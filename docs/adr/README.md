@@ -21,3 +21,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0007](0007-roundtrip-fidelity.md) | Roundtrip fidelity definition | Accepted | 2026-09-02 |
 | [0008](0008-key-material-isolation.md) | Key material isolation | Accepted | 2026-09-02 |
 | [0009](0009-ui-boundary.md) | UI boundary via generated projections | Accepted | 2026-09-02 |
+| [0010](0010-per-attribute-override-representation.md) | Overrides are represented per attribute with an explicit empty state | Accepted | 2026-09-02 |

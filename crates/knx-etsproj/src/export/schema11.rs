@@ -530,7 +530,12 @@ fn write_device(
     installation: &Installation,
     device: &DeviceInstance,
 ) -> Result<(), ExportError> {
-    write_device_inner(writer, project, &installation.parameters, device)
+    let parameters: Vec<&ParameterInstance> = installation
+        .parameters
+        .iter()
+        .filter(|p| p.device == device.id)
+        .collect();
+    write_device_inner(writer, project, parameters, device)
 }
 
 fn write_device_with_params(

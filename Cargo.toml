@@ -9,6 +9,7 @@ members = [
     "crates/knx-net",
     "crates/knx-secure",
     "apps/knx-cli",
+    "xtask",
 ]
 
 [workspace.package]

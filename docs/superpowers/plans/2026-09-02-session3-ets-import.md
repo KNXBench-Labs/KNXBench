@@ -3113,7 +3113,7 @@ Whether ETS re-imports an unsigned third-party file is untested (risk R9). The
 warning text says that in as many words, and stays until someone has tried it
 against a real ETS installation.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 #[test]
@@ -3148,19 +3148,19 @@ fn copied_signatures_are_reported_as_stale() {
 }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj export`
 Expected: FAIL, `cannot find function export_knxproj`.
 
-- [ ] **Step 3: Implement `export/mod.rs`**
+- [x] **Step 3: Implement `export/mod.rs`**
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj export`
 Expected: PASS, 8 tests in the module.
 
-- [ ] **Step 5: Run the gate and commit**
+- [x] **Step 5: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/src

@@ -174,6 +174,24 @@ pub fn parse_installation(
     // next real tag's `<` rather than before invisibly-skipped whitespace.
     // That exactness matters here — it is what lets an unknown element's
     // byte span be captured verbatim, tag and all.
+    //
+    // The reference project's own `0.xml` opens with a UTF-8 BOM.
+    // `Reader::from_reader` strips it internally (`remove_utf8_bom`) by
+    // sliding its *own* view of the input forward — `reader.buffer_position()`
+    // then counts from 0 at the first byte *after* the BOM, not from 0 at
+    // the first byte of `bytes` itself. Indexing `bytes[pos_before..end]`
+    // with those reader-reported positions against the untouched `bytes`
+    // slice silently reads a window shifted 3 bytes early: it swallows 3
+    // bytes of whatever precedes the real span and drops the span's own
+    // last 3 bytes. Found via Task 18's export round-trip, where a
+    // retained `BusAccess` element came back missing its closing ` />` —
+    // Task 6's own tests never caught it, since none inspects a captured
+    // span's content against the real (BOM-carrying) reference file, only
+    // the hand-written `MINIMAL` fixture (no BOM) and unknown-count
+    // assertions. Stripping the BOM here, once, before the reader and every
+    // `bytes[..]` index share the same baseline, fixes the offset at its
+    // source rather than patching each call site.
+    let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
     let mut reader = Reader::from_reader(bytes);
 
     let mut document = SourceDocument {

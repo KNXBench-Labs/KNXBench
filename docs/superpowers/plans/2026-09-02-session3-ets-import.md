@@ -3373,7 +3373,7 @@ roundtrip changes nothing further."
 The rule under test is that bad input produces a named error or a report entry,
 never a panic, never an unwrap on absent data, and never silently wrong data.
 
-- [ ] **Step 1: Write the tests**
+- [x] **Step 1: Write the tests**
 
 ```rust
 #[test]
@@ -3483,18 +3483,18 @@ declared uncompressed size exceeds a documented limit is refused with
 the largest entry in either reference project is 5.7 MB and the whole
 uncompressed container is 22 MB.
 
-- [ ] **Step 2: Run them and watch them fail, then implement the guards**
+- [x] **Step 2: Run them and watch them fail, then implement the guards**
 
 Run: `cargo test -p knx-etsproj --test malformed_input`
 Expected: FAIL on the guard tests until `Container::read`'s size check and the
 parser's depth limit exist.
 
-- [ ] **Step 3: Run them and watch them pass**
+- [x] **Step 3: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj --test malformed_input`
 Expected: PASS, 10 tests.
 
-- [ ] **Step 4: Run the gate and commit**
+- [x] **Step 4: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj

@@ -3000,7 +3000,7 @@ Writing rules:
   reader that depends on order should not be given a reason to fail. Byte
   equality is still not attempted or claimed.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 #[test]
@@ -3051,23 +3051,23 @@ fn the_project_xml_carries_the_group_address_style() {
 }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj export`
 Expected: FAIL, `cannot find function write_installation_xml`.
 
-- [ ] **Step 3: Implement `export/schema11.rs`**
+- [x] **Step 3: Implement `export/schema11.rs`**
 
 `quick_xml::Writer` over a `Vec<u8>`, indented two spaces to match ETS's own
 output. A `retained_lookup: BTreeMap<(&str, &str), &str>` built once from the
 opaque entries of kind `RetainedAttribute` keyed by `(xpath, name)`.
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj export`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 5: Run the gate and commit**
+- [x] **Step 5: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/src

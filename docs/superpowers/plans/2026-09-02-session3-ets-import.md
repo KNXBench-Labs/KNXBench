@@ -382,7 +382,7 @@ those three shapes, so the importer cannot be written against it.
   dpt: Override<DptRef>, flags: ResolvedFlags, size: Option<Resolved<ObjectSize>> }`.
   Task 10 (`map.rs`) constructs these; Task 18 (`export/schema11.rs`) reads them.
 
-- [ ] **Step 1: Write failing tests for `Override<T>`**
+- [x] **Step 1: Write failing tests for `Override<T>`**
 
 Add to `crates/knx-core/src/provenance.rs`:
 
@@ -410,12 +410,12 @@ fn a_value_override_reports_its_layer() {
 }
 ```
 
-- [ ] **Step 2: Run the tests and watch them fail**
+- [x] **Step 2: Run the tests and watch them fail**
 
 Run: `cargo test -p knx-core provenance`
 Expected: FAIL, `cannot find type Override in this scope`.
 
-- [ ] **Step 3: Implement `Override<T>`**
+- [x] **Step 3: Implement `Override<T>`**
 
 Add to `crates/knx-core/src/provenance.rs`:
 
@@ -462,12 +462,12 @@ impl<T> Default for Override<T> {
 }
 ```
 
-- [ ] **Step 4: Run the tests and watch them pass**
+- [x] **Step 4: Run the tests and watch them pass**
 
 Run: `cargo test -p knx-core provenance`
 Expected: PASS.
 
-- [ ] **Step 5: Write a failing test for `Text`**
+- [x] **Step 5: Write a failing test for `Text`**
 
 Add to `crates/knx-core/src/string_table.rs`:
 
@@ -485,12 +485,12 @@ fn literal_text_resolves_without_the_table_localized_text_does_not() {
 }
 ```
 
-- [ ] **Step 6: Run it and watch it fail**
+- [x] **Step 6: Run it and watch it fail**
 
 Run: `cargo test -p knx-core string_table`
 Expected: FAIL, `cannot find type Text in this scope`.
 
-- [ ] **Step 7: Implement `Text` and `StringTable::text`**
+- [x] **Step 7: Implement `Text` and `StringTable::text`**
 
 Add to `crates/knx-core/src/string_table.rs`:
 
@@ -519,12 +519,12 @@ impl StringTable {
 }
 ```
 
-- [ ] **Step 8: Run it and watch it pass**
+- [x] **Step 8: Run it and watch it pass**
 
 Run: `cargo test -p knx-core string_table`
 Expected: PASS.
 
-- [ ] **Step 9: Write a failing test for `ResolvedFlags`**
+- [x] **Step 9: Write a failing test for `ResolvedFlags`**
 
 Add to `crates/knx-core/src/flags.rs`:
 
@@ -544,12 +544,12 @@ fn a_partial_flag_override_leaves_the_other_flags_absent() {
 }
 ```
 
-- [ ] **Step 10: Run it and watch it fail**
+- [x] **Step 10: Run it and watch it fail**
 
 Run: `cargo test -p knx-core flags`
 Expected: FAIL, `cannot find type ResolvedFlags in this scope`.
 
-- [ ] **Step 11: Implement `ResolvedFlags`**
+- [x] **Step 11: Implement `ResolvedFlags`**
 
 Add to `crates/knx-core/src/flags.rs`:
 
@@ -581,12 +581,12 @@ impl ResolvedFlags {
 }
 ```
 
-- [ ] **Step 12: Run it and watch it pass**
+- [x] **Step 12: Run it and watch it pass**
 
 Run: `cargo test -p knx-core flags`
 Expected: PASS.
 
-- [ ] **Step 13: Change `ComObjectInstance` and add `BinaryDataRef`**
+- [x] **Step 13: Change `ComObjectInstance` and add `BinaryDataRef`**
 
 In `crates/knx-core/src/device.rs`, replace the five override fields and add
 the binary-data reference list to `DeviceInstance`:
@@ -641,7 +641,7 @@ fn an_empty_datapoint_type_attribute_is_not_the_same_as_an_absent_one() {
 }
 ```
 
-- [ ] **Step 14: Fix `command.rs` for the new field types**
+- [x] **Step 14: Fix `command.rs` for the new field types**
 
 Measured against `crates/knx-core/src/command.rs`: `SetComObjectDpt.dpt` is
 `Option<DptRef>`, not `Option<Resolved<DptRef>>` — it always resolves to
@@ -656,7 +656,7 @@ on. Change `RestoreComObjectDpt.dpt` from `Option<Resolved<DptRef>>` to
 `Override<DptRef>` so undo can restore `Absent`, `Empty` or `Value` exactly,
 per this step's original reasoning. Update the module's tests to match.
 
-- [ ] **Step 15: Re-export from `lib.rs`**
+- [x] **Step 15: Re-export from `lib.rs`**
 
 ```rust
 pub use device::{BinaryDataRef, ComObjectInstance, DeviceInstance};
@@ -665,12 +665,12 @@ pub use provenance::{Layer, Override, Resolved};
 pub use string_table::{Language, LocalizedString, StringTable, Text, TranslationKey};
 ```
 
-- [ ] **Step 16: Run the gate**
+- [x] **Step 16: Run the gate**
 
 Run the full gate command from Global Constraints.
 Expected: all six commands pass.
 
-- [ ] **Step 17: Commit**
+- [x] **Step 17: Commit**
 
 ```bash
 git add crates/knx-core/src

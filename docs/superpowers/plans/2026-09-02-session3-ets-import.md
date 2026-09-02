@@ -2316,11 +2316,11 @@ Until it does, keeping the manufacturer entries in the opaque store is what
 lets export write a complete container instead of one ETS could not read.
 Task 23 records this as a limitation with the condition that lifts it.
 
-- [ ] **Step 1: Add `sha2`**
+- [x] **Step 1: Add `sha2`**
 
 Workspace: `sha2 = "0.10"`. Crate: `sha2.workspace = true`.
 
-- [ ] **Step 2: Write failing tests**
+- [x] **Step 2: Write failing tests**
 
 ```rust
 #[test]
@@ -2375,19 +2375,19 @@ fn a_retained_attribute_carries_its_element_path_and_name() {
 }
 ```
 
-- [ ] **Step 3: Run them and watch them fail**
+- [x] **Step 3: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj opaque`
 Expected: FAIL, `cannot find function collect_container_entries`.
 
-- [ ] **Step 4: Implement `opaque.rs`**
+- [x] **Step 4: Implement `opaque.rs`**
 
-- [ ] **Step 5: Run them and watch them pass**
+- [x] **Step 5: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj opaque`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 6: Run the gate and commit**
+- [x] **Step 6: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj Cargo.toml Cargo.lock

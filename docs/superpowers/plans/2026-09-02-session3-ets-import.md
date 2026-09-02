@@ -2762,7 +2762,7 @@ was re-measured against the file while this plan was written. The test is the
 regression net for the whole pipeline: if any stage starts dropping things, one
 of these numbers moves.
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 ```rust
 #[test]
@@ -2836,13 +2836,13 @@ fn nothing_in_the_reference_project_is_unknown_or_lost() {
 }
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `cargo test -p knx-etsproj --test golden_reference_project`
 Expected: PASS. If a count is off, the pipeline is wrong, not the number —
 every one of these was measured against the file.
 
-- [ ] **Step 3: Run the gate and commit**
+- [x] **Step 3: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/tests

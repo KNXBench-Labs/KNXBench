@@ -3265,7 +3265,7 @@ links rendered as `(group address ets_id, direction)` pairs sorted.
 `false`, because a failing roundtrip test that says only "not equal" costs an
 hour.
 
-- [ ] **Step 1: Write the tests**
+- [x] **Step 1: Write the tests**
 
 ```rust
 #[test]
@@ -3338,21 +3338,21 @@ fn a_second_roundtrip_changes_nothing_further() {
 }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj --test roundtrip`
 Expected: FAIL, `cannot find function semantic_view`.
 
-- [ ] **Step 3: Implement `compare.rs`**
+- [x] **Step 3: Implement `compare.rs`**
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj --test roundtrip`
 Expected: PASS, 4 tests. Byte equality of the whole container is neither
 attempted nor asserted; the second-roundtrip test asserts convergence of the
 regenerated `0.xml`, which is a weaker and achievable claim.
 
-- [ ] **Step 5: Run the gate and commit**
+- [x] **Step 5: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/src crates/knx-etsproj/tests

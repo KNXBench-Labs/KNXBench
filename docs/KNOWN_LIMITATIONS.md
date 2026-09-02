@@ -12,17 +12,26 @@ here.
 ## 1. Single-sample bias
 
 **Limitation.** Everything verified about the `.knxproj` format comes from one
-project: schema 11, ETS 4.1.8 (risk R1).
+installation: schema 11 (ETS 4.1.8) and schema 23 (ETS 6.3.7959.0) — the same
+project, exported twice (risk R1).
 
-**Cause.** No ETS5 or ETS6 sample project has been available.
+**Cause.** No independent ETS5 or ETS6 sample project has been available. The
+second export of the ETS4 reference project (RESEARCH §2.4/§3.3) confirms the
+schema-11→23 format diff for this one installation, but says nothing about
+schema 12, 13, 14, 20, 21, 22, and nothing about a differently-structured
+project on schema 23 (e.g. one using `Functions`, KNX Secure, or multiple
+areas/lines for real).
 
-**Impact.** Support for schema 12, 13, 14, 20 and 21+ is derived from
-documentation and from reading `xknxproject`, not from evidence. A first import
-of such a project will very likely produce unknown-construct entries.
+**Impact.** Support for schema 12, 13, 14, 20, 21 and 22 is still derived from
+documentation and from reading `xknxproject`, not from evidence. Schema 23
+support is derived from evidence but only from one project shape; a first
+import of a structurally different schema-23 project will still likely
+produce unknown-construct entries.
 
-**Lifted when.** Real ETS5 and ETS6 projects have been imported and their
-unknown-construct reports reconciled to empty. This is a prerequisite for
-Session 3 being able to claim more than schema 11.
+**Lifted when.** Real ETS5 projects and further, independent ETS6 projects
+have been imported and their unknown-construct reports reconciled to empty.
+This is a prerequisite for Session 3 being able to claim more than schema 11
+and this one schema-23 shape.
 
 ## 2. No authoritative XSD is publicly available
 

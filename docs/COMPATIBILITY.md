@@ -31,6 +31,7 @@ alike.
 | Capability | Scope | Evidence |
 | --- | --- | --- |
 | Reading `.knxproj` schema 11 | One real ETS 4.1.8 project: 36 devices, 514 group addresses, 907 communication object instances, 1390 parameter values | RESEARCH §3, reproducible with `tools/inspect_knxproj.py` [V] |
+| Reading `.knxproj` schema 23 | The same project re-exported from ETS 6.3.7959.0: 35 devices, 514 group addresses, 691 communication object instances, 1343 parameter values | RESEARCH §2.4/§3.3, reproducible with `tools/inspect_knxproj.py` [V] — format changes vs. schema 11 catalogued there, no importer reads this yet |
 | KNXnet/IP tunnelling | One gateway at `192.0.2.1:3671`, 280 telegrams captured in a 300 s window; `GroupValueWrite`, `GroupValueRead` (30), `GroupValueResponse` (30); all 280 resolved to a named group address from the project | RESEARCH §8.1 [V] |
 
 That is the whole of it. Everything verified here was verified in Session 0,
@@ -44,7 +45,8 @@ application — which has no importer yet.
 | Schema 12 (ETS 4) | Documented only [D] | Import a real ETS 4 project of that schema and reconcile the unknown-construct report to empty |
 | Schema 13, 14 (ETS 5 up to 5.6) | Documented only [D] | Same, with an ETS 5 sample |
 | Schema 20 (ETS 5.7) | Documented only [D] | Same, with an ETS 5.7 sample |
-| Schema 21+ (ETS 6.x) | Documented only [D] | Same, with an ETS 6 sample |
+| Schema 21, 22 (ETS 6.x, early) | Documented only [D] | Same, with an ETS 6.0–6.2 sample |
+| Schema 23 (ETS 6.3.7959.0) | Container and content model diffed against schema 11 [V] (RESEARCH §2.4/§3.3); no importer built yet | Build the schema-23-aware importer and reconcile its unknown-construct report to empty |
 | Password-protected projects, schema < 21 (ZipCrypto) | Code path derived from `xknxproject` source [V], never executed here | Open a real protected ETS4/ETS5 project with its password |
 | Password-protected projects, schema ≥ 21 (AES, PBKDF2) | As above | Open a real protected ETS6 project with its password |
 | ETS re-import of a file we export | Untested (risk R9) | Export a project and open it in a real ETS installation; record the result either way |

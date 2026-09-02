@@ -62,6 +62,29 @@ impl fmt::Display for Language {
     }
 }
 
+/// A display string that is either literal or a handle into the string table.
+///
+/// Instance-level overrides in `0.xml` are literal — ETS writes the text into
+/// the project file and keeps no translation for it. Program-level defaults
+/// are localized, resolved through `TranslationUnit` trees in the application
+/// program. One field has to hold both.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Text {
+    Literal(String),
+    Localized(LocalizedString),
+}
+
+impl StringTable {
+    /// Resolves either form of text for `language`. A literal is returned as
+    /// it stands; a handle is resolved through the table.
+    pub fn text<'a>(&'a self, text: &'a Text, language: &Language) -> Option<&'a str> {
+        match text {
+            Text::Literal(s) => Some(s.as_str()),
+            Text::Localized(handle) => self.resolve(handle, language),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,5 +113,17 @@ mod tests {
         let t = StringTable::new(Language("en".into()));
         let h = LocalizedString(TranslationKey("missing".into()));
         assert_eq!(t.resolve(&h, &Language("en".into())), None);
+    }
+
+    #[test]
+    fn literal_text_resolves_without_the_table_localized_text_does_not() {
+        let table = StringTable::new(Language("en".into()));
+        let literal = Text::Literal("LICHT_AN_AUS_EG_GARDEROBE".into());
+        assert_eq!(
+            table.text(&literal, &Language("de".into())),
+            Some("LICHT_AN_AUS_EG_GARDEROBE")
+        );
+        let localized = Text::Localized(LocalizedString(TranslationKey("k1".into())));
+        assert_eq!(table.text(&localized, &Language("de".into())), None);
     }
 }

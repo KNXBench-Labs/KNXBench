@@ -9,10 +9,10 @@
 use crate::address::IndividualAddress;
 use crate::commissioning::CommissioningState;
 use crate::dpt::DptRef;
-use crate::flags::{ComFlags, GroupLink, ObjectSize};
+use crate::flags::{GroupLink, ObjectSize, ResolvedFlags};
 use crate::ids::{ComObjectInstanceId, DeviceId, SourceRef};
-use crate::provenance::Resolved;
-use crate::string_table::LocalizedString;
+use crate::provenance::{Override, Resolved};
+use crate::string_table::Text;
 
 /// A device placed in a project. Owned exclusively by `Devices` — `Topology`
 /// and `Buildings` reference a device by id, never embed it.
@@ -32,6 +32,18 @@ pub struct DeviceInstance {
     pub commissioning: CommissioningState,
     pub visibility_calculated: bool,
     pub com_objects: Vec<ComObjectInstanceId>,
+    pub binary_data: Vec<BinaryDataRef>,
+}
+
+/// A reference from a device to one of the opaque blobs in
+/// `<P-xxxx>/BinaryData/<guid>.dat`. The bytes live in the opaque store; only
+/// the reference is modelled.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BinaryDataRef {
+    /// `BinaryData/@Id` — the GUID that names the `.dat` entry.
+    pub id: String,
+    /// `BinaryData/@Name`.
+    pub name: String,
 }
 
 /// One communication object as it exists on one device, after the
@@ -44,13 +56,13 @@ pub struct ComObjectInstance {
     pub device: DeviceId,
     /// From `_O-<n>` in the source `RefId`.
     pub number: u16,
-    pub text: Resolved<LocalizedString>,
-    pub description: Option<Resolved<LocalizedString>>,
-    /// A communication object instance may have no resolved datapoint type
-    /// at all; this is normal, not an error (DATA_MODEL §9).
-    pub dpt: Option<Resolved<DptRef>>,
-    pub flags: Resolved<ComFlags>,
-    pub size: Resolved<ObjectSize>,
+    pub text: Override<Text>,
+    pub description: Override<Text>,
+    pub dpt: Override<DptRef>,
+    pub flags: ResolvedFlags,
+    /// Never stated at instance level in schema 11; filled from the
+    /// application program once the product database exists.
+    pub size: Option<Resolved<ObjectSize>>,
     pub is_active: bool,
     pub links: Vec<GroupLink>,
 }
@@ -58,8 +70,9 @@ pub struct ComObjectInstance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::provenance::Layer;
-    use crate::string_table::TranslationKey;
+    use crate::flags::ResolvedFlags;
+    use crate::provenance::{Layer, Override};
+    use crate::string_table::Text;
 
     fn source() -> SourceRef {
         SourceRef {
@@ -103,34 +116,39 @@ mod tests {
 
     #[test]
     fn com_object_instance_without_dpt_is_constructible() {
-        let com = ComObjectInstance {
+        let com = com_object_instance_fixture();
+        assert!(com.dpt.value().is_none());
+    }
+
+    /// A minimal, valid `ComObjectInstance`: text and description resolved
+    /// at program layer, no datapoint type, all five flags absent, and no
+    /// size (unstated at instance level in schema 11, as `size` documents).
+    fn com_object_instance_fixture() -> ComObjectInstance {
+        ComObjectInstance {
             id: ComObjectInstanceId(1),
             source: source(),
             device: DeviceId(1),
             number: 0,
-            text: Resolved {
-                value: LocalizedString(TranslationKey("t".into())),
+            text: Override::Value(Resolved {
+                value: Text::Literal("t".into()),
                 layer: Layer::Program,
-            },
-            description: None,
-            dpt: None,
-            flags: Resolved {
-                value: ComFlags {
-                    read: false,
-                    write: true,
-                    transmit: false,
-                    update: false,
-                    communication: true,
-                },
-                layer: Layer::Program,
-            },
-            size: Resolved {
-                value: ObjectSize::Bit(1),
-                layer: Layer::Program,
-            },
+            }),
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
             is_active: true,
             links: vec![],
-        };
-        assert!(com.dpt.is_none());
+        }
+    }
+
+    #[test]
+    fn an_empty_datapoint_type_attribute_is_not_the_same_as_an_absent_one() {
+        let mut com = com_object_instance_fixture();
+        com.dpt = Override::Empty;
+        assert!(com.dpt.value().is_none());
+        assert!(com.dpt.is_present());
+        com.dpt = Override::Absent;
+        assert!(!com.dpt.is_present());
     }
 }

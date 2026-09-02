@@ -10,7 +10,7 @@ use crate::dpt::DptRef;
 use crate::group::GroupAddressEntry;
 use crate::ids::{ComObjectInstanceId, DeviceId, GroupAddressId};
 use crate::project::Project;
-use crate::provenance::{Layer, Resolved};
+use crate::provenance::{Layer, Override, Resolved};
 use crate::validation::{check_no_duplicate_individual_address, ValidationError};
 use crate::IndividualAddress;
 
@@ -39,7 +39,7 @@ pub enum Command {
     /// share `SetComObjectDpt`'s bare-`DptRef` shape.
     RestoreComObjectDpt {
         com_object: ComObjectInstanceId,
-        dpt: Option<Resolved<DptRef>>,
+        dpt: Override<DptRef>,
     },
     /// `entry.id` is pre-allocated by the caller via
     /// `Project::ids::next_group_address_id`.
@@ -114,11 +114,17 @@ impl Command {
                     .devices
                     .com_object_mut(com_object)
                     .ok_or(CommandError::ComObjectNotFound(com_object))?;
-                let previous = com.dpt;
-                com.dpt = dpt.map(|value| Resolved {
-                    value,
-                    layer: Layer::UserEdit,
-                });
+                let previous = com.dpt.clone();
+                com.dpt = match dpt {
+                    Some(value) => Override::Value(Resolved {
+                        value: *value,
+                        layer: Layer::UserEdit,
+                    }),
+                    // A user-initiated clear is a deliberate empty, mirroring
+                    // ETS's own `DatapointType=""` convention; `Absent` would
+                    // misrepresent a value the user just acted on.
+                    None => Override::Empty,
+                };
                 Ok(Command::RestoreComObjectDpt {
                     com_object,
                     dpt: previous,
@@ -130,8 +136,8 @@ impl Command {
                     .devices
                     .com_object_mut(com_object)
                     .ok_or(CommandError::ComObjectNotFound(com_object))?;
-                let previous = com.dpt;
-                com.dpt = *dpt;
+                let previous = com.dpt.clone();
+                com.dpt = dpt.clone();
                 Ok(Command::RestoreComObjectDpt {
                     com_object,
                     dpt: previous,
@@ -213,12 +219,11 @@ mod tests {
     use crate::building::BuildingPart;
     use crate::commissioning::{CommissioningState, CompletionStatus};
     use crate::device::DeviceInstance;
-    use crate::flags::ComFlags;
-    use crate::flags::ObjectSize;
+    use crate::flags::ResolvedFlags;
     use crate::group::GroupRange;
     use crate::ids::{InstallationId, SourceRef};
     use crate::installation::Installation;
-    use crate::string_table::{LocalizedString, TranslationKey};
+    use crate::string_table::Text;
     use crate::topology::Topology;
     use crate::{GroupAddress, Language};
 
@@ -258,6 +263,7 @@ mod tests {
             commissioning: CommissioningState::default(),
             visibility_calculated: true,
             com_objects: vec![],
+            binary_data: vec![],
         });
         p
     }
@@ -304,6 +310,7 @@ mod tests {
             commissioning: CommissioningState::default(),
             visibility_calculated: true,
             com_objects: vec![],
+            binary_data: vec![],
         });
         let mut stack = CommandStack::new();
         let result = stack.do_command(
@@ -367,32 +374,32 @@ mod tests {
             source: source(),
             device: DeviceId(1),
             number: 0,
-            text: Resolved {
-                value: LocalizedString(TranslationKey("t".into())),
+            text: Override::Value(Resolved {
+                value: Text::Literal("t".into()),
                 layer: Layer::Program,
-            },
-            description: None,
-            dpt: Some(Resolved {
+            }),
+            description: Override::Absent,
+            dpt: Override::Value(Resolved {
                 value: DptRef {
                     main: 1,
                     sub: Some(1),
                 },
                 layer: Layer::Program,
             }),
-            flags: Resolved {
-                value: ComFlags {
-                    read: true,
-                    write: false,
-                    transmit: false,
-                    update: false,
-                    communication: true,
-                },
-                layer: Layer::Program,
+            flags: ResolvedFlags {
+                read: Override::Value(Resolved {
+                    value: true,
+                    layer: Layer::Program,
+                }),
+                write: Override::Absent,
+                transmit: Override::Absent,
+                update: Override::Absent,
+                communication: Override::Value(Resolved {
+                    value: true,
+                    layer: Layer::Program,
+                }),
             },
-            size: Resolved {
-                value: ObjectSize::Bit(1),
-                layer: Layer::Program,
-            },
+            size: None,
             is_active: true,
             links: vec![],
         };
@@ -412,17 +419,60 @@ mod tests {
             )
             .unwrap();
         let updated = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
-        assert_eq!(updated.dpt.as_ref().unwrap().value, new_dpt);
-        assert_eq!(updated.dpt.as_ref().unwrap().layer, Layer::UserEdit);
+        assert_eq!(updated.dpt.value().unwrap().value, new_dpt);
+        assert_eq!(updated.dpt.value().unwrap().layer, Layer::UserEdit);
         stack.undo(&mut project).unwrap();
         let restored = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
         assert_eq!(
-            restored.dpt.as_ref().unwrap().value,
+            restored.dpt.value().unwrap().value,
             DptRef {
                 main: 1,
                 sub: Some(1)
             }
         );
-        assert_eq!(restored.dpt.as_ref().unwrap().layer, Layer::Program);
+        assert_eq!(restored.dpt.value().unwrap().layer, Layer::Program);
+    }
+
+    #[test]
+    fn setting_com_object_dpt_to_none_writes_empty_not_absent() {
+        let mut project = test_project_with_one_device(None);
+        let com = ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Value(Resolved {
+                value: Text::Literal("t".into()),
+                layer: Layer::Program,
+            }),
+            description: Override::Absent,
+            dpt: Override::Value(Resolved {
+                value: DptRef {
+                    main: 1,
+                    sub: Some(1),
+                },
+                layer: Layer::Program,
+            }),
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+        };
+        project.devices.insert_com_object(com);
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetComObjectDpt {
+                    com_object: ComObjectInstanceId(1),
+                    dpt: None,
+                },
+            )
+            .unwrap();
+        let updated = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert_eq!(updated.dpt, Override::Empty);
+        stack.undo(&mut project).unwrap();
+        let restored = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert_eq!(restored.dpt.value().unwrap().layer, Layer::Program);
     }
 }

@@ -72,6 +72,7 @@ mod tests {
             commissioning: CommissioningState::default(),
             visibility_calculated: true,
             com_objects: vec![],
+            binary_data: vec![],
         }
     }
 

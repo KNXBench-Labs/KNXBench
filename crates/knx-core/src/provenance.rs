@@ -40,6 +40,42 @@ pub struct Resolved<T> {
     pub layer: Layer,
 }
 
+/// A source attribute in one of its three real states.
+///
+/// ETS distinguishes an attribute it never wrote from an attribute it wrote
+/// empty: 497 of the reference project's 907 `ComObjectInstanceRef` elements
+/// carry `DatapointType=""`, and 82 of its `Description` attributes are
+/// likewise empty. Collapsing both into `None` loses that distinction, and
+/// export then writes a file that differs from the one that was read.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub enum Override<T> {
+    /// The attribute was not present in the source.
+    #[default]
+    Absent,
+    /// The attribute was present and its value was the empty string.
+    Empty,
+    /// The attribute was present and carried a value.
+    Value(Resolved<T>),
+}
+
+impl<T> Override<T> {
+    pub fn value(&self) -> Option<&Resolved<T>> {
+        match self {
+            Override::Value(r) => Some(r),
+            _ => None,
+        }
+    }
+
+    pub fn layer(&self) -> Option<Layer> {
+        self.value().map(|r| r.layer)
+    }
+
+    /// Whether the attribute appeared in the source at all, empty or not.
+    pub fn is_present(&self) -> bool {
+        !matches!(self, Override::Absent)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,5 +103,27 @@ mod tests {
         assert!(!inferred.layer.is_exported());
         assert!(from_instance.layer.is_exported());
         assert!(edited.layer.is_exported());
+    }
+
+    #[test]
+    fn absent_and_empty_are_distinct_and_neither_carries_a_value() {
+        let absent: Override<u8> = Override::Absent;
+        let empty: Override<u8> = Override::Empty;
+        assert_ne!(absent, empty);
+        assert!(absent.value().is_none());
+        assert!(empty.value().is_none());
+        assert!(!absent.is_present());
+        assert!(empty.is_present());
+    }
+
+    #[test]
+    fn a_value_override_reports_its_layer() {
+        let o = Override::Value(Resolved {
+            value: 7u8,
+            layer: Layer::Instance,
+        });
+        assert_eq!(o.layer(), Some(Layer::Instance));
+        assert_eq!(o.value().map(|r| r.value), Some(7));
+        assert!(o.is_present());
     }
 }

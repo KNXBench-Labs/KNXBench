@@ -5,6 +5,7 @@
 //! resolved shape.
 
 use crate::ids::GroupAddressId;
+use crate::provenance::Override;
 
 /// The five communication object flags (`ReadFlag`, `WriteFlag`,
 /// `TransmitFlag`, `UpdateFlag`, `CommunicationFlag`).
@@ -40,4 +41,48 @@ pub enum Direction {
 pub struct GroupLink {
     pub ga: GroupAddressId,
     pub direction: Direction,
+}
+
+/// The five communication flags, each resolved independently.
+///
+/// The override chain works per attribute: a `ComObjectInstanceRef` in the
+/// reference project sets `ReadFlag` 39 times, `UpdateFlag` 30, `TransmitFlag`
+/// 27, `WriteFlag` 18 and `CommunicationFlag` 8 — never all five together. A
+/// single `Resolved<ComFlags>` would have to invent the four it was not told
+/// about. `ComFlags` remains the fully resolved five-flag view, produced once
+/// the product database supplies the program-level defaults.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub struct ResolvedFlags {
+    pub read: Override<bool>,
+    pub write: Override<bool>,
+    pub transmit: Override<bool>,
+    pub update: Override<bool>,
+    pub communication: Override<bool>,
+}
+
+impl ResolvedFlags {
+    /// No flag stated at any layer.
+    pub fn none() -> Self {
+        Self::default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::provenance::{Layer, Override, Resolved};
+
+    #[test]
+    fn a_partial_flag_override_leaves_the_other_flags_absent() {
+        let flags = ResolvedFlags {
+            read: Override::Value(Resolved {
+                value: true,
+                layer: Layer::Instance,
+            }),
+            ..ResolvedFlags::none()
+        };
+        assert_eq!(flags.read.value().map(|r| r.value), Some(true));
+        assert!(!flags.write.is_present());
+        assert!(!flags.communication.is_present());
+    }
 }

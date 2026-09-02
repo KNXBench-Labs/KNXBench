@@ -281,6 +281,8 @@ dependencies = [
  "chrono",
  "knx-core",
  "quick-xml",
+ "serde",
+ "serde_json",
  "sha2",
  "tempfile",
  "zip",

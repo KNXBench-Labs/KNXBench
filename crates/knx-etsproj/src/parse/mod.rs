@@ -25,7 +25,7 @@ pub struct ParseOutput {
     pub retained_elements: Vec<RetainedElement>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
 pub enum UnknownKind {
     Element,
     Attribute,
@@ -34,7 +34,7 @@ pub enum UnknownKind {
 /// One element or attribute the known-element table did not list, with an
 /// occurrence count so a project that repeats the same unknown attribute
 /// hundreds of times produces one report line, not hundreds.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct UnknownConstruct {
     /// Container entry this was read from, e.g. `"P-0512/0.xml"`.
     pub source_path: String,

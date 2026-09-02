@@ -7,9 +7,14 @@ Session 2 implements against.
 
 Session 1 implemented two of these types: `Layer` and `Resolved<T>`. Session 2
 implemented the rest of the domain model described here, in `knx-core`, plus
-the migration-chain skeleton in `knx-store`. Every section below states
-whether it is **implemented**, **planned** or **retained but uninterpreted**,
-so that the document can be read as a status as well as a design.
+the migration-chain skeleton in `knx-store`. Session 3 added one more type,
+`Override<T>` — see the amendment in section 3 and
+[ADR-0010](adr/0010-per-attribute-override-representation.md) — and built
+the importer/exporter (`knx-etsproj`) that actually constructs and
+round-trips this model against a real project; it added no other new
+`knx-core` type. Every section below states whether it is **implemented**,
+**planned** or **retained but uninterpreted**, so that the document can be
+read as a status as well as a design.
 
 Every count cited here was measured on the reference project in Session 0 and
 is reproducible with [tools/inspect_knxproj.py](../tools/inspect_knxproj.py).
@@ -41,8 +46,17 @@ parsed on import to reconstruct the override chain, and preserved as written.
 ## 3. The override chain
 
 *Implemented: `Layer`, `Resolved<T>` (Session 1, `knx-core/src/provenance.rs`);
+`Override<T>` (Session 3, `knx-core/src/provenance.rs` — see the amendment
+below and [ADR-0010](adr/0010-per-attribute-override-representation.md));
 the command layer that produces `UserEdit` values and undoes back to the
 originating layer lives in `knx-core/src/command.rs` (Session 2).*
+
+**Amendment (Session 3):** the chain resolves **per attribute**, not per
+object. `ComObjectInstanceRef` alone can leave `Text` absent while stating
+`DatapointType` as an empty string and `Description` with a real value —
+three different states on three different attributes of the same instance.
+A single `Resolved<T>` per object cannot express that; `Override<T>` below
+is what does.
 
 This is the single most constraining finding of Session 0 (RESEARCH §3.2). A
 communication object's effective properties resolve through three layers in the
@@ -59,16 +73,19 @@ ApplicationProgram/.../ComObjectRef    per-variant override: Text, FunctionText,
                                        DatapointType, all five flags, IsActive
 ```
 
-Measured override frequencies in the reference project: `DatapointType` 758×,
-`Description` 691×, `Text` 121×, `ReadFlag` 39×, `UpdateFlag` 30×,
+Measured override frequencies in the reference project: `DatapointType` 758×
+(of which 497 are the empty string and 261 carry a value — see the amendment
+above), `Description` 691×, `Text` 121×, `ReadFlag` 39×, `UpdateFlag` 30×,
 `TransmitFlag` 27×, `WriteFlag` 18×, `CommunicationFlag` 8× — against 907
 communication object instances in total.
 
-758 of 907 instances override the datapoint type. An importer that reads only
-the application program is therefore wrong for the large majority of objects,
-and a model without provenance cannot decide what to write back on export.
+758 of 907 instances carry a `DatapointType` attribute at instance level at
+all (149 do not). An importer that reads only the application program is
+therefore wrong for the large majority of objects, and a model without
+provenance cannot decide what to write back on export.
 
-No resolved scalar exists without its layer:
+No resolved scalar exists without its layer, and no overridable attribute
+exists without its three-state presence:
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -91,6 +108,17 @@ pub struct Resolved<T> {
     pub value: T,
     pub layer: Layer,
 }
+
+/// A source attribute in one of its three real states — Session 3,
+/// ADR-0010. `Override::Empty` and `Override::Absent` are distinct:
+/// collapsing them loses exactly the 497-vs-149 distinction above.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub enum Override<T> {
+    #[default]
+    Absent,
+    Empty,
+    Value(Resolved<T>),
+}
 ```
 
 Export semantics follow from the layer alone, which is what
@@ -103,7 +131,13 @@ Export semantics follow from the layer alone, which is what
 | `UserEdit` | Changed in this application | Yes |
 | `Inferred` | Derived by us, for example a DPT from linked objects | No — shown in the UI as inferred |
 
-See [ADR-0004](adr/0004-provenance-model.md).
+`Override::Absent` writes no attribute; `Override::Empty` writes an empty
+one; `Override::Value` writes only if its layer's `is_exported()` is true —
+so `Layer::Inferred`/`Program`/`ProgramRef` inside an `Override::Value` are
+excluded the same way an unwrapped `Resolved<T>` at those layers already
+was. See [ADR-0004](adr/0004-provenance-model.md) for the layer model and
+[ADR-0010](adr/0010-per-attribute-override-representation.md) for why it is
+wrapped in `Override<T>` per attribute rather than applied once per object.
 
 ## 4. Entities
 
@@ -132,7 +166,10 @@ unknown.
 | `DeviceInstanceRef` | 29 | `RefId` | Modelled as a building-to-device reference |
 | `BinaryData` | 6 | `Id`, `Name` | Opaque, section 10 |
 
-`ComObjectInstance` is the entity the override chain hangs off:
+`ComObjectInstance` is the entity the override chain hangs off. Every
+overridable attribute is `Override<T>`, per the amendment above — not the
+`Resolved<T>` / `Option<Resolved<T>>` mix this section originally sketched
+before Session 3 measured what "resolved" actually needs to represent:
 
 ```rust
 pub struct ComObjectInstance {
@@ -140,15 +177,25 @@ pub struct ComObjectInstance {
     pub source: SourceRef,
     pub device: DeviceId,
     pub number: u16,                       // from _O-<n>
-    pub text: Resolved<LocalizedString>,
-    pub description: Option<Resolved<LocalizedString>>,
-    pub dpt: Option<Resolved<DptRef>>,
-    pub flags: Resolved<ComFlags>,
-    pub size: Resolved<ObjectSize>,
+    pub text: Override<Text>,
+    pub description: Override<Text>,
+    pub dpt: Override<DptRef>,
+    pub flags: ResolvedFlags,              // five independent Override<bool>
+    pub size: Option<Resolved<ObjectSize>>,
     pub is_active: bool,
     pub links: Vec<GroupLink>,
 }
 ```
+
+`size` stays a plain `Option<Resolved<ObjectSize>>`, not `Override<T>`:
+schema 11 never states an object size at instance level at all (Session 3
+measurement), so there is no empty-vs-absent distinction to preserve for
+this one field yet — only "known, from the product database" versus
+"unknown". `text`/`description` hold `Text`, not `LocalizedString`, per
+[ADR-0010](adr/0010-per-attribute-override-representation.md) and section
+8's `Text::Literal`/`Text::Localized` split: schema 11's instance-level
+overrides are literal strings ETS wrote directly into the project, never a
+handle into the string table.
 
 `Functions` are defined in the schema but absent from the reference project —
 `xknxproject` reports an empty functions map. ETS5 and later projects do use
@@ -226,6 +273,25 @@ one application program alone carries 5919 translation elements (RESEARCH
 §4.1). Display resolves against the active language and falls back to
 `DefaultLanguage`.
 
+A field that can hold either form — `ComObjectInstance::text`/`description`,
+for instance — is typed `Text`, not `LocalizedString` directly:
+
+```rust
+pub enum Text {
+    Literal(String),
+    Localized(LocalizedString),
+}
+```
+
+**Amendment (Session 3):** schema 11's instance-level `ComObjectInstanceRef/
+@Text`/`@Description` are always `Text::Literal` — ETS writes the string
+directly into the project and keeps no translation for it (measured: this
+session's importer never calls `StringTable::insert`, since it ingests no
+application program yet). `Text::Localized` is reachable only once an
+application program is ingested (Session 4) and resolves a `Program`/
+`ProgramRef`-layer value — which `Layer::is_exported()` excludes from export
+regardless, so the distinction matters for display, not for round-tripping.
+
 This is retrofit-hostile — replacing `String` with a handle after the fact
 touches every entity, every projection and every test — which is why it is in
 the model from day one.
@@ -282,10 +348,19 @@ round-trips.
 
 ## 11. Versioning and migration
 
-*Implemented: `Project::schema_version` and `CURRENT_SCHEMA_VERSION` in
-`knx-core/src/project.rs`; the migration chain skeleton
-(`open_and_migrate`, `migrate_v0_to_v1`, the frozen `v1-empty.sqlite`
-fixture) in `knx-store/src/migration.rs`.*
+*Implemented: `Project::schema_version` and `CURRENT_SCHEMA_VERSION` (now
+`2`, Session 3 — see below) in `knx-core/src/project.rs`; the migration
+chain (`open_and_migrate`, `migrate_v0_to_v1`, `migrate_v1_to_v2`, the
+frozen `v1-empty.sqlite` and `v2-empty.sqlite` fixtures) in
+`knx-store/src/migration.rs`.*
+
+**Amendment (Session 3):** `migrate_v1_to_v2` adds the opaque-passthrough
+table (`opaque_entry`, section 10 / [ADR-0006](adr/0006-opaque-passthrough-store.md)).
+`knx-store`'s own `CURRENT_SCHEMA_VERSION` and `knx-core`'s track each
+other in lockstep by design (the migration.rs doc comment states this
+directly) — bumping to 2 here does not mean the *Rust shape* of `Project`
+changed in Session 3 (it did not: no new field, no new entity type), only
+that a new table now exists for a version this schema number to describe.
 
 ```rust
 pub struct Project {

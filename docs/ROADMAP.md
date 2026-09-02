@@ -5,7 +5,7 @@ deliverables, and the entry condition that must hold before it starts. A
 session that starts without its entry condition met produces work that has to
 be redone.
 
-Current position: **Session 2 complete**. See
+Current position: **Session 3 complete**. See
 [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 
 ## Session 0 — Technical research
@@ -39,22 +39,36 @@ the code that populates it.
 
 ## Session 3 — ETS project import
 
+**Done.** See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and
+[COMPATIBILITY.md](COMPATIBILITY.md) (every verified claim names its test).
+
 **Goal.** Read the reference project into the model, and write it back.
 
-**Deliverables.** The six-stage pipeline of
+**Deliverables, all shipped.** The six-stage pipeline of
 [IMPORT_EXPORT.md](IMPORT_EXPORT.md) for schema 11; the opaque passthrough
-store; the `ImportReport`; the golden test asserting the reference project's
-counts (36 devices including the unassigned one, 514 group addresses, 907
-communication object instances, 1390 parameter values, 569 send and 27 receive
-links); the oracle comparison against `xknxproject` where it is not known to be
-lossy; the three roundtrip guarantees; the malformed-input suite.
+store (`knx-store` schema v2); the `ImportReport`; the golden test asserting
+the reference project's measured counts (36 devices including the
+unassigned one, 514 group addresses, 907 communication object instances,
+1390 parameter values — 1174 plain and 216 union, 569 send and 27 receive
+links, 261 valued / 497 empty / 149 absent datapoint types); the oracle
+comparison against `xknxproject` where it is not known to be lossy; the
+three roundtrip guarantees plus a fourth convergence check; the
+malformed-input suite (10 tests, including a container entry-size guard and
+a 10,000-level nesting-depth check); the `knx import` CLI subcommand.
 
-**Entry condition.** The core model exists and is testable without IO.
+**Not part of this session's delivery**, carried into Session 4: entity
+persistence into SQLite beyond the opaque table; the schema-23
+known-element table (schema 23 is detected and refused by name, not
+misread); manufacturer data moving from the per-project opaque store into
+the shared product database.
 
-**Blocking risk.** No ETS5 or ETS6 sample project is available (risk R1).
-Acquiring one is a prerequisite for claiming support beyond schema 11 —
-without it, the tolerant parser reports unknown constructs and that is all we
-can honestly say.
+**Entry condition.** The core model exists and is testable without IO. Met.
+
+**Blocking risk, still open.** No ETS5 or ETS6 sample project is available
+(risk R1) beyond the one project's two exports already diffed (RESEARCH
+§2.4/§3.3). Acquiring one is a prerequisite for claiming support beyond
+schema 11 — without it, the tolerant parser reports unknown constructs and
+that is all we can honestly say.
 
 ## Session 4 — Manufacturer databases
 
@@ -64,8 +78,12 @@ depends on.
 **Deliverables.** The product database schema (manufacturer → product →
 application program → version → parameters, communication objects, DPTs);
 ingest from `.knxproj` manufacturer data, keyed with a content hash and
-skipping existing entries; indexed and cached access so that a project open
-never re-parses 22 MB; graceful degradation when the database is missing.
+skipping existing entries, replacing Session 3's per-project opaque-store
+arrangement ([KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §12); indexed and
+cached access so that a project open never re-parses 22 MB; graceful
+degradation when the database is missing; full entity persistence of
+`knx_core::Project` into `knx-store`'s SQLite tables, beyond the opaque
+table Session 3 shipped alone.
 
 Plus the **`when/@test` expression grammar spike** (risk R3). This is research,
 not a feature, and its output is a documented grammar plus a decision on
@@ -118,10 +136,10 @@ architecture; each has a defined landing place.
 
 | Question | Lands in |
 | --- | --- |
-| ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Session 3 — the tolerant parser reports unknown constructs; per-version known-element lists |
+| ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Session 3 delivered the tolerant parser (reports unknown constructs rather than failing) and schema-23 detection-and-refusal by name; the per-version known-element lists themselves still need an independent sample per version (risk R1) — no fixed session, lands whenever one becomes available |
 | `Functions` element semantics | Session 2 — a domain model addition; absent from the reference sample |
 | `when/@test` expression grammar | Session 4 — a research spike, prerequisite for the parameter editor |
-| Whether ETS re-imports an unsigned third-party `.knxproj` | Session 3 — the export warning stays until it is tested |
+| Whether ETS re-imports an unsigned third-party `.knxproj` | Session 3 delivered the mechanism (`ExportWarning::Unsigned`, always present); the verification itself — opening an export in real ETS — is still open (risk R9), no fixed session |
 | Whether Data Secure runtime keys are readable from `.knxproj` | Session 7 or later — `knx-secure` |
 | `.knxprod` encryption for master data scheme ≥ 12 | Session 4 — product database ingest; out of v1 scope |
 | The project licence | Session 7 — currently a placeholder, see [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) |

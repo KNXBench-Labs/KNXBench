@@ -62,7 +62,20 @@ protected project nests the payload as `<P-xxxx>.zip`.
 
 The reference project is unprotected, so **both paths are unverified in
 practice**. Neither may be described as supported before it has been tested
-against a real protected project.
+against a real protected project. Detection is implemented and tested
+(`Container::open` refuses a nested `<P-xxxx>.zip` payload by name,
+`ContainerError::PasswordProtected`); decryption is not.
+
+**Container entry size guard (Session 3, malformed-input hardening):** an
+entry whose declared uncompressed size exceeds 64 MB is refused before any
+allocation for it, not after. Measured justification: the largest single
+entry in either reference project is 5.7 MB (RESEARCH §4.1), and the whole
+uncompressed reference container is 22 MB — 64 MB leaves ample headroom for
+a legitimate project while refusing a zip-bomb-shaped entry that declares
+gigabytes it does not contain. Without this guard, `Vec::with_capacity`
+allocating a declared multi-gigabyte size can abort the process outright
+(an allocation failure that large calls Rust's global allocator error
+handler, not a recoverable `Result::Err`) rather than fail cleanly.
 
 ## 3. Schema detection
 
@@ -111,25 +124,57 @@ Streaming rather than DOM is forced by the same numbers as above: 5.7 MB in one
 file, 22 MB unpacked, 5919 translation elements in a single application program
 (RESEARCH §4.1) [V].
 
+**Nesting depth is bounded by design, not by an explicit limit (Session 3,
+malformed-input hardening).** The parser holds its own path/frame stacks on
+the heap rather than recursing per element, so it cannot overflow the Rust
+call stack regardless of document depth — verified with a 10,000-level
+`<GroupRange>` document, which the existing truncation handling already
+turns into a clean `ParseError::Xml`, not a crash, with no depth-specific
+code added.
+
 ## 5. Opaque store
 
-A table in the project file:
+A table in the project file (`opaque_entry`, `knx-store` schema version 2):
 
 ```text
-(source_path, kind, bytes, sha256)
+(source_path, xpath, kind, name, bytes, sha256)
 ```
 
-Contents (RESEARCH §7) [V]:
+`xpath`/`name` extend the four-column shape this section originally
+sketched: an opaque entry is not always a whole file — a retained attribute
+needs to say which element it belongs to and what it was called, so export
+can put it back on the right element rather than just somewhere in the
+archive. Both are empty for a whole container entry.
 
-| Item | Content |
+Contents (RESEARCH §7) [V], now with `OpaqueKind`, since the code exists:
+
+| Item | Content | `OpaqueKind` |
+| --- | --- | --- |
+| `<M>/Baggages/*.dll` | Windows PE binaries — ETS plug-ins, e.g. `econEts3.dll` (641 KB), `FastDownload.dll` (160 KB) | `Baggage` |
+| `<M>/*` (everything else under a manufacturer directory) | Catalog, hardware, application program XML — Session 3 arrangement, moves to the product database in Session 4 | `ManufacturerData` |
+| `<P>/BinaryData/<guid>.dat` | 8-byte header, `<BlobInfo>`, CSV payload; keyed by `BinaryData/@Id` on `DeviceInstance` | `BinaryData` |
+| `<P>/ExtraData/*.rbg`, `*.azp` | ISO-8859 CSV with CRLF, legacy ETS3-era plug-in data | `ExtraData` |
+| `*.signature` | RSA signatures over manufacturer and project data | `Signature` |
+| `knx_master.xml` | DPT/product master catalogue | `MasterData` |
+| Any other container entry not regenerated on export | Copied through unchanged | `ContainerEntry` |
+| A known-but-not-modelled attribute (`Installation/@BCUKey`, `@SplitType`, `ProjectInformation`'s tool-state attributes) | Name and value, matched back onto its element by `(xpath, name)` on export | `RetainedAttribute` |
+| An unrecognized element, or a known-but-not-modelled element (`BusAccess`) | Raw bytes, tag included | `RetainedElement` |
+
+**Fidelity by construct**, the promised column — modeled in the domain
+model, retained opaquely, or a documented unsupported feature — measured
+against the reference project, not intentions:
+
+| Construct | Status |
 | --- | --- |
-| `<M>/Baggages/*.dll` | Windows PE binaries — ETS plug-ins, e.g. `econEts3.dll` (641 KB), `FastDownload.dll` (160 KB) |
-| `<P>/BinaryData/<guid>.dat` | 8-byte header, `<BlobInfo>`, CSV payload; keyed by `BinaryData/@Id` on `DeviceInstance` |
-| `<P>/ExtraData/*.rbg`, `*.azp` | ISO-8859 CSV with CRLF, legacy ETS3-era plug-in data |
-| `*.signature` | RSA signatures over manufacturer and project data |
-| `Options/Legacy*` flags | Per-application compatibility switches |
-| `RegistrationInfo` and `Hash` attributes | Certification metadata |
-| Unknown XML fragments | Anything the known-element list does not cover |
+| `Project`, `Installation`, `Area`, `Line`, `DeviceInstance`, `ComObjectInstanceRef`, `GroupRange`, `GroupAddress`, `BuildingPart`, `DeviceInstanceRef`, `Connectors/Send`/`Receive` | Modeled |
+| `ParameterInstanceRef` | Modeled, retained uninterpreted (section 4/§10 of DATA_MODEL.md) |
+| `Installation/@BCUKey`, `@SplitType`, `ProjectInformation`'s tool-state attributes (`ProjectTracingLevel`, `Hide16BitGroupsFromLegacyPlugins`) | Retained opaque (`RetainedAttribute`) |
+| `BusAccess` | Retained opaque (`RetainedElement`) |
+| `BinaryData` blobs, `ExtraData`, `*.signature`, `knx_master.xml` | Retained opaque (whole-file `OpaqueEntry`) |
+| Manufacturer application program data (`<M-xxxx>/*`) | Retained opaque this session (`ManufacturerData`); moves to the shared product database in Session 4 |
+| Vendor plug-in DLLs (`<M-xxxx>/Baggages/*`) | Retained opaque, never executed; reported as `UnsupportedFeature` — the device is read-only here |
+| Any element or attribute outside the known-element table for the detected schema version | Retained opaque, reported in `unknown` |
+| Schema versions other than 11 | Not read — `NoKnownSchemaTable`, a named import failure, not silent wrong data |
 
 Three rules, without exception:
 
@@ -154,13 +199,24 @@ pub struct ImportReport {
     pub source: SourceInfo,                   // file, size, schema version, ETS version
     pub counts: EntityCounts,                 // per entity type: read / mapped
     pub unknown: Vec<UnknownConstruct>,       // element/attribute, path, frequency
-    pub opaque: Vec<OpaqueEntry>,             // what was preserved verbatim, and why
+    pub opaque: Vec<OpaqueSummary>,           // what was preserved verbatim, and why — no bytes
     pub inferred: Vec<InferredValue>,         // e.g. DPT from linked objects
     pub conflicts: Vec<Conflict>,             // e.g. divergent DPTs on one GA
     pub unsupported: Vec<UnsupportedFeature>, // e.g. baggage DLL → device read-only
-    pub errors: Vec<ImportError>,
+    pub errors: Vec<ImportError>,             // validation and mapping problems, tagged by stage and severity
 }
 ```
+
+**Amendment (Session 3): `opaque` holds `OpaqueSummary`, not `OpaqueEntry`.**
+This section originally sketched the raw entry type directly in the report;
+the implemented type omits `bytes` (`OpaqueSummary` carries `source_path`,
+`kind`, `size`, `sha256`, `reason` instead) specifically so that importing
+a project with 22 MB of manufacturer data does not produce a multi-megabyte
+JSON report — the store holds the bytes, the report only says they exist
+and why. `errors` is likewise not the raw `SourceProblem`/`MapProblem` enums
+Stage 4/5 use internally: each is flattened to `{stage, severity, xpath,
+detail}` so the report stays trivially serializable without coupling its
+JSON shape to those enums' exact variants.
 
 `counts` carries read and mapped figures per entity type, so that a discrepancy
 is visible as a number rather than as a suspicion.
@@ -214,15 +270,38 @@ guarantees replace it, each of which becomes a named test in Session 3:
 | 2 | **Opaque equality** — every opaque entry returns with the same SHA-256 | `roundtrip_opaque_bytes_are_hash_identical` |
 | 3 | **Unsigned** — every export is unsigned, and says so | `export_is_unsigned_and_reports_it` |
 
-The comparison relation of guarantee 1 is part of the contract, not an
-implementation detail: it is declared in code, and a change to it is a change
-to what fidelity means here.
+The comparison relation of guarantee 1 is declared as `SemanticProject` in
+`knx-etsproj/src/compare.rs` (`semantic_view`, `describe_difference`) — it
+is part of the contract, not an implementation detail, and a change to it
+is a change to what fidelity means here.
+
+**A fourth check, convergence, was added during Session 3 implementation:**
+`a_second_roundtrip_changes_nothing_further` asserts that exporting the
+*re-imported* project a second time produces the same container-entry names
+and the same `0.xml` bytes as the first export. Not one of the three
+declared guarantees (it follows from them, rather than adding a new
+dimension of fidelity), but worth stating explicitly: a pipeline that keeps
+normalizing something differently on every pass would satisfy guarantees
+1–3 on each individual roundtrip while still not being a roundtrip in the
+ordinary sense of the word.
 
 See [ADR-0007](adr/0007-roundtrip-fidelity.md).
 
 ## 10. Product database ingest
 
-On project import, manufacturer data is **not** copied into the project. It is
+**This is the target design ([ADR-0005](adr/0005-separate-product-database.md)),
+not what Session 3 ships.** Session 3 has no product database yet, so
+manufacturer data (`<M-xxxx>/*` — catalog, hardware, application program
+XML, and `Baggages/*`) goes into the opaque store like any other unmodelled
+container content, one full copy per project, keyed by `source_path` exactly
+like every other opaque entry. This is a deliberate, temporary arrangement:
+it is what lets Session 3 export a complete container instead of one ETS
+cannot read, not a claim that the target design below is implemented.
+[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) records the condition that
+lifts it.
+
+The target design, once the product database exists (Session 4): on project
+import, manufacturer data is **not** copied into the project. It is
 ingested into the separate product database, keyed by manufacturer, application
 program and version, with a content hash. Entries that already exist are
 skipped.
@@ -235,5 +314,3 @@ If the referenced product data is missing when a project is opened, **the
 project still opens.** Communication objects then show the `Instance` layer
 only, clearly marked incomplete. A project must never depend on the presence of
 manufacturer data.
-
-See [ADR-0005](adr/0005-separate-product-database.md).

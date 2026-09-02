@@ -28,10 +28,18 @@ support is derived from evidence but only from one project shape; a first
 import of a structurally different schema-23 project will still likely
 produce unknown-construct entries.
 
+**Session 3 status.** `knx-etsproj`'s known-element table covers schema 11
+only, built from this one reference project. Schema 23 is **detected and
+refused by name** (`ImportFailure::NoKnownSchemaTable { version: 23 }`) —
+never silently misread through the schema-11 table, which would undercount
+communication objects by about 24% and misread every boolean flag as false
+(RESEARCH §3.3). Building the schema-23 known-element table is Session 4
+work, not attempted here.
+
 **Lifted when.** Real ETS5 projects and further, independent ETS6 projects
 have been imported and their unknown-construct reports reconciled to empty.
-This is a prerequisite for Session 3 being able to claim more than schema 11
-and this one schema-23 shape.
+This is a prerequisite for claiming more than schema 11 and this one
+schema-23 shape.
 
 ## 2. No authoritative XSD is publicly available
 
@@ -89,6 +97,14 @@ keys are KNX's.
 
 **Impact.** An export may or may not open in ETS. The application says so at
 export time rather than implying it will work.
+
+**Session 3 status.** Every export carries `ExportWarning::Unsigned` — always
+constructed before anything else can fail, so no export is produced without
+it. Every `*.signature` entry (one per manufacturer plus one for the
+project — five in the reference project) is copied through unchanged and
+reported as `ExportWarning::StaleSignature { source_path }` per entry: it
+no longer matches the content it signs, since it cannot be regenerated
+without KNX's signing keys.
 
 **Lifted when.** Someone exports a project and opens it in a real ETS
 installation. Either outcome is useful: if ETS rejects it, the export is
@@ -184,3 +200,47 @@ application programs it references.
 
 **Lifted when.** The container layer for scheme ≥ 12 is understood, or an
 official route to that data becomes available. Out of v1 scope either way.
+
+## 12. Manufacturer application program data lives in the opaque store, not the product database
+
+**Limitation.** Parameter and communication-object semantics (type, range,
+unit, translations) that would come from an application program are not
+yet available. `ProductRefId` and `Hardware2ProgramRefId` are preserved as
+opaque strings on every `DeviceInstance`; nothing resolves them.
+
+**Cause.** [ADR-0005](adr/0005-separate-product-database.md)'s shared product
+database is Session 4 work. Until it exists, `<M-xxxx>/*` (catalog,
+hardware, application program XML, and vendor baggage) is retained in the
+per-project opaque store instead — one full copy per project, not the
+target design's one copy shared across every project that references it.
+
+**Impact.** A project opens completely and round-trips its manufacturer
+data byte-for-byte, but nothing in it is interpreted: no parameter
+metadata, no DPT catalogue resolution beyond what a `DptRef` string already
+encodes, no application-program-level defaults for communication object
+properties. `ComObjectInstance` values in v1 carry only the `Instance`
+layer; `Program`/`ProgramRef` never appear.
+
+**Lifted when.** Session 4 builds the product database and its ingest path
+(IMPORT_EXPORT §10). Existing projects keep opening in the meantime — a
+project must never depend on the presence of manufacturer data.
+
+## 13. Password-protected projects are refused, not decrypted
+
+**Limitation.** A `.knxproj` whose project part is nested as `<P-xxxx>.zip`
+(IMPORT_EXPORT §2) is detected and named
+(`ContainerError::PasswordProtected`), but the file is never opened.
+
+**Cause.** Both decryption schemes (ZipCrypto for schema < 21, AES/PBKDF2
+for schema ≥ 21) are documented from `xknxproject` source but unverified
+against a real protected project — the reference project is unprotected.
+Shipping an untested decryption path would claim support this repository
+cannot demonstrate.
+
+**Impact.** A protected project cannot be imported at all today, by design
+rather than by omission: refusing cleanly is preferred over a decryption
+path nobody has run against a real encrypted file.
+
+**Lifted when.** A real password-protected ETS4/5 project (ZipCrypto) and a
+real password-protected ETS6 project (AES) are available to verify each
+scheme against.

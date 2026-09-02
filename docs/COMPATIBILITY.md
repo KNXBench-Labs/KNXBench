@@ -28,15 +28,24 @@ alike.
 
 ## 2. Verified today
 
-| Capability | Scope | Evidence |
-| --- | --- | --- |
-| Reading `.knxproj` schema 11 | One real ETS 4.1.8 project: 36 devices, 514 group addresses, 907 communication object instances, 1390 parameter values | RESEARCH §3, reproducible with `tools/inspect_knxproj.py` [V] |
-| Reading `.knxproj` schema 23 | The same project re-exported from ETS 6.3.7959.0: 35 devices, 514 group addresses, 691 communication object instances, 1343 parameter values | RESEARCH §2.4/§3.3, reproducible with `tools/inspect_knxproj.py` [V] — format changes vs. schema 11 catalogued there, no importer reads this yet |
-| KNXnet/IP tunnelling | One gateway at `192.0.2.1:3671`, 280 telegrams captured in a 300 s window; `GroupValueWrite`, `GroupValueRead` (30), `GroupValueResponse` (30); all 280 resolved to a named group address from the project | RESEARCH §8.1 [V] |
+Every row below names the test that verifies it — CLAUDE.md forbids a
+compatibility claim with no test behind it.
 
-That is the whole of it. Everything verified here was verified in Session 0,
-against a single installation, using research scripts rather than this
-application — which has no importer yet.
+| Capability | Scope | Evidence | Test |
+| --- | --- | --- | --- |
+| Reading `.knxproj` schema 11 | One real ETS 4.1.8 project: 36 devices (35 addressed + 1 unassigned), 514 group addresses, 907 communication object instances, 569 send / 27 receive links, 1390 parameter values (1174 plain + 216 union), 22 building parts, 3 binary data references | RESEARCH §3 [V] | `the_reference_project_imports_with_the_measured_counts`, `nothing_in_the_reference_project_is_unknown_or_lost` (`knx-etsproj/tests/golden_reference_project.rs`) |
+| Reading `.knxproj` schema 23 | The same project re-exported from ETS 6.3.7959.0: 35 devices, 514 group addresses, 691 communication object instances, 1343 parameter values | RESEARCH §2.4/§3.3, reproducible with `tools/inspect_knxproj.py` [V] — format changes vs. schema 11 catalogued there | none — see "detects and refuses" below; no schema-23 importer exists |
+| Detecting schema 23 and refusing it by name, rather than misreading it through the schema-11 table | The same ETS6 export | RESEARCH §3.3 (the load-bearing format differences this would misread) | `importing_the_ets6_project_fails_with_a_named_reason_not_wrong_data` (`knx-etsproj/src/lib.rs`) |
+| Detecting a password-protected container and refusing it by name, rather than attempting decryption | A hand-built container shaped like a protected project (nested `<P-xxxx>.zip`) | IMPORT_EXPORT §2 [D for the decryption schemes; V for detection] | `a_password_protected_project_is_detected_and_named` (`knx-etsproj/src/container.rs`) |
+| Writing schema-11 containers our own reader reads back to a semantically equal model | The reference project, roundtripped | IMPORT_EXPORT §9, ADR-0007 | `roundtrip_model_is_semantically_equal` (`knx-etsproj/tests/roundtrip.rs`) |
+| Every opaque byte surviving a roundtrip unchanged | The reference project's 38 container entries | IMPORT_EXPORT §5 | `roundtrip_opaque_bytes_are_hash_identical` (`knx-etsproj/tests/roundtrip.rs`) |
+| A second roundtrip changing nothing the first one did not already normalize | The reference project, exported twice | IMPORT_EXPORT §9 | `a_second_roundtrip_changes_nothing_further` (`knx-etsproj/tests/roundtrip.rs`) |
+| Cross-checking the import against `xknxproject`'s own reading, on the parts it is not known to lose | The reference project | RESEARCH §7.1 | `group_addresses_agree_with_the_oracle_by_address_and_name`, `devices_agree_with_the_oracle_except_for_the_one_it_loses`, `the_project_metadata_agrees_with_the_oracle`, `our_linked_communication_objects_match_the_oracle_count` (`knx-etsproj/tests/oracle_xknxproject.rs`) |
+| Bad input (empty file, missing project part, truncated XML, no namespace, unsupported schema version, invalid address, duplicate id, dangling reference, an oversized declared entry size, 10000 levels of nesting) never panics and always produces a named error or a report entry | Ten hand-built malformed containers | CLAUDE.md's malformed-input testing rule | `knx-etsproj/tests/malformed_input.rs` (10 tests) |
+| KNXnet/IP tunnelling | One gateway at `192.0.2.1:3671`, 280 telegrams captured in a 300 s window; `GroupValueWrite`, `GroupValueRead` (30), `GroupValueResponse` (30); all 280 resolved to a named group address from the project | RESEARCH §8.1 [V] | none — a Session 0 research script, not an automated test; Session 6 builds the tested `BusConnection` |
+
+Every export this application produces is unsigned — see §3, "ETS re-import
+of a file we export."
 
 ## 3. Expected but unverified
 

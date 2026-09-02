@@ -65,7 +65,7 @@ fn workspace_root() -> PathBuf {
         .to_path_buf()
 }
 
-fn reference_ets4_bytes() -> Vec<u8> {
+pub(crate) fn reference_ets4_bytes() -> Vec<u8> {
     std::fs::read(workspace_root().join("Unser Zuhause ets4 - 2025-12-15.knxproj"))
         .expect("reference ETS4 project is committed at the workspace root")
 }

@@ -31,3 +31,4 @@ rusqlite = { version = "0.40", features = ["bundled"] }
 tempfile = "3"
 zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 quick-xml = "0.42"
+sha2 = "0.10"

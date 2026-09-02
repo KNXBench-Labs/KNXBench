@@ -6,6 +6,7 @@ pub mod detect;
 pub mod infer;
 pub mod known;
 pub mod map;
+pub mod opaque;
 pub mod parse;
 pub mod source;
 #[cfg(test)]

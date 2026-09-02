@@ -2693,7 +2693,7 @@ else — a dangling reference, an unparsable timestamp, an unknown attribute —
 a report entry, because a project that is partly readable should open partly
 rather than not at all.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 #[test]
@@ -2725,19 +2725,19 @@ change spelling — and importing schema 23 through the schema-11 table would
 undercount communication objects by about 24 per cent and read every boolean
 flag as false. Failing with a named reason is better than producing that.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj import`
 Expected: FAIL, `cannot find function import_knxproj`.
 
-- [ ] **Step 3: Implement the orchestration in `lib.rs`**
+- [x] **Step 3: Implement the orchestration in `lib.rs`**
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj import`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 5: Run the gate and commit**
+- [x] **Step 5: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/src

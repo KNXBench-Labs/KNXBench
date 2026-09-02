@@ -1911,7 +1911,7 @@ The distinction: an **error** is data the mapper cannot use (a dangling
 use but that is suspicious (two devices on the same individual address, a group
 address outside the range that contains it).
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 #[test]
@@ -1974,19 +1974,19 @@ fn an_address_outside_its_enclosing_range_is_a_warning() {
 }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj validate`
 Expected: FAIL, `cannot find function validate`.
 
-- [ ] **Step 3: Implement `validate.rs`**
+- [x] **Step 3: Implement `validate.rs`**
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj validate`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 5: Run the gate and commit**
+- [x] **Step 5: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/src

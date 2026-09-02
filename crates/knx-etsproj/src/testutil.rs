@@ -77,3 +77,7 @@ pub(crate) fn reference_source_document() -> SourceDocument {
         .unwrap()
         .document
 }
+
+pub(crate) fn reference_project() -> knx_core::Project {
+    crate::map::map(&reference_source_document(), "P-0512/0.xml").project
+}

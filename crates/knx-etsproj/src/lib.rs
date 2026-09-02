@@ -3,6 +3,7 @@
 
 pub mod container;
 pub mod detect;
+pub mod infer;
 pub mod known;
 pub mod map;
 pub mod parse;

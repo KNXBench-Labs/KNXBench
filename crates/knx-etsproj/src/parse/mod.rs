@@ -6,8 +6,10 @@
 //! dropped and never fatal on their own (CLAUDE.md's data-integrity rule).
 
 mod installation;
+mod project_info;
 
 pub use installation::parse_installation;
+pub use project_info::parse_project_info;
 
 use crate::source::{RetainedElement, SourceDocument};
 use quick_xml::events::BytesStart;

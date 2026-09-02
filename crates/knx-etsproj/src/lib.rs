@@ -10,7 +10,9 @@ pub mod source;
 pub use container::{Container, ContainerError, EntryInfo};
 pub use detect::{detect, DetectError, Detected, SchemaVersion};
 pub use known::{known_schema, KnownElement, KnownSchema};
-pub use parse::{parse_installation, ParseError, ParseOutput, UnknownConstruct, UnknownKind};
+pub use parse::{
+    parse_installation, parse_project_info, ParseError, ParseOutput, UnknownConstruct, UnknownKind,
+};
 pub use source::{
     RetainedAttribute, RetainedElement, SourceArea, SourceBinaryDataRef, SourceBuildingPart,
     SourceComObjectInstance, SourceDevice, SourceDocument, SourceGroupAddress, SourceGroupRange,

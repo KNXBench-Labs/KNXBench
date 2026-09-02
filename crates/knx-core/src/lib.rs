@@ -34,7 +34,7 @@ pub use group::{GroupAddressEntry, GroupRange};
 pub use ids::*;
 pub use installation::Installation;
 pub use parameter::ParameterInstance;
-pub use project::{IdAllocators, Project, CURRENT_SCHEMA_VERSION};
+pub use project::{IdAllocators, Project, ProjectInfo, CURRENT_SCHEMA_VERSION};
 pub use provenance::{Layer, Override, Resolved};
 pub use string_table::{Language, LocalizedString, StringTable, Text, TranslationKey};
 pub use topology::{Area, Line, Topology};

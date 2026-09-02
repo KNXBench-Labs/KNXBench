@@ -3,6 +3,8 @@
 //! `Topology::unassigned`; the reference project contains exactly one, and
 //! it is precisely the device `xknxproject` loses.
 
+use std::net::Ipv4Addr;
+
 use crate::ids::{AreaId, DeviceId, LineId, SourceRef};
 use crate::CompletionStatus;
 
@@ -25,6 +27,12 @@ pub struct Line {
     /// `MediumTypeRefId` — an opaque product reference, not interpreted
     /// here.
     pub medium_ref: String,
+    /// `DomainAddress` — powerline and RF domain address, uninterpreted:
+    /// its width and encoding depend on the medium.
+    pub domain_address: Option<String>,
+    pub domain_address_is_checked: Option<bool>,
+    pub ip_routing_multicast_address: Option<Ipv4Addr>,
+    pub multicast_ttl: Option<u8>,
     pub completion: CompletionStatus,
     pub devices: Vec<DeviceId>,
 }
@@ -66,6 +74,10 @@ mod tests {
             name: "L1".into(),
             address: 1,
             medium_ref: "TP".into(),
+            domain_address: None,
+            domain_address_is_checked: None,
+            ip_routing_multicast_address: None,
+            multicast_ttl: None,
             completion: CompletionStatus::FinishedDesign,
             devices: vec![],
         };
@@ -94,5 +106,23 @@ mod tests {
             unassigned: vec![DeviceId(7)],
         };
         assert_eq!(topo.unassigned, vec![DeviceId(7)]);
+    }
+
+    #[test]
+    fn a_line_carries_its_medium_configuration() {
+        let line = Line {
+            id: LineId(1),
+            source: source(),
+            name: "Hauptlinie".into(),
+            address: 1,
+            medium_ref: "MT-0".into(),
+            domain_address: Some("0".into()),
+            domain_address_is_checked: Some(false),
+            ip_routing_multicast_address: Some(Ipv4Addr::new(224, 0, 23, 12)),
+            multicast_ttl: Some(16),
+            completion: CompletionStatus::Accepted,
+            devices: vec![],
+        };
+        assert_eq!(line.multicast_ttl, Some(16));
     }
 }

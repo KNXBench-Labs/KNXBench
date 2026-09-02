@@ -15,6 +15,12 @@ pub struct GroupRange {
     pub name: String,
     pub start: GroupAddress,
     pub end: GroupAddress,
+    /// The main range this one nests under, if this is a middle range.
+    pub parent: Option<GroupRangeId>,
+    /// The middle ranges nested directly under this one, if this is a main
+    /// range. The reference project nests two levels deep — main range,
+    /// middle range, address — never three.
+    pub children: Vec<GroupRangeId>,
 }
 
 impl GroupRange {
@@ -58,9 +64,41 @@ mod tests {
             name: "Lighting".into(),
             start: GroupAddress::from_raw(100),
             end: GroupAddress::from_raw(200),
+            parent: None,
+            children: vec![],
         };
         assert!(r.contains(GroupAddress::from_raw(100)));
         assert!(r.contains(GroupAddress::from_raw(200)));
         assert!(!r.contains(GroupAddress::from_raw(201)));
+    }
+
+    #[test]
+    fn group_ranges_nest_two_levels_deep() {
+        let main = GroupRange {
+            id: GroupRangeId(1),
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "t".into(),
+            },
+            name: "Licht".into(),
+            start: GroupAddress::from_raw(2048),
+            end: GroupAddress::from_raw(4095),
+            parent: None,
+            children: vec![GroupRangeId(2)],
+        };
+        let middle = GroupRange {
+            id: GroupRangeId(2),
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "t".into(),
+            },
+            name: "Licht - An/Aus".into(),
+            start: GroupAddress::from_raw(2048),
+            end: GroupAddress::from_raw(2303),
+            parent: Some(main.id),
+            children: vec![],
+        };
+        assert!(main.contains(middle.start));
+        assert_eq!(middle.parent, Some(GroupRangeId(1)));
     }
 }

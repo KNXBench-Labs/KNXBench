@@ -170,6 +170,8 @@ mod tests {
             name: "R".into(),
             start: GroupAddress::from_raw(0),
             end: GroupAddress::from_raw(10),
+            parent: None,
+            children: vec![],
         };
         assert!(check_group_address_in_range(&range, GroupAddress::from_raw(11)).is_err());
         assert!(check_group_address_in_range(&range, GroupAddress::from_raw(5)).is_ok());

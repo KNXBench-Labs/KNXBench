@@ -1,6 +1,10 @@
 //! The project root aggregate: schema version, string table, installations,
 //! and the device map, plus synthetic id allocation (DATA_MODEL §2, §11).
 
+use chrono::{DateTime, Utc};
+
+use crate::address::GroupAddressStyle;
+use crate::commissioning::CompletionStatus;
 use crate::devices::Devices;
 use crate::ids::{
     AreaId, BuildingPartId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId, LineId,
@@ -69,9 +73,46 @@ impl IdAllocators {
     }
 }
 
+/// `Project/@Id` plus the `ProjectInformation` element.
+///
+/// `group_address_style` is here rather than on `GroupAddress` because it is a
+/// project-wide rendering choice: the 16-bit value never changes, only how it
+/// is written.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectInfo {
+    /// `Project/@Id`, e.g. `"P-0512"`. The container's project part is named
+    /// after it.
+    pub project_id: String,
+    /// `ProjectInformation/@Name`.
+    pub name: String,
+    /// `ProjectInformation/@ProjectId` — the user-facing project number, a
+    /// different thing from `project_id` despite the attribute name.
+    pub project_number: Option<String>,
+    pub group_address_style: GroupAddressStyle,
+    pub completion: CompletionStatus,
+    pub last_modified: Option<DateTime<Utc>>,
+    pub project_start: Option<DateTime<Utc>>,
+}
+
+impl Default for ProjectInfo {
+    fn default() -> Self {
+        Self {
+            project_id: String::new(),
+            name: String::new(),
+            project_number: None,
+            // ETS's own default, and the style of both reference exports.
+            group_address_style: GroupAddressStyle::ThreeLevel,
+            completion: CompletionStatus::Undefined,
+            last_modified: None,
+            project_start: None,
+        }
+    }
+}
+
 pub struct Project {
     pub schema_version: u32,
     pub strings: StringTable,
+    pub info: ProjectInfo,
     pub installations: Vec<Installation>,
     pub devices: Devices,
     pub ids: IdAllocators,
@@ -82,6 +123,7 @@ impl Project {
         Self {
             schema_version: CURRENT_SCHEMA_VERSION,
             strings: StringTable::new(default_language),
+            info: ProjectInfo::default(),
             installations: Vec::new(),
             devices: Devices::new(),
             ids: IdAllocators::default(),
@@ -106,5 +148,13 @@ mod tests {
         let p = Project::new(Language("en".into()));
         assert_eq!(p.schema_version, CURRENT_SCHEMA_VERSION);
         assert!(p.installations.is_empty());
+    }
+
+    #[test]
+    fn a_project_carries_its_group_address_style_and_identity() {
+        let p = Project::new(Language("de-DE".into()));
+        assert_eq!(p.info.group_address_style, GroupAddressStyle::ThreeLevel);
+        assert!(p.info.project_id.is_empty());
+        assert!(p.info.name.is_empty());
     }
 }

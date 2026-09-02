@@ -107,15 +107,21 @@ pub fn import_knxproj_bytes(
 ) -> Result<ImportOutcome, ImportFailure> {
     let file_size = bytes.len() as u64;
     let mut container = Container::open(bytes).map_err(ImportFailure::Container)?;
+    // Checked here, first, and not left to surface however `detect` (which
+    // also needs it internally, wrapped in its own `DetectError`) happens
+    // to encounter it: a container with no project part at all is a
+    // container-level problem, not a detection-level one, and reporting it
+    // as `ImportFailure::Container` rather than `ImportFailure::Detect`
+    // says so.
+    let part = container
+        .project_part()
+        .map_err(ImportFailure::Container)?
+        .to_string();
     let detected = detect(&mut container).map_err(ImportFailure::Detect)?;
     let schema = known_schema(detected.version.0).ok_or(ImportFailure::NoKnownSchemaTable {
         version: detected.version.0,
     })?;
 
-    let part = container
-        .project_part()
-        .map_err(ImportFailure::Container)?
-        .to_string();
     let topology_path = format!("{part}/0.xml");
     let info_path = format!("{part}/Project.xml");
 

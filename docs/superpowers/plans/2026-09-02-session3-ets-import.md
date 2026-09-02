@@ -3434,7 +3434,10 @@ fn an_invalid_individual_address_is_reported_and_the_device_still_imports() {
 #[test]
 fn a_duplicate_group_address_id_is_reported_and_both_entries_survive() {
     let out = import_knxproj_bytes(knxproj_with_duplicate_ga_id(), "dupe.knxproj").unwrap();
-    assert!(out.report.errors.iter().any(|e| e.detail.contains("duplicate")));
+    // `ProblemDetail::DuplicateId`'s `Debug` output capitalizes "Duplicate"
+    // (it is the variant name); measured against the real implementation —
+    // no `Debug`-formatted `ProblemDetail` ever produces lowercase "duplicate".
+    assert!(out.report.errors.iter().any(|e| e.detail.contains("Duplicate")));
     assert_eq!(out.project.installations[0].group_addresses.len(), 2);
 }
 
@@ -3452,8 +3455,12 @@ fn a_dangling_group_address_reference_drops_the_link_and_reports_it() {
 #[test]
 fn a_zip_bomb_shaped_entry_does_not_exhaust_memory() {
     // A single entry declaring a huge uncompressed size must be refused before
-    // it is read into a Vec, not after.
-    let bytes = zip_with_declared_size("P-0001/0.xml", 4 * 1024 * 1024 * 1024);
+    // it is read into a Vec, not after. 500 MB, not the 4 GiB a literal
+    // reading of this comment once said: 4 GiB is one past `u32::MAX`, the
+    // width of the plain (non-ZIP64) size field `zip_with_declared_size`
+    // patches by hand; 500 MB already clears the 64 MB guard with room to
+    // spare, without hitting that unrelated 32-bit boundary.
+    let bytes = zip_with_declared_size("P-0001/0.xml", 500 * 1024 * 1024);
     assert!(import_knxproj_bytes(bytes, "bomb.knxproj").is_err());
 }
 

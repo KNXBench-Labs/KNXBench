@@ -1,0 +1,410 @@
+# RESEARCH.md — Session 0: Technical Research
+
+Status: **complete for Session 0 scope**
+Date: 2026-09-02
+Method: primary-source inspection of a real ETS4 project plus a live KNX installation, supplemented by public documentation. No application code written in this session.
+
+Every statement below is tagged:
+
+* **[V]** — verified in this repository against real data or installed source code. Reproducible.
+* **[D]** — documented by a public, citable source, not verified here.
+* **[A]** — assumption or inference. Must be validated before it drives an irreversible design decision.
+
+---
+
+## 1. Evidence base
+
+| Artifact | What it is | Notes |
+| --- | --- | --- |
+| `Unser Zuhause ets4 - 2025-12-15.knxproj` | Real ETS 4.1.8 project, 1.7 MB packed / 22 MB unpacked, 38 archive entries | Not password protected. 36 devices, 514 group addresses, 4 manufacturers. |
+| `project_dump.json`, `group_addresses.json`, `devices.json` | `xknxproject` 3.10.0 output of that project | Used as a *reference implementation baseline*, not as ground truth. |
+| `bus_traffic.jsonl` | 280 live telegrams captured from the real bus | Via `monitor_bus.py`, KNXnet/IP tunnelling to gateway `192.0.2.1`. |
+| `.venv/` | `xknx` 3.20.0 (MIT), `xknxproject` 3.10.0 (GPL-2.0-only) | Source read directly for format details. |
+
+All container- and project-level numbers quoted below are reproducible with:
+
+```bash
+python3 tools/inspect_knxproj.py "Unser Zuhause ets4 - 2025-12-15.knxproj"
+```
+
+(stdlib only — deliberately no `xknxproject`, see §10.)
+
+This gives one complete, non-trivial, real-world reference installation. It is a **single sample**: everything derived from it describes schema version 11 (ETS 4.1) and four manufacturers. Sections marked as such must be re-verified against ETS5/ETS6 projects before being treated as general.
+
+---
+
+## 2. `.knxproj` container format
+
+### 2.1 Structure [V]
+
+`.knxproj` is a plain ZIP archive. Observed layout:
+
+```text
+knx_master.xml                      # KNX master data (DPTs, manufacturers, mask versions, media)
+<M-xxxx>.signature                  # one per referenced manufacturer
+<P-xxxx>.signature                  # one for the project
+<M-xxxx>/Catalog.xml                # manufacturer product catalog tree
+<M-xxxx>/Hardware.xml               # hardware, products, hardware→program mapping
+<M-xxxx>/Baggages.xml               # optional, references binary baggage
+<M-xxxx>/<M-xxxx>_A-<app>.xml       # application programs (one file each)
+<M-xxxx>/Baggages/*.dll             # opaque manufacturer binaries
+<P-xxxx>/Project.xml                # project metadata only
+<P-xxxx>/0.xml                      # installation 0: topology, buildings, group addresses
+<P-xxxx>/BinaryData/<guid>.dat      # opaque per-device blobs
+<P-xxxx>/ExtraData/*.azp, *.rbg     # opaque legacy (ETS3-era) plugin data
+```
+
+The project identifier is recovered from the `P-*.signature` filename [V]. Signature files contain a base64 blob (RSA signature over the entry content) [V]; the signing scheme is documented by KNX for product data and keyrings [D] and is **not** required to read a project.
+
+Note the filename case difference: ETS4 writes `Project.xml`, ETS5/6 write `project.xml` [V — encoded in `xknxproject/zip/extractor.py`].
+
+### 2.2 Schema versioning [V for 11, D otherwise]
+
+The schema version is the trailing integer of the default XML namespace, e.g. `http://knx.org/xml/project/11`. It must be read from the file, never assumed.
+
+| Namespace version | ETS generation |
+| --- | --- |
+| 11 | ETS 4.1 / 4.2 **[V]** |
+| 12 | ETS 4 **[D]** |
+| 13, 14 | ETS 5 up to 5.6 **[D]** |
+| 20 | ETS 5.7 **[D]** |
+| 21, 22, 23 … | ETS 6.x **[D]** |
+
+`xknxproject` reads the namespace from `knx_master.xml` (first or second line, differing between ETS 4.1 and later) [V]. Reading it from `P-*/0.xml` is equally valid for this sample and avoids a dependency on master-data placement [A].
+
+Official XSDs are **not** published on the public KNX website; they ship with the Manufacturer Tool (MT5/MT6) or via the KNX GitLab account [D]. We therefore cannot validate against an authoritative schema without KNX membership. Consequence: our importer must be **tolerant and inventorying** rather than schema-validating — see §9.
+
+### 2.3 Password protection [V — read from `xknxproject` source]
+
+When protected, the archive contains a nested `<P-xxxx>.zip`.
+
+* Schema < 21 (ETS4/ETS5): standard ZipCrypto, password used as UTF-8 bytes.
+* Schema >= 21 (ETS6): AES ZIP (`pyzipper`), password derived as
+
+```text
+base64( PBKDF2-HMAC-SHA256(
+    password = utf-16-le(user_password),
+    salt     = b"21.project.ets.knx.org",
+    iterations = 65536,
+    dklen    = 32 ) )
+```
+
+Our sample is unprotected, so this path is **unverified in practice** here. Must be tested against a real ETS6 protected project before we claim support.
+
+---
+
+## 3. Project content model (`0.xml`)
+
+Full element inventory of the real project, with observed counts and the complete attribute set actually used [V]:
+
+| Element | n | Attributes observed |
+| --- | --- | --- |
+| `Project` | 1 | `Id` |
+| `Installation` | 1 | `InstallationId`, `Name`, `BCUKey`, `DefaultLine`, `IPRoutingMulticastAddress`, `SplitType`, `CompletionStatus` |
+| `Area` | 1 | `Id`, `Name`, `Address`, `CompletionStatus` |
+| `Line` | 1 | `Id`, `Name`, `Address`, `MediumTypeRefId`, `DomainAddress`, `DomainAddressIsChecked`, `IPRoutingMulticastAddress`, `MulticastTTL`, `CompletionStatus` |
+| `BusAccess` | 1 | `Name`, `Edi`, `Parameter` |
+| `DeviceInstance` | 36 | `Id`, `Name`, `Description`, `Address`, `ProductRefId`, `Hardware2ProgramRefId`, `LastModified`, `LastDownload`, `CompletionStatus`, `IndividualAddressLoaded`, `ApplicationProgramLoaded`, `ParametersLoaded`, `CommunicationPartLoaded`, `MediumConfigLoaded`, `IsCommunicationObjectVisibilityCalculated`, `Broken` |
+| `ParameterInstanceRef` | 1390 | `RefId`, `Value` |
+| `ComObjectInstanceRef` | 907 | `RefId`, `IsActive`, `DatapointType`, `Description`, `Text`, `ReadFlag`, `WriteFlag`, `TransmitFlag`, `UpdateFlag`, `CommunicationFlag` |
+| `Send` / `Receive` | 569 / 27 | `GroupAddressRefId` |
+| `GroupRange` | 35 | `Id`, `Name`, `RangeStart`, `RangeEnd` |
+| `GroupAddress` | 514 | `Id`, `Name`, `Address`, `Central`, `Unfiltered` |
+| `BuildingPart` | 22 | `Id`, `Name`, `Number`, `Type`, `DefaultLine`, `CompletionStatus` |
+| `DeviceInstanceRef` | 29 | `RefId` |
+| `BinaryData` | 6 | `Id`, `Name` |
+
+### 3.1 Findings that constrain the domain model
+
+**Topology is not the only device container.** `Topology` contains `Area → Line → DeviceInstance`, *and* a sibling `UnassignedDevices` element. Our project has exactly one unassigned device (`Rolladenaktor J.1`, no `Address`) [V]. A model that assumes every device sits on a line will lose it.
+
+**A device's identity is a triple, not a name.** `ProductRefId` (hardware product) and `Hardware2ProgramRefId` (which application program version is loaded) are separate references, and both are needed to resolve parameters and communication objects. The individual address is *configuration*, not identity — it is absent for unassigned devices.
+
+**"Loaded" state is first-class.** `IndividualAddressLoaded`, `ApplicationProgramLoaded`, `ParametersLoaded`, `CommunicationPartLoaded`, `MediumConfigLoaded`, `LastDownload`, plus `CompletionStatus` (`Undefined` / `Editing` / `FinishedDesign` / `Accepted`, observed: 25× `FinishedDesign`, 11× `Undefined`) describe the delta between the planned project and the physical installation. This is engineering-critical state and must be in the core model, not treated as import metadata.
+
+**Group address links are directional.** `Connectors` holds `Send` and `Receive` children. 569 sending links vs. 27 receiving links in this project. Direction is semantically meaningful (which object writes the GA vs. which listens) and must not be flattened into an undirected "association" set.
+
+**Building structure is a tree with typed nodes.** `BuildingPart/@Type` observed: `Building` (1), `Floor` (3), `Room` (14), `Corridor` (2), `DistributionBoard` (1), `BuildingPart` (1). `BuildingPart` nests recursively and carries `DefaultLine`. Devices are attached by `DeviceInstanceRef`, i.e. **building placement is a many-to-one reference, independent of topology**. Two orthogonal hierarchies over the same device set.
+
+**`Functions` exist in the schema but not in this project** — `xknxproject` reports an empty `functions` map [V]. ETS5+ projects use them. Model design must not assume they are absent [A].
+
+**`BusAccess` stores the commissioning interface** as a free-form connection string:
+`Name='GATEWAY-NAME';IpAddr='192.0.2.1';Port='3671';NAT='on';` plus an `Edi` GUID identifying the ETS interface driver [V]. This is ETS-tool-specific configuration. It should be preserved verbatim for round-trip and *not* mapped into our own connection model.
+
+### 3.2 The override chain (most important single finding)
+
+A communication object's effective properties are resolved through **three layers**:
+
+```text
+ApplicationProgram/.../ComObject            (defaults: Name, Text, FunctionText,
+                                             ObjectSize, Priority, DatapointType, flags)
+        ↓ overridden by
+ApplicationProgram/.../ComObjectRef         (per-variant override: Text, FunctionText,
+                                             ObjectSize, DatapointType, flags, Tag)
+        ↓ overridden by
+0.xml  ComObjectInstanceRef                 (per-device-instance override: Text,
+                                             Description, DatapointType, all 5 flags, IsActive)
+```
+
+Frequency of instance-level overrides in this project [V]: `DatapointType` 758×, `Description` 691×, `Text` 121×, `ReadFlag` 39×, `UpdateFlag` 30×, `TransmitFlag` 27×, `WriteFlag` 18×, `CommunicationFlag` 8×.
+
+758 of 907 instances override the DPT. **An import that reads only the application program produces wrong data for the large majority of objects.** The core model must represent each layer separately (or store resolved values *plus* the layer they came from), otherwise export cannot reconstruct the original file and edits cannot be attributed.
+
+`ComObjectInstanceRef/@RefId` is a compound key of the form
+`M-006A_A-0001-22-26C0-O0079_O-0_R-10001` — application program id + `_O-<ComObject number>` + `_R-<ComObjectRef id>`. It simultaneously identifies the base object and the variant.
+
+---
+
+## 4. Manufacturer data model
+
+Verified against `M-006A` (small) and `M-0083` (2.4 MB application program) [V].
+
+```text
+Manufacturer (M-xxxx)
+├── Catalog
+│   └── CatalogSection (recursive)
+│       └── CatalogItem  → ProductRefId, Hardware2ProgramRefId
+├── Hardware
+│   └── Hardware  (SerialNumber, VersionNumber, BusCurrent, IsCoupler,
+│       │          IsPowerSupply, IsIPEnabled, HasIndividualAddress,
+│       │          OriginalManufacturer, …)
+│       ├── Products
+│       │   └── Product (OrderNumber, IsRailMounted, WidthInMillimeter,
+│       │                DefaultLanguage, Hash, RegistrationInfo)
+│       └── Hardware2Programs
+│           └── Hardware2Program (MediumTypes, Hash)
+│               ├── ApplicationProgramRef → ApplicationProgram Id
+│               └── RegistrationInfo (RegistrationNumber, RegistrationStatus,
+│                                     RegistrationSignature)
+├── ApplicationPrograms
+│   └── ApplicationProgram (ApplicationNumber, ApplicationVersion, MaskVersion,
+│       │                   ProgramType, PeiType, LoadProcedureStyle, …)
+│       ├── Static
+│       │   ├── Code → AbsoluteSegment (Address, Size, Data, Mask)
+│       │   ├── ParameterTypes → ParameterType
+│       │   │     (TypeNumber | TypeRestriction+Enumeration | TypeText | TypeNone | …)
+│       │   ├── Parameters → Parameter / Union → Memory (CodeSegment, Offset, BitOffset)
+│       │   ├── ParameterRefs → ParameterRef
+│       │   ├── ComObjectTable → ComObject
+│       │   ├── ComObjectRefs → ComObjectRef
+│       │   ├── AddressTable / AssociationTable (CodeSegment, Offset, MaxEntries)
+│       │   ├── LoadProcedures → LoadProcedure → LdCtrl*
+│       │   └── Options (≈25 Legacy* compatibility flags)
+│       └── Dynamic
+│           └── Channel → ParameterBlock → choose/when → ParameterRefRef / ComObjectRefRef
+└── Languages → Language → TranslationUnit → TranslationElement → Translation
+```
+
+### 4.1 Findings
+
+**The `Dynamic` tree is a conditional UI/visibility program, not a flat list.** `choose`/`when` nodes keyed on `ParamRefId` decide which parameters and which communication objects are visible and active for a given parameter configuration. Scale in one real device: 1211 `Parameter`, 2236 `ParameterRef`, 767 `ComObjectRef`, 526 `choose`, 1282 `when` [V]. Rendering a device editor faithfully means **evaluating this tree**, which is the single largest piece of work in an ETS alternative. `test` expressions on `when` need dedicated study (Session 4).
+
+**Parameter values live in memory layout, not in a property bag.** `Parameter/Memory` gives `CodeSegment`, `Offset`, `BitOffset`; `Union` packs several parameters into shared bits (104 `Union` elements in one program). Parameter *values* are stored per device in `0.xml` as `ParameterInstanceRef/@Value` (1390 in our project). Correct interpretation requires the `ParameterType` from the application program. This is also exactly what a device download must serialize into `AbsoluteSegment` memory images.
+
+**Translations are a side table, not inline text.** 5919 `Translation` elements in one application program. Every visible string may be language-dependent, resolved by `RefId` + `AttributeName`. The domain model needs a language-aware string resolution layer from the start; retrofitting it later is expensive.
+
+**`Options` carries ~25 `Legacy*` behavior flags** (`LegacyNoPartialDownload`, `ParameterByteOrder`, `TextParameterEncoding`, …). These change programming semantics per application. They are opaque to us for now; **preserve verbatim** and treat as a hard blocker signal for any download implementation.
+
+**Application programs are large.** Single file up to 5.7 MB in this project; total unpacked 22 MB for 12 distinct application programs. `xknxproject` requires `lxml` for exactly this reason [D]. Streaming/indexed parsing and a persistent product-database cache are a requirement, not an optimization.
+
+---
+
+## 5. `knx_master.xml`
+
+Content of the ETS4 master data file shipped inside our project [V]:
+
+* `DatapointTypes`: 46 main types, 289 subtypes.
+* `MediumTypes`: `MT-0` = TP, `MT-1` = PL, `MT-5` = IP. (RF absent in this ETS4 master file.)
+* `Manufacturers`: 447 entries, `M-0001` Siemens, `M-0002` ABB, …
+* `MaskVersions`: 29 entries, e.g. `MV-0010` mask `16` "1.0" `ManagementModel=Bcu1`, `MV-0020` mask `32` "2.0" `Bcu2`.
+* `Languages` / translations for the above.
+
+Each `MaskVersion` carries a `HawkConfigurationData` block containing `Resources` (611 `Resource` entries with `ResourceType`, `Location`, `AccessRights`), `MemorySegments` (47), `Procedures` (74 `Procedure` with `LdCtrlConnect`, `LdCtrlLoad`, `LdCtrlWriteMem`, `LdCtrlWriteProp`, `LdCtrlMerge`, `LdCtrlRestart`, …), `InterfaceObjects` (32) with `Property` definitions, `Features`, and `DownwardCompatibleMasks` [V].
+
+**This is the device-programming rulebook in machine-readable form.** Combined with the application program's own `LoadProcedures` and `AbsoluteSegment` data, the load procedure for a device is *data-driven*, not hardcoded per manufacturer. That makes commissioning technically approachable in principle — see §8 for why it is still out of scope for now.
+
+`knx_master.xml` is shipped **inside every `.knxproj`** [V]. We therefore always have the master data matching the project we import, and do not need to bundle our own copy to read a project. Whether that copy may be extracted and reused as a general database is a licensing question (§10).
+
+---
+
+## 6. Group addresses and DPT resolution
+
+* Style: `ThreeLevel` for this project; ETS also supports Free / TwoLevel [D]. Raw address is an integer; `raw_address=1` renders as `0/0/1` [V].
+* `GroupRange` nests two levels deep with `RangeStart`/`RangeEnd`; middle groups are `GroupRange` inside `GroupRange` [V].
+* `GroupAddress/@Central` and `@Unfiltered` are filter-table hints for line couplers — 2 addresses each in our project [V]. Rarely used, easily lost, must be preserved.
+
+### 6.1 DPT coverage is genuinely incomplete [V]
+
+Of 514 group addresses:
+
+| | count |
+| --- | --- |
+| no DPT set at all | 194 (38%) |
+| DPT 1.x (1.001 / 1.008 / 1.* unspecified) | 207 |
+| DPT 14.019 | 52 |
+| DPT 5.001 | 41 |
+| DPT 3.007 | 20 |
+
+Also: 110 of 514 group addresses (21%) have **no linked communication object** at all — orphan addresses that exist only as documentation. All 570 communication objects, by contrast, have at least one group address link.
+
+Implications:
+
+1. A DPT-less group address is normal, not an error. The model must allow it. Where a GA has no DPT but its linked communication objects do, the DPT can be **inferred** — but inference must be stored as inferred, never written back as if the user had set it.
+2. Orphan group addresses must survive import and export unchanged. They are the user's plan.
+3. Conflict case: multiple linked objects declaring different DPTs. Must be detected and reported, not silently resolved. (Not present in this sample; still needs a rule.)
+
+`data_secure` is `false` for all 514 addresses here — no Data Secure in this installation [V].
+
+---
+
+## 7. Opaque and unsupported data
+
+Data present in the file that we can preserve but should not interpret [V]:
+
+| Item | Content | Handling |
+| --- | --- | --- |
+| `<M>/Baggages/*.dll` | Windows PE binaries (`econEts3.dll` 641 KB, `FastDownload.dll` 160 KB) — ETS plug-ins | Preserve as opaque bytes. Never execute. Report as unsupported. |
+| `<P>/BinaryData/<guid>.dat` | 8-byte header + `<BlobInfo>` + CSV payload (`BlobFile=SmartSensor29899.blob`) | Preserve verbatim, keyed by `BinaryData/@Id` from `DeviceInstance`. |
+| `<P>/ExtraData/*.rbg`, `*.azp` | ISO-8859 CSV, CRLF — legacy ETS3-era plugin data. Byte-identical payload to the corresponding `.dat` minus header. | Preserve verbatim. |
+| `*.signature` | RSA signatures over manufacturer/project data | Preserve. Cannot be regenerated without KNX signing keys → **any export we write will be unsigned**. |
+| `Options/Legacy*` flags | Per-application compatibility switches | Preserve. Surface as capability blockers. |
+| `RegistrationInfo` / `Hash` attributes | Certification metadata | Preserve verbatim. |
+
+**These plug-in binaries are why "full ETS compatibility" is not achievable and must never be claimed.** For devices whose configuration lives partly inside a vendor DLL, no independent tool can reproduce ETS behavior.
+
+### 7.1 Measured data loss in `xknxproject` [V]
+
+`xknxproject` is an excellent *reader* but is explicitly lossy, and its output shape is a reasonable sanity baseline rather than an import target. Confirmed gaps against our sample:
+
+* **Parameter values dropped entirely.** 1390 `ParameterInstanceRef` in the file; the output model exposes none. Parameters are read only to substitute text placeholders in names (`xknxproject/util.py`, `models.py`).
+* **The unassigned device is dropped.** 36 `DeviceInstance` in the XML, 35 in `project_dump.json`.
+* Not represented: `BusAccess`, `BinaryData`/`ExtraData`, `CompletionStatus`, `LastModified`/`LastDownload`, the five `*Loaded` flags, `Broken`, `BCUKey`, `SplitType`, `GroupAddress/@Central`/`@Unfiltered`, `BuildingPart/@DefaultLine`, `Send`/`Receive` directionality.
+* No export path at all.
+
+Conclusion: **we must write our own parser.** `xknxproject` remains valuable as a cross-check oracle during development.
+
+---
+
+## 8. KNXnet/IP and bus access
+
+### 8.1 Verified live [V]
+
+Tunnelling to a real gateway at `192.0.2.1:3671` works from Linux via `xknx`, and 280 telegrams were captured in a 300 s window. Observed APCI: `GroupValueWrite` (majority), `GroupValueRead` (30), `GroupValueResponse` (30). Payload forms: `DPTBinary` (small values) and `DPTArray` (2/3/4-byte). All 280 telegrams resolved to a named group address from the project — the project model and the live bus agree.
+
+This confirms end to end: project data → group address semantics → live telegram decoding, on Linux, without ETS.
+
+### 8.2 Standards position [D]
+
+* KNXnet/IP is publicly standardized as **ISO 22510:2019** (EN ISO 22510:2020), covering Overview, Core, Device Management, Tunnelling, Routing, Remote Diagnosis, Secured Communication, plus cEMI and coupler resources. Purchasable, not free.
+* The full KNX Specification (v2.1/v3.0 — TP1, PL110, RF, application interworking) is available to KNX Association members via MyKNX, or purchasable from the KNX shop.
+* The publicly standardized subset is precisely why independent stacks (Calimero, knxd, xknx) target KNXnet/IP.
+
+### 8.3 Commissioning / device download — scope decision
+
+Technically, the ingredients are present and machine-readable: mask-version `Procedures` and `Resources` in `knx_master.xml`, `LoadProcedures` + `AbsoluteSegment` + `AddressTable`/`AssociationTable`/`ComObjectTable` offsets in each application program, and A_Memory/A_PropertyValue management services over the bus.
+
+It is nevertheless **out of scope for the current roadmap**, for reasons that are not going to change soon:
+
+1. Writing wrong memory images to a real device bricks it. This needs hardware we can afford to destroy.
+2. The `Legacy*` option matrix and partial-download rules are undocumented publicly.
+3. Vendor `Baggages` DLLs participate in download for some devices.
+4. KNX Secure devices require the key material handling of §9.
+
+Recommendation: build toward *read/diagnose/monitor* first (Session 6), and treat programming as a separate, later, explicitly-flagged research effort. Nothing in the architecture should preclude it — hence keeping `LoadProcedures`, `Memory`, `AbsoluteSegment` and mask data in the model rather than discarding them at import.
+
+---
+
+## 9. KNX Secure
+
+Not present in our sample installation (`data_secure=false` on all 514 group addresses, no keyring) — everything here is **[D]**.
+
+* **Data Secure**: each secured group address has a 128-bit runtime key. Each secure device has a tool key. ETS stores them in the `.knxproj` in protected form and can export them to a password-protected `.knxkeys` **keyring** file, which is the supported route for non-ETS clients.
+* **FDSK**: factory key printed on the device label / QR code as a 36-character device certificate (FDSK + KNX serial number). On first commissioning ETS replaces it with a per-tool Device Key. Without the project password, stored FDSKs are inaccessible and secure devices cannot be reprogrammed.
+* **Keyring format**: KNX publishes an official article; FDSK inside is separately encrypted, and the XML is signed using the same length-prefixed serialization scheme as product data. `xknx` already implements keyring decryption.
+* **ETS6 tunnel clients**: the keyring is exported per IP tunnel via *Export Interface Information*, not from the project security page.
+
+Design consequence: **key material must be a separate, isolated subsystem** with its own storage and access rules from day one. It must never be flattened into the general project model, never written to logs, exports, or reports, and must be omitted by default from any diagnostic dump. Retrofitting this is how secrets leak.
+
+Open question for a later session: can we read secured runtime keys directly out of a `.knxproj`, or only from a `.knxkeys` keyring? Untested.
+
+---
+
+## 10. Legal and licensing constraints
+
+**Not legal advice.** These are the constraints as best established from public sources; anything with commercial consequences needs a lawyer.
+
+* **Protocol vs. document.** Copyright covers the specification text, not the protocol. Implementing from a lawfully obtained specification is standard practice; redistributing the specification text is not. [D]
+* **Trademark.** "KNX" is a registered trademark. An independent tool can interoperate but cannot call itself KNX-certified without membership and conformance testing. Existing projects consistently use "KNX-compatible". **We should adopt the same wording in all user-facing text.** [D]
+* **ETS is proprietary.** Reading `.knxproj` we own is fine. We must not bundle ETS binaries, DLLs, or converters (`KnxCvNext.exe` requires an installed ETS). [D]
+* **Manufacturer product data.** `.knxprod` files are distributed through the KNX online catalog under KNX/manufacturer terms. Users importing their own downloaded product data is one thing; **us redistributing a product database is another**. Product data must stay strictly separable from application code and must not be committed to this repository. [D] — matches the rule already in `CLAUDE.md`.
+* **`knx_master.xml` extracted from a project** is KNX Association content. Read it from the user's own file at import time; do not vendor a copy. [A — conservative default]
+* **Dependency licensing — hard architectural constraint [V]:**
+
+  | Package | License | Consequence |
+  | --- | --- | --- |
+  | `xknx` 3.20.0 | MIT | Safe to depend on under any license. |
+  | `xknxproject` 3.10.0 | **GPL-2.0-only** | Linking it forces the whole application to GPL-2.0. |
+
+  Since §7.1 already establishes that we need our own parser, the clean resolution is: **`xknxproject` is a development/test-only dependency, never a runtime dependency.** This must be enforced mechanically (separate dependency group + a test that the runtime import graph never reaches it), and recorded as an ADR in Session 1.
+
+* **The `.knxprod` container** is the same XML family as `.knxproj` (master data scheme 11 vs. 12+); newer files cannot be read by older ETS. Its encryption/obfuscation layer for newer schemes was **not** established by this research and remains an open question. [D/open]
+
+---
+
+## 11. Risks
+
+| # | Risk | Severity | Mitigation |
+| --- | --- | --- | --- |
+| R1 | Single-sample bias: everything verified here is schema 11 / ETS 4.1 | High | Acquire ETS5 (13/14, 20) and ETS6 (21+) sample projects before Session 3. Treat §3 as version-specific until then. |
+| R2 | No authoritative XSD available | High | Tolerant parser + exhaustive unknown-element/attribute inventory, reported to the user (§12). |
+| R3 | `Dynamic` tree (`choose`/`when`) evaluation is the real complexity | High | Dedicated research spike in Session 4 before any device editor UI. |
+| R4 | Round-trip cannot be byte-exact (signatures, attribute ordering, ETS-internal ids) | Medium | Define round-trip fidelity as *semantic* equality over a declared model + verbatim passthrough of opaque parts. Never claim byte-exactness. |
+| R5 | Vendor plug-in DLLs make some devices unconfigurable by us | Medium | Detect `Baggages`, mark affected devices read-only, report clearly. |
+| R6 | GPL-2.0 contamination via `xknxproject` | Medium | Test-only dependency, enforced by CI. |
+| R7 | Product database size/performance (22 MB for 12 programs) | Medium | Indexed, cached, versioned product DB layer; never re-parse per open. |
+| R8 | Secret leakage once KNX Secure is supported | High | Isolated key subsystem, excluded from exports/logs by default. |
+| R9 | Writing an unsigned `.knxproj` may be rejected by ETS on re-import | Medium | Test explicitly. If rejected, our export is a one-way documentation format and must say so. |
+
+---
+
+## 12. Conclusions for Session 1 (Architecture)
+
+Recommendations carried forward, each traceable to a finding above:
+
+1. **Write our own `.knxproj` reader.** §7.1. `xknxproject` stays as a test oracle only, and as a test-only dependency for license reasons (§10).
+2. **Model the three-layer override chain explicitly** (ComObject → ComObjectRef → ComObjectInstanceRef), keeping provenance per resolved value. §3.2 — this affects 758 of 907 objects and cannot be bolted on later.
+3. **Two orthogonal hierarchies over one device set**: topology (Area/Line, plus unassigned) and building (recursive typed `BuildingPart`). Neither owns the device. §3.1.
+4. **Directional group-address links** (send / receive), not undirected associations. §3.1.
+5. **Commissioning state is domain data**, not import metadata: `*Loaded` flags, `LastDownload`, `CompletionStatus`, `Broken`. §3.1.
+6. **Language-aware strings from the start.** Translations are a side table with 5919 entries in a single application program. §4.1.
+7. **Every import produces a report**: unknown elements/attributes encountered, opaque data preserved, values inferred (e.g. DPT from linked objects), conflicts, and unsupported features. This is a core deliverable of the importer, not a logging afterthought. §6.1, §7, R2.
+8. **Opaque-passthrough store** keyed by source path, so binaries, signatures and legacy plugin data survive a round trip untouched. §7.
+9. **Product database is a separate, versioned, cached layer**, keyed by (manufacturer, application program, version), never bundled with the application. §4.1, §10.
+10. **Key material is an isolated subsystem** even before KNX Secure is implemented. §9.
+11. **Retain low-level programming data** (`Memory`, `AbsoluteSegment`, `LoadProcedures`, mask/resource data) at import even though commissioning is out of scope, so that path stays open. §8.3.
+12. **User-facing wording is "KNX-compatible", never "KNX certified" or "full ETS compatibility".** §7, §10.
+
+### Open questions to resolve before or during Session 3
+
+* ETS5/ETS6 schema deltas (13, 14, 20, 21+) — needs sample projects. (R1)
+* `Functions` element semantics — absent from our sample. (§3.1)
+* `when/@test` expression grammar in the `Dynamic` tree. (R3)
+* Whether ETS re-imports an unsigned `.knxproj` written by a third-party tool. (R9)
+* Whether Data Secure runtime keys are readable from `.knxproj` or only from `.knxkeys`. (§9)
+* `.knxprod` encryption for master data scheme 12+. (§10)
+
+---
+
+## Sources
+
+* [Project schema description – KNX Association](https://support.knx.org/hc/en-us/articles/4408207190674-Project-schema-description)
+* [Unexpected XML namespace "http://knx.org/xml/project/14" – KNX Association](https://support.knx.org/hc/en-us/articles/360007208400-Unexpected-XML-namespace-http-knx-org-xml-project-14)
+* [calimero-project/import-ets-xml (archived)](https://github.com/calimero-project/import-ets-xml)
+* [calimero-project/calimero-core](https://github.com/calimero-project/calimero-core)
+* [XKNX/xknxproject](https://github.com/XKNX/xknxproject)
+* [KNX Data Secure – KNX Association](https://support.knx.org/hc/en-us/articles/360012689639-KNX-Data-Secure)
+* [Keyring File Format – KNX Association](https://support.knx.org/hc/en-us/articles/18968368409874-Keyring-File-Format)
+* [Manufacturer Product Databases – KNX Association](https://www2.knx.org/ie/software/ets/manufacturer-product-databases/index.php)
+* [File formats used during registration/certification – KNX Association](https://support.knx.org/hc/en-us/articles/4659247971346-File-formats-used-during-registration-certification)
+* [ISO 22510:2019 — KNXnet/IP communication](https://www.iso.org/standard/73364.html)
+* [thelsing/CreateKnxProd](https://github.com/thelsing/CreateKnxProd)

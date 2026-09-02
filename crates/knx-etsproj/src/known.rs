@@ -39,7 +39,47 @@ pub fn known_schema(version: u32) -> Option<&'static KnownSchema> {
     }
 }
 
-/// Transcribed from the ETS4 reference project's measured inventory: 27
+/// `DeviceInstance`'s attribute list and the shape of its subtree do not
+/// depend on where it sits: the reference project has `DeviceInstance`
+/// under both `Line` (assigned to a line) and `UnassignedDevices` (parsed
+/// off the bus, not yet placed) with identical attributes and identical
+/// children. Shared here so the two locations' table entries cannot drift
+/// apart.
+const DEVICE_INSTANCE_ATTRS: &[&str] = &[
+    "Id",
+    "Name",
+    "Description",
+    "Address",
+    "ProductRefId",
+    "Hardware2ProgramRefId",
+    "LastModified",
+    "LastDownload",
+    "CompletionStatus",
+    "IndividualAddressLoaded",
+    "ApplicationProgramLoaded",
+    "ParametersLoaded",
+    "CommunicationPartLoaded",
+    "MediumConfigLoaded",
+    "IsCommunicationObjectVisibilityCalculated",
+    "Broken",
+];
+const PARAMETER_INSTANCE_REF_ATTRS: &[&str] = &["RefId", "Value"];
+const COM_OBJECT_INSTANCE_REF_ATTRS: &[&str] = &[
+    "RefId",
+    "IsActive",
+    "DatapointType",
+    "Text",
+    "Description",
+    "ReadFlag",
+    "WriteFlag",
+    "TransmitFlag",
+    "UpdateFlag",
+    "CommunicationFlag",
+];
+const CONNECTOR_ATTRS: &[&str] = &["GroupAddressRefId"];
+const BINARY_DATA_LEAF_ATTRS: &[&str] = &["Id", "Name"];
+
+/// Transcribed from the ETS4 reference project's measured inventory: 37
 /// element paths. `ProjectInformation` is measured from `Project.xml`
 /// (`P-0512/Project.xml`, ETS4's spelling); every other path is measured
 /// from `0.xml`. Both files share the same root `<KNX>` element and
@@ -112,24 +152,7 @@ pub const SCHEMA_11: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance",
-            attributes: &[
-                "Id",
-                "Name",
-                "Description",
-                "Address",
-                "ProductRefId",
-                "Hardware2ProgramRefId",
-                "LastModified",
-                "LastDownload",
-                "CompletionStatus",
-                "IndividualAddressLoaded",
-                "ApplicationProgramLoaded",
-                "ParametersLoaded",
-                "CommunicationPartLoaded",
-                "MediumConfigLoaded",
-                "IsCommunicationObjectVisibilityCalculated",
-                "Broken",
-            ],
+            attributes: DEVICE_INSTANCE_ATTRS,
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ParameterInstanceRefs",
@@ -137,7 +160,7 @@ pub const SCHEMA_11: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ParameterInstanceRefs/ParameterInstanceRef",
-            attributes: &["RefId", "Value"],
+            attributes: PARAMETER_INSTANCE_REF_ATTRS,
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ComObjectInstanceRefs",
@@ -145,18 +168,7 @@ pub const SCHEMA_11: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ComObjectInstanceRefs/ComObjectInstanceRef",
-            attributes: &[
-                "RefId",
-                "IsActive",
-                "DatapointType",
-                "Text",
-                "Description",
-                "ReadFlag",
-                "WriteFlag",
-                "TransmitFlag",
-                "UpdateFlag",
-                "CommunicationFlag",
-            ],
+            attributes: COM_OBJECT_INSTANCE_REF_ATTRS,
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ComObjectInstanceRefs/ComObjectInstanceRef/Connectors",
@@ -164,11 +176,11 @@ pub const SCHEMA_11: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ComObjectInstanceRefs/ComObjectInstanceRef/Connectors/Send",
-            attributes: &["GroupAddressRefId"],
+            attributes: CONNECTOR_ATTRS,
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/ComObjectInstanceRefs/ComObjectInstanceRef/Connectors/Receive",
-            attributes: &["GroupAddressRefId"],
+            attributes: CONNECTOR_ATTRS,
         },
         KnownElement {
             // The wrapper form: no attributes of its own, holds leaf
@@ -179,11 +191,60 @@ pub const SCHEMA_11: KnownSchema = KnownSchema {
         KnownElement {
             // The leaf form, same element name as its wrapper.
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/DeviceInstance/BinaryData/BinaryData",
-            attributes: &["Id", "Name"],
+            attributes: BINARY_DATA_LEAF_ATTRS,
         },
         KnownElement {
-            path: "/KNX/Project/Installations/Installation/UnassignedDevices",
+            // Measured (Task 6): nested inside `Topology`, a sibling of
+            // `Area`, not a sibling of `Topology` under `Installation` as
+            // first transcribed in Task 5. `grep -n` against the reference
+            // project's `0.xml` shows `</Area>` immediately followed by
+            // `<UnassignedDevices>` before `</Topology>` closes.
+            path: "/KNX/Project/Installations/Installation/Topology/UnassignedDevices",
             attributes: &[],
+        },
+        KnownElement {
+            // Same element, same attributes, same subtree shape as
+            // `.../Line/DeviceInstance` — an unassigned device just has no
+            // `Line` parent yet. Measured (Task 6) at the same reference
+            // project location as `UnassignedDevices` above.
+            path: "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance",
+            attributes: DEVICE_INSTANCE_ATTRS,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance/ParameterInstanceRefs",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance/ParameterInstanceRefs/ParameterInstanceRef",
+            attributes: PARAMETER_INSTANCE_REF_ATTRS,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance/ComObjectInstanceRefs",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance/ComObjectInstanceRefs/ComObjectInstanceRef",
+            attributes: COM_OBJECT_INSTANCE_REF_ATTRS,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance/ComObjectInstanceRefs/ComObjectInstanceRef/Connectors",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance/ComObjectInstanceRefs/ComObjectInstanceRef/Connectors/Send",
+            attributes: CONNECTOR_ATTRS,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance/ComObjectInstanceRefs/ComObjectInstanceRef/Connectors/Receive",
+            attributes: CONNECTOR_ATTRS,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance/BinaryData",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance/BinaryData/BinaryData",
+            attributes: BINARY_DATA_LEAF_ATTRS,
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Buildings",
@@ -259,7 +320,9 @@ mod tests {
     #[test]
     fn the_table_has_exactly_the_measured_element_count() {
         // 26 distinct element names; BinaryData occurs as both a wrapper
-        // (no attributes) and a leaf (Id, Name), so 27 distinct paths.
-        assert_eq!(known_schema(11).unwrap().elements.len(), 27);
+        // (no attributes) and a leaf (Id, Name), so 27 distinct paths under
+        // Line, plus the same 10-element DeviceInstance subtree repeated
+        // under UnassignedDevices (measured, Task 6), so 37 distinct paths.
+        assert_eq!(known_schema(11).unwrap().elements.len(), 37);
     }
 }

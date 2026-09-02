@@ -1583,8 +1583,8 @@ fn an_empty_attribute_value_is_kept_as_an_empty_string_not_dropped() {
 fn an_unknown_attribute_is_reported_with_its_value_and_not_fatal() {
     let xml = String::from_utf8(MINIMAL.to_vec())
         .unwrap()
-        .replace(r#"Address="1" CompletionStatus="Accepted""#,
-                 r#"Address="1" CompletionStatus="Accepted" Puid="42""#);
+        .replace(r#"MediumTypeRefId="MT-0" CompletionStatus="Accepted""#,
+                 r#"MediumTypeRefId="MT-0" CompletionStatus="Accepted" Puid="42""#);
     let out = parse_installation(xml.as_bytes(), "P-0001/0.xml", known_schema(11).unwrap()).unwrap();
     let u = out.unknown.iter().find(|u| u.name == "Puid").unwrap();
     assert_eq!(u.kind, UnknownKind::Attribute);

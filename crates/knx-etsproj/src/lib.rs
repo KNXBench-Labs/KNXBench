@@ -4,6 +4,7 @@
 pub mod container;
 pub mod detect;
 pub mod known;
+pub mod map;
 pub mod parse;
 pub mod source;
 #[cfg(test)]

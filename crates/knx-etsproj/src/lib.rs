@@ -3,6 +3,7 @@
 
 pub mod container;
 pub mod detect;
+pub mod export;
 pub mod infer;
 pub mod known;
 pub mod map;
@@ -147,6 +148,20 @@ pub fn import_knxproj_bytes(
     }
     for element in &parsed.retained_elements {
         opaque_entries.push(opaque::from_retained_element(&topology_path, element));
+    }
+    // `SourceLine/@BusAccess` is known but deliberately not modeled (Task
+    // 6), so it is not among the genuinely-unknown elements in
+    // `retained_elements` above — it is captured per-`SourceLine` instead.
+    // Export needs it back regardless of which of the two buckets it came
+    // from, so both are walked into the same opaque entry list here.
+    for installation in &parsed.document.installations {
+        for area in &installation.areas {
+            for line in &area.lines {
+                if let Some(bus_access) = &line.bus_access {
+                    opaque_entries.push(opaque::from_retained_element(&topology_path, bus_access));
+                }
+            }
+        }
     }
 
     let import_report = report::build(

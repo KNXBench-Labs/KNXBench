@@ -701,7 +701,7 @@ model. Adding them now is cheaper than discovering it inside the mapper.
   `Line::{domain_address, domain_address_is_checked, ip_routing_multicast_address, multicast_ttl}`;
   `GroupRange::{parent, children}`; `ParameterInstance::device`.
 
-- [ ] **Step 1: Write a failing test for `ProjectInfo`**
+- [x] **Step 1: Write a failing test for `ProjectInfo`**
 
 Add to `crates/knx-core/src/project.rs`:
 
@@ -715,12 +715,12 @@ fn a_project_carries_its_group_address_style_and_identity() {
 }
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `cargo test -p knx-core project`
 Expected: FAIL, `no field info on type Project`.
 
-- [ ] **Step 3: Implement `ProjectInfo`**
+- [x] **Step 3: Implement `ProjectInfo`**
 
 Add to `crates/knx-core/src/project.rs`:
 
@@ -770,12 +770,12 @@ and give `Project` an `info: ProjectInfo` field, initialised to
 are ETS tool state with no meaning in this model. They are retained as opaque
 attributes by Task 12, not modelled here.
 
-- [ ] **Step 4: Run it and watch it pass**
+- [x] **Step 4: Run it and watch it pass**
 
 Run: `cargo test -p knx-core project`
 Expected: PASS.
 
-- [ ] **Step 5: Write a failing test for line medium configuration**
+- [x] **Step 5: Write a failing test for line medium configuration**
 
 Add to `crates/knx-core/src/topology.rs`:
 
@@ -799,12 +799,12 @@ fn a_line_carries_its_medium_configuration() {
 }
 ```
 
-- [ ] **Step 6: Run it and watch it fail**
+- [x] **Step 6: Run it and watch it fail**
 
 Run: `cargo test -p knx-core topology`
 Expected: FAIL, `struct Line has no field named domain_address`.
 
-- [ ] **Step 7: Add the fields**
+- [x] **Step 7: Add the fields**
 
 ```rust
 pub struct Line {
@@ -822,12 +822,12 @@ pub struct Line {
 `Line`, is deliberately not modelled: RESEARCH §3.1 and DATA_MODEL §4 record it
 as opaque tool configuration. Task 12 retains it verbatim.
 
-- [ ] **Step 8: Run it and watch it pass**
+- [x] **Step 8: Run it and watch it pass**
 
 Run: `cargo test -p knx-core topology`
 Expected: PASS.
 
-- [ ] **Step 9: Write a failing test for group range nesting**
+- [x] **Step 9: Write a failing test for group range nesting**
 
 Add to `crates/knx-core/src/group.rs`:
 
@@ -857,23 +857,23 @@ fn group_ranges_nest_two_levels_deep() {
 }
 ```
 
-- [ ] **Step 10: Run it and watch it fail**
+- [x] **Step 10: Run it and watch it fail**
 
 Run: `cargo test -p knx-core group`
 Expected: FAIL, `struct GroupRange has no field named parent`.
 
-- [ ] **Step 11: Add `parent` and `children` to `GroupRange`**
+- [x] **Step 11: Add `parent` and `children` to `GroupRange`**
 
 The reference project nests `GroupRanges/GroupRange/GroupRange/GroupAddress`:
 7 main ranges, 28 middle ranges, 514 addresses. Flattening the two levels
 loses the tree the user built.
 
-- [ ] **Step 12: Run it and watch it pass**
+- [x] **Step 12: Run it and watch it pass**
 
 Run: `cargo test -p knx-core group`
 Expected: PASS.
 
-- [ ] **Step 13: Give `ParameterInstance` its owning device**
+- [x] **Step 13: Give `ParameterInstance` its owning device**
 
 `ParameterInstanceRef` is nested under `DeviceInstance`; `Installation`
 holds a flat `Vec<ParameterInstance>`. Without a device field the association
@@ -910,12 +910,12 @@ fn a_union_parameter_ref_id_is_stored_verbatim() {
 }
 ```
 
-- [ ] **Step 14: Run the gate**
+- [x] **Step 14: Run the gate**
 
 Run the full gate command.
 Expected: all six commands pass.
 
-- [ ] **Step 15: Commit**
+- [x] **Step 15: Commit**
 
 ```bash
 git add crates/knx-core/src

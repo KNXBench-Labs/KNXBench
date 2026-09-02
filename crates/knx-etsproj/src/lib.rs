@@ -26,3 +26,177 @@ pub use source::{
     SourceComObjectInstance, SourceDevice, SourceDocument, SourceGroupAddress, SourceGroupRange,
     SourceInstallation, SourceLine, SourceParameterInstance, SourceProjectInfo,
 };
+
+/// The result of a successful [`import_knxproj`]: the mapped project, every
+/// opaque entry export needs to write back unchanged, and the human-facing
+/// report summarizing all of it.
+pub struct ImportOutcome {
+    pub project: knx_core::Project,
+    pub opaque: Vec<opaque::OpaqueEntry>,
+    pub report: report::ImportReport,
+}
+
+// Hand-written rather than derived: `knx_core::Project` implements no
+// `Debug` (it owns a `StringTable`/`IdAllocators`, neither meaningfully
+// printable), so `ImportOutcome` cannot derive it either. This impl exists
+// only so `Result<ImportOutcome, _>::unwrap_err()` compiles in tests —
+// `opaque`'s entries carry raw bytes up to tens of megabytes each (Task 12),
+// so this prints their count, never their content.
+impl std::fmt::Debug for ImportOutcome {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImportOutcome")
+            .field("project", &"knx_core::Project { .. }")
+            .field("opaque", &format!("{} entries", self.opaque.len()))
+            .field("report", &self.report)
+            .finish()
+    }
+}
+
+/// Why an import could not even begin — a container that cannot be opened
+/// at all, a schema version with no known-element table, or XML that
+/// cannot be read. Everything else (a dangling reference, an unparsable
+/// timestamp, an unknown attribute) is a report entry instead: a project
+/// that is partly readable should open partly, not fail outright.
+#[derive(Debug)]
+pub enum ImportFailure {
+    Io(std::io::Error),
+    Container(ContainerError),
+    Detect(DetectError),
+    Parse(ParseError),
+    NoKnownSchemaTable { version: u32 },
+}
+
+impl std::fmt::Display for ImportFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ImportFailure::Io(e) => write!(f, "{e}"),
+            ImportFailure::Container(e) => write!(f, "{e}"),
+            ImportFailure::Detect(e) => write!(f, "{e}"),
+            ImportFailure::Parse(e) => write!(f, "{e}"),
+            ImportFailure::NoKnownSchemaTable { version } => {
+                write!(f, "no known-element table for schema version {version}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for ImportFailure {}
+
+/// Reads and imports a `.knxproj` file from disk.
+pub fn import_knxproj(path: &std::path::Path) -> Result<ImportOutcome, ImportFailure> {
+    let bytes = std::fs::read(path).map_err(ImportFailure::Io)?;
+    let file_name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default()
+        .to_string();
+    import_knxproj_bytes(bytes, &file_name)
+}
+
+/// Imports a `.knxproj` archive already in memory, running every stage in
+/// order: detect the schema version, parse both `0.xml` and `Project.xml`
+/// against its known-element table, validate the parsed document,
+/// map it into `knx_core::Project`, infer group address datapoint types,
+/// collect every container entry the exporter would otherwise have to
+/// regenerate, and fold all of it into one [`report::ImportReport`].
+pub fn import_knxproj_bytes(
+    bytes: Vec<u8>,
+    file_name: &str,
+) -> Result<ImportOutcome, ImportFailure> {
+    let file_size = bytes.len() as u64;
+    let mut container = Container::open(bytes).map_err(ImportFailure::Container)?;
+    let detected = detect(&mut container).map_err(ImportFailure::Detect)?;
+    let schema = known_schema(detected.version.0).ok_or(ImportFailure::NoKnownSchemaTable {
+        version: detected.version.0,
+    })?;
+
+    let part = container
+        .project_part()
+        .map_err(ImportFailure::Container)?
+        .to_string();
+    let topology_path = format!("{part}/0.xml");
+    let info_path = format!("{part}/Project.xml");
+
+    let topology_bytes = container
+        .read(&topology_path)
+        .map_err(ImportFailure::Container)?;
+    let mut parsed = parse_installation(&topology_bytes, &topology_path, schema)
+        .map_err(ImportFailure::Parse)?;
+
+    let info_bytes = container
+        .read(&info_path)
+        .map_err(ImportFailure::Container)?;
+    let (info, info_unknown) =
+        parse_project_info(&info_bytes, &info_path, schema).map_err(ImportFailure::Parse)?;
+    parsed.document.info = info;
+
+    let mut unknown = parsed.unknown;
+    unknown.extend(info_unknown);
+
+    let validation = validate::validate(&parsed.document);
+    let mapped = map::map(&parsed.document, &topology_path);
+    let inference = infer::infer_group_address_dpts(&mapped.project);
+
+    let mut opaque_entries = opaque::collect_container_entries(
+        &mut container,
+        &[topology_path.as_str(), info_path.as_str()],
+    )
+    .map_err(ImportFailure::Container)?;
+    for attribute in &mapped.retained {
+        opaque_entries.push(opaque::from_retained_attribute(&topology_path, attribute));
+    }
+    for element in &parsed.retained_elements {
+        opaque_entries.push(opaque::from_retained_element(&topology_path, element));
+    }
+
+    let import_report = report::build(
+        file_name,
+        file_size,
+        &detected,
+        &unknown,
+        &validation,
+        &mapped,
+        &inference,
+        &opaque_entries,
+    );
+
+    Ok(ImportOutcome {
+        project: mapped.project,
+        opaque: opaque_entries,
+        report: import_report,
+    })
+}
+
+#[cfg(test)]
+mod import_tests {
+    use super::*;
+    use crate::testutil::{reference_ets4_path, reference_ets6_path};
+    use knx_core::GroupAddressStyle;
+
+    #[test]
+    fn importing_the_reference_project_succeeds_with_a_clean_report() {
+        let out = import_knxproj(&reference_ets4_path()).unwrap();
+        assert_eq!(out.report.source.schema_version, 11);
+        assert_eq!(out.report.errors, vec![]);
+        assert_eq!(out.project.info.name, "Unser Zuhause");
+        assert_eq!(
+            out.project.info.group_address_style,
+            GroupAddressStyle::ThreeLevel
+        );
+    }
+
+    #[test]
+    fn importing_the_ets6_project_fails_with_a_named_reason_not_wrong_data() {
+        let err = import_knxproj(&reference_ets6_path()).unwrap_err();
+        assert!(matches!(
+            err,
+            ImportFailure::NoKnownSchemaTable { version: 23 }
+        ));
+    }
+
+    #[test]
+    fn the_opaque_entries_cover_every_container_entry_we_do_not_regenerate() {
+        let out = import_knxproj(&reference_ets4_path()).unwrap();
+        assert_eq!(out.opaque.iter().filter(|e| e.xpath.is_empty()).count(), 36);
+    }
+}

@@ -34,15 +34,24 @@ impl std::fmt::Display for ValueError {
 
 impl std::error::Error for ValueError {}
 
-/// Schema 11 writes `"1"`/`"0"`; schema 23 writes `"true"`/`"false"`
-/// (RESEARCH §3.3). Both are accepted regardless of source schema, since
-/// the same converter serves both.
+/// Schema 11 writes `"1"`/`"0"` for most boolean attributes, `"true"`/
+/// `"false"` on schema 23 (RESEARCH §3.3). A third spelling is schema-11
+/// specific but not schema-wide: `ComObjectInstanceRef`'s five flag
+/// attributes (`ReadFlag`, `WriteFlag`, `TransmitFlag`, `UpdateFlag`,
+/// `CommunicationFlag`) write `"Enabled"`/`"Disabled"` — measured directly
+/// against the reference project (every other boolean attribute there,
+/// `IsActive` through `DomainAddressIsChecked`, still writes `"1"`/`"0"`),
+/// not documented in RESEARCH before this was found; see RESEARCH §3.3's
+/// amendment. All three spellings are accepted regardless of source schema
+/// or attribute, since the same converter serves all of them.
 pub fn parse_bool(s: &str) -> Result<bool, ValueError> {
     match s {
         "1" => Ok(true),
         "0" => Ok(false),
         _ if s.eq_ignore_ascii_case("true") => Ok(true),
         _ if s.eq_ignore_ascii_case("false") => Ok(false),
+        _ if s.eq_ignore_ascii_case("enabled") => Ok(true),
+        _ if s.eq_ignore_ascii_case("disabled") => Ok(false),
         _ => Err(ValueError::NotABoolean(s.to_string())),
     }
 }
@@ -153,13 +162,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn both_boolean_spellings_parse() {
-        // Schema 11 writes "1"/"0"; schema 23 writes "true"/"false" (RESEARCH §3.3).
+    fn all_three_boolean_spellings_parse() {
+        // Schema 11 writes "1"/"0"; schema 23 writes "true"/"false" (RESEARCH
+        // §3.3); ComObjectInstanceRef's five flag attributes write
+        // "Enabled"/"Disabled" on schema 11 specifically (measured against
+        // the reference project, RESEARCH §3.3's amendment).
         assert!(parse_bool("1").unwrap());
         assert!(!parse_bool("0").unwrap());
         assert!(parse_bool("true").unwrap());
         assert!(!parse_bool("false").unwrap());
         assert!(parse_bool("True").unwrap());
+        assert!(parse_bool("Enabled").unwrap());
+        assert!(!parse_bool("Disabled").unwrap());
         assert!(matches!(parse_bool("yes"), Err(ValueError::NotABoolean(_))));
         assert!(matches!(parse_bool(""), Err(ValueError::NotABoolean(_))));
     }

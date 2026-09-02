@@ -40,6 +40,37 @@ pub struct Conflict {
     pub candidates: Vec<(DptRef, Vec<ComObjectInstanceId>)>,
 }
 
+// Hand-written rather than derived: `GroupAddressId`, `DptRef` and
+// `ComObjectInstanceId` are `knx_core` types, and `knx_core` stays free of
+// `serde` (Task 14's own scope is `knx-etsproj` only — see its Cargo.toml
+// change). Each field converts to a plain, always-serializable primitive:
+// an id's raw integer, a `DptRef` through its existing `Display` impl.
+impl serde::Serialize for InferredValue {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let mut s = serializer.serialize_struct("InferredValue", 3)?;
+        s.serialize_field("group_address", &self.group_address.0)?;
+        s.serialize_field("dpt", &self.dpt.to_string())?;
+        s.serialize_field("from", &self.from.iter().map(|id| id.0).collect::<Vec<_>>())?;
+        s.end()
+    }
+}
+
+impl serde::Serialize for Conflict {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let candidates: Vec<(String, Vec<u32>)> = self
+            .candidates
+            .iter()
+            .map(|(dpt, ids)| (dpt.to_string(), ids.iter().map(|id| id.0).collect()))
+            .collect();
+        let mut s = serializer.serialize_struct("Conflict", 2)?;
+        s.serialize_field("group_address", &self.group_address.0)?;
+        s.serialize_field("candidates", &candidates)?;
+        s.end()
+    }
+}
+
 pub fn infer_group_address_dpts(project: &Project) -> InferenceOutput {
     // Every (dpt, com object) candidate pair a link contributes, keyed by
     // the group address it links to. `BTreeMap` gives deterministic

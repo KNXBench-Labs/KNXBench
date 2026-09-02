@@ -1395,7 +1395,7 @@ The table is evidence, not schema: no authoritative XSD is available
 (RESEARCH §2.2), so it lists what has been seen and the parser reports
 everything else rather than failing on it.
 
-- [ ] **Step 1: Write failing tests for the known-element table**
+- [x] **Step 1: Write failing tests for the known-element table**
 
 ```rust
 #[test]
@@ -1426,12 +1426,12 @@ fn every_known_path_is_absolute_and_unique() {
 }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj known`
 Expected: FAIL, `cannot find function known_schema`.
 
-- [ ] **Step 3: Write `source.rs` and `known.rs`**
+- [x] **Step 3: Write `source.rs` and `known.rs`**
 
 `known_schema(23)` returning `None` is deliberate for this session: the
 schema-23 differences of RESEARCH §3.3 are load-bearing — `RefId` loses its
@@ -1441,12 +1441,12 @@ would produce silently wrong data. Schema 23 import reports "no known-element
 table for this schema version" and stops; that is the honest state until
 schema 23 is implemented.
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj known`
 Expected: PASS, 3 tests.
 
-- [ ] **Step 5: Run the gate and commit**
+- [x] **Step 5: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/src

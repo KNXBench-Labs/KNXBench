@@ -3715,7 +3715,7 @@ exit code."
 Documentation is a deliverable of this session, not a postscript. Each item
 below is a specific edit with its reason.
 
-- [ ] **Step 1: Correct the two evidence findings in the research and model documents**
+- [x] **Step 1: Correct the two evidence findings in the research and model documents**
 
 `RESEARCH.md` currently records 758 `DatapointType` attributes on
 `ComObjectInstanceRef` without distinguishing empty ones. Amend it to: 758
@@ -3738,7 +3738,7 @@ segment that immediately precedes the final `R-<digits>` segment of
 application program identifier can itself contain one. Verified against all 907
 reference RefIds: 0 mismatches.
 
-- [ ] **Step 2: Write ADR-0010**
+- [x] **Step 2: Write ADR-0010**
 
 Title: "Overrides are represented per attribute with an explicit empty state".
 
@@ -3760,7 +3760,7 @@ properties inspector.
 Alternatives rejected: `Option<Resolved<T>>` (cannot express `Empty`);
 a side table of raw attributes (splits the truth into two places).
 
-- [ ] **Step 3: Update `IMPORT_EXPORT.md`**
+- [x] **Step 3: Update `IMPORT_EXPORT.md`**
 
 §5's fidelity table gains a column stating, per construct, whether it is
 modeled, retained opaquely, or reported unsupported — the column now has real
@@ -3772,7 +3772,7 @@ including the explicit statement that byte equality is not attempted.
 Add the container size guard (64 MB per entry) and the nesting depth limit from
 Task 21 to the parsing section, with their measured justification.
 
-- [ ] **Step 4: Update `COMPATIBILITY.md`**
+- [x] **Step 4: Update `COMPATIBILITY.md`**
 
 State what has actually been verified, in these terms and no stronger:
 
@@ -3788,7 +3788,7 @@ State what has actually been verified, in these terms and no stronger:
 The last line stays until someone runs it against a real ETS installation and
 records the result here.
 
-- [ ] **Step 5: Update `KNOWN_LIMITATIONS.md`**
+- [x] **Step 5: Update `KNOWN_LIMITATIONS.md`**
 
 - Schema 23 is detected and refused; the schema-23 known-element table is
   Session 4 work.
@@ -3802,7 +3802,7 @@ records the result here.
   documentation, not from an authoritative XSD, which is not public.
 - Password-protected projects are refused, not decrypted.
 
-- [ ] **Step 6: Update `IMPLEMENTATION_STATUS.md` and `ROADMAP.md`**
+- [x] **Step 6: Update `IMPLEMENTATION_STATUS.md` and `ROADMAP.md`**
 
 Mark Session 3 complete with the measured counts from Task 16's golden test.
 
@@ -3812,13 +3812,13 @@ the opaque store. Full SQLite entity persistence moves to Session 4 alongside
 the product database, and the status document should say that rather than
 leaving a promise the code does not keep.
 
-- [ ] **Step 7: Verify every claim in the documents against the tests**
+- [x] **Step 7: Verify every claim in the documents against the tests**
 
 For each verified claim in `COMPATIBILITY.md`, name the test that verifies it
 in the document itself. A compatibility claim with no test behind it is exactly
 the thing `CLAUDE.md` forbids.
 
-- [ ] **Step 8: Run the full gate and commit**
+- [x] **Step 8: Run the full gate and commit**
 
 ```bash
 cargo build --workspace \

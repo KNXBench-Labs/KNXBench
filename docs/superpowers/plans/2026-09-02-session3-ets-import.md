@@ -3565,7 +3565,7 @@ produced a project and 1 when it did not, and `--report-json` writes the
 serialized `ImportReport` for machine consumption. Warnings never change the
 exit code — an import that reports 138 unsupported constructs still succeeded.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `knx-app`'s tests cannot reach `knx-etsproj`'s `tests/support` module — a
 crate's integration tests are private to it — so they repeat the four-line
@@ -3648,12 +3648,12 @@ fn the_cli_exits_nonzero_on_a_file_it_cannot_read() {
 }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-app -p knx-cli`
 Expected: FAIL, `cannot find function import_ets_project`.
 
-- [ ] **Step 3: Implement the service and the subcommand**
+- [x] **Step 3: Implement the service and the subcommand**
 
 `insert_opaque` runs the whole batch inside one `conn.unchecked_transaction()`
 so the last test's guarantee is the database's and not the caller's: an import
@@ -3665,12 +3665,12 @@ before the first row is inserted.
 inserts them. It never executes, decompresses further, or interprets any
 retained bytes.
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-app -p knx-cli`
 Expected: PASS, 7 tests.
 
-- [ ] **Step 5: Run the full gate**
+- [x] **Step 5: Run the full gate**
 
 ```bash
 cargo build --workspace \
@@ -3684,7 +3684,7 @@ cargo build --workspace \
 `check-layering` must confirm that `knx-etsproj` still has no path to
 `knx-store`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add crates/knx-app apps/knx-cli

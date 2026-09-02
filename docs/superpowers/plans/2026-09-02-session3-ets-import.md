@@ -2587,12 +2587,12 @@ ships a `Baggages/*.dll` gets an `UnsupportedFeature` saying that part of its
 configuration behaviour lives inside a vendor binary this application will
 never execute, and that the device is therefore not fully editable here.
 
-- [ ] **Step 1: Add `serde` and `serde_json`**
+- [x] **Step 1: Add `serde` and `serde_json`**
 
 Workspace: `serde = { version = "1", features = ["derive"] }` and
 `serde_json = "1"`. Crate: both, in `knx-etsproj` only.
 
-- [ ] **Step 2: Write failing tests**
+- [x] **Step 2: Write failing tests**
 
 ```rust
 #[test]
@@ -2637,19 +2637,19 @@ fn the_opaque_summary_does_not_repeat_the_bytes() {
 }
 ```
 
-- [ ] **Step 3: Run them and watch them fail**
+- [x] **Step 3: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj report`
 Expected: FAIL, `cannot find type ImportReport`.
 
-- [ ] **Step 4: Implement `report.rs`**
+- [x] **Step 4: Implement `report.rs`**
 
-- [ ] **Step 5: Run them and watch them pass**
+- [x] **Step 5: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj report`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 6: Run the gate and commit**
+- [x] **Step 6: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj Cargo.toml Cargo.lock

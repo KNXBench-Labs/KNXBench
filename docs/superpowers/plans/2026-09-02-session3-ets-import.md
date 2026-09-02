@@ -1094,6 +1094,7 @@ rather than decrypted."
       pub namespace: String,
       pub created_by: Option<String>,   // KNX/@CreatedBy
       pub tool_version: Option<String>, // KNX/@ToolVersion
+      pub namespace_disagreement: Option<SchemaVersion>, // see Step 4
   }
   pub fn detect(container: &mut Container) -> Result<Detected, DetectError>;
   pub enum DetectError {
@@ -1104,11 +1105,11 @@ rather than decrypted."
   ```
   Task 5 dispatches on `SchemaVersion`; Task 14 reports `Detected`.
 
-- [ ] **Step 1: Add `quick-xml`**
+- [x] **Step 1: Add `quick-xml`**
 
 Workspace: `quick-xml = "0.42"`. Crate: `quick-xml.workspace = true`.
 
-- [ ] **Step 2: Write failing tests**
+- [x] **Step 2: Write failing tests**
 
 ```rust
 #[test]
@@ -1146,12 +1147,12 @@ fn a_document_with_no_default_namespace_is_an_error() {
 }
 ```
 
-- [ ] **Step 3: Run them and watch them fail**
+- [x] **Step 3: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj detect`
 Expected: FAIL, `cannot find function detect`.
 
-- [ ] **Step 4: Implement `detect.rs`**
+- [x] **Step 4: Implement `detect.rs`**
 
 Read `<project part>/0.xml`, pull the root element's `xmlns` attribute with a
 `quick_xml::Reader` stopping at the first `Start` event, take the trailing
@@ -1166,12 +1167,12 @@ record a `namespace_disagreement` field when the two differ. The reference
 projects agree; the check exists so that a future sample that does not agree
 says so.
 
-- [ ] **Step 5: Run them and watch them pass**
+- [x] **Step 5: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj detect`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 6: Run the gate and commit**
+- [x] **Step 6: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj Cargo.toml Cargo.lock

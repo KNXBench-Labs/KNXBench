@@ -94,8 +94,11 @@ pub struct ImportError {
     /// The stage's own typed problem detail, `Debug`-formatted. Not pretty,
     /// but always available and always accurate — adding a `Display` impl
     /// to every `ProblemDetail`/`MapProblemDetail` variant purely to shave
-    /// punctuation off a report string is not worth the upkeep yet.
-    pub message: String,
+    /// punctuation off a report string is not worth the upkeep yet. Named
+    /// `detail`, not `message`, to match `SourceProblem`/`MapProblem`'s own
+    /// field naming (Tasks 9/10) — this is the same kind of value, just
+    /// flattened to text.
+    pub detail: String,
 }
 
 impl ImportReport {
@@ -172,7 +175,7 @@ pub fn build(
             stage: "validate",
             severity: Severity::Error,
             xpath: p.xpath.clone(),
-            message: format!("{:?}", p.detail),
+            detail: format!("{:?}", p.detail),
         });
     }
     for p in &validation.warnings {
@@ -180,7 +183,7 @@ pub fn build(
             stage: "validate",
             severity: Severity::Warning,
             xpath: p.xpath.clone(),
-            message: format!("{:?}", p.detail),
+            detail: format!("{:?}", p.detail),
         });
     }
     for p in &map.problems {
@@ -188,7 +191,7 @@ pub fn build(
             stage: "map",
             severity: Severity::Error,
             xpath: p.xpath.clone(),
-            message: format!("{:?}", p.detail),
+            detail: format!("{:?}", p.detail),
         });
     }
 

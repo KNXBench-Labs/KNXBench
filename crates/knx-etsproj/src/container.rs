@@ -10,6 +10,18 @@ use std::io::{Cursor, Read};
 
 use zip::ZipArchive;
 
+/// Refuses to read an entry whose declared uncompressed size exceeds this
+/// limit, before allocating anything for it (Task 21). Without this guard,
+/// `Vec::with_capacity(entry.size())` allocates the *declared* size
+/// upfront — a zip-bomb-shaped entry that lies about its size (e.g.
+/// declaring gigabytes while containing only a few real bytes) does not
+/// just run slowly, an allocation failure that large calls Rust's global
+/// allocator error handler, which aborts the process outright rather than
+/// returning a recoverable error. The largest entry in either reference
+/// project is 5.7 MB; the whole uncompressed reference container is 22 MB
+/// (RESEARCH). 64 MB leaves ample headroom for a legitimate project.
+const MAX_ENTRY_SIZE: u64 = 64 * 1024 * 1024;
+
 /// One entry's name and uncompressed size, snapshotted from the ZIP central
 /// directory at open time.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -102,10 +114,19 @@ impl Container {
     /// Reads one entry's bytes. Looked up case-insensitively via `find`, so
     /// callers never have to know the generation's filename casing.
     pub fn read(&mut self, path: &str) -> Result<Vec<u8>, ContainerError> {
-        let real_path = self
+        let found = self
             .find(path)
-            .map(|e| e.path.clone())
             .ok_or_else(|| ContainerError::EntryNotFound(path.to_string()))?;
+        if found.size > MAX_ENTRY_SIZE {
+            return Err(ContainerError::Read {
+                path: found.path.clone(),
+                cause: format!(
+                    "declared uncompressed size {} bytes exceeds the {MAX_ENTRY_SIZE}-byte limit",
+                    found.size
+                ),
+            });
+        }
+        let real_path = found.path.clone();
         let mut entry = self
             .archive
             .by_name(&real_path)

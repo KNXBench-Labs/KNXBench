@@ -10,7 +10,7 @@ use std::path::Path;
 use rusqlite::Connection;
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 1;
+pub const CURRENT_SCHEMA_VERSION: i64 = 2;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -48,11 +48,30 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v1 -> v2: creates the opaque passthrough table (Task 12/13) — everything
+/// the domain model does not carry, kept as bytes plus a hash so export can
+/// write it back unchanged.
+fn migrate_v1_to_v2(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(
+        "CREATE TABLE opaque_entry (
+             id          INTEGER PRIMARY KEY,
+             source_path TEXT NOT NULL,
+             xpath       TEXT NOT NULL,
+             kind        TEXT NOT NULL,
+             name        TEXT NOT NULL,
+             bytes       BLOB NOT NULL,
+             sha256      TEXT NOT NULL
+         ) STRICT;
+         CREATE INDEX opaque_entry_source_path ON opaque_entry (source_path);",
+    )?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// Ordered chain; index `i` migrates `user_version` `i` to `i + 1`.
 fn migrations() -> Vec<Migration> {
-    vec![migrate_v0_to_v1]
+    vec![migrate_v0_to_v1, migrate_v1_to_v2]
 }
 
 /// Opens (creating if absent) the SQLite file at `path`, runs every pending
@@ -133,11 +152,77 @@ mod tests {
 
     #[test]
     fn the_frozen_v1_fixture_still_opens() {
-        let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v1-empty.sqlite");
-        let conn = open_and_migrate(Path::new(fixture)).unwrap();
+        // Copied, not opened in place: a migration test must not mutate its
+        // fixture — `open_and_migrate` would otherwise rewrite the committed
+        // v1 file to v2 on disk.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v1.sqlite");
+        std::fs::copy(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v1-empty.sqlite"),
+            &path,
+        )
+        .unwrap();
+        let conn = open_and_migrate(&path).unwrap();
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         assert_eq!(version, CURRENT_SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn a_fresh_file_migrates_to_version_two_and_has_the_opaque_table() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(v, 2);
+        assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
+    }
+
+    #[test]
+    fn opaque_bytes_survive_a_round_trip_through_sqlite_unchanged() {
+        use crate::opaque::{insert_opaque, load_opaque, StoredOpaqueEntry};
+
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
+        let entry = StoredOpaqueEntry {
+            source_path: "M-0008/Baggages/econEts3.dll".into(),
+            xpath: String::new(),
+            kind: "Baggage".into(),
+            name: String::new(),
+            bytes: vec![0x4d, 0x5a, 0x00, 0xff, 0x00],
+            sha256: "abc".into(),
+        };
+        insert_opaque(&conn, std::slice::from_ref(&entry)).unwrap();
+        assert_eq!(load_opaque(&conn).unwrap(), vec![entry]);
+    }
+
+    #[test]
+    fn the_frozen_v1_fixture_migrates_forward_to_v2() {
+        // Copied, not opened in place: a migration test must not mutate its fixture.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v1.sqlite");
+        std::fs::copy(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v1-empty.sqlite"),
+            &path,
+        )
+        .unwrap();
+        let conn = open_and_migrate(&path).unwrap();
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(v, 2);
+        assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
+    }
+
+    #[test]
+    fn the_frozen_v2_fixture_still_opens() {
+        let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v2-empty.sqlite");
+        let conn = open_and_migrate(Path::new(fixture)).unwrap();
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(v, 2);
     }
 }

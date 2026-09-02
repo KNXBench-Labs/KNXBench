@@ -698,6 +698,7 @@ name = "xtask"
 version = "0.0.0"
 dependencies = [
  "cargo_metadata",
+ "knx-store",
 ]
 
 [[package]]

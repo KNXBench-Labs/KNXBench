@@ -6,3 +6,4 @@ publish = false
 
 [dependencies]
 cargo_metadata = "0.18"
+knx-store.workspace = true

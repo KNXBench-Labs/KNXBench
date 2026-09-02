@@ -7,18 +7,21 @@ mod layering;
 
 use std::process::ExitCode;
 
+const AVAILABLE_TASKS: &str = "check-layering, freeze-fixture <path>";
+
 fn main() -> ExitCode {
     let task = std::env::args().nth(1);
     match task.as_deref() {
         Some("check-layering") => check_layering(),
+        Some("freeze-fixture") => freeze_fixture(std::env::args().nth(2)),
         Some(other) => {
             eprintln!("unknown task: {other}");
-            eprintln!("available tasks: check-layering");
+            eprintln!("available tasks: {AVAILABLE_TASKS}");
             ExitCode::FAILURE
         }
         None => {
             eprintln!("usage: cargo run -p xtask -- <task>");
-            eprintln!("available tasks: check-layering");
+            eprintln!("available tasks: {AVAILABLE_TASKS}");
             ExitCode::FAILURE
         }
     }
@@ -56,4 +59,31 @@ fn check_layering() -> ExitCode {
          storage or async runtime. See the architecture spec, section 3.1."
     );
     ExitCode::FAILURE
+}
+
+/// Creates (or migrates, if it already exists) a SQLite file at `path` and
+/// `VACUUM`s it, so a committed migration-test fixture is minimal and
+/// reproducible rather than carrying whatever incidental page layout a
+/// fresh `Connection::open` happened to leave behind.
+fn freeze_fixture(path: Option<String>) -> ExitCode {
+    let Some(path) = path else {
+        eprintln!("usage: cargo run -p xtask -- freeze-fixture <path>");
+        return ExitCode::FAILURE;
+    };
+    let path = std::path::Path::new(&path);
+
+    let conn = match knx_store::open_and_migrate(path) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("failed to open/migrate {}: {e}", path.display());
+            return ExitCode::FAILURE;
+        }
+    };
+    if let Err(e) = conn.execute_batch("VACUUM;") {
+        eprintln!("failed to vacuum {}: {e}", path.display());
+        return ExitCode::FAILURE;
+    }
+
+    println!("froze fixture at {}", path.display());
+    ExitCode::SUCCESS
 }

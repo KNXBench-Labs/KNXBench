@@ -2045,7 +2045,7 @@ Mapping rules, each of which is a test below:
   attributes, and `BusAccess` are known but not modelled: they go to
   `retained`, and from there to the opaque store.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 #[test]
@@ -2131,12 +2131,12 @@ fn links_keep_their_direction() {
 }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj map`
 Expected: FAIL, `cannot find function map`.
 
-- [ ] **Step 3: Implement `map.rs`**
+- [x] **Step 3: Implement `map.rs`**
 
 Two passes. The first allocates ids for group ranges, group addresses,
 areas, lines, building parts and devices, and builds
@@ -2145,12 +2145,12 @@ the entities, resolving `RefId` strings through those tables. Two passes rather
 than one because `Connectors/Send` may reference a group address defined later
 in the document.
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj map`
 Expected: PASS, 7 tests.
 
-- [ ] **Step 5: Run the gate and commit**
+- [x] **Step 5: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/src

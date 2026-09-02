@@ -2428,7 +2428,7 @@ deliberately does not model. Nothing is executed and nothing is interpreted."
 crate that knows both. Keeping the dependency out is what stops the storage
 schema from being defined by the import format.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 #[test]
@@ -2481,13 +2481,13 @@ The existing test `the_frozen_v1_fixture_still_opens` opens the fixture in
 place and now migrates it, which would rewrite a committed file. Change it to
 copy first, the same way the new test does.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-store`
 Expected: FAIL, `cannot find function load_opaque`, and the version assertion
 fails at 1.
 
-- [ ] **Step 3: Implement the migration and `opaque.rs`**
+- [x] **Step 3: Implement the migration and `opaque.rs`**
 
 ```sql
 CREATE TABLE opaque_entry (
@@ -2507,12 +2507,12 @@ append `migrate_v1_to_v2` to the chain. `insert_opaque` runs inside one
 transaction with a prepared statement — 36 entries totalling 22 MB go in at
 once, and a partial insert would leave a project file that cannot be exported.
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-store`
 Expected: PASS.
 
-- [ ] **Step 5: Freeze the v2 fixture**
+- [x] **Step 5: Freeze the v2 fixture**
 
 ```bash
 cargo test -p knx-store fresh_file_migrates_to_version_two -- --nocapture
@@ -2524,7 +2524,7 @@ Add the `freeze-fixture` subcommand to `xtask` if it does not exist: it calls
 `open_and_migrate` on the given path, then `VACUUM`s so the file is minimal and
 reproducible.
 
-- [ ] **Step 6: Run the gate and commit**
+- [x] **Step 6: Run the gate and commit**
 
 ```bash
 git add crates/knx-store xtask/src crates/knx-core/src/project.rs

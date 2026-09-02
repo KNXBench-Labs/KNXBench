@@ -6,6 +6,7 @@ pub mod detect;
 pub mod known;
 pub mod parse;
 pub mod source;
+pub mod values;
 
 pub use container::{Container, ContainerError, EntryInfo};
 pub use detect::{detect, DetectError, Detected, SchemaVersion};

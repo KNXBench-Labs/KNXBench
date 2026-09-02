@@ -1785,7 +1785,7 @@ rather than reported as unknown."
   Task 10 calls all of these; failures become `ImportError` entries in the
   report rather than aborting the import.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 #[test]
@@ -1842,12 +1842,12 @@ fn completion_status_and_building_part_type_cover_the_observed_values() {
 }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj values`
 Expected: FAIL, `cannot find function parse_bool`.
 
-- [ ] **Step 3: Implement `values.rs`**
+- [x] **Step 3: Implement `values.rs`**
 
 `com_object_number` splits on `_`, requires the last segment to start with
 `R-` and the one before it to match `O-<digits>` exactly, and parses that.
@@ -1856,12 +1856,12 @@ Expected: FAIL, `cannot find function parse_bool`.
 form as UTC and saying so in the doc comment — ETS4 writes local time with no
 offset, so this is a recorded assumption, not a fact.
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj values`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 5: Run the gate and commit**
+- [x] **Step 5: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/src

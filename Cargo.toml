@@ -26,3 +26,4 @@ knx-etsproj = { path = "crates/knx-etsproj" }
 knx-productdb = { path = "crates/knx-productdb" }
 knx-net = { path = "crates/knx-net" }
 knx-secure = { path = "crates/knx-secure" }
+chrono = { version = "0.4", default-features = false, features = ["std"] }

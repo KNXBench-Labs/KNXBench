@@ -643,10 +643,18 @@ fn an_empty_datapoint_type_attribute_is_not_the_same_as_an_absent_one() {
 
 - [ ] **Step 14: Fix `command.rs` for the new field types**
 
-`Command::SetComObjectDpt` and `RestoreComObjectDpt` currently read and write
-`Option<Resolved<DptRef>>`. Change their payloads to `Override<DptRef>` so that
-undoing a change to an instance that carried `DatapointType=""` restores the
-empty attribute rather than deleting it. Update the module's tests to match.
+Measured against `crates/knx-core/src/command.rs`: `SetComObjectDpt.dpt` is
+`Option<DptRef>`, not `Option<Resolved<DptRef>>` — it always resolves to
+`Layer::UserEdit`, so it never carried a `Resolved` or a layer at all. Only
+`RestoreComObjectDpt.dpt` is `Option<Resolved<DptRef>>`. Leave
+`SetComObjectDpt.dpt: Option<DptRef>` unchanged; change its `apply` so that
+`Some(dpt)` writes `Override::Value(Resolved { value: dpt, layer:
+Layer::UserEdit })` and `None` writes `Override::Empty` — a user-initiated
+clear is a deliberate empty, mirroring ETS's own `DatapointType=""`
+convention; `Override::Absent` would misrepresent a value the user just acted
+on. Change `RestoreComObjectDpt.dpt` from `Option<Resolved<DptRef>>` to
+`Override<DptRef>` so undo can restore `Absent`, `Empty` or `Value` exactly,
+per this step's original reasoning. Update the module's tests to match.
 
 - [ ] **Step 15: Re-export from `lib.rs`**
 

@@ -19,6 +19,7 @@ pub mod project;
 pub mod provenance;
 pub mod string_table;
 pub mod topology;
+pub mod validation;
 
 pub use address::{AddressError, GroupAddress, GroupAddressStyle, IndividualAddress};
 pub use building::{BuildingPart, BuildingPartType};
@@ -35,3 +36,4 @@ pub use project::{IdAllocators, Project, CURRENT_SCHEMA_VERSION};
 pub use provenance::{Layer, Resolved};
 pub use string_table::{Language, LocalizedString, StringTable, TranslationKey};
 pub use topology::{Area, Line, Topology};
+pub use validation::ValidationError;

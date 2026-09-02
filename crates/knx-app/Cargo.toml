@@ -9,3 +9,8 @@ publish = false
 
 [dependencies]
 knx-core.workspace = true
+knx-etsproj.workspace = true
+knx-store.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

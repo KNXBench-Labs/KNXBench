@@ -1,0 +1,243 @@
+# Architecture
+
+The binding architecture for this repository. Decisions recorded here are
+argued in [docs/adr/](adr/); the evidence they rest on is in
+[RESEARCH.md](RESEARCH.md), cited by section throughout.
+
+## 1. Purpose and scope
+
+A Linux-first, KNX-compatible engineering application, built as an independent
+alternative to ETS rather than a reimplementation of it.
+
+**v1 target — a project editor without device parameter configuration.** Import
+`.knxproj`; inspect and edit group addresses, links, building structure,
+topology, device names and individual addresses; export; and monitor the live
+bus against the open project.
+
+Four things are explicitly out of v1:
+
+| Excluded | Reason |
+| --- | --- |
+| Device parameter editing, `Dynamic` tree evaluation | RESEARCH R3 — the `choose`/`when` grammar is unresearched and needs the Session 4 spike |
+| Commissioning and device download | RESEARCH §8.3 — bricking risk, an undocumented `Legacy*` matrix, vendor DLLs |
+| KNX Secure | RESEARCH §9 — no sample material to verify against; the subsystem exists but stays empty |
+| Direct `.knxprod` import for master data scheme ≥ 12 | RESEARCH §10 — the encryption layer is unresolved |
+
+User-facing wording is **"KNX-compatible"**. Never "KNX certified", never "full
+ETS compatibility" (RESEARCH §7, §10).
+
+## 2. Layering
+
+```text
+UI
+ ↓
+Application / Services
+ ↓
+KNX Domain Core
+ ↓
+Infrastructure  (project storage, import/export, product database, KNXnet/IP)
+```
+
+Dependencies point downward only. The KNX core does not depend on the user
+interface, and it does not depend on any import or export format: a format
+change must never propagate into the domain model.
+
+A headless CLI exists alongside the desktop application, and it is first-class,
+not a by-product. It is what keeps the core honest about UI independence, and
+it makes import, roundtrip and regression tests runnable in CI without a
+display.
+
+## 3. Workspace layout
+
+One Cargo workspace:
+
+```text
+apps/
+  knx-cli/         Headless entry point (bin name: knx)
+
+crates/
+  knx-core/        Domain model, addresses, DPT, override resolution, validation.
+                   No IO, no XML, no SQL, no UI.
+  knx-app/         Application services: open/save, commands, undo/redo,
+                   search, selection, reports
+  knx-store/       SQLite project storage, schema migrations, opaque store
+  knx-etsproj/     .knxproj read/write: ZIP, schema detection, tolerant XML
+                   parser, mapping to/from knx-core, import report
+  knx-productdb/   Product database (own SQLite), ingest of manufacturer data,
+                   indexed access to application programs
+  knx-net/         KNXnet/IP: discovery, tunnelling, routing, cEMI, telegrams
+  knx-secure/      Isolated key material subsystem (empty for now, but present)
+
+xtask/             Repository verification tasks, including the layering gate
+```
+
+```text
+knx-desktop ─┐          (Session 5)
+knx-cli ─────┴─> knx-app ─> knx-core
+                    ├─> knx-store ────> knx-core
+                    ├─> knx-etsproj ──> knx-core
+                    ├─> knx-productdb ─> knx-core
+                    ├─> knx-net ──────> knx-core
+                    └─> knx-secure
+```
+
+`apps/knx-desktop` — the Tauri shell and the React UI — is scaffolded in
+Session 5. Pulling in Tauri and a Node toolchain before there is a UI to build
+adds a large dependency surface with nothing to run against.
+
+`knx-etsproj` and `knx-store` are separate crates because the import format and
+the storage format evolve independently. An ETS6 schema delta must not touch
+the project file schema, and a model migration must not break the importer.
+
+`knx-secure` is the one crate with no dependency on `knx-core` at all — see
+section 9.
+
+## 4. Enforced rules
+
+These are tests. Each one fails the build.
+
+1. **`knx-core` must not reach `serde_json`, `quick-xml`, `rusqlite` or
+   `tokio`** in its dependency graph. Enforced by
+   `cargo run -p xtask -- check-layering`, which walks the resolved graph from
+   `cargo metadata` and prints the shortest path to any forbidden package. The
+   gate has been observed to fail on an injected violation, which is the only
+   way to know a gate works.
+2. **No runtime crate may depend on a GPL-licensed crate** (RESEARCH R6).
+   Enforced by `cargo deny check` against an explicit licence allowlist; any
+   licence not on the list is rejected, and GPL is not on the list.
+   `xknxproject` stays in `.venv`, invoked only by test scripts, never by the
+   Rust build (ADR-0002).
+3. **The UI communicates only through Tauri commands into `knx-app`**, and has
+   no path to `knx-store` or `knx-etsproj`. This rule is **not yet mechanically
+   enforced**, because no UI exists. It becomes a graph check in Session 5,
+   when `apps/knx-desktop` is created.
+
+Both existing gates run in CI on every push and pull request, and both are
+runnable locally with the same command. A check that only exists on CI gets
+ignored.
+
+## 5. Core approach
+
+The core is a **normalized domain model carrying provenance per value**, with
+one borrowing from a source-faithful design: an opaque store keyed by source
+path retains everything not modelled, verbatim, including unknown XML
+constructs (ADR-0006).
+
+Provenance is not optional decoration. A communication object's effective
+properties resolve through three layers — `ComObject`, `ComObjectRef`,
+`ComObjectInstanceRef` — and 758 of 907 instances in the reference project
+override the datapoint type at instance level (RESEARCH §3.2). Without knowing
+which layer a value came from, an exporter cannot decide what to write back.
+The type is `Resolved<T> { value, layer }`, and it is in `knx-core` from the
+first commit (ADR-0004).
+
+Two alternatives were considered and rejected:
+
+- **Source-faithful document plus computed projection.** The ETS schema would
+  become the domain model, which `CLAUDE.md` forbids and which would make a
+  second schema generation impossible to attach cleanly.
+- **Event-sourced core.** Every query would need materialization, and
+  migrations would have to keep replaying historical commands — the most
+  expensive form of schema versioning there is. Undo/redo is achieved with a
+  command pattern instead, at a fraction of the cost.
+
+## 6. Application layer
+
+Every mutation is a `Command` with `apply(&mut Project) -> Result<Inverse>`.
+Undo and redo are a stack of inverses. The UI never holds a mutable reference
+to the model.
+
+Commands are where validation lives — a duplicate individual address, a group
+address outside its `GroupRange`, a link to a deleted object. Not in the UI,
+and not in the store.
+
+Any command that changes a `Resolved<T>` sets its layer to `UserEdit`, so the
+exporter knows what to write with no separate bookkeeping to keep in sync.
+
+`knx-store` writes inside a SQLite transaction, incrementally at entity
+granularity. A crash leaves either the old state or the new one, never a
+half-written project. This is the reason the working file is SQLite rather than
+a directory tree (ADR-0003).
+
+## 7. UI boundary
+
+Tauri commands form a narrow, explicitly typed API. The UI requests projections
+— `ProjectTree`, `DeviceList`, `GroupAddressTable`, `Inspector<T>` — and sends
+`Command` values back.
+
+Domain types are not mirrored one-to-one into TypeScript. Projections are
+shaped for display and generated from Rust with `ts-rs`, so the two sides
+cannot drift apart silently. Large tables are paginated and filtered on the
+Rust side rather than shipped whole into the browser: the reference project
+alone has 514 group addresses and 907 communication object instances (RESEARCH
+§4.1).
+
+UI workarounds for domain problems are not acceptable. The fix belongs in the
+layer that owns the problem. See ADR-0009.
+
+## 8. KNXnet/IP
+
+An own implementation against ISO 22510, not a port of an existing stack.
+
+The work is Session 6, but the interface is fixed now: a `BusConnection` trait
+with `discover`, `connect_tunnel`, `send` and `subscribe`. The bus monitor is a
+consumer that resolves telegrams against the open project; the connection
+itself knows nothing about projects.
+
+`BusAccess` from `0.xml` — the ETS commissioning interface connection string —
+is preserved verbatim and **not** translated into our own connection model
+(RESEARCH §3.1). It is ETS tool configuration, not domain data, and rewriting
+it would be inventing meaning we have not verified.
+
+Commissioning and download stay out of scope (RESEARCH §8.3). The architecture
+does not block that path: load procedures, memory layout and mask data all live
+in the product database.
+
+## 9. Key material
+
+`knx-secure` exists from the first commit of the workspace, with its own
+storage, while still empty.
+
+The rules are in force from now on. Key material never enters the `Project`
+model, never enters an `ImportReport`, never enters an export, never enters a
+log, and is omitted by default from diagnostic dumps (RESEARCH §9). The crate
+does not depend on `knx-core`, so there is no type path along which a key can
+reach the project model. A test asserts that `knx-secure` types do not
+implement `Serialize` toward report or export paths.
+
+Retrofitting isolation is how secrets leak, which is why the boundary exists
+before the feature does (ADR-0008).
+
+## 10. Test strategy
+
+Seven levels. Two of them exist today; the rest arrive with the code they test.
+
+| Level | Content | Status |
+| --- | --- | --- |
+| Unit | Addresses, DPT parsing, override resolution, validation rules | Started — `Layer::is_exported` |
+| Golden | Import of the reference project against the entity counts from RESEARCH §3: 36 devices including the unassigned one, 514 group addresses, 907 `ComObjectInstanceRef`, 1390 parameter values, 569 send and 27 receive links | Session 3 |
+| Oracle | Comparison against `xknxproject` output where it is not known to be lossy; every deviation must be explained | Session 3 |
+| Roundtrip | The three roundtrip guarantees defined in [IMPORT_EXPORT.md](IMPORT_EXPORT.md) | Session 3 |
+| Migration | Every schema version has a frozen fixture that must keep loading | Session 2 |
+| Malformed input | Broken ZIP, truncated XML, unknown schema, duplicate IDs, invalid addresses, dangling references, password-protected without a password | Session 3 |
+| Licence and layering | The dependency graph reaches no GPL crate; `knx-core` stays IO-free | Done — `cargo deny check`, `cargo run -p xtask -- check-layering` |
+
+The golden numbers are reproducible independently via
+[tools/inspect_knxproj.py](../tools/inspect_knxproj.py), which reads the raw XML
+without going through our importer or through `xknxproject`. That is what makes
+them an oracle rather than an expectation we generated from our own output and
+then asserted against itself.
+
+## 11. Decision index
+
+| ADR | Title |
+| --- | --- |
+| [0001](adr/0001-technology-stack.md) | Technology stack — Rust core, Tauri, React, SQLite |
+| [0002](adr/0002-own-knxproj-parser.md) | Own `.knxproj` parser; `xknxproject` as a test oracle only |
+| [0003](adr/0003-sqlite-project-format.md) | SQLite as the native project format |
+| [0004](adr/0004-provenance-model.md) | Provenance and override-chain model |
+| [0005](adr/0005-separate-product-database.md) | Separate, shared product database |
+| [0006](adr/0006-opaque-passthrough-store.md) | Opaque passthrough store |
+| [0007](adr/0007-roundtrip-fidelity.md) | Roundtrip fidelity definition |
+| [0008](adr/0008-key-material-isolation.md) | Key material isolation |
+| [0009](adr/0009-ui-boundary.md) | UI boundary via generated projections |

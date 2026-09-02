@@ -51,7 +51,7 @@ Rust is not installed on this machine (`cargo: command not found`). This task in
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: workspace members named `knx-core`, `knx-app`, `knx-store`, `knx-etsproj`, `knx-productdb`, `knx-net`, `knx-secure`, `knx-cli`. `knx_core::{Layer, Resolved}` as defined in Step 6. Tasks 2–4 depend on these exact package names.
+- Produces: workspace members named `knx-core`, `knx-app`, `knx-store`, `knx-etsproj`, `knx-productdb`, `knx-net`, `knx-secure`, `knx-cli`. `knx_core::{Layer, Resolved}` as defined in Step 7. Tasks 2–4 depend on these exact package names.
 
 - [ ] **Step 1: Install the Rust toolchain**
 
@@ -114,6 +114,8 @@ knx-productdb = { path = "crates/knx-productdb" }
 knx-net = { path = "crates/knx-net" }
 knx-secure = { path = "crates/knx-secure" }
 ```
+
+`rust-version` uses the same version read in Step 2 — substitute it here too, in place of `1.8x.y`.
 
 Note on `license`: this is the placeholder the project ships with until the licence is decided. It is recorded as an open question in `docs/KNOWN_LIMITATIONS.md` in Task 10. Whatever it becomes, it must be compatible with the constraint that no GPL crate enters the runtime graph — that constraint is about *incoming* dependencies, not our own licence.
 

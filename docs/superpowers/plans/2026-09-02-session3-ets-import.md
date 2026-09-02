@@ -2867,7 +2867,7 @@ as a second opinion on the parts it does read, and the parts it is known to
 lose are asserted as differences rather than ignored — so that if a future
 version of the oracle starts reading them, the test says so.
 
-- [ ] **Step 1: Write the test**
+- [x] **Step 1: Write the test**
 
 ```rust
 mod support;
@@ -2947,12 +2947,12 @@ fn our_linked_communication_objects_match_the_oracle_count() {
 }
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `cargo test -p knx-etsproj --test oracle_xknxproject`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 3: Run the gate and commit**
+- [x] **Step 3: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/tests

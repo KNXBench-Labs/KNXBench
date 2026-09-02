@@ -1,6 +1,7 @@
 //! Reading and writing `.knxproj`: ZIP container, schema detection, tolerant
 //! XML parsing, mapping to and from `knx-core`, and the import report.
 
+pub mod compare;
 pub mod container;
 pub mod detect;
 pub mod export;

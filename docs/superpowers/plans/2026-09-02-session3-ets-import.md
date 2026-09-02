@@ -961,7 +961,7 @@ and the device a parameter instance belongs to."
   Task 4 calls `read` and `project_part`; Task 12 walks `entries`; Task 19
   writes a container back.
 
-- [ ] **Step 1: Add the dependencies**
+- [x] **Step 1: Add the dependencies**
 
 In `crates/knx-etsproj/Cargo.toml`:
 
@@ -987,7 +987,7 @@ Measured against the actual crate: `deflate-flate2` alone (zip 8.6.0) pulls in
 no C toolchain, deterministic across machines, in keeping with "avoid
 unnecessary dependencies".
 
-- [ ] **Step 2: Write failing tests**
+- [x] **Step 2: Write failing tests**
 
 ```rust
 #[test]
@@ -1039,12 +1039,12 @@ fn a_password_protected_project_is_detected_and_named() {
 `concat!(env!("CARGO_MANIFEST_DIR"), "/../../Unser Zuhause ets4 - 2025-12-15.knxproj")`.
 `zip_with_entries` builds a small archive in memory with `zip::ZipWriter`.
 
-- [ ] **Step 3: Run them and watch them fail**
+- [x] **Step 3: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj container`
 Expected: FAIL, `cannot find function Container::open`.
 
-- [ ] **Step 4: Implement `container.rs`**
+- [x] **Step 4: Implement `container.rs`**
 
 `open` builds `zip::ZipArchive` over a `Cursor<Vec<u8>>`, snapshots the
 inventory into `Vec<EntryInfo>` (skipping directory entries, which ETS6 writes
@@ -1060,12 +1060,12 @@ project, and shipping an untested decryption path would claim support this
 repository cannot demonstrate. The error names the nested entry so the user
 knows why.
 
-- [ ] **Step 5: Run them and watch them pass**
+- [x] **Step 5: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj container`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 6: Run the gate and commit**
+- [x] **Step 6: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj Cargo.toml Cargo.lock

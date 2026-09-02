@@ -2195,7 +2195,7 @@ inference produces a side table rather than mutating the model. That also makes
 the "never exported" rule structural: there is nothing on the entity for export
 to write.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 #[test]
@@ -2237,19 +2237,19 @@ fn the_reference_project_has_no_datapoint_type_conflicts() {
 }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj infer`
 Expected: FAIL, `cannot find function infer_group_address_dpts`.
 
-- [ ] **Step 3: Implement `infer.rs`**
+- [x] **Step 3: Implement `infer.rs`**
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj infer`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 5: Run the gate and commit**
+- [x] **Step 5: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/src

@@ -36,11 +36,22 @@ fn check_layering() -> ExitCode {
         }
     };
 
-    let violations = layering::forbidden_reachable(&graph, "knx-core", layering::CORE_FORBIDDEN);
+    let mut violations =
+        layering::forbidden_reachable(&graph, "knx-core", layering::CORE_FORBIDDEN);
+    // knx-app (Task 22) is deliberately the only crate that sees both
+    // knx-etsproj and knx-store, so the OpaqueEntry -> StoredOpaqueEntry
+    // conversion has exactly one home; knx-etsproj reaching knx-store
+    // directly would mean the import/export crate had grown a storage
+    // dependency of its own.
+    violations.extend(layering::forbidden_reachable(
+        &graph,
+        "knx-etsproj",
+        &["knx-store"],
+    ));
 
     if violations.is_empty() {
         println!(
-            "layering ok: knx-core reaches none of {:?}",
+            "layering ok: knx-core reaches none of {:?}; knx-etsproj does not reach knx-store",
             layering::CORE_FORBIDDEN
         );
         return ExitCode::SUCCESS;
@@ -56,7 +67,9 @@ fn check_layering() -> ExitCode {
     }
     eprintln!(
         "\nknx-core must perform no IO and must not depend on any format, \
-         storage or async runtime. See the architecture spec, section 3.1."
+         storage or async runtime (architecture spec, section 3.1). \
+         knx-etsproj must not depend on knx-store: the conversion between \
+         OpaqueEntry and StoredOpaqueEntry belongs in knx-app alone."
     );
     ExitCode::FAILURE
 }

@@ -258,6 +258,9 @@ name = "knx-app"
 version = "0.0.0"
 dependencies = [
  "knx-core",
+ "knx-etsproj",
+ "knx-store",
+ "tempfile",
 ]
 
 [[package]]
@@ -265,6 +268,9 @@ name = "knx-cli"
 version = "0.0.0"
 dependencies = [
  "knx-app",
+ "knx-store",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

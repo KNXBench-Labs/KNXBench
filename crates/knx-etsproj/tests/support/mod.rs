@@ -1,0 +1,32 @@
+//! Shared fixture paths for integration tests. A `tests/support/mod.rs`
+//! (not `tests/support.rs`) so Cargo does not treat it as its own test
+//! binary — each file that needs it pulls it in with `mod support;`.
+//!
+//! Not every test file that imports this module uses every function in it;
+//! `dead_code` is allowed here rather than per-item, since that is a
+//! property of being a shared module, not a sign any one function is
+//! actually unused.
+#![allow(dead_code)]
+
+use std::path::PathBuf;
+
+pub fn workspace_root() -> PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(std::path::Path::parent)
+        .expect("crate lives at <root>/crates/<name>")
+        .to_path_buf()
+}
+
+pub fn reference_ets4_path() -> PathBuf {
+    workspace_root().join("Unser Zuhause ets4 - 2025-12-15.knxproj")
+}
+
+pub fn reference_ets6_path() -> PathBuf {
+    workspace_root().join("Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj")
+}
+
+/// The `xknxproject` reference dump used by the oracle comparison (Task 17).
+pub fn oracle_dump_path() -> PathBuf {
+    workspace_root().join("project_dump.json")
+}

@@ -1697,7 +1697,7 @@ The reference project parses with no unknown constructs."
   ```
   Task 15 merges the result into the `SourceDocument`.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 #[test]
@@ -1731,19 +1731,19 @@ The second test states the rule: a known attribute that the model deliberately
 does not carry is still retained, so export writes it back. Known-but-not-
 modelled and unknown are different things — only the second is a report entry.
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj project_info`
 Expected: FAIL, `cannot find function parse_project_info`.
 
-- [ ] **Step 3: Implement `parse/project_info.rs`**
+- [x] **Step 3: Implement `parse/project_info.rs`**
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj project_info`
 Expected: PASS, 2 tests.
 
-- [ ] **Step 5: Run the gate and commit**
+- [x] **Step 5: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/src

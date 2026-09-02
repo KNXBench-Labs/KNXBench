@@ -1517,7 +1517,7 @@ event:
 an occurrence count, so a project that repeats an unknown attribute 900 times
 produces one report line, not 900.
 
-- [ ] **Step 1: Write failing tests against hand-written XML**
+- [x] **Step 1: Write failing tests against hand-written XML**
 
 ```rust
 const MINIMAL: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
@@ -1628,12 +1628,12 @@ fn truncated_xml_is_a_parse_error_carrying_its_byte_position() {
 }
 ```
 
-- [ ] **Step 2: Run them and watch them fail**
+- [x] **Step 2: Run them and watch them fail**
 
 Run: `cargo test -p knx-etsproj parse`
 Expected: FAIL, `cannot find function parse_installation`.
 
-- [ ] **Step 3: Implement `parse/mod.rs` and `parse/installation.rs`**
+- [x] **Step 3: Implement `parse/mod.rs` and `parse/installation.rs`**
 
 `mod.rs` holds the path stack, the unknown-construct aggregator, the raw-span
 capture helper, and an `attr_map` helper that decodes a `BytesStart`'s
@@ -1642,12 +1642,12 @@ attributes into `Vec<(String, String)>` with entity references expanded.
 each arm filling the corresponding source struct. Sub-elements are appended to
 the innermost open struct, tracked with a small stack of in-progress values.
 
-- [ ] **Step 4: Run them and watch them pass**
+- [x] **Step 4: Run them and watch them pass**
 
 Run: `cargo test -p knx-etsproj parse`
 Expected: PASS, 6 tests.
 
-- [ ] **Step 5: Add a test that the real reference project parses**
+- [x] **Step 5: Add a test that the real reference project parses**
 
 ```rust
 #[test]
@@ -1666,7 +1666,7 @@ fn the_reference_project_parses_with_no_unknown_constructs() {
 }
 ```
 
-- [ ] **Step 6: Run the gate and commit**
+- [x] **Step 6: Run the gate and commit**
 
 ```bash
 git add crates/knx-etsproj/src

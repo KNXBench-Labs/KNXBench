@@ -5,7 +5,7 @@ deliverables, and the entry condition that must hold before it starts. A
 session that starts without its entry condition met produces work that has to
 be redone.
 
-Current position: **Session 1 complete**. See
+Current position: **Session 2 complete**. See
 [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
 
 ## Session 0 — Technical research
@@ -20,15 +20,19 @@ with two mechanically enforced rules and CI.
 
 ## Session 2 — KNX core
 
-**Goal.** Implement the domain model of [DATA_MODEL.md](DATA_MODEL.md).
-
-**Deliverables.** Entities (project, installation, area, line, device, group
+**Done.** Implemented the domain model of [DATA_MODEL.md](DATA_MODEL.md) in
+`knx-core`: entities (project, installation, area, line, device, group
 address, group range, communication object instance, parameter instance,
 building part); typed addresses with parsing and formatting; datapoint type
 references; the override resolution that turns three source layers into
 `Resolved<T>`; validation rules; the string table; the command layer with
 inverses for undo and redo; the schema version and the migration chain
-skeleton.
+skeleton in `knx-store`.
+
+Not part of this session's delivery: the opaque passthrough store
+([ADR-0006](adr/0006-opaque-passthrough-store.md)) — nothing exists yet to
+pass through, since there is no importer. That lands in Session 3 alongside
+the code that populates it.
 
 **Entry condition.** The workspace builds, and both gates pass —
 `cargo run -p xtask -- check-layering` and `cargo deny check`. Met.

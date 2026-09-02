@@ -5,10 +5,11 @@
 This describes the target domain model of `knx-core`. It is the reference
 Session 2 implements against.
 
-Session 1 implements two of these types: `Layer` and `Resolved<T>`. Every
-section below states whether it is **implemented**, **planned** or **retained
-but uninterpreted**, so that the document can be read as a status as well as a
-design.
+Session 1 implemented two of these types: `Layer` and `Resolved<T>`. Session 2
+implemented the rest of the domain model described here, in `knx-core`, plus
+the migration-chain skeleton in `knx-store`. Every section below states
+whether it is **implemented**, **planned** or **retained but uninterpreted**,
+so that the document can be read as a status as well as a design.
 
 Every count cited here was measured on the reference project in Session 0 and
 is reproducible with [tools/inspect_knxproj.py](../tools/inspect_knxproj.py).
@@ -16,7 +17,7 @@ Section references point into [RESEARCH.md](RESEARCH.md).
 
 ## 2. Identity
 
-*Planned.*
+*Implemented: the `*Id` newtypes and `SourceRef` in `knx-core/src/ids.rs`.*
 
 Two kinds of identifier, never conflated.
 
@@ -39,7 +40,9 @@ parsed on import to reconstruct the override chain, and preserved as written.
 
 ## 3. The override chain
 
-*Implemented: `Layer`, `Resolved<T>`.*
+*Implemented: `Layer`, `Resolved<T>` (Session 1, `knx-core/src/provenance.rs`);
+the command layer that produces `UserEdit` values and undoes back to the
+originating layer lives in `knx-core/src/command.rs` (Session 2).*
 
 This is the single most constraining finding of Session 0 (RESEARCH §3.2). A
 communication object's effective properties resolve through three layers in the
@@ -104,7 +107,8 @@ See [ADR-0004](adr/0004-provenance-model.md).
 
 ## 4. Entities
 
-*Planned.*
+*Implemented: `knx-core/src/{device,parameter,devices,group,building,topology,
+installation,project}.rs`.*
 
 The attribute sets below are those actually observed in the reference project
 (RESEARCH §3), not the full schema — no authoritative XSD is available, so the
@@ -153,7 +157,7 @@ is an assumption, not a verified fact (RESEARCH §3.1).
 
 ## 5. Two orthogonal hierarchies
 
-*Planned.*
+*Implemented: `knx-core/src/{topology,building,devices}.rs`.*
 
 `Devices` is the sole owner of devices. `Topology` (Area → Line → devices) and
 `Buildings` (recursive typed `BuildingPart` → devices) hold references only
@@ -171,7 +175,7 @@ mandatory reproduces that bug.
 
 ## 6. Directional links
 
-*Planned.*
+*Implemented: `knx-core/src/flags.rs` (`Direction`, `GroupLink`).*
 
 ```rust
 pub struct GroupLink {
@@ -187,7 +191,7 @@ The reference project has 569 send links against 27 receive links (RESEARCH
 
 ## 7. Commissioning state
 
-*Planned.*
+*Implemented: `knx-core/src/commissioning.rs`.*
 
 Commissioning state is domain data, not import metadata. It describes the delta
 between the planned project and the physical installation, which is
@@ -214,7 +218,7 @@ tell the user which devices are not in the state the project says they are.
 
 ## 8. Localized strings
 
-*Planned.*
+*Implemented: `knx-core/src/string_table.rs`.*
 
 `LocalizedString` is a handle into a `StringTable` keyed by `(key, language)`,
 not a `String`. Import populates the table from the `TranslationUnit` trees:
@@ -228,7 +232,7 @@ the model from day one.
 
 ## 9. Addresses and datapoint types
 
-*Planned.*
+*Implemented: `knx-core/src/address.rs`, `knx-core/src/dpt.rs`.*
 
 Addresses are dedicated types, not integers. `IndividualAddress(u16)` exposes
 area, line and device; `GroupAddress(u16)` is rendered according to the
@@ -248,6 +252,13 @@ at most, both are findings in a report.
 
 Datapoint types are referenced, not inlined: `knx_master.xml` defines 289 DPT
 subtypes, which belong to the product database rather than to each project.
+
+`DptRef` parses a single `DPST-<main>-<sub>` / `DPT-<main>` string. It does
+not yet handle `ComObjectRef/@DatapointType` being a space-separated list of
+alternatives, which the reference project's raw XML contains (RESEARCH
+§4.2 — `M-0083/M-0083_A-0019-13-A892.xml`, e.g. `"DPST-9-21 DPST-9-21"`).
+Deferred to `knx-productdb` (Session 4), which owns DPT compatibility
+resolution.
 
 ## 10. Retained but uninterpreted
 
@@ -271,7 +282,10 @@ round-trips.
 
 ## 11. Versioning and migration
 
-*Planned.*
+*Implemented: `Project::schema_version` and `CURRENT_SCHEMA_VERSION` in
+`knx-core/src/project.rs`; the migration chain skeleton
+(`open_and_migrate`, `migrate_v0_to_v1`, the frozen `v1-empty.sqlite`
+fixture) in `knx-store/src/migration.rs`.*
 
 ```rust
 pub struct Project {

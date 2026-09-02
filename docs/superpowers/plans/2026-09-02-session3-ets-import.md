@@ -1,14 +1,16 @@
 # Session 3 — ETS Project Import Implementation Plan
 
-> **For agentic workers:** Executed inline by the controller in the same
-> session (Agent-tool subagent dispatch is blocked by the auto-mode permission
-> classifier in this repository — see the project memory
-> `subagent-dispatch-blocked`). No fresh-context subagents are dispatched; the
-> controller implements each task directly, runs the full gate after each task,
-> and commits per task. Because the controller holds full context already,
-> per-task "briefs" are the task sections below, read directly rather than
-> extracted into separate files. Steps use checkbox (`- [ ]`) syntax for
-> tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: use
+> `superpowers:subagent-driven-development` to implement this plan task by
+> task — one fresh-context subagent per task, with review between tasks.
+> `superpowers:executing-plans` is the fallback if dispatch is unavailable.
+> Each task section below is self-contained and serves as the brief for its
+> subagent: it names its files, its interfaces, its tests and its commit, so a
+> worker with no prior context can execute it. Steps use checkbox (`- [ ]`)
+> syntax for tracking.
+>
+> Subagent dispatch requires `permissionMode=default`; under
+> `permissionMode=auto` the classifier denies the Agent tool outright.
 
 **Goal.** Read the reference `.knxproj` into the `knx-core` model through the
 six-stage pipeline of [IMPORT_EXPORT.md](../../IMPORT_EXPORT.md), preserve

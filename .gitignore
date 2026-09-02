@@ -1,3 +1,4 @@
 .venv/
 bus_traffic.jsonl
 .superpowers/
+/target/

@@ -8,8 +8,10 @@ pub mod address;
 pub mod dpt;
 pub mod ids;
 pub mod provenance;
+pub mod string_table;
 
 pub use address::{AddressError, GroupAddress, GroupAddressStyle, IndividualAddress};
 pub use dpt::{DptParseError, DptRef};
 pub use ids::*;
 pub use provenance::{Layer, Resolved};
+pub use string_table::{Language, LocalizedString, StringTable, TranslationKey};

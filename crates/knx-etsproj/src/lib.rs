@@ -6,6 +6,9 @@ pub mod detect;
 pub mod known;
 pub mod parse;
 pub mod source;
+#[cfg(test)]
+mod testutil;
+pub mod validate;
 pub mod values;
 
 pub use container::{Container, ContainerError, EntryInfo};

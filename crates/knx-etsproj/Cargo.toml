@@ -10,6 +10,7 @@ publish = false
 [dependencies]
 knx-core.workspace = true
 zip.workspace = true
+quick-xml.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

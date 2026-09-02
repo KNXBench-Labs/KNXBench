@@ -29,3 +29,4 @@ knx-secure = { path = "crates/knx-secure" }
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
 tempfile = "3"
+zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs"] }

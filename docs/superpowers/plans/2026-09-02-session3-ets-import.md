@@ -977,8 +977,15 @@ tempfile.workspace = true
 and in the workspace root `Cargo.toml` under `[workspace.dependencies]`:
 
 ```toml
-zip = { version = "8.6", default-features = false, features = ["deflate-flate2"] }
+zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 ```
+
+Measured against the actual crate: `deflate-flate2` alone (zip 8.6.0) pulls in
+`flate2` with no backend selected and fails to compile
+(`flate2::compile_error!("You need to choose a zlib backend")`).
+`deflate-flate2-zlib-rs` adds the pure-Rust `zlib-rs` backend — no system zlib,
+no C toolchain, deterministic across machines, in keeping with "avoid
+unnecessary dependencies".
 
 - [ ] **Step 2: Write failing tests**
 
@@ -987,7 +994,10 @@ zip = { version = "8.6", default-features = false, features = ["deflate-flate2"]
 fn the_reference_project_inventory_has_thirty_eight_entries() {
     let mut c = Container::open(reference_ets4_bytes()).unwrap();
     assert_eq!(c.entries().len(), 38);
-    assert!(c.read("knx_master.xml").unwrap().starts_with(b"\xef\xbb\xbf<?xml"));
+    // Measured: unlike the per-installation `0.xml` files, ETS4 writes
+    // `knx_master.xml` with no UTF-8 BOM and no XML declaration — it starts
+    // directly with the root element.
+    assert!(c.read("knx_master.xml").unwrap().starts_with(b"<KNX"));
 }
 
 #[test]

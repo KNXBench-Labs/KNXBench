@@ -9,3 +9,7 @@ publish = false
 
 [dependencies]
 knx-core.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

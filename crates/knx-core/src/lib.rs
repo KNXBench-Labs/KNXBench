@@ -6,6 +6,7 @@
 
 pub mod address;
 pub mod building;
+pub mod command;
 pub mod commissioning;
 pub mod device;
 pub mod devices;
@@ -23,6 +24,7 @@ pub mod validation;
 
 pub use address::{AddressError, GroupAddress, GroupAddressStyle, IndividualAddress};
 pub use building::{BuildingPart, BuildingPartType};
+pub use command::{Command, CommandError, CommandStack};
 pub use commissioning::{CommissioningState, CompletionStatus};
 pub use device::{ComObjectInstance, DeviceInstance};
 pub use devices::Devices;

@@ -72,25 +72,59 @@ that is all we can honestly say.
 
 ## Session 4 — Manufacturer databases
 
-**Goal.** The shared product database, and the research the parameter editor
-depends on.
+**Done.** See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md),
+[IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md),
+[ADR-0012](adr/0012-enrichment-into-absent-slots.md).
 
-**Deliverables.** The product database schema (manufacturer → product →
-application program → version → parameters, communication objects, DPTs);
-ingest from `.knxproj` manufacturer data, keyed with a content hash and
-skipping existing entries, replacing Session 3's per-project opaque-store
-arrangement ([KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §12); indexed and
-cached access so that a project open never re-parses 22 MB; graceful
-degradation when the database is missing; full entity persistence of
-`knx_core::Project` into `knx-store`'s SQLite tables, beyond the opaque
-table Session 3 shipped alone.
+**Goal.** The shared product database.
 
-Plus the **`when/@test` expression grammar spike** (risk R3). This is research,
-not a feature, and its output is a documented grammar plus a decision on
-whether a parameter editor is feasible.
+**Deliverables, all shipped.** `knx-productdb`: its own SQLite schema and
+migration chain (manufacturer → hardware/product/hardware2program →
+application program → parameter types/parameters → communication objects →
+translations, plus the `knx_master.xml`-derived manufacturer names and DPT
+catalogue); content-hashed blob storage alongside the parsed tables
+([ADR-0011](adr/0011-product-database-storage.md)); ingest from
+`.knxproj` manufacturer data keyed by content hash, skipping existing
+entries, replacing Session 3's per-project opaque-store arrangement
+([KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §12); the project manifest
+(`knx-store` schema v3) naming what a project was imported with,
+independent of whether the product database itself is present; graceful
+degradation when the database is missing, tested rather than asserted;
+enrichment of `ComObjectInstance` from the resolved application program
+into `Override::Absent` slots only ([ADR-0012](adr/0012-enrichment-into-absent-slots.md));
+the `knx products` CLI subcommand and `--product-db`/`--no-product-db` on
+`knx import`.
+
+**Not part of this session's delivery**, carried forward, each its own
+future cycle rather than bundled into "Session 4 leftovers":
+
+- **Full entity persistence** of `knx_core::Project` into `knx-store`'s
+  SQLite tables, beyond the opaque and manifest tables. Two sessions have
+  now deferred this in turn (Session 3's IMPLEMENTATION_STATUS correction,
+  this session again) — it belongs at the start of whichever session
+  first needs to *save* an edited project, which is Session 5.
+- **The `when/@test` expression grammar spike** (risk R3), still
+  unresearched and still its own research cycle rather than a feature: the
+  `Dynamic` tree is not parsed at all, and the raw bytes are retained
+  regardless (ADR-0011), so no data is lost by deferring this again.
+- **A layer stack in `Override<T>`** that would make a program value
+  behind an instance-level `Empty` slot visible without risking the export
+  change ADR-0012 identifies. A domain-model change with a migration; not
+  worth taking for visibility alone without a consumer (the parameter
+  editor, or a UI) that needs it.
+- **Resolving an ambiguous, space-separated `DatapointType` list**
+  (RESEARCH §4.2) from context — e.g. a linked group address's own DPT.
+  Needs the group-address/communication-object cross-reference a later
+  session's entity persistence would make queryable; guessing from one
+  communication object alone is not attempted.
+- **`.knxprod` direct ingest** for master data scheme ≥ 12
+  (KNOWN_LIMITATIONS §11) and **schema 23 manufacturer data** — both share
+  a blocker already tracked (the container/encryption layer, and the
+  schema-23 known-element table, respectively) and neither is closer to
+  resolution after this session.
 
 **Entry condition.** Import produces application program references worth
-resolving.
+resolving. Met.
 
 ## Session 5 — UI and UX
 
@@ -138,8 +172,8 @@ architecture; each has a defined landing place.
 | --- | --- |
 | ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Session 3 delivered the tolerant parser (reports unknown constructs rather than failing) and schema-23 detection-and-refusal by name; the per-version known-element lists themselves still need an independent sample per version (risk R1) — no fixed session, lands whenever one becomes available |
 | `Functions` element semantics | Session 2 — a domain model addition; absent from the reference sample |
-| `when/@test` expression grammar | Session 4 — a research spike, prerequisite for the parameter editor |
+| `when/@test` expression grammar | Session 4 built the product database around it staying unparsed (`Dynamic`'s raw bytes retained regardless, ADR-0011); the grammar spike itself remains a research cycle, no fixed session |
 | Whether ETS re-imports an unsigned third-party `.knxproj` | Session 3 delivered the mechanism (`ExportWarning::Unsigned`, always present); the verification itself — opening an export in real ETS — is still open (risk R9), no fixed session |
 | Whether Data Secure runtime keys are readable from `.knxproj` | Session 7 or later — `knx-secure` |
-| `.knxprod` encryption for master data scheme ≥ 12 | Session 4 — product database ingest; out of v1 scope |
+| `.knxprod` encryption for master data scheme ≥ 12 | Session 4 delivered `.knxproj`-sourced product database ingest; direct `.knxprod` ingest for scheme ≥ 12 remains out of v1 scope, no fixed session |
 | The project licence | Session 7 — currently a placeholder, see [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) |

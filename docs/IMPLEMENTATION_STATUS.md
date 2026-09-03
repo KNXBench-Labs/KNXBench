@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-02 (Session 3)
+Last updated: 2026-09-03 (Session 4)
 
 ## Where the project stands
 
@@ -10,7 +10,7 @@ Last updated: 2026-09-02 (Session 3)
 | 1 | Architecture | **Done** — see [ARCHITECTURE.md](ARCHITECTURE.md), [adr/](adr/), [design spec](superpowers/specs/2026-09-02-knx-architecture-design.md) |
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
-| 4 | Manufacturer database | Not started |
+| 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
 | 5 | UI / UX | Not started |
 | 6 | KNXnet/IP | Not started |
 | 7 | Integration & hardening | Not started |
@@ -26,19 +26,20 @@ commissioning state (`commissioning.rs`), group ranges/addresses
 devices and communication objects (`device.rs`, `parameter.rs`,
 `devices.rs`), installation and project (`installation.rs`, `project.rs`),
 validation rules (`validation.rs`), and the undo/redo command layer
-(`command.rs`). Schema version bumped to 2 in Session 3 alongside
-`knx-store`'s own (lockstep by design), though the Rust shape of `Project`
-did not change.
+(`command.rs`). Schema version bumped to 3 in Session 4 alongside
+`knx-store`'s own (lockstep by design, [ADR-0003](adr/0003-sqlite-project-format.md)),
+though the Rust shape of `Project` did not change. 47 tests.
 
 **`knx-store` holds the schema-version migration chain** (`migration.rs`,
-now through v2) and the opaque passthrough table (`opaque.rs`,
-`insert_opaque`/`load_opaque`), with two frozen fixtures
-(`fixtures/v1-empty.sqlite`, `fixtures/v2-empty.sqlite`). Entity tables
+now through v3), the opaque passthrough table (`opaque.rs`,
+`insert_opaque`/`load_opaque`), and the manufacturer manifest table added
+this session (`manifest.rs`, `insert_manufacturer_refs`/
+`load_manufacturer_refs` — schema v3, [ADR-0011](adr/0011-product-database-storage.md)),
+with three frozen fixtures (`fixtures/v1-empty.sqlite`,
+`fixtures/v2-empty.sqlite`, `fixtures/v3-empty.sqlite`). Entity tables
 (persisting `knx_core::Project` itself into SQLite, beyond the opaque
-store) are **not** part of Session 3 and were never listed as such in
-[ROADMAP.md](ROADMAP.md)'s own Session 3 deliverables — that promise
-belonged only to this document's previous revision, corrected here. Full
-entity persistence is Session 4 work, alongside the product database.
+store) remain out of scope — carried forward again, this time with no
+session named yet. 12 tests.
 
 **`knx-etsproj` holds the full six-stage import/export pipeline**: the ZIP
 container (`container.rs`, with a 64 MB per-entry size guard), schema
@@ -46,25 +47,49 @@ detection (`detect.rs`), the tolerant streaming parser for both `0.xml`
 and `Project.xml` (`parse/`, `known.rs`'s schema-11 table), attribute value
 conversions (`values.rs`), structural validation (`validate.rs`), the
 mapper into `knx_core::Project` (`map.rs`), datapoint-type inference
-(`infer.rs`), the opaque-entry collector (`opaque.rs`), the import report
-(`report.rs`), orchestration (`import_knxproj`/`import_knxproj_bytes` in
-`lib.rs`), schema-11 XML writers and container export (`export/`), and the
-declared semantic-equality comparison (`compare.rs`). 88 tests in the crate
-(67 unit, plus the golden, oracle, roundtrip and malformed-input
-integration suites), on top of `knx-core`'s 47 and `knx-store`'s 8.
+(`infer.rs`), the opaque-entry collector (`opaque.rs` — now handing
+manufacturer files out separately as `ManufacturerFile`, Session 4 Task
+12), the import report (`report.rs`), orchestration
+(`import_knxproj`/`import_knxproj_bytes` in `lib.rs`), schema-11 XML
+writers and container export (`export/`), and the declared
+semantic-equality comparison (`compare.rs`). 89 tests in the crate (68
+unit, plus the golden, oracle, roundtrip and malformed-input integration
+suites).
 
-**`knx-app` holds the import service** (`import.rs`:
-`import_ets_project`) — the one crate that sees both `knx-etsproj` and
-`knx-store`, enforced by `check-layering`. **`apps/knx-cli` gains an
-`import` subcommand**: `knx import <file.knxproj> [--store <path>]
-[--report-json <path>]`, human-readable counts on stdout, exit code 0 on
-a produced project with no errors (warnings do not change it), 1 when no
-project could be produced, 2 when a project was produced but its report
-carries `Severity::Error` entries (IMPORT_EXPORT §6.1).
+**`knx-productdb` is no longer an empty crate.** It owns its own SQLite
+migration chain (`migration.rs`, v1) and parser, and depends on neither
+`knx-etsproj` nor `knx-store` (the third `check-layering` root, ADR-0011):
+the content-hashed blob store (`blob.rs`), streaming XML helpers
+(`xml.rs`), the ingest report (`report.rs`), one parser module per
+manufacturer file kind (`parse/catalog.rs`, `hardware.rs`, `program.rs`,
+`comobject.rs`, `translation.rs`, `master.rs`), per-file orchestration with
+a content-hash skip and one transaction per file (`ingest.rs`), the read
+side (`query.rs`), and enrichment of `ComObjectInstance` from the
+application program into `Override::Absent` slots only (`enrich.rs`,
+[ADR-0012](adr/0012-enrichment-into-absent-slots.md)). 69 tests (60 unit,
+plus the golden ingest of the reference project's manufacturer data, the
+`xknxproject` oracle comparison, and the malformed-input suite).
 
-`knx-productdb`, `knx-net`, `knx-secure` remain empty crates with their
-responsibility stated in a doc comment. There is still no product
-database, no manufacturer parameter interpretation, and no UI.
+**`knx-app` holds both the import and export services**
+(`import.rs`: `import_ets_project`/`import_ets_project_with`;
+`export.rs`: `export_ets_project`) — the one crate that sees
+`knx-etsproj`, `knx-store` and `knx-productdb` together, enforced by
+`check-layering`. `ImportOptions { product_db }` decides whether
+manufacturer data routes through the shared product database (ingested
+and enriched) or falls back to the project's own opaque store exactly as
+Session 3 wrote it — both paths tested, including byte-identical export
+either way. 7 tests.
+
+**`apps/knx-cli`'s `import` subcommand gains `--product-db <path>` /
+`--no-product-db`**, defaulting to `$XDG_DATA_HOME/knx/products.sqlite`
+when neither flag is given, and a new **`knx products`** subcommand
+(`list`, `ingest`, `show <program-id>`, `verify`) for inspecting the
+database and ingesting a `.knxproj`'s manufacturer data separately from a
+full import. 10 tests.
+
+`knx-net`, `knx-secure` remain empty crates with their responsibility
+stated in a doc comment. There is still no manufacturer parameter
+*interpretation* (the `Dynamic` tree, `when/@test`) and no UI.
 
 Three architectural rules are enforced mechanically rather than by
 discipline, and all three have been observed to fail on a deliberate
@@ -72,9 +97,12 @@ violation:
 
 - `cargo run -p xtask -- check-layering` — `knx-core` reaches none of
   `serde_json`, `quick-xml`, `rusqlite`, `tokio`; `knx-etsproj` reaches no
-  `knx-store` (Session 3).
+  `knx-store`; `knx-productdb` reaches neither `knx-etsproj` nor
+  `knx-store` (Session 4).
 - `cargo deny check` — no licence outside the allowlist enters the graph; GPL
   is not on the allowlist.
+
+238 tests pass across the workspace as of this session.
 
 ## What exists
 
@@ -82,12 +110,13 @@ violation:
 | --- | --- |
 | `Cargo.toml`, `rust-toolchain.toml` | Workspace root; toolchain pinned to Rust 1.98.0. |
 | `crates/knx-core/` | Domain model per [DATA_MODEL.md](DATA_MODEL.md), sections 1–9 and 11. No IO. |
-| `crates/knx-store/` | SQLite schema-version migration chain through v2 (`migration.rs`), the opaque passthrough table (`opaque.rs`), and two frozen fixtures. |
-| `crates/knx-etsproj/` | The full six-stage `.knxproj` import/export pipeline — see the Session 3 paragraph above. No dependency on `knx-store`. |
-| `crates/knx-app/` | The import service (`import.rs`) — the one crate that sees both `knx-etsproj` and `knx-store`. |
-| `crates/knx-productdb/`, `knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
-| `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand added Session 3; prints its version otherwise. |
-| `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for two roots (`knx-core`, `knx-etsproj`); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
+| `crates/knx-store/` | SQLite schema-version migration chain through v3 (`migration.rs`), the opaque passthrough table (`opaque.rs`), the manufacturer manifest table (`manifest.rs`, Session 4), and three frozen fixtures. |
+| `crates/knx-etsproj/` | The full six-stage `.knxproj` import/export pipeline — see the Session 3 paragraph above. Hands manufacturer files out separately from opaque entries (Session 4). No dependency on `knx-store`. |
+| `crates/knx-productdb/` | The shared product database: own SQLite migration chain, streaming manufacturer-XML ingest, and enrichment of `ComObjectInstance` — see the Session 4 paragraph above. No dependency on `knx-etsproj` or `knx-store`. |
+| `crates/knx-app/` | The import and export services (`import.rs`, `export.rs`) — the one crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together. |
+| `crates/knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
+| `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
+| `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for three roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |
 | `.github/workflows/ci.yml` | CI: formatting, clippy with `-D warnings`, tests, the layering gate, and `cargo deny check`. |
 | `docs/ARCHITECTURE.md` | Layering, workspace layout, enforced rules, core approach, UI boundary, KNXnet/IP, key material, test strategy. |
@@ -130,21 +159,34 @@ cargo deny check
 
 ## Next session
 
-Session 4 (manufacturer databases). Build the shared product database and
-its ingest path (IMPORT_EXPORT §10, [ADR-0005](adr/0005-separate-product-database.md)):
-manufacturer data currently sits in the opaque store
-([KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §12), one copy per project,
-and needs to move to the shared, content-hashed store the target design
-describes. Entry condition met: import produces `ProductRefId`/
-`Hardware2ProgramRefId` references worth resolving.
+Session 5 (UI / UX). ROADMAP's entry condition — "import produces a model
+worth displaying" — is met: the domain model, import/export pipeline and
+shared product database all exist, and communication objects now carry
+resolved `Program`/`ProgramRef` values in addition to whatever the
+project's own `Instance` layer stated.
 
-Known gaps carried into Session 4:
+Known gaps carried forward, none blocking Session 5:
 
-- `DptRef` does not yet parse `ComObjectRef/@DatapointType` when it is a
-  space-separated list of alternatives (RESEARCH §4.2).
+- Full entity persistence of `knx_core::Project` into `knx-store`'s SQLite
+  tables, beyond the opaque and manifest tables — still not part of any
+  session's shipped deliverables; needed before a UI can save edits, so
+  it belongs early in Session 5 rather than being deferred again.
 - The `when/@test` expression grammar that would make device parameters
-  interpretable is unresearched (RESEARCH R3).
+  interpretable is unresearched (RESEARCH R3) — its own spike, prerequisite
+  for a parameter editor.
+- A program value behind an instance-level `Empty` slot stays invisible in
+  the model ([KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §12); lifted by
+  a layer stack in `Override<T>`, a domain-model change deliberately not
+  taken this session ([ADR-0012](adr/0012-enrichment-into-absent-slots.md)).
+- An ambiguous, space-separated `DatapointType` list fills nothing
+  (RESEARCH §4.2, KNOWN_LIMITATIONS §12) — resolving it needs more context
+  (e.g. a linked group address's own DPT) than one communication object
+  alone carries.
 - Schema 23's known-element table does not exist; schema 23 is detected and
   refused by name, not misread (RESEARCH §3.3, [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §1).
+  Schema 23 manufacturer data shares this blocker.
+- `.knxprod` direct ingest for master data scheme ≥ 12 remains unsupported
+  (KNOWN_LIMITATIONS §11); manufacturer data still reaches the product
+  database only via a `.knxproj` that already contains it.
 - Whether ETS re-imports an unsigned third-party `.knxproj` remains
   untested (risk R9) — see [COMPATIBILITY.md](COMPATIBILITY.md).

@@ -201,29 +201,61 @@ application programs it references.
 **Lifted when.** The container layer for scheme ≥ 12 is understood, or an
 official route to that data becomes available. Out of v1 scope either way.
 
-## 12. Manufacturer application program data lives in the opaque store, not the product database
+## 12. Manufacturer data resolution — lifted for communication objects, three gaps remain
 
-**Limitation.** Parameter and communication-object semantics (type, range,
-unit, translations) that would come from an application program are not
-yet available. `ProductRefId` and `Hardware2ProgramRefId` are preserved as
-opaque strings on every `DeviceInstance`; nothing resolves them.
+**Lifted (Session 4) for communication-object defaults.** `ProductRefId`
+and `Hardware2ProgramRefId` now resolve: the shared product database
+([ADR-0005](adr/0005-separate-product-database.md),
+[ADR-0011](adr/0011-product-database-storage.md)) ingests `<M-xxxx>/*`
+once, keyed by content hash, and `knx_productdb::enrich` fills a
+communication object's `text`, `description`, `dpt`, five flags and `size`
+from the application program wherever the instance itself left the slot
+`Absent` (IMPORT_EXPORT §10). `ComObjectInstance` values now carry
+`Program`/`ProgramRef` in addition to `Instance` where the source project
+did not itself state a value.
 
-**Cause.** [ADR-0005](adr/0005-separate-product-database.md)'s shared product
-database is Session 4 work. Until it exists, `<M-xxxx>/*` (catalog,
-hardware, application program XML, and vendor baggage) is retained in the
-per-project opaque store instead — one full copy per project, not the
-target design's one copy shared across every project that references it.
+What remains, each with its own cause:
+
+**Parameter interpretation is still absent.** The `Dynamic` tree
+(`choose`/`when`, visibility logic) is not parsed at all; the `when/@test`
+expression grammar that would make it interpretable is unresearched
+(RESEARCH R3). *Lifted when* that grammar is documented and a parameter
+editor is judged feasible — its own research spike, not a byproduct of
+this session.
+
+**A program value behind an `Empty` instance slot stays invisible in the
+model.** 497 of the reference project's 907 `ComObjectInstanceRef`
+elements carry `DatapointType=""` — present, explicitly cleared, not
+unstated. Enrichment deliberately never overwrites `Empty` (ADR-0012): the
+program's own value stays queryable in the product database
+(`knx_productdb::query::com_object_view`) but is not baked into
+`ComObjectInstance`. *Lifted when* `Override<T>` grows a layer stack that
+can hold a program value and an instance-level `Empty` on the same
+attribute without conflating them — a domain-model change with a
+migration, deliberately deferred rather than rushed into this session.
+
+**An ambiguous, space-separated `DatapointType` list fills nothing.**
+`ComObjectRef/@DatapointType` can hold several acceptable alternatives
+(RESEARCH §4.2, e.g. `"DPST-9-21 DPST-9-1"`). Enrichment refuses to guess
+between them; it records `EnrichmentIssue::AmbiguousDpt` and leaves the
+slot as it was. *Lifted when* the alternative to select can be determined
+from context (e.g. from a linked group address's own datapoint type) — not
+attempted this session.
+
+**Cause.** All three are, respectively: unresearched grammar (RESEARCH R3);
+a domain-model change intentionally scoped out of this session
+(ADR-0012); and a genuine ambiguity in the source data this session does
+not attempt to resolve.
 
 **Impact.** A project opens completely and round-trips its manufacturer
-data byte-for-byte, but nothing in it is interpreted: no parameter
-metadata, no DPT catalogue resolution beyond what a `DptRef` string already
-encodes, no application-program-level defaults for communication object
-properties. `ComObjectInstance` values in v1 carry only the `Instance`
-layer; `Program`/`ProgramRef` never appear.
+data byte-for-byte, with communication-object defaults now resolved where
+the instance did not override them. Parameter values remain preserved but
+uninterpreted; an `Empty`-slot program default and an ambiguous DPT list
+are both visible in the product database and in `EnrichmentReport`, but
+neither is written into the domain model.
 
-**Lifted when.** Session 4 builds the product database and its ingest path
-(IMPORT_EXPORT §10). Existing projects keep opening in the meantime — a
-project must never depend on the presence of manufacturer data.
+**Lifted when.** See each gap above individually; none of the three shares
+a single condition.
 
 ## 13. Password-protected projects are refused, not decrypted
 

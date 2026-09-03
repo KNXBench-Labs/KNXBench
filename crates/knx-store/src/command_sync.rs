@@ -20,13 +20,17 @@ use crate::StoreError;
 /// through this same `Command` enum — a `RestoreComObjectDpt` produced by
 /// undoing a `SetComObjectDpt` is itself a `Command`, synced the same way.
 ///
-/// `installation_id` names which installation's topology position bookkeeping
-/// applies (`SetIndividualAddress` does not move a device between lines, so
+/// The owning installation is never a parameter: for a device it is read
+/// back off the device's own stored row, and for a group address it is
+/// `installations[0]`, the only installation `Command::apply` itself ever
+/// touches (`command.rs` uses `installations.first_mut()`). A caller
+/// passing the wrong one would silently move a device — or file a new group
+/// address — into another installation, so there is nothing to pass.
+/// `SetIndividualAddress` does not move a device between lines either, so
 /// its existing line/position is looked up and re-asserted rather than
-/// changed).
+/// changed.
 pub fn sync_after_command(
     conn: &Connection,
-    installation_id: InstallationId,
     project: &Project,
     command: &Command,
 ) -> Result<(), StoreError> {
@@ -37,12 +41,12 @@ pub fn sync_after_command(
                 .devices
                 .get(*device)
                 .expect("Command::apply already proved this device exists");
-            let (line_id, position): (Option<i64>, i64) = tx.query_row(
-                "SELECT line_id, topology_position FROM device WHERE id = ?1",
+            let (installation_id, line_id, position): (u8, Option<i64>, i64) = tx.query_row(
+                "SELECT installation_id, line_id, topology_position FROM device WHERE id = ?1",
                 [d.id.0],
-                |row| Ok((row.get(0)?, row.get(1)?)),
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
             )?;
-            upsert_device(&tx, installation_id, position, d)?;
+            upsert_device(&tx, InstallationId(installation_id), position, d)?;
             set_device_line(
                 &tx,
                 d.id,
@@ -59,6 +63,14 @@ pub fn sync_after_command(
             upsert_com_object_dpt_override(&tx, com.id, &com.dpt)?;
         }
         Command::CreateGroupAddress { entry } => {
+            // `Command::apply` pushes onto `installations.first_mut()`, so
+            // that is the installation the new row belongs to — deriving it
+            // here is what keeps the two from ever disagreeing.
+            let installation_id = project
+                .installations
+                .first()
+                .expect("Command::apply already proved this project has an installation")
+                .id;
             let position: i64 = tx
                 .query_row(
                     "SELECT COALESCE(MAX(position) + 1, 0) FROM group_address WHERE installation_id = ?1",
@@ -113,12 +125,8 @@ mod tests {
         }
     }
 
-    fn project_with_one_unassigned_device() -> Project {
-        let mut project = Project::new(knx_core::string_table::Language("en".into()));
-        let mut installation = installation();
-        installation.topology.unassigned = vec![DeviceId(1)];
-        project.installations.push(installation);
-        project.devices.insert(DeviceInstance {
+    fn device_one() -> DeviceInstance {
+        DeviceInstance {
             id: DeviceId(1),
             source: source(),
             name: "D".into(),
@@ -130,7 +138,15 @@ mod tests {
             visibility_calculated: true,
             com_objects: vec![],
             binary_data: vec![],
-        });
+        }
+    }
+
+    fn project_with_one_unassigned_device() -> Project {
+        let mut project = Project::new(knx_core::string_table::Language("en".into()));
+        let mut installation = installation();
+        installation.topology.unassigned = vec![DeviceId(1)];
+        project.installations.push(installation);
+        project.devices.insert(device_one());
         project
     }
 
@@ -145,13 +161,48 @@ mod tests {
             address: Some(IndividualAddress::new(1, 1, 1).unwrap()),
         };
         command.apply(&mut project).unwrap();
-        sync_after_command(&conn, InstallationId(0), &project, &command).unwrap();
+        sync_after_command(&conn, &project, &command).unwrap();
 
         let loaded = crate::load_project(&conn).unwrap();
         assert_eq!(
             loaded.devices.get(DeviceId(1)).unwrap().address,
             Some(IndividualAddress::new(1, 1, 1).unwrap())
         );
+    }
+
+    /// A device's installation is read back off its own stored row rather
+    /// than taken from the caller, so a device belonging to a second
+    /// installation stays there. With the removed `installation_id`
+    /// parameter, a caller passing the wrong value silently moved the
+    /// device: `upsert_device`'s
+    /// `ON CONFLICT ... installation_id = excluded.installation_id`
+    /// overwrote it without complaint.
+    #[test]
+    fn set_individual_address_keeps_a_device_in_its_own_installation() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = Project::new(knx_core::string_table::Language("en".into()));
+        project.installations.push(installation()); // InstallationId(0), empty
+        let mut second = installation();
+        second.id = InstallationId(1);
+        second.topology.unassigned = vec![DeviceId(1)];
+        project.installations.push(second);
+        project.devices.insert(device_one());
+        crate::save_project(&conn, &project).unwrap();
+
+        let command = Command::SetIndividualAddress {
+            device: DeviceId(1),
+            address: Some(IndividualAddress::new(1, 1, 1).unwrap()),
+        };
+        command.apply(&mut project).unwrap();
+        sync_after_command(&conn, &project, &command).unwrap();
+
+        let loaded = crate::load_project(&conn).unwrap();
+        assert_eq!(
+            loaded.installations[1].topology.unassigned,
+            vec![DeviceId(1)]
+        );
+        assert!(loaded.installations[0].topology.unassigned.is_empty());
+        assert_eq!(loaded, project);
     }
 
     #[test]
@@ -175,14 +226,14 @@ mod tests {
             entry: entry.clone(),
         };
         create.apply(&mut project).unwrap();
-        sync_after_command(&conn, InstallationId(0), &project, &create).unwrap();
+        sync_after_command(&conn, &project, &create).unwrap();
 
         let loaded = crate::load_project(&conn).unwrap();
         assert_eq!(loaded.installations[0].group_addresses, vec![entry]);
 
         let delete = Command::DeleteGroupAddress { id: ga_id };
         delete.apply(&mut project).unwrap();
-        sync_after_command(&conn, InstallationId(0), &project, &delete).unwrap();
+        sync_after_command(&conn, &project, &delete).unwrap();
 
         let loaded = crate::load_project(&conn).unwrap();
         assert_eq!(loaded.installations[0].group_addresses, vec![]);
@@ -227,7 +278,7 @@ mod tests {
             }),
         };
         let inverse = set.apply(&mut project).unwrap();
-        sync_after_command(&conn, InstallationId(0), &project, &set).unwrap();
+        sync_after_command(&conn, &project, &set).unwrap();
 
         let loaded = crate::load_project(&conn).unwrap();
         let com = loaded.devices.com_object(ComObjectInstanceId(1)).unwrap();
@@ -235,7 +286,7 @@ mod tests {
 
         // Undo replays through the same mechanism.
         inverse.apply(&mut project).unwrap();
-        sync_after_command(&conn, InstallationId(0), &project, &inverse).unwrap();
+        sync_after_command(&conn, &project, &inverse).unwrap();
         let loaded = crate::load_project(&conn).unwrap();
         let com = loaded.devices.com_object(ComObjectInstanceId(1)).unwrap();
         assert_eq!(com.dpt, Override::Absent);

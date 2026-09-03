@@ -22,3 +22,5 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0008](0008-key-material-isolation.md) | Key material isolation | Accepted | 2026-09-02 |
 | [0009](0009-ui-boundary.md) | UI boundary via generated projections | Accepted | 2026-09-02 |
 | [0010](0010-per-attribute-override-representation.md) | Overrides are represented per attribute with an explicit empty state | Accepted | 2026-09-02 |
+| [0011](0011-product-database-storage.md) | Product database storage — blobs and parsed tables, content hash as identity | Accepted | 2026-09-03 |
+| [0012](0012-enrichment-into-absent-slots.md) | Enrichment fills only `Override::Absent` slots | Accepted | 2026-09-03 |

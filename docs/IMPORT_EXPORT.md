@@ -313,28 +313,72 @@ See [ADR-0007](adr/0007-roundtrip-fidelity.md).
 
 ## 10. Product database ingest
 
-**This is the target design ([ADR-0005](adr/0005-separate-product-database.md)),
-not what Session 3 ships.** Session 3 has no product database yet, so
-manufacturer data (`<M-xxxx>/*` — catalog, hardware, application program
-XML, and `Baggages/*`) goes into the opaque store like any other unmodelled
-container content, one full copy per project, keyed by `source_path` exactly
-like every other opaque entry. This is a deliberate, temporary arrangement:
-it is what lets Session 3 export a complete container instead of one ETS
-cannot read, not a claim that the target design below is implemented.
-[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) records the condition that
-lifts it.
+**Implemented (Session 4).** `<M-xxxx>/*` container entries (catalog,
+hardware, application program XML, and `Baggages/*` — everything except
+`.signature` entries) are no longer copied into the project's own opaque
+store. `knx-etsproj`'s `collect_container_entries` hands them out
+separately as `ManufacturerFile` values (`ImportOutcome.manufacturer`);
+`knx-app`, the one crate that sees both `knx-etsproj` and `knx-store`,
+routes them into `knx-productdb` and writes a manifest naming what the
+project was imported with.
 
-The target design, once the product database exists (Session 4): on project
-import, manufacturer data is **not** copied into the project. It is
-ingested into the separate product database, keyed by manufacturer, application
-program and version, with a content hash. Entries that already exist are
-skipped.
+**Ingest.** Each file's SHA-256 is the identity ([ADR-0011](adr/0011-product-database-storage.md)).
+A hash already present in `source_file` is skipped without being parsed at
+all — measured directly by
+`a_second_ingest_of_the_same_files_stores_nothing_new`
+(`crates/knx-productdb/tests/golden_reference_products.rs`) and by
+`a_second_import_into_the_same_product_db_skips_every_file`
+(`crates/knx-app/tests/product_db.rs`). Otherwise the file is classified
+by its first recognized element (`Catalog`, `Hardware`,
+`ApplicationPrograms`, `Baggages`, or a non-XML blob), stored as a blob and
+parsed into entity tables inside one transaction, so a failure partway
+through leaves the database exactly as it was
+(`a_failing_parse_leaves_no_partial_rows_and_no_blob`). `knx_master.xml`
+contributes `Manufacturers` and `DatapointTypes` only
+(`knx_productdb::ingest_master_data`); the file itself stays in the
+project's own opaque store as `OpaqueKind::MasterData`.
 
-The project holds references only. Consequences: 22 MB of application data is
-stored once rather than once per project, and the licensing separation
-(RESEARCH §10) is structural rather than a matter of discipline.
+**The project manifest.** `knx-store` schema v3 adds `manufacturer_ref`
+(`source_path`, `sha256`, `len`, `kind`) — what a project was imported
+with, independent of whether the product database that supplied the bytes
+is still around. `M-xxxx.signature` entries are the one exception and stay
+in the project's own opaque store: they sign a container state, not a
+product, so their export path is unchanged.
 
-If the referenced product data is missing when a project is opened, **the
-project still opens.** Communication objects then show the `Instance` layer
-only, clearly marked incomplete. A project must never depend on the presence of
-manufacturer data.
+**Export.** `knx-app`'s `export_ets_project` loads the manifest, fetches
+each file back out of the product database by its SHA-256
+(`knx_productdb::load_source_file`), and reassembles the full
+`OpaqueEntry` list `knx_etsproj::export::export_knxproj` needs — whose own
+signature does not change. A manifest entry the database cannot supply
+produces `ExportWarning::MissingManufacturerData { source_path, sha256 }`
+naming exactly which file, and the container is written without it rather
+than silently incomplete
+(`a_project_opens_and_names_its_gap_when_the_product_database_is_gone`).
+`export_is_byte_identical_with_and_without_the_product_database` is the
+proof that routing manufacturer data through the shared database changes
+nothing about what gets written back.
+
+**Degradation.** `--no-product-db` (or `ImportOptions { product_db: None
+}`) runs the Session 3 path unchanged: manufacturer bytes go into the
+project's own opaque store, no ingest, no enrichment — a tested fallback,
+not an assertion. Without any product database at all, a project still
+opens; communication objects show the `Instance` layer only, and the
+degradation is reported once per affected device rather than failing the
+import (`EnrichmentReport`, [ADR-0012](adr/0012-enrichment-into-absent-slots.md)).
+A project must never depend on the presence of manufacturer data.
+
+**Enrichment.** `knx_productdb::enrich` resolves each device's
+`Hardware2ProgramRefId` to an application program and each communication
+object's `ComObjectInstanceRef` source id to a `ComObjectRef`/`ComObject`
+pair, then fills `Override::Absent` slots only — see ADR-0012 for why
+`Empty`, `Malformed` and instance-level `Value`s are never touched, and why
+an ambiguous, space-separated `DatapointType` list fills nothing and is
+reported (`EnrichmentIssue::AmbiguousDpt`) instead of guessed.
+
+**Not part of this session's delivery**, carried forward: parameter
+*interpretation* (the `Dynamic` tree and the `when/@test` grammar, RESEARCH
+R3 — the raw bytes are retained regardless, per ADR-0011); a layer stack in
+`Override<T>` that would make an `Empty`-slot program value visible without
+risking the export change ADR-0012 rules out; `.knxprod` direct ingest for
+master data scheme ≥ 12 (KNOWN_LIMITATIONS §11); schema 23 manufacturer
+data (same blocker as schema 23 project data).

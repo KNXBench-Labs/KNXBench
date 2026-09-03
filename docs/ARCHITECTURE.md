@@ -63,8 +63,10 @@ crates/
   knx-store/       SQLite project storage, schema migrations, opaque store
   knx-etsproj/     .knxproj read/write: ZIP, schema detection, tolerant XML
                    parser, mapping to/from knx-core, import report
-  knx-productdb/   Product database (own SQLite), ingest of manufacturer data,
-                   indexed access to application programs
+  knx-productdb/   Product database (own SQLite, own migration chain),
+                   streaming ingest of manufacturer XML keyed by content
+                   hash, and enrichment of ComObjectInstance from it
+                   (Session 4)
   knx-net/         KNXnet/IP: discovery, tunnelling, routing, cEMI, telegrams
   knx-secure/      Isolated key material subsystem (empty for now, but present)
 
@@ -97,11 +99,16 @@ section 9.
 These are tests. Each one fails the build.
 
 1. **`knx-core` must not reach `serde_json`, `quick-xml`, `rusqlite` or
-   `tokio`** in its dependency graph. Enforced by
-   `cargo run -p xtask -- check-layering`, which walks the resolved graph from
-   `cargo metadata` and prints the shortest path to any forbidden package. The
-   gate has been observed to fail on an injected violation, which is the only
-   way to know a gate works.
+   `tokio`** in its dependency graph, **`knx-etsproj` must not reach
+   `knx-store`**, and **`knx-productdb` must not reach `knx-etsproj` or
+   `knx-store`** — the third rule (Session 4) is what keeps a later
+   `.knxprod` ingest from having to travel through the `.knxproj` importer,
+   and keeps product data separable from project files (ADR-0005,
+   ADR-0011). Enforced by `cargo run -p xtask -- check-layering`, which
+   walks the resolved graph from `cargo metadata` and prints the shortest
+   path to any forbidden package. All three gates have been observed to
+   fail on an injected violation, which is the only way to know a gate
+   works.
 2. **No runtime crate may depend on a GPL-licensed crate** (RESEARCH R6).
    Enforced by `cargo deny check` against an explicit licence allowlist; any
    licence not on the list is rejected, and GPL is not on the list.
@@ -112,8 +119,8 @@ These are tests. Each one fails the build.
    enforced**, because no UI exists. It becomes a graph check in Session 5,
    when `apps/knx-desktop` is created.
 
-Both existing gates run in CI on every push and pull request, and both are
-runnable locally with the same command. A check that only exists on CI gets
+All gates run in CI on every push and pull request, and all are runnable
+locally with the same command. A check that only exists on CI gets
 ignored.
 
 ## 5. Core approach
@@ -215,11 +222,11 @@ Seven levels. Two of them exist today; the rest arrive with the code they test.
 | Level | Content | Status |
 | --- | --- | --- |
 | Unit | Addresses, DPT parsing, override resolution, validation rules | Started — `Layer::is_exported` |
-| Golden | Import of the reference project against the entity counts from RESEARCH §3: 36 devices including the unassigned one, 514 group addresses, 907 `ComObjectInstanceRef`, 1390 parameter values, 569 send and 27 receive links | Session 3 |
-| Oracle | Comparison against `xknxproject` output where it is not known to be lossy; every deviation must be explained | Session 3 |
-| Roundtrip | The three roundtrip guarantees defined in [IMPORT_EXPORT.md](IMPORT_EXPORT.md) | Session 3 |
-| Migration | Every schema version has a frozen fixture that must keep loading | Session 2 |
-| Malformed input | Broken ZIP, truncated XML, unknown schema, duplicate IDs, invalid addresses, dangling references, password-protected without a password | Session 3 |
+| Golden | Import of the reference project against the entity counts from RESEARCH §3: 36 devices including the unassigned one, 514 group addresses, 907 `ComObjectInstanceRef`, 1390 parameter values, 569 send and 27 receive links. Session 4 adds its own golden ingest of the same project's manufacturer data (4 manufacturers, 24 source files, 12 application programs, 5,630 `com_object_ref` rows, 48,057 translations — `crates/knx-productdb/tests/golden_reference_products.rs`) | Session 3, extended Session 4 |
+| Oracle | Comparison against `xknxproject` output where it is not known to be lossy; every deviation must be explained. Session 4 adds a communication-object text/DPT comparison against `project_dump.json`, read as a committed output file per ADR-0002, never a dependency | Session 3, extended Session 4 |
+| Roundtrip | The three roundtrip guarantees defined in [IMPORT_EXPORT.md](IMPORT_EXPORT.md), now including `export_is_byte_identical_with_and_without_the_product_database` (`crates/knx-app/tests/product_db.rs`) | Session 3, extended Session 4 |
+| Migration | Every schema version has a frozen fixture that must keep loading — `knx-store` through v3, `knx-productdb`'s own v1 | Session 2, extended Session 4 |
+| Malformed input | Broken ZIP, truncated XML, unknown schema, duplicate IDs, invalid addresses, dangling references, password-protected without a password. Session 4 adds `crates/knx-productdb/tests/malformed_input.rs`: a truncated program, an empty file, 10,000 levels of nesting, an id collision across two different content hashes | Session 3, extended Session 4 |
 | Licence and layering | The dependency graph reaches no GPL crate; `knx-core` stays IO-free | Done — `cargo deny check`, `cargo run -p xtask -- check-layering` |
 
 The golden numbers are reproducible independently via
@@ -241,3 +248,6 @@ then asserted against itself.
 | [0007](adr/0007-roundtrip-fidelity.md) | Roundtrip fidelity definition |
 | [0008](adr/0008-key-material-isolation.md) | Key material isolation |
 | [0009](adr/0009-ui-boundary.md) | UI boundary via generated projections |
+| [0010](adr/0010-per-attribute-override-representation.md) | Overrides are represented per attribute with an explicit empty state |
+| [0011](adr/0011-product-database-storage.md) | Product database storage — blobs and parsed tables, content hash as identity |
+| [0012](adr/0012-enrichment-into-absent-slots.md) | Enrichment fills only `Override::Absent` slots |

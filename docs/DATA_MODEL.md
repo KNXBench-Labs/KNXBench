@@ -49,7 +49,29 @@ parsed on import to reconstruct the override chain, and preserved as written.
 `Override<T>` (Session 3, `knx-core/src/provenance.rs` — see the amendment
 below and [ADR-0010](adr/0010-per-attribute-override-representation.md));
 the command layer that produces `UserEdit` values and undoes back to the
-originating layer lives in `knx-core/src/command.rs` (Session 2).*
+originating layer lives in `knx-core/src/command.rs` (Session 2); the
+`Program`/`ProgramRef` layers are now populated — see the Session 4
+amendment below.*
+
+**Amendment (Session 4):** `Program` and `ProgramRef` are no longer
+theoretical layers this crate merely defines and never produces.
+`knx_productdb::enrich(&mut Project, &Connection)` fills them by resolving
+each device's `Hardware2ProgramRefId` to an application program in the
+shared product database, then each communication object's
+`ComObjectInstanceRef` source id (`ComObjectInstance.source.ets_id`,
+already the full `ComObjectRef` id, `map.rs:660`) to that program's
+`ComObjectRef`/`ComObject` pair — no change to `knx-core` itself was
+needed for the second step.
+
+Enrichment writes **only into `Override::Absent` slots**
+([ADR-0012](adr/0012-enrichment-into-absent-slots.md)): `Empty`,
+`Malformed` and an instance-level `Value` are what the project file
+actually said, and overwriting any of them would change what export
+writes back. A space-separated, multi-alternative `ComObjectRef/
+@DatapointType` (RESEARCH §4.2) fills nothing and is reported rather than
+guessed. `ComObjectInstance.size` is the one field enrichment fills
+without this restriction, exactly per its own doc comment's stated
+purpose.
 
 **Amendment (Session 3):** the chain resolves **per attribute**, not per
 object. `ComObjectInstanceRef` alone can leave `Text` absent while stating

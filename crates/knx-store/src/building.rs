@@ -187,15 +187,16 @@ mod tests {
     }
 
     #[test]
-    fn a_three_level_hierarchy_round_trips_with_correct_children_and_flat_order() {
+    fn a_hierarchy_with_siblings_round_trips_with_correct_flat_order_and_sibling_order() {
         let conn = open_and_migrate_in_memory().unwrap();
         upsert_installation_row(&conn, &installation()).unwrap();
         let building = part(1, None, BuildingPartType::Building);
         let floor = part(2, Some(1), BuildingPartType::Floor);
         let mut room = part(3, Some(2), BuildingPartType::Room);
         room.devices = vec![DeviceId(9), DeviceId(7)]; // deliberately non-sorted by id
+        let corridor = part(4, Some(2), BuildingPartType::Corridor); // room's sibling under floor
 
-        // Insert a device row to satisfy building_part_device's FK. Minimal
+        // Insert device rows to satisfy building_part_device's FK. Minimal
         // direct SQL, matching the migration test's own style — devices.rs's
         // upsert_device is not yet wired to installation membership here.
         for id in [7, 9] {
@@ -214,18 +215,49 @@ mod tests {
             .unwrap();
         }
 
-        // flat_position: building=0, floor=1, room=2 (pre-order). position:
-        // sibling order under each's own parent (each is an only child here, so 0).
-        upsert_building_part(&conn, InstallationId(0), 0, 0, &building).unwrap();
-        upsert_building_part(&conn, InstallationId(0), 0, 1, &floor).unwrap();
-        upsert_building_part(&conn, InstallationId(0), 0, 2, &room).unwrap();
+        // `position` (sibling rank under `parent_id`) and `flat_position`
+        // (index in the flat `Installation::buildings` list) are deliberately
+        // chosen so neither one coincides with the other, with id order, or
+        // with insertion order (building, floor, room, corridor — in that
+        // call sequence below). A swap of the two orderings, or a fallback to
+        // id/rowid order for either, therefore produces a visibly different
+        // (and test-failing) sequence rather than coincidentally matching:
+        //
+        //   id:            1(building) 2(floor)   3(room)    4(corridor)
+        //   position:      3           2          1          0
+        //   flat_position: 0           1          3          2
+        //
+        // Correct flat order (by flat_position): building, floor, corridor, room.
+        // Sibling order under floor (by position, room=1 and corridor=0):
+        // corridor before room — reversed from both insertion order (room
+        // inserted before corridor) and id order (room=3 < corridor=4).
+        upsert_building_part(&conn, InstallationId(0), 3, 0, &building).unwrap();
+        upsert_building_part(&conn, InstallationId(0), 2, 1, &floor).unwrap();
+        upsert_building_part(&conn, InstallationId(0), 1, 3, &room).unwrap();
+        upsert_building_part(&conn, InstallationId(0), 0, 2, &corridor).unwrap();
 
         let loaded = load_buildings(&conn, InstallationId(0)).unwrap();
-        assert_eq!(loaded.len(), 3);
+        assert_eq!(loaded.len(), 4);
+
+        // Flat (top-level) order follows `flat_position`. Ordering by
+        // `position` instead would yield [corridor, room, floor, building];
+        // falling back to id/insertion order would yield
+        // [building, floor, room, corridor]. Both differ from the expected
+        // sequence below.
+        let ids: Vec<u32> = loaded.iter().map(|p| p.id.0).collect();
+        assert_eq!(ids, vec![1, 2, 4, 3]); // building, floor, corridor, room
+
         assert_eq!(loaded[0].id, BuildingPartId(1));
         assert_eq!(loaded[0].children, vec![BuildingPartId(2)]);
-        assert_eq!(loaded[1].children, vec![BuildingPartId(3)]);
-        assert_eq!(loaded[2].devices, vec![DeviceId(9), DeviceId(7)]);
-        assert_eq!(loaded[2].parent, Some(BuildingPartId(2)));
+
+        // Floor's children are ordered by `position`: corridor (0) before
+        // room (1) — reversed from both id order and insertion order, so
+        // reconstructing by id/rowid instead of `position` would fail this.
+        assert_eq!(loaded[1].id, BuildingPartId(2));
+        assert_eq!(loaded[1].children, vec![BuildingPartId(4), BuildingPartId(3)]);
+
+        let room_loaded = loaded.iter().find(|p| p.id == BuildingPartId(3)).unwrap();
+        assert_eq!(room_loaded.devices, vec![DeviceId(9), DeviceId(7)]);
+        assert_eq!(room_loaded.parent, Some(BuildingPartId(2)));
     }
 }

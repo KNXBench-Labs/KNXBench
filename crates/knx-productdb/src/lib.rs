@@ -16,6 +16,7 @@ pub use blob::{
     SourceFile,
 };
 pub use migration::{default_path, open_and_migrate, ProductDbError, CURRENT_PRODUCTDB_VERSION};
+pub use parse::master::ingest_master_data;
 /// Re-exported so callers name the connection type through this crate
 /// rather than depending on `rusqlite` directly.
 pub use rusqlite::Connection;

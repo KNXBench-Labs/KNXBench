@@ -10,7 +10,7 @@ use std::path::Path;
 use rusqlite::Connection;
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 2;
+pub const CURRENT_SCHEMA_VERSION: i64 = 3;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -67,11 +67,29 @@ fn migrate_v1_to_v2(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v2 -> v3: the manufacturer manifest. Manufacturer data itself now lives
+/// in the shared product database (ADR-0005); this table is what lets a
+/// project name the files it was imported with even when that database is
+/// absent — a nameable gap instead of silent loss.
+fn migrate_v2_to_v3(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(
+        "CREATE TABLE manufacturer_ref (
+             id          INTEGER PRIMARY KEY,
+             source_path TEXT NOT NULL,
+             sha256      TEXT NOT NULL,
+             len         INTEGER NOT NULL,
+             kind        TEXT NOT NULL
+         ) STRICT;
+         CREATE INDEX manufacturer_ref_sha256 ON manufacturer_ref (sha256);",
+    )?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// Ordered chain; index `i` migrates `user_version` `i` to `i + 1`.
 fn migrations() -> Vec<Migration> {
-    vec![migrate_v0_to_v1, migrate_v1_to_v2]
+    vec![migrate_v0_to_v1, migrate_v1_to_v2, migrate_v2_to_v3]
 }
 
 /// Opens (creating if absent) the SQLite file at `path`, runs every pending
@@ -170,13 +188,13 @@ mod tests {
     }
 
     #[test]
-    fn a_fresh_file_migrates_to_version_two_and_has_the_opaque_table() {
+    fn a_fresh_file_migrates_to_the_current_version_and_has_the_opaque_table() {
         let dir = tempfile::tempdir().unwrap();
         let conn = open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 2);
+        assert_eq!(v, CURRENT_SCHEMA_VERSION);
         assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
     }
 
@@ -199,7 +217,7 @@ mod tests {
     }
 
     #[test]
-    fn the_frozen_v1_fixture_migrates_forward_to_v2() {
+    fn the_frozen_v1_fixture_migrates_forward_to_the_current_version() {
         // Copied, not opened in place: a migration test must not mutate its fixture.
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("v1.sqlite");
@@ -212,17 +230,57 @@ mod tests {
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 2);
+        assert_eq!(v, CURRENT_SCHEMA_VERSION);
+        assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
+    }
+
+    // `the_frozen_v2_fixture_still_opens` is deliberately not kept: v2 is no
+    // longer `CURRENT_SCHEMA_VERSION`, so opening that fixture by its literal
+    // path (rather than a copy) would migrate it forward and rewrite the
+    // committed file on disk. `the_frozen_v2_fixture_migrates_forward_to_v3`
+    // below covers the same fixture safely, and `the_frozen_v3_fixture_still_opens`
+    // covers the "still opens as a no-op" guarantee for the version that is
+    // current now.
+
+    #[test]
+    fn a_fresh_file_migrates_to_version_three_and_has_the_manifest_table() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(v, 3);
+        assert_eq!(
+            crate::manifest::load_manufacturer_refs(&conn).unwrap(),
+            vec![]
+        );
+    }
+
+    #[test]
+    fn the_frozen_v2_fixture_migrates_forward_to_v3() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v2.sqlite");
+        std::fs::copy(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v2-empty.sqlite"),
+            &path,
+        )
+        .unwrap();
+        let conn = open_and_migrate(&path).unwrap();
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(v, 3);
+        // The v2 opaque table survives the migration with its data intact.
         assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
     }
 
     #[test]
-    fn the_frozen_v2_fixture_still_opens() {
-        let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v2-empty.sqlite");
+    fn the_frozen_v3_fixture_still_opens() {
+        let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v3-empty.sqlite");
         let conn = open_and_migrate(Path::new(fixture)).unwrap();
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 2);
+        assert_eq!(v, 3);
     }
 }

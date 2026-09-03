@@ -8,6 +8,7 @@ pub mod group;
 pub mod manifest;
 pub mod migration;
 pub mod opaque;
+pub mod parameter;
 pub mod strings;
 pub mod topology;
 

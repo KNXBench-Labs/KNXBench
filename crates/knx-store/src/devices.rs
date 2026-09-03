@@ -293,8 +293,18 @@ struct OverrideRow {
 
 fn encode_text(t: &Override<Text>) -> OverrideRow {
     match t {
-        Override::Absent => OverrideRow { state: "absent", value: None, text_kind: None, layer: None },
-        Override::Empty => OverrideRow { state: "empty", value: None, text_kind: None, layer: None },
+        Override::Absent => OverrideRow {
+            state: "absent",
+            value: None,
+            text_kind: None,
+            layer: None,
+        },
+        Override::Empty => OverrideRow {
+            state: "empty",
+            value: None,
+            text_kind: None,
+            layer: None,
+        },
         Override::Malformed(raw) => OverrideRow {
             state: "malformed",
             value: Some(raw.clone()),
@@ -316,7 +326,12 @@ fn encode_text(t: &Override<Text>) -> OverrideRow {
     }
 }
 
-fn decode_text(state: &str, value: Option<String>, text_kind: Option<String>, layer: Option<String>) -> Override<Text> {
+fn decode_text(
+    state: &str,
+    value: Option<String>,
+    text_kind: Option<String>,
+    layer: Option<String>,
+) -> Override<Text> {
     match state {
         "empty" => Override::Empty,
         "malformed" => Override::Malformed(value.expect("malformed state always carries a value")),
@@ -338,8 +353,18 @@ fn decode_text(state: &str, value: Option<String>, text_kind: Option<String>, la
 
 fn encode_dpt(d: &Override<DptRef>) -> OverrideRow {
     match d {
-        Override::Absent => OverrideRow { state: "absent", value: None, text_kind: None, layer: None },
-        Override::Empty => OverrideRow { state: "empty", value: None, text_kind: None, layer: None },
+        Override::Absent => OverrideRow {
+            state: "absent",
+            value: None,
+            text_kind: None,
+            layer: None,
+        },
+        Override::Empty => OverrideRow {
+            state: "empty",
+            value: None,
+            text_kind: None,
+            layer: None,
+        },
         Override::Malformed(raw) => OverrideRow {
             state: "malformed",
             value: Some(raw.clone()),
@@ -370,8 +395,18 @@ fn decode_dpt(state: &str, value: Option<String>, layer: Option<String>) -> Over
 
 fn encode_bool(b: &Override<bool>) -> OverrideRow {
     match b {
-        Override::Absent => OverrideRow { state: "absent", value: None, text_kind: None, layer: None },
-        Override::Empty => OverrideRow { state: "empty", value: None, text_kind: None, layer: None },
+        Override::Absent => OverrideRow {
+            state: "absent",
+            value: None,
+            text_kind: None,
+            layer: None,
+        },
+        Override::Empty => OverrideRow {
+            state: "empty",
+            value: None,
+            text_kind: None,
+            layer: None,
+        },
         Override::Malformed(raw) => OverrideRow {
             state: "malformed",
             value: Some(raw.clone()),
@@ -438,7 +473,9 @@ pub fn upsert_com_object_dpt_override(
     write_override_row(conn, com_object_instance_id, Attr::Dpt, encode_dpt(dpt))
 }
 
-fn size_columns(size: &Option<Resolved<ObjectSize>>) -> (Option<&'static str>, Option<i64>, Option<&'static str>) {
+fn size_columns(
+    size: &Option<Resolved<ObjectSize>>,
+) -> (Option<&'static str>, Option<i64>, Option<&'static str>) {
     match size {
         None => (None, None, None),
         Some(Resolved { value, layer }) => {
@@ -451,7 +488,11 @@ fn size_columns(size: &Option<Resolved<ObjectSize>>) -> (Option<&'static str>, O
     }
 }
 
-fn decode_size(kind: Option<String>, value: Option<i64>, layer: Option<String>) -> Option<Resolved<ObjectSize>> {
+fn decode_size(
+    kind: Option<String>,
+    value: Option<i64>,
+    layer: Option<String>,
+) -> Option<Resolved<ObjectSize>> {
     let kind = kind?;
     let value = value.expect("size_value present whenever size_kind is");
     let layer = layer.expect("size_layer present whenever size_kind is");
@@ -502,13 +543,28 @@ pub fn upsert_com_object_instance(
     )?;
 
     write_override_row(conn, com.id, Attr::Text, encode_text(&com.text))?;
-    write_override_row(conn, com.id, Attr::Description, encode_text(&com.description))?;
+    write_override_row(
+        conn,
+        com.id,
+        Attr::Description,
+        encode_text(&com.description),
+    )?;
     write_override_row(conn, com.id, Attr::Dpt, encode_dpt(&com.dpt))?;
     write_override_row(conn, com.id, Attr::Read, encode_bool(&com.flags.read))?;
     write_override_row(conn, com.id, Attr::Write, encode_bool(&com.flags.write))?;
-    write_override_row(conn, com.id, Attr::Transmit, encode_bool(&com.flags.transmit))?;
+    write_override_row(
+        conn,
+        com.id,
+        Attr::Transmit,
+        encode_bool(&com.flags.transmit),
+    )?;
     write_override_row(conn, com.id, Attr::Update, encode_bool(&com.flags.update))?;
-    write_override_row(conn, com.id, Attr::Communication, encode_bool(&com.flags.communication))?;
+    write_override_row(
+        conn,
+        com.id,
+        Attr::Communication,
+        encode_bool(&com.flags.communication),
+    )?;
     Ok(())
 }
 
@@ -516,25 +572,33 @@ pub fn load_com_object_instance(
     conn: &Connection,
     id: ComObjectInstanceId,
 ) -> Result<ComObjectInstance, StoreError> {
-    let (source_path, source_ets_id, device_id, number, size_kind, size_value, size_layer, is_active) =
-        conn.query_row(
-            "SELECT source_path, source_ets_id, device_id, number, size_kind, size_value,
+    let (
+        source_path,
+        source_ets_id,
+        device_id,
+        number,
+        size_kind,
+        size_value,
+        size_layer,
+        is_active,
+    ) = conn.query_row(
+        "SELECT source_path, source_ets_id, device_id, number, size_kind, size_value,
                     size_layer, is_active
              FROM com_object_instance WHERE id = ?1",
-            params![id.0],
-            |row| {
-                Ok((
-                    row.get::<_, String>(0)?,
-                    row.get::<_, String>(1)?,
-                    row.get::<_, u32>(2)?,
-                    row.get::<_, u16>(3)?,
-                    row.get::<_, Option<String>>(4)?,
-                    row.get::<_, Option<i64>>(5)?,
-                    row.get::<_, Option<String>>(6)?,
-                    row.get::<_, bool>(7)?,
-                ))
-            },
-        )?;
+        params![id.0],
+        |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, u32>(2)?,
+                row.get::<_, u16>(3)?,
+                row.get::<_, Option<String>>(4)?,
+                row.get::<_, Option<i64>>(5)?,
+                row.get::<_, Option<String>>(6)?,
+                row.get::<_, bool>(7)?,
+            ))
+        },
+    )?;
     let _ = device_id; // not part of ComObjectInstance's own fields beyond `device` below
 
     let mut stmt = conn.prepare(
@@ -592,11 +656,12 @@ pub fn load_com_object_ids_for_device(
     conn: &Connection,
     device_id: DeviceId,
 ) -> Result<Vec<ComObjectInstanceId>, StoreError> {
-    let mut stmt = conn.prepare(
-        "SELECT id FROM com_object_instance WHERE device_id = ?1 ORDER BY position",
-    )?;
+    let mut stmt =
+        conn.prepare("SELECT id FROM com_object_instance WHERE device_id = ?1 ORDER BY position")?;
     let ids = stmt
-        .query_map(params![device_id.0], |row| Ok(ComObjectInstanceId(row.get(0)?)))?
+        .query_map(params![device_id.0], |row| {
+            Ok(ComObjectInstanceId(row.get(0)?))
+        })?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(ids)
 }
@@ -830,20 +895,41 @@ mod tests {
     fn com_object_fixture() -> ComObjectInstance {
         ComObjectInstance {
             id: ComObjectInstanceId(1),
-            source: SourceRef { path: "0.xml".into(), ets_id: "M-1_O-0_R-1".into() },
+            source: SourceRef {
+                path: "0.xml".into(),
+                ets_id: "M-1_O-0_R-1".into(),
+            },
             device: DeviceId(1),
             number: 0,
-            text: Override::Value(Resolved { value: Text::Literal("An/Aus".into()), layer: Layer::Instance }),
+            text: Override::Value(Resolved {
+                value: Text::Literal("An/Aus".into()),
+                layer: Layer::Instance,
+            }),
             description: Override::Absent,
-            dpt: Override::Value(Resolved { value: DptRef { main: 1, sub: Some(1) }, layer: Layer::UserEdit }),
+            dpt: Override::Value(Resolved {
+                value: DptRef {
+                    main: 1,
+                    sub: Some(1),
+                },
+                layer: Layer::UserEdit,
+            }),
             flags: ResolvedFlags {
-                read: Override::Value(Resolved { value: true, layer: Layer::Instance }),
+                read: Override::Value(Resolved {
+                    value: true,
+                    layer: Layer::Instance,
+                }),
                 write: Override::Absent,
                 transmit: Override::Empty,
                 update: Override::Malformed("???".into()),
-                communication: Override::Value(Resolved { value: false, layer: Layer::Program }),
+                communication: Override::Value(Resolved {
+                    value: false,
+                    layer: Layer::Program,
+                }),
             },
-            size: Some(Resolved { value: ObjectSize::Bit(1), layer: Layer::Program }),
+            size: Some(Resolved {
+                value: ObjectSize::Bit(1),
+                layer: Layer::Program,
+            }),
             is_active: true,
             links: vec![],
         }
@@ -882,7 +968,10 @@ mod tests {
         assert_eq!(loaded.text, com.text);
         assert_ne!(
             loaded.text,
-            Override::Value(Resolved { value: Text::Literal("k1".into()), layer: Layer::Program })
+            Override::Value(Resolved {
+                value: Text::Literal("k1".into()),
+                layer: Layer::Program
+            })
         );
     }
 
@@ -895,7 +984,13 @@ mod tests {
         let com = com_object_fixture();
         upsert_com_object_instance(&conn, d.id, 0, &com).unwrap();
 
-        let new_dpt = Override::Value(Resolved { value: DptRef { main: 5, sub: Some(1) }, layer: Layer::UserEdit });
+        let new_dpt = Override::Value(Resolved {
+            value: DptRef {
+                main: 5,
+                sub: Some(1),
+            },
+            layer: Layer::UserEdit,
+        });
         upsert_com_object_dpt_override(&conn, com.id, &new_dpt).unwrap();
 
         let loaded = load_com_object_instance(&conn, com.id).unwrap();
@@ -927,8 +1022,14 @@ mod tests {
             .unwrap();
         }
         let links = vec![
-            GroupLink { ga: GroupAddressId(20), direction: Direction::Send },
-            GroupLink { ga: GroupAddressId(10), direction: Direction::Receive },
+            GroupLink {
+                ga: GroupAddressId(20),
+                direction: Direction::Send,
+            },
+            GroupLink {
+                ga: GroupAddressId(10),
+                direction: Direction::Receive,
+            },
         ];
         upsert_group_links(&conn, com.id, &links).unwrap();
         assert_eq!(load_group_links(&conn, com.id).unwrap(), links);

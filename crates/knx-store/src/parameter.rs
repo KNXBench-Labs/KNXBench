@@ -22,7 +22,14 @@ pub fn upsert_parameter_instance(
              source_path = excluded.source_path,
              source_ets_id = excluded.source_ets_id,
              raw = excluded.raw",
-        params![p.id.0, p.device.0, position, p.source.path, p.source.ets_id, p.raw],
+        params![
+            p.id.0,
+            p.device.0,
+            position,
+            p.source.path,
+            p.source.ets_id,
+            p.raw
+        ],
     )?;
     Ok(())
 }
@@ -70,7 +77,11 @@ mod tests {
             default_line: None,
             multicast_address: None,
             completion: CompletionStatus::FinishedDesign,
-            topology: Topology { areas: vec![], lines: vec![], unassigned: vec![] },
+            topology: Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![],
+            },
             buildings: vec![],
             group_ranges: vec![],
             group_addresses: vec![],
@@ -81,7 +92,10 @@ mod tests {
     fn device() -> DeviceInstance {
         DeviceInstance {
             id: knx_core::ids::DeviceId(1),
-            source: SourceRef { path: "t".into(), ets_id: "t".into() },
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "t".into(),
+            },
             name: "D".into(),
             description: None,
             address: None,
@@ -104,13 +118,19 @@ mod tests {
         let p1 = ParameterInstance {
             id: ParameterInstanceId(1),
             device: d.id,
-            source: SourceRef { path: "t".into(), ets_id: "M-1_P-1_R-1".into() },
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "M-1_P-1_R-1".into(),
+            },
             raw: "1".into(),
         };
         let p2 = ParameterInstance {
             id: ParameterInstanceId(2),
             device: d.id,
-            source: SourceRef { path: "t".into(), ets_id: "M-1_UP-2_R-2".into() },
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "M-1_UP-2_R-2".into(),
+            },
             raw: "42".into(),
         };
         upsert_parameter_instance(&conn, 0, &p1).unwrap();

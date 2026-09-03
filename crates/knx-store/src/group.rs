@@ -73,23 +73,28 @@ pub fn load_group_ranges(
         .collect::<Result<Vec<_>, _>>()?;
 
     rows.into_iter()
-        .map(|(id, parent_id, source_path, source_ets_id, name, start, end)| {
-            let range_id = GroupRangeId(id);
-            let mut children_stmt =
-                conn.prepare("SELECT id FROM group_range WHERE parent_id = ?1 ORDER BY position")?;
-            let children = children_stmt
-                .query_map(params![range_id.0], |row| Ok(GroupRangeId(row.get(0)?)))?
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok::<_, StoreError>(GroupRange {
-                id: range_id,
-                source: SourceRef { path: source_path, ets_id: source_ets_id },
-                name,
-                start: GroupAddress::from_raw(start),
-                end: GroupAddress::from_raw(end),
-                parent: parent_id.map(GroupRangeId),
-                children,
-            })
-        })
+        .map(
+            |(id, parent_id, source_path, source_ets_id, name, start, end)| {
+                let range_id = GroupRangeId(id);
+                let mut children_stmt = conn
+                    .prepare("SELECT id FROM group_range WHERE parent_id = ?1 ORDER BY position")?;
+                let children = children_stmt
+                    .query_map(params![range_id.0], |row| Ok(GroupRangeId(row.get(0)?)))?
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok::<_, StoreError>(GroupRange {
+                    id: range_id,
+                    source: SourceRef {
+                        path: source_path,
+                        ets_id: source_ets_id,
+                    },
+                    name,
+                    start: GroupAddress::from_raw(start),
+                    end: GroupAddress::from_raw(end),
+                    parent: parent_id.map(GroupRangeId),
+                    children,
+                })
+            },
+        )
         .collect()
 }
 
@@ -158,7 +163,10 @@ pub fn load_group_addresses(
 }
 
 pub fn delete_group_address(conn: &Connection, id: GroupAddressId) -> Result<(), StoreError> {
-    conn.execute("DELETE FROM group_link WHERE group_address_id = ?1", params![id.0])?;
+    conn.execute(
+        "DELETE FROM group_link WHERE group_address_id = ?1",
+        params![id.0],
+    )?;
     conn.execute("DELETE FROM group_address WHERE id = ?1", params![id.0])?;
     Ok(())
 }
@@ -179,7 +187,11 @@ mod tests {
             default_line: None,
             multicast_address: None,
             completion: CompletionStatus::FinishedDesign,
-            topology: Topology { areas: vec![], lines: vec![], unassigned: vec![] },
+            topology: Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![],
+            },
             buildings: vec![],
             group_ranges: vec![],
             group_addresses: vec![],
@@ -188,7 +200,10 @@ mod tests {
     }
 
     fn source() -> SourceRef {
-        SourceRef { path: "t".into(), ets_id: "t".into() }
+        SourceRef {
+            path: "t".into(),
+            ets_id: "t".into(),
+        }
     }
 
     fn range(id: u32, parent: Option<u32>, start: u16, end: u16) -> GroupRange {
@@ -282,9 +297,15 @@ mod tests {
             range: None,
         };
         upsert_group_address(&conn, InstallationId(0), 0, &entry).unwrap();
-        assert_eq!(load_group_addresses(&conn, InstallationId(0)).unwrap(), vec![entry.clone()]);
+        assert_eq!(
+            load_group_addresses(&conn, InstallationId(0)).unwrap(),
+            vec![entry.clone()]
+        );
         delete_group_address(&conn, entry.id).unwrap();
-        assert_eq!(load_group_addresses(&conn, InstallationId(0)).unwrap(), vec![]);
+        assert_eq!(
+            load_group_addresses(&conn, InstallationId(0)).unwrap(),
+            vec![]
+        );
     }
 
     #[test]

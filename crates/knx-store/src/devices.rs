@@ -10,8 +10,8 @@ use knx_core::address::IndividualAddress;
 use knx_core::commissioning::CommissioningState;
 use knx_core::device::{BinaryDataRef, ComObjectInstance, DeviceInstance};
 use knx_core::dpt::DptRef;
-use knx_core::flags::{ObjectSize, ResolvedFlags};
-use knx_core::ids::{ComObjectInstanceId, DeviceId, InstallationId, SourceRef};
+use knx_core::flags::{Direction, GroupLink, ObjectSize, ResolvedFlags};
+use knx_core::ids::{ComObjectInstanceId, DeviceId, GroupAddressId, InstallationId, SourceRef};
 use knx_core::provenance::{Layer, Override, Resolved};
 use knx_core::string_table::{LocalizedString, Text, TranslationKey};
 
@@ -601,6 +601,69 @@ pub fn load_com_object_ids_for_device(
     Ok(ids)
 }
 
+fn direction_to_str(d: Direction) -> &'static str {
+    match d {
+        Direction::Send => "send",
+        Direction::Receive => "receive",
+    }
+}
+
+fn direction_from_str(s: &str) -> Direction {
+    match s {
+        "receive" => Direction::Receive,
+        _ => Direction::Send,
+    }
+}
+
+pub fn upsert_group_links(
+    conn: &Connection,
+    com_object_instance_id: ComObjectInstanceId,
+    links: &[GroupLink],
+) -> Result<(), StoreError> {
+    conn.execute(
+        "DELETE FROM group_link WHERE com_object_instance_id = ?1",
+        params![com_object_instance_id.0],
+    )?;
+    let mut stmt = conn.prepare(
+        "INSERT INTO group_link (com_object_instance_id, group_address_id, direction, position)
+         VALUES (?1, ?2, ?3, ?4)",
+    )?;
+    for (i, link) in links.iter().enumerate() {
+        stmt.execute(params![
+            com_object_instance_id.0,
+            link.ga.0,
+            direction_to_str(link.direction),
+            i as i64,
+        ])?;
+    }
+    Ok(())
+}
+
+pub fn load_group_links(
+    conn: &Connection,
+    com_object_instance_id: ComObjectInstanceId,
+) -> Result<Vec<GroupLink>, StoreError> {
+    let mut stmt = conn.prepare(
+        "SELECT group_address_id, direction FROM group_link
+         WHERE com_object_instance_id = ?1 ORDER BY position",
+    )?;
+    let links = stmt
+        .query_map(params![com_object_instance_id.0], |row| {
+            let ga: u32 = row.get(0)?;
+            let direction: String = row.get(1)?;
+            Ok((ga, direction))
+        })?
+        .map(|r| {
+            let (ga, direction) = r?;
+            Ok(GroupLink {
+                ga: GroupAddressId(ga),
+                direction: direction_from_str(&direction),
+            })
+        })
+        .collect::<Result<Vec<_>, StoreError>>()?;
+    Ok(links)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -842,5 +905,32 @@ mod tests {
         assert_eq!(loaded.flags, com.flags); // untouched
         assert_eq!(loaded.size, com.size); // untouched
         assert_eq!(loaded.is_active, com.is_active); // untouched
+    }
+
+    #[test]
+    fn group_links_round_trip_in_order() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        upsert_installation_row(&conn, &installation()).unwrap();
+        let d = device();
+        upsert_device(&conn, InstallationId(0), 0, &d).unwrap();
+        let com = com_object_fixture();
+        upsert_com_object_instance(&conn, d.id, 0, &com).unwrap();
+        for id in [10, 20] {
+            conn.execute(
+                &format!(
+                    "INSERT INTO group_address (id, installation_id, range_id, position,
+                        source_path, source_ets_id, name, address, central, unfiltered)
+                     VALUES ({id}, 0, NULL, 0, 't', 't', 'GA', {id}, 0, 0)"
+                ),
+                [],
+            )
+            .unwrap();
+        }
+        let links = vec![
+            GroupLink { ga: GroupAddressId(20), direction: Direction::Send },
+            GroupLink { ga: GroupAddressId(10), direction: Direction::Receive },
+        ];
+        upsert_group_links(&conn, com.id, &links).unwrap();
+        assert_eq!(load_group_links(&conn, com.id).unwrap(), links);
     }
 }

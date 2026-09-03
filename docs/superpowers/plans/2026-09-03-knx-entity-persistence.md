@@ -2820,7 +2820,7 @@ git commit -m "feat(knx-store): parameter-instance persistence"
 **Files:**
 - Create: `crates/knx-store/src/project.rs`
 - Modify: `crates/knx-store/src/lib.rs` (`pub mod project; pub use project::{save_project, load_project};`)
-- Modify: `crates/knx-core/src/project.rs` (`impl IdAllocators` gains eight `peek_*` getters and `from_counts` — see Step 1 below)
+- Modify: `crates/knx-core/src/project.rs` (`impl IdAllocators` gains eight `peek_*` getters and `from_counts`; `CURRENT_SCHEMA_VERSION` bumps 3 → 4 — see Step 1 below)
 
 **Interfaces:**
 - Consumes: every `upsert_*`/`load_*` function from Tasks 3–10, plus `knx_core::project::{Project, ProjectInfo, IdAllocators}`, `knx_core::address::GroupAddressStyle`, `knx_core::string_table::Language`.
@@ -3184,7 +3184,9 @@ impl<T> OptionalNotSaved<T> for Result<T, rusqlite::Error> {
 }
 ```
 
-This references `IdAllocators::from_counts` and eight `peek_*` getters that do not exist yet — `IdAllocators`'s fields are private and its only public API today is the eight `next_*` mutators. Add these now, as part of this task's own commit, to `crates/knx-core/src/project.rs`'s `impl IdAllocators` block (Task 1 already landed and was reviewed without this addition — do not amend that commit; this task adds `knx-core/src/project.rs` to its own `Modify` list and its own commit instead):
+This references `IdAllocators::from_counts` and eight `peek_*` getters that do not exist yet — `IdAllocators`'s fields are private and its only public API today is the eight `next_*` mutators. Add these now, as part of this task's own commit, to `crates/knx-core/src/project.rs`'s `impl IdAllocators` block (Task 1 already landed and was reviewed without this addition — do not amend that commit; this task adds `knx-core/src/project.rs` to its own `Modify` list and its own commit instead).
+
+**Also in this same file, same commit:** bump `pub const CURRENT_SCHEMA_VERSION: u32 = 3;` to `4`. This is the Global Constraints' "`CURRENT_SCHEMA_VERSION` moves from 3 to 4 in lockstep" for the `knx-core` side specifically — Task 2 already bumped `knx-store`'s own constant of the same name; nothing bumped `knx-core`'s until now. The two are two independent `u32`/`i64` constants in two crates, kept in sync by convention per ADR-0003, not by any compiler check — bumping one without the other is exactly the drift ADR-0003 warns about, so both must land before this plan is done.
 
 ```rust
     pub fn peek_device(&self) -> u32 {

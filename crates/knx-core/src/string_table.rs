@@ -37,6 +37,13 @@ impl StringTable {
         }
     }
 
+    /// The language display falls back to when no entry exists for the
+    /// language asked for. A consumer that has no particular language in
+    /// mind (export, comparison) uses this rather than naming one itself.
+    pub fn default_language(&self) -> &Language {
+        &self.default_language
+    }
+
     pub fn insert(&mut self, key: TranslationKey, language: Language, text: String) {
         self.entries.insert((key, language), text);
     }

@@ -20,6 +20,13 @@
 //! (`MapProblemDetail::DroppedLink`) or that single optional field
 //! (`MapProblemDetail::UnresolvedReference`), never the entity that held it.
 //!
+//! A field modelled as [`Override`] does better than "natural default": an
+//! unparsable present value becomes `Override::Malformed`, keeping the raw
+//! text so export writes back exactly what the source said instead of
+//! dropping the attribute. Fields modelled as a bare value or an `Option`
+//! have nowhere to keep the raw text, so those still fall back to the
+//! default with the problem recorded — the loss is reported, not silent.
+//!
 //! `retained` collects every [`RetainedAttribute`] this walk passes —
 //! known-but-not-modelled attributes such as `Installation/@BCUKey` and
 //! `@SplitType`, plus anything Stage 3 could not classify at all — for
@@ -1073,7 +1080,7 @@ fn override_dpt(
                         value: s.clone(),
                     }),
                 });
-                Override::Absent
+                Override::Malformed(s.clone())
             }
         },
     }
@@ -1097,7 +1104,7 @@ fn override_bool(
                     xpath: xpath.to_string(),
                     detail: MapProblemDetail::Value(e),
                 });
-                Override::Absent
+                Override::Malformed(s.clone())
             }
         },
     }
@@ -1218,6 +1225,7 @@ mod tests {
         let mut empty = 0usize;
         let mut absent = 0usize;
         let mut valued = 0usize;
+        let mut malformed = 0usize;
         for id in out
             .project
             .devices
@@ -1228,12 +1236,14 @@ mod tests {
                 Override::Empty => empty += 1,
                 Override::Absent => absent += 1,
                 Override::Value(_) => valued += 1,
+                Override::Malformed(_) => malformed += 1,
             }
         }
         assert_eq!(empty, 497);
         assert_eq!(valued, 261);
         assert_eq!(absent, 149);
-        assert_eq!(empty + valued + absent, 907);
+        assert_eq!(malformed, 0);
+        assert_eq!(empty + valued + absent + malformed, 907);
     }
 
     #[test]
@@ -1267,6 +1277,35 @@ mod tests {
         let d = out.project.devices.iter().next().unwrap();
         assert_eq!(d.name, "D");
         assert!(d.commissioning.last_modified.is_none());
+    }
+
+    #[test]
+    fn an_unparsable_override_keeps_its_raw_text_instead_of_disappearing() {
+        let mut doc = minimal_source_document();
+        let com = &mut doc.installations[0].areas[0].lines[0].devices[0].com_objects[0];
+        com.datapoint_type = Some("DPST-nonsense".into());
+        com.read_flag = Some("Perhaps".into());
+
+        let out = map(&doc, "P-0001/0.xml");
+
+        let mapped = out
+            .project
+            .devices
+            .iter()
+            .next()
+            .and_then(|d| out.project.devices.com_object(d.com_objects[0]))
+            .unwrap();
+        assert_eq!(mapped.dpt, Override::Malformed("DPST-nonsense".into()));
+        assert_eq!(mapped.flags.read, Override::Malformed("Perhaps".into()));
+        // Reported, not silently kept: preserving the text is not the same
+        // as pretending the value was understood.
+        assert_eq!(
+            out.problems
+                .iter()
+                .filter(|p| matches!(p.detail, MapProblemDetail::Value(_)))
+                .count(),
+            2
+        );
     }
 
     #[test]

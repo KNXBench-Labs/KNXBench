@@ -13,9 +13,10 @@
 //! this module not applying at all to anything on `GroupAddressEntry`).
 //! Where they disagree, that is a [`Conflict`]: no majority vote, no
 //! first-wins rule, the address simply keeps no inferred type. A linked
-//! object that states no datapoint type at all (`Override::Empty` or
-//! `Override::Absent`) contributes no candidate either way — it neither
-//! supports nor contradicts what the others say.
+//! object that states no *usable* datapoint type (`Override::Empty`,
+//! `Override::Absent`, or an `Override::Malformed` value the mapper could
+//! not parse) contributes no candidate either way — it neither supports
+//! nor contradicts what the others say.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -84,7 +85,7 @@ pub fn infer_group_address_dpts(project: &Project) -> InferenceOutput {
                 continue;
             };
             let Some(resolved) = com.dpt.value() else {
-                continue; // Empty or Absent: no candidate, either way.
+                continue; // Empty, Absent or Malformed: no candidate.
             };
             for link in &com.links {
                 per_address

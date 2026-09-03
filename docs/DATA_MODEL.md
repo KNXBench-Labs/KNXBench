@@ -109,15 +109,18 @@ pub struct Resolved<T> {
     pub layer: Layer,
 }
 
-/// A source attribute in one of its three real states — Session 3,
+/// A source attribute in one of its four real states — Session 3,
 /// ADR-0010. `Override::Empty` and `Override::Absent` are distinct:
 /// collapsing them loses exactly the 497-vs-149 distinction above.
+/// `Override::Malformed` keeps the raw text of a present value that
+/// could not be parsed, so export does not silently drop it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum Override<T> {
     #[default]
     Absent,
     Empty,
     Value(Resolved<T>),
+    Malformed(String),
 }
 ```
 
@@ -132,7 +135,8 @@ Export semantics follow from the layer alone, which is what
 | `Inferred` | Derived by us, for example a DPT from linked objects | No — shown in the UI as inferred |
 
 `Override::Absent` writes no attribute; `Override::Empty` writes an empty
-one; `Override::Value` writes only if its layer's `is_exported()` is true —
+one; `Override::Malformed` writes its raw text back verbatim;
+`Override::Value` writes only if its layer's `is_exported()` is true —
 so `Layer::Inferred`/`Program`/`ProgramRef` inside an `Override::Value` are
 excluded the same way an unwrapped `Resolved<T>` at those layers already
 was. See [ADR-0004](adr/0004-provenance-model.md) for the layer model and

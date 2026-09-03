@@ -65,6 +65,9 @@ pub enum Override<T> {
     Empty,
     /// The attribute was present and carried a value.
     Value(Resolved<T>),
+    /// The attribute was present, non-empty, and could not be parsed into
+    /// `T`. The raw text is kept verbatim.
+    Malformed(String),
 }
 ```
 
@@ -76,9 +79,32 @@ this ADR wraps them per attribute, it does not replace what they mean.
 
 Export is a total function of this shape, with no separate bookkeeping to
 consult: `Override::Absent` writes no attribute, `Override::Empty` writes
-an empty one, `Override::Value(r)` writes `r.value` only if
+an empty one, `Override::Malformed(raw)` writes `raw` back exactly as it
+was read, and `Override::Value(r)` writes `r.value` only if
 `r.layer.is_exported()` is true — the same rule ADR-0004 already
 established, now applied per attribute instead of per object.
+
+### Amendment (post-Session-3 review): the `Malformed` state
+
+The original three states covered every value the importer could *parse*.
+A present value it could **not** parse (a `DatapointType` that is not a
+DPT, a flag spelled neither `Enabled` nor `Disabled`) was collapsed into
+`Absent`: the problem was reported, but export then wrote no attribute at
+all, so a file that came in with an unreadable value went out having
+silently lost it. That contradicts CLAUDE.md's "never silently discard
+information — preserve it where technically possible", and preserving it
+*is* technically possible: keep the raw text.
+
+`Override::Malformed(String)` is therefore the fourth state.
+`is_present()` is true for it, `value()` is `None` (there is no `T` to
+hand out), and `malformed()` returns the raw text. The importer must still
+record a problem when it produces one — the model carries the data, the
+report carries the diagnosis; neither substitutes for the other.
+
+This applies only to fields modelled as `Override<T>`. A field modelled as
+a bare value or an `Option<T>` has nowhere to keep raw text, so an
+unparsable value there still falls back to the type's default with the
+problem reported — a known asymmetry, not an oversight.
 
 ## Alternatives considered
 
@@ -118,10 +144,12 @@ project itself overrides, attribute by attribute rather than object by
 object.
 
 The semantic-equality comparison (`compare.rs`, ADR-0007) inherits the
-same three states for text and datapoint type
-(`Option<String>` with `None`/`Some("")`/`Some(value)`) — `Override<bool>`'s
-comparison narrows to a plain `Option<bool>`, since a boolean genuinely has
-no third representable state; `Override::Empty` and `Override::Absent`
-collapse to `None` there specifically, a documented, narrow exception to
-this ADR's own rule, verified harmless against the reference project (none
-of its five flag attributes is ever empty).
+same states for text and datapoint type (`Option<String>` with
+`None`/`Some("")`/`Some(raw or value)`) — `Override<bool>`'s comparison
+narrows to a plain `Option<bool>`, since a boolean genuinely has no third
+representable state; `Override::Empty`, `Override::Malformed` and
+`Override::Absent` all collapse to `None` there specifically, a
+documented, narrow exception to this ADR's own rule, verified harmless
+against the reference project (none of its five flag attributes is ever
+empty or unparsable). Export writes all four states back correctly
+regardless; only this comparison cannot tell them apart.

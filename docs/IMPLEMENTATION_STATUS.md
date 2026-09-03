@@ -49,16 +49,18 @@ mapper into `knx_core::Project` (`map.rs`), datapoint-type inference
 (`infer.rs`), the opaque-entry collector (`opaque.rs`), the import report
 (`report.rs`), orchestration (`import_knxproj`/`import_knxproj_bytes` in
 `lib.rs`), schema-11 XML writers and container export (`export/`), and the
-declared semantic-equality comparison (`compare.rs`). 84 tests in the crate
-(63 unit, plus the golden, oracle, roundtrip and malformed-input
-integration suites), on top of `knx-core`'s 46 and `knx-store`'s 8.
+declared semantic-equality comparison (`compare.rs`). 88 tests in the crate
+(67 unit, plus the golden, oracle, roundtrip and malformed-input
+integration suites), on top of `knx-core`'s 47 and `knx-store`'s 8.
 
 **`knx-app` holds the import service** (`import.rs`:
 `import_ets_project`) — the one crate that sees both `knx-etsproj` and
 `knx-store`, enforced by `check-layering`. **`apps/knx-cli` gains an
 `import` subcommand**: `knx import <file.knxproj> [--store <path>]
 [--report-json <path>]`, human-readable counts on stdout, exit code 0 on
-a produced project regardless of warnings, 1 on failure.
+a produced project with no errors (warnings do not change it), 1 when no
+project could be produced, 2 when a project was produced but its report
+carries `Severity::Error` entries (IMPORT_EXPORT §6.1).
 
 `knx-productdb`, `knx-net`, `knx-secure` remain empty crates with their
 responsibility stated in a doc comment. There is still no product
@@ -92,7 +94,7 @@ violation:
 | `docs/DATA_MODEL.md` | The target domain model, per section marked implemented / planned / retained-but-uninterpreted. |
 | `docs/IMPORT_EXPORT.md` | The six-stage pipeline, container handling, tolerant parsing, opaque store, import report, export rules, roundtrip guarantees. |
 | `docs/COMPATIBILITY.md` | What is verified, what is expected but unverified, what is not supported — every verified row now names the test that verifies it. |
-| `docs/KNOWN_LIMITATIONS.md` | Thirteen limitations with cause, impact and the condition that would lift each. |
+| `docs/KNOWN_LIMITATIONS.md` | Fifteen limitations with cause, impact and the condition that would lift each. |
 | `docs/ROADMAP.md` | Sessions 2–7 with deliverables and entry conditions. |
 | `docs/adr/` | Ten ADRs, a template and an index. |
 | `docs/RESEARCH.md` | Session 0 result plus Session 3 amendments: verified findings on the `.knxproj` format, manufacturer data, master data, KNXnet/IP, KNX Secure, licensing, risks. |

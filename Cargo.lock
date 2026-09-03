@@ -272,6 +272,7 @@ dependencies = [
  "knx-store",
  "serde_json",
  "tempfile",
+ "zip",
 ]
 
 [[package]]

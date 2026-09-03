@@ -7,7 +7,17 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 const USAGE: &str =
-    "usage: knx import <file.knxproj> [--store <path.knxdb>] [--report-json <path.json>]";
+    "usage: knx import <file.knxproj> [--store <path.knxdb>] [--report-json <path.json>]\n\
+     exit codes: 0 = imported cleanly (warnings allowed), 1 = could not import,\n\
+     2 = imported, but the report contains errors";
+
+/// Exit code for "the import produced a project, but the report contains
+/// `Severity::Error` entries" — data the mapper could not use, such as a
+/// dangling reference or a duplicate id. Distinct from `ExitCode::FAILURE`
+/// (nothing was imported at all) so a script can tell "no project" from
+/// "a project with known holes in it", and distinct from success so those
+/// holes cannot pass unnoticed in CI.
+const EXIT_IMPORTED_WITH_ERRORS: u8 = 2;
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -123,8 +133,22 @@ fn run_import(args: &[String]) -> ExitCode {
     }
 
     // Warnings never change the exit code: an import that reports plenty of
-    // unsupported constructs still succeeded at producing a project.
+    // unsupported constructs still succeeded at producing a project. Real
+    // errors do — see EXIT_IMPORTED_WITH_ERRORS.
+    if error_count(&imported.report) > 0 {
+        return ExitCode::from(EXIT_IMPORTED_WITH_ERRORS);
+    }
     ExitCode::SUCCESS
+}
+
+/// Report entries that are genuine errors, not warnings — `ImportReport`
+/// keeps both in one `errors` Vec, told apart by their `Severity`.
+fn error_count(report: &knx_etsproj::ImportReport) -> usize {
+    report
+        .errors
+        .iter()
+        .filter(|e| e.severity == knx_etsproj::report::Severity::Error)
+        .count()
 }
 
 fn print_summary(file: &str, imported: &knx_app::ImportedProject) {
@@ -153,12 +177,7 @@ fn print_summary(file: &str, imported: &knx_app::ImportedProject) {
             "ies"
         }
     );
-    let error_count = imported
-        .report
-        .errors
-        .iter()
-        .filter(|e| e.severity == knx_etsproj::report::Severity::Error)
-        .count();
+    let error_count = error_count(&imported.report);
     let warning_count = imported.report.errors.len() - error_count;
     if imported.report.has_losses() {
         println!(

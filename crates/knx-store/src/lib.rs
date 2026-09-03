@@ -4,6 +4,7 @@ use std::fmt;
 
 pub mod building;
 pub mod devices;
+pub mod group;
 pub mod manifest;
 pub mod migration;
 pub mod opaque;

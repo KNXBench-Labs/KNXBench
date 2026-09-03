@@ -49,7 +49,15 @@ impl From<rusqlite::Error> for ProductDbError {
 fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
     conn.execute_batch(
         "CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) STRICT;
-         INSERT INTO schema_meta (key, value) VALUES ('created_by', 'knx-productdb');",
+         INSERT INTO schema_meta (key, value) VALUES ('created_by', 'knx-productdb');
+         CREATE TABLE source_file (
+             sha256          TEXT PRIMARY KEY,
+             source_path     TEXT NOT NULL,
+             manufacturer_id TEXT,
+             len             INTEGER NOT NULL,
+             bytes           BLOB NOT NULL
+         ) STRICT;
+         CREATE INDEX source_file_manufacturer ON source_file (manufacturer_id);",
     )?;
     Ok(())
 }

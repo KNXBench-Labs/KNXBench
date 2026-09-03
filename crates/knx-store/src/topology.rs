@@ -188,9 +188,8 @@ pub fn load_topology(
         .map(|r| {
             let (id, source_path, source_ets_id, name, address, completion) = r?;
             let area_id = AreaId(id);
-            let mut line_stmt = conn.prepare(
-                "SELECT id FROM line WHERE area_id = ?1 ORDER BY position",
-            )?;
+            let mut line_stmt =
+                conn.prepare("SELECT id FROM line WHERE area_id = ?1 ORDER BY position")?;
             let lines = line_stmt
                 .query_map(params![area_id.0], |row| Ok(LineId(row.get(0)?)))?
                 .collect::<Result<Vec<_>, _>>()?;
@@ -257,9 +256,8 @@ pub fn load_topology(
                 completion,
             ) = r?;
             let line_id = LineId(id);
-            let mut dev_stmt = conn.prepare(
-                "SELECT id FROM device WHERE line_id = ?1 ORDER BY topology_position",
-            )?;
+            let mut dev_stmt = conn
+                .prepare("SELECT id FROM device WHERE line_id = ?1 ORDER BY topology_position")?;
             let devices = dev_stmt
                 .query_map(params![line_id.0], |row| Ok(DeviceId(row.get(0)?)))?
                 .collect::<Result<Vec<_>, _>>()?;

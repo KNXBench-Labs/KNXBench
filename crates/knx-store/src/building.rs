@@ -112,13 +112,25 @@ pub fn load_buildings(
 
     rows.into_iter()
         .map(
-            |(id, parent_id, source_path, source_ets_id, name, number, kind, default_line_id, completion)| {
+            |(
+                id,
+                parent_id,
+                source_path,
+                source_ets_id,
+                name,
+                number,
+                kind,
+                default_line_id,
+                completion,
+            )| {
                 let building_id = BuildingPartId(id);
                 let mut children_stmt = conn.prepare(
                     "SELECT id FROM building_part WHERE parent_id = ?1 ORDER BY position",
                 )?;
                 let children = children_stmt
-                    .query_map(params![building_id.0], |row| Ok(BuildingPartId(row.get(0)?)))?
+                    .query_map(params![building_id.0], |row| {
+                        Ok(BuildingPartId(row.get(0)?))
+                    })?
                     .collect::<Result<Vec<_>, _>>()?;
                 let mut dev_stmt = conn.prepare(
                     "SELECT device_id FROM building_part_device WHERE building_part_id = ?1
@@ -163,7 +175,11 @@ mod tests {
             default_line: None,
             multicast_address: None,
             completion: CompletionStatus::FinishedDesign,
-            topology: Topology { areas: vec![], lines: vec![], unassigned: vec![] },
+            topology: Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![],
+            },
             buildings: vec![],
             group_ranges: vec![],
             group_addresses: vec![],
@@ -174,7 +190,10 @@ mod tests {
     fn part(id: u32, parent: Option<u32>, kind: BuildingPartType) -> BuildingPart {
         BuildingPart {
             id: BuildingPartId(id),
-            source: SourceRef { path: "t".into(), ets_id: "t".into() },
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "t".into(),
+            },
             name: format!("Part {id}"),
             number: None,
             kind,
@@ -254,7 +273,10 @@ mod tests {
         // room (1) — reversed from both id order and insertion order, so
         // reconstructing by id/rowid instead of `position` would fail this.
         assert_eq!(loaded[1].id, BuildingPartId(2));
-        assert_eq!(loaded[1].children, vec![BuildingPartId(4), BuildingPartId(3)]);
+        assert_eq!(
+            loaded[1].children,
+            vec![BuildingPartId(4), BuildingPartId(3)]
+        );
 
         let room_loaded = loaded.iter().find(|p| p.id == BuildingPartId(3)).unwrap();
         assert_eq!(room_loaded.devices, vec![DeviceId(9), DeviceId(7)]);

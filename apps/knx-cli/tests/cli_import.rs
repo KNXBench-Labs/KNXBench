@@ -23,7 +23,15 @@ fn run_cli(args: &[&str]) -> Output {
 
 #[test]
 fn the_cli_reports_counts_and_exits_zero() {
-    let out = run_cli(&["import", reference_ets4_path().to_str().unwrap()]);
+    // `--no-product-db`: this test is about import mechanics, not product
+    // data, and must not touch the real shared product database — every
+    // plain `knx import` invocation across this suite otherwise races on
+    // the same default-path file when tests run in parallel.
+    let out = run_cli(&[
+        "import",
+        reference_ets4_path().to_str().unwrap(),
+        "--no-product-db",
+    ]);
     assert_eq!(out.status.code(), Some(0));
     let text = String::from_utf8(out.stdout).unwrap();
     assert!(text.contains("36 devices"));
@@ -40,6 +48,7 @@ fn the_cli_writes_a_machine_readable_report() {
         reference_ets4_path().to_str().unwrap(),
         "--report-json",
         report.to_str().unwrap(),
+        "--no-product-db",
     ]);
     assert_eq!(out.status.code(), Some(0));
     let json: serde_json::Value =
@@ -50,7 +59,7 @@ fn the_cli_writes_a_machine_readable_report() {
 
 #[test]
 fn the_cli_exits_nonzero_on_a_file_it_cannot_read() {
-    let out = run_cli(&["import", "/nonexistent.knxproj"]);
+    let out = run_cli(&["import", "/nonexistent.knxproj", "--no-product-db"]);
     assert_eq!(out.status.code(), Some(1));
     assert!(String::from_utf8(out.stderr)
         .unwrap()
@@ -119,12 +128,107 @@ fn write_knxproj_with_duplicate_id(path: &Path) {
 }
 
 #[test]
+fn import_with_a_product_db_reports_what_it_ingested() {
+    let dir = tempfile::tempdir().unwrap();
+    let products = dir.path().join("products.sqlite");
+    let out = run_cli(&[
+        "import",
+        reference_ets4_path().to_str().unwrap(),
+        "--product-db",
+        products.to_str().unwrap(),
+    ]);
+    assert_eq!(out.status.code(), Some(0));
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(stdout.contains("manufacturer file"), "{stdout}");
+    assert!(products.exists());
+}
+
+#[test]
+fn import_with_no_product_db_keeps_manufacturer_data_in_the_project() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("p.knxdb");
+    let out = run_cli(&[
+        "import",
+        reference_ets4_path().to_str().unwrap(),
+        "--store",
+        store.to_str().unwrap(),
+        "--no-product-db",
+    ]);
+    assert_eq!(out.status.code(), Some(0));
+    let conn = knx_store::open_and_migrate(&store).unwrap();
+    assert!(knx_store::load_opaque(&conn)
+        .unwrap()
+        .iter()
+        .any(|e| e.kind == "ManufacturerData"));
+}
+
+#[test]
+fn product_db_and_no_product_db_together_are_a_usage_error() {
+    let out = run_cli(&[
+        "import",
+        reference_ets4_path().to_str().unwrap(),
+        "--product-db",
+        "/tmp/x.sqlite",
+        "--no-product-db",
+    ]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(String::from_utf8(out.stderr)
+        .unwrap()
+        .contains("--no-product-db"));
+}
+
+#[test]
+fn products_list_prints_what_was_ingested() {
+    let dir = tempfile::tempdir().unwrap();
+    let products = dir.path().join("products.sqlite");
+    run_cli(&[
+        "products",
+        "ingest",
+        reference_ets4_path().to_str().unwrap(),
+        "--product-db",
+        products.to_str().unwrap(),
+    ]);
+    let out = run_cli(&[
+        "products",
+        "list",
+        "--product-db",
+        products.to_str().unwrap(),
+    ]);
+    assert_eq!(out.status.code(), Some(0));
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert!(stdout.contains("M-0083"), "{stdout}");
+}
+
+#[test]
+fn products_verify_is_clean_after_an_ingest() {
+    let dir = tempfile::tempdir().unwrap();
+    let products = dir.path().join("products.sqlite");
+    run_cli(&[
+        "products",
+        "ingest",
+        reference_ets4_path().to_str().unwrap(),
+        "--product-db",
+        products.to_str().unwrap(),
+    ]);
+    let out = run_cli(&[
+        "products",
+        "verify",
+        "--product-db",
+        products.to_str().unwrap(),
+    ]);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(String::from_utf8(out.stdout)
+        .unwrap()
+        .contains("0 mismatch"));
+}
+
+#[test]
 fn a_report_with_real_errors_exits_two_not_zero() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("broken.knxproj");
     write_knxproj_with_duplicate_id(&file);
 
-    let out = run_cli(&["import", file.to_str().unwrap()]);
+    let out = run_cli(&["import", file.to_str().unwrap(), "--no-product-db"]);
 
     // 2, not 1: the project did import — a caller can tell "imported with
     // known holes" from "could not import at all".

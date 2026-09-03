@@ -14,6 +14,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use super::comobject::{
     insert_com_object, insert_com_object_ref, COM_OBJECT_ATTRS, COM_OBJECT_REF_ATTRS,
 };
+use super::translation::insert_translations;
 use super::{bool_flag, report_unknown_attrs};
 use crate::report::{IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name, skip_subtree, Attrs};
@@ -49,6 +50,16 @@ struct UnionState {
     memory: Option<(Option<String>, Option<i64>, Option<i64>)>,
 }
 
+/// Where in the `Languages` tree the reader currently is: the open
+/// `Language/@Identifier` and, nested inside it, the open
+/// `TranslationElement/@RefId` — the two keys every `Translation` row needs
+/// besides its own `AttributeName`.
+#[derive(Default)]
+struct TranslationState {
+    language: Option<String>,
+    ref_id: Option<String>,
+}
+
 fn parse_i64(v: Option<&str>) -> Option<i64> {
     v.and_then(|v| v.parse::<i64>().ok())
 }
@@ -76,6 +87,7 @@ pub fn ingest_program(
     // `<ParameterType>` opens — the child that decides `kind`.
     let mut expecting_type_child = false;
     let mut current_parameter: Option<String> = None;
+    let mut translation_state = TranslationState::default();
 
     loop {
         buf.clear();
@@ -94,6 +106,8 @@ pub fn ingest_program(
                 "Union" => current_union = None,
                 "ParameterType" => current_parameter_type = None,
                 "Parameter" => current_parameter = None,
+                "Language" => translation_state.language = None,
+                "TranslationElement" => translation_state.ref_id = None,
                 _ => {}
             },
             Event::Empty(e) => {
@@ -115,6 +129,7 @@ pub fn ingest_program(
                     &mut current_parameter_type,
                     &mut expecting_type_child,
                     &mut current_parameter,
+                    &mut translation_state,
                 )?;
             }
             Event::Start(e) => {
@@ -136,6 +151,7 @@ pub fn ingest_program(
                     &mut current_parameter_type,
                     &mut expecting_type_child,
                     &mut current_parameter,
+                    &mut translation_state,
                 )?;
             }
             _ => {}
@@ -166,6 +182,7 @@ fn handle_start_or_empty(
     current_parameter_type: &mut Option<(String, Option<String>)>,
     expecting_type_child: &mut bool,
     current_parameter: &mut Option<String>,
+    translation_state: &mut TranslationState,
 ) -> Result<(), ProductDbError> {
     if *expecting_type_child {
         *expecting_type_child = false;
@@ -323,6 +340,26 @@ fn handle_start_or_empty(
                 } else if let Some(u) = current_union.as_mut() {
                     u.memory = Some((seg, off, bit));
                 }
+            }
+        }
+        "Language" => {
+            translation_state.language = a.get("Identifier").map(str::to_string);
+        }
+        "TranslationElement" => {
+            translation_state.ref_id = a.get("RefId").map(str::to_string);
+        }
+        "Translation" => {
+            if let (Some(language), Some(ref_id)) =
+                (&translation_state.language, &translation_state.ref_id)
+            {
+                insert_translations(
+                    conn,
+                    program_id,
+                    language,
+                    ref_id,
+                    a.get("AttributeName").unwrap_or_default(),
+                    a.get("Text").unwrap_or_default(),
+                )?;
             }
         }
         "ComObject" if !*already_present => {

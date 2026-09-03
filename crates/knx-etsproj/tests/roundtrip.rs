@@ -14,7 +14,11 @@ use knx_etsproj::{import_knxproj, import_knxproj_bytes, Container};
 #[test]
 fn roundtrip_model_is_semantically_equal() {
     let first = import_knxproj(&reference_ets4_path()).unwrap();
-    let exported = export_knxproj(&first.project, &first.opaque).unwrap();
+    let exported = export_knxproj(
+        &first.project,
+        &all_entries(&first.opaque, &first.manufacturer),
+    )
+    .unwrap();
     let second = import_knxproj_bytes(exported.bytes, "roundtrip.knxproj").unwrap();
 
     let a = semantic_view(&first.project);
@@ -27,7 +31,11 @@ fn roundtrip_model_is_semantically_equal() {
 #[test]
 fn roundtrip_opaque_bytes_are_hash_identical() {
     let first = import_knxproj(&reference_ets4_path()).unwrap();
-    let exported = export_knxproj(&first.project, &first.opaque).unwrap();
+    let exported = export_knxproj(
+        &first.project,
+        &all_entries(&first.opaque, &first.manufacturer),
+    )
+    .unwrap();
     let second = import_knxproj_bytes(exported.bytes, "roundtrip.knxproj").unwrap();
 
     let hashes = |entries: &[OpaqueEntry]| {
@@ -51,7 +59,11 @@ fn roundtrip_opaque_bytes_are_hash_identical() {
 #[test]
 fn export_is_unsigned_and_reports_it() {
     let first = import_knxproj(&reference_ets4_path()).unwrap();
-    let exported = export_knxproj(&first.project, &first.opaque).unwrap();
+    let exported = export_knxproj(
+        &first.project,
+        &all_entries(&first.opaque, &first.manufacturer),
+    )
+    .unwrap();
     assert!(exported
         .warnings
         .iter()
@@ -76,9 +88,16 @@ fn a_second_roundtrip_changes_nothing_further() {
     // must not normalize it again. A pipeline that keeps changing the file is
     // not a roundtrip.
     let first = import_knxproj(&reference_ets4_path()).unwrap();
-    let once = export_knxproj(&first.project, &first.opaque).unwrap().bytes;
+    let once = export_knxproj(
+        &first.project,
+        &all_entries(&first.opaque, &first.manufacturer),
+    )
+    .unwrap()
+    .bytes;
     let mid = import_knxproj_bytes(once.clone(), "once.knxproj").unwrap();
-    let twice = export_knxproj(&mid.project, &mid.opaque).unwrap().bytes;
+    let twice = export_knxproj(&mid.project, &all_entries(&mid.opaque, &mid.manufacturer))
+        .unwrap()
+        .bytes;
 
     let a = Container::open(once).unwrap();
     let b = Container::open(twice).unwrap();

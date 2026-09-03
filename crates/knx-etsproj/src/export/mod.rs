@@ -23,17 +23,19 @@ pub struct ExportOutcome {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExportWarning {
     /// Always present. Every export this application produces is unsigned.
-    Unsigned {
-        detail: String,
-    },
+    Unsigned { detail: String },
     /// A signature entry was copied through unchanged; it no longer matches
     /// the content it signs.
-    StaleSignature {
-        source_path: String,
-    },
-    ManufacturerDataFromOpaqueStore {
-        entries: usize,
-    },
+    StaleSignature { source_path: String },
+    /// Manufacturer data was written from the shared product database
+    /// rather than from the project file (ADR-0005). Always present when
+    /// the export carried any.
+    ManufacturerDataFromProductDb { entries: usize },
+    /// The project's manifest named a manufacturer file the product
+    /// database could not supply. The container is written without it, and
+    /// this says which one — never a silently incomplete archive. Raised
+    /// by `knx-app` (Task 14), which is the layer that knows the manifest.
+    MissingManufacturerData { source_path: String, sha256: String },
 }
 
 /// Writes `project` and every opaque entry back out as a `.knxproj` ZIP
@@ -81,7 +83,7 @@ pub fn export_knxproj(
         write_entry(&mut writer, options, &entry.source_path, &entry.bytes)?;
     }
     if manufacturer_data_entries > 0 {
-        warnings.push(ExportWarning::ManufacturerDataFromOpaqueStore {
+        warnings.push(ExportWarning::ManufacturerDataFromProductDb {
             entries: manufacturer_data_entries,
         });
     }
@@ -113,12 +115,33 @@ fn write_entry(
 mod tests {
     use super::*;
     use crate::container::Container;
+    use crate::opaque::ManufacturerFile;
     use crate::testutil::reference_ets4_path;
+
+    /// Reassembles the full entry list `export_knxproj` needs: every opaque
+    /// entry plus every manufacturer file converted back into an
+    /// `OpaqueEntry` at its own `source_path` — what `knx-app` does for
+    /// real once the product database exists (Task 14).
+    fn all_entries(opaque: &[OpaqueEntry], manufacturer: &[ManufacturerFile]) -> Vec<OpaqueEntry> {
+        opaque
+            .iter()
+            .cloned()
+            .chain(manufacturer.iter().map(|m| OpaqueEntry {
+                source_path: m.source_path.clone(),
+                xpath: String::new(),
+                kind: m.kind,
+                name: String::new(),
+                bytes: m.bytes.clone(),
+                sha256: m.sha256.clone(),
+            }))
+            .collect()
+    }
 
     #[test]
     fn every_export_is_unsigned_and_says_so() {
         let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
-        let exported = export_knxproj(&out.project, &out.opaque).unwrap();
+        let entries = all_entries(&out.opaque, &out.manufacturer);
+        let exported = export_knxproj(&out.project, &entries).unwrap();
         let unsigned = exported
             .warnings
             .iter()
@@ -133,7 +156,8 @@ mod tests {
     #[test]
     fn the_exported_container_holds_every_entry_the_source_had() {
         let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
-        let exported = export_knxproj(&out.project, &out.opaque).unwrap();
+        let entries = all_entries(&out.opaque, &out.manufacturer);
+        let exported = export_knxproj(&out.project, &entries).unwrap();
         let container = Container::open(exported.bytes).unwrap();
         assert_eq!(container.entries().len(), 38);
         assert!(container.find("P-0512/0.xml").is_some());
@@ -143,7 +167,8 @@ mod tests {
     #[test]
     fn copied_signatures_are_reported_as_stale() {
         let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
-        let exported = export_knxproj(&out.project, &out.opaque).unwrap();
+        let entries = all_entries(&out.opaque, &out.manufacturer);
+        let exported = export_knxproj(&out.project, &entries).unwrap();
         let stale = exported
             .warnings
             .iter()

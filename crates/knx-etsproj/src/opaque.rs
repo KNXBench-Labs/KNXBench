@@ -10,11 +10,14 @@
 //! [`OpaqueEntry`] shape, so Task 13's storage layer and Task 19's export
 //! writer handle them uniformly regardless of where they came from.
 //!
-//! `ManufacturerData` is a Session 3 arrangement, not the destination.
-//! ADR-0005 and IMPORT_EXPORT §10 put manufacturer data in the shared
-//! product database (Session 4), stored once rather than once per project.
-//! Until that exists, keeping it in the per-project opaque store is what
-//! lets export write a complete container instead of one ETS cannot read.
+//! `ManufacturerData` and `Baggage` entries are collected here too, but
+//! [`collect_container_entries`] hands them out separately as
+//! [`ManufacturerFile`] rather than folding them into the `OpaqueEntry`
+//! list: ADR-0005 and IMPORT_EXPORT §10 put manufacturer data in the
+//! shared product database (Session 4), stored once rather than once per
+//! project. `M-xxxx.signature` entries are the one exception and stay in
+//! the project's own opaque store (spec §3) — they sign a container state,
+//! not a product.
 
 use sha2::{Digest, Sha256};
 
@@ -56,30 +59,69 @@ pub enum OpaqueKind {
     RetainedElement,
 }
 
+/// A manufacturer file on its way to the product database (ADR-0005).
+/// Same bytes and same hash as an `OpaqueEntry` would have carried — this
+/// type exists so the destination is visible in the type system rather
+/// than decided by a `match` in the caller.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ManufacturerFile {
+    pub source_path: String,
+    pub bytes: Vec<u8>,
+    pub sha256: String,
+    pub kind: OpaqueKind,
+}
+
+/// The two destinations a container entry can be sorted into:
+/// `opaque` for the project's own passthrough store, `manufacturer` for
+/// the shared product database.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CollectedEntries {
+    pub opaque: Vec<OpaqueEntry>,
+    pub manufacturer: Vec<ManufacturerFile>,
+}
+
 /// Reads every container entry except those named in `regenerated` (paths
 /// this session's own exporter writes fresh, so keeping the original bytes
-/// too would just mean export has to choose between two copies). Matched
-/// case-insensitively, the same convention [`Container::find`] uses.
+/// too would just mean export has to choose between two copies), and sorts
+/// each into the opaque store or the manufacturer-data list by its
+/// [`OpaqueKind`]. Matched case-insensitively, the same convention
+/// [`Container::find`] uses.
 pub fn collect_container_entries(
     container: &mut Container,
     regenerated: &[&str],
-) -> Result<Vec<OpaqueEntry>, ContainerError> {
+) -> Result<CollectedEntries, ContainerError> {
     let paths: Vec<String> = container.entries().iter().map(|e| e.path.clone()).collect();
-    let mut out = Vec::with_capacity(paths.len());
+    let mut out = CollectedEntries {
+        opaque: Vec::with_capacity(paths.len()),
+        manufacturer: Vec::new(),
+    };
     for path in paths {
         if regenerated.iter().any(|r| r.eq_ignore_ascii_case(&path)) {
             continue;
         }
         let bytes = container.read(&path)?;
         let sha256 = sha256_hex(&bytes);
-        out.push(OpaqueEntry {
-            source_path: path.clone(),
-            xpath: String::new(),
-            kind: classify(&path),
-            name: String::new(),
-            bytes,
-            sha256,
-        });
+        let kind = classify(&path);
+        match kind {
+            OpaqueKind::ManufacturerData | OpaqueKind::Baggage => {
+                out.manufacturer.push(ManufacturerFile {
+                    source_path: path,
+                    bytes,
+                    sha256,
+                    kind,
+                });
+            }
+            _ => {
+                out.opaque.push(OpaqueEntry {
+                    source_path: path,
+                    xpath: String::new(),
+                    kind,
+                    name: String::new(),
+                    bytes,
+                    sha256,
+                });
+            }
+        }
     }
     Ok(out)
 }
@@ -154,19 +196,77 @@ mod tests {
     use crate::testutil::reference_ets4_bytes;
 
     #[test]
-    fn every_container_entry_except_the_regenerated_ones_is_collected() {
+    fn manufacturer_files_are_handed_out_separately_from_opaque_entries() {
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
-        let entries =
+        let collected =
             collect_container_entries(&mut c, &["P-0512/0.xml", "P-0512/Project.xml"]).unwrap();
-        assert_eq!(entries.len(), 36); // 38 archive entries less the two we rewrite
-        assert!(entries.iter().all(|e| !e.sha256.is_empty()));
+        // 36 entries less the two regenerated ones, split into the
+        // manufacturer files (which now go to the product database) and
+        // everything else (which stays in the project's opaque store).
+        assert_eq!(collected.opaque.len() + collected.manufacturer.len(), 36);
+        assert!(collected
+            .manufacturer
+            .iter()
+            .all(|m| m.source_path.starts_with("M-")));
+        assert!(collected
+            .opaque
+            .iter()
+            .all(|e| !matches!(e.kind, OpaqueKind::ManufacturerData | OpaqueKind::Baggage)));
+    }
+
+    #[test]
+    fn manufacturer_signatures_stay_in_the_opaque_store() {
+        // M-0008.signature signs a container state, not a product; leaving
+        // it here keeps the export path for signatures unchanged (spec §3).
+        let mut c = Container::open(reference_ets4_bytes()).unwrap();
+        let collected = collect_container_entries(&mut c, &[]).unwrap();
+        assert!(collected
+            .opaque
+            .iter()
+            .any(|e| e.source_path == "M-0008.signature"));
+        assert!(!collected
+            .manufacturer
+            .iter()
+            .any(|m| m.source_path.ends_with(".signature")));
+    }
+
+    #[test]
+    fn every_manufacturer_file_carries_the_hash_of_its_own_bytes() {
+        let mut c = Container::open(reference_ets4_bytes()).unwrap();
+        let collected = collect_container_entries(&mut c, &[]).unwrap();
+        assert!(collected
+            .manufacturer
+            .iter()
+            .all(|m| m.sha256 == sha256_hex(&m.bytes)));
+        // The vendor DLL travels with the manufacturer data, byte for byte.
+        let dll = collected
+            .manufacturer
+            .iter()
+            .find(|m| m.source_path.ends_with("econEts3.dll"))
+            .unwrap();
+        assert_eq!(dll.bytes.len(), 641536);
+        assert_eq!(dll.kind, OpaqueKind::Baggage);
     }
 
     #[test]
     fn entries_are_classified_by_where_they_sit_in_the_container() {
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
-        let entries = collect_container_entries(&mut c, &[]).unwrap();
-        let kind = |p: &str| entries.iter().find(|e| e.source_path == p).unwrap().kind;
+        let collected = collect_container_entries(&mut c, &[]).unwrap();
+        let kind = |p: &str| {
+            collected
+                .opaque
+                .iter()
+                .find(|e| e.source_path == p)
+                .map(|e| e.kind)
+                .or_else(|| {
+                    collected
+                        .manufacturer
+                        .iter()
+                        .find(|m| m.source_path == p)
+                        .map(|m| m.kind)
+                })
+                .unwrap()
+        };
         assert_eq!(kind("knx_master.xml"), OpaqueKind::MasterData);
         assert_eq!(kind("P-0512.signature"), OpaqueKind::Signature);
         assert_eq!(kind("M-0008/Baggages/econEts3.dll"), OpaqueKind::Baggage);
@@ -176,19 +276,6 @@ mod tests {
             OpaqueKind::BinaryData
         );
         assert_eq!(kind("P-0512/ExtraData/20001.azp"), OpaqueKind::ExtraData);
-    }
-
-    #[test]
-    fn the_baggage_dll_is_copied_byte_for_byte() {
-        let mut c = Container::open(reference_ets4_bytes()).unwrap();
-        let entries = collect_container_entries(&mut c, &[]).unwrap();
-        let dll = entries
-            .iter()
-            .find(|e| e.source_path.ends_with("econEts3.dll"))
-            .unwrap();
-        assert_eq!(dll.bytes.len(), 641536);
-        assert_eq!(&dll.bytes[..2], b"MZ"); // a PE image, and we do nothing with it
-        assert_eq!(dll.sha256, sha256_hex(&dll.bytes));
     }
 
     #[test]

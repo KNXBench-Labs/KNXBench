@@ -7,6 +7,8 @@
 
 pub mod blob;
 pub mod migration;
+pub mod report;
+pub mod xml;
 
 pub use blob::{
     has_source_file, load_source_file, sha256_hex, store_source_file, verify, BlobMismatch,

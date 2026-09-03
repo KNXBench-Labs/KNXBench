@@ -57,7 +57,18 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
              len             INTEGER NOT NULL,
              bytes           BLOB NOT NULL
          ) STRICT;
-         CREATE INDEX source_file_manufacturer ON source_file (manufacturer_id);",
+         CREATE INDEX source_file_manufacturer ON source_file (manufacturer_id);
+         CREATE TABLE ingest_unknown (
+             id            INTEGER PRIMARY KEY,
+             source_sha256 TEXT NOT NULL,
+             program_id    TEXT,
+             xpath         TEXT NOT NULL,
+             kind          TEXT NOT NULL,
+             name          TEXT NOT NULL,
+             occurrences   INTEGER NOT NULL,
+             sample        TEXT
+         ) STRICT;
+         CREATE INDEX ingest_unknown_source ON ingest_unknown (source_sha256);",
     )?;
     Ok(())
 }

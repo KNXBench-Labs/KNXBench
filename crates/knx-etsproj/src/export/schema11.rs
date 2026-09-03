@@ -10,7 +10,8 @@
 //!   per-instance one, since that is the granularity Task 6 captured it at.
 //! - `Override::Value` is written only when its `Layer::is_exported()` is
 //!   true; `Override::Empty` is written as an empty attribute; nothing is
-//!   written for `Override::Absent`. Nothing carrying `Layer::Inferred`,
+//!   written for `Override::Absent`; `Override::Malformed` is written back
+//!   as the raw text that was read. Nothing carrying `Layer::Inferred`,
 //!   `Layer::Program` or `Layer::ProgramRef` can reach the file — there is
 //!   no branch that writes an unexported layer's value.
 //! - Element and attribute order follows schema 11's own order (per
@@ -36,8 +37,8 @@ use quick_xml::Writer;
 
 use knx_core::{
     Area, BuildingPart, BuildingPartType, ComObjectInstance, CompletionStatus, DeviceInstance,
-    Direction, DptRef, GroupAddressEntry, GroupAddressStyle, GroupRange, Installation, Language,
-    Line, Override, ParameterInstance, Project, StringTable, Text,
+    Direction, DptRef, GroupAddressEntry, GroupAddressStyle, GroupRange, Installation, Line,
+    Override, ParameterInstance, Project, StringTable, Text,
 };
 
 use crate::opaque::{OpaqueEntry, OpaqueKind};
@@ -155,7 +156,10 @@ impl Attrs {
 }
 
 /// `Override::Value` writes only when `is_exported()`; `Override::Empty`
-/// writes an empty attribute; `Override::Absent` writes nothing.
+/// writes an empty attribute; `Override::Absent` writes nothing;
+/// `Override::Malformed` writes its raw text back verbatim, so a value
+/// this application could not parse survives the roundtrip as the source
+/// file spelled it rather than disappearing.
 /// `ReadFlag`/`WriteFlag`/`TransmitFlag`/`UpdateFlag`/`CommunicationFlag`
 /// spell their booleans `"Enabled"`/`"Disabled"` on schema 11 — measured,
 /// RESEARCH §3.3's amendment — never `"1"`/`"0"`, which is every other
@@ -170,6 +174,9 @@ fn push_override_flag(attrs: &mut Attrs, name: &str, o: &Override<bool>) {
             attrs.push(name, if r.value { "Enabled" } else { "Disabled" });
         }
         Override::Value(_) => {}
+        Override::Malformed(raw) => {
+            attrs.push(name, raw.clone());
+        }
     }
 }
 
@@ -183,6 +190,9 @@ fn push_override_dpt(attrs: &mut Attrs, name: &str, o: &Override<DptRef>) {
             attrs.push(name, r.value.to_string());
         }
         Override::Value(_) => {}
+        Override::Malformed(raw) => {
+            attrs.push(name, raw.clone());
+        }
     }
 }
 
@@ -201,11 +211,15 @@ fn push_override_text(attrs: &mut Attrs, name: &str, o: &Override<Text>, strings
             attrs.push(name, "");
         }
         Override::Value(r) if r.layer.is_exported() => {
-            let language = Language("en".to_string());
-            let text = strings.text(&r.value, &language).unwrap_or_default();
+            let text = strings
+                .text(&r.value, strings.default_language())
+                .unwrap_or_default();
             attrs.push(name, text);
         }
         Override::Value(_) => {}
+        Override::Malformed(raw) => {
+            attrs.push(name, raw.clone());
+        }
     }
 }
 
@@ -824,6 +838,27 @@ mod tests {
         let xml =
             String::from_utf8(write_installation_xml(&out.project, &out.opaque).unwrap()).unwrap();
         assert_eq!(xml.matches(r#"DatapointType="""#).count(), 497);
+    }
+
+    #[test]
+    fn a_malformed_value_is_written_back_exactly_as_it_was_read() {
+        let mut out = crate::import_knxproj(&reference_ets4_path()).unwrap();
+        let id = *out
+            .project
+            .devices
+            .iter()
+            .flat_map(|d| d.com_objects.iter())
+            .next()
+            .unwrap();
+        let com = out.project.devices.com_object_mut(id).unwrap();
+        com.dpt = Override::Malformed("DPST-nonsense".into());
+        com.flags.read = Override::Malformed("Perhaps".into());
+
+        let xml =
+            String::from_utf8(write_installation_xml(&out.project, &out.opaque).unwrap()).unwrap();
+
+        assert!(xml.contains(r#"DatapointType="DPST-nonsense""#));
+        assert!(xml.contains(r#"ReadFlag="Perhaps""#));
     }
 
     #[test]

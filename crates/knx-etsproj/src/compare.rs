@@ -26,7 +26,7 @@ use std::collections::BTreeMap;
 use knx_core::{
     Area, BuildingPart, BuildingPartId, BuildingPartType, ComObjectInstance, CommissioningState,
     CompletionStatus, DeviceId, DeviceInstance, Direction, DptRef, GroupAddressEntry,
-    GroupAddressStyle, GroupRange, GroupRangeId, Installation, Language, Line, LineId, Override,
+    GroupAddressStyle, GroupRange, GroupRangeId, Installation, Line, LineId, Override,
     ParameterInstance, Project, StringTable, Text,
 };
 
@@ -309,24 +309,23 @@ fn direction_rank(d: Direction) -> u8 {
     }
 }
 
-/// `Override::Absent` -> `None`, `Override::Empty` -> `Some("")`; a
-/// `Value` renders only if its layer is exported — matching exactly what a
-/// roundtrip through `export_knxproj` actually writes, since that is what
-/// this comparison exists to check.
+/// `Override::Absent` -> `None`, `Override::Empty` -> `Some("")`,
+/// `Override::Malformed` -> its raw text; a `Value` renders only if its
+/// layer is exported — matching exactly what a roundtrip through
+/// `export_knxproj` actually writes, since that is what this comparison
+/// exists to check.
 fn semantic_text(o: &Override<Text>, strings: &StringTable) -> Option<String> {
     match o {
         Override::Absent => None,
         Override::Empty => Some(String::new()),
-        Override::Value(r) if r.layer.is_exported() => {
-            let language = Language("en".to_string());
-            Some(
-                strings
-                    .text(&r.value, &language)
-                    .unwrap_or_default()
-                    .to_string(),
-            )
-        }
+        Override::Value(r) if r.layer.is_exported() => Some(
+            strings
+                .text(&r.value, strings.default_language())
+                .unwrap_or_default()
+                .to_string(),
+        ),
         Override::Value(_) => None,
+        Override::Malformed(raw) => Some(raw.clone()),
     }
 }
 
@@ -336,15 +335,18 @@ fn semantic_dpt(o: &Override<DptRef>) -> Option<String> {
         Override::Empty => Some(String::new()),
         Override::Value(r) if r.layer.is_exported() => Some(r.value.to_string()),
         Override::Value(_) => None,
+        Override::Malformed(raw) => Some(raw.clone()),
     }
 }
 
-/// `Option<bool>` has no third state, so `Override::Empty` collapses into
-/// `None` alongside `Override::Absent` — a real, if narrow, loss of
-/// distinction in this comparison type specifically. None of the
-/// reference project's flag attributes are ever empty (measured: each of
-/// the five is exclusively `"Enabled"` or `"Disabled"`), so it does not
-/// affect this repository's actual roundtrip test.
+/// `Option<bool>` has no third state, so `Override::Empty` and
+/// `Override::Malformed` both collapse into `None` alongside
+/// `Override::Absent` — a real, if narrow, loss of distinction in this
+/// comparison type specifically. None of the reference project's flag
+/// attributes are ever empty or unparsable (measured: each of the five is
+/// exclusively `"Enabled"` or `"Disabled"`), so it does not affect this
+/// repository's actual roundtrip test. Export still writes all three
+/// states back correctly; only this comparison cannot tell them apart.
 fn semantic_flag(o: &Override<bool>) -> Option<bool> {
     match o {
         Override::Value(r) if r.layer.is_exported() => Some(r.value),

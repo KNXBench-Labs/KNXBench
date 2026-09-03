@@ -244,3 +244,54 @@ path nobody has run against a real encrypted file.
 **Lifted when.** A real password-protected ETS4/5 project (ZipCrypto) and a
 real password-protected ETS6 project (AES) are available to verify each
 scheme against.
+
+## 14. The project's default language is a placeholder
+
+**Limitation.** Every imported project is created with
+`Language("en")` as its `StringTable`'s default language, regardless of the
+language the project was actually authored in.
+
+**Cause.** A schema-11 project file carries no project-wide language tag:
+`DefaultLanguage` belongs to an application program's `RegistrationInfo`
+(RESEARCH §4.1), not to `ProjectInformation`. Session 3 imports no
+application program, so there is nothing in the imported data to derive a
+real value from, and inventing one from, say, the project name would be a
+guess presented as a fact.
+
+**Impact.** Nothing observable in Session 3: instance-level `@Text` and
+`@Description` are literal, not translated, so every `Text` this importer
+produces is `Text::Literal` and resolves without consulting the table at
+all. The default language only starts to matter once localized program
+text exists. Export and semantic comparison both ask the project's own
+`StringTable::default_language()` rather than naming a language
+themselves, so when a real value arrives there is exactly one place that
+sets it.
+
+**Lifted when.** Session 4 ingests application programs and their
+`RegistrationInfo`, giving the importer a measured language to set instead
+of a placeholder.
+
+## 15. Unparsable values survive only on `Override` fields
+
+**Limitation.** A present attribute whose value cannot be parsed keeps its
+raw text — and is written back verbatim on export — only where the field
+is modelled as `Override<T>` (`Override::Malformed`, ADR-0010's
+amendment). On a field modelled as a bare value or an `Option<T>`, an
+unparsable value falls back to the type's default and only the report
+records what the source actually said.
+
+**Cause.** `Override<T>` exists to carry an attribute's presence state, so
+a fourth state costs nothing structurally. A bare `u8` or an
+`Option<DateTime<Utc>>` has nowhere to put a string, and widening every
+such field would push presence bookkeeping into parts of the model that do
+not otherwise need it.
+
+**Impact.** For the affected fields (timestamps, individual addresses,
+numeric ids, enums such as `CompletionStatus`) a malformed source value is
+reported but not written back: the export is a correct file that differs
+from the original in exactly that attribute. No such value occurs in the
+reference project — the case is reachable only with hand-broken input.
+
+**Lifted when.** A real project is found that carries unparsable values on
+those fields, making the added model surface worth its cost. Until then
+the asymmetry is deliberate, documented, and reported at import time.

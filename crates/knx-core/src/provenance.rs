@@ -56,6 +56,13 @@ pub enum Override<T> {
     Empty,
     /// The attribute was present and carried a value.
     Value(Resolved<T>),
+    /// The attribute was present and carried a non-empty value this
+    /// application could not parse into `T`. The raw text is kept exactly
+    /// as it was read, so export writes back what the source file said
+    /// instead of dropping the attribute — an unreadable value is still
+    /// the user's data. An importer that produces this state must also
+    /// report the problem; the model itself carries no report.
+    Malformed(String),
 }
 
 impl<T> Override<T> {
@@ -70,7 +77,16 @@ impl<T> Override<T> {
         self.value().map(|r| r.layer)
     }
 
-    /// Whether the attribute appeared in the source at all, empty or not.
+    /// The raw text of a value that was present but could not be parsed.
+    pub fn malformed(&self) -> Option<&str> {
+        match self {
+            Override::Malformed(raw) => Some(raw.as_str()),
+            _ => None,
+        }
+    }
+
+    /// Whether the attribute appeared in the source at all, empty or not,
+    /// readable or not.
     pub fn is_present(&self) -> bool {
         !matches!(self, Override::Absent)
     }
@@ -103,6 +119,16 @@ mod tests {
         assert!(!inferred.layer.is_exported());
         assert!(from_instance.layer.is_exported());
         assert!(edited.layer.is_exported());
+    }
+
+    #[test]
+    fn a_malformed_value_is_present_carries_no_value_and_keeps_its_raw_text() {
+        let malformed: Override<u8> = Override::Malformed("not-a-number".into());
+        assert!(malformed.is_present());
+        assert!(malformed.value().is_none());
+        assert_eq!(malformed.malformed(), Some("not-a-number"));
+        assert_ne!(malformed, Override::Absent);
+        assert_ne!(malformed, Override::Empty);
     }
 
     #[test]

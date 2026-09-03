@@ -226,6 +226,30 @@ representation nor an opaque entry, that is a bug in the importer — not a
 report entry, and not an acceptable outcome. Silent discarding is not permitted
 anywhere in this pipeline.
 
+**Unparsable values.** A present attribute whose value the importer cannot
+parse is kept, not dropped. On a field modelled as `Override<T>` the raw
+text is held in `Override::Malformed` (ADR-0010's amendment) and written
+back verbatim on export, so a file that arrives with an unreadable value
+leaves with the same one. A field modelled as a bare value or an `Option`
+has nowhere to keep the raw text, so it falls back to the type's default
+with the problem reported — the loss is visible in the report, never
+silent.
+
+### 6.1 CLI exit codes
+
+`knx import` distinguishes three outcomes, so a script does not have to
+parse the JSON report to learn which one it got:
+
+| Code | Meaning |
+| --- | --- |
+| 0 | A project was produced and its report contains no `Severity::Error` entries. Warnings and unknown constructs do not change this. |
+| 1 | No project was produced: bad usage, an unreadable file, an unsupported schema, or a store that could not be opened. |
+| 2 | A project was produced, but the report contains at least one `Severity::Error` entry — data the mapper could not use, such as a dangling reference or a duplicate id. |
+
+Code 2 exists because 0 and 1 alone force a choice between hiding real
+structural errors and failing an import that did in fact produce a usable
+project.
+
 ## 7. Inference and conflicts
 
 A group address may carry no datapoint type of its own — 194 of 514 in the

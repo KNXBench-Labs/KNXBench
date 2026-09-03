@@ -2820,6 +2820,7 @@ git commit -m "feat(knx-store): parameter-instance persistence"
 **Files:**
 - Create: `crates/knx-store/src/project.rs`
 - Modify: `crates/knx-store/src/lib.rs` (`pub mod project; pub use project::{save_project, load_project};`)
+- Modify: `crates/knx-core/src/project.rs` (`impl IdAllocators` gains eight `peek_*` getters and `from_counts` — see Step 1 below)
 
 **Interfaces:**
 - Consumes: every `upsert_*`/`load_*` function from Tasks 3–10, plus `knx_core::project::{Project, ProjectInfo, IdAllocators}`, `knx_core::address::GroupAddressStyle`, `knx_core::string_table::Language`.
@@ -2896,6 +2897,17 @@ const DELETE_ALL_TABLES: &[&str] = &[
 
 pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreError> {
     let tx = conn.unchecked_transaction()?;
+
+    // `building_part` and `group_range` self-reference via `parent_id`.
+    // Under `PRAGMA foreign_keys = ON`, a bulk `DELETE FROM` on a
+    // self-referencing table risks the constraint being checked against a
+    // row this same statement has not deleted yet (SQLite does not
+    // guarantee an all-at-once "no rows left, so nothing to violate"
+    // ordering here — only that no *other* table's FK is left dangling).
+    // Breaking every self-reference first makes the two DELETEs below
+    // unconditionally safe regardless of internal row order.
+    tx.execute("UPDATE building_part SET parent_id = NULL", [])?;
+    tx.execute("UPDATE group_range SET parent_id = NULL", [])?;
 
     for table in DELETE_ALL_TABLES {
         tx.execute(&format!("DELETE FROM {table}"), [])?;
@@ -3172,7 +3184,7 @@ impl<T> OptionalNotSaved<T> for Result<T, rusqlite::Error> {
 }
 ```
 
-This references `IdAllocators::from_counts` and eight `peek_*` getters that do not exist yet — `IdAllocators`'s fields are private and its only public API today is the eight `next_*` mutators. Add these to `crates/knx-core/src/project.rs`'s `impl IdAllocators` block (this belongs in Task 1, not here — go back and add it there now, before writing `project.rs`'s test, since `project.rs` will not compile without it):
+This references `IdAllocators::from_counts` and eight `peek_*` getters that do not exist yet — `IdAllocators`'s fields are private and its only public API today is the eight `next_*` mutators. Add these now, as part of this task's own commit, to `crates/knx-core/src/project.rs`'s `impl IdAllocators` block (Task 1 already landed and was reviewed without this addition — do not amend that commit; this task adds `knx-core/src/project.rs` to its own `Modify` list and its own commit instead):
 
 ```rust
     pub fn peek_device(&self) -> u32 {
@@ -3404,6 +3416,15 @@ mod tests {
         save_project(&conn, &project).unwrap();
         let loaded = load_project(&conn).unwrap();
         assert_eq!(loaded, project);
+
+        // Re-save on top of existing self-referencing rows (`building_part`/
+        // `group_range`'s `parent_id`) — the case a single-save round trip
+        // above never exercises, and the one `PRAGMA foreign_keys = ON`
+        // bulk-delete could violate if the two tables' `parent_id` columns
+        // are not neutralized before their rows are deleted.
+        save_project(&conn, &project).unwrap();
+        let loaded_again = load_project(&conn).unwrap();
+        assert_eq!(loaded_again, project);
     }
 
     #[test]

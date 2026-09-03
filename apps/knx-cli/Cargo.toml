@@ -20,3 +20,4 @@ tempfile.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 serde_json.workspace = true
+zip.workspace = true

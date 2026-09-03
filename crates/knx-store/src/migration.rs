@@ -10,7 +10,7 @@ use std::path::Path;
 use rusqlite::Connection;
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 3;
+pub const CURRENT_SCHEMA_VERSION: i64 = 4;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -85,11 +85,232 @@ fn migrate_v2_to_v3(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v3 -> v4: every entity table for `knx_core::Project` — the full domain
+/// model, not just the opaque/manifest passthrough (ADR-0003; design doc
+/// `docs/superpowers/specs/2026-09-03-knx-entity-persistence-design.md`).
+/// The `Override<T>` chain is one row per (com object, attribute) in
+/// `com_object_override`, not wide columns. `position`/`flat_position`
+/// columns preserve every order-sensitive `Vec` the domain model has — see
+/// the design doc's "owned-list vs flat-list order" note for which table
+/// gets which.
+fn migrate_v3_to_v4(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(
+        "CREATE TABLE project_info (
+             id                  INTEGER PRIMARY KEY CHECK (id = 0),
+             project_id          TEXT NOT NULL,
+             name                TEXT NOT NULL,
+             project_number      TEXT,
+             group_address_style TEXT NOT NULL,
+             completion          TEXT NOT NULL,
+             last_modified       TEXT,
+             project_start       TEXT,
+             default_language    TEXT NOT NULL
+         ) STRICT;
+
+         CREATE TABLE id_allocators (
+             id                  INTEGER PRIMARY KEY CHECK (id = 0),
+             device              INTEGER NOT NULL,
+             area                INTEGER NOT NULL,
+             line                INTEGER NOT NULL,
+             com_object_instance INTEGER NOT NULL,
+             group_range         INTEGER NOT NULL,
+             group_address       INTEGER NOT NULL,
+             building_part       INTEGER NOT NULL,
+             parameter_instance  INTEGER NOT NULL
+         ) STRICT;
+
+         CREATE TABLE string_table_entry (
+             key      TEXT NOT NULL,
+             language TEXT NOT NULL,
+             value    TEXT NOT NULL,
+             PRIMARY KEY (key, language)
+         ) STRICT;
+
+         CREATE TABLE installation (
+             id                INTEGER PRIMARY KEY,
+             name              TEXT NOT NULL,
+             -- No REFERENCES: `line` rows can be created before their owning
+             -- installation's default line is known during a future
+             -- incremental-update path. The one deliberate unconstrained FK.
+             default_line_id   INTEGER,
+             multicast_address TEXT,
+             completion        TEXT NOT NULL
+         ) STRICT;
+
+         CREATE TABLE area (
+             id              INTEGER PRIMARY KEY,
+             installation_id INTEGER NOT NULL REFERENCES installation(id),
+             position        INTEGER NOT NULL,
+             source_path     TEXT NOT NULL,
+             source_ets_id   TEXT NOT NULL,
+             name            TEXT NOT NULL,
+             address         INTEGER NOT NULL,
+             completion      TEXT NOT NULL
+         ) STRICT;
+         CREATE INDEX area_installation_id ON area (installation_id);
+
+         CREATE TABLE line (
+             id                           INTEGER PRIMARY KEY,
+             area_id                      INTEGER NOT NULL REFERENCES area(id),
+             position                     INTEGER NOT NULL,
+             source_path                  TEXT NOT NULL,
+             source_ets_id                TEXT NOT NULL,
+             name                         TEXT NOT NULL,
+             address                      INTEGER NOT NULL,
+             medium_ref                   TEXT NOT NULL,
+             domain_address               TEXT,
+             domain_address_is_checked    INTEGER,
+             ip_routing_multicast_address TEXT,
+             multicast_ttl                INTEGER,
+             completion                   TEXT NOT NULL
+         ) STRICT;
+         CREATE INDEX line_area_id ON line (area_id);
+
+         CREATE TABLE building_part (
+             id              INTEGER PRIMARY KEY,
+             installation_id INTEGER NOT NULL REFERENCES installation(id),
+             parent_id       INTEGER REFERENCES building_part(id),
+             position        INTEGER NOT NULL,
+             flat_position   INTEGER NOT NULL,
+             source_path     TEXT NOT NULL,
+             source_ets_id   TEXT NOT NULL,
+             name            TEXT NOT NULL,
+             number          TEXT,
+             kind            TEXT NOT NULL,
+             default_line_id INTEGER REFERENCES line(id),
+             completion      TEXT NOT NULL
+         ) STRICT;
+         CREATE INDEX building_part_installation_id ON building_part (installation_id);
+         CREATE INDEX building_part_parent_id ON building_part (parent_id);
+
+         CREATE TABLE device (
+             id                          INTEGER PRIMARY KEY,
+             installation_id             INTEGER NOT NULL REFERENCES installation(id),
+             line_id                     INTEGER REFERENCES line(id),
+             topology_position           INTEGER NOT NULL,
+             source_path                 TEXT NOT NULL,
+             source_ets_id               TEXT NOT NULL,
+             name                        TEXT NOT NULL,
+             description                 TEXT,
+             address                     INTEGER,
+             product_ref                 TEXT NOT NULL,
+             program_ref                 TEXT NOT NULL,
+             completion                  TEXT NOT NULL,
+             individual_address_loaded   INTEGER NOT NULL,
+             application_program_loaded  INTEGER NOT NULL,
+             parameters_loaded           INTEGER NOT NULL,
+             communication_part_loaded   INTEGER NOT NULL,
+             medium_config_loaded        INTEGER NOT NULL,
+             last_modified               TEXT,
+             last_download               TEXT,
+             broken                      INTEGER NOT NULL,
+             visibility_calculated       INTEGER NOT NULL
+         ) STRICT;
+         CREATE INDEX device_installation_id ON device (installation_id);
+         CREATE INDEX device_line_id ON device (line_id);
+
+         CREATE TABLE binary_data_ref (
+             device_id INTEGER NOT NULL REFERENCES device(id),
+             position  INTEGER NOT NULL,
+             blob_id   TEXT NOT NULL,
+             name      TEXT NOT NULL,
+             PRIMARY KEY (device_id, position)
+         ) STRICT;
+
+         CREATE TABLE building_part_device (
+             building_part_id INTEGER NOT NULL REFERENCES building_part(id),
+             device_id        INTEGER NOT NULL REFERENCES device(id),
+             position         INTEGER NOT NULL,
+             PRIMARY KEY (building_part_id, device_id)
+         ) STRICT;
+         CREATE INDEX building_part_device_device_id ON building_part_device (device_id);
+
+         CREATE TABLE com_object_instance (
+             id            INTEGER PRIMARY KEY,
+             device_id     INTEGER NOT NULL REFERENCES device(id),
+             position      INTEGER NOT NULL,
+             source_path   TEXT NOT NULL,
+             source_ets_id TEXT NOT NULL,
+             number        INTEGER NOT NULL,
+             size_kind     TEXT,
+             size_value    INTEGER,
+             size_layer    TEXT,
+             is_active     INTEGER NOT NULL
+         ) STRICT;
+         CREATE INDEX com_object_instance_device_id ON com_object_instance (device_id);
+
+         CREATE TABLE com_object_override (
+             com_object_instance_id INTEGER NOT NULL REFERENCES com_object_instance(id),
+             attr                    TEXT NOT NULL,
+             state                   TEXT NOT NULL,
+             value                   TEXT,
+             text_kind               TEXT,
+             layer                   TEXT,
+             PRIMARY KEY (com_object_instance_id, attr)
+         ) STRICT;
+
+         CREATE TABLE group_range (
+             id              INTEGER PRIMARY KEY,
+             installation_id INTEGER NOT NULL REFERENCES installation(id),
+             parent_id       INTEGER REFERENCES group_range(id),
+             position        INTEGER NOT NULL,
+             flat_position   INTEGER NOT NULL,
+             source_path     TEXT NOT NULL,
+             source_ets_id   TEXT NOT NULL,
+             name            TEXT NOT NULL,
+             range_start     INTEGER NOT NULL,
+             range_end       INTEGER NOT NULL
+         ) STRICT;
+         CREATE INDEX group_range_installation_id ON group_range (installation_id);
+         CREATE INDEX group_range_parent_id ON group_range (parent_id);
+
+         CREATE TABLE group_address (
+             id              INTEGER PRIMARY KEY,
+             installation_id INTEGER NOT NULL REFERENCES installation(id),
+             range_id        INTEGER REFERENCES group_range(id),
+             position        INTEGER NOT NULL,
+             source_path     TEXT NOT NULL,
+             source_ets_id   TEXT NOT NULL,
+             name            TEXT NOT NULL,
+             address         INTEGER NOT NULL,
+             central         INTEGER NOT NULL,
+             unfiltered      INTEGER NOT NULL
+         ) STRICT;
+         CREATE INDEX group_address_installation_id ON group_address (installation_id);
+         CREATE INDEX group_address_range_id ON group_address (range_id);
+
+         CREATE TABLE group_link (
+             com_object_instance_id INTEGER NOT NULL REFERENCES com_object_instance(id),
+             group_address_id       INTEGER NOT NULL REFERENCES group_address(id),
+             direction              TEXT NOT NULL,
+             position               INTEGER NOT NULL,
+             PRIMARY KEY (com_object_instance_id, position)
+         ) STRICT;
+         CREATE INDEX group_link_group_address_id ON group_link (group_address_id);
+
+         CREATE TABLE parameter_instance (
+             id            INTEGER PRIMARY KEY,
+             device_id     INTEGER NOT NULL REFERENCES device(id),
+             position      INTEGER NOT NULL,
+             source_path   TEXT NOT NULL,
+             source_ets_id TEXT NOT NULL,
+             raw           TEXT NOT NULL
+         ) STRICT;
+         CREATE INDEX parameter_instance_device_id ON parameter_instance (device_id);",
+    )?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// Ordered chain; index `i` migrates `user_version` `i` to `i + 1`.
 fn migrations() -> Vec<Migration> {
-    vec![migrate_v0_to_v1, migrate_v1_to_v2, migrate_v2_to_v3]
+    vec![
+        migrate_v0_to_v1,
+        migrate_v1_to_v2,
+        migrate_v2_to_v3,
+        migrate_v3_to_v4,
+    ]
 }
 
 /// Opens (creating if absent) the SQLite file at `path`, runs every pending
@@ -97,6 +318,7 @@ fn migrations() -> Vec<Migration> {
 /// `CURRENT_SCHEMA_VERSION`.
 pub fn open_and_migrate(path: &Path) -> Result<Connection, MigrationError> {
     let conn = Connection::open(path)?;
+    conn.pragma_update(None, "foreign_keys", "ON")?;
     migrate(&conn)?;
     Ok(conn)
 }
@@ -110,6 +332,7 @@ pub fn open_and_migrate(path: &Path) -> Result<Connection, MigrationError> {
 /// display it, with no save/reload feature yet (Session 5 cycle 1).
 pub fn open_and_migrate_in_memory() -> Result<Connection, MigrationError> {
     let conn = Connection::open_in_memory()?;
+    conn.pragma_update(None, "foreign_keys", "ON")?;
     migrate(&conn)?;
     Ok(conn)
 }
@@ -259,9 +482,15 @@ mod tests {
     // longer `CURRENT_SCHEMA_VERSION`, so opening that fixture by its literal
     // path (rather than a copy) would migrate it forward and rewrite the
     // committed file on disk. `the_frozen_v2_fixture_migrates_forward_to_v3`
-    // below covers the same fixture safely, and `the_frozen_v3_fixture_still_opens`
-    // covers the "still opens as a no-op" guarantee for the version that is
-    // current now.
+    // below covers the same fixture safely.
+    //
+    // `the_frozen_v3_fixture_still_opens` was kept for the same reason while
+    // v3 was current, but is deliberately not kept now that v4 is current:
+    // opening the v3 fixture by its literal path would migrate it forward to
+    // v4 and rewrite the committed file on disk.
+    // `the_frozen_v3_fixture_migrates_forward_to_v4` below covers the same
+    // fixture safely, and `the_frozen_v4_fixture_still_opens` covers the
+    // "still opens as a no-op" guarantee for the version that is current now.
 
     #[test]
     fn a_fresh_file_migrates_to_version_three_and_has_the_manifest_table() {
@@ -270,7 +499,11 @@ mod tests {
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 3);
+        // `open_and_migrate` always runs the full chain, so a fresh file
+        // lands on `CURRENT_SCHEMA_VERSION` (now 4), not v3 — the manifest
+        // table introduced at v3 is what this test actually verifies, and it
+        // still exists and is empty at v4.
+        assert_eq!(v, 4);
         assert_eq!(
             crate::manifest::load_manufacturer_refs(&conn).unwrap(),
             vec![]
@@ -290,19 +523,81 @@ mod tests {
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 3);
+        // See the comment on the test above: the chain runs all the way to
+        // `CURRENT_SCHEMA_VERSION` (now 4), not just to v3.
+        assert_eq!(v, 4);
         // The v2 opaque table survives the migration with its data intact.
         assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
     }
 
     #[test]
-    fn the_frozen_v3_fixture_still_opens() {
-        let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v3-empty.sqlite");
+    fn a_fresh_file_migrates_to_version_four_and_has_every_entity_table() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(v, 4);
+        for table in [
+            "project_info",
+            "id_allocators",
+            "string_table_entry",
+            "installation",
+            "area",
+            "line",
+            "building_part",
+            "building_part_device",
+            "device",
+            "binary_data_ref",
+            "com_object_instance",
+            "com_object_override",
+            "group_link",
+            "group_range",
+            "group_address",
+            "parameter_instance",
+        ] {
+            let count: i64 = conn
+                .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))
+                .unwrap();
+            assert_eq!(count, 0, "table {table} should exist and be empty");
+        }
+    }
+
+    #[test]
+    fn foreign_keys_are_enforced() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
+        let fk_on: i64 = conn
+            .query_row("PRAGMA foreign_keys", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(fk_on, 1);
+    }
+
+    #[test]
+    fn the_frozen_v3_fixture_migrates_forward_to_v4() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v3.sqlite");
+        std::fs::copy(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v3-empty.sqlite"),
+            &path,
+        )
+        .unwrap();
+        let conn = open_and_migrate(&path).unwrap();
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(v, 4);
+        assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
+    }
+
+    #[test]
+    fn the_frozen_v4_fixture_still_opens() {
+        let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v4-empty.sqlite");
         let conn = open_and_migrate(Path::new(fixture)).unwrap();
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 3);
+        assert_eq!(v, 4);
     }
 
     #[test]

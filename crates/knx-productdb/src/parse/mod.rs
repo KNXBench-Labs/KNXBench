@@ -5,6 +5,7 @@
 
 pub mod catalog;
 pub mod hardware;
+pub mod program;
 
 use crate::report::UnknownCollector;
 use crate::xml::Attrs;

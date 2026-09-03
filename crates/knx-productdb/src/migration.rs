@@ -139,7 +139,72 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
              registration_signature  TEXT,
              source_sha256           TEXT NOT NULL
          ) STRICT;
-         CREATE INDEX hardware2program_program ON hardware2program (application_program_ref);",
+         CREATE INDEX hardware2program_program ON hardware2program (application_program_ref);
+         CREATE TABLE application_program (
+             id                    TEXT PRIMARY KEY,
+             manufacturer_id       TEXT NOT NULL,
+             name                  TEXT,
+             application_number    TEXT,
+             application_version   TEXT,
+             program_type          TEXT,
+             mask_version          TEXT,
+             pei_type              TEXT,
+             load_procedure_style  TEXT,
+             default_language      TEXT,
+             hash                  TEXT,
+             linkable              INTEGER,
+             original_manufacturer TEXT,
+             source_sha256         TEXT NOT NULL
+         ) STRICT;
+         CREATE TABLE parameter_type (
+             program_id     TEXT NOT NULL,
+             id             TEXT NOT NULL,
+             name           TEXT,
+             kind           TEXT NOT NULL,
+             size_in_bit    INTEGER,
+             base           TEXT,
+             min_inclusive  TEXT,
+             max_inclusive  TEXT,
+             number_type    TEXT,
+             PRIMARY KEY (program_id, id)
+         ) STRICT;
+         CREATE TABLE parameter_type_enum (
+             program_id        TEXT NOT NULL,
+             parameter_type_id TEXT NOT NULL,
+             id                TEXT NOT NULL,
+             value             TEXT,
+             text              TEXT,
+             display_order     INTEGER,
+             PRIMARY KEY (program_id, id)
+         ) STRICT;
+         CREATE INDEX parameter_type_enum_type ON parameter_type_enum (program_id, parameter_type_id);
+         CREATE TABLE parameter (
+             program_id        TEXT NOT NULL,
+             id                TEXT NOT NULL,
+             name              TEXT,
+             text              TEXT,
+             parameter_type_id TEXT,
+             access            TEXT,
+             value             TEXT,
+             suffix            TEXT,
+             code_segment      TEXT,
+             offset            INTEGER,
+             bit_offset        INTEGER,
+             union_id          INTEGER,
+             union_size_in_bit INTEGER,
+             PRIMARY KEY (program_id, id)
+         ) STRICT;
+         CREATE TABLE parameter_ref (
+             program_id    TEXT NOT NULL,
+             id            TEXT NOT NULL,
+             parameter_id  TEXT NOT NULL,
+             display_order INTEGER,
+             tag           TEXT,
+             text          TEXT,
+             value         TEXT,
+             PRIMARY KEY (program_id, id)
+         ) STRICT;
+         CREATE INDEX parameter_ref_program ON parameter_ref (program_id);",
     )?;
     Ok(())
 }

@@ -3,9 +3,22 @@ import type { InstallationNode } from "./InstallationNode";
 
 export type ProjectTree = { schema_version: number, 
 /**
- * Count of import-report items (errors, unknown constructs, DPT
- * conflicts, documented capability gaps) that a caller with access to
- * the `ImportReport` should fill in — always `0` straight out of
+ * Count of genuine `Severity::Error` items from the `ImportReport` —
+ * data actually lost or misread, as `knx_etsproj::report::Severity`
+ * distinguishes it (see `ImportReport::has_losses()`) — that a caller
+ * with access to the `ImportReport` should fill in — always `0`
+ * straight out of [`build_project_tree`], since this crate never sees
+ * that type (CLAUDE.md: never silently discard information; full
+ * drill-down is a later cycle, this is the count that says something
+ * was genuinely lost, never to be shown to the user as a mere
+ * "warning").
+ */
+errors: number, 
+/**
+ * Count of everything else worth a look but not a real loss:
+ * `Severity::Warning` items, unknown constructs, DPT conflicts, and
+ * documented capability gaps — that a caller with access to the
+ * `ImportReport` should fill in — always `0` straight out of
  * [`build_project_tree`], since this crate never sees that type
  * (CLAUDE.md: never silently discard information; full drill-down is
  * a later cycle, this is the count that says something is worth

@@ -33,10 +33,7 @@ pub fn open_project_impl(path: &Path) -> Result<ProjectTree, AppError> {
     let imported = knx_app::import_ets_project_with(path, &conn, ImportOptions::default())?;
 
     let mut tree = knx_projection::build_project_tree(&imported.project);
-    tree.warnings = imported.report.errors.len()
-        + imported.report.unknown.len()
-        + imported.report.conflicts.len()
-        + imported.report.unsupported.len();
+    apply_report_counts(&mut tree, &imported.report);
 
     Ok(tree)
 }
@@ -49,14 +46,29 @@ fn open_project(path: String, state: tauri::State<AppState>) -> Result<ProjectTr
             knx_app::import_ets_project_with(Path::new(&path), &conn, ImportOptions::default())
                 .map_err(|e| e.to_string())?;
         let mut tree = knx_projection::build_project_tree(&imported.project);
-        tree.warnings = imported.report.errors.len()
-            + imported.report.unknown.len()
-            + imported.report.conflicts.len()
-            + imported.report.unsupported.len();
+        apply_report_counts(&mut tree, &imported.report);
         (tree, imported.project)
     };
     *state.project.lock().expect("state mutex poisoned") = Some(project);
     Ok(tree)
+}
+
+/// Fills in `tree.errors`/`tree.warnings` from `report`, keeping a genuine
+/// `Severity::Error` (data actually lost or misread) distinct from
+/// everything else merely worth a look — the same split
+/// `apps/knx-cli/src/main.rs`'s `error_count()` draws, since `ImportReport`
+/// keeps both severities in one `errors` Vec.
+fn apply_report_counts(tree: &mut ProjectTree, report: &knx_etsproj::ImportReport) {
+    let error_count = report
+        .errors
+        .iter()
+        .filter(|e| e.severity == knx_etsproj::report::Severity::Error)
+        .count();
+    let warning_count = report.errors.len() - error_count;
+
+    tree.errors = error_count;
+    tree.warnings =
+        warning_count + report.unknown.len() + report.conflicts.len() + report.unsupported.len();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

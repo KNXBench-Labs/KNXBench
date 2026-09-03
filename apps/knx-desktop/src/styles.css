@@ -37,6 +37,14 @@ main {
 
 .project-explorer footer {
   margin-top: 1rem;
+}
+
+.project-explorer footer .import-errors {
+  color: #b00020;
+  font-weight: bold;
+}
+
+.project-explorer footer .import-warnings {
   font-style: italic;
   opacity: 0.8;
 }

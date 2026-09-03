@@ -1769,6 +1769,7 @@ version = "0.0.0"
 dependencies = [
  "knx-app",
  "knx-core",
+ "knx-etsproj",
  "knx-projection",
  "knx-store",
  "tauri",

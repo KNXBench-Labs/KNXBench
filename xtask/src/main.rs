@@ -48,10 +48,21 @@ fn check_layering() -> ExitCode {
         "knx-etsproj",
         &["knx-store"],
     ));
+    // knx-productdb owns its own parser and its own store (ADR-0011). It
+    // must not reach the project-import crate or the project store: a
+    // .knxprod ingest added later must not have to travel through the
+    // .knxproj importer, and product data must stay separable from project
+    // files (ADR-0005).
+    violations.extend(layering::forbidden_reachable(
+        &graph,
+        "knx-productdb",
+        &["knx-etsproj", "knx-store"],
+    ));
 
     if violations.is_empty() {
         println!(
-            "layering ok: knx-core reaches none of {:?}; knx-etsproj does not reach knx-store",
+            "layering ok: knx-core reaches none of {:?}; knx-etsproj does not reach knx-store; \
+             knx-productdb reaches neither knx-etsproj nor knx-store",
             layering::CORE_FORBIDDEN
         );
         return ExitCode::SUCCESS;

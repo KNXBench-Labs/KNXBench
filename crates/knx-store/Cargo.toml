@@ -13,4 +13,10 @@ knx-core.workspace = true
 rusqlite.workspace = true
 
 [dev-dependencies]
+# Test-only: `tests/reference_project.rs` round-trips the real reference
+# `.knxproj` through save_project/load_project, which needs the importer to
+# produce the `Project` in the first place. Not a layering violation —
+# `check-layering` forbids `knx-etsproj` depending on storage, not the
+# reverse, and a dev-dependency never enters the production graph.
+knx-etsproj.workspace = true
 tempfile.workspace = true

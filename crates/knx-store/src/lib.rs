@@ -2,6 +2,7 @@
 
 use std::fmt;
 
+pub mod devices;
 pub mod manifest;
 pub mod migration;
 pub mod opaque;

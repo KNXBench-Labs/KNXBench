@@ -8,6 +8,7 @@ rust-version.workspace = true
 publish = false
 
 [dependencies]
+chrono.workspace = true
 knx-core.workspace = true
 rusqlite.workspace = true
 

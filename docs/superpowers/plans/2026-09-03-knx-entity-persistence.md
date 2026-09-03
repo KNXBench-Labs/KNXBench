@@ -1144,8 +1144,12 @@ pub fn upsert_device(
                  ?17, ?18, ?19, ?20)
          ON CONFLICT(id) DO UPDATE SET
              installation_id = excluded.installation_id,
-             line_id = excluded.line_id,
-             topology_position = excluded.topology_position,
+             -- line_id/topology_position deliberately absent here: the
+             -- INSERT above always sets line_id = NULL, so
+             -- excluded.line_id/excluded.topology_position are never the
+             -- row's real placement — including them in DO UPDATE SET
+             -- would reset placement to NULL/stale on every re-upsert.
+             -- set_device_line (below) is placement's only writer.
              source_path = excluded.source_path,
              source_ets_id = excluded.source_ets_id,
              name = excluded.name,

@@ -327,3 +327,25 @@ reference project — the case is reachable only with hand-broken input.
 **Lifted when.** A real project is found that carries unparsable values on
 those fields, making the added model surface worth its cost. Until then
 the asymmetry is deliberate, documented, and reported at import time.
+
+## 16. Tauri v2's Linux backend depends on archived GTK3 bindings
+
+**Limitation.** The desktop shell's Linux runtime depends on `tauri` 2.11,
+which pulls in the archived gtk-rs GTK3 bindings; `cargo deny check` flags
+16 upstream "unmaintained" notices in the advisory database, all of which
+must be suppressed in `deny.toml` to build.
+
+**Cause.** The gtk-rs project archived its GTK3 bindings repository in 2024.
+The bindings are not vulnerabilities — every advisory explicitly states "no
+safe upgrade is available" — but they are no longer maintained upstream.
+Tauri's own GTK4 migration is in progress and not yet shipped.
+
+**Impact.** Each `tauri` or `tauri-*` dependency bump requires manual
+re-check of the 16 suppressed IDs: RUSTSEC-2024-0370, -0411 through -0420
+(minus one gap), and RUSTSEC-2025-0075, -0080, -0081, -0098, -0100. As
+Tauri moves to GTK4, some or all of these may disappear from the advisory
+database. Until then, the `deny.toml` ignore list is permanent infrastructure.
+
+**Lifted when.** Tauri v3 or a later `tauri` 2.x release ships its GTK4
+backend and becomes the default on Linux.
+

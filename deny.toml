@@ -34,6 +34,27 @@ allow-wildcard-paths = true
 [advisories]
 version = 2
 yanked = "deny"
+# Every ID below is an "unmaintained" notice, not a vulnerability, and every
+# one's own advisory text says no safe upgrade exists yet. All 16 are
+# transitive dependencies of tauri 2.11 on Linux (Session 5), not something
+# this repository chose or can route around independently:
+#  - RUSTSEC-2024-0411/-0412/-0413/-0414/-0415/-0416/-0417/-0418/-0419/-0420:
+#    the archived gtk-rs GTK3 bindings (atk/gdk/gdk-pixbuf/gio/glib/gtk/
+#    pango/soup3/webkit2gtk and friends) — retired once Tauri ships its
+#    GTK4 backend, tracked upstream, no fixed date.
+#  - RUSTSEC-2025-0075/-0080/-0081/-0098/-0100: the `unic-*` Unicode crates,
+#    via `urlpattern` (tauri-utils's navigation/CSP matching).
+#  - RUSTSEC-2024-0370: `proc-macro-error`, via the tray/menu stack (`muda`).
+# Re-check this list whenever `tauri`/`tauri-*` is bumped — some of these
+# may already be gone.
+ignore = [
+    "RUSTSEC-2024-0411", "RUSTSEC-2024-0412", "RUSTSEC-2024-0413",
+    "RUSTSEC-2024-0414", "RUSTSEC-2024-0415", "RUSTSEC-2024-0416",
+    "RUSTSEC-2024-0417", "RUSTSEC-2024-0418", "RUSTSEC-2024-0419",
+    "RUSTSEC-2024-0420", "RUSTSEC-2024-0370",
+    "RUSTSEC-2025-0075", "RUSTSEC-2025-0080", "RUSTSEC-2025-0081",
+    "RUSTSEC-2025-0098", "RUSTSEC-2025-0100",
+]
 
 [sources]
 unknown-registry = "deny"

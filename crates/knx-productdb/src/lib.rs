@@ -5,8 +5,13 @@
 //! SHA-256, and as parsed rows. The blob is the integrity guarantee — the
 //! parser may not understand a construct, but nothing is ever lost.
 
+pub mod blob;
 pub mod migration;
 
+pub use blob::{
+    has_source_file, load_source_file, sha256_hex, store_source_file, verify, BlobMismatch,
+    SourceFile,
+};
 pub use migration::{default_path, open_and_migrate, ProductDbError, CURRENT_PRODUCTDB_VERSION};
 /// Re-exported so callers name the connection type through this crate
 /// rather than depending on `rusqlite` directly.

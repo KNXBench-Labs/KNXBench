@@ -118,17 +118,21 @@ pub fn import_knxproj_bytes(
         .project_part()
         .map_err(ImportFailure::Container)?
         .to_string();
-    let detected = detect(&mut container).map_err(ImportFailure::Detect)?;
+    let topology_path = format!("{part}/0.xml");
+    let info_path = format!("{part}/Project.xml");
+
+    // Read once, used for both detection and parsing — `Container::read`
+    // has no cache, so reading `0.xml` (typically the container's largest
+    // entry) a second time would re-decompress it for no reason.
+    let topology_bytes = container
+        .read(&topology_path)
+        .map_err(ImportFailure::Container)?;
+    let detected = detect::detect_from_bytes(&topology_bytes, &topology_path, &mut container)
+        .map_err(ImportFailure::Detect)?;
     let schema = known_schema(detected.version.0).ok_or(ImportFailure::NoKnownSchemaTable {
         version: detected.version.0,
     })?;
 
-    let topology_path = format!("{part}/0.xml");
-    let info_path = format!("{part}/Project.xml");
-
-    let topology_bytes = container
-        .read(&topology_path)
-        .map_err(ImportFailure::Container)?;
     let mut parsed = parse_installation(&topology_bytes, &topology_path, schema)
         .map_err(ImportFailure::Parse)?;
 

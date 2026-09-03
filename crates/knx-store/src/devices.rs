@@ -8,8 +8,12 @@ use rusqlite::{params, Connection};
 
 use knx_core::address::IndividualAddress;
 use knx_core::commissioning::CommissioningState;
-use knx_core::device::{BinaryDataRef, DeviceInstance};
-use knx_core::ids::{DeviceId, InstallationId, SourceRef};
+use knx_core::device::{BinaryDataRef, ComObjectInstance, DeviceInstance};
+use knx_core::dpt::DptRef;
+use knx_core::flags::{ObjectSize, ResolvedFlags};
+use knx_core::ids::{ComObjectInstanceId, DeviceId, InstallationId, SourceRef};
+use knx_core::provenance::{Layer, Override, Resolved};
+use knx_core::string_table::{LocalizedString, Text, TranslationKey};
 
 use crate::topology::{completion_from_str, completion_to_str};
 use crate::StoreError;
@@ -232,6 +236,371 @@ pub fn load_all_device_ids(conn: &Connection) -> Result<Vec<DeviceId>, StoreErro
     Ok(ids)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Attr {
+    Text,
+    Description,
+    Dpt,
+    Read,
+    Write,
+    Transmit,
+    Update,
+    Communication,
+}
+
+pub fn attr_to_str(a: Attr) -> &'static str {
+    match a {
+        Attr::Text => "text",
+        Attr::Description => "description",
+        Attr::Dpt => "dpt",
+        Attr::Read => "read",
+        Attr::Write => "write",
+        Attr::Transmit => "transmit",
+        Attr::Update => "update",
+        Attr::Communication => "communication",
+    }
+}
+
+fn layer_to_str(l: Layer) -> &'static str {
+    match l {
+        Layer::Program => "Program",
+        Layer::ProgramRef => "ProgramRef",
+        Layer::Instance => "Instance",
+        Layer::Inferred => "Inferred",
+        Layer::UserEdit => "UserEdit",
+    }
+}
+
+fn layer_from_str(s: &str) -> Layer {
+    match s {
+        "ProgramRef" => Layer::ProgramRef,
+        "Instance" => Layer::Instance,
+        "Inferred" => Layer::Inferred,
+        "UserEdit" => Layer::UserEdit,
+        _ => Layer::Program,
+    }
+}
+
+/// One row of `com_object_override`, already string-encoded. Building this
+/// is what turns each `Override<T>` field into the four columns the table
+/// stores — the encoding side of the codec.
+struct OverrideRow {
+    state: &'static str,
+    value: Option<String>,
+    text_kind: Option<&'static str>,
+    layer: Option<&'static str>,
+}
+
+fn encode_text(t: &Override<Text>) -> OverrideRow {
+    match t {
+        Override::Absent => OverrideRow { state: "absent", value: None, text_kind: None, layer: None },
+        Override::Empty => OverrideRow { state: "empty", value: None, text_kind: None, layer: None },
+        Override::Malformed(raw) => OverrideRow {
+            state: "malformed",
+            value: Some(raw.clone()),
+            text_kind: None,
+            layer: None,
+        },
+        Override::Value(Resolved { value, layer }) => {
+            let (kind, text) = match value {
+                Text::Literal(s) => ("literal", s.clone()),
+                Text::Localized(LocalizedString(TranslationKey(k))) => ("localized", k.clone()),
+            };
+            OverrideRow {
+                state: "value",
+                value: Some(text),
+                text_kind: Some(kind),
+                layer: Some(layer_to_str(*layer)),
+            }
+        }
+    }
+}
+
+fn decode_text(state: &str, value: Option<String>, text_kind: Option<String>, layer: Option<String>) -> Override<Text> {
+    match state {
+        "empty" => Override::Empty,
+        "malformed" => Override::Malformed(value.expect("malformed state always carries a value")),
+        "value" => {
+            let text = match text_kind.as_deref() {
+                Some("localized") => Text::Localized(LocalizedString(TranslationKey(
+                    value.expect("value state always carries a value"),
+                ))),
+                _ => Text::Literal(value.expect("value state always carries a value")),
+            };
+            Override::Value(Resolved {
+                value: text,
+                layer: layer_from_str(&layer.expect("value state always carries a layer")),
+            })
+        }
+        _ => Override::Absent,
+    }
+}
+
+fn encode_dpt(d: &Override<DptRef>) -> OverrideRow {
+    match d {
+        Override::Absent => OverrideRow { state: "absent", value: None, text_kind: None, layer: None },
+        Override::Empty => OverrideRow { state: "empty", value: None, text_kind: None, layer: None },
+        Override::Malformed(raw) => OverrideRow {
+            state: "malformed",
+            value: Some(raw.clone()),
+            text_kind: None,
+            layer: None,
+        },
+        Override::Value(Resolved { value, layer }) => OverrideRow {
+            state: "value",
+            value: Some(value.to_string()),
+            text_kind: None,
+            layer: Some(layer_to_str(*layer)),
+        },
+    }
+}
+
+fn decode_dpt(state: &str, value: Option<String>, layer: Option<String>) -> Override<DptRef> {
+    match state {
+        "empty" => Override::Empty,
+        "malformed" => Override::Malformed(value.expect("malformed state always carries a value")),
+        "value" => Override::Value(Resolved {
+            value: DptRef::parse(&value.expect("value state always carries a value"))
+                .expect("stored DptRef text is always valid"),
+            layer: layer_from_str(&layer.expect("value state always carries a layer")),
+        }),
+        _ => Override::Absent,
+    }
+}
+
+fn encode_bool(b: &Override<bool>) -> OverrideRow {
+    match b {
+        Override::Absent => OverrideRow { state: "absent", value: None, text_kind: None, layer: None },
+        Override::Empty => OverrideRow { state: "empty", value: None, text_kind: None, layer: None },
+        Override::Malformed(raw) => OverrideRow {
+            state: "malformed",
+            value: Some(raw.clone()),
+            text_kind: None,
+            layer: None,
+        },
+        Override::Value(Resolved { value, layer }) => OverrideRow {
+            state: "value",
+            value: Some(if *value { "1".into() } else { "0".into() }),
+            text_kind: None,
+            layer: Some(layer_to_str(*layer)),
+        },
+    }
+}
+
+fn decode_bool(state: &str, value: Option<String>, layer: Option<String>) -> Override<bool> {
+    match state {
+        "empty" => Override::Empty,
+        "malformed" => Override::Malformed(value.expect("malformed state always carries a value")),
+        "value" => Override::Value(Resolved {
+            value: value.expect("value state always carries a value") == "1",
+            layer: layer_from_str(&layer.expect("value state always carries a layer")),
+        }),
+        _ => Override::Absent,
+    }
+}
+
+fn write_override_row(
+    conn: &Connection,
+    com_object_instance_id: ComObjectInstanceId,
+    attr: Attr,
+    row: OverrideRow,
+) -> Result<(), StoreError> {
+    conn.execute(
+        "INSERT INTO com_object_override
+             (com_object_instance_id, attr, state, value, text_kind, layer)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(com_object_instance_id, attr) DO UPDATE SET
+             state = excluded.state,
+             value = excluded.value,
+             text_kind = excluded.text_kind,
+             layer = excluded.layer",
+        params![
+            com_object_instance_id.0,
+            attr_to_str(attr),
+            row.state,
+            row.value,
+            row.text_kind,
+            row.layer,
+        ],
+    )?;
+    Ok(())
+}
+
+/// Writes exactly one `com_object_override` row for `com`'s `dpt` field —
+/// the single-attribute upsert `command_sync::sync_after_command` (Task 12)
+/// calls for `SetComObjectDpt`/`RestoreComObjectDpt`, instead of rewriting
+/// the whole `com_object_instance` row.
+pub fn upsert_com_object_dpt_override(
+    conn: &Connection,
+    com_object_instance_id: ComObjectInstanceId,
+    dpt: &Override<DptRef>,
+) -> Result<(), StoreError> {
+    write_override_row(conn, com_object_instance_id, Attr::Dpt, encode_dpt(dpt))
+}
+
+fn size_columns(size: &Option<Resolved<ObjectSize>>) -> (Option<&'static str>, Option<i64>, Option<&'static str>) {
+    match size {
+        None => (None, None, None),
+        Some(Resolved { value, layer }) => {
+            let (kind, v) = match value {
+                ObjectSize::Bit(n) => ("bit", *n as i64),
+                ObjectSize::Byte(n) => ("byte", *n as i64),
+            };
+            (Some(kind), Some(v), Some(layer_to_str(*layer)))
+        }
+    }
+}
+
+fn decode_size(kind: Option<String>, value: Option<i64>, layer: Option<String>) -> Option<Resolved<ObjectSize>> {
+    let kind = kind?;
+    let value = value.expect("size_value present whenever size_kind is");
+    let layer = layer.expect("size_layer present whenever size_kind is");
+    let size = match kind.as_str() {
+        "byte" => ObjectSize::Byte(value as u16),
+        _ => ObjectSize::Bit(value as u8),
+    };
+    Some(Resolved {
+        value: size,
+        layer: layer_from_str(&layer),
+    })
+}
+
+pub fn upsert_com_object_instance(
+    conn: &Connection,
+    device_id: DeviceId,
+    position: i64,
+    com: &ComObjectInstance,
+) -> Result<(), StoreError> {
+    let (size_kind, size_value, size_layer) = size_columns(&com.size);
+    conn.execute(
+        "INSERT INTO com_object_instance
+             (id, device_id, position, source_path, source_ets_id, number, size_kind,
+              size_value, size_layer, is_active)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+         ON CONFLICT(id) DO UPDATE SET
+             device_id = excluded.device_id,
+             position = excluded.position,
+             source_path = excluded.source_path,
+             source_ets_id = excluded.source_ets_id,
+             number = excluded.number,
+             size_kind = excluded.size_kind,
+             size_value = excluded.size_value,
+             size_layer = excluded.size_layer,
+             is_active = excluded.is_active",
+        params![
+            com.id.0,
+            device_id.0,
+            position,
+            com.source.path,
+            com.source.ets_id,
+            com.number,
+            size_kind,
+            size_value,
+            size_layer,
+            com.is_active,
+        ],
+    )?;
+
+    write_override_row(conn, com.id, Attr::Text, encode_text(&com.text))?;
+    write_override_row(conn, com.id, Attr::Description, encode_text(&com.description))?;
+    write_override_row(conn, com.id, Attr::Dpt, encode_dpt(&com.dpt))?;
+    write_override_row(conn, com.id, Attr::Read, encode_bool(&com.flags.read))?;
+    write_override_row(conn, com.id, Attr::Write, encode_bool(&com.flags.write))?;
+    write_override_row(conn, com.id, Attr::Transmit, encode_bool(&com.flags.transmit))?;
+    write_override_row(conn, com.id, Attr::Update, encode_bool(&com.flags.update))?;
+    write_override_row(conn, com.id, Attr::Communication, encode_bool(&com.flags.communication))?;
+    Ok(())
+}
+
+pub fn load_com_object_instance(
+    conn: &Connection,
+    id: ComObjectInstanceId,
+) -> Result<ComObjectInstance, StoreError> {
+    let (source_path, source_ets_id, device_id, number, size_kind, size_value, size_layer, is_active) =
+        conn.query_row(
+            "SELECT source_path, source_ets_id, device_id, number, size_kind, size_value,
+                    size_layer, is_active
+             FROM com_object_instance WHERE id = ?1",
+            params![id.0],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, u32>(2)?,
+                    row.get::<_, u16>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, Option<i64>>(5)?,
+                    row.get::<_, Option<String>>(6)?,
+                    row.get::<_, bool>(7)?,
+                ))
+            },
+        )?;
+    let _ = device_id; // not part of ComObjectInstance's own fields beyond `device` below
+
+    let mut stmt = conn.prepare(
+        "SELECT attr, state, value, text_kind, layer FROM com_object_override
+         WHERE com_object_instance_id = ?1",
+    )?;
+    let mut text = Override::Absent;
+    let mut description = Override::Absent;
+    let mut dpt = Override::Absent;
+    let mut flags = ResolvedFlags::none();
+    let rows = stmt
+        .query_map(params![id.0], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+                row.get::<_, Option<String>>(3)?,
+                row.get::<_, Option<String>>(4)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    for (attr, state, value, text_kind, layer) in rows {
+        match attr.as_str() {
+            "text" => text = decode_text(&state, value, text_kind, layer),
+            "description" => description = decode_text(&state, value, text_kind, layer),
+            "dpt" => dpt = decode_dpt(&state, value, layer),
+            "read" => flags.read = decode_bool(&state, value, layer),
+            "write" => flags.write = decode_bool(&state, value, layer),
+            "transmit" => flags.transmit = decode_bool(&state, value, layer),
+            "update" => flags.update = decode_bool(&state, value, layer),
+            "communication" => flags.communication = decode_bool(&state, value, layer),
+            other => unreachable!("unknown com_object_override.attr {other:?}"),
+        }
+    }
+
+    Ok(ComObjectInstance {
+        id,
+        source: SourceRef {
+            path: source_path,
+            ets_id: source_ets_id,
+        },
+        device: DeviceId(device_id),
+        number,
+        text,
+        description,
+        dpt,
+        flags,
+        size: decode_size(size_kind, size_value, size_layer),
+        is_active,
+        links: vec![],
+    })
+}
+
+pub fn load_com_object_ids_for_device(
+    conn: &Connection,
+    device_id: DeviceId,
+) -> Result<Vec<ComObjectInstanceId>, StoreError> {
+    let mut stmt = conn.prepare(
+        "SELECT id FROM com_object_instance WHERE device_id = ?1 ORDER BY position",
+    )?;
+    let ids = stmt
+        .query_map(params![device_id.0], |row| Ok(ComObjectInstanceId(row.get(0)?)))?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(ids)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -393,5 +762,82 @@ mod tests {
         assert_eq!(position, 3);
         let loaded = load_device(&conn, d.id).unwrap();
         assert_eq!(loaded.name, "Renamed");
+    }
+
+    fn com_object_fixture() -> ComObjectInstance {
+        ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: SourceRef { path: "0.xml".into(), ets_id: "M-1_O-0_R-1".into() },
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Value(Resolved { value: Text::Literal("An/Aus".into()), layer: Layer::Instance }),
+            description: Override::Absent,
+            dpt: Override::Value(Resolved { value: DptRef { main: 1, sub: Some(1) }, layer: Layer::UserEdit }),
+            flags: ResolvedFlags {
+                read: Override::Value(Resolved { value: true, layer: Layer::Instance }),
+                write: Override::Absent,
+                transmit: Override::Empty,
+                update: Override::Malformed("???".into()),
+                communication: Override::Value(Resolved { value: false, layer: Layer::Program }),
+            },
+            size: Some(Resolved { value: ObjectSize::Bit(1), layer: Layer::Program }),
+            is_active: true,
+            links: vec![],
+        }
+    }
+
+    #[test]
+    fn a_com_object_instance_round_trips_every_override_state() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        upsert_installation_row(&conn, &installation()).unwrap();
+        let d = device();
+        upsert_device(&conn, InstallationId(0), 0, &d).unwrap();
+        let com = com_object_fixture();
+        upsert_com_object_instance(&conn, d.id, 0, &com).unwrap();
+        let loaded = load_com_object_instance(&conn, com.id).unwrap();
+        assert_eq!(loaded.text, com.text);
+        assert_eq!(loaded.description, com.description);
+        assert_eq!(loaded.dpt, com.dpt);
+        assert_eq!(loaded.flags, com.flags);
+        assert_eq!(loaded.size, com.size);
+        assert_eq!(loaded.is_active, com.is_active);
+    }
+
+    #[test]
+    fn a_localized_text_override_round_trips_distinct_from_a_literal_one() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        upsert_installation_row(&conn, &installation()).unwrap();
+        let d = device();
+        upsert_device(&conn, InstallationId(0), 0, &d).unwrap();
+        let mut com = com_object_fixture();
+        com.text = Override::Value(Resolved {
+            value: Text::Localized(LocalizedString(TranslationKey("k1".into()))),
+            layer: Layer::Program,
+        });
+        upsert_com_object_instance(&conn, d.id, 0, &com).unwrap();
+        let loaded = load_com_object_instance(&conn, com.id).unwrap();
+        assert_eq!(loaded.text, com.text);
+        assert_ne!(
+            loaded.text,
+            Override::Value(Resolved { value: Text::Literal("k1".into()), layer: Layer::Program })
+        );
+    }
+
+    #[test]
+    fn upsert_com_object_dpt_override_touches_only_the_dpt_row() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        upsert_installation_row(&conn, &installation()).unwrap();
+        let d = device();
+        upsert_device(&conn, InstallationId(0), 0, &d).unwrap();
+        let com = com_object_fixture();
+        upsert_com_object_instance(&conn, d.id, 0, &com).unwrap();
+
+        let new_dpt = Override::Value(Resolved { value: DptRef { main: 5, sub: Some(1) }, layer: Layer::UserEdit });
+        upsert_com_object_dpt_override(&conn, com.id, &new_dpt).unwrap();
+
+        let loaded = load_com_object_instance(&conn, com.id).unwrap();
+        assert_eq!(loaded.dpt, new_dpt);
+        assert_eq!(loaded.text, com.text); // untouched by the targeted upsert
+        assert_eq!(loaded.flags, com.flags); // untouched
     }
 }

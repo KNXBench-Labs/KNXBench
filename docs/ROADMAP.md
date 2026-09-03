@@ -144,6 +144,17 @@ the shell, the projection layer, and Project Explorer. Inspector, search,
 command palette and dark/light mode are later cycles of this same
 session, not yet scheduled.
 
+Cycle 2 (`docs/superpowers/specs/2026-09-03-knx-entity-persistence-design.md`)
+delivered `knx-store` entity persistence for the full `knx_core::Project`
+(schema v4): one row-writer module per entity, `save_project`/
+`load_project` as a full round trip, and `sync_after_command` incremental
+sync for the four `Command` variants that exist today
+(`SetIndividualAddress`, `SetComObjectDpt`/`RestoreComObjectDpt`,
+`CreateGroupAddress`/`DeleteGroupAddress`). This is storage-layer only —
+no Tauri `save_project`/`load_project` command and no desktop save UX yet.
+Inspector, search, command palette and dark/light mode remain not yet
+scheduled, now joined by knx-app wiring for save/load.
+
 **Entry condition.** Import produces a model worth displaying.
 
 ## Session 6 — KNXnet/IP

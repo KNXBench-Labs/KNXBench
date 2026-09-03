@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-03 (Session 5, cycle 1)
+Last updated: 2026-09-03 (Session 5, cycle 2)
 
 ## Where the project stands
 
@@ -11,7 +11,7 @@ Last updated: 2026-09-03 (Session 5, cycle 1)
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
-| 5 | UI / UX | **In progress** — cycle 1 (shell, projection, Project Explorer) done, see [ROADMAP.md](ROADMAP.md) |
+| 5 | UI / UX | **In progress** — cycle 1 (shell, projection, Project Explorer) and cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)) done, see [ROADMAP.md](ROADMAP.md) |
 | 6 | KNXnet/IP | Not started |
 | 7 | Integration & hardening | Not started |
 
@@ -28,18 +28,44 @@ devices and communication objects (`device.rs`, `parameter.rs`,
 validation rules (`validation.rs`), and the undo/redo command layer
 (`command.rs`). Schema version bumped to 3 in Session 4 alongside
 `knx-store`'s own (lockstep by design, [ADR-0003](adr/0003-sqlite-project-format.md)),
-though the Rust shape of `Project` did not change. 47 tests.
+though the Rust shape of `Project` did not change. Session 5 cycle 2 bumps
+it again to 4 for `knx-store`'s new entity persistence (below), and this
+time does touch the Rust shape, but only by derive: `Project`, `Devices`,
+`StringTable` and `IdAllocators` gain `#[derive(PartialEq)]`, and
+`StringTable` gains a public `iter()` — both additive, no behavior change
+(see [DATA_MODEL.md §11](DATA_MODEL.md)). 48 tests.
 
-**`knx-store` holds the schema-version migration chain** (`migration.rs`,
-now through v3), the opaque passthrough table (`opaque.rs`,
+**`knx-store` gains full entity persistence for `knx_core::Project`**
+this cycle (schema v4, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)):
+one persistence module per entity area — `strings.rs`
+(`string_table_entry`), `topology.rs` (`installation`/`area`/`line`),
+`building.rs` (`building_part`/`building_part_device`), `devices.rs`
+(`device`/`binary_data_ref`/`com_object_instance`/`group_link`, plus the
+`com_object_override` codec for all seven `Override<T>` attributes on
+`ComObjectInstance`, normalized as one row per
+`(com_object_instance_id, attr)` rather than wide columns), `group.rs`
+(`group_range`/`group_address`), `parameter.rs` (`parameter_instance`) —
+orchestrated by `project.rs`'s `save_project`/`load_project` (one
+whole-project-replace transaction each way, not diffed) and
+`command_sync.rs`'s `sync_after_command(conn, &Project, &Command)` for
+incremental writes after a command. `PRAGMA foreign_keys = ON` is now set.
+Still holds the schema-version migration chain (`migration.rs`, now
+through v4), the opaque passthrough table (`opaque.rs`,
 `insert_opaque`/`load_opaque`), and the manufacturer manifest table added
-this session (`manifest.rs`, `insert_manufacturer_refs`/
+in Session 4 (`manifest.rs`, `insert_manufacturer_refs`/
 `load_manufacturer_refs` — schema v3, [ADR-0011](adr/0011-product-database-storage.md)),
-with three frozen fixtures (`fixtures/v1-empty.sqlite`,
-`fixtures/v2-empty.sqlite`, `fixtures/v3-empty.sqlite`). Entity tables
-(persisting `knx_core::Project` itself into SQLite, beyond the opaque
-store) remain out of scope — carried forward again, this time with no
-session named yet. 12 tests.
+with four frozen fixtures (`fixtures/v1-empty.sqlite` through
+`v4-empty.sqlite`). Incremental sync is honest, not complete: only the
+four `Command` variants that exist today (`SetIndividualAddress`,
+`SetComObjectDpt`/`RestoreComObjectDpt`, `CreateGroupAddress`/
+`DeleteGroupAddress`) have a `sync_after_command` path — every other
+entity and every other `Override<T>` attribute is written only by a full
+`save_project`, until a command exists for it. A cross-task bug surfaced
+and was fixed during this cycle: `strings.rs`'s `upsert_string_table`
+originally opened its own `BEGIN`/`COMMIT` transaction internally, which
+panics when called from inside another already-open transaction (as
+`save_project` does); it now uses `SAVEPOINT`/`RELEASE`/`ROLLBACK TO`
+instead, so it composes correctly both standalone and nested. 42 tests.
 
 **`knx-etsproj` holds the full six-stage import/export pipeline**: the ZIP
 container (`container.rs`, with a 64 MB per-entry size guard), schema
@@ -120,7 +146,7 @@ violation:
 - `cargo deny check` — no licence outside the allowlist enters the graph; GPL
   is not on the allowlist.
 
-252 tests pass across the workspace as of this session.
+282 tests pass across the workspace as of this session.
 
 ## What exists
 
@@ -128,7 +154,7 @@ violation:
 | --- | --- |
 | `Cargo.toml`, `rust-toolchain.toml` | Workspace root; toolchain pinned to Rust 1.98.0. |
 | `crates/knx-core/` | Domain model per [DATA_MODEL.md](DATA_MODEL.md), sections 1–9 and 11. No IO. |
-| `crates/knx-store/` | SQLite schema-version migration chain through v3 (`migration.rs`), the opaque passthrough table (`opaque.rs`), the manufacturer manifest table (`manifest.rs`, Session 4), and three frozen fixtures. |
+| `crates/knx-store/` | SQLite schema-version migration chain through v4 (`migration.rs`), the opaque passthrough table (`opaque.rs`), the manufacturer manifest table (`manifest.rs`, Session 4), full `knx_core::Project` entity persistence (`project.rs`, `strings.rs`, `topology.rs`, `building.rs`, `devices.rs`, `group.rs`, `parameter.rs`, `command_sync.rs` — Session 5 cycle 2), and four frozen fixtures. |
 | `crates/knx-etsproj/` | The full six-stage `.knxproj` import/export pipeline — see the Session 3 paragraph above. Hands manufacturer files out separately from opaque entries (Session 4). No dependency on `knx-store`. |
 | `crates/knx-productdb/` | The shared product database: own SQLite migration chain, streaming manufacturer-XML ingest, and enrichment of `ComObjectInstance` — see the Session 4 paragraph above. No dependency on `knx-etsproj` or `knx-store`. |
 | `crates/knx-projection/` | Pure `Project` → `ProjectTree` projection with `ts-rs` TypeScript bindings — see the Session 5 paragraph above. No dependency beyond `knx-core`; the fourth `check-layering` root. |
@@ -187,10 +213,20 @@ project's own `Instance` layer stated.
 
 Known gaps carried forward, none blocking Session 5:
 
-- Full entity persistence of `knx_core::Project` into `knx-store`'s SQLite
-  tables, beyond the opaque and manifest tables — still not part of any
-  session's shipped deliverables; needed before a UI can save edits, so
-  it belongs early in Session 5 rather than being deferred again.
+- `knx-store`'s entity persistence (above) has no `knx-app`/desktop wiring
+  yet — no Tauri `save_project`/`load_project` command, no save dialog or
+  UX. Only `SetIndividualAddress`, `SetComObjectDpt`/`RestoreComObjectDpt`
+  and `CreateGroupAddress`/`DeleteGroupAddress` have an incremental
+  `sync_after_command` path; every other entity/attribute is written only
+  by a full `save_project` until a command exists for it.
+- `manifest.rs`/`opaque.rs` still open their own internal SQL transaction
+  the same way `strings.rs` did before this cycle's `SAVEPOINT` fix
+  (above); not currently reachable from inside `save_project`'s
+  transaction, so no live bug, but the same hazard would resurface if a
+  future task ever wires them into it. Two ad-hoc `SELECT` queries in
+  `command_sync.rs` (a device's current placement; the next
+  `group_address` position) should move behind named helpers in
+  `devices.rs`/`group.rs` if that module grows — harmless today.
 - The `when/@test` expression grammar that would make device parameters
   interpretable is unresearched (RESEARCH R3) — its own spike, prerequisite
   for a parameter editor.

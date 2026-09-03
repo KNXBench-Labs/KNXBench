@@ -375,10 +375,10 @@ round-trips.
 ## 11. Versioning and migration
 
 *Implemented: `Project::schema_version` and `CURRENT_SCHEMA_VERSION` (now
-`2`, Session 3 — see below) in `knx-core/src/project.rs`; the migration
-chain (`open_and_migrate`, `migrate_v0_to_v1`, `migrate_v1_to_v2`, the
-frozen `v1-empty.sqlite` and `v2-empty.sqlite` fixtures) in
-`knx-store/src/migration.rs`.*
+`4`, Session 5 — see amendments below) in `knx-core/src/project.rs`; the
+migration chain (`open_and_migrate`, `migrate_v0_to_v1` through
+`migrate_v3_to_v4`, the frozen `v1-empty.sqlite` through `v4-empty.sqlite`
+fixtures) in `knx-store/src/migration.rs`.*
 
 **Amendment (Session 3):** `migrate_v1_to_v2` adds the opaque-passthrough
 table (`opaque_entry`, section 10 / [ADR-0006](adr/0006-opaque-passthrough-store.md)).
@@ -387,6 +387,27 @@ other in lockstep by design (the migration.rs doc comment states this
 directly) — bumping to 2 here does not mean the *Rust shape* of `Project`
 changed in Session 3 (it did not: no new field, no new entity type), only
 that a new table now exists for a version this schema number to describe.
+
+**Amendment (Session 4):** `migrate_v2_to_v3` adds the manufacturer
+manifest table (`manufacturer_ref`, [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md)
+/ [ADR-0011](adr/0011-product-database-storage.md)). Same lockstep
+relationship as Session 3: bumping to 3 does not mean the Rust shape of
+`Project` changed (it did not).
+
+**Amendment (Session 5, cycle 2):** `migrate_v3_to_v4` adds one table (or
+more) per `knx_core::Project` entity — installation/area/line, building
+parts, devices and communication objects (including a normalized
+`com_object_override` table for the `Override<T>` chain), group
+ranges/addresses, parameter instances — plus `project_info` and
+`id_allocators` for the project's own scalar/counter state. Full detail,
+including the owned-list-vs-flat-list `position`-column reasoning, is in
+[the design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md),
+not repeated here. Unlike Sessions 3 and 4, this one *does* change
+`knx-core`'s Rust shape, though only by derive: `Project`, `Devices`,
+`StringTable` and `IdAllocators` all gain `#[derive(PartialEq)]`, and
+`StringTable` gains a public `iter()` — both additive, no behavior change,
+needed so `knx-store`'s round-trip test can assert `Project == Project`
+and so it can enumerate string-table entries to persist them.
 
 ```rust
 pub struct Project {

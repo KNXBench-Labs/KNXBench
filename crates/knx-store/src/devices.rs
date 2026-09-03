@@ -353,4 +353,45 @@ mod tests {
         let loaded = load_device(&conn, d.id).unwrap();
         assert_eq!(loaded.name, d.name); // untouched
     }
+
+    #[test]
+    fn re_upserting_a_placed_device_does_not_reset_its_placement() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        upsert_installation_row(&conn, &installation()).unwrap();
+        let d = device();
+        upsert_device(&conn, InstallationId(0), 0, &d).unwrap();
+        // A line row must exist to satisfy the foreign key.
+        conn.execute(
+            "INSERT INTO area (id, installation_id, position, source_path, source_ets_id, name, address, completion)
+             VALUES (1, 0, 0, 't', 't', 'A', 1, 'FinishedDesign')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO line (id, area_id, position, source_path, source_ets_id, name, address, medium_ref, completion)
+             VALUES (1, 1, 0, 't', 't', 'L', 1, 'TP', 'FinishedDesign')",
+            [],
+        )
+        .unwrap();
+        set_device_line(&conn, d.id, Some(knx_core::ids::LineId(1)), 3).unwrap();
+
+        // Re-upsert the same device (e.g. an unrelated field changed) — this
+        // must NOT reset line_id/topology_position back to NULL/0, the exact
+        // bug this task's ON CONFLICT fix closes.
+        let mut d2 = d.clone();
+        d2.name = "Renamed".into();
+        upsert_device(&conn, InstallationId(0), 0, &d2).unwrap();
+
+        let (line_id, position): (Option<i64>, i64) = conn
+            .query_row(
+                "SELECT line_id, topology_position FROM device WHERE id = 1",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(line_id, Some(1));
+        assert_eq!(position, 3);
+        let loaded = load_device(&conn, d.id).unwrap();
+        assert_eq!(loaded.name, "Renamed");
+    }
 }

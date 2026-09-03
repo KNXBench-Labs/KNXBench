@@ -9,3 +9,9 @@ publish = false
 
 [dependencies]
 knx-core.workspace = true
+rusqlite.workspace = true
+quick-xml.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

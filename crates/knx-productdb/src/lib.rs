@@ -7,6 +7,7 @@
 
 pub mod blob;
 pub mod migration;
+pub mod parse;
 pub mod report;
 pub mod xml;
 

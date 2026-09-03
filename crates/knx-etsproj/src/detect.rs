@@ -141,7 +141,21 @@ pub fn detect(container: &mut Container) -> Result<Detected, DetectError> {
     let part = container.project_part()?.to_string();
     let entry = format!("{part}/0.xml");
     let xml = container.read(&entry)?;
-    let root = version_from_root(&xml, &entry)?;
+    detect_from_bytes(&xml, &entry, container)
+}
+
+/// Detects the schema version from an already-read `0.xml`. A caller that
+/// also needs the parsed document (`import_knxproj_bytes`) reads `0.xml`
+/// once and passes the bytes here, rather than `detect` reading the same
+/// entry from the container a second time — `Container::read` has no
+/// cache, so a second call re-decompresses the entire entry, and `0.xml`
+/// is typically the largest file in the container.
+pub fn detect_from_bytes(
+    xml: &[u8],
+    entry_name: &str,
+    container: &mut Container,
+) -> Result<Detected, DetectError> {
+    let root = version_from_root(xml, entry_name)?;
 
     let namespace_disagreement = version_from_master(container)
         .ok()

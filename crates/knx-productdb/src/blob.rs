@@ -134,7 +134,10 @@ mod tests {
         let f = file("M-0083/Catalog.xml", b"<KNX/>");
         let sha = sha256_hex(&f.bytes);
         assert!(store_source_file(&conn, &f).unwrap());
-        assert_eq!(load_source_file(&conn, &sha).unwrap(), Some(b"<KNX/>".to_vec()));
+        assert_eq!(
+            load_source_file(&conn, &sha).unwrap(),
+            Some(b"<KNX/>".to_vec())
+        );
     }
 
     #[test]

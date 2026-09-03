@@ -15,6 +15,19 @@
 //! reference project or a written test yet motivates the added surface —
 //! add them when one does, per CLAUDE.md's "prefer documented evidence
 //! over assumptions."
+//!
+//! Two `Installation`s are independent bus/address spaces — the domain
+//! model already supports more than one (`Project::installations:
+//! Vec<Installation>`), and two of them legitimately reusing the same
+//! individual address or group address is normal, not a conflict. The two
+//! checks that compare raw address *values* (not ETS id strings) are
+//! therefore scoped per installation ([`DeviceAddress::installation`]/
+//! [`GroupAddressOccurrence::installation`]). `check_duplicate_ids` and
+//! `check_dangling_group_address_refs` stay global on purpose: they
+//! compare ETS id *strings*, which already embed the owning installation's
+//! number as part of the id itself (e.g. `P-0512-0_GA-1`), so a genuine
+//! cross-installation string collision would be a real anomaly worth
+//! flagging, not a false positive the way a bare address number is.
 
 use crate::source::{SourceDocument, SourceGroupRange};
 
@@ -84,6 +97,11 @@ struct GroupAddressLink {
 
 /// One device's composed individual address, for the duplicate-address pass.
 struct DeviceAddress {
+    /// Which `Installation` this device belongs to (its index in
+    /// `document.installations`) — installations are independent bus/
+    /// address spaces, so a duplicate check must not compare addresses
+    /// across them.
+    installation: usize,
     device_id: String,
     area: String,
     line: String,
@@ -93,6 +111,9 @@ struct DeviceAddress {
 /// One group address in its immediate enclosing range, for the duplicate-
 /// address and outside-range passes.
 struct GroupAddressOccurrence {
+    /// Which `Installation` this address belongs to — see
+    /// [`DeviceAddress::installation`] for why this matters.
+    installation: usize,
     id: String,
     address: Option<String>,
     xpath: String,
@@ -134,6 +155,7 @@ pub fn validate(document: &SourceDocument) -> ValidationOutput {
                         &line_path,
                         Some(&area.address),
                         Some(&line.address),
+                        inst_idx,
                         &mut ids,
                         &mut links,
                         &mut device_addresses,
@@ -149,6 +171,7 @@ pub fn validate(document: &SourceDocument) -> ValidationOutput {
                 &unassigned_path,
                 None,
                 None,
+                inst_idx,
                 &mut ids,
                 &mut links,
                 &mut device_addresses,
@@ -156,7 +179,7 @@ pub fn validate(document: &SourceDocument) -> ValidationOutput {
         }
 
         for range in &installation.group_ranges {
-            walk_group_range(range, &inst_path, &mut ids, &mut group_addresses);
+            walk_group_range(range, &inst_path, inst_idx, &mut ids, &mut group_addresses);
         }
     }
 
@@ -178,6 +201,7 @@ fn walk_device(
     parent_path: &str,
     area_address: Option<&Option<String>>,
     line_address: Option<&Option<String>>,
+    installation: usize,
     ids: &mut Vec<IdOccurrence>,
     links: &mut Vec<GroupAddressLink>,
     device_addresses: &mut Vec<DeviceAddress>,
@@ -193,6 +217,7 @@ fn walk_device(
         (area_address, line_address, device.address.as_ref())
     {
         device_addresses.push(DeviceAddress {
+            installation,
             device_id: device.id.clone(),
             area: area.clone(),
             line: line.clone(),
@@ -229,6 +254,7 @@ fn walk_device(
 fn walk_group_range(
     range: &SourceGroupRange,
     parent_path: &str,
+    installation: usize,
     ids: &mut Vec<IdOccurrence>,
     group_addresses: &mut Vec<GroupAddressOccurrence>,
 ) {
@@ -246,6 +272,7 @@ fn walk_group_range(
             xpath: format!("{range_path}/GroupAddress[@Id='{}']", address.id),
         });
         group_addresses.push(GroupAddressOccurrence {
+            installation,
             id: address.id.clone(),
             address: address.address.clone(),
             xpath: format!("{range_path}/GroupAddress[@Id='{}']", address.id),
@@ -256,7 +283,7 @@ fn walk_group_range(
     }
 
     for child in &range.children {
-        walk_group_range(child, &range_path, ids, group_addresses);
+        walk_group_range(child, &range_path, installation, ids, group_addresses);
     }
 }
 
@@ -307,14 +334,19 @@ fn check_duplicate_individual_addresses(
     warnings: &mut Vec<SourceProblem>,
 ) {
     use std::collections::HashMap;
-    let mut groups: HashMap<(String, String, String), Vec<&DeviceAddress>> = HashMap::new();
+    let mut groups: HashMap<(usize, String, String, String), Vec<&DeviceAddress>> = HashMap::new();
     for da in device_addresses {
         groups
-            .entry((da.area.clone(), da.line.clone(), da.device.clone()))
+            .entry((
+                da.installation,
+                da.area.clone(),
+                da.line.clone(),
+                da.device.clone(),
+            ))
             .or_default()
             .push(da);
     }
-    for ((area, line, device), occurrences) in groups {
+    for ((_installation, area, line, device), occurrences) in groups {
         if occurrences.len() > 1 {
             let address = format!("{area}.{line}.{device}");
             warnings.push(SourceProblem {
@@ -334,13 +366,16 @@ fn check_duplicate_group_addresses(
     warnings: &mut Vec<SourceProblem>,
 ) {
     use std::collections::HashMap;
-    let mut groups: HashMap<&str, Vec<&GroupAddressOccurrence>> = HashMap::new();
+    let mut groups: HashMap<(usize, &str), Vec<&GroupAddressOccurrence>> = HashMap::new();
     for ga in group_addresses {
         if let Some(address) = ga.address.as_deref() {
-            groups.entry(address).or_default().push(ga);
+            groups
+                .entry((ga.installation, address))
+                .or_default()
+                .push(ga);
         }
     }
-    for (address, occurrences) in groups {
+    for ((_installation, address), occurrences) in groups {
         if occurrences.len() > 1 {
             warnings.push(SourceProblem {
                 xpath: String::new(),
@@ -457,5 +492,29 @@ mod tests {
             out.warnings[0].detail,
             ProblemDetail::GroupAddressOutsideItsRange { .. }
         ));
+    }
+
+    #[test]
+    fn two_installations_reusing_the_same_individual_and_group_address_is_not_a_duplicate() {
+        // Installations are independent bus/address spaces: each one
+        // legitimately has its own device at 1.1.1 and its own group
+        // address "1" — a *different* Id, since ETS always embeds the
+        // installation number in every Id it writes; the address *values*
+        // coincide, the identities do not — and that is not a conflict
+        // between them.
+        let mut doc = minimal_source_document();
+        let mut second = doc.installations[0].clone();
+        second.areas[0].id = "P-0001-1_A-1".into();
+        second.areas[0].lines[0].id = "P-0001-1_L-2".into();
+        second.areas[0].lines[0].devices[0].id = "P-0001-1_DI-1".into();
+        second.group_ranges[0].id = "P-0001-1_GR-1".into();
+        second.group_ranges[0].children[0].id = "P-0001-1_GR-2".into();
+        second.group_ranges[0].children[0].addresses[0].id = "P-0001-1_GA-1".into();
+        second.areas[0].lines[0].devices[0].com_objects[0].sends = vec!["P-0001-1_GA-1".into()];
+        doc.installations.push(second);
+
+        let out = validate(&doc);
+        assert_eq!(out.errors, vec![]);
+        assert_eq!(out.warnings, vec![]);
     }
 }

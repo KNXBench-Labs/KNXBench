@@ -3,9 +3,12 @@
 //! `knx_core::Project` graph at once (design doc:
 //! docs/superpowers/specs/2026-09-03-knx-entity-persistence-design.md).
 
+use std::collections::BTreeSet;
+
 use rusqlite::{params, Connection};
 
 use knx_core::address::GroupAddressStyle;
+use knx_core::ids::{ComObjectInstanceId, DeviceId};
 use knx_core::installation::Installation;
 use knx_core::project::{IdAllocators, Project, ProjectInfo};
 use knx_core::string_table::Language;
@@ -126,6 +129,14 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
 
     upsert_string_table(&tx, &project.strings)?;
 
+    // `Devices` is an independent map: a `DeviceInstance` can live there
+    // without any `Line::devices`/`Topology::unassigned` list naming it, and
+    // a `ComObjectInstance` without its device's `com_objects` naming it.
+    // The two walks below reach only what the topology names, so anything
+    // they miss would vanish on save. Both sets are collected as the walks
+    // run and checked before `COMMIT`.
+    let mut written_devices: BTreeSet<DeviceId> = BTreeSet::new();
+
     for installation in &project.installations {
         upsert_installation_row(&tx, installation)?;
 
@@ -152,6 +163,7 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
                     .expect("Line::devices only ever names devices that exist in Devices");
                 upsert_device(&tx, installation.id, i as i64, device)?;
                 set_device_line(&tx, *device_id, Some(line.id), i as i64)?;
+                written_devices.insert(*device_id);
             }
         }
         for (i, device_id) in installation.topology.unassigned.iter().enumerate() {
@@ -161,6 +173,7 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
                 .expect("Topology::unassigned only ever names devices that exist in Devices");
             upsert_device(&tx, installation.id, i as i64, device)?;
             set_device_line(&tx, *device_id, None, i as i64)?;
+            written_devices.insert(*device_id);
         }
 
         for (i, flat_position, part) in flatten_buildings(&installation.buildings) {
@@ -180,11 +193,22 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
         }
     }
 
+    let unreachable_devices: Vec<DeviceId> = project
+        .devices
+        .iter()
+        .map(|d| d.id)
+        .filter(|id| !written_devices.contains(id))
+        .collect();
+    if !unreachable_devices.is_empty() {
+        return Err(StoreError::UnreachableDevices(unreachable_devices));
+    }
+
     // Com-object instances + group links: one pass over every device's
     // `com_objects`, independent of which installation the device belongs
     // to — `com_object_instance` has no `installation_id` column of its
     // own, only `device_id`, so this does not need to be nested inside the
     // installation loop above.
+    let mut written_com_objects: BTreeSet<ComObjectInstanceId> = BTreeSet::new();
     for device in project.devices.iter() {
         for (j, com_id) in device.com_objects.iter().enumerate() {
             let com = project
@@ -193,7 +217,18 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
                 .expect("DeviceInstance::com_objects only ever names existing com objects");
             upsert_com_object_instance(&tx, device.id, j as i64, com)?;
             upsert_group_links(&tx, com.id, &com.links)?;
+            written_com_objects.insert(com.id);
         }
+    }
+
+    let unreachable_com_objects: Vec<ComObjectInstanceId> = project
+        .devices
+        .com_objects()
+        .map(|c| c.id)
+        .filter(|id| !written_com_objects.contains(id))
+        .collect();
+    if !unreachable_com_objects.is_empty() {
+        return Err(StoreError::UnreachableComObjects(unreachable_com_objects));
     }
 
     tx.commit()?;
@@ -405,6 +440,101 @@ mod tests {
     #[test]
     fn loading_a_never_saved_database_is_not_saved_not_an_empty_project() {
         let conn = open_and_migrate_in_memory().unwrap();
+        assert!(matches!(load_project(&conn), Err(StoreError::NotSaved)));
+    }
+
+    fn device(id: u32) -> DeviceInstance {
+        DeviceInstance {
+            id: DeviceId(id),
+            source: source(),
+            name: format!("D{id}"),
+            description: None,
+            address: None,
+            product_ref: "P".into(),
+            program_ref: "H".into(),
+            commissioning: CommissioningState::default(),
+            visibility_calculated: true,
+            com_objects: vec![],
+            binary_data: vec![],
+        }
+    }
+
+    fn project_with_one_installation() -> Project {
+        let mut project = Project::new(Language("en".into()));
+        project.installations.push(Installation {
+            id: InstallationId(0),
+            name: "I".into(),
+            default_line: None,
+            multicast_address: None,
+            completion: CompletionStatus::FinishedDesign,
+            topology: Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![],
+            },
+            buildings: vec![],
+            group_ranges: vec![],
+            group_addresses: vec![],
+            parameters: vec![],
+        });
+        project
+    }
+
+    /// `Devices` is an independent map, so a device can sit in it without
+    /// any line or unassigned list naming it. `save_project` writes devices
+    /// by walking the topology, so such a device would be silently dropped —
+    /// it has to be refused instead (CLAUDE.md: never silently discard
+    /// information).
+    #[test]
+    fn a_device_unreachable_from_the_topology_is_refused_not_dropped() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_installation();
+        project.installations[0].topology.unassigned = vec![DeviceId(1)];
+        project.devices.insert(device(1));
+        project.devices.insert(device(2)); // named by nothing
+
+        match save_project(&conn, &project) {
+            Err(StoreError::UnreachableDevices(ids)) => assert_eq!(ids, vec![DeviceId(2)]),
+            other => panic!("expected UnreachableDevices, got {other:?}"),
+        }
+        // Nothing was half-written either: the transaction never committed.
+        assert!(matches!(load_project(&conn), Err(StoreError::NotSaved)));
+    }
+
+    /// The same one level down: a `ComObjectInstance` owned by `Devices` but
+    /// named by no device's `com_objects` list.
+    #[test]
+    fn a_com_object_unreachable_from_its_device_is_refused_not_dropped() {
+        use knx_core::device::ComObjectInstance;
+        use knx_core::flags::ResolvedFlags;
+        use knx_core::ids::ComObjectInstanceId;
+        use knx_core::provenance::Override;
+
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_installation();
+        project.installations[0].topology.unassigned = vec![DeviceId(1)];
+        project.devices.insert(device(1));
+        project.devices.insert_com_object(ComObjectInstance {
+            id: ComObjectInstanceId(7),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+        });
+        // …and deliberately never pushed onto device 1's `com_objects`.
+
+        match save_project(&conn, &project) {
+            Err(StoreError::UnreachableComObjects(ids)) => {
+                assert_eq!(ids, vec![ComObjectInstanceId(7)])
+            }
+            other => panic!("expected UnreachableComObjects, got {other:?}"),
+        }
         assert!(matches!(load_project(&conn), Err(StoreError::NotSaved)));
     }
 

@@ -7,6 +7,10 @@
 //! the one crate that sees both `knx-etsproj` and `knx-store` — see
 //! `import`'s own doc comment for why that matters.
 
+pub mod export;
 pub mod import;
 
-pub use import::{import_ets_project, AppError, ImportedProject};
+pub use export::export_ets_project;
+pub use import::{
+    import_ets_project, import_ets_project_with, AppError, ImportOptions, ImportedProject,
+};

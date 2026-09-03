@@ -7,17 +7,29 @@
 //! the `OpaqueEntry` → `StoredOpaqueEntry` conversion here, and nowhere
 //! else, is what keeps `knx-etsproj` itself free of a storage dependency:
 //! nothing in `knx-etsproj` needs to know `knx-store`'s row shape exists.
+//!
+//! Manufacturer data (Task 12) routes through the shared product database
+//! when the caller supplies one (`ImportOptions::product_db`); otherwise it
+//! falls back to the project's own opaque store, exactly as Session 3
+//! wrote it. Either way the manifest (`knx-store` schema v3) is written,
+//! so the project can always name what it was imported with.
 
 use std::path::Path;
 
-use knx_etsproj::opaque::OpaqueEntry;
+use knx_etsproj::opaque::{ManufacturerFile, OpaqueEntry};
 use knx_etsproj::{ImportFailure, ImportReport};
-use knx_store::{insert_opaque, Connection, SqlError, StoredOpaqueEntry};
+use knx_store::{
+    insert_manufacturer_refs, insert_opaque, Connection, ManufacturerRef, SqlError,
+    StoredOpaqueEntry,
+};
 
 pub struct ImportedProject {
     pub project: knx_core::Project,
     pub report: ImportReport,
     pub opaque_entries: usize,
+    pub manufacturer_ingested: usize,
+    pub manufacturer_skipped: usize,
+    pub enrichment: Option<knx_productdb::EnrichmentReport>,
 }
 
 #[derive(Debug)]
@@ -25,6 +37,8 @@ pub enum AppError {
     Import(ImportFailure),
     Store(knx_store::MigrationError),
     Sql(SqlError),
+    ProductDb(knx_productdb::ProductDbError),
+    Export(knx_etsproj::export::ExportError),
 }
 
 impl std::fmt::Display for AppError {
@@ -33,6 +47,8 @@ impl std::fmt::Display for AppError {
             AppError::Import(e) => write!(f, "{e}"),
             AppError::Store(e) => write!(f, "{e}"),
             AppError::Sql(e) => write!(f, "{e}"),
+            AppError::ProductDb(e) => write!(f, "{e}"),
+            AppError::Export(e) => write!(f, "{e}"),
         }
     }
 }
@@ -57,6 +73,28 @@ impl From<SqlError> for AppError {
     }
 }
 
+impl From<knx_productdb::ProductDbError> for AppError {
+    fn from(e: knx_productdb::ProductDbError) -> Self {
+        AppError::ProductDb(e)
+    }
+}
+
+impl From<knx_etsproj::export::ExportError> for AppError {
+    fn from(e: knx_etsproj::export::ExportError) -> Self {
+        AppError::Export(e)
+    }
+}
+
+/// What a caller wants done with manufacturer data. `None` runs exactly
+/// the Session 3 path: the files go into the project's opaque store and
+/// nothing is enriched. That path stays supported, and stays tested,
+/// because a user who does not want a shared database must still get a
+/// complete, exportable project.
+#[derive(Default)]
+pub struct ImportOptions<'a> {
+    pub product_db: Option<&'a knx_productdb::Connection>,
+}
+
 /// Imports `path` and persists every opaque entry into `conn`, which the
 /// caller has already opened and migrated — the CLI decides whether that
 /// connection is backed by a file or lives only for this run. The whole
@@ -66,16 +104,69 @@ impl From<SqlError> for AppError {
 /// partway through the insert leaves it exactly as it was before this
 /// call, not half-written.
 pub fn import_ets_project(path: &Path, conn: &Connection) -> Result<ImportedProject, AppError> {
-    let outcome = knx_etsproj::import_knxproj(path)?;
+    import_ets_project_with(path, conn, ImportOptions::default())
+}
 
-    let stored: Vec<StoredOpaqueEntry> = outcome.opaque.iter().map(to_stored).collect();
+/// The general form: `options.product_db` decides where manufacturer data
+/// goes and whether the project's communication objects get enriched from
+/// it.
+pub fn import_ets_project_with(
+    path: &Path,
+    conn: &Connection,
+    options: ImportOptions<'_>,
+) -> Result<ImportedProject, AppError> {
+    let mut outcome = knx_etsproj::import_knxproj(path)?;
+
+    // The manifest is written whichever way the manufacturer files are
+    // stored: it describes what the project was imported with, not where
+    // the bytes ended up.
+    let manifest: Vec<ManufacturerRef> = outcome
+        .manufacturer
+        .iter()
+        .map(|m| ManufacturerRef {
+            source_path: m.source_path.clone(),
+            sha256: m.sha256.clone(),
+            len: m.bytes.len() as i64,
+            kind: format!("{:?}", m.kind),
+        })
+        .collect();
+
+    let mut stored: Vec<StoredOpaqueEntry> = outcome.opaque.iter().map(to_stored).collect();
+    let mut ingested = 0usize;
+    let mut skipped = 0usize;
+    let mut enrichment = None;
+
+    match options.product_db {
+        Some(products) => {
+            for file in &outcome.manufacturer {
+                match knx_productdb::ingest_file(products, &file.source_path, &file.bytes)? {
+                    knx_productdb::IngestOutcome::Ingested { .. } => ingested += 1,
+                    knx_productdb::IngestOutcome::Skipped { .. } => skipped += 1,
+                }
+            }
+            if let Some(master) = outcome
+                .opaque
+                .iter()
+                .find(|e| e.kind == knx_etsproj::opaque::OpaqueKind::MasterData)
+            {
+                knx_productdb::ingest_master_data(products, &master.bytes)?;
+            }
+            enrichment = Some(knx_productdb::enrich(&mut outcome.project, products)?);
+        }
+        None => stored.extend(outcome.manufacturer.iter().map(manufacturer_to_stored)),
+    }
+
     let opaque_entries = stored.len();
     insert_opaque(conn, &stored)?;
+    insert_manufacturer_refs(conn, &manifest)?;
 
     Ok(ImportedProject {
         project: outcome.project,
         report: outcome.report,
         opaque_entries,
+        manufacturer_ingested: ingested,
+        manufacturer_skipped: skipped,
+        enrichment,
     })
 }
 
@@ -91,5 +182,19 @@ fn to_stored(e: &OpaqueEntry) -> StoredOpaqueEntry {
         name: e.name.clone(),
         bytes: e.bytes.clone(),
         sha256: e.sha256.clone(),
+    }
+}
+
+/// The `--no-product-db` fallback: a manufacturer file becomes a whole-file
+/// opaque entry, same shape `to_stored` would have produced for it before
+/// Task 12 split the two apart.
+fn manufacturer_to_stored(m: &ManufacturerFile) -> StoredOpaqueEntry {
+    StoredOpaqueEntry {
+        source_path: m.source_path.clone(),
+        xpath: String::new(),
+        kind: format!("{:?}", m.kind),
+        name: String::new(),
+        bytes: m.bytes.clone(),
+        sha256: m.sha256.clone(),
     }
 }

@@ -1,0 +1,45 @@
+//! Confirms the projection did not drop or duplicate anything the importer
+//! produced, against the same reference project and the same golden counts
+//! Session 3's import golden test already established
+//! (crates/knx-etsproj/tests/golden_reference_project.rs).
+
+use std::path::PathBuf;
+
+fn workspace_root() -> PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(std::path::Path::parent)
+        .and_then(std::path::Path::parent)
+        .expect("crate lives at <root>/apps/knx-desktop/src-tauri")
+        .to_path_buf()
+}
+
+fn reference_ets4_path() -> PathBuf {
+    workspace_root().join("Unser Zuhause ets4 - 2025-12-15.knxproj")
+}
+
+#[test]
+fn opening_the_reference_project_yields_the_measured_counts() {
+    let tree = knx_desktop_lib::open_project_impl(&reference_ets4_path()).unwrap();
+
+    assert_eq!(tree.installations.len(), 1);
+    let inst = &tree.installations[0];
+
+    assert_eq!(inst.topology.len(), 1); // one area
+    assert_eq!(inst.topology[0].lines.len(), 1);
+
+    let device_count: usize = inst
+        .topology
+        .iter()
+        .flat_map(|a| a.lines.iter())
+        .map(|l| l.devices.len())
+        .sum();
+    assert_eq!(device_count, 35); // 35 on the line
+    assert_eq!(inst.unassigned.len(), 1); // plus the one unassigned device
+
+    assert_eq!(count_buildings(&inst.buildings), 22);
+}
+
+fn count_buildings(nodes: &[knx_projection::BuildingNode]) -> usize {
+    nodes.iter().map(|n| 1 + count_buildings(&n.children)).sum()
+}

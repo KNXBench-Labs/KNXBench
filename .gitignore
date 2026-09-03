@@ -4,3 +4,4 @@ bus_traffic.jsonl
 /target/
 .worktrees/
 crates/knx-projection/bindings/
+apps/knx-desktop/src-tauri/gen/

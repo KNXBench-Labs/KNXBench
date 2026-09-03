@@ -10,6 +10,7 @@ members = [
     "crates/knx-net",
     "crates/knx-secure",
     "apps/knx-cli",
+    "apps/knx-desktop/src-tauri",
     "xtask",
 ]
 
@@ -31,6 +32,9 @@ knx-secure = { path = "crates/knx-secure" }
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
 tempfile = "3"
+tauri = "2.11"
+tauri-build = "2.6"
+tauri-plugin-dialog = "2.7"
 zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 quick-xml = "0.42"
 sha2 = "0.10"

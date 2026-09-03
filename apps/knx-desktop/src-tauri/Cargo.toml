@@ -1,0 +1,23 @@
+[package]
+name = "knx-desktop"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+name = "knx_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build.workspace = true
+
+[dependencies]
+knx-app.workspace = true
+knx-core.workspace = true
+knx-projection.workspace = true
+knx-store.workspace = true
+tauri.workspace = true
+tauri-plugin-dialog.workspace = true

@@ -253,7 +253,14 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
              text           TEXT,
              PRIMARY KEY (program_id, language, ref_id, attribute_name)
          ) STRICT;
-         CREATE INDEX translation_lookup ON translation (program_id, language, ref_id);",
+         CREATE INDEX translation_lookup ON translation (program_id, language, ref_id);
+         CREATE TABLE datapoint_type (
+             id   TEXT PRIMARY KEY,
+             main INTEGER NOT NULL,
+             sub  INTEGER,
+             name TEXT,
+             text TEXT
+         ) STRICT;",
     )?;
     Ok(())
 }

@@ -1,0 +1,192 @@
+//! `knx_master.xml`: `Manufacturers` (id → display name) and
+//! `DatapointTypes` (main/sub numbers → id), ingested minimally per spec §4
+//! — the file itself stays in the project's opaque store
+//! (`OpaqueKind::MasterData`), so the export path is unchanged.
+
+use quick_xml::events::Event;
+use quick_xml::Reader;
+use rusqlite::{params, Connection};
+
+use super::report_unknown_attrs;
+use crate::report::{UnknownCollector, UnknownConstruct};
+use crate::xml::{attrs, local_name};
+use crate::ProductDbError;
+
+const MANUFACTURER_ATTRS: &[&str] = &["Id", "Name"];
+const DATAPOINT_TYPE_ATTRS: &[&str] = &["Id", "Number", "Name", "Text"];
+const DATAPOINT_SUBTYPE_ATTRS: &[&str] = &["Id", "Number", "Name", "Text"];
+
+fn parse_i64(v: Option<&str>) -> Option<i64> {
+    v.and_then(|v| v.parse::<i64>().ok())
+}
+
+pub fn ingest_master_data(
+    conn: &Connection,
+    bytes: &[u8],
+) -> Result<Vec<UnknownConstruct>, ProductDbError> {
+    let source_path = "knx_master.xml";
+    let mut reader = Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut unknown = UnknownCollector::default();
+    let mut current_main: Option<i64> = None;
+
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        match event {
+            Event::Eof => break,
+            Event::End(e) if e.local_name().as_ref() == "DatapointType" => {
+                current_main = None;
+            }
+            Event::Start(e) | Event::Empty(e) => {
+                let name = local_name(&e);
+                let a = attrs(&e, source_path)?;
+                match name.as_str() {
+                    "Manufacturer" => {
+                        report_unknown_attrs(
+                            &mut unknown,
+                            "/KNX/MasterData/Manufacturers/Manufacturer",
+                            &a,
+                            MANUFACTURER_ATTRS,
+                        );
+                        conn.execute(
+                            "INSERT INTO manufacturer (id, name) VALUES (?1, ?2)
+                             ON CONFLICT(id) DO UPDATE SET name = excluded.name",
+                            params![a.get("Id"), a.get("Name")],
+                        )?;
+                    }
+                    "DatapointType" => {
+                        report_unknown_attrs(
+                            &mut unknown,
+                            "/KNX/MasterData/DatapointTypes/DatapointType",
+                            &a,
+                            DATAPOINT_TYPE_ATTRS,
+                        );
+                        let main = parse_i64(a.get("Number")).unwrap_or_default();
+                        current_main = Some(main);
+                        conn.execute(
+                            "INSERT OR IGNORE INTO datapoint_type (id, main, sub, name, text)
+                             VALUES (?1, ?2, NULL, ?3, ?4)",
+                            params![a.get("Id"), main, a.get("Name"), a.get("Text")],
+                        )?;
+                    }
+                    "DatapointSubtype" => {
+                        report_unknown_attrs(
+                            &mut unknown,
+                            "/KNX/MasterData/DatapointTypes/DatapointType/DatapointSubtypes/DatapointSubtype",
+                            &a,
+                            DATAPOINT_SUBTYPE_ATTRS,
+                        );
+                        if let Some(main) = current_main {
+                            conn.execute(
+                                "INSERT OR IGNORE INTO datapoint_type (id, main, sub, name, text)
+                                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                                params![
+                                    a.get("Id"),
+                                    main,
+                                    parse_i64(a.get("Number")),
+                                    a.get("Name"),
+                                    a.get("Text"),
+                                ],
+                            )?;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(unknown.into_vec())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::open_and_migrate;
+
+    const MASTER: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Siemens" />
+      <Manufacturer Id="M-0083" Name="MDT technologies" />
+    </Manufacturers>
+    <DatapointTypes>
+      <DatapointType Id="DPT-1" Number="1" Name="1.xxx" Text="1-bit">
+        <DatapointSubtypes>
+          <DatapointSubtype Id="DPST-1-1" Number="1" Name="DPT_Switch" Text="switch" />
+        </DatapointSubtypes>
+      </DatapointType>
+    </DatapointTypes>
+  </MasterData>
+</KNX>"#;
+
+    fn db() -> (tempfile::TempDir, Connection) {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        (dir, conn)
+    }
+
+    #[test]
+    fn manufacturer_names_are_filled_in() {
+        let (_dir, conn) = db();
+        ingest_master_data(&conn, MASTER.as_bytes()).unwrap();
+        let name: String = conn
+            .query_row(
+                "SELECT name FROM manufacturer WHERE id = 'M-0083'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(name, "MDT technologies");
+    }
+
+    #[test]
+    fn a_manufacturer_seen_during_ingest_first_gets_its_name_later() {
+        // Hardware.xml creates the row with a NULL name (Task 4); master
+        // data fills it in whichever order the two arrive.
+        let (_dir, conn) = db();
+        conn.execute(
+            "INSERT INTO manufacturer (id, name) VALUES ('M-0083', NULL)",
+            [],
+        )
+        .unwrap();
+        ingest_master_data(&conn, MASTER.as_bytes()).unwrap();
+        let name: String = conn
+            .query_row(
+                "SELECT name FROM manufacturer WHERE id = 'M-0083'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(name, "MDT technologies");
+    }
+
+    #[test]
+    fn datapoint_main_and_subtypes_are_stored_with_their_numbers() {
+        let (_dir, conn) = db();
+        ingest_master_data(&conn, MASTER.as_bytes()).unwrap();
+        let (main, sub, name): (i64, Option<i64>, String) = conn
+            .query_row(
+                "SELECT main, sub, name FROM datapoint_type WHERE id = 'DPST-1-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!((main, sub, name.as_str()), (1, Some(1), "DPT_Switch"));
+        let main_only: (i64, Option<i64>) = conn
+            .query_row(
+                "SELECT main, sub FROM datapoint_type WHERE id = 'DPT-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(main_only, (1, None));
+    }
+}

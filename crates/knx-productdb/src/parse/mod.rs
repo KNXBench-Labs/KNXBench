@@ -6,6 +6,7 @@
 pub mod catalog;
 pub mod comobject;
 pub mod hardware;
+pub mod master;
 pub mod program;
 pub mod translation;
 

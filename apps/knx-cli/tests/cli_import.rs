@@ -55,3 +55,18 @@ fn the_cli_exits_nonzero_on_a_file_it_cannot_read() {
         .unwrap()
         .contains("nonexistent"));
 }
+
+#[test]
+fn a_flag_missing_its_value_is_a_usage_error_not_a_swallowed_flag() {
+    // `--store` must not silently consume `--report-json` as its own value.
+    let out = run_cli(&[
+        "import",
+        "--store",
+        "--report-json",
+        "out.json",
+        reference_ets4_path().to_str().unwrap(),
+    ]);
+    assert_eq!(out.status.code(), Some(1));
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(stderr.contains("--store"));
+}

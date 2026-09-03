@@ -26,7 +26,19 @@ struct ImportArgs {
     report_json: Option<String>,
 }
 
-fn parse_import_args(args: &[String]) -> Option<ImportArgs> {
+/// Reads the value following a `--flag`. Refuses to treat the *next* flag
+/// as this one's value (`--store --report-json out.json f.knxproj` would
+/// otherwise silently swallow `--report-json` as `--store`'s path, leaving
+/// `--report-json` itself unrecognized) — a missing value is a usage
+/// error, not a value that happens to start with `--`.
+fn take_value(args: &[String], i: usize, flag: &str) -> Result<String, String> {
+    match args.get(i) {
+        Some(v) if !v.starts_with("--") => Ok(v.clone()),
+        _ => Err(format!("{flag} needs a value")),
+    }
+}
+
+fn parse_import_args(args: &[String]) -> Result<ImportArgs, String> {
     let mut file = None;
     let mut store = None;
     let mut report_json = None;
@@ -35,28 +47,35 @@ fn parse_import_args(args: &[String]) -> Option<ImportArgs> {
         match args[i].as_str() {
             "--store" => {
                 i += 1;
-                store = args.get(i).cloned();
+                store = Some(take_value(args, i, "--store")?);
             }
             "--report-json" => {
                 i += 1;
-                report_json = args.get(i).cloned();
+                report_json = Some(take_value(args, i, "--report-json")?);
+            }
+            other if other.starts_with("--") => {
+                return Err(format!("unknown flag: {other}"));
             }
             other if file.is_none() => file = Some(other.to_string()),
-            _ => {}
+            other => return Err(format!("unexpected extra argument: {other}")),
         }
         i += 1;
     }
-    Some(ImportArgs {
-        file: file?,
+    let file = file.ok_or_else(|| "missing <file.knxproj>".to_string())?;
+    Ok(ImportArgs {
+        file,
         store,
         report_json,
     })
 }
 
 fn run_import(args: &[String]) -> ExitCode {
-    let Some(parsed) = parse_import_args(args) else {
-        eprintln!("{USAGE}");
-        return ExitCode::FAILURE;
+    let parsed = match parse_import_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
     };
 
     // `--store` names a persistent database; without it, this run's opaque
@@ -134,11 +153,20 @@ fn print_summary(file: &str, imported: &knx_app::ImportedProject) {
             "ies"
         }
     );
+    let error_count = imported
+        .report
+        .errors
+        .iter()
+        .filter(|e| e.severity == knx_etsproj::report::Severity::Error)
+        .count();
+    let warning_count = imported.report.errors.len() - error_count;
     if imported.report.has_losses() {
         println!(
-            "  {} error(s), {} unknown construct(s) — see the report for detail",
-            imported.report.errors.len(),
+            "  {error_count} error(s), {} unknown construct(s) — see the report for detail",
             imported.report.unknown.len()
         );
+    }
+    if warning_count > 0 {
+        println!("  {warning_count} warning(s) — see the report for detail");
     }
 }

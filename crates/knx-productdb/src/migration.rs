@@ -68,7 +68,78 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
              occurrences   INTEGER NOT NULL,
              sample        TEXT
          ) STRICT;
-         CREATE INDEX ingest_unknown_source ON ingest_unknown (source_sha256);",
+         CREATE INDEX ingest_unknown_source ON ingest_unknown (source_sha256);
+         CREATE TABLE manufacturer (
+             id   TEXT PRIMARY KEY,
+             name TEXT
+         ) STRICT;
+         CREATE TABLE catalog_section (
+             id                  TEXT PRIMARY KEY,
+             manufacturer_id     TEXT NOT NULL,
+             parent_id           TEXT,
+             name                TEXT,
+             number              TEXT,
+             visible_description TEXT,
+             default_language    TEXT,
+             source_sha256       TEXT NOT NULL
+         ) STRICT;
+         CREATE TABLE catalog_item (
+             id                      TEXT PRIMARY KEY,
+             manufacturer_id         TEXT NOT NULL,
+             section_id              TEXT NOT NULL,
+             name                    TEXT,
+             number                  TEXT,
+             visible_description     TEXT,
+             product_ref_id          TEXT,
+             hardware2program_ref_id TEXT,
+             default_language        TEXT,
+             source_sha256           TEXT NOT NULL
+         ) STRICT;
+         CREATE INDEX catalog_item_section ON catalog_item (section_id);
+         CREATE TABLE hardware (
+             id                      TEXT PRIMARY KEY,
+             manufacturer_id         TEXT NOT NULL,
+             name                    TEXT,
+             serial_number           TEXT,
+             version_number          TEXT,
+             bus_current             TEXT,
+             has_individual_address  INTEGER,
+             has_application_program INTEGER,
+             is_accessory            INTEGER,
+             is_coupler              INTEGER,
+             is_power_supply         INTEGER,
+             is_ip_enabled           INTEGER,
+             is_power_line_repeater  INTEGER,
+             original_manufacturer   TEXT,
+             source_sha256           TEXT NOT NULL
+         ) STRICT;
+         CREATE TABLE product (
+             id                  TEXT PRIMARY KEY,
+             manufacturer_id     TEXT NOT NULL,
+             hardware_id         TEXT NOT NULL,
+             text                TEXT,
+             order_number        TEXT,
+             is_rail_mounted     INTEGER,
+             width_in_millimeter TEXT,
+             default_language    TEXT,
+             hash                TEXT,
+             registration_status TEXT,
+             source_sha256       TEXT NOT NULL
+         ) STRICT;
+         CREATE INDEX product_hardware ON product (hardware_id);
+         CREATE TABLE hardware2program (
+             id                      TEXT PRIMARY KEY,
+             manufacturer_id         TEXT NOT NULL,
+             hardware_id             TEXT NOT NULL,
+             application_program_ref TEXT,
+             medium_types            TEXT,
+             hash                    TEXT,
+             registration_number     TEXT,
+             registration_status     TEXT,
+             registration_signature  TEXT,
+             source_sha256           TEXT NOT NULL
+         ) STRICT;
+         CREATE INDEX hardware2program_program ON hardware2program (application_program_ref);",
     )?;
     Ok(())
 }

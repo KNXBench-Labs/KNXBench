@@ -97,6 +97,27 @@ fn migrations() -> Vec<Migration> {
 /// `CURRENT_SCHEMA_VERSION`.
 pub fn open_and_migrate(path: &Path) -> Result<Connection, MigrationError> {
     let conn = Connection::open(path)?;
+    migrate(&conn)?;
+    Ok(conn)
+}
+
+/// Opens an in-memory database and runs every migration in order — the same
+/// chain as [`open_and_migrate`], but with nothing written to disk and
+/// nothing left behind when the connection is dropped. For callers that
+/// need a `Connection` to satisfy an API built around persistence (the
+/// opaque store, the manifest table) without wanting a project file of
+/// their own — e.g. the desktop app importing a `.knxproj` purely to
+/// display it, with no save/reload feature yet (Session 5 cycle 1).
+pub fn open_and_migrate_in_memory() -> Result<Connection, MigrationError> {
+    let conn = Connection::open_in_memory()?;
+    migrate(&conn)?;
+    Ok(conn)
+}
+
+/// Runs every pending migration against an already-open connection and
+/// brings its `user_version` to `CURRENT_SCHEMA_VERSION`. Shared by the
+/// file-backed and in-memory entry points so the two can never drift.
+fn migrate(conn: &Connection) -> Result<(), MigrationError> {
     let found: i64 = conn.query_row("PRAGMA user_version", [], |row| row.get(0))?;
 
     if found > CURRENT_SCHEMA_VERSION {
@@ -108,14 +129,14 @@ pub fn open_and_migrate(path: &Path) -> Result<Connection, MigrationError> {
 
     let pending = &migrations()[found as usize..CURRENT_SCHEMA_VERSION as usize];
     for migration in pending {
-        migration(&conn)?;
+        migration(conn)?;
     }
 
     if found < CURRENT_SCHEMA_VERSION {
         conn.pragma_update(None, "user_version", CURRENT_SCHEMA_VERSION)?;
     }
 
-    Ok(conn)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -282,5 +303,18 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         assert_eq!(v, 3);
+    }
+
+    #[test]
+    fn in_memory_connection_migrates_to_current_version() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(version, CURRENT_SCHEMA_VERSION);
+        // The opaque table exists, same as a fresh file-backed connection.
+        let _count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM opaque_entry", [], |row| row.get(0))
+            .unwrap();
     }
 }

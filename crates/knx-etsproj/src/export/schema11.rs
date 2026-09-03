@@ -409,15 +409,35 @@ fn write_installation(
     );
     open(writer, "Installation", &attrs)?;
 
+    // Built once per installation rather than scanned per link: a
+    // `ComObjectInstance`'s `GroupLink`s can only meaningfully target this
+    // installation's own group addresses, and a per-link linear scan over
+    // every group address in every installation does not scale (the
+    // reference project's ~600 links × 514 addresses already costs
+    // ~150k comparisons per export; a 10,000-address project would cost
+    // tens of millions).
+    let ga_by_id: BTreeMap<knx_core::GroupAddressId, &str> = installation
+        .group_addresses
+        .iter()
+        .map(|g| (g.id, g.source.ets_id.as_str()))
+        .collect();
+
     open(writer, "Topology", &Attrs::new())?;
     for area in &installation.topology.areas {
-        write_area(writer, project, &installation.topology, area, elements)?;
+        write_area(
+            writer,
+            project,
+            &installation.topology,
+            area,
+            &ga_by_id,
+            elements,
+        )?;
     }
     if !installation.topology.unassigned.is_empty() {
         open(writer, "UnassignedDevices", &Attrs::new())?;
         for &device_id in &installation.topology.unassigned {
             if let Some(device) = project.devices.get(device_id) {
-                write_device(writer, project, installation, device)?;
+                write_device(writer, project, installation, &ga_by_id, device)?;
             }
         }
         close(writer, "UnassignedDevices")?;
@@ -454,11 +474,13 @@ fn write_installation(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn write_area(
     writer: &mut Writer<Vec<u8>>,
     project: &Project,
     topology: &knx_core::Topology,
     area: &Area,
+    ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
     elements: &BTreeMap<String, Vec<u8>>,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
@@ -470,7 +492,7 @@ fn write_area(
 
     for &line_id in &area.lines {
         if let Some(line) = topology.line(line_id) {
-            write_line(writer, project, line, elements)?;
+            write_line(writer, project, line, ga_by_id, elements)?;
         }
     }
 
@@ -482,6 +504,7 @@ fn write_line(
     writer: &mut Writer<Vec<u8>>,
     project: &Project,
     line: &Line,
+    ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
     elements: &BTreeMap<String, Vec<u8>>,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
@@ -505,7 +528,7 @@ fn write_line(
         // so this takes it via the caller passing `project` and resolving
         // parameters per-device instead (see `write_device`'s signature).
         if let Some(device) = project.devices.get(device_id) {
-            write_device_with_params(writer, project, device)?;
+            write_device_with_params(writer, project, ga_by_id, device)?;
         }
     }
 
@@ -528,6 +551,7 @@ fn write_device(
     writer: &mut Writer<Vec<u8>>,
     project: &Project,
     installation: &Installation,
+    ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
     device: &DeviceInstance,
 ) -> Result<(), ExportError> {
     let parameters: Vec<&ParameterInstance> = installation
@@ -535,12 +559,13 @@ fn write_device(
         .iter()
         .filter(|p| p.device == device.id)
         .collect();
-    write_device_inner(writer, project, parameters, device)
+    write_device_inner(writer, project, parameters, ga_by_id, device)
 }
 
 fn write_device_with_params(
     writer: &mut Writer<Vec<u8>>,
     project: &Project,
+    ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
     device: &DeviceInstance,
 ) -> Result<(), ExportError> {
     // `Line`'s own caller (`write_area`) does not carry `Installation`, only
@@ -554,13 +579,15 @@ fn write_device_with_params(
         .flat_map(|i| &i.parameters)
         .filter(|p| p.device == device.id)
         .collect();
-    write_device_inner(writer, project, parameters, device)
+    write_device_inner(writer, project, parameters, ga_by_id, device)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn write_device_inner<'a>(
     writer: &mut Writer<Vec<u8>>,
     project: &Project,
     all_parameters: impl IntoIterator<Item = &'a ParameterInstance>,
+    ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
     device: &DeviceInstance,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
@@ -632,7 +659,7 @@ fn write_device_inner<'a>(
         open(writer, "ComObjectInstanceRefs", &Attrs::new())?;
         for &com_id in &device.com_objects {
             if let Some(com) = project.devices.com_object(com_id) {
-                write_com_object(writer, project, com)?;
+                write_com_object(writer, project, ga_by_id, com)?;
             }
         }
         close(writer, "ComObjectInstanceRefs")?;
@@ -656,6 +683,7 @@ fn write_device_inner<'a>(
 fn write_com_object(
     writer: &mut Writer<Vec<u8>>,
     project: &Project,
+    ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
     com: &ComObjectInstance,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
@@ -686,13 +714,7 @@ fn write_com_object(
             Direction::Send => "Send",
             Direction::Receive => "Receive",
         };
-        let ga_ets_id = project
-            .installations
-            .iter()
-            .flat_map(|i| &i.group_addresses)
-            .find(|g| g.id == link.ga)
-            .map(|g| g.source.ets_id.clone());
-        if let Some(ets_id) = ga_ets_id {
+        if let Some(&ets_id) = ga_by_id.get(&link.ga) {
             let mut a = Attrs::new();
             a.push("GroupAddressRefId", ets_id);
             empty(writer, name, &a)?;

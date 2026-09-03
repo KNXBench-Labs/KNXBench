@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 knx-app.workspace = true
+knx-etsproj.workspace = true
 knx-store.workspace = true
 tempfile.workspace = true
 

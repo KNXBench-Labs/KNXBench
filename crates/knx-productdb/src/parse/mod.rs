@@ -7,6 +7,7 @@ pub mod catalog;
 pub mod comobject;
 pub mod hardware;
 pub mod program;
+pub mod translation;
 
 use crate::report::UnknownCollector;
 use crate::xml::Attrs;

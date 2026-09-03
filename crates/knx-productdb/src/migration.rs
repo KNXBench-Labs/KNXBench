@@ -244,7 +244,16 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
              PRIMARY KEY (program_id, id)
          ) STRICT;
          CREATE INDEX com_object_ref_program ON com_object_ref (program_id);
-         CREATE INDEX com_object_ref_object ON com_object_ref (program_id, com_object_id);",
+         CREATE INDEX com_object_ref_object ON com_object_ref (program_id, com_object_id);
+         CREATE TABLE translation (
+             program_id     TEXT NOT NULL,
+             language       TEXT NOT NULL,
+             ref_id         TEXT NOT NULL,
+             attribute_name TEXT NOT NULL,
+             text           TEXT,
+             PRIMARY KEY (program_id, language, ref_id, attribute_name)
+         ) STRICT;
+         CREATE INDEX translation_lookup ON translation (program_id, language, ref_id);",
     )?;
     Ok(())
 }

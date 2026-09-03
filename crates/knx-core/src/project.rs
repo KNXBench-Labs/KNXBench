@@ -20,7 +20,7 @@ pub const CURRENT_SCHEMA_VERSION: u32 = 3;
 
 /// Synthetic, project-unique id counters. Ids start at 1; 0 is never
 /// allocated, which leaves it free for tests to use as an obviously-fake id.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct IdAllocators {
     device: u32,
     area: u32,
@@ -109,6 +109,7 @@ impl Default for ProjectInfo {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Project {
     pub schema_version: u32,
     pub strings: StringTable,

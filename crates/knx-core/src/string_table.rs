@@ -23,7 +23,7 @@ pub struct LocalizedString(pub TranslationKey);
 
 /// Maps `(TranslationKey, Language)` to display text. Display resolves
 /// against the active language and falls back to `default_language`.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct StringTable {
     default_language: Language,
     entries: HashMap<(TranslationKey, Language), String>,
@@ -46,6 +46,14 @@ impl StringTable {
 
     pub fn insert(&mut self, key: TranslationKey, language: Language, text: String) {
         self.entries.insert((key, language), text);
+    }
+
+    /// Every entry as `(key, language, value)`. Iteration order is
+    /// unspecified (backed by a `HashMap`) — persistence writes all of it
+    /// regardless of order, since string-table entries are looked up by
+    /// key, never enumerated positionally (DATA_MODEL §8).
+    pub fn iter(&self) -> impl Iterator<Item = (&TranslationKey, &Language, &str)> {
+        self.entries.iter().map(|((k, l), v)| (k, l, v.as_str()))
     }
 
     /// Resolves `handle` for `language`, falling back to the table's
@@ -132,5 +140,32 @@ mod tests {
         );
         let localized = Text::Localized(LocalizedString(TranslationKey("k1".into())));
         assert_eq!(table.text(&localized, &Language("de".into())), None);
+    }
+
+    #[test]
+    fn iter_yields_every_entry_regardless_of_order() {
+        let mut t = StringTable::new(Language("en".into()));
+        t.insert(
+            TranslationKey("k1".into()),
+            Language("de".into()),
+            "Licht".into(),
+        );
+        t.insert(
+            TranslationKey("k2".into()),
+            Language("en".into()),
+            "Heat".into(),
+        );
+        let mut seen: Vec<(String, String, String)> = t
+            .iter()
+            .map(|(k, l, v)| (k.0.clone(), l.0.clone(), v.to_string()))
+            .collect();
+        seen.sort();
+        assert_eq!(
+            seen,
+            vec![
+                ("k1".to_string(), "de".to_string(), "Licht".to_string()),
+                ("k2".to_string(), "en".to_string(), "Heat".to_string()),
+            ]
+        );
     }
 }

@@ -3,3 +3,4 @@ bus_traffic.jsonl
 .superpowers/
 /target/
 .worktrees/
+crates/knx-projection/bindings/

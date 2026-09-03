@@ -58,11 +58,22 @@ fn check_layering() -> ExitCode {
         "knx-productdb",
         &["knx-etsproj", "knx-store"],
     ));
+    // knx-projection turns Project into display-shaped structs for the
+    // desktop UI (ADR-0009, Session 5). It must stay exactly as free of IO
+    // and storage as knx-core itself — a projection layer that reached
+    // rusqlite or quick-xml directly would defeat the point of having one.
+    violations.extend(layering::forbidden_reachable(
+        &graph,
+        "knx-projection",
+        layering::CORE_FORBIDDEN,
+    ));
 
     if violations.is_empty() {
         println!(
             "layering ok: knx-core reaches none of {:?}; knx-etsproj does not reach knx-store; \
-             knx-productdb reaches neither knx-etsproj nor knx-store",
+             knx-productdb reaches neither knx-etsproj nor knx-store; knx-projection reaches \
+             none of {:?}",
+            layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN
         );
         return ExitCode::SUCCESS;

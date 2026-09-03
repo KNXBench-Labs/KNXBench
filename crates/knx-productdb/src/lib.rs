@@ -6,6 +6,7 @@
 //! parser may not understand a construct, but nothing is ever lost.
 
 pub mod blob;
+pub mod enrich;
 pub mod ingest;
 pub mod migration;
 pub mod parse;
@@ -17,6 +18,7 @@ pub use blob::{
     has_source_file, load_source_file, sha256_hex, store_source_file, verify, BlobMismatch,
     SourceFile,
 };
+pub use enrich::{enrich, EnrichmentIssue, EnrichmentReport};
 pub use ingest::{ingest_file, FileKind, IngestOutcome};
 pub use migration::{default_path, open_and_migrate, ProductDbError, CURRENT_PRODUCTDB_VERSION};
 pub use parse::master::ingest_master_data;

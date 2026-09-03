@@ -11,6 +11,9 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use rusqlite::{params, Connection, OptionalExtension};
 
+use super::comobject::{
+    insert_com_object, insert_com_object_ref, COM_OBJECT_ATTRS, COM_OBJECT_REF_ATTRS,
+};
 use super::{bool_flag, report_unknown_attrs};
 use crate::report::{IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name, skip_subtree, Attrs};
@@ -321,6 +324,24 @@ fn handle_start_or_empty(
                     u.memory = Some((seg, off, bit));
                 }
             }
+        }
+        "ComObject" if !*already_present => {
+            report_unknown_attrs(
+                unknown,
+                "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ComObjectTable/ComObject",
+                a,
+                COM_OBJECT_ATTRS,
+            );
+            insert_com_object(conn, program_id, a)?;
+        }
+        "ComObjectRef" if !*already_present => {
+            report_unknown_attrs(
+                unknown,
+                "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ComObjectRefs/ComObjectRef",
+                a,
+                COM_OBJECT_REF_ATTRS,
+            );
+            insert_com_object_ref(conn, program_id, a)?;
         }
         "ParameterRef" if !*already_present => {
             conn.execute(

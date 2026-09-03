@@ -107,9 +107,14 @@ impl ImportReport {
     }
 
     /// Whether anything was actually lost or misunderstood — not whether a
-    /// documented capability gap ([`Self::unsupported`]) exists.
+    /// documented capability gap ([`Self::unsupported`]) exists, and not
+    /// whether `errors` merely contains a `Severity::Warning` (data the
+    /// mapper could still use, just suspicious — `validate.rs`'s own
+    /// distinction, which this check must honor rather than flatten).
     pub fn has_losses(&self) -> bool {
-        !self.errors.is_empty() || !self.unknown.is_empty() || !self.conflicts.is_empty()
+        self.errors.iter().any(|e| e.severity == Severity::Error)
+            || !self.unknown.is_empty()
+            || !self.conflicts.is_empty()
     }
 }
 
@@ -339,5 +344,41 @@ mod tests {
         let json = reference_report().to_json();
         // 22 MB of manufacturer data must not end up inside a JSON report.
         assert!(json.len() < 512 * 1024);
+    }
+
+    #[test]
+    fn has_losses_ignores_warnings_and_counts_only_real_errors() {
+        let mut report = ImportReport {
+            source: SourceInfo {
+                file_name: "t".into(),
+                file_size: 0,
+                schema_version: 11,
+                namespace: "t".into(),
+                created_by: None,
+                tool_version: None,
+                namespace_disagreement: None,
+            },
+            counts: EntityCounts { rows: vec![] },
+            unknown: vec![],
+            opaque: vec![],
+            inferred: vec![],
+            conflicts: vec![],
+            unsupported: vec![],
+            errors: vec![ImportError {
+                stage: "validate",
+                severity: Severity::Warning,
+                xpath: "t".into(),
+                detail: "t".into(),
+            }],
+        };
+        assert!(!report.has_losses(), "a warning-only report has no losses");
+
+        report.errors.push(ImportError {
+            stage: "validate",
+            severity: Severity::Error,
+            xpath: "t".into(),
+            detail: "t".into(),
+        });
+        assert!(report.has_losses(), "a real error is a loss");
     }
 }

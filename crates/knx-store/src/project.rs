@@ -66,16 +66,25 @@ const DELETE_ALL_TABLES: &[&str] = &[
 pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreError> {
     let tx = conn.unchecked_transaction()?;
 
-    // `building_part` and `group_range` self-reference via `parent_id`.
-    // Under `PRAGMA foreign_keys = ON`, a bulk `DELETE FROM` on a
-    // self-referencing table risks the constraint being checked against a
-    // row this same statement has not deleted yet (SQLite does not
-    // guarantee an all-at-once "no rows left, so nothing to violate"
-    // ordering here — only that no *other* table's FK is left dangling).
-    // Breaking every self-reference first makes the two DELETEs below
-    // unconditionally safe regardless of internal row order.
-    tx.execute("UPDATE building_part SET parent_id = NULL", [])?;
-    tx.execute("UPDATE group_range SET parent_id = NULL", [])?;
+    // Defer every foreign-key check to `COMMIT`, for two reasons that both
+    // come from `building_part`/`group_range` self-referencing via
+    // `parent_id`:
+    //
+    //  * a bulk `DELETE FROM` on a self-referencing table would otherwise
+    //    risk the constraint being checked against a row this same
+    //    statement has not deleted yet, and
+    //  * `Installation::buildings`/`::group_ranges` are flat `Vec`s in no
+    //    guaranteed parent-before-child order — `knx-etsproj`'s importer
+    //    builds them in *post*-order (every child precedes its parent), so
+    //    inserting them in list order writes rows whose `parent_id` names a
+    //    row that does not exist yet.
+    //
+    // Deferred does not mean disabled: SQLite still verifies every
+    // constraint at `COMMIT`, so a genuinely dangling reference is still an
+    // error — just a commit-time one. The pragma is scoped to this
+    // transaction, SQLite resetting it to OFF as soon as the transaction
+    // ends, so no other user of this connection is affected.
+    tx.execute_batch("PRAGMA defer_foreign_keys = ON")?;
 
     for table in DELETE_ALL_TABLES {
         tx.execute(&format!("DELETE FROM {table}"), [])?;
@@ -462,10 +471,18 @@ mod tests {
         assert_eq!(loaded, project);
     }
 
-    #[test]
-    fn a_project_with_nested_buildings_and_group_ranges_round_trips() {
-        let conn = open_and_migrate_in_memory().unwrap();
-        let mut project = Project::new(Language("en".into()));
+    /// A two-level building hierarchy (`House` -> `Floor 1`) and a two-level
+    /// group-range nesting (`Licht` -> `Licht - An/Aus`) plus one group
+    /// address inside the inner range. Returned as separate values so each
+    /// caller can put them into `Installation::buildings`/`::group_ranges`
+    /// in its own order — the flat `Vec`'s order is exactly what the
+    /// pre-order/post-order tests below differ on.
+    #[allow(clippy::type_complexity)]
+    fn hierarchy_nodes() -> (
+        (BuildingPart, BuildingPart),
+        (GroupRange, GroupRange),
+        GroupAddressEntry,
+    ) {
         let building = BuildingPart {
             id: BuildingPartId(1),
             source: source(),
@@ -517,6 +534,15 @@ mod tests {
             unfiltered: false,
             range: Some(GroupRangeId(2)),
         };
+        ((building, floor), (main_range, mid_range), ga)
+    }
+
+    fn project_with_hierarchy(
+        buildings: Vec<BuildingPart>,
+        group_ranges: Vec<GroupRange>,
+        group_addresses: Vec<GroupAddressEntry>,
+    ) -> Project {
+        let mut project = Project::new(Language("en".into()));
         project.installations.push(Installation {
             id: InstallationId(0),
             name: "I".into(),
@@ -528,11 +554,20 @@ mod tests {
                 lines: vec![],
                 unassigned: vec![],
             },
-            buildings: vec![building, floor],
-            group_ranges: vec![main_range, mid_range],
-            group_addresses: vec![ga],
+            buildings,
+            group_ranges,
+            group_addresses,
             parameters: vec![],
         });
+        project
+    }
+
+    #[test]
+    fn a_project_with_nested_buildings_and_group_ranges_round_trips() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let ((building, floor), (main_range, mid_range), ga) = hierarchy_nodes();
+        let project =
+            project_with_hierarchy(vec![building, floor], vec![main_range, mid_range], vec![ga]);
 
         save_project(&conn, &project).unwrap();
         let loaded = load_project(&conn).unwrap();
@@ -542,10 +577,54 @@ mod tests {
         // `group_range`'s `parent_id`) — the case a single-save round trip
         // above never exercises, and the one `PRAGMA foreign_keys = ON`
         // bulk-delete could violate if the two tables' `parent_id` columns
-        // are not neutralized before their rows are deleted.
+        // were still pointing at rows the same statement has not deleted yet.
         save_project(&conn, &project).unwrap();
         let loaded_again = load_project(&conn).unwrap();
         assert_eq!(loaded_again, project);
+    }
+
+    /// The order the real importer produces: `knx-etsproj`'s `map.rs`
+    /// recurses into a node's children and pushes each of them onto the flat
+    /// `Installation::buildings`/`::group_ranges` `Vec` *before* pushing the
+    /// node itself, so every child precedes its parent. Writing a
+    /// `building_part`/`group_range` row whose `parent_id` names a row that
+    /// does not exist yet is a hard `FOREIGN KEY constraint failed` under
+    /// `PRAGMA foreign_keys = ON` unless `save_project` defers foreign-key
+    /// checking to `COMMIT` — which is exactly what this test pins down.
+    #[test]
+    fn a_post_order_hierarchy_round_trips_the_way_the_importer_builds_it() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let ((building, floor), (main_range, mid_range), ga) = hierarchy_nodes();
+        let project = project_with_hierarchy(
+            vec![floor, building],       // child before parent
+            vec![mid_range, main_range], // child before parent
+            vec![ga],
+        );
+
+        save_project(&conn, &project).unwrap();
+        let loaded = load_project(&conn).unwrap();
+        assert_eq!(loaded, project);
+
+        // And again on top of the rows the first save left behind.
+        save_project(&conn, &project).unwrap();
+        assert_eq!(load_project(&conn).unwrap(), project);
+    }
+
+    /// Deferring foreign-key checks to `COMMIT` must not become "no foreign
+    /// keys at all": a genuinely dangling reference is still rejected, just
+    /// at commit time rather than at insert time.
+    #[test]
+    fn a_dangling_parent_reference_is_still_rejected_at_commit() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let ((_, mut floor), (main_range, mid_range), ga) = hierarchy_nodes();
+        floor.parent = Some(BuildingPartId(99)); // no such building part
+        let project = project_with_hierarchy(vec![floor], vec![main_range, mid_range], vec![ga]);
+
+        let err = save_project(&conn, &project).unwrap_err();
+        assert!(
+            matches!(err, StoreError::Sqlite(_)),
+            "a dangling parent_id must still fail: {err}"
+        );
     }
 
     #[test]

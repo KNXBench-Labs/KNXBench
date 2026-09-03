@@ -3,6 +3,7 @@
 use std::fmt;
 
 pub mod building;
+pub mod command_sync;
 pub mod devices;
 pub mod group;
 pub mod manifest;
@@ -13,6 +14,7 @@ pub mod project;
 pub mod strings;
 pub mod topology;
 
+pub use command_sync::sync_after_command;
 pub use manifest::{insert_manufacturer_refs, load_manufacturer_refs, ManufacturerRef};
 pub use migration::{
     open_and_migrate, open_and_migrate_in_memory, MigrationError, CURRENT_SCHEMA_VERSION,

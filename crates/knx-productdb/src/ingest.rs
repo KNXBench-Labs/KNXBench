@@ -99,6 +99,9 @@ pub fn ingest_file(
 /// not by file name: the name is a convention, the content is the fact.
 /// A `Baggages/` blob is not XML at all, so it is recognized by its bytes.
 fn classify(bytes: &[u8]) -> FileKind {
+    if bytes.is_empty() {
+        return FileKind::Unrecognized;
+    }
     let text = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bytes);
     if text.iter().find(|b| !b.is_ascii_whitespace()) != Some(&b'<') {
         return FileKind::Baggage;

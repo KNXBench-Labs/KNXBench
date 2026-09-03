@@ -8,9 +8,9 @@ use knx_core::string_table::{Language, StringTable, TranslationKey};
 use crate::StoreError;
 
 pub fn upsert_string_table(conn: &Connection, table: &StringTable) -> Result<(), StoreError> {
-    conn.execute("DELETE FROM string_table_entry", [])?;
     let tx = conn.unchecked_transaction()?;
     {
+        tx.execute("DELETE FROM string_table_entry", [])?;
         let mut stmt = tx.prepare(
             "INSERT INTO string_table_entry (key, language, value) VALUES (?1, ?2, ?3)",
         )?;

@@ -6,6 +6,7 @@ pub mod manifest;
 pub mod migration;
 pub mod opaque;
 pub mod strings;
+pub mod topology;
 
 pub use manifest::{insert_manufacturer_refs, load_manufacturer_refs, ManufacturerRef};
 pub use migration::{

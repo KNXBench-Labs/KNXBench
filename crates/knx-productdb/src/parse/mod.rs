@@ -4,6 +4,7 @@
 //! of one unknown element or attribute.
 
 pub mod catalog;
+pub mod comobject;
 pub mod hardware;
 pub mod program;
 

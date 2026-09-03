@@ -204,7 +204,47 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
              value         TEXT,
              PRIMARY KEY (program_id, id)
          ) STRICT;
-         CREATE INDEX parameter_ref_program ON parameter_ref (program_id);",
+         CREATE INDEX parameter_ref_program ON parameter_ref (program_id);
+         CREATE TABLE com_object (
+             program_id          TEXT NOT NULL,
+             id                  TEXT NOT NULL,
+             number              INTEGER,
+             name                TEXT,
+             text                TEXT,
+             function_text       TEXT,
+             visible_description TEXT,
+             object_size         TEXT,
+             priority            TEXT,
+             dpt_list            TEXT,
+             read_flag           TEXT,
+             write_flag          TEXT,
+             transmit_flag       TEXT,
+             update_flag         TEXT,
+             communication_flag  TEXT,
+             read_on_init_flag   TEXT,
+             PRIMARY KEY (program_id, id)
+         ) STRICT;
+         CREATE TABLE com_object_ref (
+             program_id          TEXT NOT NULL,
+             id                  TEXT NOT NULL,
+             com_object_id       TEXT NOT NULL,
+             tag                 TEXT,
+             text                TEXT,
+             function_text       TEXT,
+             visible_description TEXT,
+             object_size         TEXT,
+             priority            TEXT,
+             dpt_list            TEXT,
+             read_flag           TEXT,
+             write_flag          TEXT,
+             transmit_flag       TEXT,
+             update_flag         TEXT,
+             communication_flag  TEXT,
+             read_on_init_flag   TEXT,
+             PRIMARY KEY (program_id, id)
+         ) STRICT;
+         CREATE INDEX com_object_ref_program ON com_object_ref (program_id);
+         CREATE INDEX com_object_ref_object ON com_object_ref (program_id, com_object_id);",
     )?;
     Ok(())
 }

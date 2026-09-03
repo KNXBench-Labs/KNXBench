@@ -2,6 +2,7 @@ import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import ProjectExplorer from "./ProjectExplorer";
 
 function App() {
   const [tree, setTree] = useState<ProjectTree | null>(null);
@@ -24,8 +25,12 @@ function App() {
   return (
     <main>
       <button onClick={pickProject}>Open project…</button>
-      {error && <p role="alert">{error}</p>}
-      {tree && <pre>{JSON.stringify(tree, null, 2)}</pre>}
+      {error && (
+        <p role="alert" className="error-banner">
+          {error}
+        </p>
+      )}
+      {tree && <ProjectExplorer tree={tree} />}
     </main>
   );
 }

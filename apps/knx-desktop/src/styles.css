@@ -10,3 +10,33 @@ body {
 main {
   padding: 1rem;
 }
+
+.error-banner {
+  color: #b00020;
+  border: 1px solid #b00020;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.project-explorer ul {
+  list-style: none;
+  padding-left: 1.25rem;
+}
+
+.project-explorer .tree-root {
+  padding-left: 0;
+}
+
+.tree-label {
+  cursor: default;
+}
+
+.tree-label.expandable {
+  cursor: pointer;
+}
+
+.project-explorer footer {
+  margin-top: 1rem;
+  font-style: italic;
+  opacity: 0.8;
+}

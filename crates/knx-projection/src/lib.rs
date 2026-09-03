@@ -15,9 +15,20 @@ use ts_rs::TS;
 #[ts(export)]
 pub struct ProjectTree {
     pub schema_version: u32,
-    /// Count of import-report items (errors, unknown constructs, DPT
-    /// conflicts, documented capability gaps) that a caller with access to
-    /// the `ImportReport` should fill in — always `0` straight out of
+    /// Count of genuine `Severity::Error` items from the `ImportReport` —
+    /// data actually lost or misread, as `knx_etsproj::report::Severity`
+    /// distinguishes it (see `ImportReport::has_losses()`) — that a caller
+    /// with access to the `ImportReport` should fill in — always `0`
+    /// straight out of [`build_project_tree`], since this crate never sees
+    /// that type (CLAUDE.md: never silently discard information; full
+    /// drill-down is a later cycle, this is the count that says something
+    /// was genuinely lost, never to be shown to the user as a mere
+    /// "warning").
+    pub errors: usize,
+    /// Count of everything else worth a look but not a real loss:
+    /// `Severity::Warning` items, unknown constructs, DPT conflicts, and
+    /// documented capability gaps — that a caller with access to the
+    /// `ImportReport` should fill in — always `0` straight out of
     /// [`build_project_tree`], since this crate never sees that type
     /// (CLAUDE.md: never silently discard information; full drill-down is
     /// a later cycle, this is the count that says something is worth
@@ -85,6 +96,7 @@ pub struct DeviceNode {
 pub fn build_project_tree(project: &Project) -> ProjectTree {
     ProjectTree {
         schema_version: project.schema_version,
+        errors: 0,
         warnings: 0,
         installations: project
             .installations
@@ -273,6 +285,7 @@ mod tests {
         let project = Project::new(Language("en".into()));
         let tree = build_project_tree(&project);
         assert_eq!(tree.schema_version, project.schema_version);
+        assert_eq!(tree.errors, 0);
         assert_eq!(tree.warnings, 0);
         assert!(tree.installations.is_empty());
     }

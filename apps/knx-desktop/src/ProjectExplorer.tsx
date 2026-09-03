@@ -99,8 +99,20 @@ export default function ProjectExplorer(props: { tree: ProjectTree }) {
           <InstallationItem key={inst.id} installation={inst} />
         ))}
       </ul>
-      {tree.warnings > 0 && (
-        <footer>{tree.warnings} import warning{tree.warnings === 1 ? "" : "s"}</footer>
+      {(tree.errors > 0 || tree.warnings > 0) && (
+        <footer>
+          {tree.errors > 0 && (
+            <div className="import-errors">
+              {tree.errors} import error{tree.errors === 1 ? "" : "s"} — data may be missing or
+              incorrect
+            </div>
+          )}
+          {tree.warnings > 0 && (
+            <div className="import-warnings">
+              {tree.warnings} import warning{tree.warnings === 1 ? "" : "s"}
+            </div>
+          )}
+        </footer>
       )}
     </div>
   );

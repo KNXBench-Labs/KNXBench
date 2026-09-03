@@ -17,6 +17,7 @@ tauri-build.workspace = true
 [dependencies]
 knx-app.workspace = true
 knx-core.workspace = true
+knx-etsproj.workspace = true
 knx-projection.workspace = true
 knx-store.workspace = true
 tauri.workspace = true

@@ -22,6 +22,15 @@ fn reference_ets4_path() -> PathBuf {
 fn opening_the_reference_project_yields_the_measured_counts() {
     let tree = knx_desktop_lib::open_project_impl(&reference_ets4_path()).unwrap();
 
+    // The reference project's golden import has no real errors: `warnings`
+    // is non-zero only because of the two documented vendor-baggage
+    // capability gaps (see knx-etsproj's own
+    // `vendor_baggage_is_reported_as_unsupported` test) — a genuine
+    // capability gap, not a data loss (`ImportReport::has_losses()`
+    // deliberately excludes it), so it must never surface as `errors`.
+    assert_eq!(tree.errors, 0);
+    assert_eq!(tree.warnings, 2);
+
     assert_eq!(tree.installations.len(), 1);
     let inst = &tree.installations[0];
 

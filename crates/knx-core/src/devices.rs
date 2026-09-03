@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use crate::device::{ComObjectInstance, DeviceInstance};
 use crate::ids::{ComObjectInstanceId, DeviceId};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Devices {
     by_id: BTreeMap<DeviceId, DeviceInstance>,
     com_objects: BTreeMap<ComObjectInstanceId, ComObjectInstance>,

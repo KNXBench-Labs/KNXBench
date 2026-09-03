@@ -16,7 +16,7 @@ use crate::string_table::{Language, StringTable};
 /// The schema version this build of the domain model writes. Mirrored into
 /// SQLite's `user_version` pragma by `knx-store`; there is no
 /// version-skipping migration path and no downgrade (ADR-0003).
-pub const CURRENT_SCHEMA_VERSION: u32 = 3;
+pub const CURRENT_SCHEMA_VERSION: u32 = 4;
 
 /// Synthetic, project-unique id counters. Ids start at 1; 0 is never
 /// allocated, which leaves it free for tests to use as an obviously-fake id.
@@ -70,6 +70,57 @@ impl IdAllocators {
 
     pub fn next_parameter_instance_id(&mut self) -> ParameterInstanceId {
         next_id!(self, parameter_instance, ParameterInstanceId)
+    }
+
+    pub fn peek_device(&self) -> u32 {
+        self.device
+    }
+    pub fn peek_area(&self) -> u32 {
+        self.area
+    }
+    pub fn peek_line(&self) -> u32 {
+        self.line
+    }
+    pub fn peek_com_object_instance(&self) -> u32 {
+        self.com_object_instance
+    }
+    pub fn peek_group_range(&self) -> u32 {
+        self.group_range
+    }
+    pub fn peek_group_address(&self) -> u32 {
+        self.group_address
+    }
+    pub fn peek_building_part(&self) -> u32 {
+        self.building_part
+    }
+    pub fn peek_parameter_instance(&self) -> u32 {
+        self.parameter_instance
+    }
+
+    /// Reconstructs an `IdAllocators` at exactly the counts given —
+    /// `knx-store::load_project`'s way of restoring allocator state so a
+    /// freshly loaded project never reissues an id already in use.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_counts(
+        device: u32,
+        area: u32,
+        line: u32,
+        com_object_instance: u32,
+        group_range: u32,
+        group_address: u32,
+        building_part: u32,
+        parameter_instance: u32,
+    ) -> Self {
+        Self {
+            device,
+            area,
+            line,
+            com_object_instance,
+            group_range,
+            group_address,
+            building_part,
+            parameter_instance,
+        }
     }
 }
 

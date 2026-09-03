@@ -238,43 +238,68 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
 /// `Installation::buildings`/`::group_ranges` are flat `Vec`s where each
 /// element also carries `position` (sibling order under its own
 /// `parent`/`parent_id`, used to rebuild `children`) — see the design
-/// doc's "owned-list vs flat-list order" note. `flat_position` is simply
-/// the element's index in the flat `Vec`; `position` is recomputed here as
-/// the 0-based rank among siblings sharing the same parent, in flat-list
-/// order (which is the pre-order the importer itself produces — verified
-/// by Task 6/8's own hierarchy tests).
+/// doc's "owned-list vs flat-list order" note.
 fn flatten_buildings(
     buildings: &[knx_core::building::BuildingPart],
 ) -> Vec<(i64, i64, &knx_core::building::BuildingPart)> {
-    sibling_positions(buildings, |p| p.parent.map(|x| x.0))
-        .into_iter()
-        .enumerate()
-        .map(|(flat, (sib, part))| (sib, flat as i64, part))
-        .collect()
+    flatten_hierarchy(
+        buildings,
+        |p| p.id.0,
+        |p| p.parent.map(|x| x.0),
+        |parent, child| parent.children.iter().position(|c| c.0 == child),
+    )
 }
 
 fn flatten_ranges(
     ranges: &[knx_core::group::GroupRange],
 ) -> Vec<(i64, i64, &knx_core::group::GroupRange)> {
-    sibling_positions(ranges, |r| r.parent.map(|x| x.0))
-        .into_iter()
-        .enumerate()
-        .map(|(flat, (sib, range))| (sib, flat as i64, range))
-        .collect()
+    flatten_hierarchy(
+        ranges,
+        |r| r.id.0,
+        |r| r.parent.map(|x| x.0),
+        |parent, child| parent.children.iter().position(|c| c.0 == child),
+    )
 }
 
-/// For each element, its 0-based rank among the elements preceding it (in
-/// slice order) that share its `parent_key`.
-fn sibling_positions<T>(items: &[T], parent_key: impl Fn(&T) -> Option<u32>) -> Vec<(i64, &T)> {
-    let mut counts: std::collections::HashMap<Option<u32>, i64> = std::collections::HashMap::new();
+/// `(position, flat_position, item)` for each element of a flat hierarchy
+/// list.
+///
+/// `flat_position` is the element's index in the flat `Vec`. `position` is
+/// its index inside its parent's own `children` `Vec` — the field that
+/// actually defines sibling order — found via `sibling_index`, not
+/// re-derived from where the element happens to sit in the flat list. The
+/// two can disagree: `children` and the flat list are independent `pub`
+/// fields, and reconstructing `children` from flat-list order on reload
+/// would silently reorder it.
+///
+/// Two cases have no `children` list to read an order out of, and both fall
+/// back to `flat_position`, which is always defined and always
+/// deterministic:
+///
+///  * a root (`parent` is `None`) — nothing contains it. Nothing queries
+///    root `position` as a group either: `load_buildings`/`load_group_ranges`
+///    only ever read `position` through
+///    `WHERE parent_id = ?1 ORDER BY position`, never for `parent_id IS NULL`.
+///  * an element whose named parent is missing from the list, or whose
+///    parent's `children` does not name it back — inconsistent input, where
+///    any order is a guess; a deterministic one beats a panic.
+fn flatten_hierarchy<T>(
+    items: &[T],
+    id: impl Fn(&T) -> u32,
+    parent: impl Fn(&T) -> Option<u32>,
+    sibling_index: impl Fn(&T, u32) -> Option<usize>,
+) -> Vec<(i64, i64, &T)> {
+    let by_id: std::collections::HashMap<u32, &T> =
+        items.iter().map(|item| (id(item), item)).collect();
     items
         .iter()
-        .map(|item| {
-            let key = parent_key(item);
-            let count = counts.entry(key).or_insert(0);
-            let position = *count;
-            *count += 1;
-            (position, item)
+        .enumerate()
+        .map(|(flat, item)| {
+            let position = parent(item)
+                .and_then(|p| by_id.get(&p))
+                .and_then(|p| sibling_index(p, id(item)))
+                .map_or(flat as i64, |i| i as i64);
+            (position, flat as i64, item)
         })
         .collect()
 }
@@ -738,6 +763,92 @@ mod tests {
         // And again on top of the rows the first save left behind.
         save_project(&conn, &project).unwrap();
         assert_eq!(load_project(&conn).unwrap(), project);
+    }
+
+    /// Sibling order comes from the parent's own `children` field, not from
+    /// the order the siblings happen to appear in the flat
+    /// `Installation::buildings`/`::group_ranges` `Vec`. The two are
+    /// independent `pub` fields; here they deliberately disagree (the flat
+    /// list holds `[a, b]`, `children` says `[b, a]`, and the two are not
+    /// even adjacent in the flat list), which counting flat-list occurrences
+    /// per parent would silently "fix" by reordering `children` on reload.
+    #[test]
+    fn sibling_order_follows_the_children_field_not_the_flat_list_order() {
+        let conn = open_and_migrate_in_memory().unwrap();
+
+        let house = BuildingPart {
+            children: vec![BuildingPartId(3), BuildingPartId(2)], // reversed
+            ..part(1, None, BuildingPartType::Building)
+        };
+        let floor_a = part(2, Some(1), BuildingPartType::Floor);
+        let floor_b = part(3, Some(1), BuildingPartType::Floor);
+        let annex = part(4, None, BuildingPartType::Building); // separates the two
+
+        let licht = GroupRange {
+            children: vec![GroupRangeId(3), GroupRangeId(2)], // reversed
+            ..range(1, None, 0, 2047)
+        };
+        let mid_a = range(2, Some(1), 0, 255);
+        let mid_b = range(3, Some(1), 256, 511);
+        let heizung = range(4, None, 2048, 4095); // separates the two
+
+        let project = project_with_hierarchy(
+            vec![floor_a, annex, floor_b, house],
+            vec![mid_a, heizung, mid_b, licht],
+            vec![],
+        );
+
+        save_project(&conn, &project).unwrap();
+        let loaded = load_project(&conn).unwrap();
+
+        let house_loaded = loaded.installations[0]
+            .buildings
+            .iter()
+            .find(|p| p.id == BuildingPartId(1))
+            .unwrap();
+        assert_eq!(
+            house_loaded.children,
+            vec![BuildingPartId(3), BuildingPartId(2)],
+            "children must come back in the order the field stated"
+        );
+        let licht_loaded = loaded.installations[0]
+            .group_ranges
+            .iter()
+            .find(|r| r.id == GroupRangeId(1))
+            .unwrap();
+        assert_eq!(
+            licht_loaded.children,
+            vec![GroupRangeId(3), GroupRangeId(2)],
+            "children must come back in the order the field stated"
+        );
+        assert_eq!(loaded, project);
+    }
+
+    fn part(id: u32, parent: Option<u32>, kind: BuildingPartType) -> BuildingPart {
+        BuildingPart {
+            id: BuildingPartId(id),
+            source: source(),
+            name: format!("Part {id}"),
+            number: None,
+            kind,
+            default_line: None,
+            completion: CompletionStatus::FinishedDesign,
+            children: vec![],
+            devices: vec![],
+            parent: parent.map(BuildingPartId),
+        }
+    }
+
+    fn range(id: u32, parent: Option<u32>, start: u16, end: u16) -> GroupRange {
+        GroupRange {
+            id: GroupRangeId(id),
+            source: source(),
+            name: format!("Range {id}"),
+            start: GroupAddress::from_raw(start),
+            end: GroupAddress::from_raw(end),
+            parent: parent.map(GroupRangeId),
+            children: vec![],
+        }
     }
 
     /// Deferring foreign-key checks to `COMMIT` must not become "no foreign

@@ -69,11 +69,40 @@ dialog) is explicitly out of scope — this cycle is the storage layer only.
   (`Topology::unassigned`), but `unassigned` is a per-installation list —
   without `installation_id` a line-less device's installation membership
   would not be reconstructible on load.
-- **`position` columns wherever `Vec<Id>` order is meaningful** in
-  `knx-core` (building-part children and device refs, group-range children,
-  group addresses within a range, binary data refs, group links) — SQLite
-  gives no ordering guarantee otherwise, and losing input order on reload
-  would be a silent data change.
+- **`position` columns wherever a `Vec<T>` or `Vec<Id>`'s order is
+  meaningful** in `knx-core` — SQLite gives no ordering guarantee
+  otherwise, and losing input order on reload would be a silent data
+  change the round-trip test would not even catch unless `PartialEq` is
+  order-sensitive (it is: derived `Vec<T>` equality is). Two distinct kinds
+  of ordering show up, and some entities need both:
+  - **Owned-list order** — the entity has exactly one parent/container, so
+    its order can live as a plain column on the entity's own row: `area
+    .position` (within `Topology::areas`), `line.position` (within
+    `Area::lines`), `device.topology_position` (within `Line::devices`
+    when `line_id` is set, or `Topology::unassigned` when it is not — the
+    two are mutually exclusive per device, so one column serves both),
+    `com_object_instance.position` (within `DeviceInstance::com_objects`),
+    `building_part.position` (sibling order under `parent_id`, used to
+    rebuild `BuildingPart::children`), `group_range.position` (sibling
+    order under `parent_id`, used to rebuild `GroupRange::children`).
+  - **Flat-list order** — `Installation::buildings` and
+    `Installation::group_ranges` are each a *flat* `Vec` of every node
+    regardless of nesting depth, which is a second, independent ordering
+    from the sibling order above. `building_part.flat_position` and
+    `group_range.flat_position` carry this one. `Installation::
+    group_addresses` and `Installation::parameters` are already flat with
+    no separate hierarchy, so `group_address.position` and the new
+    `parameter_instance.position` need only the one column each.
+  - **Exception, reasoned not assumed:** `Project::installations: Vec<
+    Installation>` gets no position column — `InstallationId` mirrors
+    ETS's own installation number rather than a synthetic counter
+    (`ids.rs`'s doc comment), so `ORDER BY id` reproduces ETS's own
+    ordering deliberately, not by luck. Every other id used for ordering
+    above is `IdAllocators`-issued and synthetic, which is precisely why
+    those get real `position` columns instead of relying on id order.
+  - `StringTable`'s entries need no position column: its `PartialEq`
+    (added above) compares the underlying `HashMap`, which is already
+    order-insensitive.
 - **`PRAGMA foreign_keys = ON`**, not currently set anywhere in
   `knx-store`. A real relational schema now exists; referential integrity
   should be enforced by SQLite itself (CLAUDE.md priority: data integrity).
@@ -83,6 +112,11 @@ dialog) is explicitly out of scope — this cycle is the storage layer only.
   Project`) to be possible at all without a hand-rolled comparison helper.
   Derive-only, no behavior change — flagged here explicitly because it
   touches `knx-core`, not because it is risky.
+- **`StringTable` also gains a public `iter()`.** Its entries are private
+  (`HashMap<(TranslationKey, Language), String>`); persistence cannot save
+  what it cannot enumerate. `pub fn iter(&self) -> impl Iterator<Item =
+  (&TranslationKey, &Language, &str)>` is additive, no existing behavior
+  changes.
 
 ## Architecture
 
@@ -159,6 +193,7 @@ CREATE TABLE installation (
 CREATE TABLE area (
     id              INTEGER PRIMARY KEY,
     installation_id INTEGER NOT NULL REFERENCES installation(id),
+    position        INTEGER NOT NULL,   -- order within Topology::areas
     source_path     TEXT NOT NULL,
     source_ets_id   TEXT NOT NULL,
     name            TEXT NOT NULL,
@@ -169,6 +204,7 @@ CREATE TABLE area (
 CREATE TABLE line (
     id                           INTEGER PRIMARY KEY,
     area_id                      INTEGER NOT NULL REFERENCES area(id),
+    position                     INTEGER NOT NULL,   -- order within Area::lines
     source_path                  TEXT NOT NULL,
     source_ets_id                TEXT NOT NULL,
     name                         TEXT NOT NULL,
@@ -185,7 +221,8 @@ CREATE TABLE building_part (
     id              INTEGER PRIMARY KEY,
     installation_id INTEGER NOT NULL REFERENCES installation(id),
     parent_id       INTEGER REFERENCES building_part(id),
-    position        INTEGER NOT NULL,   -- sibling order under parent_id
+    position        INTEGER NOT NULL,   -- sibling order under parent_id (rebuilds ::children)
+    flat_position   INTEGER NOT NULL,   -- order within Installation::buildings (flat)
     source_path     TEXT NOT NULL,
     source_ets_id   TEXT NOT NULL,
     name            TEXT NOT NULL,
@@ -206,6 +243,9 @@ CREATE TABLE device (
     id                          INTEGER PRIMARY KEY,
     installation_id             INTEGER NOT NULL REFERENCES installation(id),
     line_id                     INTEGER REFERENCES line(id),   -- NULL = unassigned
+    topology_position           INTEGER NOT NULL,   -- order within Line::devices
+                                                      -- (line_id set) or Topology::unassigned
+                                                      -- (line_id NULL) — mutually exclusive
     source_path                 TEXT NOT NULL,
     source_ets_id               TEXT NOT NULL,
     name                        TEXT NOT NULL,
@@ -236,6 +276,7 @@ CREATE TABLE binary_data_ref (
 CREATE TABLE com_object_instance (
     id            INTEGER PRIMARY KEY,
     device_id     INTEGER NOT NULL REFERENCES device(id),
+    position      INTEGER NOT NULL,   -- order within DeviceInstance::com_objects
     source_path   TEXT NOT NULL,
     source_ets_id TEXT NOT NULL,
     number        INTEGER NOT NULL,
@@ -272,7 +313,8 @@ CREATE TABLE group_range (
     id              INTEGER PRIMARY KEY,
     installation_id INTEGER NOT NULL REFERENCES installation(id),
     parent_id       INTEGER REFERENCES group_range(id),
-    position        INTEGER NOT NULL,
+    position        INTEGER NOT NULL,   -- sibling order under parent_id (rebuilds ::children)
+    flat_position   INTEGER NOT NULL,   -- order within Installation::group_ranges (flat)
     source_path     TEXT NOT NULL,
     source_ets_id   TEXT NOT NULL,
     name            TEXT NOT NULL,
@@ -296,6 +338,7 @@ CREATE TABLE group_address (
 CREATE TABLE parameter_instance (
     id            INTEGER PRIMARY KEY,
     device_id     INTEGER NOT NULL REFERENCES device(id),
+    position      INTEGER NOT NULL,   -- order within Installation::parameters
     source_path   TEXT NOT NULL,
     source_ets_id TEXT NOT NULL,
     raw           TEXT NOT NULL

@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-03 (Session 4)
+Last updated: 2026-09-03 (Session 5, cycle 1)
 
 ## Where the project stands
 
@@ -11,7 +11,7 @@ Last updated: 2026-09-03 (Session 4)
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
-| 5 | UI / UX | Not started |
+| 5 | UI / UX | **In progress** — cycle 1 (shell, projection, Project Explorer) done, see [ROADMAP.md](ROADMAP.md) |
 | 6 | KNXnet/IP | Not started |
 | 7 | Integration & hardening | Not started |
 
@@ -87,9 +87,26 @@ when neither flag is given, and a new **`knx products`** subcommand
 database and ingesting a `.knxproj`'s manufacturer data separately from a
 full import. 10 tests.
 
+**`knx-projection` is a new crate this session**: a pure `Project` →
+`ProjectTree` projection (`lib.rs`) with no IO of its own, `ts-rs`-derived
+TypeScript bindings for the desktop frontend, and a dependency on nothing
+but `knx-core` — the fourth `check-layering` root, held to the same
+IO-free bar as `knx-core` itself. 12 tests.
+
+**`apps/knx-desktop` is the desktop shell**: Tauri v2 with a React + Vite
+frontend, scaffolded this session rather than in Session 1. Its one
+command so far, `open_project`, imports a `.knxproj`, projects it through
+`knx-projection`, and returns the resulting `ProjectTree` to the
+frontend's Project Explorer. The store connection it opens for that
+import is in-memory (`knx_store::open_and_migrate_in_memory`) and
+discarded on drop — this cycle displays a project but does not persist or
+reload any of the desktop app's own state. 1 test.
+
 `knx-net`, `knx-secure` remain empty crates with their responsibility
 stated in a doc comment. There is still no manufacturer parameter
-*interpretation* (the `Dynamic` tree, `when/@test`) and no UI.
+*interpretation* (the `Dynamic` tree, `when/@test`), and the desktop UI so
+far covers only the Project Explorer — no properties inspector, search,
+command palette, dark/light mode or persistence yet.
 
 Three architectural rules are enforced mechanically rather than by
 discipline, and all three have been observed to fail on a deliberate
@@ -98,11 +115,12 @@ violation:
 - `cargo run -p xtask -- check-layering` — `knx-core` reaches none of
   `serde_json`, `quick-xml`, `rusqlite`, `tokio`; `knx-etsproj` reaches no
   `knx-store`; `knx-productdb` reaches neither `knx-etsproj` nor
-  `knx-store` (Session 4).
+  `knx-store` (Session 4); `knx-projection` reaches none of the same
+  packages forbidden to `knx-core` (Session 5, the fourth root).
 - `cargo deny check` — no licence outside the allowlist enters the graph; GPL
   is not on the allowlist.
 
-238 tests pass across the workspace as of this session.
+252 tests pass across the workspace as of this session.
 
 ## What exists
 
@@ -113,12 +131,14 @@ violation:
 | `crates/knx-store/` | SQLite schema-version migration chain through v3 (`migration.rs`), the opaque passthrough table (`opaque.rs`), the manufacturer manifest table (`manifest.rs`, Session 4), and three frozen fixtures. |
 | `crates/knx-etsproj/` | The full six-stage `.knxproj` import/export pipeline — see the Session 3 paragraph above. Hands manufacturer files out separately from opaque entries (Session 4). No dependency on `knx-store`. |
 | `crates/knx-productdb/` | The shared product database: own SQLite migration chain, streaming manufacturer-XML ingest, and enrichment of `ComObjectInstance` — see the Session 4 paragraph above. No dependency on `knx-etsproj` or `knx-store`. |
+| `crates/knx-projection/` | Pure `Project` → `ProjectTree` projection with `ts-rs` TypeScript bindings — see the Session 5 paragraph above. No dependency beyond `knx-core`; the fourth `check-layering` root. |
 | `crates/knx-app/` | The import and export services (`import.rs`, `export.rs`) — the one crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together. |
 | `crates/knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
-| `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for three roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
+| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` command, in-memory store connection); `src/` the React frontend, including the `ts-rs`-generated bindings under `src/bindings/`. |
+| `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |
-| `.github/workflows/ci.yml` | CI: formatting, clippy with `-D warnings`, tests, the layering gate, and `cargo deny check`. |
+| `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-desktop/src/bindings` are not stale (Session 5). |
 | `docs/ARCHITECTURE.md` | Layering, workspace layout, enforced rules, core approach, UI boundary, KNXnet/IP, key material, test strategy. |
 | `docs/DATA_MODEL.md` | The target domain model, per section marked implemented / planned / retained-but-uninterpreted. |
 | `docs/IMPORT_EXPORT.md` | The six-stage pipeline, container handling, tolerant parsing, opaque store, import report, export rules, roundtrip guarantees. |

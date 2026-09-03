@@ -138,6 +138,12 @@ inspector, search, command palette, dark and light mode. Rule 3 of
 [ARCHITECTURE.md](ARCHITECTURE.md) section 4 becomes a mechanical gate in this
 session, since a UI finally exists to check.
 
+Cycle 1 (this document's own scope split, see
+`docs/superpowers/specs/2026-09-03-knx-desktop-shell-design.md`) delivered
+the shell, the projection layer, and Project Explorer. Inspector, search,
+command palette and dark/light mode are later cycles of this same
+session, not yet scheduled.
+
 **Entry condition.** Import produces a model worth displaying.
 
 ## Session 6 — KNXnet/IP

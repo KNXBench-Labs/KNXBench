@@ -838,6 +838,9 @@ mod tests {
         let loaded = load_com_object_instance(&conn, com.id).unwrap();
         assert_eq!(loaded.dpt, new_dpt);
         assert_eq!(loaded.text, com.text); // untouched by the targeted upsert
+        assert_eq!(loaded.description, com.description); // untouched
         assert_eq!(loaded.flags, com.flags); // untouched
+        assert_eq!(loaded.size, com.size); // untouched
+        assert_eq!(loaded.is_active, com.is_active); // untouched
     }
 }

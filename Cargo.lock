@@ -259,6 +259,7 @@ version = "0.0.0"
 dependencies = [
  "knx-core",
  "knx-etsproj",
+ "knx-productdb",
  "knx-store",
  "tempfile",
 ]
@@ -269,6 +270,7 @@ version = "0.0.0"
 dependencies = [
  "knx-app",
  "knx-etsproj",
+ "knx-productdb",
  "knx-store",
  "serde_json",
  "tempfile",
@@ -308,6 +310,12 @@ name = "knx-productdb"
 version = "0.0.0"
 dependencies = [
  "knx-core",
+ "quick-xml",
+ "rusqlite",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "zip",
 ]
 
 [[package]]

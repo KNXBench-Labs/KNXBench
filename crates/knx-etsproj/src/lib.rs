@@ -36,6 +36,10 @@ pub use source::{
 pub struct ImportOutcome {
     pub project: knx_core::Project,
     pub opaque: Vec<opaque::OpaqueEntry>,
+    /// Manufacturer files (`<M-xxxx>/*`, `Baggages/*` — everything except
+    /// `.signature` entries) on their way to the product database
+    /// (ADR-0005). `knx-app` is the only crate that ingests these.
+    pub manufacturer: Vec<opaque::ManufacturerFile>,
     pub report: report::ImportReport,
 }
 
@@ -50,6 +54,10 @@ impl std::fmt::Debug for ImportOutcome {
         f.debug_struct("ImportOutcome")
             .field("project", &"knx_core::Project { .. }")
             .field("opaque", &format!("{} entries", self.opaque.len()))
+            .field(
+                "manufacturer",
+                &format!("{} files", self.manufacturer.len()),
+            )
             .field("report", &self.report)
             .finish()
     }
@@ -150,11 +158,13 @@ pub fn import_knxproj_bytes(
     let mapped = map::map(&parsed.document, &topology_path);
     let inference = infer::infer_group_address_dpts(&mapped.project);
 
-    let mut opaque_entries = opaque::collect_container_entries(
+    let collected = opaque::collect_container_entries(
         &mut container,
         &[topology_path.as_str(), info_path.as_str()],
     )
     .map_err(ImportFailure::Container)?;
+    let mut opaque_entries = collected.opaque;
+    let manufacturer = collected.manufacturer;
     for attribute in &mapped.retained {
         opaque_entries.push(opaque::from_retained_attribute(&topology_path, attribute));
     }
@@ -185,11 +195,13 @@ pub fn import_knxproj_bytes(
         &mapped,
         &inference,
         &opaque_entries,
+        &manufacturer,
     );
 
     Ok(ImportOutcome {
         project: mapped.project,
         opaque: opaque_entries,
+        manufacturer,
         report: import_report,
     })
 }
@@ -224,6 +236,9 @@ mod import_tests {
     #[test]
     fn the_opaque_entries_cover_every_container_entry_we_do_not_regenerate() {
         let out = import_knxproj(&reference_ets4_path()).unwrap();
-        assert_eq!(out.opaque.iter().filter(|e| e.xpath.is_empty()).count(), 36);
+        // 36 whole-file entries, split between the opaque store and the
+        // manufacturer files now handed out separately (Task 12).
+        let opaque_whole_files = out.opaque.iter().filter(|e| e.xpath.is_empty()).count();
+        assert_eq!(opaque_whole_files + out.manufacturer.len(), 36);
     }
 }

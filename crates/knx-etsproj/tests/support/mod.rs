@@ -10,6 +10,27 @@
 
 use std::path::PathBuf;
 
+use knx_etsproj::opaque::{ManufacturerFile, OpaqueEntry};
+
+/// Reassembles the full entry list `export_knxproj` needs: every opaque
+/// entry plus every manufacturer file converted back into an `OpaqueEntry`
+/// at its own `source_path`, mirroring what `knx-app` does for real once
+/// the product database exists (Task 14).
+pub fn all_entries(opaque: &[OpaqueEntry], manufacturer: &[ManufacturerFile]) -> Vec<OpaqueEntry> {
+    opaque
+        .iter()
+        .cloned()
+        .chain(manufacturer.iter().map(|m| OpaqueEntry {
+            source_path: m.source_path.clone(),
+            xpath: String::new(),
+            kind: m.kind,
+            name: String::new(),
+            bytes: m.bytes.clone(),
+            sha256: m.sha256.clone(),
+        }))
+        .collect()
+}
+
 pub fn workspace_root() -> PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()

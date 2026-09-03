@@ -8,18 +8,36 @@ use knx_core::string_table::{Language, StringTable, TranslationKey};
 use crate::StoreError;
 
 pub fn upsert_string_table(conn: &Connection, table: &StringTable) -> Result<(), StoreError> {
-    let tx = conn.unchecked_transaction()?;
-    {
-        tx.execute("DELETE FROM string_table_entry", [])?;
-        let mut stmt = tx.prepare(
-            "INSERT INTO string_table_entry (key, language, value) VALUES (?1, ?2, ?3)",
-        )?;
+    // A `SAVEPOINT` rather than `conn.unchecked_transaction()`: this is
+    // called both standalone (this module's own tests) and nested inside
+    // `knx_store::project::save_project`'s own transaction. `BEGIN` (which
+    // `unchecked_transaction()` issues) fails with "cannot start a
+    // transaction within a transaction" in the nested case; `SAVEPOINT` is
+    // valid at any nesting depth, including with no transaction open yet.
+    conn.execute_batch("SAVEPOINT knx_store_upsert_string_table")?;
+    let result = (|| -> Result<(), StoreError> {
+        conn.execute("DELETE FROM string_table_entry", [])?;
+        let mut stmt = conn
+            .prepare("INSERT INTO string_table_entry (key, language, value) VALUES (?1, ?2, ?3)")?;
         for (key, language, value) in table.iter() {
             stmt.execute(params![key.0, language.0, value])?;
         }
+        Ok(())
+    })();
+    match result {
+        Ok(()) => {
+            conn.execute_batch("RELEASE knx_store_upsert_string_table")?;
+            Ok(())
+        }
+        Err(e) => {
+            // Best-effort unwind; the original error is what's reported.
+            let _ = conn.execute_batch(
+                "ROLLBACK TO knx_store_upsert_string_table; \
+                 RELEASE knx_store_upsert_string_table",
+            );
+            Err(e)
+        }
     }
-    tx.commit()?;
-    Ok(())
 }
 
 pub fn load_string_table(
@@ -78,9 +96,17 @@ mod tests {
     fn upsert_replaces_rather_than_accumulates() {
         let conn = open_and_migrate_in_memory().unwrap();
         let mut table = StringTable::new(Language("en".into()));
-        table.insert(TranslationKey("k1".into()), Language("en".into()), "A".into());
+        table.insert(
+            TranslationKey("k1".into()),
+            Language("en".into()),
+            "A".into(),
+        );
         upsert_string_table(&conn, &table).unwrap();
-        table.insert(TranslationKey("k2".into()), Language("en".into()), "B".into());
+        table.insert(
+            TranslationKey("k2".into()),
+            Language("en".into()),
+            "B".into(),
+        );
         upsert_string_table(&conn, &table).unwrap();
         let count: i64 = conn
             .query_row("SELECT COUNT(*) FROM string_table_entry", [], |r| r.get(0))

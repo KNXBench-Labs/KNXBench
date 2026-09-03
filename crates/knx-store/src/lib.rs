@@ -37,6 +37,19 @@ pub enum StoreError {
     /// project (`Project::new`), which is a valid in-memory value that has
     /// simply not been persisted yet.
     NotSaved,
+    /// `save_project` found devices in `Project::devices` that no
+    /// `Line::devices` or `Topology::unassigned` list names. `save_project`
+    /// writes devices by walking the topology, so such a device has no
+    /// installation to be filed under and would be silently dropped —
+    /// refused instead (CLAUDE.md: never silently discard information).
+    UnreachableDevices(Vec<knx_core::ids::DeviceId>),
+    /// The same, one level down: communication object instances owned by
+    /// `Project::devices` that no `DeviceInstance::com_objects` list names.
+    UnreachableComObjects(Vec<knx_core::ids::ComObjectInstanceId>),
+    /// A `com_object_override.attr` value this build does not know — only
+    /// reachable from a database written by something other than this code
+    /// (hand-edited, corrupted, or a newer/third-party writer).
+    UnknownOverrideAttr(String),
 }
 
 impl std::error::Error for StoreError {}
@@ -46,8 +59,33 @@ impl fmt::Display for StoreError {
         match self {
             StoreError::Sqlite(e) => write!(f, "{e}"),
             StoreError::NotSaved => write!(f, "no project has been saved to this database yet"),
+            StoreError::UnreachableDevices(ids) => write!(
+                f,
+                "{} device(s) exist in the project but are named by no line and by no \
+                 unassigned list, so they have no installation to be saved under: {}",
+                ids.len(),
+                join_ids(ids)
+            ),
+            StoreError::UnreachableComObjects(ids) => write!(
+                f,
+                "{} communication object instance(s) exist in the project but are named by no \
+                 device's com_objects list, so they have no device to be saved under: {}",
+                ids.len(),
+                join_ids(ids)
+            ),
+            StoreError::UnknownOverrideAttr(attr) => write!(
+                f,
+                "com_object_override.attr {attr:?} is not an attribute this build knows"
+            ),
         }
     }
+}
+
+fn join_ids<T: fmt::Display>(ids: &[T]) -> String {
+    ids.iter()
+        .map(|id| id.to_string())
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 impl From<rusqlite::Error> for StoreError {

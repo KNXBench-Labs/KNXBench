@@ -49,6 +49,15 @@ impl Devices {
     pub fn com_object_mut(&mut self, id: ComObjectInstanceId) -> Option<&mut ComObjectInstance> {
         self.com_objects.get_mut(&id)
     }
+
+    /// Every communication object instance this `Devices` owns, in id order —
+    /// including any not currently named by its device's `com_objects` list.
+    /// Persistence needs the full set to be able to notice such an orphan
+    /// instead of silently dropping it, the same reason `StringTable::iter`
+    /// exists.
+    pub fn com_objects(&self) -> impl Iterator<Item = &ComObjectInstance> {
+        self.com_objects.values()
+    }
 }
 
 #[cfg(test)]
@@ -74,6 +83,35 @@ mod tests {
             com_objects: vec![],
             binary_data: vec![],
         }
+    }
+
+    #[test]
+    fn com_objects_enumerates_every_instance_including_an_unlinked_one() {
+        use crate::device::ComObjectInstance;
+        use crate::flags::ResolvedFlags;
+        use crate::ids::ComObjectInstanceId;
+        use crate::provenance::Override;
+
+        let mut d = Devices::new();
+        d.insert(device(DeviceId(1))); // its `com_objects` list stays empty
+        d.insert_com_object(ComObjectInstance {
+            id: ComObjectInstanceId(7),
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "t".into(),
+            },
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+        });
+        let ids: Vec<_> = d.com_objects().map(|c| c.id).collect();
+        assert_eq!(ids, vec![ComObjectInstanceId(7)]);
     }
 
     #[test]

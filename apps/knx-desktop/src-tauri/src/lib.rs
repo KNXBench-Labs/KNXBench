@@ -22,6 +22,14 @@ pub struct AppState {
     /// from, if any. `None` until `save_project_as`/`open_native_project`
     /// sets it; plain `save_project` requires it already set.
     pub store_path: Mutex<Option<PathBuf>>,
+    /// Every applied command's inverse, for undo/redo. Reset to empty on
+    /// `open_project`/`open_native_project` — undo history never survives
+    /// loading a different project, and is never persisted to `.knxdb`.
+    pub command_stack: Mutex<knx_core::CommandStack>,
+    /// (errors, warnings) from the initial import's `ImportReport`,
+    /// reapplied to every tree rebuilt after a command/undo/redo — edits
+    /// don't change what import lost. `(0, 0)` for a `.knxdb` native load.
+    pub import_counts: Mutex<(usize, usize)>,
 }
 
 impl Default for AppState {
@@ -29,6 +37,8 @@ impl Default for AppState {
         Self {
             project: Mutex::new(None),
             store_path: Mutex::new(None),
+            command_stack: Mutex::new(knx_core::CommandStack::new()),
+            import_counts: Mutex::new((0, 0)),
         }
     }
 }
@@ -62,6 +72,8 @@ fn open_project(path: String, state: tauri::State<AppState>) -> Result<ProjectTr
         (tree, imported.project)
     };
     *state.project.lock().expect("state mutex poisoned") = Some(project);
+    *state.command_stack.lock().expect("state mutex poisoned") = knx_core::CommandStack::new();
+    *state.import_counts.lock().expect("state mutex poisoned") = (tree.errors, tree.warnings);
     Ok(tree)
 }
 
@@ -104,6 +116,115 @@ fn device_detail(
     device_detail_impl(project, device_id)
 }
 
+/// Rebuilds `tree` from `project` and overlays the counts/undo-redo state
+/// that `build_project_tree` alone cannot know about.
+fn tree_with_state(
+    project: &knx_core::Project,
+    stack: &knx_core::CommandStack,
+    import_counts: (usize, usize),
+) -> knx_projection::ProjectTree {
+    let mut tree = knx_projection::build_project_tree(project);
+    tree.errors = import_counts.0;
+    tree.warnings = import_counts.1;
+    tree.can_undo = stack.can_undo();
+    tree.can_redo = stack.can_redo();
+    tree
+}
+
+fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {
+    let mut project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_mut().ok_or("no project open")?;
+    let mut stack = state.command_stack.lock().expect("state mutex poisoned");
+    stack.do_command(project, cmd).map_err(|e| e.to_string())?;
+    let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+    Ok(tree_with_state(project, &stack, import_counts))
+}
+
+pub fn set_individual_address_impl(
+    state: &AppState,
+    device_id: u32,
+    address: Option<String>,
+) -> Result<knx_projection::ProjectTree, String> {
+    let address = match address {
+        Some(s) => Some(
+            s.parse::<knx_core::IndividualAddress>()
+                .map_err(|e| e.to_string())?,
+        ),
+        None => None,
+    };
+    apply(
+        state,
+        knx_core::Command::SetIndividualAddress {
+            device: knx_core::DeviceId(device_id),
+            address,
+        },
+    )
+}
+
+pub fn set_com_object_dpt_impl(
+    state: &AppState,
+    com_object_id: u32,
+    dpt: Option<String>,
+) -> Result<knx_projection::ProjectTree, String> {
+    let dpt = match dpt {
+        Some(s) => Some(knx_core::DptRef::parse(&s).map_err(|e| e.to_string())?),
+        None => None,
+    };
+    apply(
+        state,
+        knx_core::Command::SetComObjectDpt {
+            com_object: knx_core::ComObjectInstanceId(com_object_id),
+            dpt,
+        },
+    )
+}
+
+pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String> {
+    let mut project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_mut().ok_or("no project open")?;
+    let mut stack = state.command_stack.lock().expect("state mutex poisoned");
+    stack.undo(project).map_err(|e| e.to_string())?;
+    let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+    Ok(tree_with_state(project, &stack, import_counts))
+}
+
+pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String> {
+    let mut project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_mut().ok_or("no project open")?;
+    let mut stack = state.command_stack.lock().expect("state mutex poisoned");
+    stack.redo(project).map_err(|e| e.to_string())?;
+    let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+    Ok(tree_with_state(project, &stack, import_counts))
+}
+
+#[tauri::command]
+fn set_individual_address(
+    device_id: u32,
+    address: Option<String>,
+    state: tauri::State<AppState>,
+) -> Result<knx_projection::ProjectTree, String> {
+    set_individual_address_impl(&state, device_id, address)
+}
+
+#[tauri::command]
+fn set_com_object_dpt(
+    com_object_id: u32,
+    dpt: Option<String>,
+    state: tauri::State<AppState>,
+) -> Result<knx_projection::ProjectTree, String> {
+    set_com_object_dpt_impl(&state, com_object_id, dpt)
+}
+
+#[tauri::command]
+fn undo(state: tauri::State<AppState>) -> Result<knx_projection::ProjectTree, String> {
+    undo_impl(&state)
+}
+
+#[tauri::command]
+fn redo(state: tauri::State<AppState>) -> Result<knx_projection::ProjectTree, String> {
+    redo_impl(&state)
+}
+
 #[tauri::command]
 fn save_project_as(path: String, state: tauri::State<AppState>) -> Result<(), String> {
     let path = PathBuf::from(path);
@@ -137,6 +258,8 @@ fn open_native_project(path: String, state: tauri::State<AppState>) -> Result<Pr
     let tree = knx_projection::build_project_tree(&project);
     *state.project.lock().expect("state mutex poisoned") = Some(project);
     *state.store_path.lock().expect("state mutex poisoned") = Some(path);
+    *state.command_stack.lock().expect("state mutex poisoned") = knx_core::CommandStack::new();
+    *state.import_counts.lock().expect("state mutex poisoned") = (0, 0);
     Ok(tree)
 }
 
@@ -168,7 +291,11 @@ pub fn run() {
             save_project,
             save_project_as,
             open_native_project,
-            device_detail
+            device_detail,
+            set_individual_address,
+            set_com_object_dpt,
+            undo,
+            redo
         ])
         .run(tauri::generate_context!())
         .expect("error while running knx-desktop");

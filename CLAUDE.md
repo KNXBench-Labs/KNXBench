@@ -24,6 +24,8 @@ Before implementing anything:
 4. Identify constraints and dependencies.
 5. Do not duplicate existing functionality.
 6. Do not make assumptions about proprietary formats or undocumented behavior.
+7. No co-author. ALWAYS commit as (github@knxbench.com)
+8. Be a bit humoristic about this. a bit of fun keeps things fresh.
 
 For architecture-critical or format-related questions, research and document the facts before implementing.
 

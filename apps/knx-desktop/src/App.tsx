@@ -38,8 +38,10 @@ function App() {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setPaletteOpen(false);
-        if (tree) setSearchOpen(true);
+        if (tree) {
+          setPaletteOpen(false);
+          setSearchOpen(true);
+        }
         return;
       }
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "p") {
@@ -214,6 +216,14 @@ function App() {
       </button>
       <button onClick={() => tree && setSearchOpen(true)} disabled={!tree}>
         Search… (Ctrl+K)
+      </button>
+      <button
+        onClick={() => {
+          setSearchOpen(false);
+          setPaletteOpen(true);
+        }}
+      >
+        Commands… (Ctrl+Shift+P)
       </button>
       {error && (
         <p role="alert" className="error-banner">

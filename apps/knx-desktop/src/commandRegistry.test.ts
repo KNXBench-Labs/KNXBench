@@ -76,4 +76,11 @@ describe("command enablement", () => {
     COMMANDS.find((c) => c.id === "save")!.run(ctx);
     expect(called).toBe(true);
   });
+
+  it("lists all seven commands in palette order, with an unconditionally enabled first entry", () => {
+    expect(COMMANDS.map((c) => c.id)).toEqual([
+      "open-project", "open-native", "save", "save-as", "undo", "redo", "search",
+    ]);
+    expect(COMMANDS[0].isEnabled(noopCtx({ tree: null }))).toBe(true);
+  });
 });

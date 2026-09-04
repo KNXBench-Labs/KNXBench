@@ -19,6 +19,10 @@ export interface PaletteCommand {
   run: (ctx: CommandContext) => void;
 }
 
+// `isEnabled` on each command below mirrors the `disabled` condition on the
+// matching toolbar button in `App.tsx` (`!tree`, `!tree?.can_undo`,
+// `!tree?.can_redo`) — the toolbar buttons are not derived from this
+// registry, so the two must be kept in sync by hand if either changes.
 export const COMMANDS: PaletteCommand[] = [
   {
     id: "open-project",
@@ -75,6 +79,6 @@ export const COMMANDS: PaletteCommand[] = [
  */
 export function filterCommands(commands: PaletteCommand[], query: string): PaletteCommand[] {
   const needle = query.trim().toLowerCase();
-  if (needle === "") return commands;
+  if (needle === "") return [...commands];
   return commands.filter((cmd) => cmd.label.toLowerCase().includes(needle));
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -17,21 +17,33 @@ function App() {
   const [hasStorePath, setHasStorePath] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
+  // Mirrors selectedDeviceId synchronously so in-flight device_detail
+  // responses can tell, once they land, whether the selection has since
+  // moved on — state updates alone are too late to check inside the same
+  // async callback that reads them.
+  const selectedDeviceIdRef = useRef<number | null>(null);
 
   function resetTree(newTree: ProjectTree) {
     setTree(newTree);
+    selectedDeviceIdRef.current = null;
     setSelectedDeviceId(null);
     setDeviceDetail(null);
   }
 
   async function selectDevice(id: number) {
+    selectedDeviceIdRef.current = id;
     setSelectedDeviceId(id);
     setError(null);
     try {
-      setDeviceDetail(await invoke<DeviceDetail>("device_detail", { deviceId: id }));
+      const detail = await invoke<DeviceDetail>("device_detail", { deviceId: id });
+      if (selectedDeviceIdRef.current === id) {
+        setDeviceDetail(detail);
+      }
     } catch (e) {
-      setError(String(e));
-      setDeviceDetail(null);
+      if (selectedDeviceIdRef.current === id) {
+        setError(String(e));
+        setDeviceDetail(null);
+      }
     }
   }
 
@@ -39,12 +51,20 @@ function App() {
   // address edit changes its label), and the currently selected device's
   // detail refreshes alongside it (its own fields, or nothing if the edit
   // targeted a different device — device_detail is cheap enough to always
-  // refetch rather than track which device a given command touched).
+  // refetch rather than track which device a given command touched). If the
+  // selection has moved on by the time this response lands (the user clicked
+  // another device while this edit's request was in flight), the stale
+  // result is discarded instead of overwriting the newly selected device's
+  // detail.
   async function handleTreeUpdate(newTree: ProjectTree) {
     setTree(newTree);
-    if (selectedDeviceId !== null) {
+    const id = selectedDeviceIdRef.current;
+    if (id !== null) {
       try {
-        setDeviceDetail(await invoke<DeviceDetail>("device_detail", { deviceId: selectedDeviceId }));
+        const detail = await invoke<DeviceDetail>("device_detail", { deviceId: id });
+        if (selectedDeviceIdRef.current === id) {
+          setDeviceDetail(detail);
+        }
       } catch (e) {
         setError(String(e));
       }

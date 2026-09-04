@@ -1,6 +1,31 @@
 :root {
   color-scheme: light dark;
   font-family: system-ui, sans-serif;
+  --knx-error-color: #b00020;
+  --knx-overlay-backdrop: rgba(0, 0, 0, 0.4);
+  --knx-overlay-shadow: rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --knx-error-color: #ff6b6b;
+    --knx-overlay-backdrop: rgba(0, 0, 0, 0.6);
+    --knx-overlay-shadow: rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme="light"] {
+  --knx-error-color: #b00020;
+  --knx-overlay-backdrop: rgba(0, 0, 0, 0.4);
+  --knx-overlay-shadow: rgba(0, 0, 0, 0.3);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --knx-error-color: #ff6b6b;
+  --knx-overlay-backdrop: rgba(0, 0, 0, 0.6);
+  --knx-overlay-shadow: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
 }
 
 body {
@@ -12,8 +37,8 @@ main {
 }
 
 .error-banner {
-  color: #b00020;
-  border: 1px solid #b00020;
+  color: var(--knx-error-color);
+  border: 1px solid var(--knx-error-color);
   padding: 0.5rem;
   border-radius: 4px;
 }
@@ -51,7 +76,7 @@ main {
 }
 
 .project-explorer footer .import-errors {
-  color: #b00020;
+  color: var(--knx-error-color);
   font-weight: bold;
 }
 
@@ -101,7 +126,7 @@ main {
 
 .field-error {
   display: block;
-  color: #b00020;
+  color: var(--knx-error-color);
   font-size: 0.85em;
 }
 
@@ -132,7 +157,7 @@ main {
 .search-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--knx-overlay-backdrop);
   display: flex;
   justify-content: center;
   padding-top: 10vh;
@@ -146,7 +171,7 @@ main {
   max-height: 70vh;
   overflow-y: auto;
   border-radius: 6px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 24px var(--knx-overlay-shadow);
   padding: 0.75rem;
 }
 

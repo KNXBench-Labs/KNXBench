@@ -9,6 +9,8 @@ import Inspector from "./Inspector";
 import Search from "./Search";
 import CommandPalette from "./CommandPalette";
 import type { CommandContext } from "./commandRegistry";
+import ThemeToggle from "./ThemeToggle";
+import { useTheme } from "./theme";
 
 const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
 
@@ -28,6 +30,7 @@ function App() {
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [theme, cycleTheme] = useTheme();
   // Mirrors `selection` synchronously so in-flight device_detail responses
   // can tell, once they land, whether the selection has since moved on —
   // state updates alone are too late to check inside the same async
@@ -225,6 +228,7 @@ function App() {
       >
         Commands… (Ctrl+Shift+P)
       </button>
+      <ThemeToggle theme={theme} onCycle={cycleTheme} />
       {error && (
         <p role="alert" className="error-banner">
           {error}

@@ -3,6 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <title>KNX</title>
+    <script>
+      (function () {
+        var t = localStorage.getItem("knx-desktop:theme");
+        if (t === "light" || t === "dark") {
+          document.documentElement.setAttribute("data-theme", t);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

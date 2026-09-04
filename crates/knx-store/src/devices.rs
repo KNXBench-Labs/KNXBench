@@ -630,7 +630,11 @@ pub fn load_com_object_instance(
             "transmit" => flags.transmit = decode_bool(&state, value, layer),
             "update" => flags.update = decode_bool(&state, value, layer),
             "communication" => flags.communication = decode_bool(&state, value, layer),
-            other => unreachable!("unknown com_object_override.attr {other:?}"),
+            // Not a coding-bug-only branch: this code never writes an
+            // attribute it does not know, but a hand-edited, corrupted or
+            // third-party-written database can hold one, and refusing to
+            // read it is better than aborting the process.
+            other => return Err(StoreError::UnknownOverrideAttr(other.to_string())),
         }
     }
 
@@ -1000,6 +1004,32 @@ mod tests {
         assert_eq!(loaded.flags, com.flags); // untouched
         assert_eq!(loaded.size, com.size); // untouched
         assert_eq!(loaded.is_active, com.is_active); // untouched
+    }
+
+    /// A `com_object_override.attr` this build does not know reaches
+    /// `load_com_object_instance` from any database this code did not write
+    /// — hand-edited, corrupted, or written by a newer/third-party tool. It
+    /// is an error to report, not a process to abort.
+    #[test]
+    fn an_unknown_override_attribute_is_an_error_not_a_panic() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        upsert_installation_row(&conn, &installation()).unwrap();
+        let d = device();
+        upsert_device(&conn, InstallationId(0), 0, &d).unwrap();
+        let com = com_object_fixture();
+        upsert_com_object_instance(&conn, d.id, 0, &com).unwrap();
+        conn.execute(
+            "INSERT INTO com_object_override
+                 (com_object_instance_id, attr, state, value, text_kind, layer)
+             VALUES (?1, 'priority', 'value', 'low', NULL, 'Instance')",
+            params![com.id.0],
+        )
+        .unwrap();
+
+        match load_com_object_instance(&conn, com.id) {
+            Err(StoreError::UnknownOverrideAttr(attr)) => assert_eq!(attr, "priority"),
+            other => panic!("expected UnknownOverrideAttr, got {other:?}"),
+        }
     }
 
     #[test]

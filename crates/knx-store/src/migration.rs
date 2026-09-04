@@ -1,8 +1,11 @@
 //! Schema-version migration chain, keyed off SQLite's `user_version` pragma
 //! (ADR-0003). Migrations run in order; there is no version-skipping path
-//! and no downgrade. Entity tables arrive with Session 3's importer, once
-//! there is data to store — this chain currently only proves the version
-//! mechanics via a `schema_meta` marker table.
+//! and no downgrade. The chain now runs v0 -> v4: the `schema_meta` marker
+//! table (v1), the opaque passthrough table (v2), the manufacturer manifest
+//! (v3) and every `knx_core::Project` entity table (v4 — `project_info`
+//! through `parameter_instance`, written and read by `project.rs`'s
+//! `save_project`/`load_project`). Each version has a frozen fixture under
+//! `fixtures/` that the tests below migrate forward.
 
 use std::fmt;
 use std::path::Path;

@@ -41,7 +41,7 @@ one persistence module per entity area — `strings.rs`
 (`string_table_entry`), `topology.rs` (`installation`/`area`/`line`),
 `building.rs` (`building_part`/`building_part_device`), `devices.rs`
 (`device`/`binary_data_ref`/`com_object_instance`/`group_link`, plus the
-`com_object_override` codec for all seven `Override<T>` attributes on
+`com_object_override` codec for all eight `Override<T>` attributes on
 `ComObjectInstance`, normalized as one row per
 `(com_object_instance_id, attr)` rather than wide columns), `group.rs`
 (`group_range`/`group_address`), `parameter.rs` (`parameter_instance`) —
@@ -63,9 +63,38 @@ entity and every other `Override<T>` attribute is written only by a full
 `save_project`, until a command exists for it. A cross-task bug surfaced
 and was fixed during this cycle: `strings.rs`'s `upsert_string_table`
 originally opened its own `BEGIN`/`COMMIT` transaction internally, which
-panics when called from inside another already-open transaction (as
-`save_project` does); it now uses `SAVEPOINT`/`RELEASE`/`ROLLBACK TO`
-instead, so it composes correctly both standalone and nested. 42 tests.
+returned an error when called from inside another already-open transaction
+(as `save_project` does); it now uses `SAVEPOINT`/`RELEASE`/`ROLLBACK TO`
+instead, so it composes correctly both standalone and nested. A second,
+more serious integration bug surfaced in final review and was fixed before
+merge: `save_project` assumed `Installation::buildings`/`::group_ranges`
+arrive in pre-order (parent before child) — `knx-etsproj`'s importer
+actually produces post-order, which made `save_project` fail with a
+foreign-key violation on every real project with a nested building or
+group-range hierarchy, including this repo's own reference project.
+Fixed with `PRAGMA defer_foreign_keys = ON` for the whole transaction
+(which also made the `building_part`/`group_range` `parent_id`-neutralizing
+statements from the original design redundant; removed). `knx-store` now
+carries `knx-etsproj` as a `[dev-dependencies]` entry (not a layering
+violation — `check-layering`'s rule is that `knx-etsproj` must not reach
+`knx-store`, not the reverse, and a dev-dependency never enters the
+production graph) so a reference-project round-trip test
+(`tests/reference_project.rs`) can exercise exactly this path against the
+real reference `.knxproj`. `save_project` also now refuses (rather than
+silently drops) a device or communication-object instance that exists in
+`Devices` but is unreachable from any topology/building list —
+`StoreError::UnreachableDevices`/`UnreachableComObjects`. 51 tests (49
+unit, 2 integration).
+
+**Known limitation carried from this cycle** ([KNOWN_LIMITATIONS.md §17](KNOWN_LIMITATIONS.md)):
+`knx_core::command::Command::DeleteGroupAddress` removes the
+`GroupAddressEntry` but does not clean up any `GroupLink` left pointing at
+it from a communication object — a `knx-core` command-layer gap, not a
+`knx-store` one. `sync_after_command` still deletes the address correctly,
+but a subsequent full `save_project` will fail with a foreign-key violation
+against the dangling link. Fixing it means deciding cascade-delete vs.
+block-the-delete vs. something else in `command.rs`'s own design,
+deliberately not done in this cycle.
 
 **`knx-etsproj` holds the full six-stage import/export pipeline**: the ZIP
 container (`container.rs`, with a 64 MB per-entry size guard), schema
@@ -146,7 +175,7 @@ violation:
 - `cargo deny check` — no licence outside the allowlist enters the graph; GPL
   is not on the allowlist.
 
-282 tests pass across the workspace as of this session.
+292 tests pass across the workspace as of this session.
 
 ## What exists
 

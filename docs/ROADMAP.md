@@ -153,7 +153,16 @@ sync for the four `Command` variants that exist today
 `CreateGroupAddress`/`DeleteGroupAddress`). This is storage-layer only —
 no Tauri `save_project`/`load_project` command and no desktop save UX yet.
 Inspector, search, command palette and dark/light mode remain not yet
-scheduled, now joined by knx-app wiring for save/load.
+scheduled.
+
+Cycle 3 adds the knx-app wiring cycle 2 left open: `save_project`/
+`save_project_as`/`open_native_project` Tauri commands over a `.knxdb`
+file (always a full round trip via `knx_store::{save_project,
+load_project}`, no incremental sync), plus Save/Save As/Open buttons in
+the frontend. A second, independent file format from ETS `.knxproj`
+import — `AppState` now tracks both the in-memory project and, separately,
+the `.knxdb` path it was last saved to or loaded from. Inspector, search,
+command palette and dark/light mode remain not yet scheduled.
 
 **Entry condition.** Import produces a model worth displaying.
 

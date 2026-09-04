@@ -22,3 +22,6 @@ knx-projection.workspace = true
 knx-store.workspace = true
 tauri.workspace = true
 tauri-plugin-dialog.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

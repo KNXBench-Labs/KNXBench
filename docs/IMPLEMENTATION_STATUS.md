@@ -262,7 +262,9 @@ where `isEnabled` is false render with a `disabled` class and
 `aria-disabled="true"`, are skipped by `ArrowUp`/`ArrowDown` traversal,
 and are a no-op on click or `Enter`. `App.tsx` gains `paletteOpen` state,
 a `Ctrl+Shift+P`/`Cmd+Shift+P` keyboard branch, a `ctx: CommandContext`
-built with `useMemo`, and a toolbar button ("Commands… (Ctrl+Shift+P)",
+built as a plain object literal each render (deliberately not
+memoized, matching every other prop `App.tsx` passes its children), and
+a toolbar button ("Commands… (Ctrl+Shift+P)",
 never `disabled`, same as the two Open buttons) alongside the existing
 "Search… (Ctrl+K)" button. `Ctrl+K` and `Ctrl+Shift+P` are mutually
 exclusive in both directions — each keyboard branch closes the other

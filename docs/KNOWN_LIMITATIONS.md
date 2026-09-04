@@ -436,9 +436,9 @@ semantics either: `CommandPalette.tsx`'s disabled rows carry
 highlighted row via `aria-activedescendant`.
 
 **Cause.** (a) The two overlays' keyboard-traversal semantics differ —
-`Search.tsx` navigates a grouped-by-kind list that wraps at the ends;
-`CommandPalette.tsx` navigates a flat list that skips disabled rows and
-stops at the ends — enough divergence that extracting a shared
+`Search.tsx` navigates a grouped-by-kind list (both stop, rather than wrap,
+at the ends); `CommandPalette.tsx` navigates a flat list that additionally
+skips disabled rows — enough divergence that extracting a shared
 `<ModalOverlay>` shell was judged premature after only two consumers;
 `styles.css`'s `.search-overlay`/`.search-panel`/`.search-empty`/
 `.search-results`/`.search-result` classes are shared today, but the

@@ -88,27 +88,47 @@ that module.
 
 ### Command dispatch
 
-`knx_core::Command` and `CommandError` gain `#[derive(Serialize,
-Deserialize, TS)]` (`#[ts(export)]`) so they can cross IPC. `AppState` gains:
+**Correction from the first draft of this section:** giving
+`knx_core::Command`/`CommandError` `Serialize`/`Deserialize`/`TS` derives
+would drag every type reachable from them (`ValidationError`,
+`GroupAddressEntry`, `GroupAddress`, `Override<T>`, ...) into IPC surface
+for the sake of two fields, and would add `serde`/`ts-rs` as dependencies
+of `knx-core` for the first time. Simpler: two narrow, per-field Tauri
+commands that take plain `Option<String>` and parse it server-side with
+the parsers that already exist and are already unit-tested
+(`IndividualAddress: FromStr`, `DptRef::parse`) — no new type crosses IPC,
+`knx-core` gains no new dependency, and there is no parsing logic to
+duplicate in TypeScript. The single-text-field UX from the frontend
+section is unaffected; only where parsing happens changed.
+
+`AppState` gains:
 
 ```rust
 pub command_stack: Mutex<CommandStack>,
+/// (errors, warnings) from the initial import's `ImportReport`, carried
+/// into every tree rebuilt after a command/undo/redo — edits don't change
+/// what import lost. `(0, 0)` for a `.knxdb` native load.
+pub import_counts: Mutex<(usize, usize)>,
 ```
 
-cleared (`*state.command_stack.lock().unwrap() = CommandStack::new()`)
-inside `open_project`, `save_project_as` is unaffected, and
-`open_native_project` — undo history never survives loading a different
-project. It does survive a `save_project`/`save_project_as` on the current
-project (in-memory only, never persisted to `.knxdb` — out of scope, same
-as every other app's session-only undo history).
+Both reset inside `open_project` (`import_counts` set from the same
+counts `apply_report_counts` computes) and `open_native_project` (both
+`(0, 0)`, fresh `CommandStack`) — undo history and the import-loss counts
+never survive loading a different project. They do survive a
+`save_project`/`save_project_as` on the current project (in-memory only,
+never persisted to `.knxdb` — out of scope, same as every other app's
+session-only undo history).
 
-Three new Tauri commands, mirroring the existing `open_project` shape
+Four new Tauri commands, mirroring the existing `open_project` shape
 (return the full refreshed tree so tree labels — e.g. a changed individual
 address — update without a second round trip):
 
 ```rust
 #[tauri::command]
-fn apply_command(cmd: knx_core::Command, state: tauri::State<AppState>) -> Result<ProjectTree, String>;
+fn set_individual_address(device_id: u32, address: Option<String>, state: tauri::State<AppState>) -> Result<ProjectTree, String>;
+
+#[tauri::command]
+fn set_com_object_dpt(com_object_id: u32, dpt: Option<String>, state: tauri::State<AppState>) -> Result<ProjectTree, String>;
 
 #[tauri::command]
 fn undo(state: tauri::State<AppState>) -> Result<ProjectTree, String>;
@@ -117,13 +137,19 @@ fn undo(state: tauri::State<AppState>) -> Result<ProjectTree, String>;
 fn redo(state: tauri::State<AppState>) -> Result<ProjectTree, String>;
 ```
 
-Each locks `project` and `command_stack` together, calls
-`CommandStack::do_command`/`undo`/`redo`, and on success rebuilds the tree
-the same way `open_project` does. On failure the project is untouched
-(`Command::apply`'s existing guarantee) and the error is
-`CommandError`'s/`ValidationError`'s `Display` text — already
-human-readable (e.g. "individual address 1.1.1 already used by device 5,
-cannot assign to device 3"). No structured error payload this cycle.
+`set_individual_address`/`set_com_object_dpt` parse their `Option<String>`
+first (`s.parse::<IndividualAddress>()` / `DptRef::parse(&s)`), returning
+the parser's own `Display`ed error on failure without touching the
+project; on success they build the matching `Command` and go through a
+shared `apply` helper with `undo`/`redo`. `apply` locks `project` and
+`command_stack` together, calls `CommandStack::do_command`, and — on
+success — rebuilds the tree via `knx_projection::build_project_tree` and
+overlays `import_counts` and `command_stack.can_undo()`/`can_redo()` onto
+it before returning. On failure the project is untouched (`Command::apply`'s
+existing guarantee) and the error is `CommandError`'s/`ValidationError`'s
+`Display` text — already human-readable (e.g. "individual address 1.1.1
+already used by device 5, cannot assign to device 3"). No structured
+error payload this cycle.
 
 `ProjectTree` gains `can_undo: bool` / `can_redo: bool` so the frontend's
 undo/redo buttons know their enabled state without a separate round trip.
@@ -163,15 +189,19 @@ Backend-only, following `apps/knx-desktop/src-tauri/tests/`'s existing
 no-Tauri-machinery pattern (`open_reference_project.rs`,
 `save_load_roundtrip.rs`):
 
-- `apply_command_impl`/`device_detail_impl` (the `pub fn`s the Tauri
-  commands wrap, same split as `open_project_impl`/`save_project_as_impl`)
-  get a new `command_dispatch.rs` integration test: apply
-  `SetIndividualAddress`, confirm the tree and `device_detail` reflect it,
-  undo, confirm it reverts, redo, confirm it reapplies.
-- A duplicate-individual-address case: `apply_command` returns `Err`, the
-  project is unchanged, `command_stack` gained nothing to undo.
-- `SetComObjectDpt`/`RestoreComObjectDpt` through the same round trip,
-  confirming `dpt_layer` reports `"UserEdit"` after a manual edit.
+- `set_individual_address_impl`/`set_com_object_dpt_impl`/`undo_impl`/
+  `redo_impl`/`device_detail_impl` (the `pub fn`s the Tauri commands wrap,
+  same split as `open_project_impl`/`save_project_as_impl`) get a new
+  `command_dispatch.rs` integration test: apply an individual-address
+  change, confirm the tree and `device_detail` reflect it, undo, confirm
+  it reverts, redo, confirm it reapplies.
+- A duplicate-individual-address case: `set_individual_address_impl`
+  returns `Err`, the project is unchanged, `command_stack` gained nothing
+  to undo.
+- A malformed address/DPT string case: the parser's own error surfaces,
+  project untouched.
+- `set_com_object_dpt_impl` through the same round trip, confirming
+  `dpt_layer` reports `"UserEdit"` after a manual edit.
 
 ## Out of scope (carried to later cycles)
 

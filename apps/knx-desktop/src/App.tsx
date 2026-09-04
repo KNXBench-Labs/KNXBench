@@ -66,7 +66,9 @@ function App() {
           setDeviceDetail(detail);
         }
       } catch (e) {
-        setError(String(e));
+        if (selectedDeviceIdRef.current === id) {
+          setError(String(e));
+        }
       }
     }
   }

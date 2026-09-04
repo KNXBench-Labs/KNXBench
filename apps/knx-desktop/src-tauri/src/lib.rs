@@ -83,6 +83,27 @@ pub fn open_native_project_impl(path: &Path) -> Result<ProjectTree, String> {
     Ok(knx_projection::build_project_tree(&project))
 }
 
+/// Projects one device's detail. `Err` names the device id when it no
+/// longer exists in `project` — a stale selection after an edit, for
+/// instance.
+pub fn device_detail_impl(
+    project: &knx_core::Project,
+    device_id: u32,
+) -> Result<knx_projection::DeviceDetail, String> {
+    knx_projection::build_device_detail(project, knx_core::DeviceId(device_id))
+        .ok_or_else(|| format!("device {device_id} not found"))
+}
+
+#[tauri::command]
+fn device_detail(
+    device_id: u32,
+    state: tauri::State<AppState>,
+) -> Result<knx_projection::DeviceDetail, String> {
+    let project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_ref().ok_or("no project open")?;
+    device_detail_impl(project, device_id)
+}
+
 #[tauri::command]
 fn save_project_as(path: String, state: tauri::State<AppState>) -> Result<(), String> {
     let path = PathBuf::from(path);
@@ -146,7 +167,8 @@ pub fn run() {
             open_project,
             save_project,
             save_project_as,
-            open_native_project
+            open_native_project,
+            device_detail
         ])
         .run(tauri::generate_context!())
         .expect("error while running knx-desktop");

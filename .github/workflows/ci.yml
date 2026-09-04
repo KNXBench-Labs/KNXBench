@@ -43,10 +43,19 @@ jobs:
       - name: Test
         run: cargo test --workspace
 
-      - name: Frontend build
+      - name: Frontend install
         run: |
           cd apps/knx-desktop
           npm ci
+
+      - name: Frontend tests
+        run: |
+          cd apps/knx-desktop
+          npm test
+
+      - name: Frontend build
+        run: |
+          cd apps/knx-desktop
           npm run build
 
       - name: ts-rs bindings up to date

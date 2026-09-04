@@ -423,3 +423,39 @@ cycle's surface to keep search and tree-navigation state disjoint.
 for a selection that originates outside the tree itself (search today,
 potentially a future command palette too).
 
+## 20. Command palette and search share overlay CSS and an accessibility gap, unaddressed
+
+**Limitation.** `apps/knx-desktop/src/Search.tsx` and `CommandPalette.tsx`
+are two near-identical modal-overlay implementations — an overlay div, a
+click-outside `stopPropagation` panel, an autofocused input, and
+`Escape`/arrow-key/`Enter` handling — kept as separate components rather
+than one shared shell. Neither overlay's result list has proper ARIA
+semantics either: `CommandPalette.tsx`'s disabled rows carry
+`aria-disabled="true"` but nothing backs it with `role="option"`/
+`role="listbox"` on the containing list, and neither overlay announces the
+highlighted row via `aria-activedescendant`.
+
+**Cause.** (a) The two overlays' keyboard-traversal semantics differ —
+`Search.tsx` navigates a grouped-by-kind list that wraps at the ends;
+`CommandPalette.tsx` navigates a flat list that skips disabled rows and
+stops at the ends — enough divergence that extracting a shared
+`<ModalOverlay>` shell was judged premature after only two consumers;
+`styles.css`'s `.search-overlay`/`.search-panel`/`.search-empty`/
+`.search-results`/`.search-result` classes are shared today, but the
+component logic is not. (b) Accessibility semantics for a custom
+listbox-like widget were out of scope for both the search and command
+palette design cycles, which focused on keyboard/mouse behavior, not
+screen-reader support.
+
+**Impact.** Two call sites to keep in sync by hand whenever overlay
+structure changes (e.g. a future scroll-into-view fix would need applying
+twice). A screen reader user gets no indication of which row is disabled
+or currently highlighted in either overlay.
+
+**Lifted when.** (a) A third overlay is added — the dark/light mode
+picker is next on [ROADMAP.md](ROADMAP.md) and would be that third case —
+at which point extracting a shared shell stops being speculative
+abstraction over two data points. (b) A joint accessibility pass covers
+both overlays together, not a palette-only or search-only fix, since the
+gap and its fix are identical in both.
+

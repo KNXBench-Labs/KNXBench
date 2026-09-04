@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-04 (Session 5, cycle 5)
+Last updated: 2026-09-04 (Session 5, cycle 6)
 
 ## Where the project stands
 
@@ -11,7 +11,7 @@ Last updated: 2026-09-04 (Session 5, cycle 5)
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
-| 5 | UI / UX | **In progress** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)) and cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)) done, see [ROADMAP.md](ROADMAP.md) |
+| 5 | UI / UX | **In progress** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)) and cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)) done, see [ROADMAP.md](ROADMAP.md) |
 | 6 | KNXnet/IP | Not started |
 | 7 | Integration & hardening | Not started |
 
@@ -244,14 +244,41 @@ frontend test runner: `package.json` gains a `vitest` test script, and CI
 now runs it. 14 `vitest` tests (`treeUtils.test.ts`, `searchMatch.test.ts`)
 alongside the existing 9 Rust integration tests, unchanged.
 
+Cycle 6 (`docs/superpowers/specs/2026-09-04-command-palette-design.md`)
+adds the `Ctrl+Shift+P` command palette. `commandRegistry.ts` is a new,
+IO-free module: `COMMANDS`, a static array of the seven actions
+`App.tsx` already exposes as toolbar buttons, each an `id`/`label`/
+optional `shortcutHint`/`isEnabled(ctx)`/`run(ctx)` record against a
+`CommandContext` of `tree` plus the seven existing callback functions;
+and `filterCommands`, a plain case-insensitive substring match over each
+command's label — no fuzzy ranking, since seven static entries need no
+scoring algorithm. `isEnabled` mirrors, by hand, the `disabled` condition
+on each command's toolbar button (`!tree`, `!tree?.can_undo`,
+`!tree?.can_redo`); the two are not derived from each other and must be
+kept in sync if either changes. `CommandPalette.tsx` reuses `Search.tsx`'s
+modal-overlay structure (autofocused input, click-outside-to-close,
+`Escape`/arrow-key/`Enter` handling) as one flat, ungrouped list; rows
+where `isEnabled` is false render with a `disabled` class and
+`aria-disabled="true"`, are skipped by `ArrowUp`/`ArrowDown` traversal,
+and are a no-op on click or `Enter`. `App.tsx` gains `paletteOpen` state,
+a `Ctrl+Shift+P`/`Cmd+Shift+P` keyboard branch, a `ctx: CommandContext`
+built with `useMemo`, and a toolbar button ("Commands… (Ctrl+Shift+P)",
+never `disabled`, same as the two Open buttons) alongside the existing
+"Search… (Ctrl+K)" button. `Ctrl+K` and `Ctrl+Shift+P` are mutually
+exclusive in both directions — each keyboard branch closes the other
+overlay before opening its own — and the palette works with no project
+loaded. 9 new `vitest` tests in `commandRegistry.test.ts`, for 23 total
+alongside the existing 9 Rust integration tests, unchanged.
+
 `knx-net`, `knx-secure` remain empty crates with their responsibility
 stated in a doc comment. There is still no manufacturer parameter
 *interpretation* (the `Dynamic` tree, `when/@test`), and the desktop UI so
 far covers the Project Explorer, the four save/load/import buttons, a
 properties inspector with undo/redo for two editable fields (individual
-address, communication-object DPT), and `Ctrl+K` search over devices,
-group addresses, and building parts — no command palette, dark/light
-mode, or editing of anything beyond those two fields yet.
+address, communication-object DPT), `Ctrl+K` search over devices, group
+addresses, and building parts, and a `Ctrl+Shift+P` command palette over
+the app's seven existing actions — no dark/light mode, or editing of
+anything beyond those two Inspector fields, yet.
 
 Three architectural rules are enforced mechanically rather than by
 discipline, and all three have been observed to fail on a deliberate
@@ -265,7 +292,7 @@ violation:
 - `cargo deny check` — no licence outside the allowlist enters the graph; GPL
   is not on the allowlist.
 
-306 Rust tests pass across the workspace as of this session, plus 14
+306 Rust tests pass across the workspace as of this session, plus 23
 `vitest` tests in `apps/knx-desktop` (run separately, `npm test`, not part
 of `cargo test --workspace`).
 
@@ -282,7 +309,7 @@ of `cargo test --workspace`).
 | `crates/knx-app/` | The import and export services (`import.rs`, `export.rs`) — the one crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together. |
 | `crates/knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
-| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` against an in-memory store; `save_project`/`save_project_as`/`open_native_project` against a `.knxdb` file; `device_detail`/`set_individual_address`/`set_com_object_dpt`/`undo`/`redo` against the in-memory `CommandStack`); `src/` the React frontend (`ProjectExplorer` selection, `Inspector`, undo/redo toolbar and `Ctrl+Z`/`Ctrl+Shift+Z`, `Ctrl+K` search over devices/group addresses/building parts via `Search.tsx`/`searchMatch.ts`/`treeUtils.ts`), including the `ts-rs`-generated bindings under `src/bindings/` and a `vitest` suite (Session 5 cycle 5). |
+| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` against an in-memory store; `save_project`/`save_project_as`/`open_native_project` against a `.knxdb` file; `device_detail`/`set_individual_address`/`set_com_object_dpt`/`undo`/`redo` against the in-memory `CommandStack`); `src/` the React frontend (`ProjectExplorer` selection, `Inspector`, undo/redo toolbar and `Ctrl+Z`/`Ctrl+Shift+Z`, `Ctrl+K` search over devices/group addresses/building parts via `Search.tsx`/`searchMatch.ts`/`treeUtils.ts`, and `Ctrl+Shift+P` command palette via `CommandPalette.tsx`/`commandRegistry.ts`, Session 5 cycle 6), including the `ts-rs`-generated bindings under `src/bindings/` and a `vitest` suite (Session 5 cycle 5, extended cycle 6). |
 | `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |
 | `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, `knx-desktop`'s own `npm test` (Vitest, Session 5 cycle 5), the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-desktop/src/bindings` are not stale (Session 5). |
@@ -290,7 +317,7 @@ of `cargo test --workspace`).
 | `docs/DATA_MODEL.md` | The target domain model, per section marked implemented / planned / retained-but-uninterpreted. |
 | `docs/IMPORT_EXPORT.md` | The six-stage pipeline, container handling, tolerant parsing, opaque store, import report, export rules, roundtrip guarantees. |
 | `docs/COMPATIBILITY.md` | What is verified, what is expected but unverified, what is not supported — every verified row now names the test that verifies it. |
-| `docs/KNOWN_LIMITATIONS.md` | Nineteen limitations with cause, impact and the condition that would lift each. |
+| `docs/KNOWN_LIMITATIONS.md` | Twenty limitations with cause, impact and the condition that would lift each. |
 | `docs/ROADMAP.md` | Sessions 2–7 with deliverables and entry conditions. |
 | `docs/adr/` | Ten ADRs, a template and an index. |
 | `docs/RESEARCH.md` | Session 0 result plus Session 3 amendments: verified findings on the `.knxproj` format, manufacturer data, master data, KNXnet/IP, KNX Secure, licensing, risks. |
@@ -334,8 +361,9 @@ project's own `Instance` layer stated.
 
 Cycle 5 shipped Search: finding a device, group address, or building part
 by name/address across a project too large to scan by eye in the Project
-Explorer alone. Command palette and dark/light mode remain, per
-[ROADMAP.md](ROADMAP.md).
+Explorer alone. Cycle 6 shipped the command palette: `Ctrl+Shift+P` over
+the app's seven existing actions, reusing Search's overlay structure.
+Dark/light mode remains, per [ROADMAP.md](ROADMAP.md).
 
 Known gaps carried forward, none blocking Session 5:
 
@@ -369,6 +397,13 @@ Known gaps carried forward, none blocking Session 5:
   display available for a Tauri GUI session. Should be run before, or at,
   merge. `vitest` coverage (`treeUtils.test.ts`, `searchMatch.test.ts`)
   covers the ranking/indexing logic underneath it.
+- Cycle 6's plan-mandated manual smoke check for the command palette
+  (open it with `Ctrl+Shift+P`, type a filter, arrow-navigate skipping a
+  disabled row, invoke an entry with Enter, verify `Ctrl+K`/
+  `Ctrl+Shift+P` mutual exclusivity) was likewise not performed — no
+  display available in this environment. Should be run before, or at,
+  merge. `vitest` coverage (`commandRegistry.test.ts`) covers the
+  filtering/enablement logic underneath it.
 - A search result that lands inside a manually collapsed Project Explorer
   branch is not auto-revealed — the tree does not expand or scroll to it,
   only the Inspector reflects the new selection. This is an explicit,

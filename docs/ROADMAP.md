@@ -140,9 +140,9 @@ session, since a UI finally exists to check.
 
 Cycle 1 (this document's own scope split, see
 `docs/superpowers/specs/2026-09-03-knx-desktop-shell-design.md`) delivered
-the shell, the projection layer, and Project Explorer. Inspector, search,
-command palette and dark/light mode are later cycles of this same
-session, not yet scheduled.
+the shell, the projection layer, and Project Explorer. Inspector, search
+and command palette are later cycles of this same session, all now
+shipped; dark/light mode remains not yet scheduled.
 
 Cycle 2 (`docs/superpowers/specs/2026-09-03-knx-entity-persistence-design.md`)
 delivered `knx-store` entity persistence for the full `knx_core::Project`
@@ -152,8 +152,8 @@ sync for the four `Command` variants that exist today
 (`SetIndividualAddress`, `SetComObjectDpt`/`RestoreComObjectDpt`,
 `CreateGroupAddress`/`DeleteGroupAddress`). This is storage-layer only —
 no Tauri `save_project`/`load_project` command and no desktop save UX yet.
-Inspector, search, command palette and dark/light mode remain not yet
-scheduled.
+Inspector, search and command palette have since shipped; dark/light mode
+remains not yet scheduled.
 
 Cycle 3 adds the knx-app wiring cycle 2 left open: `save_project`/
 `save_project_as`/`open_native_project` Tauri commands over a `.knxdb`
@@ -161,8 +161,9 @@ file (always a full round trip via `knx_store::{save_project,
 load_project}`, no incremental sync), plus Save/Save As/Open buttons in
 the frontend. A second, independent file format from ETS `.knxproj`
 import — `AppState` now tracks both the in-memory project and, separately,
-the `.knxdb` path it was last saved to or loaded from. Inspector, search,
-command palette and dark/light mode remain not yet scheduled.
+the `.knxdb` path it was last saved to or loaded from. Inspector, search
+and command palette have since shipped; dark/light mode remains not yet
+scheduled.
 
 Cycle 4 (`docs/superpowers/specs/2026-09-04-selection-inspector-design.md`)
 delivers device selection in the Project Explorer and a Properties
@@ -173,8 +174,8 @@ pre-existing `CommandStack` (`AppState` gains `command_stack` and
 `import_counts`), giving Undo/Redo toolbar buttons and `Ctrl+Z`/
 `Ctrl+Shift+Z` shortcuts for free. Five new Tauri commands:
 `device_detail`, `set_individual_address`, `set_com_object_dpt`, `undo`,
-`redo`. Search, command palette and dark/light mode remain not yet
-scheduled.
+`redo`. Search and command palette have since shipped; dark/light mode
+remains not yet scheduled.
 
 Cycle 5 (`docs/superpowers/specs/2026-09-04-search-design.md`) delivers
 `Ctrl+K` search across devices, group addresses, and building parts.
@@ -186,20 +187,35 @@ device-only to a union over all three kinds, `ProjectExplorer` and
 render read-only in the Inspector — no `Command` exists for either yet),
 and `searchMatch.ts`'s `matchEntries` ranks and caps matches for the new
 `Search.tsx` overlay component. CI now runs the frontend's own Vitest
-suite. Command palette and dark/light mode remain not yet scheduled.
+suite. Command palette has since shipped (cycle 6, below); dark/light
+mode remains not yet scheduled.
+
+Cycle 6 (`docs/superpowers/specs/2026-09-04-command-palette-design.md`)
+delivers the `Ctrl+Shift+P` command palette. `commandRegistry.ts` is a
+static list of the app's seven existing actions (the same ones cycles
+1-4's toolbar buttons already expose) paired with an `isEnabled`
+predicate and a plain case-insensitive substring filter over their
+labels — seven static entries need no fuzzy ranking. `CommandPalette.tsx`
+reuses `Search.tsx`'s modal-overlay structure (autofocused input,
+arrow-key navigation, click-outside-to-close) as one flat list rather
+than grouped by kind, with disabled entries rendered greyed-out and
+skipped by arrow navigation rather than hidden. Opening the palette
+closes an open search overlay and vice versa — `Ctrl+K` and
+`Ctrl+Shift+P` are mutually exclusive — and the palette works with no
+project loaded, same as the two Open actions it lists.
 
 **Entry condition.** Import produces a model worth displaying.
 
-Cycle 6+ candidates (from `ideas.md`, not yet scheduled), each with no
-architectural blocker against starting once command palette and dark/light
-mode ship: a project status/dashboard view (projection-layer sibling to
-search, no new domain data needed); a lighter, occasionally humorous tone in
-toast/error copy; small holiday and late-night toast easter eggs. Fine-grained
-UI animation is deliberately held until after command palette and dark/light
-mode land, so it is not redone against components that are still changing
-structurally. Renaming the project to KNXBench is a standalone task (crate
-names, docs, repo) best done between cycles, not interleaved with one, to
-avoid churn against in-flight doc edits.
+Cycle 7+ candidates (from `ideas.md`, not yet scheduled), each with no
+architectural blocker against starting once dark/light mode ships: a
+project status/dashboard view (projection-layer sibling to search, no new
+domain data needed); a lighter, occasionally humorous tone in toast/error
+copy; small holiday and late-night toast easter eggs. Fine-grained UI
+animation is deliberately held until after dark/light mode lands, so it is
+not redone against components that are still changing structurally.
+Renaming the project to KNXBench is a standalone task (crate names, docs,
+repo) best done between cycles, not interleaved with one, to avoid churn
+against in-flight doc edits.
 
 ## Session 6 — KNXnet/IP
 

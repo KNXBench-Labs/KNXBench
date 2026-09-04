@@ -35,6 +35,11 @@ main {
   cursor: pointer;
 }
 
+.tree-label.selected {
+  background: color-mix(in srgb, currentColor 15%, transparent);
+  border-radius: 3px;
+}
+
 .project-explorer footer {
   margin-top: 1rem;
 }

@@ -7,6 +7,8 @@ import type { Selection } from "./selection";
 import ProjectExplorer from "./ProjectExplorer";
 import Inspector from "./Inspector";
 import Search from "./Search";
+import CommandPalette from "./CommandPalette";
+import type { CommandContext } from "./commandRegistry";
 
 const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
 
@@ -25,6 +27,7 @@ function App() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   // Mirrors `selection` synchronously so in-flight device_detail responses
   // can tell, once they land, whether the selection has since moved on —
   // state updates alone are too late to check inside the same async
@@ -35,7 +38,14 @@ function App() {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
+        setPaletteOpen(false);
         if (tree) setSearchOpen(true);
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setSearchOpen(false);
+        setPaletteOpen(true);
         return;
       }
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return;
@@ -175,6 +185,17 @@ function App() {
     }
   }
 
+  const ctx: CommandContext = {
+    tree,
+    pickProject,
+    openNativeProject,
+    saveProject,
+    saveProjectAs,
+    undo,
+    redo,
+    openSearch: () => setSearchOpen(true),
+  };
+
   return (
     <main>
       <button onClick={pickProject}>Open project…</button>
@@ -216,6 +237,7 @@ function App() {
       {tree && searchOpen && (
         <Search tree={tree} onSelect={selectEntity} onClose={() => setSearchOpen(false)} />
       )}
+      {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
     </main>
   );
 }

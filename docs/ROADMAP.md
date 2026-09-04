@@ -164,6 +164,18 @@ import — `AppState` now tracks both the in-memory project and, separately,
 the `.knxdb` path it was last saved to or loaded from. Inspector, search,
 command palette and dark/light mode remain not yet scheduled.
 
+Cycle 4 (`docs/superpowers/specs/2026-09-04-selection-inspector-design.md`)
+delivers device selection in the Project Explorer and a Properties
+Inspector panel: clicking a device row shows its name, description,
+editable individual address, and one editable DPT field per communication
+object with its resolved-layer badge. Edits run through the app's
+pre-existing `CommandStack` (`AppState` gains `command_stack` and
+`import_counts`), giving Undo/Redo toolbar buttons and `Ctrl+Z`/
+`Ctrl+Shift+Z` shortcuts for free. Five new Tauri commands:
+`device_detail`, `set_individual_address`, `set_com_object_dpt`, `undo`,
+`redo`. Search, command palette and dark/light mode remain not yet
+scheduled.
+
 **Entry condition.** Import produces a model worth displaying.
 
 ## Session 6 — KNXnet/IP

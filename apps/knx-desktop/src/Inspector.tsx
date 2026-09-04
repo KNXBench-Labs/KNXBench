@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
@@ -8,6 +8,11 @@ function AddressField(props: { detail: DeviceDetail; onApplied: (tree: ProjectTr
   const { detail, onApplied } = props;
   const [value, setValue] = useState(detail.address ?? "");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValue(detail.address ?? "");
+    setError(null);
+  }, [detail.address]);
 
   async function apply() {
     const current = detail.address ?? "";
@@ -46,6 +51,11 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
   const { com, onApplied } = props;
   const [value, setValue] = useState(com.dpt ?? "");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValue(com.dpt ?? "");
+    setError(null);
+  }, [com.dpt]);
 
   async function apply() {
     const current = com.dpt ?? "";

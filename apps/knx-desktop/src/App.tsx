@@ -11,9 +11,14 @@ const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
 function App() {
   const [tree, setTree] = useState<ProjectTree | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Whether the backend's `AppState.store_path` is set — mirrored here only
-  // so "Save" knows whether it can skip the dialog; the backend remains the
-  // source of truth and still refuses `save_project` if this ever drifts.
+  // Whether the backend's `AppState.store_path` is set — mirrored here so
+  // "Save" knows whether it can skip the dialog. Safety here rests on this
+  // flag staying in lockstep with the backend's own `store_path`: the
+  // backend does NOT check which project is loaded against `store_path`
+  // before writing — `save_project` just writes wherever `store_path`
+  // points. See docs/KNOWN_LIMITATIONS.md for the tracked gap (importing a
+  // fresh `.knxproj` while `store_path` still points at a different
+  // `.knxdb` would let a subsequent Save overwrite the wrong file).
   const [hasStorePath, setHasStorePath] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);

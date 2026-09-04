@@ -176,6 +176,18 @@ pre-existing `CommandStack` (`AppState` gains `command_stack` and
 `redo`. Search, command palette and dark/light mode remain not yet
 scheduled.
 
+Cycle 5 (`docs/superpowers/specs/2026-09-04-search-design.md`) delivers
+`Ctrl+K` search across devices, group addresses, and building parts.
+`knx-projection` gains group addresses on `InstallationNode` (formatted
+per `project.info.group_address_style`, not shown anywhere in the UI
+before this cycle). The frontend's `Selection` type generalizes from
+device-only to a union over all three kinds, `ProjectExplorer` and
+`Inspector` generalize accordingly (group addresses and building parts
+render read-only in the Inspector — no `Command` exists for either yet),
+and `searchMatch.ts`'s `matchEntries` ranks and caps matches for the new
+`Search.tsx` overlay component. CI now runs the frontend's own Vitest
+suite. Command palette and dark/light mode remain not yet scheduled.
+
 **Entry condition.** Import produces a model worth displaying.
 
 ## Session 6 — KNXnet/IP

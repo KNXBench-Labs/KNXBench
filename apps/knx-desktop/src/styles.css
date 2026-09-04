@@ -186,6 +186,14 @@ main {
   padding: 0.35rem 0.5rem;
   cursor: pointer;
   border-radius: 3px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-result.disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .search-result.selected {

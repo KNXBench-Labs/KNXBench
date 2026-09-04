@@ -7,7 +7,10 @@
 
 use std::collections::HashMap;
 
-use knx_core::{BuildingPart, BuildingPartId, BuildingPartType, Devices, Project, Topology};
+use knx_core::{
+    BuildingPart, BuildingPartId, BuildingPartType, Devices, GroupAddressEntry, GroupAddressStyle,
+    Project, Topology,
+};
 use serde::Serialize;
 use ts_rs::TS;
 
@@ -51,6 +54,7 @@ pub struct InstallationNode {
     pub topology: Vec<AreaNode>,
     pub buildings: Vec<BuildingNode>,
     pub unassigned: Vec<DeviceNode>,
+    pub group_addresses: Vec<GroupAddressNode>,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -95,6 +99,16 @@ pub struct DeviceNode {
     pub description: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct GroupAddressNode {
+    pub id: u32,
+    pub name: String,
+    /// Formatted per the project's own `GroupAddressStyle`
+    /// (`GroupAddress::format`), e.g. `"4/2/100"`.
+    pub address: String,
+}
+
 /// Builds the full display tree for every installation in `project`. Pure
 /// and total: never panics on a project that imported successfully, even
 /// one with dangling `BuildingPart` device references (knx-etsproj's
@@ -109,12 +123,18 @@ pub fn build_project_tree(project: &Project) -> ProjectTree {
         installations: project
             .installations
             .iter()
-            .map(|inst| build_installation(inst, &project.devices))
+            .map(|inst| {
+                build_installation(inst, &project.devices, project.info.group_address_style)
+            })
             .collect(),
     }
 }
 
-fn build_installation(inst: &knx_core::Installation, devices: &Devices) -> InstallationNode {
+fn build_installation(
+    inst: &knx_core::Installation,
+    devices: &Devices,
+    ga_style: GroupAddressStyle,
+) -> InstallationNode {
     InstallationNode {
         id: inst.id.0,
         name: inst.name.clone(),
@@ -127,6 +147,22 @@ fn build_installation(inst: &knx_core::Installation, devices: &Devices) -> Insta
             .filter_map(|id| devices.get(*id))
             .map(build_device_node)
             .collect(),
+        group_addresses: inst
+            .group_addresses
+            .iter()
+            .map(|entry| build_group_address_node(entry, ga_style))
+            .collect(),
+    }
+}
+
+fn build_group_address_node(
+    entry: &GroupAddressEntry,
+    style: GroupAddressStyle,
+) -> GroupAddressNode {
+    GroupAddressNode {
+        id: entry.id.0,
+        name: entry.name.clone(),
+        address: entry.address.format(style),
     }
 }
 
@@ -574,5 +610,31 @@ mod tests {
             links: vec![],
         });
         project
+    }
+
+    #[test]
+    fn group_addresses_are_projected_and_formatted_per_project_style() {
+        let mut project = Project::new(Language("en".into()));
+        let mut inst = empty_installation();
+        inst.group_addresses.push(knx_core::GroupAddressEntry {
+            id: knx_core::GroupAddressId(1),
+            source: source(),
+            name: "Living room light".into(),
+            address: knx_core::GroupAddress::parse(
+                "4/2/100",
+                knx_core::GroupAddressStyle::ThreeLevel,
+            )
+            .unwrap(),
+            central: false,
+            unfiltered: false,
+            range: None,
+        });
+        project.installations.push(inst);
+
+        let tree = build_project_tree(&project);
+        let ga = &tree.installations[0].group_addresses[0];
+        assert_eq!(ga.id, 1);
+        assert_eq!(ga.name, "Living room light");
+        assert_eq!(ga.address, "4/2/100");
     }
 }

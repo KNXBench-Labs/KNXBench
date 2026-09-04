@@ -81,6 +81,14 @@ main {
   font-style: italic;
 }
 
+.inspector-address {
+  font-family: monospace;
+}
+
+.inspector-path {
+  opacity: 0.8;
+}
+
 .inspector-field {
   display: block;
   margin-bottom: 0.75rem;

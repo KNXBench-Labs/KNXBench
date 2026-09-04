@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-04 (Session 5, cycle 4)
+Last updated: 2026-09-04 (Session 5, cycle 5)
 
 ## Where the project stands
 
@@ -11,7 +11,7 @@ Last updated: 2026-09-04 (Session 5, cycle 4)
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
-| 5 | UI / UX | **In progress** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring) and cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)) done, see [ROADMAP.md](ROADMAP.md) |
+| 5 | UI / UX | **In progress** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)) and cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)) done, see [ROADMAP.md](ROADMAP.md) |
 | 6 | KNXnet/IP | Not started |
 | 7 | Integration & hardening | Not started |
 
@@ -161,6 +161,14 @@ layer it resolved from (`dpt_layer`) and the read/write/transmit/update/
 communication flags (display-only this cycle — no `Command` exists yet to
 edit a flag). 16 tests.
 
+Cycle 5 (`docs/superpowers/specs/2026-09-04-search-design.md`) adds
+`GroupAddressNode` and a `group_addresses: Vec<GroupAddressNode>` field on
+`InstallationNode`, projected from `Installation.group_addresses` and
+formatted through `GroupAddress::format` per `project.info.
+group_address_style` — the reference project's 514 group addresses are
+cheap enough to embed eagerly, unlike `DeviceDetail`'s lazy communication
+objects. 18 tests.
+
 **`apps/knx-desktop` is the desktop shell**: Tauri v2 with a React + Vite
 frontend, scaffolded this session rather than in Session 1. `open_project`
 imports a `.knxproj`, projects it through `knx-projection`, and returns
@@ -217,13 +225,33 @@ total: 7 new this cycle (`command_dispatch.rs` — 5, `device_detail.rs` —
 2) plus the 2 pre-existing (`open_reference_project.rs`,
 `save_load_roundtrip.rs`) unchanged.
 
+Cycle 5 (`docs/superpowers/specs/2026-09-04-search-design.md`) adds
+`Ctrl+K` search across devices, group addresses, and building parts.
+`selection.ts`'s `Selection` generalizes from device-only to a union over
+the three kinds; `ProjectExplorer` and `Inspector` generalize their
+selection/render paths accordingly, with group addresses and building
+parts rendered read-only in the Inspector (no `Command` exists for either
+yet). `treeUtils.ts`'s `buildSearchIndex` flattens `ProjectTree` into one
+`SearchEntry[]` per kind (deduplicating a device that appears under both
+topology and a building), and `searchMatch.ts`'s `matchEntries` ranks
+exact label matches first, then starts-with, then contains-only,
+alphabetically within a rank, over label plus each kind's own second
+field (address or breadcrumb path), capped at 50 results. `Search.tsx` is
+the overlay component itself — autofocus, `Escape` to close, arrow keys
+and `Enter` to navigate/pick against the same grouped-by-kind order the
+list renders in, click to pick. This is also the first cycle with a
+frontend test runner: `package.json` gains a `vitest` test script, and CI
+now runs it. 14 `vitest` tests (`treeUtils.test.ts`, `searchMatch.test.ts`)
+alongside the existing 9 Rust integration tests, unchanged.
+
 `knx-net`, `knx-secure` remain empty crates with their responsibility
 stated in a doc comment. There is still no manufacturer parameter
 *interpretation* (the `Dynamic` tree, `when/@test`), and the desktop UI so
-far covers the Project Explorer, the four save/load/import buttons, and a
+far covers the Project Explorer, the four save/load/import buttons, a
 properties inspector with undo/redo for two editable fields (individual
-address, communication-object DPT) — no search, command palette,
-dark/light mode, or editing of anything beyond those two fields yet.
+address, communication-object DPT), and `Ctrl+K` search over devices,
+group addresses, and building parts — no command palette, dark/light
+mode, or editing of anything beyond those two fields yet.
 
 Three architectural rules are enforced mechanically rather than by
 discipline, and all three have been observed to fail on a deliberate
@@ -237,7 +265,9 @@ violation:
 - `cargo deny check` — no licence outside the allowlist enters the graph; GPL
   is not on the allowlist.
 
-304 tests pass across the workspace as of this session.
+306 Rust tests pass across the workspace as of this session, plus 14
+`vitest` tests in `apps/knx-desktop` (run separately, `npm test`, not part
+of `cargo test --workspace`).
 
 ## What exists
 
@@ -248,19 +278,19 @@ violation:
 | `crates/knx-store/` | SQLite schema-version migration chain through v4 (`migration.rs`), the opaque passthrough table (`opaque.rs`), the manufacturer manifest table (`manifest.rs`, Session 4), full `knx_core::Project` entity persistence (`project.rs`, `strings.rs`, `topology.rs`, `building.rs`, `devices.rs`, `group.rs`, `parameter.rs`, `command_sync.rs` — Session 5 cycle 2), and four frozen fixtures. |
 | `crates/knx-etsproj/` | The full six-stage `.knxproj` import/export pipeline — see the Session 3 paragraph above. Hands manufacturer files out separately from opaque entries (Session 4). No dependency on `knx-store`. |
 | `crates/knx-productdb/` | The shared product database: own SQLite migration chain, streaming manufacturer-XML ingest, and enrichment of `ComObjectInstance` — see the Session 4 paragraph above. No dependency on `knx-etsproj` or `knx-store`. |
-| `crates/knx-projection/` | Pure `Project` → `ProjectTree` projection with `ts-rs` TypeScript bindings — see the Session 5 paragraph above. No dependency beyond `knx-core`; the fourth `check-layering` root. |
+| `crates/knx-projection/` | Pure `Project` → `ProjectTree` projection with `ts-rs` TypeScript bindings, including `GroupAddressNode` on `InstallationNode` (Session 5 cycle 5) — see the Session 5 paragraph above. No dependency beyond `knx-core`; the fourth `check-layering` root. |
 | `crates/knx-app/` | The import and export services (`import.rs`, `export.rs`) — the one crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together. |
 | `crates/knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
-| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` against an in-memory store; `save_project`/`save_project_as`/`open_native_project` against a `.knxdb` file; `device_detail`/`set_individual_address`/`set_com_object_dpt`/`undo`/`redo` against the in-memory `CommandStack`); `src/` the React frontend (`ProjectExplorer` selection, `Inspector`, undo/redo toolbar and `Ctrl+Z`/`Ctrl+Shift+Z`), including the `ts-rs`-generated bindings under `src/bindings/`. |
+| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` against an in-memory store; `save_project`/`save_project_as`/`open_native_project` against a `.knxdb` file; `device_detail`/`set_individual_address`/`set_com_object_dpt`/`undo`/`redo` against the in-memory `CommandStack`); `src/` the React frontend (`ProjectExplorer` selection, `Inspector`, undo/redo toolbar and `Ctrl+Z`/`Ctrl+Shift+Z`, `Ctrl+K` search over devices/group addresses/building parts via `Search.tsx`/`searchMatch.ts`/`treeUtils.ts`), including the `ts-rs`-generated bindings under `src/bindings/` and a `vitest` suite (Session 5 cycle 5). |
 | `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |
-| `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-desktop/src/bindings` are not stale (Session 5). |
+| `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, `knx-desktop`'s own `npm test` (Vitest, Session 5 cycle 5), the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-desktop/src/bindings` are not stale (Session 5). |
 | `docs/ARCHITECTURE.md` | Layering, workspace layout, enforced rules, core approach, UI boundary, KNXnet/IP, key material, test strategy. |
 | `docs/DATA_MODEL.md` | The target domain model, per section marked implemented / planned / retained-but-uninterpreted. |
 | `docs/IMPORT_EXPORT.md` | The six-stage pipeline, container handling, tolerant parsing, opaque store, import report, export rules, roundtrip guarantees. |
 | `docs/COMPATIBILITY.md` | What is verified, what is expected but unverified, what is not supported — every verified row now names the test that verifies it. |
-| `docs/KNOWN_LIMITATIONS.md` | Fifteen limitations with cause, impact and the condition that would lift each. |
+| `docs/KNOWN_LIMITATIONS.md` | Nineteen limitations with cause, impact and the condition that would lift each. |
 | `docs/ROADMAP.md` | Sessions 2–7 with deliverables and entry conditions. |
 | `docs/adr/` | Ten ADRs, a template and an index. |
 | `docs/RESEARCH.md` | Session 0 result plus Session 3 amendments: verified findings on the `.knxproj` format, manufacturer data, master data, KNXnet/IP, KNX Secure, licensing, risks. |
@@ -302,10 +332,10 @@ shared product database all exist, and communication objects now carry
 resolved `Program`/`ProgramRef` values in addition to whatever the
 project's own `Instance` layer stated.
 
-The next Session 5 slice is Search: finding a device, group address, or
-building part by name/address across a project too large to scan by eye
-in the Project Explorer alone. Command palette and dark/light mode remain
-after that, per [ROADMAP.md](ROADMAP.md).
+Cycle 5 shipped Search: finding a device, group address, or building part
+by name/address across a project too large to scan by eye in the Project
+Explorer alone. Command palette and dark/light mode remain, per
+[ROADMAP.md](ROADMAP.md).
 
 Known gaps carried forward, none blocking Session 5:
 
@@ -333,6 +363,18 @@ Known gaps carried forward, none blocking Session 5:
   change-guard in `AddressField`/`DptField`, the stale-selection-race
   trace in `App.tsx`) covered the correctness that mattered; left for the
   user, or a future session with a display, to confirm interactively.
+- Cycle 5's plan-mandated manual smoke check for the `Ctrl+K` search
+  overlay (open it, type a query, navigate with the arrow keys, pick a
+  result) was likewise not performed in this environment — no isolated
+  display available for a Tauri GUI session. Should be run before, or at,
+  merge. `vitest` coverage (`treeUtils.test.ts`, `searchMatch.test.ts`)
+  covers the ranking/indexing logic underneath it.
+- A search result that lands inside a manually collapsed Project Explorer
+  branch is not auto-revealed — the tree does not expand or scroll to it,
+  only the Inspector reflects the new selection. This is an explicit,
+  approved scope decision recorded in
+  [the search design spec](superpowers/specs/2026-09-04-search-design.md),
+  not an oversight; see [KNOWN_LIMITATIONS.md §19](KNOWN_LIMITATIONS.md).
 - `manifest.rs`/`opaque.rs` still open their own internal SQL transaction
   the same way `strings.rs` did before this cycle's `SAVEPOINT` fix
   (above); not currently reachable from inside `save_project`'s

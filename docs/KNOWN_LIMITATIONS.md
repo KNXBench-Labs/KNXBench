@@ -404,3 +404,22 @@ overwrite the old `.knxdb` with the newly-imported project's data.
 `save_project` verifies the in-memory project actually originated from
 `store_path` before writing.
 
+## 19. A search result inside a collapsed tree branch is not revealed
+
+**Limitation.** Picking a result from `Ctrl+K` search (`apps/knx-desktop/
+src/Search.tsx`) selects the matching device, group address, or building
+part and shows it in the Inspector, but if the Project Explorer tree has
+the ancestor branch containing it manually collapsed, the tree itself does
+not expand or scroll to reveal the row — only the Inspector reflects the
+new selection.
+
+**Cause.** An explicit, approved scope decision recorded in
+[the search design spec](superpowers/specs/2026-09-04-search-design.md),
+not an oversight: tree auto-expand/scroll-into-view needs its own
+expand/collapse/reveal logic, which the spec deliberately kept out of this
+cycle's surface to keep search and tree-navigation state disjoint.
+
+**Lifted when.** A future cycle adds tree auto-expand and scroll-into-view
+for a selection that originates outside the tree itself (search today,
+potentially a future command palette too).
+

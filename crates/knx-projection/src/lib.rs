@@ -615,16 +615,14 @@ mod tests {
     #[test]
     fn group_addresses_are_projected_and_formatted_per_project_style() {
         let mut project = Project::new(Language("en".into()));
+        project.info.group_address_style = knx_core::GroupAddressStyle::TwoLevel;
         let mut inst = empty_installation();
         inst.group_addresses.push(knx_core::GroupAddressEntry {
             id: knx_core::GroupAddressId(1),
             source: source(),
             name: "Living room light".into(),
-            address: knx_core::GroupAddress::parse(
-                "4/2/100",
-                knx_core::GroupAddressStyle::ThreeLevel,
-            )
-            .unwrap(),
+            address: knx_core::GroupAddress::parse("4/612", knx_core::GroupAddressStyle::TwoLevel)
+                .unwrap(),
             central: false,
             unfiltered: false,
             range: None,
@@ -635,6 +633,6 @@ mod tests {
         let ga = &tree.installations[0].group_addresses[0];
         assert_eq!(ga.id, 1);
         assert_eq!(ga.name, "Living room light");
-        assert_eq!(ga.address, "4/2/100");
+        assert_eq!(ga.address, "4/612");
     }
 }

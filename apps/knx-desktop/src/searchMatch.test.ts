@@ -35,6 +35,12 @@ describe("matchEntries", () => {
     expect(result[0].label).toBe("Dimmer hallway");
   });
 
+  it("matches a group address on its address, not just its label", () => {
+    const result = matchEntries(entries, "1/1/3");
+    expect(result).toHaveLength(1);
+    expect(result[0].label).toBe("Dimmer feedback");
+  });
+
   it("matches a building part on its breadcrumb path", () => {
     const result = matchEntries(entries, "main building");
     expect(result).toHaveLength(1);

@@ -377,3 +377,30 @@ address — a `knx-core` change, not a `knx-store` one, and its own design
 decision (cascade-delete the links silently, or surface them as an import/
 edit-report finding first) rather than a one-line fix.
 
+## 18. `open_project` does not clear the previous `.knxdb` `store_path`
+
+**Limitation.** `AppState.store_path` (the `.knxdb` file a subsequent plain
+`save_project` writes to) is only ever set by `save_project_as` and
+`open_native_project`. The Tauri `open_project` command — ETS `.knxproj`
+import — loads a fresh in-memory project but never touches `store_path`.
+If a `.knxdb` was open and the user then imports a `.knxproj`, `store_path`
+still points at that old `.knxdb` file.
+
+**Cause.** `open_project` and `open_native_project` were added in
+different cycles (`.knxproj` import predates the native `.knxdb` format)
+and were never made to share a single "what file, if any, backs the
+in-memory project" invariant.
+
+**Impact.** None reachable through the current UI: `apps/knx-desktop/src/
+App.tsx` resets its own `hasStorePath` flag to `false` on ETS import, so
+"Save" always falls back to "Save As…" in that state. But the backend has
+no equivalent guard — `save_project` just writes wherever `store_path`
+points, with no check that the loaded project actually originated from
+that path — so a future UI change that calls `save_project` without first
+re-deriving `hasStorePath` from a real backend query could silently
+overwrite the old `.knxdb` with the newly-imported project's data.
+
+**Lifted when.** Either `open_project` clears `store_path` to `None`, or
+`save_project` verifies the in-memory project actually originated from
+`store_path` before writing.
+

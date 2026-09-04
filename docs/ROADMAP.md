@@ -190,6 +190,17 @@ suite. Command palette and dark/light mode remain not yet scheduled.
 
 **Entry condition.** Import produces a model worth displaying.
 
+Cycle 6+ candidates (from `ideas.md`, not yet scheduled), each with no
+architectural blocker against starting once command palette and dark/light
+mode ship: a project status/dashboard view (projection-layer sibling to
+search, no new domain data needed); a lighter, occasionally humorous tone in
+toast/error copy; small holiday and late-night toast easter eggs. Fine-grained
+UI animation is deliberately held until after command palette and dark/light
+mode land, so it is not redone against components that are still changing
+structurally. Renaming the project to KNXBench is a standalone task (crate
+names, docs, repo) best done between cycles, not interleaved with one, to
+avoid churn against in-flight doc edits.
+
 ## Session 6 — KNXnet/IP
 
 **Goal.** Talk to the bus.
@@ -197,7 +208,8 @@ suite. Command palette and dark/light mode remain not yet scheduled.
 **Deliverables.** The `BusConnection` trait implemented against ISO 22510:
 discovery, tunnelling, routing, cEMI and telegram encoding; the bus monitor as
 a consumer that resolves telegrams against the open project; connection
-management and diagnostics.
+management and diagnostics. Device discovery (`ideas.md`) is this session's
+`discovery` deliverable, not a separate feature — it cannot start earlier.
 
 **Entry condition.** A project can be opened and its group addresses resolved,
 so that captured telegrams have something to resolve against.
@@ -212,6 +224,18 @@ optimization driven by those measurements rather than by guesswork; packaging
 for Linux; the licence decision.
 
 **Entry condition.** All earlier sessions' deliverables exist and are tested.
+
+Deferred beyond Session 7 (from `ideas.md`, no fixed session): MCP
+capabilities and automation of repetitive tasks both need a mature,
+near-complete `Command` layer as their foundation — premature before
+Session 7. A live "who talks to whom" group-address/device animation is
+more valuable once Session 6's bus monitor can feed it real telegrams
+rather than only static group links. A mobile app and non-Linux desktop
+support are new-platform work, out of scope while the Linux-first desktop
+(CLAUDE.md) is still incomplete. An in-app project documentation/notes
+feature is a new domain concept absent from
+[DATA_MODEL.md](DATA_MODEL.md) — needs its own ADR before implementation,
+not bundled into a UI cycle.
 
 ## Open questions and where they land
 

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -22,6 +22,20 @@ function App() {
   // moved on — state updates alone are too late to check inside the same
   // async callback that reads them.
   const selectedDeviceIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return;
+      e.preventDefault();
+      if (e.shiftKey) {
+        if (tree?.can_redo) void redo();
+      } else {
+        if (tree?.can_undo) void undo();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  });
 
   function resetTree(newTree: ProjectTree) {
     setTree(newTree);
@@ -122,6 +136,24 @@ function App() {
     }
   }
 
+  async function undo() {
+    setError(null);
+    try {
+      await handleTreeUpdate(await invoke<ProjectTree>("undo"));
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
+  async function redo() {
+    setError(null);
+    try {
+      await handleTreeUpdate(await invoke<ProjectTree>("redo"));
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
   return (
     <main>
       <button onClick={pickProject}>Open project…</button>
@@ -131,6 +163,12 @@ function App() {
       </button>
       <button onClick={saveProjectAs} disabled={!tree}>
         Save As…
+      </button>
+      <button onClick={undo} disabled={!tree?.can_undo}>
+        Undo
+      </button>
+      <button onClick={redo} disabled={!tree?.can_redo}>
+        Redo
       </button>
       {error && (
         <p role="alert" className="error-banner">

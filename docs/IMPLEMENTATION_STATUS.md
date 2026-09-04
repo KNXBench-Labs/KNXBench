@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-04 (Session 5, cycle 3)
+Last updated: 2026-09-04 (Session 5, cycle 4)
 
 ## Where the project stands
 
@@ -11,7 +11,7 @@ Last updated: 2026-09-04 (Session 5, cycle 3)
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
-| 5 | UI / UX | **In progress** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)) and cycle 3 (`knx-desktop` save/load wiring) done, see [ROADMAP.md](ROADMAP.md) |
+| 5 | UI / UX | **In progress** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring) and cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)) done, see [ROADMAP.md](ROADMAP.md) |
 | 6 | KNXnet/IP | Not started |
 | 7 | Integration & hardening | Not started |
 
@@ -150,7 +150,16 @@ full import. 10 tests.
 `ProjectTree` projection (`lib.rs`) with no IO of its own, `ts-rs`-derived
 TypeScript bindings for the desktop frontend, and a dependency on nothing
 but `knx-core` — the fourth `check-layering` root, held to the same
-IO-free bar as `knx-core` itself. 12 tests.
+IO-free bar as `knx-core` itself. Cycle 4 adds `ProjectTree.can_undo`/
+`.can_redo` (plain booleans the projection itself always sets `false`;
+the desktop shell overlays the real `CommandStack` state after projecting,
+below) and `build_device_detail`/`DeviceDetail`/`ComObjectNode` — the
+properties-inspector projection for one device, resolving each
+communication object's DPT through the same `Program`/`ProgramRef`/
+`Instance`/`Inferred`/`UserEdit` layer order as the tree view, plus which
+layer it resolved from (`dpt_layer`) and the read/write/transmit/update/
+communication flags (display-only this cycle — no `Command` exists yet to
+edit a flag). 16 tests.
 
 **`apps/knx-desktop` is the desktop shell**: Tauri v2 with a React + Vite
 frontend, scaffolded this session rather than in Session 1. `open_project`
@@ -174,12 +183,47 @@ unmeasured. 1 test (round-trips the reference project through
 `save_project_as` → `open_native_project` against the same golden counts
 `open_reference_project.rs` already established for ETS import).
 
+Cycle 4 adds device selection, a properties inspector, and undo/redo
+([design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)).
+`AppState` gains `command_stack: Mutex<CommandStack>` (every applied
+command's inverse; reset on `open_project`/`open_native_project`, never
+persisted to `.knxdb` — undo history is session-only by design) and
+`import_counts: Mutex<(usize, usize)>` (the initial import's error/warning
+counts, reapplied to every tree rebuilt after a command/undo/redo, since
+an edit doesn't change what import lost). Five new Tauri commands:
+`device_detail` projects one device (`knx_projection::build_device_detail`)
+for the Inspector panel; `set_individual_address`/`set_com_object_dpt`
+parse the frontend's string input into `knx_core::IndividualAddress`/
+`DptRef`, wrap it in a `knx_core::Command`, and run it through the shared
+`apply` helper (`do_command` on the stack, then re-project with
+`tree_with_state` overlaying `can_undo`/`can_redo`/the carried-forward
+import counts); `undo`/`redo` call the same overlay after `CommandStack::
+undo`/`redo`. Every command is split `<name>_impl(state, ...)` /
+`#[tauri::command] fn <name>(...)`, so `command_dispatch.rs` and
+`device_detail.rs` exercise the logic without any running `tauri::App`.
+`ProjectExplorer` gained `selectedId`/`onSelectDevice` props (a clicked
+device row calls back into `App.tsx`'s `selectDevice`, which fetches
+`device_detail` and guards the response with a `selectedDeviceIdRef`
+against a stale reply landing after the selection has moved on — the same
+guard covers `handleTreeUpdate`'s post-command refetch). The new
+`Inspector.tsx` renders the selected device's name/description, an
+address field, and one DPT field per communication object with its
+resolved-layer badge; each field applies on blur or Enter, no-ops if the
+value didn't change, and reverts to the last-known-good value with an
+inline error on a rejected edit. The toolbar gains Undo/Redo buttons
+(disabled from `tree.can_undo`/`.can_redo`) and a window-level `Ctrl+Z`/
+`Ctrl+Shift+Z` keyboard shortcut. 9 `knx-desktop` integration tests
+total: 7 new this cycle (`command_dispatch.rs` — 5, `device_detail.rs` —
+2) plus the 2 pre-existing (`open_reference_project.rs`,
+`save_load_roundtrip.rs`) unchanged.
+
 `knx-net`, `knx-secure` remain empty crates with their responsibility
 stated in a doc comment. There is still no manufacturer parameter
 *interpretation* (the `Dynamic` tree, `when/@test`), and the desktop UI so
-far covers only the Project Explorer plus the four save/load/import
-buttons — no properties inspector, search, command palette or dark/light
-mode yet.
+far covers the Project Explorer, the four save/load/import buttons, and a
+properties inspector with undo/redo for two editable fields (individual
+address, communication-object DPT) — no search, command palette,
+dark/light mode, or editing of anything beyond those two fields yet.
 
 Three architectural rules are enforced mechanically rather than by
 discipline, and all three have been observed to fail on a deliberate
@@ -193,7 +237,7 @@ violation:
 - `cargo deny check` — no licence outside the allowlist enters the graph; GPL
   is not on the allowlist.
 
-293 tests pass across the workspace as of this session.
+304 tests pass across the workspace as of this session.
 
 ## What exists
 
@@ -208,7 +252,7 @@ violation:
 | `crates/knx-app/` | The import and export services (`import.rs`, `export.rs`) — the one crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together. |
 | `crates/knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
-| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` against an in-memory store; `save_project`/`save_project_as`/`open_native_project` against a `.knxdb` file); `src/` the React frontend, including the `ts-rs`-generated bindings under `src/bindings/`. |
+| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` against an in-memory store; `save_project`/`save_project_as`/`open_native_project` against a `.knxdb` file; `device_detail`/`set_individual_address`/`set_com_object_dpt`/`undo`/`redo` against the in-memory `CommandStack`); `src/` the React frontend (`ProjectExplorer` selection, `Inspector`, undo/redo toolbar and `Ctrl+Z`/`Ctrl+Shift+Z`), including the `ts-rs`-generated bindings under `src/bindings/`. |
 | `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |
 | `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-desktop/src/bindings` are not stale (Session 5). |
@@ -258,16 +302,37 @@ shared product database all exist, and communication objects now carry
 resolved `Program`/`ProgramRef` values in addition to whatever the
 project's own `Instance` layer stated.
 
+The next Session 5 slice is Search: finding a device, group address, or
+building part by name/address across a project too large to scan by eye
+in the Project Explorer alone. Command palette and dark/light mode remain
+after that, per [ROADMAP.md](ROADMAP.md).
+
 Known gaps carried forward, none blocking Session 5:
 
 - Cycle 3 wires `knx-store`'s entity persistence to a Tauri
   `save_project`/`save_project_as`/`open_native_project` command with a
-  save dialog and UX, but always as a full round trip. Only
-  `SetIndividualAddress`, `SetComObjectDpt`/`RestoreComObjectDpt` and
-  `CreateGroupAddress`/`DeleteGroupAddress` have an incremental
-  `sync_after_command` path; every other entity/attribute is written only
-  by a full `save_project` until a command exists for it, and no command
-  layer exists in `knx-desktop` yet to invoke one from the UI.
+  save dialog and UX, but always as a full round trip. Cycle 4 adds a
+  command layer to `knx-desktop` (`device_detail`/`set_individual_address`/
+  `set_com_object_dpt`/`undo`/`redo`), but it only reaches two of the four
+  `Command` variants that have an incremental `sync_after_command` path
+  (`SetIndividualAddress`, `SetComObjectDpt`/`RestoreComObjectDpt`) — the
+  other two (`CreateGroupAddress`/`DeleteGroupAddress`) have no UI yet.
+  Every other entity/attribute is still written only by a full
+  `save_project`, until both a command and UI exist for it. Undo history
+  is session-only by design (`AppState.command_stack`, reset on
+  open/import, never persisted to `.knxdb`).
+- Cycle 4's properties inspector edits exactly two fields (individual
+  address, communication-object DPT); `ComObjectNode`'s read/write/
+  transmit/update/communication flags are projected but display-only —
+  no `Command` exists yet to edit a flag. No group-address, building, or
+  parameter editing exists in the UI yet either.
+- Cycle 4's plan-mandated manual smoke check (launch the app, edit a
+  device's address, confirm Undo/Redo via both the toolbar and
+  `Ctrl+Z`/`Ctrl+Shift+Z`) was not performed — no display available in
+  this environment for a Tauri GUI session. Code-level review (the
+  change-guard in `AddressField`/`DptField`, the stale-selection-race
+  trace in `App.tsx`) covered the correctness that mattered; left for the
+  user, or a future session with a display, to confirm interactively.
 - `manifest.rs`/`opaque.rs` still open their own internal SQL transaction
   the same way `strings.rs` did before this cycle's `SAVEPOINT` fix
   (above); not currently reachable from inside `save_project`'s

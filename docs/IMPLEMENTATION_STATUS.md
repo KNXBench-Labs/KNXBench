@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-04 (Session 5, cycle 6)
+Last updated: 2026-09-04 (Session 5, cycle 7)
 
 ## Where the project stands
 
@@ -11,7 +11,7 @@ Last updated: 2026-09-04 (Session 5, cycle 6)
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
-| 5 | UI / UX | **In progress** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)) and cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)) done, see [ROADMAP.md](ROADMAP.md) |
+| 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)) and cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)) done — CLAUDE.md's full UI/UX deliverable list is complete, see [ROADMAP.md](ROADMAP.md) |
 | 6 | KNXnet/IP | Not started |
 | 7 | Integration & hardening | Not started |
 
@@ -272,15 +272,39 @@ overlay before opening its own — and the palette works with no project
 loaded. 9 new `vitest` tests in `commandRegistry.test.ts`, for 23 total
 alongside the existing 9 Rust integration tests, unchanged.
 
+Cycle 7 (`docs/superpowers/specs/2026-09-04-dark-light-mode-design.md`)
+adds a three-state (System/Light/Dark) theme toggle. `theme.ts` is a new,
+mostly IO-free module: `nextTheme` cycles System → Light → Dark → System;
+`loadTheme`/`saveTheme` take an injected `localStorage`-shaped object
+rather than reading the global, which is what makes them unit-testable
+under Vitest's `environment: "node"`; `useTheme()` composes them into a
+hook that applies `data-theme` to `<html>` (removed entirely for
+"system", so a `prefers-color-scheme` media query governs) and persists
+on every change. `ThemeToggle.tsx` is a hand-written inline-SVG icon
+button (sun/moon/monitor) — no icon-library dependency, matching
+`commandRegistry.ts`'s no-fuzzy-ranking restraint from cycle 6.
+`styles.css` gains three custom properties (`--knx-error-color`,
+`--knx-overlay-backdrop`, `--knx-overlay-shadow`) for the only three
+colors that don't already adapt via `currentColor`/system color
+keywords, with a `prefers-color-scheme` default and `:root[data-theme]`
+overrides that outrank it by CSS specificity (an attribute selector on
+`:root` beats a bare `:root` inside a media query) regardless of source
+order. `index.html` gets a small inline script applying a persisted
+explicit choice before React mounts, avoiding a one-frame flash of the
+wrong theme; it necessarily duplicates `theme.ts`'s storage key and
+valid-value literals by hand, since it runs before any module graph
+exists. 5 new `vitest` tests in `theme.test.ts`, for 28 total alongside
+the existing 9 Rust integration tests, unchanged.
+
 `knx-net`, `knx-secure` remain empty crates with their responsibility
 stated in a doc comment. There is still no manufacturer parameter
 *interpretation* (the `Dynamic` tree, `when/@test`), and the desktop UI so
 far covers the Project Explorer, the four save/load/import buttons, a
 properties inspector with undo/redo for two editable fields (individual
 address, communication-object DPT), `Ctrl+K` search over devices, group
-addresses, and building parts, and a `Ctrl+Shift+P` command palette over
-the app's seven existing actions — no dark/light mode, or editing of
-anything beyond those two Inspector fields, yet.
+addresses, and building parts, a `Ctrl+Shift+P` command palette over the
+app's seven existing actions, and a System/Light/Dark theme toggle — no
+editing of anything beyond those two Inspector fields yet.
 
 Three architectural rules are enforced mechanically rather than by
 discipline, and all three have been observed to fail on a deliberate
@@ -294,7 +318,7 @@ violation:
 - `cargo deny check` — no licence outside the allowlist enters the graph; GPL
   is not on the allowlist.
 
-306 Rust tests pass across the workspace as of this session, plus 23
+306 Rust tests pass across the workspace as of this session, plus 28
 `vitest` tests in `apps/knx-desktop` (run separately, `npm test`, not part
 of `cargo test --workspace`).
 
@@ -311,7 +335,7 @@ of `cargo test --workspace`).
 | `crates/knx-app/` | The import and export services (`import.rs`, `export.rs`) — the one crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together. |
 | `crates/knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
-| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` against an in-memory store; `save_project`/`save_project_as`/`open_native_project` against a `.knxdb` file; `device_detail`/`set_individual_address`/`set_com_object_dpt`/`undo`/`redo` against the in-memory `CommandStack`); `src/` the React frontend (`ProjectExplorer` selection, `Inspector`, undo/redo toolbar and `Ctrl+Z`/`Ctrl+Shift+Z`, `Ctrl+K` search over devices/group addresses/building parts via `Search.tsx`/`searchMatch.ts`/`treeUtils.ts`, and `Ctrl+Shift+P` command palette via `CommandPalette.tsx`/`commandRegistry.ts`, Session 5 cycle 6), including the `ts-rs`-generated bindings under `src/bindings/` and a `vitest` suite (Session 5 cycle 5, extended cycle 6). |
+| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` against an in-memory store; `save_project`/`save_project_as`/`open_native_project` against a `.knxdb` file; `device_detail`/`set_individual_address`/`set_com_object_dpt`/`undo`/`redo` against the in-memory `CommandStack`); `src/` the React frontend (`ProjectExplorer` selection, `Inspector`, undo/redo toolbar and `Ctrl+Z`/`Ctrl+Shift+Z`, `Ctrl+K` search over devices/group addresses/building parts via `Search.tsx`/`searchMatch.ts`/`treeUtils.ts`, `Ctrl+Shift+P` command palette via `CommandPalette.tsx`/`commandRegistry.ts` (Session 5 cycle 6), and a System/Light/Dark theme toggle via `ThemeToggle.tsx`/`theme.ts` (Session 5 cycle 7)), including the `ts-rs`-generated bindings under `src/bindings/` and a `vitest` suite (Session 5 cycle 5, extended cycles 6-7). |
 | `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |
 | `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, `knx-desktop`'s own `npm test` (Vitest, Session 5 cycle 5), the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-desktop/src/bindings` are not stale (Session 5). |
@@ -365,7 +389,10 @@ Cycle 5 shipped Search: finding a device, group address, or building part
 by name/address across a project too large to scan by eye in the Project
 Explorer alone. Cycle 6 shipped the command palette: `Ctrl+Shift+P` over
 the app's seven existing actions, reusing Search's overlay structure.
-Dark/light mode remains, per [ROADMAP.md](ROADMAP.md).
+Cycle 7 shipped a System/Light/Dark theme toggle, persisted to
+`localStorage`. CLAUDE.md's UI/UX deliverable list for Session 5 —
+Project Explorer, properties inspector, search, command palette, dark
+and light mode — is now complete; see [ROADMAP.md](ROADMAP.md).
 
 Known gaps carried forward, none blocking Session 5:
 
@@ -406,6 +433,16 @@ Known gaps carried forward, none blocking Session 5:
   display available in this environment. Should be run before, or at,
   merge. `vitest` coverage (`commandRegistry.test.ts`) covers the
   filtering/enablement logic underneath it.
+- Cycle 7's plan-mandated manual smoke check (click through all three
+  theme states, confirm the icon matches each state, confirm the error
+  banner and search/palette overlay stay legible in both explicit Light
+  and Dark, restart the app after picking an explicit theme and confirm
+  it survives) was likewise not performed — no display available in this
+  environment. Should be run before, or at, merge; the placeholder
+  dark-mode color values (`#ff6b6b` error text, `rgba(0,0,0,0.6)`/
+  `rgba(0,0,0,0.5)` overlay backdrop/shadow) are an untested starting
+  point, not a measured contrast-ratio result. `vitest` coverage
+  (`theme.test.ts`) covers the cycling/persistence logic underneath it.
 - A search result that lands inside a manually collapsed Project Explorer
   branch is not auto-revealed — the tree does not expand or scroll to it,
   only the Inspector reflects the new selection. This is an explicit,

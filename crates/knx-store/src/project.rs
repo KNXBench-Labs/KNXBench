@@ -390,6 +390,10 @@ pub fn load_project(conn: &Connection) -> Result<Project, StoreError> {
     }
 
     Ok(Project {
+        // Not stored, and deliberately so: the migration chain has already
+        // brought this file to `CURRENT_SCHEMA_VERSION` before `load_project`
+        // can run, so an older file's version is a fact about the file
+        // before migration, not about the `Project` being reconstructed here.
         schema_version: knx_core::project::CURRENT_SCHEMA_VERSION,
         strings,
         info: ProjectInfo {

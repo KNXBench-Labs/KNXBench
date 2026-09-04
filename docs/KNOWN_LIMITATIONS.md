@@ -349,3 +349,31 @@ database. Until then, the `deny.toml` ignore list is permanent infrastructure.
 **Lifted when.** Tauri v3 or a later `tauri` 2.x release ships its GTK4
 backend and becomes the default on Linux.
 
+## 17. Deleting a group address can leave a dangling `GroupLink`
+
+**Limitation.** `knx_core::command::Command::DeleteGroupAddress` removes the
+`GroupAddressEntry` from `Installation::group_addresses` but does not scan
+`Devices` for any `ComObjectInstance.links` entry that pointed at it. A
+communication object can therefore end up with a `GroupLink` naming a group
+address id that no longer exists in the project.
+
+**Cause.** The command was written against the group-address list alone;
+finding every com object that might reference a given group address needs
+either an index the domain model does not maintain or a full device scan,
+and neither was in scope when the command was added.
+
+**Impact.** In memory, nothing visibly breaks — the dangling link is just
+an id that resolves to nothing if looked up. Persisting the project is
+where it surfaces: `knx-store`'s `sync_after_command` deletes the group
+address row correctly (`group.rs::delete_group_address` also removes its
+own `group_link` rows), but a later *full* `save_project` re-derives every
+`group_link` row straight from each `ComObjectInstance.links` in memory —
+including the dangling one — and fails with a foreign-key violation against
+`group_address(id)`.
+
+**Lifted when.** `Command::DeleteGroupAddress` (or a helper it calls) also
+walks `Devices` and removes/flags every `GroupLink` naming the deleted
+address — a `knx-core` change, not a `knx-store` one, and its own design
+decision (cascade-delete the links silently, or surface them as an import/
+edit-report finding first) rather than a one-line fix.
+

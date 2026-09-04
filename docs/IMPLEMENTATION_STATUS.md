@@ -31,9 +31,13 @@ validation rules (`validation.rs`), and the undo/redo command layer
 though the Rust shape of `Project` did not change. Session 5 cycle 2 bumps
 it again to 4 for `knx-store`'s new entity persistence (below), and this
 time does touch the Rust shape, but only by derive: `Project`, `Devices`,
-`StringTable` and `IdAllocators` gain `#[derive(PartialEq)]`, and
-`StringTable` gains a public `iter()` — both additive, no behavior change
-(see [DATA_MODEL.md §11](DATA_MODEL.md)). 48 tests.
+`StringTable` and `IdAllocators` gain `#[derive(PartialEq)]`,
+`StringTable` gains a public `iter()`, and `Devices` gains a public
+`com_objects()` (enumerates every communication object instance,
+including one an owning device's `com_objects` list doesn't name — what
+`knx-store`'s `save_project` uses to detect and refuse an unreachable one
+rather than silently drop it) — all additive, no behavior change (see
+[DATA_MODEL.md §11](DATA_MODEL.md)). 49 tests.
 
 **`knx-store` gains full entity persistence for `knx_core::Project`**
 this cycle (schema v4, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)):

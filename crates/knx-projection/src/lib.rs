@@ -34,6 +34,12 @@ pub struct ProjectTree {
     /// a later cycle, this is the count that says something is worth
     /// looking at).
     pub warnings: usize,
+    /// Always `false` straight out of [`build_project_tree`] — this crate
+    /// never sees a `CommandStack`. The desktop shell overlays the real
+    /// value from its own `CommandStack` after every command/undo/redo.
+    pub can_undo: bool,
+    /// See `can_undo`.
+    pub can_redo: bool,
     pub installations: Vec<InstallationNode>,
 }
 
@@ -98,6 +104,8 @@ pub fn build_project_tree(project: &Project) -> ProjectTree {
         schema_version: project.schema_version,
         errors: 0,
         warnings: 0,
+        can_undo: false,
+        can_redo: false,
         installations: project
             .installations
             .iter()
@@ -156,6 +164,88 @@ fn build_device_node(device: &knx_core::DeviceInstance) -> DeviceNode {
         name: device.name.clone(),
         address: device.address.map(|a| a.to_string()),
         description: device.description.clone(),
+    }
+}
+
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct DeviceDetail {
+    pub id: u32,
+    pub name: String,
+    pub description: Option<String>,
+    /// Formatted individual address (e.g. `"1.1.1"`), `None` if unassigned.
+    pub address: Option<String>,
+    pub com_objects: Vec<ComObjectNode>,
+}
+
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct ComObjectNode {
+    pub id: u32,
+    /// From `_O-<n>` in the source `RefId`.
+    pub number: u16,
+    pub name: Option<String>,
+    /// Formatted datapoint type reference (e.g. `"DPST-1-1"`, `"DPT-1"`),
+    /// `None` if never stated at any layer.
+    pub dpt: Option<String>,
+    /// The layer `dpt` resolved from (`"Program"`, `"ProgramRef"`,
+    /// `"Instance"`, `"Inferred"`, `"UserEdit"`), `None` alongside `dpt:
+    /// None`.
+    pub dpt_layer: Option<String>,
+    pub is_active: bool,
+    /// Display-only this cycle — no `Command` exists yet to edit flags.
+    pub read: bool,
+    pub write: bool,
+    pub transmit: bool,
+    pub update: bool,
+    pub communication: bool,
+}
+
+/// Builds the detail panel for one device, resolving each communication
+/// object's text through the project's string table. `None` if `id` does
+/// not name a device in `project` (a stale selection after an edit, for
+/// instance).
+pub fn build_device_detail(project: &Project, id: knx_core::DeviceId) -> Option<DeviceDetail> {
+    let device = project.devices.get(id)?;
+    Some(DeviceDetail {
+        id: device.id.0,
+        name: device.name.clone(),
+        description: device.description.clone(),
+        address: device.address.map(|a| a.to_string()),
+        com_objects: device
+            .com_objects
+            .iter()
+            .filter_map(|com_id| project.devices.com_object(*com_id))
+            .map(|com| build_com_object_node(com, project))
+            .collect(),
+    })
+}
+
+fn build_com_object_node(
+    com: &knx_core::ComObjectInstance,
+    project: &Project,
+) -> ComObjectNode {
+    let name = com.text.value().and_then(|resolved| {
+        project
+            .strings
+            .text(&resolved.value, project.strings.default_language())
+            .map(|s| s.to_string())
+    });
+    let dpt = com.dpt.value().map(|resolved| resolved.value.to_string());
+    let dpt_layer = com.dpt.layer().map(|layer| format!("{layer:?}"));
+    let flag = |o: &knx_core::Override<bool>| o.value().map(|r| r.value).unwrap_or(false);
+    ComObjectNode {
+        id: com.id.0,
+        number: com.number,
+        name,
+        dpt,
+        dpt_layer,
+        is_active: com.is_active,
+        read: flag(&com.flags.read),
+        write: flag(&com.flags.write),
+        transmit: flag(&com.flags.transmit),
+        update: flag(&com.flags.update),
+        communication: flag(&com.flags.communication),
     }
 }
 
@@ -416,5 +506,76 @@ mod tests {
 
         let tree = build_project_tree(&project);
         assert!(tree.installations[0].buildings[0].devices.is_empty());
+    }
+
+    #[test]
+    fn build_device_detail_resolves_name_dpt_and_layer_for_each_com_object() {
+        let project = project_with_one_device();
+        let detail = build_device_detail(&project, knx_core::DeviceId(1)).unwrap();
+
+        assert_eq!(detail.id, 1);
+        assert_eq!(detail.name, "Switch");
+        assert_eq!(detail.description.as_deref(), Some("Hallway switch"));
+        assert_eq!(detail.address.as_deref(), Some("1.1.1"));
+        assert_eq!(detail.com_objects.len(), 1);
+
+        let com = &detail.com_objects[0];
+        assert_eq!(com.number, 0);
+        assert_eq!(com.name.as_deref(), Some("Switch on/off"));
+        assert_eq!(com.dpt.as_deref(), Some("DPST-1-1"));
+        assert_eq!(com.dpt_layer.as_deref(), Some("UserEdit"));
+        assert!(com.is_active);
+        assert!(!com.read); // ResolvedFlags::none() sets nothing
+    }
+
+    #[test]
+    fn build_device_detail_returns_none_for_an_unknown_device() {
+        let project = project_with_one_device();
+        assert!(build_device_detail(&project, knx_core::DeviceId(99)).is_none());
+    }
+
+    fn project_with_one_device() -> Project {
+        use knx_core::{
+            CommissioningState, ComObjectInstance, ComObjectInstanceId, DeviceId, DptRef,
+            IndividualAddress, Layer, ResolvedFlags, Text,
+        };
+
+        let mut project = Project::new(Language("en".into()));
+        project.devices.insert(DeviceInstance {
+            id: DeviceId(1),
+            source: source(),
+            name: "Switch".into(),
+            description: Some("Hallway switch".into()),
+            address: Some(IndividualAddress::new(1, 1, 1).unwrap()),
+            product_ref: "P".into(),
+            program_ref: "H".into(),
+            commissioning: CommissioningState::default(),
+            visibility_calculated: true,
+            com_objects: vec![ComObjectInstanceId(1)],
+            binary_data: vec![],
+        });
+        project.devices.insert_com_object(ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: knx_core::Override::Value(knx_core::Resolved {
+                value: Text::Literal("Switch on/off".into()),
+                layer: Layer::Program,
+            }),
+            description: knx_core::Override::Absent,
+            dpt: knx_core::Override::Value(knx_core::Resolved {
+                value: DptRef {
+                    main: 1,
+                    sub: Some(1),
+                },
+                layer: Layer::UserEdit,
+            }),
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+        });
+        project
     }
 }

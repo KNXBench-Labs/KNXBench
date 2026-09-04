@@ -24,4 +24,14 @@ errors: number,
  * a later cycle, this is the count that says something is worth
  * looking at).
  */
-warnings: number, installations: Array<InstallationNode>, };
+warnings: number, 
+/**
+ * Always `false` straight out of [`build_project_tree`] — this crate
+ * never sees a `CommandStack`. The desktop shell overlays the real
+ * value from its own `CommandStack` after every command/undo/redo.
+ */
+can_undo: boolean, 
+/**
+ * See `can_undo`.
+ */
+can_redo: boolean, installations: Array<InstallationNode>, };

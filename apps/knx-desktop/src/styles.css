@@ -182,6 +182,9 @@ main {
   margin: 0;
 }
 
+/* Shared by Search.tsx and CommandPalette.tsx (.search-overlay/.search-panel/
+   .search-empty/.search-results/.search-result); .search-result.disabled is
+   palette-only — search never renders a disabled row. */
 .search-result {
   padding: 0.35rem 0.5rem;
   cursor: pointer;

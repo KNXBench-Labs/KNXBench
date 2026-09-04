@@ -221,10 +221,7 @@ pub fn build_device_detail(project: &Project, id: knx_core::DeviceId) -> Option<
     })
 }
 
-fn build_com_object_node(
-    com: &knx_core::ComObjectInstance,
-    project: &Project,
-) -> ComObjectNode {
+fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -> ComObjectNode {
     let name = com.text.value().and_then(|resolved| {
         project
             .strings
@@ -536,7 +533,7 @@ mod tests {
 
     fn project_with_one_device() -> Project {
         use knx_core::{
-            CommissioningState, ComObjectInstance, ComObjectInstanceId, DeviceId, DptRef,
+            ComObjectInstance, ComObjectInstanceId, CommissioningState, DeviceId, DptRef,
             IndividualAddress, Layer, ResolvedFlags, Text,
         };
 

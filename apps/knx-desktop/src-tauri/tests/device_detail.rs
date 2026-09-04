@@ -2,7 +2,7 @@
 //! `open_reference_project.rs` for the same pattern against a real import.
 
 use knx_core::{
-    CommissioningState, ComObjectInstance, ComObjectInstanceId, DeviceInstance, DeviceId, DptRef,
+    ComObjectInstance, ComObjectInstanceId, CommissioningState, DeviceId, DeviceInstance, DptRef,
     Language, Layer, Override, Project, Resolved, ResolvedFlags, SourceRef, Text,
 };
 

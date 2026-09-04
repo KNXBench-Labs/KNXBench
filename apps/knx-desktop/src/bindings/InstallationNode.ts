@@ -2,5 +2,6 @@
 import type { AreaNode } from "./AreaNode";
 import type { BuildingNode } from "./BuildingNode";
 import type { DeviceNode } from "./DeviceNode";
+import type { GroupAddressNode } from "./GroupAddressNode";
 
-export type InstallationNode = { id: number, name: string, topology: Array<AreaNode>, buildings: Array<BuildingNode>, unassigned: Array<DeviceNode>, };
+export type InstallationNode = { id: number, name: string, topology: Array<AreaNode>, buildings: Array<BuildingNode>, unassigned: Array<DeviceNode>, group_addresses: Array<GroupAddressNode>, };

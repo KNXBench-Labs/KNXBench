@@ -5,24 +5,35 @@ import type { AreaNode } from "./bindings/AreaNode";
 import type { LineNode } from "./bindings/LineNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
+import type { Selection } from "./selection";
 
 function TreeNode(props: {
   label: string;
   children?: React.ReactNode;
   selected?: boolean;
-  onClick?: () => void;
+  onSelect?: () => void;
 }) {
   const [open, setOpen] = useState(true);
   const hasChildren = props.children !== undefined;
-  const classes = ["tree-label"];
-  if (hasChildren) classes.push("expandable");
-  if (props.selected) classes.push("selected");
-  const handleClick = hasChildren ? () => setOpen(!open) : props.onClick;
+  const labelClasses = ["tree-label"];
+  if (props.selected) labelClasses.push("selected");
+  if (props.onSelect) labelClasses.push("selectable");
+  // A node with children but no `onSelect` (every non-leaf label except
+  // BuildingItem) keeps the old whole-row-toggles behavior. A node with
+  // `onSelect` (DeviceItem, BuildingItem) selects on the label instead —
+  // BuildingItem still gets its own dedicated chevron to expand/collapse.
+  const labelClick = props.onSelect ?? (hasChildren ? () => setOpen(!open) : undefined);
   return (
     <li>
-      <span className={classes.join(" ")} onClick={handleClick}>
-        {hasChildren ? (open ? "▾ " : "▸ ") : ""}
-        {props.label}
+      <span className="tree-row">
+        {hasChildren && (
+          <span className="tree-toggle" onClick={() => setOpen(!open)}>
+            {open ? "▾" : "▸"}
+          </span>
+        )}
+        <span className={labelClasses.join(" ")} onClick={labelClick}>
+          {props.label}
+        </span>
       </span>
       {hasChildren && open && <ul>{props.children}</ul>}
     </li>
@@ -30,76 +41,80 @@ function TreeNode(props: {
 }
 
 type SelectionProps = {
-  selectedId: number | null;
-  onSelectDevice: (id: number) => void;
+  selection: Selection | null;
+  onSelect: (sel: Selection) => void;
 };
 
 function DeviceItem(props: { device: DeviceNode } & SelectionProps) {
-  const { device, selectedId, onSelectDevice } = props;
+  const { device, selection, onSelect } = props;
   const label = device.address ? `${device.address} ${device.name}` : device.name;
   return (
     <TreeNode
       label={label}
-      selected={device.id === selectedId}
-      onClick={() => onSelectDevice(device.id)}
+      selected={selection?.kind === "device" && selection.id === device.id}
+      onSelect={() => onSelect({ kind: "device", id: device.id })}
     />
   );
 }
 
 function LineItem(props: { line: LineNode } & SelectionProps) {
-  const { line, selectedId, onSelectDevice } = props;
+  const { line, selection, onSelect } = props;
   return (
     <TreeNode label={`Line ${line.address}: ${line.name}`}>
       {line.devices.map((d) => (
-        <DeviceItem key={d.id} device={d} selectedId={selectedId} onSelectDevice={onSelectDevice} />
+        <DeviceItem key={d.id} device={d} selection={selection} onSelect={onSelect} />
       ))}
     </TreeNode>
   );
 }
 
 function AreaItem(props: { area: AreaNode } & SelectionProps) {
-  const { area, selectedId, onSelectDevice } = props;
+  const { area, selection, onSelect } = props;
   return (
     <TreeNode label={`Area ${area.address}: ${area.name}`}>
       {area.lines.map((l) => (
-        <LineItem key={l.id} line={l} selectedId={selectedId} onSelectDevice={onSelectDevice} />
+        <LineItem key={l.id} line={l} selection={selection} onSelect={onSelect} />
       ))}
     </TreeNode>
   );
 }
 
 function BuildingItem(props: { building: BuildingNode } & SelectionProps) {
-  const { building, selectedId, onSelectDevice } = props;
+  const { building, selection, onSelect } = props;
   return (
-    <TreeNode label={`${building.name} (${building.kind})`}>
+    <TreeNode
+      label={`${building.name} (${building.kind})`}
+      selected={selection?.kind === "building_part" && selection.id === building.id}
+      onSelect={() => onSelect({ kind: "building_part", id: building.id })}
+    >
       {building.children.map((c) => (
-        <BuildingItem key={c.id} building={c} selectedId={selectedId} onSelectDevice={onSelectDevice} />
+        <BuildingItem key={c.id} building={c} selection={selection} onSelect={onSelect} />
       ))}
       {building.devices.map((d) => (
-        <DeviceItem key={d.id} device={d} selectedId={selectedId} onSelectDevice={onSelectDevice} />
+        <DeviceItem key={d.id} device={d} selection={selection} onSelect={onSelect} />
       ))}
     </TreeNode>
   );
 }
 
 function InstallationItem(props: { installation: InstallationNode } & SelectionProps) {
-  const { installation, selectedId, onSelectDevice } = props;
+  const { installation, selection, onSelect } = props;
   return (
     <TreeNode label={installation.name}>
       <TreeNode label="Topology">
         {installation.topology.map((a) => (
-          <AreaItem key={a.id} area={a} selectedId={selectedId} onSelectDevice={onSelectDevice} />
+          <AreaItem key={a.id} area={a} selection={selection} onSelect={onSelect} />
         ))}
       </TreeNode>
       <TreeNode label="Buildings">
         {installation.buildings.map((b) => (
-          <BuildingItem key={b.id} building={b} selectedId={selectedId} onSelectDevice={onSelectDevice} />
+          <BuildingItem key={b.id} building={b} selection={selection} onSelect={onSelect} />
         ))}
       </TreeNode>
       {installation.unassigned.length > 0 && (
         <TreeNode label="Unassigned">
           {installation.unassigned.map((d) => (
-            <DeviceItem key={d.id} device={d} selectedId={selectedId} onSelectDevice={onSelectDevice} />
+            <DeviceItem key={d.id} device={d} selection={selection} onSelect={onSelect} />
           ))}
         </TreeNode>
       )}
@@ -108,7 +123,7 @@ function InstallationItem(props: { installation: InstallationNode } & SelectionP
 }
 
 export default function ProjectExplorer(props: { tree: ProjectTree } & SelectionProps) {
-  const { tree, selectedId, onSelectDevice } = props;
+  const { tree, selection, onSelect } = props;
   return (
     <div className="project-explorer">
       <ul className="tree-root">
@@ -116,8 +131,8 @@ export default function ProjectExplorer(props: { tree: ProjectTree } & Selection
           <InstallationItem
             key={inst.id}
             installation={inst}
-            selectedId={selectedId}
-            onSelectDevice={onSelectDevice}
+            selection={selection}
+            onSelect={onSelect}
           />
         ))}
       </ul>

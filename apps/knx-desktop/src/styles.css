@@ -31,8 +31,14 @@ main {
   cursor: default;
 }
 
-.tree-label.expandable {
+.tree-label.selectable {
   cursor: pointer;
+}
+
+.tree-toggle {
+  cursor: pointer;
+  display: inline-block;
+  width: 1em;
 }
 
 .tree-label.selected {

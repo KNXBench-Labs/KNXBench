@@ -53,3 +53,64 @@ main {
   font-style: italic;
   opacity: 0.8;
 }
+
+.workspace {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.project-explorer {
+  flex: 1 1 40%;
+  min-width: 0;
+}
+
+.inspector {
+  flex: 1 1 60%;
+  min-width: 0;
+}
+
+.inspector-description {
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.inspector-field {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.inspector-field input {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.field-error {
+  display: block;
+  color: #b00020;
+  font-size: 0.85em;
+}
+
+.com-object-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.com-object-list li {
+  padding: 0.5rem 0;
+  border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.com-object-label {
+  display: block;
+  font-weight: bold;
+}
+
+.provenance-badge {
+  display: inline-block;
+  font-size: 0.75em;
+  opacity: 0.7;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 0 0.35em;
+}

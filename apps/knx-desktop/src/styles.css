@@ -128,3 +128,66 @@ main {
   border-radius: 3px;
   padding: 0 0.35em;
 }
+
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  padding-top: 10vh;
+  z-index: 10;
+}
+
+.search-panel {
+  background: Canvas;
+  color: CanvasText;
+  width: min(32rem, 90vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  border-radius: 6px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  padding: 0.75rem;
+}
+
+.search-panel input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 1rem;
+  padding: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.search-empty {
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.search-results {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.search-group-label {
+  font-size: 0.75em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  margin-top: 0.5rem;
+}
+
+.search-group ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.search-result {
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.search-result.selected {
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}

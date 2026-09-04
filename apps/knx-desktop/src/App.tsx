@@ -3,8 +3,10 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
+import type { Selection } from "./selection";
 import ProjectExplorer from "./ProjectExplorer";
 import Inspector from "./Inspector";
+import Search from "./Search";
 
 const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
 
@@ -20,16 +22,22 @@ function App() {
   // fresh `.knxproj` while `store_path` still points at a different
   // `.knxdb` would let a subsequent Save overwrite the wrong file).
   const [hasStorePath, setHasStorePath] = useState(false);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
+  const [selection, setSelection] = useState<Selection | null>(null);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
-  // Mirrors selectedDeviceId synchronously so in-flight device_detail
-  // responses can tell, once they land, whether the selection has since
-  // moved on — state updates alone are too late to check inside the same
-  // async callback that reads them.
-  const selectedDeviceIdRef = useRef<number | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  // Mirrors `selection` synchronously so in-flight device_detail responses
+  // can tell, once they land, whether the selection has since moved on —
+  // state updates alone are too late to check inside the same async
+  // callback that reads them.
+  const selectionRef = useRef<Selection | null>(null);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        if (tree) setSearchOpen(true);
+        return;
+      }
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return;
       e.preventDefault();
       if (e.shiftKey) {
@@ -44,22 +52,29 @@ function App() {
 
   function resetTree(newTree: ProjectTree) {
     setTree(newTree);
-    selectedDeviceIdRef.current = null;
-    setSelectedDeviceId(null);
+    selectionRef.current = null;
+    setSelection(null);
     setDeviceDetail(null);
   }
 
-  async function selectDevice(id: number) {
-    selectedDeviceIdRef.current = id;
-    setSelectedDeviceId(id);
+  async function selectEntity(sel: Selection) {
+    selectionRef.current = sel;
+    setSelection(sel);
     setError(null);
+    if (sel.kind !== "device") {
+      // Group-address/building-part detail resolves synchronously from
+      // `tree` inside Inspector — nothing to fetch, and no stale
+      // `deviceDetail` should linger from a previous device selection.
+      setDeviceDetail(null);
+      return;
+    }
     try {
-      const detail = await invoke<DeviceDetail>("device_detail", { deviceId: id });
-      if (selectedDeviceIdRef.current === id) {
+      const detail = await invoke<DeviceDetail>("device_detail", { deviceId: sel.id });
+      if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
         setDeviceDetail(detail);
       }
     } catch (e) {
-      if (selectedDeviceIdRef.current === id) {
+      if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
         setError(String(e));
         setDeviceDetail(null);
       }
@@ -67,27 +82,28 @@ function App() {
   }
 
   // After any command/undo/redo: the tree refreshes unconditionally (an
-  // address edit changes its label), and the currently selected device's
-  // detail refreshes alongside it (its own fields, or nothing if the edit
-  // targeted a different device — device_detail is cheap enough to always
-  // refetch rather than track which device a given command touched). If the
-  // selection has moved on by the time this response lands (the user clicked
-  // another device while this edit's request was in flight), the stale
-  // result is discarded instead of overwriting the newly selected device's
-  // detail.
+  // address edit changes its label), and — if a device is currently
+  // selected — its detail refreshes alongside it (its own fields, or
+  // nothing if the edit targeted a different device — device_detail is
+  // cheap enough to always refetch rather than track which device a given
+  // command touched). A group-address or building-part selection needs no
+  // refetch: Inspector reads it straight out of the refreshed `tree` prop.
+  // If the selection has moved on by the time this response lands (the
+  // user clicked another device while this edit's request was in flight),
+  // the stale result is discarded instead of overwriting the newly
+  // selected device's detail.
   async function handleTreeUpdate(newTree: ProjectTree) {
     setTree(newTree);
-    const id = selectedDeviceIdRef.current;
-    if (id !== null) {
-      try {
-        const detail = await invoke<DeviceDetail>("device_detail", { deviceId: id });
-        if (selectedDeviceIdRef.current === id) {
-          setDeviceDetail(detail);
-        }
-      } catch (e) {
-        if (selectedDeviceIdRef.current === id) {
-          setError(String(e));
-        }
+    const sel = selectionRef.current;
+    if (sel?.kind !== "device") return;
+    try {
+      const detail = await invoke<DeviceDetail>("device_detail", { deviceId: sel.id });
+      if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
+        setDeviceDetail(detail);
+      }
+    } catch (e) {
+      if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
+        setError(String(e));
       }
     }
   }
@@ -175,6 +191,9 @@ function App() {
       <button onClick={redo} disabled={!tree?.can_redo}>
         Redo
       </button>
+      <button onClick={() => tree && setSearchOpen(true)} disabled={!tree}>
+        Search… (Ctrl+K)
+      </button>
       {error && (
         <p role="alert" className="error-banner">
           {error}
@@ -182,11 +201,20 @@ function App() {
       )}
       {tree && (
         <div className="workspace">
-          <ProjectExplorer tree={tree} selectedId={selectedDeviceId} onSelectDevice={selectDevice} />
-          {deviceDetail && (
-            <Inspector key={deviceDetail.id} detail={deviceDetail} onApplied={handleTreeUpdate} />
+          <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} />
+          {selection && (
+            <Inspector
+              key={`${selection.kind}-${selection.id}`}
+              selection={selection}
+              tree={tree}
+              deviceDetail={deviceDetail}
+              onApplied={handleTreeUpdate}
+            />
           )}
         </div>
+      )}
+      {tree && searchOpen && (
+        <Search tree={tree} onSelect={selectEntity} onClose={() => setSearchOpen(false)} />
       )}
     </main>
   );

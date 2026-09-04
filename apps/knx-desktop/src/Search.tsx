@@ -33,6 +33,12 @@ export default function Search(props: {
   const index = useMemo(() => buildSearchIndex(tree), [tree]);
   const results = useMemo(() => matchEntries(index, query), [index, query]);
 
+  const grouped = KIND_ORDER.map((kind) => ({
+    kind,
+    entries: results.filter((entry) => entry.kind === kind),
+  })).filter((group) => group.entries.length > 0);
+  const ordered = grouped.flatMap((group) => group.entries);
+
   useEffect(() => {
     setHighlight(0);
   }, [results]);
@@ -47,20 +53,15 @@ export default function Search(props: {
       onClose();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlight((h) => Math.min(h + 1, results.length - 1));
+      setHighlight((h) => Math.min(h + 1, ordered.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlight((h) => Math.max(h - 1, 0));
     } else if (e.key === "Enter") {
-      const entry = results[highlight];
+      const entry = ordered[highlight];
       if (entry) pick(entry);
     }
   }
-
-  const grouped = KIND_ORDER.map((kind) => ({
-    kind,
-    entries: results.map((entry, index) => ({ entry, index })).filter((r) => r.entry.kind === kind),
-  })).filter((group) => group.entries.length > 0);
 
   return (
     <div className="search-overlay" onClick={onClose}>
@@ -78,15 +79,18 @@ export default function Search(props: {
             <li key={kind} className="search-group">
               <div className="search-group-label">{KIND_LABELS[kind]}</div>
               <ul>
-                {entries.map(({ entry, index }) => (
-                  <li
-                    key={`${entry.kind}-${entry.id}`}
-                    className={index === highlight ? "search-result selected" : "search-result"}
-                    onClick={() => pick(entry)}
-                  >
-                    {describeEntry(entry)}
-                  </li>
-                ))}
+                {entries.map((entry) => {
+                  const position = ordered.indexOf(entry);
+                  return (
+                    <li
+                      key={`${entry.kind}-${entry.id}`}
+                      className={position === highlight ? "search-result selected" : "search-result"}
+                      onClick={() => pick(entry)}
+                    >
+                      {describeEntry(entry)}
+                    </li>
+                  );
+                })}
               </ul>
             </li>
           ))}

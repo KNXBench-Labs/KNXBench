@@ -3,6 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import type { GroupAddressNode } from "./bindings/GroupAddressNode";
+import type { BuildingNode } from "./bindings/BuildingNode";
+import type { Selection } from "./selection";
+import { findBuildingPart, findGroupAddress } from "./treeUtils";
 
 function AddressField(props: { detail: DeviceDetail; onApplied: (tree: ProjectTree) => void }) {
   const { detail, onApplied } = props;
@@ -90,10 +94,7 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
   );
 }
 
-export default function Inspector(props: {
-  detail: DeviceDetail;
-  onApplied: (tree: ProjectTree) => void;
-}) {
+function DeviceInspector(props: { detail: DeviceDetail; onApplied: (tree: ProjectTree) => void }) {
   const { detail, onApplied } = props;
   return (
     <div className="inspector">
@@ -114,4 +115,59 @@ export default function Inspector(props: {
       </ul>
     </div>
   );
+}
+
+function GroupAddressInspector(props: { ga: GroupAddressNode }) {
+  const { ga } = props;
+  return (
+    <div className="inspector">
+      <h2>{ga.name}</h2>
+      <p className="inspector-address">{ga.address}</p>
+    </div>
+  );
+}
+
+function BuildingPartInspector(props: { node: BuildingNode; path: string }) {
+  const { node, path } = props;
+  return (
+    <div className="inspector">
+      <h2>{node.name}</h2>
+      <p className="inspector-description">{node.kind}</p>
+      <p className="inspector-path">{path}</p>
+      <p>
+        {node.devices.length} device{node.devices.length === 1 ? "" : "s"},{" "}
+        {node.children.length} child part{node.children.length === 1 ? "" : "s"}
+      </p>
+    </div>
+  );
+}
+
+// `deviceDetail` is `null` both before the async `device_detail` fetch
+// lands and if it errored (App.tsx clears it either way) — in either case
+// there is nothing to show yet, so this renders nothing rather than a
+// half-populated panel. Group-address and building-part selections have
+// no such gap: both resolve synchronously from `tree`, which is always
+// already loaded by the time Inspector can render at all.
+export default function Inspector(props: {
+  selection: Selection;
+  tree: ProjectTree;
+  deviceDetail: DeviceDetail | null;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { selection, tree, deviceDetail, onApplied } = props;
+
+  if (selection.kind === "device") {
+    if (!deviceDetail) return null;
+    return <DeviceInspector detail={deviceDetail} onApplied={onApplied} />;
+  }
+
+  if (selection.kind === "group_address") {
+    const ga = findGroupAddress(tree, selection.id);
+    if (!ga) return null;
+    return <GroupAddressInspector ga={ga} />;
+  }
+
+  const found = findBuildingPart(tree, selection.id);
+  if (!found) return null;
+  return <BuildingPartInspector node={found.node} path={found.path} />;
 }

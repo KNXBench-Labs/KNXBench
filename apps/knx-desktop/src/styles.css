@@ -130,6 +130,17 @@ main {
   font-size: 0.85em;
 }
 
+.tree-new-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0;
+}
+
+.tree-new-row input {
+  min-width: 0;
+}
+
 .com-object-list {
   list-style: none;
   padding-left: 0;

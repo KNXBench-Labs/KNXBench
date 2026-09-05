@@ -237,7 +237,12 @@ function App() {
       )}
       {tree && (
         <div className="workspace">
-          <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} />
+          <ProjectExplorer
+            tree={tree}
+            selection={selection}
+            onSelect={selectEntity}
+            onTreeUpdate={handleTreeUpdate}
+          />
           {selection ? (
             <Inspector
               key={`${selection.kind}-${selection.id}`}

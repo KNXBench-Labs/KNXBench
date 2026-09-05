@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { invoke } from "@tauri-apps/api/core";
+import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { Selection } from "./selection";
@@ -95,7 +95,7 @@ function App() {
       return;
     }
     try {
-      const detail = await invoke<DeviceDetail>("device_detail", { deviceId: sel.id });
+      const detail = await api.deviceDetail(sel.id);
       if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
         setDeviceDetail(detail);
       }
@@ -123,7 +123,7 @@ function App() {
     const sel = selectionRef.current;
     if (sel?.kind !== "device") return;
     try {
-      const detail = await invoke<DeviceDetail>("device_detail", { deviceId: sel.id });
+      const detail = await api.deviceDetail(sel.id);
       if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
         setDeviceDetail(detail);
       }
@@ -142,7 +142,7 @@ function App() {
     if (typeof path !== "string") return;
     clearErrors();
     try {
-      resetTree(await invoke<ProjectTree>("open_project", { path }));
+      resetTree(await api.importProject(path));
       setHasStorePath(false); // ETS import has no `.knxdb` location yet
     } catch (e) {
       pushError(String(e));
@@ -154,7 +154,7 @@ function App() {
     if (typeof path !== "string") return;
     clearErrors();
     try {
-      resetTree(await invoke<ProjectTree>("open_native_project", { path }));
+      resetTree(await api.openProject(path));
       setHasStorePath(true);
     } catch (e) {
       pushError(String(e));
@@ -166,7 +166,7 @@ function App() {
     if (typeof path !== "string") return;
     clearErrors();
     try {
-      await invoke("save_project_as", { path });
+      await api.saveProjectAs(path);
       setHasStorePath(true);
     } catch (e) {
       pushError(String(e));
@@ -177,7 +177,7 @@ function App() {
     if (!hasStorePath) return saveProjectAs();
     clearErrors();
     try {
-      await invoke("save_project");
+      await api.saveProject();
     } catch (e) {
       pushError(String(e));
     }
@@ -186,7 +186,7 @@ function App() {
   async function undo() {
     clearErrors();
     try {
-      await handleTreeUpdate(await invoke<ProjectTree>("undo"));
+      await handleTreeUpdate(await api.undo());
     } catch (e) {
       pushError(String(e));
     }
@@ -195,7 +195,7 @@ function App() {
   async function redo() {
     clearErrors();
     try {
-      await handleTreeUpdate(await invoke<ProjectTree>("redo"));
+      await handleTreeUpdate(await api.redo());
     } catch (e) {
       pushError(String(e));
     }

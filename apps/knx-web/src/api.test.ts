@@ -48,4 +48,23 @@ describe("api", () => {
     const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(JSON.parse(init.body as string)).toEqual({ deviceId: 7, address: "1.1.1" });
   });
+
+  it("errorMessage unwraps an Error's message without doubling 'Error: '", () => {
+    expect(api.errorMessage(new Error("no project open"))).toBe("no project open");
+  });
+
+  it("errorMessage falls back to String(e) for a non-Error throw", () => {
+    expect(api.errorMessage("plain string")).toBe("plain string");
+    expect(api.errorMessage(42)).toBe("42");
+  });
+
+  it("errorMessage round-trips a rejection thrown by request()", async () => {
+    mockFetchOnce({ error: "no project open" }, false, 400);
+    try {
+      await api.undo();
+      throw new Error("expected api.undo() to reject");
+    } catch (e) {
+      expect(api.errorMessage(e)).toBe("no project open");
+    }
+  });
 });

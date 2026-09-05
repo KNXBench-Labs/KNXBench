@@ -133,7 +133,7 @@ function NewGroupAddressRow(props: { onCreated: (tree: ProjectTree) => void }) {
       setAddress("");
       setName("");
     } catch (e) {
-      setError(String(e));
+      setError(api.errorMessage(e));
     }
   }
 

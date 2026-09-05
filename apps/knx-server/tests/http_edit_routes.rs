@@ -85,3 +85,38 @@ async fn creating_a_malformed_group_address_is_a_400() {
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 }
+
+#[tokio::test]
+async fn undo_after_create_removes_it_and_redo_brings_it_back() {
+    let state = Arc::new(state_with_one_installation());
+    let app = knx_server::app(state, None);
+
+    app.clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/group-addresses")
+                .header("content-type", "application/json")
+                .body(Body::from(json!({ "name": "GA", "address": "1/1/1" }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let undo = app
+        .clone()
+        .oneshot(Request::builder().method("POST").uri("/api/undo").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(undo.status(), StatusCode::OK);
+    let tree = body_json(undo).await;
+    assert!(tree["installations"][0]["group_addresses"].as_array().unwrap().is_empty());
+
+    let redo = app
+        .oneshot(Request::builder().method("POST").uri("/api/redo").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(redo.status(), StatusCode::OK);
+    let tree = body_json(redo).await;
+    assert_eq!(tree["installations"][0]["group_addresses"].as_array().unwrap().len(), 1);
+}

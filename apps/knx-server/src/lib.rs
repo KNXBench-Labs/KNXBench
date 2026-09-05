@@ -10,6 +10,7 @@ pub use domain::*;
 
 mod errors;
 mod routes;
+mod fs_routes;
 
 pub type SharedState = Arc<AppState>;
 
@@ -21,6 +22,7 @@ pub type SharedState = Arc<AppState>;
 pub fn app(state: SharedState, static_dir: Option<PathBuf>) -> Router {
     let api = Router::new()
         .merge(routes::project_routes())
+        .merge(fs_routes::fs_routes())
         .route("/healthz", get(|| async { "ok" }))
         .with_state(state);
 

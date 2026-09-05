@@ -352,10 +352,14 @@ fallback. The frontend itself moved, file-for-file, from
 `apps/knx-desktop/src` to a new npm package, **`apps/knx-web`**; its API
 client (`api.ts`) is rewritten from Tauri's `invoke()` to plain `fetch()`
 against the same routes, and a new `FsPicker.tsx` provides the
-mount-directory listing/upload/download UI for the web build. Native file
+mount-directory listing/upload UI for the web build. Native file
 dialogs stay native on desktop: `@tauri-apps/plugin-dialog` still runs
 behind a `window.__TAURI__` check in `apps/knx-web/src/filePicker.ts`; only
 the web build (no `__TAURI__`) falls back to `FsPicker.tsx`.
+`/api/project/download` exists and is tested server-side (see
+`http_fs_routes.rs`) but has no frontend caller yet — `FsPicker.tsx` only
+wires up listing and upload; see
+[KNOWN_LIMITATIONS.md #26](KNOWN_LIMITATIONS.md#26-apiprojectdownload-has-no-frontend-caller).
 `apps/knx-desktop/src-tauri` is now an 80-line thin wrapper (`lib.rs`): it
 spawns `knx-server`'s router in-process — a fixed dev port
 (`knx_server::DEV_PORT`, the target of `apps/knx-web`'s Vite dev proxy) in
@@ -386,7 +390,7 @@ frontend steps and ts-rs staleness check were updated to point at
 `apps/knx-web` (they still named `apps/knx-desktop` after the move, which
 would have failed CI on the next push — caught and fixed in this same
 pass, not a separate finding left for later). 327 Rust tests now pass
-across the workspace (up from 314), plus 52 `vitest` tests in
+across the workspace (up from 314), plus 55 `vitest` tests in
 `apps/knx-web` across 8 files (up from 46 in `apps/knx-desktop`, moved
 1-for-1 plus a new `api.test.ts` against a mocked `fetch`).
 
@@ -404,7 +408,7 @@ across the workspace (up from 314), plus 52 `vitest` tests in
 | `crates/knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
 | `apps/knx-server/` | **New, web/Docker deployment target.** The axum HTTP API binary (`knx-server`) and library (`knx_server`) — see the paragraph above. `src/domain.rs` holds `AppState` and the same `_impl` functions the old Tauri commands wrapped; `src/routes.rs`/`fs_routes.rs` are the axum route handlers; `src/errors.rs` maps `AppError` to an HTTP status plus a `{"error": ...}` body. `main.rs` reads `KNX_PORT`/`KNX_STATIC_DIR`/`KNX_DATA_DIR` from the environment. `Dockerfile` is the three-stage build (Node frontend, Rust backend, Debian-slim runtime); `scripts/smoke-test.sh` builds and runs the image and exercises `/healthz` plus an import over HTTP. |
-| `apps/knx-web/` | **New, moved from `apps/knx-desktop/src`.** The React + Vite frontend, now a standalone npm package consumed by both `knx-server`'s static-file serving and the Tauri desktop shell. `src/api.ts` is the `fetch()`-based client (replaces Tauri's `invoke()`); `src/FsPicker.tsx` is the mount-directory listing/upload/download UI shown when `window.__TAURI__` is absent; `src/filePicker.ts` picks between it and the native Tauri dialog. Everything else (`ProjectExplorer`, `Inspector`, `Search.tsx`/`CommandPalette.tsx`, `ThemeToggle.tsx`, `Dashboard.tsx`, `Toast.tsx`, the `ts-rs`-generated bindings under `src/bindings/`) moved unchanged from `knx-desktop` — see the Session 5 paragraph above for what each does. `vitest` suite: 52 tests across 8 files, including new `api.test.ts` against a mocked `fetch`. |
+| `apps/knx-web/` | **New, moved from `apps/knx-desktop/src`.** The React + Vite frontend, now a standalone npm package consumed by both `knx-server`'s static-file serving and the Tauri desktop shell. `src/api.ts` is the `fetch()`-based client (replaces Tauri's `invoke()`); `src/FsPicker.tsx` is the mount-directory listing/upload UI shown when `window.__TAURI__` is absent (the server's `/api/project/download` route has no UI caller yet, see [KNOWN_LIMITATIONS.md #26](KNOWN_LIMITATIONS.md#26-apiprojectdownload-has-no-frontend-caller)); `src/filePicker.ts` picks between it and the native Tauri dialog. Everything else (`ProjectExplorer`, `Inspector`, `Search.tsx`/`CommandPalette.tsx`, `ThemeToggle.tsx`, `Dashboard.tsx`, `Toast.tsx`, the `ts-rs`-generated bindings under `src/bindings/`) moved unchanged from `knx-desktop` — see the Session 5 paragraph above for what each does. `vitest` suite: 55 tests across 8 files, including new `api.test.ts` against a mocked `fetch`. |
 | `apps/knx-desktop/` | **Thin native wrapper as of the web/Docker deployment target** — see the paragraph above. `src-tauri/` is now just window/process wiring (`lib.rs`, ~80 lines): spawn `knx-server`'s router locally, point one `WebviewWindowBuilder` at it, keep the native file-dialog plugin available for `apps/knx-web`'s `window.__TAURI__` check. No `#[tauri::command]` handlers and no integration tests remain here — both moved to `apps/knx-server`. No `src/` of its own any more; it loads `apps/knx-web`'s build output (dev: Vite HMR on a fixed port; release: bundled as a Tauri resource). |
 | `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |

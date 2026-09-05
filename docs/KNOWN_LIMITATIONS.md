@@ -528,10 +528,10 @@ local to this one route, not an architectural one.
 ## 24. `FsPicker` has no drag-and-drop or multi-select
 
 **Limitation.** `apps/knx-web/src/FsPicker.tsx` — the mount-directory
-listing/upload/download UI shown in the web build when
-`window.__TAURI__` is absent — supports browsing directories and picking
-or uploading one file at a time. It has no drag-and-drop file upload zone
-and no multi-select for batch operations.
+listing/upload UI shown in the web build when `window.__TAURI__` is
+absent — supports browsing directories and picking or uploading one file
+at a time. It has no drag-and-drop file upload zone and no multi-select
+for batch operations.
 
 **Cause.** YAGNI for this iteration: the design's stated goal was parity
 with the desktop's native-dialog UX for opening and saving one project at
@@ -573,4 +573,30 @@ failing outright instead of warning.
 (or later, matching `engines.node`) base image — a one-line change,
 deliberately not made speculatively ahead of an actual failure, but worth
 fixing before Node 20's EOL removes the option of doing it calmly.
+
+## 26. `/api/project/download` has no frontend caller
+
+**Limitation.** `apps/knx-server`'s `/api/project/download` route is
+implemented and covered by server-side tests (`tests/http_fs_routes.rs`),
+but no code under `apps/knx-web/src` calls it — `FsPicker.tsx` wires up
+directory listing and upload only. A web user has no UI path to download
+a `.knxdb` file to their local machine; "Save As…" in the web build
+writes to the server's mounted `data_dir` (via `saveMountPicker` in
+`filePicker.ts`), not to the browser's downloads folder.
+
+**Cause.** Out of scope for the web/Docker deployment plan as specified:
+the plan's goal was serving the same editing UI over HTTP with the
+mounted volume as the file store, not a download-to-browser workflow.
+The route was added and tested ahead of a UI because the desktop build's
+`save_project_as` needed the same underlying logic either way.
+
+**Impact.** None for the mounted-volume workflow the deployment targets
+(files already land on the server's disk, which is what's backed up/
+mounted). It matters only if a user wants a local copy of a project that
+lives solely on the server's `data_dir` — today they'd need direct
+filesystem or `docker cp` access to the volume instead.
+
+**Lifted when.** A demonstrated need arises for browser-side downloads;
+wiring a "Download" button to the existing, already-tested route is a
+small, contained `apps/knx-web` change.
 

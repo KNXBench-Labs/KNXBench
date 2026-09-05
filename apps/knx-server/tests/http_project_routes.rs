@@ -72,3 +72,76 @@ async fn importing_a_missing_file_is_a_500() {
     let body = body_json(response).await;
     assert!(body["error"].as_str().unwrap().len() > 0);
 }
+
+#[tokio::test]
+async fn saving_without_an_open_project_is_a_500() {
+    let state = Arc::new(knx_server::AppState::default());
+    let app = knx_server::app(state, None);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/save")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+}
+
+#[tokio::test]
+async fn importing_then_saving_as_then_reopening_round_trips() {
+    let state = Arc::new(knx_server::AppState::default());
+    let app = knx_server::app(state, None);
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("roundtrip.knxdb");
+
+    let import_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/import")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "path": reference_ets4_path().to_string_lossy() }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(import_response.status(), StatusCode::OK);
+
+    let save_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/save-as")
+                .header("content-type", "application/json")
+                .body(Body::from(json!({ "path": db_path.to_string_lossy() }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(save_response.status(), StatusCode::OK);
+
+    let reopen_response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/open")
+                .header("content-type", "application/json")
+                .body(Body::from(json!({ "path": db_path.to_string_lossy() }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(reopen_response.status(), StatusCode::OK);
+    let tree = body_json(reopen_response).await;
+    assert_eq!(tree["errors"], 0);
+    assert_eq!(tree["warnings"], 0);
+}

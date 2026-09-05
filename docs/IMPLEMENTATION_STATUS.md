@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-05 (Session 5, cycle 10)
+Last updated: 2026-09-05 (Session 5, cycle 10; web/Docker deployment target)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -330,11 +330,65 @@ violation:
 - `cargo deny check` — no licence outside the allowlist enters the graph; GPL
   is not on the allowlist.
 
-314 Rust tests pass across the workspace as of this session, plus 46
+314 Rust tests passed across the workspace as of cycle 10, plus 46
 `vitest` tests in `apps/knx-desktop` (run separately, `npm test`, not part
 of `cargo test --workspace`) — up from 32 with cycle 10's new
 `toast.test.ts` (14 tests: `isLateNight`, `findHoliday`,
 `pickStartupToast`, `humorizeError`).
+
+**Web/Docker deployment target** (cross-cutting, added alongside Session 5
+rather than as one of its cycles — not on the original Session 0-7
+roadmap, see [ROADMAP.md](ROADMAP.md) and
+[the design spec](superpowers/specs/2026-09-05-web-docker-deployment-design.md)).
+`apps/knx-desktop`'s Tauri IPC layer (the `#[tauri::command]` wrappers that
+used to live in `src-tauri/src/lib.rs`) is gone. All of it — routes, state,
+the `_impl` functions underneath — moved into a new crate, **`apps/knx-server`**:
+an axum HTTP API serving `/api/*` (one route per former Tauri command,
+plus new web-only routes for directory listing, upload and `.knxdb`
+download under `/api/fs/*` and `/api/project/download`, and `/healthz` for
+container orchestration) and, when a `static_dir` is supplied to
+`knx_server::app`, the built frontend as a `tower_http::ServeDir`
+fallback. The frontend itself moved, file-for-file, from
+`apps/knx-desktop/src` to a new npm package, **`apps/knx-web`**; its API
+client (`api.ts`) is rewritten from Tauri's `invoke()` to plain `fetch()`
+against the same routes, and a new `FsPicker.tsx` provides the
+mount-directory listing/upload/download UI for the web build. Native file
+dialogs stay native on desktop: `@tauri-apps/plugin-dialog` still runs
+behind a `window.__TAURI__` check in `apps/knx-web/src/filePicker.ts`; only
+the web build (no `__TAURI__`) falls back to `FsPicker.tsx`.
+`apps/knx-desktop/src-tauri` is now an 80-line thin wrapper (`lib.rs`): it
+spawns `knx-server`'s router in-process — a fixed dev port
+(`knx_server::DEV_PORT`, the target of `apps/knx-web`'s Vite dev proxy) in
+debug builds, an OS-assigned ephemeral port serving the bundled frontend
+resource in release builds — and points one `WebviewWindowBuilder` at
+whichever URL results. Command-level integration test coverage that used
+to live in `knx-desktop/src-tauri`'s own tests moved with the logic to
+`apps/knx-server/tests` (`command_dispatch.rs`, `device_detail.rs`,
+`open_reference_project.rs`, `save_load_roundtrip.rs`, unchanged in
+substance, now exercised over HTTP via `tower::ServiceExt::oneshot` where
+applicable) alongside new route-level tests (`healthz.rs`,
+`http_device_detail.rs`, `http_edit_routes.rs`, `http_fs_routes.rs`,
+`http_project_routes.rs`) — `knx-desktop/src-tauri` itself carries none
+today. `apps/knx-server/src/main.rs` reads `KNX_PORT`/`KNX_STATIC_DIR`/
+`KNX_DATA_DIR` from the environment, the last falling back to the OS temp
+dir if unset, so `/api/fs/*` and `/api/project/download` respect a mounted
+Docker volume in production; this was a real gap found and fixed mid-plan
+— the original `main.rs` never read `KNX_DATA_DIR` at all, despite the
+Dockerfile already setting `ENV KNX_DATA_DIR=/data`. Docker packaging
+(`apps/knx-server/Dockerfile`) is a three-stage build — `node:20-alpine`
+builds the frontend, `rust:1.98-slim` builds the release binary,
+`debian:bookworm-slim` ships just the binary and static assets, no
+GTK/WebKit2GTK anywhere in the image — verified by
+`apps/knx-server/scripts/smoke-test.sh` (builds the image, runs the
+container against a mounted `/data`, imports the reference project over
+HTTP, asserts zero errors in the response). `.github/workflows/ci.yml`'s
+frontend steps and ts-rs staleness check were updated to point at
+`apps/knx-web` (they still named `apps/knx-desktop` after the move, which
+would have failed CI on the next push — caught and fixed in this same
+pass, not a separate finding left for later). 327 Rust tests now pass
+across the workspace (up from 314), plus 52 `vitest` tests in
+`apps/knx-web` across 8 files (up from 46 in `apps/knx-desktop`, moved
+1-for-1 plus a new `api.test.ts` against a mocked `fetch`).
 
 ## What exists
 
@@ -349,15 +403,17 @@ of `cargo test --workspace`) — up from 32 with cycle 10's new
 | `crates/knx-app/` | The import and export services (`import.rs`, `export.rs`) — the one crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together. |
 | `crates/knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
-| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` against an in-memory store; `save_project`/`save_project_as`/`open_native_project` against a `.knxdb` file; `device_detail`/`set_individual_address`/`set_com_object_dpt`/`create_group_address`/`delete_group_address`/`undo`/`redo` against the in-memory `CommandStack`); `src/` the React frontend (`ProjectExplorer` selection including a "Group Addresses" branch with inline create (cycle 9), `Inspector` including group-address delete (cycle 9), undo/redo toolbar and `Ctrl+Z`/`Ctrl+Shift+Z`, `Ctrl+K` search over devices/group addresses/building parts via `Search.tsx`/`searchMatch.ts`/`treeUtils.ts`, `Ctrl+Shift+P` command palette via `CommandPalette.tsx`/`commandRegistry.ts` (Session 5 cycle 6), a System/Light/Dark theme toggle via `ThemeToggle.tsx`/`theme.ts` (Session 5 cycle 7), a read-only project status dashboard via `Dashboard.tsx`/`dashboardStats.ts` (Session 5 cycle 8), and a toast notification stack via `Toast.tsx`/`toast.ts`/`toastCopy.ts` replacing the old persistent error banner (Session 5 cycle 10)), including the `ts-rs`-generated bindings under `src/bindings/` and a `vitest` suite (Session 5 cycle 5, extended cycles 6-8 and 10). |
+| `apps/knx-server/` | **New, web/Docker deployment target.** The axum HTTP API binary (`knx-server`) and library (`knx_server`) — see the paragraph above. `src/domain.rs` holds `AppState` and the same `_impl` functions the old Tauri commands wrapped; `src/routes.rs`/`fs_routes.rs` are the axum route handlers; `src/errors.rs` maps `AppError` to an HTTP status plus a `{"error": ...}` body. `main.rs` reads `KNX_PORT`/`KNX_STATIC_DIR`/`KNX_DATA_DIR` from the environment. `Dockerfile` is the three-stage build (Node frontend, Rust backend, Debian-slim runtime); `scripts/smoke-test.sh` builds and runs the image and exercises `/healthz` plus an import over HTTP. |
+| `apps/knx-web/` | **New, moved from `apps/knx-desktop/src`.** The React + Vite frontend, now a standalone npm package consumed by both `knx-server`'s static-file serving and the Tauri desktop shell. `src/api.ts` is the `fetch()`-based client (replaces Tauri's `invoke()`); `src/FsPicker.tsx` is the mount-directory listing/upload/download UI shown when `window.__TAURI__` is absent; `src/filePicker.ts` picks between it and the native Tauri dialog. Everything else (`ProjectExplorer`, `Inspector`, `Search.tsx`/`CommandPalette.tsx`, `ThemeToggle.tsx`, `Dashboard.tsx`, `Toast.tsx`, the `ts-rs`-generated bindings under `src/bindings/`) moved unchanged from `knx-desktop` — see the Session 5 paragraph above for what each does. `vitest` suite: 52 tests across 8 files, including new `api.test.ts` against a mocked `fetch`. |
+| `apps/knx-desktop/` | **Thin native wrapper as of the web/Docker deployment target** — see the paragraph above. `src-tauri/` is now just window/process wiring (`lib.rs`, ~80 lines): spawn `knx-server`'s router locally, point one `WebviewWindowBuilder` at it, keep the native file-dialog plugin available for `apps/knx-web`'s `window.__TAURI__` check. No `#[tauri::command]` handlers and no integration tests remain here — both moved to `apps/knx-server`. No `src/` of its own any more; it loads `apps/knx-web`'s build output (dev: Vite HMR on a fixed port; release: bundled as a Tauri resource). |
 | `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |
-| `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, `knx-desktop`'s own `npm test` (Vitest, Session 5 cycle 5), the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-desktop/src/bindings` are not stale (Session 5). |
+| `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, `knx-web`'s own `npm test` (Vitest, Session 5 cycle 5; path updated from `knx-desktop` to `knx-web` with the web/Docker deployment target), the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-web/src/bindings` are not stale (Session 5; path likewise updated). Does not build or smoke-test the `knx-server` Docker image — that stays a local/manual step (`apps/knx-server/scripts/smoke-test.sh`), not yet wired into CI. |
 | `docs/ARCHITECTURE.md` | Layering, workspace layout, enforced rules, core approach, UI boundary, KNXnet/IP, key material, test strategy. |
 | `docs/DATA_MODEL.md` | The target domain model, per section marked implemented / planned / retained-but-uninterpreted. |
 | `docs/IMPORT_EXPORT.md` | The six-stage pipeline, container handling, tolerant parsing, opaque store, import report, export rules, roundtrip guarantees. |
 | `docs/COMPATIBILITY.md` | What is verified, what is expected but unverified, what is not supported — every verified row now names the test that verifies it. |
-| `docs/KNOWN_LIMITATIONS.md` | Twenty limitations with cause, impact and the condition that would lift each. |
+| `docs/KNOWN_LIMITATIONS.md` | Twenty-five limitations with cause, impact and the condition that would lift each. |
 | `docs/ROADMAP.md` | Sessions 2–7 with deliverables and entry conditions. |
 | `docs/adr/` | Ten ADRs, a template and an index. |
 | `docs/RESEARCH.md` | Session 0 result plus Session 3 amendments: verified findings on the `.knxproj` format, manufacturer data, master data, KNXnet/IP, KNX Secure, licensing, risks. |

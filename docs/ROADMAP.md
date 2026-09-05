@@ -281,6 +281,48 @@ KNXBench is a standalone task (crate names, docs, repo) best done
 between cycles, not interleaved with one, to avoid churn against
 in-flight doc edits.
 
+## Cross-cutting — Web/Docker deployment target
+
+**Done.** Not part of the original Session 0-7 breakdown above — added by
+explicit request alongside Session 5, tracked in
+[the design spec](superpowers/specs/2026-09-05-web-docker-deployment-design.md)
+and folded in here once implemented, same as that spec's own header flags
+it. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for what
+shipped.
+
+**Goal.** A second deployment path — a Docker container exposing a web UI
+reachable from any device on the LAN — without duplicating the frontend or
+the application logic, and without requiring the native
+Tauri/WebKit2GTK stack on the host.
+
+**Deliverables, all shipped.** One HTTP API (`apps/knx-server`, axum) as
+the frontend's only integration point, replacing Tauri IPC; the frontend
+moved from `apps/knx-desktop/src` to a standalone package, `apps/knx-web`,
+talking to it over `fetch()`; `apps/knx-desktop/src-tauri` reduced to a
+thin wrapper that spawns `knx-server` locally and points its WebView at
+it — one frontend, one API surface, two ways to run it, per the design's
+"converge, don't duplicate" decision; a three-stage Docker build with no
+GTK/WebKit2GTK in the final image; a scripted smoke test
+(`apps/knx-server/scripts/smoke-test.sh`) that builds the image, runs it,
+and imports the reference project over HTTP against a mounted volume.
+LAN-only, no auth, single in-memory project, by design (see
+[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)) — matching the stated use
+case, not a gap.
+
+**Not part of this delivery, stays open.** KNXnet/IP multicast discovery
+does not work unmodified inside a Docker container — it needs
+`--network host` — and this delivery does not solve that, since no bus
+communication feature exists yet to need it. That constraint is
+Session 6's to account for when it starts: discovery, tunnelling and
+routing all assume host network access is either already granted or is
+itself part of Session 6's container-specific deliverables. Nothing about
+this delivery blocks Session 6; it simply doesn't attempt Session 6's
+problem early.
+
+**Entry condition.** None — this was schedulable independently of the
+Session 0-7 sequence, since it adds a transport layer in front of
+already-shipped application logic rather than new domain capability.
+
 ## Session 6 — KNXnet/IP
 
 **Goal.** Talk to the bus.
@@ -290,6 +332,14 @@ discovery, tunnelling, routing, cEMI and telegram encoding; the bus monitor as
 a consumer that resolves telegrams against the open project; connection
 management and diagnostics. Device discovery (`ideas.md`) is this session's
 `discovery` deliverable, not a separate feature — it cannot start earlier.
+
+**Carried in from the web/Docker deployment target, above.** KNXnet/IP
+multicast discovery does not work unmodified inside the `knx-server`
+Docker container — it needs `--network host` — a constraint noted, not
+solved, when that target was built, since no bus feature existed yet to
+need it. This session has to account for it: either document that the
+container deployment path requires `--network host` for discovery to
+work, or design around it.
 
 **Entry condition.** A project can be opened and its group addresses resolved,
 so that captured telegrams have something to resolve against.

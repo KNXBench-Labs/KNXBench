@@ -11,7 +11,9 @@ use crate::group::GroupAddressEntry;
 use crate::ids::{ComObjectInstanceId, DeviceId, GroupAddressId};
 use crate::project::Project;
 use crate::provenance::{Layer, Override, Resolved};
-use crate::validation::{check_no_duplicate_individual_address, ValidationError};
+use crate::validation::{
+    check_no_duplicate_group_address, check_no_duplicate_individual_address, ValidationError,
+};
 use crate::IndividualAddress;
 
 /// A single reversible mutation. `apply` performs the mutation on
@@ -57,6 +59,12 @@ pub enum CommandError {
     DeviceNotFound(DeviceId),
     ComObjectNotFound(ComObjectInstanceId),
     GroupAddressNotFound(GroupAddressId),
+    /// A `DeleteGroupAddress` was refused because at least one
+    /// communication object still links to it — deleting it now would
+    /// leave a dangling `GroupLink` (`ValidationError::DanglingGroupLink`
+    /// exists for the reverse direction: a link created against a group
+    /// address that is already gone).
+    GroupAddressInUse(GroupAddressId),
     InstallationNotFound,
     NothingToUndo,
     NothingToRedo,
@@ -73,6 +81,9 @@ impl fmt::Display for CommandError {
                 write!(f, "communication object instance {id} not found")
             }
             CommandError::GroupAddressNotFound(id) => write!(f, "group address {id} not found"),
+            CommandError::GroupAddressInUse(id) => {
+                write!(f, "group address {id} is still linked from a communication object")
+            }
             CommandError::InstallationNotFound => write!(f, "project has no installation"),
             CommandError::NothingToUndo => write!(f, "nothing to undo"),
             CommandError::NothingToRedo => write!(f, "nothing to redo"),
@@ -148,12 +159,20 @@ impl Command {
                     .installations
                     .first_mut()
                     .ok_or(CommandError::InstallationNotFound)?;
+                check_no_duplicate_group_address(installation, entry.id, entry.address)?;
                 let id = entry.id;
                 installation.group_addresses.push(entry.clone());
                 Ok(Command::DeleteGroupAddress { id })
             }
             Command::DeleteGroupAddress { id } => {
                 let id = *id;
+                if project
+                    .devices
+                    .com_objects()
+                    .any(|com| com.links.iter().any(|link| link.ga == id))
+                {
+                    return Err(CommandError::GroupAddressInUse(id));
+                }
                 let installation = project
                     .installations
                     .first_mut()
@@ -219,7 +238,7 @@ mod tests {
     use crate::building::BuildingPart;
     use crate::commissioning::{CommissioningState, CompletionStatus};
     use crate::device::DeviceInstance;
-    use crate::flags::ResolvedFlags;
+    use crate::flags::{Direction, GroupLink, ResolvedFlags};
     use crate::group::GroupRange;
     use crate::ids::{InstallationId, SourceRef};
     use crate::installation::Installation;
@@ -364,6 +383,84 @@ mod tests {
         assert_eq!(project.installations[0].group_addresses.len(), 1);
         stack.undo(&mut project).unwrap(); // undoes the create -> empty again
         assert!(project.installations[0].group_addresses.is_empty());
+    }
+
+    #[test]
+    fn create_group_address_rejects_a_duplicate_address_and_leaves_the_stack_untouched() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].group_addresses.push(GroupAddressEntry {
+            id: GroupAddressId(1),
+            source: source(),
+            name: "Existing".into(),
+            address: GroupAddress::from_raw(5),
+            central: false,
+            unfiltered: false,
+            range: None,
+        });
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::CreateGroupAddress {
+                entry: GroupAddressEntry {
+                    id: GroupAddressId(2),
+                    source: source(),
+                    name: "New".into(),
+                    address: GroupAddress::from_raw(5),
+                    central: false,
+                    unfiltered: false,
+                    range: None,
+                },
+            },
+        );
+        assert!(matches!(
+            result,
+            Err(CommandError::Validation(ValidationError::DuplicateGroupAddress { .. }))
+        ));
+        assert_eq!(project.installations[0].group_addresses.len(), 1);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn delete_group_address_is_rejected_while_a_com_object_still_links_to_it() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].group_addresses.push(GroupAddressEntry {
+            id: GroupAddressId(1),
+            source: source(),
+            name: "GA".into(),
+            address: GroupAddress::from_raw(1),
+            central: false,
+            unfiltered: false,
+            range: None,
+        });
+        project.devices.insert_com_object(ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![GroupLink {
+                ga: GroupAddressId(1),
+                direction: Direction::Send,
+            }],
+        });
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::DeleteGroupAddress {
+                id: GroupAddressId(1),
+            },
+        );
+        assert!(matches!(
+            result,
+            Err(CommandError::GroupAddressInUse(GroupAddressId(1)))
+        ));
+        assert_eq!(project.installations[0].group_addresses.len(), 1);
+        assert!(!stack.can_undo());
     }
 
     #[test]

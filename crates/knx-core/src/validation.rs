@@ -26,6 +26,11 @@ pub enum ValidationError {
         com_object: ComObjectInstanceId,
         ga: GroupAddressId,
     },
+    DuplicateGroupAddress {
+        address: GroupAddress,
+        existing: GroupAddressId,
+        new: GroupAddressId,
+    },
 }
 
 impl std::error::Error for ValidationError {}
@@ -50,6 +55,15 @@ impl fmt::Display for ValidationError {
                 f,
                 "communication object {com_object} links to group address {ga}, which does not exist"
             ),
+            ValidationError::DuplicateGroupAddress {
+                address,
+                existing,
+                new,
+            } => write!(
+                f,
+                "group address {} already used by group address {existing}, cannot assign to group address {new}",
+                address.raw()
+            ),
         }
     }
 }
@@ -66,6 +80,26 @@ pub fn check_no_duplicate_individual_address(
             return Err(ValidationError::DuplicateIndividualAddress {
                 address,
                 existing: device.id,
+                new: candidate,
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Rejects assigning `address` to `candidate` if any other group address
+/// entry in `installation` already has it. An entry keeping its own
+/// current address is not a duplicate.
+pub fn check_no_duplicate_group_address(
+    installation: &Installation,
+    candidate: GroupAddressId,
+    address: GroupAddress,
+) -> Result<(), ValidationError> {
+    for entry in &installation.group_addresses {
+        if entry.id != candidate && entry.address == address {
+            return Err(ValidationError::DuplicateGroupAddress {
+                address,
+                existing: entry.id,
                 new: candidate,
             });
         }
@@ -204,5 +238,42 @@ mod tests {
             err,
             Err(ValidationError::DanglingGroupLink { .. })
         ));
+    }
+
+    #[test]
+    fn check_no_duplicate_group_address_rejects_a_second_entry_with_the_same_address() {
+        let installation = Installation {
+            id: crate::ids::InstallationId(0),
+            name: "I".into(),
+            default_line: None,
+            multicast_address: None,
+            completion: crate::commissioning::CompletionStatus::FinishedDesign,
+            topology: crate::topology::Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![],
+            },
+            buildings: vec![],
+            group_ranges: vec![],
+            group_addresses: vec![crate::group::GroupAddressEntry {
+                id: GroupAddressId(1),
+                source: test_source(),
+                name: "Existing".into(),
+                address: GroupAddress::from_raw(5),
+                central: false,
+                unfiltered: false,
+                range: None,
+            }],
+            parameters: vec![],
+        };
+        let result =
+            check_no_duplicate_group_address(&installation, GroupAddressId(2), GroupAddress::from_raw(5));
+        assert!(matches!(
+            result,
+            Err(ValidationError::DuplicateGroupAddress { existing, new, .. })
+                if existing == GroupAddressId(1) && new == GroupAddressId(2)
+        ));
+        // An entry keeping its own current address is not a duplicate of itself.
+        assert!(check_no_duplicate_group_address(&installation, GroupAddressId(1), GroupAddress::from_raw(5)).is_ok());
     }
 }

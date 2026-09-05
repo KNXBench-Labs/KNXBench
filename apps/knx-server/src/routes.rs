@@ -21,6 +21,8 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/com-object-dpt", post(set_com_object_dpt))
         .route("/api/group-addresses", post(create_group_address))
         .route("/api/group-addresses/{id}", delete(delete_group_address))
+        .route("/api/undo", post(undo))
+        .route("/api/redo", post(redo))
 }
 
 #[derive(Deserialize)]
@@ -120,4 +122,12 @@ async fn delete_group_address(
     domain::delete_group_address_impl(&state, id)
         .map(Json)
         .map_err(ApiError::bad_request)
+}
+
+async fn undo(State(state): State<SharedState>) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::undo_impl(&state).map(Json).map_err(ApiError::bad_request)
+}
+
+async fn redo(State(state): State<SharedState>) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::redo_impl(&state).map(Json).map_err(ApiError::bad_request)
 }

@@ -101,7 +101,7 @@ function App() {
       }
     } catch (e) {
       if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
-        pushError(String(e));
+        pushError(api.errorMessage(e));
         setDeviceDetail(null);
       }
     }
@@ -129,7 +129,7 @@ function App() {
       }
     } catch (e) {
       if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
-        pushError(String(e));
+        pushError(api.errorMessage(e));
       }
     }
   }
@@ -142,7 +142,7 @@ function App() {
       resetTree(await api.importProject(path));
       setHasStorePath(false); // ETS import has no `.knxdb` location yet
     } catch (e) {
-      pushError(String(e));
+      pushError(api.errorMessage(e));
     }
   }
 
@@ -154,7 +154,7 @@ function App() {
       resetTree(await api.openProject(path));
       setHasStorePath(true);
     } catch (e) {
-      pushError(String(e));
+      pushError(api.errorMessage(e));
     }
   }
 
@@ -166,7 +166,7 @@ function App() {
       await api.saveProjectAs(path);
       setHasStorePath(true);
     } catch (e) {
-      pushError(String(e));
+      pushError(api.errorMessage(e));
     }
   }
 
@@ -176,7 +176,7 @@ function App() {
     try {
       await api.saveProject();
     } catch (e) {
-      pushError(String(e));
+      pushError(api.errorMessage(e));
     }
   }
 
@@ -185,7 +185,7 @@ function App() {
     try {
       await handleTreeUpdate(await api.undo());
     } catch (e) {
-      pushError(String(e));
+      pushError(api.errorMessage(e));
     }
   }
 
@@ -194,7 +194,7 @@ function App() {
     try {
       await handleTreeUpdate(await api.redo());
     } catch (e) {
-      pushError(String(e));
+      pushError(api.errorMessage(e));
     }
   }
 

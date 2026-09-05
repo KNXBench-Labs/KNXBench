@@ -68,3 +68,12 @@ export function undo(): Promise<ProjectTree> {
 export function redo(): Promise<ProjectTree> {
   return request("/api/redo", { method: "POST" });
 }
+
+/// Unwraps the message from an error thrown by `request()` (or anything
+/// else `Error`-shaped); falls back to `String(e)` for non-`Error` throws.
+/// Callers used to do `String(e)` directly, back when Tauri's `invoke()`
+/// rejected with a bare string — now that every API error is a real
+/// `Error`, that produced a doubled `Error: <message>` in the UI.
+export function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}

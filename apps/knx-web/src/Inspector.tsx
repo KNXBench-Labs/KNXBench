@@ -26,7 +26,7 @@ function AddressField(props: { detail: DeviceDetail; onApplied: (tree: ProjectTr
       const tree = await api.setIndividualAddress(detail.id, value === "" ? null : value);
       onApplied(tree);
     } catch (e) {
-      setError(String(e));
+      setError(api.errorMessage(e));
       setValue(current);
     }
   }
@@ -66,7 +66,7 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
       const tree = await api.setComObjectDpt(com.id, value === "" ? null : value);
       onApplied(tree);
     } catch (e) {
-      setError(String(e));
+      setError(api.errorMessage(e));
       setValue(current);
     }
   }
@@ -131,7 +131,7 @@ function GroupAddressInspector(props: {
       const tree = await api.deleteGroupAddress(ga.id);
       onDeleted(tree);
     } catch (e) {
-      setError(String(e));
+      setError(api.errorMessage(e));
     }
   }
 

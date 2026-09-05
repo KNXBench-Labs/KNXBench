@@ -11,7 +11,7 @@ Last updated: 2026-09-05 (Session 5, cycle 9)
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
-| 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)), and cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) done — CLAUDE.md's full UI/UX deliverable list is complete, see [ROADMAP.md](ROADMAP.md) |
+| 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)), cycle 8 (project status dashboard, [design spec](superpowers/specs/2026-09-04-dashboard-design.md)), and cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) done — CLAUDE.md's full UI/UX deliverable list is complete, see [ROADMAP.md](ROADMAP.md) |
 | 6 | KNXnet/IP | Not started |
 | 7 | Integration & hardening | Not started |
 
@@ -299,12 +299,16 @@ the existing 9 Rust integration tests, unchanged.
 `knx-net`, `knx-secure` remain empty crates with their responsibility
 stated in a doc comment. There is still no manufacturer parameter
 *interpretation* (the `Dynamic` tree, `when/@test`), and the desktop UI so
-far covers the Project Explorer, the four save/load/import buttons, a
+far covers the Project Explorer (including a "Group Addresses" branch
+with inline create, cycle 9), the four save/load/import buttons, a
 properties inspector with undo/redo for two editable fields (individual
-address, communication-object DPT), `Ctrl+K` search over devices, group
-addresses, and building parts, a `Ctrl+Shift+P` command palette over the
-app's seven existing actions, and a System/Light/Dark theme toggle — no
-editing of anything beyond those two Inspector fields yet.
+address, communication-object DPT) plus group address create/delete
+(cycle 9), `Ctrl+K` search over devices, group addresses, and building
+parts, a `Ctrl+Shift+P` command palette over the app's seven existing
+actions, a System/Light/Dark theme toggle, and a read-only project status
+dashboard shown when nothing is selected (cycle 8) — no editing of
+anything beyond the individual address, communication-object DPT, and
+group address entities yet.
 
 Three architectural rules are enforced mechanically rather than by
 discipline, and all three have been observed to fail on a deliberate
@@ -318,7 +322,7 @@ violation:
 - `cargo deny check` — no licence outside the allowlist enters the graph; GPL
   is not on the allowlist.
 
-306 Rust tests pass across the workspace as of this session, plus 28
+314 Rust tests pass across the workspace as of this session, plus 32
 `vitest` tests in `apps/knx-desktop` (run separately, `npm test`, not part
 of `cargo test --workspace`).
 
@@ -335,7 +339,7 @@ of `cargo test --workspace`).
 | `crates/knx-app/` | The import and export services (`import.rs`, `export.rs`) — the one crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together. |
 | `crates/knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
-| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` against an in-memory store; `save_project`/`save_project_as`/`open_native_project` against a `.knxdb` file; `device_detail`/`set_individual_address`/`set_com_object_dpt`/`undo`/`redo` against the in-memory `CommandStack`); `src/` the React frontend (`ProjectExplorer` selection, `Inspector`, undo/redo toolbar and `Ctrl+Z`/`Ctrl+Shift+Z`, `Ctrl+K` search over devices/group addresses/building parts via `Search.tsx`/`searchMatch.ts`/`treeUtils.ts`, `Ctrl+Shift+P` command palette via `CommandPalette.tsx`/`commandRegistry.ts` (Session 5 cycle 6), and a System/Light/Dark theme toggle via `ThemeToggle.tsx`/`theme.ts` (Session 5 cycle 7)), including the `ts-rs`-generated bindings under `src/bindings/` and a `vitest` suite (Session 5 cycle 5, extended cycles 6-7). |
+| `apps/knx-desktop/` | Tauri v2 + React + Vite desktop shell — see the Session 5 paragraph above. `src-tauri/` holds the Rust side (`open_project` against an in-memory store; `save_project`/`save_project_as`/`open_native_project` against a `.knxdb` file; `device_detail`/`set_individual_address`/`set_com_object_dpt`/`create_group_address`/`delete_group_address`/`undo`/`redo` against the in-memory `CommandStack`); `src/` the React frontend (`ProjectExplorer` selection including a "Group Addresses" branch with inline create (cycle 9), `Inspector` including group-address delete (cycle 9), undo/redo toolbar and `Ctrl+Z`/`Ctrl+Shift+Z`, `Ctrl+K` search over devices/group addresses/building parts via `Search.tsx`/`searchMatch.ts`/`treeUtils.ts`, `Ctrl+Shift+P` command palette via `CommandPalette.tsx`/`commandRegistry.ts` (Session 5 cycle 6), a System/Light/Dark theme toggle via `ThemeToggle.tsx`/`theme.ts` (Session 5 cycle 7), and a read-only project status dashboard via `Dashboard.tsx`/`dashboardStats.ts` (Session 5 cycle 8)), including the `ts-rs`-generated bindings under `src/bindings/` and a `vitest` suite (Session 5 cycle 5, extended cycles 6-8). |
 | `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |
 | `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, `knx-desktop`'s own `npm test` (Vitest, Session 5 cycle 5), the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-desktop/src/bindings` are not stale (Session 5). |

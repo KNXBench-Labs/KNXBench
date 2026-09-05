@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
@@ -135,11 +135,8 @@ function App() {
   }
 
   async function pickProject() {
-    const path = await open({
-      multiple: false,
-      filters: [{ name: "ETS project", extensions: ["knxproj"] }],
-    });
-    if (typeof path !== "string") return;
+    const path = await pickOpenPath([{ name: "ETS project", extensions: ["knxproj"] }]);
+    if (!path) return;
     clearErrors();
     try {
       resetTree(await api.importProject(path));
@@ -150,8 +147,8 @@ function App() {
   }
 
   async function openNativeProject() {
-    const path = await open({ multiple: false, filters: KNXDB_FILTER });
-    if (typeof path !== "string") return;
+    const path = await pickOpenPath(KNXDB_FILTER);
+    if (!path) return;
     clearErrors();
     try {
       resetTree(await api.openProject(path));
@@ -162,8 +159,8 @@ function App() {
   }
 
   async function saveProjectAs() {
-    const path = await save({ filters: KNXDB_FILTER, defaultPath: "project.knxdb" });
-    if (typeof path !== "string") return;
+    const path = await pickSavePath(KNXDB_FILTER, "project.knxdb");
+    if (!path) return;
     clearErrors();
     try {
       await api.saveProjectAs(path);

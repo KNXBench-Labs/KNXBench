@@ -301,3 +301,48 @@ main {
 .dashboard-errors {
   color: var(--knx-error-color);
 }
+
+.fs-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--knx-overlay-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.fs-picker {
+  background: Canvas;
+  color: CanvasText;
+  padding: 1rem;
+  min-width: 24rem;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 6px;
+  box-shadow: 0 4px 24px var(--knx-overlay-shadow);
+}
+
+.fs-picker-list {
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fs-picker-list li {
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+}
+
+.fs-picker-list li:hover {
+  background: color-mix(in srgb, CanvasText 12%, transparent);
+}
+
+.fs-picker-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}

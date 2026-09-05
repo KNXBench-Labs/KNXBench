@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { InstallationNode } from "./bindings/InstallationNode";
 import type { AreaNode } from "./bindings/AreaNode";
@@ -128,7 +128,7 @@ function NewGroupAddressRow(props: { onCreated: (tree: ProjectTree) => void }) {
     if (!canCreate) return;
     setError(null);
     try {
-      const tree = await invoke<ProjectTree>("create_group_address", { name, address });
+      const tree = await api.createGroupAddress(name, address);
       onCreated(tree);
       setAddress("");
       setName("");

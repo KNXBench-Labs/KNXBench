@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import * as api from "./api";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -23,10 +23,7 @@ function AddressField(props: { detail: DeviceDetail; onApplied: (tree: ProjectTr
     if (value === current) return;
     setError(null);
     try {
-      const tree = await invoke<ProjectTree>("set_individual_address", {
-        deviceId: detail.id,
-        address: value === "" ? null : value,
-      });
+      const tree = await api.setIndividualAddress(detail.id, value === "" ? null : value);
       onApplied(tree);
     } catch (e) {
       setError(String(e));
@@ -66,10 +63,7 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
     if (value === current) return;
     setError(null);
     try {
-      const tree = await invoke<ProjectTree>("set_com_object_dpt", {
-        comObjectId: com.id,
-        dpt: value === "" ? null : value,
-      });
+      const tree = await api.setComObjectDpt(com.id, value === "" ? null : value);
       onApplied(tree);
     } catch (e) {
       setError(String(e));
@@ -134,7 +128,7 @@ function GroupAddressInspector(props: {
   async function remove() {
     setError(null);
     try {
-      const tree = await invoke<ProjectTree>("delete_group_address", { id: ga.id });
+      const tree = await api.deleteGroupAddress(ga.id);
       onDeleted(tree);
     } catch (e) {
       setError(String(e));

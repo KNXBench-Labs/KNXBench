@@ -45,7 +45,7 @@ export function humorizeError(
   random: () => number = Math.random,
   wrappers: string[] = ERROR_WRAPPERS,
 ): string {
-  return pickRandom(wrappers, random).replace("{msg}", message);
+  return pickRandom(wrappers, random).replace("{msg}", () => message);
 }
 
 export function useToasts() {

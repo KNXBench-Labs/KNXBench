@@ -5,10 +5,8 @@ use axum::Router;
 use axum::routing::get;
 use tower_http::services::ServeDir;
 
-/// Placeholder until Task 2 moves the real state in from
-/// `apps/knx-desktop/src-tauri`.
-#[derive(Default)]
-pub struct AppState;
+mod domain;
+pub use domain::*;
 
 pub type SharedState = Arc<AppState>;
 

@@ -10,6 +10,7 @@ import Search from "./Search";
 import CommandPalette from "./CommandPalette";
 import type { CommandContext } from "./commandRegistry";
 import ThemeToggle from "./ThemeToggle";
+import Dashboard from "./Dashboard";
 import { useTheme } from "./theme";
 
 const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
@@ -237,7 +238,7 @@ function App() {
       {tree && (
         <div className="workspace">
           <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} />
-          {selection && (
+          {selection ? (
             <Inspector
               key={`${selection.kind}-${selection.id}`}
               selection={selection}
@@ -245,6 +246,8 @@ function App() {
               deviceDetail={deviceDetail}
               onApplied={handleTreeUpdate}
             />
+          ) : (
+            <Dashboard tree={tree} />
           )}
         </div>
       )}

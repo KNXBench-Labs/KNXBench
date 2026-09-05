@@ -250,6 +250,7 @@ function App() {
               tree={tree}
               deviceDetail={deviceDetail}
               onApplied={handleTreeUpdate}
+              onDeleted={resetTree}
             />
           ) : (
             <Dashboard tree={tree} />

@@ -117,12 +117,29 @@ function DeviceInspector(props: { detail: DeviceDetail; onApplied: (tree: Projec
   );
 }
 
-function GroupAddressInspector(props: { ga: GroupAddressNode }) {
-  const { ga } = props;
+function GroupAddressInspector(props: {
+  ga: GroupAddressNode;
+  onDeleted: (tree: ProjectTree) => void;
+}) {
+  const { ga, onDeleted } = props;
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setError(null);
+    try {
+      const tree = await invoke<ProjectTree>("delete_group_address", { id: ga.id });
+      onDeleted(tree);
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
   return (
     <div className="inspector">
       <h2>{ga.name}</h2>
       <p className="inspector-address">{ga.address}</p>
+      <button onClick={remove}>Delete</button>
+      {error && <span className="field-error">{error}</span>}
     </div>
   );
 }
@@ -153,8 +170,9 @@ export default function Inspector(props: {
   tree: ProjectTree;
   deviceDetail: DeviceDetail | null;
   onApplied: (tree: ProjectTree) => void;
+  onDeleted: (tree: ProjectTree) => void;
 }) {
-  const { selection, tree, deviceDetail, onApplied } = props;
+  const { selection, tree, deviceDetail, onApplied, onDeleted } = props;
 
   if (selection.kind === "device") {
     if (!deviceDetail) return null;
@@ -164,7 +182,7 @@ export default function Inspector(props: {
   if (selection.kind === "group_address") {
     const ga = findGroupAddress(tree, selection.id);
     if (!ga) return null;
-    return <GroupAddressInspector ga={ga} />;
+    return <GroupAddressInspector ga={ga} onDeleted={onDeleted} />;
   }
 
   const found = findBuildingPart(tree, selection.id);

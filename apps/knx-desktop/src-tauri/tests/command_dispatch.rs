@@ -3,9 +3,9 @@
 //! for the same no-Tauri pattern.
 
 use knx_core::{
-    ComObjectInstance, ComObjectInstanceId, CommissioningState, DeviceId, DeviceInstance, DptRef,
-    IndividualAddress, Language, Layer, Override, Project, Resolved, ResolvedFlags, SourceRef,
-    Text,
+    ComObjectInstance, ComObjectInstanceId, CommissioningState, CompletionStatus, DeviceId,
+    DeviceInstance, DptRef, GroupAddressId, IndividualAddress, Installation, InstallationId,
+    Language, Layer, Override, Project, Resolved, ResolvedFlags, SourceRef, Text, Topology,
 };
 use knx_desktop_lib::AppState;
 
@@ -70,6 +70,132 @@ fn state_with_two_devices() -> AppState {
     let state = AppState::default();
     *state.project.lock().unwrap() = Some(project);
     state
+}
+
+fn state_with_one_installation() -> AppState {
+    let mut project = Project::new(Language("en".into()));
+    project.installations.push(Installation {
+        id: InstallationId(0),
+        name: "I".into(),
+        default_line: None,
+        multicast_address: None,
+        completion: CompletionStatus::FinishedDesign,
+        topology: Topology {
+            areas: vec![],
+            lines: vec![],
+            unassigned: vec![],
+        },
+        buildings: vec![],
+        group_ranges: vec![],
+        group_addresses: vec![],
+        parameters: vec![],
+    });
+    let state = AppState::default();
+    *state.project.lock().unwrap() = Some(project);
+    state
+}
+
+#[test]
+fn creating_a_group_address_then_deleting_it_round_trips_through_undo() {
+    let state = state_with_one_installation();
+
+    let tree = knx_desktop_lib::create_group_address_impl(
+        &state,
+        "Living room light".into(),
+        "1/1/1".into(),
+    )
+    .unwrap();
+    assert!(tree.can_undo);
+    assert_eq!(tree.installations[0].group_addresses.len(), 1);
+    let ga = &tree.installations[0].group_addresses[0];
+    assert_eq!(ga.name, "Living room light");
+    assert_eq!(ga.address, "1/1/1");
+    let id = ga.id;
+
+    let tree = knx_desktop_lib::delete_group_address_impl(&state, id).unwrap();
+    assert!(tree.installations[0].group_addresses.is_empty());
+
+    let tree = knx_desktop_lib::undo_impl(&state).unwrap(); // undoes the delete
+    assert_eq!(tree.installations[0].group_addresses.len(), 1);
+    let tree = knx_desktop_lib::undo_impl(&state).unwrap(); // undoes the create
+    assert!(tree.installations[0].group_addresses.is_empty());
+}
+
+#[test]
+fn creating_a_group_address_with_a_malformed_address_is_rejected() {
+    let state = state_with_one_installation();
+    let err =
+        knx_desktop_lib::create_group_address_impl(&state, "GA".into(), "not-an-address".into())
+            .unwrap_err();
+    assert!(err.contains("malformed group address"), "{err}");
+    assert!(!state.command_stack.lock().unwrap().can_undo());
+}
+
+#[test]
+fn creating_a_duplicate_group_address_is_rejected() {
+    let state = state_with_one_installation();
+    knx_desktop_lib::create_group_address_impl(&state, "First".into(), "1/1/1".into()).unwrap();
+    let err = knx_desktop_lib::create_group_address_impl(&state, "Second".into(), "1/1/1".into())
+        .unwrap_err();
+    assert!(err.contains("already used"), "{err}");
+    let project = state.project.lock().unwrap();
+    assert_eq!(
+        project.as_ref().unwrap().installations[0]
+            .group_addresses
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn deleting_a_group_address_still_linked_from_a_com_object_is_rejected() {
+    let state = state_with_one_installation();
+    let tree =
+        knx_desktop_lib::create_group_address_impl(&state, "GA".into(), "1/1/1".into()).unwrap();
+    let ga_id = tree.installations[0].group_addresses[0].id;
+
+    {
+        let mut project = state.project.lock().unwrap();
+        let project = project.as_mut().unwrap();
+        project.devices.insert(DeviceInstance {
+            id: DeviceId(1),
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "t".into(),
+            },
+            name: "D".into(),
+            description: None,
+            address: None,
+            product_ref: "P".into(),
+            program_ref: "H".into(),
+            commissioning: CommissioningState::default(),
+            visibility_calculated: true,
+            com_objects: vec![ComObjectInstanceId(1)],
+            binary_data: vec![],
+        });
+        project.devices.insert_com_object(ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "t".into(),
+            },
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![knx_core::GroupLink {
+                ga: GroupAddressId(ga_id),
+                direction: knx_core::Direction::Send,
+            }],
+        });
+    }
+
+    let err = knx_desktop_lib::delete_group_address_impl(&state, ga_id).unwrap_err();
+    assert!(err.contains("still linked"), "{err}");
 }
 
 #[test]

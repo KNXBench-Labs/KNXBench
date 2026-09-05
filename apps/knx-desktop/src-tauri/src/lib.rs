@@ -179,6 +179,54 @@ pub fn set_com_object_dpt_impl(
     )
 }
 
+/// Allocates a fresh `GroupAddressId` and creates a new group address in
+/// `installations[0]` — the only installation any `Command` targets
+/// (`Command::apply`'s own doc comment). `address` is parsed against the
+/// project's own `GroupAddressStyle` (`ProjectInfo::group_address_style`),
+/// the same style `GroupAddressNode`'s `address` string was formatted with.
+/// `entry.source` is empty: this is the first UI-created domain object in
+/// this codebase, with no ETS origin to preserve.
+pub fn create_group_address_impl(
+    state: &AppState,
+    name: String,
+    address: String,
+) -> Result<knx_projection::ProjectTree, String> {
+    let cmd = {
+        let mut project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_mut().ok_or("no project open")?;
+        let style = project.info.group_address_style;
+        let address = knx_core::GroupAddress::parse(&address, style).map_err(|e| e.to_string())?;
+        let id = project.ids.next_group_address_id();
+        knx_core::Command::CreateGroupAddress {
+            entry: knx_core::GroupAddressEntry {
+                id,
+                source: knx_core::SourceRef {
+                    path: String::new(),
+                    ets_id: String::new(),
+                },
+                name,
+                address,
+                central: false,
+                unfiltered: false,
+                range: None,
+            },
+        }
+    };
+    apply(state, cmd)
+}
+
+pub fn delete_group_address_impl(
+    state: &AppState,
+    id: u32,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::DeleteGroupAddress {
+            id: knx_core::GroupAddressId(id),
+        },
+    )
+}
+
 pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String> {
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
@@ -213,6 +261,23 @@ fn set_com_object_dpt(
     state: tauri::State<AppState>,
 ) -> Result<knx_projection::ProjectTree, String> {
     set_com_object_dpt_impl(&state, com_object_id, dpt)
+}
+
+#[tauri::command]
+fn create_group_address(
+    name: String,
+    address: String,
+    state: tauri::State<AppState>,
+) -> Result<knx_projection::ProjectTree, String> {
+    create_group_address_impl(&state, name, address)
+}
+
+#[tauri::command]
+fn delete_group_address(
+    id: u32,
+    state: tauri::State<AppState>,
+) -> Result<knx_projection::ProjectTree, String> {
+    delete_group_address_impl(&state, id)
 }
 
 #[tauri::command]
@@ -294,6 +359,8 @@ pub fn run() {
             device_detail,
             set_individual_address,
             set_com_object_dpt,
+            create_group_address,
+            delete_group_address,
             undo,
             redo
         ])

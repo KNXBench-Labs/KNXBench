@@ -9,6 +9,7 @@
     "beforeBuildCommand": "npm --prefix ../knx-web run build"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": []
   },
   "bundle": {

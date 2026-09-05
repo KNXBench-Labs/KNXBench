@@ -2,9 +2,9 @@
 //! strategies for the web build (server-mount and upload/download; the
 //! Tauri build skips these entirely in favor of native OS dialogs, see
 //! `apps/knx-web/src/filePicker.ts`).
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use axum::extract::{Multipart, Query, State};
+use axum::extract::{DefaultBodyLimit, Multipart, Query, State};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -12,33 +12,26 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain;
 use crate::errors::ApiError;
+use crate::paths::resolve_in_data_dir;
 use crate::SharedState;
+
+/// Upload ceiling for `/api/fs/upload`, replacing axum's 2 MB default —
+/// which is well under the size of a real ETS export (this repository's
+/// own reference `.knxproj` is 1.7 MB, and a whole-building project is a
+/// multiple of that). 100 MB is chosen to be comfortably above any
+/// `.knxproj`/`.knxdb` observed so far while still bounding how much one
+/// request can make the server buffer, since `upload` reads the field
+/// fully into memory before writing it.
+const MAX_UPLOAD_BYTES: usize = 100 * 1024 * 1024;
 
 pub fn fs_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/fs/list", get(list_dir))
-        .route("/api/fs/upload", post(upload))
+        .route(
+            "/api/fs/upload",
+            post(upload).layer(DefaultBodyLimit::max(MAX_UPLOAD_BYTES)),
+        )
         .route("/api/project/download", get(download))
-}
-
-/// Resolves `relative` against `data_dir` and confirms the result still
-/// lives under it — the only thing standing between `/api/fs/list` and a
-/// `path=../../etc` escape out of the mounted volume. `canonicalize`
-/// requires the path to exist, which also rejects a nonexistent `path`
-/// with a clear "does not exist" instead of a confusing filesystem error
-/// later.
-fn resolve_in_data_dir(data_dir: &Path, relative: &str) -> Result<PathBuf, ApiError> {
-    let candidate = data_dir.join(relative.trim_start_matches('/'));
-    let canonical_root = data_dir
-        .canonicalize()
-        .map_err(|e| ApiError::internal(format!("data dir unreadable: {e}")))?;
-    let canonical = candidate
-        .canonicalize()
-        .map_err(|_| ApiError::bad_request("path does not exist"))?;
-    if !canonical.starts_with(&canonical_root) {
-        return Err(ApiError::bad_request("path escapes the data directory"));
-    }
-    Ok(canonical)
 }
 
 #[derive(Deserialize)]
@@ -81,6 +74,14 @@ struct UploadResponse {
     path: String,
 }
 
+/// Keeps axum's own status choice for a failed multipart read instead of
+/// flattening everything to 400: a body that blew `MAX_UPLOAD_BYTES` is a
+/// 413 with "Request payload is too large", not a 400 framed as a
+/// malformed-encoding problem the client could fix by re-encoding.
+fn multipart_error(e: axum::extract::multipart::MultipartError) -> ApiError {
+    ApiError::with_status(e.status(), e.body_text())
+}
+
 async fn upload(
     State(state): State<SharedState>,
     mut multipart: Multipart,
@@ -88,11 +89,7 @@ async fn upload(
     let uploads_dir = state.data_dir.join("uploads");
     std::fs::create_dir_all(&uploads_dir).map_err(|e| ApiError::internal(e.to_string()))?;
 
-    while let Some(field) = multipart
-        .next_field()
-        .await
-        .map_err(|e| ApiError::bad_request(e.to_string()))?
-    {
+    while let Some(field) = multipart.next_field().await.map_err(multipart_error)? {
         let Some(filename) = field.file_name().map(str::to_owned) else {
             continue;
         };
@@ -103,10 +100,7 @@ async fn upload(
             .file_name()
             .ok_or_else(|| ApiError::bad_request("empty filename"))?;
         let dest = uploads_dir.join(safe_name);
-        let bytes = field
-            .bytes()
-            .await
-            .map_err(|e| ApiError::bad_request(e.to_string()))?;
+        let bytes = field.bytes().await.map_err(multipart_error)?;
         std::fs::write(&dest, &bytes).map_err(|e| ApiError::internal(e.to_string()))?;
         let relative = dest.strip_prefix(&state.data_dir).unwrap_or(&dest);
         return Ok(Json(UploadResponse {

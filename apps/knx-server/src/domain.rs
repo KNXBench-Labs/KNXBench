@@ -33,8 +33,12 @@ pub struct AppState {
     /// reapplied to every tree rebuilt after a command/undo/redo — edits
     /// don't change what import lost. `(0, 0)` for a `.knxdb` native load.
     pub import_counts: Mutex<(usize, usize)>,
-    /// Root directory `fs_routes.rs`'s `/api/fs/*` routes are confined to.
-    /// Irrelevant to every function in this file.
+    /// Root directory web-originated file access is confined to:
+    /// `fs_routes.rs`'s `/api/fs/*` routes entirely, plus any *relative*
+    /// path a `/api/project/*` route is given (`crate::paths`). Absolute
+    /// paths — what the Tauri build's native dialogs return — bypass it by
+    /// design. Irrelevant to every function in this file: the route layer
+    /// has already resolved the path by the time it calls in here.
     pub data_dir: PathBuf,
 }
 

@@ -103,7 +103,10 @@ mod tests {
     fn a_relative_read_path_resolves_under_the_data_dir() {
         let dir = data_dir();
         let resolved = resolve_project_path(dir.path(), "sub/a.knxproj").unwrap();
-        assert_eq!(resolved, dir.path().canonicalize().unwrap().join("sub/a.knxproj"));
+        assert_eq!(
+            resolved,
+            dir.path().canonicalize().unwrap().join("sub/a.knxproj")
+        );
     }
 
     #[test]
@@ -132,7 +135,10 @@ mod tests {
     fn a_relative_write_target_resolves_even_though_it_does_not_exist_yet() {
         let dir = data_dir();
         let resolved = resolve_new_project_path(dir.path(), "sub/fresh.knxdb").unwrap();
-        assert_eq!(resolved, dir.path().canonicalize().unwrap().join("sub/fresh.knxdb"));
+        assert_eq!(
+            resolved,
+            dir.path().canonicalize().unwrap().join("sub/fresh.knxdb")
+        );
     }
 
     #[test]

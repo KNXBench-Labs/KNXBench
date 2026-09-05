@@ -48,7 +48,13 @@ async fn importing_the_reference_project_returns_the_golden_counts() {
     let tree = body_json(response).await;
     assert_eq!(tree["errors"], 0);
     assert_eq!(tree["warnings"], 2);
-    assert_eq!(tree["installations"][0]["topology"][0]["lines"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        tree["installations"][0]["topology"][0]["lines"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
 }
 
 #[tokio::test]
@@ -62,7 +68,9 @@ async fn importing_a_missing_file_is_a_500() {
                 .method("POST")
                 .uri("/api/project/import")
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "path": "/does/not/exist.knxproj" }).to_string()))
+                .body(Body::from(
+                    json!({ "path": "/does/not/exist.knxproj" }).to_string(),
+                ))
                 .unwrap(),
         )
         .await
@@ -70,7 +78,7 @@ async fn importing_a_missing_file_is_a_500() {
 
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
     let body = body_json(response).await;
-    assert!(body["error"].as_str().unwrap().len() > 0);
+    assert!(!body["error"].as_str().unwrap().is_empty());
 }
 
 #[tokio::test]
@@ -122,7 +130,9 @@ async fn importing_then_saving_as_then_reopening_round_trips() {
                 .method("POST")
                 .uri("/api/project/save-as")
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "path": db_path.to_string_lossy() }).to_string()))
+                .body(Body::from(
+                    json!({ "path": db_path.to_string_lossy() }).to_string(),
+                ))
                 .unwrap(),
         )
         .await
@@ -135,7 +145,9 @@ async fn importing_then_saving_as_then_reopening_round_trips() {
                 .method("POST")
                 .uri("/api/project/open")
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "path": db_path.to_string_lossy() }).to_string()))
+                .body(Body::from(
+                    json!({ "path": db_path.to_string_lossy() }).to_string(),
+                ))
                 .unwrap(),
         )
         .await

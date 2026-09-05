@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "knx-desktop",
+  "productName": "KNXBench",
   "version": "0.0.0",
   "identifier": "com.knxbench.knxbench-labs",
   "build": {
@@ -11,7 +11,7 @@
   },
   "app": {
     "windows": [
-      { "label": "main", "title": "KNX", "width": 1200, "height": 800 }
+      { "label": "main", "title": "KNXBench", "width": 1200, "height": 800 }
     ]
   },
   "bundle": {

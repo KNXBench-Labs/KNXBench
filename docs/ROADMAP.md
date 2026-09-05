@@ -259,17 +259,27 @@ that limitation's entry had left open. The create row, and (after this
 review's fix) the Delete button, both only act on the first installation,
 since `Command::apply` only ever targets `installations[0]`.
 
+Cycle 10 ([design spec](superpowers/specs/2026-09-05-toast-easter-eggs-design.md))
+delivers three `ideas.md` entries bundled together, since two of them
+needed infrastructure that didn't exist yet and the third reuses it: a
+toast notification stack (`toast.ts`/`toastCopy.ts`/`Toast.tsx`)
+replacing the old single persistent error banner one-for-one; a
+lighter, humorous tone on error toasts (the raw backend message is
+wrapped in a randomly chosen template, never edited, so the factual
+core survives verbatim); and a one-shot startup toast for a listed
+holiday or, failing that, a late-night session — never both. Backend
+error text is untouched; humor lives entirely in the frontend wrapper.
+
 **Entry condition.** Import produces a model worth displaying.
 
-Cycle 10+ candidates (from `ideas.md`, not yet scheduled), each with no
-architectural blocker remaining now that dark/light mode has shipped: a
-lighter, occasionally humorous tone in toast/error copy; small holiday
-and late-night toast easter eggs. Fine-grained UI animation was
-deliberately held until dark/light mode landed, so it wouldn't be redone
-against components that were still changing structurally — that gate is
-now clear. Renaming the project to KNXBench is a standalone task (crate
-names, docs, repo) best done between cycles, not interleaved with one,
-to avoid churn against in-flight doc edits.
+Cycle 11+ candidates (from `ideas.md`, not yet scheduled), each with no
+architectural blocker remaining now that dark/light mode and toasts have
+shipped: fine-grained UI animation, deliberately held until dark/light
+mode landed so it wouldn't be redone against components that were still
+changing structurally — that gate is now clear. Renaming the project to
+KNXBench is a standalone task (crate names, docs, repo) best done
+between cycles, not interleaved with one, to avoid churn against
+in-flight doc edits.
 
 ## Session 6 — KNXnet/IP
 

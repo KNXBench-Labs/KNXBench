@@ -64,4 +64,10 @@ describe("humorizeError", () => {
   it("uses the injected random to select the wrapper", () => {
     expect(humorizeError("x", () => 0.99, ["A: {msg}", "B: {msg}"])).toBe("B: x");
   });
+
+  it("keeps a message containing $-patterns verbatim", () => {
+    expect(humorizeError("Cost is $100 and $$200 or $&here", () => 0, ["Nope: {msg}"])).toBe(
+      "Nope: Cost is $100 and $$200 or $&here",
+    );
+  });
 });

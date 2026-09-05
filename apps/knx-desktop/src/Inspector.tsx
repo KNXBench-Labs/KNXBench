@@ -119,9 +119,16 @@ function DeviceInspector(props: { detail: DeviceDetail; onApplied: (tree: Projec
 
 function GroupAddressInspector(props: {
   ga: GroupAddressNode;
+  // `Command::apply`'s `DeleteGroupAddress` arm only ever searches
+  // `installations[0]` (command.rs) — the same reason
+  // `ProjectExplorer.tsx`'s inline create row only renders under the
+  // first installation. Offering Delete for a group address that lives
+  // in any other installation would always fail with a confusing
+  // "not found" error, so the button itself is gated instead.
+  canDelete: boolean;
   onDeleted: (tree: ProjectTree) => void;
 }) {
-  const { ga, onDeleted } = props;
+  const { ga, canDelete, onDeleted } = props;
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -138,7 +145,13 @@ function GroupAddressInspector(props: {
     <div className="inspector">
       <h2>{ga.name}</h2>
       <p className="inspector-address">{ga.address}</p>
-      <button onClick={remove}>Delete</button>
+      {canDelete ? (
+        <button onClick={remove}>Delete</button>
+      ) : (
+        <p className="inspector-description">
+          Delete is only available for group addresses in the first installation.
+        </p>
+      )}
       {error && <span className="field-error">{error}</span>}
     </div>
   );
@@ -182,7 +195,8 @@ export default function Inspector(props: {
   if (selection.kind === "group_address") {
     const ga = findGroupAddress(tree, selection.id);
     if (!ga) return null;
-    return <GroupAddressInspector ga={ga} onDeleted={onDeleted} />;
+    const canDelete = tree.installations[0]?.group_addresses.some((g) => g.id === ga.id) ?? false;
+    return <GroupAddressInspector ga={ga} canDelete={canDelete} onDeleted={onDeleted} />;
   }
 
   const found = findBuildingPart(tree, selection.id);

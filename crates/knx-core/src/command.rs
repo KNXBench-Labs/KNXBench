@@ -82,7 +82,10 @@ impl fmt::Display for CommandError {
             }
             CommandError::GroupAddressNotFound(id) => write!(f, "group address {id} not found"),
             CommandError::GroupAddressInUse(id) => {
-                write!(f, "group address {id} is still linked from a communication object")
+                write!(
+                    f,
+                    "group address {id} is still linked from a communication object"
+                )
             }
             CommandError::InstallationNotFound => write!(f, "project has no installation"),
             CommandError::NothingToUndo => write!(f, "nothing to undo"),
@@ -388,15 +391,17 @@ mod tests {
     #[test]
     fn create_group_address_rejects_a_duplicate_address_and_leaves_the_stack_untouched() {
         let mut project = test_project_with_one_device(None);
-        project.installations[0].group_addresses.push(GroupAddressEntry {
-            id: GroupAddressId(1),
-            source: source(),
-            name: "Existing".into(),
-            address: GroupAddress::from_raw(5),
-            central: false,
-            unfiltered: false,
-            range: None,
-        });
+        project.installations[0]
+            .group_addresses
+            .push(GroupAddressEntry {
+                id: GroupAddressId(1),
+                source: source(),
+                name: "Existing".into(),
+                address: GroupAddress::from_raw(5),
+                central: false,
+                unfiltered: false,
+                range: None,
+            });
         let mut stack = CommandStack::new();
         let result = stack.do_command(
             &mut project,
@@ -414,7 +419,9 @@ mod tests {
         );
         assert!(matches!(
             result,
-            Err(CommandError::Validation(ValidationError::DuplicateGroupAddress { .. }))
+            Err(CommandError::Validation(
+                ValidationError::DuplicateGroupAddress { .. }
+            ))
         ));
         assert_eq!(project.installations[0].group_addresses.len(), 1);
         assert!(!stack.can_undo());
@@ -423,15 +430,17 @@ mod tests {
     #[test]
     fn delete_group_address_is_rejected_while_a_com_object_still_links_to_it() {
         let mut project = test_project_with_one_device(None);
-        project.installations[0].group_addresses.push(GroupAddressEntry {
-            id: GroupAddressId(1),
-            source: source(),
-            name: "GA".into(),
-            address: GroupAddress::from_raw(1),
-            central: false,
-            unfiltered: false,
-            range: None,
-        });
+        project.installations[0]
+            .group_addresses
+            .push(GroupAddressEntry {
+                id: GroupAddressId(1),
+                source: source(),
+                name: "GA".into(),
+                address: GroupAddress::from_raw(1),
+                central: false,
+                unfiltered: false,
+                range: None,
+            });
         project.devices.insert_com_object(ComObjectInstance {
             id: ComObjectInstanceId(1),
             source: source(),

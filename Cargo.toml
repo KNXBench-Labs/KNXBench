@@ -30,6 +30,7 @@ knx-productdb = { path = "crates/knx-productdb" }
 knx-projection = { path = "crates/knx-projection" }
 knx-net = { path = "crates/knx-net" }
 knx-secure = { path = "crates/knx-secure" }
+knx-server = { path = "apps/knx-server" }
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
 tempfile = "3"

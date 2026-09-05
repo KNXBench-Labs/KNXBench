@@ -4,17 +4,17 @@
   "version": "0.0.0",
   "identifier": "com.knxbench.knxbench-labs",
   "build": {
-    "frontendDist": "../dist",
-    "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "frontendDist": "../../knx-web/dist",
+    "beforeDevCommand": "npm --prefix ../knx-web run dev",
+    "beforeBuildCommand": "npm --prefix ../knx-web run build"
   },
   "app": {
-    "windows": [
-      { "label": "main", "title": "KNXBench", "width": 1200, "height": 800 }
-    ]
+    "windows": []
   },
   "bundle": {
-    "active": false
+    "active": false,
+    "resources": {
+      "../../knx-web/dist": "frontend"
+    }
   }
 }

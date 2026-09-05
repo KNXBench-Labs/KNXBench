@@ -26,12 +26,17 @@ use std::sync::Arc;
 
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
-fn spawn_server(listener: TcpListener, state: Arc<knx_server::AppState>, static_dir: Option<PathBuf>) {
+fn spawn_server(
+    listener: TcpListener,
+    state: Arc<knx_server::AppState>,
+    static_dir: Option<PathBuf>,
+) {
     listener
         .set_nonblocking(true)
         .expect("failed to set listener non-blocking");
     tauri::async_runtime::spawn(async move {
-        let listener = tokio::net::TcpListener::from_std(listener).expect("listener conversion failed");
+        let listener =
+            tokio::net::TcpListener::from_std(listener).expect("listener conversion failed");
         axum::serve(listener, knx_server::app(state, static_dir))
             .await
             .expect("knx-server exited unexpectedly");
@@ -52,9 +57,8 @@ pub fn run() {
             let state = Arc::new(knx_server::AppState::new(data_dir));
 
             let window_url = if cfg!(debug_assertions) {
-                let listener = TcpListener::bind(("127.0.0.1", knx_server::DEV_PORT)).expect(
-                    "dev port already in use — is another `cargo tauri dev` running?",
-                );
+                let listener = TcpListener::bind(("127.0.0.1", knx_server::DEV_PORT))
+                    .expect("dev port already in use — is another `cargo tauri dev` running?");
                 spawn_server(listener, state, None);
                 "http://localhost:1420".to_string()
             } else {
@@ -69,10 +73,14 @@ pub fn run() {
                 format!("http://127.0.0.1:{port}")
             };
 
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::External(window_url.parse().unwrap()))
-                .title("KNXBench")
-                .inner_size(1200.0, 800.0)
-                .build()?;
+            WebviewWindowBuilder::new(
+                app,
+                "main",
+                WebviewUrl::External(window_url.parse().unwrap()),
+            )
+            .title("KNXBench")
+            .inner_size(1200.0, 800.0)
+            .build()?;
             Ok(())
         })
         .run(tauri::generate_context!())

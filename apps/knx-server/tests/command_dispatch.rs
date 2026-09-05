@@ -99,12 +99,9 @@ fn state_with_one_installation() -> AppState {
 fn creating_a_group_address_then_deleting_it_round_trips_through_undo() {
     let state = state_with_one_installation();
 
-    let tree = knx_server::create_group_address_impl(
-        &state,
-        "Living room light".into(),
-        "1/1/1".into(),
-    )
-    .unwrap();
+    let tree =
+        knx_server::create_group_address_impl(&state, "Living room light".into(), "1/1/1".into())
+            .unwrap();
     assert!(tree.can_undo);
     assert_eq!(tree.installations[0].group_addresses.len(), 1);
     let ga = &tree.installations[0].group_addresses[0];
@@ -124,9 +121,8 @@ fn creating_a_group_address_then_deleting_it_round_trips_through_undo() {
 #[test]
 fn creating_a_group_address_with_a_malformed_address_is_rejected() {
     let state = state_with_one_installation();
-    let err =
-        knx_server::create_group_address_impl(&state, "GA".into(), "not-an-address".into())
-            .unwrap_err();
+    let err = knx_server::create_group_address_impl(&state, "GA".into(), "not-an-address".into())
+        .unwrap_err();
     assert!(err.contains("malformed group address"), "{err}");
     assert!(!state.command_stack.lock().unwrap().can_undo());
 }
@@ -135,8 +131,8 @@ fn creating_a_group_address_with_a_malformed_address_is_rejected() {
 fn creating_a_duplicate_group_address_is_rejected() {
     let state = state_with_one_installation();
     knx_server::create_group_address_impl(&state, "First".into(), "1/1/1".into()).unwrap();
-    let err = knx_server::create_group_address_impl(&state, "Second".into(), "1/1/1".into())
-        .unwrap_err();
+    let err =
+        knx_server::create_group_address_impl(&state, "Second".into(), "1/1/1".into()).unwrap_err();
     assert!(err.contains("already used"), "{err}");
     let project = state.project.lock().unwrap();
     assert_eq!(
@@ -150,8 +146,7 @@ fn creating_a_duplicate_group_address_is_rejected() {
 #[test]
 fn deleting_a_group_address_still_linked_from_a_com_object_is_rejected() {
     let state = state_with_one_installation();
-    let tree =
-        knx_server::create_group_address_impl(&state, "GA".into(), "1/1/1".into()).unwrap();
+    let tree = knx_server::create_group_address_impl(&state, "GA".into(), "1/1/1".into()).unwrap();
     let ga_id = tree.installations[0].group_addresses[0].id;
 
     {
@@ -202,8 +197,7 @@ fn deleting_a_group_address_still_linked_from_a_com_object_is_rejected() {
 fn setting_individual_address_then_undo_then_redo_round_trips() {
     let state = state_with_two_devices();
 
-    let tree =
-        knx_server::set_individual_address_impl(&state, 1, Some("1.1.2".into())).unwrap();
+    let tree = knx_server::set_individual_address_impl(&state, 1, Some("1.1.2".into())).unwrap();
     assert!(tree.can_undo);
     assert!(!tree.can_redo);
     let project = state.project.lock().unwrap();
@@ -230,8 +224,7 @@ fn setting_individual_address_then_undo_then_redo_round_trips() {
 #[test]
 fn a_duplicate_individual_address_is_rejected_and_leaves_the_stack_untouched() {
     let state = state_with_two_devices();
-    let err =
-        knx_server::set_individual_address_impl(&state, 1, Some("1.1.1".into())).unwrap_err();
+    let err = knx_server::set_individual_address_impl(&state, 1, Some("1.1.1".into())).unwrap_err();
     assert!(err.contains("already used by device 2"), "{err}");
 
     let project = state.project.lock().unwrap();
@@ -245,9 +238,8 @@ fn a_duplicate_individual_address_is_rejected_and_leaves_the_stack_untouched() {
 #[test]
 fn a_malformed_address_string_is_rejected_before_touching_the_project() {
     let state = state_with_two_devices();
-    let err =
-        knx_server::set_individual_address_impl(&state, 1, Some("not-an-address".into()))
-            .unwrap_err();
+    let err = knx_server::set_individual_address_impl(&state, 1, Some("not-an-address".into()))
+        .unwrap_err();
     assert!(err.contains("malformed individual address"), "{err}");
     assert!(!state.command_stack.lock().unwrap().can_undo());
 }

@@ -14,7 +14,11 @@ fn state_with_one_installation() -> knx_server::AppState {
         default_line: None,
         multicast_address: None,
         completion: CompletionStatus::FinishedDesign,
-        topology: Topology { areas: vec![], lines: vec![], unassigned: vec![] },
+        topology: Topology {
+            areas: vec![],
+            lines: vec![],
+            unassigned: vec![],
+        },
         buildings: vec![],
         group_ranges: vec![],
         group_addresses: vec![],
@@ -26,7 +30,9 @@ fn state_with_one_installation() -> knx_server::AppState {
 }
 
 async fn body_json(response: axum::response::Response) -> Value {
-    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     serde_json::from_slice(&bytes).unwrap()
 }
 
@@ -42,14 +48,18 @@ async fn creating_then_deleting_a_group_address_round_trips() {
                 .method("POST")
                 .uri("/api/group-addresses")
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "name": "Living room", "address": "1/1/1" }).to_string()))
+                .body(Body::from(
+                    json!({ "name": "Living room", "address": "1/1/1" }).to_string(),
+                ))
                 .unwrap(),
         )
         .await
         .unwrap();
     assert_eq!(create.status(), StatusCode::OK);
     let tree = body_json(create).await;
-    let ga_id = tree["installations"][0]["group_addresses"][0]["id"].as_u64().unwrap();
+    let ga_id = tree["installations"][0]["group_addresses"][0]["id"]
+        .as_u64()
+        .unwrap();
 
     let delete = app
         .oneshot(
@@ -63,7 +73,10 @@ async fn creating_then_deleting_a_group_address_round_trips() {
         .unwrap();
     assert_eq!(delete.status(), StatusCode::OK);
     let tree = body_json(delete).await;
-    assert!(tree["installations"][0]["group_addresses"].as_array().unwrap().is_empty());
+    assert!(tree["installations"][0]["group_addresses"]
+        .as_array()
+        .unwrap()
+        .is_empty());
 }
 
 #[tokio::test]
@@ -77,7 +90,9 @@ async fn creating_a_malformed_group_address_is_a_400() {
                 .method("POST")
                 .uri("/api/group-addresses")
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "name": "GA", "address": "not-an-address" }).to_string()))
+                .body(Body::from(
+                    json!({ "name": "GA", "address": "not-an-address" }).to_string(),
+                ))
                 .unwrap(),
         )
         .await
@@ -97,7 +112,9 @@ async fn undo_after_create_removes_it_and_redo_brings_it_back() {
                 .method("POST")
                 .uri("/api/group-addresses")
                 .header("content-type", "application/json")
-                .body(Body::from(json!({ "name": "GA", "address": "1/1/1" }).to_string()))
+                .body(Body::from(
+                    json!({ "name": "GA", "address": "1/1/1" }).to_string(),
+                ))
                 .unwrap(),
         )
         .await
@@ -105,18 +122,39 @@ async fn undo_after_create_removes_it_and_redo_brings_it_back() {
 
     let undo = app
         .clone()
-        .oneshot(Request::builder().method("POST").uri("/api/undo").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(undo.status(), StatusCode::OK);
     let tree = body_json(undo).await;
-    assert!(tree["installations"][0]["group_addresses"].as_array().unwrap().is_empty());
+    assert!(tree["installations"][0]["group_addresses"]
+        .as_array()
+        .unwrap()
+        .is_empty());
 
     let redo = app
-        .oneshot(Request::builder().method("POST").uri("/api/redo").body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/redo")
+                .body(Body::empty())
+                .unwrap(),
+        )
         .await
         .unwrap();
     assert_eq!(redo.status(), StatusCode::OK);
     let tree = body_json(redo).await;
-    assert_eq!(tree["installations"][0]["group_addresses"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        tree["installations"][0]["group_addresses"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
 }

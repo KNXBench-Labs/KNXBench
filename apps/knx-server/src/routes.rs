@@ -130,10 +130,18 @@ async fn delete_group_address(
         .map_err(ApiError::bad_request)
 }
 
-async fn undo(State(state): State<SharedState>) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::undo_impl(&state).map(Json).map_err(ApiError::bad_request)
+async fn undo(
+    State(state): State<SharedState>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::undo_impl(&state)
+        .map(Json)
+        .map_err(ApiError::bad_request)
 }
 
-async fn redo(State(state): State<SharedState>) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::redo_impl(&state).map(Json).map_err(ApiError::bad_request)
+async fn redo(
+    State(state): State<SharedState>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::redo_impl(&state)
+        .map(Json)
+        .map_err(ApiError::bad_request)
 }

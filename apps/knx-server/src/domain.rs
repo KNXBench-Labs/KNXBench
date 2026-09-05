@@ -177,7 +177,10 @@ pub fn device_detail_impl(
         .ok_or_else(|| format!("device {device_id} not found"))
 }
 
-pub fn device_detail(state: &AppState, device_id: u32) -> Result<knx_projection::DeviceDetail, String> {
+pub fn device_detail(
+    state: &AppState,
+    device_id: u32,
+) -> Result<knx_projection::DeviceDetail, String> {
     let project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_ref().ok_or("no project open")?;
     device_detail_impl(project, device_id)

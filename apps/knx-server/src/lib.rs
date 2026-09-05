@@ -1,8 +1,8 @@
-use std::sync::Arc;
 use std::path::PathBuf;
+use std::sync::Arc;
 
-use axum::Router;
 use axum::routing::get;
+use axum::Router;
 use tower_http::services::ServeDir;
 
 mod domain;

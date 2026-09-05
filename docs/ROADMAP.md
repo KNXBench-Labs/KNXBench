@@ -243,9 +243,25 @@ button, overlay, or keyboard shortcut. No clickable stat drills into a
 filtered view this cycle; `ideas.md` records that as a deliberate future
 candidate, since no error-detail view exists yet to drill into.
 
+Cycle 9 (no design spec — a bounded task, brainstormed directly in chat)
+delivers group address create and delete: a "Group Addresses" tree branch
+per installation (existing `GroupAddressNode` data, previously reachable
+only through `Ctrl+K` search, never rendered as a branch) with an inline
+create row, and a Delete button on the group-address inspector. Two
+`knx-core` validation guards land alongside the UI: `Command::
+CreateGroupAddress` now rejects a duplicate group address value
+(`ValidationError::DuplicateGroupAddress`), and `Command::
+DeleteGroupAddress` now refuses to delete an address still named by any
+`ComObjectInstance.links` entry (`CommandError::GroupAddressInUse`) —
+closing [KNOWN_LIMITATIONS.md §17](KNOWN_LIMITATIONS.md) by refusing the
+dangerous delete rather than cascading it, one of the two resolutions
+that limitation's entry had left open. The create row, and (after this
+review's fix) the Delete button, both only act on the first installation,
+since `Command::apply` only ever targets `installations[0]`.
+
 **Entry condition.** Import produces a model worth displaying.
 
-Cycle 9+ candidates (from `ideas.md`, not yet scheduled), each with no
+Cycle 10+ candidates (from `ideas.md`, not yet scheduled), each with no
 architectural blocker remaining now that dark/light mode has shipped: a
 lighter, occasionally humorous tone in toast/error copy; small holiday
 and late-night toast easter eggs. Fine-grained UI animation was

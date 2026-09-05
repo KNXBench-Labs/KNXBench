@@ -349,33 +349,27 @@ database. Until then, the `deny.toml` ignore list is permanent infrastructure.
 **Lifted when.** Tauri v3 or a later `tauri` 2.x release ships its GTK4
 backend and becomes the default on Linux.
 
-## 17. Deleting a group address can leave a dangling `GroupLink`
+## 17. Deleting a group address can leave a dangling `GroupLink` — resolved
 
-**Limitation.** `knx_core::command::Command::DeleteGroupAddress` removes the
-`GroupAddressEntry` from `Installation::group_addresses` but does not scan
-`Devices` for any `ComObjectInstance.links` entry that pointed at it. A
-communication object can therefore end up with a `GroupLink` naming a group
-address id that no longer exists in the project.
+**Resolved (Session 5, cycle 9).** `knx_core::command::Command::
+DeleteGroupAddress` now scans `Devices::com_objects()` for any
+`ComObjectInstance.links` entry naming the group address being deleted,
+and refuses the whole command (`CommandError::GroupAddressInUse`) if one
+exists, rather than removing the entry and leaving the link dangling.
+This is the "surface them as ... finding first" resolution this entry
+originally anticipated, in its strictest form: the delete simply does not
+happen until the user removes the link first. A future cycle could soften
+this into removing/flagging the links automatically instead of refusing
+outright — that remains a design choice, not a defect.
 
-**Cause.** The command was written against the group-address list alone;
-finding every com object that might reference a given group address needs
-either an index the domain model does not maintain or a full device scan,
-and neither was in scope when the command was added.
-
-**Impact.** In memory, nothing visibly breaks — the dangling link is just
-an id that resolves to nothing if looked up. Persisting the project is
-where it surfaces: `knx-store`'s `sync_after_command` deletes the group
-address row correctly (`group.rs::delete_group_address` also removes its
-own `group_link` rows), but a later *full* `save_project` re-derives every
-`group_link` row straight from each `ComObjectInstance.links` in memory —
-including the dangling one — and fails with a foreign-key violation against
+**Originally.** `DeleteGroupAddress` removed the `GroupAddressEntry` from
+`Installation::group_addresses` without scanning `Devices` for any
+`ComObjectInstance.links` entry that pointed at it, so a communication
+object could end up with a `GroupLink` naming a group address id that no
+longer existed. In memory nothing visibly broke; a later full
+`save_project` re-derived every `group_link` row from
+`ComObjectInstance.links` and failed with a foreign-key violation against
 `group_address(id)`.
-
-**Lifted when.** `Command::DeleteGroupAddress` (or a helper it calls) also
-walks `Devices` and removes/flags every `GroupLink` naming the deleted
-address — a `knx-core` change, not a `knx-store` one, and its own design
-decision (cascade-delete the links silently, or surface them as an import/
-edit-report finding first) rather than a one-line fix.
 
 ## 18. `open_project` does not clear the previous `.knxdb` `store_path`
 
@@ -458,4 +452,29 @@ at which point extracting a shared shell stops being speculative
 abstraction over two data points. (b) A joint accessibility pass covers
 both overlays together, not a palette-only or search-only fix, since the
 gap and its fix are identical in both.
+
+## 21. A UI-created group address has no `ets_id` and is dropped on export
+
+**Limitation.** `create_group_address_impl` (`apps/knx-desktop/src-tauri/
+src/lib.rs`) creates a `GroupAddressEntry` with an empty `SourceRef`
+(`path`/`ets_id` both `""`) and `range: None` — there is no ETS origin to
+preserve for an entity the user created directly in this app. The
+`.knxproj` exporter (`crates/knx-etsproj/src/export/schema11.rs`) only
+emits a group address nested inside its `GroupRange`, filtering on a
+matching `range` id, so a range-less entry is silently omitted from
+export entirely; if that filter were ever relaxed, an empty `ets_id`
+would also produce an invalid, colliding `Id=""` attribute.
+
+**Cause.** Group address creation (Session 5, cycle 9) was scoped to the
+in-memory/`.knxdb` round trip only; ETS export was never in that task's
+scope, and `SourceRef` has no synthetic-id convention for an entity with
+no ETS origin.
+
+**Impact.** None reachable today — `export_ets_project` has no caller in
+`knx-desktop` or `knx-cli` yet, only in `knx-app`'s own tests. Reachable
+the moment an export command is wired into either.
+
+**Lifted when.** A UI-created entity gets a synthetic, stable `ets_id`
+(and, separately, a `GroupRange` assignment, since a `.knxproj` group
+address is always range-nested) before export ever reaches it.
 

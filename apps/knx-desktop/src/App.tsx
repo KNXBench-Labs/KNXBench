@@ -12,12 +12,14 @@ import type { CommandContext } from "./commandRegistry";
 import ThemeToggle from "./ThemeToggle";
 import Dashboard from "./Dashboard";
 import { useTheme } from "./theme";
+import ToastStack from "./Toast";
+import { pickStartupToast, useToasts } from "./toast";
 
 const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
 
 function App() {
   const [tree, setTree] = useState<ProjectTree | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { toasts, pushError, clearErrors, pushFun, dismiss } = useToasts();
   // Whether the backend's `AppState.store_path` is set — mirrored here so
   // "Save" knows whether it can skip the dialog. Safety here rests on this
   // flag staying in lockstep with the backend's own `store_path`: the
@@ -66,6 +68,14 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
 
+  const startupToastShown = useRef(false);
+  useEffect(() => {
+    if (startupToastShown.current) return; // StrictMode double-invoke guard
+    startupToastShown.current = true;
+    const message = pickStartupToast(new Date());
+    if (message) pushFun(message);
+  }, []);
+
   function resetTree(newTree: ProjectTree) {
     setTree(newTree);
     selectionRef.current = null;
@@ -76,7 +86,7 @@ function App() {
   async function selectEntity(sel: Selection) {
     selectionRef.current = sel;
     setSelection(sel);
-    setError(null);
+    clearErrors();
     if (sel.kind !== "device") {
       // Group-address/building-part detail resolves synchronously from
       // `tree` inside Inspector — nothing to fetch, and no stale
@@ -91,7 +101,7 @@ function App() {
       }
     } catch (e) {
       if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
-        setError(String(e));
+        pushError(String(e));
         setDeviceDetail(null);
       }
     }
@@ -119,7 +129,7 @@ function App() {
       }
     } catch (e) {
       if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
-        setError(String(e));
+        pushError(String(e));
       }
     }
   }
@@ -130,64 +140,64 @@ function App() {
       filters: [{ name: "ETS project", extensions: ["knxproj"] }],
     });
     if (typeof path !== "string") return;
-    setError(null);
+    clearErrors();
     try {
       resetTree(await invoke<ProjectTree>("open_project", { path }));
       setHasStorePath(false); // ETS import has no `.knxdb` location yet
     } catch (e) {
-      setError(String(e));
+      pushError(String(e));
     }
   }
 
   async function openNativeProject() {
     const path = await open({ multiple: false, filters: KNXDB_FILTER });
     if (typeof path !== "string") return;
-    setError(null);
+    clearErrors();
     try {
       resetTree(await invoke<ProjectTree>("open_native_project", { path }));
       setHasStorePath(true);
     } catch (e) {
-      setError(String(e));
+      pushError(String(e));
     }
   }
 
   async function saveProjectAs() {
     const path = await save({ filters: KNXDB_FILTER, defaultPath: "project.knxdb" });
     if (typeof path !== "string") return;
-    setError(null);
+    clearErrors();
     try {
       await invoke("save_project_as", { path });
       setHasStorePath(true);
     } catch (e) {
-      setError(String(e));
+      pushError(String(e));
     }
   }
 
   async function saveProject() {
     if (!hasStorePath) return saveProjectAs();
-    setError(null);
+    clearErrors();
     try {
       await invoke("save_project");
     } catch (e) {
-      setError(String(e));
+      pushError(String(e));
     }
   }
 
   async function undo() {
-    setError(null);
+    clearErrors();
     try {
       await handleTreeUpdate(await invoke<ProjectTree>("undo"));
     } catch (e) {
-      setError(String(e));
+      pushError(String(e));
     }
   }
 
   async function redo() {
-    setError(null);
+    clearErrors();
     try {
       await handleTreeUpdate(await invoke<ProjectTree>("redo"));
     } catch (e) {
-      setError(String(e));
+      pushError(String(e));
     }
   }
 
@@ -230,11 +240,7 @@ function App() {
         Commands… (Ctrl+Shift+P)
       </button>
       <ThemeToggle theme={theme} onCycle={cycleTheme} />
-      {error && (
-        <p role="alert" className="error-banner">
-          {error}
-        </p>
-      )}
+      <ToastStack toasts={toasts} onDismiss={dismiss} />
       {tree && (
         <div className="workspace">
           <ProjectExplorer

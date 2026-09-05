@@ -266,14 +266,22 @@ mod tests {
             }],
             parameters: vec![],
         };
-        let result =
-            check_no_duplicate_group_address(&installation, GroupAddressId(2), GroupAddress::from_raw(5));
+        let result = check_no_duplicate_group_address(
+            &installation,
+            GroupAddressId(2),
+            GroupAddress::from_raw(5),
+        );
         assert!(matches!(
             result,
             Err(ValidationError::DuplicateGroupAddress { existing, new, .. })
                 if existing == GroupAddressId(1) && new == GroupAddressId(2)
         ));
         // An entry keeping its own current address is not a duplicate of itself.
-        assert!(check_no_duplicate_group_address(&installation, GroupAddressId(1), GroupAddress::from_raw(5)).is_ok());
+        assert!(check_no_duplicate_group_address(
+            &installation,
+            GroupAddressId(1),
+            GroupAddress::from_raw(5)
+        )
+        .is_ok());
     }
 }

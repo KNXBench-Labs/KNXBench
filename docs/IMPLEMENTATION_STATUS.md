@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-05 (Session 5, cycle 8)
+Last updated: 2026-09-05 (Session 5, cycle 9)
 
 ## Where the project stands
 
@@ -11,7 +11,7 @@ Last updated: 2026-09-05 (Session 5, cycle 8)
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
-| 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)) and cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)) done — CLAUDE.md's full UI/UX deliverable list is complete, see [ROADMAP.md](ROADMAP.md) |
+| 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)), and cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) done — CLAUDE.md's full UI/UX deliverable list is complete, see [ROADMAP.md](ROADMAP.md) |
 | 6 | KNXnet/IP | Not started |
 | 7 | Integration & hardening | Not started |
 
@@ -400,14 +400,21 @@ Known gaps carried forward, none blocking Session 5:
   `save_project`/`save_project_as`/`open_native_project` command with a
   save dialog and UX, but always as a full round trip. Cycle 4 adds a
   command layer to `knx-desktop` (`device_detail`/`set_individual_address`/
-  `set_com_object_dpt`/`undo`/`redo`), but it only reaches two of the four
-  `Command` variants that have an incremental `sync_after_command` path
-  (`SetIndividualAddress`, `SetComObjectDpt`/`RestoreComObjectDpt`) — the
-  other two (`CreateGroupAddress`/`DeleteGroupAddress`) have no UI yet.
-  Every other entity/attribute is still written only by a full
-  `save_project`, until both a command and UI exist for it. Undo history
-  is session-only by design (`AppState.command_stack`, reset on
-  open/import, never persisted to `.knxdb`).
+  `set_com_object_dpt`/`undo`/`redo`); cycle 9 reaches the remaining two
+  `Command` variants that already had an incremental `sync_after_command`
+  path (`CreateGroupAddress`/`DeleteGroupAddress`) with a UI
+  (`create_group_address`/`delete_group_address`). Every other
+  entity/attribute is still written only by a full `save_project`, until
+  both a command and UI exist for it. Undo history is session-only by
+  design (`AppState.command_stack`, reset on open/import, never persisted
+  to `.knxdb`).
+- Cycle 9's plan-mandated manual smoke check (open a project, expand
+  "Group Addresses", create one via the inline row, select it, delete it,
+  confirm Undo/Redo restores it via both the toolbar and `Ctrl+Z`/
+  `Ctrl+Shift+Z`) was not performed — no display available in this
+  environment for a Tauri GUI session. Rust-level tests
+  (`command.rs`, `command_dispatch.rs`) cover the validation and
+  persistence logic underneath it.
 - Cycle 4's properties inspector edits exactly two fields (individual
   address, communication-object DPT); `ComObjectNode`'s read/write/
   transmit/update/communication flags are projected but display-only —

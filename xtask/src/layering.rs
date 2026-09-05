@@ -56,8 +56,18 @@ pub fn forbidden_reachable(graph: &DepGraph, root: &str, forbidden: &[&str]) -> 
     violations
 }
 
-/// Packages `knx-core` must never reach. Spec section 3.1, rule 1.
-pub const CORE_FORBIDDEN: &[&str] = &["serde_json", "quick-xml", "rusqlite", "tokio"];
+/// Packages `knx-core` must never reach. Spec section 3.1, rule 1. `axum`
+/// and `tower` are here alongside `tokio` so an accidental HTTP dependency
+/// (e.g. from the web/Docker deployment target's `knx-server`) creeping
+/// into a domain crate gets caught by this gate too.
+pub const CORE_FORBIDDEN: &[&str] = &[
+    "serde_json",
+    "quick-xml",
+    "rusqlite",
+    "tokio",
+    "axum",
+    "tower",
+];
 
 /// Build the resolved dependency graph of the whole workspace, including
 /// transitive third-party dependencies.

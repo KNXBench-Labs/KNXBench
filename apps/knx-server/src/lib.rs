@@ -9,8 +9,9 @@ mod domain;
 pub use domain::*;
 
 mod errors;
-mod routes;
 mod fs_routes;
+mod paths;
+mod routes;
 
 pub type SharedState = Arc<AppState>;
 

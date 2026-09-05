@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use axum::extract::Path as AxumPath;
 use axum::extract::State;
 use axum::routing::{delete, post};
@@ -8,6 +6,7 @@ use serde::Deserialize;
 
 use crate::domain;
 use crate::errors::ApiError;
+use crate::paths::{resolve_new_project_path, resolve_project_path};
 use crate::SharedState;
 
 pub fn project_routes() -> Router<SharedState> {
@@ -25,6 +24,10 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/redo", post(redo))
 }
 
+/// `path` is either an absolute host path (desktop, from a native OS
+/// dialog) or one relative to `AppState::data_dir` (web, from
+/// `FsPicker.tsx` or `/api/fs/upload`) — see `crate::paths` for how the
+/// two are told apart and what confinement the relative case gets.
 #[derive(Deserialize)]
 pub(crate) struct PathBody {
     pub(crate) path: String,
@@ -34,7 +37,8 @@ async fn import_project(
     State(state): State<SharedState>,
     Json(body): Json<PathBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::open_project(&state, Path::new(&body.path))
+    let path = resolve_project_path(&state.data_dir, &body.path)?;
+    domain::open_project(&state, &path)
         .map(Json)
         .map_err(ApiError::internal)
 }
@@ -43,7 +47,8 @@ async fn open_native_project(
     State(state): State<SharedState>,
     Json(body): Json<PathBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::open_native_project(&state, Path::new(&body.path))
+    let path = resolve_project_path(&state.data_dir, &body.path)?;
+    domain::open_native_project(&state, &path)
         .map(Json)
         .map_err(ApiError::internal)
 }
@@ -56,7 +61,8 @@ async fn save_project_as(
     State(state): State<SharedState>,
     Json(body): Json<PathBody>,
 ) -> Result<(), ApiError> {
-    domain::save_project_as(&state, Path::new(&body.path)).map_err(ApiError::internal)
+    let path = resolve_new_project_path(&state.data_dir, &body.path)?;
+    domain::save_project_as(&state, &path).map_err(ApiError::internal)
 }
 
 async fn device_detail(

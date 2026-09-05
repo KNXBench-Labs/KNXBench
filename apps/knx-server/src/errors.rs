@@ -14,6 +14,7 @@ use serde_json::json;
 /// Every other route only ever touches already-loaded in-memory state, so
 /// its failures (malformed input, stale id, "no project open") are always
 /// the caller's to fix -> `bad_request` (400).
+#[derive(Debug)]
 pub struct ApiError {
     status: StatusCode,
     message: String,
@@ -30,6 +31,18 @@ impl ApiError {
     pub fn internal(message: impl Into<String>) -> Self {
         Self {
             status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: message.into(),
+        }
+    }
+
+    /// Escape hatch for the one case where the status is not ours to
+    /// choose: an axum extractor that already classified its own failure
+    /// (`MultipartError` distinguishes 413 "too large" from 400
+    /// "malformed"). Everything else goes through the two constructors
+    /// above and the split documented on this type.
+    pub fn with_status(status: StatusCode, message: impl Into<String>) -> Self {
+        Self {
+            status,
             message: message.into(),
         }
     }

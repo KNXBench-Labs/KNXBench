@@ -11,6 +11,14 @@ async fn main() {
     let data_dir = std::env::var("KNX_DATA_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| std::env::temp_dir());
+    // Created up front rather than lazily: every path under `data_dir` is
+    // resolved by canonicalizing it, which fails outright if the root
+    // itself does not exist — a `KNX_DATA_DIR` pointing at a volume that
+    // has not been created yet would otherwise turn every `/api/fs/*`
+    // call into an opaque "data dir unreadable" 500. Same call the Tauri
+    // shell already makes for its own data dir.
+    std::fs::create_dir_all(&data_dir)
+        .unwrap_or_else(|e| panic!("failed to create data dir {}: {e}", data_dir.display()));
 
     let state = Arc::new(knx_server::AppState::new(data_dir));
     let app = knx_server::app(state, static_dir);

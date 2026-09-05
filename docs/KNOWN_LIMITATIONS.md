@@ -385,7 +385,7 @@ different cycles (`.knxproj` import predates the native `.knxdb` format)
 and were never made to share a single "what file, if any, backs the
 in-memory project" invariant.
 
-**Impact.** None reachable through the current UI: `apps/knx-desktop/src/
+**Impact.** None reachable through the current UI: `apps/knx-web/src/
 App.tsx` resets its own `hasStorePath` flag to `false` on ETS import, so
 "Save" always falls back to "Save As…" in that state. But the backend has
 no equivalent guard — `save_project` just writes wherever `store_path`
@@ -400,7 +400,7 @@ overwrite the old `.knxdb` with the newly-imported project's data.
 
 ## 19. A search result inside a collapsed tree branch is not revealed
 
-**Limitation.** Picking a result from `Ctrl+K` search (`apps/knx-desktop/
+**Limitation.** Picking a result from `Ctrl+K` search (`apps/knx-web/
 src/Search.tsx`) selects the matching device, group address, or building
 part and shows it in the Inspector, but if the Project Explorer tree has
 the ancestor branch containing it manually collapsed, the tree itself does
@@ -419,7 +419,7 @@ potentially a future command palette too).
 
 ## 20. Command palette and search share overlay CSS and an accessibility gap, unaddressed
 
-**Limitation.** `apps/knx-desktop/src/Search.tsx` and `CommandPalette.tsx`
+**Limitation.** `apps/knx-web/src/Search.tsx` and `CommandPalette.tsx`
 are two near-identical modal-overlay implementations — an overlay div, a
 click-outside `stopPropagation` panel, an autofocused input, and
 `Escape`/arrow-key/`Enter` handling — kept as separate components rather
@@ -455,15 +455,17 @@ gap and its fix are identical in both.
 
 ## 21. A UI-created group address has no `ets_id` and is dropped on export
 
-**Limitation.** `create_group_address_impl` (`apps/knx-desktop/src-tauri/
-src/lib.rs`) creates a `GroupAddressEntry` with an empty `SourceRef`
-(`path`/`ets_id` both `""`) and `range: None` — there is no ETS origin to
-preserve for an entity the user created directly in this app. The
-`.knxproj` exporter (`crates/knx-etsproj/src/export/schema11.rs`) only
-emits a group address nested inside its `GroupRange`, filtering on a
-matching `range` id, so a range-less entry is silently omitted from
-export entirely; if that filter were ever relaxed, an empty `ets_id`
-would also produce an invalid, colliding `Id=""` attribute.
+**Limitation.** `create_group_address_impl` (`apps/knx-server/src/
+domain.rs` — moved here from `apps/knx-desktop/src-tauri/src/lib.rs` with
+the web/Docker deployment target; same function, same behavior) creates a
+`GroupAddressEntry` with an empty `SourceRef` (`path`/`ets_id` both `""`)
+and `range: None` — there is no ETS origin to preserve for an entity the
+user created directly in this app. The `.knxproj` exporter
+(`crates/knx-etsproj/src/export/schema11.rs`) only emits a group address
+nested inside its `GroupRange`, filtering on a matching `range` id, so a
+range-less entry is silently omitted from export entirely; if that filter
+were ever relaxed, an empty `ets_id` would also produce an invalid,
+colliding `Id=""` attribute.
 
 **Cause.** Group address creation (Session 5, cycle 9) was scoped to the
 in-memory/`.knxdb` round trip only; ETS export was never in that task's
@@ -471,10 +473,104 @@ scope, and `SourceRef` has no synthetic-id convention for an entity with
 no ETS origin.
 
 **Impact.** None reachable today — `export_ets_project` has no caller in
-`knx-desktop` or `knx-cli` yet, only in `knx-app`'s own tests. Reachable
-the moment an export command is wired into either.
+`knx-server`, `knx-desktop` or `knx-cli` yet, only in `knx-app`'s own
+tests. Reachable the moment an export route or command is wired into any
+of them.
 
 **Lifted when.** A UI-created entity gets a synthetic, stable `ets_id`
 (and, separately, a `GroupRange` assignment, since a `.knxproj` group
 address is always range-nested) before export ever reaches it.
+
+## 22. The web/Docker deployment target has no authentication
+
+**Limitation.** `apps/knx-server` serves its HTTP API and the frontend
+with no login, session, or authorization layer of any kind — anyone who
+can reach the container's port can open, edit, and save the project.
+
+**Cause.** A deliberate scope decision recorded in
+[the design spec](superpowers/specs/2026-09-05-web-docker-deployment-design.md):
+the stated use case is a self-hosted container on a trusted LAN, not
+internet exposure, and auth is not free to bolt on afterward for a
+stateful, single-project server — retrofitting it later is a separate
+design, not an oversight to patch incrementally.
+
+**Impact.** The container must not be exposed to the internet or to an
+untrusted network. Nothing in `knx-server` itself enforces that boundary;
+it is a deployment-time responsibility (firewalling, a reverse proxy with
+its own auth, or simply staying LAN-only), not something the application
+checks or warns about.
+
+**Lifted when.** A deliberate decision to add an auth layer is made, with
+its own design covering session/multi-user implications for the
+single-`Mutex`-guarded-project state model this server already has.
+
+## 23. `/api/project/download` buffers the whole `.knxdb` file in memory
+
+**Limitation.** The route that lets the web UI save a project as a
+downloaded `.knxdb` file reads the entire file into memory before writing
+the HTTP response body, rather than streaming it.
+
+**Cause.** Simplicity for the common case: `axum`'s streaming-response
+plumbing (a `Body` backed by an async byte stream over a file handle)
+is more code for a project file that, for every project measured so far
+(including the reference project), is small enough that buffering it
+costs nothing observable.
+
+**Impact.** None for typical project sizes. A very large `.knxdb` file
+would hold its full byte size in server memory for the duration of one
+download request — a real cost only if project sizes grow well past what
+this repository's reference project or any tested project represents.
+
+**Lifted when.** A demonstrated need arises from a project large enough to
+make buffering measurably costly; real streaming is a contained change
+local to this one route, not an architectural one.
+
+## 24. `FsPicker` has no drag-and-drop or multi-select
+
+**Limitation.** `apps/knx-web/src/FsPicker.tsx` — the mount-directory
+listing/upload/download UI shown in the web build when
+`window.__TAURI__` is absent — supports browsing directories and picking
+or uploading one file at a time. It has no drag-and-drop file upload zone
+and no multi-select for batch operations.
+
+**Cause.** YAGNI for this iteration: the design's stated goal was parity
+with the desktop's native-dialog UX for opening and saving one project at
+a time, not a general-purpose file manager. Neither capability was needed
+to meet that goal.
+
+**Impact.** A web user uploads files one at a time through a standard
+file-input control rather than dragging one in, and cannot batch-upload
+or batch-delete multiple files from the mount listing. No functional gap
+for the single-project workflow the server is built around.
+
+**Lifted when.** A demonstrated need arises — e.g. a workflow that
+regularly moves several files into the mount at once — at which point
+drag-and-drop and multi-select can be added to `FsPicker.tsx` without
+touching the underlying `/api/fs/*` routes, which already accept one file
+per request by design.
+
+## 25. `apps/knx-web`'s declared Node version and the Docker build's Node image disagree
+
+**Limitation.** `apps/knx-web/package.json` declares `engines.node:
+">=22.12.0"`, but `apps/knx-server/Dockerfile`'s frontend build stage
+(`FROM node:20-alpine`) builds it with Node 20. `npm ci` in that stage
+prints a non-fatal `EBADENGINE` warning; the build still succeeds today.
+
+**Cause.** The `engines` field was set to match the Node version already
+in use for local development and CI (Node 22, per `.github/workflows/
+ci.yml`'s `actions/setup-node@v4`) when `apps/knx-web` was created; the
+Dockerfile's frontend stage was written independently and pinned to
+`node:20-alpine` without cross-checking that declaration.
+
+**Impact.** None today — `EBADENGINE` is a warning, not an error, and
+nothing in the built frontend has been observed to need a Node
+22-specific feature. It is a latent risk, not a live bug: if Node 20
+reaches its upstream EOL, or a future change enables `engine-strict` in
+either `npm ci` invocation or an `.npmrc`, the same build would start
+failing outright instead of warning.
+
+**Lifted when.** The Dockerfile's frontend stage is bumped to a Node 22
+(or later, matching `engines.node`) base image — a one-line change,
+deliberately not made speculatively ahead of an actual failure, but worth
+fixing before Node 20's EOL removes the option of doing it calmly.
 

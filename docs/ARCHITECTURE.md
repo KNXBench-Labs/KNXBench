@@ -54,6 +54,19 @@ One Cargo workspace:
 ```text
 apps/
   knx-cli/         Headless entry point (bin name: knx)
+  knx-server/      axum HTTP API + static frontend serving — the web/Docker
+                   deployment target. Same _impl functions and AppState
+                   knx-desktop used to own directly, now the only crate
+                   that speaks HTTP.
+  knx-desktop/     Tauri v2 shell. src-tauri/ is a thin native wrapper that
+                   spawns knx-server locally and points a WebView at it —
+                   no #[tauri::command] handlers of its own since the
+                   web/Docker deployment target. src-tauri/'s only
+                   workspace dependency is knx-server.
+  knx-web/         React + Vite frontend (npm package, not a Cargo
+                   workspace member) — served by knx-server's static-file
+                   fallback and, in dev, by knx-desktop's Tauri WebView.
+                   Talks to knx-server over fetch(); no Tauri invoke().
 
 crates/
   knx-core/        Domain model, addresses, DPT, override resolution, validation.
@@ -67,6 +80,8 @@ crates/
                    streaming ingest of manufacturer XML keyed by content
                    hash, and enrichment of ComObjectInstance from it
                    (Session 4)
+  knx-projection/  Pure Project -> ProjectTree projection, ts-rs TypeScript
+                   bindings for knx-web. No IO; depends on knx-core only.
   knx-net/         KNXnet/IP: discovery, tunnelling, routing, cEMI, telegrams
   knx-secure/      Isolated key material subsystem (empty for now, but present)
 
@@ -74,18 +89,34 @@ xtask/             Repository verification tasks, including the layering gate
 ```
 
 ```text
-knx-desktop ─┐          (Session 5)
-knx-cli ─────┴─> knx-app ─> knx-core
-                    ├─> knx-store ────> knx-core
-                    ├─> knx-etsproj ──> knx-core
-                    ├─> knx-productdb ─> knx-core
-                    ├─> knx-net ──────> knx-core
-                    └─> knx-secure
+knx-desktop ─> knx-server ─┬─> knx-app ─> knx-core
+                           ├─> knx-store ────> knx-core
+                           ├─> knx-etsproj ──> knx-core
+                           └─> knx-projection ─> knx-core
+
+knx-cli ────────────────────> knx-app ─> knx-core
+                                 ├─> knx-store ────> knx-core
+                                 ├─> knx-etsproj ──> knx-core
+                                 ├─> knx-productdb ─> knx-core
+                                 ├─> knx-net ──────> knx-core
+                                 └─> knx-secure
 ```
 
-`apps/knx-desktop` — the Tauri shell and the React UI — is scaffolded in
-Session 5. Pulling in Tauri and a Node toolchain before there is a UI to build
-adds a large dependency surface with nothing to run against.
+(`knx-web` has no place in this graph — it is an npm package, not a Cargo
+crate; it reaches `knx-server` over HTTP, not `cargo`'s dependency
+resolution.)
+
+`apps/knx-desktop` — the Tauri shell and the React UI — was scaffolded in
+Session 5. `apps/knx-server` and `apps/knx-web` (a web/Docker deployment
+target, cross-cutting alongside Session 5, see
+[ROADMAP.md](ROADMAP.md)) later took over the API surface and the UI
+respectively: `knx-desktop/src-tauri` shrank to a thin wrapper spawning
+`knx-server` locally, and `knx-web` is the same React application that
+used to live at `knx-desktop/src`, now talking to `knx-server` over HTTP
+instead of Tauri IPC. Pulling in Tauri and a Node toolchain before there
+was a UI to build would have added a large dependency surface with
+nothing to run against — the same reasoning that held Tauri out of
+Session 1.
 
 `knx-etsproj` and `knx-store` are separate crates because the import format and
 the storage format evolve independently. An ETS6 schema delta must not touch
@@ -93,6 +124,11 @@ the project file schema, and a model migration must not break the importer.
 
 `knx-secure` is the one crate with no dependency on `knx-core` at all — see
 section 9.
+
+`knx-core`/`knx-app`/`knx-store`/`knx-etsproj`/`knx-productdb`/
+`knx-projection` keep zero dependency on both Tauri and any HTTP
+framework — `knx-server` is the only crate that speaks HTTP, the same
+architectural role Tauri's command layer had before it.
 
 ## 4. Enforced rules
 
@@ -114,10 +150,17 @@ These are tests. Each one fails the build.
    licence not on the list is rejected, and GPL is not on the list.
    `xknxproject` stays in `.venv`, invoked only by test scripts, never by the
    Rust build (ADR-0002).
-3. **The UI communicates only through Tauri commands into `knx-app`**, and has
-   no path to `knx-store` or `knx-etsproj`. This rule is **not yet mechanically
-   enforced**, because no UI exists. It becomes a graph check in Session 5,
-   when `apps/knx-desktop` is created.
+3. **The UI communicates only through HTTP, into `knx-server`**, and has no
+   path of its own to `knx-app`, `knx-store` or `knx-etsproj`. Originally
+   stated as "only through Tauri commands into `knx-app`" when
+   `apps/knx-desktop` was the only deployment target (Session 5); the
+   web/Docker deployment target replaced Tauri IPC with an HTTP API, so
+   the boundary moved from `knx-desktop/src-tauri` to `knx-server`, but the
+   shape of the rule — one crate mediates between the UI and everything
+   below it — is unchanged. This rule is **still not mechanically
+   enforced**: `check-layering`'s four roots (rule 1, above) do not
+   include a UI-boundary check, since `apps/knx-web` is an npm package
+   outside the Cargo dependency graph `cargo metadata` walks.
 
 All gates run in CI on every push and pull request, and all are runnable
 locally with the same command. A check that only exists on CI gets
@@ -168,9 +211,11 @@ a directory tree (ADR-0003).
 
 ## 7. UI boundary
 
-Tauri commands form a narrow, explicitly typed API. The UI requests projections
-— `ProjectTree`, `DeviceList`, `GroupAddressTable`, `Inspector<T>` — and sends
-`Command` values back.
+`knx-server`'s HTTP routes form a narrow, explicitly typed API — one route per
+former Tauri command, same JSON shapes, same `_impl` functions underneath
+(the web/Docker deployment target replaced the transport, not the
+contract). The UI requests projections — `ProjectTree`, `DeviceList`,
+`GroupAddressTable`, `Inspector<T>` — and sends `Command` values back.
 
 Domain types are not mirrored one-to-one into TypeScript. Projections are
 shaped for display and generated from Rust with `ts-rs`, so the two sides

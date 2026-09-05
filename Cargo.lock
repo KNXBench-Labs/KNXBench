@@ -1842,15 +1842,12 @@ dependencies = [
 name = "knx-desktop"
 version = "0.0.0"
 dependencies = [
- "knx-app",
- "knx-core",
- "knx-etsproj",
- "knx-projection",
- "knx-store",
+ "axum",
+ "knx-server",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
- "tempfile",
+ "tokio",
 ]
 
 [[package]]

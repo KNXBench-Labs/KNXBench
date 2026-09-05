@@ -14,6 +14,13 @@ mod fs_routes;
 
 pub type SharedState = Arc<AppState>;
 
+/// Fixed port `cargo tauri dev` and `apps/knx-web`'s Vite dev proxy both
+/// agree on — see `apps/knx-web/vite.config.ts`'s `server.proxy["/api"]`
+/// and this crate's `DEV_PORT` used from `knx-desktop/src-tauri/src/lib.rs`.
+/// A constant instead of an env var: both sides are source, not
+/// deployment config, so there is nothing to make runtime-configurable.
+pub const DEV_PORT: u16 = 4777;
+
 /// Builds the full router: `/healthz` (and, from later tasks, `/api/*`),
 /// plus — if `static_dir` is given — the built frontend served from `/`
 /// as a fallback. `static_dir` is `None` for API-only test builds and the

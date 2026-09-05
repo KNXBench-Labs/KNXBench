@@ -1,0 +1,30 @@
+[package]
+name = "knx-server"
+version = "0.0.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "knx-server"
+path = "src/main.rs"
+
+[lib]
+name = "knx_server"
+path = "src/lib.rs"
+
+[dependencies]
+knx-app.workspace = true
+knx-core.workspace = true
+knx-etsproj.workspace = true
+knx-projection.workspace = true
+knx-store.workspace = true
+axum = { workspace = true, features = ["multipart"] }
+tokio = { workspace = true, features = ["full"] }
+tower = { workspace = true, features = ["util"] }
+tower-http = { workspace = true, features = ["fs"] }
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true

@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { InstallationNode } from "./bindings/InstallationNode";
 import type { AreaNode } from "./bindings/AreaNode";
 import type { LineNode } from "./bindings/LineNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
+import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { Selection } from "./selection";
 
 function TreeNode(props: {
@@ -97,8 +99,74 @@ function BuildingItem(props: { building: BuildingNode } & SelectionProps) {
   );
 }
 
-function InstallationItem(props: { installation: InstallationNode } & SelectionProps) {
-  const { installation, selection, onSelect } = props;
+function GroupAddressItem(props: { ga: GroupAddressNode } & SelectionProps) {
+  const { ga, selection, onSelect } = props;
+  return (
+    <TreeNode
+      label={`${ga.address} ${ga.name}`}
+      selected={selection?.kind === "group_address" && selection.id === ga.id}
+      onSelect={() => onSelect({ kind: "group_address", id: ga.id })}
+    />
+  );
+}
+
+// The only affordance in the tree that creates a domain object rather than
+// selecting one — kept as an inline row rather than a dialog, the same way
+// `AddressField`/`DptField` (Inspector.tsx) edit inline rather than popping
+// a modal. Only rendered under the first installation (`InstallationItem`'s
+// `isFirst`): `Command::apply` only ever targets `installations[0]`
+// (command.rs), so this is the only installation the affordance could
+// honestly promise to create into.
+function NewGroupAddressRow(props: { onCreated: (tree: ProjectTree) => void }) {
+  const { onCreated } = props;
+  const [address, setAddress] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const canCreate = address.trim() !== "" && name.trim() !== "";
+
+  async function create() {
+    if (!canCreate) return;
+    setError(null);
+    try {
+      const tree = await invoke<ProjectTree>("create_group_address", { name, address });
+      onCreated(tree);
+      setAddress("");
+      setName("");
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
+  return (
+    <li className="tree-new-row">
+      <input
+        value={address}
+        placeholder="1/1/1"
+        onChange={(e) => setAddress(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void create();
+        }}
+      />
+      <input
+        value={name}
+        placeholder="New group address"
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void create();
+        }}
+      />
+      <button onClick={create} disabled={!canCreate}>
+        Add
+      </button>
+      {error && <span className="field-error">{error}</span>}
+    </li>
+  );
+}
+
+function InstallationItem(
+  props: { installation: InstallationNode; isFirst: boolean; onTreeUpdate: (tree: ProjectTree) => void } & SelectionProps,
+) {
+  const { installation, isFirst, onTreeUpdate, selection, onSelect } = props;
   return (
     <TreeNode label={installation.name}>
       <TreeNode label="Topology">
@@ -118,19 +186,29 @@ function InstallationItem(props: { installation: InstallationNode } & SelectionP
           ))}
         </TreeNode>
       )}
+      <TreeNode label="Group Addresses">
+        {installation.group_addresses.map((ga) => (
+          <GroupAddressItem key={ga.id} ga={ga} selection={selection} onSelect={onSelect} />
+        ))}
+        {isFirst && <NewGroupAddressRow onCreated={onTreeUpdate} />}
+      </TreeNode>
     </TreeNode>
   );
 }
 
-export default function ProjectExplorer(props: { tree: ProjectTree } & SelectionProps) {
-  const { tree, selection, onSelect } = props;
+export default function ProjectExplorer(
+  props: { tree: ProjectTree; onTreeUpdate: (tree: ProjectTree) => void } & SelectionProps,
+) {
+  const { tree, onTreeUpdate, selection, onSelect } = props;
   return (
     <div className="project-explorer">
       <ul className="tree-root">
-        {tree.installations.map((inst) => (
+        {tree.installations.map((inst, idx) => (
           <InstallationItem
             key={inst.id}
             installation={inst}
+            isFirst={idx === 0}
+            onTreeUpdate={onTreeUpdate}
             selection={selection}
             onSelect={onSelect}
           />

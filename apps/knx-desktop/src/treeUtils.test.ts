@@ -6,7 +6,7 @@ import type { DeviceNode } from "./bindings/DeviceNode";
 import { buildSearchIndex, findBuildingPart, findGroupAddress } from "./treeUtils";
 
 function device(id: number, name: string, address: string | null = null): DeviceNode {
-  return { id, name, address, description: null };
+  return { id, name, address, description: null, com_object_count: 0 };
 }
 
 function building(

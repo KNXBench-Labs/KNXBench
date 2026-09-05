@@ -5,4 +5,10 @@ export type DeviceNode = { id: number, name: string,
  * Formatted individual address (e.g. `"1.1.1"`) — `None` if the device
  * has no address assigned, which is valid project state.
  */
-address: string | null, description: string | null, };
+address: string | null, description: string | null, 
+/**
+ * Count of this device's communication objects, regardless of
+ * `is_active` — the dashboard's project-wide total sums this field
+ * across every `DeviceNode` it visits (Session 5, cycle 8).
+ */
+com_object_count: number, };

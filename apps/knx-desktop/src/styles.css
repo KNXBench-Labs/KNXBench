@@ -227,3 +227,32 @@ main {
 .search-result.selected {
   background: color-mix(in srgb, currentColor 15%, transparent);
 }
+
+.dashboard {
+  flex: 1 1 60%;
+  min-width: 0;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1rem;
+  margin: 0.75rem 0;
+}
+
+.dashboard-stats dt {
+  opacity: 0.8;
+}
+
+.dashboard-stats dd {
+  margin: 0;
+  font-weight: bold;
+}
+
+.dashboard-issues {
+  margin-top: 1.5rem;
+}
+
+.dashboard-errors {
+  color: var(--knx-error-color);
+}

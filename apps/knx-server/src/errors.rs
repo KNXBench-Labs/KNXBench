@@ -1,0 +1,42 @@
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use axum::Json;
+use serde_json::json;
+
+/// Every function in `domain.rs` returns `Result<T, String>` (or
+/// `Result<T, knx_app::AppError>` for the `_impl` variants, converted at
+/// the route boundary) — there is no error taxonomy below this layer to
+/// switch on. The 400/500 split here is drawn by *which* operation
+/// failed, not by inspecting the message: `open_project`/
+/// `open_native_project`/`save_project`/`save_project_as` touch the
+/// filesystem and `knx-store`, so their failures (missing file, corrupt
+/// database, disk full) are environment problems -> `internal` (500).
+/// Every other route only ever touches already-loaded in-memory state, so
+/// its failures (malformed input, stale id, "no project open") are always
+/// the caller's to fix -> `bad_request` (400).
+pub struct ApiError {
+    status: StatusCode,
+    message: String,
+}
+
+impl ApiError {
+    pub fn bad_request(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::BAD_REQUEST,
+            message: message.into(),
+        }
+    }
+
+    pub fn internal(message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            message: message.into(),
+        }
+    }
+}
+
+impl IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        (self.status, Json(json!({ "error": self.message }))).into_response()
+    }
+}

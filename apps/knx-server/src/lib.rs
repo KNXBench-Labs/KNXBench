@@ -8,6 +8,9 @@ use tower_http::services::ServeDir;
 mod domain;
 pub use domain::*;
 
+mod errors;
+mod routes;
+
 pub type SharedState = Arc<AppState>;
 
 /// Builds the full router: `/healthz` (and, from later tasks, `/api/*`),
@@ -17,6 +20,7 @@ pub type SharedState = Arc<AppState>;
 /// release branch.
 pub fn app(state: SharedState, static_dir: Option<PathBuf>) -> Router {
     let api = Router::new()
+        .merge(routes::project_routes())
         .route("/healthz", get(|| async { "ok" }))
         .with_state(state);
 

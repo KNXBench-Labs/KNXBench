@@ -97,6 +97,10 @@ pub struct DeviceNode {
     /// has no address assigned, which is valid project state.
     pub address: Option<String>,
     pub description: Option<String>,
+    /// Count of this device's communication objects, regardless of
+    /// `is_active` — the dashboard's project-wide total sums this field
+    /// across every `DeviceNode` it visits (Session 5, cycle 8).
+    pub com_object_count: usize,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -200,6 +204,7 @@ fn build_device_node(device: &knx_core::DeviceInstance) -> DeviceNode {
         name: device.name.clone(),
         address: device.address.map(|a| a.to_string()),
         description: device.description.clone(),
+        com_object_count: device.com_objects.len(),
     }
 }
 
@@ -565,6 +570,17 @@ mod tests {
     fn build_device_detail_returns_none_for_an_unknown_device() {
         let project = project_with_one_device();
         assert!(build_device_detail(&project, knx_core::DeviceId(99)).is_none());
+    }
+
+    #[test]
+    fn device_node_carries_its_communication_object_count() {
+        let mut project = project_with_one_device();
+        let mut inst = empty_installation();
+        inst.topology.unassigned.push(knx_core::DeviceId(1));
+        project.installations.push(inst);
+
+        let tree = build_project_tree(&project);
+        assert_eq!(tree.installations[0].unassigned[0].com_object_count, 1);
     }
 
     fn project_with_one_device() -> Project {

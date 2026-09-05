@@ -219,18 +219,41 @@ one-frame flash of the wrong theme. CLAUDE.md's UI/UX deliverable list
 for this session — Project Explorer, properties inspector, search,
 command palette, dark and light mode — is now complete.
 
+Cycle 8 (`docs/superpowers/specs/2026-09-04-dashboard-design.md`) delivers
+a read-only project status dashboard, filling the workspace slot that
+sat empty when a project was loaded but nothing selected. CLAUDE.md's
+Session 5 UI/UX deliverable list was already complete as of cycle 7 —
+this is a bonus item pulled from `ideas.md`, not a gap-closer.
+`knx-projection` gains one new field, `DeviceNode.com_object_count`
+(`build_device_node` populates it from `device.com_objects.len()`), the
+one piece of data the frontend didn't already have; every other stat
+(installations, areas, lines, devices assigned/unassigned, group
+addresses, building parts) is summed from the existing `ProjectTree`
+shape by a new pure frontend module, `dashboardStats.ts`, walking
+topology and the unassigned bucket for devices/communication objects and
+buildings separately for building-part counts — deliberately never
+sharing a device between the two walks, since a device is placed in a
+line and a building independently (DATA_MODEL.md) and summing both
+would double-count it. `Dashboard.tsx` is a presentational component
+consuming `computeStats`, rendered in `App.tsx` in place of the
+`{selection && <Inspector>}` no-op via `{selection ? <Inspector> :
+<Dashboard>}` — mutually exclusive with the Inspector the same way
+Inspector and nothing-selected were before this cycle, no new toolbar
+button, overlay, or keyboard shortcut. No clickable stat drills into a
+filtered view this cycle; `ideas.md` records that as a deliberate future
+candidate, since no error-detail view exists yet to drill into.
+
 **Entry condition.** Import produces a model worth displaying.
 
-Cycle 8+ candidates (from `ideas.md`, not yet scheduled), each with no
+Cycle 9+ candidates (from `ideas.md`, not yet scheduled), each with no
 architectural blocker remaining now that dark/light mode has shipped: a
-project status/dashboard view (projection-layer sibling to search, no new
-domain data needed); a lighter, occasionally humorous tone in toast/error
-copy; small holiday and late-night toast easter eggs. Fine-grained UI
-animation was deliberately held until dark/light mode landed, so it
-wouldn't be redone against components that were still changing
-structurally — that gate is now clear. Renaming the project to KNXBench
-is a standalone task (crate names, docs, repo) best done between cycles,
-not interleaved with one, to avoid churn against in-flight doc edits.
+lighter, occasionally humorous tone in toast/error copy; small holiday
+and late-night toast easter eggs. Fine-grained UI animation was
+deliberately held until dark/light mode landed, so it wouldn't be redone
+against components that were still changing structurally — that gate is
+now clear. Renaming the project to KNXBench is a standalone task (crate
+names, docs, repo) best done between cycles, not interleaved with one,
+to avoid churn against in-flight doc edits.
 
 ## Session 6 — KNXnet/IP
 

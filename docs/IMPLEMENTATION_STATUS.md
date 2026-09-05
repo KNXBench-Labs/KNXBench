@@ -2,6 +2,12 @@
 
 Last updated: 2026-09-05 (Session 5, cycle 10)
 
+**Rebrand (2026-09-05):** the project is now named **KNXBench** — product
+name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
+only. Crate names (`knx-core`, `knx-desktop`, ...), the `knx` CLI binary, and
+"KNX" as the protocol/standard term throughout the docs are unchanged and not
+in scope.
+
 ## Where the project stands
 
 | Session | Scope | Status |

@@ -11,6 +11,7 @@ members = [
     "crates/knx-secure",
     "apps/knx-cli",
     "apps/knx-desktop/src-tauri",
+    "apps/knx-server",
     "xtask",
 ]
 
@@ -41,3 +42,7 @@ sha2 = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ts-rs = "12"
+axum = "0.8"
+tokio = "1"
+tower = "0.5"
+tower-http = "0.6"

@@ -13,6 +13,8 @@ pub fn project_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/project/import", post(import_project))
         .route("/api/project/open", post(open_native_project))
+        .route("/api/project/save", post(save_project))
+        .route("/api/project/save-as", post(save_project_as))
 }
 
 #[derive(Deserialize)]
@@ -36,4 +38,15 @@ async fn open_native_project(
     domain::open_native_project(&state, Path::new(&body.path))
         .map(Json)
         .map_err(ApiError::internal)
+}
+
+async fn save_project(State(state): State<SharedState>) -> Result<(), ApiError> {
+    domain::save_project(&state).map_err(ApiError::internal)
+}
+
+async fn save_project_as(
+    State(state): State<SharedState>,
+    Json(body): Json<PathBody>,
+) -> Result<(), ApiError> {
+    domain::save_project_as(&state, Path::new(&body.path)).map_err(ApiError::internal)
 }

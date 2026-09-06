@@ -7,3 +7,4 @@ crates/knx-projection/bindings/
 apps/knx-desktop/src-tauri/gen/
 ideas.md
 OriginalData/
+node_modules/

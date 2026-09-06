@@ -17,7 +17,7 @@ in scope.
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
-| 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)), cycle 8 (project status dashboard, [design spec](superpowers/specs/2026-09-04-dashboard-design.md)), cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) — CLAUDE.md's full UI/UX deliverable list complete as of cycle 9 — and cycle 10 (a toast notification stack replacing the old persistent error banner, humor-wrapped error text, and a one-shot holiday/late-night startup toast, [design spec](superpowers/specs/2026-09-05-toast-easter-eggs-design.md)) done, see [ROADMAP.md](ROADMAP.md) |
+| 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)), cycle 8 (project status dashboard, [design spec](superpowers/specs/2026-09-04-dashboard-design.md)), cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) — CLAUDE.md's full UI/UX deliverable list complete as of cycle 9 — and cycle 10 (a toast notification stack replacing the old persistent error banner, humor-wrapped error text, and a one-shot holiday/late-night startup toast, [design spec](superpowers/specs/2026-09-05-toast-easter-eggs-design.md)) and cycle 11 (user-customizable theme tokens — accent/background/surface/text — plus a three-level motion setting, layered on top of the cycle 7 theme toggle, via a new `ThemePanel.tsx`) done, see [ROADMAP.md](ROADMAP.md) |
 | 6 | KNXnet/IP | In progress (Cycles 1-2 shipped) — see below |
 | 7 | Integration & hardening | Not started |
 
@@ -302,6 +302,39 @@ valid-value literals by hand, since it runs before any module graph
 exists. 5 new `vitest` tests in `theme.test.ts`, for 28 total alongside
 the existing 9 Rust integration tests, unchanged.
 
+Cycle 11 adds user-customizable theme tokens and motion, layered on top
+of cycle 7's System/Light/Dark cycle rather than replacing it. `palette.ts`
+is a new, mostly IO-free module mirroring `theme.ts`'s shape: a closed set
+of four `TOKENS` (`accent`, `bg`, `surface`, `text`), `loadPalette`/
+`savePalette` against an injected `localStorage`-shaped object (unit-tested
+under `environment: "node"`, no DOM needed), and `applyPalette` writing one
+CSS custom property per token as an inline style on `<html>` — present only
+for the tokens the user has actually overridden, so an unset token falls
+through to the base theme's own value via ordinary CSS cascade rather than
+needing its own removal-tracking logic. Motion is a three-level
+`off`/`subtle`/`standard` setting stored alongside the colors, mapped to a
+`--knx-transition-duration` custom property; `styles.css` only applies that
+duration inside a `prefers-reduced-motion: no-preference` block, so the OS
+setting always overrides the user's motion choice, never the other way
+round. `styles.css` also gains three new base tokens (`--knx-accent`,
+`--knx-bg`, `--knx-surface` — `--knx-text` makes four) defaulting to the
+`AccentColor`/`Canvas`/`CanvasText` system keywords, and every previously
+hardcoded `Canvas`/`CanvasText` usage (`.toast--error`, `.toast--fun`,
+`.search-panel`, `.fs-picker`) now reads through one of them instead, plus
+the two selection highlights (`.tree-label.selected`,
+`.search-result.selected`) now tint from `--knx-accent` instead of
+`currentColor` — the only two places an accent override was otherwise
+invisible. `usePalette()` composes the above into a hook shaped like
+`useTheme()`'s but exposing per-field setters (`setColor`, `setMotion`,
+`resetAll`) rather than a single cycle function, since a settings panel
+edits one field at a time. `ThemePanel.tsx` is a small modal (a color
+`<input>` per token with a per-token reset button, a motion `<select>`, a
+reset-all button) opened from a new gear button next to `ThemeToggle` in
+`App.tsx`; like `ThemeToggle.tsx` it has no dedicated component test — the
+codebase's established split is that `.tsx` files are untested render
+wiring, and the logic underneath (`palette.ts`) carries the unit tests. 9
+new `vitest` tests in `palette.test.ts`, for 64 total.
+
 `knx-net`, `knx-secure` remain empty crates with their responsibility
 stated in a doc comment. There is still no manufacturer parameter
 *interpretation* (the `Dynamic` tree, `when/@test`), and the desktop UI so
@@ -311,8 +344,9 @@ properties inspector with undo/redo for two editable fields (individual
 address, communication-object DPT) plus group address create/delete
 (cycle 9), `Ctrl+K` search over devices, group addresses, and building
 parts, a `Ctrl+Shift+P` command palette over the app's seven existing
-actions, a System/Light/Dark theme toggle, a read-only project status
-dashboard shown when nothing is selected (cycle 8), and a toast
+actions, a System/Light/Dark theme toggle with user-customizable accent/
+background/surface/text tokens and motion (cycle 11), a read-only project
+status dashboard shown when nothing is selected (cycle 8), and a toast
 notification stack with humor-wrapped error text and a one-shot
 holiday/late-night startup toast (cycle 10) — no editing of anything
 beyond the individual address, communication-object DPT, and group
@@ -390,9 +424,10 @@ frontend steps and ts-rs staleness check were updated to point at
 `apps/knx-web` (they still named `apps/knx-desktop` after the move, which
 would have failed CI on the next push — caught and fixed in this same
 pass, not a separate finding left for later). 327 Rust tests now pass
-across the workspace (up from 314), plus 55 `vitest` tests in
-`apps/knx-web` across 8 files (up from 46 in `apps/knx-desktop`, moved
-1-for-1 plus a new `api.test.ts` against a mocked `fetch`).
+across the workspace (up from 314), plus 64 `vitest` tests in
+`apps/knx-web` across 9 files (up from 46 in `apps/knx-desktop`: moved
+1-for-1 plus a new `api.test.ts` against a mocked `fetch`, then cycle 11's
+`palette.test.ts`).
 
 ## What exists
 
@@ -408,7 +443,7 @@ across the workspace (up from 314), plus 55 `vitest` tests in
 | `crates/knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
 | `apps/knx-server/` | **New, web/Docker deployment target.** The axum HTTP API binary (`knx-server`) and library (`knx_server`) — see the paragraph above. `src/domain.rs` holds `AppState` and the same `_impl` functions the old Tauri commands wrapped; `src/routes.rs`/`fs_routes.rs` are the axum route handlers; `src/errors.rs` maps `AppError` to an HTTP status plus a `{"error": ...}` body. `main.rs` reads `KNX_PORT`/`KNX_STATIC_DIR`/`KNX_DATA_DIR` from the environment. `Dockerfile` is the three-stage build (Node frontend, Rust backend, Debian-slim runtime); `scripts/smoke-test.sh` builds and runs the image and exercises `/healthz` plus an import over HTTP. |
-| `apps/knx-web/` | **New, moved from `apps/knx-desktop/src`.** The React + Vite frontend, now a standalone npm package consumed by both `knx-server`'s static-file serving and the Tauri desktop shell. `src/api.ts` is the `fetch()`-based client (replaces Tauri's `invoke()`); `src/FsPicker.tsx` is the mount-directory listing/upload UI shown when `window.__TAURI__` is absent (the server's `/api/project/download` route has no UI caller yet, see [KNOWN_LIMITATIONS.md #26](KNOWN_LIMITATIONS.md#26-apiprojectdownload-has-no-frontend-caller)); `src/filePicker.ts` picks between it and the native Tauri dialog. Everything else (`ProjectExplorer`, `Inspector`, `Search.tsx`/`CommandPalette.tsx`, `ThemeToggle.tsx`, `Dashboard.tsx`, `Toast.tsx`, the `ts-rs`-generated bindings under `src/bindings/`) moved unchanged from `knx-desktop` — see the Session 5 paragraph above for what each does. `vitest` suite: 55 tests across 8 files, including new `api.test.ts` against a mocked `fetch`. |
+| `apps/knx-web/` | **New, moved from `apps/knx-desktop/src`.** The React + Vite frontend, now a standalone npm package consumed by both `knx-server`'s static-file serving and the Tauri desktop shell. `src/api.ts` is the `fetch()`-based client (replaces Tauri's `invoke()`); `src/FsPicker.tsx` is the mount-directory listing/upload UI shown when `window.__TAURI__` is absent (the server's `/api/project/download` route has no UI caller yet, see [KNOWN_LIMITATIONS.md #26](KNOWN_LIMITATIONS.md#26-apiprojectdownload-has-no-frontend-caller)); `src/filePicker.ts` picks between it and the native Tauri dialog. Everything else (`ProjectExplorer`, `Inspector`, `Search.tsx`/`CommandPalette.tsx`, `ThemeToggle.tsx`, `Dashboard.tsx`, `Toast.tsx`, the `ts-rs`-generated bindings under `src/bindings/`) moved unchanged from `knx-desktop` — see the Session 5 paragraph above for what each does. `vitest` suite: 64 tests across 9 files, including `api.test.ts` against a mocked `fetch` and cycle 11's `palette.test.ts`. |
 | `apps/knx-desktop/` | **Thin native wrapper as of the web/Docker deployment target** — see the paragraph above. `src-tauri/` is now just window/process wiring (`lib.rs`, ~80 lines): spawn `knx-server`'s router locally, point one `WebviewWindowBuilder` at it, keep the native file-dialog plugin available for `apps/knx-web`'s `window.__TAURI__` check. No `#[tauri::command]` handlers and no integration tests remain here — both moved to `apps/knx-server`. No `src/` of its own any more; it loads `apps/knx-web`'s build output (dev: Vite HMR on a fixed port; release: bundled as a Tauri resource). |
 | `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |

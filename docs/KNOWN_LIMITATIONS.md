@@ -11,35 +11,58 @@ here.
 
 ## 1. Single-sample bias
 
-**Limitation.** Everything verified about the `.knxproj` format comes from one
-installation: schema 11 (ETS 4.1.8) and schema 23 (ETS 6.3.7959.0) — the same
-project, exported twice (risk R1).
+**Limitation.** Everything verified about the `.knxproj` format comes from two
+installations: the "Unser Zuhause" project (schema 11, ETS 4.1.8, and schema
+23, ETS 6.3.7959.0 — the same project exported twice, risk R1) and, since
+Session 7 (2026-09-06), the KNX Association "KV v2.5" demo project (schema
+21, ETS 5.7 — a genuinely different installation).
 
-**Cause.** No independent ETS5 or ETS6 sample project has been available. The
-second export of the ETS4 reference project (RESEARCH §2.4/§3.3) confirms the
-schema-11→23 format diff for this one installation, but says nothing about
-schema 12, 13, 14, 20, 21, 22, and nothing about a differently-structured
-project on schema 23 (e.g. one using `Functions`, KNX Secure, or multiple
-areas/lines for real).
+**Cause.** Independent ETS5/ETS6 sample projects remain scarce. The second
+export of the ETS4 reference project (RESEARCH §2.4/§3.3) confirms the
+schema-11→23 format diff for one installation; the KV demo project (RESEARCH
+§2.5/§3.4) independently confirms most of that same diff already exists at
+schema 21, on unrelated data. Together they say nothing about schema 12, 13,
+14, 20 or 22, and nothing about a differently-structured schema-23 project
+(e.g. one using `Functions`, KNX Secure, or multiple areas/lines for real).
 
-**Impact.** Support for schema 12, 13, 14, 20, 21 and 22 is still derived from
-documentation and from reading `xknxproject`, not from evidence. Schema 23
-support is derived from evidence but only from one project shape; a first
-import of a structurally different schema-23 project will still likely
-produce unknown-construct entries.
+**Impact.** Support for schema 12, 13, 14, 20 and 22 is still derived from
+documentation and from reading `xknxproject`, not from evidence. Schema 21
+and 23 support is derived from evidence but from only two project shapes; a
+first import of a structurally different schema-21+ project will still
+likely produce unknown-construct entries or new deltas.
 
 **Session 3 status.** `knx-etsproj`'s known-element table covers schema 11
-only, built from this one reference project. Schema 23 is **detected and
-refused by name** (`ImportFailure::NoKnownSchemaTable { version: 23 }`) —
-never silently misread through the schema-11 table, which would undercount
+only, built from the reference project. Schema 23 is **detected and refused
+by name** (`ImportFailure::NoKnownSchemaTable { version: 23 }`) — never
+silently misread through the schema-11 table, which would undercount
 communication objects by about 24% and misread every boolean flag as false
 (RESEARCH §3.3). Building the schema-23 known-element table is Session 4
 work, not attempted here.
 
+**Session 7 status (2026-09-06).** Schema 21 is likewise **detected and
+refused by name**, now proven against a real, independent schema-21 file
+(`knx-etsproj`'s `importing_a_second_independent_schema21_project_fails_...`
+test), not just a synthetic namespace string — the refusal mechanism is
+schema-version-generic (`known_schema` returning `None`), so no code change
+was needed, only the test. Full schema-21/23 import support is **not**
+implemented; see the "next big task" note below.
+
+**Next big task.** Building real schema 21 (and by extension 23) import
+support is the next major format-support undertaking, flagged explicitly
+(2026-09-06) rather than left as a vague "whenever a sample turns up" — a
+sample now exists (RESEARCH §3.4). It needs its own brainstorming/design
+pass before implementation, not a drive-by table entry: `ModuleInstances`
+(modular application programs) has no domain-model representation yet
+(absent from [DATA_MODEL.md](DATA_MODEL.md), needs its own ADR), and
+`GroupObjectTree` vs. `ComObjectInstanceRefs` as the authoritative
+communication-object source needs a resolution rule. This is ETS Import
+(Session 3) / KNX Core (Session 2) territory reopened, not Session 7
+hardening — see [ROADMAP.md](ROADMAP.md).
+
 **Lifted when.** Real ETS5 projects and further, independent ETS6 projects
 have been imported and their unknown-construct reports reconciled to empty.
-This is a prerequisite for claiming more than schema 11 and this one
-schema-23 shape.
+This is a prerequisite for claiming more than schema 11 and these two
+schema-21/23 shapes.
 
 ## 2. No authoritative XSD is publicly available
 

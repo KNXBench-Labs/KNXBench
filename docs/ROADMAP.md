@@ -396,6 +396,23 @@ per schema version; performance measurement on large projects, with
 optimization driven by those measurements rather than by guesswork; packaging
 for Linux; the licence decision.
 
+**Status.** Cycle 1 (2026-09-06) audited and froze what "per schema version"
+actually means given the fixtures on hand: schema 11 (ETS4 reference
+project) already had full roundtrip/oracle/malformed-input coverage —
+unchanged. Schema 23 turned out to already have a real-file (not just
+synthetic-namespace) refusal test. Schema 21 did not: `KV v2.5 -
+demo.knxproj`, a genuinely independent second sample discovered in
+`OriginalData/` (gitignored there, committed to the repo root as a fixture
+here, same treatment as the other two), got the matching real-file refusal
+test. Comparing it against the schema-11 reference (RESEARCH §3.4) found
+that every structural delta previously attributed to schema 23 alone
+(`Segment`, `GroupObjectTree`, `Puid`, `Locations`) already exists at schema
+21, plus one not seen before (`ModuleInstances`, modular application
+programs) — flagged as the next major format-support task, not attempted
+here (see [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md)). `knx-store`'s
+`.knxdb` migration chain (v1→v4, frozen fixtures) was verified, not
+touched — already complete, 14/14 tests green.
+
 **Entry condition.** All earlier sessions' deliverables exist and are tested.
 
 Deferred beyond Session 7 (from `ideas.md`, no fixed session): MCP
@@ -417,7 +434,7 @@ architecture; each has a defined landing place.
 
 | Question | Lands in |
 | --- | --- |
-| ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Session 3 delivered the tolerant parser (reports unknown constructs rather than failing) and schema-23 detection-and-refusal by name; the per-version known-element lists themselves still need an independent sample per version (risk R1) — no fixed session, lands whenever one becomes available |
+| ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Session 3 delivered the tolerant parser (reports unknown constructs rather than failing) and schema-23 detection-and-refusal by name. Session 7 cycle 1 (2026-09-06) added a second, independent sample (schema 21, RESEARCH §2.5/§3.4) and the matching detection-and-refusal test, but not implementation — schema 12, 13, 14, 20, 22 remain unsampled. **Flagged as the next major format-support task** (not "whenever a sample becomes available" anymore — one exists): needs its own brainstorming/design pass, since `ModuleInstances` has no domain-model representation yet. See [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md). |
 | `Functions` element semantics | Session 2 — a domain model addition; absent from the reference sample |
 | `when/@test` expression grammar | Session 4 built the product database around it staying unparsed (`Dynamic`'s raw bytes retained regardless, ADR-0011); the grammar spike itself remains a research cycle, no fixed session |
 | Whether ETS re-imports an unsigned third-party `.knxproj` | Session 3 delivered the mechanism (`ExportWarning::Unsigned`, always present); the verification itself — opening an export in real ETS — is still open (risk R9), no fixed session |

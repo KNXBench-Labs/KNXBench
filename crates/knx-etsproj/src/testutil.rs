@@ -78,6 +78,15 @@ pub(crate) fn reference_ets6_path() -> PathBuf {
     workspace_root().join("Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj")
 }
 
+/// A second, genuinely independent installation (KNX Association demo
+/// project, not a re-export of the "Unser Zuhause" reference project) —
+/// schema 21, ETS 5.7. Session 7 evidence: schema 21 already carries the
+/// `Segment`/`GroupObjectTree`/`ModuleInstances`/`Locations` deltas
+/// previously attributed to schema 23 alone (RESEARCH §2.5/§3.4).
+pub(crate) fn reference_kv_schema21_path() -> PathBuf {
+    workspace_root().join("KV v2.5 - demo.knxproj")
+}
+
 pub(crate) fn reference_source_document() -> SourceDocument {
     let mut c = Container::open(reference_ets4_bytes()).unwrap();
     let bytes = c.read("P-0512/0.xml").unwrap();

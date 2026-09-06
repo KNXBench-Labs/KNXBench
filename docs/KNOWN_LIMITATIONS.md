@@ -610,7 +610,12 @@ reachable as of Cycle 4. Discovery does not work unmodified inside the
 `--network host`) — untouched by this cycle, since `knx-server` doesn't
 call `discover` yet.
 
-**Lifted when.** KNX IP Secure lands in a later cycle of Session 6, or in Session 7.
+**Lifted when.** Shelved indefinitely as of 2026-09-06 — no fixed
+session or cycle owns it. Plain tunnelling/routing covers the common
+case; IP Secure only matters for secure-only gateways or installations
+with it explicitly enabled. Revisit on demand (a real gateway needing
+it), doing the RESEARCH.md §9 spike first, not speculatively. See
+[ROADMAP.md, Session 6](ROADMAP.md).
 
 ## 27. `TunnelClient` heartbeat retry has a narrow race condition — resolved
 

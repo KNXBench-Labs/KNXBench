@@ -13,6 +13,7 @@ const USAGE: &str =
      \x20     knx products ingest <file.knxproj> [--product-db <path>]\n\
      \x20     knx products show <program-id> [--product-db <path>]\n\
      \x20     knx products verify [--product-db <path>]\n\
+     \x20     knx bus monitor --gateway <host:port> [--project <path.knxdb>]\n\
      exit codes: 0 = imported cleanly (warnings allowed), 1 = could not import,\n\
      2 = imported, but the report contains errors";
 
@@ -29,6 +30,7 @@ fn main() -> ExitCode {
     match args.first().map(String::as_str) {
         Some("import") => run_import(&args[1..]),
         Some("products") => run_products(&args[1..]),
+        Some("bus") => run_bus(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE
@@ -524,5 +526,181 @@ fn run_products_verify(args: &[String]) -> ExitCode {
         ExitCode::SUCCESS
     } else {
         ExitCode::FAILURE
+    }
+}
+
+/// `knx bus monitor` — connects to a real KNXnet/IP gateway over tunnelling
+/// and prints decoded telegrams as they arrive (spec §9, Task 9).
+fn run_bus(args: &[String]) -> ExitCode {
+    match args.first().map(String::as_str) {
+        Some("monitor") => run_bus_monitor(&args[1..]),
+        _ => {
+            eprintln!("{USAGE}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+struct BusMonitorArgs {
+    gateway: String,
+    project: Option<String>,
+}
+
+fn parse_bus_monitor_args(args: &[String]) -> Result<BusMonitorArgs, String> {
+    let mut gateway = None;
+    let mut project = None;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--gateway" => {
+                gateway = Some(take_value(args, i + 1, "--gateway")?);
+                i += 2;
+            }
+            "--project" => {
+                project = Some(take_value(args, i + 1, "--project")?);
+                i += 2;
+            }
+            other => return Err(format!("unrecognized argument: {other}")),
+        }
+    }
+    Ok(BusMonitorArgs {
+        gateway: gateway.ok_or_else(|| "--gateway is required".to_string())?,
+        project,
+    })
+}
+
+fn run_bus_monitor(args: &[String]) -> ExitCode {
+    let parsed = match parse_bus_monitor_args(args) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let gateway: std::net::SocketAddrV4 = match parsed.gateway.parse() {
+        Ok(g) => g,
+        Err(_) => {
+            eprintln!("--gateway must be host:port, e.g. 192.0.2.1:3671");
+            return ExitCode::FAILURE;
+        }
+    };
+    let ga_names: std::collections::HashMap<u16, String> = match &parsed.project {
+        Some(path) => match load_group_address_names(Path::new(path)) {
+            Ok(names) => names,
+            Err(e) => {
+                eprintln!("could not load project {path}: {e}");
+                return ExitCode::FAILURE;
+            }
+        },
+        None => std::collections::HashMap::new(),
+    };
+
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    runtime.block_on(run_bus_monitor_async(gateway, ga_names))
+}
+
+async fn run_bus_monitor_async(
+    gateway: std::net::SocketAddrV4,
+    ga_names: std::collections::HashMap<u16, String>,
+) -> ExitCode {
+    use knx_net::BusConnection;
+    let client = knx_net::KnxNetIpClient::new();
+    let tunnel = match client.connect_tunnel(gateway).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("could not connect to {gateway}: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    eprintln!(
+        "connected to {gateway}, assigned individual address {}. Ctrl-C to stop.",
+        tunnel.assigned_address()
+    );
+    let mut telegrams = tunnel.subscribe();
+    loop {
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {
+                eprintln!("disconnecting...");
+                if let Err(e) = tunnel.disconnect().await {
+                    eprintln!("disconnect: {e}");
+                }
+                break;
+            }
+            received = telegrams.recv() => match received {
+                Ok(telegram) => println!("{}", format_telegram(&telegram, &ga_names)),
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                    eprintln!("warning: {n} telegram(s) dropped (receiver too slow)");
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+            },
+        }
+    }
+    ExitCode::SUCCESS
+}
+
+/// Loads `group_address -> name` for every installation in a stored
+/// project, so `format_telegram` can annotate a raw group address with the
+/// name the user gave it in ETS. Silently returns an empty map only when
+/// the caller passed no `--project` at all (see `run_bus_monitor`) — any
+/// failure to open or read a *given* path is reported, never swallowed.
+fn load_group_address_names(path: &Path) -> Result<std::collections::HashMap<u16, String>, String> {
+    let conn = knx_store::migration::open_and_migrate(path).map_err(|e| e.to_string())?;
+    let project = knx_store::project::load_project(&conn).map_err(|e| e.to_string())?;
+    let mut names = std::collections::HashMap::new();
+    for installation in &project.installations {
+        for entry in &installation.group_addresses {
+            names.insert(entry.address.raw(), entry.name.clone());
+        }
+    }
+    Ok(names)
+}
+
+fn format_telegram(
+    telegram: &knx_net::LDataFrame,
+    ga_names: &std::collections::HashMap<u16, String>,
+) -> String {
+    use knx_net::Destination;
+    let dest = match telegram.destination {
+        Destination::Group(ga) => {
+            let formatted = ga.format(knx_core::GroupAddressStyle::ThreeLevel);
+            match ga_names.get(&ga.raw()) {
+                Some(name) => format!("{formatted} ({name})"),
+                None => formatted,
+            }
+        }
+        Destination::Individual(ia) => ia.to_string(),
+    };
+    format!(
+        "{} -> {dest}: {}",
+        telegram.source,
+        format_service(&telegram.service)
+    )
+}
+
+fn format_service(service: &knx_net::ApplicationService) -> String {
+    use knx_net::{ApplicationService, GroupValue};
+    let format_value = |v: &GroupValue| match v {
+        GroupValue::Short(bits) => format!("{bits:#04x} (6-bit)"),
+        GroupValue::Bytes(bytes) => format!("{bytes:02x?}"),
+    };
+    match service {
+        ApplicationService::GroupValueRead => "GroupValueRead".to_string(),
+        ApplicationService::GroupValueResponse(v) => {
+            format!("GroupValueResponse {}", format_value(v))
+        }
+        ApplicationService::GroupValueWrite(v) => format!("GroupValueWrite {}", format_value(v)),
+        ApplicationService::Other { apci, data } => {
+            format!("APCI {apci:#06x} data {data:02x?}")
+        }
     }
 }

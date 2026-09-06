@@ -1823,11 +1823,14 @@ name = "knx-cli"
 version = "0.0.0"
 dependencies = [
  "knx-app",
+ "knx-core",
  "knx-etsproj",
+ "knx-net",
  "knx-productdb",
  "knx-store",
  "serde_json",
  "tempfile",
+ "tokio",
  "zip",
 ]
 

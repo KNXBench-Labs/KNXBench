@@ -112,6 +112,12 @@ pub fn sync_after_command(
         Command::DeleteGroupAddress { id } => {
             delete_group_address(&tx, *id)?;
         }
+        Command::CreateArea { .. } => {
+            // Area persistence layer not yet implemented (Task 2 scope).
+        }
+        Command::DeleteArea { .. } => {
+            // Area persistence layer not yet implemented (Task 2 scope).
+        }
     }
     tx.commit()?;
     Ok(())

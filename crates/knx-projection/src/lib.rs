@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use knx_core::{
     BuildingPart, BuildingPartId, BuildingPartType, Devices, GroupAddressEntry, GroupAddressStyle,
-    Project, Topology,
+    GroupRange, Project, Topology,
 };
 use serde::Serialize;
 use ts_rs::TS;
@@ -55,6 +55,7 @@ pub struct InstallationNode {
     pub buildings: Vec<BuildingNode>,
     pub unassigned: Vec<DeviceNode>,
     pub group_addresses: Vec<GroupAddressNode>,
+    pub group_ranges: Vec<GroupRangeNode>,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -113,6 +114,24 @@ pub struct GroupAddressNode {
     pub address: String,
 }
 
+/// A flat (not nested) view of one `GroupRange` — `parent` names the
+/// containing main range's id for a middle range, `None` for a main
+/// range. Deliberately does not nest `GroupAddressNode`s inside their
+/// range: `InstallationNode.group_addresses` stays a flat list, matching
+/// its existing shape, until a future cycle redesigns the group-address
+/// tree branch around the real main/middle/address hierarchy.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct GroupRangeNode {
+    pub id: u32,
+    pub name: String,
+    /// Formatted per the project's own `GroupAddressStyle`, same as
+    /// `GroupAddressNode::address`.
+    pub start: String,
+    pub end: String,
+    pub parent: Option<u32>,
+}
+
 /// Builds the full display tree for every installation in `project`. Pure
 /// and total: never panics on a project that imported successfully, even
 /// one with dangling `BuildingPart` device references (knx-etsproj's
@@ -156,6 +175,11 @@ fn build_installation(
             .iter()
             .map(|entry| build_group_address_node(entry, ga_style))
             .collect(),
+        group_ranges: inst
+            .group_ranges
+            .iter()
+            .map(|range| build_group_range_node(range, ga_style))
+            .collect(),
     }
 }
 
@@ -167,6 +191,16 @@ fn build_group_address_node(
         id: entry.id.0,
         name: entry.name.clone(),
         address: entry.address.format(style),
+    }
+}
+
+fn build_group_range_node(range: &GroupRange, style: GroupAddressStyle) -> GroupRangeNode {
+    GroupRangeNode {
+        id: range.id.0,
+        name: range.name.clone(),
+        start: range.start.format(style),
+        end: range.end.format(style),
+        parent: range.parent.map(|p| p.0),
     }
 }
 
@@ -670,5 +704,57 @@ mod tests {
         assert_eq!(ga.id, 1);
         assert_eq!(ga.name, "Living room light");
         assert_eq!(ga.address, "4/612");
+    }
+
+    #[test]
+    fn group_ranges_are_projected_with_their_parent_link() {
+        let mut project = knx_core::Project::new(knx_core::Language("en".into()));
+        project.installations.push(knx_core::Installation {
+            id: knx_core::InstallationId(0),
+            name: "I".into(),
+            default_line: None,
+            multicast_address: None,
+            completion: knx_core::CompletionStatus::FinishedDesign,
+            topology: knx_core::Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![],
+            },
+            buildings: vec![],
+            group_ranges: vec![
+                knx_core::GroupRange {
+                    id: knx_core::GroupRangeId(1),
+                    source: knx_core::SourceRef {
+                        path: "t".into(),
+                        ets_id: "t".into(),
+                    },
+                    name: "Main".into(),
+                    start: knx_core::GroupAddress::from_raw(0),
+                    end: knx_core::GroupAddress::from_raw(2047),
+                    parent: None,
+                    children: vec![knx_core::GroupRangeId(2)],
+                },
+                knx_core::GroupRange {
+                    id: knx_core::GroupRangeId(2),
+                    source: knx_core::SourceRef {
+                        path: "t".into(),
+                        ets_id: "t".into(),
+                    },
+                    name: "Middle".into(),
+                    start: knx_core::GroupAddress::from_raw(0),
+                    end: knx_core::GroupAddress::from_raw(255),
+                    parent: Some(knx_core::GroupRangeId(1)),
+                    children: vec![],
+                },
+            ],
+            group_addresses: vec![],
+            parameters: vec![],
+        });
+        let tree = build_project_tree(&project);
+        let ranges = &tree.installations[0].group_ranges;
+        assert_eq!(ranges.len(), 2);
+        assert_eq!(ranges[0].id, 1);
+        assert_eq!(ranges[0].parent, None);
+        assert_eq!(ranges[1].parent, Some(1));
     }
 }

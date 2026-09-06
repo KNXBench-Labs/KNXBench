@@ -551,9 +551,45 @@ Known gaps added this cycle (not bugs, scope decisions):
   `discover` yet, so nothing regresses, but the gap is now reachable from
   a CLI a container user might reasonably try.
 
+**Session 6, Cycle 4 (2026-09-06) — KNXnet/IP routing.** Own design spec
+(`docs/superpowers/specs/2026-09-06-knxnet-ip-routing-design.md`), per the
+brainstorming skill's classification: a new subsystem, not an extension
+of the existing tunnel connection. `routing.rs` decodes
+`ROUTING_LOST_MESSAGE`/`ROUTING_BUSY` far enough to log them;
+`ROUTING_INDICATION` needed no new codec at all, since its body is
+exactly an `L_Data.ind` cEMI frame — the same `cemi::encode_l_data`/
+`decode_l_data` Cycles 1-2 already built. `RoutingClient` joins the
+standard routing multicast group (`224.0.23.12:3671`, shared with
+discovery's default) with multicast loopback disabled, and implements
+`BusConnection::connect_routing(own_address)` — `own_address` is a
+required parameter, not negotiated, since routing has no
+`CONNECT_REQUEST`/`CRD` handshake to assign one through the way
+tunnelling does. `RoutingClient::send` is a single unconfirmed multicast
+send with no ACK wait and no retry (Routing v01.05.02 AS §5.1 marks the
+service unconfirmed outright, unlike Tunnelling's `TUNNELLING_REQUEST`/
+`ACK` pair). `knx bus route-monitor --source-address <addr>` and
+`knx bus route-send --source-address <addr> <ga> <value>` are the
+CLI-facing pieces. Unlike Cycles 1-3, this cycle's core round trip
+(`RoutingClient` send/receive) is tested on loopback multicast directly —
+no real gateway needed, since routing is plain UDP multicast rather than
+a protocol exchange with one specific peer.
+
+Known gaps added this cycle (not bugs, scope decisions):
+
+- No `--multicast` override for a non-default routing multicast address —
+  hardcoded to the standard group (KNOWN_LIMITATIONS.md).
+- `ROUTING_BUSY` is decoded and logged, never used to throttle sends
+  (KNOWN_LIMITATIONS.md).
+- Whether the reference gateway (`192.0.2.1`) supports routing at all
+  is unconfirmed — tunnelling and discovery are verified against it,
+  routing isn't yet. Manual verification (same policy as Cycles 2-3: a
+  human chooses when to probe the LAN) is left for the user:
+  `cargo run -p knx-cli -- bus route-monitor --source-address <spare-address>`
+  against a running installation.
+
 ## Next session
 
-Session 6 is in progress (Cycles 1-3 done). ROADMAP's entry condition — "a
+Session 6 is in progress (Cycles 1-4 done). ROADMAP's entry condition — "a
 project can be opened and its group addresses resolved" — is met: the domain
 model, import/export pipeline, shared product database, and now tunnelling
 (receive and send) to a known gateway — plus discovery of gateways on the

@@ -180,6 +180,108 @@ fn group_value(length: usize, inline6: u8, extra: &[u8]) -> GroupValue {
     }
 }
 
+/// Encodes an `L_Data.req`/`.con`/`.ind` cEMI frame — the inverse of
+/// `decode_l_data`, same fixed layout (EMI_IMI v01.04.02 AS §4.1.5.3.2),
+/// never emitting additional information (`add_info_len = 0`; this cycle
+/// never needs any). Ctrl1 0xBC (standard frame, no repeat, domain
+/// broadcast, low priority, no ack request) and Ctrl2's hop-count-6 are
+/// this crate's only outbound defaults — the same values already implied
+/// by every hand-built fixture `decode_l_data` is tested against above.
+pub fn encode_l_data(frame: &LDataFrame) -> Vec<u8> {
+    let message_code = match frame.kind {
+        LDataMessageKind::Request => L_DATA_REQ,
+        LDataMessageKind::Indication => L_DATA_IND,
+        LDataMessageKind::Confirmation { .. } => L_DATA_CON,
+    };
+    let ctrl1 = match frame.kind {
+        LDataMessageKind::Confirmation { error: true } => 0xBD,
+        _ => 0xBC,
+    };
+    let (address_type_bit, dest_raw) = match frame.destination {
+        Destination::Group(addr) => (0x80, addr.raw()),
+        Destination::Individual(addr) => (0x00, addr.raw()),
+    };
+    let ctrl2 = address_type_bit | 0x60; // hop count 6, standard EFF (0000)
+    let source_raw = frame.source.raw();
+
+    let (short_apci, length, inline6, extra): (u8, usize, u8, &[u8]) = match &frame.service {
+        ApplicationService::GroupValueRead => (0b0000, 1, 0, &[]),
+        ApplicationService::GroupValueResponse(v) => {
+            let (length, inline6, extra) = encode_group_value(v);
+            (0b0001, length, inline6, extra)
+        }
+        ApplicationService::GroupValueWrite(v) => {
+            let (length, inline6, extra) = encode_group_value(v);
+            (0b0010, length, inline6, extra)
+        }
+        ApplicationService::Other { apci, data } => {
+            // Round-trips exactly what `decode_l_data` reconstructs
+            // `apci` from: its own encoding below stores the same two
+            // octets in the same places, only ever reached when the
+            // 4-bit `short_apci` scheme above doesn't apply.
+            let tpci_apci_hi = (apci >> 8) as u8;
+            let apci_lo = *apci as u8;
+            return finish_l_data(
+                message_code,
+                ctrl1,
+                ctrl2,
+                source_raw,
+                dest_raw,
+                1 + data.len(),
+                tpci_apci_hi,
+                apci_lo,
+                data,
+            );
+        }
+    };
+    let tpci_apci_hi = (short_apci >> 2) & 0x03;
+    let apci_lo = ((short_apci & 0x03) << 6) | inline6;
+    finish_l_data(
+        message_code,
+        ctrl1,
+        ctrl2,
+        source_raw,
+        dest_raw,
+        length,
+        tpci_apci_hi,
+        apci_lo,
+        extra,
+    )
+}
+
+fn encode_group_value(value: &GroupValue) -> (usize, u8, &[u8]) {
+    match value {
+        GroupValue::Short(inline6) => (1, *inline6, &[]),
+        GroupValue::Bytes(bytes) => (1 + bytes.len(), 0, bytes),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn finish_l_data(
+    message_code: u8,
+    ctrl1: u8,
+    ctrl2: u8,
+    source_raw: u16,
+    dest_raw: u16,
+    length: usize,
+    tpci_apci_hi: u8,
+    apci_lo: u8,
+    extra: &[u8],
+) -> Vec<u8> {
+    let mut buf = Vec::with_capacity(11 + extra.len());
+    buf.push(message_code);
+    buf.push(0x00); // additional info length
+    buf.push(ctrl1);
+    buf.push(ctrl2);
+    buf.extend_from_slice(&source_raw.to_be_bytes());
+    buf.extend_from_slice(&dest_raw.to_be_bytes());
+    buf.push(length as u8);
+    buf.push(tpci_apci_hi);
+    buf.push(apci_lo);
+    buf.extend_from_slice(extra);
+    buf
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -281,6 +383,79 @@ mod tests {
     fn decode_rejects_short_buffer() {
         let err = decode_l_data(&[0x29]).unwrap_err();
         assert_eq!(err, CemiError::TooShort { needed: 2, got: 1 });
+    }
+
+    /// `L_Data.req` (message code 11h) form of `write_on_frame` — same
+    /// Ctrl1/Ctrl2/addresses/TPCI-APCI, sent rather than received. Ctrl1
+    /// 0xBC and Ctrl2's hop-count-6/AT-bit form here match the incoming
+    /// fixture above; RESEARCH.md notes no reason cEMI would ask for a
+    /// different default outbound.
+    fn write_on_request() -> Vec<u8> {
+        let mut bytes = write_on_frame();
+        bytes[0] = L_DATA_REQ;
+        bytes
+    }
+
+    #[test]
+    fn encode_l_data_matches_hand_built_group_value_write_request() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            service: ApplicationService::GroupValueWrite(GroupValue::Short(0x01)),
+        };
+        assert_eq!(encode_l_data(&frame), write_on_request());
+    }
+
+    #[test]
+    fn encode_l_data_round_trips_through_decode() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            service: ApplicationService::GroupValueWrite(GroupValue::Bytes(vec![0x2A, 0x99])),
+        };
+        let encoded = encode_l_data(&frame);
+        assert_eq!(decode_l_data(&encoded).unwrap(), frame);
+    }
+
+    #[test]
+    fn encode_l_data_round_trips_group_value_read() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x0000),
+            destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            service: ApplicationService::GroupValueRead,
+        };
+        let encoded = encode_l_data(&frame);
+        assert_eq!(decode_l_data(&encoded).unwrap(), frame);
+    }
+
+    #[test]
+    fn encode_l_data_round_trips_individual_destination() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
+            service: ApplicationService::GroupValueWrite(GroupValue::Short(0x00)),
+        };
+        let encoded = encode_l_data(&frame);
+        assert_eq!(decode_l_data(&encoded).unwrap(), frame);
+    }
+
+    #[test]
+    fn encode_l_data_round_trips_other_apci() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            service: ApplicationService::Other {
+                apci: 0x03C0,
+                data: vec![0xAB, 0xCD],
+            },
+        };
+        let encoded = encode_l_data(&frame);
+        assert_eq!(decode_l_data(&encoded).unwrap(), frame);
     }
 
     #[test]

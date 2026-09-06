@@ -13,6 +13,7 @@ const USAGE: &str =
      \x20     knx products ingest <file.knxproj> [--product-db <path>]\n\
      \x20     knx products show <program-id> [--product-db <path>]\n\
      \x20     knx products verify [--product-db <path>]\n\
+     \x20     knx bus discover\n\
      \x20     knx bus monitor --gateway <host:port> [--project <path.knxdb>]\n\
      \x20     knx bus write --gateway <host:port> <main/middle/sub> <0|1|hex>\n\
      exit codes: 0 = imported cleanly (warnings allowed), 1 = could not import,\n\
@@ -534,10 +535,61 @@ fn run_products_verify(args: &[String]) -> ExitCode {
 /// and prints decoded telegrams as they arrive (spec §9, Task 9).
 fn run_bus(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
+        Some("discover") => run_bus_discover(&args[1..]),
         Some("monitor") => run_bus_monitor(&args[1..]),
         Some("write") => run_bus_write(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// `knx bus discover` — multicasts a `SEARCH_REQUEST` and prints every
+/// gateway that answers within the spec's 10s window. Takes no arguments;
+/// that's the point (no `--gateway` to already know).
+fn run_bus_discover(args: &[String]) -> ExitCode {
+    if !args.is_empty() {
+        eprintln!("knx bus discover takes no arguments\n{USAGE}");
+        return ExitCode::FAILURE;
+    }
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(run_bus_discover_async())
+}
+
+async fn run_bus_discover_async() -> ExitCode {
+    use knx_net::BusConnection;
+    let client = knx_net::KnxNetIpClient::new();
+    match client.discover().await {
+        Ok(gateways) if gateways.is_empty() => {
+            println!("no gateways responded");
+            ExitCode::SUCCESS
+        }
+        Ok(gateways) => {
+            for g in gateways {
+                let tag = if g.supports_tunnelling {
+                    " [tunnelling]"
+                } else {
+                    ""
+                };
+                println!(
+                    "{}  {}  {}{}",
+                    g.individual_address, g.friendly_name, g.control_endpoint, tag
+                );
+            }
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("discovery failed: {e}");
             ExitCode::FAILURE
         }
     }

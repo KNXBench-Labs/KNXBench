@@ -574,7 +574,7 @@ failing outright instead of warning.
 deliberately not made speculatively ahead of an actual failure, but worth
 fixing before Node 20's EOL removes the option of doing it calmly.
 
-## 26. `BusConnection` does not yet support routing or KNX IP Secure
+## 26. `BusConnection` does not yet support KNX IP Secure
 
 **Limitation.** `crates/knx-net`'s `BusConnection` trait implements
 tunnelling and discovery: `discover` multicasts a `SEARCH_REQUEST`
@@ -583,14 +583,11 @@ collects `SEARCH_RESPONSE`s; `connect_tunnel` opens a tunnel to a
 gateway by known IP; `subscribe` receives telegrams; `TunnelClient::send`
 writes one (`GroupValueWrite` or any other `ApplicationService`, no DPT
 interpretation — raw bytes only, same scope cut as the receive side).
-Routing and all secure-protocol paths remain `BusError::NotImplemented`
-stubs. A reader should not assume the trait is feature-complete because
-it compiles.
+`connect_routing` (Cycle 4) sends/receives unconfirmed `ROUTING_INDICATION` frames over the standard multicast group — no custom multicast address override, and `ROUTING_BUSY` is decoded and logged but never used to throttle sends (see the two new limitation entries below). Secure-protocol paths remain unimplemented. A reader should not assume the trait is feature-complete because it compiles.
 
 **Cause.** Session 6 Cycle 1 delivered read-only tunnelling as the
 foundation for bus monitoring; Cycle 2 added sending; Cycle 3 added
-discovery. Routing is still a later cycle. Secure protocols are out of
-v1 scope, handled by the isolated `knx-secure` crate.
+discovery. Cycle 4 added routing. Secure protocols are out of v1 scope, handled by the isolated `knx-secure` crate.
 
 **Impact.** A real KNX installation's gateways can be found on the LAN
 without a known IP once `discover()` sends a valid discovery HPAI (a
@@ -601,14 +598,12 @@ for the resolved-IP/real-port workaround), then handed by control
 endpoint to `connect_tunnel` for monitoring/actuation by group address
 over a tunnel. Live-hardware verification of the full discover-then-connect
 flow was left for the user to run, same as Cycle 2's `send` — this
-sandbox has no real KNXnet/IP gateway to discover. Routing (multicast)
-and KNX IP Secure remain unreachable regardless. Discovery does not work
+sandbox has no real KNXnet/IP gateway to discover. KNX IP Secure remains unreachable regardless; routing (unencrypted multicast) is reachable as of Cycle 4. Discovery does not work
 unmodified inside the `knx-server` Docker container (needs
 `--network host`) — untouched by this cycle, since `knx-server` doesn't
 call `discover` yet.
 
-**Lifted when.** Routing and KNX IP Secure each land in their own later
-cycle of Session 6, or in Session 7.
+**Lifted when.** KNX IP Secure lands in a later cycle of Session 6, or in Session 7.
 
 ## 27. `TunnelClient` heartbeat retry has a narrow race condition
 
@@ -696,4 +691,73 @@ filesystem or `docker cp` access to the volume instead.
 **Lifted when.** A demonstrated need arises for browser-side downloads;
 wiring a "Download" button to the existing, already-tested route is a
 small, contained `apps/knx-web` change.
+
+## 31. KNXnet/IP routing has no custom multicast address override
+
+**Limitation.** `RoutingClient::connect_routing` always joins the standard
+KNXnet/IP System Setup Multicast Address, `224.0.23.12:3671` (Routing
+v01.05.02 AS §2.3.1). No CLI flag or API parameter selects a different
+group.
+
+**Cause.** Session 6 Cycle 4's design spec deliberately hardcoded it,
+same call as Cycle 3's discovery multicast address — no environment here
+needs a non-default group.
+
+**Impact.** A KNX installation using a custom routing multicast address
+(needed only past 180 KNX subnetworks, or when multiple installations
+share one IP network, per §2.3.2) cannot be reached by `route-monitor`/
+`route-send` yet.
+
+**Lifted when.** A real setup needs a non-default group — no fixed cycle.
+
+## 32. `ROUTING_BUSY` is logged, not honored, by `RoutingClient`
+
+**Limitation.** Routing v01.05.02 AS §2.3.5 requires any KNX IP device to
+stop sending `ROUTING_INDICATION` for a received `tw` after a
+`ROUTING_BUSY` frame. `RoutingClient` decodes and logs `ROUTING_BUSY` (and
+`ROUTING_LOST_MESSAGE`) but never reacts to either.
+
+**Cause.** Session 6 Cycle 4's design spec deliberately cut this: the CLI
+sends occasional single telegrams, not a sustained flood, so the failure
+mode the spec guards against barely applies to this tool's actual usage.
+
+**Impact.** In a busy installation already under flow-control pressure
+from other devices, `route-send` could still add to that pressure instead
+of backing off. Low risk given the CLI's own send pattern; would matter
+more if `RoutingClient` were ever driven by something that sends in a
+tight loop.
+
+**Lifted when.** A caller that sends fast enough for this to matter
+exists — no fixed cycle.
+
+## 33. `RoutingClient`'s loopback round-trip test cannot prove correctness in every environment
+
+**Limitation.** `routing_client_sends_and_receives_a_group_value_write`
+(`crates/knx-net/src/client.rs`) sends a real telegram between two
+`RoutingClient`s over UDP multicast on loopback and asserts the receiver
+decoded it correctly. In a sandbox or CI runner whose network namespace
+does not deliver multicast loopback locally, the test detects the
+timeout and skips gracefully (logs to stderr, returns `Ok`) rather than
+failing — but that skip fires *after* `connect`/`send` have already run,
+so it cannot tell "this environment has no multicast loopback" apart
+from "there's a real regression in `RoutingClient`'s send/receive path."
+A `cargo test` pass in such an environment does not, by itself, prove
+the routing round trip actually works.
+
+**Cause.** Confirmed during Session 6 Cycle 4 implementation: this
+project's own dev sandbox does not deliver multicast loopback traffic at
+all (`ip route get 224.0.23.12` resolves via the physical interface, not
+`lo`; reproduced independently with plain Python UDP sockets outside any
+Rust code), regardless of the `IP_MULTICAST_LOOP` socket option. This is
+an environment property, not a `RoutingClient` bug.
+
+**Impact.** A real regression in `RoutingClient` could pass CI silently
+in any similarly network-restricted runner. Check the test's stderr
+output (a skip message is logged) or run it on a host with working
+loopback multicast delivery before trusting a green `cargo test -p
+knx-net` as proof that routing round-trips still work.
+
+**Lifted when.** A `#[ignore]`-style marker or a CI capability probe
+distinguishes "skipped, no proof either way" from "passed, proof
+obtained" in tooling/reporting — no fixed cycle.
 

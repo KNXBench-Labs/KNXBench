@@ -86,13 +86,7 @@ mod tests {
     #[test]
     fn decode_routing_lost_message_rejects_too_short_buffer() {
         let err = decode_routing_lost_message(&[0x04, 0x00, 0x00]).unwrap_err();
-        assert_eq!(
-            err,
-            RoutingError::TooShort {
-                needed: 4,
-                got: 3
-            }
-        );
+        assert_eq!(err, RoutingError::TooShort { needed: 4, got: 3 });
     }
 
     /// Hand-built from §5.4's field layout: structure length 04h, device
@@ -109,12 +103,6 @@ mod tests {
     #[test]
     fn decode_routing_busy_rejects_too_short_buffer() {
         let err = decode_routing_busy(&[0x04, 0x01, 0x00, 0x64, 0x00]).unwrap_err();
-        assert_eq!(
-            err,
-            RoutingError::TooShort {
-                needed: 6,
-                got: 5
-            }
-        );
+        assert_eq!(err, RoutingError::TooShort { needed: 6, got: 5 });
     }
 }

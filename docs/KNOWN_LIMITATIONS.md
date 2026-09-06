@@ -611,44 +611,48 @@ call `discover` yet.
 
 **Lifted when.** KNX IP Secure lands in a later cycle of Session 6, or in Session 7.
 
-## 27. `TunnelClient` heartbeat retry has a narrow race condition
+## 27. `TunnelClient` heartbeat retry has a narrow race condition — resolved
 
-**Limitation.** `crates/knx-net`'s `TunnelClient` manages heartbeat
+**Resolved (Session 6, cycle 5).** `crates/knx-net`'s heartbeat and
+`TunnelClient::send`'s ack wait both used the same pattern — reset a
+shared `Mutex<Option<T>>` reply slot, send a request, `timeout(...,
+notify.notified())` once, then check the slot — which is exactly what
+made the race possible: a `Notify` permit left over from a reply that
+arrived just after a previous attempt gave up would wake this attempt
+immediately with nothing useful in the slot, burning it without waiting
+out its real budget. The shared `wait_for_reply` helper both call sites
+now use loops on the same deadline instead of waiting once: a stale or
+non-matching wakeup is discarded and waited past, so only a genuine
+timeout or a matching reply ends the wait. Covered by
+`wait_for_reply_survives_a_stale_non_matching_wakeup` and
+`wait_for_reply_times_out_when_nothing_ever_matches` in `client.rs`.
+
+**Originally.** `crates/knx-net`'s `TunnelClient` managed heartbeat
 timeouts with a `tokio::select!` and a `tokio::time::sleep`. A stale
-wakeup from a cancelled sleep can race the timeout branch, burning one
-retry attempt unnecessarily before the real retry fires on the next cycle.
+wakeup from a cancelled sleep could race the timeout branch, burning one
+retry attempt unnecessarily before the real retry fired on the next cycle.
 
-**Cause.** A low-probability race in the select-loop structure, accepted
-during Cycle 1 because the real retry logic still fires correctly after
-the stale wakeup; no observed impact on live gateways.
+## 28. `TunnelClient` subscribers receive no signal when the tunnel closes — resolved
 
-**Impact.** None observed on the race itself. Under load or adversarial timing,
-a connection might consume one extra heartbeat attempt before eventual disconnect.
+**Resolved (Session 6, cycle 5).** `subscribe()` now returns
+`broadcast::Receiver<TunnelEvent>` instead of `Receiver<LDataFrame>`, where
+`TunnelEvent` is `Telegram(LDataFrame)` or `Closed`. `receive_loop` sends
+exactly one `TunnelEvent::Closed` as its last action, right after its
+`select!` loop exits — reached from every exit path (explicit
+`disconnect()`, the heartbeat loop exhausting its retries, a dead socket,
+or a server-initiated `DISCONNECT_REQUEST`) since they all funnel through
+that same loop. `apps/knx-cli`'s `bus monitor` matches on it and prints
+"gateway closed the tunnel" instead of sitting in indefinite silence.
+Chosen over closing the channel itself (the `Sender` lives inside the
+`Arc<TunnelState>` shared by the client and the receive loop, so there is
+no single owner that could drop it) or a second dedicated status channel
+(one enum keeps subscribers to a single `recv()` loop).
 
-**Lifted when.** A dedicated hardening pass reviews the state machine's
-timing and fixes the race with explicit timing guards or by restructuring
-the wakeup logic. Not a blocking issue for Cycle 1.
-
-## 28. `TunnelClient` subscribers receive no signal when the tunnel closes
-
-**Limitation.** `crates/knx-net`'s `TunnelClient::subscribe()` returns a
-broadcast receiver that yields telegrams. When the tunnel dies — either because
-the heartbeat loop exhausts its retries or the gateway goes silent — subscribers
-receive no signal. The broadcast channel never closes (the `Sender` lives inside
-the same `Arc` the caller holds), so `telegrams.recv()` simply stops yielding
-anything forever, indistinguishable from a quiet KNX bus.
-
-**Cause.** The heartbeat shutdown logic does not close the broadcast channel.
-A redesign of the channel ownership model or addition of an explicit shutdown
-signal would be required to notify subscribers.
-
-**Impact.** A consumer of `TunnelClient` (such as `apps/knx-cli`'s `bus monitor`
-command) cannot distinguish "gateway died" from "nobody flipped a switch" — both
-look like indefinite silence. Detecting a lost connection requires external
-monitoring (e.g. watching elapsed time since last telegram received).
-
-**Lifted when.** `TunnelClient` signals shutdown to subscribers via channel
-closure, an explicit disconnect event, or a dedicated status-change channel.
+**Originally.** `crates/knx-net`'s `TunnelClient::subscribe()` returned a
+broadcast receiver that yielded telegrams. When the tunnel died — either
+because the heartbeat loop exhausted its retries or the gateway went
+silent — subscribers received no signal; `telegrams.recv()` simply stopped
+yielding anything forever, indistinguishable from a quiet KNX bus.
 
 ## 29. `apps/knx-cli bus monitor` has formatting limitations
 
@@ -716,25 +720,27 @@ share one IP network, per §2.3.2) cannot be reached by `route-monitor`/
 
 **Lifted when.** A real setup needs a non-default group — no fixed cycle.
 
-## 32. `ROUTING_BUSY` is logged, not honored, by `RoutingClient`
+## 32. `ROUTING_BUSY` is logged, not honored, by `RoutingClient` — resolved
 
-**Limitation.** Routing v01.05.02 AS §2.3.5 requires any KNX IP device to
+**Resolved (Session 6, cycle 5).** `RoutingState` gained a `busy_until:
+Mutex<Option<Instant>>` deadline. On receiving `ROUTING_BUSY`,
+`routing_receive_loop` merges its `wait_time_ms` into that deadline via
+`merge_busy_deadline` — the higher of the remaining time on any deadline
+already in effect and the new frame's `tw`, exactly as Routing v01.05.02
+AS §2.3.5's "device receiving ROUTING_BUSY" rule requires. `send()` now
+calls `wait_out_routing_busy()` first, which sleeps until the deadline
+clears (re-checking after waking, in case a later `ROUTING_BUSY` extended
+it meanwhile) before transmitting. The spec's additional random back-off
+after `tw` (`trandom`, driven by a moving count of recent `ROUTING_BUSY`
+frames) is a `MAY`, not a `SHALL`, and is not implemented — the mandatory
+stop-and-wait behavior is. Covered by
+`merge_busy_deadline_keeps_the_later_of_the_two` and
+`routing_client_send_waits_out_a_routing_busy_deadline` in `client.rs`.
+
+**Originally.** Routing v01.05.02 AS §2.3.5 requires any KNX IP device to
 stop sending `ROUTING_INDICATION` for a received `tw` after a
-`ROUTING_BUSY` frame. `RoutingClient` decodes and logs `ROUTING_BUSY` (and
-`ROUTING_LOST_MESSAGE`) but never reacts to either.
-
-**Cause.** Session 6 Cycle 4's design spec deliberately cut this: the CLI
-sends occasional single telegrams, not a sustained flood, so the failure
-mode the spec guards against barely applies to this tool's actual usage.
-
-**Impact.** In a busy installation already under flow-control pressure
-from other devices, `route-send` could still add to that pressure instead
-of backing off. Low risk given the CLI's own send pattern; would matter
-more if `RoutingClient` were ever driven by something that sends in a
-tight loop.
-
-**Lifted when.** A caller that sends fast enough for this to matter
-exists — no fixed cycle.
+`ROUTING_BUSY` frame. `RoutingClient` decoded and logged `ROUTING_BUSY`
+(and `ROUTING_LOST_MESSAGE`) but never reacted to either.
 
 ## 33. `RoutingClient`'s loopback round-trip test cannot prove correctness in every environment
 

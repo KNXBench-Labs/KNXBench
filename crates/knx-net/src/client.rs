@@ -3,7 +3,11 @@
 //! `SEARCH_RESPONSE`) is implemented as of Session 6 Cycle 3.
 //! `TunnelClient::send` is implemented as of Session 6 Cycle 2
 //! (KNOWN_LIMITATIONS.md §26). `connect_routing`/`RoutingClient` are
-//! implemented as of Session 6 Cycle 4.
+//! implemented as of Session 6 Cycle 4. Session 6 Cycle 5 hardens
+//! connection management: `wait_for_reply` fixes a heartbeat/ack retry
+//! race (KNOWN_LIMITATIONS.md #27), `TunnelEvent::Closed` signals
+//! subscribers when the tunnel dies (#28), and `RoutingClient::send`
+//! honors `ROUTING_BUSY` (#32).
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::Arc;
@@ -182,11 +186,26 @@ impl BusConnection for KnxNetIpClient {
     }
 }
 
+/// What a `TunnelClient` subscriber receives: either a telegram off the bus,
+/// or a one-time notice that the tunnel is gone (KNOWN_LIMITATIONS.md #28).
+/// Before this, a dead tunnel and a quiet bus were indistinguishable —
+/// `subscribe()`'s receiver just stopped yielding anything, forever, either
+/// way.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TunnelEvent {
+    Telegram(LDataFrame),
+    /// Sent exactly once, as the last message on this channel, from
+    /// whichever cause tore the tunnel down: an explicit `disconnect()`,
+    /// `heartbeat_loop` exhausting its retries, or the gateway sending its
+    /// own `DISCONNECT_REQUEST`.
+    Closed,
+}
+
 struct TunnelState {
     socket: UdpSocket,
     channel_id: u8,
     assigned_address: IndividualAddress,
-    tx: broadcast::Sender<LDataFrame>,
+    tx: broadcast::Sender<TunnelEvent>,
     heartbeat_reply: Mutex<Option<u8>>,
     heartbeat_notify: Notify,
     shutdown: Notify,
@@ -268,7 +287,7 @@ impl TunnelClient {
         self.state.assigned_address
     }
 
-    pub fn subscribe(&self) -> broadcast::Receiver<LDataFrame> {
+    pub fn subscribe(&self) -> broadcast::Receiver<TunnelEvent> {
         self.state.tx.subscribe()
     }
 
@@ -311,16 +330,18 @@ impl TunnelClient {
                 .send(&datagram)
                 .await
                 .map_err(BusError::Io)?;
-            let waited =
-                tokio::time::timeout(Duration::from_secs(1), self.state.ack_notify.notified())
-                    .await;
-            let reply = self.state.ack_reply.lock().await.take();
-            if waited.is_ok() {
-                if let Some((ack_seq, status)) = reply {
-                    if ack_seq == seq && status == tunnelling::E_NO_ERROR {
-                        *seq_guard = seq.wrapping_add(1);
-                        return Ok(());
-                    }
+            let deadline = tokio::time::Instant::now() + Duration::from_secs(1);
+            let reply = wait_for_reply(
+                &self.state.ack_notify,
+                &self.state.ack_reply,
+                deadline,
+                |&(ack_seq, _)| ack_seq == seq,
+            )
+            .await;
+            if let Some((_, status)) = reply {
+                if status == tunnelling::E_NO_ERROR {
+                    *seq_guard = seq.wrapping_add(1);
+                    return Ok(());
                 }
             }
         }
@@ -372,6 +393,12 @@ struct RoutingState {
     socket: UdpSocket,
     tx: broadcast::Sender<LDataFrame>,
     shutdown: Notify,
+    /// Set while a received `ROUTING_BUSY` is still in effect (Routing
+    /// v01.05.02 AS §2.3.5's mandatory "device receiving ROUTING_BUSY"
+    /// rule) — `None` when clear. `send()` waits this out before
+    /// transmitting. The spec's optional additional random back-off
+    /// (`trandom`, a `MAY`) is not implemented — see KNOWN_LIMITATIONS.md.
+    busy_until: Mutex<Option<tokio::time::Instant>>,
 }
 
 /// A KNXnet/IP routing endpoint — joined to the standard routing
@@ -417,6 +444,7 @@ impl RoutingClient {
             socket,
             tx,
             shutdown: Notify::new(),
+            busy_until: Mutex::new(None),
         });
         tokio::spawn(routing_receive_loop(state.clone()));
 
@@ -437,6 +465,7 @@ impl RoutingClient {
         destination: Destination,
         service: ApplicationService,
     ) -> Result<(), BusError> {
+        self.wait_out_routing_busy().await;
         let frame = LDataFrame {
             kind: cemi::LDataMessageKind::Indication,
             source: self.own_address,
@@ -452,6 +481,20 @@ impl RoutingClient {
             .map_err(BusError::Io)?;
         Ok(())
     }
+
+    /// Blocks until any `ROUTING_BUSY` in effect has elapsed (Routing
+    /// v01.05.02 AS §2.3.5, KNOWN_LIMITATIONS.md #32). Re-checks after
+    /// waking in case a later `ROUTING_BUSY` extended the deadline while
+    /// this was asleep.
+    async fn wait_out_routing_busy(&self) {
+        loop {
+            let deadline = *self.state.busy_until.lock().await;
+            match deadline {
+                Some(d) if d > tokio::time::Instant::now() => tokio::time::sleep_until(d).await,
+                _ => return,
+            }
+        }
+    }
 }
 
 impl Drop for RoutingClient {
@@ -460,6 +503,20 @@ impl Drop for RoutingClient {
         // background receive loop. Leaving the multicast group itself is
         // the OS's job when the socket closes, no explicit call needed.
         self.state.shutdown.notify_waiters();
+    }
+}
+
+/// Routing v01.05.02 AS §2.3.5: "If another ROUTING_BUSY Frame is received
+/// before the time tw has elapsed[,] the resulting time tw shall be
+/// determined by the higher value of the remaining time of a previous
+/// ROUTING_BUSY and the value tw received with this last ROUTING_BUSY."
+fn merge_busy_deadline(
+    existing: Option<tokio::time::Instant>,
+    new_deadline: tokio::time::Instant,
+) -> tokio::time::Instant {
+    match existing {
+        Some(e) if e > new_deadline => e,
+        _ => new_deadline,
     }
 }
 
@@ -498,6 +555,10 @@ async fn routing_receive_loop(state: Arc<RoutingState>) {
                         "ROUTING_BUSY: device_state={:#04x}, wait {}ms, control={:#06x}",
                         busy.device_state, busy.wait_time_ms, busy.control_field
                     );
+                    let new_deadline = tokio::time::Instant::now()
+                        + Duration::from_millis(u64::from(busy.wait_time_ms));
+                    let mut guard = state.busy_until.lock().await;
+                    *guard = Some(merge_busy_deadline(*guard, new_deadline));
                 }
             }
             _ => {} // unsupported/unknown service type: ignore
@@ -572,7 +633,7 @@ async fn receive_loop(state: Arc<TunnelState>) {
                     send_ack(&state, req.sequence_counter, tunnelling::E_NO_ERROR).await;
                     recv_seq = recv_seq.wrapping_add(1);
                     if let Ok(telegram) = cemi::decode_l_data(req.cemi) {
-                        let _ = state.tx.send(telegram);
+                        let _ = state.tx.send(TunnelEvent::Telegram(telegram));
                     }
                 } else if req.sequence_counter == recv_seq.wrapping_sub(1) {
                     // Duplicate of the frame just processed (our own ACK
@@ -610,6 +671,11 @@ async fn receive_loop(state: Arc<TunnelState>) {
             _ => {} // unsupported/unknown service type: ignore (§6.2/§6.3)
         }
     }
+    // Signal any subscriber that the tunnel is gone (KNOWN_LIMITATIONS.md
+    // #28). Every exit path above — explicit shutdown, a dead socket, or a
+    // server-initiated DISCONNECT_REQUEST — falls through to here, so one
+    // send covers all of them. Best-effort: no subscribers is not an error.
+    let _ = state.tx.send(TunnelEvent::Closed);
 }
 
 async fn send_ack(state: &TunnelState, sequence_counter: u8, status: u8) {
@@ -663,19 +729,127 @@ async fn send_heartbeat_with_retries(state: &Arc<TunnelState>) -> bool {
         if state.socket.send(&datagram).await.is_err() {
             return false;
         }
-        let waited =
-            tokio::time::timeout(Duration::from_secs(10), state.heartbeat_notify.notified()).await;
-        let status = state.heartbeat_reply.lock().await.take();
-        if waited.is_ok() && status == Some(services::E_NO_ERROR) {
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+        let status = wait_for_reply(
+            &state.heartbeat_notify,
+            &state.heartbeat_reply,
+            deadline,
+            |_| true,
+        )
+        .await;
+        if status == Some(services::E_NO_ERROR) {
             return true;
         }
     }
     false
 }
 
+/// Waits for `notify` to fire and `reply` to hold a value matching
+/// `is_match`, within `deadline` — retrying stale wakeups instead of
+/// treating them as a timeout (KNOWN_LIMITATIONS.md #27).
+///
+/// `tokio::sync::Notify` keeps at most one permit: if a wakeup meant for a
+/// previous attempt (e.g. a reply that arrived just after that attempt gave
+/// up) fires here before this attempt's real reply does, a naive single
+/// `timeout(..., notified())` would wake immediately, find nothing useful,
+/// and burn this attempt without ever really waiting out its budget. This
+/// loops on the same deadline instead: a stale or non-matching wakeup is
+/// discarded and waited past, so only a genuine timeout or a matching reply
+/// ends it.
+async fn wait_for_reply<T: Clone>(
+    notify: &Notify,
+    reply: &Mutex<Option<T>>,
+    deadline: tokio::time::Instant,
+    is_match: impl Fn(&T) -> bool,
+) -> Option<T> {
+    loop {
+        let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+        if remaining.is_zero() {
+            return None;
+        }
+        if tokio::time::timeout(remaining, notify.notified())
+            .await
+            .is_err()
+        {
+            return None; // genuine timeout
+        }
+        let mut guard = reply.lock().await;
+        match guard.take() {
+            Some(value) if is_match(&value) => return Some(value),
+            _ => continue, // stale wakeup or a reply for someone else: keep waiting
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// KNOWN_LIMITATIONS.md #27: a stale `Notify` wakeup — one meant for an
+    /// earlier attempt, firing after this attempt already reset the shared
+    /// reply slot — must not be mistaken for a timeout. This fires the
+    /// notify twice: once immediately with a non-matching reply (the stale
+    /// wakeup), once after a short delay with the matching one. The old
+    /// single-`timeout(notified())` code would return `None` on the first
+    /// (non-matching) wakeup; `wait_for_reply` must instead keep waiting and
+    /// return the real reply.
+    #[tokio::test]
+    async fn wait_for_reply_survives_a_stale_non_matching_wakeup() {
+        let notify = Notify::new();
+        let reply: Mutex<Option<(u8, u8)>> = Mutex::new(None);
+
+        tokio::join!(
+            async {
+                // The "stale" wakeup: a reply for some other request,
+                // delivered right away.
+                *reply.lock().await = Some((0xFF, 0));
+                notify.notify_one();
+                tokio::time::sleep(Duration::from_millis(20)).await;
+                // The real reply, for sequence 7, arrives after a delay —
+                // well inside the deadline, but after the stale wakeup.
+                *reply.lock().await = Some((7, tunnelling::E_NO_ERROR));
+                notify.notify_one();
+            },
+            async {
+                let deadline = tokio::time::Instant::now() + Duration::from_secs(1);
+                let result = wait_for_reply(&notify, &reply, deadline, |&(seq, _)| seq == 7).await;
+                assert_eq!(
+                    result,
+                    Some((7, tunnelling::E_NO_ERROR)),
+                    "must keep waiting past a stale/non-matching wakeup instead of timing out"
+                );
+            }
+        );
+    }
+
+    /// A genuine timeout — no reply ever arrives — must still return `None`
+    /// rather than loop forever.
+    #[tokio::test]
+    async fn wait_for_reply_times_out_when_nothing_ever_matches() {
+        let notify = Notify::new();
+        let reply: Mutex<Option<(u8, u8)>> = Mutex::new(None);
+        let deadline = tokio::time::Instant::now() + Duration::from_millis(50);
+        let result = wait_for_reply(&notify, &reply, deadline, |&(seq, _)| seq == 7).await;
+        assert_eq!(result, None);
+    }
+
+    /// Routing v01.05.02 AS §2.3.5: a second `ROUTING_BUSY` arriving before
+    /// the first one's `tw` has elapsed must extend the deadline to the
+    /// *later* of the two, never shorten it.
+    #[test]
+    fn merge_busy_deadline_keeps_the_later_of_the_two() {
+        let now = tokio::time::Instant::now();
+        let far = now + Duration::from_millis(100);
+        let near = now + Duration::from_millis(20);
+
+        // A shorter new deadline than the one already in effect: keep the
+        // existing (later) one.
+        assert_eq!(merge_busy_deadline(Some(far), near), far);
+        // A longer new deadline: adopt it.
+        assert_eq!(merge_busy_deadline(Some(near), far), far);
+        // No previous ROUTING_BUSY in effect: the new deadline wins outright.
+        assert_eq!(merge_busy_deadline(None, far), far);
+    }
 
     /// Confirms the fix for the discovery HPAI bug: a discovery socket
     /// bound to the wildcard address and left unconnected must still
@@ -782,6 +956,50 @@ mod tests {
         assert_eq!(
             received.service,
             ApplicationService::GroupValueWrite(GroupValue::Short(1))
+        );
+    }
+
+    /// KNOWN_LIMITATIONS.md #32: `send()` must wait out a `ROUTING_BUSY`
+    /// deadline already in effect before transmitting. Sets `busy_until`
+    /// directly (this test lives inside `client` itself, so `RoutingState`'s
+    /// private field is reachable) rather than round-tripping a real
+    /// `ROUTING_BUSY` datagram through the receive loop — that path is
+    /// exercised by `merge_busy_deadline_keeps_the_later_of_the_two` above,
+    /// so this test's job is only to confirm `send()` actually honours the
+    /// deadline once set. Only needs `connect_routing` to succeed (to reach
+    /// a real `send()`); delivery is irrelevant, so unlike the round-trip
+    /// test above this one only skips if joining the multicast group itself
+    /// fails.
+    #[tokio::test]
+    async fn routing_client_send_waits_out_a_routing_busy_deadline() {
+        use crate::cemi::{ApplicationService, Destination, GroupValue};
+        use knx_core::{GroupAddress, GroupAddressStyle, IndividualAddress};
+
+        let own_address = IndividualAddress::new(1, 1, 3).unwrap();
+        let client = match KnxNetIpClient::new().connect_routing(own_address).await {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!(
+                    "skipping routing_client_send_waits_out_a_routing_busy_deadline: \
+                     could not join the routing multicast group in this sandbox: {e}"
+                );
+                return;
+            }
+        };
+        let wait = Duration::from_millis(150);
+        *client.state.busy_until.lock().await = Some(tokio::time::Instant::now() + wait);
+
+        let started = tokio::time::Instant::now();
+        let group_address = GroupAddress::parse("1/2/3", GroupAddressStyle::ThreeLevel).unwrap();
+        let _ = client
+            .send(
+                Destination::Group(group_address),
+                ApplicationService::GroupValueWrite(GroupValue::Short(0)),
+            )
+            .await;
+        assert!(
+            started.elapsed() >= wait,
+            "send() must wait out the ROUTING_BUSY deadline before transmitting"
         );
     }
 }

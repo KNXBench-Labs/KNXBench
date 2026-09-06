@@ -340,7 +340,14 @@ Cycle 3 (2026-09-06) delivered discovery: `core::dib` DIB decoding,
 `KnxNetIpClient::discover`, and a `knx bus discover` CLI subcommand.
 Cycle 4 (2026-09-06) delivered routing: `RoutingClient` over the
 standard multicast group, and `knx bus route-monitor`/`route-send` CLI
-subcommands. KNX IP Secure remains for a later cycle.
+subcommands. KNX IP Secure was scoped next but explicitly shelved for a
+later cycle (out of proportion for one cycle: ECDH handshake, a new TCP
+transport for unicast sessions, AES-CCM, and a `.knxkeys` keyring format
+with no research spike done yet); Cycle 5 (2026-09-06) picked up the
+session's other remaining deliverable instead — connection management and
+diagnostics — closing three known gaps in the existing `TunnelClient`/
+`RoutingClient` flows (heartbeat retry race, no shutdown signal to
+subscribers, `ROUTING_BUSY` not honored).
 
 **Deliverables.** The `BusConnection` trait implemented against ISO 22510:
 discovery, tunnelling, routing, cEMI and telegram encoding; the bus monitor as

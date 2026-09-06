@@ -183,4 +183,50 @@ mod tests {
         let err = decode_search_response(&body).unwrap_err();
         assert_eq!(err, DiscoveryError::MissingDeviceInfo);
     }
+
+    #[test]
+    fn decode_search_response_rejects_dib_with_zero_length() {
+        // Regression: DIB claiming length 0 must not panic (Core v01.06.02
+        // AS §6.2/§6.3 "ignore what you don't understand" requires safe skip).
+        let mut body = control_hpai().encode().to_vec();
+        body.push(0x00); // DIB length 0 is invalid
+        body.push(0xFE); // DIB type (won't matter if length is 0)
+
+        let err = decode_search_response(&body).unwrap_err();
+        // Must error gracefully, not panic.
+        assert!(matches!(err, DiscoveryError::TooShort { .. }));
+    }
+
+    #[test]
+    fn decode_search_response_rejects_dib_claiming_more_than_buffer_has() {
+        // Regression: DIB claiming length > remaining buffer must not panic
+        // or read out of bounds (Core v01.06.02 AS §6.2/§6.3 robust parsing).
+        let mut body = control_hpai().encode().to_vec();
+        body.extend_from_slice(&[0xFF, 0xFE]); // Claims 255-byte DIB, only 2 bytes present
+
+        let err = decode_search_response(&body).unwrap_err();
+        // Must error gracefully, not panic or read past end.
+        assert!(matches!(err, DiscoveryError::TooShort { .. }));
+    }
+
+    #[test]
+    fn decode_search_response_rejects_truncated_dib() {
+        // Regression: buffer truncated mid-DIB must not panic. Device Info
+        // DIB requires 54 bytes (Core v01.06.02 AS §7.5.4.2); a partial one
+        // followed by actual end-of-buffer must error, not crash.
+        let mut body = control_hpai().encode().to_vec();
+        // Start a Device Info DIB claiming 54 bytes total, but only provide 20.
+        body.extend_from_slice(&[54, crate::core::dib::DEVICE_INFO]);
+        body.extend_from_slice(&[0x02, 0x00]); // medium, status
+        body.extend_from_slice(&[0x11, 0x01]); // individual address
+        body.extend_from_slice(&[0x00; 16]); // Just enough to reach 20 bytes total
+                                             // But Device Info needs 54; will error when trying to decode.
+
+        let err = decode_search_response(&body).unwrap_err();
+        // Must error gracefully, not panic or read out of bounds.
+        assert!(matches!(
+            err,
+            DiscoveryError::Dib(_) | DiscoveryError::TooShort { .. }
+        ));
+    }
 }

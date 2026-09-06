@@ -3,8 +3,12 @@
 //! id(s) name, reading the resulting state out of the already-mutated
 //! `project` rather than re-deriving `command.rs`'s own mutation logic
 //! (design doc, "Incremental command sync"). Grows as `command.rs` grows —
-//! today's six variants (plus their two undo/redo forms) are all that
-//! exist.
+//! all 18 `Command` variants have a match arm here, but only the original
+//! eight (device address/description, com-object DPT/description and their
+//! undo/redo forms, group-address create/delete) actually persist; the ten
+//! topology/group-range/group-link variants are no-op stubs awaiting a
+//! future incremental-sync pass (see each arm's own "persistence layer not
+//! yet implemented" comment).
 
 use rusqlite::Connection;
 

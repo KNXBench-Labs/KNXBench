@@ -50,6 +50,11 @@ pub enum ValidationError {
         range: GroupRangeId,
         existing: GroupRangeId,
     },
+    GroupRangeInverted {
+        range: GroupRangeId,
+        start: GroupAddress,
+        end: GroupAddress,
+    },
 }
 
 impl std::error::Error for ValidationError {}
@@ -106,6 +111,12 @@ impl fmt::Display for ValidationError {
             ValidationError::OverlappingGroupRange { range, existing } => write!(
                 f,
                 "group range {range} overlaps existing range {existing}"
+            ),
+            ValidationError::GroupRangeInverted { range, start, end } => write!(
+                f,
+                "group range {range} has start {} after end {}",
+                start.raw(),
+                end.raw()
             ),
         }
     }
@@ -195,6 +206,27 @@ pub fn check_no_duplicate_line_address(
         }
     }
     Ok(())
+}
+
+/// Rejects a group range whose `start` comes after its `end` — an inverted
+/// span that `GroupRange::contains` (which assumes `start <= x <= end`)
+/// could never match, and that would also confuse the overlap check below
+/// (its interval test assumes canonical ordering). `start == end` (a
+/// single-address range) is well-ordered and accepted.
+pub fn check_group_range_is_well_ordered(
+    candidate: GroupRangeId,
+    start: GroupAddress,
+    end: GroupAddress,
+) -> Result<(), ValidationError> {
+    if start > end {
+        Err(ValidationError::GroupRangeInverted {
+            range: candidate,
+            start,
+            end,
+        })
+    } else {
+        Ok(())
+    }
 }
 
 /// Rejects a group range whose `[start, end]` span is not entirely
@@ -537,6 +569,36 @@ mod tests {
             parent,
             children: vec![],
         }
+    }
+
+    #[test]
+    fn an_inverted_range_is_rejected() {
+        let err = check_group_range_is_well_ordered(
+            GroupRangeId(1),
+            GroupAddress::from_raw(255),
+            GroupAddress::from_raw(0),
+        );
+        assert!(matches!(
+            err,
+            Err(ValidationError::GroupRangeInverted { .. })
+        ));
+    }
+
+    #[test]
+    fn a_well_ordered_range_is_accepted() {
+        assert!(check_group_range_is_well_ordered(
+            GroupRangeId(1),
+            GroupAddress::from_raw(0),
+            GroupAddress::from_raw(255)
+        )
+        .is_ok());
+        // The degenerate single-address case (start == end) is well-ordered.
+        assert!(check_group_range_is_well_ordered(
+            GroupRangeId(1),
+            GroupAddress::from_raw(100),
+            GroupAddress::from_raw(100)
+        )
+        .is_ok());
     }
 
     #[test]

@@ -1,8 +1,9 @@
 # GAP_ANALYSIS_ETS.md
 
 A systematic comparison of KNXBench against ETS's feature set, as of
-**Session 6, Cycle 5** (2026-09-06 — see
-[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)).
+**Session 6, Cycle 5 plus the 2026-09-06 topology/group-range/group-link
+command layer and editable device/com-object descriptions** (2026-09-06 —
+see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)).
 
 This document does not duplicate [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)
 (consequences of evidence gaps or recorded decisions on *existing* features)
@@ -36,23 +37,29 @@ of ETS 5/6 as a professional tool, not a specific verified version — treat
 ## B. Editing / CRUD gaps
 
 ETS lets you build a project from nothing. KNXBench today can only *edit*
-what an ETS import (or a prior `.knxdb` save) already contains — `knx-core`'s
-`Command` enum has exactly **six** variants total:
+what an ETS import (or a prior `.knxdb` save) already contains.
+`knx-core`'s `Command` enum has **sixteen** variants as of the
+2026-09-06 topology/group-range/group-link layer:
 `SetIndividualAddress`, `SetComObjectDpt`/`RestoreComObjectDpt`,
 `SetDeviceDescription`, `SetComObjectDescription`/`RestoreComObjectDescription`,
-`CreateGroupAddress`/`DeleteGroupAddress`. Everything else below has **no
-command, and therefore no UI**, regardless of whether the underlying model
-field exists.
+`CreateGroupAddress`/`DeleteGroupAddress`, `CreateArea`/`DeleteArea`,
+`CreateLine`/`DeleteLine`, `MoveDeviceToLine`, `CreateGroupRange`/
+`DeleteGroupRange`/`RenameGroupRange`, `LinkComObject`/`UnlinkComObject`.
+The last ten have an `apps/knx-server` HTTP route each but **no frontend UI**
+yet (see T4-T6 in the task backlog) — a backend command closes the *model*
+gap but not the *usability* gap until a screen exists to drive it. Everything
+else below has no command and therefore no UI, regardless of whether the
+underlying model field exists.
 
 | # | Gap | Impact |
 |---|-----|--------|
 | B1 | **No device creation.** No "insert product from catalog" workflow exists — a device can only arrive via ETS import. | You cannot start a project from scratch, or add one device to an existing project, without ETS. This is arguably the single biggest parity gap: ETS's core workflow (catalog → drag device onto a line) has no equivalent here at all. |
 | B2 | **No device deletion.** | A device, once imported, cannot be removed. |
-| B3 | **No topology creation/editing.** No commands to add/remove/rename an installation, area, or line, or to move a device between lines. | Topology is import-only; nothing about it can be built or restructured. |
+| B3 | **Topology CRUD has no UI.** `CreateArea`/`DeleteArea`/`CreateLine`/`DeleteLine`/`MoveDeviceToLine` exist as `knx-core` commands with `apps/knx-server` routes (2026-09-06) — no longer import-only at the model/API layer — but no frontend screen calls any of them. | Cannot add/remove/rename an area or line, or move a device between lines, from the UI. |
 | B4 | **No building-part CRUD.** Building parts are projected and rendered but explicitly read-only in the Inspector — "no `Command` exists for either yet" (per IMPLEMENTATION_STATUS Session 5 cycle 5). | Cannot create a building/floor/room, rename one, or move a device between rooms. |
-| B5 | **No group-range CRUD.** Only individual group addresses can be created/deleted (cycle 9); the containing `GroupRange` (main/middle group) cannot be created, renamed, or deleted. | A UI-created group address also has no `GroupRange` to nest in — see [KNOWN_LIMITATIONS.md §21](KNOWN_LIMITATIONS.md#21-a-ui-created-group-address-has-no-ets_id-and-is-dropped-on-export), which is a direct symptom of this gap. |
+| B5 | **Group-range CRUD has no UI.** `CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange` exist as commands and routes (2026-09-06); only individual group addresses have a UI (create/delete, cycle 9) — the containing `GroupRange` still can't be created, renamed, or deleted from the frontend. | A UI-created group address still has no `GroupRange` to nest in *through the UI* — see [KNOWN_LIMITATIONS.md §21](KNOWN_LIMITATIONS.md#21-a-ui-created-group-address-has-no-ets_id-and-is-dropped-on-export), a direct symptom, only partially resolved. |
 | B6 | **No communication-object flag editing.** Read/write/transmit/update/communication flags are projected and shown in the Inspector but are display-only — "no `Command` exists yet to edit a flag" (Session 5 cycle 4 notes, restated in the "Next session" backlog). | Cannot re-flag a comm object (e.g. turn on "read on start") without ETS. |
-| B7 | **No group-link editing.** Linking/unlinking a communication object to/from a group address has no command — only whatever links the source project (or, at best, `DeleteGroupAddress`'s refusal check) already encodes. | Cannot wire up a new device's comm objects to group addresses in the UI at all — compounds B1: even if device creation existed, there would be no way to link it afterward. |
+| B7 | **Group-link editing has no UI.** `LinkComObject`/`UnlinkComObject` exist as a command and route (2026-09-06), finally calling the `check_group_link_target_exists` validation that already existed; no frontend screen drives it yet. | Cannot wire up a new device's comm objects to group addresses in the UI — compounds B1: even if device creation existed, there would be no screen to link it afterward. |
 | B8 | **No parameter editing.** (See A3 — no interpretation means no editor is possible yet regardless.) | |
 | B9 | **No bulk/multi-select operations.** Every edit in the UI targets exactly one entity (one device's address, one comm object's DPT, one group address create/delete). | No "select 20 devices, change all their addresses' area", no multi-delete, no copy/paste of a device with its parameters — all standard ETS workflows for any project past a handful of devices. |
 | B10 | **No drag-and-drop anywhere in the UI.** CLAUDE.md's UI/UX section lists drag & drop as a target capability. | Every structural change that ETS does by dragging (device onto a line, device onto a room, GA onto a comm object) has no equivalent gesture here, and per B1-B7 mostly has no non-drag equivalent either. |
@@ -149,6 +156,17 @@ Each task: **what**, **why**, **depends on**.
   only). `LinkComObject`/`UnlinkComObject` land, finally calling the
   validation.rs function that already existed for this
   (`check_group_link_target_exists`).
+- **T23. Topology/group-range/group-link UI.** T4-T6's ten commands are
+  reachable over HTTP but not from any screen: an area/line tree-edit UI
+  in the Project Explorer, a "Group Ranges" branch (sibling to cycle 9's
+  "Group Addresses" branch) with create/rename/delete, a range picker so
+  a UI-created group address gets a real parent (closing
+  [KNOWN_LIMITATIONS.md §21](KNOWN_LIMITATIONS.md#21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved)
+  for real), and a link/unlink control on the comm-object Inspector row.
+  Closes the remaining UI half of **B3**, **B5**, **B7**. Depends on:
+  none architecturally — T4-T6's routes and `knx-projection`'s new
+  `GroupRangeNode` already exist; this is frontend-only work, the same
+  shape as cycle 9's group-address UI.
 
 ### Tier 2 — closes remaining single-field-editor gaps
 

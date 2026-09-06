@@ -7,6 +7,7 @@ use std::fmt;
 
 use crate::device::ComObjectInstance;
 use crate::dpt::DptRef;
+use crate::flags::{Direction, GroupLink};
 use crate::group::{GroupAddressEntry, GroupRange};
 use crate::ids::{AreaId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId, LineId};
 use crate::project::Project;
@@ -14,10 +15,10 @@ use crate::provenance::{Layer, Override, Resolved};
 use crate::string_table::Text;
 use crate::topology::{Area, Line};
 use crate::validation::{
-    check_group_address_in_range, check_group_range_nests_in_parent,
-    check_no_duplicate_area_address, check_no_duplicate_group_address,
-    check_no_duplicate_individual_address, check_no_duplicate_line_address,
-    check_no_overlapping_group_range, ValidationError,
+    check_group_address_in_range, check_group_link_target_exists,
+    check_group_range_nests_in_parent, check_no_duplicate_area_address,
+    check_no_duplicate_group_address, check_no_duplicate_individual_address,
+    check_no_duplicate_line_address, check_no_overlapping_group_range, ValidationError,
 };
 use crate::IndividualAddress;
 
@@ -118,6 +119,20 @@ pub enum Command {
         id: GroupRangeId,
         name: String,
     },
+    /// Adds a directional link from a communication object instance to a
+    /// group address. `direction` distinguishes a send link from a
+    /// receive link — a comm object may hold both for the same `ga` as
+    /// two distinct `GroupLink`s (DATA_MODEL §6).
+    LinkComObject {
+        com_object: ComObjectInstanceId,
+        ga: GroupAddressId,
+        direction: Direction,
+    },
+    UnlinkComObject {
+        com_object: ComObjectInstanceId,
+        ga: GroupAddressId,
+        direction: Direction,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -146,6 +161,16 @@ pub enum CommandError {
     /// A `DeleteGroupRange` was refused because at least one group
     /// address still names it as its `range`.
     GroupRangeInUse(GroupRangeId),
+    LinkAlreadyExists {
+        com_object: ComObjectInstanceId,
+        ga: GroupAddressId,
+        direction: Direction,
+    },
+    LinkNotFound {
+        com_object: ComObjectInstanceId,
+        ga: GroupAddressId,
+        direction: Direction,
+    },
     InstallationNotFound,
     NothingToUndo,
     NothingToRedo,
@@ -183,6 +208,22 @@ impl fmt::Display for CommandError {
             CommandError::GroupRangeInUse(id) => write!(
                 f,
                 "group range {id} still has group addresses assigned to it"
+            ),
+            CommandError::LinkAlreadyExists {
+                com_object,
+                ga,
+                direction,
+            } => write!(
+                f,
+                "communication object {com_object} already links to group address {ga} ({direction:?})"
+            ),
+            CommandError::LinkNotFound {
+                com_object,
+                ga,
+                direction,
+            } => write!(
+                f,
+                "communication object {com_object} has no {direction:?} link to group address {ga}"
             ),
             CommandError::InstallationNotFound => write!(f, "project has no installation"),
             CommandError::NothingToUndo => write!(f, "nothing to undo"),
@@ -573,6 +614,69 @@ impl Command {
                 let previous = std::mem::replace(&mut range.name, name.clone());
                 Ok(Command::RenameGroupRange { id, name: previous })
             }
+            Command::LinkComObject {
+                com_object,
+                ga,
+                direction,
+            } => {
+                let com_object = *com_object;
+                let ga = *ga;
+                let direction = *direction;
+                let installation = project
+                    .installations
+                    .first()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                check_group_link_target_exists(installation, com_object, ga)?;
+                let com = project
+                    .devices
+                    .com_object_mut(com_object)
+                    .ok_or(CommandError::ComObjectNotFound(com_object))?;
+                if com
+                    .links
+                    .iter()
+                    .any(|l| l.ga == ga && l.direction == direction)
+                {
+                    return Err(CommandError::LinkAlreadyExists {
+                        com_object,
+                        ga,
+                        direction,
+                    });
+                }
+                com.links.push(GroupLink { ga, direction });
+                Ok(Command::UnlinkComObject {
+                    com_object,
+                    ga,
+                    direction,
+                })
+            }
+            Command::UnlinkComObject {
+                com_object,
+                ga,
+                direction,
+            } => {
+                let com_object = *com_object;
+                let ga = *ga;
+                let direction = *direction;
+                let com = project
+                    .devices
+                    .com_object_mut(com_object)
+                    .ok_or(CommandError::ComObjectNotFound(com_object))?;
+                let pos = com
+                    .links
+                    .iter()
+                    .position(|l| l.ga == ga && l.direction == direction)
+                    .ok_or(CommandError::LinkNotFound {
+                        com_object,
+                        ga,
+                        direction,
+                    })?;
+                com.links.remove(pos);
+                Ok(Command::LinkComObject {
+                    com_object,
+                    ga,
+                    direction,
+                })
+            }
         }
     }
 }
@@ -626,7 +730,7 @@ mod tests {
     use crate::building::BuildingPart;
     use crate::commissioning::{CommissioningState, CompletionStatus};
     use crate::device::DeviceInstance;
-    use crate::flags::{Direction, GroupLink, ResolvedFlags};
+    use crate::flags::ResolvedFlags;
     use crate::group::GroupRange;
     use crate::ids::{InstallationId, LineId, SourceRef};
     use crate::installation::Installation;
@@ -1691,6 +1795,210 @@ mod tests {
         assert_eq!(
             result,
             Err(CommandError::GroupRangeNotFound(GroupRangeId(99)))
+        );
+    }
+
+    fn test_project_with_one_com_object() -> Project {
+        let mut p = test_project_with_one_device(None);
+        p.devices
+            .get_mut(DeviceId(1))
+            .unwrap()
+            .com_objects
+            .push(ComObjectInstanceId(1));
+        p.devices.insert_com_object(ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Value(Resolved {
+                value: Text::Literal("t".into()),
+                layer: Layer::Program,
+            }),
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+        });
+        p.installations[0].group_addresses.push(GroupAddressEntry {
+            id: GroupAddressId(1),
+            source: source(),
+            name: "GA".into(),
+            address: GroupAddress::from_raw(1),
+            central: false,
+            unfiltered: false,
+            range: None,
+        });
+        p
+    }
+
+    #[test]
+    fn link_then_unlink_com_object_round_trips_through_undo() {
+        let mut project = test_project_with_one_com_object();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::LinkComObject {
+                    com_object: ComObjectInstanceId(1),
+                    ga: GroupAddressId(1),
+                    direction: Direction::Send,
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            project
+                .devices
+                .com_object(ComObjectInstanceId(1))
+                .unwrap()
+                .links,
+            vec![GroupLink {
+                ga: GroupAddressId(1),
+                direction: Direction::Send
+            }]
+        );
+        stack
+            .do_command(
+                &mut project,
+                Command::UnlinkComObject {
+                    com_object: ComObjectInstanceId(1),
+                    ga: GroupAddressId(1),
+                    direction: Direction::Send,
+                },
+            )
+            .unwrap();
+        assert!(project
+            .devices
+            .com_object(ComObjectInstanceId(1))
+            .unwrap()
+            .links
+            .is_empty());
+        stack.undo(&mut project).unwrap();
+        assert_eq!(
+            project
+                .devices
+                .com_object(ComObjectInstanceId(1))
+                .unwrap()
+                .links
+                .len(),
+            1
+        );
+        stack.undo(&mut project).unwrap();
+        assert!(project
+            .devices
+            .com_object(ComObjectInstanceId(1))
+            .unwrap()
+            .links
+            .is_empty());
+    }
+
+    #[test]
+    fn link_com_object_rejects_a_nonexistent_group_address() {
+        let mut project = test_project_with_one_com_object();
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::LinkComObject {
+                com_object: ComObjectInstanceId(1),
+                ga: GroupAddressId(99),
+                direction: Direction::Send,
+            },
+        );
+        assert!(matches!(
+            result,
+            Err(CommandError::Validation(
+                ValidationError::DanglingGroupLink { .. }
+            ))
+        ));
+    }
+
+    #[test]
+    fn link_com_object_rejects_an_exact_duplicate_link() {
+        let mut project = test_project_with_one_com_object();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::LinkComObject {
+                    com_object: ComObjectInstanceId(1),
+                    ga: GroupAddressId(1),
+                    direction: Direction::Send,
+                },
+            )
+            .unwrap();
+        let result = stack.do_command(
+            &mut project,
+            Command::LinkComObject {
+                com_object: ComObjectInstanceId(1),
+                ga: GroupAddressId(1),
+                direction: Direction::Send,
+            },
+        );
+        assert_eq!(
+            result,
+            Err(CommandError::LinkAlreadyExists {
+                com_object: ComObjectInstanceId(1),
+                ga: GroupAddressId(1),
+                direction: Direction::Send,
+            })
+        );
+    }
+
+    #[test]
+    fn link_com_object_allows_send_and_receive_on_the_same_group_address() {
+        let mut project = test_project_with_one_com_object();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::LinkComObject {
+                    com_object: ComObjectInstanceId(1),
+                    ga: GroupAddressId(1),
+                    direction: Direction::Send,
+                },
+            )
+            .unwrap();
+        stack
+            .do_command(
+                &mut project,
+                Command::LinkComObject {
+                    com_object: ComObjectInstanceId(1),
+                    ga: GroupAddressId(1),
+                    direction: Direction::Receive,
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            project
+                .devices
+                .com_object(ComObjectInstanceId(1))
+                .unwrap()
+                .links
+                .len(),
+            2
+        );
+    }
+
+    #[test]
+    fn unlink_a_nonexistent_link_is_rejected() {
+        let mut project = test_project_with_one_com_object();
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::UnlinkComObject {
+                com_object: ComObjectInstanceId(1),
+                ga: GroupAddressId(1),
+                direction: Direction::Send,
+            },
+        );
+        assert_eq!(
+            result,
+            Err(CommandError::LinkNotFound {
+                com_object: ComObjectInstanceId(1),
+                ga: GroupAddressId(1),
+                direction: Direction::Send,
+            })
         );
     }
 }

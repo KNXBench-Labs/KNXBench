@@ -113,7 +113,7 @@ impl TunnelClient {
             layer: tunnelling::TUNNEL_LINKLAYER,
         }
         .encode();
-        let body = services::encode_connect_request(control_hpai, &cri, control_hpai);
+        let body = services::encode_connect_request(control_hpai, control_hpai, &cri);
         let datagram = frame::encode_frame(services::CONNECT_REQUEST, &body);
         socket.send(&datagram).await.map_err(BusError::Io)?;
 

@@ -510,9 +510,12 @@ CLI-facing piece; `crates/knx-net/tests/live_gateway.rs` gained a second
 `KNX_TEST_GA` env var — deliberately not defaulted to any address in the
 live project, since a `GroupValueWrite` physically actuates whatever it's
 linked to. Live-hardware verification of `send` itself (as opposed to the
-unit/round-trip tests above) is left for whoever sets `KNX_TEST_GA` — not
-run as part of this cycle's own verification, since choosing a safe
-target address is a human decision, not this session's to make.
+unit/round-trip tests above) was left for whoever sets `KNX_TEST_GA` —
+not run as part of this cycle's own verification, since choosing a safe
+target address is a human decision, not this session's to make. Run
+2026-09-06 with `KNX_TEST_GA=0/0/1` (user-chosen): `TUNNELLING_ACK`
+received and matched, confirming `send`'s wire format and ack-correlation
+against the real gateway, not just the round-trip tests above.
 
 ## Next session
 

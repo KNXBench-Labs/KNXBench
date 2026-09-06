@@ -2,7 +2,8 @@
 //! (ARCHITECTURE.md §8). `discover` (multicast `SEARCH_REQUEST`/
 //! `SEARCH_RESPONSE`) is implemented as of Session 6 Cycle 3.
 //! `TunnelClient::send` is implemented as of Session 6 Cycle 2
-//! (KNOWN_LIMITATIONS.md §26).
+//! (KNOWN_LIMITATIONS.md §26). `connect_routing`/`RoutingClient` are
+//! implemented as of Session 6 Cycle 4.
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::Arc;
@@ -64,7 +65,8 @@ pub struct DiscoveredGateway {
 
 /// A local KNXnet/IP client, not yet connected to any gateway. `discover`
 /// (multicast `SEARCH_REQUEST`, Core v01.06.02 AS §4.2) and `connect_tunnel`
-/// are both implemented as of Session 6 Cycle 3.
+/// are both implemented as of Session 6 Cycle 3; `connect_routing` as of
+/// Session 6 Cycle 4.
 pub struct KnxNetIpClient;
 
 impl KnxNetIpClient {
@@ -89,12 +91,22 @@ impl Default for KnxNetIpClient {
 pub trait BusConnection {
     async fn discover(&self) -> Result<Vec<DiscoveredGateway>, BusError>;
     async fn connect_tunnel(&self, gateway: SocketAddrV4) -> Result<TunnelClient, BusError>;
+    async fn connect_routing(
+        &self,
+        own_address: IndividualAddress,
+    ) -> Result<RoutingClient, BusError>;
 }
 
 /// Standard KNXnet/IP discovery/routing multicast group and port (Core
 /// v01.06.02 AS §4.2). Hardcoded this cycle — not a CLI override (design
 /// spec's Cycle 3 Q2).
 const DISCOVERY_MULTICAST: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(224, 0, 23, 12), 3671);
+
+/// Standard KNXnet/IP routing multicast group and port (Routing v01.05.02
+/// AS §2.3.1) — same address/port discovery already uses (Core v01.06.02
+/// AS §4.2), kept as its own named constant since routing and discovery
+/// are separate features that happen to share a default today.
+const ROUTING_MULTICAST: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(224, 0, 23, 12), 3671);
 
 /// Core v01.06.02 AS §5.2.4 `SEARCH_TIMEOUT`: how long to keep collecting
 /// `SEARCH_RESPONSE`s after sending one `SEARCH_REQUEST` (design spec's
@@ -160,6 +172,13 @@ impl BusConnection for KnxNetIpClient {
 
     async fn connect_tunnel(&self, gateway: SocketAddrV4) -> Result<TunnelClient, BusError> {
         TunnelClient::connect(gateway).await
+    }
+
+    async fn connect_routing(
+        &self,
+        own_address: IndividualAddress,
+    ) -> Result<RoutingClient, BusError> {
+        RoutingClient::connect(own_address).await
     }
 }
 
@@ -346,6 +365,143 @@ impl Drop for TunnelClient {
         // `disconnect()` (early return, panic unwind, ...). Idempotent
         // alongside the explicit path: `notify_waiters()` twice is harmless.
         self.state.shutdown.notify_waiters();
+    }
+}
+
+struct RoutingState {
+    socket: UdpSocket,
+    tx: broadcast::Sender<LDataFrame>,
+    shutdown: Notify,
+}
+
+/// A KNXnet/IP routing endpoint — joined to the standard routing
+/// multicast group, sending and receiving `ROUTING_INDICATION` frames
+/// unconfirmed (Routing v01.05.02 AS §5.1). Unlike `TunnelClient`, there
+/// is no connection to a specific peer: `own_address` is this client's
+/// own claimed source address for outgoing frames, not something a
+/// gateway assigns, since routing has no `CONNECT_REQUEST`/`CRD`
+/// handshake to assign one through.
+pub struct RoutingClient {
+    state: Arc<RoutingState>,
+    own_address: IndividualAddress,
+}
+
+impl RoutingClient {
+    async fn connect(own_address: IndividualAddress) -> Result<Self, BusError> {
+        use socket2::{Domain, Socket, Type};
+
+        let socket2_socket = Socket::new(Domain::IPV4, Type::DGRAM, None).map_err(BusError::Io)?;
+        socket2_socket
+            .set_reuse_address(true)
+            .map_err(BusError::Io)?;
+        socket2_socket
+            .bind(
+                &std::net::SocketAddr::from((Ipv4Addr::UNSPECIFIED, ROUTING_MULTICAST.port()))
+                    .into(),
+            )
+            .map_err(BusError::Io)?;
+        socket2_socket.set_nonblocking(true).map_err(BusError::Io)?;
+        let std_socket: std::net::UdpSocket = socket2_socket.into();
+        let socket = UdpSocket::from_std(std_socket).map_err(BusError::Io)?;
+
+        socket
+            .join_multicast_v4(*ROUTING_MULTICAST.ip(), Ipv4Addr::UNSPECIFIED)
+            .map_err(BusError::Io)?;
+        // Without this, our own sends would loop back through this same
+        // socket and appear in `subscribe()` as if another device sent
+        // them (design spec's Architecture section).
+        socket.set_multicast_loop_v4(false).map_err(BusError::Io)?;
+
+        let (tx, _rx) = broadcast::channel(64);
+        let state = Arc::new(RoutingState {
+            socket,
+            tx,
+            shutdown: Notify::new(),
+        });
+        tokio::spawn(routing_receive_loop(state.clone()));
+
+        Ok(RoutingClient { state, own_address })
+    }
+
+    pub fn subscribe(&self) -> broadcast::Receiver<LDataFrame> {
+        self.state.tx.subscribe()
+    }
+
+    /// Sends one `ROUTING_INDICATION` (Routing v01.05.02 AS §5.1: an
+    /// unconfirmed service) — no ACK to wait for, no retry, unlike
+    /// `TunnelClient::send`. Every routing frame on the wire is an
+    /// `L_Data.ind` regardless of direction (§3.8), so `kind` is always
+    /// `Indication`, never `Request`.
+    pub async fn send(
+        &self,
+        destination: Destination,
+        service: ApplicationService,
+    ) -> Result<(), BusError> {
+        let frame = LDataFrame {
+            kind: cemi::LDataMessageKind::Indication,
+            source: self.own_address,
+            destination,
+            service,
+        };
+        let datagram =
+            frame::encode_frame(services::ROUTING_INDICATION, &cemi::encode_l_data(&frame));
+        self.state
+            .socket
+            .send_to(&datagram, ROUTING_MULTICAST)
+            .await
+            .map_err(BusError::Io)?;
+        Ok(())
+    }
+}
+
+impl Drop for RoutingClient {
+    fn drop(&mut self) {
+        // Safety net mirroring `TunnelClient`'s Drop — stops the
+        // background receive loop. Leaving the multicast group itself is
+        // the OS's job when the socket closes, no explicit call needed.
+        self.state.shutdown.notify_waiters();
+    }
+}
+
+/// The sole reader of `state.socket` — routing has no second concurrent
+/// task touching it (no heartbeat, unlike `TunnelClient`).
+async fn routing_receive_loop(state: Arc<RoutingState>) {
+    let mut buf = [0u8; 1024];
+    loop {
+        let n = tokio::select! {
+            _ = state.shutdown.notified() => break,
+            result = state.socket.recv(&mut buf) => match result {
+                Ok(n) => n,
+                Err(_) => break,
+            },
+        };
+        let Ok((header, body)) = frame::decode_frame(&buf[..n]) else {
+            continue; // malformed datagram: ignore it, don't crash (§6.2/§6.3-style tolerance)
+        };
+        match header.service_type {
+            services::ROUTING_INDICATION => {
+                if let Ok(telegram) = cemi::decode_l_data(body) {
+                    let _ = state.tx.send(telegram);
+                }
+            }
+            services::ROUTING_LOST_MESSAGE => {
+                if let Ok(msg) = crate::routing::decode_routing_lost_message(body) {
+                    eprintln!(
+                        "ROUTING_LOST_MESSAGE: device_state={:#04x}, lost {} message(s)",
+                        msg.device_state, msg.lost_message_count
+                    );
+                }
+            }
+            services::ROUTING_BUSY => {
+                if let Ok(busy) = crate::routing::decode_routing_busy(body) {
+                    eprintln!(
+                        "ROUTING_BUSY: device_state={:#04x}, wait {}ms, control={:#06x}",
+                        busy.device_state, busy.wait_time_ms, busy.control_field
+                    );
+                }
+            }
+            _ => {} // unsupported/unknown service type: ignore
+        }
     }
 }
 
@@ -560,6 +716,72 @@ mod tests {
         assert_eq!(
             hpai.port, discovery_port,
             "resolved HPAI must carry the real discovery socket's port, not the probe's"
+        );
+    }
+
+    /// Round-trip proof that `RoutingClient` actually multicasts and
+    /// receives, entirely on loopback — unlike tunnelling/discovery,
+    /// routing needs no real gateway to test, since it's plain UDP
+    /// multicast rather than a protocol exchange with a specific peer.
+    /// Skipped (not failed) if this sandbox has no multicast route on
+    /// loopback at all, same policy as the discovery test above it.
+    #[tokio::test]
+    async fn routing_client_sends_and_receives_a_group_value_write() {
+        use crate::cemi::{ApplicationService, Destination, GroupValue};
+        use knx_core::{GroupAddress, GroupAddressStyle, IndividualAddress};
+
+        let sender_address = IndividualAddress::new(1, 1, 1).unwrap();
+        let receiver_address = IndividualAddress::new(1, 1, 2).unwrap();
+
+        let sender = match KnxNetIpClient::new().connect_routing(sender_address).await {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!(
+                    "skipping routing_client_sends_and_receives_a_group_value_write: \
+                     could not join the routing multicast group in this sandbox: {e}"
+                );
+                return;
+            }
+        };
+        let receiver = KnxNetIpClient::new()
+            .connect_routing(receiver_address)
+            .await
+            .expect("second RoutingClient should join the same group fine (SO_REUSEADDR)");
+        let mut telegrams = receiver.subscribe();
+
+        let group_address = GroupAddress::parse("1/2/3", GroupAddressStyle::ThreeLevel).unwrap();
+        sender
+            .send(
+                Destination::Group(group_address),
+                ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+            )
+            .await
+            .expect("send over loopback multicast should succeed");
+
+        // Some sandboxes accept `IP_ADD_MEMBERSHIP`/`sendto()` without error
+        // yet never actually deliver the datagram locally (verified here by
+        // hand with plain Python sockets, forcing `IP_MULTICAST_IF` to
+        // 127.0.0.1: join and send both succeed, nothing arrives) — a
+        // stricter, no-route-at-all failure than the ones `connect_routing`
+        // above can detect. Treat that the same way: skip, don't fail.
+        let received = match tokio::time::timeout(Duration::from_secs(5), telegrams.recv()).await {
+            Ok(Ok(telegram)) => telegram,
+            Ok(Err(_)) => panic!("broadcast channel closed unexpectedly"),
+            Err(_) => {
+                eprintln!(
+                    "skipping routing_client_sends_and_receives_a_group_value_write: \
+                     joined the multicast group but no datagram arrived within 5s — \
+                     this sandbox appears to accept the join/send but not deliver \
+                     multicast locally"
+                );
+                return;
+            }
+        };
+        assert_eq!(received.source, sender_address);
+        assert_eq!(received.destination, Destination::Group(group_address));
+        assert_eq!(
+            received.service,
+            ApplicationService::GroupValueWrite(GroupValue::Short(1))
         );
     }
 }

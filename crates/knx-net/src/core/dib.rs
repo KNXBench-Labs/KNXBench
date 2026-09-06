@@ -144,7 +144,7 @@ pub fn decode_service_families(buf: &[u8]) -> Result<(ServiceFamilies, &[u8]), D
         });
     }
     let len = buf[0];
-    if (buf.len() as u8) < len {
+    if buf.len() < len as usize {
         return Err(DibError::TooShort {
             needed: len as usize,
             got: buf.len(),
@@ -157,14 +157,22 @@ pub fn decode_service_families(buf: &[u8]) -> Result<(ServiceFamilies, &[u8]), D
             got: type_code,
         });
     }
+    if len < 2 {
+        return Err(DibError::BadLength(len));
+    }
     let pairs_len = len - 2;
-    if pairs_len % 2 != 0 {
+    if !pairs_len.is_multiple_of(2) {
         return Err(DibError::OddServiceFamiliesLength(len));
     }
     let pairs = &buf[2..len as usize];
     let families = pairs
-        .chunks_exact(2)
-        .map(|pair| ServiceFamily { id: pair[0], version: pair[1] })
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|pair| ServiceFamily {
+            id: pair[0],
+            version: pair[1],
+        })
         .collect();
     Ok((ServiceFamilies(families), &buf[len as usize..]))
 }
@@ -176,14 +184,30 @@ mod tests {
 
     fn device_info_bytes() -> Vec<u8> {
         let mut b = vec![
-            0x36, DEVICE_INFO, // structure length 54, type 0x01
-            0x02,             // KNX medium: TP1
-            0x00,             // device status
-            0x11, 0x01,       // individual address 1.1.1
-            0x00, 0x00,       // project-installation identifier
-            0x00, 0xFA, 0x12, 0x34, 0x56, 0x78, // serial number
-            224, 0, 23, 12,   // routing multicast address
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, // MAC address
+            0x36,
+            DEVICE_INFO, // structure length 54, type 0x01
+            0x02,        // KNX medium: TP1
+            0x00,        // device status
+            0x11,
+            0x01, // individual address 1.1.1
+            0x00,
+            0x00, // project-installation identifier
+            0x00,
+            0xFA,
+            0x12,
+            0x34,
+            0x56,
+            0x78, // serial number
+            224,
+            0,
+            23,
+            12, // routing multicast address
+            0x00,
+            0x01,
+            0x02,
+            0x03,
+            0x04,
+            0x05, // MAC address
         ];
         let mut name = b"KNX IP Gateway".to_vec();
         name.resize(30, 0); // zero-padded to 30 octets
@@ -236,19 +260,35 @@ mod tests {
         let err = decode_device_info(&bytes).unwrap_err();
         assert_eq!(
             err,
-            DibError::UnexpectedType { expected: DEVICE_INFO, got: SUPP_SVC_FAMILIES }
+            DibError::UnexpectedType {
+                expected: DEVICE_INFO,
+                got: SUPP_SVC_FAMILIES
+            }
         );
     }
 
     #[test]
     fn decode_service_families_reads_every_pair_and_reports_tunnelling_support() {
-        let bytes = [0x06, SUPP_SVC_FAMILIES, 0x02, 0x01, SERVICE_FAMILY_TUNNELLING, 0x01];
+        let bytes = [
+            0x06,
+            SUPP_SVC_FAMILIES,
+            0x02,
+            0x01,
+            SERVICE_FAMILY_TUNNELLING,
+            0x01,
+        ];
         let (families, rest) = decode_service_families(&bytes).unwrap();
         assert_eq!(
             families,
             ServiceFamilies(vec![
-                ServiceFamily { id: 0x02, version: 0x01 },
-                ServiceFamily { id: SERVICE_FAMILY_TUNNELLING, version: 0x01 },
+                ServiceFamily {
+                    id: 0x02,
+                    version: 0x01
+                },
+                ServiceFamily {
+                    id: SERVICE_FAMILY_TUNNELLING,
+                    version: 0x01
+                },
             ])
         );
         assert!(families.supports(SERVICE_FAMILY_TUNNELLING));
@@ -269,7 +309,24 @@ mod tests {
         let err = decode_service_families(&bytes).unwrap_err();
         assert_eq!(
             err,
-            DibError::UnexpectedType { expected: SUPP_SVC_FAMILIES, got: DEVICE_INFO }
+            DibError::UnexpectedType {
+                expected: SUPP_SVC_FAMILIES,
+                got: DEVICE_INFO
+            }
         );
+    }
+
+    #[test]
+    fn decode_service_families_rejects_len_zero() {
+        let bytes = [0x00, SUPP_SVC_FAMILIES];
+        let err = decode_service_families(&bytes).unwrap_err();
+        assert_eq!(err, DibError::BadLength(0x00));
+    }
+
+    #[test]
+    fn decode_service_families_rejects_len_one() {
+        let bytes = [0x01, SUPP_SVC_FAMILIES];
+        let err = decode_service_families(&bytes).unwrap_err();
+        assert_eq!(err, DibError::BadLength(0x01));
     }
 }

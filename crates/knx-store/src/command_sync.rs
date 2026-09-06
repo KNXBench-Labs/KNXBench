@@ -118,6 +118,12 @@ pub fn sync_after_command(
         Command::DeleteArea { .. } => {
             // Area persistence layer not yet implemented (Task 2 scope).
         }
+        Command::CreateLine { .. } => {
+            // Line persistence layer not yet implemented (Task 3 scope).
+        }
+        Command::DeleteLine { .. } => {
+            // Line persistence layer not yet implemented (Task 3 scope).
+        }
     }
     tx.commit()?;
     Ok(())

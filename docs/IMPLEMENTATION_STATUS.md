@@ -460,10 +460,24 @@ a pattern for future hardware-dependent tests), and the `knx bus monitor`
 CLI subcommand resolving live telegrams against the project's group addresses.
 The implementation is built directly from the KNX Association specification
 (Core v01.06.02 AS, Tunnelling v01.07.01 AS, EMI_IMI v01.04.02 AS), not from
-reading `xknx` or other stacks. Built and unit-tested; live-gateway verification
-pending in an environment with LAN access to a real KNXnet/IP gateway — to be
-run by the user via `cargo test -p knx-net -- --ignored` and `knx bus monitor`
-against their own gateway.
+reading `xknx` or other stacks. Live-gateway verification ran 2026-09-06
+against a real gateway (`cargo test -p knx-net -- --ignored`) and found one
+real bug (see below) — now fixed and re-verified: connect, heartbeat,
+receive and disconnect all confirmed against physical hardware, not just
+unit tests.
+
+**Bug found and fixed by live verification:** `encode_connect_request`
+built the CONNECT_REQUEST body as control HPAI, CRI, data HPAI — which is
+the order Core v01.06.02 AS §7.8.1's prose describes, but not what any
+interoperable stack actually puts on the wire. The real gateway silently
+dropped every such request (no CONNECT_RESPONSE, ever — indistinguishable
+from a dead gateway or a firewall). Comparing against `xknx`'s
+`ConnectRequest.to_knx()` (control HPAI, data HPAI, CRI) and confirming
+with a hand-crafted UDP packet pinned the order; switching to it fixed the
+timeout immediately. Lesson for future codec work against this spec:
+where the prose and the wire disagree, trust the wire — cross-check a new
+service against a second interoperable implementation before assuming the
+prose is unambiguous.
 
 Known gaps added this cycle (not bugs, scope decisions):
 

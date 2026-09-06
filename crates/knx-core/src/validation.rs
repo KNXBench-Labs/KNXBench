@@ -8,8 +8,9 @@ use std::fmt;
 use crate::address::{GroupAddress, IndividualAddress};
 use crate::devices::Devices;
 use crate::group::GroupRange;
-use crate::ids::{ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId};
+use crate::ids::{AreaId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId, LineId};
 use crate::installation::Installation;
+use crate::topology::{Area, Line, Topology};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValidationError {
@@ -30,6 +31,29 @@ pub enum ValidationError {
         address: GroupAddress,
         existing: GroupAddressId,
         new: GroupAddressId,
+    },
+    DuplicateAreaAddress {
+        address: u8,
+        existing: AreaId,
+        new: AreaId,
+    },
+    DuplicateLineAddress {
+        address: u8,
+        existing: LineId,
+        new: LineId,
+    },
+    GroupRangeOutsideParent {
+        range: GroupRangeId,
+        parent: GroupRangeId,
+    },
+    OverlappingGroupRange {
+        range: GroupRangeId,
+        existing: GroupRangeId,
+    },
+    GroupRangeInverted {
+        range: GroupRangeId,
+        start: GroupAddress,
+        end: GroupAddress,
     },
 }
 
@@ -63,6 +87,36 @@ impl fmt::Display for ValidationError {
                 f,
                 "group address {} already used by group address {existing}, cannot assign to group address {new}",
                 address.raw()
+            ),
+            ValidationError::DuplicateAreaAddress {
+                address,
+                existing,
+                new,
+            } => write!(
+                f,
+                "area address {address} already used by area {existing}, cannot assign to area {new}"
+            ),
+            ValidationError::DuplicateLineAddress {
+                address,
+                existing,
+                new,
+            } => write!(
+                f,
+                "line address {address} already used by line {existing} in the same area, cannot assign to line {new}"
+            ),
+            ValidationError::GroupRangeOutsideParent { range, parent } => write!(
+                f,
+                "group range {range} does not nest inside its parent range {parent}"
+            ),
+            ValidationError::OverlappingGroupRange { range, existing } => write!(
+                f,
+                "group range {range} overlaps existing range {existing}"
+            ),
+            ValidationError::GroupRangeInverted { range, start, end } => write!(
+                f,
+                "group range {range} has start {} after end {}",
+                start.raw(),
+                end.raw()
             ),
         }
     }
@@ -107,6 +161,117 @@ pub fn check_no_duplicate_group_address(
     Ok(())
 }
 
+/// Rejects assigning `address` to `candidate` if any other area in
+/// `topology` already has it. An area reusing its own current address is
+/// not a duplicate.
+pub fn check_no_duplicate_area_address(
+    topology: &Topology,
+    candidate: AreaId,
+    address: u8,
+) -> Result<(), ValidationError> {
+    for area in &topology.areas {
+        if area.id != candidate && area.address == address {
+            return Err(ValidationError::DuplicateAreaAddress {
+                address,
+                existing: area.id,
+                new: candidate,
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Rejects assigning `address` to `candidate` if any other line *owned by
+/// `area`* already has it — line addresses are unique per area
+/// (Area.Line.Device numbering), not project-wide, so this only ever
+/// looks at `area`'s own line list, resolved against `lines`.
+pub fn check_no_duplicate_line_address(
+    area: &Area,
+    lines: &[Line],
+    candidate: LineId,
+    address: u8,
+) -> Result<(), ValidationError> {
+    for &line_id in &area.lines {
+        if line_id == candidate {
+            continue;
+        }
+        if let Some(line) = lines.iter().find(|l| l.id == line_id) {
+            if line.address == address {
+                return Err(ValidationError::DuplicateLineAddress {
+                    address,
+                    existing: line.id,
+                    new: candidate,
+                });
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Rejects a group range whose `start` comes after its `end` — an inverted
+/// span that `GroupRange::contains` (which assumes `start <= x <= end`)
+/// could never match, and that would also confuse the overlap check below
+/// (its interval test assumes canonical ordering). `start == end` (a
+/// single-address range) is well-ordered and accepted.
+pub fn check_group_range_is_well_ordered(
+    candidate: GroupRangeId,
+    start: GroupAddress,
+    end: GroupAddress,
+) -> Result<(), ValidationError> {
+    if start > end {
+        Err(ValidationError::GroupRangeInverted {
+            range: candidate,
+            start,
+            end,
+        })
+    } else {
+        Ok(())
+    }
+}
+
+/// Rejects a group range whose `[start, end]` span is not entirely
+/// contained by `parent`'s own span.
+pub fn check_group_range_nests_in_parent(
+    parent: &GroupRange,
+    candidate: GroupRangeId,
+    start: GroupAddress,
+    end: GroupAddress,
+) -> Result<(), ValidationError> {
+    if parent.contains(start) && parent.contains(end) {
+        Ok(())
+    } else {
+        Err(ValidationError::GroupRangeOutsideParent {
+            range: candidate,
+            parent: parent.id,
+        })
+    }
+}
+
+/// Rejects a group range whose `[start, end]` span overlaps any sibling's
+/// (ranges at the same nesting level — all main ranges, or all middle
+/// ranges under the same parent). A range checked against its own current
+/// span is not an overlap with itself.
+pub fn check_no_overlapping_group_range<'a>(
+    siblings: impl Iterator<Item = &'a GroupRange>,
+    candidate: GroupRangeId,
+    start: GroupAddress,
+    end: GroupAddress,
+) -> Result<(), ValidationError> {
+    for sibling in siblings {
+        if sibling.id == candidate {
+            continue;
+        }
+        let overlaps = sibling.start.raw() <= end.raw() && start.raw() <= sibling.end.raw();
+        if overlaps {
+            return Err(ValidationError::OverlappingGroupRange {
+                range: candidate,
+                existing: sibling.id,
+            });
+        }
+    }
+    Ok(())
+}
+
 /// Rejects a group address that falls outside its range.
 pub fn check_group_address_in_range(
     range: &GroupRange,
@@ -144,8 +309,9 @@ mod tests {
     use super::*;
     use crate::commissioning::{CommissioningState, CompletionStatus};
     use crate::device::DeviceInstance;
-    use crate::ids::SourceRef;
-    use crate::topology::Topology;
+    use crate::group::GroupRange;
+    use crate::ids::{AreaId, GroupRangeId, LineId, SourceRef};
+    use crate::topology::{Area, Line, Topology};
 
     fn test_source() -> SourceRef {
         SourceRef {
@@ -281,6 +447,225 @@ mod tests {
             &installation,
             GroupAddressId(1),
             GroupAddress::from_raw(5)
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn duplicate_area_address_is_rejected() {
+        let topology = Topology {
+            areas: vec![Area {
+                id: AreaId(1),
+                source: test_source(),
+                name: "A1".into(),
+                address: 1,
+                completion: CompletionStatus::FinishedDesign,
+                lines: vec![],
+            }],
+            lines: vec![],
+            unassigned: vec![],
+        };
+        let err = check_no_duplicate_area_address(&topology, AreaId(2), 1);
+        assert!(matches!(
+            err,
+            Err(ValidationError::DuplicateAreaAddress { .. })
+        ));
+    }
+
+    #[test]
+    fn an_area_reusing_its_own_address_is_not_a_duplicate() {
+        let topology = Topology {
+            areas: vec![Area {
+                id: AreaId(1),
+                source: test_source(),
+                name: "A1".into(),
+                address: 1,
+                completion: CompletionStatus::FinishedDesign,
+                lines: vec![],
+            }],
+            lines: vec![],
+            unassigned: vec![],
+        };
+        assert!(check_no_duplicate_area_address(&topology, AreaId(1), 1).is_ok());
+    }
+
+    fn test_line(id: LineId, address: u8) -> Line {
+        Line {
+            id,
+            source: test_source(),
+            name: "L".into(),
+            address,
+            medium_ref: "TP".into(),
+            domain_address: None,
+            domain_address_is_checked: None,
+            ip_routing_multicast_address: None,
+            multicast_ttl: None,
+            completion: CompletionStatus::FinishedDesign,
+            devices: vec![],
+        }
+    }
+
+    #[test]
+    fn duplicate_line_address_within_the_same_area_is_rejected() {
+        let area = Area {
+            id: AreaId(1),
+            source: test_source(),
+            name: "A".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![LineId(1)],
+        };
+        let lines = vec![test_line(LineId(1), 1)];
+        let err = check_no_duplicate_line_address(&area, &lines, LineId(2), 1);
+        assert!(matches!(
+            err,
+            Err(ValidationError::DuplicateLineAddress { .. })
+        ));
+    }
+
+    #[test]
+    fn a_line_reusing_its_own_address_is_not_a_duplicate() {
+        let area = Area {
+            id: AreaId(1),
+            source: test_source(),
+            name: "A".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![LineId(1)],
+        };
+        let lines = vec![test_line(LineId(1), 1)];
+        assert!(check_no_duplicate_line_address(&area, &lines, LineId(1), 1).is_ok());
+    }
+
+    #[test]
+    fn the_same_address_in_a_different_area_is_not_a_duplicate() {
+        // check_no_duplicate_line_address only ever sees one area's own
+        // line list, so a different area's line sharing the same address
+        // number never reaches it — this documents that scoping choice.
+        let area = Area {
+            id: AreaId(2),
+            source: test_source(),
+            name: "A2".into(),
+            address: 2,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![],
+        };
+        let other_areas_line = vec![test_line(LineId(1), 1)];
+        assert!(check_no_duplicate_line_address(&area, &other_areas_line, LineId(2), 1).is_ok());
+    }
+
+    fn test_range(
+        id: GroupRangeId,
+        start: u16,
+        end: u16,
+        parent: Option<GroupRangeId>,
+    ) -> GroupRange {
+        GroupRange {
+            id,
+            source: test_source(),
+            name: "R".into(),
+            start: GroupAddress::from_raw(start),
+            end: GroupAddress::from_raw(end),
+            parent,
+            children: vec![],
+        }
+    }
+
+    #[test]
+    fn an_inverted_range_is_rejected() {
+        let err = check_group_range_is_well_ordered(
+            GroupRangeId(1),
+            GroupAddress::from_raw(255),
+            GroupAddress::from_raw(0),
+        );
+        assert!(matches!(
+            err,
+            Err(ValidationError::GroupRangeInverted { .. })
+        ));
+    }
+
+    #[test]
+    fn a_well_ordered_range_is_accepted() {
+        assert!(check_group_range_is_well_ordered(
+            GroupRangeId(1),
+            GroupAddress::from_raw(0),
+            GroupAddress::from_raw(255)
+        )
+        .is_ok());
+        // The degenerate single-address case (start == end) is well-ordered.
+        assert!(check_group_range_is_well_ordered(
+            GroupRangeId(1),
+            GroupAddress::from_raw(100),
+            GroupAddress::from_raw(100)
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn a_range_nesting_inside_its_parent_is_accepted() {
+        let parent = test_range(GroupRangeId(1), 0, 2047, None);
+        assert!(check_group_range_nests_in_parent(
+            &parent,
+            GroupRangeId(2),
+            GroupAddress::from_raw(0),
+            GroupAddress::from_raw(255)
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn a_range_extending_past_its_parent_is_rejected() {
+        let parent = test_range(GroupRangeId(1), 0, 255, None);
+        let err = check_group_range_nests_in_parent(
+            &parent,
+            GroupRangeId(2),
+            GroupAddress::from_raw(0),
+            GroupAddress::from_raw(2047),
+        );
+        assert!(matches!(
+            err,
+            Err(ValidationError::GroupRangeOutsideParent { .. })
+        ));
+    }
+
+    #[test]
+    fn overlapping_sibling_ranges_are_rejected() {
+        let existing = test_range(GroupRangeId(1), 0, 255, None);
+        let siblings = [existing];
+        let err = check_no_overlapping_group_range(
+            siblings.iter(),
+            GroupRangeId(2),
+            GroupAddress::from_raw(200),
+            GroupAddress::from_raw(500),
+        );
+        assert!(matches!(
+            err,
+            Err(ValidationError::OverlappingGroupRange { .. })
+        ));
+    }
+
+    #[test]
+    fn non_overlapping_sibling_ranges_are_accepted() {
+        let existing = test_range(GroupRangeId(1), 0, 255, None);
+        let siblings = [existing];
+        assert!(check_no_overlapping_group_range(
+            siblings.iter(),
+            GroupRangeId(2),
+            GroupAddress::from_raw(256),
+            GroupAddress::from_raw(500)
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn a_range_checked_against_its_own_current_span_is_not_an_overlap() {
+        let existing = test_range(GroupRangeId(1), 0, 255, None);
+        let siblings = [existing];
+        assert!(check_no_overlapping_group_range(
+            siblings.iter(),
+            GroupRangeId(1),
+            GroupAddress::from_raw(0),
+            GroupAddress::from_raw(255)
         )
         .is_ok());
     }

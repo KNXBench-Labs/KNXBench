@@ -136,6 +136,12 @@ pub fn sync_after_command(
         Command::RenameGroupRange { .. } => {
             // Group-range persistence layer not yet implemented (Task 5 scope).
         }
+        Command::LinkComObject { .. } => {
+            // Group-link persistence layer not yet implemented (Task 6 scope).
+        }
+        Command::UnlinkComObject { .. } => {
+            // Group-link persistence layer not yet implemented (Task 6 scope).
+        }
     }
     tx.commit()?;
     Ok(())

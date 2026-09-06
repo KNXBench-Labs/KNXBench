@@ -473,6 +473,24 @@ pub fn upsert_com_object_dpt_override(
     write_override_row(conn, com_object_instance_id, Attr::Dpt, encode_dpt(dpt))
 }
 
+/// Writes exactly one `com_object_override` row for `com`'s `description`
+/// field — the single-attribute upsert `command_sync::sync_after_command`
+/// calls for `SetComObjectDescription`/`RestoreComObjectDescription`,
+/// instead of rewriting the whole `com_object_instance` row. Mirrors
+/// `upsert_com_object_dpt_override`.
+pub fn upsert_com_object_description_override(
+    conn: &Connection,
+    com_object_instance_id: ComObjectInstanceId,
+    description: &Override<Text>,
+) -> Result<(), StoreError> {
+    write_override_row(
+        conn,
+        com_object_instance_id,
+        Attr::Description,
+        encode_text(description),
+    )
+}
+
 fn size_columns(
     size: &Option<Resolved<ObjectSize>>,
 ) -> (Option<&'static str>, Option<i64>, Option<&'static str>) {
@@ -1001,6 +1019,30 @@ mod tests {
         assert_eq!(loaded.dpt, new_dpt);
         assert_eq!(loaded.text, com.text); // untouched by the targeted upsert
         assert_eq!(loaded.description, com.description); // untouched
+        assert_eq!(loaded.flags, com.flags); // untouched
+        assert_eq!(loaded.size, com.size); // untouched
+        assert_eq!(loaded.is_active, com.is_active); // untouched
+    }
+
+    #[test]
+    fn upsert_com_object_description_override_touches_only_the_description_row() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        upsert_installation_row(&conn, &installation()).unwrap();
+        let d = device();
+        upsert_device(&conn, InstallationId(0), 0, &d).unwrap();
+        let com = com_object_fixture();
+        upsert_com_object_instance(&conn, d.id, 0, &com).unwrap();
+
+        let new_description = Override::Value(Resolved {
+            value: Text::Literal("Aktoreingang 1".into()),
+            layer: Layer::UserEdit,
+        });
+        upsert_com_object_description_override(&conn, com.id, &new_description).unwrap();
+
+        let loaded = load_com_object_instance(&conn, com.id).unwrap();
+        assert_eq!(loaded.description, new_description);
+        assert_eq!(loaded.text, com.text); // untouched by the targeted upsert
+        assert_eq!(loaded.dpt, com.dpt); // untouched
         assert_eq!(loaded.flags, com.flags); // untouched
         assert_eq!(loaded.size, com.size); // untouched
         assert_eq!(loaded.is_active, com.is_active); // untouched

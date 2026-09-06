@@ -53,6 +53,26 @@ export function setComObjectDpt(comObjectId: number, dpt: string | null): Promis
   });
 }
 
+export function setDeviceDescription(
+  deviceId: number,
+  description: string | null,
+): Promise<ProjectTree> {
+  return request("/api/device-description", {
+    method: "POST",
+    body: JSON.stringify({ deviceId, description }),
+  });
+}
+
+export function setComObjectDescription(
+  comObjectId: number,
+  description: string | null,
+): Promise<ProjectTree> {
+  return request("/api/com-object-description", {
+    method: "POST",
+    body: JSON.stringify({ comObjectId, description }),
+  });
+}
+
 export function createGroupAddress(name: string, address: string): Promise<ProjectTree> {
   return request("/api/group-addresses", { method: "POST", body: JSON.stringify({ name, address }) });
 }

@@ -356,6 +356,17 @@ is the next step, to be run by the user via `cargo test -p knx-net --
 --ignored` and `knx bus monitor` against their own gateway in an environment
 with LAN access.
 
+**Session 6, Cycle 3 (2026-09):** `discover()` implemented — a
+`SEARCH_REQUEST` multicast to `224.0.23.12:3671` (Core v01.06.02 AS §4.2),
+collecting `SEARCH_RESPONSE`s for the full 10s `SEARCH_TIMEOUT` and
+parsing both the Device Info and Supported Service Families DIBs
+(§7.5.4.2/§7.5.4.3). `crates/knx-net` gained `core::dib` and `discovery`,
+plus a `knx bus discover` CLI subcommand. Live verification against the
+reference gateway — confirming it answers and advertises tunnelling
+support — is the next step, to be run by the user via
+`cargo test -p knx-net -- --ignored` and `knx bus discover` on their own
+LAN.
+
 ### 8.2 Standards position [D]
 
 * KNXnet/IP is publicly standardized as **ISO 22510:2019** (EN ISO 22510:2020), covering Overview, Core, Device Management, Tunnelling, Routing, Remote Diagnosis, Secured Communication, plus cEMI and coupler resources. Purchasable, not free.

@@ -237,13 +237,13 @@ them, exposed as a `BusConnection` trait (`discover`, `connect_tunnel`) and
 a `TunnelClient` handle (`send`, `subscribe`) — the same names this
 document already fixed, now backed by a real implementation grounded in
 the KNX Association specification rather than a port of an existing
-stack. `discover` and `TunnelClient::send` remain explicit
-`BusError::NotImplemented` stubs; later cycles cover them, plus routing
-and KNX IP Secure. The bus monitor is a consumer that resolves telegrams
-against the open project (`apps/knx-cli`'s `bus monitor` subcommand,
-resolving against group address names only, no DPT interpretation yet);
-the connection itself knows nothing about projects, as this section
-originally specified.
+stack. `TunnelClient::send` (Cycle 2) and `discover` (Cycle 3, multicast
+`SEARCH_REQUEST`/`SEARCH_RESPONSE`) are both implemented now; routing and
+KNX IP Secure remain later cycles. The bus monitor is a consumer that
+resolves telegrams against the open project (`apps/knx-cli`'s `bus monitor`
+subcommand, resolving against group address names only, no DPT
+interpretation yet); the connection itself knows nothing about projects,
+as this section originally specified.
 
 `BusAccess` from `0.xml` — the ETS commissioning interface connection string —
 is preserved verbatim and **not** translated into our own connection model

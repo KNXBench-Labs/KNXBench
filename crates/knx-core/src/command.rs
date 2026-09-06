@@ -16,9 +16,10 @@ use crate::string_table::Text;
 use crate::topology::{Area, Line};
 use crate::validation::{
     check_group_address_in_range, check_group_link_target_exists,
-    check_group_range_nests_in_parent, check_no_duplicate_area_address,
-    check_no_duplicate_group_address, check_no_duplicate_individual_address,
-    check_no_duplicate_line_address, check_no_overlapping_group_range, ValidationError,
+    check_group_range_is_well_ordered, check_group_range_nests_in_parent,
+    check_no_duplicate_area_address, check_no_duplicate_group_address,
+    check_no_duplicate_individual_address, check_no_duplicate_line_address,
+    check_no_overlapping_group_range, ValidationError,
 };
 use crate::IndividualAddress;
 
@@ -537,6 +538,7 @@ impl Command {
                     .installations
                     .first_mut()
                     .ok_or(CommandError::InstallationNotFound)?;
+                check_group_range_is_well_ordered(range.id, range.start, range.end)?;
                 if let Some(parent_id) = range.parent {
                     let parent = installation
                         .group_ranges
@@ -1595,6 +1597,25 @@ mod tests {
                 ValidationError::GroupRangeOutsideParent { .. }
             ))
         ));
+    }
+
+    #[test]
+    fn create_group_range_rejects_an_inverted_span() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::CreateGroupRange {
+                range: test_range(GroupRangeId(1), 255, 0, None),
+            },
+        );
+        assert!(matches!(
+            result,
+            Err(CommandError::Validation(
+                ValidationError::GroupRangeInverted { .. }
+            ))
+        ));
+        assert!(!stack.can_undo());
     }
 
     #[test]

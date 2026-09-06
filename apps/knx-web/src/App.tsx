@@ -10,8 +10,10 @@ import Search from "./Search";
 import CommandPalette from "./CommandPalette";
 import type { CommandContext } from "./commandRegistry";
 import ThemeToggle from "./ThemeToggle";
+import ThemePanel from "./ThemePanel";
 import Dashboard from "./Dashboard";
 import { useTheme } from "./theme";
+import { usePalette } from "./palette";
 import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
 
@@ -34,6 +36,8 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [theme, cycleTheme] = useTheme();
+  const [paletteSettings, setPaletteColor, setPaletteMotion, resetPalette] = usePalette();
+  const [themePanelOpen, setThemePanelOpen] = useState(false);
   // Mirrors `selection` synchronously so in-flight device_detail responses
   // can tell, once they land, whether the selection has since moved on —
   // state updates alone are too late to check inside the same async
@@ -237,6 +241,18 @@ function App() {
         Commands… (Ctrl+Shift+P)
       </button>
       <ThemeToggle theme={theme} onCycle={cycleTheme} />
+      <button onClick={() => setThemePanelOpen(true)} title="Customize theme" aria-label="Customize theme">
+        ⚙
+      </button>
+      {themePanelOpen && (
+        <ThemePanel
+          settings={paletteSettings}
+          onSetColor={setPaletteColor}
+          onSetMotion={setPaletteMotion}
+          onResetAll={resetPalette}
+          onClose={() => setThemePanelOpen(false)}
+        />
+      )}
       <ToastStack toasts={toasts} onDismiss={dismiss} />
       {tree && (
         <div className="workspace">

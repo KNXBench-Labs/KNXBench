@@ -272,16 +272,25 @@ error text is untouched; humor lives entirely in the frontend wrapper.
 
 **Entry condition.** Import produces a model worth displaying.
 
-Cycle 11+ candidates (from `ideas.md`, not yet scheduled), each with no
-architectural blocker remaining now that dark/light mode and toasts have
-shipped: fine-grained UI animation, deliberately held until dark/light
-mode landed so it wouldn't be redone against components that were still
-changing structurally — that gate is now clear. Renaming the project to
-KNXBench (repo, README, docs) is done; renaming the crates themselves
-(`knx-core`, `knx-store`, `knx-desktop`, `knx-server`, `knx-cli`, …) is a
-deliberate non-goal — decided against, not merely deferred, since every
-one of them has downstream dependents and a rename would only ever be
-cosmetic. Cycle 11 is fine-grained UI animation.
+Cycle 11 delivers the fine-grained UI animation candidate — held until
+dark/light mode landed so it wouldn't be redone against components that
+were still changing structurally — bundled with a second, user-requested
+piece: user-customizable theme tokens. `palette.ts` layers four
+freely-colorable tokens (`accent`, `bg`, `surface`, `text`) on top of
+cycle 7's System/Light/Dark cycle, applied as inline CSS custom
+properties on `<html>` so an unoverridden token falls through to the base
+theme via ordinary cascade. Motion ships as a three-level
+`off`/`subtle`/`standard` setting mapped to a transition-duration token,
+gated entirely inside `prefers-reduced-motion: no-preference` — the OS
+setting always wins over the user's choice. `ThemePanel.tsx`, opened from
+a new gear button beside `ThemeToggle`, is the settings surface for both.
+Renaming the project to KNXBench (repo, README, docs) is done; renaming
+the crates themselves (`knx-core`, `knx-store`, `knx-desktop`,
+`knx-server`, `knx-cli`, …) is a deliberate non-goal — decided against,
+not merely deferred, since every one of them has downstream dependents
+and a rename would only ever be cosmetic.
+
+Cycle 12+ candidates (from `ideas.md`, not yet scheduled).
 
 ## Cross-cutting — Web/Docker deployment target
 

@@ -124,6 +124,9 @@ pub fn sync_after_command(
         Command::DeleteLine { .. } => {
             // Line persistence layer not yet implemented (Task 3 scope).
         }
+        Command::MoveDeviceToLine { .. } => {
+            // Line/device-membership persistence layer not yet implemented (Task 4 scope).
+        }
     }
     tx.commit()?;
     Ok(())

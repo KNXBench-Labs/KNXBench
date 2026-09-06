@@ -127,6 +127,15 @@ pub fn sync_after_command(
         Command::MoveDeviceToLine { .. } => {
             // Line/device-membership persistence layer not yet implemented (Task 4 scope).
         }
+        Command::CreateGroupRange { .. } => {
+            // Group-range persistence layer not yet implemented (Task 5 scope).
+        }
+        Command::DeleteGroupRange { .. } => {
+            // Group-range persistence layer not yet implemented (Task 5 scope).
+        }
+        Command::RenameGroupRange { .. } => {
+            // Group-range persistence layer not yet implemented (Task 5 scope).
+        }
     }
     tx.commit()?;
     Ok(())

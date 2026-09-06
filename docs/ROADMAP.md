@@ -358,6 +358,18 @@ diagnostics — closing three known gaps in the existing `TunnelClient`/
 `RoutingClient` flows (heartbeat retry race, no shutdown signal to
 subscribers, `ROUTING_BUSY` not honored).
 
+**Decision (2026-09-06).** KNX IP Secure is shelved indefinitely, not
+merely deferred to "a later cycle" — no fixed session or cycle owns it.
+Rationale: plain tunnelling/routing already covers the common case
+(legacy gateways, and current-generation gateways not configured
+secure-only); IP Secure only matters for secure-only gateways or
+installations with IP Secure explicitly enabled. Revisit when a real
+gateway actually needs it, not speculatively — at which point do the
+RESEARCH.md §9 spike (ECDH handshake, TCP unicast transport, AES-CCM,
+`.knxkeys` keyring; whether keys are even readable from `.knxproj` or
+only `.knxkeys`) before implementing. See
+[KNOWN_LIMITATIONS.md §26](KNOWN_LIMITATIONS.md).
+
 **Deliverables.** The `BusConnection` trait implemented against ISO 22510:
 discovery, tunnelling, routing, cEMI and telegram encoding; the bus monitor as
 a consumer that resolves telegrams against the open project; connection

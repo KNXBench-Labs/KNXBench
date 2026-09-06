@@ -574,7 +574,66 @@ failing outright instead of warning.
 deliberately not made speculatively ahead of an actual failure, but worth
 fixing before Node 20's EOL removes the option of doing it calmly.
 
-## 26. `/api/project/download` has no frontend caller
+## 26. `BusConnection` does not yet support discovery, sending, routing, or KNX IP Secure
+
+**Limitation.** `crates/knx-net`'s `BusConnection` trait implements only
+read-only tunnelling: `connect_tunnel` opens a tunnel to a gateway by known
+IP and `subscribe` receives telegrams. `discover`, `send` and all routing and
+secure-protocol paths are `BusError::NotImplemented` stubs. A reader should
+not assume the trait is feature-complete because it compiles.
+
+**Cause.** Session 6 Cycle 1 delivered read-only tunnelling as the foundation
+for bus monitoring; later cycles cover discovery, sending and routing. Secure
+protocols are out of v1 scope, handled by the isolated `knx-secure` crate.
+
+**Impact.** A real KNX installation can be monitored (telegrams received and
+resolved against the project) and diagnostics run, but cannot be programmed
+or its topology discovered automatically.
+
+**Lifted when.** Each feature (discovery, sending, routing, KNX IP Secure)
+lands in its own later cycle of Session 6, or in Session 7.
+
+## 27. `TunnelClient` heartbeat retry has a narrow race condition
+
+**Limitation.** `crates/knx-net`'s `TunnelClient` manages heartbeat
+timeouts with a `tokio::select!` and a `tokio::time::sleep`. A stale
+wakeup from a cancelled sleep can race the timeout branch, burning one
+retry attempt unnecessarily before the real retry fires on the next cycle.
+
+**Cause.** A low-probability race in the select-loop structure, accepted
+during Cycle 1 because the real retry logic still fires correctly after
+the stale wakeup; no observed impact on live gateways.
+
+**Impact.** None observed. Under load or adversarial timing, a connection
+might consume one extra heartbeat attempt before reconnecting.
+
+**Lifted when.** A dedicated hardening pass reviews the state machine's
+timing and fixes the race with explicit timing guards or by restructuring
+the wakeup logic. Not a blocking issue for Cycle 1.
+
+## 28. `apps/knx-cli bus monitor` has formatting limitations
+
+**Limitation.** The `knx bus monitor` subcommand, added in Session 6 Cycle 1,
+always formats group addresses as three-level (e.g. `1/2/3`) regardless of
+the project's configured style, and merges group-address names from all
+installations into one flat namespace (last-seen wins on collision).
+
+**Cause.** Deliberate scope decision for Cycle 1: the tool is built for
+dev/smoke-testing use against the reference project, which has one installation
+and uses three-level addressing throughout. Generalizing to multi-installation
+projects and honouring the configured style requires mapping infrastructure
+not needed for this cycle's verification workflow.
+
+**Impact.** A project with multiple installations or a non-three-level
+group-address style will see misformatted or incorrectly-merged names in the
+monitor output. Data is not lost — telegrams still resolve by address internally
+— only the human-readable label is approximate.
+
+**Lifted when.** A future cycle adds full formatting respect and per-installation
+name resolution, either bundled into a general bus-monitor redesign or as a
+targeted enhancement to the CLI subcommand.
+
+## 29. `/api/project/download` has no frontend caller
 
 **Limitation.** `apps/knx-server`'s `/api/project/download` route is
 implemented and covered by server-side tests (`tests/http_fs_routes.rs`),

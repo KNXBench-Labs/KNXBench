@@ -329,6 +329,11 @@ already-shipped application logic rather than new domain capability.
 
 **Goal.** Talk to the bus.
 
+**Status.** Cycle 1 (2026-09-06) delivered read-only tunnelling per the 2026-09-06
+design spec: `crates/knx-net` codec modules, `TunnelClient` state machine,
+live-gateway integration test, and `knx bus monitor` CLI subcommand. Discovery,
+sending, routing, and KNX IP Secure remain for later cycles.
+
 **Deliverables.** The `BusConnection` trait implemented against ISO 22510:
 discovery, tunnelling, routing, cEMI and telegram encoding; the bus monitor as
 a consumer that resolves telegrams against the open project; connection

@@ -592,12 +592,20 @@ foundation for bus monitoring; Cycle 2 added sending; Cycle 3 added
 discovery. Routing is still a later cycle. Secure protocols are out of
 v1 scope, handled by the isolated `knx-secure` crate.
 
-**Impact.** A real KNX installation's gateways can now be found on the
-LAN without a known IP, and monitored/actuated by group address over a
-tunnel, but it still cannot be reached over routing (multicast) or KNX
-IP Secure. Discovery does not work unmodified inside the `knx-server`
-Docker container (needs `--network host`) — untouched by this cycle,
-since `knx-server` doesn't call `discover` yet.
+**Impact.** A real KNX installation's gateways can be found on the LAN
+without a known IP once `discover()` sends a valid discovery HPAI (a
+final-review fix: the discovery socket must stay unconnected to receive
+unicast `SEARCH_RESPONSE`s from any gateway, so a naive `local_addr()`
+read off it reported the invalid `0.0.0.0:<port>` — see the fix commit
+for the resolved-IP/real-port workaround), then handed by control
+endpoint to `connect_tunnel` for monitoring/actuation by group address
+over a tunnel. Live-hardware verification of the full discover-then-connect
+flow was left for the user to run, same as Cycle 2's `send` — this
+sandbox has no real KNXnet/IP gateway to discover. Routing (multicast)
+and KNX IP Secure remain unreachable regardless. Discovery does not work
+unmodified inside the `knx-server` Docker container (needs
+`--network host`) — untouched by this cycle, since `knx-server` doesn't
+call `discover` yet.
 
 **Lifted when.** Routing and KNX IP Secure each land in their own later
 cycle of Session 6, or in Session 7.

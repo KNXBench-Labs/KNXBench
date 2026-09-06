@@ -10,6 +10,12 @@ use super::hpai::Hpai;
 // Discovery service type identifiers, Core v01.06.02 AS §7.4.1.
 pub const SEARCH_REQUEST: u16 = 0x0201;
 pub const SEARCH_RESPONSE: u16 = 0x0202;
+
+// Routing service type identifiers, Routing v01.05.02 AS §5.1.
+pub const ROUTING_INDICATION: u16 = 0x0530;
+pub const ROUTING_LOST_MESSAGE: u16 = 0x0531;
+pub const ROUTING_BUSY: u16 = 0x0532;
+
 pub const CONNECT_REQUEST: u16 = 0x0205;
 pub const CONNECT_RESPONSE: u16 = 0x0206;
 pub const CONNECTIONSTATE_REQUEST: u16 = 0x0207;

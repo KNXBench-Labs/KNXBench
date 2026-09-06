@@ -1,7 +1,8 @@
 //! The `BusConnection` trait and its tunnelling implementation
-//! (ARCHITECTURE.md §8). `discover`/`TunnelClient::send` are explicit
-//! `BusError::NotImplemented` stubs this cycle — never `todo!()`, never a
-//! silent no-op (CLAUDE.md).
+//! (ARCHITECTURE.md §8). `discover` remains an explicit
+//! `BusError::NotImplemented` stub this cycle — never `todo!()`, never a
+//! silent no-op (CLAUDE.md). `TunnelClient::send` is implemented as of
+//! Session 6 Cycle 2 (KNOWN_LIMITATIONS.md §26).
 
 use std::net::{SocketAddr, SocketAddrV4};
 use std::sync::Arc;
@@ -11,7 +12,7 @@ use knx_core::IndividualAddress;
 use tokio::net::UdpSocket;
 use tokio::sync::{broadcast, Mutex, Notify};
 
-use crate::cemi::{self, LDataFrame};
+use crate::cemi::{self, ApplicationService, Destination, LDataFrame};
 use crate::core::hpai::Hpai;
 use crate::core::services;
 use crate::frame;
@@ -93,6 +94,15 @@ struct TunnelState {
     heartbeat_reply: Mutex<Option<u8>>,
     heartbeat_notify: Notify,
     shutdown: Notify,
+    /// Guards the whole send-and-wait-for-ack critical section, so at most
+    /// one `TUNNELLING_REQUEST` is outstanding at a time (Tunnelling
+    /// v01.07.01 AS §2.6 assumes one un-acked request per direction) —
+    /// its value is the next sequence counter to use, tracked separately
+    /// from `receive_loop`'s own `recv_seq` since the two directions
+    /// number independently.
+    send_seq: Mutex<u8>,
+    ack_reply: Mutex<Option<(u8, u8)>>,
+    ack_notify: Notify,
 }
 
 /// `disconnect()` is the graceful path — it tells the gateway we're leaving
@@ -147,6 +157,9 @@ impl TunnelClient {
             heartbeat_reply: Mutex::new(None),
             heartbeat_notify: Notify::new(),
             shutdown: Notify::new(),
+            send_seq: Mutex::new(0),
+            ack_reply: Mutex::new(None),
+            ack_notify: Notify::new(),
         });
 
         tokio::spawn(receive_loop(state.clone()));
@@ -163,10 +176,63 @@ impl TunnelClient {
         self.state.tx.subscribe()
     }
 
-    /// Sending is out of scope this cycle (design spec §Scope) — this is a
-    /// typed, catchable stub, not a silent no-op.
-    pub async fn send(&self, _frame: &LDataFrame) -> Result<(), BusError> {
-        Err(BusError::NotImplemented)
+    /// Sends an `L_Data.req` (Tunnelling v01.07.01 AS §2.6): source/kind
+    /// are the client's concern, not the caller's — the gateway assigns
+    /// the actual source address and message code, so only the
+    /// destination and application service are exposed here.
+    ///
+    /// Per §2.6.1/§2.6.2: waits up to `TUNNELLING_REQUEST_TIMEOUT` (1s)
+    /// for a matching `TUNNELLING_ACK`; on timeout or an error status,
+    /// repeats the same `TUNNELLING_REQUEST` once with the same sequence
+    /// counter. If that repeat also fails, the connection is terminated
+    /// (a `DISCONNECT_REQUEST` is sent, best-effort, and the background
+    /// tasks are told to stop) and `BusError::Timeout` is returned — the
+    /// same outcome `heartbeat_loop` already reaches on repeated failure.
+    pub async fn send(
+        &self,
+        destination: Destination,
+        service: ApplicationService,
+    ) -> Result<(), BusError> {
+        let frame = LDataFrame {
+            kind: cemi::LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0),
+            destination,
+            service,
+        };
+        let cemi_bytes = cemi::encode_l_data(&frame);
+
+        let mut seq_guard = self.state.send_seq.lock().await;
+        let seq = *seq_guard;
+        let datagram = frame::encode_frame(
+            tunnelling::TUNNELLING_REQUEST,
+            &tunnelling::encode_tunnelling_request(self.state.channel_id, seq, &cemi_bytes),
+        );
+
+        for _attempt in 0..2 {
+            *self.state.ack_reply.lock().await = None;
+            self.state
+                .socket
+                .send(&datagram)
+                .await
+                .map_err(BusError::Io)?;
+            let waited =
+                tokio::time::timeout(Duration::from_secs(1), self.state.ack_notify.notified())
+                    .await;
+            let reply = self.state.ack_reply.lock().await.take();
+            if waited.is_ok() {
+                if let Some((ack_seq, status)) = reply {
+                    if ack_seq == seq && status == tunnelling::E_NO_ERROR {
+                        *seq_guard = seq.wrapping_add(1);
+                        return Ok(());
+                    }
+                }
+            }
+        }
+
+        drop(seq_guard);
+        self.state.shutdown.notify_waiters();
+        let _ = self.try_send_disconnect_request().await;
+        Err(BusError::Timeout)
     }
 
     /// Best-effort graceful disconnect (Core v01.06.02 AS §5.5): sends
@@ -256,6 +322,14 @@ async fn receive_loop(state: Arc<TunnelState>) {
                     send_ack(&state, req.sequence_counter, tunnelling::E_NO_ERROR).await;
                 }
                 // Any other sequence number: no ack, discard (§2.6.1).
+            }
+            tunnelling::TUNNELLING_ACK => {
+                if let Ok(ack) = tunnelling::decode_tunnelling_ack(body) {
+                    if ack.channel_id == state.channel_id {
+                        *state.ack_reply.lock().await = Some((ack.sequence_counter, ack.status));
+                        state.ack_notify.notify_one();
+                    }
+                }
             }
             services::CONNECTIONSTATE_RESPONSE => {
                 if let Ok(resp) = services::decode_connectionstate_response(body) {

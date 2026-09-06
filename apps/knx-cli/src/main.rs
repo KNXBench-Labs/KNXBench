@@ -14,6 +14,7 @@ const USAGE: &str =
      \x20     knx products show <program-id> [--product-db <path>]\n\
      \x20     knx products verify [--product-db <path>]\n\
      \x20     knx bus monitor --gateway <host:port> [--project <path.knxdb>]\n\
+     \x20     knx bus write --gateway <host:port> <main/middle/sub> <0|1|hex>\n\
      exit codes: 0 = imported cleanly (warnings allowed), 1 = could not import,\n\
      2 = imported, but the report contains errors";
 
@@ -534,6 +535,7 @@ fn run_products_verify(args: &[String]) -> ExitCode {
 fn run_bus(args: &[String]) -> ExitCode {
     match args.first().map(String::as_str) {
         Some("monitor") => run_bus_monitor(&args[1..]),
+        Some("write") => run_bus_write(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE
@@ -646,6 +648,149 @@ async fn run_bus_monitor_async(
         }
     }
     ExitCode::SUCCESS
+}
+
+struct BusWriteArgs {
+    gateway: String,
+    group_address: String,
+    value: String,
+}
+
+fn parse_bus_write_args(args: &[String]) -> Result<BusWriteArgs, String> {
+    let mut gateway = None;
+    let mut positional = Vec::new();
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--gateway" => {
+                gateway = Some(take_value(args, i + 1, "--gateway")?);
+                i += 2;
+            }
+            other => {
+                positional.push(other.to_string());
+                i += 1;
+            }
+        }
+    }
+    let [group_address, value] = &positional[..] else {
+        return Err("expected exactly one group address and one value".to_string());
+    };
+    Ok(BusWriteArgs {
+        gateway: gateway.ok_or_else(|| "--gateway is required".to_string())?,
+        group_address: group_address.clone(),
+        value: value.clone(),
+    })
+}
+
+/// Parses a `GroupValueWrite` payload with no DPT interpretation (same
+/// scope cut as the read-only monitor's decode side): `0`/`1` is a 6-bit
+/// inline value (e.g. DPT-1), anything else is read as a hex byte string
+/// (optionally `0x`-prefixed, e.g. `2a99`).
+fn parse_group_value(s: &str) -> Result<knx_net::GroupValue, String> {
+    match s {
+        "0" => Ok(knx_net::GroupValue::Short(0)),
+        "1" => Ok(knx_net::GroupValue::Short(1)),
+        hex => {
+            let hex = hex.strip_prefix("0x").unwrap_or(hex);
+            if hex.is_empty() || hex.len() % 2 != 0 {
+                return Err(format!(
+                    "value must be 0, 1, or an even-length hex byte string, got {s}"
+                ));
+            }
+            (0..hex.len())
+                .step_by(2)
+                .map(|i| {
+                    u8::from_str_radix(&hex[i..i + 2], 16)
+                        .map_err(|_| format!("invalid hex value: {s}"))
+                })
+                .collect::<Result<Vec<u8>, String>>()
+                .map(knx_net::GroupValue::Bytes)
+        }
+    }
+}
+
+fn run_bus_write(args: &[String]) -> ExitCode {
+    let parsed = match parse_bus_write_args(args) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let gateway: std::net::SocketAddrV4 = match parsed.gateway.parse() {
+        Ok(g) => g,
+        Err(_) => {
+            eprintln!("--gateway must be host:port, e.g. 192.0.2.1:3671");
+            return ExitCode::FAILURE;
+        }
+    };
+    let group_address = match knx_core::GroupAddress::parse(
+        &parsed.group_address,
+        knx_core::GroupAddressStyle::ThreeLevel,
+    ) {
+        Ok(ga) => ga,
+        Err(e) => {
+            eprintln!("invalid group address {}: {e}", parsed.group_address);
+            return ExitCode::FAILURE;
+        }
+    };
+    let value = match parse_group_value(&parsed.value) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(run_bus_write_async(gateway, group_address, value))
+}
+
+async fn run_bus_write_async(
+    gateway: std::net::SocketAddrV4,
+    group_address: knx_core::GroupAddress,
+    value: knx_net::GroupValue,
+) -> ExitCode {
+    use knx_net::{ApplicationService, BusConnection, Destination};
+    let client = knx_net::KnxNetIpClient::new();
+    let tunnel = match client.connect_tunnel(gateway).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("could not connect to {gateway}: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let result = tunnel
+        .send(
+            Destination::Group(group_address),
+            ApplicationService::GroupValueWrite(value),
+        )
+        .await;
+    if let Err(e) = tunnel.disconnect().await {
+        eprintln!("disconnect: {e}");
+    }
+    match result {
+        Ok(()) => {
+            println!(
+                "wrote to {}",
+                group_address.format(knx_core::GroupAddressStyle::ThreeLevel)
+            );
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("write failed: {e}");
+            ExitCode::FAILURE
+        }
+    }
 }
 
 /// Loads `group_address -> name` for every installation in a stored

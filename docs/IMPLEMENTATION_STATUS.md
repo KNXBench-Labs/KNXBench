@@ -452,8 +452,8 @@ cargo deny check
 ```
 
 **Session 6, Cycle 1 (2026-09-06) — KNXnet/IP read-only tunnelling.**
-`crates/knx-net` was built with five codec modules (`address.rs`, `cemi.rs`,
-`connect.rs`, `heartbeat.rs`, `receive.rs`), unit tests for each, a
+`crates/knx-net` was built with five codec modules (`frame.rs`, `core/hpai.rs`,
+`core/services.rs`, `tunnelling.rs`, `cemi.rs`), unit tests for each, a
 `TunnelClient` state machine managing the connect/heartbeat/receive/disconnect
 lifecycle, an `#[ignore]`d live-gateway integration test (first of its kind —
 a pattern for future hardware-dependent tests), and the `knx bus monitor`

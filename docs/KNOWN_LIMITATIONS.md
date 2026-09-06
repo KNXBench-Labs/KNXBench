@@ -604,14 +604,35 @@ retry attempt unnecessarily before the real retry fires on the next cycle.
 during Cycle 1 because the real retry logic still fires correctly after
 the stale wakeup; no observed impact on live gateways.
 
-**Impact.** None observed. Under load or adversarial timing, a connection
-might consume one extra heartbeat attempt before reconnecting.
+**Impact.** None observed on the race itself. Under load or adversarial timing,
+a connection might consume one extra heartbeat attempt before eventual disconnect.
 
 **Lifted when.** A dedicated hardening pass reviews the state machine's
 timing and fixes the race with explicit timing guards or by restructuring
 the wakeup logic. Not a blocking issue for Cycle 1.
 
-## 28. `apps/knx-cli bus monitor` has formatting limitations
+## 28. `TunnelClient` subscribers receive no signal when the tunnel closes
+
+**Limitation.** `crates/knx-net`'s `TunnelClient::subscribe()` returns a
+broadcast receiver that yields telegrams. When the tunnel dies — either because
+the heartbeat loop exhausts its retries or the gateway goes silent — subscribers
+receive no signal. The broadcast channel never closes (the `Sender` lives inside
+the same `Arc` the caller holds), so `telegrams.recv()` simply stops yielding
+anything forever, indistinguishable from a quiet KNX bus.
+
+**Cause.** The heartbeat shutdown logic does not close the broadcast channel.
+A redesign of the channel ownership model or addition of an explicit shutdown
+signal would be required to notify subscribers.
+
+**Impact.** A consumer of `TunnelClient` (such as `apps/knx-cli`'s `bus monitor`
+command) cannot distinguish "gateway died" from "nobody flipped a switch" — both
+look like indefinite silence. Detecting a lost connection requires external
+monitoring (e.g. watching elapsed time since last telegram received).
+
+**Lifted when.** `TunnelClient` signals shutdown to subscribers via channel
+closure, an explicit disconnect event, or a dedicated status-change channel.
+
+## 29. `apps/knx-cli bus monitor` has formatting limitations
 
 **Limitation.** The `knx bus monitor` subcommand, added in Session 6 Cycle 1,
 always formats group addresses as three-level (e.g. `1/2/3`) regardless of
@@ -633,7 +654,7 @@ monitor output. Data is not lost — telegrams still resolve by address internal
 name resolution, either bundled into a general bus-monitor redesign or as a
 targeted enhancement to the CLI subcommand.
 
-## 29. `/api/project/download` has no frontend caller
+## 30. `/api/project/download` has no frontend caller
 
 **Limitation.** `apps/knx-server`'s `/api/project/download` route is
 implemented and covered by server-side tests (`tests/http_fs_routes.rs`),

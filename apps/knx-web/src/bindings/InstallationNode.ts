@@ -3,5 +3,6 @@ import type { AreaNode } from "./AreaNode";
 import type { BuildingNode } from "./BuildingNode";
 import type { DeviceNode } from "./DeviceNode";
 import type { GroupAddressNode } from "./GroupAddressNode";
+import type { GroupRangeNode } from "./GroupRangeNode";
 
-export type InstallationNode = { id: number, name: string, topology: Array<AreaNode>, buildings: Array<BuildingNode>, unassigned: Array<DeviceNode>, group_addresses: Array<GroupAddressNode>, };
+export type InstallationNode = { id: number, name: string, topology: Array<AreaNode>, buildings: Array<BuildingNode>, unassigned: Array<DeviceNode>, group_addresses: Array<GroupAddressNode>, group_ranges: Array<GroupRangeNode>, };

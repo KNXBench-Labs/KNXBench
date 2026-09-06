@@ -25,9 +25,13 @@ async fn connects_and_receives_at_least_one_telegram() {
     let mut telegrams = tunnel.subscribe();
     let received = tokio::time::timeout(Duration::from_secs(60), telegrams.recv()).await;
     tunnel.disconnect().await.expect("clean disconnect");
-    received
+    let event = received
         .expect("at least one telegram within 60s — trigger a switch on the bus if this times out")
         .expect("broadcast channel still open");
+    assert!(
+        matches!(event, knx_net::TunnelEvent::Telegram(_)),
+        "expected a telegram, not a Closed event, while the gateway was still connected"
+    );
 }
 
 /// Writes a `GroupValueWrite` to a real group address and expects the

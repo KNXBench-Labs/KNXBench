@@ -590,9 +590,59 @@ Known gaps added this cycle (not bugs, scope decisions):
   `cargo run -p knx-cli -- bus route-monitor --source-address <spare-address>`
   against a running installation.
 
+**Session 6, Cycle 5 (2026-09-06) — Connection management and diagnostics
+hardening.** Bounded task, brainstormed directly in chat (per the
+brainstorming skill's classification: three already-documented gaps in
+existing `TunnelClient`/`RoutingClient` flows, not a new subsystem) after
+KNX IP Secure — the other item on Session 6's remaining backlog — was
+explicitly shelved for a later cycle. Closes KNOWN_LIMITATIONS.md #27,
+#28 and #32:
+
+- **#27 (heartbeat retry race).** `send_heartbeat_with_retries` and
+  `TunnelClient::send`'s ack wait both replaced a single
+  `timeout(..., notify.notified())` with the new shared `wait_for_reply`
+  helper, which loops on the same deadline instead of returning on the
+  first wakeup — a stale `Notify` permit from a reply that arrived just
+  after a previous attempt gave up can no longer be mistaken for a
+  timeout and burn an attempt early.
+- **#28 (no shutdown signal to subscribers).** `TunnelClient::subscribe()`
+  now yields `TunnelEvent` (`Telegram(LDataFrame)` or `Closed`) instead of
+  a bare `LDataFrame`. `receive_loop` sends one `Closed` event as its last
+  action, reached from every exit path (explicit `disconnect()`, the
+  heartbeat loop exhausting its retries, a dead socket, or a
+  server-initiated `DISCONNECT_REQUEST`) since they all funnel through
+  that loop before it returns. `apps/knx-cli`'s `bus monitor` prints
+  "gateway closed the tunnel" on it instead of sitting in silence
+  indistinguishable from a quiet bus.
+- **#32 (`ROUTING_BUSY` not honored).** `RoutingState` gained a
+  `busy_until` deadline that `routing_receive_loop` extends on each
+  `ROUTING_BUSY` received (`merge_busy_deadline`: the higher of the
+  remaining time already in effect and the new frame's `tw`, per Routing
+  v01.05.02 AS §2.3.5) and `RoutingClient::send` waits out before
+  transmitting. The spec's optional `trandom` back-off (a `MAY`) is not
+  implemented — only the mandatory stop-and-wait rule (a `SHALL`) is.
+
+Four new tests in `crates/knx-net/src/client.rs`:
+`wait_for_reply_survives_a_stale_non_matching_wakeup` and
+`wait_for_reply_times_out_when_nothing_ever_matches` exercise the race
+fix without any networking; `merge_busy_deadline_keeps_the_later_of_the_two`
+checks the pure deadline-merge rule; `routing_client_send_waits_out_a_routing_busy_deadline`
+confirms `send()` actually blocks on it end-to-end over loopback
+multicast (skipped, not failed, if this sandbox has no multicast route,
+same policy as Cycle 4's round-trip test). All three touched call sites
+(`apps/knx-cli/src/main.rs`'s `bus monitor`, and
+`crates/knx-net/tests/live_gateway.rs`'s live-gateway test) were updated
+for `TunnelEvent`; `bus route-monitor` is unaffected, since it subscribes
+to `RoutingClient`, not `TunnelClient`.
+
+Known gaps carried forward (not new, restated for context): #31 (no
+custom routing multicast address) and #33 (the loopback round-trip test's
+environment-dependent skip) remain open — out of this cycle's scope,
+which was specifically the three gaps above.
+
 ## Next session
 
-Session 6 is in progress (Cycles 1-4 done). ROADMAP's entry condition — "a
+Session 6 is in progress (Cycles 1-5 done). ROADMAP's entry condition — "a
 project can be opened and its group addresses resolved" — is met: the domain
 model, import/export pipeline, shared product database, and now tunnelling
 (receive and send) to a known gateway — plus discovery of gateways on the

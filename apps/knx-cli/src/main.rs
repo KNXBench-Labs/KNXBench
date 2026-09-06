@@ -695,7 +695,13 @@ async fn run_bus_monitor_async(
                 break;
             }
             received = telegrams.recv() => match received {
-                Ok(telegram) => println!("{}", format_telegram(&telegram, &ga_names)),
+                Ok(knx_net::TunnelEvent::Telegram(telegram)) => {
+                    println!("{}", format_telegram(&telegram, &ga_names));
+                }
+                Ok(knx_net::TunnelEvent::Closed) => {
+                    eprintln!("gateway closed the tunnel");
+                    break;
+                }
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     eprintln!("warning: {n} telegram(s) dropped (receiver too slow)");
                 }

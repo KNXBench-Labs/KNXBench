@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-06 (Session 5, cycle 12; editable descriptions)
+Last updated: 2026-09-06 (Session 7, cycle 1; roundtrip/migration suite audit + schema-21 sample)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -18,8 +18,8 @@ in scope.
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
 | 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)), cycle 8 (project status dashboard, [design spec](superpowers/specs/2026-09-04-dashboard-design.md)), cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) — CLAUDE.md's full UI/UX deliverable list complete as of cycle 9 — and cycle 10 (a toast notification stack replacing the old persistent error banner, humor-wrapped error text, and a one-shot holiday/late-night startup toast, [design spec](superpowers/specs/2026-09-05-toast-easter-eggs-design.md)) and cycle 11 (user-customizable theme tokens — accent/background/surface/text — plus a three-level motion setting, layered on top of the cycle 7 theme toggle, via a new `ThemePanel.tsx`) and cycle 12 (device and communication-object descriptions are now editable, not just displayed: `Command::SetDeviceDescription` and `Command::SetComObjectDescription`/`RestoreComObjectDescription` clone the `SetIndividualAddress`/`SetComObjectDpt` command-layer pattern exactly, wired through `knx-store::command_sync`, `knx-server`'s `/api/device-description` and `/api/com-object-description` routes, and two new `Inspector.tsx` fields; `ComObjectNode` also gains `description`/`description_layer` so a communication object's description — modelled and persisted since Session 5 cycle 2 but never shown — is finally visible at all. An ETS feature audit done alongside this found no other silently-missing field: `GroupAddress`/`GroupRange`/`BuildingPart` genuinely carry no `Description` attribute in the one schema-11 project this project's evidence comes from — see [KNOWN_LIMITATIONS.md #1](KNOWN_LIMITATIONS.md#1-single-sample-bias), not a bug here) done, see [ROADMAP.md](ROADMAP.md) |
-| 6 | KNXnet/IP | In progress (Cycles 1-2 shipped) — see below |
-| 7 | Integration & hardening | Not started |
+| 6 | KNXnet/IP | Cycles 1-5 shipped (tunnelling, sending, discovery, routing, connection management/diagnostics). KNX IP Secure scoped, then shelved indefinitely (2026-09-06) — see [ROADMAP.md](ROADMAP.md), [KNOWN_LIMITATIONS.md §26](KNOWN_LIMITATIONS.md) |
+| 7 | Integration & hardening | In progress (cycle 1) — see below |
 
 **The repository is a buildable Cargo workspace with eight crates.**
 `knx-core` holds the full domain model of [DATA_MODEL.md](DATA_MODEL.md):
@@ -711,6 +711,30 @@ them together. 49 Rust tests added across
 `crates/knx-core`/`crates/knx-projection`/`apps/knx-server`.
 
 ## Next session
+
+Session 7 is in progress (cycle 1, 2026-09-06). Its entry condition — all
+earlier sessions' deliverables exist and are tested — is met well enough to
+start: Session 6 shipped cycles 1-5 (tunnelling, sending, discovery,
+routing, diagnostics), with KNX IP Secure shelved indefinitely rather than
+attempted (see below), not blocking. Cycle 1 audited "full roundtrip and
+migration suite with frozen fixtures per schema version" against what
+actually exists: schema 11 (ETS4 reference project) already had full
+coverage, unchanged. A real, independent second sample — `KV v2.5 -
+demo.knxproj`, schema 21, found in `OriginalData/` — got a real-file
+detection-and-refusal regression test (schema 23 already had one). Comparing
+schema 21 against schema 11 (RESEARCH §3.4) found real structural deltas
+previously attributed to schema 23 alone already exist at 21, plus one new
+one (`ModuleInstances`) — flagged as the next major format-support task, not
+attempted this cycle (see [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md)).
+`knx-store`'s `.knxdb` migration chain (v1→v4) was verified, not touched —
+already complete. Remaining Session 7 deliverables: performance measurement
+on large projects, Linux packaging, the licence decision.
+
+Session 6's KNX IP Secure was scoped after cycle 4 (routing), then shelved
+indefinitely (2026-09-06, not just deferred to "a later cycle") — plain
+tunnelling/routing covers the common case; revisit only when a real
+secure-only gateway needs it, research spike first. See
+[ROADMAP.md](ROADMAP.md), [KNOWN_LIMITATIONS.md §26](KNOWN_LIMITATIONS.md).
 
 Session 6 is in progress (Cycles 1-5 done). ROADMAP's entry condition — "a
 project can be opened and its group addresses resolved" — is met: the domain

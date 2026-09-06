@@ -245,6 +245,49 @@ fn a_malformed_address_string_is_rejected_before_touching_the_project() {
 }
 
 #[test]
+fn setting_device_description_then_undo_then_redo_round_trips() {
+    let state = state_with_two_devices();
+
+    let tree =
+        knx_server::set_device_description_impl(&state, 1, Some("Flur, links".into())).unwrap();
+    assert!(tree.can_undo);
+    let project = state.project.lock().unwrap();
+    let detail = knx_server::device_detail_impl(project.as_ref().unwrap(), 1).unwrap();
+    assert_eq!(detail.description.as_deref(), Some("Flur, links"));
+    drop(project);
+
+    knx_server::undo_impl(&state).unwrap();
+    let project = state.project.lock().unwrap();
+    let detail = knx_server::device_detail_impl(project.as_ref().unwrap(), 1).unwrap();
+    assert_eq!(detail.description, None);
+    drop(project);
+
+    knx_server::redo_impl(&state).unwrap();
+    let project = state.project.lock().unwrap();
+    let detail = knx_server::device_detail_impl(project.as_ref().unwrap(), 1).unwrap();
+    assert_eq!(detail.description.as_deref(), Some("Flur, links"));
+}
+
+#[test]
+fn setting_com_object_description_marks_it_user_edit_and_undo_restores_the_program_layer() {
+    let state = state_with_two_devices();
+    knx_server::set_com_object_description_impl(&state, 1, Some("Aktoreingang 1".into())).unwrap();
+
+    let project = state.project.lock().unwrap();
+    let detail = knx_server::device_detail_impl(project.as_ref().unwrap(), 1).unwrap();
+    let com = &detail.com_objects[0];
+    assert_eq!(com.description.as_deref(), Some("Aktoreingang 1"));
+    assert_eq!(com.description_layer.as_deref(), Some("UserEdit"));
+    drop(project);
+
+    knx_server::undo_impl(&state).unwrap();
+    let project = state.project.lock().unwrap();
+    let detail = knx_server::device_detail_impl(project.as_ref().unwrap(), 1).unwrap();
+    let com = &detail.com_objects[0];
+    assert_eq!(com.description, None); // fixture's com object had no description at all
+}
+
+#[test]
 fn setting_com_object_dpt_marks_it_user_edit_and_undo_restores_the_program_layer() {
     let state = state_with_two_devices();
     knx_server::set_com_object_dpt_impl(&state, 1, Some("DPST-5-1".into())).unwrap();

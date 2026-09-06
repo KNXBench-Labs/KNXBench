@@ -4,8 +4,9 @@
 //! decode, disconnect. Cycle 2 adds sending (`TunnelClient::send`) —
 //! encode, `TUNNELLING_REQUEST`/`ACK` with the spec's retry-once-then-
 //! disconnect rule. Cycle 3 implements `discover` (multicast
-//! `SEARCH_REQUEST`/`SEARCH_RESPONSE`); routing and KNX IP Secure are
-//! later cycles still.
+//! `SEARCH_REQUEST`/`SEARCH_RESPONSE`). Cycle 4 implements
+//! `RoutingClient`/`connect_routing`; KNX IP Secure is a later cycle
+//! still.
 //! See `docs/superpowers/specs/2026-09-06-knxnet-ip-tunneling-design.md`.
 
 pub mod cemi;
@@ -17,4 +18,6 @@ pub mod routing;
 pub mod tunnelling;
 
 pub use cemi::{ApplicationService, Destination, GroupValue, LDataFrame, LDataMessageKind};
-pub use client::{BusConnection, BusError, DiscoveredGateway, KnxNetIpClient, TunnelClient};
+pub use client::{
+    BusConnection, BusError, DiscoveredGateway, KnxNetIpClient, RoutingClient, TunnelClient,
+};

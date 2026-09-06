@@ -1872,6 +1872,7 @@ name = "knx-net"
 version = "0.0.0"
 dependencies = [
  "knx-core",
+ "socket2",
  "tokio",
 ]
 

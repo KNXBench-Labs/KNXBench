@@ -10,3 +10,6 @@ pub mod client;
 pub mod core;
 pub mod frame;
 pub mod tunnelling;
+
+pub use cemi::{ApplicationService, Destination, GroupValue, LDataFrame, LDataMessageKind};
+pub use client::{BusConnection, BusError, KnxNetIpClient, TunnelClient};

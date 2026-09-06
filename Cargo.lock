@@ -1869,6 +1869,7 @@ name = "knx-net"
 version = "0.0.0"
 dependencies = [
  "knx-core",
+ "tokio",
 ]
 
 [[package]]

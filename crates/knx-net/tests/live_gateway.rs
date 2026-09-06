@@ -61,3 +61,26 @@ async fn sends_a_group_value_write_and_gets_acked() {
     tunnel.disconnect().await.expect("clean disconnect");
     result.expect("gateway should ack the TUNNELLING_REQUEST");
 }
+
+/// Multicasts a `SEARCH_REQUEST` and expects the known reference gateway
+/// to answer with tunnelling support advertised. Needs LAN access to the
+/// discovery multicast group (`224.0.23.12:3671`) — not just a route to
+/// one known gateway IP, unlike the other tests in this file.
+#[tokio::test]
+#[ignore = "needs a real KNXnet/IP gateway reachable via multicast on the LAN"]
+async fn discovers_the_known_gateway_with_tunnelling_support() {
+    let client = knx_net::KnxNetIpClient::new();
+    let gateways = client
+        .discover()
+        .await
+        .expect("discover against a real network");
+    let expected = gateway_addr();
+    let found = gateways
+        .iter()
+        .find(|g| g.control_endpoint == expected)
+        .unwrap_or_else(|| panic!("expected gateway {expected} among {gateways:?}"));
+    assert!(
+        found.supports_tunnelling,
+        "expected the known gateway to advertise tunnelling support"
+    );
+}

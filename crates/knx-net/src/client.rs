@@ -1,10 +1,10 @@
 //! The `BusConnection` trait and its tunnelling implementation
-//! (ARCHITECTURE.md §8). `discover` remains an explicit
-//! `BusError::NotImplemented` stub this cycle — never `todo!()`, never a
-//! silent no-op (CLAUDE.md). `TunnelClient::send` is implemented as of
-//! Session 6 Cycle 2 (KNOWN_LIMITATIONS.md §26).
+//! (ARCHITECTURE.md §8). `discover` (multicast `SEARCH_REQUEST`/
+//! `SEARCH_RESPONSE`) is implemented as of Session 6 Cycle 3.
+//! `TunnelClient::send` is implemented as of Session 6 Cycle 2
+//! (KNOWN_LIMITATIONS.md §26).
 
-use std::net::{SocketAddr, SocketAddrV4};
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -13,8 +13,10 @@ use tokio::net::UdpSocket;
 use tokio::sync::{broadcast, Mutex, Notify};
 
 use crate::cemi::{self, ApplicationService, Destination, LDataFrame};
+use crate::core::dib;
 use crate::core::hpai::Hpai;
 use crate::core::services;
+use crate::discovery;
 use crate::frame;
 use crate::tunnelling;
 
@@ -47,9 +49,22 @@ impl std::fmt::Display for BusError {
 
 impl std::error::Error for BusError {}
 
-/// A local KNXnet/IP client, not yet connected to any gateway. Cycle 1
-/// implements `connect_tunnel` only; `discover` (multicast `SEARCH_REQUEST`,
-/// Core v01.06.02 AS §4.2) is a later cycle's work.
+/// A gateway found via `discover()` (Core v01.06.02 AS §7.4.1's
+/// `SEARCH_RESPONSE`). `supports_tunnelling` is derived from the
+/// Supported Service Families DIB, when the gateway sends one — some
+/// gateways only support routing, and this is how a caller finds out
+/// before trying `connect_tunnel` on it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiscoveredGateway {
+    pub control_endpoint: SocketAddrV4,
+    pub individual_address: IndividualAddress,
+    pub friendly_name: String,
+    pub supports_tunnelling: bool,
+}
+
+/// A local KNXnet/IP client, not yet connected to any gateway. `discover`
+/// (multicast `SEARCH_REQUEST`, Core v01.06.02 AS §4.2) and `connect_tunnel`
+/// are both implemented as of Session 6 Cycle 3.
 pub struct KnxNetIpClient;
 
 impl KnxNetIpClient {
@@ -72,13 +87,75 @@ impl Default for KnxNetIpClient {
 // implementer, called directly), so it's allowed rather than worked around.
 #[allow(async_fn_in_trait)]
 pub trait BusConnection {
-    async fn discover(&self) -> Result<Vec<SocketAddrV4>, BusError>;
+    async fn discover(&self) -> Result<Vec<DiscoveredGateway>, BusError>;
     async fn connect_tunnel(&self, gateway: SocketAddrV4) -> Result<TunnelClient, BusError>;
 }
 
+/// Standard KNXnet/IP discovery/routing multicast group and port (Core
+/// v01.06.02 AS §4.2). Hardcoded this cycle — not a CLI override (design
+/// spec's Cycle 3 Q2).
+const DISCOVERY_MULTICAST: SocketAddrV4 = SocketAddrV4::new(Ipv4Addr::new(224, 0, 23, 12), 3671);
+
+/// Core v01.06.02 AS §5.2.4 `SEARCH_TIMEOUT`: how long to keep collecting
+/// `SEARCH_RESPONSE`s after sending one `SEARCH_REQUEST` (design spec's
+/// Cycle 3 Q3 — full spec value, not a shortened one).
+const SEARCH_TIMEOUT_SECS: u64 = 10;
+
 impl BusConnection for KnxNetIpClient {
-    async fn discover(&self) -> Result<Vec<SocketAddrV4>, BusError> {
-        Err(BusError::NotImplemented)
+    async fn discover(&self) -> Result<Vec<DiscoveredGateway>, BusError> {
+        let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(BusError::Io)?;
+        let discovery_endpoint = local_hpai(&socket)?;
+        let request_body = discovery::encode_search_request(discovery_endpoint);
+        let datagram = frame::encode_frame(services::SEARCH_REQUEST, &request_body);
+        socket
+            .send_to(&datagram, DISCOVERY_MULTICAST)
+            .await
+            .map_err(BusError::Io)?;
+
+        let mut gateways: Vec<DiscoveredGateway> = Vec::new();
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(SEARCH_TIMEOUT_SECS);
+        let mut buf = [0u8; 1024];
+        loop {
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            if remaining.is_zero() {
+                break;
+            }
+            let Ok(Ok((n, _src))) =
+                tokio::time::timeout(remaining, socket.recv_from(&mut buf)).await
+            else {
+                break; // window elapsed, or the socket errored: stop collecting
+            };
+            let Ok((header, resp_body)) = frame::decode_frame(&buf[..n]) else {
+                continue;
+            };
+            if header.service_type != services::SEARCH_RESPONSE {
+                continue;
+            }
+            let Ok(response) = discovery::decode_search_response(resp_body) else {
+                continue;
+            };
+            let control_endpoint = SocketAddrV4::new(
+                response.control_endpoint.addr,
+                response.control_endpoint.port,
+            );
+            if gateways
+                .iter()
+                .any(|g| g.control_endpoint == control_endpoint)
+            {
+                continue;
+            }
+            let supports_tunnelling = response
+                .service_families
+                .as_ref()
+                .is_some_and(|f| f.supports(dib::SERVICE_FAMILY_TUNNELLING));
+            gateways.push(DiscoveredGateway {
+                control_endpoint,
+                individual_address: response.device_info.individual_address,
+                friendly_name: response.device_info.friendly_name,
+                supports_tunnelling,
+            });
+        }
+        Ok(gateways)
     }
 
     async fn connect_tunnel(&self, gateway: SocketAddrV4) -> Result<TunnelClient, BusError> {

@@ -96,6 +96,14 @@ pub enum Command {
     DeleteLine {
         id: LineId,
     },
+    /// Moves a device to `line`, or to `Topology::unassigned` if `None`.
+    /// Does not touch `DeviceInstance::address` — a line move and a
+    /// re-address are two separate user intents; `SetIndividualAddress`
+    /// is the command for the latter.
+    MoveDeviceToLine {
+        device: DeviceId,
+        line: Option<LineId>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -394,6 +402,56 @@ impl Command {
                 Ok(Command::CreateLine {
                     area: area_id,
                     line,
+                })
+            }
+            Command::MoveDeviceToLine { device, line } => {
+                let device = *device;
+                let line = *line;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                if let Some(line_id) = line {
+                    if !installation.topology.lines.iter().any(|l| l.id == line_id) {
+                        return Err(CommandError::LineNotFound(line_id));
+                    }
+                }
+                let previous = if let Some(pos) = installation
+                    .topology
+                    .unassigned
+                    .iter()
+                    .position(|&d| d == device)
+                {
+                    installation.topology.unassigned.remove(pos);
+                    None
+                } else if let Some(current_line) = installation
+                    .topology
+                    .lines
+                    .iter_mut()
+                    .find(|l| l.devices.contains(&device))
+                {
+                    let id = current_line.id;
+                    current_line.devices.retain(|&d| d != device);
+                    Some(id)
+                } else {
+                    return Err(CommandError::DeviceNotFound(device));
+                };
+                match line {
+                    Some(line_id) => {
+                        installation
+                            .topology
+                            .lines
+                            .iter_mut()
+                            .find(|l| l.id == line_id)
+                            .unwrap()
+                            .devices
+                            .push(device);
+                    }
+                    None => installation.topology.unassigned.push(device),
+                }
+                Ok(Command::MoveDeviceToLine {
+                    device,
+                    line: previous,
                 })
             }
         }
@@ -1109,5 +1167,122 @@ mod tests {
         let mut stack = CommandStack::new();
         let result = stack.do_command(&mut project, Command::DeleteLine { id: LineId(99) });
         assert_eq!(result, Err(CommandError::LineNotFound(LineId(99))));
+    }
+
+    fn project_with_line_and_unassigned_device() -> Project {
+        let mut p = test_project_with_one_device(None);
+        p.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "A".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![LineId(1)],
+        });
+        p.installations[0]
+            .topology
+            .lines
+            .push(test_line(LineId(1), 1, vec![]));
+        p.installations[0].topology.unassigned.push(DeviceId(1));
+        p
+    }
+
+    #[test]
+    fn move_device_from_unassigned_to_a_line_and_back_via_undo() {
+        let mut project = project_with_line_and_unassigned_device();
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveDeviceToLine {
+                    device: DeviceId(1),
+                    line: Some(LineId(1)),
+                },
+            )
+            .unwrap();
+        assert!(project.installations[0].topology.unassigned.is_empty());
+        assert_eq!(
+            project.installations[0].topology.lines[0].devices,
+            vec![DeviceId(1)]
+        );
+        stack.undo(&mut project).unwrap();
+        assert_eq!(
+            project.installations[0].topology.unassigned,
+            vec![DeviceId(1)]
+        );
+        assert!(project.installations[0].topology.lines[0]
+            .devices
+            .is_empty());
+    }
+
+    #[test]
+    fn move_device_between_two_lines() {
+        let mut project = project_with_line_and_unassigned_device();
+        project.installations[0].topology.areas[0]
+            .lines
+            .push(LineId(2));
+        project.installations[0]
+            .topology
+            .lines
+            .push(test_line(LineId(2), 2, vec![]));
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveDeviceToLine {
+                    device: DeviceId(1),
+                    line: Some(LineId(1)),
+                },
+            )
+            .unwrap();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveDeviceToLine {
+                    device: DeviceId(1),
+                    line: Some(LineId(2)),
+                },
+            )
+            .unwrap();
+        assert!(project.installations[0].topology.lines[0]
+            .devices
+            .is_empty());
+        assert_eq!(
+            project.installations[0].topology.lines[1].devices,
+            vec![DeviceId(1)]
+        );
+    }
+
+    #[test]
+    fn move_device_to_a_nonexistent_line_is_rejected_and_leaves_the_device_in_place() {
+        let mut project = project_with_line_and_unassigned_device();
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::MoveDeviceToLine {
+                device: DeviceId(1),
+                line: Some(LineId(99)),
+            },
+        );
+        assert_eq!(result, Err(CommandError::LineNotFound(LineId(99))));
+        assert_eq!(
+            project.installations[0].topology.unassigned,
+            vec![DeviceId(1)]
+        );
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn move_an_unknown_device_is_rejected() {
+        let mut project = project_with_line_and_unassigned_device();
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::MoveDeviceToLine {
+                device: DeviceId(99),
+                line: Some(LineId(1)),
+            },
+        );
+        assert_eq!(result, Err(CommandError::DeviceNotFound(DeviceId(99))));
     }
 }

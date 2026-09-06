@@ -4,6 +4,17 @@
   --knx-error-color: #b00020;
   --knx-overlay-backdrop: rgba(0, 0, 0, 0.4);
   --knx-overlay-shadow: rgba(0, 0, 0, 0.3);
+  /* Base chrome tokens. A user override (palette.ts, applied as an inline
+     style on <html>) beats these — that's plain CSS cascade, no extra
+     plumbing needed. */
+  --knx-accent: AccentColor;
+  --knx-bg: Canvas;
+  --knx-surface: Canvas;
+  --knx-text: CanvasText;
+  /* Overridden per motion level by palette.ts; only takes effect where
+     transition-duration is actually referenced below, which itself is
+     gated on prefers-reduced-motion — the OS setting always wins. */
+  --knx-transition-duration: 250ms;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,8 +39,23 @@
   color-scheme: dark;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  body,
+  .search-panel,
+  .fs-picker,
+  .theme-panel,
+  .tree-label.selected,
+  .search-result.selected {
+    transition: background-color var(--knx-transition-duration) ease,
+      color var(--knx-transition-duration) ease,
+      border-color var(--knx-transition-duration) ease;
+  }
+}
+
 body {
   margin: 0;
+  background: var(--knx-bg);
+  color: var(--knx-text);
 }
 
 main {
@@ -68,13 +94,13 @@ main {
 .toast--error {
   color: var(--knx-error-color);
   border: 1px solid var(--knx-error-color);
-  background: Canvas;
+  background: var(--knx-surface);
 }
 
 .toast--fun {
-  color: CanvasText;
+  color: var(--knx-text);
   border: 1px solid currentColor;
-  background: Canvas;
+  background: var(--knx-surface);
 }
 
 .project-explorer ul {
@@ -101,7 +127,7 @@ main {
 }
 
 .tree-label.selected {
-  background: color-mix(in srgb, currentColor 15%, transparent);
+  background: color-mix(in srgb, var(--knx-accent) 20%, transparent);
   border-radius: 3px;
 }
 
@@ -210,8 +236,8 @@ main {
 }
 
 .search-panel {
-  background: Canvas;
-  color: CanvasText;
+  background: var(--knx-surface);
+  color: var(--knx-text);
   width: min(32rem, 90vw);
   max-height: 70vh;
   overflow-y: auto;
@@ -270,7 +296,7 @@ main {
 }
 
 .search-result.selected {
-  background: color-mix(in srgb, currentColor 15%, transparent);
+  background: color-mix(in srgb, var(--knx-accent) 20%, transparent);
 }
 
 .dashboard {
@@ -313,8 +339,8 @@ main {
 }
 
 .fs-picker {
-  background: Canvas;
-  color: CanvasText;
+  background: var(--knx-surface);
+  color: var(--knx-text);
   padding: 1rem;
   min-width: 24rem;
   max-height: 70vh;
@@ -345,4 +371,50 @@ main {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
+}
+
+.theme-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--knx-overlay-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.theme-panel {
+  background: var(--knx-surface);
+  color: var(--knx-text);
+  padding: 1rem;
+  min-width: 20rem;
+  border-radius: 6px;
+  box-shadow: 0 4px 24px var(--knx-overlay-shadow);
+}
+
+.theme-panel-tokens {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.theme-panel-tokens li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+}
+
+.theme-panel-motion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+.theme-panel-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }

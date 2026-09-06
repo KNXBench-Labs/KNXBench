@@ -277,9 +277,11 @@ architectural blocker remaining now that dark/light mode and toasts have
 shipped: fine-grained UI animation, deliberately held until dark/light
 mode landed so it wouldn't be redone against components that were still
 changing structurally — that gate is now clear. Renaming the project to
-KNXBench is a standalone task (crate names, docs, repo) best done
-between cycles, not interleaved with one, to avoid churn against
-in-flight doc edits.
+KNXBench (repo, README, docs) is done; renaming the crates themselves
+(`knx-core`, `knx-store`, `knx-desktop`, `knx-server`, `knx-cli`, …) is a
+deliberate non-goal — decided against, not merely deferred, since every
+one of them has downstream dependents and a rename would only ever be
+cosmetic. Cycle 11 is fine-grained UI animation.
 
 ## Cross-cutting — Web/Docker deployment target
 

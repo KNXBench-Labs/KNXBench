@@ -209,7 +209,7 @@ pub fn import_knxproj_bytes(
 #[cfg(test)]
 mod import_tests {
     use super::*;
-    use crate::testutil::{reference_ets4_path, reference_ets6_path};
+    use crate::testutil::{reference_ets4_path, reference_ets6_path, reference_kv_schema21_path};
     use knx_core::GroupAddressStyle;
 
     #[test]
@@ -230,6 +230,18 @@ mod import_tests {
         assert!(matches!(
             err,
             ImportFailure::NoKnownSchemaTable { version: 23 }
+        ));
+    }
+
+    #[test]
+    fn importing_a_second_independent_schema21_project_fails_with_a_named_reason_not_wrong_data() {
+        // Not a re-export of the ets6 reference project — a genuinely
+        // different installation (Session 7 evidence). Confirms the
+        // refusal path is schema-version-generic, not special-cased to 23.
+        let err = import_knxproj(&reference_kv_schema21_path()).unwrap_err();
+        assert!(matches!(
+            err,
+            ImportFailure::NoKnownSchemaTable { version: 21 }
         ));
     }
 

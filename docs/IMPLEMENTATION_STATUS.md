@@ -517,13 +517,48 @@ target address is a human decision, not this session's to make. Run
 received and matched, confirming `send`'s wire format and ack-correlation
 against the real gateway, not just the round-trip tests above.
 
+**Session 6, Cycle 3 (2026-09-06) — KNXnet/IP discovery.** Own design
+spec (`docs/superpowers/specs/2026-09-06-knxnet-ip-discovery-design.md`),
+per the brainstorming skill's classification: a new subsystem, not an
+extension of Cycle 1/2's existing tunnel connection. `core::dib` decodes
+the Device Info and Supported Service Families DIBs a `SEARCH_RESPONSE`
+carries; `discovery` encodes `SEARCH_REQUEST` and decodes
+`SEARCH_RESPONSE` bodies, skipping any DIB type it doesn't recognize
+rather than rejecting the whole response. `KnxNetIpClient::discover` no
+longer returns `BusError::NotImplemented`: it multicasts one
+`SEARCH_REQUEST` to `224.0.23.12:3671` and collects replies for the full
+spec `SEARCH_TIMEOUT` (10s), deduping by control endpoint. Only the
+original `SEARCH_REQUEST`/`SEARCH_RESPONSE` form is implemented — not
+`SEARCH_REQUEST_EXTENDED`/`RESPONSE_EXTENDED` (Core v2) — and the
+multicast address/timeout are hardcoded constants, not CLI flags, both
+deliberate scope cuts recorded in the design spec. `knx bus discover`
+(no arguments — that's the feature) is the CLI-facing piece.
+`crates/knx-net/tests/live_gateway.rs` gained a third `#[ignore]`d test
+that multicasts for real and checks the reference gateway both answers
+and advertises tunnelling support. Live-hardware verification was left
+for the user to run, same as Cycle 2's `send` — choosing when to probe
+the LAN isn't this session's call to make unsupervised.
+
+Known gaps added this cycle (not bugs, scope decisions):
+
+- `SEARCH_REQUEST_EXTENDED`/`RESPONSE_EXTENDED` (Core v2) are not
+  implemented — no gateway encountered so far has needed them.
+- The discovery multicast group/port and the collection timeout are
+  hardcoded constants; no CLI override exists yet.
+- Discovery does not work unmodified inside the `knx-server` Docker
+  container (needs `--network host`) — a known, not-yet-solved
+  constraint (ROADMAP.md, Session 6 entry); `knx-server` does not call
+  `discover` yet, so nothing regresses, but the gap is now reachable from
+  a CLI a container user might reasonably try.
+
 ## Next session
 
-Session 6 is in progress (Cycles 1-2 done). ROADMAP's entry condition — "a
+Session 6 is in progress (Cycles 1-3 done). ROADMAP's entry condition — "a
 project can be opened and its group addresses resolved" — is met: the domain
 model, import/export pipeline, shared product database, and now tunnelling
-(receive and send) to a known gateway all exist, and telegrams from the live
-bus resolve against group addresses from the open project.
+(receive and send) to a known gateway — plus discovery of gateways on the
+LAN — all exist, and telegrams from the live bus resolve against group
+addresses from the open project.
 
 Cycle 5 shipped Search: finding a device, group address, or building part
 by name/address across a project too large to scan by eye in the Project

@@ -574,29 +574,33 @@ failing outright instead of warning.
 deliberately not made speculatively ahead of an actual failure, but worth
 fixing before Node 20's EOL removes the option of doing it calmly.
 
-## 26. `BusConnection` does not yet support discovery, routing, or KNX IP Secure
+## 26. `BusConnection` does not yet support routing or KNX IP Secure
 
 **Limitation.** `crates/knx-net`'s `BusConnection` trait implements
-tunnelling only: `connect_tunnel` opens a tunnel to a gateway by known IP,
-`subscribe` receives telegrams, and (as of Session 6 Cycle 2)
-`TunnelClient::send` writes one (`GroupValueWrite` or any other
-`ApplicationService`, no DPT interpretation — raw bytes only, same scope
-cut as the receive side). `discover` and all routing/secure-protocol paths
-remain `BusError::NotImplemented` stubs. A reader should not assume the
-trait is feature-complete because it compiles.
+tunnelling and discovery: `discover` multicasts a `SEARCH_REQUEST`
+(original form only, not Core v2's `SEARCH_REQUEST_EXTENDED`) and
+collects `SEARCH_RESPONSE`s; `connect_tunnel` opens a tunnel to a
+gateway by known IP; `subscribe` receives telegrams; `TunnelClient::send`
+writes one (`GroupValueWrite` or any other `ApplicationService`, no DPT
+interpretation — raw bytes only, same scope cut as the receive side).
+Routing and all secure-protocol paths remain `BusError::NotImplemented`
+stubs. A reader should not assume the trait is feature-complete because
+it compiles.
 
 **Cause.** Session 6 Cycle 1 delivered read-only tunnelling as the
-foundation for bus monitoring; Cycle 2 added sending. Discovery and
-routing are still later cycles. Secure protocols are out of v1 scope,
-handled by the isolated `knx-secure` crate.
+foundation for bus monitoring; Cycle 2 added sending; Cycle 3 added
+discovery. Routing is still a later cycle. Secure protocols are out of
+v1 scope, handled by the isolated `knx-secure` crate.
 
-**Impact.** A real KNX installation can be monitored and actuated by group
-address over a tunnel opened to a *known* gateway IP, but its topology
-cannot be discovered automatically, nor can it be reached over routing
-(multicast) or KNX IP Secure.
+**Impact.** A real KNX installation's gateways can now be found on the
+LAN without a known IP, and monitored/actuated by group address over a
+tunnel, but it still cannot be reached over routing (multicast) or KNX
+IP Secure. Discovery does not work unmodified inside the `knx-server`
+Docker container (needs `--network host`) — untouched by this cycle,
+since `knx-server` doesn't call `discover` yet.
 
-**Lifted when.** Each remaining feature (discovery, routing, KNX IP Secure)
-lands in its own later cycle of Session 6, or in Session 7.
+**Lifted when.** Routing and KNX IP Secure each land in their own later
+cycle of Session 6, or in Session 7.
 
 ## 27. `TunnelClient` heartbeat retry has a narrow race condition
 

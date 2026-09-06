@@ -50,14 +50,14 @@ implemented; see the "next big task" note below.
 **Next big task.** Building real schema 21 (and by extension 23) import
 support is the next major format-support undertaking, flagged explicitly
 (2026-09-06) rather than left as a vague "whenever a sample turns up" — a
-sample now exists (RESEARCH §3.4). It needs its own brainstorming/design
-pass before implementation, not a drive-by table entry: `ModuleInstances`
-(modular application programs) has no domain-model representation yet
-(absent from [DATA_MODEL.md](DATA_MODEL.md), needs its own ADR), and
-`GroupObjectTree` vs. `ComObjectInstanceRefs` as the authoritative
-communication-object source needs a resolution rule. This is ETS Import
-(Session 3) / KNX Core (Session 2) territory reopened, not Session 7
-hardening — see [ROADMAP.md](ROADMAP.md).
+sample now exists (RESEARCH §3.4). The brainstorming/design pass this called
+for is done (2026-09-06): [ADR-0013](adr/0013-module-instance-representation.md)
+gives `ModuleInstances` a domain-model representation, [ADR-0014](adr/0014-group-object-tree-authoritative-source.md)
+resolves `GroupObjectTree` vs. `ComObjectInstanceRefs`, and
+[the design spec](superpowers/specs/2026-09-06-schema-21-23-import-support-design.md)
+lays out the `knx-core`/`knx-etsproj`/`knx-productdb` implementation — not
+yet built. This is ETS Import (Session 3) / KNX Core (Session 2) territory
+reopened, not Session 7 hardening — see [ROADMAP.md](ROADMAP.md).
 
 **Lifted when.** Real ETS5 projects and further, independent ETS6 projects
 have been imported and their unknown-construct reports reconciled to empty.

@@ -872,8 +872,7 @@ fn parse_bus_route_monitor_args(args: &[String]) -> Result<BusRouteMonitorArgs, 
         }
     }
     Ok(BusRouteMonitorArgs {
-        source_address: source_address
-            .ok_or_else(|| "--source-address is required".to_string())?,
+        source_address: source_address.ok_or_else(|| "--source-address is required".to_string())?,
         project,
     })
 }
@@ -970,8 +969,8 @@ fn parse_bus_route_send_args(args: &[String]) -> Result<BusRouteSendArgs, String
         }
     }
     // Check source_address first to provide clear error messaging
-    let source_address = source_address
-        .ok_or_else(|| "--source-address is required".to_string())?;
+    let source_address =
+        source_address.ok_or_else(|| "--source-address is required".to_string())?;
     let [group_address, value] = &positional[..] else {
         return Err("expected exactly one group address and one value".to_string());
     };

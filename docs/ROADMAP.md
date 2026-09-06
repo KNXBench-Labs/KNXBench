@@ -336,7 +336,11 @@ live-gateway integration test, and `knx bus monitor` CLI subcommand. Cycle 2
 `cemi::encode_l_data` (the inverse of Cycle 1's decode), `TunnelClient::send`
 implementing Tunnelling v01.07.01 AS §2.6's wait-1s/retry-once/
 disconnect-on-repeated-failure rule, and a `knx bus write` CLI subcommand.
-Discovery, routing, and KNX IP Secure remain for later cycles.
+Cycle 3 (2026-09-06) delivered discovery: `core::dib` DIB decoding,
+`KnxNetIpClient::discover`, and a `knx bus discover` CLI subcommand.
+Cycle 4 (2026-09-06) delivered routing: `RoutingClient` over the
+standard multicast group, and `knx bus route-monitor`/`route-send` CLI
+subcommands. KNX IP Secure remains for a later cycle.
 
 **Deliverables.** The `BusConnection` trait implemented against ISO 22510:
 discovery, tunnelling, routing, cEMI and telegram encoding; the bus monitor as

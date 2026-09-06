@@ -8,14 +8,14 @@ use std::fmt;
 use crate::device::ComObjectInstance;
 use crate::dpt::DptRef;
 use crate::group::GroupAddressEntry;
-use crate::ids::{AreaId, ComObjectInstanceId, DeviceId, GroupAddressId};
+use crate::ids::{AreaId, ComObjectInstanceId, DeviceId, GroupAddressId, LineId};
 use crate::project::Project;
 use crate::provenance::{Layer, Override, Resolved};
 use crate::string_table::Text;
-use crate::topology::Area;
+use crate::topology::{Area, Line};
 use crate::validation::{
     check_no_duplicate_area_address, check_no_duplicate_group_address,
-    check_no_duplicate_individual_address, ValidationError,
+    check_no_duplicate_individual_address, check_no_duplicate_line_address, ValidationError,
 };
 use crate::IndividualAddress;
 
@@ -86,6 +86,16 @@ pub enum Command {
     DeleteArea {
         id: AreaId,
     },
+    /// `line.id` is pre-allocated by the caller via
+    /// `Project::ids::next_line_id`. `area` names the owning area, which
+    /// must already exist.
+    CreateLine {
+        area: AreaId,
+        line: Line,
+    },
+    DeleteLine {
+        id: LineId,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -103,6 +113,10 @@ pub enum CommandError {
     AreaNotFound(AreaId),
     /// A `DeleteArea` was refused because it still owns at least one line.
     AreaNotEmpty(AreaId),
+    LineNotFound(LineId),
+    /// A `DeleteLine` was refused because it still owns at least one
+    /// device.
+    LineNotEmpty(LineId),
     InstallationNotFound,
     NothingToUndo,
     NothingToRedo,
@@ -128,6 +142,10 @@ impl fmt::Display for CommandError {
             CommandError::AreaNotFound(id) => write!(f, "area {id} not found"),
             CommandError::AreaNotEmpty(id) => {
                 write!(f, "area {id} still has lines, cannot delete")
+            }
+            CommandError::LineNotFound(id) => write!(f, "line {id} not found"),
+            CommandError::LineNotEmpty(id) => {
+                write!(f, "line {id} still has devices, cannot delete")
             }
             CommandError::InstallationNotFound => write!(f, "project has no installation"),
             CommandError::NothingToUndo => write!(f, "nothing to undo"),
@@ -313,6 +331,70 @@ impl Command {
                 }
                 let area = installation.topology.areas.remove(pos);
                 Ok(Command::CreateArea { area })
+            }
+            Command::CreateLine { area, line } => {
+                let area_id = *area;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let area_ref = installation
+                    .topology
+                    .areas
+                    .iter()
+                    .find(|a| a.id == area_id)
+                    .ok_or(CommandError::AreaNotFound(area_id))?;
+                check_no_duplicate_line_address(
+                    area_ref,
+                    &installation.topology.lines,
+                    line.id,
+                    line.address,
+                )?;
+                let id = line.id;
+                installation.topology.lines.push(line.clone());
+                installation
+                    .topology
+                    .areas
+                    .iter_mut()
+                    .find(|a| a.id == area_id)
+                    .unwrap()
+                    .lines
+                    .push(id);
+                Ok(Command::DeleteLine { id })
+            }
+            Command::DeleteLine { id } => {
+                let id = *id;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let area_id = installation
+                    .topology
+                    .area_of(id)
+                    .map(|a| a.id)
+                    .ok_or(CommandError::LineNotFound(id))?;
+                let pos = installation
+                    .topology
+                    .lines
+                    .iter()
+                    .position(|l| l.id == id)
+                    .ok_or(CommandError::LineNotFound(id))?;
+                if !installation.topology.lines[pos].devices.is_empty() {
+                    return Err(CommandError::LineNotEmpty(id));
+                }
+                let line = installation.topology.lines.remove(pos);
+                installation
+                    .topology
+                    .areas
+                    .iter_mut()
+                    .find(|a| a.id == area_id)
+                    .unwrap()
+                    .lines
+                    .retain(|&l| l != id);
+                Ok(Command::CreateLine {
+                    area: area_id,
+                    line,
+                })
             }
         }
     }
@@ -899,5 +981,133 @@ mod tests {
         let mut stack = CommandStack::new();
         let result = stack.do_command(&mut project, Command::DeleteArea { id: AreaId(99) });
         assert_eq!(result, Err(CommandError::AreaNotFound(AreaId(99))));
+    }
+
+    fn test_line(id: LineId, address: u8, devices: Vec<DeviceId>) -> Line {
+        Line {
+            id,
+            source: source(),
+            name: "L".into(),
+            address,
+            medium_ref: "TP".into(),
+            domain_address: None,
+            domain_address_is_checked: None,
+            ip_routing_multicast_address: None,
+            multicast_ttl: None,
+            completion: CompletionStatus::FinishedDesign,
+            devices,
+        }
+    }
+
+    #[test]
+    fn create_then_delete_line_round_trips_through_undo() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "A".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![],
+        });
+        let mut stack = CommandStack::new();
+        let line = test_line(LineId(1), 1, vec![]);
+        stack
+            .do_command(
+                &mut project,
+                Command::CreateLine {
+                    area: AreaId(1),
+                    line: line.clone(),
+                },
+            )
+            .unwrap();
+        assert_eq!(project.installations[0].topology.lines.len(), 1);
+        assert_eq!(
+            project.installations[0].topology.areas[0].lines,
+            vec![LineId(1)]
+        );
+        stack
+            .do_command(&mut project, Command::DeleteLine { id: LineId(1) })
+            .unwrap();
+        assert!(project.installations[0].topology.lines.is_empty());
+        assert!(project.installations[0].topology.areas[0].lines.is_empty());
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].topology.lines.len(), 1);
+        stack.undo(&mut project).unwrap();
+        assert!(project.installations[0].topology.lines.is_empty());
+    }
+
+    #[test]
+    fn create_line_rejects_a_duplicate_address_in_the_same_area() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "A".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![LineId(1)],
+        });
+        project.installations[0]
+            .topology
+            .lines
+            .push(test_line(LineId(1), 1, vec![]));
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::CreateLine {
+                area: AreaId(1),
+                line: test_line(LineId(2), 1, vec![]),
+            },
+        );
+        assert!(matches!(
+            result,
+            Err(CommandError::Validation(
+                ValidationError::DuplicateLineAddress { .. }
+            ))
+        ));
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn create_line_rejects_an_unknown_area() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::CreateLine {
+                area: AreaId(99),
+                line: test_line(LineId(1), 1, vec![]),
+            },
+        );
+        assert_eq!(result, Err(CommandError::AreaNotFound(AreaId(99))));
+    }
+
+    #[test]
+    fn delete_line_refuses_when_it_still_has_a_device() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "A".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![LineId(1)],
+        });
+        project.installations[0]
+            .topology
+            .lines
+            .push(test_line(LineId(1), 1, vec![DeviceId(1)]));
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(&mut project, Command::DeleteLine { id: LineId(1) });
+        assert_eq!(result, Err(CommandError::LineNotEmpty(LineId(1))));
+    }
+
+    #[test]
+    fn delete_unknown_line_is_rejected() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(&mut project, Command::DeleteLine { id: LineId(99) });
+        assert_eq!(result, Err(CommandError::LineNotFound(LineId(99))));
     }
 }

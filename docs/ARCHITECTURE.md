@@ -238,7 +238,10 @@ a `TunnelClient` handle (`send`, `subscribe`) — the same names this
 document already fixed, now backed by a real implementation grounded in
 the KNX Association specification rather than a port of an existing
 stack. `TunnelClient::send` (Cycle 2), `discover` (Cycle 3, multicast
-`SEARCH_REQUEST`/`SEARCH_RESPONSE`), and `connect_routing` (Cycle 4, unconfirmed `ROUTING_INDICATION` over the standard routing multicast group) are all implemented now; KNX IP Secure remains out of scope, handled separately by `knx-secure`. The bus monitor is a consumer that
+`SEARCH_REQUEST`/`SEARCH_RESPONSE`), and `connect_routing` (Cycle 4,
+unconfirmed `ROUTING_INDICATION` over the standard routing multicast
+group) are all implemented now; KNX IP Secure remains out of scope, handled
+separately by `knx-secure`. The bus monitor is a consumer that
 resolves telegrams against the open project (`apps/knx-cli`'s `bus monitor`
 subcommand, resolving against group address names only, no DPT
 interpretation yet); the connection itself knows nothing about projects,

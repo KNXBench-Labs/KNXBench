@@ -675,6 +675,41 @@ custom routing multicast address) and #33 (the loopback round-trip test's
 environment-dependent skip) remain open — out of this cycle's scope,
 which was specifically the three gaps above.
 
+**Topology & group-range command layer (2026-09-06).** `knx-core::command`
+gains ten `Command` variants closing the first item of
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 1 backlog: `CreateArea`/
+`DeleteArea`, `CreateLine`/`DeleteLine`, `MoveDeviceToLine`,
+`CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange`, and
+`LinkComObject`/`UnlinkComObject` — each following `CreateGroupAddress`/
+`DeleteGroupAddress`'s existing shape exactly (caller pre-allocates the id
+via `Project::ids`, `apply` returns its own inverse). Two validation
+functions that existed but were never called from any command
+(`check_group_address_in_range`, `check_group_link_target_exists`) are
+finally wired up — the former into `CreateGroupAddress` itself, as a
+previously-missing check on existing behavior; the latter into
+`LinkComObject` only (`UnlinkComObject` removes a link and so has no
+target to check exists). `CreateGroupRange` gets its own pair of checks
+instead, from two of the four new `validation.rs` functions that close
+the remaining gaps: duplicate area/line address (line addresses unique
+per area, not project-wide, matching ETS's Area.Line.Device numbering)
+and group-range nesting/overlap (`check_group_range_nests_in_parent`,
+`check_no_overlapping_group_range`). All ten commands are backend-only
+this cycle: `apps/knx-server` gains one route each (`/api/areas`,
+`/api/lines`, `/api/move-device`, `/api/group-ranges`,
+`/api/group-links`), but no frontend UI exists for any of them yet — see
+[the design spec](superpowers/specs/2026-09-06-topology-group-range-commands-design.md)
+for the deliberate scope cut (`knx-projection`'s `GroupAddressNode` has no
+real main/middle/address nesting yet; that redesign is its own future
+cycle). `knx-projection` gains a small, additive `GroupRangeNode`
+(id/name/start/end/parent) on `InstallationNode` — not the fuller nesting
+redesign, just enough for an HTTP caller to discover a newly-created
+range's id. `sync_after_command` gains no new incremental-sync paths for
+any of the ten — same as every command since Session 5 cycle 2 that
+hasn't gotten one yet, correct via a full `save_project`/`load_project`
+round trip until a later cycle's incremental-sync pass covers all of
+them together. 49 Rust tests added across
+`crates/knx-core`/`crates/knx-projection`/`apps/knx-server`.
+
 ## Next session
 
 Session 6 is in progress (Cycles 1-5 done). ROADMAP's entry condition — "a

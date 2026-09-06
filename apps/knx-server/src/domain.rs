@@ -280,12 +280,21 @@ pub fn set_com_object_description_impl(
 /// Allocates a fresh `GroupAddressId` and creates a new group address in
 /// `installations[0]` — the only installation any `Command` targets
 /// (`Command::apply`'s own doc comment). `address` is parsed against the
-/// project's own `GroupAddressStyle`. `entry.source` is empty: a
-/// UI-created object has no ETS origin to preserve.
+/// project's own `GroupAddressStyle`. `entry.source` gets a synthetic,
+/// stable id (`KB-GA-<id>`) instead of the empty string this used to
+/// write — a UI-created entity has no ETS origin to preserve, but an
+/// empty `ets_id` produced an invalid, colliding `Id=""` attribute if it
+/// ever reached export (KNOWN_LIMITATIONS.md #21). `range_id` stays
+/// optional: forcing every UI-created address into a range needs a range
+/// *picker* in the UI, which does not exist yet (Sub-Project 2) — until
+/// then, a `None` range keeps behaving exactly as before, and a `Some`
+/// range is now validated (`Command::CreateGroupAddress`'s own
+/// in-range check) rather than trusted blindly.
 pub fn create_group_address_impl(
     state: &AppState,
     name: String,
     address: String,
+    range_id: Option<u32>,
 ) -> Result<knx_projection::ProjectTree, String> {
     let cmd = {
         let mut project = state.project.lock().expect("state mutex poisoned");
@@ -297,14 +306,14 @@ pub fn create_group_address_impl(
             entry: knx_core::GroupAddressEntry {
                 id,
                 source: knx_core::SourceRef {
-                    path: String::new(),
-                    ets_id: String::new(),
+                    path: format!("KB-GA-{}", id.0),
+                    ets_id: format!("KB-GA-{}", id.0),
                 },
                 name,
                 address,
                 central: false,
                 unfiltered: false,
-                range: None,
+                range: range_id.map(knx_core::GroupRangeId),
             },
         }
     };
@@ -319,6 +328,200 @@ pub fn delete_group_address_impl(
         state,
         knx_core::Command::DeleteGroupAddress {
             id: knx_core::GroupAddressId(id),
+        },
+    )
+}
+
+pub fn create_area_impl(
+    state: &AppState,
+    name: String,
+    address: u8,
+) -> Result<knx_projection::ProjectTree, String> {
+    let cmd = {
+        let mut project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_mut().ok_or("no project open")?;
+        let id = project.ids.next_area_id();
+        knx_core::Command::CreateArea {
+            area: knx_core::Area {
+                id,
+                source: knx_core::SourceRef {
+                    path: format!("KB-Area-{}", id.0),
+                    ets_id: format!("KB-Area-{}", id.0),
+                },
+                name,
+                address,
+                completion: knx_core::CompletionStatus::Editing,
+                lines: vec![],
+            },
+        }
+    };
+    apply(state, cmd)
+}
+
+pub fn delete_area_impl(state: &AppState, id: u32) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::DeleteArea {
+            id: knx_core::AreaId(id),
+        },
+    )
+}
+
+pub fn create_line_impl(
+    state: &AppState,
+    area_id: u32,
+    name: String,
+    address: u8,
+    medium_ref: String,
+) -> Result<knx_projection::ProjectTree, String> {
+    let cmd = {
+        let mut project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_mut().ok_or("no project open")?;
+        let id = project.ids.next_line_id();
+        knx_core::Command::CreateLine {
+            area: knx_core::AreaId(area_id),
+            line: knx_core::Line {
+                id,
+                source: knx_core::SourceRef {
+                    path: format!("KB-Line-{}", id.0),
+                    ets_id: format!("KB-Line-{}", id.0),
+                },
+                name,
+                address,
+                medium_ref,
+                domain_address: None,
+                domain_address_is_checked: None,
+                ip_routing_multicast_address: None,
+                multicast_ttl: None,
+                completion: knx_core::CompletionStatus::Editing,
+                devices: vec![],
+            },
+        }
+    };
+    apply(state, cmd)
+}
+
+pub fn delete_line_impl(state: &AppState, id: u32) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::DeleteLine {
+            id: knx_core::LineId(id),
+        },
+    )
+}
+
+pub fn move_device_to_line_impl(
+    state: &AppState,
+    device_id: u32,
+    line_id: Option<u32>,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::MoveDeviceToLine {
+            device: knx_core::DeviceId(device_id),
+            line: line_id.map(knx_core::LineId),
+        },
+    )
+}
+
+pub fn create_group_range_impl(
+    state: &AppState,
+    name: String,
+    start: String,
+    end: String,
+    parent_id: Option<u32>,
+) -> Result<knx_projection::ProjectTree, String> {
+    let cmd = {
+        let mut project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_mut().ok_or("no project open")?;
+        let style = project.info.group_address_style;
+        let start = knx_core::GroupAddress::parse(&start, style).map_err(|e| e.to_string())?;
+        let end = knx_core::GroupAddress::parse(&end, style).map_err(|e| e.to_string())?;
+        let id = project.ids.next_group_range_id();
+        knx_core::Command::CreateGroupRange {
+            range: knx_core::GroupRange {
+                id,
+                source: knx_core::SourceRef {
+                    path: format!("KB-Range-{}", id.0),
+                    ets_id: format!("KB-Range-{}", id.0),
+                },
+                name,
+                start,
+                end,
+                parent: parent_id.map(knx_core::GroupRangeId),
+                children: vec![],
+            },
+        }
+    };
+    apply(state, cmd)
+}
+
+pub fn delete_group_range_impl(
+    state: &AppState,
+    id: u32,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::DeleteGroupRange {
+            id: knx_core::GroupRangeId(id),
+        },
+    )
+}
+
+pub fn rename_group_range_impl(
+    state: &AppState,
+    id: u32,
+    name: String,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::RenameGroupRange {
+            id: knx_core::GroupRangeId(id),
+            name,
+        },
+    )
+}
+
+fn parse_direction(direction: &str) -> Result<knx_core::Direction, String> {
+    match direction {
+        "Send" => Ok(knx_core::Direction::Send),
+        "Receive" => Ok(knx_core::Direction::Receive),
+        other => Err(format!(
+            "unknown direction '{other}', expected 'Send' or 'Receive'"
+        )),
+    }
+}
+
+pub fn link_com_object_impl(
+    state: &AppState,
+    com_object_id: u32,
+    ga_id: u32,
+    direction: String,
+) -> Result<knx_projection::ProjectTree, String> {
+    let direction = parse_direction(&direction)?;
+    apply(
+        state,
+        knx_core::Command::LinkComObject {
+            com_object: knx_core::ComObjectInstanceId(com_object_id),
+            ga: knx_core::GroupAddressId(ga_id),
+            direction,
+        },
+    )
+}
+
+pub fn unlink_com_object_impl(
+    state: &AppState,
+    com_object_id: u32,
+    ga_id: u32,
+    direction: String,
+) -> Result<knx_projection::ProjectTree, String> {
+    let direction = parse_direction(&direction)?;
+    apply(
+        state,
+        knx_core::Command::UnlinkComObject {
+            com_object: knx_core::ComObjectInstanceId(com_object_id),
+            ga: knx_core::GroupAddressId(ga_id),
+            direction,
         },
     )
 }

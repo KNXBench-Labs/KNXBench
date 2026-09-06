@@ -10,3 +10,4 @@ publish = false
 [dependencies]
 knx-core.workspace = true
 tokio = { workspace = true, features = ["net", "sync", "time", "macros", "rt"] }
+socket2 = { workspace = true, features = ["all"] }

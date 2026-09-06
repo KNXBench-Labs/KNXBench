@@ -16,6 +16,8 @@ const USAGE: &str =
      \x20     knx bus discover\n\
      \x20     knx bus monitor --gateway <host:port> [--project <path.knxdb>]\n\
      \x20     knx bus write --gateway <host:port> <main/middle/sub> <0|1|hex>\n\
+     \x20     knx bus route-monitor --source-address <area.line.device> [--project <path.knxdb>]\n\
+     \x20     knx bus route-send --source-address <area.line.device> <main/middle/sub> <0|1|hex>\n\
      exit codes: 0 = imported cleanly (warnings allowed), 1 = could not import,\n\
      2 = imported, but the report contains errors";
 
@@ -538,6 +540,8 @@ fn run_bus(args: &[String]) -> ExitCode {
         Some("discover") => run_bus_discover(&args[1..]),
         Some("monitor") => run_bus_monitor(&args[1..]),
         Some("write") => run_bus_write(&args[1..]),
+        Some("route-monitor") => run_bus_route_monitor(&args[1..]),
+        Some("route-send") => run_bus_route_send(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE
@@ -840,6 +844,222 @@ async fn run_bus_write_async(
         }
         Err(e) => {
             eprintln!("write failed: {e}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+struct BusRouteMonitorArgs {
+    source_address: String,
+    project: Option<String>,
+}
+
+fn parse_bus_route_monitor_args(args: &[String]) -> Result<BusRouteMonitorArgs, String> {
+    let mut source_address = None;
+    let mut project = None;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--source-address" => {
+                source_address = Some(take_value(args, i + 1, "--source-address")?);
+                i += 2;
+            }
+            "--project" => {
+                project = Some(take_value(args, i + 1, "--project")?);
+                i += 2;
+            }
+            other => return Err(format!("unrecognized argument: {other}")),
+        }
+    }
+    Ok(BusRouteMonitorArgs {
+        source_address: source_address
+            .ok_or_else(|| "--source-address is required".to_string())?,
+        project,
+    })
+}
+
+fn run_bus_route_monitor(args: &[String]) -> ExitCode {
+    let parsed = match parse_bus_route_monitor_args(args) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let own_address: knx_core::IndividualAddress = match parsed.source_address.parse() {
+        Ok(a) => a,
+        Err(_) => {
+            eprintln!("--source-address must be area.line.device, e.g. 1.1.1");
+            return ExitCode::FAILURE;
+        }
+    };
+    let ga_names: std::collections::HashMap<u16, String> = match &parsed.project {
+        Some(path) => match load_group_address_names(Path::new(path)) {
+            Ok(names) => names,
+            Err(e) => {
+                eprintln!("could not load project {path}: {e}");
+                return ExitCode::FAILURE;
+            }
+        },
+        None => std::collections::HashMap::new(),
+    };
+
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(run_bus_route_monitor_async(own_address, ga_names))
+}
+
+async fn run_bus_route_monitor_async(
+    own_address: knx_core::IndividualAddress,
+    ga_names: std::collections::HashMap<u16, String>,
+) -> ExitCode {
+    use knx_net::BusConnection;
+    let client = knx_net::KnxNetIpClient::new();
+    let routing = match client.connect_routing(own_address).await {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("could not join the routing multicast group: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    eprintln!("joined routing multicast as {own_address}. Ctrl-C to stop.");
+    let mut telegrams = routing.subscribe();
+    loop {
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => break,
+            received = telegrams.recv() => match received {
+                Ok(telegram) => println!("{}", format_telegram(&telegram, &ga_names)),
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                    eprintln!("warning: {n} telegram(s) dropped (receiver too slow)");
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+            },
+        }
+    }
+    ExitCode::SUCCESS
+}
+
+struct BusRouteSendArgs {
+    source_address: String,
+    group_address: String,
+    value: String,
+}
+
+fn parse_bus_route_send_args(args: &[String]) -> Result<BusRouteSendArgs, String> {
+    let mut source_address = None;
+    let mut positional = Vec::new();
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--source-address" => {
+                source_address = Some(take_value(args, i + 1, "--source-address")?);
+                i += 2;
+            }
+            other => {
+                positional.push(other.to_string());
+                i += 1;
+            }
+        }
+    }
+    // Check source_address first to provide clear error messaging
+    let source_address = source_address
+        .ok_or_else(|| "--source-address is required".to_string())?;
+    let [group_address, value] = &positional[..] else {
+        return Err("expected exactly one group address and one value".to_string());
+    };
+    Ok(BusRouteSendArgs {
+        source_address,
+        group_address: group_address.clone(),
+        value: value.clone(),
+    })
+}
+
+fn run_bus_route_send(args: &[String]) -> ExitCode {
+    let parsed = match parse_bus_route_send_args(args) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let own_address: knx_core::IndividualAddress = match parsed.source_address.parse() {
+        Ok(a) => a,
+        Err(_) => {
+            eprintln!("--source-address must be area.line.device, e.g. 1.1.1");
+            return ExitCode::FAILURE;
+        }
+    };
+    let group_address = match knx_core::GroupAddress::parse(
+        &parsed.group_address,
+        knx_core::GroupAddressStyle::ThreeLevel,
+    ) {
+        Ok(ga) => ga,
+        Err(e) => {
+            eprintln!("invalid group address {}: {e}", parsed.group_address);
+            return ExitCode::FAILURE;
+        }
+    };
+    let value = match parse_group_value(&parsed.value) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(run_bus_route_send_async(own_address, group_address, value))
+}
+
+async fn run_bus_route_send_async(
+    own_address: knx_core::IndividualAddress,
+    group_address: knx_core::GroupAddress,
+    value: knx_net::GroupValue,
+) -> ExitCode {
+    use knx_net::{ApplicationService, BusConnection, Destination};
+    let client = knx_net::KnxNetIpClient::new();
+    let routing = match client.connect_routing(own_address).await {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("could not join the routing multicast group: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    // Routing is unconfirmed (Routing v01.05.02 AS §5.1) — "sent", not
+    // "wrote", since there's no ACK to confirm delivery, unlike tunnelling.
+    match routing
+        .send(
+            Destination::Group(group_address),
+            ApplicationService::GroupValueWrite(value),
+        )
+        .await
+    {
+        Ok(()) => {
+            println!(
+                "sent to {}",
+                group_address.format(knx_core::GroupAddressStyle::ThreeLevel)
+            );
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("send failed: {e}");
             ExitCode::FAILURE
         }
     }

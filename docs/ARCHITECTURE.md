@@ -231,10 +231,19 @@ layer that owns the problem. See ADR-0009.
 
 An own implementation against ISO 22510, not a port of an existing stack.
 
-The work is Session 6, but the interface is fixed now: a `BusConnection` trait
-with `discover`, `connect_tunnel`, `send` and `subscribe`. The bus monitor is a
-consumer that resolves telegrams against the open project; the connection
-itself knows nothing about projects.
+Session 6, Cycle 1 delivered read-only tunnelling: `crates/knx-net` connects
+to a KNXnet/IP gateway by known IP, receives KNX telegrams, and decodes
+them, exposed as a `BusConnection` trait (`discover`, `connect_tunnel`) and
+a `TunnelClient` handle (`send`, `subscribe`) — the same names this
+document already fixed, now backed by a real implementation grounded in
+the KNX Association specification rather than a port of an existing
+stack. `discover` and `TunnelClient::send` remain explicit
+`BusError::NotImplemented` stubs; later cycles cover them, plus routing
+and KNX IP Secure. The bus monitor is a consumer that resolves telegrams
+against the open project (`apps/knx-cli`'s `bus monitor` subcommand,
+resolving against group address names only, no DPT interpretation yet);
+the connection itself knows nothing about projects, as this section
+originally specified.
 
 `BusAccess` from `0.xml` — the ETS commissioning interface connection string —
 is preserved verbatim and **not** translated into our own connection model

@@ -249,6 +249,34 @@ pub fn set_com_object_dpt_impl(
     )
 }
 
+pub fn set_device_description_impl(
+    state: &AppState,
+    device_id: u32,
+    description: Option<String>,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::SetDeviceDescription {
+            device: knx_core::DeviceId(device_id),
+            description,
+        },
+    )
+}
+
+pub fn set_com_object_description_impl(
+    state: &AppState,
+    com_object_id: u32,
+    description: Option<String>,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::SetComObjectDescription {
+            com_object: knx_core::ComObjectInstanceId(com_object_id),
+            description,
+        },
+    )
+}
+
 /// Allocates a fresh `GroupAddressId` and creates a new group address in
 /// `installations[0]` — the only installation any `Command` targets
 /// (`Command::apply`'s own doc comment). `address` is parsed against the

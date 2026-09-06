@@ -49,6 +49,28 @@ describe("api", () => {
     expect(JSON.parse(init.body as string)).toEqual({ deviceId: 7, address: "1.1.1" });
   });
 
+  it("setDeviceDescription posts to /api/device-description with camelCase field names", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.setDeviceDescription(7, "Flur, links");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/device-description");
+    expect(JSON.parse(init.body as string)).toEqual({
+      deviceId: 7,
+      description: "Flur, links",
+    });
+  });
+
+  it("setComObjectDescription posts to /api/com-object-description with camelCase field names", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.setComObjectDescription(3, "Aktoreingang 1");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/com-object-description");
+    expect(JSON.parse(init.body as string)).toEqual({
+      comObjectId: 3,
+      description: "Aktoreingang 1",
+    });
+  });
+
   it("errorMessage unwraps an Error's message without doubling 'Error: '", () => {
     expect(api.errorMessage(new Error("no project open"))).toBe("no project open");
   });

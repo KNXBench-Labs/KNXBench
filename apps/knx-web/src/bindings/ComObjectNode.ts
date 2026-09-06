@@ -15,7 +15,17 @@ dpt: string | null,
  * `"Instance"`, `"Inferred"`, `"UserEdit"`), `None` alongside `dpt:
  * None`.
  */
-dpt_layer: string | null, is_active: boolean, 
+dpt_layer: string | null, 
+/**
+ * Resolved through the project's string table, same as `name` — `None`
+ * if never stated at any layer.
+ */
+description: string | null, 
+/**
+ * The layer `description` resolved from, `None` alongside
+ * `description: None`.
+ */
+description_layer: string | null, is_active: boolean, 
 /**
  * Display-only this cycle — no `Command` exists yet to edit flags.
  */

@@ -10,6 +10,7 @@
 pub mod cemi;
 pub mod client;
 pub mod core;
+pub mod discovery;
 pub mod frame;
 pub mod tunnelling;
 

@@ -7,6 +7,9 @@
 use super::hpai::Hpai;
 
 // Service type identifiers, Core v01.06.02 AS §7.4.1.
+// Discovery service type identifiers, Core v01.06.02 AS §7.4.1.
+pub const SEARCH_REQUEST: u16 = 0x0201;
+pub const SEARCH_RESPONSE: u16 = 0x0202;
 pub const CONNECT_REQUEST: u16 = 0x0205;
 pub const CONNECT_RESPONSE: u16 = 0x0206;
 pub const CONNECTIONSTATE_REQUEST: u16 = 0x0207;
@@ -251,6 +254,8 @@ mod tests {
 
     #[test]
     fn service_type_constants_match_the_spec() {
+        assert_eq!(SEARCH_REQUEST, 0x0201);
+        assert_eq!(SEARCH_RESPONSE, 0x0202);
         assert_eq!(CONNECT_REQUEST, 0x0205);
         assert_eq!(CONNECT_RESPONSE, 0x0206);
         assert_eq!(CONNECTIONSTATE_REQUEST, 0x0207);

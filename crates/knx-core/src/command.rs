@@ -11,6 +11,7 @@ use crate::group::GroupAddressEntry;
 use crate::ids::{ComObjectInstanceId, DeviceId, GroupAddressId};
 use crate::project::Project;
 use crate::provenance::{Layer, Override, Resolved};
+use crate::string_table::Text;
 use crate::validation::{
     check_no_duplicate_group_address, check_no_duplicate_individual_address, ValidationError,
 };
@@ -25,6 +26,15 @@ pub enum Command {
     SetIndividualAddress {
         device: DeviceId,
         address: Option<IndividualAddress>,
+    },
+    /// Sets a device's description as a user edit. Unlike
+    /// `ComObjectInstance::description`, `DeviceInstance::description` is a
+    /// bare `Option<String>`, not an `Override<Text>` — no provenance layer
+    /// exists to preserve, so this doubles as its own undo/redo form (like
+    /// `SetIndividualAddress`).
+    SetDeviceDescription {
+        device: DeviceId,
+        description: Option<String>,
     },
     /// Sets a communication object instance's datapoint type as a user
     /// edit. Always resolves to `Layer::UserEdit` — use `RestoreComObjectDpt`
@@ -42,6 +52,21 @@ pub enum Command {
     RestoreComObjectDpt {
         com_object: ComObjectInstanceId,
         dpt: Override<DptRef>,
+    },
+    /// Sets a communication object instance's description as a user edit.
+    /// Always resolves to `Layer::UserEdit` — use
+    /// `RestoreComObjectDescription` to put back an exact prior
+    /// `Resolved<Text>` (that is what undo does; this variant is not it).
+    SetComObjectDescription {
+        com_object: ComObjectInstanceId,
+        description: Option<String>,
+    },
+    /// The undo/redo form of `SetComObjectDescription` — see
+    /// `RestoreComObjectDpt` for why this cannot share the bare-`String`
+    /// shape.
+    RestoreComObjectDescription {
+        com_object: ComObjectInstanceId,
+        description: Override<Text>,
     },
     /// `entry.id` is pre-allocated by the caller via
     /// `Project::ids::next_group_address_id`.
@@ -122,6 +147,22 @@ impl Command {
                     address: previous,
                 })
             }
+            Command::SetDeviceDescription {
+                device,
+                description,
+            } => {
+                let device = *device;
+                let target = project
+                    .devices
+                    .get_mut(device)
+                    .ok_or(CommandError::DeviceNotFound(device))?;
+                let previous = target.description.clone();
+                target.description = description.clone();
+                Ok(Command::SetDeviceDescription {
+                    device,
+                    description: previous,
+                })
+            }
             Command::SetComObjectDpt { com_object, dpt } => {
                 let com_object = *com_object;
                 let com: &mut ComObjectInstance = project
@@ -155,6 +196,46 @@ impl Command {
                 Ok(Command::RestoreComObjectDpt {
                     com_object,
                     dpt: previous,
+                })
+            }
+            Command::SetComObjectDescription {
+                com_object,
+                description,
+            } => {
+                let com_object = *com_object;
+                let com: &mut ComObjectInstance = project
+                    .devices
+                    .com_object_mut(com_object)
+                    .ok_or(CommandError::ComObjectNotFound(com_object))?;
+                let previous = com.description.clone();
+                com.description = match description {
+                    Some(value) => Override::Value(Resolved {
+                        value: Text::Literal(value.clone()),
+                        layer: Layer::UserEdit,
+                    }),
+                    // A user-initiated clear is a deliberate empty, mirroring
+                    // `SetComObjectDpt`'s own convention (see its comment).
+                    None => Override::Empty,
+                };
+                Ok(Command::RestoreComObjectDescription {
+                    com_object,
+                    description: previous,
+                })
+            }
+            Command::RestoreComObjectDescription {
+                com_object,
+                description,
+            } => {
+                let com_object = *com_object;
+                let com: &mut ComObjectInstance = project
+                    .devices
+                    .com_object_mut(com_object)
+                    .ok_or(CommandError::ComObjectNotFound(com_object))?;
+                let previous = com.description.clone();
+                com.description = description.clone();
+                Ok(Command::RestoreComObjectDescription {
+                    com_object,
+                    description: previous,
                 })
             }
             Command::CreateGroupAddress { entry } => {
@@ -537,6 +618,114 @@ mod tests {
             }
         );
         assert_eq!(restored.dpt.value().unwrap().layer, Layer::Program);
+    }
+
+    #[test]
+    fn set_device_description_then_undo_restores_previous_value() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetDeviceDescription {
+                    device: DeviceId(1),
+                    description: Some("new description".into()),
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            project.devices.get(DeviceId(1)).unwrap().description,
+            Some("new description".to_string())
+        );
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.devices.get(DeviceId(1)).unwrap().description, None);
+        stack.redo(&mut project).unwrap();
+        assert_eq!(
+            project.devices.get(DeviceId(1)).unwrap().description,
+            Some("new description".to_string())
+        );
+    }
+
+    #[test]
+    fn set_com_object_description_marks_layer_as_user_edit_and_undoes() {
+        let mut project = test_project_with_one_device(None);
+        let com = ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Value(Resolved {
+                value: Text::Literal("old".into()),
+                layer: Layer::Program,
+            }),
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+        };
+        project.devices.insert_com_object(com);
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetComObjectDescription {
+                    com_object: ComObjectInstanceId(1),
+                    description: Some("new".into()),
+                },
+            )
+            .unwrap();
+        let updated = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert_eq!(
+            updated.description.value().unwrap().value,
+            Text::Literal("new".into())
+        );
+        assert_eq!(updated.description.value().unwrap().layer, Layer::UserEdit);
+        stack.undo(&mut project).unwrap();
+        let restored = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert_eq!(
+            restored.description.value().unwrap().value,
+            Text::Literal("old".into())
+        );
+        assert_eq!(restored.description.value().unwrap().layer, Layer::Program);
+    }
+
+    #[test]
+    fn setting_com_object_description_to_none_writes_empty_not_absent() {
+        let mut project = test_project_with_one_device(None);
+        let com = ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Value(Resolved {
+                value: Text::Literal("old".into()),
+                layer: Layer::Program,
+            }),
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+        };
+        project.devices.insert_com_object(com);
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetComObjectDescription {
+                    com_object: ComObjectInstanceId(1),
+                    description: None,
+                },
+            )
+            .unwrap();
+        let updated = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert_eq!(updated.description, Override::Empty);
+        stack.undo(&mut project).unwrap();
+        let restored = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert_eq!(restored.description.value().unwrap().layer, Layer::Program);
     }
 
     #[test]

@@ -3,7 +3,8 @@
 //! id(s) name, reading the resulting state out of the already-mutated
 //! `project` rather than re-deriving `command.rs`'s own mutation logic
 //! (design doc, "Incremental command sync"). Grows as `command.rs` grows —
-//! today's four variants are all that exist.
+//! today's six variants (plus their two undo/redo forms) are all that
+//! exist.
 
 use rusqlite::Connection;
 
@@ -11,7 +12,10 @@ use knx_core::command::Command;
 use knx_core::ids::InstallationId;
 use knx_core::project::Project;
 
-use crate::devices::{set_device_line, upsert_com_object_dpt_override, upsert_device};
+use crate::devices::{
+    set_device_line, upsert_com_object_description_override, upsert_com_object_dpt_override,
+    upsert_device,
+};
 use crate::group::{delete_group_address, upsert_group_address};
 use crate::StoreError;
 
@@ -54,6 +58,24 @@ pub fn sync_after_command(
                 position,
             )?;
         }
+        Command::SetDeviceDescription { device, .. } => {
+            let d = project
+                .devices
+                .get(*device)
+                .expect("Command::apply already proved this device exists");
+            let (installation_id, line_id, position): (u8, Option<i64>, i64) = tx.query_row(
+                "SELECT installation_id, line_id, topology_position FROM device WHERE id = ?1",
+                [d.id.0],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )?;
+            upsert_device(&tx, InstallationId(installation_id), position, d)?;
+            set_device_line(
+                &tx,
+                d.id,
+                line_id.map(|l| knx_core::ids::LineId(l as u32)),
+                position,
+            )?;
+        }
         Command::SetComObjectDpt { com_object, .. }
         | Command::RestoreComObjectDpt { com_object, .. } => {
             let com = project
@@ -61,6 +83,14 @@ pub fn sync_after_command(
                 .com_object(*com_object)
                 .expect("Command::apply already proved this com object exists");
             upsert_com_object_dpt_override(&tx, com.id, &com.dpt)?;
+        }
+        Command::SetComObjectDescription { com_object, .. }
+        | Command::RestoreComObjectDescription { com_object, .. } => {
+            let com = project
+                .devices
+                .com_object(*com_object)
+                .expect("Command::apply already proved this com object exists");
+            upsert_com_object_description_override(&tx, com.id, &com.description)?;
         }
         Command::CreateGroupAddress { entry } => {
             // `Command::apply` pushes onto `installations.first_mut()`, so
@@ -237,6 +267,78 @@ mod tests {
 
         let loaded = crate::load_project(&conn).unwrap();
         assert_eq!(loaded.installations[0].group_addresses, vec![]);
+    }
+
+    #[test]
+    fn set_device_description_syncs_only_the_device_row() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_unassigned_device();
+        crate::save_project(&conn, &project).unwrap();
+
+        let command = Command::SetDeviceDescription {
+            device: DeviceId(1),
+            description: Some("Schaltaktor Keller".into()),
+        };
+        command.apply(&mut project).unwrap();
+        sync_after_command(&conn, &project, &command).unwrap();
+
+        let loaded = crate::load_project(&conn).unwrap();
+        assert_eq!(
+            loaded.devices.get(DeviceId(1)).unwrap().description,
+            Some("Schaltaktor Keller".to_string())
+        );
+    }
+
+    #[test]
+    fn set_com_object_description_syncs_only_the_description_override_row() {
+        use knx_core::device::ComObjectInstance;
+        use knx_core::flags::ResolvedFlags;
+        use knx_core::ids::ComObjectInstanceId;
+        use knx_core::provenance::Override;
+
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_unassigned_device();
+        project.devices.insert_com_object(ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+        });
+        project
+            .devices
+            .get_mut(DeviceId(1))
+            .unwrap()
+            .com_objects
+            .push(ComObjectInstanceId(1));
+        crate::save_project(&conn, &project).unwrap();
+
+        let set = Command::SetComObjectDescription {
+            com_object: ComObjectInstanceId(1),
+            description: Some("Aktoreingang 1".into()),
+        };
+        let inverse = set.apply(&mut project).unwrap();
+        sync_after_command(&conn, &project, &set).unwrap();
+
+        let loaded = crate::load_project(&conn).unwrap();
+        let com = loaded.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert_eq!(
+            com.description.value().unwrap().value,
+            knx_core::string_table::Text::Literal("Aktoreingang 1".into())
+        );
+
+        // Undo replays through the same mechanism.
+        inverse.apply(&mut project).unwrap();
+        sync_after_command(&conn, &project, &inverse).unwrap();
+        let loaded = crate::load_project(&conn).unwrap();
+        let com = loaded.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert_eq!(com.description, Override::Absent);
     }
 
     #[test]

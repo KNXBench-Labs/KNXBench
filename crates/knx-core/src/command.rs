@@ -8,12 +8,14 @@ use std::fmt;
 use crate::device::ComObjectInstance;
 use crate::dpt::DptRef;
 use crate::group::GroupAddressEntry;
-use crate::ids::{ComObjectInstanceId, DeviceId, GroupAddressId};
+use crate::ids::{AreaId, ComObjectInstanceId, DeviceId, GroupAddressId};
 use crate::project::Project;
 use crate::provenance::{Layer, Override, Resolved};
 use crate::string_table::Text;
+use crate::topology::Area;
 use crate::validation::{
-    check_no_duplicate_group_address, check_no_duplicate_individual_address, ValidationError,
+    check_no_duplicate_area_address, check_no_duplicate_group_address,
+    check_no_duplicate_individual_address, ValidationError,
 };
 use crate::IndividualAddress;
 
@@ -76,6 +78,14 @@ pub enum Command {
     DeleteGroupAddress {
         id: GroupAddressId,
     },
+    /// `area.id` is pre-allocated by the caller via
+    /// `Project::ids::next_area_id`.
+    CreateArea {
+        area: Area,
+    },
+    DeleteArea {
+        id: AreaId,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,6 +100,9 @@ pub enum CommandError {
     /// exists for the reverse direction: a link created against a group
     /// address that is already gone).
     GroupAddressInUse(GroupAddressId),
+    AreaNotFound(AreaId),
+    /// A `DeleteArea` was refused because it still owns at least one line.
+    AreaNotEmpty(AreaId),
     InstallationNotFound,
     NothingToUndo,
     NothingToRedo,
@@ -111,6 +124,10 @@ impl fmt::Display for CommandError {
                     f,
                     "group address {id} is still linked from a communication object"
                 )
+            }
+            CommandError::AreaNotFound(id) => write!(f, "area {id} not found"),
+            CommandError::AreaNotEmpty(id) => {
+                write!(f, "area {id} still has lines, cannot delete")
             }
             CommandError::InstallationNotFound => write!(f, "project has no installation"),
             CommandError::NothingToUndo => write!(f, "nothing to undo"),
@@ -269,6 +286,34 @@ impl Command {
                 let entry = installation.group_addresses.remove(pos);
                 Ok(Command::CreateGroupAddress { entry })
             }
+            Command::CreateArea { area } => {
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                check_no_duplicate_area_address(&installation.topology, area.id, area.address)?;
+                let id = area.id;
+                installation.topology.areas.push(area.clone());
+                Ok(Command::DeleteArea { id })
+            }
+            Command::DeleteArea { id } => {
+                let id = *id;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let pos = installation
+                    .topology
+                    .areas
+                    .iter()
+                    .position(|a| a.id == id)
+                    .ok_or(CommandError::AreaNotFound(id))?;
+                if !installation.topology.areas[pos].lines.is_empty() {
+                    return Err(CommandError::AreaNotEmpty(id));
+                }
+                let area = installation.topology.areas.remove(pos);
+                Ok(Command::CreateArea { area })
+            }
         }
     }
 }
@@ -324,10 +369,10 @@ mod tests {
     use crate::device::DeviceInstance;
     use crate::flags::{Direction, GroupLink, ResolvedFlags};
     use crate::group::GroupRange;
-    use crate::ids::{InstallationId, SourceRef};
+    use crate::ids::{InstallationId, LineId, SourceRef};
     use crate::installation::Installation;
     use crate::string_table::Text;
-    use crate::topology::Topology;
+    use crate::topology::{Area, Topology};
     use crate::{GroupAddress, Language};
 
     fn source() -> SourceRef {
@@ -769,5 +814,90 @@ mod tests {
         stack.undo(&mut project).unwrap();
         let restored = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
         assert_eq!(restored.dpt.value().unwrap().layer, Layer::Program);
+    }
+
+    #[test]
+    fn create_then_delete_area_round_trips_through_undo() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let area = Area {
+            id: AreaId(1),
+            source: source(),
+            name: "Area 1".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![],
+        };
+        stack
+            .do_command(&mut project, Command::CreateArea { area: area.clone() })
+            .unwrap();
+        assert_eq!(project.installations[0].topology.areas.len(), 1);
+        stack
+            .do_command(&mut project, Command::DeleteArea { id: AreaId(1) })
+            .unwrap();
+        assert!(project.installations[0].topology.areas.is_empty());
+        stack.undo(&mut project).unwrap(); // undoes the delete -> recreates
+        assert_eq!(project.installations[0].topology.areas.len(), 1);
+        stack.undo(&mut project).unwrap(); // undoes the create -> empty again
+        assert!(project.installations[0].topology.areas.is_empty());
+    }
+
+    #[test]
+    fn create_area_rejects_a_duplicate_address_and_leaves_the_stack_untouched() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "Existing".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![],
+        });
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::CreateArea {
+                area: Area {
+                    id: AreaId(2),
+                    source: source(),
+                    name: "New".into(),
+                    address: 1,
+                    completion: CompletionStatus::FinishedDesign,
+                    lines: vec![],
+                },
+            },
+        );
+        assert!(matches!(
+            result,
+            Err(CommandError::Validation(
+                ValidationError::DuplicateAreaAddress { .. }
+            ))
+        ));
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn delete_area_refuses_when_it_still_has_a_line() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "A".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![LineId(1)],
+        });
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(&mut project, Command::DeleteArea { id: AreaId(1) });
+        assert_eq!(result, Err(CommandError::AreaNotEmpty(AreaId(1))));
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn delete_unknown_area_is_rejected() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(&mut project, Command::DeleteArea { id: AreaId(99) });
+        assert_eq!(result, Err(CommandError::AreaNotFound(AreaId(99))));
     }
 }

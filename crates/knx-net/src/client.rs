@@ -104,7 +104,7 @@ const SEARCH_TIMEOUT_SECS: u64 = 10;
 impl BusConnection for KnxNetIpClient {
     async fn discover(&self) -> Result<Vec<DiscoveredGateway>, BusError> {
         let socket = UdpSocket::bind("0.0.0.0:0").await.map_err(BusError::Io)?;
-        let discovery_endpoint = local_hpai(&socket)?;
+        let discovery_endpoint = local_discovery_hpai(&socket).await?;
         let request_body = discovery::encode_search_request(discovery_endpoint);
         let datagram = frame::encode_frame(services::SEARCH_REQUEST, &request_body);
         socket
@@ -361,6 +361,32 @@ fn local_hpai(socket: &UdpSocket) -> Result<Hpai, BusError> {
     }
 }
 
+/// `local_hpai(&socket)` alone is not enough for the discovery socket:
+/// `socket` is bound to the wildcard address and stays unconnected (it must,
+/// to receive unicast `SEARCH_RESPONSE`s from any gateway), so
+/// `local_addr()`/`getsockname()` reports IP `0.0.0.0` — a real interface
+/// address is only resolved once a socket is `connect()`ed and the kernel
+/// picks an outgoing route. Core v01.06.02 AS §8.6.2.2: an HPAI with one of
+/// {address, port} zero and the other non-zero is invalid and must be
+/// ignored by the receiving device — exactly what an unconnected
+/// wildcard-bound socket would otherwise produce here. Work around it with
+/// a throwaway socket connected to the multicast group purely to force
+/// route resolution (UDP `connect()` sends no packet), then pair its
+/// resolved IP with the real discovery socket's actual port.
+async fn local_discovery_hpai(socket: &UdpSocket) -> Result<Hpai, BusError> {
+    let probe = UdpSocket::bind("0.0.0.0:0").await.map_err(BusError::Io)?;
+    probe
+        .connect(DISCOVERY_MULTICAST)
+        .await
+        .map_err(BusError::Io)?;
+    let probe_hpai = local_hpai(&probe)?;
+    let real_port = local_hpai(socket)?.port;
+    Ok(Hpai {
+        addr: probe_hpai.addr,
+        port: real_port,
+    })
+}
+
 /// The sole reader of `state.socket` for the lifetime of the connection —
 /// `heartbeat_loop` only ever sends, then waits on `heartbeat_notify`, so
 /// there is never a second concurrent reader racing this one.
@@ -489,4 +515,51 @@ async fn send_heartbeat_with_retries(state: &Arc<TunnelState>) -> bool {
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Confirms the fix for the discovery HPAI bug: a discovery socket
+    /// bound to the wildcard address and left unconnected must still
+    /// yield a real (non-`0.0.0.0`) local IP once paired via
+    /// `local_discovery_hpai`, with the discovery socket's own port
+    /// (not the throwaway probe's). Skipped rather than failed if this
+    /// sandbox has no route to the discovery multicast group at all —
+    /// that's an environment limitation, not a regression.
+    #[tokio::test]
+    async fn local_discovery_hpai_resolves_a_real_ip_and_keeps_the_real_port() {
+        let socket = UdpSocket::bind("0.0.0.0:0")
+            .await
+            .expect("bind discovery socket");
+        let discovery_port = local_hpai(&socket)
+            .expect("read discovery socket's own port")
+            .port;
+
+        let probe = UdpSocket::bind("0.0.0.0:0")
+            .await
+            .expect("bind probe socket");
+        if probe.connect(DISCOVERY_MULTICAST).await.is_err() {
+            eprintln!(
+                "skipping local_discovery_hpai_resolves_a_real_ip_and_keeps_the_real_port: \
+                 no route to {DISCOVERY_MULTICAST} in this sandbox"
+            );
+            return;
+        }
+        drop(probe);
+
+        let hpai = local_discovery_hpai(&socket)
+            .await
+            .expect("local_discovery_hpai should succeed when the route exists");
+        assert_ne!(
+            hpai.addr,
+            Ipv4Addr::new(0, 0, 0, 0),
+            "resolved HPAI must not be the invalid wildcard address (Core v01.06.02 AS §8.6.2.2)"
+        );
+        assert_eq!(
+            hpai.port, discovery_port,
+            "resolved HPAI must carry the real discovery socket's port, not the probe's"
+        );
+    }
 }

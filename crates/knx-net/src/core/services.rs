@@ -67,13 +67,17 @@ impl From<super::hpai::HpaiError> for ServiceError {
     }
 }
 
-/// Core v01.06.02 AS §7.8.1, Figure 35: client control HPAI, CRI, client
-/// data HPAI, in that order.
-pub fn encode_connect_request(control: Hpai, cri: &[u8], data: Hpai) -> Vec<u8> {
-    let mut body = Vec::with_capacity(8 + cri.len() + 8);
+/// Core v01.06.02 AS §7.8.1's prose reads control HPAI, CRI, data HPAI —
+/// but real gateways (and every interoperable stack, e.g. xknx's
+/// `ConnectRequest.to_knx()`) put the data HPAI before the CRI. Verified
+/// against a physical gateway: the prose order gets silently dropped (no
+/// CONNECT_RESPONSE, ever), this order gets one every time. Wire format
+/// wins over the paragraph.
+pub fn encode_connect_request(control: Hpai, data: Hpai, cri: &[u8]) -> Vec<u8> {
+    let mut body = Vec::with_capacity(8 + 8 + cri.len());
     body.extend_from_slice(&control.encode());
-    body.extend_from_slice(cri);
     body.extend_from_slice(&data.encode());
+    body.extend_from_slice(cri);
     body
 }
 
@@ -167,12 +171,12 @@ mod tests {
     }
 
     #[test]
-    fn connect_request_lays_out_control_hpai_cri_data_hpai_in_order() {
+    fn connect_request_lays_out_control_hpai_data_hpai_cri_in_order() {
         let cri = [0x04, 0x04, 0x02, 0x00]; // opaque to this module
-        let body = encode_connect_request(hpai(), &cri, hpai());
+        let body = encode_connect_request(hpai(), hpai(), &cri);
         let mut expected = hpai().encode().to_vec();
-        expected.extend_from_slice(&cri);
         expected.extend_from_slice(&hpai().encode());
+        expected.extend_from_slice(&cri);
         assert_eq!(body, expected);
     }
 

@@ -18,7 +18,7 @@ in scope.
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
 | 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)), cycle 8 (project status dashboard, [design spec](superpowers/specs/2026-09-04-dashboard-design.md)), cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) — CLAUDE.md's full UI/UX deliverable list complete as of cycle 9 — and cycle 10 (a toast notification stack replacing the old persistent error banner, humor-wrapped error text, and a one-shot holiday/late-night startup toast, [design spec](superpowers/specs/2026-09-05-toast-easter-eggs-design.md)) done, see [ROADMAP.md](ROADMAP.md) |
-| 6 | KNXnet/IP | Not started |
+| 6 | KNXnet/IP | In progress (Cycle 1 shipped) — see below |
 | 7 | Integration & hardening | Not started |
 
 **The repository is a buildable Cargo workspace with eight crates.**
@@ -451,13 +451,37 @@ cargo run -p xtask -- check-layering
 cargo deny check
 ```
 
+**Session 6, Cycle 1 (2026-09-06) — KNXnet/IP read-only tunnelling.**
+`crates/knx-net` was built with five codec modules (`address.rs`, `cemi.rs`,
+`connect.rs`, `heartbeat.rs`, `receive.rs`), unit tests for each, a
+`TunnelClient` state machine managing the connect/heartbeat/receive/disconnect
+lifecycle, an `#[ignore]`d live-gateway integration test (first of its kind —
+a pattern for future hardware-dependent tests), and the `knx bus monitor`
+CLI subcommand resolving live telegrams against the project's group addresses.
+The implementation is built directly from the KNX Association specification
+(Core v01.06.02 AS, Tunnelling v01.07.01 AS, EMI_IMI v01.04.02 AS), not from
+reading `xknx` or other stacks. Built and unit-tested; live-gateway verification
+pending in an environment with LAN access to a real KNXnet/IP gateway — to be
+run by the user via `cargo test -p knx-net -- --ignored` and `knx bus monitor`
+against their own gateway.
+
+Known gaps added this cycle (not bugs, scope decisions):
+
+- `TunnelClient`'s heartbeat retry logic has a narrow, low-probability race
+  condition where a stale wakeup can burn one retry attempt. Not fixed this
+  cycle; no observed impact; noted for a future hardening pass.
+- `apps/knx-cli`'s `bus monitor` always formats group addresses as
+  three-level and merges names across installations into one flat map
+  (last-seen wins on collision). Acceptable for this cycle's dev/smoke-testing
+  use; not yet a general-purpose tool.
+
 ## Next session
 
-Session 5 (UI / UX). ROADMAP's entry condition — "import produces a model
-worth displaying" — is met: the domain model, import/export pipeline and
-shared product database all exist, and communication objects now carry
-resolved `Program`/`ProgramRef` values in addition to whatever the
-project's own `Instance` layer stated.
+Session 6 is in progress (Cycle 1 done). ROADMAP's entry condition — "a project
+can be opened and its group addresses resolved" — is met: the domain model,
+import/export pipeline, shared product database, and now read-only tunnelling
+to a known gateway all exist, and telegrams from the live bus resolve against
+group addresses from the open project.
 
 Cycle 5 shipped Search: finding a device, group address, or building part
 by name/address across a project too large to scan by eye in the Project

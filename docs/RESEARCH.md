@@ -343,6 +343,19 @@ Tunnelling to a real gateway at `192.0.2.1:3671` works from Linux via `xknx`, an
 
 This confirms end to end: project data → group address semantics → live telegram decoding, on Linux, without ETS.
 
+**Session 6, Cycle 1 (2026-09):** An own Rust implementation of the
+tunnelling connect/heartbeat/receive/disconnect lifecycle and cEMI `L_Data`
+decode, built directly from the KNX Association specification (Core v01.06.02
+AS, Tunnelling v01.07.01 AS, EMI_IMI v01.04.02 AS — not from reading
+`xknx`'s implementation). This cycle delivered `crates/knx-net`'s five codec
+modules with unit tests, the `TunnelClient` state machine, an `#[ignore]`d
+live-gateway integration test (the first of its kind in this repository —
+a pattern for future hardware-dependent tests), and the `knx bus monitor`
+CLI subcommand. Live-gateway verification against a real KNXnet/IP gateway
+is the next step, to be run by the user via `cargo test -p knx-net --
+--ignored` and `knx bus monitor` against their own gateway in an environment
+with LAN access.
+
 ### 8.2 Standards position [D]
 
 * KNXnet/IP is publicly standardized as **ISO 22510:2019** (EN ISO 22510:2020), covering Overview, Core, Device Management, Tunnelling, Routing, Remote Diagnosis, Secured Communication, plus cEMI and coupler resources. Purchasable, not free.

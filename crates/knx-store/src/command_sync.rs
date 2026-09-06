@@ -3,8 +3,12 @@
 //! id(s) name, reading the resulting state out of the already-mutated
 //! `project` rather than re-deriving `command.rs`'s own mutation logic
 //! (design doc, "Incremental command sync"). Grows as `command.rs` grows —
-//! today's six variants (plus their two undo/redo forms) are all that
-//! exist.
+//! all 18 `Command` variants have a match arm here, but only the original
+//! eight (device address/description, com-object DPT/description and their
+//! undo/redo forms, group-address create/delete) actually persist; the ten
+//! topology/group-range/group-link variants are no-op stubs awaiting a
+//! future incremental-sync pass (see each arm's own "persistence layer not
+//! yet implemented" comment).
 
 use rusqlite::Connection;
 
@@ -111,6 +115,36 @@ pub fn sync_after_command(
         }
         Command::DeleteGroupAddress { id } => {
             delete_group_address(&tx, *id)?;
+        }
+        Command::CreateArea { .. } => {
+            // Area persistence layer not yet implemented (Task 2 scope).
+        }
+        Command::DeleteArea { .. } => {
+            // Area persistence layer not yet implemented (Task 2 scope).
+        }
+        Command::CreateLine { .. } => {
+            // Line persistence layer not yet implemented (Task 3 scope).
+        }
+        Command::DeleteLine { .. } => {
+            // Line persistence layer not yet implemented (Task 3 scope).
+        }
+        Command::MoveDeviceToLine { .. } => {
+            // Line/device-membership persistence layer not yet implemented (Task 4 scope).
+        }
+        Command::CreateGroupRange { .. } => {
+            // Group-range persistence layer not yet implemented (Task 5 scope).
+        }
+        Command::DeleteGroupRange { .. } => {
+            // Group-range persistence layer not yet implemented (Task 5 scope).
+        }
+        Command::RenameGroupRange { .. } => {
+            // Group-range persistence layer not yet implemented (Task 5 scope).
+        }
+        Command::LinkComObject { .. } => {
+            // Group-link persistence layer not yet implemented (Task 6 scope).
+        }
+        Command::UnlinkComObject { .. } => {
+            // Group-link persistence layer not yet implemented (Task 6 scope).
         }
     }
     tx.commit()?;

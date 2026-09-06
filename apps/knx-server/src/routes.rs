@@ -25,6 +25,20 @@ pub fn project_routes() -> Router<SharedState> {
         )
         .route("/api/group-addresses", post(create_group_address))
         .route("/api/group-addresses/{id}", delete(delete_group_address))
+        .route("/api/areas", post(create_area))
+        .route("/api/areas/{id}", delete(delete_area))
+        .route("/api/lines", post(create_line))
+        .route("/api/lines/{id}", delete(delete_line))
+        .route("/api/move-device", post(move_device_to_line))
+        .route("/api/group-ranges", post(create_group_range))
+        .route(
+            "/api/group-ranges/{id}",
+            delete(delete_group_range).patch(rename_group_range),
+        )
+        .route(
+            "/api/group-links",
+            post(link_com_object).delete(unlink_com_object),
+        )
         .route("/api/undo", post(undo))
         .route("/api/redo", post(redo))
 }
@@ -144,16 +158,19 @@ async fn set_com_object_description(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CreateGroupAddressBody {
     name: String,
     address: String,
+    #[serde(default)]
+    range_id: Option<u32>,
 }
 
 async fn create_group_address(
     State(state): State<SharedState>,
     Json(body): Json<CreateGroupAddressBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
-    domain::create_group_address_impl(&state, body.name, body.address)
+    domain::create_group_address_impl(&state, body.name, body.address, body.range_id)
         .map(Json)
         .map_err(ApiError::bad_request)
 }
@@ -163,6 +180,148 @@ async fn delete_group_address(
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     domain::delete_group_address_impl(&state, id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+struct CreateAreaBody {
+    name: String,
+    address: u8,
+}
+
+async fn create_area(
+    State(state): State<SharedState>,
+    Json(body): Json<CreateAreaBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::create_area_impl(&state, body.name, body.address)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+async fn delete_area(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u32>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::delete_area_impl(&state, id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateLineBody {
+    area_id: u32,
+    name: String,
+    address: u8,
+    medium_ref: String,
+}
+
+async fn create_line(
+    State(state): State<SharedState>,
+    Json(body): Json<CreateLineBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::create_line_impl(
+        &state,
+        body.area_id,
+        body.name,
+        body.address,
+        body.medium_ref,
+    )
+    .map(Json)
+    .map_err(ApiError::bad_request)
+}
+
+async fn delete_line(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u32>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::delete_line_impl(&state, id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MoveDeviceBody {
+    device_id: u32,
+    line_id: Option<u32>,
+}
+
+async fn move_device_to_line(
+    State(state): State<SharedState>,
+    Json(body): Json<MoveDeviceBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::move_device_to_line_impl(&state, body.device_id, body.line_id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateGroupRangeBody {
+    name: String,
+    start: String,
+    end: String,
+    #[serde(default)]
+    parent_id: Option<u32>,
+}
+
+async fn create_group_range(
+    State(state): State<SharedState>,
+    Json(body): Json<CreateGroupRangeBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::create_group_range_impl(&state, body.name, body.start, body.end, body.parent_id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+async fn delete_group_range(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u32>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::delete_group_range_impl(&state, id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+struct RenameGroupRangeBody {
+    name: String,
+}
+
+async fn rename_group_range(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u32>,
+    Json(body): Json<RenameGroupRangeBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::rename_group_range_impl(&state, id, body.name)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GroupLinkBody {
+    com_object_id: u32,
+    ga_id: u32,
+    direction: String,
+}
+
+async fn link_com_object(
+    State(state): State<SharedState>,
+    Json(body): Json<GroupLinkBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::link_com_object_impl(&state, body.com_object_id, body.ga_id, body.direction)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+async fn unlink_com_object(
+    State(state): State<SharedState>,
+    Json(body): Json<GroupLinkBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::unlink_com_object_impl(&state, body.com_object_id, body.ga_id, body.direction)
         .map(Json)
         .map_err(ApiError::bad_request)
 }

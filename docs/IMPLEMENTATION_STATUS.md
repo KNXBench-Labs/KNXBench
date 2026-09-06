@@ -577,9 +577,12 @@ a protocol exchange with one specific peer.
 Known gaps added this cycle (not bugs, scope decisions):
 
 - No `--multicast` override for a non-default routing multicast address —
-  hardcoded to the standard group (KNOWN_LIMITATIONS.md).
+  hardcoded to the standard group (KNOWN_LIMITATIONS.md #31).
 - `ROUTING_BUSY` is decoded and logged, never used to throttle sends
-  (KNOWN_LIMITATIONS.md).
+  (KNOWN_LIMITATIONS.md #32).
+- The loopback round-trip test for `RoutingClient` send/receive skips
+  gracefully in a sandbox lacking multicast loopback, which cannot
+  distinguish it from a real regression (KNOWN_LIMITATIONS.md #33).
 - Whether the reference gateway (`192.0.2.1`) supports routing at all
   is unconfirmed — tunnelling and discovery are verified against it,
   routing isn't yet. Manual verification (same policy as Cycles 2-3: a

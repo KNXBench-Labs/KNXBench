@@ -583,7 +583,12 @@ collects `SEARCH_RESPONSE`s; `connect_tunnel` opens a tunnel to a
 gateway by known IP; `subscribe` receives telegrams; `TunnelClient::send`
 writes one (`GroupValueWrite` or any other `ApplicationService`, no DPT
 interpretation — raw bytes only, same scope cut as the receive side).
-`connect_routing` (Cycle 4) sends/receives unconfirmed `ROUTING_INDICATION` frames over the standard multicast group — no custom multicast address override, and `ROUTING_BUSY` is decoded and logged but never used to throttle sends (see the two new limitation entries below). Secure-protocol paths remain unimplemented. A reader should not assume the trait is feature-complete because it compiles.
+`connect_routing` (Cycle 4) sends/receives unconfirmed `ROUTING_INDICATION`
+frames over the standard multicast group — no custom multicast address
+override, and `ROUTING_BUSY` is decoded and logged but never used to
+throttle sends (see the two new limitation entries below). Secure-protocol
+paths remain unimplemented. A reader should not assume the trait is
+feature-complete because it compiles.
 
 **Cause.** Session 6 Cycle 1 delivered read-only tunnelling as the
 foundation for bus monitoring; Cycle 2 added sending; Cycle 3 added
@@ -597,9 +602,10 @@ read off it reported the invalid `0.0.0.0:<port>` — see the fix commit
 for the resolved-IP/real-port workaround), then handed by control
 endpoint to `connect_tunnel` for monitoring/actuation by group address
 over a tunnel. Live-hardware verification of the full discover-then-connect
-flow was left for the user to run, same as Cycle 2's `send` — this
-sandbox has no real KNXnet/IP gateway to discover. KNX IP Secure remains unreachable regardless; routing (unencrypted multicast) is reachable as of Cycle 4. Discovery does not work
-unmodified inside the `knx-server` Docker container (needs
+flow was left for the user to run, same as Cycle 2's `send` — this sandbox has no real KNXnet/IP gateway to discover. KNX IP Secure
+remains unreachable regardless; routing (unencrypted multicast) is
+reachable as of Cycle 4. Discovery does not work unmodified inside the
+`knx-server` Docker container (needs
 `--network host`) — untouched by this cycle, since `knx-server` doesn't
 call `discover` yet.
 

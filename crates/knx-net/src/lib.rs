@@ -13,6 +13,7 @@ pub mod client;
 pub mod core;
 pub mod discovery;
 pub mod frame;
+pub mod routing;
 pub mod tunnelling;
 
 pub use cemi::{ApplicationService, Destination, GroupValue, LDataFrame, LDataMessageKind};

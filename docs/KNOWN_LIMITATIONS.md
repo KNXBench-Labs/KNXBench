@@ -453,33 +453,34 @@ abstraction over two data points. (b) A joint accessibility pass covers
 both overlays together, not a palette-only or search-only fix, since the
 gap and its fix are identical in both.
 
-## 21. A UI-created group address has no `ets_id` and is dropped on export
+## 21. A UI-created group address without a range is still dropped on export — partially resolved
 
-**Limitation.** `create_group_address_impl` (`apps/knx-server/src/
-domain.rs` — moved here from `apps/knx-desktop/src-tauri/src/lib.rs` with
-the web/Docker deployment target; same function, same behavior) creates a
-`GroupAddressEntry` with an empty `SourceRef` (`path`/`ets_id` both `""`)
-and `range: None` — there is no ETS origin to preserve for an entity the
-user created directly in this app. The `.knxproj` exporter
-(`crates/knx-etsproj/src/export/schema11.rs`) only emits a group address
-nested inside its `GroupRange`, filtering on a matching `range` id, so a
-range-less entry is silently omitted from export entirely; if that filter
-were ever relaxed, an empty `ets_id` would also produce an invalid,
-colliding `Id=""` attribute.
+**Partially resolved.** `create_group_address_impl`
+(`apps/knx-server/src/domain.rs`) now writes a synthetic, stable
+`ets_id`/`path` (`KB-GA-<id>`) instead of the empty string it used to —
+the "colliding `Id=""` attribute if export were ever wired up" half of
+this limitation is fixed regardless of whether a range is given.
 
-**Cause.** Group address creation (Session 5, cycle 9) was scoped to the
-in-memory/`.knxdb` round trip only; ETS export was never in that task's
-scope, and `SourceRef` has no synthetic-id convention for an entity with
-no ETS origin.
+**Still open.** `range_id` stays optional at the HTTP boundary — a
+UI-created group address with no range assigned is still silently
+omitted by `crates/knx-etsproj/src/export/schema11.rs`'s exporter, which
+only emits a group address nested inside its `GroupRange`. Forcing every
+creation through a range needs a range *picker* in the UI, which does not
+exist yet; `knx_core::Command::CreateGroupRange` (this cycle) makes
+ranges creatable, but the frontend has no screen to create or choose one
+from. `Command::CreateGroupAddress` now validates a *given* range
+(`check_group_address_in_range`), so a range, once chosen, cannot
+disagree with the address — only the choice itself isn't enforced yet.
 
-**Impact.** None reachable today — `export_ets_project` has no caller in
-`knx-server`, `knx-desktop` or `knx-cli` yet, only in `knx-app`'s own
-tests. Reachable the moment an export route or command is wired into any
-of them.
+**Originally.** [as before — the empty-`ets_id`/`range: None` behavior
+this entry first documented].
 
-**Lifted when.** A UI-created entity gets a synthetic, stable `ets_id`
-(and, separately, a `GroupRange` assignment, since a `.knxproj` group
-address is always range-nested) before export ever reaches it.
+**Lifted when.** The frontend gains a group-range create/pick UI
+(Sub-Project 2 or later, see
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)) and `range_id` becomes a
+required argument to group-address creation at that point — not before,
+since making it required today would break the already-shipped
+range-less creation UI with nothing to replace it.
 
 ## 22. The web/Docker deployment target has no authentication
 

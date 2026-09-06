@@ -18,7 +18,7 @@ in scope.
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
 | 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)), cycle 8 (project status dashboard, [design spec](superpowers/specs/2026-09-04-dashboard-design.md)), cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) — CLAUDE.md's full UI/UX deliverable list complete as of cycle 9 — and cycle 10 (a toast notification stack replacing the old persistent error banner, humor-wrapped error text, and a one-shot holiday/late-night startup toast, [design spec](superpowers/specs/2026-09-05-toast-easter-eggs-design.md)) done, see [ROADMAP.md](ROADMAP.md) |
-| 6 | KNXnet/IP | In progress (Cycle 1 shipped) — see below |
+| 6 | KNXnet/IP | In progress (Cycles 1-2 shipped) — see below |
 | 7 | Integration & hardening | Not started |
 
 **The repository is a buildable Cargo workspace with eight crates.**
@@ -489,13 +489,38 @@ Known gaps added this cycle (not bugs, scope decisions):
   (last-seen wins on collision). Acceptable for this cycle's dev/smoke-testing
   use; not yet a general-purpose tool.
 
+**Session 6, Cycle 2 (2026-09-06) — KNXnet/IP sending.** Bounded task,
+brainstormed directly in chat (no separate design spec, per the
+brainstorming skill's classification: extends Cycle 1's existing
+`TunnelClient::send` stub and `bus` CLI subcommand rather than introducing
+a new subsystem). `cemi::encode_l_data` is the inverse of Cycle 1's
+`decode_l_data` — round-trip-tested for `GroupValueWrite`/`GroupValueRead`,
+group and individual destinations, and the `Other` APCI fallback.
+`TunnelClient::send(destination, service)` implements Tunnelling
+v01.07.01 AS §2.6's rule exactly: send, wait up to the 1-second
+`TUNNELLING_REQUEST_TIMEOUT` for a matching `TUNNELLING_ACK`, repeat once
+on timeout or error status, then terminate the connection
+(`DISCONNECT_REQUEST` + background-task shutdown) if the repeat also
+fails. `receive_loop` gained the `TUNNELLING_ACK` match arm this required
+(previously silently ignored by its catch-all). No DPT interpretation —
+callers pass raw `GroupValue::Short`/`Bytes`, same scope cut as Cycle 1's
+receive side. `knx bus write --gateway <host:port> <ga> <0|1|hex>` is the
+CLI-facing piece; `crates/knx-net/tests/live_gateway.rs` gained a second
+`#[ignore]`d test that only runs against an explicit, human-chosen
+`KNX_TEST_GA` env var — deliberately not defaulted to any address in the
+live project, since a `GroupValueWrite` physically actuates whatever it's
+linked to. Live-hardware verification of `send` itself (as opposed to the
+unit/round-trip tests above) is left for whoever sets `KNX_TEST_GA` — not
+run as part of this cycle's own verification, since choosing a safe
+target address is a human decision, not this session's to make.
+
 ## Next session
 
-Session 6 is in progress (Cycle 1 done). ROADMAP's entry condition — "a project
-can be opened and its group addresses resolved" — is met: the domain model,
-import/export pipeline, shared product database, and now read-only tunnelling
-to a known gateway all exist, and telegrams from the live bus resolve against
-group addresses from the open project.
+Session 6 is in progress (Cycles 1-2 done). ROADMAP's entry condition — "a
+project can be opened and its group addresses resolved" — is met: the domain
+model, import/export pipeline, shared product database, and now tunnelling
+(receive and send) to a known gateway all exist, and telegrams from the live
+bus resolve against group addresses from the open project.
 
 Cycle 5 shipped Search: finding a device, group address, or building part
 by name/address across a project too large to scan by eye in the Project

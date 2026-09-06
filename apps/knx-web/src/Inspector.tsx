@@ -48,6 +48,90 @@ function AddressField(props: { detail: DeviceDetail; onApplied: (tree: ProjectTr
   );
 }
 
+function DeviceDescriptionField(props: {
+  detail: DeviceDetail;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { detail, onApplied } = props;
+  const [value, setValue] = useState(detail.description ?? "");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValue(detail.description ?? "");
+    setError(null);
+  }, [detail.description]);
+
+  async function apply() {
+    const current = detail.description ?? "";
+    if (value === current) return;
+    setError(null);
+    try {
+      const tree = await api.setDeviceDescription(detail.id, value === "" ? null : value);
+      onApplied(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+      setValue(current);
+    }
+  }
+
+  return (
+    <label className="inspector-field">
+      Description
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={apply}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+      />
+      {error && <span className="field-error">{error}</span>}
+    </label>
+  );
+}
+
+function ComObjectDescriptionField(props: {
+  com: ComObjectNode;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { com, onApplied } = props;
+  const [value, setValue] = useState(com.description ?? "");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValue(com.description ?? "");
+    setError(null);
+  }, [com.description]);
+
+  async function apply() {
+    const current = com.description ?? "";
+    if (value === current) return;
+    setError(null);
+    try {
+      const tree = await api.setComObjectDescription(com.id, value === "" ? null : value);
+      onApplied(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+      setValue(current);
+    }
+  }
+
+  return (
+    <label className="inspector-field">
+      Description
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={apply}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+      />
+      {error && <span className="field-error">{error}</span>}
+    </label>
+  );
+}
+
 function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) => void }) {
   const { com, onApplied } = props;
   const [value, setValue] = useState(com.dpt ?? "");
@@ -93,8 +177,8 @@ function DeviceInspector(props: { detail: DeviceDetail; onApplied: (tree: Projec
   return (
     <div className="inspector">
       <h2>{detail.name}</h2>
-      {detail.description && <p className="inspector-description">{detail.description}</p>}
       <AddressField detail={detail} onApplied={onApplied} />
+      <DeviceDescriptionField detail={detail} onApplied={onApplied} />
       <h3>Communication objects</h3>
       <ul className="com-object-list">
         {detail.com_objects.map((com) => (
@@ -104,6 +188,10 @@ function DeviceInspector(props: { detail: DeviceDetail; onApplied: (tree: Projec
             </span>
             <DptField com={com} onApplied={onApplied} />
             {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
+            <ComObjectDescriptionField com={com} onApplied={onApplied} />
+            {com.description_layer && (
+              <span className="provenance-badge">{com.description_layer}</span>
+            )}
           </li>
         ))}
       </ul>

@@ -233,6 +233,12 @@ pub struct ComObjectNode {
     /// `"Instance"`, `"Inferred"`, `"UserEdit"`), `None` alongside `dpt:
     /// None`.
     pub dpt_layer: Option<String>,
+    /// Resolved through the project's string table, same as `name` — `None`
+    /// if never stated at any layer.
+    pub description: Option<String>,
+    /// The layer `description` resolved from, `None` alongside
+    /// `description: None`.
+    pub description_layer: Option<String>,
     pub is_active: bool,
     /// Display-only this cycle — no `Command` exists yet to edit flags.
     pub read: bool,
@@ -271,6 +277,13 @@ fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -
     });
     let dpt = com.dpt.value().map(|resolved| resolved.value.to_string());
     let dpt_layer = com.dpt.layer().map(|layer| format!("{layer:?}"));
+    let description = com.description.value().and_then(|resolved| {
+        project
+            .strings
+            .text(&resolved.value, project.strings.default_language())
+            .map(|s| s.to_string())
+    });
+    let description_layer = com.description.layer().map(|layer| format!("{layer:?}"));
     let flag = |o: &knx_core::Override<bool>| o.value().map(|r| r.value).unwrap_or(false);
     ComObjectNode {
         id: com.id.0,
@@ -278,6 +291,8 @@ fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -
         name,
         dpt,
         dpt_layer,
+        description,
+        description_layer,
         is_active: com.is_active,
         read: flag(&com.flags.read),
         write: flag(&com.flags.write),
@@ -562,6 +577,8 @@ mod tests {
         assert_eq!(com.name.as_deref(), Some("Switch on/off"));
         assert_eq!(com.dpt.as_deref(), Some("DPST-1-1"));
         assert_eq!(com.dpt_layer.as_deref(), Some("UserEdit"));
+        assert_eq!(com.description.as_deref(), Some("Hallway light switch"));
+        assert_eq!(com.description_layer.as_deref(), Some("Instance"));
         assert!(com.is_active);
         assert!(!com.read); // ResolvedFlags::none() sets nothing
     }
@@ -612,7 +629,10 @@ mod tests {
                 value: Text::Literal("Switch on/off".into()),
                 layer: Layer::Program,
             }),
-            description: knx_core::Override::Absent,
+            description: knx_core::Override::Value(knx_core::Resolved {
+                value: Text::Literal("Hallway light switch".into()),
+                layer: Layer::Instance,
+            }),
             dpt: knx_core::Override::Value(knx_core::Resolved {
                 value: DptRef {
                     main: 1,

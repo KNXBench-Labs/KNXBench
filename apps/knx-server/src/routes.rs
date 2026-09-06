@@ -17,7 +17,12 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/project/save-as", post(save_project_as))
         .route("/api/device/{id}", axum::routing::get(device_detail))
         .route("/api/individual-address", post(set_individual_address))
+        .route("/api/device-description", post(set_device_description))
         .route("/api/com-object-dpt", post(set_com_object_dpt))
+        .route(
+            "/api/com-object-description",
+            post(set_com_object_description),
+        )
         .route("/api/group-addresses", post(create_group_address))
         .route("/api/group-addresses/{id}", delete(delete_group_address))
         .route("/api/undo", post(undo))
@@ -92,6 +97,22 @@ async fn set_individual_address(
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct SetDeviceDescriptionBody {
+    device_id: u32,
+    description: Option<String>,
+}
+
+async fn set_device_description(
+    State(state): State<SharedState>,
+    Json(body): Json<SetDeviceDescriptionBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::set_device_description_impl(&state, body.device_id, body.description)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct SetComObjectDptBody {
     com_object_id: u32,
     dpt: Option<String>,
@@ -102,6 +123,22 @@ async fn set_com_object_dpt(
     Json(body): Json<SetComObjectDptBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     domain::set_com_object_dpt_impl(&state, body.com_object_id, body.dpt)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SetComObjectDescriptionBody {
+    com_object_id: u32,
+    description: Option<String>,
+}
+
+async fn set_com_object_description(
+    State(state): State<SharedState>,
+    Json(body): Json<SetComObjectDescriptionBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::set_com_object_description_impl(&state, body.com_object_id, body.description)
         .map(Json)
         .map_err(ApiError::bad_request)
 }

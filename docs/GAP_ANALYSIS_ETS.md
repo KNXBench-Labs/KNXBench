@@ -136,19 +136,19 @@ Each task: **what**, **why**, **depends on**.
   active group links, or cascading with an explicit confirmation —
   a design decision to make explicitly, not default to either behavior
   silently. Closes **B2**.
-- **T4. Topology CRUD commands.** `CreateInstallation`/`CreateArea`/
-  `CreateLine`(and matching deletes)/`MoveDeviceToLine`. Needed before
-  T1 is useful for more than "the one line an imported project already
-  has" — a from-scratch project has no line to create a device on yet.
-  Closes **B3**.
-- **T5. Group-range CRUD commands.** `CreateGroupRange`/`DeleteGroupRange`/
-  `RenameGroupRange`, plus fixing **B5**/[KNOWN_LIMITATIONS.md §21]: give
-  a UI-created group address a real `GroupRange` parent and a synthetic
-  stable `ets_id` so it survives export. Closes **B5**.
-- **T6. Group-link editing command.** `Command::LinkComObject`/
-  `UnlinkComObject` (comm-object instance ↔ group address). Without
-  this, T1-T5 together still can't wire up a newly created device to
-  anything. Closes **B7**.
+- **T4. Topology CRUD commands.** **Done** (2026-09-06, backend only —
+  see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)). `CreateArea`/
+  `DeleteArea`/`CreateLine`/`DeleteLine`/`MoveDeviceToLine` land as
+  `knx-core` commands with `apps/knx-server` routes; no frontend UI yet.
+- **T5. Group-range CRUD commands.** **Done** (2026-09-06, backend only).
+  `CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange` land; the
+  export-drop bug ([KNOWN_LIMITATIONS.md §21](KNOWN_LIMITATIONS.md#21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved))
+  is only partially closed — see that entry for why `range_id` stays
+  optional until a UI exists to pick one.
+- **T6. Group-link editing command.** **Done** (2026-09-06, backend
+  only). `LinkComObject`/`UnlinkComObject` land, finally calling the
+  validation.rs function that already existed for this
+  (`check_group_link_target_exists`).
 
 ### Tier 2 — closes remaining single-field-editor gaps
 

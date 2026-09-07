@@ -4,6 +4,7 @@ import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
+import type { GroupLinkNode } from "./bindings/GroupLinkNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
@@ -173,8 +174,102 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
   );
 }
 
-function DeviceInspector(props: { detail: DeviceDetail; onApplied: (tree: ProjectTree) => void }) {
-  const { detail, onApplied } = props;
+// One existing `GroupLink`, with an Unlink button. `Command::UnlinkComObject`
+// carries no `installations[0]`-only restriction the way Link/create/delete
+// commands do (it removes whatever link already exists on the comm object,
+// regardless of which installation the linked address lives in), so Unlink
+// is always offered — unlike `NewGroupLinkRow`'s Link, which is gated by
+// the picker only ever listing the first installation's addresses.
+function GroupLinkRow(props: {
+  com: ComObjectNode;
+  link: GroupLinkNode;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { com, link, onApplied } = props;
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setError(null);
+    try {
+      const tree = await api.unlinkComObject(com.id, link.ga_id, link.direction);
+      onApplied(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  return (
+    <li className="group-link-row">
+      <span>
+        {link.direction}: {link.address ?? `#${link.ga_id}`}
+        {link.name ? ` ${link.name}` : ""}
+      </span>
+      <button onClick={remove}>Unlink</button>
+      {error && <span className="field-error">{error}</span>}
+    </li>
+  );
+}
+
+// The create counterpart of `GroupLinkRow` — same inline-row shape as
+// `NewGroupAddressRow`/`NewGroupRangeRow`. `groupAddresses` is always the
+// first installation's list: `Command::LinkComObject` only ever validates
+// the target address against `installations[0]` (command.rs), the same
+// constraint every other create affordance in this file already honors.
+function NewGroupLinkRow(props: {
+  com: ComObjectNode;
+  groupAddresses: GroupAddressNode[];
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { com, groupAddresses, onApplied } = props;
+  const [gaId, setGaId] = useState("");
+  const [direction, setDirection] = useState<"Send" | "Receive">("Send");
+  const [error, setError] = useState<string | null>(null);
+  const canLink = gaId !== "";
+
+  async function link() {
+    if (!canLink) return;
+    setError(null);
+    try {
+      const tree = await api.linkComObject(com.id, Number(gaId), direction);
+      onApplied(tree);
+      setGaId("");
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  return (
+    <li className="tree-new-row">
+      <select value={gaId} onChange={(e) => setGaId(e.target.value)}>
+        <option value="">(choose a group address)</option>
+        {groupAddresses.map((ga) => (
+          <option key={ga.id} value={ga.id}>
+            {ga.address} {ga.name}
+          </option>
+        ))}
+      </select>
+      <select
+        value={direction}
+        onChange={(e) => setDirection(e.target.value as "Send" | "Receive")}
+      >
+        <option value="Send">Send</option>
+        <option value="Receive">Receive</option>
+      </select>
+      <button onClick={link} disabled={!canLink}>
+        Link
+      </button>
+      {error && <span className="field-error">{error}</span>}
+    </li>
+  );
+}
+
+function DeviceInspector(props: {
+  detail: DeviceDetail;
+  tree: ProjectTree;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { detail, tree, onApplied } = props;
+  const groupAddresses = tree.installations[0]?.group_addresses ?? [];
   return (
     <div className="inspector">
       <h2>{detail.name}</h2>
@@ -193,6 +288,17 @@ function DeviceInspector(props: { detail: DeviceDetail; onApplied: (tree: Projec
             {com.description_layer && (
               <span className="provenance-badge">{com.description_layer}</span>
             )}
+            <ul className="group-link-list">
+              {com.links.map((link) => (
+                <GroupLinkRow
+                  key={`${link.ga_id}-${link.direction}`}
+                  com={com}
+                  link={link}
+                  onApplied={onApplied}
+                />
+              ))}
+              <NewGroupLinkRow com={com} groupAddresses={groupAddresses} onApplied={onApplied} />
+            </ul>
           </li>
         ))}
       </ul>
@@ -360,7 +466,7 @@ export default function Inspector(props: {
 
   if (selection.kind === "device") {
     if (!deviceDetail) return null;
-    return <DeviceInspector detail={deviceDetail} onApplied={onApplied} />;
+    return <DeviceInspector detail={deviceDetail} tree={tree} onApplied={onApplied} />;
   }
 
   if (selection.kind === "group_address") {

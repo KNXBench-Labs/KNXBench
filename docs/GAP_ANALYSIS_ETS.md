@@ -168,16 +168,27 @@ Each task: **what**, **why**, **depends on**.
   `GroupRangeNode` already exist; this is frontend-only work, the same
   shape as cycle 9's group-address UI.
 
-  **First slice done (2026-09-07).** The "Group Ranges" branch (nested
+  **Slice 1 done (2026-09-07).** The "Group Ranges" branch (nested
   main/middle, create/rename/delete, `treeUtils.ts`'s `nestGroupRanges`
   rebuilding the hierarchy from `GroupRangeNode`'s flat `parent` pointer)
   and the range `<select>` on `NewGroupAddressRow` both ship — closing
   **B5** and the picker half of KNOWN_LIMITATIONS §21 (still not a
-  *forced* choice, see that entry). Still open from T23: the area/line
-  tree-edit UI (**B3**) and the link/unlink control (**B7**), each its
-  own follow-up slice by design (brainstormed as three separate bounded
-  steps, not one).
-  shape as cycle 9's group-address UI.
+  *forced* choice, see that entry).
+
+  **Slice 2 done (2026-09-07).** The link/unlink control on the
+  comm-object Inspector row ships, closing **B7**. `knx-projection`
+  gains `ComObjectNode.links: Vec<GroupLinkNode>` — the projection had no
+  field for a comm object's *existing* `GroupLink`s at all until now,
+  found while scoping this slice, not a pre-existing doc gap — resolved
+  per-link against every installation's group addresses (a link names its
+  target by id alone, with no installation of its own to narrow the
+  search), defensively `None`-address/name on a dangling link rather than
+  panicking. `Inspector.tsx`'s `NewGroupLinkRow` picker is
+  `installations[0]`-only (`Command::LinkComObject`'s own restriction);
+  `GroupLinkRow`'s Unlink is not (`Command::UnlinkComObject` carries no
+  such check). Still open from T23: the area/line tree-edit UI (**B3**),
+  its own follow-up slice by design (brainstormed as three separate
+  bounded steps, not one).
 
 ### Tier 2 — closes remaining single-field-editor gaps
 

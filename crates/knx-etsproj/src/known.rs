@@ -25,16 +25,17 @@ pub struct KnownSchema {
 /// The known-element table for `version`, or `None` if this session does not
 /// yet know that schema version.
 ///
-/// `known_schema(23)` is deliberately `None`: the schema-23 differences of
-/// RESEARCH §3.3 are load-bearing (`RefId` loses its prefix, links move to
-/// attributes, `GroupObjectTree` becomes the authoritative object list,
-/// boolean spelling changes), and a table that pretended otherwise would
-/// produce silently wrong data. Schema 23 import reports "no known-element
-/// table for this schema version" and stops; that is the honest state until
-/// schema 23 is implemented.
+/// Schema 21 and 23 both account for the load-bearing content-model
+/// differences of RESEARCH §3.3/§3.4 (`RefId` losing its prefix, links moving
+/// to attributes, `GroupObjectTree` becoming the authoritative object list,
+/// boolean spelling changes, the `Segment` level, `Locations`/`Space`
+/// replacing `Buildings`/`BuildingPart`) — see [`SCHEMA_21`] and
+/// [`SCHEMA_23`]'s own doc comments for what is and is not yet covered.
 pub fn known_schema(version: u32) -> Option<&'static KnownSchema> {
     match version {
         11 => Some(&SCHEMA_11),
+        21 => Some(&SCHEMA_21),
+        23 => Some(&SCHEMA_23),
         _ => None,
     }
 }
@@ -284,6 +285,326 @@ pub const SCHEMA_11: KnownSchema = KnownSchema {
     ],
 };
 
+/// `DeviceInstance`'s attribute list at schema ≥21 (RESEARCH §3.3/§3.4):
+/// `Comment`/`SerialNumber`/`IsActivityCalculated`/`LastUsedAPDULength`/
+/// `ReadMaxAPDULength`/`Puid` are new; `CompletionStatus`,
+/// `IsCommunicationObjectVisibilityCalculated` and `Broken` are gone
+/// (measured against `KV v2.5 - demo.knxproj`, all 4 devices).
+const DEVICE_INSTANCE_ATTRS_21: &[&str] = &[
+    "Id",
+    "Name",
+    "Address",
+    "ProductRefId",
+    "Hardware2ProgramRefId",
+    "Comment",
+    "Description",
+    "SerialNumber",
+    "ApplicationProgramLoaded",
+    "CommunicationPartLoaded",
+    "IndividualAddressLoaded",
+    "MediumConfigLoaded",
+    "ParametersLoaded",
+    "IsActivityCalculated",
+    "LastModified",
+    "LastDownload",
+    "LastUsedAPDULength",
+    "ReadMaxAPDULength",
+    "Puid",
+];
+/// `ComObjectInstanceRef`'s attribute list at schema ≥21. Measured (RESEARCH
+/// §3.4): every instance in the reference project carries only `RefId`,
+/// `ChannelId` and `Links` — the override attributes (`IsActive`,
+/// `DatapointType`, `Text`, `Description`) never actually appear on
+/// module-based devices there, but are kept in the known table since they
+/// are attested for schema 23 (RESEARCH §3.3) on the same element and are
+/// expected, not exotic, on non-module devices.
+const COM_OBJECT_INSTANCE_REF_ATTRS_21: &[&str] =
+    &["RefId", "ChannelId", "Links", "IsActive", "DatapointType", "Text", "Description"];
+
+/// Transcribed from `KV v2.5 - demo.knxproj` (`P-03DE/0.xml` and
+/// `P-03DE/project.xml`), a genuinely independent schema-21 sample (RESEARCH
+/// §2.5/§3.4) — 4 devices, 13 group addresses, manufacturer `M-00FA`.
+///
+/// This table is *not yet* exhaustive the way [`SCHEMA_11`]'s is: some
+/// entries below (`Area`, `Line`, `Installation`, …) reflect only the
+/// attributes this one sample happens to set (e.g. neither `Area` nor `Line`
+/// carries a `Name` in this project — genuinely absent from the measured
+/// XML, not an omission), and it has not yet been closed against a tolerant
+/// parser's `UnknownConstruct` reports (no schema-≥21 parser exists yet —
+/// that is a later task). Mirrors exactly how [`SCHEMA_11`] itself started
+/// out; see this module's own doc comment.
+pub const SCHEMA_21: KnownSchema = KnownSchema {
+    version: 21,
+    elements: &[
+        KnownElement {
+            path: "/KNX",
+            attributes: &["CreatedBy", "ToolVersion"],
+        },
+        KnownElement {
+            path: "/KNX/Project",
+            attributes: &["Id"],
+        },
+        KnownElement {
+            path: "/KNX/Project/ProjectInformation",
+            attributes: &[
+                "Name",
+                "GroupAddressStyle",
+                "LastModified",
+                "ProjectStart",
+                "Comment",
+                "LastUsedPuid",
+                "Guid",
+                "ProjectType",
+            ],
+        },
+        KnownElement {
+            path: "/KNX/Project/ProjectInformation/ProjectTraces",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/ProjectInformation/ProjectTraces/ProjectTrace",
+            attributes: &["Date", "UserName", "Comment"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation",
+            attributes: &["Name", "BCUKey", "DefaultLine", "IPRoutingLatencyTolerance"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area",
+            attributes: &["Id", "Address", "Puid"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line",
+            attributes: &["Id", "Address", "Puid"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment",
+            attributes: &[
+                "Id",
+                "Number",
+                "MediumTypeRefId",
+                "DomainAddress",
+                "DomainAddressIsChecked",
+                "IPRoutingMulticastAddress",
+                "MulticastTTL",
+                "Puid",
+            ],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance",
+            attributes: DEVICE_INSTANCE_ATTRS_21,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ComObjectInstanceRefs",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ComObjectInstanceRefs/ComObjectInstanceRef",
+            attributes: COM_OBJECT_INSTANCE_REF_ATTRS_21,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ModuleInstances",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ModuleInstances/ModuleInstance",
+            attributes: &["Id", "RefId", "RepeatIndex"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ModuleInstances/ModuleInstance/Arguments",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ModuleInstances/ModuleInstance/Arguments/Argument",
+            attributes: &["RefId", "Value"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/GroupObjectTree",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/GroupObjectTree/Nodes",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/GroupObjectTree/Nodes/Node",
+            attributes: &["Type", "RefId", "GroupObjectInstances"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/Security",
+            attributes: &["SequenceNumber", "SequenceNumberTimestamp"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Locations",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Locations/Space",
+            attributes: &["Id", "Name", "Number", "Type", "DefaultLine", "Puid"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange",
+            attributes: &["Id", "Name", "RangeStart", "RangeEnd", "Puid"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange/GroupAddress",
+            attributes: &["Id", "Name", "Address", "DatapointType", "Puid"],
+        },
+    ],
+};
+
+/// Schema 23's own confirmed deltas over schema 21 (RESEARCH §3.3): short
+/// `RefId` (already schema-21-shaped, no change needed), a flat
+/// `GroupObjectTree/@GroupObjectInstances` attribute directly on
+/// `DeviceInstance` instead of nested `Nodes/Node`, and `"true"`/`"false"`
+/// booleans (already accepted by `parse_bool` regardless of source schema).
+/// Module-related entries (`ModuleInstances`, `ModuleDef`) are carried over
+/// from schema 21 *by inference*, not independent schema-23 evidence — see
+/// the spec's scope decision and KNOWN_LIMITATIONS §1.
+pub const SCHEMA_23: KnownSchema = KnownSchema {
+    version: 23,
+    elements: &[
+        KnownElement {
+            path: "/KNX",
+            attributes: &["CreatedBy", "ToolVersion"],
+        },
+        KnownElement {
+            path: "/KNX/Project",
+            attributes: &["Id"],
+        },
+        KnownElement {
+            path: "/KNX/Project/ProjectInformation",
+            attributes: &[
+                "Name",
+                "GroupAddressStyle",
+                "LastModified",
+                "ProjectStart",
+                "Comment",
+                "LastUsedPuid",
+                "Guid",
+                "ProjectType",
+            ],
+        },
+        KnownElement {
+            path: "/KNX/Project/ProjectInformation/ProjectTraces",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/ProjectInformation/ProjectTraces/ProjectTrace",
+            attributes: &["Date", "UserName", "Comment"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation",
+            attributes: &["Name", "BCUKey", "DefaultLine", "IPRoutingLatencyTolerance"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area",
+            attributes: &["Id", "Address", "Puid"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line",
+            attributes: &["Id", "Address", "Puid"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment",
+            attributes: &[
+                "Id",
+                "Number",
+                "MediumTypeRefId",
+                "DomainAddress",
+                "DomainAddressIsChecked",
+                "IPRoutingMulticastAddress",
+                "MulticastTTL",
+                "Puid",
+            ],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance",
+            attributes: DEVICE_INSTANCE_ATTRS_21,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ComObjectInstanceRefs",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ComObjectInstanceRefs/ComObjectInstanceRef",
+            attributes: COM_OBJECT_INSTANCE_REF_ATTRS_21,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ModuleInstances",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ModuleInstances/ModuleInstance",
+            attributes: &["Id", "RefId", "RepeatIndex"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ModuleInstances/ModuleInstance/Arguments",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ModuleInstances/ModuleInstance/Arguments/Argument",
+            attributes: &["RefId", "Value"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/GroupObjectTree",
+            attributes: &["GroupObjectInstances"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/Security",
+            attributes: &["SequenceNumber", "SequenceNumberTimestamp"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Locations",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Locations/Space",
+            attributes: &["Id", "Name", "Number", "Type", "DefaultLine", "Puid"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange",
+            attributes: &["Id", "Name", "RangeStart", "RangeEnd", "Puid"],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange/GroupAddress",
+            attributes: &["Id", "Name", "Address", "DatapointType", "Puid"],
+        },
+    ],
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -298,12 +619,32 @@ mod tests {
             .unwrap();
         assert!(line.attributes.contains(&"MediumTypeRefId"));
         assert!(line.attributes.contains(&"MulticastTTL"));
-        assert!(!line.attributes.contains(&"Puid")); // schema 23 only
+        assert!(!line.attributes.contains(&"Puid")); // schema ≥21 only (RESEARCH §3.4 correction)
     }
 
     #[test]
     fn an_unknown_schema_version_has_no_table() {
-        assert!(known_schema(23).is_none());
+        assert!(known_schema(99).is_none());
+    }
+
+    #[test]
+    fn schema_23_agrees_with_schema_21_except_the_group_object_tree_shape() {
+        let paths = |s: &KnownSchema| -> Vec<&str> {
+            s.elements
+                .iter()
+                .map(|e| e.path)
+                .filter(|p| !p.contains("GroupObjectTree"))
+                .collect()
+        };
+        assert_eq!(paths(&SCHEMA_21), paths(&SCHEMA_23));
+        let ga_tree = |s: &KnownSchema| {
+            s.elements
+                .iter()
+                .find(|e| e.path.ends_with("GroupObjectTree"))
+                .unwrap()
+        };
+        assert!(!ga_tree(&SCHEMA_21).attributes.contains(&"GroupObjectInstances"));
+        assert!(ga_tree(&SCHEMA_23).attributes.contains(&"GroupObjectInstances"));
     }
 
     #[test]

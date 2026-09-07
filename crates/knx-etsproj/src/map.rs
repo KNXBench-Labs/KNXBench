@@ -852,6 +852,7 @@ fn map_installation_v21(
                     .devices
                     .get(&device.id)
                     .expect("every device is allocated in pass 1");
+                let segment_xpath = format!("{line_xpath}/Segment");
                 let device_retained = map_device_v21(
                     device,
                     device_id,
@@ -862,7 +863,7 @@ fn map_installation_v21(
                     ids,
                     devices,
                     &mut parameters,
-                    &line_xpath,
+                    &segment_xpath,
                     problems,
                     counts,
                 );
@@ -1020,7 +1021,7 @@ fn map_device_v21(
     problems: &mut Vec<MapProblem>,
     counts: &mut EntityCounts,
 ) -> Vec<RetainedAttribute> {
-    let xpath = format!("{parent_xpath}/Segment/DeviceInstance[@Id='{}']", device.id);
+    let xpath = format!("{parent_xpath}/DeviceInstance[@Id='{}']", device.id);
     let mut retained = device.other.clone();
 
     let address = compose_individual_address(
@@ -2031,6 +2032,46 @@ mod tests {
         assert!(
             problem.xpath.contains("/Line[") && problem.xpath.contains("/Segment/DeviceInstance["),
             "expected xpath to include .../Line[...]/Segment/DeviceInstance[...], got: {}",
+            problem.xpath
+        );
+    }
+
+    /// Regression test for a re-opened review finding: the previous fix for
+    /// the test above inserted `/Segment` *inside* `map_device_v21` itself,
+    /// which also runs for `UnassignedDevices`-parented devices — a shape
+    /// that has no `Segment` element (confirmed against `known.rs` and
+    /// `export/schema21.rs`, both of which build
+    /// `.../UnassignedDevices/DeviceInstance[...]` directly). An unassigned
+    /// device's `MapProblem` xpath must not gain a `/Segment/` that doesn't
+    /// exist in the real document.
+    #[test]
+    fn a_schema_21_unassigned_device_map_problem_xpath_has_no_segment_element() {
+        let mut doc = reference_kv_source_document();
+        assert!(
+            doc.installations[0].unassigned_devices.is_empty(),
+            "KV sample has no unassigned devices; the hand-built device below is the only one"
+        );
+        let device = SourceDevice {
+            id: "P-03DE-0_DI-unassigned-test".into(),
+            last_modified: Some("not a date".into()),
+            ..SourceDevice::default()
+        };
+        doc.installations[0].unassigned_devices.push(device);
+
+        let out = map(&doc, "P-03DE/0.xml");
+        let problem = out
+            .problems
+            .iter()
+            .find(|p| matches!(p.detail, MapProblemDetail::Value(_)))
+            .expect("the malformed LastModified value is reported");
+        assert!(
+            problem.xpath.contains("/UnassignedDevices/DeviceInstance["),
+            "expected xpath to include .../UnassignedDevices/DeviceInstance[...], got: {}",
+            problem.xpath
+        );
+        assert!(
+            !problem.xpath.contains("/Segment/"),
+            "unassigned devices have no Segment element in the real document, got: {}",
             problem.xpath
         );
     }

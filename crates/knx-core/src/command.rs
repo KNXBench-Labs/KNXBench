@@ -947,6 +947,7 @@ mod tests {
                 ga: GroupAddressId(1),
                 direction: Direction::Send,
             }],
+            module_instance: None,
         });
         let mut stack = CommandStack::new();
         let result = stack.do_command(
@@ -999,6 +1000,7 @@ mod tests {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         };
         project.devices.insert_com_object(com);
         let mut stack = CommandStack::new();
@@ -1074,6 +1076,7 @@ mod tests {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         };
         project.devices.insert_com_object(com);
         let mut stack = CommandStack::new();
@@ -1119,6 +1122,7 @@ mod tests {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         };
         project.devices.insert_com_object(com);
         let mut stack = CommandStack::new();
@@ -1162,6 +1166,7 @@ mod tests {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         };
         project.devices.insert_com_object(com);
         let mut stack = CommandStack::new();
@@ -1841,6 +1846,7 @@ mod tests {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         });
         p.installations[0].group_addresses.push(GroupAddressEntry {
             id: GroupAddressId(1),

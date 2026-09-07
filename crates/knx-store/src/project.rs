@@ -555,6 +555,7 @@ mod tests {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         });
         // …and deliberately never pushed onto device 1's `com_objects`.
 

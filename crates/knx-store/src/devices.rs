@@ -671,6 +671,8 @@ pub fn load_com_object_instance(
         size: decode_size(size_kind, size_value, size_layer),
         is_active,
         links: vec![],
+        // Persistence of module-based devices is Task 11's job.
+        module_instance: None,
     })
 }
 
@@ -954,6 +956,7 @@ mod tests {
             }),
             is_active: true,
             links: vec![],
+            module_instance: None,
         }
     }
 

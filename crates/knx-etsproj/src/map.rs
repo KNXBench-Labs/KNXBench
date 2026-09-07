@@ -268,6 +268,9 @@ fn map_project_info(
         completion: required_completion(&info.completion_status, xpath, problems),
         last_modified: optional_timestamp(&info.last_modified, xpath, problems),
         project_start: optional_timestamp(&info.project_start, xpath, problems),
+        // This mapper only ever handles schema-11 documents; schema ≥21/23
+        // detection and wiring is Task 6's job.
+        ets_schema_version: 11,
     }
 }
 
@@ -670,6 +673,9 @@ fn map_com_object(
         size: None,
         is_active: required_bool(&com.is_active, &xpath, problems),
         links,
+        // Schema 11 has no `ModuleInstance` concept; module-based devices
+        // (schema ≥21) are wired up starting with Task 6.
+        module_instance: None,
     };
 
     (instance, retained)

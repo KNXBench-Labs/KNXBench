@@ -42,6 +42,7 @@ id_type!(GroupRangeId, u32);
 id_type!(GroupAddressId, u32);
 id_type!(BuildingPartId, u32);
 id_type!(ParameterInstanceId, u32);
+id_type!(ModuleInstanceId, u32);
 
 // `InstallationId` mirrors ETS's own installation number (`InstallationId`
 // in `0.xml`) rather than a synthetic counter: it is already stable and
@@ -61,5 +62,10 @@ mod tests {
     #[test]
     fn id_displays_as_its_raw_value() {
         assert_eq!(DeviceId(1).to_string(), "1");
+    }
+
+    #[test]
+    fn module_instance_ids_with_different_values_are_not_equal() {
+        assert_ne!(ModuleInstanceId(1), ModuleInstanceId(2));
     }
 }

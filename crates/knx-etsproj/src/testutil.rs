@@ -8,7 +8,7 @@
 #![cfg(test)]
 
 use crate::known::known_schema;
-use crate::parse::parse_installation;
+use crate::parse::{parse_installation, parse_installation_v21, parse_project_info};
 use crate::source::SourceDocument;
 use crate::Container;
 use std::path::PathBuf;
@@ -78,6 +78,15 @@ pub(crate) fn reference_ets6_path() -> PathBuf {
     workspace_root().join("Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj")
 }
 
+/// A second, genuinely independent installation (KNX Association demo
+/// project, not a re-export of the "Unser Zuhause" reference project) —
+/// schema 21, ETS 5.7. Session 7 evidence: schema 21 already carries the
+/// `Segment`/`GroupObjectTree`/`ModuleInstances`/`Locations` deltas
+/// previously attributed to schema 23 alone (RESEARCH §2.5/§3.4).
+pub(crate) fn reference_kv_schema21_path() -> PathBuf {
+    workspace_root().join("KV v2.5 - demo.knxproj")
+}
+
 pub(crate) fn reference_source_document() -> SourceDocument {
     let mut c = Container::open(reference_ets4_bytes()).unwrap();
     let bytes = c.read("P-0512/0.xml").unwrap();
@@ -88,4 +97,25 @@ pub(crate) fn reference_source_document() -> SourceDocument {
 
 pub(crate) fn reference_project() -> knx_core::Project {
     crate::map::map(&reference_source_document(), "P-0512/0.xml").project
+}
+
+/// Schema-≥21 counterpart of [`reference_source_document`]: the KV demo
+/// project's `0.xml`, parsed through [`parse_installation_v21`], with its
+/// `project.xml` folded into `document.info` exactly as
+/// `import_knxproj_bytes` does for schema 11's `Project.xml` — `lib.rs`
+/// itself does not dispatch to `parse_installation_v21` yet (later task), so
+/// this helper calls it directly rather than going through
+/// `import_knxproj`/`import_knxproj_bytes`.
+pub(crate) fn reference_kv_source_document() -> SourceDocument {
+    let schema = known_schema(21).unwrap();
+    let mut c = Container::open(std::fs::read(reference_kv_schema21_path()).unwrap()).unwrap();
+    let topology_bytes = c.read("P-03DE/0.xml").unwrap();
+    let mut document =
+        parse_installation_v21(&topology_bytes, "P-03DE/0.xml", schema)
+            .unwrap()
+            .document;
+    let info_bytes = c.read("P-03DE/project.xml").unwrap();
+    let (info, _) = parse_project_info(&info_bytes, "P-03DE/project.xml", schema).unwrap();
+    document.info = info;
+    document
 }

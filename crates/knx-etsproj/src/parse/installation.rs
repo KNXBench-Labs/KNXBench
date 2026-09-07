@@ -525,6 +525,10 @@ fn build_frame(
             parameters: Vec::new(),
             com_objects: Vec::new(),
             binary_data: Vec::new(),
+            module_instances: Vec::new(),
+            module_instances_raw: None,
+            group_object_tree: Vec::new(),
+            group_object_tree_raw: None,
             other: Vec::new(),
         }),
         "ComObjectInstanceRef" => Frame::ComObject(SourceComObjectInstance {
@@ -540,6 +544,8 @@ fn build_frame(
             communication_flag: bag.take("CommunicationFlag"),
             sends: Vec::new(),
             receives: Vec::new(),
+            links: Vec::new(),
+            channel_id: None,
             other: Vec::new(),
         }),
         "ParameterInstanceRef" => Frame::Parameter(SourceParameterInstance {

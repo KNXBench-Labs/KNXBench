@@ -73,12 +73,39 @@ export function setComObjectDescription(
   });
 }
 
-export function createGroupAddress(name: string, address: string): Promise<ProjectTree> {
-  return request("/api/group-addresses", { method: "POST", body: JSON.stringify({ name, address }) });
+export function createGroupAddress(
+  name: string,
+  address: string,
+  rangeId?: number,
+): Promise<ProjectTree> {
+  return request("/api/group-addresses", {
+    method: "POST",
+    body: JSON.stringify({ name, address, rangeId }),
+  });
 }
 
 export function deleteGroupAddress(id: number): Promise<ProjectTree> {
   return request(`/api/group-addresses/${id}`, { method: "DELETE" });
+}
+
+export function createGroupRange(
+  name: string,
+  start: string,
+  end: string,
+  parentId?: number,
+): Promise<ProjectTree> {
+  return request("/api/group-ranges", {
+    method: "POST",
+    body: JSON.stringify({ name, start, end, parentId }),
+  });
+}
+
+export function deleteGroupRange(id: number): Promise<ProjectTree> {
+  return request(`/api/group-ranges/${id}`, { method: "DELETE" });
+}
+
+export function renameGroupRange(id: number, name: string): Promise<ProjectTree> {
+  return request(`/api/group-ranges/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });
 }
 
 export function undo(): Promise<ProjectTree> {

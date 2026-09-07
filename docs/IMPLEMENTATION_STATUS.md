@@ -864,3 +864,35 @@ Known gaps carried forward, none blocking Session 5:
   database only via a `.knxproj` that already contains it.
 - Whether ETS re-imports an unsigned third-party `.knxproj` remains
   untested (risk R9) — see [COMPATIBILITY.md](COMPATIBILITY.md).
+
+**T23, first slice (2026-09-07) — Group-Ranges UI.** `apps/knx-web`
+gains a "Group Ranges" tree branch (sibling to cycle 9's "Group
+Addresses" branch) and a range picker on group-address creation, closing
+**B5** ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)) and the picker half
+of [KNOWN_LIMITATIONS.md §21](KNOWN_LIMITATIONS.md#21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved).
+Brainstormed and scoped as the first of three deliberately separate
+bounded slices of T23 (Group Ranges → link/unlink → topology tree-edit),
+not one combined cycle. `treeUtils.ts` gains `nestGroupRanges` (rebuilds
+the main/middle hierarchy from `GroupRangeNode`'s flat `parent` pointer —
+`knx-projection` deliberately keeps that type flat, per its own doc
+comment) and `findGroupRange`; `ProjectExplorer.tsx` gains
+`GroupRangeItem`/`NewGroupRangeRow` (create only offered on a main range,
+matching the two-level depth the reference project actually shows, though
+the model itself doesn't cap nesting); `Inspector.tsx` gains
+`GroupRangeInspector`/`GroupRangeNameField` (rename inline, same
+blur-to-apply shape as `AddressField`, plus Delete), gated by the same
+`installations[0]`-only check every other create/delete/rename affordance
+already carries (`Command::apply`'s hard-coded target). No backend change
+was needed — `create_group_address`'s `range_id` and the
+`create_group_range`/`delete_group_range`/`rename_group_range` routes
+already existed (2026-09-06 topology/group-range command layer) with no
+frontend caller until now. A real, pre-existing bug was found and fixed
+in passing: `dashboardStats.test.ts` never got its four installation
+fixtures updated with `group_ranges: []` when that field was added to
+`InstallationNode` in the same 2026-09-06 cycle, which meant `apps/knx-web`'s
+own `npm run build` (`tsc && vite build`) — part of `ci.yml` — has been
+failing type-check on `main` since that merge; not caused by this slice,
+fixed alongside it since it blocked verifying this slice's own `tsc`
+run. 10 new `vitest` tests (`treeUtils.test.ts` — `findGroupRange`,
+`nestGroupRanges`; `api.test.ts` — the three new endpoints plus the
+`rangeId`-omitted/-included cases), for 76 total.

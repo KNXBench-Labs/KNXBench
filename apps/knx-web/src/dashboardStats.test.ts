@@ -50,6 +50,7 @@ describe("computeStats", () => {
         buildings: [],
         unassigned: [device(1, 2)],
         group_addresses: [{ id: 1, name: "ga1", address: "1/1/1" }],
+        group_ranges: [],
       },
       {
         id: 1,
@@ -58,6 +59,7 @@ describe("computeStats", () => {
         buildings: [],
         unassigned: [device(2, 3)],
         group_addresses: [{ id: 2, name: "ga2", address: "1/1/2" }],
+        group_ranges: [],
       },
     ];
     const stats = computeStats(tree);
@@ -107,6 +109,7 @@ describe("computeStats", () => {
         ],
         unassigned: [],
         group_addresses: [],
+        group_ranges: [],
       },
     ];
     const stats = computeStats(tree);
@@ -125,6 +128,7 @@ describe("computeStats", () => {
         buildings: [],
         unassigned: [device(1, 1)],
         group_addresses: [],
+        group_ranges: [],
       },
     ];
     const stats = computeStats(tree);

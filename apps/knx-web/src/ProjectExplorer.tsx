@@ -7,7 +7,9 @@ import type { LineNode } from "./bindings/LineNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
+import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { Selection } from "./selection";
+import { nestGroupRanges, type GroupRangeTreeNode } from "./treeUtils";
 
 function TreeNode(props: {
   label: string;
@@ -110,17 +112,24 @@ function GroupAddressItem(props: { ga: GroupAddressNode } & SelectionProps) {
   );
 }
 
-// The only affordance in the tree that creates a domain object rather than
-// selecting one — kept as an inline row rather than a dialog, the same way
-// `AddressField`/`DptField` (Inspector.tsx) edit inline rather than popping
-// a modal. Only rendered under the first installation (`InstallationItem`'s
-// `isFirst`): `Command::apply` only ever targets `installations[0]`
-// (command.rs), so this is the only installation the affordance could
-// honestly promise to create into.
-function NewGroupAddressRow(props: { onCreated: (tree: ProjectTree) => void }) {
-  const { onCreated } = props;
+// One of two affordances in the tree that create a domain object rather
+// than select one (the other is `NewGroupRangeRow`, below) — kept as an
+// inline row rather than a dialog, the same way `AddressField`/`DptField`
+// (Inspector.tsx) edit inline rather than popping a modal. Only rendered
+// under the first installation (`InstallationItem`'s `isFirst`):
+// `Command::apply` only ever targets `installations[0]` (command.rs), so
+// this is the only installation the affordance could honestly promise to
+// create into. `ranges` is the installation's own flat `group_ranges` list
+// (main and middle ranges alike) — an unset selection creates the address
+// with no range, same as every group address created before this cycle.
+function NewGroupAddressRow(props: {
+  ranges: GroupRangeNode[];
+  onCreated: (tree: ProjectTree) => void;
+}) {
+  const { ranges, onCreated } = props;
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
+  const [rangeId, setRangeId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const canCreate = address.trim() !== "" && name.trim() !== "";
 
@@ -128,10 +137,15 @@ function NewGroupAddressRow(props: { onCreated: (tree: ProjectTree) => void }) {
     if (!canCreate) return;
     setError(null);
     try {
-      const tree = await api.createGroupAddress(name, address);
+      const tree = await api.createGroupAddress(
+        name,
+        address,
+        rangeId === "" ? undefined : Number(rangeId),
+      );
       onCreated(tree);
       setAddress("");
       setName("");
+      setRangeId("");
     } catch (e) {
       setError(api.errorMessage(e));
     }
@@ -155,11 +169,117 @@ function NewGroupAddressRow(props: { onCreated: (tree: ProjectTree) => void }) {
           if (e.key === "Enter") void create();
         }}
       />
+      <select value={rangeId} onChange={(e) => setRangeId(e.target.value)}>
+        <option value="">(no range)</option>
+        {ranges.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.start}–{r.end} {r.name}
+          </option>
+        ))}
+      </select>
       <button onClick={create} disabled={!canCreate}>
         Add
       </button>
       {error && <span className="field-error">{error}</span>}
     </li>
+  );
+}
+
+// The group-range counterpart of `NewGroupAddressRow`. `parentId` is
+// `undefined` when rendered directly under the "Group Ranges" branch
+// (creates a main range) and set to a main range's id when rendered under
+// that range's own row (creates a middle range) — `GroupRangeItem` never
+// nests a third `NewGroupRangeRow` under a middle range, matching the
+// reference project's observed two-level depth (`GroupRange`'s own doc
+// comment in knx-core), even though the model itself doesn't cap nesting.
+function NewGroupRangeRow(props: {
+  parentId?: number;
+  onCreated: (tree: ProjectTree) => void;
+}) {
+  const { parentId, onCreated } = props;
+  const [name, setName] = useState("");
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const canCreate = name.trim() !== "" && start.trim() !== "" && end.trim() !== "";
+
+  async function create() {
+    if (!canCreate) return;
+    setError(null);
+    try {
+      const tree = await api.createGroupRange(name, start, end, parentId);
+      onCreated(tree);
+      setName("");
+      setStart("");
+      setEnd("");
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  return (
+    <li className="tree-new-row">
+      <input
+        value={start}
+        placeholder="1/0/0"
+        onChange={(e) => setStart(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void create();
+        }}
+      />
+      <input
+        value={end}
+        placeholder="1/7/255"
+        onChange={(e) => setEnd(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void create();
+        }}
+      />
+      <input
+        value={name}
+        placeholder={parentId === undefined ? "New group range" : "New middle range"}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void create();
+        }}
+      />
+      <button onClick={create} disabled={!canCreate}>
+        Add
+      </button>
+      {error && <span className="field-error">{error}</span>}
+    </li>
+  );
+}
+
+function GroupRangeItem(
+  props: {
+    node: GroupRangeTreeNode;
+    isFirst: boolean;
+    onCreated: (tree: ProjectTree) => void;
+  } & SelectionProps,
+) {
+  const { node, isFirst, onCreated, selection, onSelect } = props;
+  const { range, children } = node;
+  return (
+    <TreeNode
+      label={`${range.start}–${range.end} ${range.name}`}
+      selected={selection?.kind === "group_range" && selection.id === range.id}
+      onSelect={() => onSelect({ kind: "group_range", id: range.id })}
+    >
+      {children.map((c) => (
+        <GroupRangeItem
+          key={c.range.id}
+          node={c}
+          isFirst={isFirst}
+          onCreated={onCreated}
+          selection={selection}
+          onSelect={onSelect}
+        />
+      ))}
+      {isFirst && range.parent === null && (
+        <NewGroupRangeRow parentId={range.id} onCreated={onCreated} />
+      )}
+    </TreeNode>
   );
 }
 
@@ -190,7 +310,22 @@ function InstallationItem(
         {installation.group_addresses.map((ga) => (
           <GroupAddressItem key={ga.id} ga={ga} selection={selection} onSelect={onSelect} />
         ))}
-        {isFirst && <NewGroupAddressRow onCreated={onTreeUpdate} />}
+        {isFirst && (
+          <NewGroupAddressRow ranges={installation.group_ranges} onCreated={onTreeUpdate} />
+        )}
+      </TreeNode>
+      <TreeNode label="Group Ranges">
+        {nestGroupRanges(installation.group_ranges).map((node) => (
+          <GroupRangeItem
+            key={node.range.id}
+            node={node}
+            isFirst={isFirst}
+            onCreated={onTreeUpdate}
+            selection={selection}
+            onSelect={onSelect}
+          />
+        ))}
+        {isFirst && <NewGroupRangeRow onCreated={onTreeUpdate} />}
       </TreeNode>
     </TreeNode>
   );

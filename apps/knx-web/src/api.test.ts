@@ -71,6 +71,55 @@ describe("api", () => {
     });
   });
 
+  it("createGroupAddress omits rangeId when not given", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.createGroupAddress("Light on/off", "1/1/1");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/group-addresses");
+    expect(JSON.parse(init.body as string)).toEqual({ name: "Light on/off", address: "1/1/1" });
+  });
+
+  it("createGroupAddress includes rangeId when given", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.createGroupAddress("Light on/off", "1/1/1", 3);
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({
+      name: "Light on/off",
+      address: "1/1/1",
+      rangeId: 3,
+    });
+  });
+
+  it("createGroupRange posts to /api/group-ranges with camelCase parentId", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.createGroupRange("Lighting", "1/0/0", "1/7/255", 5);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/group-ranges");
+    expect(JSON.parse(init.body as string)).toEqual({
+      name: "Lighting",
+      start: "1/0/0",
+      end: "1/7/255",
+      parentId: 5,
+    });
+  });
+
+  it("deleteGroupRange issues a DELETE to /api/group-ranges/:id", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.deleteGroupRange(9);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/group-ranges/9");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("renameGroupRange issues a PATCH with the new name", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.renameGroupRange(9, "Blinds");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/group-ranges/9");
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body as string)).toEqual({ name: "Blinds" });
+  });
+
   it("errorMessage unwraps an Error's message without doubling 'Error: '", () => {
     expect(api.errorMessage(new Error("no project open"))).toBe("no project open");
   });

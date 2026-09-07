@@ -3,7 +3,8 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { InstallationNode } from "./bindings/InstallationNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
-import { buildSearchIndex, findBuildingPart, findGroupAddress } from "./treeUtils";
+import type { GroupRangeNode } from "./bindings/GroupRangeNode";
+import { buildSearchIndex, findBuildingPart, findGroupAddress, findGroupRange, nestGroupRanges } from "./treeUtils";
 
 function device(id: number, name: string, address: string | null = null): DeviceNode {
   return { id, name, address, description: null, com_object_count: 0 };
@@ -27,8 +28,19 @@ function installation(overrides: Partial<InstallationNode> = {}): InstallationNo
     buildings: [],
     unassigned: [],
     group_addresses: [],
+    group_ranges: [],
     ...overrides,
   };
+}
+
+function range(
+  id: number,
+  name: string,
+  start: string,
+  end: string,
+  parent: number | null = null,
+): GroupRangeNode {
+  return { id, name, start, end, parent };
 }
 
 function tree(installations: InstallationNode[]): ProjectTree {
@@ -132,5 +144,42 @@ describe("findBuildingPart", () => {
   it("returns undefined for an unknown id", () => {
     const t = tree([installation()]);
     expect(findBuildingPart(t, 404)).toBeUndefined();
+  });
+});
+
+describe("findGroupRange", () => {
+  it("finds a group range by id across installations", () => {
+    const t = tree([installation({ group_ranges: [range(1, "Lighting", "1/0/0", "1/7/255")] })]);
+    expect(findGroupRange(t, 1)).toEqual(range(1, "Lighting", "1/0/0", "1/7/255"));
+  });
+
+  it("returns undefined for an unknown id", () => {
+    const t = tree([installation()]);
+    expect(findGroupRange(t, 404)).toBeUndefined();
+  });
+});
+
+describe("nestGroupRanges", () => {
+  it("nests middle ranges under their main range, preserving list order", () => {
+    const main = range(1, "Lighting", "1/0/0", "1/7/255");
+    const middleA = range(2, "Ground floor", "1/0/0", "1/0/255", 1);
+    const middleB = range(3, "First floor", "1/1/0", "1/1/255", 1);
+    const nested = nestGroupRanges([main, middleA, middleB]);
+    expect(nested).toEqual([
+      { range: main, children: [{ range: middleA, children: [] }, { range: middleB, children: [] }] },
+    ]);
+  });
+
+  it("keeps unrelated main ranges as separate top-level entries", () => {
+    const lighting = range(1, "Lighting", "1/0/0", "1/7/255");
+    const blinds = range(2, "Blinds", "2/0/0", "2/7/255");
+    expect(nestGroupRanges([lighting, blinds])).toEqual([
+      { range: lighting, children: [] },
+      { range: blinds, children: [] },
+    ]);
+  });
+
+  it("returns an empty array for no ranges", () => {
+    expect(nestGroupRanges([])).toEqual([]);
   });
 });

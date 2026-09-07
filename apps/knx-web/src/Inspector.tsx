@@ -4,9 +4,10 @@ import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
+import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
-import { findBuildingPart, findGroupAddress } from "./treeUtils";
+import { findBuildingPart, findGroupAddress, findGroupRange } from "./treeUtils";
 
 function AddressField(props: { detail: DeviceDetail; onApplied: (tree: ProjectTree) => void }) {
   const { detail, onApplied } = props;
@@ -239,6 +240,94 @@ function GroupAddressInspector(props: {
   );
 }
 
+function GroupRangeNameField(props: {
+  range: GroupRangeNode;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { range, onApplied } = props;
+  const [value, setValue] = useState(range.name);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValue(range.name);
+    setError(null);
+  }, [range.name]);
+
+  async function apply() {
+    if (value === range.name || value.trim() === "") {
+      setValue(range.name);
+      return;
+    }
+    setError(null);
+    try {
+      const tree = await api.renameGroupRange(range.id, value);
+      onApplied(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+      setValue(range.name);
+    }
+  }
+
+  return (
+    <label className="inspector-field">
+      Name
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={apply}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+      />
+      {error && <span className="field-error">{error}</span>}
+    </label>
+  );
+}
+
+function GroupRangeInspector(props: {
+  range: GroupRangeNode;
+  // Same `installations[0]`-only gate as `GroupAddressInspector` — every
+  // group-range command (`Command::CreateGroupRange`/`DeleteGroupRange`/
+  // `RenameGroupRange`) only ever searches the first installation
+  // (command.rs).
+  canEdit: boolean;
+  onApplied: (tree: ProjectTree) => void;
+  onDeleted: (tree: ProjectTree) => void;
+}) {
+  const { range, canEdit, onApplied, onDeleted } = props;
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setError(null);
+    try {
+      const tree = await api.deleteGroupRange(range.id);
+      onDeleted(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  return (
+    <div className="inspector">
+      <h2>{range.name}</h2>
+      <p className="inspector-address">
+        {range.start}–{range.end}
+      </p>
+      {canEdit ? (
+        <>
+          <GroupRangeNameField range={range} onApplied={onApplied} />
+          <button onClick={remove}>Delete</button>
+        </>
+      ) : (
+        <p className="inspector-description">
+          Rename and Delete are only available for group ranges in the first installation.
+        </p>
+      )}
+      {error && <span className="field-error">{error}</span>}
+    </div>
+  );
+}
+
 function BuildingPartInspector(props: { node: BuildingNode; path: string }) {
   const { node, path } = props;
   return (
@@ -279,6 +368,15 @@ export default function Inspector(props: {
     if (!ga) return null;
     const canDelete = tree.installations[0]?.group_addresses.some((g) => g.id === ga.id) ?? false;
     return <GroupAddressInspector ga={ga} canDelete={canDelete} onDeleted={onDeleted} />;
+  }
+
+  if (selection.kind === "group_range") {
+    const range = findGroupRange(tree, selection.id);
+    if (!range) return null;
+    const canEdit = tree.installations[0]?.group_ranges.some((r) => r.id === range.id) ?? false;
+    return (
+      <GroupRangeInspector range={range} canEdit={canEdit} onApplied={onApplied} onDeleted={onDeleted} />
+    );
   }
 
   const found = findBuildingPart(tree, selection.id);

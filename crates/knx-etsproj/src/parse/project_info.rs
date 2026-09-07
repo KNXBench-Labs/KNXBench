@@ -11,9 +11,11 @@ use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
 use crate::known::KnownSchema;
-use crate::source::{RetainedAttribute, SourceProjectInfo};
+use crate::source::{RetainedAttribute, RetainedElement, SourceProjectInfo};
 
-use super::{attr_map, ParseError, UnknownAggregator, UnknownConstruct, UnknownKind};
+use super::{
+    attr_map, skip_and_capture, ParseError, UnknownAggregator, UnknownConstruct, UnknownKind,
+};
 
 /// Parses one `Project.xml` document into a [`SourceProjectInfo`],
 /// tolerantly: an unknown element or attribute is reported, not fatal.
@@ -24,6 +26,11 @@ pub fn parse_project_info(
     source_path: &str,
     schema: &KnownSchema,
 ) -> Result<(SourceProjectInfo, Vec<UnknownConstruct>), ParseError> {
+    // See `installation.rs`'s identical stripping for why: `Reader` silently
+    // absorbs a leading UTF-8 BOM into its own position bookkeeping, so
+    // `ProjectTraces`'s raw-capture slice must be indexed against a `bytes`
+    // view with the same three bytes already removed.
+    let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
     let mut reader = Reader::from_reader(bytes);
     let mut path_stack: Vec<String> = Vec::new();
     let mut info = SourceProjectInfo::default();
@@ -45,6 +52,7 @@ pub fn parse_project_info(
                     &start,
                     false,
                     &mut reader,
+                    bytes,
                     pos_before,
                     source_path,
                     schema,
@@ -59,6 +67,7 @@ pub fn parse_project_info(
                     &start,
                     true,
                     &mut reader,
+                    bytes,
                     pos_before,
                     source_path,
                     schema,
@@ -101,6 +110,7 @@ fn open_element<'a>(
     start: &BytesStart<'a>,
     is_empty: bool,
     reader: &mut Reader<&'a [u8]>,
+    bytes: &'a [u8],
     pos_before: u64,
     source_path: &str,
     schema: &KnownSchema,
@@ -111,6 +121,26 @@ fn open_element<'a>(
     let local = start.name().local_name().as_ref().to_string();
     path_stack.push(local.clone());
     let xpath = format!("/{}", path_stack.join("/"));
+
+    // `ProjectTraces` (schema ≥21, an audit log — RESEARCH §3.4: "purpose
+    // not investigated") is known but deliberately not modeled beyond
+    // verbatim retention, mirroring `installation.rs`'s `BusAccess` special
+    // case exactly: whole subtree captured raw, not walked, never reported
+    // as unknown.
+    if local == "ProjectTraces" {
+        let raw = if is_empty {
+            bytes[pos_before as usize..reader.buffer_position() as usize].to_vec()
+        } else {
+            skip_and_capture(reader, bytes, start, pos_before, source_path)?
+        };
+        info.project_traces_raw = Some(RetainedElement {
+            xpath,
+            name: local,
+            raw,
+        });
+        path_stack.pop();
+        return Ok(());
+    }
 
     let known_names = schema
         .elements

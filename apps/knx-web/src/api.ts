@@ -108,6 +108,32 @@ export function renameGroupRange(id: number, name: string): Promise<ProjectTree>
   return request(`/api/group-ranges/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });
 }
 
+// `direction` is `"Send"` or `"Receive"` — the same strings
+// `ComObjectNode.links[].direction` already carries (both sides format
+// `knx_core::Direction`'s `Debug` form), so a link read from the Inspector
+// can be passed straight back to `unlinkComObject` unchanged.
+export function linkComObject(
+  comObjectId: number,
+  gaId: number,
+  direction: string,
+): Promise<ProjectTree> {
+  return request("/api/group-links", {
+    method: "POST",
+    body: JSON.stringify({ comObjectId, gaId, direction }),
+  });
+}
+
+export function unlinkComObject(
+  comObjectId: number,
+  gaId: number,
+  direction: string,
+): Promise<ProjectTree> {
+  return request("/api/group-links", {
+    method: "DELETE",
+    body: JSON.stringify({ comObjectId, gaId, direction }),
+  });
+}
+
 export function undo(): Promise<ProjectTree> {
   return request("/api/undo", { method: "POST" });
 }

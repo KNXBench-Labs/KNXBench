@@ -280,6 +280,30 @@ pub struct ComObjectNode {
     pub transmit: bool,
     pub update: bool,
     pub communication: bool,
+    /// The `GroupLink`s already on this communication object —
+    /// `knx_core::Command::LinkComObject`/`UnlinkComObject` (2026-09-06)
+    /// had no projection field to read or drive from until this cycle.
+    pub links: Vec<GroupLinkNode>,
+}
+
+/// One directional link from a communication object to a group address,
+/// as seen from the communication object's side. `address`/`name` are
+/// `None` only if `ga_id` names no address anywhere in the project — a
+/// dangling link, which `Command::DeleteGroupAddress` already refuses to
+/// create (`CommandError::GroupAddressInUse`) but this stays defensive
+/// rather than panicking on data that reached the model some other way
+/// (e.g. a future import path that doesn't route through that check).
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct GroupLinkNode {
+    pub ga_id: u32,
+    /// Formatted per the project's own `GroupAddressStyle`, same as
+    /// `GroupAddressNode::address`.
+    pub address: Option<String>,
+    pub name: Option<String>,
+    /// `"Send"` or `"Receive"` (`Direction`'s `Debug` form, same
+    /// convention as `dpt_layer`/`description_layer`).
+    pub direction: String,
 }
 
 /// Builds the detail panel for one device, resolving each communication
@@ -333,6 +357,35 @@ fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -
         transmit: flag(&com.flags.transmit),
         update: flag(&com.flags.update),
         communication: flag(&com.flags.communication),
+        links: com
+            .links
+            .iter()
+            .map(|link| build_group_link_node(link, project))
+            .collect(),
+    }
+}
+
+/// Finds a `GroupAddressEntry` by id across every installation — a
+/// `GroupLink` names its target by id alone, with no installation
+/// context of its own to narrow the search.
+fn find_group_address_entry(
+    project: &Project,
+    id: knx_core::GroupAddressId,
+) -> Option<&GroupAddressEntry> {
+    project
+        .installations
+        .iter()
+        .flat_map(|inst| inst.group_addresses.iter())
+        .find(|entry| entry.id == id)
+}
+
+fn build_group_link_node(link: &knx_core::GroupLink, project: &Project) -> GroupLinkNode {
+    let entry = find_group_address_entry(project, link.ga);
+    GroupLinkNode {
+        ga_id: link.ga.0,
+        address: entry.map(|e| e.address.format(project.info.group_address_style)),
+        name: entry.map(|e| e.name.clone()),
+        direction: format!("{:?}", link.direction),
     }
 }
 
@@ -615,6 +668,70 @@ mod tests {
         assert_eq!(com.description_layer.as_deref(), Some("Instance"));
         assert!(com.is_active);
         assert!(!com.read); // ResolvedFlags::none() sets nothing
+        assert!(com.links.is_empty());
+    }
+
+    #[test]
+    fn build_device_detail_projects_a_group_link_with_its_resolved_address_and_name() {
+        let mut project = project_with_one_device();
+        let mut inst = empty_installation();
+        inst.group_addresses.push(knx_core::GroupAddressEntry {
+            id: knx_core::GroupAddressId(9),
+            source: source(),
+            name: "Hallway light on/off".into(),
+            address: knx_core::GroupAddress::parse(
+                "1/1/1",
+                knx_core::GroupAddressStyle::ThreeLevel,
+            )
+            .unwrap(),
+            central: false,
+            unfiltered: false,
+            range: None,
+        });
+        project.installations.push(inst);
+        project
+            .devices
+            .com_object_mut(knx_core::ComObjectInstanceId(1))
+            .unwrap()
+            .links
+            .push(knx_core::GroupLink {
+                ga: knx_core::GroupAddressId(9),
+                direction: knx_core::Direction::Send,
+            });
+
+        let detail = build_device_detail(&project, knx_core::DeviceId(1)).unwrap();
+        let links = &detail.com_objects[0].links;
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].ga_id, 9);
+        assert_eq!(links[0].address.as_deref(), Some("1/1/1"));
+        assert_eq!(links[0].name.as_deref(), Some("Hallway light on/off"));
+        assert_eq!(links[0].direction, "Send");
+    }
+
+    #[test]
+    fn build_device_detail_stays_defensive_on_a_dangling_group_link() {
+        // `Command::DeleteGroupAddress` already refuses to create this state
+        // (`CommandError::GroupAddressInUse`), but the projection stays
+        // defensive against data that reached the model some other way,
+        // same rationale as `a_dangling_building_device_reference_is_dropped_not_panicked`.
+        let mut project = project_with_one_device();
+        project
+            .devices
+            .com_object_mut(knx_core::ComObjectInstanceId(1))
+            .unwrap()
+            .links
+            .push(knx_core::GroupLink {
+                ga: knx_core::GroupAddressId(404),
+                direction: knx_core::Direction::Receive,
+            });
+
+        let detail = build_device_detail(&project, knx_core::DeviceId(1)).unwrap();
+        let links = &detail.com_objects[0].links;
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].ga_id, 404);
+        assert_eq!(links[0].address, None);
+        assert_eq!(links[0].name, None);
+        assert_eq!(links[0].direction, "Receive");
     }
 
     #[test]

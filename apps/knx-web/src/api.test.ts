@@ -120,6 +120,32 @@ describe("api", () => {
     expect(JSON.parse(init.body as string)).toEqual({ name: "Blinds" });
   });
 
+  it("linkComObject posts to /api/group-links with camelCase field names", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.linkComObject(3, 9, "Send");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/group-links");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({
+      comObjectId: 3,
+      gaId: 9,
+      direction: "Send",
+    });
+  });
+
+  it("unlinkComObject issues a DELETE to /api/group-links with a body", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.unlinkComObject(3, 9, "Receive");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/group-links");
+    expect(init.method).toBe("DELETE");
+    expect(JSON.parse(init.body as string)).toEqual({
+      comObjectId: 3,
+      gaId: 9,
+      direction: "Receive",
+    });
+  });
+
   it("errorMessage unwraps an Error's message without doubling 'Error: '", () => {
     expect(api.errorMessage(new Error("no project open"))).toBe("no project open");
   });

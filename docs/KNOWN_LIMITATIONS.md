@@ -475,23 +475,25 @@ this limitation is fixed regardless of whether a range is given.
 **Still open.** `range_id` stays optional at the HTTP boundary — a
 UI-created group address with no range assigned is still silently
 omitted by `crates/knx-etsproj/src/export/schema11.rs`'s exporter, which
-only emits a group address nested inside its `GroupRange`. Forcing every
-creation through a range needs a range *picker* in the UI, which does not
-exist yet; `knx_core::Command::CreateGroupRange` (this cycle) makes
-ranges creatable, but the frontend has no screen to create or choose one
-from. `Command::CreateGroupAddress` now validates a *given* range
-(`check_group_address_in_range`), so a range, once chosen, cannot
-disagree with the address — only the choice itself isn't enforced yet.
+only emits a group address nested inside its `GroupRange`.
+`apps/knx-web`'s Project Explorer now has both halves the previous
+version of this entry was waiting on: a "Group Ranges" tree branch
+(create/rename/delete main and middle ranges, T23 first slice,
+2026-09-07) and a range `<select>` on the group-address create row, so a
+user *can* pick a range at creation time. The picker's default is
+"(no range)", not a forced choice, so a range-less group address remains
+one click away — the gap is now "the UI allows skipping it", not "the UI
+has no way to do it at all".
 
 **Originally.** [as before — the empty-`ets_id`/`range: None` behavior
 this entry first documented].
 
-**Lifted when.** The frontend gains a group-range create/pick UI
-(Sub-Project 2 or later, see
-[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)) and `range_id` becomes a
-required argument to group-address creation at that point — not before,
-since making it required today would break the already-shipped
-range-less creation UI with nothing to replace it.
+**Lifted when.** A deliberate product decision to require a range at
+creation time (defaulting the picker to the first available range rather
+than "none", or rejecting the create with no range chosen) — not
+attempted this cycle, since forcing it changes today's already-shipped
+range-less creation behavior for existing users, not just adds a new
+option.
 
 ## 22. The web/Docker deployment target has no authentication
 

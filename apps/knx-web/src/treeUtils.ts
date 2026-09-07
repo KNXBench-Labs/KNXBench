@@ -2,6 +2,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
+import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 
 export type SearchEntry =
   | { kind: "device"; id: number; label: string; address: string | null }
@@ -75,4 +76,36 @@ export function findBuildingPart(
     if (found) return found;
   }
   return undefined;
+}
+
+export function findGroupRange(tree: ProjectTree, id: number): GroupRangeNode | undefined {
+  for (const inst of tree.installations) {
+    const found = inst.group_ranges.find((r) => r.id === id);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+export interface GroupRangeTreeNode {
+  range: GroupRangeNode;
+  children: GroupRangeTreeNode[];
+}
+
+// `GroupRangeNode` is a flat list with only a `parent` pointer (knx-projection
+// deliberately doesn't nest it — see the type's own doc comment); this
+// rebuilds the main/middle hierarchy for the tree branch. No depth limit is
+// hardcoded even though the one reference project measured never nests past
+// two levels (`GroupRange`'s own doc comment in knx-core) — a third level
+// would just render as a range within a range, not break anything.
+export function nestGroupRanges(ranges: GroupRangeNode[]): GroupRangeTreeNode[] {
+  const byParent = new Map<number | null, GroupRangeNode[]>();
+  for (const range of ranges) {
+    const siblings = byParent.get(range.parent) ?? [];
+    siblings.push(range);
+    byParent.set(range.parent, siblings);
+  }
+  function build(parent: number | null): GroupRangeTreeNode[] {
+    return (byParent.get(parent) ?? []).map((range) => ({ range, children: build(range.id) }));
+  }
+  return build(null);
 }

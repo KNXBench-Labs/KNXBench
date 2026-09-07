@@ -168,6 +168,17 @@ Each task: **what**, **why**, **depends on**.
   `GroupRangeNode` already exist; this is frontend-only work, the same
   shape as cycle 9's group-address UI.
 
+  **First slice done (2026-09-07).** The "Group Ranges" branch (nested
+  main/middle, create/rename/delete, `treeUtils.ts`'s `nestGroupRanges`
+  rebuilding the hierarchy from `GroupRangeNode`'s flat `parent` pointer)
+  and the range `<select>` on `NewGroupAddressRow` both ship — closing
+  **B5** and the picker half of KNOWN_LIMITATIONS §21 (still not a
+  *forced* choice, see that entry). Still open from T23: the area/line
+  tree-edit UI (**B3**) and the link/unlink control (**B7**), each its
+  own follow-up slice by design (brainstormed as three separate bounded
+  steps, not one).
+  shape as cycle 9's group-address UI.
+
 ### Tier 2 — closes remaining single-field-editor gaps
 
 - **T7. Communication-object flag editing.** `Command::SetComObjectFlags`

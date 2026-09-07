@@ -8,6 +8,7 @@ pub mod devices;
 pub mod group;
 pub mod manifest;
 pub mod migration;
+pub mod module_instance;
 pub mod opaque;
 pub mod parameter;
 pub mod project;

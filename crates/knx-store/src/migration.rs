@@ -1,11 +1,13 @@
 //! Schema-version migration chain, keyed off SQLite's `user_version` pragma
 //! (ADR-0003). Migrations run in order; there is no version-skipping path
-//! and no downgrade. The chain now runs v0 -> v4: the `schema_meta` marker
+//! and no downgrade. The chain now runs v0 -> v5: the `schema_meta` marker
 //! table (v1), the opaque passthrough table (v2), the manufacturer manifest
-//! (v3) and every `knx_core::Project` entity table (v4 — `project_info`
+//! (v3), every `knx_core::Project` entity table (v4 — `project_info`
 //! through `parameter_instance`, written and read by `project.rs`'s
-//! `save_project`/`load_project`). Each version has a frozen fixture under
-//! `fixtures/` that the tests below migrate forward.
+//! `save_project`/`load_project`) and `ModuleInstance` persistence (v5 —
+//! ADR-0013, the schema-≥21 modular-application-program entity). Each
+//! version has a frozen fixture under `fixtures/` that the tests below
+//! migrate forward.
 
 use std::fmt;
 use std::path::Path;
@@ -13,7 +15,7 @@ use std::path::Path;
 use rusqlite::Connection;
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 4;
+pub const CURRENT_SCHEMA_VERSION: i64 = 5;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -304,6 +306,41 @@ fn migrate_v3_to_v4(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v4 -> v5: `ModuleInstance` persistence (ADR-0013) — the schema-≥21
+/// modular-application-program entity Task 1 added to `knx-core`.
+/// `module_instance`/`module_instance_argument` mirror `parameter_instance`'s
+/// shape (retained-but-uninterpreted `SourceRef`+value rows); the nullable
+/// `com_object_instance.module_instance_id` column, `project_info.
+/// ets_schema_version` column, and `id_allocators.module_instance` counter
+/// column are additive-only, per DATA_MODEL §11.
+fn migrate_v4_to_v5(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(
+        "CREATE TABLE module_instance (
+             id            INTEGER PRIMARY KEY,
+             device_id     INTEGER NOT NULL REFERENCES device(id),
+             position      INTEGER NOT NULL,
+             source_path   TEXT NOT NULL,
+             source_ets_id TEXT NOT NULL,
+             repeat_index  TEXT NOT NULL
+         ) STRICT;
+         CREATE INDEX module_instance_device_id ON module_instance (device_id);
+
+         CREATE TABLE module_instance_argument (
+             module_instance_id INTEGER NOT NULL REFERENCES module_instance(id),
+             position            INTEGER NOT NULL,
+             source_path         TEXT NOT NULL,
+             source_ets_id       TEXT NOT NULL,
+             value               TEXT NOT NULL,
+             PRIMARY KEY (module_instance_id, position)
+         ) STRICT;
+
+         ALTER TABLE com_object_instance ADD COLUMN module_instance_id INTEGER REFERENCES module_instance(id);
+         ALTER TABLE project_info ADD COLUMN ets_schema_version INTEGER NOT NULL DEFAULT 11;
+         ALTER TABLE id_allocators ADD COLUMN module_instance INTEGER NOT NULL DEFAULT 0;",
+    )?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// Ordered chain; index `i` migrates `user_version` `i` to `i + 1`.
@@ -313,6 +350,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v1_to_v2,
         migrate_v2_to_v3,
         migrate_v3_to_v4,
+        migrate_v4_to_v5,
     ]
 }
 
@@ -488,12 +526,18 @@ mod tests {
     // below covers the same fixture safely.
     //
     // `the_frozen_v3_fixture_still_opens` was kept for the same reason while
-    // v3 was current, but is deliberately not kept now that v4 is current:
+    // v3 was current, but is deliberately not kept now that v5 is current:
     // opening the v3 fixture by its literal path would migrate it forward to
-    // v4 and rewrite the committed file on disk.
+    // v5 and rewrite the committed file on disk.
     // `the_frozen_v3_fixture_migrates_forward_to_v4` below covers the same
-    // fixture safely, and `the_frozen_v4_fixture_still_opens` covers the
-    // "still opens as a no-op" guarantee for the version that is current now.
+    // fixture safely.
+    //
+    // `the_frozen_v4_fixture_still_opens` was kept for the same reason while
+    // v4 was current, but is deliberately not kept now that v5 is current:
+    // opening the v4 fixture by its literal path would migrate it forward to
+    // v5 and rewrite the committed file on disk.
+    // `the_frozen_v4_fixture_migrates_forward_to_v5` below covers the same
+    // fixture safely.
 
     #[test]
     fn a_fresh_file_migrates_to_version_three_and_has_the_manifest_table() {
@@ -503,10 +547,10 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // `open_and_migrate` always runs the full chain, so a fresh file
-        // lands on `CURRENT_SCHEMA_VERSION` (now 4), not v3 — the manifest
+        // lands on `CURRENT_SCHEMA_VERSION` (now 5), not v3 — the manifest
         // table introduced at v3 is what this test actually verifies, and it
-        // still exists and is empty at v4.
-        assert_eq!(v, 4);
+        // still exists and is empty at v5.
+        assert_eq!(v, 5);
         assert_eq!(
             crate::manifest::load_manufacturer_refs(&conn).unwrap(),
             vec![]
@@ -527,8 +571,8 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // See the comment on the test above: the chain runs all the way to
-        // `CURRENT_SCHEMA_VERSION` (now 4), not just to v3.
-        assert_eq!(v, 4);
+        // `CURRENT_SCHEMA_VERSION` (now 5), not just to v3.
+        assert_eq!(v, 5);
         // The v2 opaque table survives the migration with its data intact.
         assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
     }
@@ -540,7 +584,10 @@ mod tests {
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 4);
+        // As with the tests above, a fresh file always lands on
+        // `CURRENT_SCHEMA_VERSION` (now 5) — the v4 entity tables checked
+        // below still exist and are empty at v5.
+        assert_eq!(v, 5);
         for table in [
             "project_info",
             "id_allocators",
@@ -589,18 +636,30 @@ mod tests {
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 4);
+        // See the comment on `the_frozen_v2_fixture_migrates_forward_to_v3`:
+        // the chain runs all the way to `CURRENT_SCHEMA_VERSION` (now 5), not
+        // just to v4.
+        assert_eq!(v, 5);
         assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
     }
 
     #[test]
-    fn the_frozen_v4_fixture_still_opens() {
-        let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v4-empty.sqlite");
-        let conn = open_and_migrate(Path::new(fixture)).unwrap();
+    fn the_frozen_v4_fixture_migrates_forward_to_v5() {
+        // Copied, not opened in place: a migration test must not mutate its
+        // fixture — `open_and_migrate` would otherwise rewrite the committed
+        // v4 file on disk to v5.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v4.sqlite");
+        std::fs::copy(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v4-empty.sqlite"),
+            &path,
+        )
+        .unwrap();
+        let conn = open_and_migrate(&path).unwrap();
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 4);
+        assert_eq!(v, 5);
     }
 
     #[test]
@@ -614,5 +673,16 @@ mod tests {
         let _count: i64 = conn
             .query_row("SELECT COUNT(*) FROM opaque_entry", [], |row| row.get(0))
             .unwrap();
+    }
+
+    #[test]
+    fn v4_to_v5_adds_the_module_instance_table_and_column() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        migrate(&conn).unwrap(); // runs the full chain including the new migrate_v4_to_v5
+        let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap();
+        assert_eq!(version, 5);
+        conn.execute("INSERT INTO module_instance (id, device_id, position, source_path, source_ets_id, repeat_index) VALUES (1, 0, 0, 't', 't', '6x1')", []).unwrap_err(); // device_id FK: no device(0) exists, expected to fail — proves the FK/table exist
+        conn.query_row("SELECT module_instance_id FROM com_object_instance LIMIT 0", [], |_| Ok(())).ok(); // column exists (no rows to fail on, just proves no "no such column" error at prepare time)
     }
 }

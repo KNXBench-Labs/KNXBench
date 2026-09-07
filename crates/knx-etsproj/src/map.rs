@@ -1020,7 +1020,7 @@ fn map_device_v21(
     problems: &mut Vec<MapProblem>,
     counts: &mut EntityCounts,
 ) -> Vec<RetainedAttribute> {
-    let xpath = format!("{parent_xpath}/DeviceInstance[@Id='{}']", device.id);
+    let xpath = format!("{parent_xpath}/Segment/DeviceInstance[@Id='{}']", device.id);
     let mut retained = device.other.clone();
 
     let address = compose_individual_address(
@@ -2005,5 +2005,33 @@ mod tests {
     fn ets_schema_version_is_recorded_on_the_project() {
         let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
         assert_eq!(out.project.info.ets_schema_version, 21);
+    }
+
+    /// Regression test for a review finding: a schema-≥21 `DeviceInstance`
+    /// sits under `Line/Segment/`, not directly under `Line/` the way
+    /// schema 11 does — a `MapProblem`'s xpath must reflect the real
+    /// document structure, not schema 11's shallower one.
+    #[test]
+    fn a_schema_21_map_problem_xpath_includes_the_segment_element() {
+        let mut doc = reference_kv_source_document();
+        doc.installations[0]
+            .areas
+            .iter_mut()
+            .flat_map(|a| a.lines.iter_mut())
+            .find(|l| !l.devices.is_empty())
+            .expect("the KV sample has at least one line with a device")
+            .devices[0]
+            .last_modified = Some("not a date".into());
+        let out = map(&doc, "P-03DE/0.xml");
+        let problem = out
+            .problems
+            .iter()
+            .find(|p| matches!(p.detail, MapProblemDetail::Value(_)))
+            .expect("the malformed LastModified value is reported");
+        assert!(
+            problem.xpath.contains("/Line[") && problem.xpath.contains("/Segment/DeviceInstance["),
+            "expected xpath to include .../Line[...]/Segment/DeviceInstance[...], got: {}",
+            problem.xpath
+        );
     }
 }

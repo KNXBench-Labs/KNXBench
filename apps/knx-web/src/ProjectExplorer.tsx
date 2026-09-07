@@ -61,10 +61,120 @@ function DeviceItem(props: { device: DeviceNode } & SelectionProps) {
   );
 }
 
+// The topology counterpart of `NewGroupAddressRow`/`NewGroupRangeRow`.
+// `medium_ref` (`MediumTypeRefId` — an opaque product reference `knx-core`
+// deliberately does not interpret, see `Line`'s own doc comment) has no
+// dropdown to pick from for the same reason; `"MT-0"` (ETS's own default
+// for twisted-pair) is pre-filled so the common case needs no typing.
+function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTree) => void }) {
+  const { areaId, onCreated } = props;
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [mediumRef, setMediumRef] = useState("MT-0");
+  const [error, setError] = useState<string | null>(null);
+  const canCreate = name.trim() !== "" && address.trim() !== "" && mediumRef.trim() !== "";
+
+  async function create() {
+    if (!canCreate) return;
+    setError(null);
+    try {
+      const tree = await api.createLine(areaId, name, Number(address), mediumRef);
+      onCreated(tree);
+      setName("");
+      setAddress("");
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  return (
+    <li className="tree-new-row">
+      <input
+        value={address}
+        placeholder="1"
+        onChange={(e) => setAddress(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void create();
+        }}
+      />
+      <input
+        value={name}
+        placeholder="New line"
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void create();
+        }}
+      />
+      <input
+        value={mediumRef}
+        placeholder="MT-0"
+        onChange={(e) => setMediumRef(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void create();
+        }}
+      />
+      <button onClick={create} disabled={!canCreate}>
+        Add
+      </button>
+      {error && <span className="field-error">{error}</span>}
+    </li>
+  );
+}
+
+function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
+  const { onCreated } = props;
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const canCreate = name.trim() !== "" && address.trim() !== "";
+
+  async function create() {
+    if (!canCreate) return;
+    setError(null);
+    try {
+      const tree = await api.createArea(name, Number(address));
+      onCreated(tree);
+      setName("");
+      setAddress("");
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  return (
+    <li className="tree-new-row">
+      <input
+        value={address}
+        placeholder="1"
+        onChange={(e) => setAddress(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void create();
+        }}
+      />
+      <input
+        value={name}
+        placeholder="New area"
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void create();
+        }}
+      />
+      <button onClick={create} disabled={!canCreate}>
+        Add
+      </button>
+      {error && <span className="field-error">{error}</span>}
+    </li>
+  );
+}
+
 function LineItem(props: { line: LineNode } & SelectionProps) {
   const { line, selection, onSelect } = props;
   return (
-    <TreeNode label={`Line ${line.address}: ${line.name}`}>
+    <TreeNode
+      label={`Line ${line.address}: ${line.name}`}
+      selected={selection?.kind === "line" && selection.id === line.id}
+      onSelect={() => onSelect({ kind: "line", id: line.id })}
+    >
       {line.devices.map((d) => (
         <DeviceItem key={d.id} device={d} selection={selection} onSelect={onSelect} />
       ))}
@@ -72,13 +182,20 @@ function LineItem(props: { line: LineNode } & SelectionProps) {
   );
 }
 
-function AreaItem(props: { area: AreaNode } & SelectionProps) {
-  const { area, selection, onSelect } = props;
+function AreaItem(
+  props: { area: AreaNode; isFirst: boolean; onCreated: (tree: ProjectTree) => void } & SelectionProps,
+) {
+  const { area, isFirst, onCreated, selection, onSelect } = props;
   return (
-    <TreeNode label={`Area ${area.address}: ${area.name}`}>
+    <TreeNode
+      label={`Area ${area.address}: ${area.name}`}
+      selected={selection?.kind === "area" && selection.id === area.id}
+      onSelect={() => onSelect({ kind: "area", id: area.id })}
+    >
       {area.lines.map((l) => (
         <LineItem key={l.id} line={l} selection={selection} onSelect={onSelect} />
       ))}
+      {isFirst && <NewLineRow areaId={area.id} onCreated={onCreated} />}
     </TreeNode>
   );
 }
@@ -291,8 +408,16 @@ function InstallationItem(
     <TreeNode label={installation.name}>
       <TreeNode label="Topology">
         {installation.topology.map((a) => (
-          <AreaItem key={a.id} area={a} selection={selection} onSelect={onSelect} />
+          <AreaItem
+            key={a.id}
+            area={a}
+            isFirst={isFirst}
+            onCreated={onTreeUpdate}
+            selection={selection}
+            onSelect={onSelect}
+          />
         ))}
+        {isFirst && <NewAreaRow onCreated={onTreeUpdate} />}
       </TreeNode>
       <TreeNode label="Buildings">
         {installation.buildings.map((b) => (

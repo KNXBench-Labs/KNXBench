@@ -4,7 +4,16 @@ import type { InstallationNode } from "./bindings/InstallationNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
-import { buildSearchIndex, findBuildingPart, findGroupAddress, findGroupRange, nestGroupRanges } from "./treeUtils";
+import {
+  buildSearchIndex,
+  findArea,
+  findBuildingPart,
+  findDeviceLineInFirstInstallation,
+  findGroupAddress,
+  findGroupRange,
+  findLine,
+  nestGroupRanges,
+} from "./treeUtils";
 
 function device(id: number, name: string, address: string | null = null): DeviceNode {
   return { id, name, address, description: null, com_object_count: 0 };
@@ -147,6 +156,43 @@ describe("findBuildingPart", () => {
   });
 });
 
+describe("findArea", () => {
+  it("finds an area by id across installations", () => {
+    const t = tree([
+      installation({ topology: [{ id: 3, name: "Ground floor", address: 1, lines: [] }] }),
+    ]);
+    expect(findArea(t, 3)?.name).toBe("Ground floor");
+  });
+
+  it("returns undefined for an unknown id", () => {
+    const t = tree([installation()]);
+    expect(findArea(t, 404)).toBeUndefined();
+  });
+});
+
+describe("findLine", () => {
+  it("finds a line nested inside an area", () => {
+    const t = tree([
+      installation({
+        topology: [
+          {
+            id: 3,
+            name: "Ground floor",
+            address: 1,
+            lines: [{ id: 9, name: "Main line", address: 1, devices: [] }],
+          },
+        ],
+      }),
+    ]);
+    expect(findLine(t, 9)?.name).toBe("Main line");
+  });
+
+  it("returns undefined for an unknown id", () => {
+    const t = tree([installation()]);
+    expect(findLine(t, 404)).toBeUndefined();
+  });
+});
+
 describe("findGroupRange", () => {
   it("finds a group range by id across installations", () => {
     const t = tree([installation({ group_ranges: [range(1, "Lighting", "1/0/0", "1/7/255")] })]);
@@ -181,5 +227,42 @@ describe("nestGroupRanges", () => {
 
   it("returns an empty array for no ranges", () => {
     expect(nestGroupRanges([])).toEqual([]);
+  });
+});
+
+describe("findDeviceLineInFirstInstallation", () => {
+  function withTopology(overrides: {
+    topology?: InstallationNode["topology"];
+    unassigned?: DeviceNode[];
+  }): ProjectTree {
+    return tree([installation(overrides)]);
+  }
+
+  it("finds a device nested inside an area's line", () => {
+    const t = withTopology({
+      topology: [
+        {
+          id: 1,
+          name: "Area 1",
+          address: 1,
+          lines: [{ id: 7, name: "Line 1", address: 1, devices: [device(9, "Switch")] }],
+        },
+      ],
+    });
+    expect(findDeviceLineInFirstInstallation(t, 9)).toBe(7);
+  });
+
+  it("returns null for a device in the unassigned bucket", () => {
+    const t = withTopology({ unassigned: [device(9, "Switch")] });
+    expect(findDeviceLineInFirstInstallation(t, 9)).toBeNull();
+  });
+
+  it("returns undefined for a device absent from the first installation's topology", () => {
+    const t = withTopology({});
+    expect(findDeviceLineInFirstInstallation(t, 9)).toBeUndefined();
+  });
+
+  it("returns undefined when there is no first installation at all", () => {
+    expect(findDeviceLineInFirstInstallation(tree([]), 9)).toBeUndefined();
   });
 });

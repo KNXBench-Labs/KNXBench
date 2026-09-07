@@ -944,3 +944,37 @@ into this one. `knx-projection` itself is clippy-clean
 standalone since the workspace-wide invocation cannot get past
 `knx-etsproj`'s failure to even reach `knx-projection`'s or
 `knx-server`'s own lints).
+
+**T23, third slice (2026-09-07) — area/line tree-edit UI. T23
+complete.** `apps/knx-web`'s `AreaItem`/`LineItem` in the Project
+Explorer become selectable — previously expand-only, the only topology
+rows without one, unlike every other tree kind since cycle 5's search —
+with `NewAreaRow`/`NewLineRow` create rows (`isFirst`-gated, same
+convention as every other create affordance; `medium_ref` pre-filled
+`"MT-0"`, ETS's own default for twisted-pair, since `Line.medium_ref` is
+an opaque product reference `knx-core` deliberately doesn't interpret,
+per that field's own doc comment, so no dropdown is possible). Closes
+**B3** ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)) and, with it, T23 as
+a whole. `Inspector.tsx` gains `AreaInspector`/`LineInspector`
+(summary — line/device count — plus Delete, `installations[0]`-gated
+like every other Delete in this file; no rename field, since no
+`RenameArea`/`RenameLine` command exists, unlike `GroupRangeInspector`)
+and `LineMoveField` on the device Inspector, driving `Command::
+MoveDeviceToLine` from a `<select>` of every area's lines plus
+"(unassigned)" — independent of `AddressField`'s individual address, per
+that command's own doc comment ("a line move and a re-address are two
+separate user intents"). `LineMoveField` renders nothing (not a disabled
+control) when `treeUtils.ts`'s new `findDeviceLineInFirstInstallation`
+returns `undefined` — a device the command can't target at all because
+it isn't reachable from `installations[0]`'s topology (a building-only
+placement, or a later installation) — since there's no sensible current
+value to show even disabled, unlike the `canDelete`-gated buttons
+elsewhere that do have one. `treeUtils.ts` also gains `findArea`/
+`findLine`, matching every other selectable kind's own find helper
+(`findGroupAddress`, `findGroupRange`, `findBuildingPart`). No backend
+change needed — `CreateArea`/`DeleteArea`/`CreateLine`/`DeleteLine`/
+`MoveDeviceToLine` and their routes already existed (2026-09-06 topology
+command layer) with no frontend caller until now. 14 new `vitest` tests
+(`treeUtils.test.ts` — `findArea`, `findLine`,
+`findDeviceLineInFirstInstallation`; `api.test.ts` — the five new
+endpoints), for 92 total.

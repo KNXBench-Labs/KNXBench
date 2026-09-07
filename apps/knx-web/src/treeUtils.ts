@@ -1,8 +1,10 @@
 import type { ProjectTree } from "./bindings/ProjectTree";
+import type { AreaNode } from "./bindings/AreaNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
+import type { LineNode } from "./bindings/LineNode";
 
 export type SearchEntry =
   | { kind: "device"; id: number; label: string; address: string | null }
@@ -78,6 +80,24 @@ export function findBuildingPart(
   return undefined;
 }
 
+export function findArea(tree: ProjectTree, id: number): AreaNode | undefined {
+  for (const inst of tree.installations) {
+    const found = inst.topology.find((a) => a.id === id);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+export function findLine(tree: ProjectTree, id: number): LineNode | undefined {
+  for (const inst of tree.installations) {
+    for (const area of inst.topology) {
+      const found = area.lines.find((l) => l.id === id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
 export function findGroupRange(tree: ProjectTree, id: number): GroupRangeNode | undefined {
   for (const inst of tree.installations) {
     const found = inst.group_ranges.find((r) => r.id === id);
@@ -108,4 +128,28 @@ export function nestGroupRanges(ranges: GroupRangeNode[]): GroupRangeTreeNode[] 
     return (byParent.get(parent) ?? []).map((range) => ({ range, children: build(range.id) }));
   }
   return build(null);
+}
+
+// Where a device currently sits in the *first* installation's topology —
+// `Command::MoveDeviceToLine` only ever targets `installations[0]`
+// (command.rs), the same restriction every other create/delete/rename
+// affordance in this codebase is already gated by. Returns a line id, `null`
+// for unassigned, or `undefined` if the device isn't in this installation's
+// topology at all (a building-only placement, or the device belongs to a
+// later installation) — `MoveDeviceToLine` can't target it either way, so
+// `undefined` is the signal to hide the move control rather than show a
+// misleading current value.
+export function findDeviceLineInFirstInstallation(
+  tree: ProjectTree,
+  deviceId: number,
+): number | null | undefined {
+  const inst = tree.installations[0];
+  if (!inst) return undefined;
+  for (const area of inst.topology) {
+    for (const line of area.lines) {
+      if (line.devices.some((d) => d.id === deviceId)) return line.id;
+    }
+  }
+  if (inst.unassigned.some((d) => d.id === deviceId)) return null;
+  return undefined;
 }

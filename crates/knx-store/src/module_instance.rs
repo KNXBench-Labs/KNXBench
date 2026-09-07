@@ -22,7 +22,10 @@ pub fn upsert_module_instance(
              repeat_index = excluded.repeat_index",
         params![m.id.0, m.device.0, position, m.source.path, m.source.ets_id, m.repeat_index],
     )?;
-    conn.execute("DELETE FROM module_instance_argument WHERE module_instance_id = ?1", params![m.id.0])?;
+    conn.execute(
+        "DELETE FROM module_instance_argument WHERE module_instance_id = ?1",
+        params![m.id.0],
+    )?;
     for (i, (source, value)) in m.arguments.iter().enumerate() {
         conn.execute(
             "INSERT INTO module_instance_argument (module_instance_id, position, source_path, source_ets_id, value)
@@ -45,8 +48,11 @@ pub fn load_module_instances_for_installation(
     let rows: Vec<(ModuleInstanceId, DeviceId, String, String, String)> = stmt
         .query_map(params![installation_id.0], |row| {
             Ok((
-                ModuleInstanceId(row.get(0)?), DeviceId(row.get(1)?),
-                row.get(2)?, row.get(3)?, row.get(4)?,
+                ModuleInstanceId(row.get(0)?),
+                DeviceId(row.get(1)?),
+                row.get(2)?,
+                row.get(3)?,
+                row.get(4)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -59,10 +65,22 @@ pub fn load_module_instances_for_installation(
         )?;
         let arguments = arg_stmt
             .query_map(params![id.0], |row| {
-                Ok((SourceRef { path: row.get(0)?, ets_id: row.get(1)? }, row.get(2)?))
+                Ok((
+                    SourceRef {
+                        path: row.get(0)?,
+                        ets_id: row.get(1)?,
+                    },
+                    row.get(2)?,
+                ))
             })?
             .collect::<Result<Vec<_>, _>>()?;
-        out.push(ModuleInstance { id, device, source: SourceRef { path, ets_id }, repeat_index, arguments });
+        out.push(ModuleInstance {
+            id,
+            device,
+            source: SourceRef { path, ets_id },
+            repeat_index,
+            arguments,
+        });
     }
     Ok(out)
 }

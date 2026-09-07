@@ -690,7 +690,7 @@ fn build_frame(
             parameters_loaded: bag.take("ParametersLoaded"),
             communication_part_loaded: bag.take("CommunicationPartLoaded"),
             medium_config_loaded: bag.take("MediumConfigLoaded"),
-            visibility_calculated: bag.take("IsCommunicationObjectVisibilityCalculated"),
+            visibility_calculated: bag.take("IsActivityCalculated"),
             broken: bag.take("Broken"),
             parameters: Vec::new(),
             com_objects: Vec::new(),
@@ -1013,6 +1013,11 @@ mod tests {
         assert!(!device.group_object_tree.is_empty());
         assert!(device.module_instances_raw.is_some());
         assert!(device.group_object_tree_raw.is_some());
+        // Regression test for a review finding: this attribute is named
+        // `IsActivityCalculated` at schema >=21, not schema 11's
+        // `IsCommunicationObjectVisibilityCalculated` — every device in this
+        // sample carries `IsActivityCalculated="true"`.
+        assert_eq!(device.visibility_calculated.as_deref(), Some("true"));
     }
 
     /// Regression test for a review finding on this task: `Security` was

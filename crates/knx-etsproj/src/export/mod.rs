@@ -72,7 +72,20 @@ pub fn export_knxproj(
     };
     let project_id = &project.info.project_id;
     let installation_path = format!("{project_id}/0.xml");
-    let project_info_path = format!("{project_id}/Project.xml");
+    // ETS itself spells this entry `Project.xml` at schema 11 (ETS4) but
+    // lowercase `project.xml` at schema ≥21 (ETS5/6) — measured directly:
+    // `unzip -l` on both the ETS4 reference project and `KV v2.5 -
+    // demo.knxproj` (`crates/knx-etsproj/src/source.rs`'s own module doc
+    // already notes this split). `Container::read`'s case-insensitive
+    // lookup means our own reader tolerates either spelling, but a
+    // case-sensitive ZIP consumer — including real ETS — would not find
+    // `project.xml` under `Project.xml`, so the casing this writer emits
+    // is not cosmetic.
+    let project_info_path = if project.info.ets_schema_version >= 21 {
+        format!("{project_id}/project.xml")
+    } else {
+        format!("{project_id}/Project.xml")
+    };
 
     let mut writer = ZipWriter::new(Cursor::new(Vec::new()));
     let options = SimpleFileOptions::default();
@@ -185,5 +198,44 @@ mod tests {
             .filter(|w| matches!(w, ExportWarning::StaleSignature { .. }))
             .count();
         assert_eq!(stale, 5); // four manufacturer signatures and one project signature
+    }
+
+    /// Literal, case-preserving ZIP entry names for `exported.bytes` —
+    /// deliberately not `Container::find`/`Container::read`, which match
+    /// case-insensitively (`container.rs`'s own doc comment) precisely so
+    /// *our* reader tolerates either spelling. That tolerance would hide
+    /// the exact regression these two tests exist to catch: a real ETS or
+    /// any case-sensitive ZIP consumer does not get the same latitude.
+    fn literal_entry_names(bytes: Vec<u8>) -> Vec<String> {
+        let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
+        (0..archive.len())
+            .map(|i| archive.by_index(i).unwrap().name().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn a_schema_21_export_writes_lowercase_project_xml() {
+        // ETS itself spells this entry lowercase from schema ≥21 onward
+        // (measured — `source.rs`'s own module doc, `unzip -l` on `KV v2.5
+        // - demo.knxproj`), unlike schema 11's `Project.xml`.
+        let document = crate::testutil::reference_kv_source_document();
+        let mapped = crate::map::map(&document, "P-03DE/0.xml");
+        let exported = export_knxproj(&mapped.project, &[]).unwrap();
+        let names = literal_entry_names(exported.bytes);
+        assert!(
+            names.iter().any(|n| n == "P-03DE/project.xml"),
+            "expected a literal lowercase P-03DE/project.xml entry, got: {names:?}"
+        );
+        assert!(!names.iter().any(|n| n == "P-03DE/Project.xml"));
+    }
+
+    #[test]
+    fn a_schema_11_export_still_writes_capitalized_project_xml() {
+        let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
+        let entries = all_entries(&out.opaque, &out.manufacturer);
+        let exported = export_knxproj(&out.project, &entries).unwrap();
+        let names = literal_entry_names(exported.bytes);
+        assert!(names.iter().any(|n| n == "P-0512/Project.xml"));
+        assert!(!names.iter().any(|n| n == "P-0512/project.xml"));
     }
 }

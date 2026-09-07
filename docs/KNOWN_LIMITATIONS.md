@@ -25,44 +25,32 @@ schema 21, on unrelated data. Together they say nothing about schema 12, 13,
 14, 20 or 22, and nothing about a differently-structured schema-23 project
 (e.g. one using `Functions`, KNX Secure, or multiple areas/lines for real).
 
-**Impact.** Support for schema 12, 13, 14, 20 and 22 is still derived from
-documentation and from reading `xknxproject`, not from evidence. Schema 21
-and 23 support is derived from evidence but from only two project shapes; a
-first import of a structurally different schema-21+ project will still
-likely produce unknown-construct entries or new deltas.
+**Impact.** Schema 21 is implemented and round-trip verified against one
+sample (the KV project) — a first import of a *structurally different*
+schema-21 project (e.g. one with `Functions`, multiple areas/lines for real,
+or a `GroupObjectTree` shape this session never saw) will still likely
+produce unknown-construct entries. Schema 23's module-based handling
+specifically remains *inferred, not evidenced* — it reuses schema 21's
+measured element/attribute set by inference (`known.rs`'s `SCHEMA_23`
+table, commented as such), with no independent module-using schema-23
+sample to confirm the inference. Schema 12/13/14/20/22 remain fully
+undocumented-by-evidence, unaffected by this work.
 
-**Session 3 status.** `knx-etsproj`'s known-element table covers schema 11
-only, built from the reference project. Schema 23 is **detected and refused
-by name** (`ImportFailure::NoKnownSchemaTable { version: 23 }`) — never
-silently misread through the schema-11 table, which would undercount
-communication objects by about 24% and misread every boolean flag as false
-(RESEARCH §3.3). Building the schema-23 known-element table is Session 4
-work, not attempted here.
+**Implemented (schema 21/23 import support).** Schema 21 import and export
+shipped, round-trip verified on one sample (`knx-etsproj`'s
+`importing_the_kv_schema_21_project_succeeds_with_zero_unknown_constructs`).
+Schema 23 import shipped, with no round-trip claim; its module handling is
+flagged as inferred both here and in `ImportReport.unsupported` at runtime.
+[ADR-0013](adr/0013-module-instance-representation.md) and
+[ADR-0014](adr/0014-group-object-tree-authoritative-source.md) record the
+design decisions this rests on.
 
-**Session 7 status (2026-09-06).** Schema 21 is likewise **detected and
-refused by name**, now proven against a real, independent schema-21 file
-(`knx-etsproj`'s `importing_a_second_independent_schema21_project_fails_...`
-test), not just a synthetic namespace string — the refusal mechanism is
-schema-version-generic (`known_schema` returning `None`), so no code change
-was needed, only the test. Full schema-21/23 import support is **not**
-implemented; see the "next big task" note below.
-
-**Next big task.** Building real schema 21 (and by extension 23) import
-support is the next major format-support undertaking, flagged explicitly
-(2026-09-06) rather than left as a vague "whenever a sample turns up" — a
-sample now exists (RESEARCH §3.4). The brainstorming/design pass this called
-for is done (2026-09-06): [ADR-0013](adr/0013-module-instance-representation.md)
-gives `ModuleInstances` a domain-model representation, [ADR-0014](adr/0014-group-object-tree-authoritative-source.md)
-resolves `GroupObjectTree` vs. `ComObjectInstanceRefs`, and
-[the design spec](superpowers/specs/2026-09-06-schema-21-23-import-support-design.md)
-lays out the `knx-core`/`knx-etsproj`/`knx-productdb` implementation — not
-yet built. This is ETS Import (Session 3) / KNX Core (Session 2) territory
-reopened, not Session 7 hardening — see [ROADMAP.md](ROADMAP.md).
-
-**Lifted when.** Real ETS5 projects and further, independent ETS6 projects
-have been imported and their unknown-construct reports reconciled to empty.
-This is a prerequisite for claiming more than schema 11 and these two
-schema-21/23 shapes.
+**Lifted when.** A second, independent, module-using schema-21 or schema-23
+sample project has been imported and its unknown-construct report
+reconciled to empty — this would upgrade schema 23's module handling from
+inferred to evidenced, and schema 21's claim from one-sample to
+cross-validated. Schema 12/13/14/20/22 still need their own first sample
+each, unrelated to this upgrade.
 
 ## 2. No authoritative XSD is publicly available
 

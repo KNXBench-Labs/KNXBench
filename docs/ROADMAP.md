@@ -405,7 +405,7 @@ architecture; each has a defined landing place.
 
 | Question | Lands in |
 | --- | --- |
-| ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Session 3 delivered the tolerant parser (reports unknown constructs rather than failing) and schema-23 detection-and-refusal by name; the per-version known-element lists themselves still need an independent sample per version (risk R1) — no fixed session, lands whenever one becomes available |
+| ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Schema 21 import+export shipped and round-trip verified (one sample, KV demo project); schema 23 import shipped, module handling inferred not evidenced (no independent module-using schema-23 sample); schema 12, 13, 14, 20, 22 remain undocumented-by-evidence — no fixed session, lands whenever a sample becomes available for each. `Dynamic`/`choose`/`when`'s grammar (mentioned in the row two below this one) is now provably avoidable for import (ADR-0014: `GroupObjectTree` already carries ETS's own resolution of it) rather than blocking — it remains unresearched only as a parameter-editing concern, not an import one. |
 | `Functions` element semantics | Session 2 — a domain model addition; absent from the reference sample |
 | `when/@test` expression grammar | Session 4 built the product database around it staying unparsed (`Dynamic`'s raw bytes retained regardless, ADR-0011); the grammar spike itself remains a research cycle, no fixed session |
 | Whether ETS re-imports an unsigned third-party `.knxproj` | Session 3 delivered the mechanism (`ExportWarning::Unsigned`, always present); the verification itself — opening an export in real ETS — is still open (risk R9), no fixed session |

@@ -175,13 +175,23 @@ pub fn module_com_object_ref(ref_id: &str) -> Result<(String, u16), ValueError> 
         .ok_or_else(|| ValueError::MalformedRefId(ref_id.to_string()))?;
     // rest is now "M-<m>_MI-<k>_O-<a>-<b>_R-<c>"; drop the M-/MI- segments.
     let mut parts = rest.splitn(3, '_');
-    let _module = parts.next().ok_or_else(|| ValueError::MalformedRefId(ref_id.to_string()))?;
-    let _module_instance = parts.next().ok_or_else(|| ValueError::MalformedRefId(ref_id.to_string()))?;
-    let tail = parts.next().ok_or_else(|| ValueError::MalformedRefId(ref_id.to_string()))?;
+    let _module = parts
+        .next()
+        .ok_or_else(|| ValueError::MalformedRefId(ref_id.to_string()))?;
+    let _module_instance = parts
+        .next()
+        .ok_or_else(|| ValueError::MalformedRefId(ref_id.to_string()))?;
+    let tail = parts
+        .next()
+        .ok_or_else(|| ValueError::MalformedRefId(ref_id.to_string()))?;
     // tail is "O-<a>-<b>_R-<c>"
     let mut tail_parts = tail.rsplitn(2, '_');
-    let r_part = tail_parts.next().ok_or_else(|| ValueError::MalformedRefId(ref_id.to_string()))?;
-    let o_part = tail_parts.next().ok_or_else(|| ValueError::MalformedRefId(ref_id.to_string()))?;
+    let r_part = tail_parts
+        .next()
+        .ok_or_else(|| ValueError::MalformedRefId(ref_id.to_string()))?;
+    let o_part = tail_parts
+        .next()
+        .ok_or_else(|| ValueError::MalformedRefId(ref_id.to_string()))?;
     if !r_part.starts_with("R-") {
         return Err(ValueError::MalformedRefId(ref_id.to_string()));
     }
@@ -278,8 +288,7 @@ mod tests {
 
     #[test]
     fn a_module_ref_id_yields_its_short_form_and_object_number() {
-        let (short, number) =
-            module_com_object_ref("MD-2_M-1_MI-1_O-2-0_R-4").unwrap();
+        let (short, number) = module_com_object_ref("MD-2_M-1_MI-1_O-2-0_R-4").unwrap();
         assert_eq!(short, "MD-2_O-2-0_R-4");
         assert_eq!(number, 0);
     }
@@ -289,8 +298,7 @@ mod tests {
         // Verified against the KV demo project: the "O-<arg>-<obj>" shape's
         // second number is the ComObject's own @Number, the first is an
         // argument-group index, not part of the object number.
-        let (short, number) =
-            module_com_object_ref("MD-2_M-5_MI-1_O-2-2_R-8").unwrap();
+        let (short, number) = module_com_object_ref("MD-2_M-5_MI-1_O-2-2_R-8").unwrap();
         assert_eq!(short, "MD-2_O-2-2_R-8");
         assert_eq!(number, 2);
     }

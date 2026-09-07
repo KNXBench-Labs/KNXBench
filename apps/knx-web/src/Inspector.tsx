@@ -3,12 +3,21 @@ import * as api from "./api";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import type { AreaNode } from "./bindings/AreaNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { GroupLinkNode } from "./bindings/GroupLinkNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
+import type { LineNode } from "./bindings/LineNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
-import { findBuildingPart, findGroupAddress, findGroupRange } from "./treeUtils";
+import {
+  findArea,
+  findBuildingPart,
+  findDeviceLineInFirstInstallation,
+  findGroupAddress,
+  findGroupRange,
+  findLine,
+} from "./treeUtils";
 
 function AddressField(props: { detail: DeviceDetail; onApplied: (tree: ProjectTree) => void }) {
   const { detail, onApplied } = props;
@@ -263,6 +272,61 @@ function NewGroupLinkRow(props: {
   );
 }
 
+// Moves a device between lines (or to/from unassigned) via
+// `Command::MoveDeviceToLine` — independent of `AddressField`'s individual
+// address, per that command's own doc comment ("a line move and a
+// re-address are two separate user intents"). Renders nothing if
+// `findDeviceLineInFirstInstallation` returns `undefined`: the device isn't
+// reachable from `installations[0]`'s topology at all (building-only
+// placement, or a later installation), so the command has nothing to
+// target — same "hide rather than show a misleading value" rule as
+// `GroupAddressInspector`'s `canDelete` gate, just applied to visibility
+// instead of a disabled button, since there is no sensible current value to
+// show disabled.
+function LineMoveField(props: {
+  detail: DeviceDetail;
+  tree: ProjectTree;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { detail, tree, onApplied } = props;
+  const current = findDeviceLineInFirstInstallation(tree, detail.id);
+  const [error, setError] = useState<string | null>(null);
+
+  if (current === undefined) return null;
+
+  async function move(lineId: number | null) {
+    setError(null);
+    try {
+      const tree = await api.moveDeviceToLine(detail.id, lineId);
+      onApplied(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  return (
+    <label className="inspector-field">
+      Line
+      <select
+        value={current ?? ""}
+        onChange={(e) => move(e.target.value === "" ? null : Number(e.target.value))}
+      >
+        <option value="">(unassigned)</option>
+        {tree.installations[0]?.topology.map((area) => (
+          <optgroup key={area.id} label={`Area ${area.address}: ${area.name}`}>
+            {area.lines.map((line) => (
+              <option key={line.id} value={line.id}>
+                Line {line.address}: {line.name}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      {error && <span className="field-error">{error}</span>}
+    </label>
+  );
+}
+
 function DeviceInspector(props: {
   detail: DeviceDetail;
   tree: ProjectTree;
@@ -274,6 +338,7 @@ function DeviceInspector(props: {
     <div className="inspector">
       <h2>{detail.name}</h2>
       <AddressField detail={detail} onApplied={onApplied} />
+      <LineMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <DeviceDescriptionField detail={detail} onApplied={onApplied} />
       <h3>Communication objects</h3>
       <ul className="com-object-list">
@@ -434,6 +499,88 @@ function GroupRangeInspector(props: {
   );
 }
 
+// No `RenameArea` command exists — `CreateArea`/`DeleteArea` are the only
+// two, so unlike `GroupRangeInspector` there is nothing to edit here, just
+// a summary and Delete.
+function AreaInspector(props: {
+  area: AreaNode;
+  // Same `installations[0]`-only gate as every other Delete button in this
+  // file — `Command::DeleteArea` only ever searches the first installation
+  // (command.rs).
+  canDelete: boolean;
+  onDeleted: (tree: ProjectTree) => void;
+}) {
+  const { area, canDelete, onDeleted } = props;
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setError(null);
+    try {
+      const tree = await api.deleteArea(area.id);
+      onDeleted(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  return (
+    <div className="inspector">
+      <h2>
+        Area {area.address}: {area.name}
+      </h2>
+      <p className="inspector-description">
+        {area.lines.length} line{area.lines.length === 1 ? "" : "s"}
+      </p>
+      {canDelete ? (
+        <button onClick={remove}>Delete</button>
+      ) : (
+        <p className="inspector-description">
+          Delete is only available for areas in the first installation.
+        </p>
+      )}
+      {error && <span className="field-error">{error}</span>}
+    </div>
+  );
+}
+
+function LineInspector(props: {
+  line: LineNode;
+  canDelete: boolean;
+  onDeleted: (tree: ProjectTree) => void;
+}) {
+  const { line, canDelete, onDeleted } = props;
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setError(null);
+    try {
+      const tree = await api.deleteLine(line.id);
+      onDeleted(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  return (
+    <div className="inspector">
+      <h2>
+        Line {line.address}: {line.name}
+      </h2>
+      <p className="inspector-description">
+        {line.devices.length} device{line.devices.length === 1 ? "" : "s"}
+      </p>
+      {canDelete ? (
+        <button onClick={remove}>Delete</button>
+      ) : (
+        <p className="inspector-description">
+          Delete is only available for lines in the first installation.
+        </p>
+      )}
+      {error && <span className="field-error">{error}</span>}
+    </div>
+  );
+}
+
 function BuildingPartInspector(props: { node: BuildingNode; path: string }) {
   const { node, path } = props;
   return (
@@ -483,6 +630,21 @@ export default function Inspector(props: {
     return (
       <GroupRangeInspector range={range} canEdit={canEdit} onApplied={onApplied} onDeleted={onDeleted} />
     );
+  }
+
+  if (selection.kind === "area") {
+    const area = findArea(tree, selection.id);
+    if (!area) return null;
+    const canDelete = tree.installations[0]?.topology.some((a) => a.id === area.id) ?? false;
+    return <AreaInspector area={area} canDelete={canDelete} onDeleted={onDeleted} />;
+  }
+
+  if (selection.kind === "line") {
+    const line = findLine(tree, selection.id);
+    if (!line) return null;
+    const canDelete =
+      tree.installations[0]?.topology.some((a) => a.lines.some((l) => l.id === line.id)) ?? false;
+    return <LineInspector line={line} canDelete={canDelete} onDeleted={onDeleted} />;
   }
 
   const found = findBuildingPart(tree, selection.id);

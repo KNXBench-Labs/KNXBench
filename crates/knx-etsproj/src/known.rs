@@ -403,6 +403,18 @@ pub const SCHEMA_21: KnownSchema = KnownSchema {
             attributes: DEVICE_INSTANCE_ATTRS_21,
         },
         KnownElement {
+            // Measured (Task 5): every device in `KV v2.5 - demo.knxproj`
+            // carries this — an oversight in this table's initial Task 3
+            // transcription, not a genuine schema-21 absence. Same shape as
+            // schema 11's entry of the same name.
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ParameterInstanceRefs",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ParameterInstanceRefs/ParameterInstanceRef",
+            attributes: PARAMETER_INSTANCE_REF_ATTRS,
+        },
+        KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ComObjectInstanceRefs",
             attributes: &[],
         },
@@ -439,6 +451,11 @@ pub const SCHEMA_21: KnownSchema = KnownSchema {
             attributes: &["Type", "RefId", "GroupObjectInstances"],
         },
         KnownElement {
+            // Measured (Task 5): per-device sequence-number/timestamp
+            // bookkeeping, purpose not investigated (RESEARCH). Known but
+            // deliberately not modeled by `SourceDevice` — the tolerant
+            // parser retains it verbatim at the document level instead (see
+            // `installation_v21.rs`'s own `"Security"` handling for why).
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/Security",
             attributes: &["SequenceNumber", "SequenceNumberTimestamp"],
         },
@@ -545,6 +562,14 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance",
             attributes: DEVICE_INSTANCE_ATTRS_21,
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ParameterInstanceRefs",
+            attributes: &[],
+        },
+        KnownElement {
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ParameterInstanceRefs/ParameterInstanceRef",
+            attributes: PARAMETER_INSTANCE_REF_ATTRS,
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ComObjectInstanceRefs",

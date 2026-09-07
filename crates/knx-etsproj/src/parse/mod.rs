@@ -6,9 +6,11 @@
 //! dropped and never fatal on their own (CLAUDE.md's data-integrity rule).
 
 mod installation;
+mod installation_v21;
 mod project_info;
 
 pub use installation::parse_installation;
+pub use installation_v21::parse_installation_v21;
 pub use project_info::parse_project_info;
 
 use crate::source::{RetainedElement, SourceDocument};

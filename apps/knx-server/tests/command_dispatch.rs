@@ -52,6 +52,7 @@ fn state_with_two_devices() -> AppState {
         size: None,
         is_active: true,
         links: vec![],
+        module_instance: None,
     });
     project.devices.insert(DeviceInstance {
         id: DeviceId(2),
@@ -192,6 +193,7 @@ fn deleting_a_group_address_still_linked_from_a_com_object_is_rejected() {
                 ga: GroupAddressId(ga_id),
                 direction: knx_core::Direction::Send,
             }],
+            module_instance: None,
         });
     }
 

@@ -31,6 +31,10 @@ pub struct SourceProjectInfo {
     pub completion_status: Option<String>,
     pub last_modified: Option<String>,
     pub project_start: Option<String>,
+    /// The whole `<ProjectTraces>...</ProjectTraces>` subtree (schema ≥21,
+    /// an audit log — RESEARCH §3.4: "purpose not investigated"), retained
+    /// verbatim for export.
+    pub project_traces_raw: Option<RetainedElement>,
     pub other: Vec<RetainedAttribute>,
 }
 
@@ -96,6 +100,21 @@ pub struct SourceDevice {
     pub parameters: Vec<SourceParameterInstance>,
     pub com_objects: Vec<SourceComObjectInstance>,
     pub binary_data: Vec<SourceBinaryDataRef>,
+    /// Schema ≥21 only. Structured for `map.rs`'s `ModuleInstance`
+    /// construction (ADR-0013).
+    pub module_instances: Vec<SourceModuleInstance>,
+    /// The whole `<ModuleInstances>...</ModuleInstances>` subtree, verbatim,
+    /// for export — see the plan's Global Constraints on why this is
+    /// retained raw rather than reconstructed.
+    pub module_instances_raw: Option<RetainedElement>,
+    /// Schema ≥21 only. The authoritative communication-object id list
+    /// (ADR-0014), unioned across nested `Nodes/Node` (schema 21) or read
+    /// flat (schema 23) — the schema-version-specific walk lives in the
+    /// parser, not here.
+    pub group_object_tree: Vec<String>,
+    /// The whole `<GroupObjectTree>...</GroupObjectTree>` subtree, verbatim,
+    /// for export.
+    pub group_object_tree_raw: Option<RetainedElement>,
     pub other: Vec<RetainedAttribute>,
 }
 
@@ -103,6 +122,20 @@ pub struct SourceDevice {
 pub struct SourceParameterInstance {
     pub ref_id: String,
     pub value: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SourceArgument {
+    pub ref_id: String,
+    pub value: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SourceModuleInstance {
+    pub id: String,
+    pub ref_id: String,
+    pub repeat_index: Option<String>,
+    pub arguments: Vec<SourceArgument>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -121,6 +154,14 @@ pub struct SourceComObjectInstance {
     pub sends: Vec<String>,
     /// `Connectors/Receive/@GroupAddressRefId`.
     pub receives: Vec<String>,
+    /// Schema ≥21's flat `Links` attribute (space-separated short GA ids),
+    /// parsed into a list. Empty for schema 11, which uses `sends`/
+    /// `receives` instead.
+    pub links: Vec<String>,
+    /// Schema ≥21's `ChannelId` — known-but-not-modeled at instance level
+    /// today (no channel-grouped UI yet, spec's explicit scope decision);
+    /// carried here only so `map.rs` can fold it into `other` for export.
+    pub channel_id: Option<String>,
     pub other: Vec<RetainedAttribute>,
 }
 

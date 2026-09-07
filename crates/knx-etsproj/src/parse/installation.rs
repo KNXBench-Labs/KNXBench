@@ -529,6 +529,7 @@ fn build_frame(
             module_instances_raw: None,
             group_object_tree: Vec::new(),
             group_object_tree_raw: None,
+            security_raw: None,
             other: Vec::new(),
         }),
         "ComObjectInstanceRef" => Frame::ComObject(SourceComObjectInstance {

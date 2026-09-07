@@ -383,25 +383,25 @@ fn open_element<'a>(
 
     // `Security` (schema ≥21, per-device sequence-number/timestamp bookkeeping
     // — RESEARCH has not investigated its semantics beyond the attribute
-    // names): known but deliberately not modeled, retained verbatim like
-    // `BusAccess` above. Unlike `BusAccess`, `SourceDevice` has no dedicated
-    // slot to attach a per-device retained element to (Task 4 did not
-    // anticipate this element), so it goes into the document-wide
-    // `retained_elements` bucket instead — every device's `Security` is
-    // still preserved byte-for-byte, just not individually addressable by
-    // which device it came from until a future task gives `SourceDevice`
-    // its own slot.
+    // names): known but deliberately not modeled, retained verbatim exactly
+    // like `BusAccess` above — a leaf whose whole subtree is consumed here,
+    // never pushed onto either stack, attached straight onto the enclosing
+    // `Frame::Device` (schema ≥21's `Security` sits directly under
+    // `DeviceInstance`, so the device frame is always what's on top).
     if local == "Security" {
         let raw = if is_empty {
             bytes[pos_before as usize..reader.buffer_position() as usize].to_vec()
         } else {
             skip_and_capture(reader, bytes, start, pos_before, source_path)?
         };
-        retained_elements.push(RetainedElement {
-            xpath,
+        let retained = RetainedElement {
+            xpath: xpath.clone(),
             name: local,
             raw,
-        });
+        };
+        if let Some(Frame::Device(d)) = frames.last_mut() {
+            d.security_raw = Some(retained);
+        }
         return Ok(());
     }
 
@@ -699,6 +699,7 @@ fn build_frame(
             module_instances_raw: None,
             group_object_tree: Vec::new(),
             group_object_tree_raw: None,
+            security_raw: None,
             other: Vec::new(),
         }),
         "ComObjectInstanceRef" => Frame::ComObject(SourceComObjectInstance {
@@ -1012,5 +1013,36 @@ mod tests {
         assert!(!device.group_object_tree.is_empty());
         assert!(device.module_instances_raw.is_some());
         assert!(device.group_object_tree_raw.is_some());
+    }
+
+    /// Regression test for a review finding on this task: `Security` was
+    /// initially retained in the document-wide `retained_elements` bucket,
+    /// indistinguishable between devices (every device's `Security` shares
+    /// the same structural xpath). It must be addressable per device instead
+    /// — Task 7's export brief assumes exactly that.
+    #[test]
+    fn every_device_carries_its_own_security_element_raw() {
+        let mut c = Container::open(std::fs::read(reference_kv_schema21_path()).unwrap()).unwrap();
+        let bytes = c.read("P-03DE/0.xml").unwrap();
+        let out =
+            parse_installation_v21(&bytes, "P-03DE/0.xml", known_schema(21).unwrap()).unwrap();
+        let devices: Vec<_> = out.document.installations[0]
+            .areas
+            .iter()
+            .flat_map(|a| &a.lines)
+            .flat_map(|l| &l.devices)
+            .collect();
+        assert_eq!(devices.len(), 4);
+        for device in &devices {
+            let security = device
+                .security_raw
+                .as_ref()
+                .unwrap_or_else(|| panic!("device {} has no security_raw", device.id));
+            assert!(security.raw.starts_with(b"<Security"));
+            assert!(security.raw.ends_with(b"/>") || security.raw.ends_with(b"</Security>"));
+        }
+        // Never the document-wide unknown/opaque bucket — it belongs to its
+        // own device now, not the flat catch-all.
+        assert!(out.retained_elements.iter().all(|e| e.name != "Security"));
     }
 }

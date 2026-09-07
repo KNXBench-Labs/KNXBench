@@ -115,6 +115,14 @@ pub struct SourceDevice {
     /// The whole `<GroupObjectTree>...</GroupObjectTree>` subtree, verbatim,
     /// for export.
     pub group_object_tree_raw: Option<RetainedElement>,
+    /// Schema ≥21 only. The whole `<Security>...</Security>` subtree,
+    /// verbatim — per-device sequence-number/timestamp bookkeeping, purpose
+    /// not investigated (RESEARCH). Known but deliberately not modeled
+    /// beyond raw retention, exactly like `module_instances_raw`/
+    /// `group_object_tree_raw` above; kept per-device (not in a document-
+    /// wide bucket) so a future export task can recover which `Security`
+    /// blob belongs to which device without relying on document order.
+    pub security_raw: Option<RetainedElement>,
     pub other: Vec<RetainedAttribute>,
 }
 

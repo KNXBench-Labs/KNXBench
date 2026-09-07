@@ -146,6 +146,58 @@ describe("api", () => {
     });
   });
 
+  it("createArea posts name and address", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.createArea("Ground floor", 1);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/areas");
+    expect(JSON.parse(init.body as string)).toEqual({ name: "Ground floor", address: 1 });
+  });
+
+  it("deleteArea issues a DELETE to /api/areas/:id", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.deleteArea(4);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/areas/4");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("createLine posts to /api/lines with camelCase field names", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.createLine(4, "Main line", 1, "MT-0");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/lines");
+    expect(JSON.parse(init.body as string)).toEqual({
+      areaId: 4,
+      name: "Main line",
+      address: 1,
+      mediumRef: "MT-0",
+    });
+  });
+
+  it("deleteLine issues a DELETE to /api/lines/:id", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.deleteLine(7);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/lines/7");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("moveDeviceToLine posts a line id", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.moveDeviceToLine(9, 7);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/move-device");
+    expect(JSON.parse(init.body as string)).toEqual({ deviceId: 9, lineId: 7 });
+  });
+
+  it("moveDeviceToLine posts null to unassign", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.moveDeviceToLine(9, null);
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({ deviceId: 9, lineId: null });
+  });
+
   it("errorMessage unwraps an Error's message without doubling 'Error: '", () => {
     expect(api.errorMessage(new Error("no project open"))).toBe("no project open");
   });

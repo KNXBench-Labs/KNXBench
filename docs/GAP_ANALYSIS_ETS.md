@@ -156,7 +156,8 @@ Each task: **what**, **why**, **depends on**.
   only). `LinkComObject`/`UnlinkComObject` land, finally calling the
   validation.rs function that already existed for this
   (`check_group_link_target_exists`).
-- **T23. Topology/group-range/group-link UI.** T4-T6's ten commands are
+- **T23. Topology/group-range/group-link UI. Done (2026-09-07).**
+  T4-T6's ten commands are
   reachable over HTTP but not from any screen: an area/line tree-edit UI
   in the Project Explorer, a "Group Ranges" branch (sibling to cycle 9's
   "Group Addresses" branch) with create/rename/delete, a range picker so
@@ -186,9 +187,27 @@ Each task: **what**, **why**, **depends on**.
   panicking. `Inspector.tsx`'s `NewGroupLinkRow` picker is
   `installations[0]`-only (`Command::LinkComObject`'s own restriction);
   `GroupLinkRow`'s Unlink is not (`Command::UnlinkComObject` carries no
-  such check). Still open from T23: the area/line tree-edit UI (**B3**),
-  its own follow-up slice by design (brainstormed as three separate
-  bounded steps, not one).
+  such check).
+
+  **Slice 3 done (2026-09-07) — T23 complete.** The area/line tree-edit
+  UI ships, closing **B3** and the last open piece of T23: `AreaItem`/
+  `LineItem` in the Project Explorer become selectable (previously
+  expand-only, unlike every other tree row) with `NewAreaRow`/
+  `NewLineRow` create affordances (`medium_ref` pre-filled `"MT-0"` — an
+  opaque, uninterpreted reference, per `Line`'s own doc comment, so no
+  dropdown to pick from); `Inspector.tsx` gains `AreaInspector`/
+  `LineInspector` (summary plus Delete, no rename field — no
+  `RenameArea`/`RenameLine` command exists, unlike `GroupRangeInspector`)
+  and `LineMoveField` on the device Inspector (a `Command::
+  MoveDeviceToLine` picker, independent of `AddressField`'s individual
+  address per that command's own doc comment), hidden rather than shown
+  disabled for a device `treeUtils.ts`'s new
+  `findDeviceLineInFirstInstallation` can't place in `installations[0]`'s
+  topology at all (a building-only device, or a later installation) —
+  the same "nothing sensible to show" case `canDelete` gates handle by
+  disabling elsewhere, applied to visibility here since there's no
+  current value to show. `treeUtils.ts` also gains `findArea`/`findLine`,
+  matching every other selectable kind's own find helper.
 
 ### Tier 2 — closes remaining single-field-editor gaps
 

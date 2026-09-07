@@ -134,6 +134,37 @@ export function unlinkComObject(
   });
 }
 
+export function createArea(name: string, address: number): Promise<ProjectTree> {
+  return request("/api/areas", { method: "POST", body: JSON.stringify({ name, address }) });
+}
+
+export function deleteArea(id: number): Promise<ProjectTree> {
+  return request(`/api/areas/${id}`, { method: "DELETE" });
+}
+
+export function createLine(
+  areaId: number,
+  name: string,
+  address: number,
+  mediumRef: string,
+): Promise<ProjectTree> {
+  return request("/api/lines", {
+    method: "POST",
+    body: JSON.stringify({ areaId, name, address, mediumRef }),
+  });
+}
+
+export function deleteLine(id: number): Promise<ProjectTree> {
+  return request(`/api/lines/${id}`, { method: "DELETE" });
+}
+
+export function moveDeviceToLine(deviceId: number, lineId: number | null): Promise<ProjectTree> {
+  return request("/api/move-device", {
+    method: "POST",
+    body: JSON.stringify({ deviceId, lineId }),
+  });
+}
+
 export function undo(): Promise<ProjectTree> {
   return request("/api/undo", { method: "POST" });
 }

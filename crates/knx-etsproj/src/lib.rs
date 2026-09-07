@@ -185,6 +185,75 @@ pub fn import_knxproj_bytes(
             }
         }
     }
+    // Schema ≥21's `ModuleInstances`/`GroupObjectTree`/`Security` are known
+    // but deliberately not modeled beyond raw retention (the plan's Global
+    // Constraints — neither has a `knx_core` field), exactly like
+    // `BusAccess` above, except per-device rather than per-line: a project
+    // xpath fixed regardless of which device it came from would be wrong
+    // the moment a project has more than one device (the same failure mode
+    // `BusAccess`'s own fixed xpath would have for more than one line), so
+    // each device's own `@Id` is folded into the xpath here. Schema 11
+    // devices never set any of the three fields, so this loop is a no-op
+    // for schema-11 imports.
+    for installation in &parsed.document.installations {
+        for area in &installation.areas {
+            for line in &area.lines {
+                for device in &line.devices {
+                    let device_xpath = format!(
+                        "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance[@Id='{}']",
+                        device.id
+                    );
+                    if let Some(raw) = &device.module_instances_raw {
+                        let mut r = raw.clone();
+                        r.xpath = format!("{device_xpath}/ModuleInstances");
+                        opaque_entries.push(opaque::from_retained_element(&topology_path, &r));
+                    }
+                    if let Some(raw) = &device.group_object_tree_raw {
+                        let mut r = raw.clone();
+                        r.xpath = format!("{device_xpath}/GroupObjectTree");
+                        opaque_entries.push(opaque::from_retained_element(&topology_path, &r));
+                    }
+                    if let Some(raw) = &device.security_raw {
+                        let mut r = raw.clone();
+                        r.xpath = format!("{device_xpath}/Security");
+                        opaque_entries.push(opaque::from_retained_element(&topology_path, &r));
+                    }
+                }
+            }
+        }
+        // `unassigned_devices`: same, if schema ≥21 ever has any — untested,
+        // since neither reference project's known-element table models
+        // `UnassignedDevices` at schema ≥21 yet (a schema-11-only path
+        // today), but handled defensively regardless, on the same principle
+        // as the loop above.
+        for device in &installation.unassigned_devices {
+            let device_xpath = format!(
+                "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance[@Id='{}']",
+                device.id
+            );
+            if let Some(raw) = &device.module_instances_raw {
+                let mut r = raw.clone();
+                r.xpath = format!("{device_xpath}/ModuleInstances");
+                opaque_entries.push(opaque::from_retained_element(&topology_path, &r));
+            }
+            if let Some(raw) = &device.group_object_tree_raw {
+                let mut r = raw.clone();
+                r.xpath = format!("{device_xpath}/GroupObjectTree");
+                opaque_entries.push(opaque::from_retained_element(&topology_path, &r));
+            }
+            if let Some(raw) = &device.security_raw {
+                let mut r = raw.clone();
+                r.xpath = format!("{device_xpath}/Security");
+                opaque_entries.push(opaque::from_retained_element(&topology_path, &r));
+            }
+        }
+    }
+    // `ProjectTraces` (schema ≥21's audit log) sits on `Project.xml`/
+    // `project.xml`, not `0.xml` — bypasses `MapOutput` entirely, same as
+    // the loop above, since `ProjectInfo` has no field for it either.
+    if let Some(raw) = &parsed.document.info.project_traces_raw {
+        opaque_entries.push(opaque::from_retained_element(&info_path, raw));
+    }
 
     let import_report = report::build(
         file_name,
@@ -209,7 +278,7 @@ pub fn import_knxproj_bytes(
 #[cfg(test)]
 mod import_tests {
     use super::*;
-    use crate::testutil::{reference_ets4_path, reference_ets6_path};
+    use crate::testutil::{reference_ets4_path, reference_ets6_path, reference_kv_schema21_path};
     use knx_core::GroupAddressStyle;
 
     #[test]
@@ -230,6 +299,18 @@ mod import_tests {
         assert!(matches!(
             err,
             ImportFailure::NoKnownSchemaTable { version: 23 }
+        ));
+    }
+
+    #[test]
+    fn importing_a_second_independent_schema21_project_fails_with_a_named_reason_not_wrong_data() {
+        // Not a re-export of the ets6 reference project — a genuinely
+        // different installation (Session 7 evidence). Confirms the
+        // refusal path is schema-version-generic, not special-cased to 23.
+        let err = import_knxproj(&reference_kv_schema21_path()).unwrap_err();
+        assert!(matches!(
+            err,
+            ImportFailure::NoKnownSchemaTable { version: 21 }
         ));
     }
 

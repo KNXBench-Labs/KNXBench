@@ -11,35 +11,58 @@ here.
 
 ## 1. Single-sample bias
 
-**Limitation.** Everything verified about the `.knxproj` format comes from one
-installation: schema 11 (ETS 4.1.8) and schema 23 (ETS 6.3.7959.0) — the same
-project, exported twice (risk R1).
+**Limitation.** Everything verified about the `.knxproj` format comes from two
+installations: the "Unser Zuhause" project (schema 11, ETS 4.1.8, and schema
+23, ETS 6.3.7959.0 — the same project exported twice, risk R1) and, since
+Session 7 (2026-09-06), the KNX Association "KV v2.5" demo project (schema
+21, ETS 5.7 — a genuinely different installation).
 
-**Cause.** No independent ETS5 or ETS6 sample project has been available. The
-second export of the ETS4 reference project (RESEARCH §2.4/§3.3) confirms the
-schema-11→23 format diff for this one installation, but says nothing about
-schema 12, 13, 14, 20, 21, 22, and nothing about a differently-structured
-project on schema 23 (e.g. one using `Functions`, KNX Secure, or multiple
-areas/lines for real).
+**Cause.** Independent ETS5/ETS6 sample projects remain scarce. The second
+export of the ETS4 reference project (RESEARCH §2.4/§3.3) confirms the
+schema-11→23 format diff for one installation; the KV demo project (RESEARCH
+§2.5/§3.4) independently confirms most of that same diff already exists at
+schema 21, on unrelated data. Together they say nothing about schema 12, 13,
+14, 20 or 22, and nothing about a differently-structured schema-23 project
+(e.g. one using `Functions`, KNX Secure, or multiple areas/lines for real).
 
-**Impact.** Support for schema 12, 13, 14, 20, 21 and 22 is still derived from
-documentation and from reading `xknxproject`, not from evidence. Schema 23
-support is derived from evidence but only from one project shape; a first
-import of a structurally different schema-23 project will still likely
-produce unknown-construct entries.
+**Impact.** Support for schema 12, 13, 14, 20 and 22 is still derived from
+documentation and from reading `xknxproject`, not from evidence. Schema 21
+and 23 support is derived from evidence but from only two project shapes; a
+first import of a structurally different schema-21+ project will still
+likely produce unknown-construct entries or new deltas.
 
 **Session 3 status.** `knx-etsproj`'s known-element table covers schema 11
-only, built from this one reference project. Schema 23 is **detected and
-refused by name** (`ImportFailure::NoKnownSchemaTable { version: 23 }`) —
-never silently misread through the schema-11 table, which would undercount
+only, built from the reference project. Schema 23 is **detected and refused
+by name** (`ImportFailure::NoKnownSchemaTable { version: 23 }`) — never
+silently misread through the schema-11 table, which would undercount
 communication objects by about 24% and misread every boolean flag as false
 (RESEARCH §3.3). Building the schema-23 known-element table is Session 4
 work, not attempted here.
 
+**Session 7 status (2026-09-06).** Schema 21 is likewise **detected and
+refused by name**, now proven against a real, independent schema-21 file
+(`knx-etsproj`'s `importing_a_second_independent_schema21_project_fails_...`
+test), not just a synthetic namespace string — the refusal mechanism is
+schema-version-generic (`known_schema` returning `None`), so no code change
+was needed, only the test. Full schema-21/23 import support is **not**
+implemented; see the "next big task" note below.
+
+**Next big task.** Building real schema 21 (and by extension 23) import
+support is the next major format-support undertaking, flagged explicitly
+(2026-09-06) rather than left as a vague "whenever a sample turns up" — a
+sample now exists (RESEARCH §3.4). The brainstorming/design pass this called
+for is done (2026-09-06): [ADR-0013](adr/0013-module-instance-representation.md)
+gives `ModuleInstances` a domain-model representation, [ADR-0014](adr/0014-group-object-tree-authoritative-source.md)
+resolves `GroupObjectTree` vs. `ComObjectInstanceRefs`, and
+[the design spec](superpowers/specs/2026-09-06-schema-21-23-import-support-design.md)
+lays out the `knx-core`/`knx-etsproj`/`knx-productdb` implementation — not
+yet built. This is ETS Import (Session 3) / KNX Core (Session 2) territory
+reopened, not Session 7 hardening — see [ROADMAP.md](ROADMAP.md).
+
 **Lifted when.** Real ETS5 projects and further, independent ETS6 projects
 have been imported and their unknown-construct reports reconciled to empty.
-This is a prerequisite for claiming more than schema 11 and this one
-schema-23 shape.
+This is a prerequisite for claiming more than schema 11 and these two
+schema-21/23 shapes.
 
 ## 2. No authoritative XSD is publicly available
 
@@ -610,7 +633,12 @@ reachable as of Cycle 4. Discovery does not work unmodified inside the
 `--network host`) — untouched by this cycle, since `knx-server` doesn't
 call `discover` yet.
 
-**Lifted when.** KNX IP Secure lands in a later cycle of Session 6, or in Session 7.
+**Lifted when.** Shelved indefinitely as of 2026-09-06 — no fixed
+session or cycle owns it. Plain tunnelling/routing covers the common
+case; IP Secure only matters for secure-only gateways or installations
+with it explicitly enabled. Revisit on demand (a real gateway needing
+it), doing the RESEARCH.md §9 spike first, not speculatively. See
+[ROADMAP.md, Session 6](ROADMAP.md).
 
 ## 27. `TunnelClient` heartbeat retry has a narrow race condition — resolved
 
@@ -773,4 +801,55 @@ knx-net` as proof that routing round-trips still work.
 **Lifted when.** A `#[ignore]`-style marker or a CI capability probe
 distinguishes "skipped, no proof either way" from "passed, proof
 obtained" in tooling/reporting — no fixed cycle.
+
+## 34. Schema-≥21 export drops a handful of known-but-unmapped, per-device/per-line attributes
+
+**Limitation.** `crate::known::SCHEMA_21`/`SCHEMA_23` list several
+attributes with no dedicated field on `SourceDevice`/`SourceLine`:
+`DeviceInstance`'s `Comment`, `SerialNumber`, `IsActivityCalculated`,
+`LastUsedAPDULength`, `ReadMaxAPDULength`, `Puid`; `Segment`'s own `Id`,
+`Number`, `Puid`; and `Puid` generally, on every element that carries it.
+`map.rs` folds all of these into one project-wide
+`Vec<RetainedAttribute>`, keyed only by their schema-shaped xpath (e.g.
+every device's `Comment` collapses to the single key
+`(".../DeviceInstance", "Comment")`, indistinguishable between devices).
+Confirmed against `KV v2.5 - demo.knxproj`: all 4 devices carry a
+distinct `SerialNumber` and `Puid`. `knx-etsproj`'s schema-≥21 exporter
+(`export/schema21.rs`) does not reconstruct any of these on export — not
+because they are unrecoverable in principle, but because the flat bucket
+cannot say *which* device or line a given value belongs to, and writing
+one device's real hardware serial number onto every other device would
+be silent data corruption, worse than the loss.
+
+**Cause.** `installation_v21.rs`'s parser (Task 6) retains known-but-
+unmapped attributes at the same schema-shaped-xpath granularity
+`schema11.rs`'s own module doc already documents and accepts for
+document-wide singletons like `Installation/@BCUKey` — a granularity
+that was never a problem for schema 11 (every `DeviceInstance` attribute
+there has a dedicated field, so no leftover ever occurs), but surfaces
+for the first time at schema ≥21, where several genuinely do not.
+Separately, `installation_v21.rs`'s `DeviceInstance` arm reads
+`IsCommunicationObjectVisibilityCalculated` (schema 11's attribute name)
+into `SourceDevice::visibility_calculated` instead of schema ≥21's own
+`IsActivityCalculated` — a plain wrong-attribute-name bug, confirmed by
+inspecting the parser against the measured known-element table; every
+schema-≥21 device's `visibility_calculated` is a mapping default, never
+the file's real value.
+
+**Impact.** Round-tripping a schema-≥21 project through this
+application loses `Comment`, `SerialNumber`, `IsActivityCalculated`,
+`LastUsedAPDULength`, `ReadMaxAPDULength` and `Puid` on every device, and
+`Id`/`Number`/`Puid` on every `Segment` — cosmetic/bookkeeping data in
+most cases (nothing else in the file refers back to a `Segment`'s own
+`Id`), except `SerialNumber`, which is real hardware identification a
+technician may care about.
+
+**Lifted when.** `installation_v21.rs`'s parser gains a per-instance
+xpath for `DeviceInstance`'s and `Segment`'s own leftover attributes —
+the same fix Task 5 already applied to `Security` (per-device
+`SourceDevice::security_raw`, not a document-wide bucket) — and the
+`IsActivityCalculated`/`IsCommunicationObjectVisibilityCalculated`
+attribute-name mismatch is corrected in the same pass. Out of scope for
+the schema-21/23 import/export plan's Task 7 (export only); tracked here
+for a future fast-follow.
 

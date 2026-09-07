@@ -453,9 +453,10 @@ pub const SCHEMA_21: KnownSchema = KnownSchema {
         KnownElement {
             // Measured (Task 5): per-device sequence-number/timestamp
             // bookkeeping, purpose not investigated (RESEARCH). Known but
-            // deliberately not modeled by `SourceDevice` — the tolerant
-            // parser retains it verbatim at the document level instead (see
-            // `installation_v21.rs`'s own `"Security"` handling for why).
+            // its content is not interpreted — `SourceDevice::security_raw`
+            // retains it verbatim, per device (see `installation_v21.rs`'s
+            // own `"Security"` handling for why, and `SourceDevice`'s own
+            // doc comment on the field).
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/Security",
             attributes: &["SequenceNumber", "SequenceNumberTimestamp"],
         },

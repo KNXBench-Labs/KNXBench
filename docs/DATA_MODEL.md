@@ -165,6 +165,17 @@ was. See [ADR-0004](adr/0004-provenance-model.md) for the layer model and
 [ADR-0010](adr/0010-per-attribute-override-representation.md) for why it is
 wrapped in `Override<T>` per attribute rather than applied once per object.
 
+**Module-based objects (schema ≥21):** a module-based device resolves its
+`ComObjectInstance` defaults through one extra hop before reaching the
+product database — `ModuleInstance` → `ModuleDef` → `ComObjectRef` →
+`ComObject`, rather than the direct `ApplicationProgram` chain above, which
+schema 11 (and any non-module device) still uses unchanged. This section
+states only the chain's *shape*; see [ADR-0013](adr/0013-module-instance-representation.md)
+for why `ModuleInstance` is a first-class entity and
+[ADR-0014](adr/0014-group-object-tree-authoritative-source.md) for why
+`GroupObjectTree`, not `ComObjectInstanceRef`, is the authoritative source
+for which module instance a given object belongs to.
+
 ## 4. Entities
 
 *Implemented: `knx-core/src/{device,parameter,devices,group,building,topology,
@@ -191,6 +202,7 @@ unknown.
 | `BuildingPart` | 22 | `Id`, `Name`, `Number`, `Type`, `DefaultLine`, `CompletionStatus` | Modelled, section 5 |
 | `DeviceInstanceRef` | 29 | `RefId` | Modelled as a building-to-device reference |
 | `BinaryData` | 6 | `Id`, `Name` | Opaque, section 10 |
+| `ModuleInstance` | 4 devices' worth in the KV sample (schema 21; not present in the schema-11 reference project) | `RefId`, `RepeatIndex`, `Arguments`/`Argument` | Modelled as a first-class entity, retained-but-uninterpreted arguments/repeat_index, ADR-0013 |
 
 `ComObjectInstance` is the entity the override chain hangs off. Every
 overridable attribute is `Override<T>`, per the amendment above — not the
@@ -210,8 +222,16 @@ pub struct ComObjectInstance {
     pub size: Option<Resolved<ObjectSize>>,
     pub is_active: bool,
     pub links: Vec<GroupLink>,
+    pub module_instance: Option<ModuleInstanceId>,
 }
 ```
+
+`module_instance` is `Some` only for objects belonging to a module-based
+device (schema ≥21, [ADR-0013](adr/0013-module-instance-representation.md)):
+such an object resolves its DPT/Text defaults through
+`ModuleInstance` → `ModuleDef` → `ComObjectRef` → `ComObject` instead of the
+direct `ApplicationProgram` chain schema 11 uses. It is `None` for every
+schema-11 device.
 
 `size` stays a plain `Option<Resolved<ObjectSize>>`, not `Override<T>`:
 schema 11 never states an object size at instance level at all (Session 3
@@ -375,10 +395,10 @@ round-trips.
 ## 11. Versioning and migration
 
 *Implemented: `Project::schema_version` and `CURRENT_SCHEMA_VERSION` (now
-`4`, Session 5 — see amendments below) in `knx-core/src/project.rs`; the
-migration chain (`open_and_migrate`, `migrate_v0_to_v1` through
-`migrate_v3_to_v4`, the frozen `v1-empty.sqlite` through `v4-empty.sqlite`
-fixtures) in `knx-store/src/migration.rs`.*
+`5`, schema 21/23 import support — see amendments below) in
+`knx-core/src/project.rs`; the migration chain (`open_and_migrate`,
+`migrate_v0_to_v1` through `migrate_v4_to_v5`, the frozen `v1-empty.sqlite`
+through `v4-empty.sqlite` fixtures) in `knx-store/src/migration.rs`.*
 
 **Amendment (Session 3):** `migrate_v1_to_v2` adds the opaque-passthrough
 table (`opaque_entry`, section 10 / [ADR-0006](adr/0006-opaque-passthrough-store.md)).
@@ -408,6 +428,17 @@ not repeated here. Unlike Sessions 3 and 4, this one *does* change
 `StringTable` gains a public `iter()` — both additive, no behavior change,
 needed so `knx-store`'s round-trip test can assert `Project == Project`
 and so it can enumerate string-table entries to persist them.
+
+**Amendment (schema 21/23 import support):** `migrate_v4_to_v5` bumps
+`CURRENT_SCHEMA_VERSION` 4 → 5, adding new `module_instance`/
+`module_instance_argument` tables plus a nullable
+`com_object_instance.module_instance_id` column and a
+`project_info.ets_schema_version` column. Unlike the table-only Session 3/4
+amendments above, this one *does* change `knx-core`'s Rust shape: a new
+`ModuleInstance` entity (`knx-core/src/module.rs`), one new field on
+`ComObjectInstance` (`module_instance: Option<ModuleInstanceId>`, section 4),
+and one new field on `ProjectInfo` (`ets_schema_version: u32`, defaulting to
+11). See [ADR-0013](adr/0013-module-instance-representation.md).
 
 ```rust
 pub struct Project {

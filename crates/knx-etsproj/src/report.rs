@@ -170,7 +170,7 @@ pub fn build(
         .map(opaque_summary)
         .chain(manufacturer.iter().map(manufacturer_summary))
         .collect();
-    let unsupported = manufacturer
+    let mut unsupported: Vec<UnsupportedFeature> = manufacturer
         .iter()
         .filter(|m| matches!(m.kind, crate::opaque::OpaqueKind::Baggage))
         .map(|m| UnsupportedFeature {
@@ -182,6 +182,21 @@ pub fn build(
             ),
         })
         .collect();
+    // Schema 23's module-based application program handling is mapped using
+    // schema 21's measured shape (Task 7) — plausible, since schema 21
+    // already carries the same `ModuleInstances`/`GroupObjectTree` deltas
+    // (Session 7 evidence), but never independently confirmed against a
+    // module-using schema-23 sample the way schema 21 is against the KV
+    // reference project. Surfaced here rather than silently assumed.
+    if detected.version.0 == 23 {
+        unsupported.push(UnsupportedFeature {
+            what: "module-based application program handling (schema 23)".to_string(),
+            consequence: "inferred from schema 21's measured shape, not independently \
+                          evidenced against a module-using schema-23 sample — see \
+                          KNOWN_LIMITATIONS.md §1"
+                .to_string(),
+        });
+    }
 
     let mut errors: Vec<ImportError> = Vec::new();
     for p in &validation.errors {
@@ -360,6 +375,30 @@ mod tests {
             .find(|u| u.what.contains("econEts3.dll"))
             .unwrap();
         assert!(u.consequence.contains("not executed"));
+    }
+
+    #[test]
+    fn schema_23_carries_a_module_handling_capability_gap_but_11_and_21_do_not() {
+        let ets6 = crate::import_knxproj(&crate::testutil::reference_ets6_path()).unwrap();
+        assert!(ets6
+            .report
+            .unsupported
+            .iter()
+            .any(|u| u.what == "module-based application program handling (schema 23)"));
+
+        let ets4 = crate::import_knxproj(&crate::testutil::reference_ets4_path()).unwrap();
+        assert!(!ets4
+            .report
+            .unsupported
+            .iter()
+            .any(|u| u.what.contains("module-based application program handling")));
+
+        let kv = crate::import_knxproj(&crate::testutil::reference_kv_schema21_path()).unwrap();
+        assert!(!kv
+            .report
+            .unsupported
+            .iter()
+            .any(|u| u.what.contains("module-based application program handling")));
     }
 
     #[test]

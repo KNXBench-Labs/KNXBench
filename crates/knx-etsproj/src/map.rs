@@ -49,8 +49,8 @@ use knx_core::{
     ComObjectInstanceId, CommissioningState, CompletionStatus, DeviceId, DeviceInstance, Devices,
     Direction, DptRef, GroupAddress, GroupAddressEntry, GroupAddressId, GroupAddressStyle,
     GroupLink, GroupRange, GroupRangeId, IdAllocators, IndividualAddress, Installation,
-    InstallationId, Language, Layer, Line, LineId, Override, ParameterInstance, Project,
-    ProjectInfo, Resolved, ResolvedFlags, SourceRef, Text, Topology,
+    InstallationId, Language, Layer, Line, LineId, ModuleInstance, ModuleInstanceId, Override,
+    ParameterInstance, Project, ProjectInfo, Resolved, ResolvedFlags, SourceRef, Text, Topology,
 };
 
 use crate::source::{
@@ -58,8 +58,8 @@ use crate::source::{
     SourceGroupRange, SourceInstallation,
 };
 use crate::values::{
-    com_object_number, parse_bool, parse_building_part_type, parse_completion_status,
-    parse_timestamp, parse_u16, parse_u8, ValueError,
+    com_object_number, module_com_object_ref, parse_bool, parse_building_part_type,
+    parse_completion_status, parse_timestamp, parse_u16, parse_u8, ValueError,
 };
 
 pub struct MapOutput {
@@ -118,6 +118,7 @@ pub struct EntityCounts {
     pub group_addresses: Count,
     pub building_parts: Count,
     pub parameters: Count,
+    pub module_instances: Count,
 }
 
 /// Pass 1's result: a stable internal id for every cross-referenceable
@@ -133,6 +134,10 @@ struct IdTables {
 }
 
 pub fn map(document: &SourceDocument, source_path: &str) -> MapOutput {
+    if document.schema_version >= 21 {
+        return map_v21(document, source_path);
+    }
+
     let mut ids = IdAllocators::default();
     let tables = allocate_ids(document, &mut ids);
 
@@ -172,6 +177,75 @@ pub fn map(document: &SourceDocument, source_path: &str) -> MapOutput {
         problems,
         counts,
     }
+}
+
+/// Schema-≥21 counterpart of [`map`], sharing its top-level shape exactly:
+/// the same schema-agnostic `allocate_ids` pass, the same
+/// `Project::new`/`MapOutput` assembly — only `map_project_info_v21` (for
+/// `ProjectInfo::ets_schema_version`) and `map_installation_v21` (for
+/// module-instance/`GroupObjectTree`-driven device mapping) differ.
+fn map_v21(document: &SourceDocument, source_path: &str) -> MapOutput {
+    let mut ids = IdAllocators::default();
+    let tables = allocate_ids(document, &mut ids);
+    // Schema ≥21's `ComObjectInstanceRef/@Links` names a group address by
+    // its short id (`"GA-3"`), not the fully-qualified `@Id`
+    // (`"P-03DE-0_GA-3"`) `tables.group_addresses` is keyed by — measured
+    // against the KV reference project (RESEARCH §3.3/§3.4's "short id"
+    // pattern, here on the group-address side rather than the com-object
+    // side). Derived once from the already-built table, without touching
+    // the schema-agnostic `allocate_ids` itself.
+    let short_group_addresses = short_group_address_ids(&tables);
+
+    let mut project = Project::new(Language("en".into()));
+
+    let mut retained = Vec::new();
+    let mut problems = Vec::new();
+    let mut counts = EntityCounts::default();
+
+    project.info = map_project_info_v21(document, &mut retained, &mut problems);
+
+    for installation in &document.installations {
+        let (mapped, installation_retained) = map_installation_v21(
+            installation,
+            source_path,
+            &tables,
+            &short_group_addresses,
+            &mut ids,
+            &mut project.devices,
+            &mut problems,
+            &mut counts,
+        );
+        retained.extend(installation_retained);
+        project.installations.push(mapped);
+    }
+
+    project.ids = ids;
+
+    MapOutput {
+        project,
+        retained,
+        problems,
+        counts,
+    }
+}
+
+/// The short form of every already-allocated group address id, e.g.
+/// `"P-03DE-0_GA-3"` → `"GA-3"`. See [`map_v21`]'s call site for why this
+/// exists. Silently skips any id that does not end in a `_GA-<n>` segment
+/// rather than panicking — a document whose ids do not follow this pattern
+/// just leaves schema-≥21 `Links` unresolved (reported by `push_link`'s
+/// existing `DroppedLink`, same as any other dangling reference), not a
+/// parse failure.
+fn short_group_address_ids(tables: &IdTables) -> BTreeMap<String, GroupAddressId> {
+    tables
+        .group_addresses
+        .iter()
+        .filter_map(|(full, &id)| {
+            full.rsplit_once('_')
+                .filter(|(_, short)| short.starts_with("GA-"))
+                .map(|(_, short)| (short.to_string(), id))
+        })
+        .collect()
 }
 
 fn allocate_ids(document: &SourceDocument, ids: &mut IdAllocators) -> IdTables {
@@ -269,9 +343,28 @@ fn map_project_info(
         last_modified: optional_timestamp(&info.last_modified, xpath, problems),
         project_start: optional_timestamp(&info.project_start, xpath, problems),
         // This mapper only ever handles schema-11 documents; schema ≥21/23
-        // detection and wiring is Task 6's job.
+        // documents go through `map_project_info_v21` below instead.
         ets_schema_version: 11,
     }
+}
+
+/// Schema-≥21 counterpart of [`map_project_info`]: a thin wrapper that
+/// reuses every field conversion unchanged and only overrides
+/// `ets_schema_version` with the document's real, detected version (21 or
+/// 23). `document.info.project_traces_raw` (schema ≥21's `ProjectTraces`
+/// audit log) is a [`crate::source::RetainedElement`], not a
+/// `RetainedAttribute` — like `SourceLine/@BusAccess` (see the module doc
+/// comment), it bypasses `MapOutput` entirely and reaches export straight
+/// from `SourceDocument`, so there is nothing for this function to fold it
+/// into.
+fn map_project_info_v21(
+    document: &SourceDocument,
+    retained: &mut Vec<RetainedAttribute>,
+    problems: &mut Vec<MapProblem>,
+) -> ProjectInfo {
+    let mut info = map_project_info(document, retained, problems);
+    info.ets_schema_version = document.schema_version;
+    info
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -678,6 +771,523 @@ fn map_com_object(
         module_instance: None,
     };
 
+    (instance, retained)
+}
+
+/// Schema-≥21 counterpart of [`map_installation`]: the identical
+/// area/line/unassigned-device loop shape and the identical, unchanged
+/// `map_group_range`/`map_building_part` calls — `Segment` has already been
+/// flattened away by the parser (Task 5), so `SourceLine::devices` already
+/// holds exactly the right list either way. The only real difference is
+/// mapping each device through [`map_device_v21`] instead of [`map_device`].
+#[allow(clippy::too_many_arguments)]
+fn map_installation_v21(
+    installation: &SourceInstallation,
+    source_path: &str,
+    tables: &IdTables,
+    short_group_addresses: &BTreeMap<String, GroupAddressId>,
+    ids: &mut IdAllocators,
+    devices: &mut Devices,
+    problems: &mut Vec<MapProblem>,
+    counts: &mut EntityCounts,
+) -> (Installation, Vec<RetainedAttribute>) {
+    let mut retained = installation.other.clone();
+    let xpath = "/KNX/Project/Installations/Installation";
+
+    let id = match &installation.installation_id {
+        Some(s) => s.parse::<u8>().map(InstallationId).unwrap_or_else(|_| {
+            problems.push(MapProblem {
+                xpath: xpath.to_string(),
+                detail: MapProblemDetail::Value(ValueError::NotAnInteger {
+                    field: "InstallationId",
+                    value: s.clone(),
+                }),
+            });
+            InstallationId(0)
+        }),
+        None => InstallationId(0),
+    };
+
+    let default_line = resolve_optional(
+        &installation.default_line,
+        &tables.lines,
+        "Installation/@DefaultLine",
+        xpath,
+        problems,
+    );
+    let multicast_address =
+        optional_ipv4(&installation.ip_routing_multicast_address, xpath, problems);
+    let completion = required_completion(&installation.completion_status, xpath, problems);
+
+    let mut topology = Topology {
+        areas: Vec::new(),
+        lines: Vec::new(),
+        unassigned: Vec::new(),
+    };
+    let mut group_ranges = Vec::new();
+    let mut group_addresses = Vec::new();
+    let mut buildings = Vec::new();
+    let mut parameters = Vec::new();
+
+    for area in &installation.areas {
+        let area_id = *tables
+            .areas
+            .get(&area.id)
+            .expect("every area is allocated in pass 1");
+        let area_xpath = format!("{xpath}/Topology/Area[@Id='{}']", area.id);
+        let area_addr = required_u8(&area.address, "Area/@Address", &area_xpath, problems);
+
+        let mut line_ids = Vec::new();
+        for line in &area.lines {
+            let line_id = *tables
+                .lines
+                .get(&line.id)
+                .expect("every line is allocated in pass 1");
+            let line_xpath = format!("{area_xpath}/Line[@Id='{}']", line.id);
+            let line_addr = required_u8(&line.address, "Line/@Address", &line_xpath, problems);
+
+            let mut device_ids = Vec::new();
+            for device in &line.devices {
+                let device_id = *tables
+                    .devices
+                    .get(&device.id)
+                    .expect("every device is allocated in pass 1");
+                let device_retained = map_device_v21(
+                    device,
+                    device_id,
+                    source_path,
+                    Some(area_addr),
+                    Some(line_addr),
+                    short_group_addresses,
+                    ids,
+                    devices,
+                    &mut parameters,
+                    &line_xpath,
+                    problems,
+                    counts,
+                );
+                retained.extend(device_retained);
+                device_ids.push(device_id);
+            }
+
+            topology.lines.push(Line {
+                id: line_id,
+                source: SourceRef {
+                    path: source_path.to_string(),
+                    ets_id: line.id.clone(),
+                },
+                name: line.name.clone().unwrap_or_default(),
+                address: line_addr,
+                medium_ref: line.medium_type_ref_id.clone().unwrap_or_default(),
+                domain_address: line.domain_address.clone(),
+                domain_address_is_checked: optional_bool(
+                    &line.domain_address_is_checked,
+                    &line_xpath,
+                    problems,
+                ),
+                ip_routing_multicast_address: optional_ipv4(
+                    &line.ip_routing_multicast_address,
+                    &line_xpath,
+                    problems,
+                ),
+                multicast_ttl: optional_u8(
+                    &line.multicast_ttl,
+                    "MulticastTTL",
+                    &line_xpath,
+                    problems,
+                ),
+                completion: required_completion(&line.completion_status, &line_xpath, problems),
+                devices: device_ids,
+            });
+            retained.extend(line.other.iter().cloned());
+            counts.lines.bump();
+            line_ids.push(line_id);
+        }
+
+        topology.areas.push(Area {
+            id: area_id,
+            source: SourceRef {
+                path: source_path.to_string(),
+                ets_id: area.id.clone(),
+            },
+            name: area.name.clone().unwrap_or_default(),
+            address: area_addr,
+            completion: required_completion(&area.completion_status, &area_xpath, problems),
+            lines: line_ids,
+        });
+        retained.extend(area.other.iter().cloned());
+        counts.areas.bump();
+    }
+
+    let unassigned_xpath = format!("{xpath}/Topology/UnassignedDevices");
+    for device in &installation.unassigned_devices {
+        let device_id = *tables
+            .devices
+            .get(&device.id)
+            .expect("every device is allocated in pass 1");
+        let device_retained = map_device_v21(
+            device,
+            device_id,
+            source_path,
+            None,
+            None,
+            short_group_addresses,
+            ids,
+            devices,
+            &mut parameters,
+            &unassigned_xpath,
+            problems,
+            counts,
+        );
+        retained.extend(device_retained);
+        topology.unassigned.push(device_id);
+    }
+
+    for range in &installation.group_ranges {
+        map_group_range(
+            range,
+            None,
+            source_path,
+            xpath,
+            tables,
+            &mut group_ranges,
+            &mut group_addresses,
+            &mut retained,
+            problems,
+            counts,
+        );
+    }
+
+    for part in &installation.buildings {
+        map_building_part(
+            part,
+            None,
+            source_path,
+            xpath,
+            tables,
+            &mut buildings,
+            &mut retained,
+            problems,
+            counts,
+        );
+    }
+
+    (
+        Installation {
+            id,
+            name: installation.name.clone().unwrap_or_default(),
+            default_line,
+            multicast_address,
+            completion,
+            topology,
+            buildings,
+            group_ranges,
+            group_addresses,
+            parameters,
+        },
+        retained,
+    )
+}
+
+/// Schema-≥21 counterpart of [`map_device`]. Parameters, binary data,
+/// commissioning state and the final `DeviceInstance` are built exactly as
+/// in `map_device` — `CompletionStatus`/`Broken` are absent at schema ≥21
+/// (Global Constraints), but `required_completion`/`required_bool` already
+/// treat `None` as the natural default with no spurious `MapProblem`, so no
+/// special-casing is needed there.
+///
+/// Two things are genuinely new:
+/// - Every `SourceModuleInstance` becomes a `knx_core::ModuleInstance`,
+///   inserted into `devices` up front, so the com-object loop below can look
+///   up each object's owning module instance by its `RefId` prefix.
+/// - Communication objects are enumerated from `device.group_object_tree`
+///   (ADR-0014's authoritative id list), not from `device.com_objects`
+///   (which only holds the subset that carries an *instance-level override*
+///   — text, DPT, links, …). An id with no override still produces a
+///   `ComObjectInstance`, just one with every field at `Override::Absent`.
+#[allow(clippy::too_many_arguments)]
+fn map_device_v21(
+    device: &SourceDevice,
+    device_id: DeviceId,
+    source_path: &str,
+    area_address: Option<u8>,
+    line_address: Option<u8>,
+    short_group_addresses: &BTreeMap<String, GroupAddressId>,
+    ids: &mut IdAllocators,
+    devices: &mut Devices,
+    parameters: &mut Vec<ParameterInstance>,
+    parent_xpath: &str,
+    problems: &mut Vec<MapProblem>,
+    counts: &mut EntityCounts,
+) -> Vec<RetainedAttribute> {
+    let xpath = format!("{parent_xpath}/DeviceInstance[@Id='{}']", device.id);
+    let mut retained = device.other.clone();
+
+    let address = compose_individual_address(
+        area_address,
+        line_address,
+        device.address.as_deref(),
+        &xpath,
+        problems,
+    );
+
+    // ModuleInstance construction first — the com-object mapping below needs
+    // to know, for each GroupObjectTree id, whether it belongs to a module
+    // in order to set `ComObjectInstance::module_instance`.
+    let mut module_instance_ids: BTreeMap<String, ModuleInstanceId> = BTreeMap::new();
+    for mi in &device.module_instances {
+        let id = ids.next_module_instance_id();
+        module_instance_ids.insert(mi.id.clone(), id);
+        devices.insert_module_instance(ModuleInstance {
+            id,
+            device: device_id,
+            source: SourceRef {
+                path: source_path.to_string(),
+                ets_id: mi.ref_id.clone(),
+            },
+            repeat_index: mi.repeat_index.clone().unwrap_or_default(),
+            arguments: mi
+                .arguments
+                .iter()
+                .map(|a| {
+                    (
+                        SourceRef {
+                            path: source_path.to_string(),
+                            ets_id: a.ref_id.clone(),
+                        },
+                        a.value.clone().unwrap_or_default(),
+                    )
+                })
+                .collect(),
+        });
+        counts.module_instances.bump();
+    }
+
+    // ComObjectInstanceRef overrides, keyed by RefId, for the lookup below.
+    let overrides: BTreeMap<&str, &SourceComObjectInstance> = device
+        .com_objects
+        .iter()
+        .map(|c| (c.ref_id.as_str(), c))
+        .collect();
+
+    // ADR-0014: GroupObjectTree is the authoritative id list. An id with no
+    // override still produces a ComObjectInstance, Override::Absent.
+    let mut com_object_ids = Vec::new();
+    for ref_id in &device.group_object_tree {
+        let com_id = ids.next_com_object_instance_id();
+        let (mapped, com_retained) = map_com_object_v21(
+            ref_id,
+            overrides.get(ref_id.as_str()).copied(),
+            com_id,
+            device_id,
+            source_path,
+            &module_instance_ids,
+            short_group_addresses,
+            &xpath,
+            problems,
+        );
+        retained.extend(com_retained);
+        devices.insert_com_object(mapped);
+        com_object_ids.push(com_id);
+        counts.com_objects.bump();
+    }
+
+    for param in &device.parameters {
+        parameters.push(ParameterInstance {
+            id: ids.next_parameter_instance_id(),
+            device: device_id,
+            source: SourceRef {
+                path: source_path.to_string(),
+                ets_id: param.ref_id.clone(),
+            },
+            raw: param.value.clone().unwrap_or_default(),
+        });
+        counts.parameters.bump();
+    }
+
+    let binary_data = device
+        .binary_data
+        .iter()
+        .map(|b| BinaryDataRef {
+            id: b.id.clone(),
+            name: b.name.clone().unwrap_or_default(),
+        })
+        .collect();
+
+    let commissioning = CommissioningState {
+        completion: required_completion(&device.completion_status, &xpath, problems),
+        individual_address_loaded: required_bool(
+            &device.individual_address_loaded,
+            &xpath,
+            problems,
+        ),
+        application_program_loaded: required_bool(
+            &device.application_program_loaded,
+            &xpath,
+            problems,
+        ),
+        parameters_loaded: required_bool(&device.parameters_loaded, &xpath, problems),
+        communication_part_loaded: required_bool(
+            &device.communication_part_loaded,
+            &xpath,
+            problems,
+        ),
+        medium_config_loaded: required_bool(&device.medium_config_loaded, &xpath, problems),
+        last_modified: optional_timestamp(&device.last_modified, &xpath, problems),
+        last_download: optional_timestamp(&device.last_download, &xpath, problems),
+        broken: required_bool(&device.broken, &xpath, problems),
+    };
+
+    devices.insert(DeviceInstance {
+        id: device_id,
+        source: SourceRef {
+            path: source_path.to_string(),
+            ets_id: device.id.clone(),
+        },
+        name: device.name.clone().unwrap_or_default(),
+        description: device.description.clone(),
+        address,
+        product_ref: device.product_ref_id.clone().unwrap_or_default(),
+        program_ref: device.hardware2program_ref_id.clone().unwrap_or_default(),
+        commissioning,
+        visibility_calculated: required_bool(&device.visibility_calculated, &xpath, problems),
+        com_objects: com_object_ids,
+        binary_data,
+    });
+    counts.devices.bump();
+
+    retained
+}
+
+/// Schema-≥21 counterpart of [`map_com_object`]. `ref_id` is the original,
+/// unstripped `GroupObjectTree` id (e.g. `"MD-2_M-1_MI-1_O-2-0_R-4"`) — kept
+/// verbatim in `ComObjectInstance::source::ets_id` rather than
+/// `module_com_object_ref`'s short form, since later productdb-enrichment
+/// tasks need the original to do their own transformation. Takes
+/// `short_group_addresses` (see [`short_group_address_ids`]) rather than
+/// `&IdTables` directly — `Links`'s targets are already short ids, and that
+/// is the only cross-reference this function resolves.
+#[allow(clippy::too_many_arguments)]
+fn map_com_object_v21(
+    ref_id: &str,
+    over: Option<&SourceComObjectInstance>,
+    com_id: ComObjectInstanceId,
+    device_id: DeviceId,
+    source_path: &str,
+    module_instance_ids: &BTreeMap<String, ModuleInstanceId>,
+    short_group_addresses: &BTreeMap<String, GroupAddressId>,
+    device_xpath: &str,
+    problems: &mut Vec<MapProblem>,
+) -> (ComObjectInstance, Vec<RetainedAttribute>) {
+    let xpath = format!("{device_xpath}/GroupObjectTree[@Id='{ref_id}']");
+    let mut retained = Vec::new();
+
+    let (number, module_instance) = match module_com_object_ref(ref_id) {
+        Ok((_short, number)) => {
+            // "MD-<n>_M-<m>_MI-<k>_O-<a>-<b>_R-<c>" — `module_instance_ids`
+            // is keyed by `SourceModuleInstance::id`, i.e. the
+            // `ModuleInstance` element's own `@Id` (e.g. `"MD-2_M-1_MI-1"`,
+            // *not* its `@RefId` `"MD-2_M-1"`, which only names the
+            // `ModuleDef` it instantiates — a device can hold several
+            // `ModuleInstance`s sharing one `@RefId`, distinguished by
+            // `@Id`'s trailing `_MI-<k>`). That id is this `ref_id` with
+            // just its own `_O-<a>-<b>_R-<c>` tail removed. Verified:
+            // `"MD-2_M-1_MI-1_O-2-0_R-4".rsplitn(3, '_')` yields
+            // `["R-4", "O-2-0", "MD-2_M-1_MI-1"]`, so `.nth(2)` is the
+            // module-instance key — two segments dropped from the right
+            // (`O-`, `R-`), not three; the brief's own prose description
+            // ("keyed by the @RefId shape") named the wrong attribute, but
+            // its `rsplitn(3, '_').nth(2)` arithmetic was actually right.
+            let module_key = ref_id.rsplitn(3, '_').nth(2).unwrap_or(ref_id);
+            (number, module_instance_ids.get(module_key).copied())
+        }
+        Err(_) => {
+            // Not a module-based id: either schema-11-shaped (shouldn't
+            // occur under a schema-≥21 device, but a genuinely malformed id
+            // must not abort the whole device) or malformed.
+            match com_object_number(ref_id) {
+                Ok(n) => (n, None),
+                Err(e) => {
+                    problems.push(MapProblem {
+                        xpath: xpath.clone(),
+                        detail: MapProblemDetail::Value(e),
+                    });
+                    (0, None)
+                }
+            }
+        }
+    };
+
+    let (text, description, dpt, flags, is_active, channel_id_retained) = match over {
+        Some(c) => (
+            override_text(&c.text),
+            override_text(&c.description),
+            override_dpt(&c.datapoint_type, &xpath, problems),
+            // Schema ≥21 instance overrides never carry flags (ADR-0014,
+            // measured against the KV reference project).
+            ResolvedFlags::none(),
+            required_bool(&c.is_active, &xpath, problems),
+            c.channel_id.clone().map(|v| RetainedAttribute {
+                xpath: xpath.clone(),
+                name: "ChannelId".into(),
+                value: v,
+            }),
+        ),
+        None => (
+            Override::Absent,
+            Override::Absent,
+            Override::Absent,
+            ResolvedFlags::none(),
+            true,
+            None,
+        ),
+    };
+    retained.extend(channel_id_retained);
+
+    let mut links = Vec::new();
+    if let Some(c) = over {
+        for target in &c.links {
+            // Direction is not stated at schema ≥21 (Global Constraints
+            // #2) — Send is a documented, flagged assumption, not an
+            // invented fact; it does not affect export (Links is
+            // regenerated from the GA id alone).
+            //
+            // `target` is `Links`'s short group-address id (`"GA-3"`), so
+            // `push_link` — unchanged, reused as-is — is handed
+            // `short_group_addresses` here rather than the fully-qualified
+            // `tables.group_addresses` schema 11's `sends`/`receives` use.
+            push_link(
+                target,
+                Direction::Send,
+                ref_id,
+                short_group_addresses,
+                &xpath,
+                &mut links,
+                problems,
+            );
+        }
+    }
+
+    let instance = ComObjectInstance {
+        id: com_id,
+        source: SourceRef {
+            path: source_path.to_string(),
+            ets_id: ref_id.to_string(),
+        },
+        device: device_id,
+        number,
+        text,
+        description,
+        dpt,
+        flags,
+        // Never stated at instance level; filled from the application
+        // program once the product database exists (Session 4), same as
+        // schema 11.
+        size: None,
+        is_active,
+        links,
+        module_instance,
+    };
     (instance, retained)
 }
 
@@ -1208,7 +1818,9 @@ fn resolve_many<Id: Copy>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::{minimal_source_document, reference_source_document};
+    use crate::testutil::{
+        minimal_source_document, reference_kv_source_document, reference_source_document,
+    };
 
     #[test]
     fn every_imported_value_carries_the_instance_layer() {
@@ -1339,5 +1951,59 @@ mod tests {
                 Direction::Receive => (s, r + 1),
             });
         assert_eq!((send, receive), (569, 27));
+    }
+
+    #[test]
+    fn a_module_based_device_maps_every_group_object_tree_id_even_without_an_override() {
+        let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
+        let device = out
+            .project
+            .devices
+            .iter()
+            .find(|d| !d.com_objects.is_empty())
+            .unwrap();
+        assert!(
+            device.com_objects.len()
+                > out
+                    .project
+                    .devices
+                    .com_objects()
+                    .filter(|c| c.device == device.id && c.text.is_present())
+                    .count()
+        );
+    }
+
+    #[test]
+    fn a_module_based_com_object_carries_its_module_instance_id() {
+        let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
+        let com = out
+            .project
+            .devices
+            .com_objects()
+            .find(|c| c.module_instance.is_some())
+            .unwrap();
+        assert!(out
+            .project
+            .devices
+            .module_instance(com.module_instance.unwrap())
+            .is_some());
+    }
+
+    #[test]
+    fn schema_21_group_links_default_to_send_direction_documented_assumption() {
+        let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
+        let com = out
+            .project
+            .devices
+            .com_objects()
+            .find(|c| !c.links.is_empty())
+            .unwrap();
+        assert!(com.links.iter().all(|l| l.direction == Direction::Send));
+    }
+
+    #[test]
+    fn ets_schema_version_is_recorded_on_the_project() {
+        let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
+        assert_eq!(out.project.info.ets_schema_version, 21);
     }
 }

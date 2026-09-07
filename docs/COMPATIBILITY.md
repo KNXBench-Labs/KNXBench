@@ -34,8 +34,8 @@ compatibility claim with no test behind it.
 | Capability | Scope | Evidence | Test |
 | --- | --- | --- | --- |
 | Reading `.knxproj` schema 11 | One real ETS 4.1.8 project: 36 devices (35 addressed + 1 unassigned), 514 group addresses, 907 communication object instances, 569 send / 27 receive links, 1390 parameter values (1174 plain + 216 union), 22 building parts, 3 binary data references | RESEARCH §3 [V] | `the_reference_project_imports_with_the_measured_counts`, `nothing_in_the_reference_project_is_unknown_or_lost` (`knx-etsproj/tests/golden_reference_project.rs`) |
-| Reading `.knxproj` schema 23 | The same project re-exported from ETS 6.3.7959.0: 35 devices, 514 group addresses, 691 communication object instances, 1343 parameter values | RESEARCH §2.4/§3.3, reproducible with `tools/inspect_knxproj.py` [V] — format changes vs. schema 11 catalogued there | none — see "detects and refuses" below; no schema-23 importer exists |
-| Detecting schema 23 and refusing it by name, rather than misreading it through the schema-11 table | The same ETS6 export | RESEARCH §3.3 (the load-bearing format differences this would misread) | `importing_the_ets6_project_fails_with_a_named_reason_not_wrong_data` (`knx-etsproj/src/lib.rs`) |
+| Reading and writing `.knxproj` schema 21 | KNX Association `KV v2.5` demo project (ETS 5.7), 4 devices, module-based application programs (ADR-0013), zero unknown-construct entries | this plan's spec + ADR-0013/ADR-0014 | `importing_the_kv_schema_21_project_succeeds_with_zero_unknown_constructs`, `a_schema_21_export_reimports_to_an_equal_domain_model` (`crates/knx-etsproj/src/lib.rs`, `.../export/schema21.rs`) |
+| Reading `.knxproj` schema 23 | The ETS6 re-export of the reference project — module-based application-program handling is *inferred* from the schema-21 sample, not independently evidenced (no module-using schema-23 sample exists) — no round-trip claim | RESEARCH §2.4/§3.3 + this plan's scope decision | `importing_the_ets6_schema_23_project_succeeds_but_carries_no_round_trip_claim` |
 | Detecting a password-protected container and refusing it by name, rather than attempting decryption | A hand-built container shaped like a protected project (nested `<P-xxxx>.zip`) | IMPORT_EXPORT §2 [D for the decryption schemes; V for detection] | `a_password_protected_project_is_detected_and_named` (`knx-etsproj/src/container.rs`) |
 | Writing schema-11 containers our own reader reads back to a semantically equal model | The reference project, roundtripped | IMPORT_EXPORT §9, ADR-0007 | `roundtrip_model_is_semantically_equal` (`knx-etsproj/tests/roundtrip.rs`) |
 | Every opaque byte surviving a roundtrip unchanged | The reference project's 38 container entries | IMPORT_EXPORT §5 | `roundtrip_opaque_bytes_are_hash_identical` (`knx-etsproj/tests/roundtrip.rs`) |
@@ -61,8 +61,8 @@ of a file we export."
 | Schema 12 (ETS 4) | Documented only [D] | Import a real ETS 4 project of that schema and reconcile the unknown-construct report to empty |
 | Schema 13, 14 (ETS 5 up to 5.6) | Documented only [D] | Same, with an ETS 5 sample |
 | Schema 20 (ETS 5.7) | Documented only [D] | Same, with an ETS 5.7 sample |
-| Schema 21, 22 (ETS 6.x, early) | Documented only [D] | Same, with an ETS 6.0–6.2 sample |
-| Schema 23 (ETS 6.3.7959.0) | Container and content model diffed against schema 11 [V] (RESEARCH §2.4/§3.3); no importer built yet | Build the schema-23-aware importer and reconcile its unknown-construct report to empty |
+| Schema 22 (ETS 6.x, early) | Documented only [D] | Same, with an ETS 6.0–6.2 sample |
+| Schema 23 (ETS 6.3.7959.0) | Container and content model diffed against schema 11 [V] (RESEARCH §2.4/§3.3); importer built, but module handling inferred not evidenced | Obtain an independent, module-using schema-23 sample and reconcile its unknown-construct report to empty |
 | Password-protected projects, schema < 21 (ZipCrypto) | Code path derived from `xknxproject` source [V], never executed here | Open a real protected ETS4/ETS5 project with its password |
 | Password-protected projects, schema ≥ 21 (AES, PBKDF2) | As above | Open a real protected ETS6 project with its password |
 | ETS re-import of a file we export | Untested (risk R9) | Export a project and open it in a real ETS installation; record the result either way |

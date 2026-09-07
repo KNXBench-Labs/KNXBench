@@ -5,12 +5,14 @@
 use std::collections::BTreeMap;
 
 use crate::device::{ComObjectInstance, DeviceInstance};
-use crate::ids::{ComObjectInstanceId, DeviceId};
+use crate::ids::{ComObjectInstanceId, DeviceId, ModuleInstanceId};
+use crate::module::ModuleInstance;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Devices {
     by_id: BTreeMap<DeviceId, DeviceInstance>,
     com_objects: BTreeMap<ComObjectInstanceId, ComObjectInstance>,
+    module_instances: BTreeMap<ModuleInstanceId, ModuleInstance>,
 }
 
 impl Devices {
@@ -57,6 +59,18 @@ impl Devices {
     /// exists.
     pub fn com_objects(&self) -> impl Iterator<Item = &ComObjectInstance> {
         self.com_objects.values()
+    }
+
+    pub fn insert_module_instance(&mut self, m: ModuleInstance) {
+        self.module_instances.insert(m.id, m);
+    }
+
+    pub fn module_instance(&self, id: ModuleInstanceId) -> Option<&ModuleInstance> {
+        self.module_instances.get(&id)
+    }
+
+    pub fn module_instances(&self) -> impl Iterator<Item = &ModuleInstance> {
+        self.module_instances.values()
     }
 }
 
@@ -109,6 +123,7 @@ mod tests {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         });
         let ids: Vec<_> = d.com_objects().map(|c| c.id).collect();
         assert_eq!(ids, vec![ComObjectInstanceId(7)]);
@@ -120,5 +135,22 @@ mod tests {
         d.insert(device(DeviceId(1)));
         assert!(d.get(DeviceId(1)).is_some());
         assert!(d.get(DeviceId(2)).is_none());
+    }
+
+    #[test]
+    fn module_instances_are_retrievable_by_id() {
+        let mut d = Devices::new();
+        d.insert_module_instance(crate::module::ModuleInstance {
+            id: ModuleInstanceId(1),
+            device: DeviceId(1),
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "MD-2_M-1".into(),
+            },
+            repeat_index: "6x1".into(),
+            arguments: vec![],
+        });
+        assert!(d.module_instance(ModuleInstanceId(1)).is_some());
+        assert_eq!(d.module_instances().count(), 1);
     }
 }

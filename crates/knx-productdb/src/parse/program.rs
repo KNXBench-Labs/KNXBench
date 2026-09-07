@@ -6,6 +6,15 @@
 //! visibility program depends on the `when/@test` grammar, which is
 //! unresearched (RESEARCH R3). The bytes survive in `source_file`, so
 //! nothing is lost by not modelling it yet.
+//!
+//! `ModuleDefs/ModuleDef/Static/{ComObjectTable,ComObjectRefs}` (schema
+//! ≥21, ADR-0013) needs no dedicated handling here: `ComObject`/
+//! `ComObjectRef` are matched by local element name only, with no path
+//! context, so a `ModuleDef`'s own `ComObject`/`ComObjectRef` children hit
+//! the exact same match arms as the top-level `ApplicationProgram/Static`
+//! ones and are inserted under whichever `program_id` is currently open —
+//! always the owning `ApplicationProgram`'s id, since `ModuleDef` never
+//! reassigns it. Verified directly (Task 9, 2026-09), not assumed.
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -674,5 +683,32 @@ mod tests {
             .conflicts
             .iter()
             .any(|c| c.id == "M-006A_A-0001-22-26C0-O0079" && c.other_sha256 == "sha-2"));
+    }
+
+    const MODULE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/21"><ManufacturerData><Manufacturer RefId="M-00FA">
+<ApplicationPrograms><ApplicationProgram Id="M-00FA_A-2504-10-C071" Name="P" ApplicationVersion="10" MaskVersion="MV-0701">
+<Static><ComObjectTable/><ComObjectRefs/></Static>
+<ModuleDefs><ModuleDef Id="M-00FA_A-2504-10-C071_MD-2" Name="module">
+<Static>
+<ComObjectTable>
+  <ComObject Id="M-00FA_A-2504-10-C071_MD-2_O-2-0" Number="0" Text="OnOff" ObjectSize="1 Bit" DatapointType="DPST-1-1" WriteFlag="Enabled" />
+</ComObjectTable>
+<ComObjectRefs>
+  <ComObjectRef Id="M-00FA_A-2504-10-C071_MD-2_O-2-0_R-1" RefId="M-00FA_A-2504-10-C071_MD-2_O-2-0" />
+</ComObjectRefs>
+</Static>
+</ModuleDef></ModuleDefs>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    #[test]
+    fn a_module_defs_com_object_is_ingested_under_the_owning_program_id() {
+        let (_dir, conn) = db();
+        ingest_program(&conn, "sha-mod", "M-00FA/A.xml", MODULE_PROGRAM.as_bytes()).unwrap();
+        let view = crate::query::com_object_view(
+            &conn, "M-00FA_A-2504-10-C071", "M-00FA_A-2504-10-C071_MD-2_O-2-0_R-1",
+        ).unwrap();
+        assert!(view.is_some());
+        assert_eq!(view.unwrap().text.as_deref(), Some("OnOff"));
     }
 }

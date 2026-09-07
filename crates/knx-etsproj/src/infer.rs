@@ -181,6 +181,7 @@ mod tests {
                     ga,
                     direction: Direction::Send,
                 }],
+                module_instance: None,
             });
         }
         project.devices.insert(DeviceInstance {

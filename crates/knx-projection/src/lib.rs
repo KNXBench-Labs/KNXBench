@@ -678,6 +678,7 @@ mod tests {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         });
         project
     }

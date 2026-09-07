@@ -22,6 +22,7 @@ use crate::devices::{
 use crate::group::{
     load_group_addresses, load_group_ranges, upsert_group_address, upsert_group_range,
 };
+use crate::module_instance::{load_module_instances_for_installation, upsert_module_instance};
 use crate::parameter::{load_parameters_for_installation, upsert_parameter_instance};
 use crate::strings::{load_string_table, upsert_string_table};
 use crate::topology::{
@@ -54,6 +55,8 @@ const DELETE_ALL_TABLES: &[&str] = &[
     "binary_data_ref",
     "building_part_device",
     "parameter_instance",
+    "module_instance_argument",
+    "module_instance",
     "group_address",
     "group_range",
     "device",
@@ -96,8 +99,8 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
     tx.execute(
         "INSERT INTO project_info
              (id, project_id, name, project_number, group_address_style, completion,
-              last_modified, project_start, default_language)
-         VALUES (0, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+              last_modified, project_start, default_language, ets_schema_version)
+         VALUES (0, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
             project.info.project_id,
             project.info.name,
@@ -107,14 +110,15 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
             project.info.last_modified.map(|d| d.to_rfc3339()),
             project.info.project_start.map(|d| d.to_rfc3339()),
             project.strings.default_language().0,
+            project.info.ets_schema_version,
         ],
     )?;
 
     tx.execute(
         "INSERT INTO id_allocators
              (id, device, area, line, com_object_instance, group_range, group_address,
-              building_part, parameter_instance)
-         VALUES (0, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+              building_part, parameter_instance, module_instance)
+         VALUES (0, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
             project.ids.peek_device(),
             project.ids.peek_area(),
@@ -124,6 +128,7 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
             project.ids.peek_group_address(),
             project.ids.peek_building_part(),
             project.ids.peek_parameter_instance(),
+            project.ids.peek_module_instance(),
         ],
     )?;
 
@@ -231,6 +236,23 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
         return Err(StoreError::UnreachableComObjects(unreachable_com_objects));
     }
 
+    // Module instances: `Devices.module_instances` is a flat, global map
+    // keyed by id, exactly like `com_objects` — every `ModuleInstance` is
+    // reached directly by `ModuleInstance::device`, not via an owning
+    // `Installation`/`DeviceInstance` list, so this mirrors the
+    // com-object-instance loop above (one pass per device, `position` reset
+    // per device), not the per-installation `parameters` loop.
+    for device in project.devices.iter() {
+        for (position, module_instance) in project
+            .devices
+            .module_instances()
+            .filter(|m| m.device == device.id)
+            .enumerate()
+        {
+            upsert_module_instance(&tx, position as i64, module_instance)?;
+        }
+    }
+
     tx.commit()?;
     Ok(())
 }
@@ -314,10 +336,11 @@ pub fn load_project(conn: &Connection) -> Result<Project, StoreError> {
         last_modified,
         project_start,
         default_language,
+        ets_schema_version,
     ) = conn
         .query_row(
             "SELECT project_id, name, project_number, group_address_style, completion,
-                    last_modified, project_start, default_language
+                    last_modified, project_start, default_language, ets_schema_version
              FROM project_info WHERE id = 0",
             [],
             |row| {
@@ -330,6 +353,7 @@ pub fn load_project(conn: &Connection) -> Result<Project, StoreError> {
                     row.get::<_, Option<String>>(5)?,
                     row.get::<_, Option<String>>(6)?,
                     row.get::<_, String>(7)?,
+                    row.get::<_, u32>(8)?,
                 ))
             },
         )
@@ -339,7 +363,7 @@ pub fn load_project(conn: &Connection) -> Result<Project, StoreError> {
 
     let ids = conn.query_row(
         "SELECT device, area, line, com_object_instance, group_range, group_address,
-                building_part, parameter_instance
+                building_part, parameter_instance, module_instance
          FROM id_allocators WHERE id = 0",
         [],
         |row| {
@@ -352,6 +376,7 @@ pub fn load_project(conn: &Connection) -> Result<Project, StoreError> {
                 row.get(5)?,
                 row.get(6)?,
                 row.get(7)?,
+                row.get(8)?,
             ))
         },
     )?;
@@ -375,6 +400,9 @@ pub fn load_project(conn: &Connection) -> Result<Project, StoreError> {
         let group_ranges = load_group_ranges(conn, row.id)?;
         let group_addresses = load_group_addresses(conn, row.id)?;
         let parameters = load_parameters_for_installation(conn, row.id)?;
+        for module_instance in load_module_instances_for_installation(conn, row.id)? {
+            devices.insert_module_instance(module_instance);
+        }
         installations.push(Installation {
             id: row.id,
             name: row.name,
@@ -412,6 +440,7 @@ pub fn load_project(conn: &Connection) -> Result<Project, StoreError> {
                     .expect("stored timestamp is always valid RFC3339")
                     .with_timezone(&chrono::Utc)
             }),
+            ets_schema_version,
         },
         installations,
         devices,
@@ -555,6 +584,7 @@ mod tests {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         });
         // …and deliberately never pushed onto device 1's `com_objects`.
 
@@ -883,5 +913,33 @@ mod tests {
         let next = loaded.ids.next_device_id();
         assert_eq!(next, DeviceId(3));
         assert_ne!(next, second);
+    }
+
+    /// `ModuleInstance` lives on `Devices` as a flat, global map (no owning
+    /// `Installation`/`DeviceInstance` list), unlike `ParameterInstance` — see
+    /// this task's Controller correction. This exercises save->load for that
+    /// storage shape end to end, not just `module_instance.rs`'s own
+    /// unit-level round trip.
+    #[test]
+    fn module_instances_round_trip_through_save_and_load() {
+        use knx_core::ids::ModuleInstanceId;
+        use knx_core::module::ModuleInstance;
+
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_installation();
+        project.installations[0].topology.unassigned = vec![DeviceId(1)];
+        project.devices.insert(device(1));
+        project.devices.insert_module_instance(ModuleInstance {
+            id: ModuleInstanceId(1),
+            device: DeviceId(1),
+            source: source(),
+            repeat_index: "6x1".into(),
+            arguments: vec![(source(), "1".into()), (source(), "0".into())],
+        });
+
+        save_project(&conn, &project).unwrap();
+        let loaded = load_project(&conn).unwrap();
+        assert_eq!(loaded.devices.module_instances().count(), 1);
+        assert_eq!(loaded, project);
     }
 }

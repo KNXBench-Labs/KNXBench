@@ -11,7 +11,9 @@ use knx_core::commissioning::CommissioningState;
 use knx_core::device::{BinaryDataRef, ComObjectInstance, DeviceInstance};
 use knx_core::dpt::DptRef;
 use knx_core::flags::{Direction, GroupLink, ObjectSize, ResolvedFlags};
-use knx_core::ids::{ComObjectInstanceId, DeviceId, GroupAddressId, InstallationId, SourceRef};
+use knx_core::ids::{
+    ComObjectInstanceId, DeviceId, GroupAddressId, InstallationId, ModuleInstanceId, SourceRef,
+};
 use knx_core::provenance::{Layer, Override, Resolved};
 use knx_core::string_table::{LocalizedString, Text, TranslationKey};
 
@@ -534,8 +536,8 @@ pub fn upsert_com_object_instance(
     conn.execute(
         "INSERT INTO com_object_instance
              (id, device_id, position, source_path, source_ets_id, number, size_kind,
-              size_value, size_layer, is_active)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+              size_value, size_layer, is_active, module_instance_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
          ON CONFLICT(id) DO UPDATE SET
              device_id = excluded.device_id,
              position = excluded.position,
@@ -545,7 +547,8 @@ pub fn upsert_com_object_instance(
              size_kind = excluded.size_kind,
              size_value = excluded.size_value,
              size_layer = excluded.size_layer,
-             is_active = excluded.is_active",
+             is_active = excluded.is_active,
+             module_instance_id = excluded.module_instance_id",
         params![
             com.id.0,
             device_id.0,
@@ -557,6 +560,7 @@ pub fn upsert_com_object_instance(
             size_value,
             size_layer,
             com.is_active,
+            com.module_instance.map(|m| m.0),
         ],
     )?;
 
@@ -599,9 +603,10 @@ pub fn load_com_object_instance(
         size_value,
         size_layer,
         is_active,
+        module_instance_id,
     ) = conn.query_row(
         "SELECT source_path, source_ets_id, device_id, number, size_kind, size_value,
-                    size_layer, is_active
+                    size_layer, is_active, module_instance_id
              FROM com_object_instance WHERE id = ?1",
         params![id.0],
         |row| {
@@ -614,6 +619,7 @@ pub fn load_com_object_instance(
                 row.get::<_, Option<i64>>(5)?,
                 row.get::<_, Option<String>>(6)?,
                 row.get::<_, bool>(7)?,
+                row.get::<_, Option<u32>>(8)?,
             ))
         },
     )?;
@@ -671,6 +677,7 @@ pub fn load_com_object_instance(
         size: decode_size(size_kind, size_value, size_layer),
         is_active,
         links: vec![],
+        module_instance: module_instance_id.map(ModuleInstanceId),
     })
 }
 
@@ -954,6 +961,7 @@ mod tests {
             }),
             is_active: true,
             links: vec![],
+            module_instance: None,
         }
     }
 

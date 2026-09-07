@@ -83,7 +83,16 @@ pub struct SemanticDevice {
     pub program_ref: Option<String>,
     pub commissioning: CommissioningState,
     pub binary_data: Vec<String>,
+    pub module_instances: Vec<SemanticModuleInstance>,
     pub com_objects: Vec<SemanticComObject>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct SemanticModuleInstance {
+    pub ets_id: String,
+    pub repeat_index: String,
+    /// `(argument ets_id, value)`, sorted by the argument's own ets_id.
+    pub arguments: Vec<(String, String)>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -98,6 +107,9 @@ pub struct SemanticComObject {
     pub flags: [Option<bool>; 5],
     /// `(group address ets_id, direction)`, sorted.
     pub links: Vec<(String, Direction)>,
+    /// The linked `ModuleInstance`'s own `ets_id`, `None` for
+    /// schema-11-shaped devices.
+    pub module_instance: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -256,6 +268,26 @@ fn semantic_device(project: &Project, d: &DeviceInstance) -> SemanticDevice {
     let mut binary_data: Vec<String> = d.binary_data.iter().map(|b| b.id.clone()).collect();
     binary_data.sort();
 
+    let mut module_instances: Vec<SemanticModuleInstance> = project
+        .devices
+        .module_instances()
+        .filter(|m| m.device == d.id)
+        .map(|m| SemanticModuleInstance {
+            ets_id: m.source.ets_id.clone(),
+            repeat_index: m.repeat_index.clone(),
+            arguments: {
+                let mut args: Vec<(String, String)> = m
+                    .arguments
+                    .iter()
+                    .map(|(source, value)| (source.ets_id.clone(), value.clone()))
+                    .collect();
+                args.sort();
+                args
+            },
+        })
+        .collect();
+    module_instances.sort_by(|a, b| a.ets_id.cmp(&b.ets_id));
+
     SemanticDevice {
         ets_id: d.source.ets_id.clone(),
         name: d.name.clone(),
@@ -264,6 +296,7 @@ fn semantic_device(project: &Project, d: &DeviceInstance) -> SemanticDevice {
         program_ref: Some(d.program_ref.clone()).filter(|s| !s.is_empty()),
         commissioning: d.commissioning.clone(),
         binary_data,
+        module_instances,
         com_objects,
     }
 }
@@ -286,6 +319,11 @@ fn semantic_com_object(project: &Project, c: &ComObjectInstance) -> SemanticComO
             .then(direction_rank(a.1).cmp(&direction_rank(b.1)))
     });
 
+    let module_instance = c
+        .module_instance
+        .and_then(|id| project.devices.module_instance(id))
+        .map(|m| m.source.ets_id.clone());
+
     SemanticComObject {
         number: c.number,
         text: semantic_text(&c.text, &project.strings),
@@ -299,6 +337,7 @@ fn semantic_com_object(project: &Project, c: &ComObjectInstance) -> SemanticComO
             semantic_flag(&c.flags.communication),
         ],
         links,
+        module_instance,
     }
 }
 
@@ -528,4 +567,106 @@ fn describe_vec_difference<T: std::fmt::Debug + PartialEq>(
         }
     }
     format!("{label}: differs, but no element-wise difference was found (order?)")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use knx_core::{ComObjectInstance, Language, ResolvedFlags, SourceRef, Topology};
+
+    fn source(ets_id: &str) -> SourceRef {
+        SourceRef {
+            path: "t".into(),
+            ets_id: ets_id.into(),
+        }
+    }
+
+    /// A minimal but real `Project`: one installation, one device
+    /// (unassigned in topology), one module-based com object, matching
+    /// `knx-productdb::enrich`'s fixture-building pattern for this exact
+    /// device/com-object/module-instance combination.
+    fn project_with_module_instance(repeat_index: &str) -> Project {
+        let mut p = Project::new(Language("de-DE".into()));
+        let device_id = p.ids.next_device_id();
+        let com_id = p.ids.next_com_object_instance_id();
+        let module_id = p.ids.next_module_instance_id();
+
+        p.devices.insert_module_instance(knx_core::ModuleInstance {
+            id: module_id,
+            device: device_id,
+            source: source("MD-2_M-1"),
+            repeat_index: repeat_index.into(),
+            arguments: vec![],
+        });
+        p.devices.insert(DeviceInstance {
+            id: device_id,
+            source: source("P-0001-0_DI-1"),
+            name: "D".into(),
+            description: None,
+            address: None,
+            product_ref: "H-2_P-1".into(),
+            program_ref: "H-2_HP-1".into(),
+            commissioning: Default::default(),
+            visibility_calculated: false,
+            com_objects: vec![com_id],
+            binary_data: vec![],
+        });
+        p.devices.insert_com_object(ComObjectInstance {
+            id: com_id,
+            source: source("MD-2_M-1_MI-1_O-2-0_R-1"),
+            device: device_id,
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: Some(module_id),
+        });
+
+        p.installations.push(Installation {
+            id: knx_core::InstallationId(0),
+            name: "I".into(),
+            default_line: None,
+            multicast_address: None,
+            completion: CompletionStatus::FinishedDesign,
+            topology: Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![device_id],
+            },
+            buildings: vec![],
+            group_ranges: vec![],
+            group_addresses: vec![],
+            parameters: vec![],
+        });
+
+        p
+    }
+
+    #[test]
+    fn a_module_instance_difference_is_detected() {
+        let a = project_with_module_instance("6x1");
+        let b = project_with_module_instance("7x1");
+
+        let diff = describe_difference(&semantic_view(&a), &semantic_view(&b))
+            .expect("a differing repeat_index must be reported as a difference");
+        assert!(
+            diff.contains("6x1") && diff.contains("7x1"),
+            "diff should mention both repeat_index values, got: {diff}"
+        );
+    }
+
+    #[test]
+    fn an_identical_module_instance_is_not_a_difference() {
+        let a = project_with_module_instance("6x1");
+        let b = project_with_module_instance("6x1");
+
+        assert_eq!(
+            describe_difference(&semantic_view(&a), &semantic_view(&b)),
+            None
+        );
+    }
 }

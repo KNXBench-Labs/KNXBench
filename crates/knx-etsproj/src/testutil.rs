@@ -8,6 +8,7 @@
 #![cfg(test)]
 
 use crate::known::known_schema;
+use crate::opaque::{ManufacturerFile, OpaqueEntry};
 use crate::parse::{parse_installation, parse_installation_v21, parse_project_info};
 use crate::source::SourceDocument;
 use crate::Container;
@@ -99,6 +100,33 @@ pub(crate) fn reference_project() -> knx_core::Project {
     crate::map::map(&reference_source_document(), "P-0512/0.xml").project
 }
 
+/// `crate::export::export_knxproj`'s `retained` parameter is every opaque
+/// entry the exporter must copy through unchanged: the container/attribute/
+/// element entries `import_knxproj*` already collected, plus every
+/// manufacturer file, restated as an `OpaqueEntry` with an empty `xpath`/
+/// `name` (manufacturer files are not addressed by xpath the way topology
+/// attributes are). Mirrors `tests/support/mod.rs`'s identically-named
+/// helper for the same reason that file exists: `export_knxproj` does not
+/// distinguish "topology opaque data" from "manufacturer opaque data" — it
+/// just wants one combined list.
+pub(crate) fn all_entries(
+    opaque: &[OpaqueEntry],
+    manufacturer: &[ManufacturerFile],
+) -> Vec<OpaqueEntry> {
+    opaque
+        .iter()
+        .cloned()
+        .chain(manufacturer.iter().map(|m| OpaqueEntry {
+            source_path: m.source_path.clone(),
+            xpath: String::new(),
+            kind: m.kind,
+            name: String::new(),
+            bytes: m.bytes.clone(),
+            sha256: m.sha256.clone(),
+        }))
+        .collect()
+}
+
 /// Schema-≥21 counterpart of [`reference_source_document`]: the KV demo
 /// project's `0.xml`, parsed through [`parse_installation_v21`], with its
 /// `project.xml` folded into `document.info` exactly as
@@ -110,10 +138,9 @@ pub(crate) fn reference_kv_source_document() -> SourceDocument {
     let schema = known_schema(21).unwrap();
     let mut c = Container::open(std::fs::read(reference_kv_schema21_path()).unwrap()).unwrap();
     let topology_bytes = c.read("P-03DE/0.xml").unwrap();
-    let mut document =
-        parse_installation_v21(&topology_bytes, "P-03DE/0.xml", schema)
-            .unwrap()
-            .document;
+    let mut document = parse_installation_v21(&topology_bytes, "P-03DE/0.xml", schema)
+        .unwrap()
+        .document;
     let info_bytes = c.read("P-03DE/project.xml").unwrap();
     let (info, _) = parse_project_info(&info_bytes, "P-03DE/project.xml", schema).unwrap();
     document.info = info;

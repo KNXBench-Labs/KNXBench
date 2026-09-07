@@ -727,152 +727,34 @@ fn write_space(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::container::Container;
-    use crate::export::export_knxproj;
-    use crate::known::known_schema;
-    use crate::map::{self, MapOutput};
-    use crate::opaque::{
-        collect_container_entries, from_retained_attribute, from_retained_element,
-    };
-    use crate::parse::{parse_installation_v21, parse_project_info};
-    use crate::source::SourceDocument;
-    use crate::testutil::reference_kv_schema21_path;
+    use crate::testutil::{all_entries, reference_kv_schema21_path};
 
-    /// Parses the KV reference project straight through the schema-≥21
-    /// parser and mapper, and builds exactly the opaque-entry list
-    /// `import_knxproj_bytes` would (container entries plus every retained
-    /// attribute/element, including the per-device
-    /// `ModuleInstances`/`GroupObjectTree`/`Security` splice this task's own
-    /// `lib.rs` change added). Does not go through `import_knxproj`/
-    /// `import_knxproj_bytes` themselves: those still dispatch every schema
-    /// version through the schema-11 parser (Task 8's wiring, not this
-    /// task's — see the module doc comment), which panics on schema-≥21
-    /// XML. `testutil::reference_kv_source_document` takes the same
-    /// shortcut for the same reason.
-    fn import_kv_v21() -> (MapOutput, Vec<OpaqueEntry>) {
-        let bytes = std::fs::read(reference_kv_schema21_path()).unwrap();
-        let mut container = Container::open(bytes).unwrap();
-        let part = container.project_part().unwrap().to_string();
-        let topology_path = format!("{part}/0.xml");
-        let info_path = format!("{part}/project.xml");
-        let schema = known_schema(21).unwrap();
-
-        let topology_bytes = container.read(&topology_path).unwrap();
-        let mut parsed = parse_installation_v21(&topology_bytes, &topology_path, schema).unwrap();
-        let info_bytes = container.read(&info_path).unwrap();
-        let (info, _) = parse_project_info(&info_bytes, &info_path, schema).unwrap();
-        parsed.document.info = info;
-
-        let mapped = map::map(&parsed.document, &topology_path);
-
-        let collected = collect_container_entries(
-            &mut container,
-            &[topology_path.as_str(), info_path.as_str()],
-        )
-        .unwrap();
-        let mut opaque_entries = collected.opaque;
-        for attribute in &mapped.retained {
-            opaque_entries.push(from_retained_attribute(&topology_path, attribute));
-        }
-        for element in &parsed.retained_elements {
-            opaque_entries.push(from_retained_element(&topology_path, element));
-        }
-        splice_device_raw_elements(&parsed.document, &topology_path, &mut opaque_entries);
-        if let Some(raw) = &parsed.document.info.project_traces_raw {
-            opaque_entries.push(from_retained_element(&info_path, raw));
-        }
-
-        (mapped, opaque_entries)
-    }
-
-    /// The exact splice `lib.rs`'s `import_knxproj_bytes` performs (this
-    /// task's own Step 2 change) — reproduced here since the test helper
-    /// above bypasses `import_knxproj_bytes` itself.
-    fn splice_device_raw_elements(
-        document: &SourceDocument,
-        topology_path: &str,
-        opaque_entries: &mut Vec<OpaqueEntry>,
-    ) {
-        for installation in &document.installations {
-            for area in &installation.areas {
-                for line in &area.lines {
-                    for device in &line.devices {
-                        let device_xpath = device_raw_xpath(&device.id);
-                        if let Some(raw) = &device.module_instances_raw {
-                            let mut r = raw.clone();
-                            r.xpath = format!("{device_xpath}/ModuleInstances");
-                            opaque_entries.push(from_retained_element(topology_path, &r));
-                        }
-                        if let Some(raw) = &device.group_object_tree_raw {
-                            let mut r = raw.clone();
-                            r.xpath = format!("{device_xpath}/GroupObjectTree");
-                            opaque_entries.push(from_retained_element(topology_path, &r));
-                        }
-                        if let Some(raw) = &device.security_raw {
-                            let mut r = raw.clone();
-                            r.xpath = format!("{device_xpath}/Security");
-                            opaque_entries.push(from_retained_element(topology_path, &r));
-                        }
-                    }
-                }
-            }
-        }
-    }
-
+    /// The schema-21 counterpart of `tests/roundtrip.rs`'s
+    /// `roundtrip_model_is_semantically_equal`: goes through the real public
+    /// `import_knxproj`/`export_knxproj`/`import_knxproj_bytes` pipeline
+    /// (wired for schema ≥21 since Task 8's `c3ba51d`, not the schema-11-only
+    /// parser/mapper shortcut this test used before that), and checks
+    /// genuine deep semantic equality via `compare::{semantic_view,
+    /// describe_difference}` — including `ModuleInstance` data, now that
+    /// `compare.rs` covers it.
     #[test]
     fn a_schema_21_export_reimports_to_an_equal_domain_model() {
-        let (mapped, opaque_entries) = import_kv_v21();
-        assert_eq!(mapped.project.info.ets_schema_version, 21);
-        assert!(mapped.project.devices.module_instances().count() > 0);
+        let first = crate::import_knxproj(&reference_kv_schema21_path()).unwrap();
+        assert_eq!(first.project.info.ets_schema_version, 21);
+        assert!(first.project.devices.module_instances().count() > 0);
 
-        let exported = export_knxproj(&mapped.project, &opaque_entries).unwrap();
+        let exported = crate::export::export_knxproj(
+            &first.project,
+            &all_entries(&first.opaque, &first.manufacturer),
+        )
+        .unwrap();
+        let second = crate::import_knxproj_bytes(exported.bytes, "KV v2.5 - demo.knxproj").unwrap();
 
-        // Reimported the same way `import_kv_v21` read the original — not
-        // through `import_knxproj_bytes`, for the same not-yet-wired-to-
-        // schema-≥21 reason (see that helper's own doc comment).
-        let mut reexported = Container::open(exported.bytes).unwrap();
-        let re_part = reexported.project_part().unwrap().to_string();
-        let re_topology_path = format!("{re_part}/0.xml");
-        let re_info_path = format!("{re_part}/Project.xml");
-        let schema = known_schema(21).unwrap();
-        let re_topology_bytes = reexported.read(&re_topology_path).unwrap();
-        let mut re_parsed =
-            parse_installation_v21(&re_topology_bytes, &re_topology_path, schema).unwrap();
-        let re_info_bytes = reexported.read(&re_info_path).unwrap();
-        let (re_info, _) = parse_project_info(&re_info_bytes, &re_info_path, schema).unwrap();
-        re_parsed.document.info = re_info;
-        let reimported = map::map(&re_parsed.document, &re_topology_path);
-
-        assert_eq!(
-            reimported.project.devices.iter().count(),
-            mapped.project.devices.iter().count()
-        );
-        assert_eq!(
-            reimported.project.devices.module_instances().count(),
-            mapped.project.devices.module_instances().count()
-        );
-        assert_eq!(
-            reimported.project.devices.com_objects().count(),
-            mapped.project.devices.com_objects().count()
-        );
-        // A representative device's own module instance and communication
-        // object survive by their original ETS ids, not merely by count.
-        let original_device = mapped
-            .project
-            .devices
-            .iter()
-            .find(|d| !d.com_objects.is_empty())
-            .unwrap();
-        let reimported_device = reimported
-            .project
-            .devices
-            .iter()
-            .find(|d| d.source.ets_id == original_device.source.ets_id)
-            .expect("the same device round-trips under the same ETS id");
-        assert_eq!(
-            reimported_device.com_objects.len(),
-            original_device.com_objects.len()
-        );
+        let a = crate::compare::semantic_view(&first.project);
+        let b = crate::compare::semantic_view(&second.project);
+        if let Some(diff) = crate::compare::describe_difference(&a, &b) {
+            panic!("roundtrip changed the model: {diff}");
+        }
     }
 
     #[test]

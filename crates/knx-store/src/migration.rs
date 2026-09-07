@@ -680,9 +680,16 @@ mod tests {
         let conn = Connection::open_in_memory().unwrap();
         conn.pragma_update(None, "foreign_keys", "ON").unwrap();
         migrate(&conn).unwrap(); // runs the full chain including the new migrate_v4_to_v5
-        let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(version, 5);
         conn.execute("INSERT INTO module_instance (id, device_id, position, source_path, source_ets_id, repeat_index) VALUES (1, 0, 0, 't', 't', '6x1')", []).unwrap_err(); // device_id FK: no device(0) exists, expected to fail — proves the FK/table exist
-        conn.query_row("SELECT module_instance_id FROM com_object_instance LIMIT 0", [], |_| Ok(())).ok(); // column exists (no rows to fail on, just proves no "no such column" error at prepare time)
+        conn.query_row(
+            "SELECT module_instance_id FROM com_object_instance LIMIT 0",
+            [],
+            |_| Ok(()),
+        )
+        .ok(); // column exists (no rows to fail on, just proves no "no such column" error at prepare time)
     }
 }

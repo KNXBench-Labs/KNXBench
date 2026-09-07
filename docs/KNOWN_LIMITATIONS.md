@@ -794,8 +794,8 @@ obtained" in tooling/reporting — no fixed cycle.
 
 **Limitation.** `crate::known::SCHEMA_21`/`SCHEMA_23` list several
 attributes with no dedicated field on `SourceDevice`/`SourceLine`:
-`DeviceInstance`'s `Comment`, `SerialNumber`, `IsActivityCalculated`,
-`LastUsedAPDULength`, `ReadMaxAPDULength`, `Puid`; `Segment`'s own `Id`,
+`DeviceInstance`'s `Comment`, `SerialNumber`, `LastUsedAPDULength`,
+`ReadMaxAPDULength`, `Puid`; `Segment`'s own `Id`,
 `Number`, `Puid`; and `Puid` generally, on every element that carries it.
 `map.rs` folds all of these into one project-wide
 `Vec<RetainedAttribute>`, keyed only by their schema-shaped xpath (e.g.
@@ -816,17 +816,10 @@ document-wide singletons like `Installation/@BCUKey` — a granularity
 that was never a problem for schema 11 (every `DeviceInstance` attribute
 there has a dedicated field, so no leftover ever occurs), but surfaces
 for the first time at schema ≥21, where several genuinely do not.
-Separately, `installation_v21.rs`'s `DeviceInstance` arm reads
-`IsCommunicationObjectVisibilityCalculated` (schema 11's attribute name)
-into `SourceDevice::visibility_calculated` instead of schema ≥21's own
-`IsActivityCalculated` — a plain wrong-attribute-name bug, confirmed by
-inspecting the parser against the measured known-element table; every
-schema-≥21 device's `visibility_calculated` is a mapping default, never
-the file's real value.
 
 **Impact.** Round-tripping a schema-≥21 project through this
-application loses `Comment`, `SerialNumber`, `IsActivityCalculated`,
-`LastUsedAPDULength`, `ReadMaxAPDULength` and `Puid` on every device, and
+application loses `Comment`, `SerialNumber`, `LastUsedAPDULength`,
+`ReadMaxAPDULength` and `Puid` on every device, and
 `Id`/`Number`/`Puid` on every `Segment` — cosmetic/bookkeeping data in
 most cases (nothing else in the file refers back to a `Segment`'s own
 `Id`), except `SerialNumber`, which is real hardware identification a
@@ -835,9 +828,7 @@ technician may care about.
 **Lifted when.** `installation_v21.rs`'s parser gains a per-instance
 xpath for `DeviceInstance`'s and `Segment`'s own leftover attributes —
 the same fix Task 5 already applied to `Security` (per-device
-`SourceDevice::security_raw`, not a document-wide bucket) — and the
-`IsActivityCalculated`/`IsCommunicationObjectVisibilityCalculated`
-attribute-name mismatch is corrected in the same pass. Out of scope for
+`SourceDevice::security_raw`, not a document-wide bucket). Out of scope for
 the schema-21/23 import/export plan's Task 7 (export only); tracked here
 for a future fast-follow.
 

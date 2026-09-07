@@ -922,8 +922,8 @@ mod tests {
     /// unit-level round trip.
     #[test]
     fn module_instances_round_trip_through_save_and_load() {
-        use knx_core::module::ModuleInstance;
         use knx_core::ids::ModuleInstanceId;
+        use knx_core::module::ModuleInstance;
 
         let conn = open_and_migrate_in_memory().unwrap();
         let mut project = project_with_one_installation();
@@ -934,10 +934,7 @@ mod tests {
             device: DeviceId(1),
             source: source(),
             repeat_index: "6x1".into(),
-            arguments: vec![
-                (source(), "1".into()),
-                (source(), "0".into()),
-            ],
+            arguments: vec![(source(), "1".into()), (source(), "0".into())],
         });
 
         save_project(&conn, &project).unwrap();

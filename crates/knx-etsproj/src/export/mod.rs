@@ -4,6 +4,7 @@
 //! into a fresh ZIP archive (Task 19).
 
 pub mod schema11;
+pub mod schema21;
 
 pub use schema11::{write_installation_xml, write_project_xml, ExportError};
 
@@ -58,8 +59,17 @@ pub fn export_knxproj(
             .to_string(),
     }];
 
-    let installation_xml = write_installation_xml(project, opaque)?;
-    let project_xml = write_project_xml(project, opaque)?;
+    let (installation_xml, project_xml) = if project.info.ets_schema_version >= 21 {
+        (
+            schema21::write_installation_xml_v21(project, opaque)?,
+            schema21::write_project_xml_v21(project, opaque)?,
+        )
+    } else {
+        (
+            write_installation_xml(project, opaque)?,
+            write_project_xml(project, opaque)?,
+        )
+    };
     let project_id = &project.info.project_id;
     let installation_path = format!("{project_id}/0.xml");
     let project_info_path = format!("{project_id}/Project.xml");

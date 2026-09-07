@@ -726,6 +726,7 @@ async fn linking_then_unlinking_a_com_object_to_a_group_address() {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         });
     let state = knx_server::AppState::default();
     *state.project.lock().unwrap() = Some(project);

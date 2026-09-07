@@ -896,3 +896,51 @@ fixed alongside it since it blocked verifying this slice's own `tsc`
 run. 10 new `vitest` tests (`treeUtils.test.ts` — `findGroupRange`,
 `nestGroupRanges`; `api.test.ts` — the three new endpoints plus the
 `rangeId`-omitted/-included cases), for 76 total.
+
+**T23, second slice (2026-09-07) — Link/Unlink UI.** `apps/knx-web`'s
+comm-object rows in the properties Inspector gain a link list with an
+Unlink button per existing `GroupLink` and an inline add-link row
+(group-address picker + Send/Receive select), closing **B7**
+([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). Unlike the first slice, a
+real backend gap surfaced during scoping, not just a missing frontend
+caller: `knx-projection`'s `ComObjectNode` had no field for a comm
+object's *existing* `GroupLink`s at all — `Command::LinkComObject`/
+`UnlinkComObject` (2026-09-06) could change the model but nothing could
+display what was already linked. `ComObjectNode` gains
+`links: Vec<GroupLinkNode>` (`ga_id`, resolved `address`/`name` — `None`
+on a dangling link rather than panicking, since a `GroupLink` names its
+target by id alone with no installation of its own to search, and this
+stays defensive even though `DeleteGroupAddress` already refuses to
+create that state — and `direction` as `Direction`'s `Debug` form,
+`"Send"`/`"Receive"`, matching `dpt_layer`'s convention and, not
+coincidentally, exactly the string `apps/knx-server`'s
+`parse_direction` expects back from `unlinkComObject`). `Inspector.tsx`
+gains `GroupLinkRow` (Unlink — no `installations[0]` restriction,
+since `Command::UnlinkComObject` doesn't have one) and `NewGroupLinkRow`
+(Link — gated to `installations[0]`'s group addresses, matching
+`Command::LinkComObject`'s own check). 3 new `cargo test -p
+knx-projection` tests (a resolved link, a dangling one, and the existing
+device-detail test gains a `links.is_empty()` assertion) and 2 new
+`vitest` tests (`api.test.ts` — `linkComObject`/`unlinkComObject`), for
+78 `vitest` total; backend route coverage for link/unlink already
+existed (`http_edit_routes.rs`'s
+`linking_then_unlinking_a_com_object_to_a_group_address`, 2026-09-06)
+and needed no change.
+
+**Pre-existing bug found, not fixed this slice (out of scope — see
+below).** `cargo clippy --workspace --all-targets -- -D warnings` — a
+`ci.yml` gate — currently fails on `main`:
+`crates/knx-etsproj/src/parse/installation.rs` and
+`installation_v21.rs`'s `Frame` enums trip `clippy::large_enum_variant`
+(744 vs. 360 bytes between `Device`/`ComObject` variants), evidently
+introduced by the schema-21/23 import work
+(`57c233b`/2026-09-07) and not caught then since that merge predates
+this session running clippy. Confirmed pre-existing (reproduces
+identically on `main` before this slice's changes) and unrelated to
+`knx-web`/`knx-projection`; fixing it means boxing large `Frame`
+variants across two parser files, a separate bounded task, not folded
+into this one. `knx-projection` itself is clippy-clean
+(`cargo clippy -p knx-projection --all-targets -- -D warnings`, run
+standalone since the workspace-wide invocation cannot get past
+`knx-etsproj`'s failure to even reach `knx-projection`'s or
+`knx-server`'s own lints).

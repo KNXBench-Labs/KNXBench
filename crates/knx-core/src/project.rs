@@ -8,7 +8,7 @@ use crate::commissioning::CompletionStatus;
 use crate::devices::Devices;
 use crate::ids::{
     AreaId, BuildingPartId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId, LineId,
-    ParameterInstanceId,
+    ModuleInstanceId, ParameterInstanceId,
 };
 use crate::installation::Installation;
 use crate::string_table::{Language, StringTable};
@@ -16,7 +16,7 @@ use crate::string_table::{Language, StringTable};
 /// The schema version this build of the domain model writes. Mirrored into
 /// SQLite's `user_version` pragma by `knx-store`; there is no
 /// version-skipping migration path and no downgrade (ADR-0003).
-pub const CURRENT_SCHEMA_VERSION: u32 = 4;
+pub const CURRENT_SCHEMA_VERSION: u32 = 5;
 
 /// Synthetic, project-unique id counters. Ids start at 1; 0 is never
 /// allocated, which leaves it free for tests to use as an obviously-fake id.
@@ -30,6 +30,7 @@ pub struct IdAllocators {
     group_address: u32,
     building_part: u32,
     parameter_instance: u32,
+    module_instance: u32,
 }
 
 macro_rules! next_id {
@@ -72,6 +73,10 @@ impl IdAllocators {
         next_id!(self, parameter_instance, ParameterInstanceId)
     }
 
+    pub fn next_module_instance_id(&mut self) -> ModuleInstanceId {
+        next_id!(self, module_instance, ModuleInstanceId)
+    }
+
     pub fn peek_device(&self) -> u32 {
         self.device
     }
@@ -96,6 +101,9 @@ impl IdAllocators {
     pub fn peek_parameter_instance(&self) -> u32 {
         self.parameter_instance
     }
+    pub fn peek_module_instance(&self) -> u32 {
+        self.module_instance
+    }
 
     /// Reconstructs an `IdAllocators` at exactly the counts given —
     /// `knx-store::load_project`'s way of restoring allocator state so a
@@ -110,6 +118,7 @@ impl IdAllocators {
         group_address: u32,
         building_part: u32,
         parameter_instance: u32,
+        module_instance: u32,
     ) -> Self {
         Self {
             device,
@@ -120,6 +129,7 @@ impl IdAllocators {
             group_address,
             building_part,
             parameter_instance,
+            module_instance,
         }
     }
 }
@@ -143,6 +153,11 @@ pub struct ProjectInfo {
     pub completion: CompletionStatus,
     pub last_modified: Option<DateTime<Utc>>,
     pub project_start: Option<DateTime<Utc>>,
+    /// The ETS project XML's own schema version (11, 21 or 23) — unrelated
+    /// to `CURRENT_SCHEMA_VERSION`, which is this crate's persistence-format
+    /// version. Schema 11 devices carry a monolithic application program;
+    /// schema ≥21 devices are module-based (ADR-0013).
+    pub ets_schema_version: u32,
 }
 
 impl Default for ProjectInfo {
@@ -156,6 +171,7 @@ impl Default for ProjectInfo {
             completion: CompletionStatus::Undefined,
             last_modified: None,
             project_start: None,
+            ets_schema_version: 11,
         }
     }
 }

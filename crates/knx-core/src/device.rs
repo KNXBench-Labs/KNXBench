@@ -10,7 +10,7 @@ use crate::address::IndividualAddress;
 use crate::commissioning::CommissioningState;
 use crate::dpt::DptRef;
 use crate::flags::{GroupLink, ObjectSize, ResolvedFlags};
-use crate::ids::{ComObjectInstanceId, DeviceId, SourceRef};
+use crate::ids::{ComObjectInstanceId, DeviceId, ModuleInstanceId, SourceRef};
 use crate::provenance::{Override, Resolved};
 use crate::string_table::Text;
 
@@ -65,6 +65,11 @@ pub struct ComObjectInstance {
     pub size: Option<Resolved<ObjectSize>>,
     pub is_active: bool,
     pub links: Vec<GroupLink>,
+    /// `None` for a schema-11-shaped monolithic-program device; `Some` for
+    /// a module-based one (ADR-0013). Resolves this object's DPT/Text
+    /// defaults through `ModuleInstance` → `ModuleDef` → `ComObjectRef` →
+    /// `ComObject` instead of the direct `ApplicationProgram` chain.
+    pub module_instance: Option<ModuleInstanceId>,
 }
 
 #[cfg(test)]
@@ -139,6 +144,7 @@ mod tests {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         }
     }
 

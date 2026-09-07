@@ -102,7 +102,17 @@ pub fn enrich(
         };
         report.devices_resolved += 1;
         for (com_id, ref_id) in coms {
-            let Some(view) = com_object_view(conn, &program_id, &ref_id)? else {
+            let is_module_based = project
+                .devices
+                .com_object(com_id)
+                .and_then(|c| c.module_instance)
+                .is_some();
+            let lookup_id = if is_module_based {
+                module_ref_id(&program_id, &ref_id).unwrap_or_else(|| ref_id.clone())
+            } else {
+                ref_id.clone()
+            };
+            let Some(view) = com_object_view(conn, &program_id, &lookup_id)? else {
                 report.issues.push(EnrichmentIssue::ComObjectRefMissing {
                     device_ets_id: device_ets_id.clone(),
                     ref_id,
@@ -115,6 +125,22 @@ pub fn enrich(
         }
     }
     Ok(report)
+}
+
+/// Reconstructs a module-based communication object's fully-qualified
+/// `ComObjectRef` id from its device-level `RefId` and the resolved
+/// application-program id — the productdb-local twin of
+/// `knx-etsproj::values::module_com_object_ref`, duplicated rather than
+/// shared across the crate boundary (see this task's rationale: avoiding
+/// a new knx-productdb → knx-etsproj dependency edge for ~10 lines).
+fn module_ref_id(program_id: &str, device_ref_id: &str) -> Option<String> {
+    let rest = device_ref_id.strip_prefix("MD-")?;
+    let (md_digits, rest) = rest.split_once('_')?;
+    let mut parts = rest.splitn(3, '_');
+    parts.next()?; // M-<m>
+    parts.next()?; // MI-<k>
+    let tail = parts.next()?; // O-<a>-<b>_R-<c>
+    Some(format!("{program_id}_MD-{md_digits}_{tail}"))
 }
 
 /// Writes `value` only into an `Override::Absent` slot. Every other state
@@ -331,6 +357,7 @@ mod tests {
             size: None,
             is_active: true,
             links: vec![],
+            module_instance: None,
         });
         p
     }
@@ -470,5 +497,108 @@ mod tests {
         let report = enrich(&mut p, &conn).unwrap();
         assert!(!report.available);
         assert_eq!(report.com_objects_enriched, 0);
+    }
+
+    // A second Hardware/Program pair, module-based (schema ≥21, ADR-0013) —
+    // same XML shape Task 9 used to prove ingestion works, duplicated here
+    // (not imported across the module.rs/program.rs test boundary — this
+    // crate's tests don't share fixtures across files) plus a Hardware2Program
+    // link so `resolve_program` can reach it the same way `db()`'s existing
+    // fixture reaches `PROGRAM`.
+    const MODULE_HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/21"><ManufacturerData><Manufacturer RefId="M-00FA">
+<Hardware><Hardware Id="H-2" Name="Y" SerialNumber="S2" VersionNumber="1">
+<Hardware2Programs><Hardware2Program Id="H-2_HP-1" MediumTypes="MT-0">
+<ApplicationProgramRef RefId="M-00FA_A-2504-10-C071" /></Hardware2Program></Hardware2Programs>
+</Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
+
+    const MODULE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/21"><ManufacturerData><Manufacturer RefId="M-00FA">
+<ApplicationPrograms><ApplicationProgram Id="M-00FA_A-2504-10-C071" Name="P" ApplicationVersion="10" MaskVersion="MV-0701">
+<Static><ComObjectTable/><ComObjectRefs/></Static>
+<ModuleDefs><ModuleDef Id="M-00FA_A-2504-10-C071_MD-2" Name="module">
+<Static>
+<ComObjectTable>
+  <ComObject Id="M-00FA_A-2504-10-C071_MD-2_O-2-0" Number="0" Text="OnOff" ObjectSize="1 Bit" DatapointType="DPST-1-1" WriteFlag="Enabled" />
+</ComObjectTable>
+<ComObjectRefs>
+  <ComObjectRef Id="M-00FA_A-2504-10-C071_MD-2_O-2-0_R-1" RefId="M-00FA_A-2504-10-C071_MD-2_O-2-0" />
+</ComObjectRefs>
+</Static>
+</ModuleDef></ModuleDefs>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    fn db_with_module_program() -> (tempfile::TempDir, Connection) {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_hardware(&conn, "sha-h2", "M-00FA/Hardware.xml", MODULE_HARDWARE.as_bytes()).unwrap();
+        ingest_program(&conn, "sha-mod", "M-00FA/A.xml", MODULE_PROGRAM.as_bytes()).unwrap();
+        (dir, conn)
+    }
+
+    /// One device with one module-based communication object (ADR-0013):
+    /// `module_instance: Some(..)`, `source.ets_id` the raw, unstripped
+    /// device-level `RefId` `enrich()` must transform before lookup.
+    fn project_with_module_com_object(ets_id: &str) -> Project {
+        let mut p = Project::new(Language("de-DE".into()));
+        let device_id = p.ids.next_device_id();
+        let com_id = p.ids.next_com_object_instance_id();
+        let module_id = p.ids.next_module_instance_id();
+        p.devices.insert_module_instance(knx_core::ModuleInstance {
+            id: module_id,
+            device: device_id,
+            source: source("MD-2_M-1"),
+            repeat_index: "6x1".into(),
+            arguments: vec![],
+        });
+        p.devices.insert(DeviceInstance {
+            id: device_id,
+            source: source("P-0001-0_DI-1"),
+            name: "D".into(),
+            description: None,
+            address: None,
+            product_ref: "H-2_P-1".into(),
+            program_ref: "H-2_HP-1".into(),
+            commissioning: Default::default(),
+            visibility_calculated: false,
+            com_objects: vec![com_id],
+            binary_data: vec![],
+        });
+        p.devices.insert_com_object(ComObjectInstance {
+            id: com_id,
+            source: source(ets_id),
+            device: device_id,
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: Some(module_id),
+        });
+        p
+    }
+
+    #[test]
+    fn a_module_based_com_object_is_enriched_through_the_module_hop() {
+        let (_dir, conn) = db_with_module_program();
+        let mut p = project_with_module_com_object("MD-2_M-1_MI-1_O-2-0_R-1");
+        let report = enrich(&mut p, &conn).unwrap();
+        assert_eq!(report.com_objects_enriched, 1);
+        let com = p
+            .devices
+            .com_object(knx_core::ComObjectInstanceId(1))
+            .unwrap();
+        match &com.text {
+            Override::Value(r) => {
+                assert_eq!(
+                    p.strings.text(&r.value, p.strings.default_language()),
+                    Some("OnOff")
+                );
+            }
+            other => panic!("expected a program-layer text, got {other:?}"),
+        }
     }
 }

@@ -69,14 +69,14 @@ impl std::error::Error for ExportError {}
 /// The tool identity this exporter writes into `KNX/@CreatedBy`/
 /// `@ToolVersion` — see the module doc comment for why this is not the
 /// original ETS tool identity.
-const EXPORTER_NAME: &str = "knx-etsproj";
-const EXPORTER_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub(crate) const EXPORTER_NAME: &str = "knx-etsproj";
+pub(crate) const EXPORTER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Known-but-not-modeled attributes, keyed by the schema-shaped
 /// `(xpath, name)` [`crate::known`] itself uses.
-type RetainedAttrs = BTreeMap<(String, String), String>;
+pub(crate) type RetainedAttrs = BTreeMap<(String, String), String>;
 
-fn retained_attrs(opaque: &[OpaqueEntry]) -> RetainedAttrs {
+pub(crate) fn retained_attrs(opaque: &[OpaqueEntry]) -> RetainedAttrs {
     opaque
         .iter()
         .filter(|e| e.kind == OpaqueKind::RetainedAttribute)
@@ -92,7 +92,7 @@ fn retained_attrs(opaque: &[OpaqueEntry]) -> RetainedAttrs {
 /// Retained elements ([`crate::source::RetainedElement`], raw XML bytes),
 /// keyed by their own schema-shaped xpath. Only `BusAccess` uses this path
 /// today.
-fn retained_elements(opaque: &[OpaqueEntry]) -> BTreeMap<String, Vec<u8>> {
+pub(crate) fn retained_elements(opaque: &[OpaqueEntry]) -> BTreeMap<String, Vec<u8>> {
     opaque
         .iter()
         .filter(|e| e.kind == OpaqueKind::RetainedElement)
@@ -102,50 +102,54 @@ fn retained_elements(opaque: &[OpaqueEntry]) -> BTreeMap<String, Vec<u8>> {
 
 /// Accumulates one element's attributes in schema order, filling gaps from
 /// the retained-attribute store last.
-struct Attrs(Vec<(String, String)>);
+pub(crate) struct Attrs(Vec<(String, String)>);
 
 impl Attrs {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self(Vec::new())
     }
 
-    fn push(&mut self, name: &str, value: impl Into<String>) -> &mut Self {
+    pub(crate) fn push(&mut self, name: &str, value: impl Into<String>) -> &mut Self {
         self.0.push((name.to_string(), value.into()));
         self
     }
 
-    fn opt(&mut self, name: &str, value: &Option<String>) -> &mut Self {
+    pub(crate) fn opt(&mut self, name: &str, value: &Option<String>) -> &mut Self {
         if let Some(v) = value {
             self.push(name, v.clone());
         }
         self
     }
 
-    fn opt_display(&mut self, name: &str, value: Option<impl std::fmt::Display>) -> &mut Self {
+    pub(crate) fn opt_display(
+        &mut self,
+        name: &str,
+        value: Option<impl std::fmt::Display>,
+    ) -> &mut Self {
         if let Some(v) = value {
             self.push(name, v.to_string());
         }
         self
     }
 
-    fn required_bool(&mut self, name: &str, value: bool) -> &mut Self {
+    pub(crate) fn required_bool(&mut self, name: &str, value: bool) -> &mut Self {
         self.push(name, if value { "1" } else { "0" })
     }
 
-    fn opt_bool(&mut self, name: &str, value: Option<bool>) -> &mut Self {
+    pub(crate) fn opt_bool(&mut self, name: &str, value: Option<bool>) -> &mut Self {
         if let Some(v) = value {
             self.required_bool(name, v);
         }
         self
     }
 
-    fn has(&self, name: &str) -> bool {
+    pub(crate) fn has(&self, name: &str) -> bool {
         self.0.iter().any(|(n, _)| n == name)
     }
 
     /// Fills every attribute this element's schema-shaped `xpath` has in
     /// the retained store, skipping any name the model already wrote.
-    fn fill_retained(&mut self, retained: &RetainedAttrs, xpath: &str) -> &mut Self {
+    pub(crate) fn fill_retained(&mut self, retained: &RetainedAttrs, xpath: &str) -> &mut Self {
         for ((x, name), value) in retained {
             if x == xpath && !self.has(name) {
                 self.push(name, value.clone());
@@ -164,7 +168,7 @@ impl Attrs {
 /// spell their booleans `"Enabled"`/`"Disabled"` on schema 11 — measured,
 /// RESEARCH §3.3's amendment — never `"1"`/`"0"`, which is every other
 /// schema-11 boolean attribute's spelling.
-fn push_override_flag(attrs: &mut Attrs, name: &str, o: &Override<bool>) {
+pub(crate) fn push_override_flag(attrs: &mut Attrs, name: &str, o: &Override<bool>) {
     match o {
         Override::Absent => {}
         Override::Empty => {
@@ -180,7 +184,7 @@ fn push_override_flag(attrs: &mut Attrs, name: &str, o: &Override<bool>) {
     }
 }
 
-fn push_override_dpt(attrs: &mut Attrs, name: &str, o: &Override<DptRef>) {
+pub(crate) fn push_override_dpt(attrs: &mut Attrs, name: &str, o: &Override<DptRef>) {
     match o {
         Override::Absent => {}
         Override::Empty => {
@@ -204,7 +208,12 @@ fn push_override_dpt(attrs: &mut Attrs, name: &str, o: &Override<DptRef>) {
 /// `ProgramRef`, which `is_exported()` already excludes — the `strings`
 /// lookup below is defensive completeness, not a path this session's data
 /// exercises.
-fn push_override_text(attrs: &mut Attrs, name: &str, o: &Override<Text>, strings: &StringTable) {
+pub(crate) fn push_override_text(
+    attrs: &mut Attrs,
+    name: &str,
+    o: &Override<Text>,
+    strings: &StringTable,
+) {
     match o {
         Override::Absent => {}
         Override::Empty => {
@@ -232,7 +241,7 @@ fn completion_status_str(c: CompletionStatus) -> &'static str {
     }
 }
 
-fn group_address_style_str(s: GroupAddressStyle) -> &'static str {
+pub(crate) fn group_address_style_str(s: GroupAddressStyle) -> &'static str {
     match s {
         GroupAddressStyle::Free => "Free",
         GroupAddressStyle::TwoLevel => "TwoLevel",
@@ -240,7 +249,7 @@ fn group_address_style_str(s: GroupAddressStyle) -> &'static str {
     }
 }
 
-fn building_part_type_str(k: BuildingPartType) -> &'static str {
+pub(crate) fn building_part_type_str(k: BuildingPartType) -> &'static str {
     match k {
         BuildingPartType::Building => "Building",
         BuildingPartType::Floor => "Floor",
@@ -255,7 +264,7 @@ fn building_part_type_str(k: BuildingPartType) -> &'static str {
 /// counterpart): the internal `DateTime<Utc>` is treated as if its clock
 /// reading were already local, per that function's documented assumption,
 /// so formatting drops the offset rather than converting through it.
-fn format_timestamp(dt: DateTime<Utc>) -> String {
+pub(crate) fn format_timestamp(dt: DateTime<Utc>) -> String {
     dt.format("%Y-%m-%dT%H:%M:%S").to_string()
 }
 
@@ -263,11 +272,15 @@ fn format_timestamp(dt: DateTime<Utc>) -> String {
 // `quick_xml::Result`: `Vec<u8>` is a plain `std::io::Write`, so quick-xml
 // reports write failures through `io::Error`, not its own `Error` type
 // (which `write_raw_element`'s `Reader::read_event` still uses).
-fn xml_err(e: std::io::Error) -> ExportError {
+pub(crate) fn xml_err(e: std::io::Error) -> ExportError {
     ExportError::Xml(e.to_string())
 }
 
-fn open(writer: &mut Writer<Vec<u8>>, name: &str, attrs: &Attrs) -> Result<(), ExportError> {
+pub(crate) fn open(
+    writer: &mut Writer<Vec<u8>>,
+    name: &str,
+    attrs: &Attrs,
+) -> Result<(), ExportError> {
     let mut elem = BytesStart::new(name);
     for (k, v) in &attrs.0 {
         elem.push_attribute((k.as_str(), v.as_str()));
@@ -275,7 +288,11 @@ fn open(writer: &mut Writer<Vec<u8>>, name: &str, attrs: &Attrs) -> Result<(), E
     writer.write_event(Event::Start(elem)).map_err(xml_err)
 }
 
-fn empty(writer: &mut Writer<Vec<u8>>, name: &str, attrs: &Attrs) -> Result<(), ExportError> {
+pub(crate) fn empty(
+    writer: &mut Writer<Vec<u8>>,
+    name: &str,
+    attrs: &Attrs,
+) -> Result<(), ExportError> {
     let mut elem = BytesStart::new(name);
     for (k, v) in &attrs.0 {
         elem.push_attribute((k.as_str(), v.as_str()));
@@ -283,7 +300,7 @@ fn empty(writer: &mut Writer<Vec<u8>>, name: &str, attrs: &Attrs) -> Result<(), 
     writer.write_event(Event::Empty(elem)).map_err(xml_err)
 }
 
-fn close(writer: &mut Writer<Vec<u8>>, name: &str) -> Result<(), ExportError> {
+pub(crate) fn close(writer: &mut Writer<Vec<u8>>, name: &str) -> Result<(), ExportError> {
     writer
         .write_event(Event::End(BytesEnd::new(name)))
         .map_err(xml_err)
@@ -294,7 +311,10 @@ fn close(writer: &mut Writer<Vec<u8>>, name: &str) -> Result<(), ExportError> {
 /// the same writer that is producing everything else, so it participates
 /// in the same indentation instead of being spliced in as an untouched
 /// byte run.
-fn write_raw_element(writer: &mut Writer<Vec<u8>>, raw: &[u8]) -> Result<(), ExportError> {
+pub(crate) fn write_raw_element(
+    writer: &mut Writer<Vec<u8>>,
+    raw: &[u8],
+) -> Result<(), ExportError> {
     let mut reader = quick_xml::Reader::from_reader(raw);
     let event = reader
         .read_event()
@@ -781,7 +801,7 @@ fn write_building_part(
     Ok(())
 }
 
-fn write_group_range(
+pub(crate) fn write_group_range(
     writer: &mut Writer<Vec<u8>>,
     by_id: &BTreeMap<knx_core::GroupRangeId, &GroupRange>,
     addresses: &[GroupAddressEntry],

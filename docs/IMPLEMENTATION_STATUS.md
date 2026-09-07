@@ -435,7 +435,7 @@ across the workspace (up from 314), plus 64 `vitest` tests in
 | --- | --- |
 | `Cargo.toml`, `rust-toolchain.toml` | Workspace root; toolchain pinned to Rust 1.98.0. |
 | `crates/knx-core/` | Domain model per [DATA_MODEL.md](DATA_MODEL.md), sections 1–9 and 11. No IO. |
-| `crates/knx-store/` | SQLite schema-version migration chain through v4 (`migration.rs`), the opaque passthrough table (`opaque.rs`), the manufacturer manifest table (`manifest.rs`, Session 4), full `knx_core::Project` entity persistence (`project.rs`, `strings.rs`, `topology.rs`, `building.rs`, `devices.rs`, `group.rs`, `parameter.rs`, `command_sync.rs` — Session 5 cycle 2), and four frozen fixtures. |
+| `crates/knx-store/` | SQLite schema-version migration chain through v5 (`migration.rs`), the opaque passthrough table (`opaque.rs`), the manufacturer manifest table (`manifest.rs`, Session 4), full `knx_core::Project` entity persistence (`project.rs`, `strings.rs`, `topology.rs`, `building.rs`, `devices.rs`, `group.rs`, `parameter.rs`, `command_sync.rs` — Session 5 cycle 2), and four frozen fixtures. |
 | `crates/knx-etsproj/` | The full six-stage `.knxproj` import/export pipeline — see the Session 3 paragraph above. Hands manufacturer files out separately from opaque entries (Session 4). No dependency on `knx-store`. |
 | `crates/knx-productdb/` | The shared product database: own SQLite migration chain, streaming manufacturer-XML ingest, and enrichment of `ComObjectInstance` — see the Session 4 paragraph above. No dependency on `knx-etsproj` or `knx-store`. |
 | `crates/knx-projection/` | Pure `Project` → `ProjectTree` projection with `ts-rs` TypeScript bindings, including `GroupAddressNode` on `InstallationNode` (Session 5 cycle 5) — see the Session 5 paragraph above. No dependency beyond `knx-core`; the fourth `check-layering` root. |
@@ -852,9 +852,13 @@ Known gaps carried forward, none blocking Session 5:
   (RESEARCH §4.2, KNOWN_LIMITATIONS §12) — resolving it needs more context
   (e.g. a linked group address's own DPT) than one communication object
   alone carries.
-- Schema 23's known-element table does not exist; schema 23 is detected and
-  refused by name, not misread (RESEARCH §3.3, [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §1).
-  Schema 23 manufacturer data shares this blocker.
+- Schema 21 import+export shipped and round-trip verified against one
+  sample (the KNX Association `KV v2.5` demo project); schema 23 import
+  shipped, module-based application-program handling inferred from schema
+  21's measured shape, not independently evidenced — no round-trip claim
+  (RESEARCH §3.4, [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §1). Schema
+  23 manufacturer data ingestion is unaffected by this and remains its own
+  gap (KNOWN_LIMITATIONS §12).
 - `.knxprod` direct ingest for master data scheme ≥ 12 remains unsupported
   (KNOWN_LIMITATIONS §11); manufacturer data still reaches the product
   database only via a `.knxproj` that already contains it.

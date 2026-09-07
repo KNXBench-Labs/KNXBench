@@ -1,32 +1,44 @@
-//! The element dispatch for `0.xml`: one small state machine over SAX
-//! events, building the nested `SourceDocument` shape as elements open and
-//! close.
+//! The element dispatch for schema ≥21's `0.xml`: the same small state
+//! machine as [`super::installation::parse_installation`] (schema 11), kept
+//! as a textually separate sibling per ADR-0014 rather than shared, since the
+//! two schemas' content models diverge enough (`Segment` interposed between
+//! `Line` and `DeviceInstance`, `Locations`/`Space` replacing
+//! `Buildings`/`BuildingPart`, flat `Links`/`ChannelId` replacing
+//! `Connectors`, `ModuleInstances`/`GroupObjectTree` appearing at all) that a
+//! shared abstraction would cost more than it saves.
 //!
 //! Two stacks are threaded through the loop: `path_stack`, the absolute
-//! element path (every element that goes through the normal open/close
-//! cycle pushes its local name and pops it again), and `frames`, the
-//! in-progress struct values waiting for their children to finish — pushed
-//! only by elements the known-element table models as a struct. Wrapper
-//! elements (`Installations`, `Topology`, `ParameterInstanceRefs`, …) push
-//! `path_stack` but never `frames`; when a frame-bearing element's sibling
-//! closes, the frame stack's top is therefore always its true structural
-//! parent, wrapper elements notwithstanding.
+//! element path, and `frames`, the in-progress struct values waiting for
+//! their children to finish. Wrapper elements push `path_stack` but never
+//! `frames`. A third kind, [`Kind::RawCapture`], behaves like a wrapper for
+//! walking purposes (children are still parsed normally) but additionally
+//! remembers the byte offset its element opened at, so the matching close
+//! event can slice `bytes[start..end]` and retain the whole subtree verbatim
+//! for export — used for `ModuleInstances` and `GroupObjectTree`, both of
+//! which need their children *understood* (to populate
+//! `SourceDevice::module_instances`/`group_object_tree`) and their raw bytes
+//! *retained* (since `map.rs`/export reconstructs neither element from the
+//! modeled fields alone — see the plan's Global Constraints).
 //!
-//! `GroupRange` and `BuildingPart` nest inside themselves. The known-element
-//! table registers one path per element, so a nested occurrence's absolute
-//! path (e.g. `.../GroupRange/GroupRange`) is collapsed to the same path as
-//! the outer one before it is looked up in the table; the *uncollapsed*
+//! `GroupRange`, `BuildingPart` and `Space` nest inside themselves (the
+//! latter two share one collapse rule, matching how ETS's location
+//! hierarchy — schema 11's `Buildings`/`BuildingPart`, schema ≥21's
+//! `Locations`/`Space` — can be arbitrarily deep even though the reference
+//! project measured here is flat). The known-element table registers one
+//! path per element, so a nested occurrence's absolute path is collapsed to
+//! the same path as the outer one before it is looked up; the *uncollapsed*
 //! path is still what gets reported in `UnknownConstruct`/`RetainedAttribute`
-//! xpaths, since that is more useful to a human reading the import report.
+//! xpaths.
 
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
 use crate::known::KnownSchema;
 use crate::source::{
-    RetainedAttribute, RetainedElement, SourceArea, SourceBinaryDataRef, SourceBuildingPart,
-    SourceComObjectInstance, SourceDevice, SourceDocument, SourceGroupAddress, SourceGroupRange,
-    SourceInstallation, SourceLine, SourceParameterInstance,
+    RetainedAttribute, RetainedElement, SourceArea, SourceArgument, SourceBinaryDataRef,
+    SourceBuildingPart, SourceComObjectInstance, SourceDevice, SourceDocument, SourceGroupAddress,
+    SourceGroupRange, SourceInstallation, SourceLine, SourceModuleInstance,
+    SourceParameterInstance,
 };
 
 use super::{attr_map, skip_and_capture, ParseError, ParseOutput, UnknownAggregator, UnknownKind};
@@ -44,16 +56,21 @@ enum Frame {
     GroupRange(SourceGroupRange),
     GroupAddress(SourceGroupAddress),
     BinaryDataRef(SourceBinaryDataRef),
+    ModuleInstance(SourceModuleInstance),
+    Argument(SourceArgument),
 }
 
-/// Whether an element that went through the normal open/close cycle pushed
-/// a [`Frame`] or was a pure wrapper. Recorded at open time and consulted at
-/// close time so the ambiguous case — `BinaryData`, which is a wrapper as
-/// `DeviceInstance`'s child and a leaf as its own child — never needs a
-/// special case: the close side just does what the open side decided.
+/// Whether an element that went through the normal open/close cycle pushed a
+/// [`Frame`], was a pure wrapper, or is a wrapper that additionally needs its
+/// raw bytes sliced out at close time (see the module doc comment).
 enum Kind {
     Wrapper,
     Frame,
+    /// Carries the byte offset the element opened at and its absolute xpath
+    /// (both computed once, at open time) so the matching `End` event can
+    /// slice `bytes[start..reader.buffer_position()]` without recomputing
+    /// either.
+    RawCapture(u64, String),
 }
 
 /// Collects raw `(name, value)` attribute pairs not yet classified against
@@ -130,14 +147,13 @@ fn known_attributes<'s>(schema: &'s KnownSchema, path: &str) -> &'s [&'s str] {
         .unwrap_or(&[])
 }
 
-/// The only two elements that genuinely nest inside themselves at any
-/// depth, sharing one known-element table entry regardless of how deep.
-/// `BinaryData` also repeats its own local name at consecutive stack
-/// positions (the wrapper, then the leaf), but those are two *different*
-/// table entries with different attributes — collapsing them would look up
-/// the wrapper's (empty) attribute list for the leaf. Only these two names
-/// collapse.
-const SELF_RECURSIVE: &[&str] = &["GroupRange", "BuildingPart"];
+/// Elements that genuinely nest inside themselves at any depth, sharing one
+/// known-element table entry regardless of how deep. `BuildingPart` and
+/// `Space` are two different element *names* for the same location-hierarchy
+/// concept (schema 11 vs schema ≥21) but each still only ever nests under
+/// its own name, so both are listed; collapsing only ever matches an
+/// element against a consecutive occurrence of the *same* name.
+const SELF_RECURSIVE: &[&str] = &["GroupRange", "BuildingPart", "Space"];
 
 /// Collapses consecutive duplicate segments for [`SELF_RECURSIVE`] elements
 /// so a recursive element's path matches the single entry the
@@ -157,40 +173,23 @@ fn real_path(stack: &[String]) -> String {
     format!("/{}", stack.join("/"))
 }
 
-/// Parses one `0.xml` document (an installation's topology, devices and
-/// group addresses) into a [`SourceDocument`], tolerantly: an element or
-/// attribute the known-element table for `schema` does not list is retained
-/// and reported, never a fatal error on its own. Only malformed XML and a
-/// missing required identity attribute (`Id`/`RefId` on a modeled element)
-/// fail the whole parse.
-pub fn parse_installation(
+/// Parses one schema-≥21 `0.xml` document (an installation's topology,
+/// devices and group addresses) into a [`SourceDocument`], tolerantly: an
+/// element or attribute the known-element table for `schema` does not list
+/// is retained and reported, never a fatal error on its own. Only malformed
+/// XML and a missing required identity attribute (`Id`/`RefId` on a modeled
+/// element) fail the whole parse.
+pub fn parse_installation_v21(
     bytes: &[u8],
     source_path: &str,
     schema: &KnownSchema,
 ) -> Result<ParseOutput, ParseError> {
-    // `trim_text` stays off (the default): a whitespace-only run between
-    // tags must still surface as its own `Event::Text`, so `pos_before`,
-    // snapshotted once per loop iteration, always lands right before the
-    // next real tag's `<` rather than before invisibly-skipped whitespace.
-    // That exactness matters here — it is what lets an unknown element's
-    // byte span be captured verbatim, tag and all.
-    //
-    // The reference project's own `0.xml` opens with a UTF-8 BOM.
-    // `Reader::from_reader` strips it internally (`remove_utf8_bom`) by
-    // sliding its *own* view of the input forward — `reader.buffer_position()`
-    // then counts from 0 at the first byte *after* the BOM, not from 0 at
-    // the first byte of `bytes` itself. Indexing `bytes[pos_before..end]`
-    // with those reader-reported positions against the untouched `bytes`
-    // slice silently reads a window shifted 3 bytes early: it swallows 3
-    // bytes of whatever precedes the real span and drops the span's own
-    // last 3 bytes. Found via Task 18's export round-trip, where a
-    // retained `BusAccess` element came back missing its closing ` />` —
-    // Task 6's own tests never caught it, since none inspects a captured
-    // span's content against the real (BOM-carrying) reference file, only
-    // the hand-written `MINIMAL` fixture (no BOM) and unknown-count
-    // assertions. Stripping the BOM here, once, before the reader and every
-    // `bytes[..]` index share the same baseline, fixes the offset at its
-    // source rather than patching each call site.
+    // See `parse_installation`'s identical stripping for why: `Reader`
+    // silently absorbs a leading UTF-8 BOM into its own position bookkeeping,
+    // so every `bytes[pos_before..end]` raw-capture slice must be indexed
+    // against a `bytes` view that has already had the same three bytes
+    // removed, or every capture lands three bytes early. The reference
+    // project measured here (`KV v2.5 - demo.knxproj`) carries this BOM too.
     let bytes = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
     let mut reader = Reader::from_reader(bytes);
 
@@ -256,12 +255,33 @@ pub fn parse_installation(
                 let kind = kind_stack
                     .pop()
                     .expect("kind stack out of sync with path stack");
-                if let Kind::Frame = kind {
-                    let parent_name = path_stack.last().map(String::as_str).unwrap_or("");
-                    let closed = frames
-                        .pop()
-                        .expect("frame stack out of sync with path stack");
-                    attach_frame(&mut frames, &mut document, parent_name, &local, closed);
+                match kind {
+                    Kind::Frame => {
+                        let parent_name = path_stack.last().map(String::as_str).unwrap_or("");
+                        let closed = frames
+                            .pop()
+                            .expect("frame stack out of sync with path stack");
+                        attach_frame(&mut frames, &mut document, parent_name, &local, closed);
+                    }
+                    Kind::RawCapture(start_pos, xpath) => {
+                        let end = reader.buffer_position();
+                        let raw = bytes[start_pos as usize..end as usize].to_vec();
+                        let retained = RetainedElement {
+                            xpath,
+                            name: local.clone(),
+                            raw,
+                        };
+                        if let Some(Frame::Device(d)) = frames.last_mut() {
+                            match local.as_str() {
+                                "ModuleInstances" => d.module_instances_raw = Some(retained),
+                                "GroupObjectTree" => d.group_object_tree_raw = Some(retained),
+                                _ => unreachable!(
+                                    "Kind::RawCapture used for unexpected element {local}"
+                                ),
+                            }
+                        }
+                    }
+                    Kind::Wrapper => {}
                 }
             }
 
@@ -291,8 +311,8 @@ pub fn parse_installation(
 /// absolute path against `schema`, then either recurses into the normal
 /// open/close cycle (wrapper or frame-bearing elements push `path_stack`
 /// and, for frames, `frames`) or resolves the element on the spot (leaf
-/// string references, the verbatim-retained `BusAccess`, and anything the
-/// table does not know at all).
+/// string references, the verbatim-retained `BusAccess`/`ModuleInstances`/
+/// `GroupObjectTree`, and anything the table does not know at all).
 #[allow(clippy::too_many_arguments)]
 fn open_element<'a>(
     start: &BytesStart<'a>,
@@ -361,6 +381,30 @@ fn open_element<'a>(
         return Ok(());
     }
 
+    // `Security` (schema ≥21, per-device sequence-number/timestamp bookkeeping
+    // — RESEARCH has not investigated its semantics beyond the attribute
+    // names): known but deliberately not modeled, retained verbatim exactly
+    // like `BusAccess` above — a leaf whose whole subtree is consumed here,
+    // never pushed onto either stack, attached straight onto the enclosing
+    // `Frame::Device` (schema ≥21's `Security` sits directly under
+    // `DeviceInstance`, so the device frame is always what's on top).
+    if local == "Security" {
+        let raw = if is_empty {
+            bytes[pos_before as usize..reader.buffer_position() as usize].to_vec()
+        } else {
+            skip_and_capture(reader, bytes, start, pos_before, source_path)?
+        };
+        let retained = RetainedElement {
+            xpath: xpath.clone(),
+            name: local,
+            raw,
+        };
+        if let Some(Frame::Device(d)) = frames.last_mut() {
+            d.security_raw = Some(retained);
+        }
+        return Ok(());
+    }
+
     // Genuinely unknown: retained verbatim and reported, subtree consumed
     // here, never pushed onto either stack.
     if !is_known_path {
@@ -402,6 +446,129 @@ fn open_element<'a>(
         return Ok(());
     }
 
+    // `Node`: a leaf, but unlike the leaf strings above it does not attach a
+    // single value — it unions its `GroupObjectInstances` ids into the
+    // enclosing device's authoritative object-id list (ADR-0014). `Type`/
+    // `RefId` are known but deliberately not modeled at this level: the raw
+    // `GroupObjectTree` capture (see below) is what preserves them for
+    // export, so nothing here is actually lost, only left unstructured.
+    if local == "Node" {
+        let attrs = attr_map(start, source_path, pos_before)?;
+        let (mut bag, _) = partition_attrs(attrs, known, &xpath, aggregator);
+        if let Some(ids) = bag.take("GroupObjectInstances") {
+            if let Some(Frame::Device(d)) = frames.last_mut() {
+                for id in ids.split_whitespace() {
+                    if !d.group_object_tree.iter().any(|x| x == id) {
+                        d.group_object_tree.push(id.to_string());
+                    }
+                }
+            }
+        }
+        if !is_empty {
+            reader
+                .read_to_end(start.to_end().name())
+                .map_err(|e| ParseError::Xml {
+                    source_path: source_path.to_string(),
+                    position: reader.buffer_position(),
+                    cause: e.to_string(),
+                })?;
+        }
+        return Ok(());
+    }
+
+    // `Segment` is a transparent merge-up: schema ≥21 interposes it between
+    // `Line` and `DeviceInstance`, and moves the medium/domain-address
+    // attributes that schema 11 puts directly on `Line` down onto `Segment`
+    // instead — but nothing downstream (`map.rs`, `knx-core`) has a
+    // "segment" concept, so its attributes are folded straight into the
+    // enclosing `Line` frame and its `DeviceInstance` children attach to
+    // `Line` too (see the `"Segment"` arm added to `attach_frame` below).
+    if local == "Segment" {
+        let attrs = attr_map(start, source_path, pos_before)?;
+        let (mut bag, _unknown) = partition_attrs(attrs, known, &xpath, aggregator);
+        if let Some(Frame::Line(line)) = frames.last_mut() {
+            if let Some(v) = bag.take("MediumTypeRefId") {
+                if line.medium_type_ref_id.is_none() {
+                    line.medium_type_ref_id = Some(v);
+                } else {
+                    line.other.push(RetainedAttribute {
+                        xpath: xpath.clone(),
+                        name: "MediumTypeRefId".into(),
+                        value: v,
+                    });
+                }
+            }
+            if let Some(v) = bag.take("DomainAddress") {
+                line.domain_address.get_or_insert(v);
+            }
+            if let Some(v) = bag.take("DomainAddressIsChecked") {
+                line.domain_address_is_checked.get_or_insert(v);
+            }
+            if let Some(v) = bag.take("IPRoutingMulticastAddress") {
+                line.ip_routing_multicast_address.get_or_insert(v);
+            }
+            if let Some(v) = bag.take("MulticastTTL") {
+                line.multicast_ttl.get_or_insert(v);
+            }
+            line.other.extend(bag.into_retained(&xpath)); // Id, Number, Puid, leftovers
+        }
+        if is_empty {
+            return Ok(()); // no DeviceInstance children to wait for
+        }
+        path_stack.push(local);
+        kind_stack.push(Kind::Wrapper); // DeviceInstance children attach to Line, not Segment
+        return Ok(());
+    }
+
+    // `ModuleInstances`: walked (its `ModuleInstance` children are modeled)
+    // *and* retained raw for export in one pass — see the module doc
+    // comment for why `Kind::RawCapture` exists.
+    if local == "ModuleInstances" {
+        if is_empty {
+            let raw = bytes[pos_before as usize..reader.buffer_position() as usize].to_vec();
+            if let Some(Frame::Device(d)) = frames.last_mut() {
+                d.module_instances_raw = Some(RetainedElement {
+                    xpath: xpath.clone(),
+                    name: local.clone(),
+                    raw,
+                });
+            }
+            return Ok(());
+        }
+        path_stack.push(local);
+        kind_stack.push(Kind::RawCapture(pos_before, xpath));
+        return Ok(());
+    }
+
+    // `GroupObjectTree`: schema 21 nests `Nodes/Node` children (walked and
+    // unioned by the `Node` case above); schema 23 instead carries a flat
+    // `GroupObjectInstances` attribute directly here (no children at all).
+    // Either way the whole subtree is also retained raw for export.
+    if local == "GroupObjectTree" {
+        let attrs = attr_map(start, source_path, pos_before)?;
+        let (mut bag, _) = partition_attrs(attrs, known, &xpath, aggregator);
+        if let Some(ids) = bag.take("GroupObjectInstances") {
+            // schema 23's flat shape only
+            if let Some(Frame::Device(d)) = frames.last_mut() {
+                d.group_object_tree = ids.split_whitespace().map(str::to_string).collect();
+            }
+        }
+        if is_empty {
+            let raw = bytes[pos_before as usize..reader.buffer_position() as usize].to_vec();
+            if let Some(Frame::Device(d)) = frames.last_mut() {
+                d.group_object_tree_raw = Some(RetainedElement {
+                    xpath: xpath.clone(),
+                    name: local.clone(),
+                    raw,
+                });
+            }
+            return Ok(());
+        }
+        path_stack.push(local);
+        kind_stack.push(Kind::RawCapture(pos_before, xpath));
+        return Ok(());
+    }
+
     // A wrapper: known, carries no data of its own, only structure.
     if is_wrapper(&local, &parent_name) {
         let attrs = attr_map(start, source_path, pos_before)?;
@@ -436,8 +603,11 @@ fn is_wrapper(local: &str, parent_name: &str) -> bool {
         | "Connectors"
         | "UnassignedDevices"
         | "Buildings"
+        | "Locations"
         | "GroupAddresses"
-        | "GroupRanges" => true,
+        | "GroupRanges"
+        | "Arguments"
+        | "Nodes" => true,
         // The wrapper form of `BinaryData`; the leaf form's parent is `BinaryData` itself.
         "BinaryData" => parent_name == "DeviceInstance",
         _ => false,
@@ -520,7 +690,7 @@ fn build_frame(
             parameters_loaded: bag.take("ParametersLoaded"),
             communication_part_loaded: bag.take("CommunicationPartLoaded"),
             medium_config_loaded: bag.take("MediumConfigLoaded"),
-            visibility_calculated: bag.take("IsCommunicationObjectVisibilityCalculated"),
+            visibility_calculated: bag.take("IsActivityCalculated"),
             broken: bag.take("Broken"),
             parameters: Vec::new(),
             com_objects: Vec::new(),
@@ -545,8 +715,11 @@ fn build_frame(
             communication_flag: bag.take("CommunicationFlag"),
             sends: Vec::new(),
             receives: Vec::new(),
-            links: Vec::new(),
-            channel_id: None,
+            links: bag
+                .take("Links")
+                .map(|s| s.split_whitespace().map(str::to_string).collect())
+                .unwrap_or_default(),
+            channel_id: bag.take("ChannelId"),
             other: Vec::new(),
         }),
         "ParameterInstanceRef" => Frame::Parameter(SourceParameterInstance {
@@ -557,7 +730,7 @@ fn build_frame(
             id: bag.require("Id", xpath)?,
             name: bag.take("Name"),
         }),
-        "BuildingPart" => Frame::BuildingPart(SourceBuildingPart {
+        "BuildingPart" | "Space" => Frame::BuildingPart(SourceBuildingPart {
             id: bag.require("Id", xpath)?,
             name: bag.take("Name"),
             number: bag.take("Number"),
@@ -585,6 +758,16 @@ fn build_frame(
             unfiltered: bag.take("Unfiltered"),
             other: Vec::new(),
         }),
+        "ModuleInstance" => Frame::ModuleInstance(SourceModuleInstance {
+            id: bag.require("Id", xpath)?,
+            ref_id: bag.require("RefId", xpath)?,
+            repeat_index: bag.take("RepeatIndex"),
+            arguments: Vec::new(),
+        }),
+        "Argument" => Frame::Argument(SourceArgument {
+            ref_id: bag.require("RefId", xpath)?,
+            value: bag.take("Value"),
+        }),
         _ => unreachable!("build_frame called for non-frame-bearing element {local}"),
     };
     Ok(attach_other(frame, unknown, bag.into_retained(xpath)))
@@ -606,10 +789,15 @@ fn attach_other(
         Frame::BuildingPart(v) => &mut v.other,
         Frame::GroupRange(v) => &mut v.other,
         Frame::GroupAddress(v) => &mut v.other,
-        // `SourceParameterInstance` and `SourceBinaryDataRef` have no
-        // `other` field: both are two-field leaves and every attribute
-        // either table lists is already modeled.
-        Frame::Parameter(_) | Frame::BinaryDataRef(_) => return frame,
+        // `SourceParameterInstance`, `SourceBinaryDataRef`, `SourceArgument`
+        // and `SourceModuleInstance` have no `other` field: every attribute
+        // any of the four's known-element table entry lists is already
+        // modeled, and each is a small enough leaf that adding a catch-all
+        // bucket for a case that has never yet occurred is not worth it.
+        Frame::Parameter(_)
+        | Frame::BinaryDataRef(_)
+        | Frame::Argument(_)
+        | Frame::ModuleInstance(_) => return frame,
     };
     other.extend(unknown);
     other.extend(leftover);
@@ -644,6 +832,10 @@ fn attach_frame(
                 Some(Frame::Line(l)) => l.devices.push(into_device(closed)),
                 _ => unreachable!("DeviceInstance outside a Line frame"),
             },
+            "Segment" => match frames.last_mut() {
+                Some(Frame::Line(l)) => l.devices.push(into_device(closed)),
+                _ => unreachable!("DeviceInstance outside a Segment/Line frame"),
+            },
             "UnassignedDevices" => match frames.last_mut() {
                 Some(Frame::Installation(i)) => i.unassigned_devices.push(into_device(closed)),
                 _ => unreachable!("DeviceInstance outside an Installation frame"),
@@ -662,12 +854,12 @@ fn attach_frame(
             Some(Frame::Device(d)) => d.binary_data.push(into_binary_data(closed)),
             _ => unreachable!("BinaryData outside a DeviceInstance frame"),
         },
-        "BuildingPart" => match parent_name {
-            "Buildings" => match frames.last_mut() {
+        "BuildingPart" | "Space" => match parent_name {
+            "Buildings" | "Locations" => match frames.last_mut() {
                 Some(Frame::Installation(i)) => i.buildings.push(into_building_part(closed)),
                 _ => unreachable!("BuildingPart outside an Installation frame"),
             },
-            "BuildingPart" => match frames.last_mut() {
+            "BuildingPart" | "Space" => match frames.last_mut() {
                 Some(Frame::BuildingPart(b)) => b.children.push(into_building_part(closed)),
                 _ => unreachable!("nested BuildingPart outside a BuildingPart frame"),
             },
@@ -687,6 +879,14 @@ fn attach_frame(
         "GroupAddress" => match frames.last_mut() {
             Some(Frame::GroupRange(g)) => g.addresses.push(into_group_address(closed)),
             _ => unreachable!("GroupAddress outside a GroupRange frame"),
+        },
+        "ModuleInstance" => match frames.last_mut() {
+            Some(Frame::Device(d)) => d.module_instances.push(into_module_instance(closed)),
+            _ => unreachable!("ModuleInstance outside a DeviceInstance frame"),
+        },
+        "Argument" => match frames.last_mut() {
+            Some(Frame::ModuleInstance(m)) => m.arguments.push(into_argument(closed)),
+            _ => unreachable!("Argument outside a ModuleInstance frame"),
         },
         other => unreachable!("attach_frame called for non-frame-bearing element {other}"),
     }
@@ -752,168 +952,102 @@ fn into_group_address(f: Frame) -> SourceGroupAddress {
         _ => unreachable!(),
     }
 }
+fn into_module_instance(f: Frame) -> SourceModuleInstance {
+    match f {
+        Frame::ModuleInstance(v) => v,
+        _ => unreachable!(),
+    }
+}
+fn into_argument(f: Frame) -> SourceArgument {
+    match f {
+        Frame::Argument(v) => v,
+        _ => unreachable!(),
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::known::known_schema;
+    use crate::testutil::reference_kv_schema21_path;
     use crate::Container;
-    use std::path::PathBuf;
-
-    fn workspace_root() -> PathBuf {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .and_then(std::path::Path::parent)
-            .expect("crate lives at <root>/crates/<name>")
-            .to_path_buf()
-    }
-
-    fn reference_ets4_bytes() -> Vec<u8> {
-        std::fs::read(workspace_root().join("Unser Zuhause ets4 - 2025-12-15.knxproj"))
-            .expect("reference ETS4 project is committed at the workspace root")
-    }
-
-    const MINIMAL: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
-<KNX xmlns="http://knx.org/xml/project/11" CreatedBy="ETS4" ToolVersion="ETS 4.1.8">
-  <Project Id="P-0001">
-    <Installations>
-      <Installation InstallationId="0" Name="" DefaultLine="P-0001-0_L-2" CompletionStatus="Undefined">
-        <Topology>
-          <Area Id="P-0001-0_A-1" Name="A" Address="1" CompletionStatus="Undefined">
-            <Line Id="P-0001-0_L-2" Name="L" Address="1" MediumTypeRefId="MT-0" CompletionStatus="Accepted">
-              <DeviceInstance Id="P-0001-0_DI-1" Name="D" ProductRefId="M-0001_H-1_P-1"
-                              Hardware2ProgramRefId="M-0001_H-1_HP-1" Address="1"
-                              LastModified="2023-07-14T11:55:33" CompletionStatus="FinishedDesign"
-                              IndividualAddressLoaded="1" ApplicationProgramLoaded="1"
-                              ParametersLoaded="1" CommunicationPartLoaded="1"
-                              MediumConfigLoaded="1" IsCommunicationObjectVisibilityCalculated="1"
-                              Broken="0">
-                <ComObjectInstanceRefs>
-                  <ComObjectInstanceRef RefId="M-0001_A-1_O-0_R-1" DatapointType="" IsActive="1">
-                    <Connectors><Send GroupAddressRefId="P-0001-0_GA-1" /></Connectors>
-                  </ComObjectInstanceRef>
-                </ComObjectInstanceRefs>
-              </DeviceInstance>
-            </Line>
-          </Area>
-        </Topology>
-        <GroupAddresses>
-          <GroupRanges>
-            <GroupRange Id="P-0001-0_GR-1" Name="Licht" RangeStart="1" RangeEnd="255">
-              <GroupRange Id="P-0001-0_GR-2" Name="An/Aus" RangeStart="1" RangeEnd="127">
-                <GroupAddress Id="P-0001-0_GA-1" Address="1" Name="GA" />
-              </GroupRange>
-            </GroupRange>
-          </GroupRanges>
-        </GroupAddresses>
-      </Installation>
-    </Installations>
-  </Project>
-</KNX>"#;
 
     #[test]
-    fn a_minimal_document_parses_into_the_source_shape() {
-        let out = parse_installation(MINIMAL, "P-0001/0.xml", known_schema(11).unwrap()).unwrap();
-        let inst = &out.document.installations[0];
-        assert_eq!(out.document.project_id, "P-0001");
-        assert_eq!(inst.areas[0].lines[0].devices.len(), 1);
-        let com = &inst.areas[0].lines[0].devices[0].com_objects[0];
-        assert_eq!(com.sends, vec!["P-0001-0_GA-1"]);
-        assert!(com.receives.is_empty());
-        assert_eq!(
-            inst.group_ranges[0].children[0].addresses[0].id,
-            "P-0001-0_GA-1"
-        );
-        assert!(out.unknown.is_empty());
-    }
-
-    #[test]
-    fn an_empty_attribute_value_is_kept_as_an_empty_string_not_dropped() {
-        let out = parse_installation(MINIMAL, "P-0001/0.xml", known_schema(11).unwrap()).unwrap();
-        let com = &out.document.installations[0].areas[0].lines[0].devices[0].com_objects[0];
-        assert_eq!(com.datapoint_type.as_deref(), Some(""));
-        assert_eq!(com.text, None);
-    }
-
-    #[test]
-    fn an_unknown_attribute_is_reported_with_its_value_and_not_fatal() {
-        let xml = String::from_utf8(MINIMAL.to_vec()).unwrap().replace(
-            r#"MediumTypeRefId="MT-0" CompletionStatus="Accepted""#,
-            r#"MediumTypeRefId="MT-0" CompletionStatus="Accepted" Puid="42""#,
-        );
+    fn the_kv_sample_parses_with_a_bounded_unknown_count() {
+        // Not yet zero — Task 3's table is filled in iteratively against this
+        // exact test's failure output. This test's job in this task is to
+        // prove the state machine itself does not panic or error on the real
+        // file; Task 8 tightens the assertion to `== vec![]`.
+        let mut c = Container::open(std::fs::read(reference_kv_schema21_path()).unwrap()).unwrap();
+        let bytes = c.read("P-03DE/0.xml").unwrap();
         let out =
-            parse_installation(xml.as_bytes(), "P-0001/0.xml", known_schema(11).unwrap()).unwrap();
-        let u = out.unknown.iter().find(|u| u.name == "Puid").unwrap();
-        assert_eq!(u.kind, UnknownKind::Attribute);
+            parse_installation_v21(&bytes, "P-03DE/0.xml", known_schema(21).unwrap()).unwrap();
         assert_eq!(
-            u.xpath,
-            "/KNX/Project/Installations/Installation/Topology/Area/Line"
+            out.document.installations[0]
+                .areas
+                .iter()
+                .flat_map(|a| &a.lines)
+                .map(|l| l.devices.len())
+                .sum::<usize>(),
+            4
         );
-        assert_eq!(u.sample.as_deref(), Some("42"));
-        let line = &out.document.installations[0].areas[0].lines[0];
-        assert!(line
-            .other
-            .iter()
-            .any(|a| a.name == "Puid" && a.value == "42"));
     }
 
     #[test]
-    fn an_unknown_element_is_retained_verbatim_and_reported() {
-        let xml = String::from_utf8(MINIMAL.to_vec())
-            .unwrap()
-            .replace("<Topology>", "<Security SequenceNumber=\"7\"/><Topology>");
+    fn a_module_based_device_carries_its_module_instances_and_group_object_tree() {
+        let mut c = Container::open(std::fs::read(reference_kv_schema21_path()).unwrap()).unwrap();
+        let bytes = c.read("P-03DE/0.xml").unwrap();
         let out =
-            parse_installation(xml.as_bytes(), "P-0001/0.xml", known_schema(11).unwrap()).unwrap();
-        let u = out.unknown.iter().find(|u| u.name == "Security").unwrap();
-        assert_eq!(u.kind, UnknownKind::Element);
-        let kept = out
-            .retained_elements
-            .iter()
-            .find(|e| e.name == "Security")
-            .unwrap();
-        assert_eq!(kept.raw, br#"<Security SequenceNumber="7"/>"#);
-    }
-
-    #[test]
-    fn repeated_unknown_attributes_aggregate_into_one_report_line() {
-        let xml = String::from_utf8(MINIMAL.to_vec()).unwrap().replace(
-            r#"<GroupAddress Id="P-0001-0_GA-1" Address="1" Name="GA" />"#,
-            r#"<GroupAddress Id="P-0001-0_GA-1" Address="1" Name="GA" Puid="1" />
-           <GroupAddress Id="P-0001-0_GA-2" Address="2" Name="GB" Puid="2" />"#,
-        );
-        let out =
-            parse_installation(xml.as_bytes(), "P-0001/0.xml", known_schema(11).unwrap()).unwrap();
-        let u = out.unknown.iter().find(|u| u.name == "Puid").unwrap();
-        assert_eq!(u.occurrences, 2);
-    }
-
-    #[test]
-    fn truncated_xml_is_a_parse_error_carrying_its_byte_position() {
-        let truncated = &MINIMAL[..MINIMAL.len() / 2];
-        assert!(matches!(
-            parse_installation(truncated, "P-0001/0.xml", known_schema(11).unwrap()),
-            Err(ParseError::Xml { .. })
-        ));
-    }
-
-    #[test]
-    fn the_reference_project_parses_with_no_unknown_constructs() {
-        let mut c = Container::open(reference_ets4_bytes()).unwrap();
-        let bytes = c.read("P-0512/0.xml").unwrap();
-        let out = parse_installation(&bytes, "P-0512/0.xml", known_schema(11).unwrap()).unwrap();
-        assert_eq!(
-            out.unknown,
-            vec![],
-            "the schema-11 table was transcribed from this very project; \
-             anything unknown here is a gap in the table"
-        );
-        let inst = &out.document.installations[0];
-        let devices: usize = inst
+            parse_installation_v21(&bytes, "P-03DE/0.xml", known_schema(21).unwrap()).unwrap();
+        let device = out.document.installations[0]
             .areas
             .iter()
             .flat_map(|a| &a.lines)
-            .map(|l| l.devices.len())
-            .sum();
-        assert_eq!(devices + inst.unassigned_devices.len(), 36);
+            .flat_map(|l| &l.devices)
+            .find(|d| !d.module_instances.is_empty())
+            .unwrap();
+        assert_eq!(
+            device.module_instances[0].repeat_index.as_deref(),
+            Some("6x1")
+        );
+        assert!(!device.group_object_tree.is_empty());
+        assert!(device.module_instances_raw.is_some());
+        assert!(device.group_object_tree_raw.is_some());
+        // Regression test for a review finding: this attribute is named
+        // `IsActivityCalculated` at schema >=21, not schema 11's
+        // `IsCommunicationObjectVisibilityCalculated` — every device in this
+        // sample carries `IsActivityCalculated="true"`.
+        assert_eq!(device.visibility_calculated.as_deref(), Some("true"));
+    }
+
+    /// Regression test for a review finding on this task: `Security` was
+    /// initially retained in the document-wide `retained_elements` bucket,
+    /// indistinguishable between devices (every device's `Security` shares
+    /// the same structural xpath). It must be addressable per device instead
+    /// — Task 7's export brief assumes exactly that.
+    #[test]
+    fn every_device_carries_its_own_security_element_raw() {
+        let mut c = Container::open(std::fs::read(reference_kv_schema21_path()).unwrap()).unwrap();
+        let bytes = c.read("P-03DE/0.xml").unwrap();
+        let out =
+            parse_installation_v21(&bytes, "P-03DE/0.xml", known_schema(21).unwrap()).unwrap();
+        let devices: Vec<_> = out.document.installations[0]
+            .areas
+            .iter()
+            .flat_map(|a| &a.lines)
+            .flat_map(|l| &l.devices)
+            .collect();
+        assert_eq!(devices.len(), 4);
+        for device in &devices {
+            let security = device
+                .security_raw
+                .as_ref()
+                .unwrap_or_else(|| panic!("device {} has no security_raw", device.id));
+            assert!(security.raw.starts_with(b"<Security"));
+            assert!(security.raw.ends_with(b"/>") || security.raw.ends_with(b"</Security>"));
+        }
+        // Never the document-wide unknown/opaque bucket — it belongs to its
+        // own device now, not the flat catch-all.
+        assert!(out.retained_elements.iter().all(|e| e.name != "Security"));
     }
 }

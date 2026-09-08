@@ -442,7 +442,7 @@ git commit -m "feat(knx-web): self-host Space Grotesk/Inter/JetBrains Mono" --au
 
 Read `apps/knx-web/src/styles.css` lines 1-53 to confirm the exact current text before editing (it may have shifted slightly from what's quoted in the spec).
 
-- [ ] **Step 2: Replace lines 1-53 (the `:root` block through the closing `}` of the `prefers-reduced-motion` block's `:root[data-theme="dark"]` predecessor — i.e. everything up to but not including the `@media (prefers-reduced-motion: no-preference)` rule) with:**
+- [ ] **Step 2: Replace everything from the top of the file through the end of the `:root[data-theme="dark"]` block — i.e. the `:root { ... }` block, the `@media (prefers-color-scheme: dark) { ... }` block, and the `:root[data-theme="light"] { ... }`/`:root[data-theme="dark"] { ... }` blocks, stopping right before the `@media (prefers-reduced-motion: no-preference)` rule — with:**
 
 ```css
 :root[data-theme="bitcoin-defi"] {
@@ -728,7 +728,7 @@ git commit -m "feat(knx-web): glass overlays, card hover-lift, corner accents" -
 
 - [ ] **Step 1: Grid-pattern background**
 
-Find the `body { margin: 0; background: var(--knx-bg); color: var(--knx-text or --knx-foreground); }` rule (renamed in Task 6). Append immediately after it:
+Find the `body { margin: 0; background: var(--knx-bg); color: var(--knx-foreground); }` rule (Task 6 renamed `--knx-text` to `--knx-foreground` here). Append immediately after it:
 
 ```css
 :root[data-theme="bitcoin-defi"] body {

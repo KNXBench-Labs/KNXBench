@@ -67,6 +67,43 @@ impl ResolvedFlags {
     }
 }
 
+/// Which of a communication object's five flags a `Command::SetComObjectFlag`
+/// targets. Mirrors `ResolvedFlags`' own field order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ComFlagKind {
+    Read,
+    Write,
+    Transmit,
+    Update,
+    Communication,
+}
+
+impl ResolvedFlags {
+    /// Borrows the one field `kind` names — lets `Command::SetComObjectFlag`
+    /// stay generic over which of the five flags it edits instead of five
+    /// near-identical match arms living in `command.rs`.
+    pub fn get(&self, kind: ComFlagKind) -> &Override<bool> {
+        match kind {
+            ComFlagKind::Read => &self.read,
+            ComFlagKind::Write => &self.write,
+            ComFlagKind::Transmit => &self.transmit,
+            ComFlagKind::Update => &self.update,
+            ComFlagKind::Communication => &self.communication,
+        }
+    }
+
+    /// The mutable counterpart of `get`.
+    pub fn get_mut(&mut self, kind: ComFlagKind) -> &mut Override<bool> {
+        match kind {
+            ComFlagKind::Read => &mut self.read,
+            ComFlagKind::Write => &mut self.write,
+            ComFlagKind::Transmit => &mut self.transmit,
+            ComFlagKind::Update => &mut self.update,
+            ComFlagKind::Communication => &mut self.communication,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,5 +121,21 @@ mod tests {
         assert_eq!(flags.read.value().map(|r| r.value), Some(true));
         assert!(!flags.write.is_present());
         assert!(!flags.communication.is_present());
+    }
+
+    #[test]
+    fn get_and_get_mut_address_the_matching_field() {
+        let mut flags = ResolvedFlags::none();
+        *flags.get_mut(ComFlagKind::Communication) = Override::Value(Resolved {
+            value: true,
+            layer: Layer::UserEdit,
+        });
+        assert_eq!(
+            flags.get(ComFlagKind::Communication).value().map(|r| r.value),
+            Some(true)
+        );
+        // Untouched fields stay absent — `get_mut` must not alias another
+        // field.
+        assert!(!flags.get(ComFlagKind::Read).is_present());
     }
 }

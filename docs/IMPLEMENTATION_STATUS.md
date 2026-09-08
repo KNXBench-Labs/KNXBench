@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-06 (Session 7, cycle 1; roundtrip/migration suite audit + schema-21 sample)
+Last updated: 2026-09-08 (T1/T3 device create/delete backend, T2 device catalog browser UI)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -1012,3 +1012,26 @@ frontend in T23 a day later. 16 new tests across
 `crates/knx-core`/`crates/knx-productdb`/`apps/knx-server`. Closes
 **B1**/**B2** ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)), backend
 only; **T2** stays open.
+
+**T2, device catalog browser UI (2026-09-08).** Frontend-only, bounded
+task (no design spec — same shape as cycle 9's group-address UI, per the
+brainstorming skill's classification), closing the gap left open above.
+`apps/knx-web` gains `CatalogBrowser.tsx`, a modal reusing `.search-overlay`/
+`.search-panel` (now shared by three consumers — `Search.tsx`,
+`CommandPalette.tsx`, and this) with a manufacturer `<select>` and a
+debounced (~200ms) search box querying the already-existing
+`GET /api/catalog/manufacturers`/`GET /api/catalog/items` routes; picking
+an item and naming the device calls `POST /api/devices`. Opened from a
+new `+ Add device` row rendered on every `LineItem` and once under the
+Unassigned bucket, both `isFirst`-gated the same way every other create
+affordance in `ProjectExplorer.tsx` already is (`Command::CreateDevice`
+only ever targets `installations[0]`) — `LineItem` gains the `isFirst`
+prop for this, threaded down from `AreaItem`, which already had it.
+`api.ts` gains `catalogManufacturers`/`catalogItems`/`createDevice` plus
+two hand-written DTO types (`CatalogManufacturer`/`CatalogItem`) — server
+route-local structs, not `knx-projection` types, so no `ts-rs` binding
+exists for them, same treatment every other request body already gets.
+No backend change was needed; no arrow-key navigation in the modal
+(click-only), a deliberate scope cut unlike `Search.tsx`. Device-delete
+UI (T3's own frontend, backend done 2026-09-08 above) stays open, its own
+future slice. 5 new `vitest` tests in `api.test.ts`, for 97 total.

@@ -10,6 +10,7 @@ import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { Selection } from "./selection";
 import { nestGroupRanges, type GroupRangeTreeNode } from "./treeUtils";
+import CatalogBrowser from "./CatalogBrowser";
 
 function TreeNode(props: {
   label: string;
@@ -167,8 +168,22 @@ function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
   );
 }
 
-function LineItem(props: { line: LineNode } & SelectionProps) {
-  const { line, selection, onSelect } = props;
+// The trigger for CatalogBrowser (T2, GAP_ANALYSIS_ETS.md) — opens the
+// modal targeting this line (or `null` for the Unassigned bucket below).
+// `isFirst`-gated like every other create affordance: `Command::CreateDevice`
+// only ever targets `installations[0]`.
+function AddDeviceRow(props: { onAdd: () => void }) {
+  return (
+    <li className="tree-new-row">
+      <button onClick={props.onAdd}>+ Add device</button>
+    </li>
+  );
+}
+
+function LineItem(
+  props: { line: LineNode; isFirst: boolean; onAddDevice: (lineId: number) => void } & SelectionProps,
+) {
+  const { line, isFirst, onAddDevice, selection, onSelect } = props;
   return (
     <TreeNode
       label={`Line ${line.address}: ${line.name}`}
@@ -178,14 +193,20 @@ function LineItem(props: { line: LineNode } & SelectionProps) {
       {line.devices.map((d) => (
         <DeviceItem key={d.id} device={d} selection={selection} onSelect={onSelect} />
       ))}
+      {isFirst && <AddDeviceRow onAdd={() => onAddDevice(line.id)} />}
     </TreeNode>
   );
 }
 
 function AreaItem(
-  props: { area: AreaNode; isFirst: boolean; onCreated: (tree: ProjectTree) => void } & SelectionProps,
+  props: {
+    area: AreaNode;
+    isFirst: boolean;
+    onCreated: (tree: ProjectTree) => void;
+    onAddDevice: (lineId: number) => void;
+  } & SelectionProps,
 ) {
-  const { area, isFirst, onCreated, selection, onSelect } = props;
+  const { area, isFirst, onCreated, onAddDevice, selection, onSelect } = props;
   return (
     <TreeNode
       label={`Area ${area.address}: ${area.name}`}
@@ -193,7 +214,14 @@ function AreaItem(
       onSelect={() => onSelect({ kind: "area", id: area.id })}
     >
       {area.lines.map((l) => (
-        <LineItem key={l.id} line={l} selection={selection} onSelect={onSelect} />
+        <LineItem
+          key={l.id}
+          line={l}
+          isFirst={isFirst}
+          onAddDevice={onAddDevice}
+          selection={selection}
+          onSelect={onSelect}
+        />
       ))}
       {isFirst && <NewLineRow areaId={area.id} onCreated={onCreated} />}
     </TreeNode>
@@ -401,9 +429,14 @@ function GroupRangeItem(
 }
 
 function InstallationItem(
-  props: { installation: InstallationNode; isFirst: boolean; onTreeUpdate: (tree: ProjectTree) => void } & SelectionProps,
+  props: {
+    installation: InstallationNode;
+    isFirst: boolean;
+    onTreeUpdate: (tree: ProjectTree) => void;
+    onAddDevice: (lineId: number | null) => void;
+  } & SelectionProps,
 ) {
-  const { installation, isFirst, onTreeUpdate, selection, onSelect } = props;
+  const { installation, isFirst, onTreeUpdate, onAddDevice, selection, onSelect } = props;
   return (
     <TreeNode label={installation.name}>
       <TreeNode label="Topology">
@@ -413,6 +446,7 @@ function InstallationItem(
             area={a}
             isFirst={isFirst}
             onCreated={onTreeUpdate}
+            onAddDevice={onAddDevice}
             selection={selection}
             onSelect={onSelect}
           />
@@ -424,11 +458,12 @@ function InstallationItem(
           <BuildingItem key={b.id} building={b} selection={selection} onSelect={onSelect} />
         ))}
       </TreeNode>
-      {installation.unassigned.length > 0 && (
+      {(installation.unassigned.length > 0 || isFirst) && (
         <TreeNode label="Unassigned">
           {installation.unassigned.map((d) => (
             <DeviceItem key={d.id} device={d} selection={selection} onSelect={onSelect} />
           ))}
+          {isFirst && <AddDeviceRow onAdd={() => onAddDevice(null)} />}
         </TreeNode>
       )}
       <TreeNode label="Group Addresses">
@@ -460,6 +495,11 @@ export default function ProjectExplorer(
   props: { tree: ProjectTree; onTreeUpdate: (tree: ProjectTree) => void } & SelectionProps,
 ) {
   const { tree, onTreeUpdate, selection, onSelect } = props;
+  // `undefined` = closed; `number | null` = open, targeting that line
+  // (or `null` for unassigned) — CatalogBrowser (T2) is only ever opened
+  // from the first installation, same restriction every other create
+  // affordance here already carries.
+  const [catalogTarget, setCatalogTarget] = useState<number | null | undefined>(undefined);
   return (
     <div className="project-explorer">
       <ul className="tree-root">
@@ -469,11 +509,19 @@ export default function ProjectExplorer(
             installation={inst}
             isFirst={idx === 0}
             onTreeUpdate={onTreeUpdate}
+            onAddDevice={setCatalogTarget}
             selection={selection}
             onSelect={onSelect}
           />
         ))}
       </ul>
+      {catalogTarget !== undefined && (
+        <CatalogBrowser
+          lineId={catalogTarget}
+          onCreated={onTreeUpdate}
+          onClose={() => setCatalogTarget(undefined)}
+        />
+      )}
       {(tree.errors > 0 || tree.warnings > 0) && (
         <footer>
           {tree.errors > 0 && (

@@ -278,9 +278,29 @@ main {
   margin: 0;
 }
 
-/* Shared by Search.tsx and CommandPalette.tsx (.search-overlay/.search-panel/
-   .search-empty/.search-results/.search-result); .search-result.disabled is
-   palette-only — search never renders a disabled row. */
+.search-panel select {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 1rem;
+  padding: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.catalog-create-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.catalog-create-row input {
+  flex: 1;
+}
+
+/* Shared by Search.tsx, CommandPalette.tsx and CatalogBrowser.tsx
+   (.search-overlay/.search-panel/.search-empty/.search-results/
+   .search-result); .search-result.disabled is palette-only — search and
+   the catalog browser never render a disabled row. */
 .search-result {
   padding: 0.35rem 0.5rem;
   cursor: pointer;

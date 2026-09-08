@@ -5,11 +5,14 @@
 
 use std::fmt;
 
+use crate::building::BuildingPart;
 use crate::device::{ComObjectInstance, DeviceInstance};
 use crate::dpt::DptRef;
 use crate::flags::{Direction, GroupLink};
 use crate::group::{GroupAddressEntry, GroupRange};
-use crate::ids::{AreaId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId, LineId};
+use crate::ids::{
+    AreaId, BuildingPartId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId, LineId,
+};
 use crate::installation::Installation;
 use crate::project::Project;
 use crate::provenance::{Layer, Override, Resolved};
@@ -129,6 +132,23 @@ pub enum Command {
     DeleteDevice {
         id: DeviceId,
     },
+    /// `part.id` is pre-allocated by the caller via
+    /// `Project::ids::next_building_part_id`. `part.parent` names the
+    /// owning building part, which must already exist — `None` creates a
+    /// root part. `installation.buildings` is a flat list (DATA_MODEL
+    /// §5, `building.rs`'s own doc comment); this just links `part.id`
+    /// into its parent's `children`, same as `CreateGroupRange`.
+    CreateBuildingPart {
+        part: BuildingPart,
+    },
+    /// Refuses (`CommandError::BuildingPartNotEmpty`) if the part still
+    /// has children or devices — the building-part equivalent of
+    /// `DeleteGroupRange`'s `GroupRangeNotEmpty`/`LineNotEmpty`'s single
+    /// non-empty check, just covering both at once since either leaves
+    /// something dangling.
+    DeleteBuildingPart {
+        id: BuildingPartId,
+    },
     /// `range.id` is pre-allocated by the caller via
     /// `Project::ids::next_group_range_id`.
     CreateGroupRange {
@@ -181,6 +201,10 @@ pub enum CommandError {
     /// deleting it now would leave a dangling `GroupLink`, the device
     /// equivalent of `GroupAddressInUse`.
     DeviceHasLinks(DeviceId),
+    BuildingPartNotFound(BuildingPartId),
+    /// A `DeleteBuildingPart` was refused because it still has a child
+    /// part or a device located in it.
+    BuildingPartNotEmpty(BuildingPartId),
     GroupRangeNotFound(GroupRangeId),
     /// A `DeleteGroupRange` was refused because it still has nested
     /// (middle) ranges.
@@ -230,6 +254,10 @@ impl fmt::Display for CommandError {
             }
             CommandError::DeviceHasLinks(id) => {
                 write!(f, "device {id} still has linked communication objects, cannot delete")
+            }
+            CommandError::BuildingPartNotFound(id) => write!(f, "building part {id} not found"),
+            CommandError::BuildingPartNotEmpty(id) => {
+                write!(f, "building part {id} still has children or devices, cannot delete")
             }
             CommandError::GroupRangeNotFound(id) => write!(f, "group range {id} not found"),
             CommandError::GroupRangeNotEmpty(id) => {
@@ -643,6 +671,57 @@ impl Command {
                     line,
                 })
             }
+            Command::CreateBuildingPart { part } => {
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                if let Some(parent_id) = part.parent {
+                    if !installation.buildings.iter().any(|p| p.id == parent_id) {
+                        return Err(CommandError::BuildingPartNotFound(parent_id));
+                    }
+                }
+                let id = part.id;
+                if let Some(parent_id) = part.parent {
+                    installation
+                        .buildings
+                        .iter_mut()
+                        .find(|p| p.id == parent_id)
+                        .unwrap()
+                        .children
+                        .push(id);
+                }
+                installation.buildings.push(part.clone());
+                Ok(Command::DeleteBuildingPart { id })
+            }
+            Command::DeleteBuildingPart { id } => {
+                let id = *id;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let pos = installation
+                    .buildings
+                    .iter()
+                    .position(|p| p.id == id)
+                    .ok_or(CommandError::BuildingPartNotFound(id))?;
+                if !installation.buildings[pos].children.is_empty()
+                    || !installation.buildings[pos].devices.is_empty()
+                {
+                    return Err(CommandError::BuildingPartNotEmpty(id));
+                }
+                let part = installation.buildings.remove(pos);
+                if let Some(parent_id) = part.parent {
+                    installation
+                        .buildings
+                        .iter_mut()
+                        .find(|p| p.id == parent_id)
+                        .unwrap()
+                        .children
+                        .retain(|&c| c != id);
+                }
+                Ok(Command::CreateBuildingPart { part })
+            }
             Command::CreateGroupRange { range } => {
                 let installation = project
                     .installations
@@ -839,7 +918,7 @@ impl CommandStack {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::building::BuildingPart;
+    use crate::building::{BuildingPart, BuildingPartType};
     use crate::commissioning::{CommissioningState, CompletionStatus};
     use crate::device::DeviceInstance;
     use crate::flags::ResolvedFlags;
@@ -2342,6 +2421,154 @@ mod tests {
                 ga: GroupAddressId(1),
                 direction: Direction::Send,
             })
+        );
+    }
+
+    fn test_building_part(
+        id: BuildingPartId,
+        kind: BuildingPartType,
+        parent: Option<BuildingPartId>,
+    ) -> BuildingPart {
+        BuildingPart {
+            id,
+            source: source(),
+            name: "B".into(),
+            number: None,
+            kind,
+            default_line: None,
+            completion: CompletionStatus::Editing,
+            children: vec![],
+            devices: vec![],
+            parent,
+        }
+    }
+
+    #[test]
+    fn create_then_delete_building_part_round_trips_through_undo() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let part = test_building_part(BuildingPartId(1), BuildingPartType::Building, None);
+        stack
+            .do_command(
+                &mut project,
+                Command::CreateBuildingPart { part: part.clone() },
+            )
+            .unwrap();
+        assert_eq!(project.installations[0].buildings.len(), 1);
+        stack
+            .do_command(
+                &mut project,
+                Command::DeleteBuildingPart { id: BuildingPartId(1) },
+            )
+            .unwrap();
+        assert!(project.installations[0].buildings.is_empty());
+        stack.undo(&mut project).unwrap(); // undoes the delete -> recreates
+        assert_eq!(project.installations[0].buildings.len(), 1);
+        stack.undo(&mut project).unwrap(); // undoes the create -> empty again
+        assert!(project.installations[0].buildings.is_empty());
+    }
+
+    #[test]
+    fn creating_a_nested_building_part_links_it_into_its_parents_children() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .buildings
+            .push(test_building_part(BuildingPartId(1), BuildingPartType::Building, None));
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::CreateBuildingPart {
+                    part: test_building_part(
+                        BuildingPartId(2),
+                        BuildingPartType::Floor,
+                        Some(BuildingPartId(1)),
+                    ),
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            project.installations[0].buildings[0].children,
+            vec![BuildingPartId(2)]
+        );
+        stack.undo(&mut project).unwrap();
+        assert!(project.installations[0].buildings[0].children.is_empty());
+    }
+
+    #[test]
+    fn create_building_part_rejects_an_unknown_parent() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::CreateBuildingPart {
+                part: test_building_part(
+                    BuildingPartId(1),
+                    BuildingPartType::Room,
+                    Some(BuildingPartId(99)),
+                ),
+            },
+        );
+        assert_eq!(
+            result,
+            Err(CommandError::BuildingPartNotFound(BuildingPartId(99)))
+        );
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn delete_building_part_refuses_when_it_still_has_a_child() {
+        let mut project = test_project_with_one_device(None);
+        let mut parent = test_building_part(BuildingPartId(1), BuildingPartType::Building, None);
+        parent.children.push(BuildingPartId(2));
+        project.installations[0].buildings.push(parent);
+        project.installations[0]
+            .buildings
+            .push(test_building_part(
+                BuildingPartId(2),
+                BuildingPartType::Floor,
+                Some(BuildingPartId(1)),
+            ));
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::DeleteBuildingPart { id: BuildingPartId(1) },
+        );
+        assert_eq!(
+            result,
+            Err(CommandError::BuildingPartNotEmpty(BuildingPartId(1)))
+        );
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn delete_building_part_refuses_when_it_still_has_a_device() {
+        let mut project = test_project_with_one_device(None);
+        let mut part = test_building_part(BuildingPartId(1), BuildingPartType::Room, None);
+        part.devices.push(DeviceId(1));
+        project.installations[0].buildings.push(part);
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::DeleteBuildingPart { id: BuildingPartId(1) },
+        );
+        assert_eq!(
+            result,
+            Err(CommandError::BuildingPartNotEmpty(BuildingPartId(1)))
+        );
+    }
+
+    #[test]
+    fn delete_unknown_building_part_is_rejected() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::DeleteBuildingPart { id: BuildingPartId(99) },
+        );
+        assert_eq!(
+            result,
+            Err(CommandError::BuildingPartNotFound(BuildingPartId(99)))
         );
     }
 }

@@ -28,7 +28,8 @@ description: string | null,
  */
 description_layer: string | null, is_active: boolean, 
 /**
- * Display-only this cycle — no `Command` exists yet to edit flags.
+ * Editable via `Command::SetComObjectFlag` (one flag at a time) —
+ * see `ComFlagKind` in `knx-core`.
  */
 read: boolean, write: boolean, transmit: boolean, update: boolean, communication: boolean, 
 /**

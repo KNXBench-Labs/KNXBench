@@ -1,47 +1,48 @@
 import { useEffect, useState } from "react";
 
-export type Theme = "system" | "light" | "dark";
+export interface ThemeDef {
+  id: string;
+  name: string;
+}
 
-const ORDER: Theme[] = ["system", "light", "dark"];
+export const THEMES: readonly ThemeDef[] = [{ id: "bitcoin-defi", name: "Bitcoin DeFi" }];
+
+const DEFAULT_THEME_ID = "bitcoin-defi";
 const STORAGE_KEY = "knx-desktop:theme";
 
-/** Cycles System -> Light -> Dark -> System. */
-export function nextTheme(current: Theme): Theme {
-  return ORDER[(ORDER.indexOf(current) + 1) % ORDER.length];
+function isThemeId(id: string): boolean {
+  return THEMES.some((t) => t.id === id);
 }
 
 /**
- * Reads the persisted theme. Any stored value other than "light"/"dark"
- * (missing key, or a value from a future/incompatible version) resolves
- * to "system" — the always-safe default, never a hard failure.
+ * Reads the persisted theme id. Anything that isn't a known theme id —
+ * missing key, a value from a future/incompatible version, cycle 7's old
+ * "system"/"light"/"dark" values, or a theme that's since been removed —
+ * resolves to the default, the same always-safe-default philosophy as the
+ * old `loadTheme`.
  */
-export function loadTheme(storage: Pick<Storage, "getItem">): Theme {
+export function loadThemeId(storage: Pick<Storage, "getItem">): string {
   const raw = storage.getItem(STORAGE_KEY);
-  return raw === "light" || raw === "dark" ? raw : "system";
+  return raw && isThemeId(raw) ? raw : DEFAULT_THEME_ID;
 }
 
-export function saveTheme(storage: Pick<Storage, "setItem">, theme: Theme): void {
-  storage.setItem(STORAGE_KEY, theme);
+export function saveThemeId(storage: Pick<Storage, "setItem">, id: string): void {
+  storage.setItem(STORAGE_KEY, id);
 }
 
 /**
- * Reads the persisted theme on mount, applies it to `<html data-theme>`
- * (removed entirely for "system", so the `prefers-color-scheme` media
- * query in styles.css governs), and persists on every change. The
- * returned setter is a cycle-to-next function, not an arbitrary setter —
- * the toggle button is the only caller and only ever advances the cycle.
+ * Reads the persisted theme id on mount, applies it to `<html
+ * data-theme>`, and persists on every change. Unlike the old `useTheme`,
+ * the attribute is always set — there is no "system"/unthemed state
+ * anymore.
  */
-export function useTheme(): [Theme, () => void] {
-  const [theme, setTheme] = useState<Theme>(() => loadTheme(window.localStorage));
+export function useThemeId(): [string, (id: string) => void] {
+  const [id, setId] = useState<string>(() => loadThemeId(window.localStorage));
 
   useEffect(() => {
-    if (theme === "system") {
-      document.documentElement.removeAttribute("data-theme");
-    } else {
-      document.documentElement.setAttribute("data-theme", theme);
-    }
-    saveTheme(window.localStorage, theme);
-  }, [theme]);
+    document.documentElement.setAttribute("data-theme", id);
+    saveThemeId(window.localStorage, id);
+  }, [id]);
 
-  return [theme, () => setTheme(nextTheme)];
+  return [id, setId];
 }

@@ -8,3 +8,6 @@ apps/knx-desktop/src-tauri/gen/
 ideas.md
 OriginalData/
 node_modules/
+AGENTS.md
+.claude/.headroom_wrap_settings.lock
+.serena/project.yml

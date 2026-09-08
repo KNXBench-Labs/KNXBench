@@ -244,6 +244,14 @@ describe("api", () => {
     });
   });
 
+  it("deleteDevice issues a DELETE to /api/devices/:id", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.deleteDevice(12);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/devices/12");
+    expect(init.method).toBe("DELETE");
+  });
+
   it("errorMessage unwraps an Error's message without doubling 'Error: '", () => {
     expect(api.errorMessage(new Error("no project open"))).toBe("no project open");
   });

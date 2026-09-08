@@ -1033,8 +1033,8 @@ route-local structs, not `knx-projection` types, so no `ts-rs` binding
 exists for them, same treatment every other request body already gets.
 No backend change was needed; no arrow-key navigation in the modal
 (click-only), a deliberate scope cut unlike `Search.tsx`. Device-delete
-UI (T3's own frontend, backend done 2026-09-08 above) stays open, its own
-future slice. 5 new `vitest` tests in `api.test.ts`, for 97 total.
+UI (T3's own frontend, backend done 2026-09-08 above) is its own
+following cycle, below. 5 new `vitest` tests in `api.test.ts`, for 97 total.
 
 **Regression fix, cycle 13's `mask-image` ate every fixed overlay
 (2026-09-08).** User report: every "open" toolbar button was clickable but
@@ -1055,3 +1055,22 @@ this — `styles.css` has no coverage and every prior vitest run mocks
 `fetch`/DOM without ever painting a real layout — a gap worth keeping in
 mind for future full-page-visual changes. 89/89 existing `vitest` tests
 still green (unaffected, CSS-only fix).
+
+**T3, device-delete UI (2026-09-08).** Closes the frontend half T2 left
+open. `api.ts` gains `deleteDevice`; `Inspector.tsx`'s `DeviceInspector`
+gains a `canDelete`-gated Delete button, same shape as
+`AreaInspector`/`LineInspector`'s own — `canDelete` reuses
+`findDeviceLineInFirstInstallation`'s existing three-way result
+(a line id, `null` for unassigned-but-reachable, or `undefined` for
+unreachable) rather than a new helper, since `!== undefined` is exactly
+`Command::DeleteDevice`'s own reachability test
+(`remove_device_from_topology` only searches `installations[0]`'s lines
+and `unassigned`, command.rs). A `CommandError::DeviceHasLinks` refusal
+surfaces through the same `api.errorMessage`-into-`field-error` path
+every other Delete button already uses; no new error-handling shape was
+needed. `onDeleted` (already threaded into `Inspector` for every other
+selectable kind) now also reaches the device branch, so a successful
+delete clears the selection via `App.tsx`'s existing `resetTree`. No
+backend change — `DELETE /api/devices/{id}` shipped with T1/T3's backend
+cycle above. 1 new `vitest` test in `api.test.ts`, for 90 total. Closes
+**T3**'s frontend half ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)).

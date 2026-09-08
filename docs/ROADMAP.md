@@ -290,7 +290,37 @@ the crates themselves (`knx-core`, `knx-store`, `knx-desktop`,
 not merely deferred, since every one of them has downstream dependents
 and a rename would only ever be cosmetic.
 
-Cycle 12+ candidates (from `ideas.md`, not yet scheduled).
+Cycle 13 ([design spec](superpowers/specs/2026-09-08-bitcoin-defi-theme-design.md))
+replaces cycle 7's System/Light/Dark cycle and cycle 11's four-token
+palette override outright with a named, selectable theme — a complete
+visual package (colors, typography, radii, shadows, texture) rather than
+a per-user color tweak layered on a light/dark base. "Bitcoin DeFi" is
+the first theme and today's default; the registry is built to hold more
+later even though it holds one entry now. `theme.ts` is rewritten from a
+System/Light/Dark cycling function into a `ThemeDef`/`THEMES` registry
+with `loadThemeId`/`saveThemeId`/`useThemeId`; `palette.ts`,
+`palette.test.ts`, and `ThemePanel.tsx` are deleted outright rather than
+migrated, since a 4-token override doesn't map onto a 12+-token theme
+package. `ThemeToggle.tsx`'s sun/moon/monitor cycle button is replaced by
+`ThemeSwitcher.tsx`, a `<select>` built against the `THEMES` registry so
+a second theme needs no UI change. `index.html`'s inline bootstrap script
+now always sets `data-theme` — Bitcoin DeFi is dark-only by design, so
+there is no more "system"/unthemed state — and silently falls back any
+of cycle 7's old stored values (`"system"`/`"light"`/`"dark"`) to the new
+default. Fonts load two ways: self-hosted `@fontsource` packages (Space
+Grotesk, Inter, JetBrains Mono) imported in `main.tsx` as the guaranteed
+offline fallback, and a Google Fonts `<link>` in `index.html` for a
+CDN-first look, per the user's request — no security header blocks the
+external request in either deployment target. `styles.css` gains a
+24-custom-property design-token layer and component recipes app-wide:
+pill-shaped gradient/glow buttons, glass-morphism overlays, mono/gold
+technical text, gradient-text on the Dashboard heading, card hover-lift,
+and a fading grid-pattern background. Landing-page-only pieces of the
+source design system — orbital hero, pricing tiers, blockchain timeline —
+have no target in this data-dense project editor and are deliberately
+left unbuilt.
+
+Cycle 14+ candidates (from `ideas.md`, not yet scheduled).
 
 ## Cross-cutting — Web/Docker deployment target
 

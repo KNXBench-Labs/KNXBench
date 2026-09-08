@@ -1,5 +1,29 @@
 - **Last Agent:** Claude
-- **Timestamp:** 2026-09-08 14:00
-- **Completed:** T3, device-delete UI (the frontend half T2 left open, 2026-09-08) — `api.ts` gains `deleteDevice`; `Inspector.tsx`'s `DeviceInspector` gains a `canDelete`-gated Delete button matching `AreaInspector`/`LineInspector`'s own shape, reusing `findDeviceLineInFirstInstallation`'s existing three-way result for the gate rather than a new helper. A `CommandError::DeviceHasLinks` refusal surfaces through the same `api.errorMessage` path every other Delete button already uses. `onDeleted` now reaches the device branch of `Inspector`, so a successful delete clears the selection via `App.tsx`'s `resetTree`. No backend change — `DELETE /api/devices/{id}` shipped with the earlier T1/T3 backend cycle. 1 new `vitest` test (`api.test.ts`), 90/90 green. `docs/IMPLEMENTATION_STATUS.md` and `docs/GAP_ANALYSIS_ETS.md` updated (T3 closed). Note: `.ai/CURRENT_STATE.md` itself was never actually committed before this — it existed only as an untracked file in the main checkout's working directory, invisible to `git worktree`, so this session's worktree started without it and this write is its first real commit into history.
-- **Pending/Next Steps:** No open frontend/backend gap tracked in `GAP_ANALYSIS_ETS.md` as of this cycle — check that file and `IMPLEMENTATION_STATUS.md`'s tail for whatever the next session added. Session 7 (Integration & Hardening) continues.
-- **Notes for Codex:** Work happened in a git worktree (`t3-device-delete-ui` branch) per this project's usual flow; merge/rebase onto `main` before continuing from here. `.ai/CURRENT_STATE.md` was untracked garbage on the old main checkout before this commit — if you find a second stale copy sitting in `/mnt/daten-i/Sourcecode/KNXBench/.ai/` outside any worktree, it's safe to delete once this version has landed on `main`.
+- **Timestamp:** 2026-09-08 14:24
+- **Completed:** T7, communication-object flag editing. `knx-core` gains
+  `Command::SetComObjectFlag`/`RestoreComObjectFlag` (generic over a new
+  `ComFlagKind` enum via `ResolvedFlags::get`/`get_mut`, same
+  set-as-`UserEdit`/undo-restores-exact-`Override` shape as
+  `SetComObjectDpt`/`SetComObjectDescription`, but `value` is a bare
+  `bool` — no "clear to inherited" gesture for a checkbox).
+  `apps/knx-server` gains `POST /api/com-object-flag`. `apps/knx-web`
+  gains `ComObjectFlagsRow`, five checkboxes on the comm-object Inspector
+  row — the flags existed read-only on `ComObjectNode` from an earlier
+  cycle but were never actually rendered in the UI until now. 3 new
+  `cargo test` tests, 1 new `vitest` test, all green. Priority stays
+  unmodelled/out of scope (`ResolvedFlags` has no priority field).
+  `docs/GAP_ANALYSIS_ETS.md` and `docs/IMPLEMENTATION_STATUS.md` updated
+  (T7 closed).
+- **Pending/Next Steps:** Tier 2's remaining items: T8 (building-part
+  CRUD commands, `CreateBuildingPart`/`DeleteBuildingPart`/
+  `RenameBuildingPart`/`MoveDeviceToBuildingPart`, closes B4) and T9
+  (bulk/multi-select operations — flagged in `GAP_ANALYSIS_ETS.md` as
+  needing its own design spec for a `Command::Batch` wrapper before
+  implementation, unlike every other item in this backlog so far).
+- **Notes for Codex:** Work happened in a git worktree per this
+  project's usual flow; merge/rebase onto `main` before continuing from
+  here. No new `CommandError` variant was needed for T7 — every failure
+  path (unknown com-object, unknown flag name) reuses
+  `CommandError::ComObjectNotFound` or a plain `Err(String)` from the
+  server's own `parse_com_flag_kind`, same as `parse_direction`'s
+  existing convention.

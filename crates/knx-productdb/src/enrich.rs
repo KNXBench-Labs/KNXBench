@@ -161,7 +161,13 @@ fn layer_of(layer: ValueLayer) -> Layer {
     }
 }
 
-fn apply(
+/// Fills every `Override::Absent` slot on the communication object
+/// instance named by `com_id` from `view`, exactly as `enrich()`'s own
+/// per-project loop does for each device it resolves. Exposed as `pub` so
+/// a caller seeding a single newly created communication object (device
+/// creation, `apps/knx-server::domain::create_device_impl`) can reuse this
+/// mapping directly instead of duplicating it.
+pub fn apply(
     project: &mut Project,
     com_id: ComObjectInstanceId,
     ref_id: &str,
@@ -411,6 +417,28 @@ mod tests {
             com.size.map(|s| s.value),
             Some(knx_core::ObjectSize::Bit(1))
         );
+    }
+
+    #[test]
+    fn apply_can_be_called_directly_without_going_through_enrich() {
+        let (_dir, conn) = db();
+        let view = com_object_view(&conn, "A-1", "A-1_O-1_R-1").unwrap().unwrap();
+        let mut p = project_with("A-1_O-1_R-1", Override::Absent);
+        let mut issues = Vec::new();
+        let changed = apply(
+            &mut p,
+            knx_core::ComObjectInstanceId(1),
+            "A-1_O-1_R-1",
+            &view,
+            &mut issues,
+        );
+        assert!(changed);
+        assert!(issues.is_empty());
+        let com = p
+            .devices
+            .com_object(knx_core::ComObjectInstanceId(1))
+            .unwrap();
+        assert!(com.dpt.value().is_some());
     }
 
     #[test]

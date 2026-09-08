@@ -978,3 +978,37 @@ command layer) with no frontend caller until now. 14 new `vitest` tests
 (`treeUtils.test.ts` — `findArea`, `findLine`,
 `findDeviceLineInFirstInstallation`; `api.test.ts` — the five new
 endpoints), for 92 total.
+
+**T1/T3, device create/delete commands (2026-09-08) — backend only.**
+`knx-core` gains `Command::CreateDevice`/`DeleteDevice`
+(`CommandError::DeviceHasLinks` for the latter's refuse-with-dependents
+case, matching `DeleteArea`/`DeleteLine`/`DeleteGroupAddress`'s own
+convention); `MoveDeviceToLine`'s device-lookup was factored into a
+shared `remove_device_from_topology` helper both commands now use.
+`knx-productdb` gains `catalog_items`/`catalog_item`/`com_object_ref_ids`
+in `query.rs` (backing the future catalog browser, T2) and makes
+`enrich::apply` `pub`, so device creation seeds a device's comm objects
+from the product database once at creation time instead of duplicating
+`enrich()`'s own DPT/text/flags mapping. `apps/knx-server` gains
+`AppState.product_db: Option<Mutex<knx_productdb::Connection>>` (opened
+from `knx_productdb::default_path()`, gracefully `None` on any failure,
+per ADR-0012), a `create_device_impl`/`delete_device_impl`/
+`catalog_manufacturers_impl`/`catalog_items_impl` set in `domain.rs`,
+and four routes: `GET /api/catalog/manufacturers`,
+`GET /api/catalog/items`, `POST /api/devices`, `DELETE /api/devices/{id}`.
+Bonus fix, same root cause, bundled in: `import_and_project` (backing
+`/api/project/import`) now actually wires `state.product_db` through to
+`import_ets_project_with` — every `.knxproj` opened through
+`apps/knx-server` had never been enriched from the product database
+until now, unlike `knx import --product-db` on the CLI, since nothing
+previously threaded a connection through for it to use.
+`open_project_impl` (the server-free golden-count path
+`open_reference_project.rs` exercises) deliberately stays unenriched, so
+that test's counts remain deterministic. No frontend caller for any of
+the four new routes — T2, the catalog browser UI, is its own future
+cycle, the same "backend now, UI later" shape as the 2026-09-06
+topology/group-range/group-link command layer (T4-T6), which got its
+frontend in T23 a day later. 16 new tests across
+`crates/knx-core`/`crates/knx-productdb`/`apps/knx-server`. Closes
+**B1**/**B2** ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)), backend
+only; **T2** stays open.

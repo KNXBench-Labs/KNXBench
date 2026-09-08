@@ -554,6 +554,31 @@ pub fn unlink_com_object_impl(
     )
 }
 
+pub fn catalog_manufacturers_impl(state: &AppState) -> Result<Vec<(String, Option<String>)>, String> {
+    let products = state
+        .product_db
+        .as_ref()
+        .ok_or("no product database configured")?
+        .lock()
+        .expect("state mutex poisoned");
+    knx_productdb::query::manufacturers(&products).map_err(|e| e.to_string())
+}
+
+pub fn catalog_items_impl(
+    state: &AppState,
+    manufacturer: Option<String>,
+    search: Option<String>,
+) -> Result<Vec<knx_productdb::query::CatalogItemRow>, String> {
+    let products = state
+        .product_db
+        .as_ref()
+        .ok_or("no product database configured")?
+        .lock()
+        .expect("state mutex poisoned");
+    knx_productdb::query::catalog_items(&products, manufacturer.as_deref(), search.as_deref())
+        .map_err(|e| e.to_string())
+}
+
 /// Creates a device from a product-database catalog entry (design doc
 /// §3). A catalog item with no resolvable hardware program — passive
 /// hardware, or a `hardware2program_ref_id` this product database

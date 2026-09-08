@@ -183,6 +183,50 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
   );
 }
 
+// Five checkboxes, one per `ComFlagName` — each toggle applies immediately
+// (no blur/Enter gesture, unlike `DptField`/`ComObjectDescriptionField`,
+// since a checkbox's `onChange` already fires exactly once per intended
+// edit). No "clear to inherited" affordance exists here, matching
+// `Command::SetComObjectFlag`'s own bare-`bool` shape (see command.rs).
+function ComObjectFlagsRow(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) => void }) {
+  const { com, onApplied } = props;
+  const [error, setError] = useState<string | null>(null);
+
+  async function toggle(flag: api.ComFlagName, value: boolean) {
+    setError(null);
+    try {
+      const tree = await api.setComObjectFlag(com.id, flag, value);
+      onApplied(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  const flags: { label: string; name: api.ComFlagName; value: boolean }[] = [
+    { label: "R", name: "Read", value: com.read },
+    { label: "W", name: "Write", value: com.write },
+    { label: "T", name: "Transmit", value: com.transmit },
+    { label: "U", name: "Update", value: com.update },
+    { label: "C", name: "Communication", value: com.communication },
+  ];
+
+  return (
+    <div className="com-object-flags">
+      {flags.map((f) => (
+        <label key={f.name} title={f.name}>
+          <input
+            type="checkbox"
+            checked={f.value}
+            onChange={(e) => toggle(f.name, e.target.checked)}
+          />
+          {f.label}
+        </label>
+      ))}
+      {error && <span className="field-error">{error}</span>}
+    </div>
+  );
+}
+
 // One existing `GroupLink`, with an Unlink button. `Command::UnlinkComObject`
 // carries no `installations[0]`-only restriction the way Link/create/delete
 // commands do (it removes whatever link already exists on the comm object,
@@ -383,6 +427,7 @@ function DeviceInspector(props: {
             {com.description_layer && (
               <span className="provenance-badge">{com.description_layer}</span>
             )}
+            <ComObjectFlagsRow com={com} onApplied={onApplied} />
             <ul className="group-link-list">
               {com.links.map((link) => (
                 <GroupLinkRow

@@ -31,6 +31,15 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/lines", post(create_line))
         .route("/api/lines/{id}", delete(delete_line))
         .route("/api/move-device", post(move_device_to_line))
+        .route(
+            "/api/move-device-to-building-part",
+            post(move_device_to_building_part),
+        )
+        .route("/api/building-parts", post(create_building_part))
+        .route(
+            "/api/building-parts/{id}",
+            delete(delete_building_part).patch(rename_building_part),
+        )
         .route("/api/group-ranges", post(create_group_range))
         .route(
             "/api/group-ranges/{id}",
@@ -301,6 +310,64 @@ async fn rename_group_range(
     Json(body): Json<RenameGroupRangeBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     domain::rename_group_range_impl(&state, id, body.name)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateBuildingPartBody {
+    name: String,
+    kind: String,
+    #[serde(default)]
+    parent_id: Option<u32>,
+}
+
+async fn create_building_part(
+    State(state): State<SharedState>,
+    Json(body): Json<CreateBuildingPartBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::create_building_part_impl(&state, body.name, body.kind, body.parent_id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+async fn delete_building_part(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u32>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::delete_building_part_impl(&state, id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+struct RenameBuildingPartBody {
+    name: String,
+}
+
+async fn rename_building_part(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u32>,
+    Json(body): Json<RenameBuildingPartBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::rename_building_part_impl(&state, id, body.name)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct MoveDeviceToBuildingPartBody {
+    device_id: u32,
+    part_id: Option<u32>,
+}
+
+async fn move_device_to_building_part(
+    State(state): State<SharedState>,
+    Json(body): Json<MoveDeviceToBuildingPartBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::move_device_to_building_part_impl(&state, body.device_id, body.part_id)
         .map(Json)
         .map_err(ApiError::bad_request)
 }

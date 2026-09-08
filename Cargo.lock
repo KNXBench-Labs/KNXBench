@@ -1910,6 +1910,7 @@ dependencies = [
  "knx-app",
  "knx-core",
  "knx-etsproj",
+ "knx-productdb",
  "knx-projection",
  "knx-store",
  "serde",

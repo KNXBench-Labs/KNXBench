@@ -5,11 +5,12 @@
 
 use std::fmt;
 
-use crate::device::ComObjectInstance;
+use crate::device::{ComObjectInstance, DeviceInstance};
 use crate::dpt::DptRef;
 use crate::flags::{Direction, GroupLink};
 use crate::group::{GroupAddressEntry, GroupRange};
 use crate::ids::{AreaId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId, LineId};
+use crate::installation::Installation;
 use crate::project::Project;
 use crate::provenance::{Layer, Override, Resolved};
 use crate::string_table::Text;
@@ -108,6 +109,26 @@ pub enum Command {
         device: DeviceId,
         line: Option<LineId>,
     },
+    /// Creates a device with its communication-object instances already
+    /// attached, placed in `line` or, if `None`, `Topology::unassigned` —
+    /// mirrors `MoveDeviceToLine`'s own placement rule, since a device is
+    /// placed in a line xor left unassigned the same way in both commands.
+    /// `device.id` and every entry in `com_objects` carry ids
+    /// pre-allocated by the caller via `Project::ids::next_device_id`/
+    /// `next_com_object_instance_id`; `device.com_objects` already lists
+    /// their ids, so no separate id list is threaded through twice.
+    CreateDevice {
+        device: DeviceInstance,
+        com_objects: Vec<ComObjectInstance>,
+        line: Option<LineId>,
+    },
+    /// Refuses (`CommandError::DeviceHasLinks`) if any of the device's
+    /// communication objects still links to a group address — the
+    /// device equivalent of `DeleteGroupAddress`'s `GroupAddressInUse`
+    /// check.
+    DeleteDevice {
+        id: DeviceId,
+    },
     /// `range.id` is pre-allocated by the caller via
     /// `Project::ids::next_group_range_id`.
     CreateGroupRange {
@@ -155,6 +176,11 @@ pub enum CommandError {
     /// A `DeleteLine` was refused because it still owns at least one
     /// device.
     LineNotEmpty(LineId),
+    /// A `DeleteDevice` was refused because at least one of the device's
+    /// communication object instances still links to a group address —
+    /// deleting it now would leave a dangling `GroupLink`, the device
+    /// equivalent of `GroupAddressInUse`.
+    DeviceHasLinks(DeviceId),
     GroupRangeNotFound(GroupRangeId),
     /// A `DeleteGroupRange` was refused because it still has nested
     /// (middle) ranges.
@@ -202,6 +228,9 @@ impl fmt::Display for CommandError {
             CommandError::LineNotEmpty(id) => {
                 write!(f, "line {id} still has devices, cannot delete")
             }
+            CommandError::DeviceHasLinks(id) => {
+                write!(f, "device {id} still has linked communication objects, cannot delete")
+            }
             CommandError::GroupRangeNotFound(id) => write!(f, "group range {id} not found"),
             CommandError::GroupRangeNotEmpty(id) => {
                 write!(f, "group range {id} still has nested ranges, cannot delete")
@@ -236,6 +265,37 @@ impl fmt::Display for CommandError {
 impl From<ValidationError> for CommandError {
     fn from(e: ValidationError) -> Self {
         CommandError::Validation(e)
+    }
+}
+
+/// Removes `device` from wherever it currently sits in `installation`'s
+/// topology — `unassigned` or a line's `devices` — returning the line it
+/// was in, if any. Shared by `MoveDeviceToLine` (which repositions the
+/// device elsewhere) and `DeleteDevice` (which needs the same lookup to
+/// know what line its own inverse `CreateDevice` should name).
+fn remove_device_from_topology(
+    installation: &mut Installation,
+    device: DeviceId,
+) -> Result<Option<LineId>, CommandError> {
+    if let Some(pos) = installation
+        .topology
+        .unassigned
+        .iter()
+        .position(|&d| d == device)
+    {
+        installation.topology.unassigned.remove(pos);
+        Ok(None)
+    } else if let Some(current_line) = installation
+        .topology
+        .lines
+        .iter_mut()
+        .find(|l| l.devices.contains(&device))
+    {
+        let id = current_line.id;
+        current_line.devices.retain(|&d| d != device);
+        Ok(Some(id))
+    } else {
+        Err(CommandError::DeviceNotFound(device))
     }
 }
 
@@ -495,26 +555,7 @@ impl Command {
                         return Err(CommandError::LineNotFound(line_id));
                     }
                 }
-                let previous = if let Some(pos) = installation
-                    .topology
-                    .unassigned
-                    .iter()
-                    .position(|&d| d == device)
-                {
-                    installation.topology.unassigned.remove(pos);
-                    None
-                } else if let Some(current_line) = installation
-                    .topology
-                    .lines
-                    .iter_mut()
-                    .find(|l| l.devices.contains(&device))
-                {
-                    let id = current_line.id;
-                    current_line.devices.retain(|&d| d != device);
-                    Some(id)
-                } else {
-                    return Err(CommandError::DeviceNotFound(device));
-                };
+                let previous = remove_device_from_topology(installation, device)?;
                 match line {
                     Some(line_id) => {
                         installation
@@ -531,6 +572,75 @@ impl Command {
                 Ok(Command::MoveDeviceToLine {
                     device,
                     line: previous,
+                })
+            }
+            Command::CreateDevice {
+                device,
+                com_objects,
+                line,
+            } => {
+                let device = device.clone();
+                let com_objects = com_objects.clone();
+                let line = *line;
+                let device_id = device.id;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                if let Some(line_id) = line {
+                    if !installation.topology.lines.iter().any(|l| l.id == line_id) {
+                        return Err(CommandError::LineNotFound(line_id));
+                    }
+                }
+                for com in &com_objects {
+                    project.devices.insert_com_object(com.clone());
+                }
+                project.devices.insert(device);
+                match line {
+                    Some(line_id) => {
+                        installation
+                            .topology
+                            .lines
+                            .iter_mut()
+                            .find(|l| l.id == line_id)
+                            .unwrap()
+                            .devices
+                            .push(device_id);
+                    }
+                    None => installation.topology.unassigned.push(device_id),
+                }
+                Ok(Command::DeleteDevice { id: device_id })
+            }
+            Command::DeleteDevice { id } => {
+                let id = *id;
+                let device_ref = project
+                    .devices
+                    .get(id)
+                    .ok_or(CommandError::DeviceNotFound(id))?;
+                let has_links = device_ref.com_objects.iter().any(|&com_id| {
+                    project
+                        .devices
+                        .com_object(com_id)
+                        .is_some_and(|c| !c.links.is_empty())
+                });
+                if has_links {
+                    return Err(CommandError::DeviceHasLinks(id));
+                }
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let line = remove_device_from_topology(installation, id)?;
+                let device = project.devices.remove(id).unwrap();
+                let com_objects = device
+                    .com_objects
+                    .iter()
+                    .filter_map(|&com_id| project.devices.remove_com_object(com_id))
+                    .collect();
+                Ok(Command::CreateDevice {
+                    device,
+                    com_objects,
+                    line,
                 })
             }
             Command::CreateGroupRange { range } => {
@@ -1514,6 +1624,212 @@ mod tests {
             },
         );
         assert_eq!(result, Err(CommandError::DeviceNotFound(DeviceId(99))));
+    }
+
+    fn test_com_object_instance(id: ComObjectInstanceId, device: DeviceId) -> ComObjectInstance {
+        ComObjectInstance {
+            id,
+            source: source(),
+            device,
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        }
+    }
+
+    fn test_device_instance(id: DeviceId, com_objects: Vec<ComObjectInstanceId>) -> DeviceInstance {
+        DeviceInstance {
+            id,
+            source: source(),
+            name: "New device".into(),
+            description: None,
+            address: None,
+            product_ref: "P".into(),
+            program_ref: "H".into(),
+            commissioning: CommissioningState::default(),
+            visibility_calculated: true,
+            com_objects,
+            binary_data: vec![],
+        }
+    }
+
+    #[test]
+    fn create_device_lands_in_unassigned_when_no_line_is_given_and_undo_removes_it() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let com = test_com_object_instance(ComObjectInstanceId(10), DeviceId(2));
+        let device = test_device_instance(DeviceId(2), vec![ComObjectInstanceId(10)]);
+        stack
+            .do_command(
+                &mut project,
+                Command::CreateDevice {
+                    device: device.clone(),
+                    com_objects: vec![com.clone()],
+                    line: None,
+                },
+            )
+            .unwrap();
+        assert!(project.devices.get(DeviceId(2)).is_some());
+        assert!(project.devices.com_object(ComObjectInstanceId(10)).is_some());
+        assert_eq!(
+            project.installations[0].topology.unassigned,
+            vec![DeviceId(2)]
+        );
+        stack.undo(&mut project).unwrap();
+        assert!(project.devices.get(DeviceId(2)).is_none());
+        assert!(project.devices.com_object(ComObjectInstanceId(10)).is_none());
+        assert!(project.installations[0].topology.unassigned.is_empty());
+    }
+
+    #[test]
+    fn create_device_on_a_line_places_it_there_and_rejects_an_unknown_line() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].topology.areas.push(Area {
+            id: AreaId(1),
+            source: source(),
+            name: "A".into(),
+            address: 1,
+            completion: CompletionStatus::FinishedDesign,
+            lines: vec![LineId(1)],
+        });
+        project.installations[0]
+            .topology
+            .lines
+            .push(test_line(LineId(1), 1, vec![]));
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::CreateDevice {
+                    device: test_device_instance(DeviceId(2), vec![]),
+                    com_objects: vec![],
+                    line: Some(LineId(1)),
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            project.installations[0].topology.lines[0].devices,
+            vec![DeviceId(2)]
+        );
+
+        let result = stack.do_command(
+            &mut project,
+            Command::CreateDevice {
+                device: test_device_instance(DeviceId(3), vec![]),
+                com_objects: vec![],
+                line: Some(LineId(99)),
+            },
+        );
+        assert_eq!(result, Err(CommandError::LineNotFound(LineId(99))));
+        assert!(project.devices.get(DeviceId(3)).is_none());
+    }
+
+    #[test]
+    fn delete_device_refuses_while_a_com_object_still_has_a_link() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .group_addresses
+            .push(GroupAddressEntry {
+                id: GroupAddressId(1),
+                source: source(),
+                name: "GA".into(),
+                address: GroupAddress::from_raw(1),
+                central: false,
+                unfiltered: false,
+                range: None,
+            });
+        let mut com = test_com_object_instance(ComObjectInstanceId(1), DeviceId(1));
+        com.links.push(GroupLink {
+            ga: GroupAddressId(1),
+            direction: Direction::Send,
+        });
+        project.devices.insert_com_object(com);
+        project
+            .devices
+            .get_mut(DeviceId(1))
+            .unwrap()
+            .com_objects
+            .push(ComObjectInstanceId(1));
+
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(&mut project, Command::DeleteDevice { id: DeviceId(1) });
+        assert_eq!(result, Err(CommandError::DeviceHasLinks(DeviceId(1))));
+        assert!(project.devices.get(DeviceId(1)).is_some());
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn deleting_then_undoing_and_redoing_preserves_values_captured_at_delete_time() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let com = test_com_object_instance(ComObjectInstanceId(10), DeviceId(2));
+        let device = test_device_instance(DeviceId(2), vec![ComObjectInstanceId(10)]);
+        stack
+            .do_command(
+                &mut project,
+                Command::CreateDevice {
+                    device,
+                    com_objects: vec![com],
+                    line: None,
+                },
+            )
+            .unwrap();
+
+        // Stand-in for `knx_productdb::enrich::apply` filling an `Absent`
+        // slot after creation (design doc §3, step 3) — a direct
+        // mutation, not a `Command`, exactly like the real enrichment
+        // pass.
+        project
+            .devices
+            .com_object_mut(ComObjectInstanceId(10))
+            .unwrap()
+            .dpt = Override::Value(Resolved {
+            value: DptRef {
+                main: 1,
+                sub: Some(1),
+            },
+            layer: Layer::Program,
+        });
+
+        stack
+            .do_command(&mut project, Command::DeleteDevice { id: DeviceId(2) })
+            .unwrap();
+        assert!(project.devices.get(DeviceId(2)).is_none());
+        assert!(project.devices.com_object(ComObjectInstanceId(10)).is_none());
+
+        stack.undo(&mut project).unwrap(); // undoes the delete -> recreates
+        let restored = project
+            .devices
+            .com_object(ComObjectInstanceId(10))
+            .unwrap();
+        assert_eq!(
+            restored.dpt.value().unwrap().value,
+            DptRef {
+                main: 1,
+                sub: Some(1)
+            }
+        );
+        assert_eq!(restored.dpt.value().unwrap().layer, Layer::Program);
+
+        stack.redo(&mut project).unwrap(); // re-deletes
+        assert!(project.devices.get(DeviceId(2)).is_none());
+
+        stack.undo(&mut project).unwrap(); // undoes the re-delete -> recreates again
+        let restored_again = project
+            .devices
+            .com_object(ComObjectInstanceId(10))
+            .unwrap();
+        assert_eq!(
+            restored_again.dpt.value().unwrap().layer,
+            Layer::Program,
+            "the enriched value must survive a delete/undo/redo/undo cycle unchanged"
+        );
     }
 
     fn test_range(

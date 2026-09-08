@@ -1,6 +1,7 @@
 use axum::extract::Path as AxumPath;
+use axum::extract::Query;
 use axum::extract::State;
-use axum::routing::{delete, post};
+use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use serde::Deserialize;
 
@@ -39,6 +40,10 @@ pub fn project_routes() -> Router<SharedState> {
             "/api/group-links",
             post(link_com_object).delete(unlink_com_object),
         )
+        .route("/api/catalog/manufacturers", get(catalog_manufacturers))
+        .route("/api/catalog/items", get(catalog_items))
+        .route("/api/devices", post(create_device))
+        .route("/api/devices/{id}", delete(delete_device))
         .route("/api/undo", post(undo))
         .route("/api/redo", post(redo))
 }
@@ -322,6 +327,96 @@ async fn unlink_com_object(
     Json(body): Json<GroupLinkBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     domain::unlink_com_object_impl(&state, body.com_object_id, body.ga_id, body.direction)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(serde::Serialize)]
+struct CatalogManufacturerDto {
+    id: String,
+    name: Option<String>,
+}
+
+async fn catalog_manufacturers(
+    State(state): State<SharedState>,
+) -> Result<Json<Vec<CatalogManufacturerDto>>, ApiError> {
+    domain::catalog_manufacturers_impl(&state)
+        .map(|rows| {
+            Json(
+                rows.into_iter()
+                    .map(|(id, name)| CatalogManufacturerDto { id, name })
+                    .collect(),
+            )
+        })
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+struct CatalogItemsQuery {
+    #[serde(default)]
+    manufacturer: Option<String>,
+    #[serde(default)]
+    search: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CatalogItemDto {
+    id: String,
+    manufacturer_id: String,
+    name: Option<String>,
+    number: Option<String>,
+    visible_description: Option<String>,
+    product_ref_id: Option<String>,
+    hardware2program_ref_id: Option<String>,
+}
+
+impl From<knx_productdb::query::CatalogItemRow> for CatalogItemDto {
+    fn from(r: knx_productdb::query::CatalogItemRow) -> Self {
+        Self {
+            id: r.id,
+            manufacturer_id: r.manufacturer_id,
+            name: r.name,
+            number: r.number,
+            visible_description: r.visible_description,
+            product_ref_id: r.product_ref_id,
+            hardware2program_ref_id: r.hardware2program_ref_id,
+        }
+    }
+}
+
+async fn catalog_items(
+    State(state): State<SharedState>,
+    Query(q): Query<CatalogItemsQuery>,
+) -> Result<Json<Vec<CatalogItemDto>>, ApiError> {
+    domain::catalog_items_impl(&state, q.manufacturer, q.search)
+        .map(|rows| Json(rows.into_iter().map(CatalogItemDto::from).collect()))
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateDeviceBody {
+    #[serde(default)]
+    line_id: Option<u32>,
+    catalog_item_id: String,
+    name: String,
+}
+
+async fn create_device(
+    State(state): State<SharedState>,
+    Json(body): Json<CreateDeviceBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::create_device_impl(&state, body.line_id, body.catalog_item_id, body.name)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+async fn delete_device(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u32>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::delete_device_impl(&state, id)
         .map(Json)
         .map_err(ApiError::bad_request)
 }

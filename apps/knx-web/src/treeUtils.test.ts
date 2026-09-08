@@ -8,6 +8,7 @@ import {
   buildSearchIndex,
   findArea,
   findBuildingPart,
+  findDeviceBuildingPartInFirstInstallation,
   findDeviceLineInFirstInstallation,
   findGroupAddress,
   findGroupRange,
@@ -264,5 +265,27 @@ describe("findDeviceLineInFirstInstallation", () => {
 
   it("returns undefined when there is no first installation at all", () => {
     expect(findDeviceLineInFirstInstallation(tree([]), 9)).toBeUndefined();
+  });
+});
+
+describe("findDeviceBuildingPartInFirstInstallation", () => {
+  it("finds a device nested inside a building part", () => {
+    const t = tree([
+      installation({
+        buildings: [building(1, "Main building", "Building", [
+          building(2, "Living room", "Room", [], [device(9, "Switch")]),
+        ])],
+      }),
+    ]);
+    expect(findDeviceBuildingPartInFirstInstallation(t, 9)).toBe(2);
+  });
+
+  it("returns null for a device not placed in any building part", () => {
+    const t = tree([installation({ buildings: [building(1, "Main building", "Building")] })]);
+    expect(findDeviceBuildingPartInFirstInstallation(t, 9)).toBeNull();
+  });
+
+  it("returns null when there is no first installation at all", () => {
+    expect(findDeviceBuildingPartInFirstInstallation(tree([]), 9)).toBeNull();
   });
 });

@@ -56,8 +56,23 @@ body {
   color: var(--knx-foreground);
 }
 
-:root[data-theme="bitcoin-defi"] body {
-  background-color: var(--knx-bg);
+/* The fading grid-pattern lives on a dedicated fixed pseudo-element behind
+ * everything, not on `body` itself. `mask-image` on `body` would clip
+ * `body`'s *entire* painted subtree (per spec, same as `filter`/`opacity`) —
+ * every `position: fixed` overlay appended straight to `document.body`
+ * (FsPicker, Search, CommandPalette, toasts) sits inside that mask's
+ * geometry too, and since `body` has no explicit height its own box is only
+ * as tall as the toolbar, so anything below rendered fully invisible: open
+ * project/save/search all looked clickable but silently did nothing. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+:root[data-theme="bitcoin-defi"] body::before {
   background-image:
     linear-gradient(to right, rgba(30, 41, 59, 0.5) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(30, 41, 59, 0.5) 1px, transparent 1px);

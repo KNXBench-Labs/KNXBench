@@ -153,6 +153,17 @@ pub enum Command {
         id: BuildingPartId,
         name: String,
     },
+    /// Moves a device into `part`, or out of any building part entirely
+    /// if `None` — independent of `MoveDeviceToLine`'s topology
+    /// placement, the same way `building.rs`'s own doc comment
+    /// describes a `BuildingPart` as referencing a device, not owning
+    /// it. Unlike `MoveDeviceToLine`, `None` is not itself a tracked
+    /// location (there is no building-side "unassigned" bucket) — it
+    /// just means the device is not currently placed in any part.
+    MoveDeviceToBuildingPart {
+        device: DeviceId,
+        part: Option<BuildingPartId>,
+    },
     /// `range.id` is pre-allocated by the caller via
     /// `Project::ids::next_group_range_id`.
     CreateGroupRange {
@@ -329,6 +340,25 @@ fn remove_device_from_topology(
     } else {
         Err(CommandError::DeviceNotFound(device))
     }
+}
+
+/// Removes `device` from whichever building part currently lists it, if
+/// any, returning that part's id. Unlike `remove_device_from_topology`,
+/// absence is not an error: a device with no building placement at all
+/// is a normal state (building placement isn't exhaustive the way
+/// topology's unassigned/line split is), so this returns `Ok`-shaped
+/// `None` rather than `Err`. `installation.buildings` is searched flat
+/// — no recursion needed, since it is already a flat list linked by
+/// `parent`/`children` ids, not a nested structure.
+fn remove_device_from_buildings(
+    installation: &mut Installation,
+    device: DeviceId,
+) -> Option<BuildingPartId> {
+    installation.buildings.iter_mut().find_map(|part| {
+        let pos = part.devices.iter().position(|&d| d == device)?;
+        part.devices.remove(pos);
+        Some(part.id)
+    })
 }
 
 impl Command {
@@ -739,6 +769,36 @@ impl Command {
                     .ok_or(CommandError::BuildingPartNotFound(id))?;
                 let previous = std::mem::replace(&mut part.name, name.clone());
                 Ok(Command::RenameBuildingPart { id, name: previous })
+            }
+            Command::MoveDeviceToBuildingPart { device, part } => {
+                let device = *device;
+                let part = *part;
+                if project.devices.get(device).is_none() {
+                    return Err(CommandError::DeviceNotFound(device));
+                }
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                if let Some(part_id) = part {
+                    if !installation.buildings.iter().any(|p| p.id == part_id) {
+                        return Err(CommandError::BuildingPartNotFound(part_id));
+                    }
+                }
+                let previous = remove_device_from_buildings(installation, device);
+                if let Some(part_id) = part {
+                    installation
+                        .buildings
+                        .iter_mut()
+                        .find(|p| p.id == part_id)
+                        .unwrap()
+                        .devices
+                        .push(device);
+                }
+                Ok(Command::MoveDeviceToBuildingPart {
+                    device,
+                    part: previous,
+                })
             }
             Command::CreateGroupRange { range } => {
                 let installation = project
@@ -2626,5 +2686,114 @@ mod tests {
             result,
             Err(CommandError::BuildingPartNotFound(BuildingPartId(99)))
         );
+    }
+
+    #[test]
+    fn move_device_into_a_building_part_and_back_via_undo() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .buildings
+            .push(test_building_part(BuildingPartId(1), BuildingPartType::Room, None));
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveDeviceToBuildingPart {
+                    device: DeviceId(1),
+                    part: Some(BuildingPartId(1)),
+                },
+            )
+            .unwrap();
+        assert_eq!(
+            project.installations[0].buildings[0].devices,
+            vec![DeviceId(1)]
+        );
+        stack.undo(&mut project).unwrap();
+        assert!(project.installations[0].buildings[0].devices.is_empty());
+    }
+
+    #[test]
+    fn move_device_between_two_building_parts() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .buildings
+            .push(test_building_part(BuildingPartId(1), BuildingPartType::Room, None));
+        project.installations[0]
+            .buildings
+            .push(test_building_part(BuildingPartId(2), BuildingPartType::Room, None));
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveDeviceToBuildingPart {
+                    device: DeviceId(1),
+                    part: Some(BuildingPartId(1)),
+                },
+            )
+            .unwrap();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveDeviceToBuildingPart {
+                    device: DeviceId(1),
+                    part: Some(BuildingPartId(2)),
+                },
+            )
+            .unwrap();
+        assert!(project.installations[0].buildings[0].devices.is_empty());
+        assert_eq!(
+            project.installations[0].buildings[1].devices,
+            vec![DeviceId(1)]
+        );
+    }
+
+    #[test]
+    fn moving_a_never_placed_device_to_none_is_a_harmless_no_op() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::MoveDeviceToBuildingPart {
+                    device: DeviceId(1),
+                    part: None,
+                },
+            )
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+    }
+
+    #[test]
+    fn move_device_to_building_part_rejects_an_unknown_part() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::MoveDeviceToBuildingPart {
+                device: DeviceId(1),
+                part: Some(BuildingPartId(99)),
+            },
+        );
+        assert_eq!(
+            result,
+            Err(CommandError::BuildingPartNotFound(BuildingPartId(99)))
+        );
+    }
+
+    #[test]
+    fn move_unknown_device_to_a_building_part_is_rejected() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .buildings
+            .push(test_building_part(BuildingPartId(1), BuildingPartType::Room, None));
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::MoveDeviceToBuildingPart {
+                device: DeviceId(99),
+                part: Some(BuildingPartId(1)),
+            },
+        );
+        assert_eq!(result, Err(CommandError::DeviceNotFound(DeviceId(99))));
     }
 }

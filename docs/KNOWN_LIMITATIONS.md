@@ -834,3 +834,30 @@ the same fix Task 5 already applied to `Security` (per-device
 the schema-21/23 import/export plan's Task 7 (export only); tracked here
 for a future fast-follow.
 
+## 35. Device-creation `EnrichmentIssue`s are silently dropped
+
+**Limitation.** `apps/knx-server`'s `create_device_impl` seeds a newly
+created device's communication objects from the product database via
+`knx_productdb::enrich::apply`, exactly like import's own `enrich()`
+pass — except the `Vec<EnrichmentIssue>` it collects (ambiguous DPT
+lists, a `ComObjectRef` id the resolved program doesn't have) is
+discarded rather than surfaced anywhere. A device created against an
+application program with an ambiguous DPT list on one of its
+communication objects gets that communication object with no DPT set
+and no visible warning.
+
+**Cause.** Import has `ImportReport` as an existing, already-wired
+channel for this; `POST /api/devices` has no equivalent yet — building
+one was out of scope for this slice (see
+[docs/superpowers/specs/2026-09-07-device-create-delete-design.md](superpowers/specs/2026-09-07-device-create-delete-design.md)).
+
+**Impact.** Silent: the affected communication object is
+indistinguishable, from the API's response alone, from one whose DPT
+was never set on purpose. Recoverable by hand via the existing
+`SetComObjectDpt` command/UI once a user notices, but nothing prompts
+them to look.
+
+**Lifted when.** `create_device_impl` returns its `issues` alongside the
+projected tree (or a dedicated response field) and T2's future
+catalog-browser UI surfaces them — the same role import's own report
+screen (T11, still open) would play for import.

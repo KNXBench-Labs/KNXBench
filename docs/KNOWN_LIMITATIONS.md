@@ -117,9 +117,11 @@ reported as `ExportWarning::StaleSignature { source_path }` per entry: it
 no longer matches the content it signs, since it cannot be regenerated
 without KNX's signing keys.
 
-**Lifted when.** Someone exports a project and opens it in a real ETS
-installation. Either outcome is useful: if ETS rejects it, the export is
-documented as one-way, which is a different product decision than a bug.
+**Lifted when.** Per [ADR-0015](adr/0015-native-output-drops-ets-reimport-goal.md)
+(Session 7), it isn't going to be: ETS reimport of our export is no longer
+a project goal, so this is not scheduled to be verified. The `.knxproj`
+exporter keeps working as-is and keeps saying it is unsigned; the native
+`.knxdb` file (ADR-0003) is the supported round-trip format.
 
 ## 6. Devices behind vendor plug-in DLLs
 

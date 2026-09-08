@@ -42,7 +42,6 @@
   body,
   .search-panel,
   .fs-picker,
-  .theme-panel,
   .tree-label.selected,
   .search-result.selected {
     transition: background-color var(--knx-transition-duration) ease,
@@ -55,6 +54,15 @@ body {
   margin: 0;
   background: var(--knx-bg);
   color: var(--knx-foreground);
+}
+
+:root[data-theme="bitcoin-defi"] body {
+  background-color: var(--knx-bg);
+  background-image:
+    linear-gradient(to right, rgba(30, 41, 59, 0.5) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 41, 59, 0.5) 1px, transparent 1px);
+  background-size: 50px 50px;
+  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
 }
 
 main {
@@ -431,52 +439,6 @@ main {
   justify-content: flex-end;
 }
 
-.theme-panel-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--knx-overlay-backdrop);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.theme-panel {
-  background: var(--knx-surface);
-  color: var(--knx-foreground);
-  padding: 1rem;
-  min-width: 20rem;
-  border-radius: 6px;
-  box-shadow: 0 4px 24px var(--knx-overlay-shadow);
-}
-
-.theme-panel-tokens {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.theme-panel-tokens li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.35rem 0;
-}
-
-.theme-panel-motion {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 0.5rem;
-}
-
-.theme-panel-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  margin-top: 1rem;
-}
-
 button {
   font-family: var(--knx-font-body);
   font-weight: 600;
@@ -545,4 +507,23 @@ h6 {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.theme-switcher select {
+  font-family: var(--knx-font-mono);
+  text-transform: none;
+  letter-spacing: normal;
+  min-width: 10rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

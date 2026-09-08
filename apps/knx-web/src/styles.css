@@ -88,6 +88,12 @@ main {
   font-size: 1rem;
   line-height: 1;
   color: inherit;
+  padding: 0;
+  min-height: auto;
+  border-radius: 0;
+  text-transform: none;
+  letter-spacing: normal;
+  font-family: inherit;
 }
 
 .toast--error {

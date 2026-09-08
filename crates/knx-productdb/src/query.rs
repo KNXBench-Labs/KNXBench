@@ -234,11 +234,85 @@ pub fn programs(
     Ok(rows)
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CatalogItemRow {
+    pub id: String,
+    pub manufacturer_id: String,
+    pub name: Option<String>,
+    pub number: Option<String>,
+    pub visible_description: Option<String>,
+    pub product_ref_id: Option<String>,
+    pub hardware2program_ref_id: Option<String>,
+}
+
+fn row_to_catalog_item(r: &rusqlite::Row) -> rusqlite::Result<CatalogItemRow> {
+    Ok(CatalogItemRow {
+        id: r.get(0)?,
+        manufacturer_id: r.get(1)?,
+        name: r.get(2)?,
+        number: r.get(3)?,
+        visible_description: r.get(4)?,
+        product_ref_id: r.get(5)?,
+        hardware2program_ref_id: r.get(6)?,
+    })
+}
+
+const CATALOG_ITEM_COLUMNS: &str =
+    "id, manufacturer_id, name, number, visible_description, product_ref_id, hardware2program_ref_id";
+
+/// Every `catalog_item` row, optionally narrowed to one manufacturer and/or
+/// a case-insensitive substring match on `name`/`number` — backs the future
+/// catalog browser (T2). Device creation (`apps/knx-server`) goes straight
+/// to `catalog_item` by id instead: nothing yet picks an id through this
+/// listing.
+pub fn catalog_items(
+    conn: &Connection,
+    manufacturer: Option<&str>,
+    search: Option<&str>,
+) -> Result<Vec<CatalogItemRow>, ProductDbError> {
+    let sql = format!(
+        "SELECT {CATALOG_ITEM_COLUMNS}
+         FROM catalog_item
+         WHERE (?1 IS NULL OR manufacturer_id = ?1)
+           AND (?2 IS NULL
+                OR LOWER(name) LIKE '%' || LOWER(?2) || '%'
+                OR LOWER(number) LIKE '%' || LOWER(?2) || '%')
+         ORDER BY manufacturer_id, name"
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let rows = stmt
+        .query_map([manufacturer, search], row_to_catalog_item)?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+/// The single-row lookup `apps/knx-server`'s device creation uses.
+pub fn catalog_item(conn: &Connection, id: &str) -> Result<Option<CatalogItemRow>, ProductDbError> {
+    let sql = format!("SELECT {CATALOG_ITEM_COLUMNS} FROM catalog_item WHERE id = ?1");
+    conn.query_row(&sql, [id], row_to_catalog_item)
+        .optional()
+        .map_err(Into::into)
+}
+
+/// Every `com_object_ref.id` for `program_id`, in document/ingest order.
+/// `ORDER BY rowid` rather than `ORDER BY id`: `com_object_ref` is not
+/// declared `WITHOUT ROWID`, so `rowid` preserves insertion order, and the
+/// ids themselves (`A-1_O-1_R-1`, `A-1_O-1_R-10`, `A-1_O-1_R-2`, …) do not
+/// sort into that order lexically.
+pub fn com_object_ref_ids(conn: &Connection, program_id: &str) -> Result<Vec<String>, ProductDbError> {
+    let mut stmt =
+        conn.prepare("SELECT id FROM com_object_ref WHERE program_id = ?1 ORDER BY rowid")?;
+    let rows = stmt
+        .query_map([program_id], |r| r.get(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::open_and_migrate;
-    use crate::parse::{hardware::ingest_hardware, program::ingest_program};
+    use crate::parse::{catalog::ingest_catalog, hardware::ingest_hardware, program::ingest_program};
 
     const HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
@@ -267,6 +341,64 @@ mod tests {
         ingest_hardware(&conn, "sha-h", "M-006A/Hardware.xml", HARDWARE.as_bytes()).unwrap();
         ingest_program(&conn, "sha-p", "M-006A/A.xml", PROGRAM.as_bytes()).unwrap();
         (dir, conn)
+    }
+
+    const CATALOG: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-006A">
+      <Catalog>
+        <CatalogSection Id="M-006A_CG-1" Name="Actuators" Number="1" DefaultLanguage="de-DE">
+          <CatalogItem Id="M-006A_CI-1" Name="Schaltaktor" Number="EM12102"
+                       DefaultLanguage="de-DE"
+                       ProductRefId="M-006A_H-1_P-1"
+                       Hardware2ProgramRefId="H-1_HP-1" />
+        </CatalogSection>
+      </Catalog>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+
+    #[test]
+    fn catalog_items_lists_and_filters_by_manufacturer_and_search() {
+        let (_dir, conn) = db();
+        ingest_catalog(&conn, "sha-c", "M-006A/Catalog.xml", CATALOG.as_bytes()).unwrap();
+
+        let all = catalog_items(&conn, None, None).unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].id, "M-006A_CI-1");
+
+        assert_eq!(catalog_items(&conn, Some("M-006A"), None).unwrap().len(), 1);
+        assert_eq!(catalog_items(&conn, Some("M-999X"), None).unwrap().len(), 0);
+        assert_eq!(
+            catalog_items(&conn, None, Some("schalt")).unwrap().len(),
+            1,
+            "search is case-insensitive"
+        );
+        assert_eq!(
+            catalog_items(&conn, None, Some("EM12102")).unwrap().len(),
+            1,
+            "search also matches on number"
+        );
+        assert_eq!(catalog_items(&conn, None, Some("nope")).unwrap().len(), 0);
+    }
+
+    #[test]
+    fn catalog_item_looks_up_a_single_row_by_id() {
+        let (_dir, conn) = db();
+        ingest_catalog(&conn, "sha-c", "M-006A/Catalog.xml", CATALOG.as_bytes()).unwrap();
+
+        let item = catalog_item(&conn, "M-006A_CI-1").unwrap().unwrap();
+        assert_eq!(item.manufacturer_id, "M-006A");
+        assert_eq!(item.hardware2program_ref_id.as_deref(), Some("H-1_HP-1"));
+        assert!(catalog_item(&conn, "nope").unwrap().is_none());
+    }
+
+    #[test]
+    fn com_object_ref_ids_returns_every_ref_in_document_order() {
+        let (_dir, conn) = db();
+        let ids = com_object_ref_ids(&conn, "A-1").unwrap();
+        assert_eq!(ids, vec!["A-1_O-1_R-1".to_string(), "A-1_O-1_R-2".to_string()]);
     }
 
     #[test]

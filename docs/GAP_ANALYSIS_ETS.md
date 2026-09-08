@@ -223,10 +223,18 @@ Each task: **what**, **why**, **depends on**.
 
 ### Tier 2 — closes remaining single-field-editor gaps
 
-- **T7. Communication-object flag editing.** `Command::SetComObjectFlags`
-  (read/write/transmit/update/communication, and priority if modelled),
-  wired to the existing Inspector fields that already display them
-  read-only. Closes **B6**.
+- **T7. Communication-object flag editing. Done (2026-09-08).**
+  `Command::SetComObjectFlag`/`RestoreComObjectFlag` land, one flag at a
+  time (`ComFlagKind`) rather than all five at once — a checkbox has only
+  two states, so there is no "clear to inherited" gesture the way
+  `SetComObjectDpt`/`SetComObjectDescription`'s empty-string convention
+  gives text fields. Priority stays out of scope: `ResolvedFlags`/
+  `ComFlags` model no priority field today, so there was nothing to wire.
+  `apps/knx-web` gains a `ComObjectFlagsRow` of five checkboxes on the
+  comm-object Inspector row — the flags were exported to `ComObjectNode`
+  read-only in an earlier cycle but, contrary to this task's original
+  text, were never actually rendered anywhere in the UI until now. Closes
+  **B6**.
 - **T8. Building-part CRUD commands.** `CreateBuildingPart`/
   `DeleteBuildingPart`/`RenameBuildingPart`/`MoveDeviceToBuildingPart`.
   Closes **B4**.

@@ -316,6 +316,32 @@ fn setting_com_object_dpt_marks_it_user_edit_and_undo_restores_the_program_layer
 }
 
 #[test]
+fn setting_com_object_flag_marks_it_user_edit_and_undo_restores_absence() {
+    let state = state_with_two_devices();
+    knx_server::set_com_object_flag_impl(&state, 1, "Communication".into(), true).unwrap();
+
+    let project = state.project.lock().unwrap();
+    let detail = knx_server::device_detail_impl(project.as_ref().unwrap(), 1).unwrap();
+    let com = &detail.com_objects[0];
+    assert!(com.communication);
+    drop(project);
+
+    knx_server::undo_impl(&state).unwrap();
+    let project = state.project.lock().unwrap();
+    let detail = knx_server::device_detail_impl(project.as_ref().unwrap(), 1).unwrap();
+    let com = &detail.com_objects[0];
+    assert!(!com.communication); // fixture's com object had no flags stated at all
+}
+
+#[test]
+fn setting_an_unknown_com_object_flag_name_is_rejected() {
+    let state = state_with_two_devices();
+    let err = knx_server::set_com_object_flag_impl(&state, 1, "Priority".into(), true)
+        .expect_err("unknown flag name must be rejected");
+    assert!(err.contains("Priority"));
+}
+
+#[test]
 fn undo_with_nothing_to_undo_is_an_error() {
     let state = state_with_two_devices();
     let err = knx_server::undo_impl(&state).unwrap_err();

@@ -73,6 +73,19 @@ export function setComObjectDescription(
   });
 }
 
+export type ComFlagName = "Read" | "Write" | "Transmit" | "Update" | "Communication";
+
+export function setComObjectFlag(
+  comObjectId: number,
+  flag: ComFlagName,
+  value: boolean,
+): Promise<ProjectTree> {
+  return request("/api/com-object-flag", {
+    method: "POST",
+    body: JSON.stringify({ comObjectId, flag, value }),
+  });
+}
+
 export function createGroupAddress(
   name: string,
   address: string,

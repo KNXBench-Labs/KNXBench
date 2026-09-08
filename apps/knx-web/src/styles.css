@@ -265,6 +265,21 @@ main {
   font-family: var(--knx-font-mono);
 }
 
+.com-object-flags {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0.35rem 0;
+  font-family: var(--knx-font-mono);
+  font-size: 0.85em;
+}
+
+.com-object-flags label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  cursor: pointer;
+}
+
 .provenance-badge {
   display: inline-block;
   font-size: 0.75em;

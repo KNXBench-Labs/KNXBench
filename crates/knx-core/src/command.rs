@@ -7,7 +7,7 @@ use std::fmt;
 
 use crate::device::{ComObjectInstance, DeviceInstance};
 use crate::dpt::DptRef;
-use crate::flags::{Direction, GroupLink};
+use crate::flags::{ComFlagKind, Direction, GroupLink};
 use crate::group::{GroupAddressEntry, GroupRange};
 use crate::ids::{AreaId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId, LineId};
 use crate::installation::Installation;
@@ -74,6 +74,24 @@ pub enum Command {
     RestoreComObjectDescription {
         com_object: ComObjectInstanceId,
         description: Override<Text>,
+    },
+    /// Sets one of a communication object instance's five flags as a user
+    /// edit. Always resolves to `Layer::UserEdit` — use
+    /// `RestoreComObjectFlag` to put back an exact prior `Override<bool>`
+    /// (what undo does). Unlike `SetComObjectDpt`/`SetComObjectDescription`,
+    /// a flag checkbox has only two states, so `value` is a bare `bool`,
+    /// never `Option<bool>` — there is no "clear the override" gesture here.
+    SetComObjectFlag {
+        com_object: ComObjectInstanceId,
+        flag: ComFlagKind,
+        value: bool,
+    },
+    /// The undo/redo form of `SetComObjectFlag` — see `RestoreComObjectDpt`
+    /// for why this cannot share the bare-`bool` shape.
+    RestoreComObjectFlag {
+        com_object: ComObjectInstanceId,
+        flag: ComFlagKind,
+        value: Override<bool>,
     },
     /// `entry.id` is pre-allocated by the caller via
     /// `Project::ids::next_group_address_id`.
@@ -410,6 +428,47 @@ impl Command {
                 Ok(Command::RestoreComObjectDescription {
                     com_object,
                     description: previous,
+                })
+            }
+            Command::SetComObjectFlag {
+                com_object,
+                flag,
+                value,
+            } => {
+                let com_object = *com_object;
+                let flag = *flag;
+                let com: &mut ComObjectInstance = project
+                    .devices
+                    .com_object_mut(com_object)
+                    .ok_or(CommandError::ComObjectNotFound(com_object))?;
+                let previous = com.flags.get(flag).clone();
+                *com.flags.get_mut(flag) = Override::Value(Resolved {
+                    value: *value,
+                    layer: Layer::UserEdit,
+                });
+                Ok(Command::RestoreComObjectFlag {
+                    com_object,
+                    flag,
+                    value: previous,
+                })
+            }
+            Command::RestoreComObjectFlag {
+                com_object,
+                flag,
+                value,
+            } => {
+                let com_object = *com_object;
+                let flag = *flag;
+                let com: &mut ComObjectInstance = project
+                    .devices
+                    .com_object_mut(com_object)
+                    .ok_or(CommandError::ComObjectNotFound(com_object))?;
+                let previous = com.flags.get(flag).clone();
+                *com.flags.get_mut(flag) = value.clone();
+                Ok(Command::RestoreComObjectFlag {
+                    com_object,
+                    flag,
+                    value: previous,
                 })
             }
             Command::CreateGroupAddress { entry } => {
@@ -1294,6 +1353,90 @@ mod tests {
         stack.undo(&mut project).unwrap();
         let restored = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
         assert_eq!(restored.dpt.value().unwrap().layer, Layer::Program);
+    }
+
+    #[test]
+    fn set_com_object_flag_marks_layer_as_user_edit_and_undoes() {
+        let mut project = test_project_with_one_device(None);
+        let com = ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags {
+                read: Override::Value(Resolved {
+                    value: true,
+                    layer: Layer::Program,
+                }),
+                ..ResolvedFlags::none()
+            },
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        };
+        project.devices.insert_com_object(com);
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetComObjectFlag {
+                    com_object: ComObjectInstanceId(1),
+                    flag: ComFlagKind::Read,
+                    value: false,
+                },
+            )
+            .unwrap();
+        let updated = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert_eq!(updated.flags.read.value().unwrap().value, false);
+        assert_eq!(updated.flags.read.value().unwrap().layer, Layer::UserEdit);
+        stack.undo(&mut project).unwrap();
+        let restored = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert_eq!(restored.flags.read.value().unwrap().value, true);
+        assert_eq!(restored.flags.read.value().unwrap().layer, Layer::Program);
+    }
+
+    #[test]
+    fn setting_a_never_stated_com_object_flag_writes_value_not_absent() {
+        let mut project = test_project_with_one_device(None);
+        let com = ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        };
+        project.devices.insert_com_object(com);
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetComObjectFlag {
+                    com_object: ComObjectInstanceId(1),
+                    flag: ComFlagKind::Communication,
+                    value: true,
+                },
+            )
+            .unwrap();
+        let updated = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert_eq!(updated.flags.communication.value().unwrap().value, true);
+        assert_eq!(
+            updated.flags.communication.value().unwrap().layer,
+            Layer::UserEdit
+        );
+        stack.undo(&mut project).unwrap();
+        let restored = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert!(!restored.flags.communication.is_present());
     }
 
     #[test]

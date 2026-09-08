@@ -134,10 +134,17 @@ Each task: **what**, **why**, **depends on**.
   `POST /api/devices` plus the `GET /api/catalog/manufacturers`/
   `GET /api/catalog/items` routes T2's future browser will call; no
   frontend caller yet. Closes **B1**.
-- **T2. Device catalog browser UI.** A new screen/panel listing
-  manufacturers → products → hardware variants from `knx-productdb`,
-  with search, feeding T1's create command. Closes **D3**, prerequisite
-  UI for **T1**.
+- **T2. Device catalog browser UI. Done (2026-09-08).** `CatalogBrowser.tsx`
+  is a new modal (opened from a `+ Add device` row on any line, or the
+  Unassigned bucket, in the first installation's Project Explorer —
+  `Command::CreateDevice`'s own `installations[0]` restriction) listing
+  catalog items from `knx-productdb` via the already-existing
+  `GET /api/catalog/manufacturers`/`GET /api/catalog/items` routes, with a
+  manufacturer filter and a debounced search box; picking an item and
+  naming the device calls the already-existing `POST /api/devices`. No
+  backend change needed — see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+  Closes **D3**, prerequisite UI for **T1**, which is now reachable end to
+  end. Device-delete UI (T3's own frontend) stays its own future slice.
 - **T3. Device deletion command. Done (2026-09-08, backend only).**
   `Command::DeleteDevice` refuses (`CommandError::DeviceHasLinks`) if any
   of the device's communication objects still links to a group address —

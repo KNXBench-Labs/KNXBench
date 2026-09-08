@@ -165,6 +165,48 @@ export function moveDeviceToLine(deviceId: number, lineId: number | null): Promi
   });
 }
 
+// Server-only DTOs (`apps/knx-server/src/routes.rs`'s `CatalogManufacturerDto`/
+// `CatalogItemDto`) — not `knx-projection` types, so no `ts-rs` binding exists
+// for them; hand-written to match the JSON shape, same as every request
+// body's plain object literal above.
+export interface CatalogManufacturer {
+  id: string;
+  name: string | null;
+}
+
+export interface CatalogItem {
+  id: string;
+  manufacturerId: string;
+  name: string | null;
+  number: string | null;
+  visibleDescription: string | null;
+  productRefId: string | null;
+  hardware2programRefId: string | null;
+}
+
+export function catalogManufacturers(): Promise<CatalogManufacturer[]> {
+  return request("/api/catalog/manufacturers");
+}
+
+export function catalogItems(manufacturer?: string, search?: string): Promise<CatalogItem[]> {
+  const params = new URLSearchParams();
+  if (manufacturer) params.set("manufacturer", manufacturer);
+  if (search) params.set("search", search);
+  const qs = params.toString();
+  return request(`/api/catalog/items${qs ? `?${qs}` : ""}`);
+}
+
+export function createDevice(
+  lineId: number | null,
+  catalogItemId: string,
+  name: string,
+): Promise<ProjectTree> {
+  return request("/api/devices", {
+    method: "POST",
+    body: JSON.stringify(lineId === null ? { catalogItemId, name } : { lineId, catalogItemId, name }),
+  });
+}
+
 export function undo(): Promise<ProjectTree> {
   return request("/api/undo", { method: "POST" });
 }

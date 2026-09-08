@@ -198,6 +198,52 @@ describe("api", () => {
     expect(JSON.parse(init.body as string)).toEqual({ deviceId: 9, lineId: null });
   });
 
+  it("catalogManufacturers issues a GET to /api/catalog/manufacturers", async () => {
+    mockFetchOnce([{ id: "M1", name: "ACME" }]);
+    const rows = await api.catalogManufacturers();
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/catalog/manufacturers");
+    expect(init?.method ?? "GET").toBe("GET");
+    expect(rows).toEqual([{ id: "M1", name: "ACME" }]);
+  });
+
+  it("catalogItems with no filters omits the query string", async () => {
+    mockFetchOnce([]);
+    await api.catalogItems();
+    const [url] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/catalog/items");
+  });
+
+  it("catalogItems encodes manufacturer and search as query params", async () => {
+    mockFetchOnce([]);
+    await api.catalogItems("M1", "switch actuator");
+    const [url] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/catalog/items?manufacturer=M1&search=switch+actuator");
+  });
+
+  it("createDevice posts camelCase field names with a line id", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.createDevice(7, "cat-1", "New actuator");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/devices");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({
+      lineId: 7,
+      catalogItemId: "cat-1",
+      name: "New actuator",
+    });
+  });
+
+  it("createDevice omits lineId when creating an unassigned device", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.createDevice(null, "cat-1", "New actuator");
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({
+      catalogItemId: "cat-1",
+      name: "New actuator",
+    });
+  });
+
   it("errorMessage unwraps an Error's message without doubling 'Error: '", () => {
     expect(api.errorMessage(new Error("no project open"))).toBe("no project open");
   });

@@ -125,24 +125,27 @@ Each task: **what**, **why**, **depends on**.
 
 ### Tier 1 — closes the biggest usability gap (cannot author a project from scratch)
 
-- **T1. Device-from-catalog insertion command.** Add `Command::CreateDevice`
-  (or equivalent), taking a target line and a `knx-productdb` product/
-  hardware reference, producing a `Device` with its comm-object instances
-  seeded from the application program (mirrors `enrich.rs`'s existing
-  `Override::Absent`-filling logic, applied once at creation time rather
-  than on every load). Closes **B1**.
-  Depends on: none architecturally — `knx-productdb::query` and
-  `knx_core::Devices` both already exist; this is new command-layer work
-  only.
+- **T1. Device-from-catalog insertion command. Done (2026-09-08, backend
+  only — see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)).**
+  `Command::CreateDevice` lands, seeding a device's communication-object
+  instances from `knx-productdb` once at creation time
+  (`knx_productdb::enrich::apply`, made `pub` and reused directly rather
+  than duplicated) instead of on every load. `apps/knx-server` gains
+  `POST /api/devices` plus the `GET /api/catalog/manufacturers`/
+  `GET /api/catalog/items` routes T2's future browser will call; no
+  frontend caller yet. Closes **B1**.
 - **T2. Device catalog browser UI.** A new screen/panel listing
   manufacturers → products → hardware variants from `knx-productdb`,
   with search, feeding T1's create command. Closes **D3**, prerequisite
   UI for **T1**.
-- **T3. Device deletion command.** `Command::DeleteDevice`, symmetric
-  with T1, refusing (like `DeleteGroupAddress` today) if the device has
-  active group links, or cascading with an explicit confirmation —
-  a design decision to make explicitly, not default to either behavior
-  silently. Closes **B2**.
+- **T3. Device deletion command. Done (2026-09-08, backend only).**
+  `Command::DeleteDevice` refuses (`CommandError::DeviceHasLinks`) if any
+  of the device's communication objects still links to a group address —
+  the explicit choice this task's own text asked for, matching
+  `DeleteArea`/`DeleteLine`/`DeleteGroupAddress`'s existing
+  refuse-with-dependents convention rather than a silent cascade.
+  `apps/knx-server` gains `DELETE /api/devices/{id}`; no frontend caller
+  yet. Closes **B2**.
 - **T4. Topology CRUD commands.** **Done** (2026-09-06, backend only —
   see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)). `CreateArea`/
   `DeleteArea`/`CreateLine`/`DeleteLine`/`MoveDeviceToLine` land as

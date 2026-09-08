@@ -330,13 +330,43 @@ function LineMoveField(props: {
 function DeviceInspector(props: {
   detail: DeviceDetail;
   tree: ProjectTree;
+  // Same `installations[0]`-only gate as every other Delete button in this
+  // file — `Command::DeleteDevice` only ever searches the first
+  // installation's topology (`remove_device_from_topology` in
+  // command.rs), the exact reachability `findDeviceLineInFirstInstallation`
+  // already reports for `LineMoveField`.
+  canDelete: boolean;
   onApplied: (tree: ProjectTree) => void;
+  onDeleted: (tree: ProjectTree) => void;
 }) {
-  const { detail, tree, onApplied } = props;
+  const { detail, tree, canDelete, onApplied, onDeleted } = props;
   const groupAddresses = tree.installations[0]?.group_addresses ?? [];
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setError(null);
+    try {
+      const tree = await api.deleteDevice(detail.id);
+      onDeleted(tree);
+    } catch (e) {
+      // Also where `CommandError::DeviceHasLinks` surfaces — the server
+      // refuses to delete a device whose comm objects still have group
+      // links, so the user sees why instead of a silent no-op.
+      setError(api.errorMessage(e));
+    }
+  }
+
   return (
     <div className="inspector">
       <h2>{detail.name}</h2>
+      {canDelete ? (
+        <button onClick={remove}>Delete</button>
+      ) : (
+        <p className="inspector-description">
+          Delete is only available for devices in the first installation.
+        </p>
+      )}
+      {error && <span className="field-error">{error}</span>}
       <AddressField detail={detail} onApplied={onApplied} />
       <LineMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <DeviceDescriptionField detail={detail} onApplied={onApplied} />
@@ -613,7 +643,16 @@ export default function Inspector(props: {
 
   if (selection.kind === "device") {
     if (!deviceDetail) return null;
-    return <DeviceInspector detail={deviceDetail} tree={tree} onApplied={onApplied} />;
+    const canDelete = findDeviceLineInFirstInstallation(tree, deviceDetail.id) !== undefined;
+    return (
+      <DeviceInspector
+        detail={deviceDetail}
+        tree={tree}
+        canDelete={canDelete}
+        onApplied={onApplied}
+        onDeleted={onDeleted}
+      />
+    );
   }
 
   if (selection.kind === "group_address") {

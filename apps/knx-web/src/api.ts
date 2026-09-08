@@ -207,6 +207,10 @@ export function createDevice(
   });
 }
 
+export function deleteDevice(id: number): Promise<ProjectTree> {
+  return request(`/api/devices/${id}`, { method: "DELETE" });
+}
+
 export function undo(): Promise<ProjectTree> {
   return request("/api/undo", { method: "POST" });
 }

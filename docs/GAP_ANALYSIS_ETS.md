@@ -144,15 +144,17 @@ Each task: **what**, **why**, **depends on**.
   naming the device calls the already-existing `POST /api/devices`. No
   backend change needed — see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
   Closes **D3**, prerequisite UI for **T1**, which is now reachable end to
-  end. Device-delete UI (T3's own frontend) stays its own future slice.
-- **T3. Device deletion command. Done (2026-09-08, backend only).**
+  end.
+- **T3. Device deletion command. Done (2026-09-08).**
   `Command::DeleteDevice` refuses (`CommandError::DeviceHasLinks`) if any
   of the device's communication objects still links to a group address —
   the explicit choice this task's own text asked for, matching
   `DeleteArea`/`DeleteLine`/`DeleteGroupAddress`'s existing
   refuse-with-dependents convention rather than a silent cascade.
-  `apps/knx-server` gains `DELETE /api/devices/{id}`; no frontend caller
-  yet. Closes **B2**.
+  `apps/knx-server` gains `DELETE /api/devices/{id}` (backend,
+  2026-09-08); `DeviceInspector`'s own Delete button, gated the same
+  `installations[0]`-reachable way as `AreaInspector`/`LineInspector`'s,
+  landed the same day. Closes **B2**.
 - **T4. Topology CRUD commands.** **Done** (2026-09-06, backend only —
   see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)). `CreateArea`/
   `DeleteArea`/`CreateLine`/`DeleteLine`/`MoveDeviceToLine` land as

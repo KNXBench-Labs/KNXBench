@@ -1,42 +1,41 @@
-:root {
-  color-scheme: light dark;
-  font-family: system-ui, sans-serif;
-  --knx-error-color: #b00020;
-  --knx-overlay-backdrop: rgba(0, 0, 0, 0.4);
-  --knx-overlay-shadow: rgba(0, 0, 0, 0.3);
-  /* Base chrome tokens. A user override (palette.ts, applied as an inline
-     style on <html>) beats these — that's plain CSS cascade, no extra
-     plumbing needed. */
-  --knx-accent: AccentColor;
-  --knx-bg: Canvas;
-  --knx-surface: Canvas;
-  --knx-text: CanvasText;
-  /* Overridden per motion level by palette.ts; only takes effect where
-     transition-duration is actually referenced below, which itself is
-     gated on prefers-reduced-motion — the OS setting always wins. */
-  --knx-transition-duration: 250ms;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --knx-error-color: #ff6b6b;
-    --knx-overlay-backdrop: rgba(0, 0, 0, 0.6);
-    --knx-overlay-shadow: rgba(0, 0, 0, 0.5);
-  }
-}
-
-:root[data-theme="light"] {
-  --knx-error-color: #b00020;
-  --knx-overlay-backdrop: rgba(0, 0, 0, 0.4);
-  --knx-overlay-shadow: rgba(0, 0, 0, 0.3);
-  color-scheme: light;
-}
-
-:root[data-theme="dark"] {
-  --knx-error-color: #ff6b6b;
-  --knx-overlay-backdrop: rgba(0, 0, 0, 0.6);
-  --knx-overlay-shadow: rgba(0, 0, 0, 0.5);
+:root[data-theme="bitcoin-defi"] {
   color-scheme: dark;
+  font-family: var(--knx-font-body);
+
+  /* Surfaces */
+  --knx-bg: #030304;
+  --knx-surface: #0f1115;
+  --knx-foreground: #ffffff;
+  --knx-muted: #94a3b8;
+  --knx-border: rgba(255, 255, 255, 0.1);
+  --knx-border-hover: rgba(247, 147, 26, 0.5);
+
+  /* Accents */
+  --knx-accent: #f7931a;
+  --knx-accent-secondary: #ea580c;
+  --knx-accent-tertiary: #ffd600;
+  --knx-gradient-primary: linear-gradient(to right, #ea580c, #f7931a);
+  --knx-gradient-gold: linear-gradient(to right, #f7931a, #ffd600);
+
+  /* Feedback (colored, never pure black) */
+  --knx-error-color: #ff6b6b;
+  --knx-overlay-backdrop: rgba(3, 3, 4, 0.7);
+  --knx-overlay-shadow: rgba(234, 88, 12, 0.25);
+  --knx-glow-orange: 0 0 20px -5px rgba(234, 88, 12, 0.5);
+  --knx-glow-orange-strong: 0 0 30px -5px rgba(247, 147, 26, 0.6);
+  --knx-glow-gold: 0 0 20px rgba(255, 214, 0, 0.3);
+
+  /* Typography */
+  --knx-font-heading: "Space Grotesk", sans-serif;
+  --knx-font-body: "Inter", sans-serif;
+  --knx-font-mono: "JetBrains Mono", monospace;
+
+  /* Radius */
+  --knx-radius-card: 16px;
+  --knx-radius-button: 999px;
+  --knx-radius-input: 8px;
+
+  --knx-transition-duration: 250ms;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -55,7 +54,7 @@
 body {
   margin: 0;
   background: var(--knx-bg);
-  color: var(--knx-text);
+  color: var(--knx-foreground);
 }
 
 main {
@@ -98,7 +97,7 @@ main {
 }
 
 .toast--fun {
-  color: var(--knx-text);
+  color: var(--knx-foreground);
   border: 1px solid currentColor;
   background: var(--knx-surface);
 }
@@ -237,7 +236,7 @@ main {
 
 .search-panel {
   background: var(--knx-surface);
-  color: var(--knx-text);
+  color: var(--knx-foreground);
   width: min(32rem, 90vw);
   max-height: 70vh;
   overflow-y: auto;
@@ -360,7 +359,7 @@ main {
 
 .fs-picker {
   background: var(--knx-surface);
-  color: var(--knx-text);
+  color: var(--knx-foreground);
   padding: 1rem;
   min-width: 24rem;
   max-height: 70vh;
@@ -405,7 +404,7 @@ main {
 
 .theme-panel {
   background: var(--knx-surface);
-  color: var(--knx-text);
+  color: var(--knx-foreground);
   padding: 1rem;
   min-width: 20rem;
   border-radius: 6px;

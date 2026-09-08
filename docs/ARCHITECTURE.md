@@ -11,8 +11,11 @@ alternative to ETS rather than a reimplementation of it.
 
 **v1 target — a project editor without device parameter configuration.** Import
 `.knxproj`; inspect and edit group addresses, links, building structure,
-topology, device names and individual addresses; export; and monitor the live
-bus against the open project.
+topology, device names and individual addresses; save to the native
+`.knxdb` format; and monitor the live bus against the open project.
+`.knxproj` export exists as an interop convenience, but per
+[ADR-0015](adr/0015-native-output-drops-ets-reimport-goal.md) it is no
+longer a goal for the exported file to be re-importable by ETS.
 
 Four things are explicitly out of v1:
 

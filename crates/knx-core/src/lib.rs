@@ -30,7 +30,7 @@ pub use commissioning::{CommissioningState, CompletionStatus};
 pub use device::{BinaryDataRef, ComObjectInstance, DeviceInstance};
 pub use devices::Devices;
 pub use dpt::{DptParseError, DptRef};
-pub use flags::{ComFlags, Direction, GroupLink, ObjectSize, ResolvedFlags};
+pub use flags::{ComFlagKind, ComFlags, Direction, GroupLink, ObjectSize, ResolvedFlags};
 pub use group::{GroupAddressEntry, GroupRange};
 pub use ids::*;
 pub use installation::Installation;

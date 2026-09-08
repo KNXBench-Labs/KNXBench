@@ -3,12 +3,12 @@
 //! id(s) name, reading the resulting state out of the already-mutated
 //! `project` rather than re-deriving `command.rs`'s own mutation logic
 //! (design doc, "Incremental command sync"). Grows as `command.rs` grows —
-//! all 18 `Command` variants have a match arm here, but only the original
+//! every `Command` variant has a match arm here, but only the original
 //! eight (device address/description, com-object DPT/description and their
-//! undo/redo forms, group-address create/delete) actually persist; the ten
-//! topology/group-range/group-link variants are no-op stubs awaiting a
-//! future incremental-sync pass (see each arm's own "persistence layer not
-//! yet implemented" comment).
+//! undo/redo forms, group-address create/delete) actually persist; the rest
+//! (topology/group-range/group-link variants, plus device create/delete)
+//! are no-op stubs awaiting a future incremental-sync pass (see each arm's
+//! own "persistence layer not yet implemented" comment).
 
 use rusqlite::Connection;
 
@@ -115,6 +115,16 @@ pub fn sync_after_command(
         }
         Command::DeleteGroupAddress { id } => {
             delete_group_address(&tx, *id)?;
+        }
+        Command::CreateDevice { .. } => {
+            // Device create/delete persistence layer not yet implemented
+            // (out of scope for this plan's Task 1, which only added the
+            // `Command` variants and in-memory `apply` logic).
+        }
+        Command::DeleteDevice { .. } => {
+            // Device create/delete persistence layer not yet implemented
+            // (out of scope for this plan's Task 1, which only added the
+            // `Command` variants and in-memory `apply` logic).
         }
         Command::CreateArea { .. } => {
             // Area persistence layer not yet implemented (Task 2 scope).

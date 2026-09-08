@@ -305,6 +305,39 @@ pub fn set_com_object_description_impl(
     )
 }
 
+/// Parses the wire-format flag name (`"Read"`, `"Write"`, `"Transmit"`,
+/// `"Update"`, `"Communication"` — `ComFlagKind`'s own `Debug` form) the
+/// same way `parse_direction` parses `"Send"`/`"Receive"` for group links.
+fn parse_com_flag_kind(flag: &str) -> Result<knx_core::ComFlagKind, String> {
+    match flag {
+        "Read" => Ok(knx_core::ComFlagKind::Read),
+        "Write" => Ok(knx_core::ComFlagKind::Write),
+        "Transmit" => Ok(knx_core::ComFlagKind::Transmit),
+        "Update" => Ok(knx_core::ComFlagKind::Update),
+        "Communication" => Ok(knx_core::ComFlagKind::Communication),
+        other => Err(format!(
+            "unknown com-object flag '{other}', expected one of Read/Write/Transmit/Update/Communication"
+        )),
+    }
+}
+
+pub fn set_com_object_flag_impl(
+    state: &AppState,
+    com_object_id: u32,
+    flag: String,
+    value: bool,
+) -> Result<knx_projection::ProjectTree, String> {
+    let flag = parse_com_flag_kind(&flag)?;
+    apply(
+        state,
+        knx_core::Command::SetComObjectFlag {
+            com_object: knx_core::ComObjectInstanceId(com_object_id),
+            flag,
+            value,
+        },
+    )
+}
+
 /// Allocates a fresh `GroupAddressId` and creates a new group address in
 /// `installations[0]` — the only installation any `Command` targets
 /// (`Command::apply`'s own doc comment). `address` is parsed against the

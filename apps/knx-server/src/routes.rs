@@ -24,6 +24,7 @@ pub fn project_routes() -> Router<SharedState> {
             "/api/com-object-description",
             post(set_com_object_description),
         )
+        .route("/api/com-object-flag", post(set_com_object_flag))
         .route("/api/group-addresses", post(create_group_address))
         .route("/api/group-addresses/{id}", delete(delete_group_address))
         .route("/api/areas", post(create_area))
@@ -158,6 +159,23 @@ async fn set_com_object_description(
     Json(body): Json<SetComObjectDescriptionBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     domain::set_com_object_description_impl(&state, body.com_object_id, body.description)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SetComObjectFlagBody {
+    com_object_id: u32,
+    flag: String,
+    value: bool,
+}
+
+async fn set_com_object_flag(
+    State(state): State<SharedState>,
+    Json(body): Json<SetComObjectFlagBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::set_com_object_flag_impl(&state, body.com_object_id, body.flag, body.value)
         .map(Json)
         .map_err(ApiError::bad_request)
 }

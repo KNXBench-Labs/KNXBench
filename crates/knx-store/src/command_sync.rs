@@ -156,6 +156,9 @@ pub fn sync_after_command(
         Command::UnlinkComObject { .. } => {
             // Group-link persistence layer not yet implemented (Task 6 scope).
         }
+        Command::SetComObjectFlag { .. } | Command::RestoreComObjectFlag { .. } => {
+            // Com-object-flag persistence layer not yet implemented.
+        }
     }
     tx.commit()?;
     Ok(())

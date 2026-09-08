@@ -99,13 +99,15 @@ main {
 .toast--error {
   color: var(--knx-error-color);
   border: 1px solid var(--knx-error-color);
-  background: var(--knx-surface);
+  background: rgba(15, 17, 21, 0.6);
+  backdrop-filter: blur(12px);
 }
 
 .toast--fun {
   color: var(--knx-foreground);
   border: 1px solid currentColor;
-  background: var(--knx-surface);
+  background: rgba(15, 17, 21, 0.6);
+  backdrop-filter: blur(12px);
 }
 
 .project-explorer ul {
@@ -213,8 +215,24 @@ main {
 }
 
 .com-object-list li {
-  padding: 0.5rem 0;
-  border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  padding: 0.75rem 1rem;
+  background: var(--knx-surface);
+  border-radius: var(--knx-radius-card);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dashboard-stats,
+  .com-object-list li {
+    transition: transform var(--knx-transition-duration) ease,
+      border-color var(--knx-transition-duration) ease,
+      box-shadow var(--knx-transition-duration) ease;
+  }
+}
+
+.com-object-list li:hover {
+  transform: translateY(-4px);
+  border-color: var(--knx-border-hover);
+  box-shadow: var(--knx-glow-orange);
 }
 
 .com-object-label {
@@ -244,13 +262,15 @@ main {
 }
 
 .search-panel {
-  background: var(--knx-surface);
+  background: rgba(15, 17, 21, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--knx-border);
+  box-shadow: 0 4px 24px var(--knx-overlay-shadow);
   color: var(--knx-foreground);
   width: min(32rem, 90vw);
   max-height: 70vh;
   overflow-y: auto;
   border-radius: 6px;
-  box-shadow: 0 4px 24px var(--knx-overlay-shadow);
   padding: 0.75rem;
 }
 
@@ -337,6 +357,10 @@ main {
   grid-template-columns: auto 1fr;
   gap: 0.35rem 1rem;
   margin: 0.75rem 0;
+  background: var(--knx-surface);
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+  padding: 1rem 1.25rem;
 }
 
 .dashboard-stats dt {
@@ -350,6 +374,9 @@ main {
 
 .dashboard-issues {
   margin-top: 1.5rem;
+  border-top: 1px solid var(--knx-accent);
+  border-left: 1px solid var(--knx-accent);
+  padding: 0.75rem 1rem;
 }
 
 .dashboard-errors {
@@ -367,7 +394,10 @@ main {
 }
 
 .fs-picker {
-  background: var(--knx-surface);
+  background: rgba(15, 17, 21, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--knx-border);
+  box-shadow: 0 4px 24px var(--knx-overlay-shadow);
   color: var(--knx-foreground);
   padding: 1rem;
   min-width: 24rem;
@@ -376,7 +406,6 @@ main {
   flex-direction: column;
   gap: 0.5rem;
   border-radius: 6px;
-  box-shadow: 0 4px 24px var(--knx-overlay-shadow);
 }
 
 .fs-picker-list {
@@ -392,7 +421,7 @@ main {
 }
 
 .fs-picker-list li:hover {
-  background: color-mix(in srgb, CanvasText 12%, transparent);
+  background: color-mix(in srgb, var(--knx-accent) 12%, transparent);
 }
 
 .fs-picker-actions {

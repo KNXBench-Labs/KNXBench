@@ -554,6 +554,135 @@ pub fn unlink_com_object_impl(
     )
 }
 
+/// Creates a device from a product-database catalog entry (design doc
+/// §3). A catalog item with no resolvable hardware program — passive
+/// hardware, or a `hardware2program_ref_id` this product database
+/// doesn't have — still creates a device, just with zero communication
+/// objects; that is not an error.
+pub fn create_device_impl(
+    state: &AppState,
+    line_id: Option<u32>,
+    catalog_item_id: String,
+    name: String,
+) -> Result<knx_projection::ProjectTree, String> {
+    // Step 1 (design doc §3.1): everything the product database can tell
+    // us, gathered while only `product_db` is locked — dropped before
+    // `project` is locked below, so the two mutexes are never held at
+    // once.
+    let (product_ref, program_ref, seeds) = {
+        let products = state
+            .product_db
+            .as_ref()
+            .ok_or("no product database configured")?
+            .lock()
+            .expect("state mutex poisoned");
+        let item = knx_productdb::query::catalog_item(&products, &catalog_item_id)
+            .map_err(|e| e.to_string())?
+            .ok_or("catalog item not found")?;
+        let mut seeds: Vec<(String, knx_productdb::query::ComObjectView)> = Vec::new();
+        if let Some(program_ref) = &item.hardware2program_ref_id {
+            if let Some(program_id) =
+                knx_productdb::query::resolve_program(&products, program_ref)
+                    .map_err(|e| e.to_string())?
+            {
+                for ref_id in knx_productdb::query::com_object_ref_ids(&products, &program_id)
+                    .map_err(|e| e.to_string())?
+                {
+                    if let Some(view) =
+                        knx_productdb::query::com_object_view(&products, &program_id, &ref_id)
+                            .map_err(|e| e.to_string())?
+                    {
+                        seeds.push((ref_id, view));
+                    }
+                }
+            }
+        }
+        (
+            item.product_ref_id.unwrap_or_default(),
+            item.hardware2program_ref_id.unwrap_or_default(),
+            seeds,
+        )
+    };
+
+    // Step 2 (design doc §3.2): allocate ids and build the command,
+    // holding `project`'s own lock continuously through step 3 below —
+    // `product_db` is no longer held.
+    let mut project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_mut().ok_or("no project open")?;
+
+    let device_id = project.ids.next_device_id();
+    let mut com_objects = Vec::with_capacity(seeds.len());
+    let mut enrich_inputs = Vec::with_capacity(seeds.len());
+    for (ref_id, view) in &seeds {
+        let com_id = project.ids.next_com_object_instance_id();
+        com_objects.push(knx_core::ComObjectInstance {
+            id: com_id,
+            source: knx_core::SourceRef {
+                path: ref_id.clone(),
+                ets_id: ref_id.clone(),
+            },
+            device: device_id,
+            number: view.number.unwrap_or(0) as u16,
+            text: knx_core::Override::Absent,
+            description: knx_core::Override::Absent,
+            dpt: knx_core::Override::Absent,
+            flags: knx_core::ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        });
+        enrich_inputs.push((com_id, ref_id.clone(), view.clone()));
+    }
+    let device = knx_core::DeviceInstance {
+        id: device_id,
+        source: knx_core::SourceRef {
+            path: format!("KB-DEV-{}", device_id.0),
+            ets_id: format!("KB-DEV-{}", device_id.0),
+        },
+        name,
+        description: None,
+        address: None,
+        product_ref,
+        program_ref,
+        commissioning: knx_core::CommissioningState::default(),
+        visibility_calculated: true,
+        com_objects: com_objects.iter().map(|c| c.id).collect(),
+        binary_data: vec![],
+    };
+    let cmd = knx_core::Command::CreateDevice {
+        device,
+        com_objects,
+        line: line_id.map(knx_core::LineId),
+    };
+    {
+        let mut stack = state.command_stack.lock().expect("state mutex poisoned");
+        stack.do_command(project, cmd).map_err(|e| e.to_string())?;
+    }
+
+    // Step 3 (design doc §3.3): seed enrichment once, same mapping
+    // `knx_productdb::enrich()` uses on import, not pushed onto the undo
+    // stack — undoing `CreateDevice` removes the device regardless of
+    // which slots got filled, and `DeleteDevice`'s own inverse captures
+    // the enriched state for redo (Task 1). `issues` (ambiguous DPT
+    // lists, missing com-object-ref rows) are collected but not surfaced
+    // anywhere this slice — see KNOWN_LIMITATIONS.md.
+    let mut issues = Vec::new();
+    for (com_id, ref_id, view) in &enrich_inputs {
+        knx_productdb::enrich::apply(project, *com_id, ref_id, view, &mut issues);
+    }
+
+    let stack = state.command_stack.lock().expect("state mutex poisoned");
+    let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+    Ok(tree_with_state(project, &stack, import_counts))
+}
+
+pub fn delete_device_impl(state: &AppState, id: u32) -> Result<knx_projection::ProjectTree, String> {
+    apply(state, knx_core::Command::DeleteDevice {
+        id: knx_core::DeviceId(id),
+    })
+}
+
 pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String> {
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
@@ -635,5 +764,148 @@ mod tests {
             "wiring state.product_db through open_project should enrich at least \
              one more com object's dpt ({with_filled} vs {without_filled})"
         );
+    }
+
+    // The `product_db = None` line below is a deliberate, documented
+    // reassignment (see its own comment) — not an oversight clippy should
+    // fold into a `..Default::default()` struct literal.
+    #[allow(clippy::field_reassign_with_default)]
+    fn state_with_one_installation() -> AppState {
+        let mut project = knx_core::Project::new(knx_core::Language("en".into()));
+        project.installations.push(knx_core::Installation {
+            id: knx_core::InstallationId(0),
+            name: "I".into(),
+            default_line: None,
+            multicast_address: None,
+            completion: knx_core::CompletionStatus::FinishedDesign,
+            topology: knx_core::Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![],
+            },
+            buildings: vec![],
+            group_ranges: vec![],
+            group_addresses: vec![],
+            parameters: vec![],
+        });
+        let mut state = AppState::default();
+        // `AppState::default()` now runs the real `default_path()` lookup
+        // (Task 3) — on a machine that already has a product database at
+        // e.g. `~/.local/share/knx/products.sqlite`, `default_path()`
+        // would pick it up here, making
+        // `creating_a_device_without_a_product_database_is_an_error`
+        // depend on the environment. Force `None` explicitly so this
+        // helper's guarantee ("no product database configured") holds
+        // everywhere, not just on a machine without one.
+        state.product_db = None;
+        *state.project.lock().unwrap() = Some(project);
+        state
+    }
+
+    const CATALOG_HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<Hardware><Hardware Id="H-1" Name="X" SerialNumber="S" VersionNumber="1">
+<Hardware2Programs><Hardware2Program Id="H-1_HP-1" MediumTypes="MT-0">
+<ApplicationProgramRef RefId="A-1" /></Hardware2Program></Hardware2Programs>
+</Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
+
+    const CATALOG_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1"
+  MaskVersion="MV-0701"><Static>
+<ComObjectTable>
+  <ComObject Id="A-1_O-1" Number="1" Text="Schalten" ObjectSize="1 Bit"
+             DatapointType="DPST-1-1" WriteFlag="Enabled" />
+</ComObjectTable>
+<ComObjectRefs>
+  <ComObjectRef Id="A-1_O-1_R-1" RefId="A-1_O-1" />
+</ComObjectRefs>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    const CATALOG_ITEM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-1">
+      <Catalog>
+        <CatalogSection Id="M-1_CG-1" Name="Actuators" Number="1" DefaultLanguage="de-DE">
+          <CatalogItem Id="M-1_CI-1" Name="Schaltaktor" Number="ACT-1"
+                       DefaultLanguage="de-DE"
+                       ProductRefId="M-1_P-1"
+                       Hardware2ProgramRefId="H-1_HP-1" />
+        </CatalogSection>
+      </Catalog>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+
+    /// Returns the backing `TempDir` alongside the state — same shape as
+    /// `knx-productdb`'s own `db()` test helpers — so the temp file isn't
+    /// deleted out from under the connection while the test still needs
+    /// it.
+    fn state_with_product_db() -> (tempfile::TempDir, AppState) {
+        let state = state_with_one_installation();
+        let dir = tempfile::tempdir().unwrap();
+        let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        knx_productdb::parse::hardware::ingest_hardware(
+            &products,
+            "sha-h",
+            "M-1/Hardware.xml",
+            CATALOG_HARDWARE.as_bytes(),
+        )
+        .unwrap();
+        knx_productdb::parse::program::ingest_program(
+            &products,
+            "sha-p",
+            "M-1/A.xml",
+            CATALOG_PROGRAM.as_bytes(),
+        )
+        .unwrap();
+        knx_productdb::parse::catalog::ingest_catalog(
+            &products,
+            "sha-c",
+            "M-1/Catalog.xml",
+            CATALOG_ITEM.as_bytes(),
+        )
+        .unwrap();
+        let mut state = state;
+        state.product_db = Some(Mutex::new(products));
+        (dir, state)
+    }
+
+    #[test]
+    fn creating_a_device_without_a_product_database_is_an_error() {
+        let state = state_with_one_installation();
+        let result = create_device_impl(&state, None, "anything".into(), "D".into());
+        assert_eq!(result.unwrap_err(), "no product database configured");
+    }
+
+    #[test]
+    fn creating_a_device_with_an_unknown_catalog_item_is_an_error() {
+        let (_dir, state) = state_with_product_db();
+        let result = create_device_impl(&state, None, "nope".into(), "D".into());
+        assert_eq!(result.unwrap_err(), "catalog item not found");
+    }
+
+    #[test]
+    fn creating_a_device_seeds_its_com_objects_and_deleting_it_round_trips() {
+        let (_dir, state) = state_with_product_db();
+        let tree =
+            create_device_impl(&state, None, "M-1_CI-1".into(), "Actuator 1".into()).unwrap();
+        assert_eq!(
+            tree.installations[0].unassigned.len(),
+            1,
+            "the new device lands in unassigned when no line is given"
+        );
+        let device_id = tree.installations[0].unassigned[0].id;
+
+        let detail = device_detail(&state, device_id).unwrap();
+        assert_eq!(detail.com_objects.len(), 1);
+        assert!(
+            detail.com_objects[0].dpt.is_some(),
+            "the com object was enriched at creation time from the product database"
+        );
+
+        let tree = delete_device_impl(&state, device_id).unwrap();
+        assert!(tree.installations[0].unassigned.is_empty());
     }
 }

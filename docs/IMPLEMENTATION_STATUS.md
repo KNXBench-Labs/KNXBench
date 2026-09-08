@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-08 (Session 5 cycle 13: Bitcoin DeFi theme replaces the System/Light/Dark cycle and palette override)
+Last updated: 2026-09-08 (Session 5 cycle 13 regression fix: `body`'s `mask-image` was clipping every fixed overlay invisible)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -1035,3 +1035,23 @@ No backend change was needed; no arrow-key navigation in the modal
 (click-only), a deliberate scope cut unlike `Search.tsx`. Device-delete
 UI (T3's own frontend, backend done 2026-09-08 above) stays open, its own
 future slice. 5 new `vitest` tests in `api.test.ts`, for 97 total.
+
+**Regression fix, cycle 13's `mask-image` ate every fixed overlay
+(2026-09-08).** User report: every "open" toolbar button was clickable but
+produced no visible dialog. Root cause was cycle 13's fading grid-pattern
+background — `mask-image` set directly on `body` in `styles.css`. Per spec
+`mask`/`filter` clip an element's *entire* painted subtree, same as
+`opacity`; `body` has no explicit height, so its own box is only as tall as
+the toolbar, and the mask's gradient geometry is sized to that box. Every
+`position: fixed` overlay appended straight to `document.body`
+(`FsPicker.tsx`'s file-open/save modal, `Search.tsx`, `CommandPalette.tsx`,
+the toast stack) fell outside that short box and rendered fully invisible —
+confirmed with a Playwright repro (`document.body.style.maskImage = "none"`
+made the "Open" dialog appear instantly). Fix: the grid-pattern and its
+mask now live on a `body::before` pseudo-element (`position: fixed; inset:
+0; z-index: -1; pointer-events: none`) instead of on `body` itself, so
+decoration no longer clips content it merely sits behind. No test caught
+this — `styles.css` has no coverage and every prior vitest run mocks
+`fetch`/DOM without ever painting a real layout — a gap worth keeping in
+mind for future full-page-visual changes. 89/89 existing `vitest` tests
+still green (unaffected, CSS-only fix).

@@ -149,6 +149,10 @@ pub enum Command {
     DeleteBuildingPart {
         id: BuildingPartId,
     },
+    RenameBuildingPart {
+        id: BuildingPartId,
+        name: String,
+    },
     /// `range.id` is pre-allocated by the caller via
     /// `Project::ids::next_group_range_id`.
     CreateGroupRange {
@@ -721,6 +725,20 @@ impl Command {
                         .retain(|&c| c != id);
                 }
                 Ok(Command::CreateBuildingPart { part })
+            }
+            Command::RenameBuildingPart { id, name } => {
+                let id = *id;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let part = installation
+                    .buildings
+                    .iter_mut()
+                    .find(|p| p.id == id)
+                    .ok_or(CommandError::BuildingPartNotFound(id))?;
+                let previous = std::mem::replace(&mut part.name, name.clone());
+                Ok(Command::RenameBuildingPart { id, name: previous })
             }
             Command::CreateGroupRange { range } => {
                 let installation = project
@@ -2565,6 +2583,44 @@ mod tests {
         let result = stack.do_command(
             &mut project,
             Command::DeleteBuildingPart { id: BuildingPartId(99) },
+        );
+        assert_eq!(
+            result,
+            Err(CommandError::BuildingPartNotFound(BuildingPartId(99)))
+        );
+    }
+
+    #[test]
+    fn rename_building_part_then_undo_restores_previous_name() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .buildings
+            .push(test_building_part(BuildingPartId(1), BuildingPartType::Room, None));
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::RenameBuildingPart {
+                    id: BuildingPartId(1),
+                    name: "Living room".into(),
+                },
+            )
+            .unwrap();
+        assert_eq!(project.installations[0].buildings[0].name, "Living room");
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].buildings[0].name, "B");
+    }
+
+    #[test]
+    fn rename_unknown_building_part_is_rejected() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::RenameBuildingPart {
+                id: BuildingPartId(99),
+                name: "X".into(),
+            },
         );
         assert_eq!(
             result,

@@ -71,6 +71,18 @@ describe("api", () => {
     });
   });
 
+  it("setComObjectFlag posts to /api/com-object-flag with camelCase field names", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.setComObjectFlag(3, "Communication", true);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/com-object-flag");
+    expect(JSON.parse(init.body as string)).toEqual({
+      comObjectId: 3,
+      flag: "Communication",
+      value: true,
+    });
+  });
+
   it("createGroupAddress omits rangeId when not given", async () => {
     mockFetchOnce({ installations: [] });
     await api.createGroupAddress("Light on/off", "1/1/1");

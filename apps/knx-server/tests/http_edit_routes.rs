@@ -582,6 +582,242 @@ async fn creating_a_nested_group_range_then_renaming_and_deleting_it() {
 }
 
 #[tokio::test]
+async fn creating_a_nested_building_part_then_renaming_and_deleting_it() {
+    let state = Arc::new(state_with_one_installation());
+    let app = knx_server::app(state, None);
+
+    let root = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/building-parts")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "name": "Main building", "kind": "Building" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(root.status(), StatusCode::OK);
+    let tree = body_json(root).await;
+    let root_id = tree["installations"][0]["buildings"][0]["id"]
+        .as_u64()
+        .unwrap();
+
+    let child = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/building-parts")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "name": "Floor 1", "kind": "Floor", "parentId": root_id }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(child.status(), StatusCode::OK);
+    let tree = body_json(child).await;
+    let child_id = tree["installations"][0]["buildings"][0]["children"][0]["id"]
+        .as_u64()
+        .unwrap();
+
+    let renamed = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PATCH")
+                .uri(format!("/api/building-parts/{child_id}"))
+                .header("content-type", "application/json")
+                .body(Body::from(json!({ "name": "Ground floor" }).to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(renamed.status(), StatusCode::OK);
+    let tree = body_json(renamed).await;
+    assert_eq!(
+        tree["installations"][0]["buildings"][0]["children"][0]["name"],
+        "Ground floor"
+    );
+
+    let delete_child = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri(format!("/api/building-parts/{child_id}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(delete_child.status(), StatusCode::OK);
+
+    let delete_root = app
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri(format!("/api/building-parts/{root_id}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(delete_root.status(), StatusCode::OK);
+    let tree = body_json(delete_root).await;
+    assert!(tree["installations"][0]["buildings"]
+        .as_array()
+        .unwrap()
+        .is_empty());
+}
+
+#[tokio::test]
+async fn deleting_a_nonempty_building_part_is_a_400() {
+    let state = Arc::new(state_with_one_installation());
+    let app = knx_server::app(state, None);
+
+    let root = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/building-parts")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "name": "Main building", "kind": "Building" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let tree = body_json(root).await;
+    let root_id = tree["installations"][0]["buildings"][0]["id"]
+        .as_u64()
+        .unwrap();
+
+    app.clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/building-parts")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "name": "Floor 1", "kind": "Floor", "parentId": root_id }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let delete_root = app
+        .oneshot(
+            Request::builder()
+                .method("DELETE")
+                .uri(format!("/api/building-parts/{root_id}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(delete_root.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn moving_a_device_into_a_building_part_and_back_out() {
+    let state = Arc::new(state_with_one_installation_and_device());
+    let app = knx_server::app(state, None);
+
+    let create = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/building-parts")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "name": "Living room", "kind": "Room" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let tree = body_json(create).await;
+    let part_id = tree["installations"][0]["buildings"][0]["id"]
+        .as_u64()
+        .unwrap();
+
+    let moved = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/move-device-to-building-part")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "deviceId": 1, "partId": part_id }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(moved.status(), StatusCode::OK);
+    let tree = body_json(moved).await;
+    assert_eq!(
+        tree["installations"][0]["buildings"][0]["devices"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+
+    let back = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/move-device-to-building-part")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "deviceId": 1, "partId": null }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(back.status(), StatusCode::OK);
+    let tree = body_json(back).await;
+    assert!(tree["installations"][0]["buildings"][0]["devices"]
+        .as_array()
+        .unwrap()
+        .is_empty());
+}
+
+#[tokio::test]
+async fn creating_a_building_part_with_an_unknown_kind_is_a_400() {
+    let state = Arc::new(state_with_one_installation());
+    let app = knx_server::app(state, None);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/building-parts")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "name": "X", "kind": "Basement" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
 async fn creating_a_group_address_without_a_range_still_works_unchanged() {
     // Regression guard: the shipped frontend (Session 5 cycle 9) never
     // sends `rangeId` — this must keep working exactly as before.

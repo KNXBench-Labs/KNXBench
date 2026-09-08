@@ -44,6 +44,10 @@ impl Devices {
         self.com_objects.insert(com.id, com);
     }
 
+    pub fn remove_com_object(&mut self, id: ComObjectInstanceId) -> Option<ComObjectInstance> {
+        self.com_objects.remove(&id)
+    }
+
     pub fn com_object(&self, id: ComObjectInstanceId) -> Option<&ComObjectInstance> {
         self.com_objects.get(&id)
     }

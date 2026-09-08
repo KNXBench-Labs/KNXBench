@@ -33,6 +33,14 @@ pub struct AppState {
     /// reapplied to every tree rebuilt after a command/undo/redo — edits
     /// don't change what import lost. `(0, 0)` for a `.knxdb` native load.
     pub import_counts: Mutex<(usize, usize)>,
+    /// The shared product database, opened once at startup from
+    /// `knx_productdb::default_path()`. `None` if no path could be
+    /// derived, the file doesn't exist yet, or it failed to open/migrate
+    /// — never a startup error (ADR-0012's "missing product database is
+    /// ordinary, not an error"). `Mutex`, not `RwLock`: every access here
+    /// is a handful of `SELECT`s or one `enrich()` pass, never held long
+    /// enough for reader/writer contention to matter.
+    pub product_db: Option<Mutex<knx_productdb::Connection>>,
     /// Root directory web-originated file access is confined to:
     /// `fs_routes.rs`'s `/api/fs/*` routes entirely, plus any *relative*
     /// path a `/api/project/*` route is given (`crate::paths`). Absolute
@@ -44,11 +52,15 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(data_dir: PathBuf) -> Self {
+        let product_db = knx_productdb::default_path()
+            .and_then(|path| knx_productdb::open_and_migrate(&path).ok())
+            .map(Mutex::new);
         Self {
             project: Mutex::new(None),
             store_path: Mutex::new(None),
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             import_counts: Mutex::new((0, 0)),
+            product_db,
             data_dir,
         }
     }
@@ -83,25 +95,41 @@ fn apply_report_counts(tree: &mut ProjectTree, report: &knx_etsproj::ImportRepor
 
 /// Shared by `open_project_impl` (display-only) and `open_project`
 /// (display + replaces `state`'s project) so there is exactly one import
-/// implementation instead of two.
-fn import_and_project(path: &Path) -> Result<(ProjectTree, knx_core::Project), AppError> {
+/// implementation instead of two. `product_db` is locked by the caller —
+/// this function only borrows it for the duration of the import call.
+fn import_and_project(
+    path: &Path,
+    product_db: Option<&knx_productdb::Connection>,
+) -> Result<(ProjectTree, knx_core::Project), AppError> {
     let conn = knx_store::open_and_migrate_in_memory()?;
-    let imported = knx_app::import_ets_project_with(path, &conn, ImportOptions::default())?;
+    let imported = knx_app::import_ets_project_with(path, &conn, ImportOptions { product_db })?;
     let mut tree = knx_projection::build_project_tree(&imported.project);
     apply_report_counts(&mut tree, &imported.report);
     Ok((tree, imported.project))
 }
 
 /// Imports `path` and projects it without touching `state` — what
-/// `open_reference_project.rs` exercises directly, no server needed.
+/// `open_reference_project.rs` exercises directly, no server needed. Never
+/// enriched from a product database: there is no `state` here to read one
+/// from, and this path exists specifically for a server-free golden test
+/// whose counts must stay deterministic.
 pub fn open_project_impl(path: &Path) -> Result<ProjectTree, AppError> {
-    import_and_project(path).map(|(tree, _)| tree)
+    import_and_project(path, None).map(|(tree, _)| tree)
 }
 
 /// Imports `path`, replaces `state`'s project, and resets undo history and
-/// import counts — what the `/api/project/import` route calls.
+/// import counts — what the `/api/project/import` route calls. Enriched
+/// from `state.product_db` when one is configured (the bonus fix this
+/// task adds: nothing previously wired a connection in for this path to
+/// use, unlike `knx import --product-db` on the CLI).
 pub fn open_project(state: &AppState, path: &Path) -> Result<ProjectTree, String> {
-    let (tree, project) = import_and_project(path).map_err(|e| e.to_string())?;
+    let guard = state
+        .product_db
+        .as_ref()
+        .map(|m| m.lock().expect("state mutex poisoned"));
+    let (tree, project) =
+        import_and_project(path, guard.as_deref()).map_err(|e| e.to_string())?;
+    drop(guard);
     *state.project.lock().expect("state mutex poisoned") = Some(project);
     *state.command_stack.lock().expect("state mutex poisoned") = knx_core::CommandStack::new();
     *state.import_counts.lock().expect("state mutex poisoned") = (tree.errors, tree.warnings);
@@ -542,4 +570,70 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     stack.redo(project).map_err(|e| e.to_string())?;
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     Ok(tree_with_state(project, &stack, import_counts))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    fn workspace_root() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(Path::parent)
+            .expect("crate lives at <root>/apps/knx-server")
+            .to_path_buf()
+    }
+
+    fn reference_project_path() -> PathBuf {
+        workspace_root().join("Unser Zuhause ets4 - 2025-12-15.knxproj")
+    }
+
+    #[test]
+    fn opening_a_project_through_a_wired_product_db_enriches_more_than_without() {
+        let dir = tempfile::tempdir().unwrap();
+        let products_path = dir.path().join("products.sqlite");
+        {
+            // Ingest the reference project's own manufacturer files into a
+            // fresh product database — same two-step dance
+            // `crates/knx-app/tests/product_db.rs` already uses.
+            let throwaway = knx_store::open_and_migrate_in_memory().unwrap();
+            let products = knx_productdb::open_and_migrate(&products_path).unwrap();
+            knx_app::import_ets_project_with(
+                &reference_project_path(),
+                &throwaway,
+                ImportOptions {
+                    product_db: Some(&products),
+                },
+            )
+            .unwrap();
+        }
+
+        let (_, without) = import_and_project(&reference_project_path(), None).unwrap();
+        let without_filled = without
+            .devices
+            .com_objects()
+            .filter(|c| c.dpt.value().is_some())
+            .count();
+
+        let products = knx_productdb::open_and_migrate(&products_path).unwrap();
+        let state = AppState {
+            product_db: Some(Mutex::new(products)),
+            ..AppState::default()
+        };
+        open_project(&state, &reference_project_path()).unwrap();
+        let project = state.project.lock().unwrap();
+        let project = project.as_ref().unwrap();
+        let with_filled = project
+            .devices
+            .com_objects()
+            .filter(|c| c.dpt.value().is_some())
+            .count();
+
+        assert!(
+            with_filled > without_filled,
+            "wiring state.product_db through open_project should enrich at least \
+             one more com object's dpt ({with_filled} vs {without_filled})"
+        );
+    }
 }

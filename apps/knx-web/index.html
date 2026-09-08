@@ -6,11 +6,19 @@
     <script>
       (function () {
         var t = localStorage.getItem("knx-desktop:theme");
-        if (t === "light" || t === "dark") {
-          document.documentElement.setAttribute("data-theme", t);
-        }
+        var known = ["bitcoin-defi"];
+        document.documentElement.setAttribute(
+          "data-theme",
+          known.indexOf(t) !== -1 ? t : "bitcoin-defi",
+        );
       })();
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

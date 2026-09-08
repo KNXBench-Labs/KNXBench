@@ -1074,3 +1074,23 @@ delete clears the selection via `App.tsx`'s existing `resetTree`. No
 backend change — `DELETE /api/devices/{id}` shipped with T1/T3's backend
 cycle above. 1 new `vitest` test in `api.test.ts`, for 90 total. Closes
 **T3**'s frontend half ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)).
+
+**T7, communication-object flag editing (2026-09-08).** `crates/knx-core`
+gains `Command::SetComObjectFlag`/`RestoreComObjectFlag`, generic over
+which of the five flags it targets via a new `ComFlagKind` enum and
+`ResolvedFlags::get`/`get_mut` accessors, rather than five near-identical
+commands — same "resolves to `Layer::UserEdit`, undo restores the exact
+prior `Override<bool>`" shape `SetComObjectDpt`/`SetComObjectDescription`
+already use, except `value` is a bare `bool` (a checkbox has only two
+states — no "clear the override" gesture exists here, unlike those two
+text-field commands' empty-string convention). `apps/knx-server` gains
+`POST /api/com-object-flag`, parsing the wire-format flag name the same
+way `parse_direction` already parses group-link directions. `apps/knx-web`
+gains `ComObjectFlagsRow`, five checkboxes rendered on every comm-object's
+Inspector row — `ComObjectNode` already carried all five flags as plain
+`bool`s from an earlier cycle, but nothing in the UI ever rendered them
+before this cycle, contrary to what this task's own backlog text assumed.
+No `knx-projection` change was needed. 3 new `cargo test` tests
+(`knx-core` x2, `knx-server` x2 — one positive, one rejecting an unknown
+flag name) and 1 new `vitest` test. Closes **T7**
+([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)), **B6**.

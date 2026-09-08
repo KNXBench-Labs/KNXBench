@@ -274,7 +274,8 @@ pub struct ComObjectNode {
     /// `description: None`.
     pub description_layer: Option<String>,
     pub is_active: bool,
-    /// Display-only this cycle — no `Command` exists yet to edit flags.
+    /// Editable via `Command::SetComObjectFlag` (one flag at a time) —
+    /// see `ComFlagKind` in `knx-core`.
     pub read: bool,
     pub write: bool,
     pub transmit: bool,

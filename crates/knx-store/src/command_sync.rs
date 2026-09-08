@@ -156,6 +156,18 @@ pub fn sync_after_command(
         Command::UnlinkComObject { .. } => {
             // Group-link persistence layer not yet implemented (Task 6 scope).
         }
+        Command::CreateBuildingPart { .. } => {
+            // Building-part persistence layer not yet implemented (Task 4 scope).
+        }
+        Command::DeleteBuildingPart { .. } => {
+            // Building-part persistence layer not yet implemented (Task 4 scope).
+        }
+        Command::RenameBuildingPart { .. } => {
+            // Building-part persistence layer not yet implemented (Task 4 scope).
+        }
+        Command::MoveDeviceToBuildingPart { .. } => {
+            // Building-part persistence layer not yet implemented (Task 4 scope).
+        }
     }
     tx.commit()?;
     Ok(())

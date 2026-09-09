@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use rusqlite::Connection;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 1;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 2;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -268,7 +268,31 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
 type Migration = fn(&Connection) -> Result<(), ProductDbError>;
 
 fn migrations() -> Vec<Migration> {
-    vec![migrate_v0_to_v1]
+    vec![migrate_v0_to_v1, migrate_v1_to_v2]
+}
+
+fn migrate_v1_to_v2(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE package (
+            sha256 TEXT PRIMARY KEY,
+            source_name TEXT NOT NULL,
+            scheme INTEGER NOT NULL,
+            size INTEGER NOT NULL,
+            bytes BLOB NOT NULL,
+            unknown_count INTEGER NOT NULL
+        ) STRICT;
+        CREATE TABLE package_member (
+            package_sha256 TEXT NOT NULL REFERENCES package(sha256),
+            ordinal INTEGER NOT NULL,
+            path TEXT NOT NULL,
+            role TEXT NOT NULL,
+            source_sha256 TEXT NOT NULL REFERENCES source_file(sha256),
+            size INTEGER NOT NULL,
+            PRIMARY KEY (package_sha256, path),
+            UNIQUE (package_sha256, ordinal)
+        ) STRICT;",
+    )?;
+    Ok(())
 }
 
 /// Opens (creating if absent) the product database at `path`, runs every

@@ -7,10 +7,10 @@
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 
 use super::{bool_flag, report_unknown_attrs};
-use crate::report::{UnknownCollector, UnknownConstruct};
+use crate::report::{IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name};
 use crate::ProductDbError;
 
@@ -49,18 +49,26 @@ const PRODUCT_ATTRS: &[&str] = &[
 
 const H2P_ATTRS: &[&str] = &["Id", "MediumTypes", "Hash", "NonRegRelevantDataVersion"];
 
+#[derive(Debug)]
+pub struct HardwareIngest {
+    pub unknown: Vec<UnknownConstruct>,
+    pub conflicts: Vec<IdConflict>,
+}
+
 pub fn ingest_hardware(
     conn: &Connection,
     source_sha256: &str,
     source_path: &str,
     bytes: &[u8],
-) -> Result<Vec<UnknownConstruct>, ProductDbError> {
+) -> Result<HardwareIngest, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
+    let mut conflicts = Vec::new();
     let mut manufacturer_id = String::new();
     let mut hardware_id = String::new();
     let mut h2p_id = String::new();
+    let mut h2p_is_first = false;
 
     loop {
         buf.clear();
@@ -93,31 +101,39 @@ pub fn ingest_hardware(
                             &a,
                             HARDWARE_ATTRS,
                         );
-                        conn.execute(
-                            "INSERT OR IGNORE INTO hardware
+                        if first_winner(
+                            conn,
+                            "hardware",
+                            Some(hardware_id.as_str()),
+                            source_sha256,
+                            &mut conflicts,
+                        )? {
+                            conn.execute(
+                                "INSERT INTO hardware
                              (id, manufacturer_id, name, serial_number, version_number,
                               bus_current, has_individual_address, has_application_program,
                               is_accessory, is_coupler, is_power_supply, is_ip_enabled,
                               is_power_line_repeater, original_manufacturer, source_sha256)
                              VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15)",
-                            params![
-                                hardware_id,
-                                manufacturer_id,
-                                a.get("Name"),
-                                a.get("SerialNumber"),
-                                a.get("VersionNumber"),
-                                a.get("BusCurrent"),
-                                bool_flag(&a, "HasIndividualAddress"),
-                                bool_flag(&a, "HasApplicationProgram"),
-                                bool_flag(&a, "IsAccessory"),
-                                bool_flag(&a, "IsCoupler"),
-                                bool_flag(&a, "IsPowerSupply"),
-                                bool_flag(&a, "IsIPEnabled"),
-                                bool_flag(&a, "IsPowerLineRepeater"),
-                                a.get("OriginalManufacturer"),
-                                source_sha256,
-                            ],
-                        )?;
+                                params![
+                                    hardware_id,
+                                    manufacturer_id,
+                                    a.get("Name"),
+                                    a.get("SerialNumber"),
+                                    a.get("VersionNumber"),
+                                    a.get("BusCurrent"),
+                                    bool_flag(&a, "HasIndividualAddress"),
+                                    bool_flag(&a, "HasApplicationProgram"),
+                                    bool_flag(&a, "IsAccessory"),
+                                    bool_flag(&a, "IsCoupler"),
+                                    bool_flag(&a, "IsPowerSupply"),
+                                    bool_flag(&a, "IsIPEnabled"),
+                                    bool_flag(&a, "IsPowerLineRepeater"),
+                                    a.get("OriginalManufacturer"),
+                                    source_sha256,
+                                ],
+                            )?;
+                        }
                     }
                     "Product" => {
                         report_unknown_attrs(
@@ -126,25 +142,33 @@ pub fn ingest_hardware(
                             &a,
                             PRODUCT_ATTRS,
                         );
-                        conn.execute(
-                            "INSERT OR IGNORE INTO product
+                        if first_winner(
+                            conn,
+                            "product",
+                            a.get("Id"),
+                            source_sha256,
+                            &mut conflicts,
+                        )? {
+                            conn.execute(
+                                "INSERT INTO product
                              (id, manufacturer_id, hardware_id, text, order_number,
                               is_rail_mounted, width_in_millimeter, default_language, hash,
                               registration_status, source_sha256)
                              VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,NULL,?10)",
-                            params![
-                                a.get("Id"),
-                                manufacturer_id,
-                                hardware_id,
-                                a.get("Text"),
-                                a.get("OrderNumber"),
-                                bool_flag(&a, "IsRailMounted"),
-                                a.get("WidthInMillimeter"),
-                                a.get("DefaultLanguage"),
-                                a.get("Hash"),
-                                source_sha256,
-                            ],
-                        )?;
+                                params![
+                                    a.get("Id"),
+                                    manufacturer_id,
+                                    hardware_id,
+                                    a.get("Text"),
+                                    a.get("OrderNumber"),
+                                    bool_flag(&a, "IsRailMounted"),
+                                    a.get("WidthInMillimeter"),
+                                    a.get("DefaultLanguage"),
+                                    a.get("Hash"),
+                                    source_sha256,
+                                ],
+                            )?;
+                        }
                     }
                     "Hardware2Program" => {
                         h2p_id = a.get("Id").unwrap_or_default().to_string();
@@ -154,23 +178,32 @@ pub fn ingest_hardware(
                             &a,
                             H2P_ATTRS,
                         );
-                        conn.execute(
-                            "INSERT OR IGNORE INTO hardware2program
+                        h2p_is_first = first_winner(
+                            conn,
+                            "hardware2program",
+                            Some(h2p_id.as_str()),
+                            source_sha256,
+                            &mut conflicts,
+                        )?;
+                        if h2p_is_first {
+                            conn.execute(
+                                "INSERT INTO hardware2program
                              (id, manufacturer_id, hardware_id, application_program_ref,
                               medium_types, hash, registration_number, registration_status,
                               registration_signature, source_sha256)
                              VALUES (?1,?2,?3,NULL,?4,?5,NULL,NULL,NULL,?6)",
-                            params![
-                                h2p_id,
-                                manufacturer_id,
-                                hardware_id,
-                                a.get("MediumTypes"),
-                                a.get("Hash"),
-                                source_sha256,
-                            ],
-                        )?;
+                                params![
+                                    h2p_id,
+                                    manufacturer_id,
+                                    hardware_id,
+                                    a.get("MediumTypes"),
+                                    a.get("Hash"),
+                                    source_sha256,
+                                ],
+                            )?;
+                        }
                     }
-                    "ApplicationProgramRef" => {
+                    "ApplicationProgramRef" if h2p_is_first => {
                         conn.execute(
                             "UPDATE hardware2program SET application_program_ref = ?1 WHERE id = ?2",
                             params![a.get("RefId"), h2p_id],
@@ -178,7 +211,7 @@ pub fn ingest_hardware(
                     }
                     // RegistrationInfo appears under both Product and
                     // Hardware2Program; the last id seen decides which.
-                    "RegistrationInfo" => {
+                    "RegistrationInfo" if h2p_is_first => {
                         conn.execute(
                             "UPDATE hardware2program
                              SET registration_number = ?1, registration_status = ?2,
@@ -198,7 +231,41 @@ pub fn ingest_hardware(
             _ => {}
         }
     }
-    Ok(unknown.into_vec())
+    Ok(HardwareIngest {
+        unknown: unknown.into_vec(),
+        conflicts,
+    })
+}
+
+fn first_winner(
+    conn: &Connection,
+    table: &str,
+    id: Option<&str>,
+    source_sha256: &str,
+    conflicts: &mut Vec<IdConflict>,
+) -> Result<bool, ProductDbError> {
+    let id = id.unwrap_or_default();
+    let existing: Option<String> = conn
+        .query_row(
+            &format!("SELECT source_sha256 FROM {table} WHERE id = ?1"),
+            [id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    match existing {
+        None => Ok(true),
+        Some(kept) => {
+            if kept != source_sha256 {
+                conflicts.push(IdConflict {
+                    table: table.to_string(),
+                    id: id.to_string(),
+                    kept_sha256: kept,
+                    other_sha256: source_sha256.to_string(),
+                });
+            }
+            Ok(false)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -309,7 +376,7 @@ mod tests {
         let xml = HARDWARE.replace("IsCoupler=\"0\"", "IsCoupler=\"0\" FancyNewFlag=\"7\"");
         let unknown =
             ingest_hardware(&conn, "sha-2", "M-006A/Hardware.xml", xml.as_bytes()).unwrap();
-        assert!(unknown.iter().any(|u| u.name == "FancyNewFlag"));
+        assert!(unknown.unknown.iter().any(|u| u.name == "FancyNewFlag"));
         let rows: i64 = conn
             .query_row("SELECT count(*) FROM hardware", [], |r| r.get(0))
             .unwrap();

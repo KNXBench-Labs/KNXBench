@@ -12,8 +12,8 @@ knx-core.workspace = true
 rusqlite.workspace = true
 quick-xml.workspace = true
 sha2.workspace = true
+zip.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
 tempfile.workspace = true
-zip.workspace = true

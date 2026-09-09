@@ -48,15 +48,30 @@ pub fn ingest_file(
     if has_source_file(conn, &sha256)? {
         return Ok(IngestOutcome::Skipped { sha256 });
     }
-
     let tx = conn.unchecked_transaction()?;
+    let outcome = ingest_file_in_transaction(&tx, source_path, bytes, false)?;
+    tx.commit()?;
+    Ok(outcome)
+}
+
+pub(crate) fn ingest_file_in_transaction(
+    conn: &Connection,
+    source_path: &str,
+    bytes: &[u8],
+    parse_existing: bool,
+) -> Result<IngestOutcome, ProductDbError> {
+    let sha256 = sha256_hex(bytes);
+    if !parse_existing && has_source_file(conn, &sha256)? {
+        return Ok(IngestOutcome::Skipped { sha256 });
+    }
+
     let manufacturer_id = source_path
         .split('/')
         .next()
         .filter(|top| top.starts_with("M-"))
         .map(str::to_string);
     store_source_file(
-        &tx,
+        conn,
         &SourceFile {
             source_path: source_path.to_string(),
             manufacturer_id,
@@ -67,15 +82,15 @@ pub fn ingest_file(
     let kind = classify(bytes);
     let (unknown, conflicts) = match kind {
         FileKind::Catalog => {
-            let out = catalog::ingest_catalog(&tx, &sha256, source_path, bytes)?;
+            let out = catalog::ingest_catalog(conn, &sha256, source_path, bytes)?;
             (out.unknown, out.conflicts)
         }
         FileKind::Hardware => {
-            let out = hardware::ingest_hardware(&tx, &sha256, source_path, bytes)?;
+            let out = hardware::ingest_hardware(conn, &sha256, source_path, bytes)?;
             (out.unknown, out.conflicts)
         }
         FileKind::ApplicationProgram => {
-            let out = program::ingest_program(&tx, &sha256, source_path, bytes)?;
+            let out = program::ingest_program(conn, &sha256, source_path, bytes)?;
             (out.unknown, out.conflicts)
         }
         // Baggages.xml lists the blobs; the blobs themselves and anything
@@ -83,9 +98,8 @@ pub fn ingest_file(
         FileKind::Baggages | FileKind::Baggage | FileKind::Unrecognized => (Vec::new(), Vec::new()),
     };
 
-    insert_unknown(&tx, &sha256, &unknown)?;
-    insert_conflicts(&tx, &conflicts)?;
-    tx.commit()?;
+    insert_unknown(conn, &sha256, &unknown)?;
+    insert_conflicts(conn, &conflicts)?;
 
     Ok(IngestOutcome::Ingested {
         sha256,
@@ -98,7 +112,7 @@ pub fn ingest_file(
 /// Classifies by the first recognized element inside `ManufacturerData`,
 /// not by file name: the name is a convention, the content is the fact.
 /// A `Baggages/` blob is not XML at all, so it is recognized by its bytes.
-fn classify(bytes: &[u8]) -> FileKind {
+pub(crate) fn classify(bytes: &[u8]) -> FileKind {
     if bytes.is_empty() {
         return FileKind::Unrecognized;
     }

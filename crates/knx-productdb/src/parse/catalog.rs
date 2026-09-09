@@ -7,10 +7,10 @@
 
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 
 use super::report_unknown_attrs;
-use crate::report::{UnknownCollector, UnknownConstruct};
+use crate::report::{IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name, Attrs};
 use crate::ProductDbError;
 
@@ -34,15 +34,22 @@ const ITEM_ATTRS: &[&str] = &[
     "Hardware2ProgramRefId",
 ];
 
+#[derive(Debug)]
+pub struct CatalogIngest {
+    pub unknown: Vec<UnknownConstruct>,
+    pub conflicts: Vec<IdConflict>,
+}
+
 pub fn ingest_catalog(
     conn: &Connection,
     source_sha256: &str,
     source_path: &str,
     bytes: &[u8],
-) -> Result<Vec<UnknownConstruct>, ProductDbError> {
+) -> Result<CatalogIngest, ProductDbError> {
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
+    let mut conflicts = Vec::new();
     let mut manufacturer_id = String::new();
     // The chain of currently-open `CatalogSection` ids, innermost last —
     // its top is the parent of whatever section or item comes next.
@@ -70,6 +77,7 @@ pub fn ingest_catalog(
                     source_sha256,
                     source_path,
                     &mut unknown,
+                    &mut conflicts,
                     &mut manufacturer_id,
                     &section_stack,
                 )?;
@@ -82,6 +90,7 @@ pub fn ingest_catalog(
                     source_sha256,
                     source_path,
                     &mut unknown,
+                    &mut conflicts,
                     &mut manufacturer_id,
                     &section_stack,
                 )?;
@@ -93,7 +102,10 @@ pub fn ingest_catalog(
             _ => {}
         }
     }
-    Ok(unknown.into_vec())
+    Ok(CatalogIngest {
+        unknown: unknown.into_vec(),
+        conflicts,
+    })
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -103,6 +115,7 @@ fn handle_element(
     source_sha256: &str,
     source_path: &str,
     unknown: &mut UnknownCollector,
+    conflicts: &mut Vec<IdConflict>,
     manufacturer_id: &mut String,
     section_stack: &[String],
 ) -> Result<(), ProductDbError> {
@@ -123,22 +136,30 @@ fn handle_element(
                 &a,
                 SECTION_ATTRS,
             );
-            conn.execute(
-                "INSERT OR IGNORE INTO catalog_section
+            if first_winner(
+                conn,
+                "catalog_section",
+                a.get("Id"),
+                source_sha256,
+                conflicts,
+            )? {
+                conn.execute(
+                    "INSERT INTO catalog_section
                  (id, manufacturer_id, parent_id, name, number, visible_description,
                   default_language, source_sha256)
                  VALUES (?1,?2,?3,?4,?5,?6,?7,?8)",
-                params![
-                    a.get("Id"),
-                    manufacturer_id.as_str(),
-                    section_stack.last(),
-                    a.get("Name"),
-                    a.get("Number"),
-                    a.get("VisibleDescription"),
-                    a.get("DefaultLanguage"),
-                    source_sha256,
-                ],
-            )?;
+                    params![
+                        a.get("Id"),
+                        manufacturer_id.as_str(),
+                        section_stack.last(),
+                        a.get("Name"),
+                        a.get("Number"),
+                        a.get("VisibleDescription"),
+                        a.get("DefaultLanguage"),
+                        source_sha256,
+                    ],
+                )?;
+            }
         }
         "CatalogItem" => {
             report_unknown_attrs(
@@ -147,28 +168,61 @@ fn handle_element(
                 &a,
                 ITEM_ATTRS,
             );
-            conn.execute(
-                "INSERT OR IGNORE INTO catalog_item
+            if first_winner(conn, "catalog_item", a.get("Id"), source_sha256, conflicts)? {
+                conn.execute(
+                    "INSERT INTO catalog_item
                  (id, manufacturer_id, section_id, name, number, visible_description,
                   product_ref_id, hardware2program_ref_id, default_language, source_sha256)
                  VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",
-                params![
-                    a.get("Id"),
-                    manufacturer_id.as_str(),
-                    section_stack.last(),
-                    a.get("Name"),
-                    a.get("Number"),
-                    a.get("VisibleDescription"),
-                    a.get("ProductRefId"),
-                    a.get("Hardware2ProgramRefId"),
-                    a.get("DefaultLanguage"),
-                    source_sha256,
-                ],
-            )?;
+                    params![
+                        a.get("Id"),
+                        manufacturer_id.as_str(),
+                        section_stack.last(),
+                        a.get("Name"),
+                        a.get("Number"),
+                        a.get("VisibleDescription"),
+                        a.get("ProductRefId"),
+                        a.get("Hardware2ProgramRefId"),
+                        a.get("DefaultLanguage"),
+                        source_sha256,
+                    ],
+                )?;
+            }
         }
         _ => {}
     }
     Ok(())
+}
+
+fn first_winner(
+    conn: &Connection,
+    table: &str,
+    id: Option<&str>,
+    source_sha256: &str,
+    conflicts: &mut Vec<IdConflict>,
+) -> Result<bool, ProductDbError> {
+    let id = id.unwrap_or_default();
+    let existing: Option<String> = conn
+        .query_row(
+            &format!("SELECT source_sha256 FROM {table} WHERE id = ?1"),
+            [id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    match existing {
+        None => Ok(true),
+        Some(kept) => {
+            if kept != source_sha256 {
+                conflicts.push(IdConflict {
+                    table: table.to_string(),
+                    id: id.to_string(),
+                    kept_sha256: kept,
+                    other_sha256: source_sha256.to_string(),
+                });
+            }
+            Ok(false)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -263,7 +317,7 @@ mod tests {
         let (_dir, conn) = db();
         let xml = CATALOG.replace("Number=\"1\"", "Number=\"1\" FancyNewFlag=\"7\"");
         let unknown = ingest_catalog(&conn, "sha-2", "M-006A/Catalog.xml", xml.as_bytes()).unwrap();
-        assert!(unknown.iter().any(|u| u.name == "FancyNewFlag"));
+        assert!(unknown.unknown.iter().any(|u| u.name == "FancyNewFlag"));
         let sections: i64 = conn
             .query_row("SELECT count(*) FROM catalog_section", [], |r| r.get(0))
             .unwrap();

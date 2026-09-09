@@ -66,14 +66,14 @@ pub fn ingest_file(
 
     let kind = classify(bytes);
     let (unknown, conflicts) = match kind {
-        FileKind::Catalog => (
-            catalog::ingest_catalog(&tx, &sha256, source_path, bytes)?,
-            Vec::new(),
-        ),
-        FileKind::Hardware => (
-            hardware::ingest_hardware(&tx, &sha256, source_path, bytes)?,
-            Vec::new(),
-        ),
+        FileKind::Catalog => {
+            let out = catalog::ingest_catalog(&tx, &sha256, source_path, bytes)?;
+            (out.unknown, out.conflicts)
+        }
+        FileKind::Hardware => {
+            let out = hardware::ingest_hardware(&tx, &sha256, source_path, bytes)?;
+            (out.unknown, out.conflicts)
+        }
         FileKind::ApplicationProgram => {
             let out = program::ingest_program(&tx, &sha256, source_path, bytes)?;
             (out.unknown, out.conflicts)

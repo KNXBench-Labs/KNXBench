@@ -15,6 +15,8 @@
 //! held to).
 
 pub mod html;
+mod model;
+mod testutil;
 
 use chrono::{DateTime, Utc};
 

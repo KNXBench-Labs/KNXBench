@@ -942,28 +942,37 @@ untouched.
 
 Part B: `apps/knx-server/src/session_log.rs` gained a documented
 `MAX_ENTRIES: usize = 1000` const (not a bare literal at a call site).
-Past it, `SessionLog::push` drops the oldest real entry and pins a
+Past it, `SessionLog::push` evicts the oldest real entries and pins a
 synthetic `Severity::Warning`/`source: "log"` entry at index 0 naming
 how many real entries have been dropped so far, refreshed on every
 subsequent drop — CLAUDE.md's "never silently discard information" rule
 applies to the log itself, not just to import data. That entry is never
 itself dropped or duplicated, and it counts against the cap, so
-`entries().len()` never exceeds 1000. `reset()` clears the dropped count
-along with everything else, so a freshly opened project starts with a
-genuinely empty log. `GET /api/log`'s wire shape (`Vec<LogEntry>`, a
-bare JSON array) is unchanged, so T12's own
-`session_log::from_csv_import_report` writer and the existing
-`apps/knx-server/tests/http_log_route.rs` integration tests needed no
-changes.
+`entries().len()` never exceeds 1000. `dropped` counts real entries
+actually removed: the push that first exceeds the cap removes two (the
+oldest real entry, plus one more to make room for the synthetic entry
+itself), and every push after that while still over capacity removes
+one more — an earlier draft of this counter tracked overflowing calls
+instead of removed entries and read one low from the first drop
+onward, caught before merge and fixed to match what actually happened
+to the data. `reset()` clears the dropped count along with everything
+else, so a freshly opened project starts with a genuinely empty log.
+`GET /api/log`'s wire shape (`Vec<LogEntry>`, a bare JSON array) is
+unchanged, so T12's own `session_log::from_csv_import_report` writer
+and the existing `apps/knx-server/tests/http_log_route.rs` integration
+tests needed no changes.
 
-New tests: 5 in `session_log.rs`'s own `#[cfg(test)]` module (under the
-cap, exactly at the cap, one past it, well past it — cap + 250 — and
-reset-after-a-drop), plus a new `apps/knx-web/src/App.test.tsx` (the
-first App-level test in this project: reachable with no project open,
-unchanged behaviour with one open). Gates: `cargo fmt --all --check`,
-`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test
---workspace`, `cargo run -p xtask -- check-layering`, `npx tsc
---noEmit`, `npm test -- --run` (139/139), `npm run build` all clean.
+New tests: 6 in `session_log.rs`'s own `#[cfg(test)]` module (under the
+cap, exactly at the cap, one past it — names 2 dropped — well past it —
+cap + 250, names 251 dropped — reset-after-a-drop, and an invariant
+test pinning "dropped named in the synthetic entry plus real entries
+retained equals total pushes" at two different overflow sizes), plus a
+new `apps/knx-web/src/App.test.tsx` (the first App-level test in this
+project: reachable with no project open, unchanged behaviour with one
+open). Gates: `cargo fmt --all --check`, `cargo clippy --workspace
+--all-targets -- -D warnings`, `cargo test --workspace`, `cargo run -p
+xtask -- check-layering`, `npx tsc --noEmit`, `npm test -- --run`
+(139/139), `npm run build` all clean.
 
 **Originally.** `apps/knx-web/src/App.tsx`'s "Log" toolbar button was
 `disabled={!tree}`, and the whole `.workspace` div — the only place

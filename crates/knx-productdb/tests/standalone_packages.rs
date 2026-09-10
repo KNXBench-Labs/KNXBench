@@ -36,9 +36,9 @@ fn a_raw_member_cannot_poison_the_manufacturer_parse_cache() {
         ("knx_master.xml", MASTER),
         ("notes.xml", later.as_bytes()),
         ("M-0001/Hardware.xml", HARDWARE),
-        ("M-0001/Other.xml", later.as_bytes()),
     ]);
     install_package(&conn, "good.knxprod", &bytes).unwrap();
+    knx_productdb::ingest_file(&conn, "M-0001/Hardware-later.xml", later.as_bytes()).unwrap();
     assert_eq!(
         conn.query_row("SELECT count(*) FROM hardware", [], |r| r.get::<_, i64>(0))
             .unwrap(),
@@ -73,6 +73,16 @@ fn retries_keep_conflicts_and_unknown_paths_cannot_supply_parsed_rows() {
     ]);
     let first = install_package(&conn, "second.knxprod", &bytes).unwrap();
     assert!(!first.conflicts.is_empty());
+    let third_changed = changed.replace("Conflicting", "Third");
+    install_package(
+        &conn,
+        "third.knxprod",
+        &archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", third_changed.as_bytes()),
+        ]),
+    )
+    .unwrap();
     assert_eq!(
         install_package(&conn, "retry.knxprod", &bytes)
             .unwrap()
@@ -477,5 +487,33 @@ fn migrating_v1_preserves_existing_rows_and_blobs() {
         conn.query_row("SELECT count(*) FROM hardware", [], |r| r.get::<_, i64>(0))
             .unwrap(),
         1
+    );
+}
+
+#[test]
+fn a_failed_v1_to_v2_migration_rolls_back_its_ddl_and_version() {
+    let (dir, conn) = db();
+    conn.execute_batch(
+        "DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
+         DROP TABLE package; CREATE TABLE package_conflict (marker INTEGER); PRAGMA user_version = 1;",
+    )
+    .unwrap();
+    drop(conn);
+    assert!(open_and_migrate(&dir.path().join("products.sqlite")).is_err());
+    let conn = Connection::open(dir.path().join("products.sqlite")).unwrap();
+    assert_eq!(
+        conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+    assert!(conn.prepare("SELECT * FROM package").is_err());
+    conn.execute_batch("DROP TABLE package_conflict;").unwrap();
+    drop(conn);
+    assert_eq!(
+        open_and_migrate(&dir.path().join("products.sqlite"))
+            .unwrap()
+            .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        2
     );
 }

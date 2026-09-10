@@ -289,3 +289,58 @@ fn ga_import_dry_run_matches_the_real_imports_report_and_leaves_the_store_untouc
         "--dry-run must leave the store untouched"
     );
 }
+
+#[test]
+fn ga_import_of_a_real_change_against_a_readonly_store_reports_the_save_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = dir.path().join("project.knxdb");
+    write_store(&store);
+    let before = store_addresses(&store);
+
+    let edits_csv = dir.path().join("edits.csv");
+    // A rename that would in fact update something, so this only exercises
+    // `save_project` failing, not "nothing to do" taking the branch first.
+    std::fs::write(
+        &edits_csv,
+        "Address,Name\n1/1/1,Living Room Light (renamed)\n",
+    )
+    .unwrap();
+
+    let original_permissions = std::fs::metadata(&store).unwrap().permissions();
+    let mut readonly_permissions = original_permissions.clone();
+    readonly_permissions.set_readonly(true);
+    std::fs::set_permissions(&store, readonly_permissions).unwrap();
+
+    let out = run_cli(&[
+        "ga-import",
+        store.to_str().unwrap(),
+        edits_csv.to_str().unwrap(),
+    ]);
+
+    // Restore write access before any assertion can panic and skip past it
+    // — a failed assertion here must not leave a read-only file behind for
+    // whatever runs next in this temp dir (or, worse, look like it did).
+    std::fs::set_permissions(&store, original_permissions).unwrap();
+
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    let (_, status_line) = split_trailing_status_line(&stdout);
+    assert_eq!(status_line, "store written: no (error)", "{stdout}");
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(
+        stderr.contains("failed to save project to store"),
+        "{stderr}"
+    );
+
+    assert_eq!(
+        store_addresses(&store),
+        before,
+        "a save that failed must leave the store exactly as it was"
+    );
+}

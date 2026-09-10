@@ -351,6 +351,62 @@ export function batchMoveDevicesToBuildingPart(
   });
 }
 
+// `CsvProblemDto` (apps/knx-server/src/routes.rs) — server-local, no
+// `ts-rs` binding, hand-written to match its `#[serde(rename_all =
+// "camelCase")]` JSON shape. Doubles as an export warning and an import
+// row-level problem, same as the Rust side reuses one type for both.
+export interface CsvProblem {
+  row: number | null;
+  severity: "error" | "warning";
+  detail: string;
+}
+
+export interface CsvExportReport {
+  warnings: CsvProblem[];
+}
+
+// "KNXBench group-address CSV v1" (crates/knx-csv, design
+// docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md)
+// — a format this project defines and owns, not an ETS export. `path` is a
+// fresh write target resolved server-side exactly like `exportProject`'s.
+export function exportGroupAddressesCsv(path: string): Promise<CsvExportReport> {
+  return request("/api/group-addresses/csv-export", {
+    method: "POST",
+    body: JSON.stringify({ path }),
+  });
+}
+
+export interface IgnoredColumn {
+  name: string;
+  reason: "exportOnly" | "unknown";
+}
+
+export interface CsvImportReport {
+  separator: string;
+  rowsRead: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  ignoredColumns: IgnoredColumn[];
+  problems: CsvProblem[];
+}
+
+export interface CsvImportResponse {
+  tree: ProjectTree;
+  report: CsvImportReport;
+}
+
+// A file that parses but contains a row-level error rejects with a 400
+// (`request()` throws, `tree` never reaches the caller) and leaves the
+// open project untouched — see `import_group_addresses_csv` in
+// apps/knx-server/src/routes.rs.
+export function importGroupAddressesCsv(path: string): Promise<CsvImportResponse> {
+  return request("/api/group-addresses/csv-import", {
+    method: "POST",
+    body: JSON.stringify({ path }),
+  });
+}
+
 // `LogEntry` (apps/knx-server/src/session_log.rs) — server-local, no
 // `ts-rs` binding, hand-written to match its `#[serde(rename_all =
 // "camelCase")]` JSON shape (same pattern as `CatalogInstallReport` above).

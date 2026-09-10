@@ -294,9 +294,11 @@ function App() {
       <button onClick={() => tree && setSearchOpen(true)} disabled={!tree}>
         Search… (Ctrl+K)
       </button>
-      <button onClick={() => setLogOpen((open) => !open)} disabled={!tree}>
-        Log
-      </button>
+      {/* Enabled with no project open: `GET /api/log` deliberately works
+          then too (routes.rs), specifically so a failed import with
+          nothing loaded still leaves an inspectable trail
+          (KNOWN_LIMITATIONS.md #36, part A). */}
+      <button onClick={() => setLogOpen((open) => !open)}>Log</button>
       <button
         onClick={() => {
           setSearchOpen(false);
@@ -307,27 +309,37 @@ function App() {
       </button>
       <ThemeSwitcher themes={THEMES} activeId={themeId} onSelect={setThemeId} />
       <ToastStack toasts={toasts} onDismiss={dismiss} />
-      {tree && (
+      {/* `ProjectExplorer` genuinely needs a project; `Inspector`/`Dashboard`
+          likewise. `LogPanel` alone does not (KNOWN_LIMITATIONS.md #36,
+          part A) — with no project open and the Log tab closed, there is
+          nothing for this slot to show, so it stays unrendered same as
+          before; with the Log tab open, it is the only thing in here. */}
+      {(tree || logOpen) && (
         <div className="workspace">
-          <ProjectExplorer
-            tree={tree}
-            selection={selection}
-            onSelect={selectEntity}
-            onTreeUpdate={handleTreeUpdate}
-          />
+          {tree && (
+            <ProjectExplorer
+              tree={tree}
+              selection={selection}
+              onSelect={selectEntity}
+              onTreeUpdate={handleTreeUpdate}
+            />
+          )}
           {logOpen ? (
             <LogPanel tree={tree} refreshKey={logVersion} />
-          ) : selection ? (
-            <Inspector
-              key={`${selection.kind}-${selection.id}`}
-              selection={selection}
-              tree={tree}
-              deviceDetail={deviceDetail}
-              onApplied={handleTreeUpdate}
-              onDeleted={resetTree}
-            />
           ) : (
-            <Dashboard tree={tree} />
+            tree &&
+            (selection ? (
+              <Inspector
+                key={`${selection.kind}-${selection.id}`}
+                selection={selection}
+                tree={tree}
+                deviceDetail={deviceDetail}
+                onApplied={handleTreeUpdate}
+                onDeleted={resetTree}
+              />
+            ) : (
+              <Dashboard tree={tree} />
+            ))
           )}
         </div>
       )}

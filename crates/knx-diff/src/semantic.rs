@@ -11,14 +11,6 @@
 //! output lists can be sorted deterministically (design spec §4); a
 //! `*Fields` type is not, since nothing sorts by field content.
 //!
-//! `mod semantic` is private and none of this is re-exported from `lib.rs`
-//! yet (Task 3 does that as part of assembling `diff.rs`'s public
-//! surface), so every item here is genuinely unreachable from outside the
-//! crate for now — hence the blanket `dead_code` allow below, rather than
-//! faking a caller into existence just to satisfy the lint a task early.
-
-#![allow(dead_code)]
-
 use std::collections::BTreeMap;
 use std::net::Ipv4Addr;
 

@@ -290,6 +290,19 @@ fn migrate_v1_to_v2(conn: &Connection) -> Result<(), ProductDbError> {
             size INTEGER NOT NULL,
             PRIMARY KEY (package_sha256, path),
             UNIQUE (package_sha256, ordinal)
+        ) STRICT;
+        CREATE TABLE source_parse_evidence (
+            sha256 TEXT PRIMARY KEY REFERENCES source_file(sha256)
+        ) STRICT;
+        INSERT INTO source_parse_evidence (sha256) SELECT sha256 FROM source_file;
+        CREATE TABLE package_conflict (
+            package_sha256 TEXT NOT NULL REFERENCES package(sha256),
+            ordinal INTEGER NOT NULL,
+            table_name TEXT NOT NULL,
+            logical_id TEXT NOT NULL,
+            kept_sha256 TEXT NOT NULL,
+            other_sha256 TEXT NOT NULL,
+            PRIMARY KEY (package_sha256, ordinal)
         ) STRICT;",
     )?;
     Ok(())
@@ -316,11 +329,22 @@ pub fn open_and_migrate(path: &Path) -> Result<Connection, ProductDbError> {
             supported: CURRENT_PRODUCTDB_VERSION,
         });
     }
-    for migration in &migrations()[found as usize..CURRENT_PRODUCTDB_VERSION as usize] {
-        migration(&conn)?;
-    }
     if found < CURRENT_PRODUCTDB_VERSION {
-        conn.pragma_update(None, "user_version", CURRENT_PRODUCTDB_VERSION)?;
+        conn.execute_batch("BEGIN IMMEDIATE")?;
+        let result = (|| {
+            for migration in &migrations()[found as usize..CURRENT_PRODUCTDB_VERSION as usize] {
+                migration(&conn)?;
+            }
+            conn.pragma_update(None, "user_version", CURRENT_PRODUCTDB_VERSION)?;
+            Ok::<(), ProductDbError>(())
+        })();
+        match result {
+            Ok(()) => conn.execute_batch("COMMIT")?,
+            Err(error) => {
+                let _ = conn.execute_batch("ROLLBACK");
+                return Err(error);
+            }
+        }
     }
     Ok(conn)
 }

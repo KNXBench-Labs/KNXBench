@@ -10,6 +10,8 @@ const USAGE: &str =
     "usage: knx import <file.knxproj> [--store <path.knxdb>] [--report-json <path.json>]\n\
      \x20                  [--product-db <path>] [--no-product-db]\n\
      \x20     knx export <store.knxdb> <out.knxproj> [--product-db <path>] [--no-product-db]\n\
+     \x20     knx ga-export <store.knxdb> <out.csv>\n\
+     \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run]\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
      \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>]\n\
      \x20     knx products show <program-id> [--product-db <path>]\n\
@@ -35,6 +37,8 @@ fn main() -> ExitCode {
     match args.first().map(String::as_str) {
         Some("import") => run_import(&args[1..]),
         Some("export") => run_export(&args[1..]),
+        Some("ga-export") => run_ga_export(&args[1..]),
+        Some("ga-import") => run_ga_import(&args[1..]),
         Some("products") => run_products(&args[1..]),
         Some("bus") => run_bus(&args[1..]),
         _ => {
@@ -389,6 +393,241 @@ fn run_export(args: &[String]) -> ExitCode {
     }
 
     ExitCode::SUCCESS
+}
+
+struct GaExportArgs {
+    store: String,
+    output: String,
+}
+
+fn parse_ga_export_args(args: &[String]) -> Result<GaExportArgs, String> {
+    let mut store = None;
+    let mut output = None;
+    for arg in args {
+        match arg.as_str() {
+            other if other.starts_with("--") => {
+                return Err(format!("unknown flag: {other}"));
+            }
+            other if store.is_none() => store = Some(other.to_string()),
+            other if output.is_none() => output = Some(other.to_string()),
+            other => return Err(format!("unexpected extra argument: {other}")),
+        }
+    }
+    let store = store.ok_or_else(|| "missing <store.knxdb>".to_string())?;
+    let output = output.ok_or_else(|| "missing <out.csv>".to_string())?;
+    Ok(GaExportArgs { store, output })
+}
+
+/// `knx ga-export` — writes every group address in the store's project as
+/// "KNXBench group-address CSV v1" text (design §3, §7). This is a project
+/// format this application defines and owns; it is not a claim of
+/// compatibility with any export ETS produces.
+fn run_ga_export(args: &[String]) -> ExitCode {
+    let parsed = match parse_ga_export_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let conn = match knx_store::open_and_migrate(&PathBuf::from(&parsed.store)) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("failed to open store at {}: {e}", parsed.store);
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let project = match knx_store::load_project(&conn) {
+        Ok(project) => project,
+        Err(e) => {
+            eprintln!("failed to load project from store: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let export = knx_csv::export_group_addresses(&project);
+
+    if let Err(e) = std::fs::write(&parsed.output, export.text.as_bytes()) {
+        eprintln!("failed to write {}: {e}", parsed.output);
+        return ExitCode::FAILURE;
+    }
+
+    print_export_report(&parsed.output, &export);
+    ExitCode::SUCCESS
+}
+
+/// Prints an export's report as human-readable lines (design §7: "the
+/// report prints as human-readable lines, not JSON") — every warning
+/// `knx-csv` produced, not just a count, so nothing it reported is
+/// silently dropped on the way to the terminal.
+fn print_export_report(output: &str, export: &knx_csv::CsvExport) {
+    println!("exported group addresses to {output}");
+    println!("  {} warning(s)", export.warnings.len());
+    for warning in &export.warnings {
+        print_csv_problem(warning);
+    }
+}
+
+fn print_csv_problem(problem: &knx_csv::CsvProblem) {
+    let kind = match problem.severity {
+        knx_csv::Severity::Error => "error",
+        knx_csv::Severity::Warning => "warning",
+    };
+    match problem.row {
+        Some(row) => println!("  {kind}: row {row}: {}", problem.detail),
+        None => println!("  {kind}: {}", problem.detail),
+    }
+}
+
+struct GaImportArgs {
+    store: String,
+    input: String,
+    dry_run: bool,
+}
+
+fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
+    let mut store = None;
+    let mut input = None;
+    let mut dry_run = false;
+    for arg in args {
+        match arg.as_str() {
+            "--dry-run" => dry_run = true,
+            other if other.starts_with("--") => {
+                return Err(format!("unknown flag: {other}"));
+            }
+            other if store.is_none() => store = Some(other.to_string()),
+            other if input.is_none() => input = Some(other.to_string()),
+            other => return Err(format!("unexpected extra argument: {other}")),
+        }
+    }
+    let store = store.ok_or_else(|| "missing <store.knxdb>".to_string())?;
+    let input = input.ok_or_else(|| "missing <in.csv>".to_string())?;
+    Ok(GaImportArgs {
+        store,
+        input,
+        dry_run,
+    })
+}
+
+/// `knx ga-import` — reads `in.csv` as "KNXBench group-address CSV v1"
+/// text, plans the edit against the store's project (design §4), and,
+/// unless any row is a row-level error, applies the single resulting
+/// `Command::Batch` and saves the store. `--dry-run` runs the identical
+/// plan and prints the identical report but returns before the `apply`/
+/// `save_project` calls below, so the store is provably untouched — the
+/// printed report is built solely from `plan.report`, never from whether
+/// the save happened, so it is byte-identical either way. A single
+/// trailing `store written: yes|no (reason)` line is appended *after*
+/// that report body on every terminal path, so it can never make the
+/// report itself diverge between a dry run and a real one, and a reader
+/// never has to infer from the exit code or counts alone whether a save
+/// actually happened.
+fn run_ga_import(args: &[String]) -> ExitCode {
+    let parsed = match parse_ga_import_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let conn = match knx_store::open_and_migrate(&PathBuf::from(&parsed.store)) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("failed to open store at {}: {e}", parsed.store);
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let mut project = match knx_store::load_project(&conn) {
+        Ok(project) => project,
+        Err(e) => {
+            eprintln!("failed to load project from store: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let text = match std::fs::read_to_string(&parsed.input) {
+        Ok(text) => text,
+        Err(e) => {
+            eprintln!("failed to read {}: {e}", parsed.input);
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let parsed_csv = knx_csv::parse_group_addresses(&text, project.info.group_address_style);
+    let plan = knx_csv::plan_import(&project, &parsed_csv);
+
+    print_import_report(&parsed.input, &plan.report);
+
+    let has_row_errors = plan
+        .report
+        .problems
+        .iter()
+        .any(|p| p.severity == knx_csv::Severity::Error);
+    if has_row_errors {
+        // design §4's all-or-nothing rule: `plan.command` is already `None`
+        // here, so nothing below would have applied anyway — returning
+        // early just keeps that guarantee explicit and keeps the store
+        // untouched for both a real run and `--dry-run` alike.
+        println!("store written: no (rejected)");
+        return ExitCode::from(EXIT_IMPORTED_WITH_ERRORS);
+    }
+
+    if parsed.dry_run {
+        println!("store written: no (dry run)");
+        return ExitCode::SUCCESS;
+    }
+
+    match plan.command {
+        Some(command) => {
+            if let Err(e) = command.apply(&mut project) {
+                eprintln!("failed to apply import: {e}");
+                println!("store written: no (error)");
+                return ExitCode::FAILURE;
+            }
+            if let Err(e) = knx_store::save_project(&conn, &project) {
+                eprintln!("failed to save project to store: {e}");
+                println!("store written: no (error)");
+                return ExitCode::FAILURE;
+            }
+            println!("store written: yes");
+        }
+        None => {
+            // No row created or updated anything (the report's own "nothing
+            // to do" line already said so) — there is nothing to apply, so
+            // `save_project` is never called.
+            println!("store written: no (nothing to do)");
+        }
+    }
+
+    ExitCode::SUCCESS
+}
+
+/// Prints an import report as human-readable lines (design §7). Shared
+/// verbatim between a real import and `--dry-run` — see `run_ga_import` —
+/// so the two can never drift apart.
+fn print_import_report(input: &str, report: &knx_csv::CsvImportReport) {
+    println!("imported {input}");
+    println!(
+        "  {} row(s) read, {} created, {} updated, {} unchanged",
+        report.rows_read, report.created, report.updated, report.unchanged
+    );
+    if report.created == 0 && report.updated == 0 {
+        println!("  nothing to do");
+    }
+    for ignored in &report.ignored_columns {
+        let reason = match ignored.reason {
+            knx_csv::IgnoredColumnReason::ExportOnly => "export-only column, not applied on import",
+            knx_csv::IgnoredColumnReason::Unknown => "unrecognized column",
+        };
+        println!("  ignored column '{}' ({reason})", ignored.name);
+    }
+    for problem in &report.problems {
+        print_csv_problem(problem);
+    }
 }
 
 /// `knx products list|ingest|show|verify` — inspection and separate ingest

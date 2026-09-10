@@ -72,7 +72,7 @@ underlying model field exists.
 | # | Gap | Notes |
 |---|-----|-------|
 | C1 | **No project comparison/diff.** ETS can compare two project versions structurally. KNXBench's `compare.rs` exists only as an internal roundtrip-equality oracle for tests, not a user-facing feature. | No way to answer "what changed between these two saves" without external tooling — compounded by [KNOWN_LIMITATIONS.md §9](KNOWN_LIMITATIONS.md#9-project-files-are-not-diffable) (SQLite isn't diffable at the file level either). |
-| C2 | **No CSV/Excel group-address import or export.** A common ETS workflow for bulk-authoring group addresses outside the tool. | Not present in any form — not import, not export. |
+| C2 | **Closed (2026-09-10, T12).** A new `knx-csv` crate reads and writes "KNXBench group-address CSV v1" — a format KNXBench defines and documents itself, **not** a claim of ETS CSV compatibility (no verified ETS sample exists anywhere in this repository or the KNX Standard v3.0.0 corpus). Reachable from `knx ga-export`/`knx ga-import [--dry-run]` on the CLI, `POST /api/group-addresses/csv-export`/`csv-import` on the server, and two toolbar buttons in the web group-address view. | Bulk-authoring group addresses in a spreadsheet is now possible without a full `.knxproj` round trip. See `IMPORT_EXPORT.md §11` for the format and `KNOWN_LIMITATIONS.md` for what it deliberately does not do (re-address, delete, touch group ranges, or apply `DatapointType`/`MainGroup`/`MiddleGroup`). |
 | C3 | **No partial/selective import.** ETS import here is all-or-nothing per project. | Cannot import "just this one line" or "just this device" from a `.knxproj`. |
 | C4 | **Closed (2026-09-10, T10).** `export_ets_project` now has three real callers: `knx export` on the CLI, `POST /api/project/export` on the server, and an "Export to .knxproj…" button in the web Project Explorer. | Closing this also surfaced and fixed two real data-integrity bugs (see `IMPLEMENTATION_STATUS.md`'s T10 entry for the full account): (1) server-side ETS import used a throwaway store, so Save As never persisted opaque passthrough / manufacturer manifest data, and an export taken after it silently lost that data — fixed by carrying that data through `AppState` into every save; (2) the two functions that write those tables (`knx_store::insert_opaque`/`insert_manufacturer_refs`) were plain `INSERT`s with no clear-first step, so once (1)'s fix made every save call them, a plain repeated Save duplicated every row without bound — fixed by clearing the tables before insert, matching `save_project`'s own convention. `export_project` was also changed to read opaque/manifest from live `AppState` instead of re-opening `store_path` off disk, closing off the staleness risk described in [KNOWN_LIMITATIONS.md #18](KNOWN_LIMITATIONS.md#18-open_project-does-not-clear-the-previous-knxdb-store_path) for this specific data (the broader gap in #18 itself is unchanged and out of scope here). |
 | C5 | **No signed export**, and ETS acceptance of an unsigned one is unverified. | [KNOWN_LIMITATIONS.md §5](KNOWN_LIMITATIONS.md#5-exports-are-unsigned-and-ets-acceptance-is-untested). |
@@ -363,8 +363,50 @@ Each task: **what**, **why**, **depends on**.
   `npx tsc --noEmit`, `npm test`, `npm run build`) green on the merged
   branch. See `docs/superpowers/specs/2026-09-08-session-log-design.md`
   for the full design and its ownership/reset rationale. Closes **D7**.
-- **T12. CSV group-address import/export.** A common bulk-authoring
-  workflow independent of a full `.knxproj` round trip. Closes **C2**.
+- ~~**T12. CSV group-address import/export.**~~ **Closed (2026-09-10).**
+  A new `crates/knx-csv` — depending on nothing but `knx-core`, `csv`, and
+  `serde`, enforced by a new `xtask check-layering` rule — reads and writes
+  "KNXBench group-address CSV v1": `export_group_addresses`,
+  `parse_group_addresses`, `plan_import` (`read.rs`, `write.rs`, `plan.rs`).
+  **This is a format KNXBench defines and documents itself.** No sample of
+  ETS's own group-address CSV export exists anywhere in this repository or
+  in the KNX Standard v3.0.0 corpus, so no ETS-compatibility claim is made
+  anywhere — not in code, not in docs, not in the UI — and the format is
+  never called "ETS CSV." `crates/knx-core/src/command.rs` gains the one
+  command the feature needed, `Command::UpdateGroupAddress { id, name,
+  central, unfiltered }` (its own inverse), since nothing before this could
+  rename a group address at all. Import matches rows to existing entries by
+  address, never re-addresses (an address change reads as a new row), never
+  deletes an address absent from the file, and is all-or-nothing per file —
+  any row-level error blocks the whole import, applied atomically as one
+  `Command::Batch` so the result is a single undo step. `DatapointType`,
+  `MainGroup`, and `MiddleGroup` are export-only: read back and reported as
+  recognized-but-ignored, never applied, since a group address itself
+  carries no DPT and no range-creation happens from a CSV. Surfaces:
+  `POST /api/group-addresses/csv-export`/`csv-import`
+  (`apps/knx-server/src/routes.rs`, feeding the T11 session log via
+  `session_log::from_csv_import_report`); `knx ga-export <store.knxdb>
+  <out.csv>` and `knx ga-import <store.knxdb> <in.csv> [--dry-run]`
+  (`apps/knx-cli`, `--dry-run` printing a report body byte-identical to a
+  real import, with a trailing `store written: yes`/`no (…)` line);
+  two toolbar buttons in the web group-address view
+  (`GroupAddressCsvButtons.tsx`). Tests: `knx-csv`'s own suite (separator
+  detection, BOM, CRLF, quoting, every row-level error, every boolean
+  spelling, all three address styles, plan outcomes, range placement,
+  all-or-nothing) — 50 tests via `cargo test -p knx-csv -- --list`; a
+  corpus-gated round trip in `knx-app/tests/csv_roundtrip.rs`
+  (`exporting_and_replanning_the_reference_project_is_entirely_unchanged`),
+  living in `knx-app` rather than `knx-csv` because it needs
+  `knx-etsproj` to build a real `Project`, and `knx-csv` must reach neither
+  `knx-etsproj` nor `knx-store` — `check-layering` walks dev-dependency
+  edges too, so even a dev-only edge there would have failed the rule;
+  4 new `UpdateGroupAddress` tests in `knx-core::command::tests`; 5 new
+  server integration tests (`apps/knx-server/tests/http_group_address_csv.rs`)
+  and 5 new CLI integration tests
+  (`apps/knx-cli/tests/cli_group_address_csv.rs`); 11 new frontend tests
+  in `GroupAddressCsvButtons.test.tsx` plus 4 more in `api.test.ts` for the
+  two new client functions. Closes **C2**. Design spec:
+  `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.
 - **T13. Project documentation export (PDF/HTML report).** Topology,
   building, device, and group-address listings rendered to a printable
   document — start with one format (HTML, easiest to generate and to

@@ -30,6 +30,14 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/com-object-flag", post(set_com_object_flag))
         .route("/api/group-addresses", post(create_group_address))
         .route("/api/group-addresses/{id}", delete(delete_group_address))
+        .route(
+            "/api/group-addresses/csv-export",
+            post(export_group_addresses_csv),
+        )
+        .route(
+            "/api/group-addresses/csv-import",
+            post(import_group_addresses_csv),
+        )
         .route("/api/areas", post(create_area))
         .route("/api/areas/{id}", delete(delete_area))
         .route("/api/lines", post(create_line))
@@ -367,6 +375,139 @@ async fn delete_group_address(
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     domain::delete_group_address_impl(&state, id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+/// `CsvProblem` (`knx-csv`) does not derive `Serialize` — it knows nothing
+/// of JSON — so it gets the same explicit at-the-boundary conversion
+/// `ExportWarningDto` above uses. Doubles as both an import-side problem
+/// and an export-side warning: `write.rs`'s own doc comment already
+/// reuses `CsvProblem` for both rather than duplicating the shape, and
+/// there is no reason for the DTO to duplicate it either.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CsvProblemDto {
+    row: Option<usize>,
+    severity: knx_csv::Severity,
+    detail: String,
+}
+
+impl From<&knx_csv::CsvProblem> for CsvProblemDto {
+    fn from(problem: &knx_csv::CsvProblem) -> Self {
+        Self {
+            row: problem.row,
+            severity: problem.severity,
+            detail: problem.detail.clone(),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CsvExportReportDto {
+    warnings: Vec<CsvProblemDto>,
+}
+
+/// Writes the live project's group addresses to `body.path` as "KNXBench
+/// group-address CSV v1" — see `crates/knx-csv` for the format, and its
+/// own module docs for why it is never called "ETS CSV". `path` is a fresh
+/// write target, resolved exactly like `/api/project/export`'s.
+async fn export_group_addresses_csv(
+    State(state): State<SharedState>,
+    Json(body): Json<PathBody>,
+) -> Result<Json<CsvExportReportDto>, ApiError> {
+    let path = resolve_new_project_path(&state.data_dir, &body.path)?;
+    domain::export_group_addresses_csv_impl(&state, &path)
+        .map(|export| CsvExportReportDto {
+            warnings: export.warnings.iter().map(CsvProblemDto::from).collect(),
+        })
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+enum IgnoredColumnReasonDto {
+    ExportOnly,
+    Unknown,
+}
+
+impl From<knx_csv::IgnoredColumnReason> for IgnoredColumnReasonDto {
+    fn from(reason: knx_csv::IgnoredColumnReason) -> Self {
+        match reason {
+            knx_csv::IgnoredColumnReason::ExportOnly => Self::ExportOnly,
+            knx_csv::IgnoredColumnReason::Unknown => Self::Unknown,
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct IgnoredColumnDto {
+    name: String,
+    reason: IgnoredColumnReasonDto,
+}
+
+impl From<&knx_csv::IgnoredColumn> for IgnoredColumnDto {
+    fn from(column: &knx_csv::IgnoredColumn) -> Self {
+        Self {
+            name: column.name.clone(),
+            reason: column.reason.into(),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CsvImportReportDto {
+    separator: char,
+    rows_read: usize,
+    created: usize,
+    updated: usize,
+    unchanged: usize,
+    ignored_columns: Vec<IgnoredColumnDto>,
+    problems: Vec<CsvProblemDto>,
+}
+
+impl From<&knx_csv::CsvImportReport> for CsvImportReportDto {
+    fn from(report: &knx_csv::CsvImportReport) -> Self {
+        Self {
+            separator: report.separator,
+            rows_read: report.rows_read,
+            created: report.created,
+            updated: report.updated,
+            unchanged: report.unchanged,
+            ignored_columns: report.ignored_columns.iter().map(Into::into).collect(),
+            problems: report.problems.iter().map(Into::into).collect(),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CsvImportResponseDto {
+    tree: knx_projection::ProjectTree,
+    report: CsvImportReportDto,
+}
+
+/// Reads `body.path` as "KNXBench group-address CSV v1" and plans/applies
+/// the edit against the live project (design §4). A file that parses but
+/// contains a row-level error is the caller's mistake, not this server's —
+/// `domain::import_group_addresses_csv_impl` returns `Err` naming every
+/// offending row, mapped to `400` like every other project-editing route,
+/// never `500`. `path` is a read target, resolved exactly like
+/// `/api/project/import`'s.
+async fn import_group_addresses_csv(
+    State(state): State<SharedState>,
+    Json(body): Json<PathBody>,
+) -> Result<Json<CsvImportResponseDto>, ApiError> {
+    let path = resolve_project_path(&state.data_dir, &body.path)?;
+    domain::import_group_addresses_csv_impl(&state, &path)
+        .map(|(tree, report)| CsvImportResponseDto {
+            tree,
+            report: CsvImportReportDto::from(&report),
+        })
         .map(Json)
         .map_err(ApiError::bad_request)
 }

@@ -15,6 +15,7 @@ import LogPanel from "./LogPanel";
 import { THEMES, useThemeId } from "./theme";
 import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
+import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
 
 const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
 const EXPORT_FILTER = [{ name: "ETS project", extensions: ["knxproj"] }];
@@ -277,6 +278,13 @@ function App() {
       <button onClick={exportProject} disabled={!tree || !hasStorePath}>
         Export to .knxproj…
       </button>
+      <GroupAddressCsvButtons
+        tree={tree}
+        onTreeUpdate={handleTreeUpdate}
+        onSummary={pushFun}
+        onError={reportError}
+        onClearErrors={clearErrors}
+      />
       <button onClick={undo} disabled={!tree?.can_undo}>
         Undo
       </button>

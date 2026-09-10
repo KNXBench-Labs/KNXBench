@@ -5,10 +5,11 @@
 //! can hold in its head at once.
 
 /// Escapes text content for insertion between HTML tags: `&`, `<` and `>`.
-/// `&` is replaced first so an already-produced `&lt;`/`&gt;` never gets a
-/// second pass that turns it into `&amp;lt;`. Every other character,
-/// including `"` and umlauts, passes through untouched — text content has
-/// no quoting rules to escape.
+/// The loop below walks `input` one `char` at a time, pushing each
+/// replacement into a fresh buffer that is never re-scanned — so an
+/// already-emitted `&amp;lt;` cannot happen, regardless of arm order.
+/// Every other character, including `"` and umlauts, passes through
+/// untouched — text content has no quoting rules to escape.
 pub fn escape_text(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     for ch in input.chars() {
@@ -23,8 +24,9 @@ pub fn escape_text(input: &str) -> String {
 }
 
 /// Escapes a value for insertion inside a double-quoted HTML attribute:
-/// everything [`escape_text`] escapes, plus `"` and `'`. `&` still goes
-/// first, for the same reason.
+/// everything [`escape_text`] escapes, plus `"` and `'`. Like that
+/// function, it writes into a fresh, never-re-scanned buffer, so arm
+/// order cannot cause double-escaping here either.
 pub fn escape_attr(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     for ch in input.chars() {
@@ -143,9 +145,10 @@ mod tests {
 
     #[test]
     fn escape_text_amp_before_lt_does_not_double_escape() {
-        // If `&` were escaped after `<`, `<` would first become `&lt;` and
-        // then the leading `&` of that replacement would be escaped again
-        // into `&amp;lt;`. Order matters; this pins it down.
+        // Regression guard against a future rewrite using chained
+        // `String::replace` calls, which would escape `&` before `<` and
+        // turn the resulting `&lt;` into `&amp;lt;`. The per-char walk
+        // above can't do this; this pins down the symptom to catch it.
         assert_eq!(escape_text("<"), "&lt;");
         assert!(!escape_text("<").contains("&amp;lt;"));
     }

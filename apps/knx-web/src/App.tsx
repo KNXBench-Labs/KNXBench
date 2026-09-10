@@ -16,6 +16,7 @@ import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
 
 const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
+const EXPORT_FILTER = [{ name: "ETS project", extensions: ["knxproj"] }];
 
 function App() {
   const [tree, setTree] = useState<ProjectTree | null>(null);
@@ -180,6 +181,24 @@ function App() {
     }
   }
 
+  async function exportProject() {
+    const path = await pickSavePath(EXPORT_FILTER, "project.knxproj");
+    if (!path) return;
+    clearErrors();
+    try {
+      const { warnings } = await api.exportProject(path);
+      for (const w of warnings) {
+        pushError(
+          typeof w === "object" && w !== null && "detail" in w
+            ? String((w as { detail: unknown }).detail)
+            : JSON.stringify(w),
+        );
+      }
+    } catch (e) {
+      pushError(api.errorMessage(e));
+    }
+  }
+
   async function undo() {
     clearErrors();
     try {
@@ -218,6 +237,9 @@ function App() {
       </button>
       <button onClick={saveProjectAs} disabled={!tree}>
         Save As…
+      </button>
+      <button onClick={exportProject} disabled={!tree || !hasStorePath}>
+        Export to .knxproj…
       </button>
       <button onClick={undo} disabled={!tree?.can_undo}>
         Undo

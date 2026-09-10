@@ -1955,6 +1955,7 @@ dependencies = [
  "knx-etsproj",
  "knx-productdb",
  "knx-projection",
+ "knx-report",
  "knx-store",
  "serde",
  "serde_json",

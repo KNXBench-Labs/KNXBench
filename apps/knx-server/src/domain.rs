@@ -532,6 +532,67 @@ pub fn export_group_addresses_csv_impl(
     result
 }
 
+/// Renders the live project into one self-contained "project
+/// documentation" HTML file at `path` (`knx_report::render_html`, design
+/// doc `docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`)
+/// — never called or logged as an ETS report, because no ETS-produced
+/// report sample exists anywhere in this repository to be compatible
+/// with. Never mutates the project. The clock read for the document's
+/// generation timestamp happens right here, nowhere inside `knx-report`
+/// itself — that crate's own doc comment holds it to reading only its
+/// `ReportOptions` argument, which is what keeps its tests deterministic.
+/// Every warning the render found (a device in no line, an address in no
+/// range, a dangling building-part parent, an orphaned communication
+/// object, a dangling group link, a malformed override) is pushed into
+/// the session log individually, not just returned in the response body —
+/// same reasoning as `export_group_addresses_csv_impl` above.
+pub fn export_documentation_impl(
+    state: &AppState,
+    path: &Path,
+) -> Result<knx_report::HtmlReport, String> {
+    let result = (|| -> Result<knx_report::HtmlReport, String> {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?;
+        let options = knx_report::ReportOptions {
+            generated_at: chrono::Utc::now(),
+        };
+        let report = knx_report::render_html(project, &options);
+        std::fs::write(path, report.html.as_bytes()).map_err(|e| e.to_string())?;
+        Ok(report)
+    })();
+
+    if let Ok(report) = &result {
+        let mut log = state.session_log.lock().expect("state mutex poisoned");
+        for warning in &report.warnings {
+            log.push(LogEntry {
+                timestamp: session_log::now(),
+                severity: Severity::Warning,
+                source: "doc-export".to_string(),
+                message: warning.detail.clone(),
+                location: Some(warning.location.clone()),
+                detail: None,
+            });
+        }
+    }
+
+    log_outcome(
+        state,
+        "doc-export",
+        match &result {
+            Ok(report) => format!(
+                "exported documentation to {} ({} warning(s))",
+                path.display(),
+                report.warnings.len()
+            ),
+            Err(_) => String::new(),
+        },
+        None,
+        &result,
+    );
+
+    result
+}
+
 /// Reads `path` as "KNXBench group-address CSV v1" text, plans the edit
 /// against the live project (`knx_csv::parse_group_addresses` +
 /// `knx_csv::plan_import`, design §4), and — unless any row is a

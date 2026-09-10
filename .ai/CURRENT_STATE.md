@@ -610,14 +610,55 @@
   (project diff/compare) are next in order. `KNOWN_LIMITATIONS.md` #42
   (`command_sync.rs`'s stale module doc) and #43/T27 (motion toggle)
   remain open and unscheduled.
-- **Notes for Codex:** The synthetic drop-notice's `dropped` counter has
-  a documented quirk worth knowing before you touch this file again: on
-  the very *first* overflow it evicts two real entries (the one that
-  overflowed the cap, plus one more to make room for the notice entry
-  itself) but only increments `dropped` by one, so the counter reads
-  "how many pushes happened past the cap", not "how many real entries
-  are actually missing" (which is consistently one higher, forever,
-  once triggered). This was the brief's own explicit numeric spec — "one
-  past the cap" must name exactly 1, "cap + 250" must name exactly 250 —
-  not a shortcut I chose; see `push`'s doc comment in `session_log.rs`
-  for the full mechanics if you need to touch the eviction logic.
+- **Notes for Codex:** `session_log.rs`'s `dropped` counter counts real
+  entries removed, not overflowing calls — see the fix-round entry below.
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 22:05
+- **Completed:** Fix round 1 on branch `fix-36-log-tab`, one commit on
+  top of the three above. Review caught a real bug in `019ed90`'s
+  `dropped` counter, not just a documentation nit: it counted
+  *overflowing push calls*, not real entries actually removed, and those
+  two numbers diverge from the very first drop onward, by exactly one,
+  forever. The synthetic entry was claiming "1 log entry dropped" while
+  2 were actually gone — silently misreporting the exact thing this
+  mechanism exists to report accurately.
+
+  Fixed in `apps/knx-server/src/session_log.rs`: `push()` now increments
+  `dropped` by 2 on the push that first exceeds the cap (one entry
+  evicted for being oldest, one more to make room for the synthetic
+  entry itself) and by 1 on every overflowing push after that — matching
+  how many real entries actually leave `entries()`. `synthetic_drop_notice`
+  simplified to always say "entries" (`dropped` is never 1 under this
+  accounting, so the singular branch was dead). Rewrote both `push`'s doc
+  comment and the module doc comment to describe the corrected
+  accounting; the old "incremented per call that overflows, not per
+  entry removed" explanation is gone, not edited around.
+
+  Tests: `one_past_the_cap_...` renamed to
+  `one_past_the_cap_drops_two_real_entries_and_names_two_dropped` and now
+  asserts the synthetic entry names 2 dropped (not 1) and that both
+  `entry 0` and `entry 1` are gone. `well_past_the_cap_...` now asserts
+  251 (not 250) for cap + 250 pushes. New test
+  `dropped_plus_retained_always_equals_total_pushes_past_the_cap` pins
+  the invariant directly — parses the number out of the synthetic
+  entry's own message and asserts `dropped + retained == total_pushed`
+  at two overflow sizes (1 and 250 past the cap) — the kind of test that
+  would have failed against `019ed90`'s original accounting and so would
+  have caught this before it shipped. `docs/KNOWN_LIMITATIONS.md` #36 and
+  `docs/IMPLEMENTATION_STATUS.md`'s T11-follow-up entry updated to match
+  (test count 5 → 6, "1"/"250" → "2"/"251", "per call" phrasing removed).
+
+  Gates all clean: `cargo fmt --all --check`, `cargo clippy --workspace
+  --all-targets -- -D warnings`, `cargo test --workspace`, `cargo run -p
+  xtask -- check-layering`. Frontend untouched this round, so `npm
+  test`/`tsc`/`build` were not re-run (nothing in `apps/knx-web` changed).
+- **Pending/Next Steps:** Same as above — nothing pushed, not merged.
+  **T13**/**T14** next in order; `KNOWN_LIMITATIONS.md` #42/#43 remain
+  open and unscheduled.
+- **Notes for Codex:** If you touch `session_log.rs`'s eviction logic
+  again, add a test in the same shape as
+  `dropped_plus_retained_always_equals_total_pushes_past_the_cap` for
+  whatever you change — it pins the actual invariant instead of a
+  hard-coded number, which is what would have caught the original bug
+  a round earlier.

@@ -155,25 +155,54 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
     let address_col = columns.address.expect("checked above");
     let name_col = columns.name.expect("checked above");
 
-    // The `csv` crate's `Position::line()` (verified empirically against
-    // `csv` 1.4.0, undocumented) is exactly 1 too low for the *entire* file
-    // when it uses CRLF terminators, and exactly correct for LF, even across
-    // records with embedded newlines in quoted fields. Counting records
-    // instead (as an earlier version of this function did) breaks down the
-    // moment any earlier record spans more than one physical line, because
-    // the record index no longer matches the line index at all.
+    // Neither `Position::line()` nor `Position::byte()` from the `csv`
+    // crate can be trusted here (verified empirically against `csv` 1.4.0,
+    // undocumented, by reading its own source): when a record ends in
+    // `\r\n`, the crate marks the record complete as soon as it sees the
+    // `\r`, and only consumes — and counts — the trailing `\n` at the very
+    // start of reading the *next* record, after that next record's
+    // position has already been captured. So both counters are one `\n`
+    // short for whichever record immediately follows a CRLF-terminated
+    // one. In a file with uniform CRLF endings that shows up as a constant
+    // -1 across the whole file (a per-file offset happens to cancel it
+    // out); in a file that *mixes* line endings — ordinary after
+    // hand-editing or concatenating two exports — it does not, because the
+    // deficit only applies at CRLF boundaries, and a single per-file
+    // offset over- or under-corrects records past an LF boundary.
     //
-    // Fix: calibrate a single per-file additive offset once, right after the
-    // header row is consumed. The header is always exactly one physical
-    // line, so the first data row is always true physical line 2; comparing
-    // that known-good value against what `position().line()` reports at
-    // this point gives the file's constant (0 for LF, 1 for CRLF). Applying
-    // that offset to every subsequent `position().line()` — including on
-    // the malformed-row error path below — keeps line tracking correct for
-    // multi-line records too, since `line()` itself (unlike the record
-    // index) already accounts for embedded newlines correctly.
-    let line_offset = 2u64.saturating_sub(reader.position().line());
-    let line_of = |p: &csv::Position| (p.line() + line_offset) as usize;
+    // Fix: don't use either counter. Count `'\n'` bytes ourselves, directly
+    // in the text we handed the reader. A `'\n'` ends a physical line under
+    // every convention in play here — LF, CRLF (whose terminator ends in
+    // `\n`), and a lone `\r`, which does not start a new row in a
+    // spreadsheet either — so "1 + newlines at-or-before this record's
+    // start" is exact by construction, for uniform endings, mixed endings,
+    // and multi-line quoted fields alike, without detecting or calibrating
+    // anything. This indexes into `text`, the BOM-stripped string actually
+    // passed to `csv::Reader::from_reader` below — the same string
+    // `Position::byte()` is relative to.
+    //
+    // Records (and the malformed-row error path) are visited in
+    // non-decreasing byte order, so a forward-only cursor over `text`
+    // keeps this O(n) in the file size rather than rescanning the prefix
+    // for every record.
+    let text_bytes = text.as_bytes();
+    let mut newlines_scanned_to = 0usize;
+    let mut newlines_seen = 0usize;
+    let mut line_of = |byte: u64| -> usize {
+        // `+1`: the byte the position points at is itself included in the
+        // count if it happens to be the very `'\n'` CRLF-handling above
+        // defers — see e.g. the round-2 fix report for the worked byte
+        // arithmetic this depends on.
+        let end = (byte as usize).saturating_add(1).min(text_bytes.len());
+        if end > newlines_scanned_to {
+            newlines_seen += text_bytes[newlines_scanned_to..end]
+                .iter()
+                .filter(|&&b| b == b'\n')
+                .count();
+            newlines_scanned_to = end;
+        }
+        1 + newlines_seen
+    };
 
     let mut rows = Vec::new();
     for result in reader.records() {
@@ -181,14 +210,14 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
             Ok(r) => r,
             Err(e) => {
                 problems.push(CsvProblem {
-                    row: e.position().map(line_of),
+                    row: e.position().map(|p| line_of(p.byte())),
                     severity: Severity::Error,
                     detail: format!("malformed row: {e}"),
                 });
                 continue;
             }
         };
-        let line = record.position().map(line_of).unwrap_or(0);
+        let line = record.position().map(|p| line_of(p.byte())).unwrap_or(0);
         let mut row_ok = true;
 
         let address_raw = record.get(address_col).unwrap_or("").trim();
@@ -637,14 +666,11 @@ mod tests {
     // quoted field per design §3/§8), then a blank-name error in row 2.
     // A spreadsheet opening either file shows the blank-name row on
     // physical line 4 (1: header, 2-3: row 1's two physical lines, 4: row
-    // 2). Before this fix, `record()+1` reported line 3 instead, because it
-    // counts *records*, not physical lines, and row 1 consumed two of them.
-    //
-    // Values observed against the real `csv` 1.4.0 dependency while writing
-    // this fix (see the Task 1 fix report for the full table):
-    //   LF:   row 1 `position().line()` = 2, row 2 = 4, line_offset = 0.
-    //   CRLF: row 1 `position().line()` = 1, row 2 = 3, line_offset = 1.
-    // Both resolve to the same correct physical line 4 for row 2.
+    // 2). The original `record()+1` derivation reported line 3 instead,
+    // because it counted *records*, not physical lines, and row 1 consumed
+    // two of them. See the Task 1 fix report (round 1 and round 2 sections)
+    // for the observed line numbers behind both regressions this reader
+    // has had, and why.
 
     #[test]
     fn line_number_stays_correct_after_a_multiline_quoted_field_lf() {
@@ -676,6 +702,65 @@ mod tests {
             parsed.problems[0].row,
             Some(4),
             "expected the blank-name row to be reported as physical line 4, got {:?}",
+            parsed.problems[0]
+        );
+    }
+
+    // --- Round 2 regression: files that mix line endings ---
+    //
+    // Round 1's fix calibrated a single offset per file (0 for LF, 1 for
+    // CRLF) on top of `position().line()`. That is wrong for a file that
+    // does not use one line ending throughout — an ordinary result of
+    // hand-editing a CSV or concatenating two exports — because the `csv`
+    // crate's own line/byte counters are only short by a `'\n'` immediately
+    // *after* a CRLF-terminated record, not for the whole file. A single
+    // per-file offset over- or under-corrects every record on the other
+    // side of a terminator change. No multi-line quoted field is involved
+    // in either case below; this is a distinct bug from Finding 1's.
+
+    #[test]
+    fn line_number_is_correct_when_a_crlf_row_is_followed_by_an_lf_row() {
+        // Row 2 ("200,Bar") ends CRLF; row 3 ("300,Baz") ends LF and is
+        // otherwise unremarkable. True physical lines: 1 header, 2 "100,Foo",
+        // 3 "200,Bar", 4 "300,Baz". Round 1's single-offset fix (offset 0,
+        // calibrated from this file's LF header) reported row 3 at line 3.
+        let text = "Address,Name\n100,Foo\n200,Bar\r\n300,Baz\n";
+        let parsed = parse_group_addresses(text, GroupAddressStyle::Free);
+
+        assert!(parsed.problems.is_empty(), "{:?}", parsed.problems);
+        assert_eq!(parsed.rows.len(), 3, "{:?}", parsed.rows);
+        assert_eq!(parsed.rows[0].line, 2);
+        assert_eq!(parsed.rows[1].line, 3);
+        assert_eq!(
+            parsed.rows[2].line, 4,
+            "expected \"300,Baz\" to be reported as physical line 4, got {:?}",
+            parsed.rows[2]
+        );
+    }
+
+    #[test]
+    fn line_number_is_correct_when_an_lf_row_is_followed_by_a_crlf_row() {
+        // Header and row 2 ("200,Bar") end CRLF; row 1 ("100,Foo") ends LF.
+        // True physical lines: 1 header, 2 "100,Foo", 3 "200,Bar". Round 1's
+        // single-offset fix (offset 1, calibrated from this file's CRLF
+        // header) reported row 2 at line 4.
+        let text = "Address,Name\r\n100,Foo\n200,Bar\r\n300,Extra,Field\r\n";
+        let parsed = parse_group_addresses(text, GroupAddressStyle::Free);
+
+        assert_eq!(parsed.rows.len(), 2, "{:?}", parsed.rows);
+        assert_eq!(parsed.rows[0].line, 2);
+        assert_eq!(
+            parsed.rows[1].line, 3,
+            "expected \"200,Bar\" to be reported as physical line 3, got {:?}",
+            parsed.rows[1]
+        );
+        // "300,Extra,Field" is a ragged row (3 fields, header has 2) under
+        // strict mode; its true physical line is 4.
+        assert_eq!(parsed.problems.len(), 1);
+        assert_eq!(
+            parsed.problems[0].row,
+            Some(4),
+            "expected the ragged row to be reported as physical line 4, got {:?}",
             parsed.problems[0]
         );
     }

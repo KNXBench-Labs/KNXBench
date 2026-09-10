@@ -545,3 +545,84 @@
   spec. Also note that D11 is *not* an ETS parity gap — ETS has no comparable
   animation — it is filed in the UI section only because that is where the
   control would live.
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 21:45
+- **Completed:** Three things on `main`, all committed locally, nothing pushed.
+
+  (1) **T13 design spec and implementation plan written** (`a986382`):
+  `docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`
+  and `docs/superpowers/plans/2026-09-10-project-documentation-export.md`.
+  The feature is a self-contained HTML project documentation export (closes
+  gap **D4**), deliberately HTML-first rather than PDF: the browser's own
+  print-to-PDF is the PDF path, so the crate ships `@media print` rules
+  instead of a PDF writer dependency. New pure crate `knx-report`
+  (`&Project` in, `String` + typed warnings out; no filesystem, no HTTP, no
+  SQLite, **no clock** — the generation timestamp is passed in by the
+  caller, which is what makes the output byte-deterministic in tests).
+  Public surface: `render_html(&Project, &ReportOptions) -> HtmlReport`,
+  with `ReportOptions { generated_at }`, `HtmlReport { html, warnings }`,
+  `ReportWarning { location, detail }`. Seven tasks: crate + escaping +
+  document shell + layering rules; derived model indices and orphan
+  detection; the renderer; `POST /api/project/documentation-export` plus a
+  session-log entry; a CLI subcommand; a web button; corpus proof and
+  documentation reconciliation. Reconnaissance for it is at
+  `.superpowers/sdd/t13-research/recon.md` — its load-bearing findings:
+  `GroupAddressEntry` carries no DPT field, `knx-projection`'s DTOs are
+  lossy for topology/buildings, zero HTML or templating crates exist
+  anywhere in the workspace, and nothing in `docs/` describes ETS's own
+  report contents (which is why the plan forbids every "ETS report" /
+  "ETS-compatible" claim — parity is unmeasurable without a sample).
+
+  (2) **Plan amendment settling two questions it had left open** (`a523e05`),
+  both ruled before any implementer was dispatched. Task 2's test list had
+  demanded a warning for a device with `address: None`, which the spec never
+  listed and which `crates/knx-core/src/device.rs:25-26` documents as valid
+  state — dropped, because warning on it would bury the real findings under
+  noise from every half-authored project. Task 2 also left "maps to an empty
+  list (or is absent — assert which)" undecided — ruled **absent from the
+  map**, renderer treats a missing key as "no links", so there is one
+  representation instead of two and no test that passes either way.
+
+  (3) **Roadmap and gap analysis extended with an in-application help
+  system** (`b2b74ec`), by explicit user request ("roadmap update:
+  documentation (At the end of it all) hilfe System (UI, Hover over usw)").
+  Recorded as gap **D12**, backlog **Tier 8 / T28**, and a new
+  "Cross-cutting — In-application help and user documentation" section in
+  `ROADMAP.md`, deliberately scheduled after everything else because help
+  text describes a UI that is still changing (cycle 13 deleting
+  `ThemePanel.tsx` out from under cycle 11's motion control is the cited
+  precedent). Current state measured from the code before writing it:
+  exactly **one** `title=` attribute in the entire frontend
+  (`Inspector.tsx:218`), four `aria-label`s, zero `aria-describedby`, no
+  tooltip component, no help panel, no `F1` handler,
+  `commandRegistry.ts`'s `shortcutHint` visible only inside the Command
+  Palette, and all nine `docs/` files developer-facing and unreachable from
+  the running application. T28 is bound to **T25** (message-catalogue
+  extraction — help strings are the largest new body of user-facing text)
+  and **T27** (motion switchable off — a tooltip that fades is an
+  animation), and is explicitly distinct from both T13's documentation
+  export and the deferred in-app project-notes feature.
+- **Pending/Next Steps:** T13 is in flight on branch
+  `t13-documentation-export` (worktree `.worktrees/t13-documentation-export`,
+  forked from `a986382`), executed via subagent-driven-development with its
+  ledger at `.superpowers/sdd/2026-09-10-project-documentation-export/progress.md`.
+  Task 1 (the `knx-report` crate, escaping helpers, document shell, and the
+  two `xtask` layering rules) is committed as `bcbaa6c` and under task
+  review; Tasks 2-7 remain. Separately, `KNOWN_LIMITATIONS.md` **#36** is
+  being closed on branch `fix-36-log-tab` (worktree
+  `.worktrees/fix-36-log-tab`): a 1000-entry `SessionLog` cap with a
+  synthetic drop-notice entry, and the Log tab made reachable without an
+  open project. Still nothing pushed — the standing user instruction is to
+  skip the GitHub workflow entirely (no push, no PR, no CI, no remote merge)
+  until further notice. After T13: **T14** (project diff/compare, closes
+  **C1**). Parked and unscheduled: #42 (`command_sync.rs`'s stale module
+  doc), #43/T27 (motion toggle), #D12/T28 (help system).
+- **Notes for Codex:** If you pick up T13, the non-obvious constraint is
+  that `cargo run -p xtask -- check-layering` walks **dev-dependency** edges
+  too (`xtask/src/layering.rs:94-98` takes every edge regardless of
+  `dep_kinds`). That is why the plan puts T13's corpus test in `knx-app`
+  rather than in `knx-report` — the same reason
+  `crates/knx-app/tests/csv_roundtrip.rs` lives where it does. A
+  `dev-dependencies` entry on `knx-etsproj` inside a pure crate fails the
+  layering gate exactly like a real dependency would.

@@ -1363,3 +1363,70 @@ clippy --workspace --all-targets -- -D warnings`, `cargo test
 `npm run build` on `knx-web` all clean. Closes **T9**
 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)), **B9**. Design spec:
 `docs/superpowers/specs/2026-09-10-bulk-operations-design.md`.
+
+**T11, session log / import-report review screen (2026-09-10).** A new
+`SessionLog` module (`apps/knx-server/src/session_log.rs`) owns an
+in-memory, per-server-process `Vec<LogEntry>` — never written to
+`.knxdb`, held in `AppState.session_log: Mutex<SessionLog>`. `LogEntry {
+timestamp, severity, source, message, location, detail }` serializes
+`#[serde(rename_all = "camelCase")]`, `severity` exactly `"error"` |
+`"warning"` | `"info"`, matching `knx_etsproj::report::Severity`'s own
+convention rather than inventing a second one. `from_import_report()`
+converts the same `ImportReport` `import_and_project` already produces
+for `ProjectTree`'s counts (its return type gained the report as a
+4th tuple element rather than discarding it) into warning/error entries,
+in order: `ImportError` (severity per its own field), then every
+`UnknownConstruct`, then every `Conflict`, then every
+`UnsupportedFeature`, all as warnings except error-severity
+`ImportError`s. Every other project-level operation logs one info entry
+on success or one error entry (the server's existing user-facing error
+string) on failure: `open_project`/`open_native_project` additionally
+reset the log on success only — a failed import/open appends an error
+entry without touching whatever was already there, so a user re-trying
+a bad import doesn't lose earlier context. `apply()`, the shared
+dispatcher every `*_impl` command function funnels through, logs one
+entry per command using its `Debug` form as `source`/`message`; a new
+`log_command_outcome()` helper extracted from `apply()` is reused by
+`create_device_impl`, which cannot call `apply()` itself (it needs
+product-catalog enrichment to run under the same project lock and
+returns a richer `CreateDeviceResponse`) — this was the one call site an
+initial pass missed, caught in task review before merge. `export` was
+folded in using the same info/error shape as `save`, even though the
+approved design doc's own operation list ("import/open/save/undo/redo/
+edit") never named it — excluding the one other fallible project-level
+operation would have been an arbitrary, undocumented gap the design's
+own "operational feedback" rationale argues against. `GET /api/log`
+(new route in `routes.rs`) returns every entry for the session,
+oldest-first, as a bare JSON array, always `200` (never `404` — an
+absent project is just `[]`). `apps/knx-web` adds `LogEntry`/
+`getSessionLog()` to `api.ts` (hand-written interface, no `ts-rs`
+binding, same convention as `CatalogInstallReport`) and a new
+`LogPanel.tsx`, wired into `App.tsx` via a `logOpen` boolean and a "Log"
+toolbar button (disabled until a project is open) that swaps into the
+same `.workspace` slot as Inspector/Dashboard; selecting an entity
+closes the panel, matching how selection already dismisses the
+Dashboard. `LogPanel` fetches on mount and whenever its `tree` prop
+changes (so it stays current across an edit/undo/import left open),
+renders newest-first (a client-side reversal of the API's oldest-first
+order), and has three Error/Warning/Info toggle filters, all on by
+default, that only affect already-fetched entries and never re-fetch.
+Task review caught one gap before merge: the initial fetch had no
+`.catch`, so a failed `GET /api/log` (server restart mid-session, etc.)
+produced a silent unhandled rejection with no user feedback — fixed to
+mirror `CatalogBrowser.tsx`'s existing `.catch` + `.field-error`
+convention, and the empty state was split into "No log entries yet."
+(truly empty) vs. "No log entries match the current filters." (entries
+exist, all severities toggled off) rather than conflating the two.
+New tests: 20 in `apps/knx-server` (`session_log.rs` unit tests +
+`domain.rs`, `cargo test -p knx-server`) plus a dedicated
+`apps/knx-server/tests/http_log_route.rs` integration test (import →
+failed edit → successful edit, correct append order); `knx-web` gains
+`LogPanel.test.tsx`, 7 tests (newest-first, per-severity filter
+show/hide with no re-fetch, both empty states, fetch-error render and
+clear, refetch-on-tree-change), full suite 121/121 passing (was 114).
+Gates: `cargo fmt --check`, `cargo test --workspace`, `cargo clippy
+--workspace --all-targets -- -D warnings`, `npx tsc --noEmit`, `npm
+test`, `npm run build` (with the pre-existing `dist/.gitkeep`
+restore) all clean on the merged branch. Closes **T11**, **D7**
+([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). Design spec:
+`docs/superpowers/specs/2026-09-08-session-log-design.md`.

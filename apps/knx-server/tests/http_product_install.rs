@@ -137,3 +137,24 @@ async fn malformed_and_legacy_product_uploads_are_typed_bad_requests() {
         .unwrap()
         .contains("encrypted product ZIP member"));
 }
+
+#[tokio::test]
+async fn installing_into_a_readonly_catalog_database_is_an_internal_error() {
+    let (_dir, state) = state();
+    state
+        .product_db
+        .as_ref()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .execute_batch("PRAGMA query_only = ON")
+        .unwrap();
+    let app = knx_server::app(Arc::new(state), None);
+
+    let response = app
+        .oneshot(multipart("example.knxprod", &package()))
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+}

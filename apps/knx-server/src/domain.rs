@@ -486,17 +486,14 @@ fn tree_with_state(
     tree
 }
 
-fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {
-    // Captured before `do_command` consumes `cmd` below.
-    let cmd_desc = format!("{cmd:?}");
-    let mut project = state.project.lock().expect("state mutex poisoned");
-    let project = project.as_mut().ok_or("no project open")?;
-    let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    let result = stack.do_command(project, cmd).map_err(|e| e.to_string());
-    let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-    let tree = tree_with_state(project, &stack, import_counts);
-
-    let (severity, message) = match &result {
+/// Pushes one entry per `Command` that reaches `do_command`, `source` and
+/// `message` both set to the command's `Debug` form (`cmd_desc`) — the same
+/// shape `apply()` used inline before this helper was pulled out so
+/// `create_device_impl`'s own `do_command` call (which can't go through
+/// `apply()` itself, see its call site) logs identically instead of not at
+/// all.
+fn log_command_outcome(state: &AppState, cmd_desc: String, result: &Result<(), String>) {
+    let (severity, message) = match result {
         Ok(()) => (Severity::Info, cmd_desc.clone()),
         Err(e) => (Severity::Error, e.clone()),
     };
@@ -512,6 +509,19 @@ fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::Pro
             location: None,
             detail: None,
         });
+}
+
+fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {
+    // Captured before `do_command` consumes `cmd` below.
+    let cmd_desc = format!("{cmd:?}");
+    let mut project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_mut().ok_or("no project open")?;
+    let mut stack = state.command_stack.lock().expect("state mutex poisoned");
+    let result = stack.do_command(project, cmd).map_err(|e| e.to_string());
+    let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+    let tree = tree_with_state(project, &stack, import_counts);
+
+    log_command_outcome(state, cmd_desc, &result);
 
     result.map(|()| tree)
 }
@@ -1214,10 +1224,19 @@ pub fn create_device_impl(
         com_objects,
         line: line_id.map(knx_core::LineId),
     };
-    {
+    // Captured before `do_command` consumes `cmd` below — same convention
+    // `apply()` uses, whose `log_command_outcome` helper this reuses so
+    // device creation shows up in the session log too (it can't call
+    // `apply()` itself: this function's return type carries creation
+    // diagnostics `apply()` doesn't produce, and needs the enrichment pass
+    // below run under the same `project` lock before releasing it).
+    let cmd_desc = format!("{cmd:?}");
+    let result = {
         let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-        stack.do_command(project, cmd).map_err(|e| e.to_string())?;
-    }
+        stack.do_command(project, cmd).map_err(|e| e.to_string())
+    };
+    log_command_outcome(state, cmd_desc, &result);
+    result?;
 
     // Step 3 (design doc §3.3): seed enrichment once, same mapping
     // `knx_productdb::enrich()` uses on import, not pushed onto the undo
@@ -1577,6 +1596,41 @@ mod tests {
         let (_dir, state) = state_with_product_db();
         let result = create_device_impl(&state, None, "nope".into(), "D".into());
         assert_eq!(result.unwrap_err(), "catalog item not found");
+    }
+
+    // Regression for fix-round-1 finding 1: `create_device_impl` calls
+    // `do_command` directly instead of through `apply()` (it needs the
+    // enrichment pass to run under the same `project` lock, and returns a
+    // richer type than `apply()` can), so it must push its own log entries
+    // rather than silently skipping the session log for every device
+    // created. Note: catalog-lookup failures (unknown product database /
+    // catalog item) happen *before* a `Command` is even built and stay
+    // unlogged, same as e.g. `set_individual_address_impl`'s own
+    // pre-`apply()` address-parse failure — only the `do_command` outcome
+    // itself is in scope here.
+    #[test]
+    fn creating_a_device_logs_an_info_entry_and_a_failed_creation_logs_an_error_entry() {
+        let (_dir, state) = state_with_product_db();
+
+        // `do_command` itself fails: line 999 doesn't exist.
+        create_device_impl(&state, Some(999), "M-1_CI-1".into(), "Actuator 1".into())
+            .unwrap_err();
+        create_device_impl(&state, None, "M-1_CI-1".into(), "Actuator 1".into()).unwrap();
+
+        let log = state.session_log.lock().unwrap();
+        let entries = log.entries();
+        assert_eq!(
+            entries.len(),
+            2,
+            "both the failed and the successful CreateDevice should reach the session log: {entries:?}"
+        );
+        assert_eq!(entries[0].severity, Severity::Error);
+        assert_eq!(entries[1].severity, Severity::Info);
+        assert!(
+            entries[1].source.contains("CreateDevice"),
+            "source should be the command's Debug form: {:?}",
+            entries[1].source
+        );
     }
 
     #[test]

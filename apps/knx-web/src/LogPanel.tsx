@@ -10,10 +10,14 @@ const SEVERITIES: Severity[] = ["error", "warning", "info"];
 
 /// Renders the backend session log (`GET /api/log`). Fetches on mount and
 /// whenever `props.tree` changes (a new tree reference means an
-/// edit/undo/redo/import just landed, so the log may have grown) — the
-/// severity filters below are purely a client-side render filter over the
-/// already-fetched entries and never trigger a re-fetch on their own.
-export default function LogPanel(props: { tree: ProjectTree }) {
+/// edit/undo/redo/import just landed, so the log may have grown) or
+/// `props.refreshKey` changes (bumped by `App.tsx` on every *failed*
+/// operation — those never change `props.tree`, since the operation didn't
+/// succeed, but still append an entry on the server that needs to surface
+/// here) — the severity filters below are purely a client-side render
+/// filter over the already-fetched entries and never trigger a re-fetch on
+/// their own.
+export default function LogPanel(props: { tree: ProjectTree; refreshKey: number }) {
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<Severity, boolean>>({
@@ -36,7 +40,7 @@ export default function LogPanel(props: { tree: ProjectTree }) {
     return () => {
       cancelled = true;
     };
-  }, [props.tree]);
+  }, [props.tree, props.refreshKey]);
 
   function toggleFilter(severity: Severity) {
     setFilters((f) => ({ ...f, [severity]: !f[severity] }));

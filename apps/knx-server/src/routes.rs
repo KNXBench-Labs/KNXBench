@@ -120,7 +120,12 @@ async fn install_catalog_package(
         return domain::install_catalog_package_impl(&state, &filename, &bytes)
             .map(CatalogInstallReportDto::from)
             .map(Json)
-            .map_err(ApiError::bad_request);
+            .map_err(|error| match error {
+                domain::CatalogInstallError::BadRequest(error) => {
+                    ApiError::bad_request(error.to_string())
+                }
+                domain::CatalogInstallError::Internal(error) => ApiError::internal(error),
+            });
     }
     Err(ApiError::bad_request("no file field in catalog install"))
 }

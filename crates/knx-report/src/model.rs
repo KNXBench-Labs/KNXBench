@@ -13,7 +13,7 @@
 //! hence the blanket allow below, lifted the moment Task 3 wires it in.
 #![allow(dead_code)]
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use knx_core::{
     BuildingPart, BuildingPartId, ComObjectInstanceId, GroupAddress, GroupAddressEntry,
@@ -115,7 +115,7 @@ fn build_installation(
 ) -> InstallationModel {
     let (building_roots, orphan_building_parts) =
         build_building_forest(&installation.buildings, warnings);
-    let (range_roots, range_children) = build_range_forest(&installation.group_ranges);
+    let (range_roots, range_children) = build_range_forest(&installation.group_ranges, warnings);
     let (addresses_by_range, addresses_without_range) = place_addresses(
         &installation.group_addresses,
         &installation.group_ranges,
@@ -169,23 +169,59 @@ fn build_building_forest(
 }
 
 /// `GroupRange` already stores both directions of its own nesting
-/// (`group.rs:12-24`), so the roots/children split is a direct read, not a
-/// reconstruction: roots are the ranges with `parent: None`, and a range's
-/// children are exactly its own `children` field, carried over stored
-/// order and keyed by id for `render.rs` to look up.
+/// (`group.rs:12-24`), so the roots/children split is mostly a direct read
+/// — plus a presence check, because a `parent`/`children` id can dangle
+/// (name a range this installation does not hold) the same way a
+/// `BuildingPart::parent` can. Unlike the building case there is no
+/// separate orphan list to put the finding in: a range with a dangling
+/// `parent` still needs somewhere to hang in the document, so it becomes a
+/// root instead, with a warning explaining why; a dangling `children`
+/// entry is simply dropped, with a warning, since there is nothing for
+/// `render.rs` to descend into. CLAUDE.md: never silently discard a
+/// structural oddity.
 fn build_range_forest(
     ranges: &[GroupRange],
+    warnings: &mut Vec<ReportWarning>,
 ) -> (Vec<GroupRangeId>, BTreeMap<GroupRangeId, Vec<GroupRangeId>>) {
-    let roots = ranges
-        .iter()
-        .filter(|r| r.parent.is_none())
-        .map(|r| r.id)
-        .collect();
+    let present: HashSet<GroupRangeId> = ranges.iter().map(|r| r.id).collect();
+
+    let mut roots = Vec::new();
+    for r in ranges {
+        match r.parent {
+            None => roots.push(r.id),
+            Some(parent_id) if !present.contains(&parent_id) => {
+                roots.push(r.id);
+                warnings.push(ReportWarning {
+                    location: format!("group range {}", r.id),
+                    detail: format!(
+                        "parent group range {parent_id} does not exist in this installation; treated as a root"
+                    ),
+                });
+            }
+            Some(_) => {
+                // An ordinary child: reached through its resolvable
+                // parent's own (filtered) `children` entry below.
+            }
+        }
+    }
 
     let mut children = BTreeMap::new();
     for r in ranges {
-        if !r.children.is_empty() {
-            children.insert(r.id, r.children.clone());
+        let mut kept = Vec::with_capacity(r.children.len());
+        for &child_id in &r.children {
+            if present.contains(&child_id) {
+                kept.push(child_id);
+            } else {
+                warnings.push(ReportWarning {
+                    location: format!("group range {}", r.id),
+                    detail: format!(
+                        "child group range {child_id} does not exist in this installation; omitted"
+                    ),
+                });
+            }
+        }
+        if !kept.is_empty() {
+            children.insert(r.id, kept);
         }
     }
     (roots, children)
@@ -394,6 +430,44 @@ mod tests {
             inst.range_children.get(&GroupRangeId(1)),
             Some(&vec![GroupRangeId(2), GroupRangeId(3)])
         );
+    }
+
+    #[test]
+    fn a_group_range_with_a_dangling_parent_becomes_a_root_and_warns() {
+        let mut project = crate::testutil::empty_project(GroupAddressStyle::Free);
+        let stray = range(5, "Stray", 0, 100, Some(99), &[]);
+        project.installations[0].group_ranges = vec![stray];
+
+        let model = build(&project);
+        let inst = &model.installations[0];
+
+        // Reachable, not merely warned about: it must actually be a root,
+        // or `render.rs`'s root-then-descend walk will never visit it.
+        assert_eq!(inst.range_roots, vec![GroupRangeId(5)]);
+        assert!(model
+            .warnings
+            .iter()
+            .any(|w| w.location.contains("group range 5") && w.detail.contains("99")));
+    }
+
+    #[test]
+    fn a_group_range_with_a_dangling_child_drops_it_and_warns() {
+        let mut project = crate::testutil::empty_project(GroupAddressStyle::Free);
+        let main = range(1, "Main", 0, 4095, None, &[2, 99]);
+        let real_child = range(2, "Real", 0, 2047, Some(1), &[]);
+        project.installations[0].group_ranges = vec![main, real_child];
+
+        let model = build(&project);
+        let inst = &model.installations[0];
+
+        assert_eq!(
+            inst.range_children.get(&GroupRangeId(1)),
+            Some(&vec![GroupRangeId(2)])
+        );
+        assert!(model
+            .warnings
+            .iter()
+            .any(|w| w.location.contains("group range 1") && w.detail.contains("99")));
     }
 
     #[test]

@@ -19,10 +19,16 @@ pub struct StoredOpaqueEntry {
     pub sha256: String,
 }
 
-/// Inserts every entry inside one transaction with a prepared statement — a
-/// real project's opaque bytes can total tens of megabytes across dozens of
-/// entries, and a partial insert would leave a project file that cannot be
-/// exported.
+/// Replaces the whole table with `entries`, inside one transaction with a
+/// prepared statement — a real project's opaque bytes can total tens of
+/// megabytes across dozens of entries, and a partial insert would leave a
+/// project file that cannot be exported.
+///
+/// Clears the table before inserting, mirroring `knx_store::project::
+/// save_project`'s own DELETE-then-insert convention: this is meant to be
+/// called on every save of a project (see `apps/knx-server`'s
+/// `save_project_as_impl`), and without the clear, saving the same store
+/// twice duplicates every row unboundedly.
 pub fn insert_opaque(
     conn: &Connection,
     entries: &[StoredOpaqueEntry],
@@ -34,6 +40,7 @@ pub fn insert_opaque(
     // back on drop unless committed, so an error partway through any one
     // entry leaves the table exactly as it was before this call.
     let tx = conn.unchecked_transaction()?;
+    tx.execute("DELETE FROM opaque_entry", [])?;
     let mut count = 0;
     {
         let mut stmt = tx.prepare(
@@ -71,4 +78,36 @@ pub fn load_opaque(conn: &Connection) -> Result<Vec<StoredOpaqueEntry>, rusqlite
         })
     })?;
     rows.collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::open_and_migrate;
+
+    fn entries() -> Vec<StoredOpaqueEntry> {
+        vec![StoredOpaqueEntry {
+            source_path: "M-0083/Catalog.xml".into(),
+            xpath: "/Project/Installation".into(),
+            kind: "Element".into(),
+            name: "Trade".into(),
+            bytes: b"<Trade/>".to_vec(),
+            sha256: "aa".into(),
+        }]
+    }
+
+    #[test]
+    fn saving_the_same_store_twice_does_not_duplicate_rows() {
+        // Regression for the whole-branch review of the export-UI plan
+        // (T10, round 2): `save_project_as_impl` calls `insert_opaque` on
+        // every save, including a plain re-Save of an already-populated
+        // `.knxdb`. Without the DELETE-first step, that duplicated every
+        // row on every repeated save.
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
+        assert_eq!(insert_opaque(&conn, &entries()).unwrap(), 1);
+        assert_eq!(insert_opaque(&conn, &entries()).unwrap(), 1);
+        assert_eq!(insert_opaque(&conn, &entries()).unwrap(), 1);
+        assert_eq!(load_opaque(&conn).unwrap(), entries());
+    }
 }

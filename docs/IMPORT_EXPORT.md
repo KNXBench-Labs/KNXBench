@@ -394,10 +394,13 @@ not something the KNX Association standardizes. So this document does not,
 and cannot, claim that "KNXBench group-address CSV v1" round-trips through
 ETS, and nothing in the UI, CLI, or server API may say "ETS CSV" or imply
 that interoperability. If a genuine ETS-produced CSV sample is obtained
-later, the importer's column-mapping layer (§ below) is built to take a
-second, ETS-shaped column profile alongside this one without a rewrite —
-that is the upgrade path, and it is the only claim of ETS interoperability
-this feature is entitled to make.
+later, a second, ETS-shaped column profile would fit alongside this one by
+extending the importer's header matching (`map_headers` in
+`crates/knx-csv/src/read.rs`) — one hard-coded `match` block, not a plug-in
+seam, so adding a profile means editing that function rather than
+registering with it, but the change stays contained to it. That is the
+upgrade path, and it is the only claim of ETS interoperability this feature
+is entitled to make.
 
 Implemented in `crates/knx-csv`, a pure crate depending only on `knx-core`,
 `csv`, and `serde` — it knows nothing of SQLite, HTTP, or the CLI. Its three

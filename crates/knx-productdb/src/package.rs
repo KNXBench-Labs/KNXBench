@@ -301,11 +301,15 @@ fn validate_xml(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
                 let predefined = matches!(name, "lt" | "gt" | "amp" | "apos" | "quot");
                 let numeric = name
                     .strip_prefix("#x")
-                    .or_else(|| name.strip_prefix("#X"))
                     .map(|digits| u32::from_str_radix(digits, 16).ok())
                     .or_else(|| name.strip_prefix('#').map(|digits| digits.parse().ok()))
                     .flatten()
-                    .and_then(char::from_u32)
+                    .filter(|code| {
+                        matches!(code, 0x9 | 0xA | 0xD)
+                            || (0x20..=0xD7FF).contains(code)
+                            || (0xE000..=0xFFFD).contains(code)
+                            || (0x10000..=0x10FFFF).contains(code)
+                    })
                     .is_some();
                 if depth == 0 || (!predefined && !numeric) {
                     return Err(xml_error(path, format!("undeclared XML entity {name:?}")));

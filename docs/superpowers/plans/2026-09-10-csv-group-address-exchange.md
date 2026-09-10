@@ -314,8 +314,9 @@ This task shares no file with Task 6 and may run alongside it.
 **Files:**
 - Modify: `apps/knx-web/src/api.ts`
 - Modify: `apps/knx-web/src/api.test.ts`
-- Modify: the group-address view component and its test (locate it first: the
-  component rendering the group-address list and its "New group address" control)
+- Create: `apps/knx-web/src/GroupAddressCsvButtons.tsx`
+- Create: `apps/knx-web/src/GroupAddressCsvButtons.test.tsx`
+- Modify: `apps/knx-web/src/App.tsx`
 
 **Interfaces:**
 - Produces: `exportGroupAddressCsv(path)` and `importGroupAddressCsv(path)` in `api.ts`
@@ -325,11 +326,15 @@ This task shares no file with Task 6 and may run alongside it.
 
   `api.test.ts`: both helpers post the expected body to the expected URL and
   surface a 400 body as an error message, matching the file's existing
-  conventions. Component: an "Export CSV…" button calls `pickSavePath` then the
-  export helper and toasts the warning count; an "Import CSV…" button calls
-  `pickOpenPath` then the import helper, refreshes the tree, and toasts the
-  created/updated/unchanged summary; a rejected import shows the error and
-  leaves the tree alone.
+  conventions.
+
+  `GroupAddressCsvButtons.test.tsx`, with `./api` and `./filePicker` mocked the
+  way `CatalogBrowser.test.tsx` mocks its dependencies: the export button calls
+  `pickSavePath` then the export helper and reports the warning count; the
+  import button calls `pickOpenPath` then the import helper, hands the new tree
+  to its `onTree` prop, and reports the created/updated/unchanged summary; a
+  cancelled picker (null path) calls nothing; a rejected import surfaces the
+  error and never calls `onTree`; both buttons are disabled without a project.
 
 - [ ] **Step 2: Run them and watch them fail.**
 
@@ -337,9 +342,12 @@ This task shares no file with Task 6 and may run alongside it.
 
 - [ ] **Step 3: Implement the helpers and the two buttons.**
 
-  Follow `exportProject`'s existing shape in `api.ts` and `App.tsx`'s
-  `pickSavePath` → call → toast-warnings handler. The detailed report stays in
-  the Log tab that T11 already built; the toast is one line.
+  Follow `exportProject`'s existing shape in `api.ts`. `GroupAddressCsvButtons`
+  is a small presentational component taking `{ tree, onTree, onMessage }`,
+  modelled on `BulkActionToolbar.tsx`; `App.tsx` renders it in the toolbar next
+  to "Export to .knxproj…" and passes its existing tree setter and toast
+  pusher. The detailed report stays in the Log tab that T11 already built; the
+  toast is one line.
 
 - [ ] **Step 4: Run the frontend checks.**
 

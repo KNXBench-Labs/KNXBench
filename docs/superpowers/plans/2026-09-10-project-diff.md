@@ -100,7 +100,7 @@ generic-but-hand-written), Axum, React, Vitest.
 
 ---
 
-### 1: The `knx-diff` crate skeleton and the generic matching engine
+### Task 1: The `knx-diff` crate skeleton and the generic matching engine
 
 **Files:**
 - Modify: `Cargo.toml` (workspace `members` and `[workspace.dependencies]`)
@@ -312,7 +312,7 @@ generic-but-hand-written), Axum, React, Vitest.
 
   Run: `git add Cargo.toml Cargo.lock crates/knx-diff xtask && git commit`
 
-### 2: `semantic.rs` — per-entity keys, fields and field extraction
+### Task 2: `semantic.rs` — per-entity keys, fields and field extraction
 
 **Files:**
 - Create: `crates/knx-diff/src/semantic.rs`
@@ -591,7 +591,7 @@ step in Task 3.
 
   Run: `git add crates/knx-diff && git commit`
 
-### 3: `diff.rs` — `diff_projects`, device diffing, and the correctness tests
+### Task 3: `diff.rs` — `diff_projects`, device diffing, and the correctness tests
 
 **Files:**
 - Create: `crates/knx-diff/src/diff.rs`
@@ -869,7 +869,7 @@ lookups internally and makes no ordering promise).
 
   Run: `git add crates/knx-diff && git commit`
 
-### 4: Server route and DTOs
+### Task 4: Server route and DTOs
 
 **Files:**
 - Modify: `apps/knx-server/Cargo.toml`
@@ -1039,7 +1039,7 @@ Vec<InstallationDiffDto> }`, `InstallationDiffDto` mirroring
 
   Run: `git add apps/knx-server && git commit`
 
-### 5: CLI subcommand
+### Task 5: CLI subcommand
 
 **Files:**
 - Modify: `apps/knx-cli/Cargo.toml`
@@ -1136,7 +1136,7 @@ either.
 
   Run: `git add apps/knx-cli && git commit`
 
-### 6: Web button and result panel
+### Task 6: Web button and result panel
 
 **Files:**
 - Modify: `apps/knx-web/src/api.ts`
@@ -1241,7 +1241,7 @@ This task shares no file with Task 5 and may run alongside it.
 
   Run: `git add apps/knx-web && git commit`
 
-### 7: Corpus proof and documentation
+### Task 7: Corpus proof and documentation
 
 **Files:**
 - Create: `crates/knx-app/tests/project_diff.rs`

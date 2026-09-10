@@ -419,7 +419,10 @@ fn duplicate_encrypted_truncated_and_oversized_members_are_rejected() {
 fn migrating_v1_preserves_existing_rows_and_blobs() {
     let (dir, conn) = db();
     knx_productdb::ingest_file(&conn, "M-0001/Hardware.xml", HARDWARE).unwrap();
-    conn.execute_batch("DROP TABLE package_member; DROP TABLE package; PRAGMA user_version = 1;")
+    conn.execute_batch(
+        "DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
+         DROP TABLE package; PRAGMA user_version = 1;",
+    )
         .unwrap();
     drop(conn);
     let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();

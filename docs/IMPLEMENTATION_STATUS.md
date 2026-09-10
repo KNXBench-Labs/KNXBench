@@ -1291,10 +1291,13 @@ once the data those tables carry could go stale relative to
 directly — the same live, in-memory copies every save path already
 writes through — copied into a throwaway in-memory `.knxdb` for
 `export_ets_project`'s `Connection`-shaped interface, instead of
-re-opening the file. This also collapses a lock-ordering inconsistency
-a reviewer flagged (project-then-product_db, unlike the rest of the
-codebase): `opaque`/`manufacturer_refs` are now locked, copied, and
-dropped before `project`/`product_db` are touched at all.
+re-opening the file: `opaque`/`manufacturer_refs` are now locked, copied,
+and dropped before `project`/`product_db` are touched at all, rather than
+holding all four locks at once for the duration of the call. (Round-3
+review correction: this did *not* touch the pre-existing
+`project`-then-`product_db` lock ordering itself, which round 2 flagged
+as a Minor, unaddressed inconsistency with the rest of the codebase —
+still safe, no deadlock counterpart exists for it, just left as-is.)
 
 New tests: `apps/knx-cli/tests/cli_export.rs` (2), 5 in
 `apps/knx-server/tests/http_export_route.rs` (including both regression

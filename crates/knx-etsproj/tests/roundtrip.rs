@@ -13,6 +13,10 @@ use knx_etsproj::{import_knxproj, import_knxproj_bytes, Container};
 
 #[test]
 fn roundtrip_model_is_semantically_equal() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let first = import_knxproj(&reference_ets4_path()).unwrap();
     let exported = export_knxproj(
         &first.project,
@@ -30,6 +34,10 @@ fn roundtrip_model_is_semantically_equal() {
 
 #[test]
 fn roundtrip_opaque_bytes_are_hash_identical() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let first = import_knxproj(&reference_ets4_path()).unwrap();
     let exported = export_knxproj(
         &first.project,
@@ -58,6 +66,10 @@ fn roundtrip_opaque_bytes_are_hash_identical() {
 
 #[test]
 fn export_is_unsigned_and_reports_it() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let first = import_knxproj(&reference_ets4_path()).unwrap();
     let exported = export_knxproj(
         &first.project,
@@ -87,6 +99,10 @@ fn a_second_roundtrip_changes_nothing_further() {
     // Convergence: if the first roundtrip normalizes something, the second
     // must not normalize it again. A pipeline that keeps changing the file is
     // not a roundtrip.
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let first = import_knxproj(&reference_ets4_path()).unwrap();
     let once = export_knxproj(
         &first.project,

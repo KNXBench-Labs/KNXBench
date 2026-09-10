@@ -19,6 +19,10 @@ fn reference_ets4_path() -> PathBuf {
 
 #[test]
 fn saving_then_reopening_a_native_project_round_trips_the_golden_counts() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let conn = knx_store::open_and_migrate_in_memory().unwrap();
     let imported = knx_app::import_ets_project_with(
         &reference_ets4_path(),

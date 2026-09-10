@@ -1833,6 +1833,7 @@ name = "knx-app"
 version = "0.0.0"
 dependencies = [
  "knx-core",
+ "knx-csv",
  "knx-etsproj",
  "knx-productdb",
  "knx-store",

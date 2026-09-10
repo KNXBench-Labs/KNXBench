@@ -13,6 +13,7 @@
 //! this app's own project state as a `.knxdb` SQLite file. Neither path
 //! calls into the other.
 
+use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -614,18 +615,39 @@ pub fn catalog_items_impl(
 
 /// Installs one standalone manufacturer package into the shared catalog.
 /// Multipart parsing and response serialization remain at the HTTP boundary.
+#[derive(Debug)]
+pub enum CatalogInstallError {
+    BadRequest(knx_productdb::PackageError),
+    Internal(String),
+}
+
+impl fmt::Display for CatalogInstallError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::BadRequest(error) => error.fmt(f),
+            Self::Internal(error) => f.write_str(error),
+        }
+    }
+}
+
 pub fn install_catalog_package_impl(
     state: &AppState,
     source_name: &str,
     bytes: &[u8],
-) -> Result<knx_productdb::InstallReport, String> {
+) -> Result<knx_productdb::InstallReport, CatalogInstallError> {
     let products = state
         .product_db
         .as_ref()
-        .ok_or("no product database configured")?
+        .ok_or_else(|| CatalogInstallError::Internal("no product database configured".into()))?
         .lock()
         .expect("state mutex poisoned");
-    knx_productdb::install_package(&products, source_name, bytes).map_err(|error| error.to_string())
+    knx_productdb::install_package(&products, source_name, bytes).map_err(|error| match &error {
+        knx_productdb::PackageError::Database(
+            knx_productdb::ProductDbError::Sqlite(_)
+            | knx_productdb::ProductDbError::FutureVersion { .. },
+        ) => CatalogInstallError::Internal(error.to_string()),
+        _ => CatalogInstallError::BadRequest(error),
+    })
 }
 
 /// Creates a device from a product-database catalog entry (design doc

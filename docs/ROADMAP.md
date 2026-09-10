@@ -392,6 +392,16 @@ implementation time — it is the first genuinely motion-heavy feature on
 the list, and the cheapest moment to require a switch for it is before
 anyone starts writing it.
 
+**Memo (2026-09-10), style direction — not decided, not designed, no
+task opened.** Two candidate visual directions were named for whenever
+T27's motion work (and any theme it rides alongside) actually gets
+designed: (1) an Apple-like direction — sleek, subtle, clean, restrained
+motion; (2) a "techy glitch / cyberpunk OS" direction that is still, per
+the same request, clean and sleek rather than noisy or gimmicky. Neither
+is chosen. Recorded here only so it is not lost before T27 gets a design
+spec; whoever writes that spec should treat this as a starting prompt,
+not a constraint.
+
 ## Cross-cutting — Web/Docker deployment target
 
 **Done.** Not part of the original Session 0-7 breakdown above — added by

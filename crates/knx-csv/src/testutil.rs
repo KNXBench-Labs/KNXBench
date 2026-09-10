@@ -55,6 +55,24 @@ pub(crate) fn entry(id: u32, address: u16, name: &str) -> GroupAddressEntry {
     }
 }
 
+/// Like [`entry`], but with `central`/`unfiltered` set explicitly instead of
+/// defaulting to `false` — needed to tell "an empty cell applied `false`"
+/// apart from "an empty cell left the existing `true` alone", which would
+/// otherwise look identical against an always-`false` fixture.
+pub(crate) fn entry_with_flags(
+    id: u32,
+    address: u16,
+    name: &str,
+    central: bool,
+    unfiltered: bool,
+) -> GroupAddressEntry {
+    GroupAddressEntry {
+        central,
+        unfiltered,
+        ..entry(id, address, name)
+    }
+}
+
 pub(crate) fn range(id: u32, name: &str, start: u16, end: u16, parent: Option<u32>) -> GroupRange {
     GroupRange {
         id: GroupRangeId(id),

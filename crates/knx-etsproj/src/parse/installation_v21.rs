@@ -49,7 +49,10 @@ enum Frame {
     Installation(SourceInstallation),
     Area(SourceArea),
     Line(SourceLine),
-    Device(SourceDevice),
+    // Boxed: `SourceDevice` is far larger than every other variant (clippy
+    // large_enum_variant), and a `Frame` is short-lived scaffolding anyway
+    // — the indirection costs nothing a caller notices.
+    Device(Box<SourceDevice>),
     ComObject(SourceComObjectInstance),
     Parameter(SourceParameterInstance),
     BuildingPart(SourceBuildingPart),
@@ -675,7 +678,7 @@ fn build_frame(
             bus_access: None,
             other: Vec::new(),
         }),
-        "DeviceInstance" => Frame::Device(SourceDevice {
+        "DeviceInstance" => Frame::Device(Box::new(SourceDevice {
             id: bag.require("Id", xpath)?,
             name: bag.take("Name"),
             description: bag.take("Description"),
@@ -701,7 +704,7 @@ fn build_frame(
             group_object_tree_raw: None,
             security_raw: None,
             other: Vec::new(),
-        }),
+        })),
         "ComObjectInstanceRef" => Frame::ComObject(SourceComObjectInstance {
             ref_id: bag.require("RefId", xpath)?,
             is_active: bag.take("IsActive"),
@@ -912,7 +915,7 @@ fn into_line(f: Frame) -> SourceLine {
 }
 fn into_device(f: Frame) -> SourceDevice {
     match f {
-        Frame::Device(v) => v,
+        Frame::Device(v) => *v,
         _ => unreachable!(),
     }
 }

@@ -545,3 +545,79 @@
   spec. Also note that D11 is *not* an ETS parity gap — ETS has no comparable
   animation — it is filed in the UI section only because that is where the
   control would live.
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 21:10
+- **Completed:** Closed `KNOWN_LIMITATIONS.md` #36 (the T11 follow-up
+  parked at the end of that feature's own entry), branch
+  `fix-36-log-tab`, worktree `.worktrees/fix-36-log-tab`. Two commits.
+
+  (1) `019ed90` — `SessionLog` growth cap. New documented
+  `MAX_ENTRIES: usize = 1000` const in `apps/knx-server/src/
+  session_log.rs`. Past it, `push()` drops the oldest real entry per
+  call and pins a synthetic `Severity::Warning`/`source: "log"` entry at
+  index 0 naming the running total dropped so far, refreshed on every
+  further drop, never itself dropped or duplicated, and counted against
+  the cap so `entries().len()` never exceeds 1000. `reset()` clears the
+  dropped count too. Wire shape (`GET /api/log` → bare `Vec<LogEntry>`)
+  is untouched, so T12's `from_csv_import_report` and the existing
+  `apps/knx-server/tests/http_log_route.rs` integration tests needed no
+  changes — deliberately verified by reading both before touching
+  anything, per the brief's own warning. 5 new unit tests in
+  `session_log.rs`'s own `#[cfg(test)]` module: under the cap, exactly
+  at the cap, one past it (names 1 dropped), well past it (cap + 250,
+  names 250), reset-after-a-drop.
+
+  (2) `b6853c8` — Log tab reachability. `App.tsx`'s "Log" button lost its
+  `disabled={!tree}`; the `.workspace` slot now renders on
+  `tree || logOpen` rather than `tree` alone. `ProjectExplorer` stays
+  gated on `tree` (it genuinely needs a project); `LogPanel`'s prop type
+  is now `tree: ProjectTree | null`. With a project open the layout is
+  byte-for-byte the same as before (same slot, same Inspector/Dashboard
+  swap on close). New `apps/knx-web/src/App.test.tsx` — the first
+  App-level test in this repository — 2 tests: reachable with no
+  project open (button enabled, clicking it renders `.log-panel` with
+  whatever `getSessionLog()` returned, no `.project-explorer` present),
+  and unchanged behaviour with one open (both panels present, closing
+  the tab returns to Dashboard). No existing test asserted the Log
+  button was disabled without a project, so there was nothing to update
+  there — the brief anticipated that case but it didn't occur.
+
+  Both written test-first (failing for the right reason before
+  implementation, confirmed by running them against the unmodified
+  code). Gates all clean on the worktree: `cargo fmt --all --check`,
+  `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test
+  --workspace`, `cargo run -p xtask -- check-layering`, `npx tsc
+  --noEmit`, `npm test -- --run` (139/139), `npm run build` (with the
+  `dist/.gitkeep` restore afterwards). Docs updated:
+  `KNOWN_LIMITATIONS.md` #36 rewritten closed (kept its number, "—
+  resolved (2026-09-10)" suffix, **Resolved.**/**Originally.**
+  structure matching #17's precedent), `IMPLEMENTATION_STATUS.md` gained
+  a "T11 follow-up" entry right after T11's own.
+
+  Note for the record: `apps/knx-web` had no `node_modules` in this
+  worktree (each worktree needs its own, and none had been installed
+  here yet). Symlinked it to the main checkout's
+  `apps/knx-web/node_modules` rather than running `npm install`, since
+  the two checkouts share the same `package-lock.json` and a symlink
+  costs nothing to undo. Not committed (gitignored either way) — if you
+  hit `Cannot find package 'vitest'` in a fresh worktree, that symlink
+  (or an actual `npm install`) is why.
+- **Pending/Next Steps:** Nothing pushed (standing instruction: skip the
+  GitHub workflow). Not merged to `main` yet either — that's for
+  whoever reviews this branch next. Backlog otherwise unchanged from the
+  entry above: **T13** (project documentation export) and **T14**
+  (project diff/compare) are next in order. `KNOWN_LIMITATIONS.md` #42
+  (`command_sync.rs`'s stale module doc) and #43/T27 (motion toggle)
+  remain open and unscheduled.
+- **Notes for Codex:** The synthetic drop-notice's `dropped` counter has
+  a documented quirk worth knowing before you touch this file again: on
+  the very *first* overflow it evicts two real entries (the one that
+  overflowed the cap, plus one more to make room for the notice entry
+  itself) but only increments `dropped` by one, so the counter reads
+  "how many pushes happened past the cap", not "how many real entries
+  are actually missing" (which is consistently one higher, forever,
+  once triggered). This was the brief's own explicit numeric spec — "one
+  past the cap" must name exactly 1, "cap + 250" must name exactly 250 —
+  not a shortcut I chose; see `push`'s doc comment in `session_log.rs`
+  for the full mechanics if you need to touch the eviction logic.

@@ -923,36 +923,73 @@ them to look.
 surfaces them in-modal — the same role import's own report screen (T11,
 still open) would play for import.
 
-## 36. Session log (T11): the Log tab is unreachable without an open project, and has no growth cap
+## 36. Session log (T11): the Log tab was unreachable without an open project, and had no growth cap — resolved (2026-09-10)
 
-**Limitation.** `apps/knx-web/src/App.tsx`'s "Log" toolbar button is
+**Resolved.** Two independent fixes, one commit each.
+
+Part A: `apps/knx-web/src/App.tsx`'s "Log" toolbar button is
+unconditionally enabled, and the `.workspace` slot now renders whenever
+`tree` *or* `logOpen` is truthy, rather than `tree` alone —
+`ProjectExplorer` still genuinely needs a project and stays gated on
+`tree`, but `LogPanel` does not, so with no project open the Log tab is
+the only thing in that area. With a project open, nothing changes: the
+Log tab still takes the same slot it always did, and closing it returns
+to Inspector/Dashboard as before. `LogPanel`'s `tree` prop is now
+`ProjectTree | null`; it stays a `useEffect` dependency (so the panel
+still refetches after a successful operation), and `refreshKey` —
+bumped by `App.tsx`'s `reportError()` on every failed operation — is
+untouched.
+
+Part B: `apps/knx-server/src/session_log.rs` gained a documented
+`MAX_ENTRIES: usize = 1000` const (not a bare literal at a call site).
+Past it, `SessionLog::push` drops the oldest real entry and pins a
+synthetic `Severity::Warning`/`source: "log"` entry at index 0 naming
+how many real entries have been dropped so far, refreshed on every
+subsequent drop — CLAUDE.md's "never silently discard information" rule
+applies to the log itself, not just to import data. That entry is never
+itself dropped or duplicated, and it counts against the cap, so
+`entries().len()` never exceeds 1000. `reset()` clears the dropped count
+along with everything else, so a freshly opened project starts with a
+genuinely empty log. `GET /api/log`'s wire shape (`Vec<LogEntry>`, a
+bare JSON array) is unchanged, so T12's own
+`session_log::from_csv_import_report` writer and the existing
+`apps/knx-server/tests/http_log_route.rs` integration tests needed no
+changes.
+
+New tests: 5 in `session_log.rs`'s own `#[cfg(test)]` module (under the
+cap, exactly at the cap, one past it, well past it — cap + 250 — and
+reset-after-a-drop), plus a new `apps/knx-web/src/App.test.tsx` (the
+first App-level test in this project: reachable with no project open,
+unchanged behaviour with one open). Gates: `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test
+--workspace`, `cargo run -p xtask -- check-layering`, `npx tsc
+--noEmit`, `npm test -- --run` (139/139), `npm run build` all clean.
+
+**Originally.** `apps/knx-web/src/App.tsx`'s "Log" toolbar button was
 `disabled={!tree}`, and the whole `.workspace` div — the only place
-`LogPanel` renders — is itself gated on `tree` being non-null. But
-`GET /api/log` deliberately works with no project open (`routes.rs`
-returns `200 []`, not `404`), specifically so a failed import with
-nothing open yet still leaves an inspectable trail. Separately,
-`SessionLog` (`apps/knx-server/src/session_log.rs`) has no cap on how
-many entries it accumulates, and `LogPanel` refetches and re-serializes
-the whole log on every `tree`/`refreshKey` change while the tab is open.
+`LogPanel` rendered — was itself gated on `tree` being non-null. But
+`GET /api/log` deliberately worked with no project open (`routes.rs`
+returned `200 []`, not `404`), specifically so a failed import with
+nothing open yet still left an inspectable trail. Separately,
+`SessionLog` had no cap on how many entries it accumulated, and
+`LogPanel` refetched and re-serialized the whole log on every
+`tree`/`refreshKey` change while the tab was open.
 
-**Cause.** Both per the plan's own text: the Log tab's UI slot was
-scoped to "a project is open" from the start, since every other panel in
-that slot (Inspector, Dashboard, Project Explorer) needs one; a log
-entry cap was never in the design spec's stated surface. Neither gap
-was caught until this feature's final whole-branch review.
+Both gaps traced to the same cause, per the plan's own text: the Log
+tab's UI slot was scoped to "a project is open" from the start, since
+every other panel in that slot (Inspector, Dashboard, Project Explorer)
+needs one; a log entry cap was never in the design spec's stated
+surface. Neither gap was caught until T11's final whole-branch review,
+and both were parked as a follow-up rather than fixed in the
+final-review-fix round that closed the rest of that review's findings.
 
-**Impact.** The single highest-value scenario for this feature — "my
-import just failed and no project is open, why?" — produces a correct
-error entry on the server that the UI cannot currently show. Unbounded
-growth is not a problem at today's usage levels (a single server
-process, one project at a time, log never persisted), but nothing stops
-it from becoming one over a very long session.
-
-**Lifted when.** Open — parked as a follow-up rather than fixed in the
-final-review-fix round that closed the rest of T11's whole-branch review
-findings (both are plan-level/UI-surface changes, not fix-round-scale).
-No fixed cycle. Until then: the entry is still retrievable via `curl
-localhost:<port>/api/log` (or equivalent) even with no project open.
+Impact while open: the single highest-value scenario for this feature —
+"my import just failed and no project is open, why?" — produced a
+correct error entry on the server that the UI could not show. Unbounded
+growth was never a problem at the usage levels this feature actually
+saw (a single server process, one project at a time, log never
+persisted), but nothing stopped it from becoming one over a very long
+session.
 
 ## 37. Imported translations are stored but never read, and the UI is English-only
 

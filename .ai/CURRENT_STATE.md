@@ -200,3 +200,33 @@
   `state.manufacturer_refs` consistent. New addition: any future writer of the `opaque_entry`/`manufacturer_ref` tables must go through
   `knx_store::insert_opaque`/`insert_manufacturer_refs` (now clear-before-insert) rather than hand-rolling an `INSERT`, or the duplication bug
   recurs outside those two functions' protection.
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 15:18
+- **Completed:** After merging T10 (PR #2, `7250197`), checked GitHub Actions CI on that PR and found the "Build, test, lint" job FAILED — not
+  a T10 regression, but CI's `RUSTFLAGS: -D warnings` turning two pre-existing `clippy::large_enum_variant` warnings on `knx-etsproj`'s `Frame`
+  enum (`Device(SourceDevice)`, ~744B vs ~360B for the next-largest variant) into hard compile errors. These two warnings had been flagged and
+  explicitly left untouched by several prior sessions' CURRENT_STATE.md entries ("explicitly out of scope... absent a measured reason to box
+  `SourceDevice`") — this is that measured reason: with no branch-protection/required-status-checks configured on this repo (confirmed via
+  `gh api repos/.../branches/main/protection` → 403), every future PR's CI will show red regardless of its own changes, which defeats CI as a
+  signal at all. Fixed on branch `fix-ci-red` (worktree `.worktrees/fix-ci-red`): boxed `Device(SourceDevice)` → `Device(Box<SourceDevice>)` in
+  both `crates/knx-etsproj/src/parse/installation.rs` and `installation_v21.rs`, updating each file's one construction site
+  (`Frame::Device(Box::new(SourceDevice { ... }))`) and `into_device`'s extraction arm (`Frame::Device(v) => *v`); all other match arms needed
+  no change (`Box<T>` derefs transparently). Commit `0f4f680`. Also found, in the same `-D warnings` clippy pass, an unrelated pre-existing
+  `clippy::field_reassign_with_default` in `apps/knx-server/tests/http_product_install.rs`'s `state()` helper — fixed as a struct literal with
+  `..Default::default()`, commit `1b69d50`. Both were bare warnings locally (not caught by any prior session's plain `cargo clippy`) but hard
+  errors under CI's exact invocation — worth remembering that "clippy clean locally" and "clippy clean under `-D warnings`" are different checks.
+  The `cargo fmt` drift in `command.rs` that an earlier scratch-worktree comparison against `origin/main` had also flagged turned out to already
+  be fixed on `main` (by `1f80064`, landed via the T8 merge) — a stale finding from comparing against a slightly earlier `origin/main`, not a
+  real remaining issue; no `command.rs` change was needed here. Gates on `fix-ci-red`: `cargo fmt --all --check` clean, `RUSTFLAGS="-D warnings"
+  cargo clippy --workspace --all-targets` clean (zero warnings/errors, both fixed lints confirmed gone), `cargo test --workspace` all green
+  (0 failed; required symlinking the untracked `OriginalData/` fixture directory into this worktree first — it's local-only, not git-tracked,
+  and the earlier test run failed with 13 fixture-not-found errors until the symlink was added and then removed again before committing).
+- **Pending/Next Steps:** Push `fix-ci-red`, open a PR against `main`, and — this being the first genuinely green CI run this repo will have
+  had — actually watch it go green before merging (previous PRs merged without that confirmation being possible). Then merge, clean up the
+  branch/worktree, and continue the broader `/goal` backlog: `GAP_ANALYSIS_ETS.md`'s B8-B11 and most of Section C/D/E/F remain open; T9
+  (bulk/multi-select, `Command::Batch` design) is the next natural Tier-2 pick.
+- **Notes for Codex:** If clippy ever reports `large_enum_variant` again on a *different* enum, the fix pattern here (box the oversized
+  variant's payload, fix the one construction site and any owned-extraction match arm, leave every other arm alone) is the established
+  convention for this codebase now — no need to re-derive it. Also: prefer running `cargo clippy --workspace --all-targets -- -D warnings`
+  (or setting `RUSTFLAGS="-D warnings"`) at least once before merging any branch, not just plain `cargo clippy` — they can disagree, as they
+  did here.

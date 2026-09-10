@@ -1123,12 +1123,11 @@ mod tests {
     // is ever reused against that pass's `EnrichmentReport.issues`.
     #[test]
     fn from_enrichment_keeps_program_and_com_object_issues_distinct() {
-        let program_missing = CreationDiagnostic::from_enrichment(
-            knx_productdb::EnrichmentIssue::ProgramMissing {
+        let program_missing =
+            CreationDiagnostic::from_enrichment(knx_productdb::EnrichmentIssue::ProgramMissing {
                 device_ets_id: "KB-DEV-1".into(),
                 program_ref: "A-1".into(),
-            },
-        );
+            });
         assert_eq!(
             program_missing,
             CreationDiagnostic::ProgramRefMissing {

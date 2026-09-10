@@ -1,3 +1,5 @@
+use axum::extract::DefaultBodyLimit;
+use axum::extract::Multipart;
 use axum::extract::Path as AxumPath;
 use axum::extract::Query;
 use axum::extract::State;
@@ -43,10 +45,84 @@ pub fn project_routes() -> Router<SharedState> {
         )
         .route("/api/catalog/manufacturers", get(catalog_manufacturers))
         .route("/api/catalog/items", get(catalog_items))
+        .route(
+            "/api/catalog/install",
+            post(install_catalog_package).layer(DefaultBodyLimit::max(MAX_CATALOG_PACKAGE_BYTES)),
+        )
         .route("/api/devices", post(create_device))
         .route("/api/devices/{id}", delete(delete_device))
         .route("/api/undo", post(undo))
         .route("/api/redo", post(redo))
+}
+
+/// The product database also validates a 256 MiB package bound. Applying the
+/// same bound here prevents multipart buffering from exceeding it first.
+const MAX_CATALOG_PACKAGE_BYTES: usize = 256 * 1024 * 1024;
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CatalogInstallMemberDto {
+    path: String,
+    role: String,
+    sha256: String,
+    size: u64,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CatalogInstallReportDto {
+    sha256: String,
+    scheme: u32,
+    skipped: bool,
+    members: Vec<CatalogInstallMemberDto>,
+    unknown: usize,
+    conflicts: usize,
+}
+
+impl From<knx_productdb::InstallReport> for CatalogInstallReportDto {
+    fn from(report: knx_productdb::InstallReport) -> Self {
+        Self {
+            sha256: report.sha256,
+            scheme: report.scheme,
+            skipped: report.skipped,
+            members: report
+                .members
+                .into_iter()
+                .map(|member| CatalogInstallMemberDto {
+                    path: member.path,
+                    role: member.role,
+                    sha256: member.sha256,
+                    size: member.size,
+                })
+                .collect(),
+            unknown: report.unknown,
+            conflicts: report.conflicts.len(),
+        }
+    }
+}
+
+async fn install_catalog_package(
+    State(state): State<SharedState>,
+    mut multipart: Multipart,
+) -> Result<Json<CatalogInstallReportDto>, ApiError> {
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|error| ApiError::with_status(error.status(), error.body_text()))?
+    {
+        let Some(filename) = field.file_name().map(str::to_owned) else {
+            continue;
+        };
+        let bytes = field
+            .bytes()
+            .await
+            .map_err(|error| ApiError::with_status(error.status(), error.body_text()))?;
+        return domain::install_catalog_package_impl(&state, &filename, &bytes)
+            .map(CatalogInstallReportDto::from)
+            .map(Json)
+            .map_err(ApiError::bad_request);
+    }
+    Err(ApiError::bad_request("no file field in catalog install"))
 }
 
 /// `path` is either an absolute host path (desktop, from a native OS

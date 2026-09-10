@@ -16,14 +16,17 @@ pub struct ManufacturerRef {
     pub kind: String,
 }
 
-/// Inserts every ref inside one transaction with a prepared statement, the
-/// same guarantee `insert_opaque` gives: a failure partway through leaves
-/// the table exactly as it was before this call.
+/// Replaces the whole table with `refs`, inside one transaction with a
+/// prepared statement — the same guarantee `insert_opaque` gives: a failure
+/// partway through leaves the table exactly as it was before this call, and
+/// the table is cleared before inserting so saving the same store twice
+/// does not duplicate rows (see `insert_opaque`'s doc comment).
 pub fn insert_manufacturer_refs(
     conn: &Connection,
     refs: &[ManufacturerRef],
 ) -> Result<usize, rusqlite::Error> {
     let tx = conn.unchecked_transaction()?;
+    tx.execute("DELETE FROM manufacturer_ref", [])?;
     let mut count = 0;
     {
         let mut stmt = tx.prepare(
@@ -93,5 +96,18 @@ mod tests {
         let loaded = load_manufacturer_refs(&conn).unwrap();
         assert_eq!(loaded[1].len, 641536);
         assert_eq!(loaded[1].sha256, "bb");
+    }
+
+    #[test]
+    fn saving_the_same_store_twice_does_not_duplicate_rows() {
+        // Regression for the whole-branch review of the export-UI plan
+        // (T10, round 2) — same bug class as `opaque.rs`'s test of the
+        // same name.
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
+        assert_eq!(insert_manufacturer_refs(&conn, &refs()).unwrap(), 2);
+        assert_eq!(insert_manufacturer_refs(&conn, &refs()).unwrap(), 2);
+        assert_eq!(insert_manufacturer_refs(&conn, &refs()).unwrap(), 2);
+        assert_eq!(load_manufacturer_refs(&conn).unwrap(), refs());
     }
 }

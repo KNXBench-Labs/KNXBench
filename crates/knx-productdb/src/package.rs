@@ -301,8 +301,17 @@ fn validate_xml(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
                 let predefined = matches!(name, "lt" | "gt" | "amp" | "apos" | "quot");
                 let numeric = name
                     .strip_prefix("#x")
+                    .filter(|digits| {
+                        !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_hexdigit())
+                    })
                     .map(|digits| u32::from_str_radix(digits, 16).ok())
-                    .or_else(|| name.strip_prefix('#').map(|digits| digits.parse().ok()))
+                    .or_else(|| {
+                        name.strip_prefix('#')
+                            .filter(|digits| {
+                                !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())
+                            })
+                            .map(|digits| digits.parse().ok())
+                    })
                     .flatten()
                     .filter(|code| {
                         matches!(code, 0x9 | 0xA | 0xD)

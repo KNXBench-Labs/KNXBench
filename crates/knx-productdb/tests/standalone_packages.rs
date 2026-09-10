@@ -299,6 +299,7 @@ fn validates_unknown_xml_payloads_without_rejecting_valid_references() {
         br#"<R>&undefined;</R>"#,
         br#"&amp;<R/>"#,
         br#"<R>&#0;</R>"#,
+        br#"<R>&#+65;</R>"#,
     ] {
         let bytes = archive(&[
             ("knx_master.xml", MASTER),

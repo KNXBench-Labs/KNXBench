@@ -317,6 +317,40 @@ export function deleteDevice(id: number): Promise<ProjectTree> {
   return request(`/api/devices/${id}`, { method: "DELETE" });
 }
 
+export function batchDeleteDevices(ids: number[]): Promise<ProjectTree> {
+  return request("/api/devices/batch-delete", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
+}
+
+export function batchDeleteGroupAddresses(ids: number[]): Promise<ProjectTree> {
+  return request("/api/group-addresses/batch-delete", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
+}
+
+export function batchMoveDevicesToLine(
+  deviceIds: number[],
+  lineId: number | null,
+): Promise<ProjectTree> {
+  return request("/api/devices/batch-move-line", {
+    method: "POST",
+    body: JSON.stringify({ deviceIds, lineId }),
+  });
+}
+
+export function batchMoveDevicesToBuildingPart(
+  deviceIds: number[],
+  buildingPartId: number | null,
+): Promise<ProjectTree> {
+  return request("/api/devices/batch-move-building-part", {
+    method: "POST",
+    body: JSON.stringify({ deviceIds, buildingPartId }),
+  });
+}
+
 export function undo(): Promise<ProjectTree> {
   return request("/api/undo", { method: "POST" });
 }

@@ -61,6 +61,19 @@ pub fn project_routes() -> Router<SharedState> {
         )
         .route("/api/devices", post(create_device))
         .route("/api/devices/{id}", delete(delete_device))
+        .route("/api/devices/batch-delete", post(batch_delete_devices))
+        .route(
+            "/api/group-addresses/batch-delete",
+            post(batch_delete_group_addresses),
+        )
+        .route(
+            "/api/devices/batch-move-line",
+            post(batch_move_devices_to_line),
+        )
+        .route(
+            "/api/devices/batch-move-building-part",
+            post(batch_move_devices_to_building_part),
+        )
         .route("/api/undo", post(undo))
         .route("/api/redo", post(redo))
 }
@@ -728,6 +741,61 @@ async fn delete_device(
     AxumPath(id): AxumPath<u32>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     domain::delete_device_impl(&state, id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+struct BatchIdsBody {
+    ids: Vec<u32>,
+}
+
+async fn batch_delete_devices(
+    State(state): State<SharedState>,
+    Json(body): Json<BatchIdsBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::batch_delete_devices_impl(&state, body.ids)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+async fn batch_delete_group_addresses(
+    State(state): State<SharedState>,
+    Json(body): Json<BatchIdsBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::batch_delete_group_addresses_impl(&state, body.ids)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BatchMoveDevicesToLineBody {
+    device_ids: Vec<u32>,
+    line_id: Option<u32>,
+}
+
+async fn batch_move_devices_to_line(
+    State(state): State<SharedState>,
+    Json(body): Json<BatchMoveDevicesToLineBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::batch_move_devices_to_line_impl(&state, body.device_ids, body.line_id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BatchMoveDevicesToBuildingPartBody {
+    device_ids: Vec<u32>,
+    building_part_id: Option<u32>,
+}
+
+async fn batch_move_devices_to_building_part(
+    State(state): State<SharedState>,
+    Json(body): Json<BatchMoveDevicesToBuildingPartBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    domain::batch_move_devices_to_building_part_impl(&state, body.device_ids, body.building_part_id)
         .map(Json)
         .map_err(ApiError::bad_request)
 }

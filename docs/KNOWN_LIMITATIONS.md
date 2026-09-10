@@ -953,3 +953,45 @@ final-review-fix round that closed the rest of T11's whole-branch review
 findings (both are plan-level/UI-surface changes, not fix-round-scale).
 No fixed cycle. Until then: the entry is still retrievable via `curl
 localhost:<port>/api/log` (or equivalent) even with no project open.
+
+## 37. Imported translations are stored but never read, and the UI is English-only
+
+**Limitation.** `knx-productdb` parses
+`Languages`/`TranslationUnit`/`TranslationElement`
+out of every application program it ingests and writes them to a
+`translation (program_id, language, ref_id, attribute_name, text)` table
+(`crates/knx-productdb/src/migration.rs:248`, written by
+`parse/translation.rs`). `knx-core` has carried the matching model
+indirection since day one: `Language`, `TranslationKey`,
+`LocalizedString`, and a `StringTable` that resolves against an active
+language with a `default_language` fallback, with `Project` owning a
+`strings: StringTable` (`crates/knx-core/src/project.rs:182`).
+
+Nothing reads any of it for display. `grep` for `translation` across the
+workspace finds the parser that writes the table, the migration that
+creates it, and nothing else — no query, no join, no resolution at any
+render site. Separately, every user-facing string in `apps/knx-web` is a
+hard-coded English literal, and `apps/knx-web/package.json` has no i18n
+dependency of any kind.
+
+**Cause.** The storage side was built where it belonged (Session 4's
+product-database ingestion, Session 2's domain model) and the reading
+side was never scheduled, because no screen that needed it existed yet.
+The frontend was built English-first and no cycle since has revisited
+that. Neither is a bug in anything that shipped; both are simply
+unbuilt halves.
+
+**Impact.** A German-language product catalog imported from a `.knxprod`
+displays whatever single string the parser happened to put in the
+non-translated attribute, with the translations sitting unread in the
+database beside it. Users outside English see an English application. No
+data is lost — this is the good case for the "never silently discard"
+rule, since the translations *are* preserved on disk — but preserved and
+unreachable is not the same as available.
+
+**Lifted when.** Open. Tracked as **T25** (UI chrome) and **T26** (KNX
+data) in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6, added
+2026-09-10, closing gap **D10**. Neither has a design spec or a
+scheduled cycle. Until then the translations remain queryable directly
+from the `.knxdb` product database with SQL, which is a developer
+workaround and not a feature.

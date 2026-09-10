@@ -436,3 +436,54 @@
   working-tree file: the merge will refuse to fast-forward until the
   untracked copy is gone. `.worktrees/session3-ets-import` remains the
   only other worktree (stale, unrelated, untouched).
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 21:00
+- **Completed:** Task 7 (final task, docs-only) of the **T12** plan
+  (`docs/superpowers/sdd/2026-09-10-csv-group-address-exchange/`, branch
+  `t12-csv-group-addresses`, worktree
+  `.worktrees/t12-csv-group-addresses`). Tasks 1-6 (the `knx-csv` crate,
+  `Command::UpdateGroupAddress`, the writer/planner, the server routes, the
+  CLI subcommands, the web buttons) were already implemented and reviewed
+  before this task started; this task only reconciled documentation —
+  no production code touched. Files changed: `docs/IMPORT_EXPORT.md` (new
+  §11, the format table, the honesty statement that no verified ETS CSV
+  sample exists anywhere in this repo or the KNX Standard v3.0.0 corpus,
+  and what import never does), `docs/COMPATIBILITY.md` (a new §2 verified
+  row for the corpus-gated round trip, a new §4 "not supported" row naming
+  ETS CSV/`.esf` explicitly), `docs/GAP_ANALYSIS_ETS.md` (C2 rewritten
+  "Closed", T12 struck through with the full technical account, matching
+  how C4/T10 and D7/T11 were closed), `docs/IMPLEMENTATION_STATUS.md` (new
+  T12 entry appended after T11's), `docs/KNOWN_LIMITATIONS.md` (five new
+  entries, **#38-#42**: unverified ETS interoperability; never
+  re-addresses/deletes/manages ranges; export-only columns never applied
+  plus no `Description`/`Comment` columns; the German-locale Excel
+  separator hazard; and `command_sync.rs`'s module doc overstating
+  `sync_after_command` as live when it has no callers anywhere in
+  `crates/`/`apps/` — pre-existing, not caused by this task, just made
+  easier to trip over by this task's own no-op `UpdateGroupAddress` arm in
+  that file). `docs/ROADMAP.md` was **not** touched — it names neither T12
+  nor C2. Every count written down (50 `knx-csv` tests, 5 server
+  integration tests, 5 CLI integration tests, 4 `knx-core`
+  `UpdateGroupAddress` tests, 11+4 frontend tests) was re-derived directly
+  from `cargo test -p knx-csv -- --list` and `grep`/`grep -c` against the
+  actual test files at doc-writing time, not copied from any prior task
+  report. Full report:
+  `.superpowers/sdd/2026-09-10-csv-group-address-exchange/task-7-report.md`.
+- **Pending/Next Steps:** Run the full gate (`cargo fmt --all --check`,
+  `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test
+  --workspace`, `cargo run -p xtask -- check-layering`, `cargo deny check`,
+  then `apps/knx-web`'s `npx tsc --noEmit && npm test -- --run && npm run
+  build`, restoring `dist/.gitkeep`), commit the docs
+  (`git add docs && git add -f .ai && git commit`), then hand off for
+  review — this task does not merge or push. Once reviewed and merged,
+  the branch/worktree should be cleaned up the same way T11's was.
+- **Notes for Codex:** No production code changed in this task —
+  everything above is doc reconciliation only, so if you're picking up
+  from here expect `git diff main` on this branch to be entirely under
+  `docs/` and `.ai/`. The two "parked" items recorded in
+  `KNOWN_LIMITATIONS.md` #42 and in the T12 `IMPLEMENTATION_STATUS.md`
+  entry (session-log `csv-import:<kind>` source-string redundancy, and
+  `command_sync.rs`'s stale module doc) are deliberately *not* fixed here
+  — don't treat them as regressions if you see them again; they're
+  recorded, not forgotten.

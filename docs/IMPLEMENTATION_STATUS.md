@@ -1476,3 +1476,95 @@ round: the Log tab is unreachable without an open project even though
 on entry count. Closes **T11**, **D7**
 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). Design spec:
 `docs/superpowers/specs/2026-09-08-session-log-design.md`.
+
+**T12, CSV group-address import/export (2026-09-10).** A new
+`crates/knx-csv` crate — pure, depending on nothing but `knx-core`, `csv`,
+and `serde`, with a matching `xtask check-layering` rule keeping it away
+from `knx-store`/`knx-etsproj`/`knx-productdb` — reads and writes
+"KNXBench group-address CSV v1": `export_group_addresses(&Project) ->
+CsvExport` (`write.rs`), `parse_group_addresses(text, style) -> ParsedCsv`
+(`read.rs`), and `plan_import(&Project, &ParsedCsv) -> ImportPlan`
+(`plan.rs`). **The format is KNXBench's own, not ETS's.** No sample of
+ETS's "Export Group Addresses" CSV output exists in this repository or in
+the KNX Standard v3.0.0 corpus, and it is not a KNX Association standard
+either, so nothing here — docs, UI text, commit messages — claims ETS
+compatibility; the stated upgrade path if a real ETS sample ever turns up
+is a second column profile in the same importer, not a rewrite.
+`crates/knx-core/src/command.rs` gains `Command::UpdateGroupAddress { id,
+name, central, unfiltered }` (its own inverse, following
+`SetDeviceDescription`/`RenameGroupRange`'s existing pattern) — the one
+command this feature needed and the first thing able to rename a group
+address at all; it deliberately never touches the address or the range,
+since the address is import's match key and range placement is a separate
+concern. The importer auto-detects `,`/`;` separators, accepts a BOM or
+none and CRLF or LF, matches rows to existing entries by address (never by
+name), and produces one of four outcomes per row — create, update,
+unchanged, or error — all-or-nothing per file: any row-level error blocks
+the whole import, and a successful one applies as a single `Command::Batch`
+so it is one undo step. `DatapointType`, `MainGroup`, and `MiddleGroup` are
+written on export (derived from linked communication objects and
+containing group ranges) but never applied on import — read back and
+reported as recognized-but-ignored, since a group address itself carries
+no DPT in this domain model and no range is ever created by a CSV import.
+Import never deletes an address absent from the file and never
+re-addresses an existing one (an address change in the file reads as a new
+row); both are recorded in `KNOWN_LIMITATIONS.md` alongside the missing
+`Description`/`Comment` columns (the domain model has no such fields to
+round-trip). Surfaces: `POST /api/group-addresses/csv-export`/
+`csv-import` (`apps/knx-server/src/routes.rs`, both logging to the T11
+session log through a new `session_log::from_csv_import_report`, neither
+resetting it); `knx ga-export <store.knxdb> <out.csv>` and `knx ga-import
+<store.knxdb> <in.csv> [--dry-run]` on the CLI, with `--dry-run` printing a
+report body byte-identical to a real import (the two share one
+`print_import_report` function) and a trailing `store written: yes`/`no
+(dry run|nothing to do|rejected|error)` line appended after that shared
+body on every path, so the report itself can never diverge between a dry
+run and a real one; a `GroupAddressCsvButtons.tsx` pair of toolbar buttons
+in the web group-address view, reusing the existing `pickSavePath`/
+`pickOpenPath` file dialogs and the Log tab for detail. `knx-app`'s test
+suite gains a corpus-gated round trip,
+`exporting_and_replanning_the_reference_project_is_entirely_unchanged`
+(`tests/csv_roundtrip.rs`): import the reference `.knxproj`, export its
+group addresses, re-parse that text, and re-plan against the same
+project — the plan comes back entirely `unchanged` with no problems, which
+is the real proof that the writer and the reader agree, including on names
+containing commas, quotes, and umlauts a hand-built fixture cannot exercise
+realistically. It lives in `knx-app`, not `knx-csv`, because it needs
+`knx-etsproj` to produce a real `Project`, and `knx-csv` must reach neither
+`knx-etsproj` nor `knx-store` — `cargo metadata`'s dependency graph does
+not distinguish `[dev-dependencies]` from `[dependencies]`, so
+`check-layering` genuinely rejected a `knx-etsproj` dev-dependency inside
+`knx-csv` itself during development, and `knx-app` is deliberately the one
+crate already permitted to see both sides. New tests, each figure
+re-verified via `cargo test -p <crate> -- --list` at documentation time:
+`knx-csv`'s own suite (separator detection, BOM, CRLF, quoted fields with
+embedded separators/quotes, unknown columns, every row-level error, every
+documented boolean spelling, all three address styles, plan outcomes,
+range-by-containment placement, the all-or-nothing rule) is 50 tests; 4 new
+`Command::UpdateGroupAddress` tests in `knx-core::command::tests`; 5 new
+server integration tests
+(`apps/knx-server/tests/http_group_address_csv.rs`) covering both routes,
+the rejected-file case, and the session-log append; 5 new CLI integration
+tests (`apps/knx-cli/tests/cli_group_address_csv.rs`) including the
+`--dry-run` byte-identical-report case and a read-only-store save-failure
+case; 11 new frontend tests in `GroupAddressCsvButtons.test.tsx` plus 4
+more in `api.test.ts` for the two new client functions. Two items parked
+rather than fixed in this branch: the server's session-log source strings
+use the shape `csv-import:<kind>` (`apps/knx-server/src/session_log.rs`,
+`from_csv_import_report`), where `<kind>` is `"error"`/`"warning"` derived
+straight from the same `problem.severity` the entry's own `severity` field
+already carries — a Minor noted during review and left as-is rather than
+reworked late in the cycle;
+and `crates/knx-store/src/command_sync.rs`'s module doc, pre-existing and
+unrelated to this task, describes `sync_after_command` as *the*
+incremental-persistence mechanism, but grepping `crates/` and `apps/` for
+`sync_after_command` finds no caller anywhere outside its own tests and
+`lib.rs`'s re-export — persistence in this codebase actually runs through
+`save_project`, which is what both `POST /api/group-addresses/csv-import`
+and `knx ga-import` call. This task's own `Command::UpdateGroupAddress`
+arm in that same file is one more no-op stub alongside the topology/
+group-range/group-link/device-create-delete arms already there, which made
+the doc/reality gap easier to notice, not the cause of it — see
+`KNOWN_LIMITATIONS.md`. Closes **T12**, **C2**
+([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). Design spec:
+`docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.

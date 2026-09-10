@@ -15,6 +15,7 @@ const SEVERITIES: Severity[] = ["error", "warning", "info"];
 /// already-fetched entries and never trigger a re-fetch on their own.
 export default function LogPanel(props: { tree: ProjectTree }) {
   const [entries, setEntries] = useState<LogEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<Severity, boolean>>({
     error: true,
     warning: true,
@@ -23,9 +24,15 @@ export default function LogPanel(props: { tree: ProjectTree }) {
 
   useEffect(() => {
     let cancelled = false;
-    api.getSessionLog().then((fetched) => {
-      if (!cancelled) setEntries(fetched);
-    });
+    setError(null); // clear a stale error from a previous fetch before retrying
+    api
+      .getSessionLog()
+      .then((fetched) => {
+        if (!cancelled) setEntries(fetched);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(api.errorMessage(e));
+      });
     return () => {
       cancelled = true;
     };
@@ -54,8 +61,11 @@ export default function LogPanel(props: { tree: ProjectTree }) {
           </label>
         ))}
       </div>
+      {error && <span className="field-error">{error}</span>}
       {entries.length === 0 ? (
         <p className="log-panel-empty">No log entries yet.</p>
+      ) : visible.length === 0 ? (
+        <p className="log-panel-empty">No log entries match the current filters.</p>
       ) : (
         <ul className="log-panel-list">
           {visible.map((entry, index) => (

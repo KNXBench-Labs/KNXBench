@@ -291,6 +291,31 @@ fn master_namespace_must_be_exact_and_xml_complete() {
 }
 
 #[test]
+fn validates_unknown_xml_payloads_without_rejecting_valid_references() {
+    let (_dir, conn) = db();
+    for payload in [
+        br#"<![CDATA[bad]]><R/>"#.as_slice(),
+        br#"<R bad=>ok</R>"#,
+        br#"<R>&undefined;</R>"#,
+        br#"&amp;<R/>"#,
+    ] {
+        let bytes = archive(&[
+            ("knx_master.xml", MASTER),
+            ("M-0001/Hardware.xml", HARDWARE),
+            ("notes.xml", payload),
+        ]);
+        assert!(install_package(&conn, "malformed.knxprod", &bytes).is_err());
+        assert_eq!(counts(&conn), vec![0; 9]);
+    }
+    let valid = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("notes.xml", br#"<R>&#65;&#x41;</R>"#),
+    ]);
+    assert!(install_package(&conn, "valid.knxprod", &valid).is_ok());
+}
+
+#[test]
 fn malformed_and_unsupported_packages_leave_no_rows() {
     let (_dir, conn) = db();
     let cases = [
@@ -423,7 +448,7 @@ fn migrating_v1_preserves_existing_rows_and_blobs() {
         "DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
          DROP TABLE package; PRAGMA user_version = 1;",
     )
-        .unwrap();
+    .unwrap();
     drop(conn);
     let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     assert_eq!(

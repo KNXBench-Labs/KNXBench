@@ -63,7 +63,7 @@ underlying model field exists.
 | B6 | **Closed (2026-09-08, T7).** Read/write/transmit/update/communication flags were projected and shown but display-only. | `Command::SetComObjectFlag`/`RestoreComObjectFlag` (one flag at a time, no bulk "clear to inherited" gesture) plus `ComObjectFlagsRow`'s five checkboxes on the comm-object Inspector row close this. |
 | B7 | **Closed (2026-09-07, T23 slice 2).** `LinkComObject`/`UnlinkComObject` existed as a command/route but no frontend screen drove it. | The link/unlink control on the comm-object Inspector row (`NewGroupLinkRow`/`GroupLinkRow`) closes this. |
 | B8 | **No parameter editing.** (See A3 — no interpretation means no editor is possible yet regardless.) | |
-| B9 | **No bulk/multi-select operations.** Every edit in the UI targets exactly one entity (one device's address, one comm object's DPT, one group address create/delete). | No "select 20 devices, change all their addresses' area", no multi-delete, no copy/paste of a device with its parameters — all standard ETS workflows for any project past a handful of devices. |
+| B9 | **Closed (2026-09-10, T9).** Every edit in the UI targeted exactly one entity (one device's address, one comm object's DPT, one group address create/delete). | `Command::Batch(Vec<Command>)` composes existing single-entity commands with all-or-nothing apply/rollback; ctrl/shift-click multi-select of devices and group addresses in the Project Explorer plus a bulk-action toolbar (batch delete, batch move-to-line, batch move-to-building-part) drive it, undoable as one `Ctrl+Z`. Copy/paste of a device with its parameters remains out of scope. |
 | B10 | **No drag-and-drop anywhere in the UI.** CLAUDE.md's UI/UX section lists drag & drop as a target capability. | Every structural change that ETS does by dragging (device onto a line, device onto a room, GA onto a comm object) has no equivalent gesture here, and per B1-B7 mostly has no non-drag equivalent either. |
 | B11 | **Undo history is session-only**, never persisted to `.knxdb` (explicit design choice, restated across several cycles). | Closing and reopening a project loses all undo history — ETS's own undo is also session-scoped, so this one is closer to parity than most, but worth listing since it's a real behavioral difference from a saved-and-reopened ETS project's expectations. |
 
@@ -292,13 +292,20 @@ Each task: **what**, **why**, **depends on**.
   nesting depth, unlike group ranges' observed two levels) and a
   rename/delete/move UI in the Inspector, mirroring `GroupRangeInspector`/
   `LineMoveField`. Closes **B4**.
-- **T9. Bulk/multi-select operations.** Multi-select in the Project
-  Explorer (devices, group addresses) plus batch variants of existing
-  single-entity commands (batch address reassignment, batch delete).
-  Design note: needs a `Command::Batch(Vec<Command>)` wrapper or
-  equivalent for atomic undo of a multi-entity edit — worth its own
-  design spec given `CommandStack`'s current one-command-one-inverse
-  shape. Closes **B9**.
+- ~~**T9. Bulk/multi-select operations.**~~ **Closed (2026-09-10).**
+  `Command::Batch(Vec<Command>)` composes existing single-entity commands
+  (`DeleteDevice`/`DeleteGroupAddress`/`MoveDeviceToLine`/
+  `MoveDeviceToBuildingPart`) with all-or-nothing apply/rollback —
+  `CommandStack` needed no change, since it was already generic over
+  `Command`. `knx-server` exposes four batch routes following the
+  existing one-`*_impl`-per-command convention; `apps/knx-web` adds
+  ctrl/shift-click multi-select to the Project Explorer and a bulk-action
+  toolbar. No batch "address reassignment" for individual addresses —
+  B9's own wording described topology reassignment, already covered by
+  the two `MoveDeviceTo*` commands. See
+  `docs/superpowers/specs/2026-09-10-bulk-operations-design.md` for the
+  rollback rationale and out-of-scope items (copy/paste with parameters,
+  mixed-kind batch edit). Closes **B9**.
 
 ### Tier 3 — export & reporting parity
 

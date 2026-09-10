@@ -76,6 +76,7 @@ pub fn project_routes() -> Router<SharedState> {
         )
         .route("/api/undo", post(undo))
         .route("/api/redo", post(redo))
+        .route("/api/log", get(log))
 }
 
 /// The product database also validates a 256 MiB package bound. Applying the
@@ -814,4 +815,17 @@ async fn redo(
     domain::redo_impl(&state)
         .map(Json)
         .map_err(ApiError::bad_request)
+}
+
+/// No error case: an empty/absent log is just `[]`, not a 404 — there need
+/// not be an open project for this route to answer (T11).
+async fn log(State(state): State<SharedState>) -> Json<Vec<crate::session_log::LogEntry>> {
+    Json(
+        state
+            .session_log
+            .lock()
+            .expect("state mutex poisoned")
+            .entries()
+            .to_vec(),
+    )
 }

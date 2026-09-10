@@ -171,6 +171,14 @@ pub fn sync_after_command(
         Command::MoveDeviceToBuildingPart { .. } => {
             // Building-part persistence layer not yet implemented (Task 4 scope).
         }
+        Command::Batch(_) => {
+            // No arm needed here, not just none yet: nothing currently calls
+            // `sync_after_command` from the server's command path (see
+            // docs/superpowers/specs/2026-09-10-bulk-operations-design.md,
+            // "Out of scope"), so a sub-command-by-sub-command sync of a
+            // `Batch` has no caller to serve. Only kept exhaustive so this
+            // match still compiles.
+        }
     }
     tx.commit()?;
     Ok(())

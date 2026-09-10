@@ -1024,8 +1024,10 @@ it does.
 
 **Lifted when.** A genuine ETS-produced group-address CSV export is
 obtained. At that point, adding a second, ETS-shaped column profile to
-`crates/knx-csv`'s reader is the stated upgrade path — the column-mapping
-layer that would carry it already exists for this exact purpose. `.esf`
+`crates/knx-csv`'s reader is the stated upgrade path — header matching is
+already isolated in one function (`map_headers`), so the profile would go
+there rather than spreading through the parser, though that function is a
+hard-coded `match` and would itself have to be edited. `.esf`
 import is a separate, larger undertaking (writing a parser against
 remembered syntax with no sample to check it against is exactly what
 CLAUDE.md's "do not invent technical facts" forbids) and would need its

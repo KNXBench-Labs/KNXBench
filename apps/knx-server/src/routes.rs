@@ -38,6 +38,7 @@ pub fn project_routes() -> Router<SharedState> {
             "/api/project/documentation-export",
             post(export_documentation),
         )
+        .route("/api/project/diff", post(diff_project))
         .route(
             "/api/group-addresses/csv-import",
             post(import_group_addresses_csv),
@@ -475,6 +476,674 @@ async fn export_documentation(
                 .map(DocumentationWarningDto::from)
                 .collect(),
         })
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+// ---------------------------------------------------------------------
+// POST /api/project/diff (T14) — `knx_diff::*` does not derive `Serialize`
+// (module doc, `crates/knx-diff/src/lib.rs`), so every type it returns
+// gets an explicit DTO here, `#[derive(serde::Serialize)]`, `camelCase`,
+// one `From<&knx_diff::X>` per type — the same pattern
+// `DocumentationWarningDto`/`DocumentationExportReportDto` above already
+// establish. `EntityTable<K, F>`/`EntityChange<K, F>`/`AmbiguityNote<K>`
+// are generic in `knx-diff` itself, so one generic DTO trio serves every
+// entity table except devices (`DeviceTable`/`DeviceChange`, bespoke in
+// `knx-diff` too, for the same reason: nesting a device's communication
+// objects and parameters inside a `Fields` type used on both sides of a
+// generic `EntityChange` would duplicate the nested diff meaninglessly).
+// ---------------------------------------------------------------------
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EntityChangeDto<K: serde::Serialize, F: serde::Serialize> {
+    key: K,
+    matched_by: MatchKindDto,
+    left: F,
+    right: F,
+    changed_fields: Vec<&'static str>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AmbiguityNoteDto<K: serde::Serialize> {
+    key: K,
+    left_candidates: usize,
+    right_candidates: usize,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EntityTableDto<K: serde::Serialize, F: serde::Serialize> {
+    added: Vec<(K, F)>,
+    removed: Vec<(K, F)>,
+    changed: Vec<EntityChangeDto<K, F>>,
+    ambiguous: Vec<AmbiguityNoteDto<K>>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+enum MatchKindDto {
+    EtsId,
+    NaturalKey,
+}
+
+impl From<&knx_diff::MatchKind> for MatchKindDto {
+    fn from(k: &knx_diff::MatchKind) -> Self {
+        match k {
+            knx_diff::MatchKind::EtsId => Self::EtsId,
+            knx_diff::MatchKind::NaturalKey => Self::NaturalKey,
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+enum EntityStatusDto {
+    Added,
+    Removed,
+    Matched,
+}
+
+impl From<&knx_diff::EntityStatus> for EntityStatusDto {
+    fn from(status: &knx_diff::EntityStatus) -> Self {
+        match status {
+            knx_diff::EntityStatus::Added => Self::Added,
+            knx_diff::EntityStatus::Removed => Self::Removed,
+            knx_diff::EntityStatus::Matched => Self::Matched,
+        }
+    }
+}
+
+/// Converts one `knx_diff::EntityTable<K, F>` into its DTO given the two
+/// per-entity `From<&K>`/`From<&F>` conversions below — shared by every
+/// generic entity table (areas, lines, buildings, group ranges, group
+/// addresses, communication objects, parameters: seven call sites) so the
+/// traversal lives once, not once per entity type. `Vec` order is
+/// preserved throughout — nothing here re-sorts or re-groups by key,
+/// which is what would silently reintroduce the `HashMap`-ordering problem
+/// `knx-diff` itself was built to avoid.
+fn convert_table<K, F, KD, FD>(table: &knx_diff::EntityTable<K, F>) -> EntityTableDto<KD, FD>
+where
+    KD: serde::Serialize + for<'a> From<&'a K>,
+    FD: serde::Serialize + for<'a> From<&'a F>,
+{
+    EntityTableDto {
+        added: table
+            .added
+            .iter()
+            .map(|(k, f)| (KD::from(k), FD::from(f)))
+            .collect(),
+        removed: table
+            .removed
+            .iter()
+            .map(|(k, f)| (KD::from(k), FD::from(f)))
+            .collect(),
+        changed: table
+            .changed
+            .iter()
+            .map(|c| EntityChangeDto {
+                key: KD::from(&c.key),
+                matched_by: MatchKindDto::from(&c.matched_by),
+                left: FD::from(&c.left),
+                right: FD::from(&c.right),
+                changed_fields: c.changed_fields.clone(),
+            })
+            .collect(),
+        ambiguous: table
+            .ambiguous
+            .iter()
+            .map(|a| AmbiguityNoteDto {
+                key: KD::from(&a.key),
+                left_candidates: a.left_candidates,
+                right_candidates: a.right_candidates,
+            })
+            .collect(),
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AreaKeyDto {
+    address: u8,
+}
+
+impl From<&knx_diff::AreaKey> for AreaKeyDto {
+    fn from(key: &knx_diff::AreaKey) -> Self {
+        Self {
+            address: key.address,
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AreaFieldsDto {
+    name: String,
+    /// `CompletionStatus`'s `Debug` form (e.g. `"FinishedDesign"`) — same
+    /// convention `knx_projection::BuildingNode::kind` already documents
+    /// for `BuildingPartType`: not worth a typed TS union for a single
+    /// label.
+    completion: String,
+}
+
+impl From<&knx_diff::AreaFields> for AreaFieldsDto {
+    fn from(fields: &knx_diff::AreaFields) -> Self {
+        Self {
+            name: fields.name.clone(),
+            completion: format!("{:?}", fields.completion),
+        }
+    }
+}
+
+type AreaTableDto = EntityTableDto<AreaKeyDto, AreaFieldsDto>;
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LineKeyDto {
+    area_address: u8,
+    line_address: u8,
+}
+
+impl From<&knx_diff::LineKey> for LineKeyDto {
+    fn from(key: &knx_diff::LineKey) -> Self {
+        Self {
+            area_address: key.area_address,
+            line_address: key.line_address,
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LineFieldsDto {
+    name: String,
+    medium_ref: String,
+    domain_address: Option<String>,
+    domain_address_is_checked: Option<bool>,
+    ip_routing_multicast_address: Option<String>,
+    multicast_ttl: Option<u8>,
+    completion: String,
+    area: Option<AreaKeyDto>,
+}
+
+impl From<&knx_diff::LineFields> for LineFieldsDto {
+    fn from(fields: &knx_diff::LineFields) -> Self {
+        Self {
+            name: fields.name.clone(),
+            medium_ref: fields.medium_ref.clone(),
+            domain_address: fields.domain_address.clone(),
+            domain_address_is_checked: fields.domain_address_is_checked,
+            ip_routing_multicast_address: fields
+                .ip_routing_multicast_address
+                .map(|addr| addr.to_string()),
+            multicast_ttl: fields.multicast_ttl,
+            completion: format!("{:?}", fields.completion),
+            area: fields.area.as_ref().map(AreaKeyDto::from),
+        }
+    }
+}
+
+type LineTableDto = EntityTableDto<LineKeyDto, LineFieldsDto>;
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BuildingPartKeyDto {
+    path: Vec<String>,
+}
+
+impl From<&knx_diff::BuildingPartKey> for BuildingPartKeyDto {
+    fn from(key: &knx_diff::BuildingPartKey) -> Self {
+        Self {
+            path: key.path.clone(),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct BuildingPartFieldsDto {
+    name: String,
+    number: Option<String>,
+    /// `BuildingPartType`'s `Debug` form — same convention as `AreaFieldsDto::completion`.
+    kind: String,
+    completion: String,
+    default_line: Option<LineKeyDto>,
+}
+
+impl From<&knx_diff::BuildingPartFields> for BuildingPartFieldsDto {
+    fn from(fields: &knx_diff::BuildingPartFields) -> Self {
+        Self {
+            name: fields.name.clone(),
+            number: fields.number.clone(),
+            kind: format!("{:?}", fields.kind),
+            completion: format!("{:?}", fields.completion),
+            default_line: fields.default_line.as_ref().map(LineKeyDto::from),
+        }
+    }
+}
+
+type BuildingTableDto = EntityTableDto<BuildingPartKeyDto, BuildingPartFieldsDto>;
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeviceKeyDto {
+    ets_id: Option<String>,
+    address: Option<String>,
+}
+
+impl From<&knx_diff::DeviceKey> for DeviceKeyDto {
+    fn from(key: &knx_diff::DeviceKey) -> Self {
+        Self {
+            ets_id: key.ets_id.clone(),
+            address: key.address.clone(),
+        }
+    }
+}
+
+/// Field-for-field copy of `knx_core::CommissioningState`, which — like
+/// every `knx-diff`/`knx-core` type here — does not derive `Serialize`.
+/// `last_modified`/`last_download` become RFC3339 strings: `chrono`'s
+/// `serde` feature is not enabled workspace-wide, and `session_log.rs`
+/// already established `to_rfc3339()` as this codebase's own convention
+/// for putting a `DateTime<Utc>` on the wire.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CommissioningStateDto {
+    completion: String,
+    individual_address_loaded: bool,
+    application_program_loaded: bool,
+    parameters_loaded: bool,
+    communication_part_loaded: bool,
+    medium_config_loaded: bool,
+    last_modified: Option<String>,
+    last_download: Option<String>,
+    broken: bool,
+}
+
+impl From<&knx_core::CommissioningState> for CommissioningStateDto {
+    fn from(state: &knx_core::CommissioningState) -> Self {
+        Self {
+            completion: format!("{:?}", state.completion),
+            individual_address_loaded: state.individual_address_loaded,
+            application_program_loaded: state.application_program_loaded,
+            parameters_loaded: state.parameters_loaded,
+            communication_part_loaded: state.communication_part_loaded,
+            medium_config_loaded: state.medium_config_loaded,
+            last_modified: state.last_modified.map(|d| d.to_rfc3339()),
+            last_download: state.last_download.map(|d| d.to_rfc3339()),
+            broken: state.broken,
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeviceFieldsDto {
+    name: String,
+    description: Option<String>,
+    address: Option<String>,
+    product_ref: String,
+    program_ref: String,
+    commissioning: CommissioningStateDto,
+    line: Option<LineKeyDto>,
+    building: Option<BuildingPartKeyDto>,
+}
+
+impl From<&knx_diff::DeviceFields> for DeviceFieldsDto {
+    fn from(fields: &knx_diff::DeviceFields) -> Self {
+        Self {
+            name: fields.name.clone(),
+            description: fields.description.clone(),
+            address: fields.address.clone(),
+            product_ref: fields.product_ref.clone(),
+            program_ref: fields.program_ref.clone(),
+            commissioning: CommissioningStateDto::from(&fields.commissioning),
+            line: fields.line.as_ref().map(LineKeyDto::from),
+            building: fields.building.as_ref().map(BuildingPartKeyDto::from),
+        }
+    }
+}
+
+/// Devices' own, non-generic table — mirrors `knx_diff::DeviceTable`
+/// field for field, same reasoning as the crate's own doc comment on
+/// `DeviceTable` for why it doesn't fit `EntityTableDto`.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeviceTableDto {
+    added: Vec<(DeviceKeyDto, DeviceFieldsDto)>,
+    removed: Vec<(DeviceKeyDto, DeviceFieldsDto)>,
+    changed: Vec<DeviceChangeDto>,
+    ambiguous: Vec<AmbiguityNoteDto<DeviceKeyDto>>,
+}
+
+impl From<&knx_diff::DeviceTable> for DeviceTableDto {
+    fn from(table: &knx_diff::DeviceTable) -> Self {
+        Self {
+            added: table
+                .added
+                .iter()
+                .map(|(k, f)| (DeviceKeyDto::from(k), DeviceFieldsDto::from(f)))
+                .collect(),
+            removed: table
+                .removed
+                .iter()
+                .map(|(k, f)| (DeviceKeyDto::from(k), DeviceFieldsDto::from(f)))
+                .collect(),
+            changed: table.changed.iter().map(DeviceChangeDto::from).collect(),
+            ambiguous: table
+                .ambiguous
+                .iter()
+                .map(|a| AmbiguityNoteDto {
+                    key: DeviceKeyDto::from(&a.key),
+                    left_candidates: a.left_candidates,
+                    right_candidates: a.right_candidates,
+                })
+                .collect(),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeviceChangeDto {
+    key: DeviceKeyDto,
+    matched_by: MatchKindDto,
+    left: DeviceFieldsDto,
+    right: DeviceFieldsDto,
+    changed_fields: Vec<&'static str>,
+    com_objects: ComObjectTableDto,
+    parameters: ParameterTableDto,
+}
+
+impl From<&knx_diff::DeviceChange> for DeviceChangeDto {
+    fn from(change: &knx_diff::DeviceChange) -> Self {
+        Self {
+            key: DeviceKeyDto::from(&change.key),
+            matched_by: MatchKindDto::from(&change.matched_by),
+            left: DeviceFieldsDto::from(&change.left),
+            right: DeviceFieldsDto::from(&change.right),
+            changed_fields: change.changed_fields.clone(),
+            com_objects: convert_table(&change.com_objects),
+            parameters: convert_table(&change.parameters),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GroupRangeKeyDto {
+    start: u16,
+    end: u16,
+}
+
+impl From<&knx_diff::GroupRangeKey> for GroupRangeKeyDto {
+    fn from(key: &knx_diff::GroupRangeKey) -> Self {
+        Self {
+            start: key.start,
+            end: key.end,
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GroupRangeFieldsDto {
+    name: String,
+    start: u16,
+    end: u16,
+    parent: Option<GroupRangeKeyDto>,
+}
+
+impl From<&knx_diff::GroupRangeFields> for GroupRangeFieldsDto {
+    fn from(fields: &knx_diff::GroupRangeFields) -> Self {
+        Self {
+            name: fields.name.clone(),
+            start: fields.start,
+            end: fields.end,
+            parent: fields.parent.as_ref().map(GroupRangeKeyDto::from),
+        }
+    }
+}
+
+type GroupRangeTableDto = EntityTableDto<GroupRangeKeyDto, GroupRangeFieldsDto>;
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GroupAddressKeyDto {
+    ets_id: Option<String>,
+    address: String,
+}
+
+impl From<&knx_diff::GroupAddressKey> for GroupAddressKeyDto {
+    fn from(key: &knx_diff::GroupAddressKey) -> Self {
+        Self {
+            ets_id: key.ets_id.clone(),
+            address: key.address.clone(),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GroupAddressFieldsDto {
+    name: String,
+    central: bool,
+    unfiltered: bool,
+    range: Option<GroupRangeKeyDto>,
+}
+
+impl From<&knx_diff::GroupAddressFields> for GroupAddressFieldsDto {
+    fn from(fields: &knx_diff::GroupAddressFields) -> Self {
+        Self {
+            name: fields.name.clone(),
+            central: fields.central,
+            unfiltered: fields.unfiltered,
+            range: fields.range.as_ref().map(GroupRangeKeyDto::from),
+        }
+    }
+}
+
+type GroupAddressTableDto = EntityTableDto<GroupAddressKeyDto, GroupAddressFieldsDto>;
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ComObjectKeyDto {
+    device: DeviceKeyDto,
+    number: u16,
+}
+
+impl From<&knx_diff::ComObjectKey> for ComObjectKeyDto {
+    fn from(key: &knx_diff::ComObjectKey) -> Self {
+        Self {
+            device: DeviceKeyDto::from(&key.device),
+            number: key.number,
+        }
+    }
+}
+
+/// One `ComObjectFields::links` entry: a group-address key plus the
+/// direction the communication object uses it in. `direction` is
+/// `Direction`'s `Debug` form (`"Send"`/`"Receive"`), same convention
+/// `knx_projection::GroupLinkNode::direction` already documents.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ComObjectLinkDto {
+    group_address: GroupAddressKeyDto,
+    direction: String,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ComObjectFieldsDto {
+    text: Option<String>,
+    description: Option<String>,
+    dpt: Option<String>,
+    read: Option<bool>,
+    write: Option<bool>,
+    transmit: Option<bool>,
+    update: Option<bool>,
+    communication: Option<bool>,
+    links: Vec<ComObjectLinkDto>,
+    module_instance: Option<String>,
+}
+
+impl From<&knx_diff::ComObjectFields> for ComObjectFieldsDto {
+    fn from(fields: &knx_diff::ComObjectFields) -> Self {
+        Self {
+            text: fields.text.clone(),
+            description: fields.description.clone(),
+            dpt: fields.dpt.clone(),
+            read: fields.read,
+            write: fields.write,
+            transmit: fields.transmit,
+            update: fields.update,
+            communication: fields.communication,
+            links: fields
+                .links
+                .iter()
+                .map(|(ga, direction)| ComObjectLinkDto {
+                    group_address: GroupAddressKeyDto::from(ga),
+                    direction: format!("{direction:?}"),
+                })
+                .collect(),
+            module_instance: fields.module_instance.clone(),
+        }
+    }
+}
+
+type ComObjectTableDto = EntityTableDto<ComObjectKeyDto, ComObjectFieldsDto>;
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ParameterKeyDto {
+    device: DeviceKeyDto,
+    ets_id: String,
+}
+
+impl From<&knx_diff::ParameterKey> for ParameterKeyDto {
+    fn from(key: &knx_diff::ParameterKey) -> Self {
+        Self {
+            device: DeviceKeyDto::from(&key.device),
+            ets_id: key.ets_id.clone(),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ParameterFieldsDto {
+    raw: String,
+}
+
+impl From<&knx_diff::ParameterFields> for ParameterFieldsDto {
+    fn from(fields: &knx_diff::ParameterFields) -> Self {
+        Self {
+            raw: fields.raw.clone(),
+        }
+    }
+}
+
+type ParameterTableDto = EntityTableDto<ParameterKeyDto, ParameterFieldsDto>;
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FieldChangeDto {
+    field: &'static str,
+    left: String,
+    right: String,
+}
+
+impl From<&knx_diff::FieldChange> for FieldChangeDto {
+    fn from(change: &knx_diff::FieldChange) -> Self {
+        Self {
+            field: change.field,
+            left: change.left.clone(),
+            right: change.right.clone(),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InstallationDiffDto {
+    id: u8,
+    status: EntityStatusDto,
+    field_changes: Vec<FieldChangeDto>,
+    areas: AreaTableDto,
+    lines: LineTableDto,
+    devices: DeviceTableDto,
+    group_ranges: GroupRangeTableDto,
+    group_addresses: GroupAddressTableDto,
+    buildings: BuildingTableDto,
+}
+
+impl From<&knx_diff::InstallationDiff> for InstallationDiffDto {
+    fn from(diff: &knx_diff::InstallationDiff) -> Self {
+        Self {
+            id: diff.id,
+            status: EntityStatusDto::from(&diff.status),
+            field_changes: diff
+                .field_changes
+                .iter()
+                .map(FieldChangeDto::from)
+                .collect(),
+            areas: convert_table(&diff.areas),
+            lines: convert_table(&diff.lines),
+            devices: DeviceTableDto::from(&diff.devices),
+            group_ranges: convert_table(&diff.group_ranges),
+            group_addresses: convert_table(&diff.group_addresses),
+            buildings: convert_table(&diff.buildings),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ProjectDiffDto {
+    info_changes: Vec<FieldChangeDto>,
+    installations: Vec<InstallationDiffDto>,
+}
+
+impl From<&knx_diff::ProjectDiff> for ProjectDiffDto {
+    fn from(diff: &knx_diff::ProjectDiff) -> Self {
+        Self {
+            info_changes: diff.info_changes.iter().map(FieldChangeDto::from).collect(),
+            installations: diff
+                .installations
+                .iter()
+                .map(InstallationDiffDto::from)
+                .collect(),
+        }
+    }
+}
+
+/// Compares the server's live, possibly edited, in-memory project against
+/// the `.knxdb` file at `body.path` — "what would Save change", not a
+/// comparison of two files on disk (design spec
+/// `docs/superpowers/specs/2026-09-10-project-diff-design.md` §7). `path`
+/// is resolved with `resolve_project_path`, a *read* of a file that must
+/// already exist — same function `import_project`/`open_native_project`
+/// use, never `resolve_new_project_path`.
+///
+/// Every failure `domain::diff_project_impl` can return — "no project
+/// open" or "comparison file does not exist" — is the caller's to fix
+/// relative to a project that may already be open. That is different from
+/// `import_project`/`open_native_project`, which read the *only* project a
+/// route establishes, so *their* failures are environment problems mapped
+/// to `ApiError::internal` (`errors.rs`'s own documented 400/500 split).
+/// This route therefore maps its whole result to `ApiError::bad_request`
+/// instead — the same uniform mapping `export_documentation` above already
+/// uses. Do not "fix" this back to `ApiError::internal` by analogy with
+/// `import_project`/`open_native_project` without re-reading this comment
+/// first.
+async fn diff_project(
+    State(state): State<SharedState>,
+    Json(body): Json<PathBody>,
+) -> Result<Json<ProjectDiffDto>, ApiError> {
+    let path = resolve_project_path(&state.data_dir, &body.path)?;
+    domain::diff_project_impl(&state, &path)
+        .map(|diff| ProjectDiffDto::from(&diff))
         .map(Json)
         .map_err(ApiError::bad_request)
 }

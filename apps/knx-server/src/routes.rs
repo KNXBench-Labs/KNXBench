@@ -35,6 +35,10 @@ pub fn project_routes() -> Router<SharedState> {
             post(export_group_addresses_csv),
         )
         .route(
+            "/api/project/documentation-export",
+            post(export_documentation),
+        )
+        .route(
             "/api/group-addresses/csv-import",
             post(import_group_addresses_csv),
         )
@@ -421,6 +425,55 @@ async fn export_group_addresses_csv(
     domain::export_group_addresses_csv_impl(&state, &path)
         .map(|export| CsvExportReportDto {
             warnings: export.warnings.iter().map(CsvProblemDto::from).collect(),
+        })
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+/// `ReportWarning` (`knx-report`) does not derive `Serialize` — that crate
+/// has no `serde` dependency at all, deliberately (see its own module
+/// docs) — so it gets the same explicit at-the-boundary conversion
+/// `CsvProblemDto`/`ExportWarningDto` above use.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DocumentationWarningDto {
+    location: String,
+    detail: String,
+}
+
+impl From<&knx_report::ReportWarning> for DocumentationWarningDto {
+    fn from(warning: &knx_report::ReportWarning) -> Self {
+        Self {
+            location: warning.location.clone(),
+            detail: warning.detail.clone(),
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DocumentationExportReportDto {
+    warnings: Vec<DocumentationWarningDto>,
+}
+
+/// Writes the live project as one self-contained "project documentation"
+/// HTML file to `body.path` (`crates/knx-report`) — never called an "ETS
+/// report" anywhere, because no ETS-produced sample exists in this
+/// repository to be compatible with (see `knx-report`'s own module docs).
+/// `path` is a fresh write target, resolved exactly like
+/// `/api/group-addresses/csv-export`'s.
+async fn export_documentation(
+    State(state): State<SharedState>,
+    Json(body): Json<PathBody>,
+) -> Result<Json<DocumentationExportReportDto>, ApiError> {
+    let path = resolve_new_project_path(&state.data_dir, &body.path)?;
+    domain::export_documentation_impl(&state, &path)
+        .map(|report| DocumentationExportReportDto {
+            warnings: report
+                .warnings
+                .iter()
+                .map(DocumentationWarningDto::from)
+                .collect(),
         })
         .map(Json)
         .map_err(ApiError::bad_request)

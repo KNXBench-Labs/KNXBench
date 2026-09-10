@@ -122,3 +122,28 @@
   (branch `worktree-building-part-crud`, T8 building-part CRUD, 7 commits
   unmerged, untouched, unrelated to this plan) and `.worktrees/session3-ets-import`
   (0 commits ahead of `main`, clean, stale).
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 13:15
+- **Completed:** Finished and merged `worktree-building-part-crud` (T8, building-part CRUD) to `main` as merge commit `13e084e`. Per `/goal`, resumed the plan
+  (`docs/superpowers/plans/2026-09-08-building-part-crud.md`) via subagent-driven-development: Task 7 (`ProjectExplorer.tsx` create UI, briefed in an earlier
+  session but never dispatched/committed — re-dispatched fresh) landed as `049a49c`; Task 8 (`Inspector.tsx` rename/delete/move UI) as `11d3970`; Task 9 (docs
+  closeout) as `c85cbf1`, after ruling out its brief's stale `.ai/CURRENT_STATE.md`-replace instruction (the file didn't exist on this branch's fork point,
+  predating this session's other-plan merge) and its stale doc-anchor references — both rulings independently confirmed by the task reviewer. Final
+  whole-branch review (sonnet, fork `e8bea7f`..`c85cbf1`, 10 commits): 0 Critical/Important, 3 Minor (2 already-deferred cosmetic items, 1 pre-existing
+  repo-wide `cargo fmt` drift present at the fork point, not a regression). Merge resolved the anticipated conflict in
+  `crates/knx-store/src/command_sync.rs` (this branch's 4 `BuildingPart`-command no-op stub arms vs. `main`'s independently-added
+  `SetComObjectFlag`/`RestoreComObjectFlag` stub arm, both inserted after `UnlinkComObject` — kept both, no semantic overlap) plus two doc conflicts in
+  `docs/GAP_ANALYSIS_ETS.md`/`docs/IMPLEMENTATION_STATUS.md` (kept `main`'s T7/T24 entries, added this branch's new T8 entry). Post-merge gates all green:
+  `cargo build --workspace`, `cargo test --workspace` (all crates, 0 failed), `cargo clippy --workspace --all-targets -- -D warnings` (clean except the two
+  known pre-existing `large_enum_variant` errors on `knx-etsproj`'s `Frame` enum), `cargo run -p xtask -- check-layering` (clean), `npx tsc --noEmit` (clean),
+  `npx vitest run` (104/104). `crates/knx-core` gains `Command::CreateBuildingPart`/`DeleteBuildingPart`/`RenameBuildingPart`/`MoveDeviceToBuildingPart`;
+  `apps/knx-web` gains create/rename/delete/move UI for building parts in `ProjectExplorer.tsx`/`Inspector.tsx`. Closes **T8**/**B4**
+  ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)).
+- **Pending/Next Steps:** Push `main` to `origin/main`. Clean up the `worktree-building-part-crud` branch and its worktree at
+  `.claude/worktrees/building-part-crud`, and delete the plan's `.superpowers/sdd/2026-09-08-building-part-crud/` workspace, once the push is confirmed.
+  Remaining worktree: `.worktrees/session3-ets-import` (0 commits ahead of `main`, clean, stale) — no action needed unless picked up. T9 (bulk/multi-select
+  operations, needing a `Command::Batch` design) is the next natural Tier-2 backlog pick if continuing this track; the pre-existing repo-wide `cargo fmt`
+  drift flagged by this branch's final review is a genuine, out-of-scope follow-up (not started, not requested).
+- **Notes for Codex:** Nothing gate-blocking left on `main` post-merge. The `command_sync.rs` non-exhaustive-match pattern (a stub arm per new `Command`
+  variant, "persistence layer not yet implemented" convention) now has both this session's and the prior session's additions reconciled side by side —
+  keep following that convention for any new `Command` variant until the store's real persistence layer catches up.

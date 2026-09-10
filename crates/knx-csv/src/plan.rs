@@ -203,7 +203,7 @@ fn innermost_containing_range(
 mod tests {
     use super::*;
     use crate::read::parse_group_addresses;
-    use crate::testutil::{empty_project, entry, range};
+    use crate::testutil::{empty_project, entry, entry_with_flags, range};
     use knx_core::{GroupAddressId, GroupAddressStyle};
 
     fn parsed(text: &str) -> ParsedCsv {
@@ -414,6 +414,76 @@ mod tests {
         assert_eq!(plan.report.created, 1);
         assert_eq!(plan.report.updated, 1);
         assert_eq!(plan.report.unchanged, 1);
+    }
+
+    #[test]
+    fn an_empty_central_cell_on_update_leaves_an_existing_true_alone() {
+        let mut project = empty_project(GroupAddressStyle::Free);
+        project.installations[0]
+            .group_addresses
+            .push(entry_with_flags(1, 100, "Kitchen Light", true, true));
+
+        // No Central/Unfiltered column at all, so both cells read as `None`
+        // ("empty") for every row — this is the case `unwrap_or(false)` and
+        // `unwrap_or(existing.central)` disagree on, so a name-only update
+        // must still carry the *existing* `true` through untouched.
+        let plan = plan_import(&project, &parsed("Address,Name\n100,New Name\n"));
+
+        let Some(Command::Batch(cmds)) = plan.command else {
+            panic!("expected a Batch command, got {:?}", plan.command);
+        };
+        assert_eq!(
+            cmds[0],
+            Command::UpdateGroupAddress {
+                id: GroupAddressId(1),
+                name: "New Name".to_string(),
+                central: true,
+                unfiltered: true,
+            }
+        );
+    }
+
+    #[test]
+    fn an_explicit_false_cell_on_update_flips_an_existing_true() {
+        let mut project = empty_project(GroupAddressStyle::Free);
+        project.installations[0]
+            .group_addresses
+            .push(entry_with_flags(1, 100, "Kitchen Light", true, true));
+
+        let text = "Address,Name,Central,Unfiltered\n100,Kitchen Light,false,true\n";
+        let plan = plan_import(&project, &parsed(text));
+
+        assert_eq!(plan.report.updated, 1, "{:?}", plan.report);
+        let Some(Command::Batch(cmds)) = plan.command else {
+            panic!("expected a Batch command, got {:?}", plan.command);
+        };
+        assert_eq!(
+            cmds[0],
+            Command::UpdateGroupAddress {
+                id: GroupAddressId(1),
+                name: "Kitchen Light".to_string(),
+                central: false,
+                unfiltered: true,
+            }
+        );
+    }
+
+    #[test]
+    fn an_empty_central_cell_on_create_applies_false() {
+        let project = empty_project(GroupAddressStyle::Free);
+        // Unlike the update case above, a brand-new row has no existing
+        // value to fall back to, so an empty cell must apply `false`, not
+        // leave anything alone.
+        let plan = plan_import(&project, &parsed("Address,Name\n100,Kitchen Light\n"));
+
+        let Some(Command::Batch(cmds)) = plan.command else {
+            panic!("expected a Batch command, got {:?}", plan.command);
+        };
+        let Command::CreateGroupAddress { entry } = &cmds[0] else {
+            panic!("expected CreateGroupAddress, got {:?}", cmds[0]);
+        };
+        assert!(!entry.central, "expected central to default to false");
+        assert!(!entry.unfiltered, "expected unfiltered to default to false");
     }
 
     #[test]

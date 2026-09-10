@@ -185,13 +185,19 @@ mod tests {
     }
 
     fn reference_ets4_bytes() -> Vec<u8> {
-        std::fs::read(workspace_root().join("Unser Zuhause ets4 - 2025-12-15.knxproj"))
-            .expect("reference ETS4 project is committed at the workspace root")
+        std::fs::read(
+            workspace_root()
+                .join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj"),
+        )
+        .expect("reference ETS4 project is committed at the workspace root")
     }
 
     fn reference_ets6_bytes() -> Vec<u8> {
-        std::fs::read(workspace_root().join("Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj"))
-            .expect("reference ETS6 project is committed at the workspace root")
+        std::fs::read(
+            workspace_root()
+                .join("OriginalData/DemoProjects/Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj"),
+        )
+        .expect("reference ETS6 project is committed at the workspace root")
     }
 
     #[test]

@@ -40,11 +40,11 @@ pub fn workspace_root() -> PathBuf {
 }
 
 pub fn reference_ets4_path() -> PathBuf {
-    workspace_root().join("Unser Zuhause ets4 - 2025-12-15.knxproj")
+    workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
 }
 
 pub fn reference_ets6_path() -> PathBuf {
-    workspace_root().join("Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj")
+    workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj")
 }
 
 /// The `xknxproject` reference dump used by the oracle comparison (Task 17).

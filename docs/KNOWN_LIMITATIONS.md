@@ -925,7 +925,9 @@ still open) would play for import.
 
 ## 36. Session log (T11): the Log tab was unreachable without an open project, and had no growth cap — resolved (2026-09-10)
 
-**Resolved.** Two independent fixes, one commit each.
+**Resolved.** Two independent fixes: Part A in one commit, Part B in two —
+its drop counter needed a follow-up correction, described at the end of
+Part B below.
 
 Part A: `apps/knx-web/src/App.tsx`'s "Log" toolbar button is
 unconditionally enabled, and the `.workspace` slot now renders whenever

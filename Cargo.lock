@@ -1846,6 +1846,7 @@ version = "0.0.0"
 dependencies = [
  "knx-app",
  "knx-core",
+ "knx-csv",
  "knx-etsproj",
  "knx-net",
  "knx-productdb",

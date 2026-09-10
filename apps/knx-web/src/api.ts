@@ -121,6 +121,38 @@ export function renameGroupRange(id: number, name: string): Promise<ProjectTree>
   return request(`/api/group-ranges/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });
 }
 
+export function createBuildingPart(
+  name: string,
+  kind: string,
+  parentId?: number,
+): Promise<ProjectTree> {
+  return request("/api/building-parts", {
+    method: "POST",
+    body: JSON.stringify({ name, kind, parentId }),
+  });
+}
+
+export function deleteBuildingPart(id: number): Promise<ProjectTree> {
+  return request(`/api/building-parts/${id}`, { method: "DELETE" });
+}
+
+export function renameBuildingPart(id: number, name: string): Promise<ProjectTree> {
+  return request(`/api/building-parts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function moveDeviceToBuildingPart(
+  deviceId: number,
+  partId: number | null,
+): Promise<ProjectTree> {
+  return request("/api/move-device-to-building-part", {
+    method: "POST",
+    body: JSON.stringify({ deviceId, partId }),
+  });
+}
+
 // `direction` is `"Send"` or `"Receive"` — the same strings
 // `ComObjectNode.links[].direction` already carries (both sides format
 // `knx_core::Direction`'s `Debug` form), so a link read from the Inspector

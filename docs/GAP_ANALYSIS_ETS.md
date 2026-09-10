@@ -277,9 +277,21 @@ Each task: **what**, **why**, **depends on**.
   scheme 20 is still unverified, see COMPATIBILITY.md §3); resolves
   [KNOWN_LIMITATIONS.md §35](KNOWN_LIMITATIONS.md#35-device-creation-enrichmentissues-are-silently-dropped);
   extends **D3**.
-- **T8. Building-part CRUD commands.** `CreateBuildingPart`/
-  `DeleteBuildingPart`/`RenameBuildingPart`/`MoveDeviceToBuildingPart`.
-  Closes **B4**.
+- **T8. Building-part CRUD commands. Done (2026-09-08).**
+  `CreateBuildingPart`/`DeleteBuildingPart`/`RenameBuildingPart`/
+  `MoveDeviceToBuildingPart` land in `knx-core`, mirroring
+  `CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange`'s flat-list
+  tree-CRUD shape — `installation.buildings` was already a flat
+  `Vec<BuildingPart>` linked by `parent`/`children` ids, so no new
+  nesting logic was needed, only the commands to mutate it. Building
+  placement, unlike topology placement, isn't exhaustive: a device can
+  have zero or one building part, so `MoveDeviceToBuildingPart`
+  targeting `None` means "not placed" rather than a tracked
+  "unassigned" bucket the way `MoveDeviceToLine` has one. `apps/knx-web`
+  gains a building-part create row in the Project Explorer (unbounded
+  nesting depth, unlike group ranges' observed two levels) and a
+  rename/delete/move UI in the Inspector, mirroring `GroupRangeInspector`/
+  `LineMoveField`. Closes **B4**.
 - **T9. Bulk/multi-select operations.** Multi-select in the Project
   Explorer (devices, group addresses) plus batch variants of existing
   single-entity commands (batch address reassignment, batch delete).

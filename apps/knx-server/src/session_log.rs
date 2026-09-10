@@ -139,6 +139,59 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
     entries
 }
 
+/// Converts one `CsvImportReport` (T12 — CSV group-address import,
+/// `knx_csv::plan_import`) into its problem/ignored-column entries.
+/// Deliberately the same shape as `from_import_report` above: the success
+/// summary is NOT included here — the caller (`domain.rs`) appends that
+/// separately, once it knows whether the import as a whole was accepted
+/// (design §4's all-or-nothing rule means "planned cleanly" and "actually
+/// applied" can differ only in the row-error case, which the caller alone
+/// resolves).
+///
+/// Order: `report.problems`, then `report.ignored_columns` — what might be
+/// wrong before what was merely not applied, the same "wrong before
+/// unhandled" order `from_import_report` uses for its own categories.
+/// Neither list is ever dropped for being "only" a warning or "only" an
+/// ignored column (CLAUDE.md: never silently discard information).
+pub fn from_csv_import_report(report: &knx_csv::CsvImportReport) -> Vec<LogEntry> {
+    let mut entries = Vec::new();
+
+    for problem in &report.problems {
+        let kind = match problem.severity {
+            knx_csv::Severity::Error => "error",
+            knx_csv::Severity::Warning => "warning",
+        };
+        entries.push(LogEntry {
+            timestamp: now(),
+            severity: match problem.severity {
+                knx_csv::Severity::Error => Severity::Error,
+                knx_csv::Severity::Warning => Severity::Warning,
+            },
+            source: format!("csv-import:{kind}"),
+            message: problem.detail.clone(),
+            location: problem.row.map(|row| format!("row {row}")),
+            detail: None,
+        });
+    }
+
+    for ignored in &report.ignored_columns {
+        let reason = match ignored.reason {
+            knx_csv::IgnoredColumnReason::ExportOnly => "export-only column, not applied on import",
+            knx_csv::IgnoredColumnReason::Unknown => "unrecognized column",
+        };
+        entries.push(LogEntry {
+            timestamp: now(),
+            severity: Severity::Info,
+            source: "csv-import:ignored-column".to_string(),
+            message: format!("column '{}' ignored ({reason})", ignored.name),
+            location: None,
+            detail: None,
+        });
+    }
+
+    entries
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -296,5 +349,50 @@ mod tests {
         assert_eq!(json["message"], "m");
         assert_eq!(json["location"], "/x");
         assert!(json["detail"].is_null());
+    }
+
+    #[test]
+    fn csv_import_report_maps_problems_then_ignored_columns_in_order() {
+        let report = knx_csv::CsvImportReport {
+            separator: ',',
+            rows_read: 2,
+            created: 1,
+            updated: 0,
+            unchanged: 1,
+            ignored_columns: vec![knx_csv::IgnoredColumn {
+                name: "DatapointType".into(),
+                reason: knx_csv::IgnoredColumnReason::ExportOnly,
+            }],
+            problems: vec![
+                knx_csv::CsvProblem {
+                    row: Some(3),
+                    severity: knx_csv::Severity::Error,
+                    detail: "name missing".into(),
+                },
+                knx_csv::CsvProblem {
+                    row: Some(4),
+                    severity: knx_csv::Severity::Warning,
+                    detail: "no range contains this address".into(),
+                },
+            ],
+        };
+
+        let entries = from_csv_import_report(&report);
+        assert_eq!(entries.len(), 3);
+
+        assert_eq!(entries[0].severity, Severity::Error);
+        assert_eq!(entries[0].source, "csv-import:error");
+        assert_eq!(entries[0].message, "name missing");
+        assert_eq!(entries[0].location.as_deref(), Some("row 3"));
+
+        assert_eq!(entries[1].severity, Severity::Warning);
+        assert_eq!(entries[1].source, "csv-import:warning");
+        assert_eq!(entries[1].message, "no range contains this address");
+        assert_eq!(entries[1].location.as_deref(), Some("row 4"));
+
+        assert_eq!(entries[2].severity, Severity::Info);
+        assert_eq!(entries[2].source, "csv-import:ignored-column");
+        assert!(entries[2].message.contains("DatapointType"));
+        assert!(entries[2].location.is_none());
     }
 }

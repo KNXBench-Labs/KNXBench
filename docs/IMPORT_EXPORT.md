@@ -492,3 +492,103 @@ explicit whether anything was actually saved. Web: two toolbar buttons in
 the group-address view (`GroupAddressCsvButtons.tsx`).
 
 Design record: `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.
+
+## 12. Project documentation export
+
+**This is KNXBench's own document, not an ETS report.** ETS can print
+topology, building, device, and group-address reports to paper or PDF, but
+no ETS-produced report sample — no PDF, no printout, no exported document
+of any kind — exists anywhere in this repository, and `docs/RESEARCH.md`
+has no section on ETS's report layout. So this feature is never called an
+"ETS report" or a replacement for one, in code, docs, UI text, or CLI
+output, and its content is chosen from what this domain model actually
+holds, not from a remembered ETS layout. The same rule §11 states for the
+CSV format applies here.
+
+Implemented in `crates/knx-report`, a pure crate depending only on
+`knx-core`, `knx-projection`, and `chrono` — no filesystem, HTTP, SQLite,
+or system-clock access. Its one entry point:
+
+```rust
+pub fn render_html(project: &Project, options: &ReportOptions) -> HtmlReport;
+```
+
+`ReportOptions::generated_at` is the only source of "now" — server, CLI,
+and tests each supply their own, so the same project and timestamp always
+render to byte-identical HTML. `HtmlReport` carries the rendered `html`
+`String` plus `warnings: Vec<ReportWarning>` — one entry per structural
+oddity the walk finds (a device in no line, a group address in no range, a
+building part with a dangling parent, an orphaned communication object, a
+link to a group address that does not exist, or a malformed
+`Override::Malformed` field). `render_html` cannot fail: a non-empty
+`warnings` list describes problems in the *project*, never an error in
+rendering, and every warning is rendered inline in the document itself as
+well as returned to the caller — CLAUDE.md's "never silently discard
+information" applied to an artifact that must carry its own caveats even
+if a caller discards `warnings`.
+
+**The document is one self-contained UTF-8 HTML file.** No JavaScript, no
+external assets (no images, no web fonts, no network URLs of any kind),
+one inline `<style>` block. It survives being emailed, copied to a USB
+stick, or opened on a machine with no network. It contains no animation or
+transition — a printed page cannot offer a toggle, so it has nothing that
+would need one.
+
+**Sections, in order:** Header (project name/number, group-address style,
+completion, last modified, project start, ETS/domain schema versions, plus
+the generation timestamp) — Contents (an anchor list) — Summary (counts:
+installations, areas, lines, devices, communication objects, group ranges,
+group addresses, building parts, parameter values) — Topology (area → line
+→ device, plus devices assigned to no line) — Buildings (the flat
+parent/children list resolved into its real nesting, each part's devices,
+plus any part whose parent does not resolve) — Group addresses (ranges
+nested main → middle, each address with its formatted form, name,
+`Central`/`Unfiltered`, and every linked communication object's device,
+object number, name, DPT and direction; plus addresses inside no range) —
+Devices (name, individual address, description, commissioning state, and
+the raw `product_ref`/`program_ref` identifiers, each device's
+communication objects with number, name, description, DPT, the resolved
+layer, the five flags, active state and links, plus any orphaned
+communication object) — "What this report does not contain".
+
+**A group address has no datapoint type of its own.** The DPT belongs to
+its linked communication objects, which may disagree, so the document
+lists each linked object's own DPT rather than printing one derived
+consensus value — a deliberately different computation from `knx-csv`'s
+`derive_dpt` (§11), answering a different question, so no logic is shared
+between the two crates.
+
+**The document states its own limits**, in its own last section, not only
+in this file: manufacturer, product and application-program names are not
+resolved (the identifiers are printed verbatim — resolving them needs
+`knx-productdb`, which this crate must not reach); parameter values and
+module-instance arguments are counted but not listed (they are
+uninterpreted, RESEARCH R3); binary data is referenced by name and id
+only; text renders in the project's default language only; and the
+document says plainly that it is not an ETS report and has not been
+compared to one.
+
+**PDF is produced by the browser's own print dialog**, not by KNXBench —
+the document ships `@media print` rules (no page breaks inside a table
+row, each top-level section starts a new page) for exactly that. There is
+no Rust PDF renderer in this workspace and none is planned; a browser
+already has one.
+
+**Surfaces.** Server: `POST /api/project/documentation-export {path}` →
+`{warnings}` (`apps/knx-server/src/routes.rs`), writing through the same
+`resolve_new_project_path` helper the `.knxproj` and CSV exports use, and
+logging one T11 session-log entry per warning under `source: "doc-export"`
+without resetting the log. CLI: `knx doc-export <store.knxdb> <out.html>`
+(`apps/knx-cli`), printing a summary and every warning, exiting `1` only
+when no file could be produced at all (a report with warnings is still a
+complete, correct report, so there is no separate warning exit code). Web:
+an "Export documentation…" button (`DocumentationExportButton.tsx`) in the
+same toolbar row as the `.knxproj` and CSV export controls.
+
+Not implemented, and recorded here rather than only in
+`KNOWN_LIMITATIONS.md`: PDF generation without a browser; an in-application
+print preview; section selection or filtering; multiple languages in one
+document; manufacturer/product/program name resolution; parameter and
+module-argument listings.
+
+Design record: `docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`.

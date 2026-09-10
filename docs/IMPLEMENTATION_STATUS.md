@@ -1600,3 +1600,105 @@ the doc/reality gap easier to notice, not the cause of it — see
 `KNOWN_LIMITATIONS.md`. Closes **T12**, **C2**
 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). Design spec:
 `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.
+
+**T13, project documentation export, HTML only (2026-09-10).** A new
+`crates/knx-report` crate — pure, depending only on `knx-core`,
+`knx-projection`, and `chrono`, with a matching `xtask check-layering`
+rule keeping it away from `knx-store`/`knx-etsproj`/`knx-productdb` and
+every `CORE_FORBIDDEN` dependency — renders a `&knx_core::Project` into
+one self-contained "project documentation" HTML file via its one public
+entry point, `render_html(&Project, &ReportOptions) -> HtmlReport`
+(`lib.rs`). `ReportOptions::generated_at` is the only source of "now"
+inside the crate, so the same project and timestamp always render to
+byte-identical HTML — the property a determinism test holds it to.
+`render_html` cannot fail: `HtmlReport::warnings` describes structural
+oddities *in the project* (a device in no line, a group address in no
+range, a building part with a dangling parent, a communication object
+owned by no device, a link naming a group address that does not exist,
+or an `Override::Malformed` field), never a rendering error, and every
+warning is rendered inline in the document's own body as well as
+returned to the caller (CLAUDE.md: never silently discard information).
+Internally split into `model.rs` (pure derived indices — the building
+forest, group-range nesting, the group-address → communication-object
+inverse index, every orphan list — unit-testable without an angle
+bracket) and `render.rs` (walks `&Project` plus those indices into HTML).
+Eight sections in one document: Header, Contents, Summary, Topology,
+Buildings, Group addresses, Devices, and "What this report does not
+contain" — the device section deliberately reads from two sources, not
+one: most fields come from `knx_projection::build_device_detail`
+(already resolving a communication object's text/description/DPT through
+the string table and provenance layers, and its links to formatted
+addresses — reusing it rather than duplicating that resolution), but
+`commissioning`, `product_ref`, `program_ref`, and `binary_data` are not
+in what that function returns, so those four are read directly off
+`project.devices.get(id)` in the same loop. **This is KNXBench's own
+document, never called, described, or commit-messaged as an ETS report**
+(`crates/knx-report/src/lib.rs`'s own module doc states this) — no
+ETS-produced report sample of any kind (PDF, printout, or export) exists
+anywhere in this repository, and `docs/RESEARCH.md` has no section on
+ETS's report layout, the same evidence gap T12's CSV format already
+documents (`KNOWN_LIMITATIONS.md §38`). A group address has no datapoint
+type of its own in this domain model, so rather than printing one
+guessed consensus DPT, the document lists every linked communication
+object with its own DPT — a deliberately different computation from
+`knx-csv`'s `derive_dpt` (which answers "is there a unanimous DPT?" for a
+CSV column), so no logic is shared between the two crates. The document
+is one self-contained UTF-8 file: no JavaScript, no external assets, one
+inline `<style>` block with an `@media print` rule (no page breaks inside
+a table row, each top-level section starts a new page) and no animation
+or transition of any kind — PDF comes from the browser's own print
+dialog, not from KNXBench, since no Rust PDF renderer exists in this
+workspace and none is planned. Surfaces: `POST
+/api/project/documentation-export {path} -> {warnings}`
+(`apps/knx-server/src/routes.rs`), writing through the same
+`resolve_new_project_path` helper the `.knxproj`/CSV exports use and
+logging one T11 session-log entry per warning under `source:
+"doc-export"` without resetting the log; `knx doc-export
+<store.knxdb> <out.html>` (`apps/knx-cli`), printing a summary and every
+warning and exiting `1` only when no file could be produced at all (a
+report with warnings is still a complete, correct report, so there is no
+separate warning exit code); an "Export documentation…" button
+(`DocumentationExportButton.tsx`, `apps/knx-web`) in the same toolbar row
+as the `.knxproj`/CSV export controls. Tests, every count re-verified via
+`cargo test -p <crate> -- --list` at documentation time: `knx-report`'s
+own suite (`html.rs`, `model.rs`, `render.rs`) is 43 tests, covering
+determinism, escaping of `&`/`<`/`>`/`"`/`'` in device/group-address/
+building-part names, self-containment (no `<script`, no `http://`/
+`https://`, no `transition:`/`animation:`), every orphan/dangling-
+reference finding, and that every device/group-address/building-part
+name in a small project appears exactly once; `apps/knx-server/tests/
+http_documentation_export.rs` (4 tests: a successful export, a
+warning-generating export with session-log entries, a
+path-outside-data-directory rejection, and the no-project-open 400 case);
+`apps/knx-cli/tests/cli_documentation_export.rs` (4 tests, including
+per-warning printing and a missing-store exit-1 case);
+`DocumentationExportButton.test.tsx` (6 tests). A corpus-gated
+integration test,
+`rendering_the_reference_project_produces_a_complete_self_contained_document`
+(`crates/knx-app/tests/documentation_export.rs`), imports the reference
+`.knxproj` (36 devices, 907 communication objects, 514 group addresses on
+this corpus) and asserts: every group address's formatted string appears
+in the output; every device name appears, escaped; `<table>`/`</table>`
+and `<tr>`/`</tr>` counts balance; the Summary section's nine stated
+counts equal counts computed independently from the `Project`, not just
+re-read from the model; the output contains no `<script`, `http://`, or
+`https://`; and a second render with the same timestamp is
+byte-identical — a real proof against a project a hand-built fixture
+cannot exercise realistically (907 communication objects is large enough
+that a stray `HashMap` iteration would show up as flaky output). It lives
+in `knx-app`, not `knx-report`, for the same dev-dependency-layering
+reason `csv_roundtrip.rs` does: `check-layering` walks dev-dependency
+edges too, so a `knx-etsproj` dev-dependency inside `knx-report` would
+trip `knx-report`'s own rule, and `knx-app` is deliberately the one crate
+already permitted to see both sides. **Closed for HTML only**: printing
+from inside the application and native PDF generation (without a
+browser) remain open, and new `KNOWN_LIMITATIONS.md` entries (§44-§50)
+record those plus no ETS report parity, no manufacturer/product/program
+name resolution, no parameter/module-argument listing, single-language
+rendering, and no section selection. Closes **T13**, **D4**
+([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). `ROADMAP.md` was checked
+and names neither T13 nor D4, so it was left untouched by this task (a
+separate, unrelated memo about future motion/animation style direction
+was added to its existing Motion and animation section, at explicit
+request, mid-task). Design spec:
+`docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`.

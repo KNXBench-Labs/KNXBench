@@ -1,5 +1,5 @@
 - **Last Agent:** Claude
-- **Timestamp:** 2026-09-10 11:20
+- **Timestamp:** 2026-09-10 11:35
 - **Completed:** Task 4 of `docs/superpowers/plans/2026-09-09-standalone-product-database-install.md`
   ("Make catalog creation and diagnostics honest in the web flow"), on
   branch `codex/catalog-creation-diagnostics` (base `41cb144`, Tasks 1-3
@@ -33,6 +33,25 @@
   product install and creation diagnostics` (server/productdb),
   `feat(catalog): install product packages and show diagnostics in the
   browser` (web).
+  **Fix loop (review):** two Important findings fixed and re-verified.
+  (1) `CreationDiagnostic`/`CreationDiagnosticDto` now carry a server-
+  populated `detail: String` (via `CreationDiagnostic::detail()`),
+  paralleling `ProductDbError::Package`'s `detail` convention;
+  `CatalogBrowser.tsx` dropped its client-side `formatDiagnostic()` and
+  renders `diagnostic.detail` directly. (2) `from_enrichment`'s
+  `EnrichmentIssue::ProgramMissing` arm no longer mismaps onto
+  `ComObjectRefMissing` — it now has its own
+  `CreationDiagnostic::ProgramRefMissing { program_ref }`, with a new
+  unit test (`from_enrichment_keeps_program_and_com_object_issues_
+  distinct`) pinning both mappings. Re-ran `cargo test -p knx-server
+  --lib` (14/14), `--test http_device_routes --test
+  http_product_install` (9/9 + 3/3), `npm test -- CatalogBrowser
+  api.test.ts` (34/34), `npm run build` (green) — all pass. Committed as
+  `fix(server): give creation diagnostics a real detail string and a
+  correct ProgramMissing mapping` and `fix(web): render server-supplied
+  diagnostic detail instead of reformatting client-side`. Fix report
+  appended to `.superpowers/sdd/2026-09-09-standalone-product-database-
+  install/task-4-report.md`.
 - **Pending/Next Steps:** Task 5 of the same plan — reconcile
   `docs/IMPLEMENTATION_STATUS.md`, `docs/KNOWN_LIMITATIONS.md`,
   `docs/ROADMAP.md`, `docs/GAP_ANALYSIS_ETS.md`, `docs/COMPATIBILITY.md`

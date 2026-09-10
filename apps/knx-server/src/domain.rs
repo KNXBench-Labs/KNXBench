@@ -26,6 +26,18 @@ pub struct AppState {
     /// from, if any. `None` until `save_project_as`/`open_native_project`
     /// sets it; plain `save_project` requires it already set.
     pub store_path: Mutex<Option<PathBuf>>,
+    /// Opaque passthrough entries + manufacturer manifest carried by the
+    /// current project, if any. `open_project` (ETS import) fills this from
+    /// the throwaway in-memory store before it's dropped; `open_native_project`
+    /// fills it from the `.knxdb` just loaded. Every `save_project`/
+    /// `save_project_as` writes it back into the target `.knxdb` — without
+    /// this, a server-side ETS import followed by Save As silently produced
+    /// a `.knxdb` with empty opaque/manifest tables, since the import-time
+    /// connection was never the same one Save touched (see final review of
+    /// the export-UI plan, finding B1). `None` for a fresh, never-imported
+    /// project.
+    pub opaque: Mutex<Vec<knx_store::StoredOpaqueEntry>>,
+    pub manufacturer_refs: Mutex<Vec<knx_store::ManufacturerRef>>,
     /// Every applied command's inverse, for undo/redo. Reset to empty on
     /// `open_project`/`open_native_project` — undo history never survives
     /// loading a different project, and is never persisted to `.knxdb`.
@@ -59,6 +71,8 @@ impl AppState {
         Self {
             project: Mutex::new(None),
             store_path: Mutex::new(None),
+            opaque: Mutex::new(Vec::new()),
+            manufacturer_refs: Mutex::new(Vec::new()),
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             import_counts: Mutex::new((0, 0)),
             product_db,
@@ -98,15 +112,26 @@ fn apply_report_counts(tree: &mut ProjectTree, report: &knx_etsproj::ImportRepor
 /// (display + replaces `state`'s project) so there is exactly one import
 /// implementation instead of two. `product_db` is locked by the caller —
 /// this function only borrows it for the duration of the import call.
+type ImportedOpaqueData = (
+    Vec<knx_store::StoredOpaqueEntry>,
+    Vec<knx_store::ManufacturerRef>,
+);
+
 fn import_and_project(
     path: &Path,
     product_db: Option<&knx_productdb::Connection>,
-) -> Result<(ProjectTree, knx_core::Project), AppError> {
+) -> Result<(ProjectTree, knx_core::Project, ImportedOpaqueData), AppError> {
     let conn = knx_store::open_and_migrate_in_memory()?;
     let imported = knx_app::import_ets_project_with(path, &conn, ImportOptions { product_db })?;
     let mut tree = knx_projection::build_project_tree(&imported.project);
     apply_report_counts(&mut tree, &imported.report);
-    Ok((tree, imported.project))
+    // The opaque/manifest rows the import just wrote live only in `conn`,
+    // which is dropped at the end of this function — read them out now so
+    // a later `open_project` can carry them into `state` (see `AppState::opaque`'s
+    // doc comment for why this matters).
+    let opaque = knx_store::load_opaque(&conn)?;
+    let manufacturer_refs = knx_store::load_manufacturer_refs(&conn)?;
+    Ok((tree, imported.project, (opaque, manufacturer_refs)))
 }
 
 /// Imports `path` and projects it without touching `state` — what
@@ -115,42 +140,70 @@ fn import_and_project(
 /// from, and this path exists specifically for a server-free golden test
 /// whose counts must stay deterministic.
 pub fn open_project_impl(path: &Path) -> Result<ProjectTree, AppError> {
-    import_and_project(path, None).map(|(tree, _)| tree)
+    import_and_project(path, None).map(|(tree, ..)| tree)
 }
 
 /// Imports `path`, replaces `state`'s project, and resets undo history and
 /// import counts — what the `/api/project/import` route calls. Enriched
 /// from `state.product_db` when one is configured (the bonus fix this
 /// task adds: nothing previously wired a connection in for this path to
-/// use, unlike `knx import --product-db` on the CLI).
+/// use, unlike `knx import --product-db` on the CLI). Also carries the
+/// import's opaque passthrough + manufacturer manifest into `state.opaque`/
+/// `state.manufacturer_refs`, so a later Save doesn't silently drop them.
 pub fn open_project(state: &AppState, path: &Path) -> Result<ProjectTree, String> {
     let guard = state
         .product_db
         .as_ref()
         .map(|m| m.lock().expect("state mutex poisoned"));
-    let (tree, project) = import_and_project(path, guard.as_deref()).map_err(|e| e.to_string())?;
+    let (tree, project, (opaque, manufacturer_refs)) =
+        import_and_project(path, guard.as_deref()).map_err(|e| e.to_string())?;
     drop(guard);
     *state.project.lock().expect("state mutex poisoned") = Some(project);
     *state.command_stack.lock().expect("state mutex poisoned") = knx_core::CommandStack::new();
     *state.import_counts.lock().expect("state mutex poisoned") = (tree.errors, tree.warnings);
+    *state.opaque.lock().expect("state mutex poisoned") = opaque;
+    *state
+        .manufacturer_refs
+        .lock()
+        .expect("state mutex poisoned") = manufacturer_refs;
     Ok(tree)
 }
 
 /// Persists `project` to a fresh or existing `.knxdb` file at `path`,
-/// overwriting whatever it held.
-pub fn save_project_as_impl(path: &Path, project: &knx_core::Project) -> Result<(), String> {
+/// overwriting whatever it held. `opaque`/`manufacturer_refs` are written
+/// alongside it — empty slices are a harmless no-op insert, so a native
+/// (`.knxdb`-only) project with nothing to carry costs nothing extra. This
+/// is what makes a server-side ETS-import → Save-As → Export round trip
+/// keep its opaque passthrough and manufacturer manifest data instead of
+/// silently exporting an empty one (final review finding B1).
+pub fn save_project_as_impl(
+    path: &Path,
+    project: &knx_core::Project,
+    opaque: &[knx_store::StoredOpaqueEntry],
+    manufacturer_refs: &[knx_store::ManufacturerRef],
+) -> Result<(), String> {
     let conn = knx_store::open_and_migrate(path).map_err(|e| e.to_string())?;
-    knx_store::save_project(&conn, project).map_err(|e| e.to_string())
+    knx_store::save_project(&conn, project).map_err(|e| e.to_string())?;
+    knx_store::insert_opaque(&conn, opaque).map_err(|e| e.to_string())?;
+    knx_store::insert_manufacturer_refs(&conn, manufacturer_refs).map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// Shared by `open_native_project_impl` (display-only) and
 /// `open_native_project` (display + replaces `state`'s project) — same
-/// reasoning as `import_and_project` above.
-fn load_native(path: &Path) -> Result<(ProjectTree, knx_core::Project), String> {
+/// reasoning as `import_and_project` above. Also reads back
+/// opaque/manifest rows already on disk, so `state.opaque`/
+/// `state.manufacturer_refs` stay accurate after a native load too, not
+/// just after an ETS import.
+fn load_native(
+    path: &Path,
+) -> Result<(ProjectTree, knx_core::Project, ImportedOpaqueData), String> {
     let conn = knx_store::open_and_migrate(path).map_err(|e| e.to_string())?;
     let project = knx_store::load_project(&conn).map_err(|e| e.to_string())?;
+    let opaque = knx_store::load_opaque(&conn).map_err(|e| e.to_string())?;
+    let manufacturer_refs = knx_store::load_manufacturer_refs(&conn).map_err(|e| e.to_string())?;
     let tree = knx_projection::build_project_tree(&project);
-    Ok((tree, project))
+    Ok((tree, project, (opaque, manufacturer_refs)))
 }
 
 /// Loads a `.knxdb` file at `path` and projects it, without touching
@@ -158,17 +211,22 @@ fn load_native(path: &Path) -> Result<(ProjectTree, knx_core::Project), String> 
 /// reinterpreted from an external format — so `tree.errors`/`tree.warnings`
 /// stay at their default zero.
 pub fn open_native_project_impl(path: &Path) -> Result<ProjectTree, String> {
-    load_native(path).map(|(tree, _)| tree)
+    load_native(path).map(|(tree, ..)| tree)
 }
 
 /// Loads a `.knxdb` file at `path`, replaces `state`'s project, and points
 /// `store_path` at it — what the `/api/project/open` route calls.
 pub fn open_native_project(state: &AppState, path: &Path) -> Result<ProjectTree, String> {
-    let (tree, project) = load_native(path)?;
+    let (tree, project, (opaque, manufacturer_refs)) = load_native(path)?;
     *state.project.lock().expect("state mutex poisoned") = Some(project);
     *state.store_path.lock().expect("state mutex poisoned") = Some(path.to_path_buf());
     *state.command_stack.lock().expect("state mutex poisoned") = knx_core::CommandStack::new();
     *state.import_counts.lock().expect("state mutex poisoned") = (0, 0);
+    *state.opaque.lock().expect("state mutex poisoned") = opaque;
+    *state
+        .manufacturer_refs
+        .lock()
+        .expect("state mutex poisoned") = manufacturer_refs;
     Ok(tree)
 }
 
@@ -176,7 +234,12 @@ pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
     {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_ref().ok_or("no project open")?;
-        save_project_as_impl(path, project)?;
+        let opaque = state.opaque.lock().expect("state mutex poisoned");
+        let manufacturer_refs = state
+            .manufacturer_refs
+            .lock()
+            .expect("state mutex poisoned");
+        save_project_as_impl(path, project, &opaque, &manufacturer_refs)?;
     }
     *state.store_path.lock().expect("state mutex poisoned") = Some(path.to_path_buf());
     Ok(())
@@ -191,7 +254,65 @@ pub fn save_project(state: &AppState) -> Result<(), String> {
         .ok_or("no save location yet — use Save As")?;
     let project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_ref().ok_or("no project open")?;
-    save_project_as_impl(&path, project)
+    let opaque = state.opaque.lock().expect("state mutex poisoned");
+    let manufacturer_refs = state
+        .manufacturer_refs
+        .lock()
+        .expect("state mutex poisoned");
+    save_project_as_impl(&path, project, &opaque, &manufacturer_refs)
+}
+
+/// Exports the live in-memory project to a `.knxproj` file at `path`.
+/// Requires `store_path` already set (i.e. the project has been saved or
+/// opened as `.knxdb` at least once) — a workflow guarantee that the user
+/// has committed the current state to disk before exporting, not a data
+/// source: the opaque passthrough table and manufacturer manifest
+/// `export_ets_project` needs come from `state.opaque`/
+/// `state.manufacturer_refs` (the same live, in-memory copies every save
+/// path writes through), copied into a throwaway in-memory `.knxdb` for
+/// `export_ets_project`'s `Connection`-shaped interface. Earlier this
+/// re-opened `store_path` off disk instead, which (see
+/// `KNOWN_LIMITATIONS.md` #18) can lag the in-memory project — reading
+/// live state instead removes that staleness risk for this data, even
+/// though #18's broader "`store_path` names the wrong project" gap remains
+/// for `save_project` itself. The project content itself comes from
+/// `state.project` (live, possibly edited since the last save), not from
+/// re-loading the `.knxdb` file.
+pub fn export_project(
+    state: &AppState,
+    path: &Path,
+) -> Result<knx_etsproj::export::ExportOutcome, String> {
+    {
+        let store_path = state.store_path.lock().expect("state mutex poisoned");
+        if store_path.is_none() {
+            return Err(
+                "save the project as .knxdb first — export reads passthrough data from the saved store"
+                    .to_string(),
+            );
+        }
+    }
+    let opaque = state.opaque.lock().expect("state mutex poisoned");
+    let manufacturer_refs = state
+        .manufacturer_refs
+        .lock()
+        .expect("state mutex poisoned");
+    let conn = knx_store::open_and_migrate_in_memory().map_err(|e| e.to_string())?;
+    knx_store::insert_opaque(&conn, &opaque).map_err(|e| e.to_string())?;
+    knx_store::insert_manufacturer_refs(&conn, &manufacturer_refs).map_err(|e| e.to_string())?;
+    drop(opaque);
+    drop(manufacturer_refs);
+
+    let project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_ref().ok_or("no project open")?;
+    let product_db_guard = state
+        .product_db
+        .as_ref()
+        .map(|m| m.lock().expect("state mutex poisoned"));
+    let outcome = knx_app::export_ets_project(project, &conn, product_db_guard.as_deref())
+        .map_err(|e| e.to_string())?;
+    drop(product_db_guard);
+    std::fs::write(path, &outcome.bytes).map_err(|e| e.to_string())?;
+    Ok(outcome)
 }
 
 /// Projects one device's detail. `Err` names the device id when it no
@@ -1028,7 +1149,7 @@ mod tests {
             .unwrap();
         }
 
-        let (_, without) = import_and_project(&reference_project_path(), None).unwrap();
+        let (_, without, _) = import_and_project(&reference_project_path(), None).unwrap();
         let without_filled = without
             .devices
             .com_objects()

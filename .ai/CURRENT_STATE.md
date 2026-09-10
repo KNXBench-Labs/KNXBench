@@ -147,3 +147,56 @@
 - **Notes for Codex:** Nothing gate-blocking left on `main` post-merge. The `command_sync.rs` non-exhaustive-match pattern (a stub arm per new `Command`
   variant, "persistence layer not yet implemented" convention) now has both this session's and the prior session's additions reconciled side by side —
   keep following that convention for any new `Command` variant until the store's real persistence layer catches up.
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 (continued session)
+- **Completed:** T10 (wire up `export_ets_project` to a real interface, closes **C4**) via subagent-driven-development on branch `t10-export-ui`,
+  worktree `.worktrees/t10-export-ui`, plan `docs/superpowers/plans/2026-09-10-ets-project-export.md`. Task 1 (`knx-server` `POST /api/project/export`,
+  commit `89cd7ca`), Task 2 (`knx-cli` `knx export`, commit `6f5afea`), Task 3 (`knx-web` "Export to .knxproj…" button, commit `ad1aa5f` + fix round
+  `7a9e4c1` for a warning-toast-collapsing bug) all task-reviewed clean. The final whole-branch review (sonnet, `b0db80d..7a9e4c1`) found the branch
+  **NOT READY**: a genuine data-integrity bug (B1) — server-side ETS import used a throwaway in-memory store, so `save_project_as_impl` never
+  persisted opaque passthrough/manufacturer manifest data, and an Export taken after Save As on the server path silently lost that data with no
+  warning (1.7MB source → 29.9KB output) — plus a missing documentation closeout (B2). Fixed B1 as commit `9cdb7aa`: `AppState` now carries
+  `opaque`/`manufacturer_refs`, filled on both ETS import and native `.knxdb` load, and every save path writes them back into the target `.knxdb`;
+  added a regression test (`exported_project_still_carries_opaque_and_manufacturer_data_after_save_as`) that reimports the export and checks its
+  own opaque/manifest tables are non-empty, not just "the file exists". Fixed B2 in this update: `docs/GAP_ANALYSIS_ETS.md` (C4 marked closed with
+  the B1 caveat, T10 backlog entry struck through), `docs/IMPLEMENTATION_STATUS.md` (new T10 entry). `docs/COMPATIBILITY.md` needed no change (its
+  export claims are byte-level roundtrip claims, unrelated to UI wiring). Gates: `cargo fmt --all --check` clean, `cargo test -p knx-server -p
+  knx-cli` all green (30/30 + 13/13).
+- **Pending/Next Steps:** Dispatch a follow-up whole-branch re-review confirming READY TO MERGE, then merge `t10-export-ui` to `main` and clean up
+  this plan's worktree/`.superpowers/sdd/2026-09-10-ets-project-export/` workspace per `finishing-a-development-branch`. Not yet pushed or merged as
+  of this entry. After T10 lands: T9 (bulk/multi-select operations, `Command::Batch` design) is the next natural Tier-2 pick; `GAP_ANALYSIS_ETS.md`'s
+  B8-B11 and most of Section C/D/E/F gaps remain genuinely open.
+- **Notes for Codex:** If you pick this branch up before it's merged, re-run `cargo test -p knx-server` first — the new regression test
+  (`http_export_route.rs`) is the one that would have caught B1 originally; trust it over eyeballing the diff. `apps/knx-server/src/domain.rs`'s
+  `AppState.opaque`/`manufacturer_refs` fields are the new single source of truth for "what opaque/manifest data does the in-memory project carry" —
+  any future code path that swaps `state.project` (import, native load, or a not-yet-existing "new project" command) must also set these two fields
+  consistently, or B1 recurs in a new shape.
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 (continued session, round 2)
+- **Completed:** Dispatched a round-2 whole-branch re-review (sonnet) of `t10-export-ui` after the B1/B2 fixes above. Verdict: **NOT READY** —
+  confirmed B1/B2 correctly and completely fixed, but found a new blocking bug (C1): `knx_store::insert_opaque`/`insert_manufacturer_refs` were
+  plain `INSERT`s with no clear-first step, unlike `save_project`'s own DELETE-then-insert convention. B1's fix made `save_project_as_impl` call
+  them on *every* save, not just the first, so a plain repeated `POST /api/project/save` — reusing an already-populated `store_path` — duplicated
+  every opaque/manifest row without bound. The reviewer reproduced this empirically in a standalone crate outside the worktree. Also flagged: an
+  Important non-blocking finding that `export_project` read opaque/manifest off disk via `store_path` rather than live `AppState`, compounding
+  `KNOWN_LIMITATIONS.md` #18's stale-`store_path` gap; a dangling `KNOWN_LIMITATIONS.md` cross-reference in `GAP_ANALYSIS_ETS.md`'s C4 row; a Minor
+  lock-ordering inversion in `export_project`. Ruling: fixed C1 at the `knx-store` level (`DELETE FROM` before `INSERT` inside the existing
+  transaction, in both `opaque.rs`/`manifest.rs`, so every caller gets the fix) rather than only at the `save_project_as_impl` call site — commit
+  `ac9ccaa`, with regression tests in `knx-store` (repeated insert calls) and `knx-server`
+  (`saving_the_same_project_twice_does_not_duplicate_opaque_and_manifest_rows`, exercising the real HTTP `/api/project/save` path). Also fixed the
+  Important finding and the Minor lock-ordering finding together: `export_project` now reads `AppState.opaque`/`AppState.manufacturer_refs` directly
+  instead of re-opening `store_path`, copying them into a throwaway in-memory `.knxdb` for `export_ets_project`'s `Connection`-shaped interface, and
+  locks/drops them before touching `project`/`product_db` — closing the staleness risk for this data and the lock-ordering inconsistency in one
+  change. Fixed the dangling cross-reference in `GAP_ANALYSIS_ETS.md`'s C4 row and documented all of this in `docs/KNOWN_LIMITATIONS.md` #18's new
+  "Related" note and `docs/IMPLEMENTATION_STATUS.md`'s T10 entry. The `ApiError::bad_request` coarsening Minor finding was already adjudicated in
+  an earlier round and parked as-is. Gates: `cargo fmt --all --check` clean, `cargo test --workspace` all green (one pre-existing,
+  environment-dependent `knx-productdb` failure needing `KNXBENCH_PRODUCT_CORPUS`, unrelated), `cargo clippy --workspace --all-targets` clean except
+  the two known pre-existing issues, `xtask check-layering` clean.
+- **Pending/Next Steps:** Dispatch a round-3 whole-branch re-review confirming READY TO MERGE, then merge `t10-export-ui` to `main` and clean up
+  this plan's worktree/`.superpowers/sdd/2026-09-10-ets-project-export/` workspace per `finishing-a-development-branch`. Not yet pushed or merged as
+  of this entry. After T10 lands: T9 (bulk/multi-select operations, `Command::Batch` design) is the next natural Tier-2 pick; `GAP_ANALYSIS_ETS.md`'s
+  B8-B11 and most of Section C/D/E/F gaps remain genuinely open.
+- **Notes for Codex:** Same caution as the prior entry: any future code path that swaps `state.project` must also keep `state.opaque`/
+  `state.manufacturer_refs` consistent. New addition: any future writer of the `opaque_entry`/`manufacturer_ref` tables must go through
+  `knx_store::insert_opaque`/`insert_manufacturer_refs` (now clear-before-insert) rather than hand-rolling an `INSERT`, or the duplication bug
+  recurs outside those two functions' protection.

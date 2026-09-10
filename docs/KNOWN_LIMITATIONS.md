@@ -446,6 +446,16 @@ overwrite the old `.knxdb` with the newly-imported project's data.
 `save_project` verifies the in-memory project actually originated from
 `store_path` before writing.
 
+**Related (2026-09-10, T10).** `export_project` used to be a second
+consumer of a stale `store_path`: it re-opened `store_path` off disk to
+read the opaque passthrough table and manufacturer manifest, so the same
+stale-pointer scenario above could attach one project's opaque/manifest
+data to a different project's export. Closed for that one code path by
+reading `AppState.opaque`/`AppState.manufacturer_refs` (the live,
+in-memory copies) instead of re-opening the file — see
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s C4 row. The underlying gap
+above (`store_path` itself can point at the wrong file) is unchanged.
+
 ## 19. A search result inside a collapsed tree branch is not revealed
 
 **Limitation.** Picking a result from `Ctrl+K` search (`apps/knx-web/

@@ -118,9 +118,15 @@ async fn download(State(state): State<SharedState>) -> Result<Response, ApiError
     let project = project
         .as_ref()
         .ok_or_else(|| ApiError::bad_request("no project open"))?;
+    let opaque = state.opaque.lock().expect("state mutex poisoned");
+    let manufacturer_refs = state
+        .manufacturer_refs
+        .lock()
+        .expect("state mutex poisoned");
 
     let tmp = tempfile::NamedTempFile::new().map_err(|e| ApiError::internal(e.to_string()))?;
-    domain::save_project_as_impl(tmp.path(), project).map_err(ApiError::internal)?;
+    domain::save_project_as_impl(tmp.path(), project, &opaque, &manufacturer_refs)
+        .map_err(ApiError::internal)?;
     let bytes = std::fs::read(tmp.path()).map_err(|e| ApiError::internal(e.to_string()))?;
 
     Ok((

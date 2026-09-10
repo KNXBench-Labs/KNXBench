@@ -93,6 +93,7 @@ underlying model field exists.
 | D9 | **Two near-duplicate modal-overlay implementations** (Search, Command Palette) with an unaddressed accessibility gap. | Already tracked: [KNOWN_LIMITATIONS.md §20](KNOWN_LIMITATIONS.md#20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap-unaddressed). Restated here only because it will get worse, not better, once D1/D5/D6 add more overlay-like screens without a shared shell. |
 | D10 | **The UI is English-only, and the translated data already in the model is never displayed in any language.** ETS ships a localized workbench and renders manufacturer/product/parameter text in the language the user picked. | Two distinct halves. (a) *Chrome:* every user-facing string in `apps/knx-web` is a hard-coded English literal; `package.json` has no i18n dependency of any kind and there is no message catalogue, locale detection, or language setting (D8's missing options dialog is where one would live). (b) *Data:* the plumbing exists but has no reader. `knx_core::string_table` defines `Language`/`LocalizedString`/`StringTable` with a `default_language` fallback, and `Project` owns a `strings: StringTable` (`project.rs:182`); `knx-productdb` parses `Languages`/`TranslationUnit`/`TranslationElement` into a `translation (program_id, language, ref_id, attribute_name, text)` table (`migration.rs:248`). **Nothing reads that table outside the parser that writes it**, and no code path anywhere selects an active language — see [KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only). |
 | D11 | **Animation and transition motion has no in-app switch.** Not an ETS parity gap — ETS has no comparable animation — but a user-facing control gap recorded here alongside D8, since that is where the switch would live. | Cycle 11 shipped a three-level `off`/`subtle`/`standard` motion setting in `ThemePanel.tsx`; cycle 13 deleted that file outright and did not replace the setting (its own design spec says so: "Motion: no user-facing setting (that was `palette.ts`'s job, now gone)"). What remains is `--knx-transition-duration: 250ms` in `styles.css` and three `@media (prefers-reduced-motion: no-preference)` blocks, so the OS preference is the only control a user has, and it is all-or-nothing. No `.ts`/`.tsx` file references motion at all. Tracked as **T27**; see [KNOWN_LIMITATIONS.md §43](KNOWN_LIMITATIONS.md#43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference). |
+| D12 | **No in-application help of any kind, and no end-user documentation.** ETS ships context help, tooltips throughout the workbench, and a user manual. | Measured, not remembered: the entire frontend contains **one** `title` attribute (`Inspector.tsx:218`, a communication-object flag's raw name), four `aria-label`s, zero `aria-describedby`, no tooltip component, no help panel, and no `F1` handler. All nine files in `docs/` are architecture/format documentation written for developers; none is reachable from inside the application. `commandRegistry.ts`'s `shortcutHint` is the only user-facing explanatory text, and it appears only inside the Command Palette. Distinct from **D8** (settings): this is explanation, not configuration. Tracked as **T28**, deliberately scheduled last — see [ROADMAP.md](ROADMAP.md)'s "In-application help and user documentation". |
 
 ## E. KNXnet/IP & commissioning gaps
 
@@ -529,6 +530,48 @@ constraint that binds every *other* task in this backlog.
   transitions — or a per-category switch, which is more useful once
   animations mean "a telegram flying along a bus line" and not just "a
   button fades on hover", and correspondingly more work.
+
+### Tier 8 — in-application help
+
+Added 2026-09-10 by explicit request, and placed last on purpose: help
+text describes a specific UI, so writing it before the UI stops changing
+means writing it twice. This tier is entered after Session 7's hardening
+and after the UI backlog above (T15, T17, T18, T21) has shipped or been
+dropped.
+
+- **T28. In-application help: hover explanations, contextual help, and a
+  user manual.** Today the application explains nothing about itself:
+  one `title` attribute frontend-wide, no tooltip component, no help
+  panel, no `F1`, and nine `docs/` files all written for developers and
+  none reachable from the running application. Three plausible layers,
+  and the design spec has to decide which of them are in the first cut:
+  1. **Hover/tooltip text** on controls whose meaning is not obvious from
+     their label — the communication-object flags (R/W/T/U/C) being the
+     clearest case, since `Inspector.tsx:218`'s lone `title` already
+     admits the need and answers it with the raw field name.
+  2. **Contextual help** for a selected object or panel — what a group
+     range is for, what "unfiltered" does, why a device can legitimately
+     have no individual address.
+  3. **A user manual**, which is the open question with the largest
+     consequences: whether any of `docs/` is shipped to users, or whether
+     end-user documentation is written separately from the start. The
+     existing files are not candidates as they stand — they are written
+     for whoever is building this, not for whoever is using it.
+
+  Two constraints already exist for it. Help strings are user-facing
+  chrome, so they fall under **T25**'s extraction of hard-coded English
+  into a message catalogue; writing them as literals first means
+  extracting them again later, and it is cheaper to decide the ordering
+  now than to discover it then. And any hover or disclosure that animates
+  is bound by **T27**'s rule — switchable off from inside the
+  application.
+
+  Closes **D12**. No design spec yet. Explicitly *not* the same thing as
+  the in-app project documentation/notes feature deferred beyond
+  Session 7 in [ROADMAP.md](ROADMAP.md) (that stores notes *about a
+  project* and needs a `DATA_MODEL.md` addition plus an ADR), and not the
+  same thing as **T13**'s documentation export (which prints a project
+  rather than explaining the application).
 
 ### Not backlog items — durable non-goals, listed for completeness only
 

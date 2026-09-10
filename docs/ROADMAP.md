@@ -527,6 +527,48 @@ feature is a new domain concept absent from
 [DATA_MODEL.md](DATA_MODEL.md) — needs its own ADR before implementation,
 not bundled into a UI cycle.
 
+## Cross-cutting — In-application help and user documentation
+
+**Deliberately last.** Added 2026-09-10 by explicit request: an in-app
+help system — hover explanations, contextual help, an actual manual —
+scheduled at the end of everything rather than folded into the UI cycles
+that create the things it would describe.
+
+The reason it goes last is the reason it keeps being postponed everywhere
+else: help text describes a specific UI, and a UI that is still being
+built invalidates its own help every cycle. Writing hover text for a
+panel that cycle 13 will delete (as cycle 13 deleted `ThemePanel.tsx`) is
+work done twice and wrong once. So this waits until the surfaces have
+stopped moving — which, per the sessions above, means after Session 7's
+hardening and after the outstanding UI backlog (T15, T17, T18, T21) has
+either shipped or been dropped.
+
+What exists today, measured rather than remembered: **one** `title`
+attribute in the entire frontend (`Inspector.tsx:218`, showing a
+communication-object flag's raw name), four `aria-label`s, no
+`aria-describedby` anywhere, no tooltip component, no help panel, no
+`F1` handler, and no end-user documentation of any kind — all nine files
+in `docs/` are architecture and format documentation written for
+developers, and none of them is reachable from inside the application.
+The closest thing to user-facing guidance is `commandRegistry.ts`'s
+`shortcutHint` field, which surfaces only inside the Command Palette.
+
+The shape this should take is not decided here — that belongs in a design
+spec — but the questions it has to answer are: hover/tooltip text versus a
+persistent context panel versus both; where help text lives so it can be
+translated alongside T25's UI chrome rather than after it; whether KNX
+concepts (what a group address *is*, what the five communication-object
+flags mean) get explained in-app or linked out to the KNX Association's
+own material; and whether any of `docs/` is shipped to the user or
+whether user documentation is written separately from the start.
+
+Tracked as **T28** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 8,
+closing gap **D12**. Two things it is *not*: it is not the deferred in-app
+project documentation/notes feature listed under Session 7 above — that
+one stores notes *about a project* and needs a `DATA_MODEL.md` addition
+and an ADR — and it is not T13's project documentation export, which
+prints a project rather than explaining the application.
+
 ## Open questions and where they land
 
 Carried forward from [RESEARCH.md](RESEARCH.md) §12. None of them block the

@@ -59,5 +59,8 @@ pub struct HtmlReport {
 pub struct ReportWarning {
     /// Where in the project, e.g. `"device 42"`, `"group address 1/2/3"`.
     pub location: String,
+    /// A human-readable sentence naming what's odd, e.g. `"assigned to no
+    /// line (Topology::unassigned)"`, `"parent building part 99 does not
+    /// exist"`, or `"dpt is malformed and was kept verbatim: \"1.xxx\""`.
     pub detail: String,
 }

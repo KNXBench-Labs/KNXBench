@@ -80,7 +80,7 @@ Each section is derived from the model, and each names its source:
 | Topology | `Installation::topology` (`topology.rs:41`) | area (address, name) → line (address, name, medium ref, domain address, IP multicast, TTL) → device (individual address, name, description); plus a list of `Topology::unassigned` devices |
 | Buildings | `Installation::buildings` (`building.rs:25`) | the flat parent/children list resolved into its real nesting, showing kind, number, name and each part's devices; plus any part whose `parent` does not resolve |
 | Group addresses | `Installation::group_ranges` + `group_addresses` (`group.rs:12`, `:41`) | ranges nested main → middle, each address showing formatted address, name, `Central`, `Unfiltered`, and every communication object linked to it (device, object number, DPT, direction); plus addresses inside no range |
-| Devices | `Devices` (`devices.rs:11`) | per device: name, individual address, description, commissioning state, product ref, program ref; then its communication objects with number, name, description, DPT and the layer it resolved from, size, the five flags, active state, and links; plus any orphaned communication object |
+| Devices | `Devices` (`devices.rs:11`) | per device: name, individual address, description, commissioning state, product ref, program ref; then its communication objects with number, name, description, DPT and the layer it resolved from, the five flags, active state, and links; plus any orphaned communication object |
 | What this report does not contain | — | §5 |
 
 Three model facts shape this and are worth stating outright, because each is a
@@ -102,6 +102,12 @@ place where a reader might expect more than exists:
   RESEARCH R3), and module arguments are opaque (`module.rs:1-5`). Neither gets
   a section; both are counted in the summary and explained in §5. Printing 1390
   raw `RefId`/value pairs would be volume without meaning.
+- **Communication-object `size` is not shown.** It is never populated at
+  instance level — `device.rs:63-65` documents the field as unstated in
+  schema 11 and filled in only once a product database exists, and
+  `infer.rs:178` sets it to `None` for every inferred instance. There is
+  nothing to print yet; it becomes available once `knx-productdb` can
+  supply it from the application program.
 
 ## 4. Determinism, escaping, and the two properties that must not rot
 

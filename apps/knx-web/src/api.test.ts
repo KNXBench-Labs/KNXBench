@@ -256,6 +256,28 @@ describe("api", () => {
     });
   });
 
+  it("createDevice returns the tree together with machine-readable diagnostics", async () => {
+    mockFetchOnce({
+      tree: { installations: [] },
+      diagnostics: [{ kind: "programlessProduct", catalogItemId: "cat-1" }],
+    });
+    const response = await api.createDevice(null, "cat-1", "Passive device");
+    expect(response.tree.installations).toEqual([]);
+    expect(response.diagnostics).toEqual([{ kind: "programlessProduct", catalogItemId: "cat-1" }]);
+  });
+
+  it("installProductPackage posts the selected package as multipart data", async () => {
+    mockFetchOnce({ sha256: "abc", scheme: 11, skipped: false, members: [], unknown: 0, conflicts: 0 });
+    const file = new File(["package"], "vendor.knxprod", { type: "application/zip" });
+    const report = await api.installProductPackage(file);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/catalog/install");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get("file")).toBe(file);
+    expect(report.scheme).toBe(11);
+  });
+
   it("deleteDevice issues a DELETE to /api/devices/:id", async () => {
     mockFetchOnce({ installations: [] });
     await api.deleteDevice(12);

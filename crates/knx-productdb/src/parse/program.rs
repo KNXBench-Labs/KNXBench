@@ -706,8 +706,11 @@ mod tests {
         let (_dir, conn) = db();
         ingest_program(&conn, "sha-mod", "M-00FA/A.xml", MODULE_PROGRAM.as_bytes()).unwrap();
         let view = crate::query::com_object_view(
-            &conn, "M-00FA_A-2504-10-C071", "M-00FA_A-2504-10-C071_MD-2_O-2-0_R-1",
-        ).unwrap();
+            &conn,
+            "M-00FA_A-2504-10-C071",
+            "M-00FA_A-2504-10-C071_MD-2_O-2-0_R-1",
+        )
+        .unwrap();
         assert!(view.is_some());
         assert_eq!(view.unwrap().text.as_deref(), Some("OnOff"));
     }

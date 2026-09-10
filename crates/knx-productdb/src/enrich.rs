@@ -422,7 +422,9 @@ mod tests {
     #[test]
     fn apply_can_be_called_directly_without_going_through_enrich() {
         let (_dir, conn) = db();
-        let view = com_object_view(&conn, "A-1", "A-1_O-1_R-1").unwrap().unwrap();
+        let view = com_object_view(&conn, "A-1", "A-1_O-1_R-1")
+            .unwrap()
+            .unwrap();
         let mut p = project_with("A-1_O-1_R-1", Override::Absent);
         let mut issues = Vec::new();
         let changed = apply(
@@ -559,7 +561,13 @@ mod tests {
     fn db_with_module_program() -> (tempfile::TempDir, Connection) {
         let dir = tempfile::tempdir().unwrap();
         let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
-        ingest_hardware(&conn, "sha-h2", "M-00FA/Hardware.xml", MODULE_HARDWARE.as_bytes()).unwrap();
+        ingest_hardware(
+            &conn,
+            "sha-h2",
+            "M-00FA/Hardware.xml",
+            MODULE_HARDWARE.as_bytes(),
+        )
+        .unwrap();
         ingest_program(&conn, "sha-mod", "M-00FA/A.xml", MODULE_PROGRAM.as_bytes()).unwrap();
         (dir, conn)
     }

@@ -382,3 +382,57 @@
   two known-open gaps (Log tab needs an open project; no log entry cap)
   that are deliberately *not* fixed here — don't treat them as
   regressions if you see them again.
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 18:20
+- **Completed:** Merged **T11 (session log)** to `main` — PR
+  [#5](https://github.com/KNXBench-Labs/KNXBench/pull/5), merge commit
+  `6067ef8`, 11 commits, fork point `9403bd8`. The scoped re-review of the
+  final-review fix round (see the entry above) came back with all ten
+  targeted findings **Addressed**, no new blocking issues, verdict Ready
+  to merge; the re-reviewer independently re-derived the corrected
+  test-count claim (3 new `session_log.rs` + 3 new `domain.rs` = 6 new
+  unit tests; the crate's 20 lib tests include 9 unrelated `paths.rs`
+  ones) rather than trusting the commit's own numbers. Coordinator then
+  re-ran the full gate directly on the merged HEAD before finishing:
+  `cargo fmt --all --check`, `cargo test --workspace` (all green, zero
+  failures), `cargo clippy --workspace --all-targets -- -D warnings`
+  (clean), `npx tsc --noEmit` (clean), `npm test` (122/122),
+  `npm run build` (clean, `dist/.gitkeep` restored). GitHub Actions on
+  PR #5 green on both jobs ("Build, test, lint" 5m45s, "License and
+  advisory gate" 56s) before merging. Worktree
+  `.worktrees/t11-session-log` removed, branch deleted locally and on
+  `origin`, and the plan's `.superpowers/sdd/2026-09-10-session-log/`
+  workspace deleted per subagent-driven-development.
+  Also merged, separately and independently: **PR
+  [#6](https://github.com/KNXBench-Labs/KNXBench/pull/6)** (`0eb348f`,
+  branch `docs-b4-reconcile`, now deleted), a one-line reconciliation of
+  `docs/GAP_ANALYSIS_ETS.md`'s **B4** table row, which still described
+  building parts as read-only with "no `Command` exists for either yet"
+  while the T8 backlog entry thirty lines below in the same file had read
+  **Done (2026-09-08)** ever since T8 landed. Verified before writing:
+  `CreateBuildingPart`/`DeleteBuildingPart`/`RenameBuildingPart`/
+  `MoveDeviceToBuildingPart` all present in
+  `crates/knx-core/src/command.rs`, with the Project Explorer create row
+  and Inspector rename/delete/move UI driving them. Kept out of the T11
+  branch deliberately (CLAUDE.md: do not mix unrelated changes).
+- **Pending/Next Steps:** T11 and B4 are both done and merged; nothing is
+  outstanding on either. Next actionable backlog items, in
+  `docs/GAP_ANALYSIS_ETS.md`'s own Tier-3 order: **T12** (CSV
+  group-address import/export, closes **C2**), **T13** (project
+  documentation export — PDF/HTML report, closes **D4**), **T14**
+  (project diff/compare, closes **C1**). `KNOWN_LIMITATIONS.md` **#36**
+  (Log tab unreachable without an open project; no `SessionLog` growth
+  cap) is a genuine, deliberately-parked T11 follow-up if anyone wants a
+  small self-contained pick instead.
+- **Notes for Codex:** The main checkout had untracked, byte-identical
+  copies of `docs/superpowers/plans/2026-09-10-session-log.md` and
+  `docs/superpowers/specs/2026-09-08-session-log-design.md` that blocked
+  the post-merge fast-forward ("untracked working tree files would be
+  overwritten"). Both were confirmed identical to the now-committed
+  versions (`git show origin/main:<path> | diff - <path>`) before being
+  removed — nothing was lost. Worth checking for the same situation
+  whenever a branch commits a spec/plan that was previously only a local
+  working-tree file: the merge will refuse to fast-forward until the
+  untracked copy is gone. `.worktrees/session3-ets-import` remains the
+  only other worktree (stale, unrelated, untouched).

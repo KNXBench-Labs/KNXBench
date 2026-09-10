@@ -20,6 +20,8 @@ use std::sync::Mutex;
 use knx_app::{AppError, ImportOptions};
 use knx_projection::ProjectTree;
 
+use crate::session_log::{self, LogEntry, SessionLog, Severity};
+
 pub struct AppState {
     pub project: Mutex<Option<knx_core::Project>>,
     /// The `.knxdb` file the in-memory project was last saved to or loaded
@@ -54,6 +56,11 @@ pub struct AppState {
     /// is a handful of `SELECT`s or one `enrich()` pass, never held long
     /// enough for reader/writer contention to matter.
     pub product_db: Option<Mutex<knx_productdb::Connection>>,
+    /// In-memory record of import diagnostics and operational feedback for
+    /// this server run (T11) — never persisted, never reset by anything
+    /// other than a successful `open_project`/`open_native_project`. See
+    /// `session_log.rs` for the append rules every call site below follows.
+    pub session_log: Mutex<SessionLog>,
     /// Root directory web-originated file access is confined to:
     /// `fs_routes.rs`'s `/api/fs/*` routes entirely, plus any *relative*
     /// path a `/api/project/*` route is given (`crate::paths`). Absolute
@@ -76,6 +83,7 @@ impl AppState {
             command_stack: Mutex::new(knx_core::CommandStack::new()),
             import_counts: Mutex::new((0, 0)),
             product_db,
+            session_log: Mutex::new(SessionLog::default()),
             data_dir,
         }
     }
@@ -120,7 +128,15 @@ type ImportedOpaqueData = (
 fn import_and_project(
     path: &Path,
     product_db: Option<&knx_productdb::Connection>,
-) -> Result<(ProjectTree, knx_core::Project, ImportedOpaqueData), AppError> {
+) -> Result<
+    (
+        ProjectTree,
+        knx_core::Project,
+        ImportedOpaqueData,
+        knx_etsproj::ImportReport,
+    ),
+    AppError,
+> {
     let conn = knx_store::open_and_migrate_in_memory()?;
     let imported = knx_app::import_ets_project_with(path, &conn, ImportOptions { product_db })?;
     let mut tree = knx_projection::build_project_tree(&imported.project);
@@ -131,7 +147,12 @@ fn import_and_project(
     // doc comment for why this matters).
     let opaque = knx_store::load_opaque(&conn)?;
     let manufacturer_refs = knx_store::load_manufacturer_refs(&conn)?;
-    Ok((tree, imported.project, (opaque, manufacturer_refs)))
+    Ok((
+        tree,
+        imported.project,
+        (opaque, manufacturer_refs),
+        imported.report,
+    ))
 }
 
 /// Imports `path` and projects it without touching `state` — what
@@ -155,9 +176,26 @@ pub fn open_project(state: &AppState, path: &Path) -> Result<ProjectTree, String
         .product_db
         .as_ref()
         .map(|m| m.lock().expect("state mutex poisoned"));
-    let (tree, project, (opaque, manufacturer_refs)) =
-        import_and_project(path, guard.as_deref()).map_err(|e| e.to_string())?;
+    let imported = import_and_project(path, guard.as_deref()).map_err(|e| e.to_string());
     drop(guard);
+    let (tree, project, (opaque, manufacturer_refs), report) = match imported {
+        Ok(v) => v,
+        Err(e) => {
+            state
+                .session_log
+                .lock()
+                .expect("state mutex poisoned")
+                .push(LogEntry {
+                    timestamp: session_log::now(),
+                    severity: Severity::Error,
+                    source: "import".to_string(),
+                    message: e.clone(),
+                    location: None,
+                    detail: None,
+                });
+            return Err(e);
+        }
+    };
     *state.project.lock().expect("state mutex poisoned") = Some(project);
     *state.command_stack.lock().expect("state mutex poisoned") = knx_core::CommandStack::new();
     *state.import_counts.lock().expect("state mutex poisoned") = (tree.errors, tree.warnings);
@@ -166,6 +204,29 @@ pub fn open_project(state: &AppState, path: &Path) -> Result<ProjectTree, String
         .manufacturer_refs
         .lock()
         .expect("state mutex poisoned") = manufacturer_refs;
+
+    let mut log = state.session_log.lock().expect("state mutex poisoned");
+    log.reset();
+    for entry in session_log::from_import_report(&report) {
+        log.push(entry);
+    }
+    let counts_summary = report
+        .counts
+        .rows
+        .iter()
+        .map(|c| format!("{}: {}/{}", c.entity, c.mapped, c.read))
+        .collect::<Vec<_>>()
+        .join(", ");
+    log.push(LogEntry {
+        timestamp: session_log::now(),
+        severity: Severity::Info,
+        source: "import".to_string(),
+        message: format!("imported {} ({counts_summary})", report.source.file_name),
+        location: None,
+        detail: None,
+    });
+    drop(log);
+
     Ok(tree)
 }
 
@@ -217,7 +278,25 @@ pub fn open_native_project_impl(path: &Path) -> Result<ProjectTree, String> {
 /// Loads a `.knxdb` file at `path`, replaces `state`'s project, and points
 /// `store_path` at it — what the `/api/project/open` route calls.
 pub fn open_native_project(state: &AppState, path: &Path) -> Result<ProjectTree, String> {
-    let (tree, project, (opaque, manufacturer_refs)) = load_native(path)?;
+    let loaded = load_native(path);
+    let (tree, project, (opaque, manufacturer_refs)) = match loaded {
+        Ok(v) => v,
+        Err(e) => {
+            state
+                .session_log
+                .lock()
+                .expect("state mutex poisoned")
+                .push(LogEntry {
+                    timestamp: session_log::now(),
+                    severity: Severity::Error,
+                    source: "open".to_string(),
+                    message: e.clone(),
+                    location: None,
+                    detail: None,
+                });
+            return Err(e);
+        }
+    };
     *state.project.lock().expect("state mutex poisoned") = Some(project);
     *state.store_path.lock().expect("state mutex poisoned") = Some(path.to_path_buf());
     *state.command_stack.lock().expect("state mutex poisoned") = knx_core::CommandStack::new();
@@ -227,11 +306,74 @@ pub fn open_native_project(state: &AppState, path: &Path) -> Result<ProjectTree,
         .manufacturer_refs
         .lock()
         .expect("state mutex poisoned") = manufacturer_refs;
+
+    let mut log = state.session_log.lock().expect("state mutex poisoned");
+    log.reset();
+    log.push(LogEntry {
+        timestamp: session_log::now(),
+        severity: Severity::Info,
+        source: "open".to_string(),
+        message: format!("opened {}", path.display()),
+        location: None,
+        detail: None,
+    });
+    drop(log);
+
     Ok(tree)
 }
 
+/// Pushes one info entry on `Ok`, one error entry on `Err` — shared by
+/// every operation that reports outcomes to the session log
+/// (`save_project`/`save_project_as`/`export_project`/`undo_impl`/
+/// `redo_impl`/`apply`/`create_device_impl`), none of which ever reset the
+/// log (see `session_log.rs`'s own doc comment). `detail`, when given,
+/// carries extra context the caller doesn't want duplicated into
+/// `source`/`message` (e.g. a command's full `Debug` dump — see
+/// `command_name` below).
+fn log_outcome<T>(
+    state: &AppState,
+    source: &str,
+    success_message: String,
+    detail: Option<String>,
+    result: &Result<T, String>,
+) {
+    let (severity, message) = match result {
+        Ok(_) => (Severity::Info, success_message),
+        Err(e) => (Severity::Error, e.clone()),
+    };
+    state
+        .session_log
+        .lock()
+        .expect("state mutex poisoned")
+        .push(LogEntry {
+            timestamp: session_log::now(),
+            severity,
+            source: source.to_string(),
+            message,
+            location: None,
+            detail,
+        });
+}
+
+/// The command's own variant name (`"SetIndividualAddress"`, `"Batch"`,
+/// ...) — the first token of its `Debug` form, up to the first
+/// `(`/`{`/space. Cheap, and needs no match arm per `Command` variant to
+/// stay in sync as `knx-core` grows new ones. Used for `source`/`message`
+/// on `apply()`/`create_device_impl`'s log entries so a `Command::Batch`
+/// or `Command::CreateDevice` (whose full `Debug` form can run to
+/// multiple KB) doesn't get that dump stored — and rendered — twice per
+/// entry; the full dump still goes into `detail` once.
+fn command_name(cmd: &knx_core::Command) -> String {
+    let debug = format!("{cmd:?}");
+    debug
+        .split(['(', '{', ' '])
+        .next()
+        .unwrap_or(&debug)
+        .to_string()
+}
+
 pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
-    {
+    let result = (|| {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_ref().ok_or("no project open")?;
         let opaque = state.opaque.lock().expect("state mutex poisoned");
@@ -239,27 +381,39 @@ pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
             .manufacturer_refs
             .lock()
             .expect("state mutex poisoned");
-        save_project_as_impl(path, project, &opaque, &manufacturer_refs)?;
-    }
+        save_project_as_impl(path, project, &opaque, &manufacturer_refs)
+    })();
+    log_outcome(
+        state,
+        "save",
+        format!("saved as {}", path.display()),
+        None,
+        &result,
+    );
+    result?;
     *state.store_path.lock().expect("state mutex poisoned") = Some(path.to_path_buf());
     Ok(())
 }
 
 pub fn save_project(state: &AppState) -> Result<(), String> {
-    let path = state
-        .store_path
-        .lock()
-        .expect("state mutex poisoned")
-        .clone()
-        .ok_or("no save location yet — use Save As")?;
-    let project = state.project.lock().expect("state mutex poisoned");
-    let project = project.as_ref().ok_or("no project open")?;
-    let opaque = state.opaque.lock().expect("state mutex poisoned");
-    let manufacturer_refs = state
-        .manufacturer_refs
-        .lock()
-        .expect("state mutex poisoned");
-    save_project_as_impl(&path, project, &opaque, &manufacturer_refs)
+    let result = (|| {
+        let path = state
+            .store_path
+            .lock()
+            .expect("state mutex poisoned")
+            .clone()
+            .ok_or("no save location yet — use Save As")?;
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?;
+        let opaque = state.opaque.lock().expect("state mutex poisoned");
+        let manufacturer_refs = state
+            .manufacturer_refs
+            .lock()
+            .expect("state mutex poisoned");
+        save_project_as_impl(&path, project, &opaque, &manufacturer_refs)
+    })();
+    log_outcome(state, "save", "saved".to_string(), None, &result);
+    result
 }
 
 /// Exports the live in-memory project to a `.knxproj` file at `path`.
@@ -282,37 +436,48 @@ pub fn export_project(
     state: &AppState,
     path: &Path,
 ) -> Result<knx_etsproj::export::ExportOutcome, String> {
-    {
-        let store_path = state.store_path.lock().expect("state mutex poisoned");
-        if store_path.is_none() {
-            return Err(
-                "save the project as .knxdb first — export reads passthrough data from the saved store"
-                    .to_string(),
-            );
+    let result = (|| -> Result<knx_etsproj::export::ExportOutcome, String> {
+        {
+            let store_path = state.store_path.lock().expect("state mutex poisoned");
+            if store_path.is_none() {
+                return Err(
+                    "save the project as .knxdb first — export reads passthrough data from the saved store"
+                        .to_string(),
+                );
+            }
         }
-    }
-    let opaque = state.opaque.lock().expect("state mutex poisoned");
-    let manufacturer_refs = state
-        .manufacturer_refs
-        .lock()
-        .expect("state mutex poisoned");
-    let conn = knx_store::open_and_migrate_in_memory().map_err(|e| e.to_string())?;
-    knx_store::insert_opaque(&conn, &opaque).map_err(|e| e.to_string())?;
-    knx_store::insert_manufacturer_refs(&conn, &manufacturer_refs).map_err(|e| e.to_string())?;
-    drop(opaque);
-    drop(manufacturer_refs);
+        let opaque = state.opaque.lock().expect("state mutex poisoned");
+        let manufacturer_refs = state
+            .manufacturer_refs
+            .lock()
+            .expect("state mutex poisoned");
+        let conn = knx_store::open_and_migrate_in_memory().map_err(|e| e.to_string())?;
+        knx_store::insert_opaque(&conn, &opaque).map_err(|e| e.to_string())?;
+        knx_store::insert_manufacturer_refs(&conn, &manufacturer_refs)
+            .map_err(|e| e.to_string())?;
+        drop(opaque);
+        drop(manufacturer_refs);
 
-    let project = state.project.lock().expect("state mutex poisoned");
-    let project = project.as_ref().ok_or("no project open")?;
-    let product_db_guard = state
-        .product_db
-        .as_ref()
-        .map(|m| m.lock().expect("state mutex poisoned"));
-    let outcome = knx_app::export_ets_project(project, &conn, product_db_guard.as_deref())
-        .map_err(|e| e.to_string())?;
-    drop(product_db_guard);
-    std::fs::write(path, &outcome.bytes).map_err(|e| e.to_string())?;
-    Ok(outcome)
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?;
+        let product_db_guard = state
+            .product_db
+            .as_ref()
+            .map(|m| m.lock().expect("state mutex poisoned"));
+        let outcome = knx_app::export_ets_project(project, &conn, product_db_guard.as_deref())
+            .map_err(|e| e.to_string())?;
+        drop(product_db_guard);
+        std::fs::write(path, &outcome.bytes).map_err(|e| e.to_string())?;
+        Ok(outcome)
+    })();
+    log_outcome(
+        state,
+        "export",
+        format!("exported to {}", path.display()),
+        None,
+        &result,
+    );
+    result
 }
 
 /// Projects one device's detail. `Err` names the device id when it no
@@ -351,12 +516,21 @@ fn tree_with_state(
 }
 
 fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {
+    // Captured before `do_command` consumes `cmd` below: `cmd_desc` is the
+    // full `Debug` dump, kept for `detail`; `cmd_name` is the short variant
+    // name, used for `source`/`message` (see `command_name`'s doc comment).
+    let cmd_desc = format!("{cmd:?}");
+    let cmd_name = command_name(&cmd);
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    stack.do_command(project, cmd).map_err(|e| e.to_string())?;
+    let result = stack.do_command(project, cmd).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-    Ok(tree_with_state(project, &stack, import_counts))
+    let tree = tree_with_state(project, &stack, import_counts);
+
+    log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
+
+    result.map(|()| tree)
 }
 
 pub fn set_individual_address_impl(
@@ -1057,10 +1231,20 @@ pub fn create_device_impl(
         com_objects,
         line: line_id.map(knx_core::LineId),
     };
-    {
+    // Captured before `do_command` consumes `cmd` below — same convention
+    // `apply()` uses, whose `log_outcome` helper this reuses so device
+    // creation shows up in the session log too (it can't call `apply()`
+    // itself: this function's return type carries creation diagnostics
+    // `apply()` doesn't produce, and needs the enrichment pass below run
+    // under the same `project` lock before releasing it).
+    let cmd_desc = format!("{cmd:?}");
+    let cmd_name = command_name(&cmd);
+    let result = {
         let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-        stack.do_command(project, cmd).map_err(|e| e.to_string())?;
-    }
+        stack.do_command(project, cmd).map_err(|e| e.to_string())
+    };
+    log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
+    result?;
 
     // Step 3 (design doc §3.3): seed enrichment once, same mapping
     // `knx_productdb::enrich()` uses on import, not pushed onto the undo
@@ -1192,18 +1376,22 @@ pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    stack.undo(project).map_err(|e| e.to_string())?;
+    let result = stack.undo(project).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-    Ok(tree_with_state(project, &stack, import_counts))
+    let tree = tree_with_state(project, &stack, import_counts);
+    log_outcome(state, "undo", "undo".to_string(), None, &result);
+    result.map(|()| tree)
 }
 
 pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String> {
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-    stack.redo(project).map_err(|e| e.to_string())?;
+    let result = stack.redo(project).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-    Ok(tree_with_state(project, &stack, import_counts))
+    let tree = tree_with_state(project, &stack, import_counts);
+    log_outcome(state, "redo", "redo".to_string(), None, &result);
+    result.map(|()| tree)
 }
 
 #[cfg(test)]
@@ -1247,7 +1435,7 @@ mod tests {
             .unwrap();
         }
 
-        let (_, without, _) = import_and_project(&reference_project_path(), None).unwrap();
+        let (_, without, _, _) = import_and_project(&reference_project_path(), None).unwrap();
         let without_filled = without
             .devices
             .com_objects()
@@ -1397,6 +1585,47 @@ mod tests {
         assert_eq!(result.unwrap_err(), "catalog item not found");
     }
 
+    // Regression for fix-round-1 finding 1: `create_device_impl` calls
+    // `do_command` directly instead of through `apply()` (it needs the
+    // enrichment pass to run under the same `project` lock, and returns a
+    // richer type than `apply()` can), so it must push its own log entries
+    // rather than silently skipping the session log for every device
+    // created. Note: catalog-lookup failures (unknown product database /
+    // catalog item) happen *before* a `Command` is even built and stay
+    // unlogged, same as e.g. `set_individual_address_impl`'s own
+    // pre-`apply()` address-parse failure — only the `do_command` outcome
+    // itself is in scope here.
+    #[test]
+    fn creating_a_device_logs_an_info_entry_and_a_failed_creation_logs_an_error_entry() {
+        let (_dir, state) = state_with_product_db();
+
+        // `do_command` itself fails: line 999 doesn't exist.
+        create_device_impl(&state, Some(999), "M-1_CI-1".into(), "Actuator 1".into()).unwrap_err();
+        create_device_impl(&state, None, "M-1_CI-1".into(), "Actuator 1".into()).unwrap();
+
+        let log = state.session_log.lock().unwrap();
+        let entries = log.entries();
+        assert_eq!(
+            entries.len(),
+            2,
+            "both the failed and the successful CreateDevice should reach the session log: {entries:?}"
+        );
+        assert_eq!(entries[0].severity, Severity::Error);
+        assert_eq!(entries[1].severity, Severity::Info);
+        assert_eq!(
+            entries[1].source, "CreateDevice",
+            "source should be the command's short variant name, not its full Debug dump"
+        );
+        assert!(
+            entries[1]
+                .detail
+                .as_deref()
+                .is_some_and(|d| d.contains("CreateDevice")),
+            "detail should carry the command's full Debug dump: {:?}",
+            entries[1].detail
+        );
+    }
+
     #[test]
     fn creating_a_device_seeds_its_com_objects_and_deleting_it_round_trips() {
         let (_dir, state) = state_with_product_db();
@@ -1457,5 +1686,57 @@ mod tests {
             }
         );
         assert_ne!(program_missing, com_object_missing);
+    }
+
+    fn push_sentinel(state: &AppState) {
+        state.session_log.lock().unwrap().push(LogEntry {
+            timestamp: session_log::now(),
+            severity: Severity::Info,
+            source: "sentinel".into(),
+            message: "pre-existing entry".into(),
+            location: None,
+            detail: None,
+        });
+    }
+
+    #[test]
+    fn a_failed_import_appends_an_error_entry_without_resetting_the_log() {
+        let state = AppState::default();
+        push_sentinel(&state);
+
+        let result = open_project(&state, Path::new("/does/not/exist.knxproj"));
+        assert!(result.is_err());
+
+        let entries = state.session_log.lock().unwrap().entries().to_vec();
+        assert_eq!(
+            entries.len(),
+            2,
+            "the sentinel entry must survive a failed import"
+        );
+        assert_eq!(entries[0].source, "sentinel");
+        assert_eq!(entries[1].source, "import");
+        assert_eq!(entries[1].severity, Severity::Error);
+    }
+
+    #[test]
+    fn a_successful_import_resets_and_repopulates_the_log() {
+        if !reference_project_path().exists() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
+        let state = AppState::default();
+        push_sentinel(&state);
+
+        let result = open_project(&state, &reference_project_path());
+        assert!(result.is_ok());
+
+        let entries = state.session_log.lock().unwrap().entries().to_vec();
+        assert!(
+            entries.iter().all(|e| e.source != "sentinel"),
+            "a successful import must reset the log, dropping any prior entries"
+        );
+        let last = entries.last().expect("at least the final import notice");
+        assert_eq!(last.source, "import");
+        assert_eq!(last.severity, Severity::Info);
     }
 }

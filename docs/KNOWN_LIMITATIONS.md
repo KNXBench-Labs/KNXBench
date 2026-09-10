@@ -922,3 +922,34 @@ them to look.
 `diagnostics` alongside the projected `tree`, and `CatalogBrowser.tsx`
 surfaces them in-modal — the same role import's own report screen (T11,
 still open) would play for import.
+
+## 36. Session log (T11): the Log tab is unreachable without an open project, and has no growth cap
+
+**Limitation.** `apps/knx-web/src/App.tsx`'s "Log" toolbar button is
+`disabled={!tree}`, and the whole `.workspace` div — the only place
+`LogPanel` renders — is itself gated on `tree` being non-null. But
+`GET /api/log` deliberately works with no project open (`routes.rs`
+returns `200 []`, not `404`), specifically so a failed import with
+nothing open yet still leaves an inspectable trail. Separately,
+`SessionLog` (`apps/knx-server/src/session_log.rs`) has no cap on how
+many entries it accumulates, and `LogPanel` refetches and re-serializes
+the whole log on every `tree`/`refreshKey` change while the tab is open.
+
+**Cause.** Both per the plan's own text: the Log tab's UI slot was
+scoped to "a project is open" from the start, since every other panel in
+that slot (Inspector, Dashboard, Project Explorer) needs one; a log
+entry cap was never in the design spec's stated surface. Neither gap
+was caught until this feature's final whole-branch review.
+
+**Impact.** The single highest-value scenario for this feature — "my
+import just failed and no project is open, why?" — produces a correct
+error entry on the server that the UI cannot currently show. Unbounded
+growth is not a problem at today's usage levels (a single server
+process, one project at a time, log never persisted), but nothing stops
+it from becoming one over a very long session.
+
+**Lifted when.** Open — parked as a follow-up rather than fixed in the
+final-review-fix round that closed the rest of T11's whole-branch review
+findings (both are plan-level/UI-surface changes, not fix-round-scale).
+No fixed cycle. Until then: the entry is still retrievable via `curl
+localhost:<port>/api/log` (or equivalent) even with no project open.

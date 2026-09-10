@@ -1363,3 +1363,116 @@ clippy --workspace --all-targets -- -D warnings`, `cargo test
 `npm run build` on `knx-web` all clean. Closes **T9**
 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)), **B9**. Design spec:
 `docs/superpowers/specs/2026-09-10-bulk-operations-design.md`.
+
+**T11, session log / import-report review screen (2026-09-10).** A new
+`SessionLog` module (`apps/knx-server/src/session_log.rs`) owns an
+in-memory, per-server-process `Vec<LogEntry>` — never written to
+`.knxdb`, held in `AppState.session_log: Mutex<SessionLog>`. `LogEntry {
+timestamp, severity, source, message, location, detail }` serializes
+`#[serde(rename_all = "camelCase")]`, `severity` exactly `"error"` |
+`"warning"` | `"info"`, matching `knx_etsproj::report::Severity`'s own
+convention rather than inventing a second one. `from_import_report()`
+converts the same `ImportReport` `import_and_project` already produces
+for `ProjectTree`'s counts (its return type gained the report as a
+4th tuple element rather than discarding it) into warning/info/error
+entries, in order: `ImportError` (severity per its own field), then
+every `UnknownConstruct`, then every `OpaqueSummary` (info-level — the
+opaque store already keeps the bytes, so nothing is lost either way, but
+CLAUDE.md's "never silently discard information" rule put it in the log
+alongside every other report category), then every `Conflict`, then
+every `UnsupportedFeature`. `report.inferred` and
+`SourceInfo::namespace_disagreement` are deliberately not mapped —
+a documented residual, not a silent drop (see
+`docs/KNOWN_LIMITATIONS.md`). Every other project-level operation logs
+one info entry on success or one error entry (the server's existing
+user-facing error string) on failure — but only once the operation
+reaches an actual `Command` dispatch or a project-level operation's own
+top-level `Result`: a failure caught earlier (a bad address parse, an
+empty id list, `"no project open"`, `"no product database configured"`,
+`"catalog item not found"`) produces a toast but never reaches the log.
+`open_project`/`open_native_project` additionally reset the log on
+success only — a failed import/open appends an error entry without
+touching whatever was already there, so a user re-trying a bad import
+doesn't lose earlier context. `apply()`, the shared dispatcher every
+`*_impl` command function funnels through, and `create_device_impl`
+(which cannot call `apply()` itself — it needs product-catalog
+enrichment to run under the same project lock and returns a richer
+`CreateDeviceResponse`) both log one entry per command: `source`/
+`message` on success are the command's own short variant name (e.g.
+`"SetIndividualAddress"`, `"Batch"` — the first token of its `Debug`
+form), `message` on failure is still the error string, and `detail`
+carries the full `Debug` dump exactly once. A whole-branch review found
+three near-identical logging helpers (`log_outcome`, `log_command_outcome`,
+`log_undo_redo`) that had accreted one per call-site family, and that
+the full `Debug` dump was being stored — and rendered — twice per edit
+entry (as both `source` and `message`); a fix round (still 2026-09-10)
+collapsed all three into one `log_outcome()` plus a small
+`command_name()` helper, fixing the duplication for `Command::Batch`/
+`Command::CreateDevice` entries, which can otherwise run to several KB.
+`export` was folded in using the same info/error shape as `save`, even
+though the approved design doc's own operation list ("import/open/save/
+undo/redo/edit") never named it — excluding the one other fallible
+project-level operation would have been an arbitrary, undocumented gap
+the design's own "operational feedback" rationale argues against.
+`open_project`'s own import-summary entry now reports `mapped/read` per
+entity (was `mapped` only) — the same fix round found the `read` count,
+the actual import-loss signal when it exceeds `mapped`, was being
+silently dropped from the one log line that summarizes the whole
+import. `GET /api/log` (new route in `routes.rs`) returns every entry
+for the session, oldest-first, as a bare JSON array, always `200`
+(never `404` — an absent project is just `[]`). `apps/knx-web` adds
+`LogEntry`/`getSessionLog()` to `api.ts` (hand-written interface, no
+`ts-rs` binding, same convention as `CatalogInstallReport`) and a new
+`LogPanel.tsx`, wired into `App.tsx` via a `logOpen` boolean and a "Log"
+toolbar button (disabled until a project is open) that swaps into the
+same `.workspace` slot as Inspector/Dashboard; selecting an entity
+closes the panel, matching how selection already dismisses the
+Dashboard. `LogPanel` fetches on mount and whenever its `tree` prop
+changes (so it stays current across an edit/undo/import left open),
+renders newest-first (a client-side reversal of the API's oldest-first
+order), and has three Error/Warning/Info toggle filters, all on by
+default, that only affect already-fetched entries and never re-fetch.
+Task review caught one gap before merge: the initial fetch had no
+`.catch`, so a failed `GET /api/log` (server restart mid-session, etc.)
+produced a silent unhandled rejection with no user feedback — fixed to
+mirror `CatalogBrowser.tsx`'s existing `.catch` + `.field-error`
+convention (a deliberate deviation from the original design spec, which
+described a toast for this case; the inline `.field-error` rendering
+was introduced during Task 2's own fix round but never written down
+until this entry), and the empty state was split into "No log entries
+yet." (truly empty) vs. "No log entries match the current filters."
+(entries exist, all severities toggled off) rather than conflating the
+two. The final whole-branch review round above also found the open Log
+tab never refreshed after a *failed* operation — `tree` (the fetch's
+only dependency) only changes on success, so a failed save/export/edit/
+undo/redo/import logged correctly on the server but the open tab
+wouldn't show it until an unrelated successful operation happened to
+change `tree`, which was precisely the scenario this feature exists
+for. Fixed with a `logVersion` counter in `App.tsx`, bumped by a new
+`reportError()` wrapper on every error path (all 9 `catch`-block
+`pushError` call sites in that file), threaded into `LogPanel` as a
+second `refreshKey` prop/effect-dependency alongside `tree`.
+New tests: 6 new unit tests in `apps/knx-server` — 3 in
+`session_log.rs`, 3 in `domain.rs` (verified via `cargo test -p
+knx-server --lib -- --list`; the crate's `--lib` total is 20, the other
+14 predate T11 or cover unrelated modules such as `paths.rs`) — plus a
+dedicated `apps/knx-server/tests/http_log_route.rs` integration test
+suite, now 2 tests after the fix round split out a corpus-free
+fresh-state-returns-`[]` check (previously the file's only test
+returned early before any assertion ran when the gitignored
+`OriginalData/` corpus was absent, so `GET /api/log` had never once
+been exercised in CI) from the gated import → failed edit → successful
+edit, correct-append-order test. `knx-web` gains `LogPanel.test.tsx`, 8
+tests (newest-first, per-severity filter show/hide with no re-fetch,
+both empty states, fetch-error render and clear, refetch-on-tree-change,
+refetch-on-refreshKey-change), full suite 122/122 passing (was 114
+before T11, 121 before this fix round). Gates: `cargo fmt --check`,
+`cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D
+warnings`, `npx tsc --noEmit`, `npm test`, `npm run build` (with the
+pre-existing `dist/.gitkeep` restore) all clean on the merged branch.
+Parked as a new `KNOWN_LIMITATIONS.md` entry rather than fixed in this
+round: the Log tab is unreachable without an open project even though
+`GET /api/log` deliberately works with none, and `SessionLog` has no cap
+on entry count. Closes **T11**, **D7**
+([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). Design spec:
+`docs/superpowers/specs/2026-09-08-session-log-design.md`.

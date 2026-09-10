@@ -11,6 +11,7 @@ import CommandPalette from "./CommandPalette";
 import type { CommandContext } from "./commandRegistry";
 import ThemeSwitcher from "./ThemeSwitcher";
 import Dashboard from "./Dashboard";
+import LogPanel from "./LogPanel";
 import { THEMES, useThemeId } from "./theme";
 import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
@@ -40,6 +41,18 @@ function describeExportWarning(w: unknown): string {
 function App() {
   const [tree, setTree] = useState<ProjectTree | null>(null);
   const { toasts, pushError, clearErrors, pushFun, dismiss } = useToasts();
+  // Bumped on every error path below, threaded into `LogPanel` as a second
+  // effect dependency alongside `tree`. `tree` only changes on a
+  // *successful* operation, so without this a failed save/export/edit/
+  // undo/redo/import pushes an error entry on the server that the open Log
+  // tab would not show until some unrelated successful operation happened
+  // to change the tree — exactly the case this feature exists for.
+  const [logVersion, setLogVersion] = useState(0);
+
+  function reportError(e: unknown) {
+    setLogVersion((v) => v + 1);
+    pushError(api.errorMessage(e));
+  }
   // Whether the backend's `AppState.store_path` is set — mirrored here so
   // "Save" knows whether it can skip the dialog. Safety here rests on this
   // flag staying in lockstep with the backend's own `store_path`: the
@@ -53,6 +66,7 @@ function App() {
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const [themeId, setThemeId] = useThemeId();
   // Mirrors `selection` synchronously so in-flight device_detail responses
   // can tell, once they land, whether the selection has since moved on —
@@ -106,6 +120,7 @@ function App() {
   async function selectEntity(sel: Selection) {
     selectionRef.current = sel;
     setSelection(sel);
+    setLogOpen(false);
     clearErrors();
     if (sel.kind !== "device") {
       // Group-address/building-part detail resolves synchronously from
@@ -121,7 +136,7 @@ function App() {
       }
     } catch (e) {
       if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
-        pushError(api.errorMessage(e));
+        reportError(e);
         setDeviceDetail(null);
       }
     }
@@ -149,7 +164,7 @@ function App() {
       }
     } catch (e) {
       if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
-        pushError(api.errorMessage(e));
+        reportError(e);
       }
     }
   }
@@ -162,7 +177,7 @@ function App() {
       resetTree(await api.importProject(path));
       setHasStorePath(false); // ETS import has no `.knxdb` location yet
     } catch (e) {
-      pushError(api.errorMessage(e));
+      reportError(e);
     }
   }
 
@@ -174,7 +189,7 @@ function App() {
       resetTree(await api.openProject(path));
       setHasStorePath(true);
     } catch (e) {
-      pushError(api.errorMessage(e));
+      reportError(e);
     }
   }
 
@@ -186,7 +201,7 @@ function App() {
       await api.saveProjectAs(path);
       setHasStorePath(true);
     } catch (e) {
-      pushError(api.errorMessage(e));
+      reportError(e);
     }
   }
 
@@ -196,7 +211,7 @@ function App() {
     try {
       await api.saveProject();
     } catch (e) {
-      pushError(api.errorMessage(e));
+      reportError(e);
     }
   }
 
@@ -216,7 +231,7 @@ function App() {
         pushError(warnings.map(describeExportWarning).join(" | "));
       }
     } catch (e) {
-      pushError(api.errorMessage(e));
+      reportError(e);
     }
   }
 
@@ -225,7 +240,7 @@ function App() {
     try {
       await handleTreeUpdate(await api.undo());
     } catch (e) {
-      pushError(api.errorMessage(e));
+      reportError(e);
     }
   }
 
@@ -234,7 +249,7 @@ function App() {
     try {
       await handleTreeUpdate(await api.redo());
     } catch (e) {
-      pushError(api.errorMessage(e));
+      reportError(e);
     }
   }
 
@@ -271,6 +286,9 @@ function App() {
       <button onClick={() => tree && setSearchOpen(true)} disabled={!tree}>
         Search… (Ctrl+K)
       </button>
+      <button onClick={() => setLogOpen((open) => !open)} disabled={!tree}>
+        Log
+      </button>
       <button
         onClick={() => {
           setSearchOpen(false);
@@ -289,7 +307,9 @@ function App() {
             onSelect={selectEntity}
             onTreeUpdate={handleTreeUpdate}
           />
-          {selection ? (
+          {logOpen ? (
+            <LogPanel tree={tree} refreshKey={logVersion} />
+          ) : selection ? (
             <Inspector
               key={`${selection.kind}-${selection.id}`}
               selection={selection}

@@ -626,3 +626,120 @@
   `crates/knx-app/tests/csv_roundtrip.rs` lives where it does. A
   `dev-dependencies` entry on `knx-etsproj` inside a pure crate fails the
   layering gate exactly like a real dependency would.
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 21:10
+- **Completed:** Closed `KNOWN_LIMITATIONS.md` #36 (the T11 follow-up
+  parked at the end of that feature's own entry), branch
+  `fix-36-log-tab`, worktree `.worktrees/fix-36-log-tab`. Two commits.
+
+  (1) `019ed90` — `SessionLog` growth cap. New documented
+  `MAX_ENTRIES: usize = 1000` const in `apps/knx-server/src/
+  session_log.rs`. Past it, `push()` drops the oldest real entry per
+  call and pins a synthetic `Severity::Warning`/`source: "log"` entry at
+  index 0 naming the running total dropped so far, refreshed on every
+  further drop, never itself dropped or duplicated, and counted against
+  the cap so `entries().len()` never exceeds 1000. `reset()` clears the
+  dropped count too. Wire shape (`GET /api/log` → bare `Vec<LogEntry>`)
+  is untouched, so T12's `from_csv_import_report` and the existing
+  `apps/knx-server/tests/http_log_route.rs` integration tests needed no
+  changes — deliberately verified by reading both before touching
+  anything, per the brief's own warning. 5 new unit tests in
+  `session_log.rs`'s own `#[cfg(test)]` module: under the cap, exactly
+  at the cap, one past it (names 1 dropped), well past it (cap + 250,
+  names 250), reset-after-a-drop.
+
+  (2) `b6853c8` — Log tab reachability. `App.tsx`'s "Log" button lost its
+  `disabled={!tree}`; the `.workspace` slot now renders on
+  `tree || logOpen` rather than `tree` alone. `ProjectExplorer` stays
+  gated on `tree` (it genuinely needs a project); `LogPanel`'s prop type
+  is now `tree: ProjectTree | null`. With a project open the layout is
+  byte-for-byte the same as before (same slot, same Inspector/Dashboard
+  swap on close). New `apps/knx-web/src/App.test.tsx` — the first
+  App-level test in this repository — 2 tests: reachable with no
+  project open (button enabled, clicking it renders `.log-panel` with
+  whatever `getSessionLog()` returned, no `.project-explorer` present),
+  and unchanged behaviour with one open (both panels present, closing
+  the tab returns to Dashboard). No existing test asserted the Log
+  button was disabled without a project, so there was nothing to update
+  there — the brief anticipated that case but it didn't occur.
+
+  Both written test-first (failing for the right reason before
+  implementation, confirmed by running them against the unmodified
+  code). Gates all clean on the worktree: `cargo fmt --all --check`,
+  `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test
+  --workspace`, `cargo run -p xtask -- check-layering`, `npx tsc
+  --noEmit`, `npm test -- --run` (139/139), `npm run build` (with the
+  `dist/.gitkeep` restore afterwards). Docs updated:
+  `KNOWN_LIMITATIONS.md` #36 rewritten closed (kept its number, "—
+  resolved (2026-09-10)" suffix, **Resolved.**/**Originally.**
+  structure matching #17's precedent), `IMPLEMENTATION_STATUS.md` gained
+  a "T11 follow-up" entry right after T11's own.
+
+  Note for the record: `apps/knx-web` had no `node_modules` in this
+  worktree (each worktree needs its own, and none had been installed
+  here yet). Symlinked it to the main checkout's
+  `apps/knx-web/node_modules` rather than running `npm install`, since
+  the two checkouts share the same `package-lock.json` and a symlink
+  costs nothing to undo. Not committed (gitignored either way) — if you
+  hit `Cannot find package 'vitest'` in a fresh worktree, that symlink
+  (or an actual `npm install`) is why.
+- **Pending/Next Steps:** Nothing pushed (standing instruction: skip the
+  GitHub workflow). Not merged to `main` yet either — that's for
+  whoever reviews this branch next. Backlog otherwise unchanged from the
+  entry above: **T13** (project documentation export) and **T14**
+  (project diff/compare) are next in order. `KNOWN_LIMITATIONS.md` #42
+  (`command_sync.rs`'s stale module doc) and #43/T27 (motion toggle)
+  remain open and unscheduled.
+- **Notes for Codex:** `session_log.rs`'s `dropped` counter counts real
+  entries removed, not overflowing calls — see the fix-round entry below.
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 22:05
+- **Completed:** Fix round 1 on branch `fix-36-log-tab`, one commit on
+  top of the three above. Review caught a real bug in `019ed90`'s
+  `dropped` counter, not just a documentation nit: it counted
+  *overflowing push calls*, not real entries actually removed, and those
+  two numbers diverge from the very first drop onward, by exactly one,
+  forever. The synthetic entry was claiming "1 log entry dropped" while
+  2 were actually gone — silently misreporting the exact thing this
+  mechanism exists to report accurately.
+
+  Fixed in `apps/knx-server/src/session_log.rs`: `push()` now increments
+  `dropped` by 2 on the push that first exceeds the cap (one entry
+  evicted for being oldest, one more to make room for the synthetic
+  entry itself) and by 1 on every overflowing push after that — matching
+  how many real entries actually leave `entries()`. `synthetic_drop_notice`
+  simplified to always say "entries" (`dropped` is never 1 under this
+  accounting, so the singular branch was dead). Rewrote both `push`'s doc
+  comment and the module doc comment to describe the corrected
+  accounting; the old "incremented per call that overflows, not per
+  entry removed" explanation is gone, not edited around.
+
+  Tests: `one_past_the_cap_...` renamed to
+  `one_past_the_cap_drops_two_real_entries_and_names_two_dropped` and now
+  asserts the synthetic entry names 2 dropped (not 1) and that both
+  `entry 0` and `entry 1` are gone. `well_past_the_cap_...` now asserts
+  251 (not 250) for cap + 250 pushes. New test
+  `dropped_plus_retained_always_equals_total_pushes_past_the_cap` pins
+  the invariant directly — parses the number out of the synthetic
+  entry's own message and asserts `dropped + retained == total_pushed`
+  at two overflow sizes (1 and 250 past the cap) — the kind of test that
+  would have failed against `019ed90`'s original accounting and so would
+  have caught this before it shipped. `docs/KNOWN_LIMITATIONS.md` #36 and
+  `docs/IMPLEMENTATION_STATUS.md`'s T11-follow-up entry updated to match
+  (test count 5 → 6, "1"/"250" → "2"/"251", "per call" phrasing removed).
+
+  Gates all clean: `cargo fmt --all --check`, `cargo clippy --workspace
+  --all-targets -- -D warnings`, `cargo test --workspace`, `cargo run -p
+  xtask -- check-layering`. Frontend untouched this round, so `npm
+  test`/`tsc`/`build` were not re-run (nothing in `apps/knx-web` changed).
+- **Pending/Next Steps:** Same as above — nothing pushed, not merged.
+  **T13**/**T14** next in order; `KNOWN_LIMITATIONS.md` #42/#43 remain
+  open and unscheduled.
+- **Notes for Codex:** If you touch `session_log.rs`'s eviction logic
+  again, add a test in the same shape as
+  `dropped_plus_retained_always_equals_total_pushes_past_the_cap` for
+  whatever you change — it pins the actual invariant instead of a
+  hard-coded number, which is what would have caught the original bug
+  a round earlier.

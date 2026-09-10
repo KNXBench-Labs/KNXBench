@@ -1477,6 +1477,38 @@ on entry count. Closes **T11**, **D7**
 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). Design spec:
 `docs/superpowers/specs/2026-09-08-session-log-design.md`.
 
+**T11 follow-up, Log tab reachability and a session-log growth cap
+(2026-09-10).** Closed both gaps `KNOWN_LIMITATIONS.md` #36 parked above.
+`App.tsx`'s "Log" button is unconditionally enabled, and the
+`.workspace` slot now renders on `tree || logOpen` instead of `tree`
+alone, so `LogPanel` (prop type now `tree: ProjectTree | null`) is
+reachable with no project open — `ProjectExplorer` stays gated on
+`tree`, since it genuinely needs one, so an empty-project Log tab is the
+only thing in that slot; with a project open the layout is unchanged.
+`session_log.rs` gained a documented `MAX_ENTRIES: usize = 1000` const;
+past it, `SessionLog::push` evicts the oldest real entries and pins a
+synthetic `Severity::Warning`/`source: "log"` entry at index 0 naming
+the running total of real entries dropped, refreshed on every further
+drop, itself never dropped/duplicated, and counted against the cap so
+`entries().len()` never exceeds 1000; `reset()` clears the dropped count
+too. `dropped` counts real entries actually removed, not overflowing
+calls: it jumps by 2 on the push that first exceeds the cap (one entry
+evicted for being oldest, one more to make room for the synthetic entry
+itself) and by 1 on every push after that — an earlier round of this fix
+counted overflowing calls instead and undercounted by one from the
+first drop onward, which is exactly the kind of silent-discard CLAUDE.md
+rules out, so it was corrected before merge. `GET /api/log`'s bare-array
+wire shape is unchanged, so T12's `from_csv_import_report` and
+`apps/knx-server/tests/http_log_route.rs` needed no changes. New tests:
+6 in `session_log.rs` (under/at/one-past/well-past the cap,
+reset-after-a-drop, and an invariant test pinning "dropped plus retained
+equals total pushed" at two different overflow sizes) and a new
+`App.test.tsx` (2 tests: reachable with no project, unchanged with
+one) — full suites `cargo test --workspace` and `npm test -- --run`
+(139/139) both clean, plus `cargo clippy --workspace --all-targets -- -D
+warnings`, `cargo run -p xtask -- check-layering`, `npx tsc --noEmit`,
+`npm run build`.
+
 **T12, CSV group-address import/export (2026-09-10).** A new
 `crates/knx-csv` crate — pure, depending on nothing but `knx-core`, `csv`,
 and `serde`, with a matching `xtask check-layering` rule keeping it away

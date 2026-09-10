@@ -1137,7 +1137,7 @@ both checked directly against the primary spec text, not cited on
 faith.
 
 *Task 3 — truthful CLI/HTTP results.* `knx products ingest
-<file.knxproj|file.knxprod|file.vd2>` and `POST /api/products/packages`
+<file.knxproj|file.knxprod|file.vd2>` and `POST /api/catalog/install`
 both return the same typed `PackageError` strings rather than a generic
 failure; `malformed_and_legacy_product_uploads_are_typed_bad_requests`
 (`knx-server/tests/http_product_install.rs`) pins the exact three

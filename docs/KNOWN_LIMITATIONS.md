@@ -216,7 +216,7 @@ named, external blocker (a genuinely different, undocumented legacy format),
 not an untested general failure.
 
 Note the scope: this is about standalone `.knxprod` *product packages*
-(`knx products ingest`, `POST /api/products/packages`,
+(`knx products ingest`, `POST /api/catalog/install`,
 `CatalogBrowser.tsx`'s install picker). Full `.knxproj` *project* import
 still only has evidenced coverage at schema 11/21/23 (see
 [COMPATIBILITY.md](COMPATIBILITY.md) §2/§3) — a `.knxproj` at schema 20 is

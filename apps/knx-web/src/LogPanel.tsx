@@ -17,7 +17,12 @@ const SEVERITIES: Severity[] = ["error", "warning", "info"];
 /// here) — the severity filters below are purely a client-side render
 /// filter over the already-fetched entries and never trigger a re-fetch on
 /// their own.
-export default function LogPanel(props: { tree: ProjectTree; refreshKey: number }) {
+///
+/// `tree` is `null` when no project is open: `GET /api/log` deliberately
+/// still answers (see `routes.rs`), so this panel is reachable — and still
+/// refetches on every `tree`/`refreshKey` change — with or without one
+/// (KNOWN_LIMITATIONS.md #36, part A).
+export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: number }) {
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<Severity, boolean>>({

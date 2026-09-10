@@ -9,6 +9,16 @@
 //! (save/export/edit/undo/redo, and any failed load) only ever appends, so a
 //! failed operation never erases the trail that explains what state the
 //! project is actually in.
+//!
+//! [`MAX_ENTRIES`] caps how many entries `SessionLog` ever holds at once.
+//! Past that, `push()` evicts the oldest *real* entries and keeps a
+//! synthetic warning entry pinned at index 0 that names the running total
+//! of real entries dropped so far — the number in that message is always
+//! exactly how many are actually missing, because CLAUDE.md's "never
+//! silently discard information" rule applies to the log itself, not just
+//! to import data, and a counter that undercounts its own losses would
+//! violate that rule just as surely as dropping the entries silently
+//! would. See `push`'s own doc comment for the exact mechanics.
 
 use serde::Serialize;
 
@@ -35,20 +45,81 @@ pub struct LogEntry {
     pub detail: Option<String>,
 }
 
+/// Maximum number of [`LogEntry`] items [`SessionLog`] ever holds at once,
+/// including the synthetic drop-notice entry once the cap has been
+/// exceeded (see [`SessionLog::push`]). Not derived from any measured
+/// resource limit — a generous ceiling for a single in-memory, per-process,
+/// never-persisted session log, chosen to keep `GET /api/log` cheap to
+/// re-fetch and re-serialize even across a very long session.
+const MAX_ENTRIES: usize = 1000;
+
 #[derive(Debug, Default)]
-pub struct SessionLog(Vec<LogEntry>);
+pub struct SessionLog {
+    entries: Vec<LogEntry>,
+    /// Running count of real entries dropped for exceeding [`MAX_ENTRIES`].
+    /// Zero means the synthetic drop-notice entry does not exist yet.
+    /// Cleared by [`SessionLog::reset`] along with everything else.
+    dropped: usize,
+}
 
 impl SessionLog {
     pub fn reset(&mut self) {
-        self.0.clear();
+        self.entries.clear();
+        self.dropped = 0;
     }
 
+    /// Appends `entry`, then enforces [`MAX_ENTRIES`].
+    ///
+    /// Below the cap this is a plain append. `dropped` counts real entries
+    /// actually removed, not calls that overflowed, because those are not
+    /// the same number: the push that first exceeds the cap removes *two*
+    /// real entries in one call — the oldest one (which is what "at the
+    /// cap" always means) and a second one to make room for the synthetic
+    /// `Severity::Warning`/`source: "log"` entry that gets pinned at index
+    /// 0 from that point on, naming how many real entries have been
+    /// dropped so far. So `dropped` jumps by 2 on that first overflowing
+    /// push. Every following push while still over capacity removes
+    /// exactly one more real entry (index 1, since index 0 is the pinned
+    /// synthetic entry), so `dropped` grows by 1 from there on, and
+    /// refreshes the synthetic entry's message in place — it is never
+    /// itself dropped, duplicated, or counted against `dropped`. The
+    /// number the synthetic entry reports is therefore always exactly how
+    /// many real entries are actually gone, not a rougher proxy for it.
     pub fn push(&mut self, entry: LogEntry) {
-        self.0.push(entry);
+        self.entries.push(entry);
+        if self.entries.len() <= MAX_ENTRIES {
+            return;
+        }
+        if self.dropped == 0 {
+            self.dropped += 2;
+            self.entries.remove(0);
+            self.entries.remove(0);
+            self.entries.insert(0, self.synthetic_drop_notice());
+        } else {
+            self.dropped += 1;
+            self.entries.remove(1);
+            self.entries[0] = self.synthetic_drop_notice();
+        }
+    }
+
+    fn synthetic_drop_notice(&self) -> LogEntry {
+        // `dropped` is 0 (no synthetic entry yet) or >= 2 (see `push`) —
+        // it is never 1, so "entries" is always grammatically correct here.
+        LogEntry {
+            timestamp: now(),
+            severity: Severity::Warning,
+            source: "log".to_string(),
+            message: format!(
+                "{} log entries dropped after exceeding the {MAX_ENTRIES}-entry session log cap",
+                self.dropped
+            ),
+            location: None,
+            detail: None,
+        }
     }
 
     pub fn entries(&self) -> &[LogEntry] {
-        &self.0
+        &self.entries
     }
 }
 
@@ -330,6 +401,145 @@ mod tests {
         assert_eq!(log.entries().len(), 2);
         log.reset();
         assert!(log.entries().is_empty());
+    }
+
+    fn numbered_entry(n: usize) -> LogEntry {
+        LogEntry {
+            timestamp: now(),
+            severity: Severity::Info,
+            source: "test".into(),
+            message: format!("entry {n}"),
+            location: None,
+            detail: None,
+        }
+    }
+
+    fn is_synthetic_drop_notice(entry: &LogEntry) -> bool {
+        entry.severity == Severity::Warning && entry.source == "log"
+    }
+
+    #[test]
+    fn under_the_cap_nothing_is_dropped() {
+        let mut log = SessionLog::default();
+        for n in 0..500 {
+            log.push(numbered_entry(n));
+        }
+        assert_eq!(log.entries().len(), 500);
+        assert!(!log.entries().iter().any(is_synthetic_drop_notice));
+    }
+
+    #[test]
+    fn exactly_at_the_cap_still_no_synthetic_entry() {
+        let mut log = SessionLog::default();
+        for n in 0..MAX_ENTRIES {
+            log.push(numbered_entry(n));
+        }
+        assert_eq!(log.entries().len(), MAX_ENTRIES);
+        assert!(!log.entries().iter().any(is_synthetic_drop_notice));
+    }
+
+    #[test]
+    fn one_past_the_cap_drops_two_real_entries_and_names_two_dropped() {
+        let mut log = SessionLog::default();
+        for n in 0..=MAX_ENTRIES {
+            // MAX_ENTRIES + 1 pushes total.
+            log.push(numbered_entry(n));
+        }
+        let entries = log.entries();
+        assert_eq!(entries.len(), MAX_ENTRIES);
+
+        assert!(is_synthetic_drop_notice(&entries[0]));
+        assert!(entries[0].message.contains('2'));
+        assert!(entries[0].message.contains(&MAX_ENTRIES.to_string()));
+
+        assert!(
+            !entries.iter().any(|e| e.message == "entry 0"),
+            "oldest real entry should have been dropped: {entries:#?}"
+        );
+        assert!(
+            !entries.iter().any(|e| e.message == "entry 1"),
+            "second-oldest real entry should have been dropped too, to make room \
+             for the synthetic entry: {entries:#?}"
+        );
+        assert!(
+            entries
+                .iter()
+                .any(|e| e.message == format!("entry {MAX_ENTRIES}")),
+            "newest real entry should still be present: {entries:#?}"
+        );
+    }
+
+    #[test]
+    fn well_past_the_cap_names_the_total_dropped_and_keeps_one_synthetic_entry() {
+        let mut log = SessionLog::default();
+        for n in 0..(MAX_ENTRIES + 250) {
+            log.push(numbered_entry(n));
+        }
+        let entries = log.entries();
+        assert_eq!(entries.len(), MAX_ENTRIES);
+
+        assert!(is_synthetic_drop_notice(&entries[0]));
+        assert!(entries[0].message.contains("251"));
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|e| is_synthetic_drop_notice(e))
+                .count(),
+            1
+        );
+    }
+
+    /// Pins the invariant directly instead of relying on hard-coded numbers
+    /// that could happen to match more than one (wrong) accounting scheme —
+    /// which is exactly how the very first version of this counter shipped
+    /// with an off-by-one and still passed its own tests. Whatever the
+    /// synthetic entry claims was dropped, plus however many real entries
+    /// are actually still there, must equal every push that ever happened.
+    #[test]
+    fn dropped_plus_retained_always_equals_total_pushes_past_the_cap() {
+        fn dropped_count_named_in(entry: &LogEntry) -> usize {
+            entry
+                .message
+                .split_whitespace()
+                .next()
+                .expect("synthetic drop notice message starts with a number")
+                .parse()
+                .expect("synthetic drop notice message starts with a number")
+        }
+
+        for extra in [1usize, 250usize] {
+            let mut log = SessionLog::default();
+            let total = MAX_ENTRIES + extra;
+            for n in 0..total {
+                log.push(numbered_entry(n));
+            }
+            let entries = log.entries();
+            let dropped = dropped_count_named_in(&entries[0]);
+            let retained_real_entries = entries.len() - 1; // index 0 is synthetic
+            assert_eq!(
+                dropped + retained_real_entries,
+                total,
+                "extra={extra}: dropped ({dropped}) named in the synthetic entry \
+                 plus real entries retained ({retained_real_entries}) should equal \
+                 total pushes ({total})"
+            );
+        }
+    }
+
+    #[test]
+    fn reset_after_a_drop_clears_the_synthetic_entry_and_the_dropped_count() {
+        let mut log = SessionLog::default();
+        for n in 0..(MAX_ENTRIES + 5) {
+            log.push(numbered_entry(n));
+        }
+        assert!(log.entries().iter().any(is_synthetic_drop_notice));
+
+        log.reset();
+        assert!(log.entries().is_empty());
+
+        log.push(numbered_entry(0));
+        assert_eq!(log.entries().len(), 1);
+        assert!(!log.entries().iter().any(is_synthetic_drop_notice));
     }
 
     #[test]

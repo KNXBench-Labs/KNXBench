@@ -21,7 +21,7 @@ use knx_core::{
 use knx_projection::{build_device_detail, ComObjectNode};
 
 use crate::html::{document_head, document_tail, escape_text};
-use crate::model::{self, Counts, InstallationModel, ReportModel};
+use crate::model::{self, Counts, InstallationModel, MalformedField, ReportModel};
 use crate::{HtmlReport, ReportOptions, ReportWarning};
 
 /// Assembles the whole document: [`crate::model::build`] derives the
@@ -36,6 +36,7 @@ pub(crate) fn render(project: &Project, options: &ReportOptions) -> HtmlReport {
     let ReportModel {
         installations,
         orphan_com_objects,
+        malformed_com_object_fields,
         warnings,
         counts,
     } = model::build(project);
@@ -50,7 +51,13 @@ pub(crate) fn render(project: &Project, options: &ReportOptions) -> HtmlReport {
     render_topology(&mut out, project);
     render_buildings(&mut out, project, &installations);
     render_group_addresses(&mut out, project, &installations);
-    render_devices(&mut out, project, &orphan_com_objects, &mut warnings);
+    render_devices(
+        &mut out,
+        project,
+        &orphan_com_objects,
+        &malformed_com_object_fields,
+        &mut warnings,
+    );
     render_limits(&mut out, &warnings);
 
     out.push_str(&document_tail());
@@ -542,6 +549,7 @@ fn render_devices(
     out: &mut String,
     project: &Project,
     orphan_com_objects: &[ComObjectInstanceId],
+    malformed_com_object_fields: &BTreeMap<ComObjectInstanceId, Vec<MalformedField>>,
     warnings: &mut Vec<ReportWarning>,
 ) {
     out.push_str("<section id=\"devices\"><h2>Devices</h2>");
@@ -611,7 +619,9 @@ fn render_devices(
         }
 
         match build_device_detail(project, device.id) {
-            Some(detail) => render_com_objects_table(out, &detail.com_objects),
+            Some(detail) => {
+                render_com_objects_table(out, &detail.com_objects, malformed_com_object_fields)
+            }
             None => {
                 out.push_str(
                     "<p class=\"warning\">Communication object detail unavailable for this device.</p>",
@@ -651,7 +661,11 @@ fn render_devices(
     out.push_str("</section>");
 }
 
-fn render_com_objects_table(out: &mut String, coms: &[ComObjectNode]) {
+fn render_com_objects_table(
+    out: &mut String,
+    coms: &[ComObjectNode],
+    malformed_com_object_fields: &BTreeMap<ComObjectInstanceId, Vec<MalformedField>>,
+) {
     if coms.is_empty() {
         out.push_str("<p>No communication objects.</p>");
         return;
@@ -713,6 +727,19 @@ fn render_com_objects_table(out: &mut String, coms: &[ComObjectNode]) {
             out.push_str(&parts.join(", "));
         }
         out.push_str("</td></tr>");
+
+        if let Some(fields) = malformed_com_object_fields.get(&ComObjectInstanceId(com.id)) {
+            for field in fields {
+                write!(
+                    out,
+                    "<tr class=\"warning\"><td colspan=\"11\">Unparseable source value kept \
+                     verbatim in field <strong>{}</strong>: {}</td></tr>",
+                    escape_text(field.field),
+                    escape_text(&field.raw)
+                )
+                .unwrap();
+            }
+        }
     }
     out.push_str("</table>");
 }
@@ -994,6 +1021,62 @@ mod tests {
         );
 
         assert!(!report.warnings.is_empty());
+        for warning in &report.warnings {
+            assert!(
+                report.html.contains(&warning.location),
+                "warning location {:?} not visible in the document",
+                warning.location
+            );
+        }
+    }
+
+    #[test]
+    fn a_malformed_communication_object_field_and_a_dangling_building_child_both_reach_the_document(
+    ) {
+        use knx_core::Override;
+
+        let mut project = sample_project();
+
+        // Fix round 1, concern 2: an unparseable DPT is kept verbatim
+        // (`Override::Malformed`) and must show up next to the
+        // communication object it belongs to, not just in the warning
+        // list.
+        let mut malformed_com = linked_com_object(4, 1, 1);
+        malformed_com.dpt = Override::Malformed("DPST-garbage".to_string());
+        project.devices.insert_com_object(malformed_com);
+        project
+            .devices
+            .get_mut(DeviceId(1))
+            .unwrap()
+            .com_objects
+            .push(knx_core::ComObjectInstanceId(4));
+
+        // Fix round 1, concern 1: a building part naming a child id that
+        // does not exist must warn, not just be silently skipped.
+        project.installations[0].buildings[0]
+            .children
+            .push(knx_core::BuildingPartId(404));
+
+        let report = render_html(
+            &project,
+            &ReportOptions {
+                generated_at: fixed_time(),
+            },
+        );
+
+        assert!(
+            report.html.contains("DPST-garbage"),
+            "malformed dpt raw text not visible in the document body"
+        );
+        assert!(report
+            .warnings
+            .iter()
+            .any(|w| w.location.contains("communication object 4") && w.detail.contains("dpt")));
+
+        assert!(report
+            .warnings
+            .iter()
+            .any(|w| w.location.contains("building part 1") && w.detail.contains("404")));
         for warning in &report.warnings {
             assert!(
                 report.html.contains(&warning.location),

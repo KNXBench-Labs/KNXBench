@@ -1312,3 +1312,54 @@ issues (`knx-etsproj`'s `large_enum_variant`, `knx-server`'s
 check-layering` clean, `npx tsc --noEmit` / `npm test` (104/104) /
 `npm run build` clean on `knx-web`. Closes **C4**
 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)).
+
+**T9, bulk/multi-select operations (2026-09-10).** `crates/knx-core`
+gains `Command::Batch(Vec<Command>)`, composing existing single-entity
+commands with all-or-nothing apply/rollback: on any sub-command `Err`,
+already-applied sub-commands are rolled back (their inverses re-applied
+in reverse order) before the original error propagates unchanged; on
+success, the returned inverse is the reversed list of collected inverses,
+itself a `Batch`. `CommandStack` needed no change at all — it was
+already generic over `Command`, just calling `.apply()` and pushing
+whatever came back. `knx-store::command_sync.rs` gained one more
+no-op stub arm for exhaustiveness; this is genuinely inert, since
+`knx-server`'s command path never calls `sync_after_command` at all —
+the server persists only via explicit whole-project `save_project`/
+`save_project_as`, an existing gap this cycle didn't need to touch.
+`apps/knx-server` gains `batch_delete_devices_impl`,
+`batch_delete_group_addresses_impl`, `batch_move_devices_to_line_impl`,
+`batch_move_devices_to_building_part_impl` in `domain.rs` (the same
+one-`*_impl`-per-command shape every other command already uses) and
+four routes: `POST /api/devices/batch-delete`, `POST
+/api/group-addresses/batch-delete`, `POST
+/api/devices/batch-move-line`, `POST
+/api/devices/batch-move-building-part` — each rejects an empty id list
+with 400 before constructing the `Batch`, rather than trusting the
+client. `apps/knx-web` gains `MultiSelectionKind`/`MultiSelection` in
+`selection.ts`, ctrl/shift-click multi-select threaded additively
+through `ProjectExplorer.tsx` (the existing plain-click `onSelect`
+contract is unchanged), and a new `BulkActionToolbar.tsx` rendered above
+the tree whenever a multi-selection is active, wired to the four new
+`api.ts` functions (`batchDeleteDevices`, `batchDeleteGroupAddresses`,
+`batchMoveDevicesToLine`, `batchMoveDevicesToBuildingPart`). Starting a
+multi-select of one kind (devices vs. group addresses) replaces any
+active multi-select of the other kind; mixed-kind selection isn't
+supported. The plan text and design spec both claimed the toolbar should
+confirm via `confirm()` "consistent with `Inspector.tsx`'s existing
+single-delete buttons" — false on inspection, `Inspector.tsx` has no
+`confirm()` calls anywhere and its Delete buttons act immediately,
+relying on undo as the only safety net. Built to match the actual
+existing behavior instead: bulk actions act immediately, with the whole
+batch undoable as one `Ctrl+Z`. No batch "address reassignment" for
+individual addresses — B9's own wording described topology
+reassignment, already covered by `MoveDeviceToLine`/
+`MoveDeviceToBuildingPart`. Out of scope, recorded in the design spec:
+copy/paste with parameters, mixed-kind batch edit. New tests: 3 in
+`knx-core` (`command::tests`, full suite 125 passing), 13 in
+`apps/knx-server/tests/http_batch_routes.rs`, 10 new `vitest` tests in
+`knx-web` (114/114 passing). Gates: `cargo fmt --all --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, `cargo test
+--workspace`, `cargo run -p xtask -- check-layering`, and `npm test` /
+`npm run build` on `knx-web` all clean. Closes **T9**
+([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)), **B9**. Design spec:
+`docs/superpowers/specs/2026-09-10-bulk-operations-design.md`.

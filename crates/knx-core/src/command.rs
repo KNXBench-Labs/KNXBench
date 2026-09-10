@@ -208,6 +208,13 @@ pub enum Command {
         ga: GroupAddressId,
         direction: Direction,
     },
+    /// Applies every sub-command as one atomic, one-undo-step unit — see
+    /// `docs/superpowers/specs/2026-09-10-bulk-operations-design.md` for the
+    /// rollback rationale. On any sub-command's `Err`, every already-applied
+    /// sub-command is rolled back (its inverse re-applied, in reverse order)
+    /// before the original error is returned, so `apply`'s
+    /// leave-`project`-untouched-on-`Err` contract holds for `Batch` too.
+    Batch(Vec<Command>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1004,6 +1011,30 @@ impl Command {
                     ga,
                     direction,
                 })
+            }
+            Command::Batch(commands) => {
+                let mut inverses = Vec::with_capacity(commands.len());
+                for cmd in commands {
+                    match cmd.apply(project) {
+                        Ok(inverse) => inverses.push(inverse),
+                        Err(e) => {
+                            // Roll back everything this batch already
+                            // applied, in reverse order, before surfacing
+                            // the original error — `apply`'s contract is
+                            // "leave `project` untouched on `Err`", and that
+                            // contract is per-`Command`, including `Batch`
+                            // itself.
+                            for inverse in inverses.into_iter().rev() {
+                                inverse.apply(project).expect(
+                                    "an inverse of an already-applied command must re-apply",
+                                );
+                            }
+                            return Err(e);
+                        }
+                    }
+                }
+                inverses.reverse();
+                Ok(Command::Batch(inverses))
             }
         }
     }
@@ -2959,5 +2990,78 @@ mod tests {
             },
         );
         assert_eq!(result, Err(CommandError::DeviceNotFound(DeviceId(99))));
+    }
+
+    fn test_group_address_entry(id: GroupAddressId, address: u16) -> GroupAddressEntry {
+        GroupAddressEntry {
+            id,
+            source: source(),
+            name: format!("GA{}", address),
+            address: GroupAddress::from_raw(address),
+            central: false,
+            unfiltered: false,
+            range: None,
+        }
+    }
+
+    #[test]
+    fn batch_of_two_valid_commands_applies_both_and_its_inverse_undoes_both() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let batch = Command::Batch(vec![
+            Command::CreateGroupAddress {
+                entry: test_group_address_entry(GroupAddressId(1), 1),
+            },
+            Command::CreateGroupAddress {
+                entry: test_group_address_entry(GroupAddressId(2), 2),
+            },
+        ]);
+        stack.do_command(&mut project, batch).unwrap();
+        assert_eq!(project.installations[0].group_addresses.len(), 2);
+        stack.undo(&mut project).unwrap();
+        assert!(project.installations[0].group_addresses.is_empty());
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.installations[0].group_addresses.len(), 2);
+    }
+
+    #[test]
+    fn batch_rolls_back_completely_when_a_later_command_fails() {
+        let mut project = test_project_with_one_device(None);
+        // `Project` derives `PartialEq` but not `Clone`; a separately-built
+        // instance from the same deterministic helper is equally valid as
+        // the untouched-baseline to compare against.
+        let before = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let batch = Command::Batch(vec![
+            Command::CreateGroupAddress {
+                entry: test_group_address_entry(GroupAddressId(1), 1),
+            },
+            Command::DeleteDevice { id: DeviceId(99) },
+            Command::CreateGroupAddress {
+                entry: test_group_address_entry(GroupAddressId(2), 2),
+            },
+        ]);
+        let result = stack.do_command(&mut project, batch);
+        assert_eq!(result, Err(CommandError::DeviceNotFound(DeviceId(99))));
+        assert_eq!(project, before);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
+    fn empty_batch_is_a_no_op_and_inverts_to_an_empty_batch() {
+        let mut project = test_project_with_one_device(None);
+        let before = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            Command::Batch(vec![]).apply(&mut project).unwrap(),
+            Command::Batch(vec![])
+        );
+        assert_eq!(project, before);
+        stack
+            .do_command(&mut project, Command::Batch(vec![]))
+            .unwrap();
+        assert_eq!(project, before);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
     }
 }

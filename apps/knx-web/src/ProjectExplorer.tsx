@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { InstallationNode } from "./bindings/InstallationNode";
@@ -8,15 +8,16 @@ import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
-import type { Selection } from "./selection";
+import type { MultiSelection, MultiSelectionKind, Selection } from "./selection";
 import { nestGroupRanges, type GroupRangeTreeNode } from "./treeUtils";
 import CatalogBrowser from "./CatalogBrowser";
+import BulkActionToolbar from "./BulkActionToolbar";
 
 function TreeNode(props: {
   label: string;
   children?: React.ReactNode;
   selected?: boolean;
-  onSelect?: () => void;
+  onSelect?: (e: React.MouseEvent) => void;
 }) {
   const [open, setOpen] = useState(true);
   const hasChildren = props.children !== undefined;
@@ -45,19 +46,32 @@ function TreeNode(props: {
   );
 }
 
+// `multiSelection`/`onItemClick` are additive, threaded alongside
+// `selection`/`onSelect` through every intermediate tree component exactly
+// the way that pair already is — `onSelect`'s existing plain-click contract
+// is untouched (see `onItemClick` in `ProjectExplorer`, below). Only
+// `DeviceItem`/`GroupAddressItem` actually call `onItemClick`; every other
+// item type ignores it, the same way most item types already ignore
+// `onSelect`'s sibling fields they don't need.
 type SelectionProps = {
   selection: Selection | null;
   onSelect: (sel: Selection) => void;
+  multiSelection: MultiSelection | null;
+  onItemClick: (e: React.MouseEvent, kind: MultiSelectionKind, id: number, sel: Selection) => void;
 };
 
 function DeviceItem(props: { device: DeviceNode } & SelectionProps) {
-  const { device, selection, onSelect } = props;
+  const { device, selection, multiSelection, onItemClick } = props;
   const label = device.address ? `${device.address} ${device.name}` : device.name;
+  const sel: Selection = { kind: "device", id: device.id };
   return (
     <TreeNode
       label={label}
-      selected={selection?.kind === "device" && selection.id === device.id}
-      onSelect={() => onSelect({ kind: "device", id: device.id })}
+      selected={
+        (selection?.kind === "device" && selection.id === device.id) ||
+        (multiSelection?.kind === "device" && multiSelection.ids.has(device.id))
+      }
+      onSelect={(e) => onItemClick(e, "device", device.id, sel)}
     />
   );
 }
@@ -183,7 +197,7 @@ function AddDeviceRow(props: { onAdd: () => void }) {
 function LineItem(
   props: { line: LineNode; isFirst: boolean; onAddDevice: (lineId: number) => void } & SelectionProps,
 ) {
-  const { line, isFirst, onAddDevice, selection, onSelect } = props;
+  const { line, isFirst, onAddDevice, selection, onSelect, multiSelection, onItemClick } = props;
   return (
     <TreeNode
       label={`Line ${line.address}: ${line.name}`}
@@ -191,7 +205,14 @@ function LineItem(
       onSelect={() => onSelect({ kind: "line", id: line.id })}
     >
       {line.devices.map((d) => (
-        <DeviceItem key={d.id} device={d} selection={selection} onSelect={onSelect} />
+        <DeviceItem
+          key={d.id}
+          device={d}
+          selection={selection}
+          onSelect={onSelect}
+          multiSelection={multiSelection}
+          onItemClick={onItemClick}
+        />
       ))}
       {isFirst && <AddDeviceRow onAdd={() => onAddDevice(line.id)} />}
     </TreeNode>
@@ -206,7 +227,8 @@ function AreaItem(
     onAddDevice: (lineId: number) => void;
   } & SelectionProps,
 ) {
-  const { area, isFirst, onCreated, onAddDevice, selection, onSelect } = props;
+  const { area, isFirst, onCreated, onAddDevice, selection, onSelect, multiSelection, onItemClick } =
+    props;
   return (
     <TreeNode
       label={`Area ${area.address}: ${area.name}`}
@@ -221,6 +243,8 @@ function AreaItem(
           onAddDevice={onAddDevice}
           selection={selection}
           onSelect={onSelect}
+          multiSelection={multiSelection}
+          onItemClick={onItemClick}
         />
       ))}
       {isFirst && <NewLineRow areaId={area.id} onCreated={onCreated} />}
@@ -229,12 +253,16 @@ function AreaItem(
 }
 
 function GroupAddressItem(props: { ga: GroupAddressNode } & SelectionProps) {
-  const { ga, selection, onSelect } = props;
+  const { ga, selection, multiSelection, onItemClick } = props;
+  const sel: Selection = { kind: "group_address", id: ga.id };
   return (
     <TreeNode
       label={`${ga.address} ${ga.name}`}
-      selected={selection?.kind === "group_address" && selection.id === ga.id}
-      onSelect={() => onSelect({ kind: "group_address", id: ga.id })}
+      selected={
+        (selection?.kind === "group_address" && selection.id === ga.id) ||
+        (multiSelection?.kind === "group_address" && multiSelection.ids.has(ga.id))
+      }
+      onSelect={(e) => onItemClick(e, "group_address", ga.id, sel)}
     />
   );
 }
@@ -449,7 +477,7 @@ function BuildingItem(
     onCreated: (tree: ProjectTree) => void;
   } & SelectionProps,
 ) {
-  const { building, isFirst, onCreated, selection, onSelect } = props;
+  const { building, isFirst, onCreated, selection, onSelect, multiSelection, onItemClick } = props;
   return (
     <TreeNode
       label={`${building.name} (${building.kind})`}
@@ -464,22 +492,35 @@ function BuildingItem(
           onCreated={onCreated}
           selection={selection}
           onSelect={onSelect}
+          multiSelection={multiSelection}
+          onItemClick={onItemClick}
         />
       ))}
       {building.devices.map((d) => (
-        <DeviceItem key={d.id} device={d} selection={selection} onSelect={onSelect} />
+        <DeviceItem
+          key={d.id}
+          device={d}
+          selection={selection}
+          onSelect={onSelect}
+          multiSelection={multiSelection}
+          onItemClick={onItemClick}
+        />
       ))}
       {isFirst && <NewBuildingPartRow parentId={building.id} onCreated={onCreated} />}
     </TreeNode>
   );
 }
 
+// Group ranges aren't multi-selectable (only devices/group addresses are —
+// see `MultiSelectionKind`), so this only needs the plain-selection pair,
+// not the full `SelectionProps` every device/group-address-bearing
+// component threads.
 function GroupRangeItem(
   props: {
     node: GroupRangeTreeNode;
     isFirst: boolean;
     onCreated: (tree: ProjectTree) => void;
-  } & SelectionProps,
+  } & Pick<SelectionProps, "selection" | "onSelect">,
 ) {
   const { node, isFirst, onCreated, selection, onSelect } = props;
   const { range, children } = node;
@@ -514,7 +555,16 @@ function InstallationItem(
     onAddDevice: (lineId: number | null) => void;
   } & SelectionProps,
 ) {
-  const { installation, isFirst, onTreeUpdate, onAddDevice, selection, onSelect } = props;
+  const {
+    installation,
+    isFirst,
+    onTreeUpdate,
+    onAddDevice,
+    selection,
+    onSelect,
+    multiSelection,
+    onItemClick,
+  } = props;
   return (
     <TreeNode label={installation.name}>
       <TreeNode label="Topology">
@@ -527,6 +577,8 @@ function InstallationItem(
             onAddDevice={onAddDevice}
             selection={selection}
             onSelect={onSelect}
+            multiSelection={multiSelection}
+            onItemClick={onItemClick}
           />
         ))}
         {isFirst && <NewAreaRow onCreated={onTreeUpdate} />}
@@ -540,6 +592,8 @@ function InstallationItem(
             onCreated={onTreeUpdate}
             selection={selection}
             onSelect={onSelect}
+            multiSelection={multiSelection}
+            onItemClick={onItemClick}
           />
         ))}
         {isFirst && <NewBuildingPartRow onCreated={onTreeUpdate} />}
@@ -547,14 +601,28 @@ function InstallationItem(
       {(installation.unassigned.length > 0 || isFirst) && (
         <TreeNode label="Unassigned">
           {installation.unassigned.map((d) => (
-            <DeviceItem key={d.id} device={d} selection={selection} onSelect={onSelect} />
+            <DeviceItem
+              key={d.id}
+              device={d}
+              selection={selection}
+              onSelect={onSelect}
+              multiSelection={multiSelection}
+              onItemClick={onItemClick}
+            />
           ))}
           {isFirst && <AddDeviceRow onAdd={() => onAddDevice(null)} />}
         </TreeNode>
       )}
       <TreeNode label="Group Addresses">
         {installation.group_addresses.map((ga) => (
-          <GroupAddressItem key={ga.id} ga={ga} selection={selection} onSelect={onSelect} />
+          <GroupAddressItem
+            key={ga.id}
+            ga={ga}
+            selection={selection}
+            onSelect={onSelect}
+            multiSelection={multiSelection}
+            onItemClick={onItemClick}
+          />
         ))}
         {isFirst && (
           <NewGroupAddressRow ranges={installation.group_ranges} onCreated={onTreeUpdate} />
@@ -577,8 +645,50 @@ function InstallationItem(
   );
 }
 
+// Render order of every device/group-address id across the tree, matching
+// `InstallationItem`'s own JSX order (topology, then buildings, then
+// unassigned; group addresses are already a flat per-installation list) —
+// the anchor/target pair a shift-click range is computed over. A device
+// reachable from both topology and a building keeps only its first
+// occurrence (a `Set` can't select "the same id twice" anyway).
+function deviceRenderOrder(tree: ProjectTree): number[] {
+  const seen = new Set<number>();
+  const order: number[] = [];
+  const addAll = (devices: DeviceNode[]) => {
+    for (const d of devices) {
+      if (!seen.has(d.id)) {
+        seen.add(d.id);
+        order.push(d.id);
+      }
+    }
+  };
+  function addBuildings(nodes: BuildingNode[]) {
+    for (const node of nodes) {
+      addAll(node.devices);
+      addBuildings(node.children);
+    }
+  }
+  for (const inst of tree.installations) {
+    for (const area of inst.topology) {
+      for (const line of area.lines) addAll(line.devices);
+    }
+    addBuildings(inst.buildings);
+    addAll(inst.unassigned);
+  }
+  return order;
+}
+
+function groupAddressRenderOrder(tree: ProjectTree): number[] {
+  return tree.installations.flatMap((inst) => inst.group_addresses.map((ga) => ga.id));
+}
+
 export default function ProjectExplorer(
-  props: { tree: ProjectTree; onTreeUpdate: (tree: ProjectTree) => void } & SelectionProps,
+  props: {
+    tree: ProjectTree;
+    onTreeUpdate: (tree: ProjectTree) => void;
+    selection: Selection | null;
+    onSelect: (sel: Selection) => void;
+  },
 ) {
   const { tree, onTreeUpdate, selection, onSelect } = props;
   // `undefined` = closed; `number | null` = open, targeting that line
@@ -586,8 +696,81 @@ export default function ProjectExplorer(
   // from the first installation, same restriction every other create
   // affordance here already carries.
   const [catalogTarget, setCatalogTarget] = useState<number | null | undefined>(undefined);
+
+  // Ctrl/shift-click multi-select (T9, GAP_ANALYSIS_ETS.md B9) — additive
+  // state, kept local to `ProjectExplorer` rather than lifted to `App.tsx`:
+  // nothing outside the tree/toolbar needs to know about it, unlike
+  // `selection`, which the `Inspector` also reads.
+  const [multiSelection, setMultiSelection] = useState<MultiSelection | null>(null);
+  // The anchor a shift-click range is computed from — updated on every
+  // click (plain, ctrl, or shift) so a shift-click after a plain click
+  // extends from that plain selection too, the usual file-explorer rule.
+  const [lastClicked, setLastClicked] = useState<{ kind: MultiSelectionKind; id: number } | null>(
+    null,
+  );
+
+  const deviceOrder = useMemo(() => deviceRenderOrder(tree), [tree]);
+  const gaOrder = useMemo(() => groupAddressRenderOrder(tree), [tree]);
+
+  useEffect(() => {
+    if (!multiSelection) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setMultiSelection(null);
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [multiSelection]);
+
+  function onItemClick(
+    e: React.MouseEvent,
+    kind: MultiSelectionKind,
+    id: number,
+    sel: Selection,
+  ) {
+    const order = kind === "device" ? deviceOrder : gaOrder;
+    if (e.shiftKey) {
+      e.preventDefault();
+      const anchorId = lastClicked && lastClicked.kind === kind ? lastClicked.id : null;
+      const from = anchorId !== null ? order.indexOf(anchorId) : -1;
+      const to = order.indexOf(id);
+      if (from !== -1 && to !== -1) {
+        const [lo, hi] = from <= to ? [from, to] : [to, from];
+        setMultiSelection({ kind, ids: new Set(order.slice(lo, hi + 1)) });
+      } else {
+        setMultiSelection({ kind, ids: new Set([id]) });
+      }
+      setLastClicked({ kind, id });
+      return;
+    }
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      setMultiSelection((prev) => {
+        if (!prev || prev.kind !== kind) return { kind, ids: new Set([id]) };
+        const ids = new Set(prev.ids);
+        if (ids.has(id)) ids.delete(id);
+        else ids.add(id);
+        return { kind, ids };
+      });
+      setLastClicked({ kind, id });
+      return;
+    }
+    // Plain click — untouched contract: clears any multi-selection, sets
+    // the single `Selection` exactly as before this feature existed.
+    setMultiSelection(null);
+    setLastClicked({ kind, id });
+    onSelect(sel);
+  }
+
   return (
     <div className="project-explorer">
+      {multiSelection && multiSelection.ids.size > 0 && (
+        <BulkActionToolbar
+          multiSelection={multiSelection}
+          tree={tree}
+          onTreeUpdate={onTreeUpdate}
+          onDone={() => setMultiSelection(null)}
+        />
+      )}
       <ul className="tree-root">
         {tree.installations.map((inst, idx) => (
           <InstallationItem
@@ -598,6 +781,8 @@ export default function ProjectExplorer(
             onAddDevice={setCatalogTarget}
             selection={selection}
             onSelect={onSelect}
+            multiSelection={multiSelection}
+            onItemClick={onItemClick}
           />
         ))}
       </ul>

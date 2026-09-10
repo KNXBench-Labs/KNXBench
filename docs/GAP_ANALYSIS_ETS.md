@@ -88,7 +88,7 @@ underlying model field exists.
 | D4 | **No printing / documentation export.** ETS can print topology, building, device, and group-address reports (to paper or PDF). | No print or PDF/document-export path exists anywhere in the application. |
 | D5 | **No live Group Monitor GUI.** `knx bus monitor`/`bus write` exist as CLI subcommands (Session 6) with raw-byte, no-DPT-decoding output; ETS's Group Monitor is a GUI table, DPT-decoded, filterable, with send-from-the-table. | The bus-communication features that exist have no desktop/web front end at all — they're developer/CLI tools today, not end-user features. |
 | D6 | **No bus/line diagnostics UI.** ETS can scan a line for connected devices, ping/identify a device, and show its individual info (mask version, order number) read live from the bus. | `knx-net` has no such capability yet (see Session E below) and there is no UI slot reserved for it either. |
-| D7 | **No import-report screen.** `ImportReport` (errors/warnings/unsupported list) is real and populated, but the frontend only surfaces it as toast notifications for errors — there is no dedicated screen to review the full report (all warnings, the unsupported-devices list, opaque-passthrough summary) after the initial import moment has passed. | A user who dismisses the import toasts has no way to revisit what was lost or flagged, short of re-importing. |
+| D7 | **Closed (2026-09-10, T11).** `ImportReport` (errors/warnings/unsupported list) is real and populated, but the frontend only surfaced it as toast notifications for errors — there was no dedicated screen to review the full report after the initial import moment had passed. | A new server-side `SessionLog` (`apps/knx-server`, in-memory, never persisted to `.knxdb`) plus a "Log" tab in the web UI (`LogPanel.tsx`) close this — see the T11 backlog entry below for the full shape. |
 | D8 | **No settings/preferences beyond theme.** ETS has a Workbench-wide options dialog (default group-address style, backup behavior, language, etc). | `ThemePanel.tsx` is the only settings surface that exists. |
 | D9 | **Two near-duplicate modal-overlay implementations** (Search, Command Palette) with an unaddressed accessibility gap. | Already tracked: [KNOWN_LIMITATIONS.md §20](KNOWN_LIMITATIONS.md#20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap-unaddressed). Restated here only because it will get worse, not better, once D1/D5/D6 add more overlay-like screens without a shared shell. |
 
@@ -316,10 +316,52 @@ Each task: **what**, **why**, **depends on**.
   pre-existing data-integrity bug in the server's Save path (opaque
   passthrough + manufacturer manifest data never persisted after an ETS
   import) — fixed in the same branch, see `IMPLEMENTATION_STATUS.md`.
-- **T11. Import-report review screen.** A dedicated panel (reachable
-  after the initial import, not just at import time) listing every
-  warning, unsupported item, and opaque-passthrough summary from the
-  `ImportReport` that produced the currently open project. Closes **D7**.
+- ~~**T11. Import-report review screen.**~~ **Closed (2026-09-10).** A new
+  `SessionLog` (`apps/knx-server/src/session_log.rs`) accumulates
+  `LogEntry { timestamp, severity, source, message, location, detail }`
+  in memory for the current server process — never written to `.knxdb`,
+  reset only on a successful import/native-open (a failed one appends an
+  error entry without touching what's already there). Every
+  import/open/save/export/undo/redo/edit funnels through it: import
+  populates it from the same `ImportReport` used for `ProjectTree`'s
+  counts (`from_import_report` maps `ImportError`/`UnknownConstruct`/
+  `OpaqueSummary`/`Conflict`/`UnsupportedFeature` to warning/info/error
+  entries, in that order — `report.opaque` entries are mapped to
+  info-level log entries the same as the other report categories;
+  `report.inferred` and `SourceInfo.namespace_disagreement` are
+  deliberately not mapped in this cycle, a residual rather than a silent
+  drop, see `KNOWN_LIMITATIONS.md`), and every other operation that
+  reaches a `Command` dispatch or a project-level operation's own
+  top-level `Result` logs one info entry on success or one error entry
+  (the existing user-facing error string) on failure. A failure that
+  never reaches that point — a bad address parse, an empty id list, no
+  project open, no product database configured, a catalog item not found
+  — produces a toast but no log entry. Export was folded in using the
+  same info/error shape as save, even though the design doc's own
+  operation list didn't name it — the one other fallible project-level
+  operation would otherwise have been an arbitrary, undocumented gap.
+  `GET /api/log` returns every entry for the session, oldest-first —
+  filtering and ordering are frontend-only. `apps/knx-web` adds a
+  `LogPanel.tsx` component and a "Log" toolbar button (disabled until a
+  project is open) that swaps into the same slot as the
+  Inspector/Dashboard; it renders newest-first, with Error/Warning/Info
+  toggle filters (client-side only, never re-fetch), distinct empty
+  states for "no entries at all" vs. "entries exist but every filter is
+  off," and a rendered fetch-error message if `GET /api/log` itself
+  fails. `knx-server`: 6 new unit tests (3 in `session_log.rs`, 3 in
+  `domain.rs`; the crate's `--lib` total is 20, the other 14 predate T11
+  or cover unrelated modules) plus a dedicated `tests/http_log_route.rs`
+  integration test suite (now 2 tests: a corpus-free
+  fresh-state-returns-empty-array check that always runs in CI, and the
+  gated import → failed edit → successful edit, correct append order
+  test). `knx-web`: `LogPanel.test.tsx`, 8 tests (newest-first,
+  per-severity filter show/hide with no re-fetch, both empty states,
+  fetch-error rendering and clearing, refetch-on-tree-change,
+  refetch-on-refreshKey-change). Full gate (`cargo fmt --check`, `cargo test
+  --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`,
+  `npx tsc --noEmit`, `npm test`, `npm run build`) green on the merged
+  branch. See `docs/superpowers/specs/2026-09-08-session-log-design.md`
+  for the full design and its ownership/reset rationale. Closes **D7**.
 - **T12. CSV group-address import/export.** A common bulk-authoring
   workflow independent of a full `.knxproj` round trip. Closes **C2**.
 - **T13. Project documentation export (PDF/HTML report).** Topology,

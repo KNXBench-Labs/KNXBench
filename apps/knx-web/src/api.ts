@@ -351,6 +351,22 @@ export function batchMoveDevicesToBuildingPart(
   });
 }
 
+// `LogEntry` (apps/knx-server/src/session_log.rs) — server-local, no
+// `ts-rs` binding, hand-written to match its `#[serde(rename_all =
+// "camelCase")]` JSON shape (same pattern as `CatalogInstallReport` above).
+export interface LogEntry {
+  timestamp: string;
+  severity: "error" | "warning" | "info";
+  source: string;
+  message: string;
+  location: string | null;
+  detail: string | null;
+}
+
+export function getSessionLog(): Promise<LogEntry[]> {
+  return request("/api/log");
+}
+
 export function undo(): Promise<ProjectTree> {
   return request("/api/undo", { method: "POST" });
 }

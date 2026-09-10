@@ -264,3 +264,121 @@
   make a fixture-dependent test degrade gracefully in Rust (no runtime-conditional `#[ignore]`). Don't rely on a regex/static scan to catch every
   corpus-dependent test if you're auditing this later — the reliable oracle is running the suite with `OriginalData/` absent and
   `KNXBENCH_PRODUCT_CORPUS` pointed at a nonexistent path, and guarding whatever fails.
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 (t11-session-log worktree)
+- **Completed:** T11 session-log Task 1, fix-round-1. Independent review
+  (`.superpowers/sdd/2026-09-10-session-log/task-1-review.md`, commit
+  `855e9a4`) flagged one blocking gap: `create_device_impl` called
+  `stack.do_command(...)` directly instead of routing through `apply()`,
+  so creating a device never produced a session-log entry — the one edit
+  path in `apps/knx-server/src/domain.rs` invisible to the log. Fixed by
+  extracting `apply()`'s log-push logic into a shared
+  `log_command_outcome(state, cmd_desc, &result)` helper and calling it
+  from `create_device_impl`'s own `do_command` call too (it still can't
+  call `apply()` itself — it needs the enrichment pass to run under the
+  same `project` lock, and returns a richer `CreateDeviceResponse` than
+  `apply()` produces). Catalog-lookup failures that happen before a
+  `Command` is even built (no product db, unknown catalog item) stay
+  unlogged, matching the existing convention every other `*_impl`'s
+  pre-`apply()` validation already follows (e.g.
+  `set_individual_address_impl`'s address-parse `?`). Added regression
+  test `creating_a_device_logs_an_info_entry_and_a_failed_creation_logs_an_error_entry`.
+  Commit `1651b73` on branch `t11-session-log`. `cargo test -p knx-server`
+  (all 20 tests) and `cargo clippy -p knx-server --all-targets` both clean.
+  The review's two non-blocking findings (reset-timing race between
+  `state.project` and `state.session_log`'s independent mutexes;
+  `tree_with_state` built-then-discarded on `apply()`'s error branch) were
+  left as-is — review explicitly marked both non-blocking/cosmetic.
+- **Pending/Next Steps:** Task 1 fix-round-1 is done but not yet
+  re-reviewed or merged to `main`. Next: get review sign-off on `1651b73`,
+  merge `t11-session-log`, then proceed to Task 2 (frontend Log tab) per
+  `docs/superpowers/specs/2026-09-08-session-log-design.md`.
+- **Notes for Codex:** If `apply()`'s logging behavior changes again, keep
+  `create_device_impl` in sync manually — it deliberately duplicates
+  `apply()`'s lock-then-log shape via `log_command_outcome` rather than
+  calling `apply()`, because of the enrichment-under-lock + richer-return-
+  type constraints noted above. Any future `*_impl` that similarly can't
+  call `apply()` should reuse `log_command_outcome` too, not hand-roll a
+  third copy of the log-push block.
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 17:57
+- **Completed:** Task 2 (frontend `LogPanel.tsx` + `App.tsx` wiring,
+  commit `7e43350` + fix-round-1 `f03057f`) and Task 3 (docs closure,
+  commit `28645a2`) both landed and task-reviewed clean before this
+  session started. This session addressed the final whole-branch review
+  of T11 (opus review: 0 Critical, 6 Important, 9 Minor):
+  - **#1/#8** (`domain.rs`): collapsed `log_outcome`/`log_command_outcome`/
+    `log_undo_redo` into one `log_outcome(state, source, success_message,
+    detail, result)`, plus a new `command_name()` helper (a `Command`'s
+    short `Debug` variant name). `apply()`/`create_device_impl` now put
+    the short name in `source`/`message` and the full `Debug` dump in
+    `detail` exactly once, instead of the full dump duplicated into both
+    `source` and `message` (multi-KB for `Command::Batch`/`CreateDevice`).
+  - **#2** (`session_log.rs`): `from_import_report`'s `unknown` loop now
+    carries `sample`/`source_path` into `detail`/`message` instead of
+    dropping them; added a `report.opaque` -> info-level mapping (new
+    `import:opaque` source), inserted after `unknown` in both the code
+    and its doc comment's stated order. `report.inferred`/
+    `SourceInfo::namespace_disagreement` are explicitly out of scope,
+    noted as a residual in the doc comment and in `KNOWN_LIMITATIONS.md`
+    #36.
+  - **#11** (`domain.rs`): `open_project`'s import-summary log line now
+    reports `mapped/read` per entity instead of `mapped` only — `read`
+    is the actual import-loss signal when it exceeds `mapped`.
+  - **#3** (`App.tsx`/`LogPanel.tsx`): the open Log tab never refreshed
+    after a *failed* operation, since its fetch was keyed only on `tree`
+    (which only changes on success). Added a `logVersion` counter bumped
+    by a new `reportError(e)` wrapper (replacing all 9 `catch`-block
+    `pushError(api.errorMessage(e))` calls in `App.tsx`), threaded into
+    `LogPanel` as a second `refreshKey` prop/effect-dependency.
+  - **#12** (`styles.css`): added `--knx-warning-color` and a
+    `.log-entry-warning .log-entry-severity` rule — only `.log-entry-error`
+    had severity color styling before, so warning log entries rendered
+    in the default text color.
+  - **#5** (`http_log_route.rs`): split the corpus-free `GET /api/log` ->
+    `[]` check out of the corpus-gated test (which returned early before
+    any assertion ran whenever `OriginalData/` was absent, so the route
+    had zero CI coverage) into its own always-running
+    `get_log_on_a_fresh_state_returns_an_empty_array` test.
+  - **#6** (docs): corrected `GAP_ANALYSIS_ETS.md`/`IMPLEMENTATION_STATUS.md`'s
+    T11 test-count claim — verified via `cargo test -p knx-server --lib
+    -- --list` (20 total: 8 `domain.rs` + 9 `paths.rs` + 3
+    `session_log.rs`) and `grep -c '#\[test\]'` per file; the actual T11-
+    added count is 6 new unit tests (3 `session_log.rs`, 3 `domain.rs`),
+    not 20 (the crate's unrelated `--lib` total). Also added the
+    pre-`apply()` exclusion sentence, the `report.opaque`
+    mapping/`report.inferred` residual sentences, and a sentence noting
+    the `.field-error` inline-render deviation from the original design
+    spec's toast description.
+  - **#7** (this file): this entry.
+  - **#15**: the `.field-error`-vs-toast deviation note above, in
+    `IMPLEMENTATION_STATUS.md`.
+  Parked as a new `KNOWN_LIMITATIONS.md` #36 entry rather than fixed:
+  the Log tab requiring an open project (#4) and unbounded `SessionLog`
+  growth (#16) — both plan-level/follow-up scale, not final-review-fix
+  scale.
+  Commits: `6435bbd` (Rust: log-helper collapse, opaque/detail mapping,
+  read-count fix, `http_log_route.rs` split), `5289fc8` (frontend:
+  `refreshKey`, warning CSS), and this docs commit (see `git log` for its
+  SHA — committed immediately after this entry).
+  Verification gate, all clean: `cargo fmt --all --check`; `cargo test
+  --workspace` (full workspace green, no failures); `cargo clippy
+  --workspace --all-targets -- -D warnings` (clean); `cd apps/knx-web &&
+  npx tsc --noEmit` (clean); `npm test -- --run` (122 passed, was 121);
+  `npm run build` (succeeded, `dist/.gitkeep` restored after).
+- **Pending/Next Steps:** Awaiting scoped re-review of this fix round;
+  once clean, the coordinator merges `t11-session-log` to `main`.
+- **Notes for Codex:** `log_outcome`'s signature grew two params:
+  `log_outcome(state, source, success_message, detail, result)` — every
+  call site either passes `None` for `detail` (save/export/undo/redo,
+  unchanged shape) or `Some(cmd_desc)` (`apply()`/`create_device_impl`,
+  the command's full `Debug` dump). `log_command_outcome` and
+  `log_undo_redo` no longer exist — do not reintroduce them; add a new
+  `log_outcome` call site instead. `LogPanel` now requires a
+  `refreshKey: number` prop in addition to `tree` — any new render site
+  (tests included) must pass both. `KNOWN_LIMITATIONS.md` #36 documents
+  two known-open gaps (Log tab needs an open project; no log entry cap)
+  that are deliberately *not* fixed here — don't treat them as
+  regressions if you see them again.

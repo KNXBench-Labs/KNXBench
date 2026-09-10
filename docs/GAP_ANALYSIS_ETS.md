@@ -2,8 +2,10 @@
 
 A systematic comparison of KNXBench against ETS's feature set, as of
 **Session 6, Cycle 5 plus the 2026-09-06 topology/group-range/group-link
-command layer and editable device/com-object descriptions** (2026-09-06 —
-see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)).
+command layer, editable device/com-object descriptions, catalog device
+creation/deletion/flag editing (T1-T3, T7, T23), and the 2026-09-10
+standalone `.knxprod` product-package installer** (2026-09-10 — see
+[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)).
 
 This document does not duplicate [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)
 (consequences of evidence gaps or recorded decisions on *existing* features)
@@ -31,7 +33,7 @@ of ETS 5/6 as a professional tool, not a specific verified version — treat
 | A2 | **KNX Secure** (Data Secure, IP Secure, `.knxkeys` keyring) | Full support: secure group communication, secure tunnelling/routing, keyring import/export. | Not implemented; `knx-secure` is an empty, deliberately isolated crate. | [KNOWN_LIMITATIONS.md §8](KNOWN_LIMITATIONS.md#8-knx-secure-is-not-implemented), [§26](KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure). |
 | A3 | **Parameter semantics** (`Dynamic`/`choose`/`when` tree) | Renders a parameter UI per device, with visibility/enable rules. | Parameters preserved as opaque values only; no interpretation. | [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted). |
 | A4 | **Schema coverage** | Reads any ETS3/4/5/6 project. | Schema 11 (ETS4) fully known; schema 23 (ETS6) detected and refused by name; 12-22 undocumented. | [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md#1-single-sample-bias). |
-| A5 | **`.knxprod` scheme ≥ 12** | Reads current manufacturer product files directly. | Only master data scheme 11 is readable. | [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly). |
+| A5 | **`.knxprod` scheme ≥ 12** | Reads current manufacturer product files directly. | **Partially closed (2026-09-10).** Standalone `.knxprod` product-package install (`knx_productdb::install_package`) reads scheme 11 and scheme 20 packages — verified against 3 real scheme-11 and 2 real scheme-20 files (`installs_the_readable_corpus`). Schemes 12-19, 21, 22 remain unread; `.vd2` (a pre-2013 legacy container, not the same ZIP/XML family at all) is explicitly rejected. Full `.knxproj` *project* import is still schema-11/21/23 only — this row is about standalone `.knxprod` *product packages*, a narrower claim. | [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly). |
 | A6 | **Password-protected projects** | Opens ZipCrypto (ETS4/5) and AES/PBKDF2 (ETS6) protected projects. | Detected, refused, never decrypted. | [KNOWN_LIMITATIONS.md §13](KNOWN_LIMITATIONS.md#13-password-protected-projects-are-refused-not-decrypted). |
 
 ## B. Editing / CRUD gaps
@@ -53,13 +55,13 @@ underlying model field exists.
 
 | # | Gap | Impact |
 |---|-----|--------|
-| B1 | **No device creation.** No "insert product from catalog" workflow exists — a device can only arrive via ETS import. | You cannot start a project from scratch, or add one device to an existing project, without ETS. This is arguably the single biggest parity gap: ETS's core workflow (catalog → drag device onto a line) has no equivalent here at all. |
-| B2 | **No device deletion.** | A device, once imported, cannot be removed. |
-| B3 | **Topology CRUD has no UI.** `CreateArea`/`DeleteArea`/`CreateLine`/`DeleteLine`/`MoveDeviceToLine` exist as `knx-core` commands with `apps/knx-server` routes (2026-09-06) — no longer import-only at the model/API layer — but no frontend screen calls any of them. | Cannot add/remove/rename an area or line, or move a device between lines, from the UI. |
+| B1 | **Closed (2026-09-08, T1+T2).** No "insert product from catalog" workflow existed — a device could only arrive via ETS import. | `Command::CreateDevice` (backend, T1) plus `CatalogBrowser.tsx`'s install/pick/name flow (UI, T2) now let a user add a device from the product catalog without ETS. *(Historical impact before closure: could not start a project from scratch or add one device without ETS — arguably the single biggest parity gap.)* |
+| B2 | **Closed (2026-09-08, T3).** A device, once imported, could not be removed. | `Command::DeleteDevice` (refuses with `CommandError::DeviceHasLinks` if any comm object still links a group address) plus `DeviceInspector`'s Delete button close this. |
+| B3 | **Closed (2026-09-07, T23 slice 3).** `CreateArea`/`DeleteArea`/`CreateLine`/`DeleteLine`/`MoveDeviceToLine` existed as commands/routes (2026-09-06) but no frontend screen called any of them. | The Project Explorer's area/line tree-edit UI (`NewAreaRow`/`NewLineRow`, `AreaInspector`/`LineInspector`, `LineMoveField`) now drives all five. |
 | B4 | **No building-part CRUD.** Building parts are projected and rendered but explicitly read-only in the Inspector — "no `Command` exists for either yet" (per IMPLEMENTATION_STATUS Session 5 cycle 5). | Cannot create a building/floor/room, rename one, or move a device between rooms. |
-| B5 | **Group-range CRUD has no UI.** `CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange` exist as commands and routes (2026-09-06); only individual group addresses have a UI (create/delete, cycle 9) — the containing `GroupRange` still can't be created, renamed, or deleted from the frontend. | A UI-created group address still has no `GroupRange` to nest in *through the UI* — see [KNOWN_LIMITATIONS.md §21](KNOWN_LIMITATIONS.md#21-a-ui-created-group-address-has-no-ets_id-and-is-dropped-on-export), a direct symptom, only partially resolved. |
-| B6 | **No communication-object flag editing.** Read/write/transmit/update/communication flags are projected and shown in the Inspector but are display-only — "no `Command` exists yet to edit a flag" (Session 5 cycle 4 notes, restated in the "Next session" backlog). | Cannot re-flag a comm object (e.g. turn on "read on start") without ETS. |
-| B7 | **Group-link editing has no UI.** `LinkComObject`/`UnlinkComObject` exist as a command and route (2026-09-06), finally calling the `check_group_link_target_exists` validation that already existed; no frontend screen drives it yet. | Cannot wire up a new device's comm objects to group addresses in the UI — compounds B1: even if device creation existed, there would be no screen to link it afterward. |
+| B5 | **Closed (2026-09-07, T23 slice 1).** `CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange` existed as commands/routes but only individual group addresses had a UI. | The "Group Ranges" branch in the Project Explorer (create/rename/delete, `nestGroupRanges`) plus the range `<select>` on `NewGroupAddressRow` close this. |
+| B6 | **Closed (2026-09-08, T7).** Read/write/transmit/update/communication flags were projected and shown but display-only. | `Command::SetComObjectFlag`/`RestoreComObjectFlag` (one flag at a time, no bulk "clear to inherited" gesture) plus `ComObjectFlagsRow`'s five checkboxes on the comm-object Inspector row close this. |
+| B7 | **Closed (2026-09-07, T23 slice 2).** `LinkComObject`/`UnlinkComObject` existed as a command/route but no frontend screen drove it. | The link/unlink control on the comm-object Inspector row (`NewGroupLinkRow`/`GroupLinkRow`) closes this. |
 | B8 | **No parameter editing.** (See A3 — no interpretation means no editor is possible yet regardless.) | |
 | B9 | **No bulk/multi-select operations.** Every edit in the UI targets exactly one entity (one device's address, one comm object's DPT, one group address create/delete). | No "select 20 devices, change all their addresses' area", no multi-delete, no copy/paste of a device with its parameters — all standard ETS workflows for any project past a handful of devices. |
 | B10 | **No drag-and-drop anywhere in the UI.** CLAUDE.md's UI/UX section lists drag & drop as a target capability. | Every structural change that ETS does by dragging (device onto a line, device onto a room, GA onto a comm object) has no equivalent gesture here, and per B1-B7 mostly has no non-drag equivalent either. |
@@ -82,7 +84,7 @@ underlying model field exists.
 |---|-----|-------|
 | D1 | **No graphical topology view.** ETS's Topology tab shows areas/lines/couplers/devices as a diagram. | KNXBench's Project Explorer is a tree, not a diagram; there is no visual representation of the bus structure at all. |
 | D2 | **No building/floor-plan graphical view.** ETS's Building view can show rooms spatially (and, with the right edition, overlay them on a floor plan image). | Building parts are a tree branch only, per Session 5's own scope; no spatial/graphical representation exists or is planned in DATA_MODEL. |
-| D3 | **No device catalog browser.** See B1 — there is no UI screen listing manufacturers/products/hardware variants from `knx-productdb` at all, editing aside. | The data exists (`knx-productdb::query`) but nothing in `apps/knx-web` reads it directly; enrichment is the only consumer today. |
+| D3 | **Closed (2026-09-08, T2; extended 2026-09-10 with package install).** There was no UI screen listing manufacturers/products/hardware variants from `knx-productdb` at all. | `CatalogBrowser.tsx` (opened from a `+ Add device` row) lists catalog items via `GET /api/catalog/manufacturers`/`GET /api/catalog/items`, with a manufacturer filter and search; it also gained an install file-picker for standalone `.knxprod` packages (`installProductPackage`, install-report/error display, post-install catalog refresh, in-modal creation-diagnostics rendering) on 2026-09-10. |
 | D4 | **No printing / documentation export.** ETS can print topology, building, device, and group-address reports (to paper or PDF). | No print or PDF/document-export path exists anywhere in the application. |
 | D5 | **No live Group Monitor GUI.** `knx bus monitor`/`bus write` exist as CLI subcommands (Session 6) with raw-byte, no-DPT-decoding output; ETS's Group Monitor is a GUI table, DPT-decoded, filterable, with send-from-the-table. | The bus-communication features that exist have no desktop/web front end at all — they're developer/CLI tools today, not end-user features. |
 | D6 | **No bus/line diagnostics UI.** ETS can scan a line for connected devices, ping/identify a device, and show its individual info (mask version, order number) read live from the bus. | `knx-net` has no such capability yet (see Session E below) and there is no UI slot reserved for it either. |
@@ -132,8 +134,8 @@ Each task: **what**, **why**, **depends on**.
   (`knx_productdb::enrich::apply`, made `pub` and reused directly rather
   than duplicated) instead of on every load. `apps/knx-server` gains
   `POST /api/devices` plus the `GET /api/catalog/manufacturers`/
-  `GET /api/catalog/items` routes T2's future browser will call; no
-  frontend caller yet. Closes **B1**.
+  `GET /api/catalog/items` routes T2's `CatalogBrowser.tsx` now calls; no
+  frontend caller until T2 shipped, same day. Closes **B1**.
 - **T2. Device catalog browser UI. Done (2026-09-08).** `CatalogBrowser.tsx`
   is a new modal (opened from a `+ Add device` row on any line, or the
   Unassigned bucket, in the first installation's Project Explorer —
@@ -235,6 +237,46 @@ Each task: **what**, **why**, **depends on**.
   read-only in an earlier cycle but, contrary to this task's original
   text, were never actually rendered anywhere in the UI until now. Closes
   **B6**.
+- **T24. Standalone `.knxprod` product-package install + honest creation
+  diagnostics. Done (2026-09-10).** `knx_productdb::install_package` adds
+  an atomic, transactional installer for a single `.knxprod` ZIP archive
+  (no accompanying `.knxproj`): validates the whole archive before
+  publishing any row, stores raw member bytes by SHA-256, rejects
+  encrypted members/path traversal/duplicate names/oversized
+  members/missing `knx_master.xml`/unsupported namespace/a full
+  `.knxproj` project archive as a typed `PackageError`, is idempotent
+  (`skipped: true` on a byte-identical re-install), and preserves
+  first-winner provenance on catalog-item id conflicts. Verified against
+  5 real-world files: 3 at master data scheme 11
+  (`646704-04_ETS4_2012_47_DE_EN.knxprod`,
+  `Weinzierl_730_KNX_IP_Interface_ETS4.knxprod`,
+  `Weinzierl_730_KNX_IP_Interface_ETS4_v1.knxprod`) and 2 at scheme 20
+  (`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`,
+  `Dummy_Applikation_Secure.knxprod`) —
+  `installs_the_readable_corpus` (`knx-productdb/tests/standalone_packages.rs`).
+  The 6th corpus file, `Weinzierl_730_KNX_IP_Interface_ETS2-3.vd2`, is a
+  pre-2013 ETS2-era SFX/`.vd_` archive (no `knx_master.xml`, not the same
+  ZIP/XML container family at all) and is rejected purely by filename
+  suffix, before any byte is hashed, with
+  `PackageError::LegacyVd2` → `"legacy .vd2 product data is unsupported"`
+  (`crates/knx-productdb/src/package.rs`). `knx products ingest` (CLI) and
+  `POST /api/catalog/install` (HTTP) both surface the same typed errors
+  as plain strings today — the design spec's acceptance criterion "the
+  caller receives the archive hash/size in the error report where
+  available" is **not** implemented for the `.vd2` case specifically,
+  since the filename check runs before any hash/size is computed; not
+  fixed here (out of scope for this doc-reconciliation task), flagged as
+  a known gap. `POST /api/devices` also stopped silently dropping
+  `EnrichmentIssue`s: `CreateDeviceResponse { tree, diagnostics }` now
+  returns typed `CreationDiagnostic`s (`ProgramlessProduct`/
+  `AmbiguousDpt`/`ComObjectRefMissing`/`ProgramRefMissing`/
+  `DynamicOrModuleNotEvaluated`, each with a server-computed `.detail()`
+  string) and `CatalogBrowser.tsx` renders them in-modal instead of
+  auto-closing. Partially closes **A5** (standalone `.knxprod` package
+  install only, scheme 11/20 only — full `.knxproj` project import at
+  scheme 20 is still unverified, see COMPATIBILITY.md §3); resolves
+  [KNOWN_LIMITATIONS.md §35](KNOWN_LIMITATIONS.md#35-device-creation-enrichmentissues-are-silently-dropped);
+  extends **D3**.
 - **T8. Building-part CRUD commands.** `CreateBuildingPart`/
   `DeleteBuildingPart`/`RenameBuildingPart`/`MoveDeviceToBuildingPart`.
   Closes **B4**.

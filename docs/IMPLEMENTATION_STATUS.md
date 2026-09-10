@@ -859,9 +859,12 @@ Known gaps carried forward, none blocking Session 5:
   (RESEARCH §3.4, [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §1). Schema
   23 manufacturer data ingestion is unaffected by this and remains its own
   gap (KNOWN_LIMITATIONS §12).
-- `.knxprod` direct ingest for master data scheme ≥ 12 remains unsupported
-  (KNOWN_LIMITATIONS §11); manufacturer data still reaches the product
-  database only via a `.knxproj` that already contains it.
+- `.knxprod` direct ingest for master data scheme ≥ 12 was unsupported as
+  of this cycle (2026-09-06/07); 2026-09-10's standalone package
+  installer (T24 below) lifted this for schemes 11 and 20 specifically —
+  see KNOWN_LIMITATIONS §11 for current status. Schemes 12-19/21/22 still
+  have no route in; manufacturer data at those schemes still reaches the
+  product database only via a `.knxproj` that already contains it.
 - Whether ETS re-imports an unsigned third-party `.knxproj` remains
   untested (risk R9) — see [COMPATIBILITY.md](COMPATIBILITY.md).
 
@@ -1094,3 +1097,102 @@ No `knx-projection` change was needed. 3 new `cargo test` tests
 (`knx-core` x2, `knx-server` x2 — one positive, one rejecting an unknown
 flag name) and 1 new `vitest` test. Closes **T7**
 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)), **B6**.
+
+**T24, standalone `.knxprod` product-package install + honest creation
+diagnostics (2026-09-10, plan
+[2026-09-09-standalone-product-database-install.md](superpowers/plans/2026-09-09-standalone-product-database-install.md),
+Tasks 1-5).** Four code tasks plus this documentation reconciliation.
+
+*Task 1 — first-winner provenance.* Fixed a pre-existing gap where a
+catalog-item id conflict on re-ingest could silently overwrite the first
+winner's hardware row rather than keeping it; now the first successful
+insert of a given id always wins, later conflicting inserts are recorded
+as `IdConflict`s, never applied.
+
+*Task 2 — atomic standalone package installer.* New
+`knx_productdb::install_package(conn, name, bytes)`: validates the whole
+ZIP archive before publishing any row (full pre-scan, not
+validate-as-you-go), stores every member's raw bytes by SHA-256, records
+an ordered member inventory, and rejects — as a typed `PackageError`,
+`Display`ed as an exact user-facing string — an invalid ZIP, an encrypted
+member, path traversal, a duplicate member name, an oversized member, a
+missing `knx_master.xml`, an unsupported namespace, a full `.knxproj`
+project archive passed where a product package was expected, or a
+`.vd2` filename (checked before any byte is hashed:
+`PackageError::LegacyVd2` → `"legacy .vd2 product data is
+unsupported"`). A second install of byte-identical content is a no-op
+(`InstallReport.skipped == true`, zero new rows). Verified against the
+full 6-file real-world corpus in `OriginalData/ProductDatabases/`: 3
+files at master data scheme 11, 2 at scheme 20 install cleanly
+(`installs_the_readable_corpus`,
+`crates/knx-productdb/tests/standalone_packages.rs`); the 6th,
+`Weinzierl_730_KNX_IP_Interface_ETS2-3.vd2`, is confirmed by direct
+`unzip` inspection to be a pre-2013 ETS2-era SFX/`.vd_`-style archive —
+no `knx_master.xml`, not the same ZIP/XML container family as
+`.knxprod`/`.knxproj` at all — and is rejected by the filename-suffix
+check. `Project Schema23 v01.00.00` §4.2.2-§4.2.3 (MasterData/`M-iiii`
+layout, `knx_master.xml` root) and `03_01_01 Architecture v03.00.02 AS`
+§6.2 (manufacturer product template as tool-side configuration input)
+both checked directly against the primary spec text, not cited on
+faith.
+
+*Task 3 — truthful CLI/HTTP results.* `knx products ingest
+<file.knxproj|file.knxprod|file.vd2>` and `POST /api/catalog/install`
+both return the same typed `PackageError` strings rather than a generic
+failure; `malformed_and_legacy_product_uploads_are_typed_bad_requests`
+(`knx-server/tests/http_product_install.rs`) pins the exact three
+messages (`"invalid product ZIP"`, `"legacy .vd2 product data is
+unsupported"`, `"encrypted product ZIP member"`).
+
+*Task 4 — honest catalog creation and diagnostics.*
+`knx_productdb::query::resolve_catalog_item_program` validates the full
+catalog item → product → hardware → hardware2program → program chain
+before `create_device_impl` builds a `Command::CreateDevice` — only a
+hardware row that explicitly declares itself programless may skip
+program seeding, every other dangling relation is a typed 400 with no
+command ever applied. `POST /api/devices` returns
+`CreateDeviceResponse { tree, diagnostics }` covering
+`ProgramlessProduct`/`AmbiguousDpt`/`ComObjectRefMissing`/
+`ProgramRefMissing`/`DynamicOrModuleNotEvaluated`, each carrying a
+server-computed `.detail()` string. `CatalogBrowser.tsx` gained an
+install file-picker (`installProductPackage`), install-report/error
+display, a post-install catalog refresh, and in-modal diagnostics
+rendering with a "Done" button instead of auto-close when diagnostics
+exist. Resolves
+[KNOWN_LIMITATIONS.md §35](KNOWN_LIMITATIONS.md#35-device-creation-enrichmentissues-are-silently-dropped--resolved-2026-09-10).
+
+*Task 5 — this reconciliation.* Updated
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) (A5 partially closed; B1/B2/
+B3/B5/B6/B7 marked closed against their already-"Done" task-backlog
+entries, which the table rows had not reflected; D3 closed and
+extended; new **T24** entry), [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)
+(§11 rewritten for the 11/20 split and the named `.vd2` blocker; §35
+marked resolved), [ROADMAP.md](ROADMAP.md) (the stale "`.knxprod` ingest
+... remains out of v1 scope" open question corrected), and
+[COMPATIBILITY.md](COMPATIBILITY.md) (new §2 rows for package install and
+rejection; §3's schema-20 row clarified as `.knxproj`-project-specific,
+distinct from the now-verified `.knxprod` package claim; §4's blanket
+"not supported" row narrowed to schemes 12-19/21/22 plus `.vd2`).
+`docs/superpowers/specs/2026-09-09-standalone-product-database-install-design.md`'s
+acceptance criterion "the caller receives the archive hash/size in the
+error report where available" is **not implemented** for the `.vd2`
+case (the filename check runs before any hash/size is computed) —
+recorded as a known gap, not fixed, since Task 5 is documentation-only.
+
+Gates run for Task 5 (`KNXBENCH_PRODUCT_CORPUS` pointed at
+`OriginalData/ProductDatabases`): `cargo fmt --all --check` (found and
+fixed two leftover unformatted spots from Tasks 3-4's fix-loop commits,
+whitespace only), `cargo clippy --workspace --all-targets -- -D
+warnings` (clean except the pre-existing, out-of-scope
+`clippy::large_enum_variant` on `knx-etsproj`'s `Frame` enum,
+`crates/knx-etsproj/src/parse/installation.rs:36` and
+`installation_v21.rs:48` — deliberately not touched; CLAUDE.md requires
+performance/size optimizations to be measurement-driven, not applied to
+satisfy a lint), `cargo test --workspace` (all green, corpus tests
+included), `cargo run -p xtask -- check-layering` (clean), `npm test`
+(96/96), `npm run build` (clean). A second pre-existing clippy issue
+also found and fixed in passing (test-only, zero semantic risk): three
+`clippy::bool_assert_comparison` lints in
+`crates/knx-core/src/command.rs` (`assert_eq!(x, false/true)` →
+`assert!(!x)`/`assert!(x)`), not the `Frame` enum, not product-code
+behavior.

@@ -257,8 +257,7 @@ fn row_to_catalog_item(r: &rusqlite::Row) -> rusqlite::Result<CatalogItemRow> {
     })
 }
 
-const CATALOG_ITEM_COLUMNS: &str =
-    "id, manufacturer_id, name, number, visible_description, product_ref_id, hardware2program_ref_id";
+const CATALOG_ITEM_COLUMNS: &str = "id, manufacturer_id, name, number, visible_description, product_ref_id, hardware2program_ref_id";
 
 /// Every `catalog_item` row, optionally narrowed to one manufacturer and/or
 /// a case-insensitive substring match on `name`/`number` — backs the future
@@ -294,12 +293,204 @@ pub fn catalog_item(conn: &Connection, id: &str) -> Result<Option<CatalogItemRow
         .map_err(Into::into)
 }
 
+/// The evidence a catalog item provides for device creation.  A catalog row
+/// alone is insufficient: its product, hardware, hardware-to-program and
+/// application-program references must form one consistent chain before the
+/// application is allowed to create a configured device.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CatalogItemProgram {
+    Program {
+        product_ref_id: String,
+        hardware2program_ref_id: String,
+        program_id: String,
+    },
+    /// The product's hardware explicitly says it has no application program.
+    /// This is the only database-evidenced empty-program case that remains
+    /// creatable; an absent or broken relation is not silently treated alike.
+    Programless { product_ref_id: String },
+}
+
+#[derive(Debug)]
+pub enum CatalogItemRelationError {
+    ProductMissing {
+        product_ref_id: String,
+    },
+    HardwareMissing {
+        product_ref_id: String,
+        hardware_id: String,
+    },
+    Hardware2ProgramMissing {
+        hardware2program_ref_id: String,
+    },
+    Hardware2ProgramMismatch {
+        product_ref_id: String,
+        hardware2program_ref_id: String,
+    },
+    ProgramMissing {
+        hardware2program_ref_id: String,
+        program_ref_id: Option<String>,
+    },
+    Database(ProductDbError),
+}
+
+impl From<rusqlite::Error> for CatalogItemRelationError {
+    fn from(error: rusqlite::Error) -> Self {
+        Self::Database(ProductDbError::from(error))
+    }
+}
+
+impl std::fmt::Display for CatalogItemRelationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ProductMissing { product_ref_id } => {
+                write!(f, "catalog product relation is missing: {product_ref_id}")
+            }
+            Self::HardwareMissing { hardware_id, .. } => {
+                write!(
+                    f,
+                    "catalog product hardware relation is missing: {hardware_id}"
+                )
+            }
+            Self::Hardware2ProgramMissing {
+                hardware2program_ref_id,
+            } => write!(
+                f,
+                "catalog hardware-to-program relation is missing: {hardware2program_ref_id}"
+            ),
+            Self::Hardware2ProgramMismatch {
+                product_ref_id,
+                hardware2program_ref_id,
+            } => write!(
+                f,
+                "catalog product {product_ref_id} and hardware-to-program {hardware2program_ref_id} do not share hardware"
+            ),
+            Self::ProgramMissing {
+                hardware2program_ref_id,
+                program_ref_id,
+            } => write!(
+                f,
+                "catalog hardware-to-program {hardware2program_ref_id} has no installed application program{}",
+                program_ref_id
+                    .as_deref()
+                    .map(|id| format!(": {id}"))
+                    .unwrap_or_default()
+            ),
+            Self::Database(error) => write!(f, "product database query failed: {error}"),
+        }
+    }
+}
+
+/// Resolves a catalog item only when all persisted relations support creating
+/// a device.  Kept in the product database because these are normalized
+/// manufacturer-data facts, not server/UI policy.
+pub fn resolve_catalog_item_program(
+    conn: &Connection,
+    item: &CatalogItemRow,
+) -> Result<CatalogItemProgram, CatalogItemRelationError> {
+    let product_ref_id = item
+        .product_ref_id
+        .as_deref()
+        .filter(|id| !id.is_empty())
+        .ok_or_else(|| CatalogItemRelationError::ProductMissing {
+            product_ref_id: "(absent)".into(),
+        })?;
+    let product: Option<(String, Option<i64>)> = conn
+        .query_row(
+            "SELECT p.hardware_id, h.has_application_program
+             FROM product p LEFT JOIN hardware h ON h.id = p.hardware_id
+             WHERE p.id = ?1",
+            [product_ref_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    let Some((hardware_id, has_application_program)) = product else {
+        return Err(CatalogItemRelationError::ProductMissing {
+            product_ref_id: product_ref_id.into(),
+        });
+    };
+
+    let hardware_exists: Option<i64> = conn
+        .query_row(
+            "SELECT 1 FROM hardware WHERE id = ?1",
+            [&hardware_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if hardware_exists.is_none() {
+        return Err(CatalogItemRelationError::HardwareMissing {
+            product_ref_id: product_ref_id.into(),
+            hardware_id,
+        });
+    }
+
+    let Some(hardware2program_ref_id) = item
+        .hardware2program_ref_id
+        .as_deref()
+        .filter(|id| !id.is_empty())
+    else {
+        return if has_application_program == Some(0) {
+            Ok(CatalogItemProgram::Programless {
+                product_ref_id: product_ref_id.into(),
+            })
+        } else {
+            Err(CatalogItemRelationError::Hardware2ProgramMissing {
+                hardware2program_ref_id: "(absent)".into(),
+            })
+        };
+    };
+    let h2p: Option<(String, Option<String>)> = conn
+        .query_row(
+            "SELECT hardware_id, application_program_ref FROM hardware2program WHERE id = ?1",
+            [hardware2program_ref_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+    let Some((h2p_hardware_id, program_ref_id)) = h2p else {
+        return Err(CatalogItemRelationError::Hardware2ProgramMissing {
+            hardware2program_ref_id: hardware2program_ref_id.into(),
+        });
+    };
+    if h2p_hardware_id != hardware_id {
+        return Err(CatalogItemRelationError::Hardware2ProgramMismatch {
+            product_ref_id: product_ref_id.into(),
+            hardware2program_ref_id: hardware2program_ref_id.into(),
+        });
+    }
+    let Some(program_id) = program_ref_id.as_deref() else {
+        return Err(CatalogItemRelationError::ProgramMissing {
+            hardware2program_ref_id: hardware2program_ref_id.into(),
+            program_ref_id,
+        });
+    };
+    let exists: Option<i64> = conn
+        .query_row(
+            "SELECT 1 FROM application_program WHERE id = ?1",
+            [program_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    if exists.is_none() {
+        return Err(CatalogItemRelationError::ProgramMissing {
+            hardware2program_ref_id: hardware2program_ref_id.into(),
+            program_ref_id: Some(program_id.into()),
+        });
+    }
+    Ok(CatalogItemProgram::Program {
+        product_ref_id: product_ref_id.into(),
+        hardware2program_ref_id: hardware2program_ref_id.into(),
+        program_id: program_id.into(),
+    })
+}
+
 /// Every `com_object_ref.id` for `program_id`, in document/ingest order.
 /// `ORDER BY rowid` rather than `ORDER BY id`: `com_object_ref` is not
 /// declared `WITHOUT ROWID`, so `rowid` preserves insertion order, and the
 /// ids themselves (`A-1_O-1_R-1`, `A-1_O-1_R-10`, `A-1_O-1_R-2`, …) do not
 /// sort into that order lexically.
-pub fn com_object_ref_ids(conn: &Connection, program_id: &str) -> Result<Vec<String>, ProductDbError> {
+pub fn com_object_ref_ids(
+    conn: &Connection,
+    program_id: &str,
+) -> Result<Vec<String>, ProductDbError> {
     let mut stmt =
         conn.prepare("SELECT id FROM com_object_ref WHERE program_id = ?1 ORDER BY rowid")?;
     let rows = stmt
@@ -312,11 +503,14 @@ pub fn com_object_ref_ids(conn: &Connection, program_id: &str) -> Result<Vec<Str
 mod tests {
     use super::*;
     use crate::open_and_migrate;
-    use crate::parse::{catalog::ingest_catalog, hardware::ingest_hardware, program::ingest_program};
+    use crate::parse::{
+        catalog::ingest_catalog, hardware::ingest_hardware, program::ingest_program,
+    };
 
     const HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
 <Hardware><Hardware Id="H-1" Name="X" SerialNumber="S" VersionNumber="1">
+<Products><Product Id="M-006A_H-1_P-1" /></Products>
 <Hardware2Programs><Hardware2Program Id="H-1_HP-1" MediumTypes="MT-0">
 <ApplicationProgramRef RefId="A-1" /></Hardware2Program></Hardware2Programs>
 </Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
@@ -395,10 +589,60 @@ mod tests {
     }
 
     #[test]
+    fn catalog_item_program_resolves_a_complete_relation_chain() {
+        let (_dir, conn) = db();
+        ingest_catalog(&conn, "sha-c", "M-006A/Catalog.xml", CATALOG.as_bytes()).unwrap();
+        let item = catalog_item(&conn, "M-006A_CI-1").unwrap().unwrap();
+
+        assert!(matches!(
+            resolve_catalog_item_program(&conn, &item).unwrap(),
+            CatalogItemProgram::Program {
+                product_ref_id,
+                hardware2program_ref_id,
+                program_id,
+            } if product_ref_id == "M-006A_H-1_P-1"
+                && hardware2program_ref_id == "H-1_HP-1"
+                && program_id == "A-1"
+        ));
+    }
+
+    #[test]
+    fn catalog_item_program_reports_a_missing_relation() {
+        let (_dir, conn) = db();
+        ingest_catalog(&conn, "sha-c", "M-006A/Catalog.xml", CATALOG.as_bytes()).unwrap();
+        conn.execute("DELETE FROM hardware2program WHERE id = 'H-1_HP-1'", [])
+            .unwrap();
+        let item = catalog_item(&conn, "M-006A_CI-1").unwrap().unwrap();
+
+        assert!(matches!(
+            resolve_catalog_item_program(&conn, &item),
+            Err(CatalogItemRelationError::Hardware2ProgramMissing { .. })
+        ));
+    }
+
+    #[test]
+    fn catalog_item_program_preserves_database_errors() {
+        let (_dir, conn) = db();
+        ingest_catalog(&conn, "sha-c", "M-006A/Catalog.xml", CATALOG.as_bytes()).unwrap();
+        let item = catalog_item(&conn, "M-006A_CI-1").unwrap().unwrap();
+        conn.execute_batch("DROP TABLE product").unwrap();
+
+        assert!(matches!(
+            resolve_catalog_item_program(&conn, &item),
+            Err(CatalogItemRelationError::Database(ProductDbError::Sqlite(
+                _
+            )))
+        ));
+    }
+
+    #[test]
     fn com_object_ref_ids_returns_every_ref_in_document_order() {
         let (_dir, conn) = db();
         let ids = com_object_ref_ids(&conn, "A-1").unwrap();
-        assert_eq!(ids, vec!["A-1_O-1_R-1".to_string(), "A-1_O-1_R-2".to_string()]);
+        assert_eq!(
+            ids,
+            vec!["A-1_O-1_R-1".to_string(), "A-1_O-1_R-2".to_string()]
+        );
     }
 
     #[test]

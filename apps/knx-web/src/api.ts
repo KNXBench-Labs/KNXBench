@@ -197,6 +197,44 @@ export interface CatalogItem {
   hardware2programRefId: string | null;
 }
 
+export interface CatalogInstallMember {
+  path: string;
+  role: string;
+  sha256: string;
+  size: number;
+}
+
+export interface CatalogInstallReport {
+  sha256: string;
+  scheme: number;
+  skipped: boolean;
+  members: CatalogInstallMember[];
+  unknown: number;
+  conflicts: number;
+}
+
+export interface CreationDiagnostic {
+  kind:
+    | "programlessProduct"
+    | "ambiguousDpt"
+    | "comObjectRefMissing"
+    | "programRefMissing"
+    | "dynamicOrModuleNotEvaluated";
+  catalogItemId?: string;
+  refId?: string;
+  alternatives?: string[];
+  programRef?: string;
+  programId?: string;
+  /** Ready-to-display sentence built server-side; prefer this over
+   * re-deriving wording from the structured fields above. */
+  detail: string;
+}
+
+export interface CreateDeviceResponse {
+  tree: ProjectTree;
+  diagnostics: CreationDiagnostic[];
+}
+
 export function catalogManufacturers(): Promise<CatalogManufacturer[]> {
   return request("/api/catalog/manufacturers");
 }
@@ -209,11 +247,24 @@ export function catalogItems(manufacturer?: string, search?: string): Promise<Ca
   return request(`/api/catalog/items${qs ? `?${qs}` : ""}`);
 }
 
+/// Uses multipart directly rather than `request()`: setting JSON's
+/// `Content-Type` on a FormData request would remove the required boundary.
+export async function installProductPackage(file: File): Promise<CatalogInstallReport> {
+  const form = new FormData();
+  form.append("file", file);
+  const response = await fetch("/api/catalog/install", { method: "POST", body: form });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.error ?? `${response.status} ${response.statusText}`);
+  }
+  return response.json() as Promise<CatalogInstallReport>;
+}
+
 export function createDevice(
   lineId: number | null,
   catalogItemId: string,
   name: string,
-): Promise<ProjectTree> {
+): Promise<CreateDeviceResponse> {
   return request("/api/devices", {
     method: "POST",
     body: JSON.stringify(lineId === null ? { catalogItemId, name } : { lineId, catalogItemId, name }),

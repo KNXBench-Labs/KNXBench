@@ -27,7 +27,7 @@ pub struct LogEntry {
     pub timestamp: String,
     pub severity: Severity,
     /// e.g. "import", "open", "save", "export", "undo", "redo", or the
-    /// command's own description for an edit.
+    /// command's own name for an edit.
     pub source: String,
     pub message: String,
     /// xpath, when the origin has one.
@@ -60,10 +60,14 @@ pub fn now() -> String {
 /// notice NOT included here — the caller appends that separately, since
 /// only the caller knows the operation actually succeeded end to end).
 ///
-/// Order: `report.errors`, then `report.unknown`, then `report.conflicts`,
-/// then `report.unsupported` — the same order `ImportReport`'s own fields
-/// are declared in, so a reader scanning the log sees "what's actually
-/// wrong" before "what's merely unhandled".
+/// Order: `report.errors`, then `report.unknown`, then `report.opaque`,
+/// then `report.conflicts`, then `report.unsupported` — the same order
+/// `ImportReport`'s own fields are declared in, so a reader scanning the
+/// log sees "what's actually wrong" before "what's merely unhandled".
+///
+/// `report.inferred` and `SourceInfo::namespace_disagreement` are
+/// deliberately not mapped here — a residual for a later round, not
+/// silently dropped (see `docs/KNOWN_LIMITATIONS.md`/`IMPLEMENTATION_STATUS.md`).
 pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
     let mut entries = Vec::new();
 
@@ -87,11 +91,22 @@ pub fn from_import_report(report: &knx_etsproj::ImportReport) -> Vec<LogEntry> {
             severity: Severity::Warning,
             source: "import:unknown".to_string(),
             message: format!(
-                "unknown {:?} '{}' seen {} time(s)",
-                unknown.kind, unknown.name, unknown.occurrences
+                "unknown {:?} '{}' seen {} time(s) in {}",
+                unknown.kind, unknown.name, unknown.occurrences, unknown.source_path
             ),
             location: Some(unknown.xpath.clone()),
-            detail: None,
+            detail: unknown.sample.clone(),
+        });
+    }
+
+    for opaque in &report.opaque {
+        entries.push(LogEntry {
+            timestamp: now(),
+            severity: Severity::Info,
+            source: "import:opaque".to_string(),
+            message: format!("{} preserved opaque: {}", opaque.kind, opaque.reason),
+            location: Some(opaque.source_path.clone()),
+            detail: Some(format!("{} bytes, sha256 {}", opaque.size, opaque.sha256)),
         });
     }
 
@@ -131,6 +146,7 @@ mod tests {
     fn report_with(
         errors: Vec<knx_etsproj::report::ImportError>,
         unknown: Vec<knx_etsproj::parse::UnknownConstruct>,
+        opaque: Vec<knx_etsproj::report::OpaqueSummary>,
         conflicts: Vec<knx_etsproj::infer::Conflict>,
         unsupported: Vec<knx_etsproj::report::UnsupportedFeature>,
     ) -> knx_etsproj::ImportReport {
@@ -146,7 +162,7 @@ mod tests {
             },
             counts: knx_etsproj::report::EntityCounts { rows: vec![] },
             unknown,
-            opaque: vec![],
+            opaque,
             inferred: vec![],
             conflicts,
             unsupported,
@@ -172,12 +188,19 @@ mod tests {
                 },
             ],
             vec![knx_etsproj::parse::UnknownConstruct {
-                source_path: "0.xml".into(),
+                source_path: "P-0512/0.xml".into(),
                 xpath: "/c".into(),
                 kind: knx_etsproj::parse::UnknownKind::Element,
                 name: "Foo".into(),
                 occurrences: 3,
-                sample: None,
+                sample: Some("<Foo bar=\"1\"/>".into()),
+            }],
+            vec![knx_etsproj::report::OpaqueSummary {
+                source_path: "P-0512/1.xml".into(),
+                kind: "Baggage".into(),
+                size: 42,
+                sha256: "deadbeef".into(),
+                reason: "unrecognized manufacturer namespace".into(),
             }],
             vec![knx_etsproj::infer::Conflict {
                 group_address: knx_core::GroupAddressId(7),
@@ -190,7 +213,7 @@ mod tests {
         );
 
         let entries = from_import_report(&report);
-        assert_eq!(entries.len(), 5);
+        assert_eq!(entries.len(), 6);
 
         assert_eq!(entries[0].severity, Severity::Error);
         assert_eq!(entries[0].source, "import:validate");
@@ -205,16 +228,30 @@ mod tests {
         assert_eq!(entries[2].source, "import:unknown");
         assert!(entries[2].message.contains("Foo"));
         assert!(entries[2].message.contains('3'));
+        assert!(entries[2].message.contains("P-0512/0.xml"));
         assert_eq!(entries[2].location.as_deref(), Some("/c"));
+        assert_eq!(entries[2].detail.as_deref(), Some("<Foo bar=\"1\"/>"));
 
-        assert_eq!(entries[3].severity, Severity::Warning);
-        assert_eq!(entries[3].source, "import:conflict");
-        assert!(entries[3].message.contains('7'));
-        assert!(entries[3].location.is_none());
+        assert_eq!(entries[3].severity, Severity::Info);
+        assert_eq!(entries[3].source, "import:opaque");
+        assert!(entries[3].message.contains("Baggage"));
+        assert!(entries[3]
+            .message
+            .contains("unrecognized manufacturer namespace"));
+        assert_eq!(entries[3].location.as_deref(), Some("P-0512/1.xml"));
+        assert_eq!(
+            entries[3].detail.as_deref(),
+            Some("42 bytes, sha256 deadbeef")
+        );
 
         assert_eq!(entries[4].severity, Severity::Warning);
-        assert_eq!(entries[4].source, "import:unsupported");
-        assert_eq!(entries[4].message, "some.dll: not executed");
+        assert_eq!(entries[4].source, "import:conflict");
+        assert!(entries[4].message.contains('7'));
+        assert!(entries[4].location.is_none());
+
+        assert_eq!(entries[5].severity, Severity::Warning);
+        assert_eq!(entries[5].source, "import:unsupported");
+        assert_eq!(entries[5].message, "some.dll: not executed");
     }
 
     #[test]

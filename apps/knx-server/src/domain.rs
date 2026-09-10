@@ -214,7 +214,7 @@ pub fn open_project(state: &AppState, path: &Path) -> Result<ProjectTree, String
         .counts
         .rows
         .iter()
-        .map(|c| format!("{}: {}", c.entity, c.mapped))
+        .map(|c| format!("{}: {}/{}", c.entity, c.mapped, c.read))
         .collect::<Vec<_>>()
         .join(", ");
     log.push(LogEntry {
@@ -322,13 +322,23 @@ pub fn open_native_project(state: &AppState, path: &Path) -> Result<ProjectTree,
     Ok(tree)
 }
 
-/// Pushes one info entry on `Ok`, one error entry on `Err`, both tagged
-/// `source` — shared by `save_project`/`save_project_as`/`export_project`,
-/// none of which ever reset the log (see `session_log.rs`'s own doc
-/// comment).
-fn log_outcome<T>(state: &AppState, source: &str, message: String, result: &Result<T, String>) {
+/// Pushes one info entry on `Ok`, one error entry on `Err` — shared by
+/// every operation that reports outcomes to the session log
+/// (`save_project`/`save_project_as`/`export_project`/`undo_impl`/
+/// `redo_impl`/`apply`/`create_device_impl`), none of which ever reset the
+/// log (see `session_log.rs`'s own doc comment). `detail`, when given,
+/// carries extra context the caller doesn't want duplicated into
+/// `source`/`message` (e.g. a command's full `Debug` dump — see
+/// `command_name` below).
+fn log_outcome<T>(
+    state: &AppState,
+    source: &str,
+    success_message: String,
+    detail: Option<String>,
+    result: &Result<T, String>,
+) {
     let (severity, message) = match result {
-        Ok(_) => (Severity::Info, message),
+        Ok(_) => (Severity::Info, success_message),
         Err(e) => (Severity::Error, e.clone()),
     };
     state
@@ -341,8 +351,25 @@ fn log_outcome<T>(state: &AppState, source: &str, message: String, result: &Resu
             source: source.to_string(),
             message,
             location: None,
-            detail: None,
+            detail,
         });
+}
+
+/// The command's own variant name (`"SetIndividualAddress"`, `"Batch"`,
+/// ...) — the first token of its `Debug` form, up to the first
+/// `(`/`{`/space. Cheap, and needs no match arm per `Command` variant to
+/// stay in sync as `knx-core` grows new ones. Used for `source`/`message`
+/// on `apply()`/`create_device_impl`'s log entries so a `Command::Batch`
+/// or `Command::CreateDevice` (whose full `Debug` form can run to
+/// multiple KB) doesn't get that dump stored — and rendered — twice per
+/// entry; the full dump still goes into `detail` once.
+fn command_name(cmd: &knx_core::Command) -> String {
+    let debug = format!("{cmd:?}");
+    debug
+        .split(['(', '{', ' '])
+        .next()
+        .unwrap_or(&debug)
+        .to_string()
 }
 
 pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
@@ -360,6 +387,7 @@ pub fn save_project_as(state: &AppState, path: &Path) -> Result<(), String> {
         state,
         "save",
         format!("saved as {}", path.display()),
+        None,
         &result,
     );
     result?;
@@ -384,7 +412,7 @@ pub fn save_project(state: &AppState) -> Result<(), String> {
             .expect("state mutex poisoned");
         save_project_as_impl(&path, project, &opaque, &manufacturer_refs)
     })();
-    log_outcome(state, "save", "saved".to_string(), &result);
+    log_outcome(state, "save", "saved".to_string(), None, &result);
     result
 }
 
@@ -446,6 +474,7 @@ pub fn export_project(
         state,
         "export",
         format!("exported to {}", path.display()),
+        None,
         &result,
     );
     result
@@ -486,34 +515,12 @@ fn tree_with_state(
     tree
 }
 
-/// Pushes one entry per `Command` that reaches `do_command`, `source` and
-/// `message` both set to the command's `Debug` form (`cmd_desc`) — the same
-/// shape `apply()` used inline before this helper was pulled out so
-/// `create_device_impl`'s own `do_command` call (which can't go through
-/// `apply()` itself, see its call site) logs identically instead of not at
-/// all.
-fn log_command_outcome(state: &AppState, cmd_desc: String, result: &Result<(), String>) {
-    let (severity, message) = match result {
-        Ok(()) => (Severity::Info, cmd_desc.clone()),
-        Err(e) => (Severity::Error, e.clone()),
-    };
-    state
-        .session_log
-        .lock()
-        .expect("state mutex poisoned")
-        .push(LogEntry {
-            timestamp: session_log::now(),
-            severity,
-            source: cmd_desc,
-            message,
-            location: None,
-            detail: None,
-        });
-}
-
 fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::ProjectTree, String> {
-    // Captured before `do_command` consumes `cmd` below.
+    // Captured before `do_command` consumes `cmd` below: `cmd_desc` is the
+    // full `Debug` dump, kept for `detail`; `cmd_name` is the short variant
+    // name, used for `source`/`message` (see `command_name`'s doc comment).
     let cmd_desc = format!("{cmd:?}");
+    let cmd_name = command_name(&cmd);
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;
     let mut stack = state.command_stack.lock().expect("state mutex poisoned");
@@ -521,7 +528,7 @@ fn apply(state: &AppState, cmd: knx_core::Command) -> Result<knx_projection::Pro
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let tree = tree_with_state(project, &stack, import_counts);
 
-    log_command_outcome(state, cmd_desc, &result);
+    log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
 
     result.map(|()| tree)
 }
@@ -1225,17 +1232,18 @@ pub fn create_device_impl(
         line: line_id.map(knx_core::LineId),
     };
     // Captured before `do_command` consumes `cmd` below — same convention
-    // `apply()` uses, whose `log_command_outcome` helper this reuses so
-    // device creation shows up in the session log too (it can't call
-    // `apply()` itself: this function's return type carries creation
-    // diagnostics `apply()` doesn't produce, and needs the enrichment pass
-    // below run under the same `project` lock before releasing it).
+    // `apply()` uses, whose `log_outcome` helper this reuses so device
+    // creation shows up in the session log too (it can't call `apply()`
+    // itself: this function's return type carries creation diagnostics
+    // `apply()` doesn't produce, and needs the enrichment pass below run
+    // under the same `project` lock before releasing it).
     let cmd_desc = format!("{cmd:?}");
+    let cmd_name = command_name(&cmd);
     let result = {
         let mut stack = state.command_stack.lock().expect("state mutex poisoned");
         stack.do_command(project, cmd).map_err(|e| e.to_string())
     };
-    log_command_outcome(state, cmd_desc, &result);
+    log_outcome(state, &cmd_name, cmd_name.clone(), Some(cmd_desc), &result);
     result?;
 
     // Step 3 (design doc §3.3): seed enrichment once, same mapping
@@ -1371,7 +1379,7 @@ pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let result = stack.undo(project).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let tree = tree_with_state(project, &stack, import_counts);
-    log_undo_redo(state, "undo", &result);
+    log_outcome(state, "undo", "undo".to_string(), None, &result);
     result.map(|()| tree)
 }
 
@@ -1382,29 +1390,8 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let result = stack.redo(project).map_err(|e| e.to_string());
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
     let tree = tree_with_state(project, &stack, import_counts);
-    log_undo_redo(state, "redo", &result);
+    log_outcome(state, "redo", "redo".to_string(), None, &result);
     result.map(|()| tree)
-}
-
-/// Shared by `undo_impl`/`redo_impl`: one info entry on success, one error
-/// entry (message = the returned error string) on failure.
-fn log_undo_redo(state: &AppState, source: &str, result: &Result<(), String>) {
-    let (severity, message) = match result {
-        Ok(()) => (Severity::Info, source.to_string()),
-        Err(e) => (Severity::Error, e.clone()),
-    };
-    state
-        .session_log
-        .lock()
-        .expect("state mutex poisoned")
-        .push(LogEntry {
-            timestamp: session_log::now(),
-            severity,
-            source: source.to_string(),
-            message,
-            location: None,
-            detail: None,
-        });
 }
 
 #[cfg(test)]
@@ -1625,10 +1612,17 @@ mod tests {
         );
         assert_eq!(entries[0].severity, Severity::Error);
         assert_eq!(entries[1].severity, Severity::Info);
+        assert_eq!(
+            entries[1].source, "CreateDevice",
+            "source should be the command's short variant name, not its full Debug dump"
+        );
         assert!(
-            entries[1].source.contains("CreateDevice"),
-            "source should be the command's Debug form: {:?}",
-            entries[1].source
+            entries[1]
+                .detail
+                .as_deref()
+                .is_some_and(|d| d.contains("CreateDevice")),
+            "detail should carry the command's full Debug dump: {:?}",
+            entries[1].detail
         );
     }
 

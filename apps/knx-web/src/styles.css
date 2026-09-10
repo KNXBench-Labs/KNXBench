@@ -473,6 +473,67 @@ main {
   color: var(--knx-error-color);
 }
 
+.log-panel {
+  flex: 1 1 60%;
+  min-width: 0;
+}
+
+.log-panel-filters {
+  display: flex;
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+
+.log-panel-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.log-panel-empty {
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.log-panel-list {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.log-entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--knx-surface);
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+}
+
+.log-entry-severity {
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.log-entry-error .log-entry-severity {
+  color: var(--knx-error-color);
+}
+
+.log-entry-source {
+  opacity: 0.8;
+  font-family: var(--knx-font-mono);
+}
+
+.log-entry-location,
+.log-entry-detail {
+  opacity: 0.8;
+  font-style: italic;
+  width: 100%;
+}
+
 .fs-picker-overlay {
   position: fixed;
   inset: 0;

@@ -11,6 +11,7 @@ import CommandPalette from "./CommandPalette";
 import type { CommandContext } from "./commandRegistry";
 import ThemeSwitcher from "./ThemeSwitcher";
 import Dashboard from "./Dashboard";
+import LogPanel from "./LogPanel";
 import { THEMES, useThemeId } from "./theme";
 import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
@@ -53,6 +54,7 @@ function App() {
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const [themeId, setThemeId] = useThemeId();
   // Mirrors `selection` synchronously so in-flight device_detail responses
   // can tell, once they land, whether the selection has since moved on —
@@ -106,6 +108,7 @@ function App() {
   async function selectEntity(sel: Selection) {
     selectionRef.current = sel;
     setSelection(sel);
+    setLogOpen(false);
     clearErrors();
     if (sel.kind !== "device") {
       // Group-address/building-part detail resolves synchronously from
@@ -271,6 +274,9 @@ function App() {
       <button onClick={() => tree && setSearchOpen(true)} disabled={!tree}>
         Search… (Ctrl+K)
       </button>
+      <button onClick={() => setLogOpen((open) => !open)} disabled={!tree}>
+        Log
+      </button>
       <button
         onClick={() => {
           setSearchOpen(false);
@@ -289,7 +295,9 @@ function App() {
             onSelect={selectEntity}
             onTreeUpdate={handleTreeUpdate}
           />
-          {selection ? (
+          {logOpen ? (
+            <LogPanel tree={tree} />
+          ) : selection ? (
             <Inspector
               key={`${selection.kind}-${selection.id}`}
               selection={selection}

@@ -104,6 +104,19 @@ pub enum Command {
     DeleteGroupAddress {
         id: GroupAddressId,
     },
+    /// Overwrites `name`, `central`, and `unfiltered` on an existing group
+    /// address — `address` and `range` are untouched, matching
+    /// `MoveDeviceToLine`'s split of "which value" from "where it lives".
+    /// No name validation happens here; the CSV reader that is this
+    /// command's only caller so far validates before ever constructing it
+    /// (see the CSV exchange design, §5).
+    /// The inverse carries the entry's previous three values.
+    UpdateGroupAddress {
+        id: GroupAddressId,
+        name: String,
+        central: bool,
+        unfiltered: bool,
+    },
     /// `area.id` is pre-allocated by the caller via
     /// `Project::ids::next_area_id`.
     CreateArea {
@@ -948,6 +961,34 @@ impl Command {
                     .ok_or(CommandError::GroupRangeNotFound(id))?;
                 let previous = std::mem::replace(&mut range.name, name.clone());
                 Ok(Command::RenameGroupRange { id, name: previous })
+            }
+            Command::UpdateGroupAddress {
+                id,
+                name,
+                central,
+                unfiltered,
+            } => {
+                let id = *id;
+                let central = *central;
+                let unfiltered = *unfiltered;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let entry = installation
+                    .group_addresses
+                    .iter_mut()
+                    .find(|e| e.id == id)
+                    .ok_or(CommandError::GroupAddressNotFound(id))?;
+                let previous_name = std::mem::replace(&mut entry.name, name.clone());
+                let previous_central = std::mem::replace(&mut entry.central, central);
+                let previous_unfiltered = std::mem::replace(&mut entry.unfiltered, unfiltered);
+                Ok(Command::UpdateGroupAddress {
+                    id,
+                    name: previous_name,
+                    central: previous_central,
+                    unfiltered: previous_unfiltered,
+                })
             }
             Command::LinkComObject {
                 com_object,
@@ -2393,6 +2434,135 @@ mod tests {
             result,
             Err(CommandError::GroupRangeNotFound(GroupRangeId(99)))
         );
+    }
+
+    #[test]
+    fn update_group_address_changes_name_central_and_unfiltered_and_nothing_else() {
+        let mut project = test_project_with_one_device(None);
+        let address = GroupAddress::from_raw(1);
+        project.installations[0]
+            .group_addresses
+            .push(GroupAddressEntry {
+                id: GroupAddressId(1),
+                source: source(),
+                name: "Old name".into(),
+                address,
+                central: false,
+                unfiltered: false,
+                range: Some(GroupRangeId(1)),
+            });
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::UpdateGroupAddress {
+                    id: GroupAddressId(1),
+                    name: "New name".into(),
+                    central: true,
+                    unfiltered: true,
+                },
+            )
+            .unwrap();
+        let entry = &project.installations[0].group_addresses[0];
+        assert_eq!(entry.name, "New name");
+        assert!(entry.central);
+        assert!(entry.unfiltered);
+        assert_eq!(entry.address, address);
+        assert_eq!(entry.range, Some(GroupRangeId(1)));
+        assert_eq!(entry.id, GroupAddressId(1));
+    }
+
+    #[test]
+    fn update_group_address_inverse_carries_the_previous_values() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .group_addresses
+            .push(GroupAddressEntry {
+                id: GroupAddressId(1),
+                source: source(),
+                name: "Old name".into(),
+                address: GroupAddress::from_raw(1),
+                central: false,
+                unfiltered: true,
+                range: None,
+            });
+        let inverse = Command::UpdateGroupAddress {
+            id: GroupAddressId(1),
+            name: "New name".into(),
+            central: true,
+            unfiltered: false,
+        }
+        .apply(&mut project)
+        .unwrap();
+        assert_eq!(
+            inverse,
+            Command::UpdateGroupAddress {
+                id: GroupAddressId(1),
+                name: "Old name".into(),
+                central: false,
+                unfiltered: true,
+            }
+        );
+    }
+
+    #[test]
+    fn update_unknown_group_address_is_rejected() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let result = stack.do_command(
+            &mut project,
+            Command::UpdateGroupAddress {
+                id: GroupAddressId(99),
+                name: "X".into(),
+                central: false,
+                unfiltered: false,
+            },
+        );
+        assert_eq!(
+            result,
+            Err(CommandError::GroupAddressNotFound(GroupAddressId(99)))
+        );
+    }
+
+    #[test]
+    fn update_group_address_round_trips_through_undo_and_redo() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .group_addresses
+            .push(GroupAddressEntry {
+                id: GroupAddressId(1),
+                source: source(),
+                name: "Old name".into(),
+                address: GroupAddress::from_raw(1),
+                central: false,
+                unfiltered: false,
+                range: None,
+            });
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::UpdateGroupAddress {
+                    id: GroupAddressId(1),
+                    name: "New name".into(),
+                    central: true,
+                    unfiltered: true,
+                },
+            )
+            .unwrap();
+        assert_eq!(project.installations[0].group_addresses[0].name, "New name");
+        assert!(project.installations[0].group_addresses[0].central);
+        assert!(project.installations[0].group_addresses[0].unfiltered);
+
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project.installations[0].group_addresses[0].name, "Old name");
+        assert!(!project.installations[0].group_addresses[0].central);
+        assert!(!project.installations[0].group_addresses[0].unfiltered);
+
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.installations[0].group_addresses[0].name, "New name");
+        assert!(project.installations[0].group_addresses[0].central);
+        assert!(project.installations[0].group_addresses[0].unfiltered);
     }
 
     #[test]

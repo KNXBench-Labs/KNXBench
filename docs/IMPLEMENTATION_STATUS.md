@@ -1260,16 +1260,52 @@ happen to share one connection. Fixed in the same branch:
 dropped) and `open_native_project` (read back from the `.knxdb` just
 loaded); `save_project`/`save_project_as`/`/api/project/download` all
 write them into the target `.knxdb` alongside the domain tables.
-`export_project` itself needed no change — it already read from the
-just-saved `.knxdb`, which now genuinely has the data. A new regression
-test, `exported_project_still_carries_opaque_and_manufacturer_data_after_save_as`,
+A new regression test,
+`exported_project_still_carries_opaque_and_manufacturer_data_after_save_as`,
 reimports the exported file and asserts non-empty opaque/manifest tables
 — a content check, not just "the file is non-empty", which is the class
 of assertion that let the bug through Tasks 1-3's own tests undetected.
 
-New tests: `apps/knx-cli/tests/cli_export.rs` (2), 3 in
-`apps/knx-server/tests/http_export_route.rs` (including the B1
-regression test above). Gates: `cargo fmt --all --check` clean, `cargo
-test -p knx-server -p knx-cli` all green, `npx tsc --noEmit` /
-`npm test` (104/104) / `npm run build` clean on `knx-web`. Closes **C4**
+A **second** bug surfaced by a round-2 whole-branch re-review, dispatched
+after the first fix: `knx_store::insert_opaque`/`insert_manufacturer_refs`
+were plain `INSERT`s with no clear-first step, unlike `save_project`'s own
+DELETE-then-insert convention. The first fix above made
+`save_project_as_impl` call them on *every* save, not just the first —
+so a plain repeated `POST /api/project/save`, reusing an already-populated
+`store_path`, duplicated every opaque/manifest row without bound. The
+reviewer reproduced this empirically in a standalone crate outside the
+worktree. Fixed at the `knx-store` level (`DELETE FROM` before `INSERT`,
+inside the existing transaction), so the fix covers every caller, not
+just `save_project_as_impl`. Regression tests added in both
+`knx-store` (repeated `insert_opaque`/`insert_manufacturer_refs` calls)
+and `knx-server` (`saving_the_same_project_twice_does_not_duplicate_opaque_and_manifest_rows`,
+exercising the actual HTTP `/api/project/save` path).
+
+While fixing the second bug, `export_project` was also changed: it used
+to re-open `store_path` off disk to read the opaque/manifest tables
+(the original doc comment's "no change needed" above was true at the
+time but became a second, sharper consumer of the stale-`store_path`
+gap in [KNOWN_LIMITATIONS.md #18](KNOWN_LIMITATIONS.md#18-open_project-does-not-clear-the-previous-knxdb-store_path)
+once the data those tables carry could go stale relative to
+`state.project`). It now reads `AppState.opaque`/`AppState.manufacturer_refs`
+directly — the same live, in-memory copies every save path already
+writes through — copied into a throwaway in-memory `.knxdb` for
+`export_ets_project`'s `Connection`-shaped interface, instead of
+re-opening the file. This also collapses a lock-ordering inconsistency
+a reviewer flagged (project-then-product_db, unlike the rest of the
+codebase): `opaque`/`manufacturer_refs` are now locked, copied, and
+dropped before `project`/`product_db` are touched at all.
+
+New tests: `apps/knx-cli/tests/cli_export.rs` (2), 5 in
+`apps/knx-server/tests/http_export_route.rs` (including both regression
+tests above), 2 in `knx-store` (`opaque.rs`, `manifest.rs`). Gates:
+`cargo fmt --all --check` clean, `cargo test --workspace` all green
+(one pre-existing, environment-dependent failure in `knx-productdb`'s
+`installs_the_readable_corpus`, unrelated — needs `KNXBENCH_PRODUCT_CORPUS`
+pointed at a fixture corpus not present in this environment), `cargo
+clippy --workspace --all-targets` clean except two known pre-existing
+issues (`knx-etsproj`'s `large_enum_variant`, `knx-server`'s
+`http_product_install.rs` `field_reassign_with_default`), `xtask
+check-layering` clean, `npx tsc --noEmit` / `npm test` (104/104) /
+`npm run build` clean on `knx-web`. Closes **C4**
 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)).

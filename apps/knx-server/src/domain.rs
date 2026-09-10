@@ -264,25 +264,44 @@ pub fn save_project(state: &AppState) -> Result<(), String> {
 
 /// Exports the live in-memory project to a `.knxproj` file at `path`.
 /// Requires `store_path` already set (i.e. the project has been saved or
-/// opened as `.knxdb` at least once): the opaque passthrough table and
-/// manufacturer manifest `export_ets_project` needs are read from *that*
-/// `.knxdb` connection, never from a fresh empty one, so no opaque or
-/// manufacturer data silently goes missing from the export. The project
-/// content itself comes from `state.project` (live, possibly edited since
-/// the last save), not from re-loading the `.knxdb` file.
+/// opened as `.knxdb` at least once) — a workflow guarantee that the user
+/// has committed the current state to disk before exporting, not a data
+/// source: the opaque passthrough table and manufacturer manifest
+/// `export_ets_project` needs come from `state.opaque`/
+/// `state.manufacturer_refs` (the same live, in-memory copies every save
+/// path writes through), copied into a throwaway in-memory `.knxdb` for
+/// `export_ets_project`'s `Connection`-shaped interface. Earlier this
+/// re-opened `store_path` off disk instead, which (see
+/// `KNOWN_LIMITATIONS.md` #18) can lag the in-memory project — reading
+/// live state instead removes that staleness risk for this data, even
+/// though #18's broader "`store_path` names the wrong project" gap remains
+/// for `save_project` itself. The project content itself comes from
+/// `state.project` (live, possibly edited since the last save), not from
+/// re-loading the `.knxdb` file.
 pub fn export_project(
     state: &AppState,
     path: &Path,
 ) -> Result<knx_etsproj::export::ExportOutcome, String> {
-    let store_path = state
-        .store_path
+    {
+        let store_path = state.store_path.lock().expect("state mutex poisoned");
+        if store_path.is_none() {
+            return Err(
+                "save the project as .knxdb first — export reads passthrough data from the saved store"
+                    .to_string(),
+            );
+        }
+    }
+    let opaque = state.opaque.lock().expect("state mutex poisoned");
+    let manufacturer_refs = state
+        .manufacturer_refs
         .lock()
-        .expect("state mutex poisoned")
-        .clone()
-        .ok_or(
-            "save the project as .knxdb first — export reads passthrough data from the saved store",
-        )?;
-    let conn = knx_store::open_and_migrate(&store_path).map_err(|e| e.to_string())?;
+        .expect("state mutex poisoned");
+    let conn = knx_store::open_and_migrate_in_memory().map_err(|e| e.to_string())?;
+    knx_store::insert_opaque(&conn, &opaque).map_err(|e| e.to_string())?;
+    knx_store::insert_manufacturer_refs(&conn, &manufacturer_refs).map_err(|e| e.to_string())?;
+    drop(opaque);
+    drop(manufacturer_refs);
+
     let project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_ref().ok_or("no project open")?;
     let product_db_guard = state

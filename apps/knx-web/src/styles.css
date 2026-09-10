@@ -19,6 +19,7 @@
 
   /* Feedback (colored, never pure black) */
   --knx-error-color: #ff6b6b;
+  --knx-warning-color: #ffd600;
   --knx-overlay-backdrop: rgba(3, 3, 4, 0.7);
   --knx-overlay-shadow: rgba(234, 88, 12, 0.25);
   --knx-glow-orange: 0 0 20px -5px rgba(234, 88, 12, 0.5);
@@ -520,6 +521,10 @@ main {
 
 .log-entry-error .log-entry-severity {
   color: var(--knx-error-color);
+}
+
+.log-entry-warning .log-entry-severity {
+  color: var(--knx-warning-color);
 }
 
 .log-entry-source {

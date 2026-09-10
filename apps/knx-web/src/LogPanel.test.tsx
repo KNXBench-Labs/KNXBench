@@ -41,12 +41,12 @@ function entry(overrides: Partial<LogEntry>): LogEntry {
   };
 }
 
-async function renderPanel(tree: ProjectTree) {
+async function renderPanel(tree: ProjectTree, refreshKey = 0) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<LogPanel tree={tree} />);
+    root.render(<LogPanel tree={tree} refreshKey={refreshKey} />);
   });
   return root;
 }
@@ -137,7 +137,7 @@ describe("LogPanel", () => {
     apiMock.getSessionLog.mockResolvedValue([]);
     const newTree = baseTree();
     await act(async () => {
-      root.render(<LogPanel tree={newTree} />);
+      root.render(<LogPanel tree={newTree} refreshKey={0} />);
     });
     expect(host!.querySelector(".field-error")).toBeNull();
 
@@ -160,7 +160,19 @@ describe("LogPanel", () => {
 
     const newTree = baseTree();
     await act(async () => {
-      root.render(<LogPanel tree={newTree} />);
+      root.render(<LogPanel tree={newTree} refreshKey={0} />);
+    });
+    expect(apiMock.getSessionLog).toHaveBeenCalledTimes(2);
+    root.unmount();
+  });
+
+  it("refetches when refreshKey changes, even with the same tree (a failed operation never changes tree)", async () => {
+    const tree = baseTree();
+    const root = await renderPanel(tree, 0);
+    expect(apiMock.getSessionLog).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.render(<LogPanel tree={tree} refreshKey={1} />);
     });
     expect(apiMock.getSessionLog).toHaveBeenCalledTimes(2);
     root.unmount();

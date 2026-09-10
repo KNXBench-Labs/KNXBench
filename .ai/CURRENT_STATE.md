@@ -545,3 +545,92 @@
   spec. Also note that D11 is *not* an ETS parity gap — ETS has no comparable
   animation — it is filed in the UI section only because that is where the
   control would live.
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 23:10
+- **Completed:** Task 7 of the T13 SDD plan (worktree
+  `.worktrees/t13-documentation-export`, branch `t13-documentation-export`,
+  not merged to `main` by this agent). Corpus-gated integration test plus the
+  documentation close-out for **T13**/**D4** (HTML only).
+
+  Added `crates/knx-app/tests/documentation_export.rs`: imports the
+  maintainer's real reference project
+  (`OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj`,
+  gitignored, local-only — skips with an `eprintln!` when absent), renders it
+  with `knx_report::render_html`, and asserts every formatted group address
+  and every escaped device name appears in the output, `<table>`/`</table>`
+  and `<tr>`/`</tr>` counts balance, the Summary section's nine rows match
+  counts independently recomputed from `Project` (not from `knx-report`'s own
+  `compute_counts`), the document is self-contained (no `<script`, no
+  `http://`/`https://`), and a second render with the same timestamp is
+  byte-identical. Confirmed against the real corpus (not the skip path): 36
+  devices, 907 communication objects, 514 group addresses, 248799 bytes of
+  HTML, 1 structural warning. `knx-app/Cargo.toml` gained
+  `knx-report.workspace = true` under `[dev-dependencies]`, for the same
+  layering reason `csv_roundtrip.rs` needs `knx-csv` there:
+  `check-layering` walks dev-dependency edges too, so `knx-report` itself
+  must never depend on `knx-etsproj`, and `knx-app` is the one crate allowed
+  to see both sides. Git worktrees don't carry over gitignored directories
+  from the main checkout, so a local-only, uncommitted symlink
+  `OriginalData -> /mnt/daten-i/Sourcecode/KNXBench/OriginalData` was created
+  inside this worktree to exercise the real corpus path; it is not tracked
+  and was never staged.
+
+  Documentation: `docs/IMPORT_EXPORT.md` gained a new "§12. Project
+  documentation export" section (crate/API summary, self-contained-document
+  properties, section list, "own document, not an ETS report" framing,
+  surfaces). `docs/GAP_ANALYSIS_ETS.md`: D4 row closed for HTML only, with
+  in-app printing and PDF-without-a-browser stated as explicitly still open
+  in the row's own text; T13 backlog bullet closed with full crate/route/
+  CLI/test citations and the real corpus numbers.
+  `docs/KNOWN_LIMITATIONS.md` gained seven new entries, §44–§50, covering: no
+  ETS report parity (cross-ref §38), no native PDF, no manufacturer/product/
+  program name resolution, no parameter values or module-instance arguments
+  (cross-ref §3/T18), single-language rendering (cross-ref §37/T26), no
+  in-app print preview, no section selection.
+  `docs/IMPLEMENTATION_STATUS.md` gained a dated append-only entry
+  ("T13, project documentation export, HTML only (2026-09-10)") with the same
+  re-derived numbers. `docs/ROADMAP.md` was checked (`grep -n
+  "T13|D4\b|documentation export|printing"`, no matches) and correctly left
+  untouched for the T13/D4 work, per the task brief.
+
+  Gates, all green, all re-run from this worktree: `cargo fmt --all --check`,
+  `cargo clippy --workspace --all-targets -- -D warnings`,
+  `cargo test --workspace` (718 passed, 0 failed — corpus test confirmed to
+  have actually run, not skipped), `cargo run -p xtask -- check-layering`,
+  `cargo deny check` (advisories/bans/licenses/sources all ok), and from
+  `apps/knx-web`: `npx tsc --noEmit`, `npm test -- --run` (145 passed),
+  `npm run build` (succeeded; `dist/.gitkeep`, which `npm run build` deletes,
+  restored via `git checkout -- dist/.gitkeep`).
+
+  Separately, by an explicit mid-task live user request unrelated to T13/D4,
+  `docs/ROADMAP.md`'s "Cross-cutting — Motion and animation" section gained a
+  short memo recording two candidate visual style directions for whenever
+  T27's motion work gets designed (an Apple-like sleek/subtle/clean
+  direction, and a "techy glitch / cyberpunk OS" direction that is still
+  meant to read as clean and sleek rather than noisy) — not decided, not
+  designed, no task opened; kept in its own commit, separate from the T13/D4
+  documentation work.
+- **Pending/Next Steps:** This worktree has not been merged to `main` and has
+  not been pushed (standing instruction: no GitHub workflow until further
+  notice). The dispatching orchestrator still needs to review and merge (or
+  request changes on) this branch. After that, next backlog items in order
+  are **T14** (project diff/compare, closes **C1**), and whatever T13's
+  remaining "not implemented" items are eventually promoted to (native PDF,
+  in-app print preview, section selection, manufacturer/product/program name
+  resolution, parameter values, multi-language rendering) if any of them get
+  scheduled. Still parked and unscheduled: `KNOWN_LIMITATIONS.md` #36, #42.
+  The animation-style memo added to `ROADMAP.md` is a memo only — T27 itself
+  is still unscheduled and undesigned.
+- **Notes for Codex:** The `OriginalData` symlink in this worktree is
+  local-only scratch, not part of any commit — if you pick up this branch,
+  you'll need to recreate it yourself (`ln -s
+  /mnt/daten-i/Sourcecode/KNXBench/OriginalData OriginalData` from the
+  worktree root) to make `documentation_export.rs`'s corpus test exercise the
+  real path instead of skipping. Also: `knx-report`'s device-detail section
+  reads two sources — `build_device_detail` (pure, from `knx-projection`) and
+  direct `project.devices.get(id)` reads for `commissioning`/`product_ref`/
+  `program_ref`/`binary_data`. This is deliberate (documented in
+  `IMPLEMENTATION_STATUS.md`'s new T13 entry) but is exactly the kind of
+  two-source pattern a reviewer should double check stays in sync if either
+  side changes shape.

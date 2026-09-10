@@ -1832,10 +1832,12 @@ dependencies = [
 name = "knx-app"
 version = "0.0.0"
 dependencies = [
+ "chrono",
  "knx-core",
  "knx-csv",
  "knx-etsproj",
  "knx-productdb",
+ "knx-report",
  "knx-store",
  "tempfile",
 ]

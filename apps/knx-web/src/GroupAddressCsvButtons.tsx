@@ -24,6 +24,27 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 // is where that detail lives, not here.
 const CSV_FILTER = [{ name: "Group-address CSV", extensions: ["csv"] }];
 
+// A successful (200) import can still carry `problems` of severity
+// `"warning"` and non-empty `ignoredColumns` — a column the file had that
+// import never applies. Both are already logged server-side, but the
+// export button's toast surfaces its warning count and the import button's
+// summary was silently dropping the equivalent counts, which is exactly
+// the "information never silently discarded" rule this project holds
+// itself to. Folded into the one-line summary, matching export's own
+// "— see Log." pointer, rather than reopening a report viewer here.
+function importSummary(report: api.CsvImportReport): string {
+  const base = `Group addresses imported from CSV: ${report.created} created, ${report.updated} updated, ${report.unchanged} unchanged`;
+  const warningCount = report.problems.filter((p) => p.severity === "warning").length;
+  const ignoredCount = report.ignoredColumns.length;
+  const extras: string[] = [];
+  if (warningCount > 0) extras.push(`${warningCount} warning${warningCount === 1 ? "" : "s"}`);
+  if (ignoredCount > 0) {
+    extras.push(`${ignoredCount} column${ignoredCount === 1 ? "" : "s"} ignored`);
+  }
+  if (extras.length === 0) return `${base}.`;
+  return `${base}, ${extras.join(", ")} — see Log.`;
+}
+
 export default function GroupAddressCsvButtons(props: {
   tree: ProjectTree | null;
   onTreeUpdate: (tree: ProjectTree) => void;
@@ -54,10 +75,7 @@ export default function GroupAddressCsvButtons(props: {
     try {
       const { tree: nextTree, report } = await api.importGroupAddressesCsv(path);
       onTreeUpdate(nextTree);
-      onSummary(
-        `Group addresses imported from CSV: ${report.created} created, ${report.updated} updated, ` +
-          `${report.unchanged} unchanged.`,
-      );
+      onSummary(importSummary(report));
     } catch (e) {
       // A rejected import (400 — a row-level problem) never reaches the
       // `.then` above: `onTreeUpdate` is not called, and the project the

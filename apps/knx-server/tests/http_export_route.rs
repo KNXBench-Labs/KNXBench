@@ -145,3 +145,104 @@ async fn importing_saving_then_exporting_round_trips_and_reports_the_unsigned_wa
         "export should have written a non-empty .knxproj file"
     );
 }
+
+/// Regression test for the data-integrity bug the whole-branch review
+/// caught (final-review.md, finding B1): a server-side ETS import used a
+/// throwaway in-memory store whose opaque passthrough + manufacturer
+/// manifest rows never survived into the `.knxdb` written by Save As, so
+/// the exported `.knxproj` silently lost that data even though the export
+/// route itself reported no error. Confirms the fix by reimporting the
+/// exported file and checking its own opaque/manifest tables are non-empty
+/// — a genuine content check, not just "the file is non-empty" (which the
+/// previous, buggy 29.9KB-from-1.7MB export also satisfied).
+#[tokio::test]
+async fn exported_project_still_carries_opaque_and_manufacturer_data_after_save_as() {
+    let state = Arc::new(knx_server::AppState::default());
+    let app = knx_server::app(state, None);
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("roundtrip.knxdb");
+    let export_path = dir.path().join("roundtrip.knxproj");
+
+    let import_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/import")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "path": reference_ets4_path().to_string_lossy() }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(import_response.status(), StatusCode::OK);
+
+    let save_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/save-as")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "path": db_path.to_string_lossy() }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(save_response.status(), StatusCode::OK);
+
+    // The bug lived here: the `.knxdb` Save As just wrote must itself carry
+    // the opaque/manifest rows, or the export below has nothing correct to
+    // read from regardless of what the export route does.
+    let saved_conn = knx_store::open_and_migrate(&db_path).unwrap();
+    let saved_opaque = knx_store::load_opaque(&saved_conn).unwrap();
+    let saved_manifest = knx_store::load_manufacturer_refs(&saved_conn).unwrap();
+    assert!(
+        !saved_opaque.is_empty(),
+        "the saved .knxdb should carry the opaque entries the ETS import produced"
+    );
+    assert!(
+        !saved_manifest.is_empty(),
+        "the saved .knxdb should carry the manufacturer manifest the ETS import produced"
+    );
+
+    let export_response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/export")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "path": export_path.to_string_lossy() }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(export_response.status(), StatusCode::OK);
+
+    // Reimport the exported .knxproj into a fresh throwaway store and
+    // confirm it still carries opaque/manifest data of its own — the
+    // end-to-end guarantee a user actually cares about.
+    let reimport_conn = knx_store::open_and_migrate_in_memory().unwrap();
+    knx_app::import_ets_project_with(
+        &export_path,
+        &reimport_conn,
+        knx_app::ImportOptions::default(),
+    )
+    .unwrap();
+    let reimported_opaque = knx_store::load_opaque(&reimport_conn).unwrap();
+    let reimported_manifest = knx_store::load_manufacturer_refs(&reimport_conn).unwrap();
+    assert!(
+        !reimported_opaque.is_empty(),
+        "the exported .knxproj should still carry opaque data on reimport"
+    );
+    assert!(
+        !reimported_manifest.is_empty(),
+        "the exported .knxproj should still carry manufacturer manifest data on reimport"
+    );
+}

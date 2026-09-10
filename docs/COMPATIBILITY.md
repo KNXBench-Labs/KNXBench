@@ -50,6 +50,8 @@ compatibility claim with no test behind it.
 | A project opening and naming its gap when the product database is missing, rather than failing to open or guessing | The reference project, its product database deleted after import | ADR-0005, ADR-0011 | `a_project_opens_and_names_its_gap_when_the_product_database_is_gone` (`knx-app/tests/product_db.rs`) |
 | Enriching communication objects from the application program into `Override::Absent` slots only, never into `Empty`/`Malformed`/instance-level values | Hand-built fixtures pinning each of the four `Override` states | ADR-0012, DATA_MODEL §3 | `an_absent_text_is_filled_at_the_program_layer`, `an_empty_instance_attribute_is_never_overwritten`, `an_instance_value_is_never_overwritten` (`knx-productdb/src/enrich.rs`) |
 | An ambiguous, space-separated `DatapointType` list filling nothing and being reported rather than guessed | A `ComObjectRef` carrying two alternatives | RESEARCH §4.2, ADR-0012 | `a_datapoint_type_list_fills_nothing_and_is_reported` (`knx-productdb/src/enrich.rs`) |
+| Installing a standalone `.knxprod` product package (no accompanying `.knxproj`) at master data scheme 11 or scheme 20, atomically, with content-addressed storage and idempotent re-install | 5 real-world files: 3 at scheme 11 (`646704-04_ETS4_2012_47_DE_EN.knxprod`, `Weinzierl_730_KNX_IP_Interface_ETS4.knxprod`, `Weinzierl_730_KNX_IP_Interface_ETS4_v1.knxprod`), 2 at scheme 20 (`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`, `Dummy_Applikation_Secure.knxprod`) — the `.knxprod`/`.knxproj` container family per *Project Schema23 v01.00.00* §4.2.2-§4.2.3 (`knx_master.xml` root, `http://knx.org/xml/project/{scheme}`), the "manufacturer product template as input to tool-side configuration" role per *03_01_01 Architecture v03.00.02 AS* §6.2 | `installs_the_readable_corpus` (`knx-productdb/tests/standalone_packages.rs`) |
+| Rejecting a malformed or unsafe standalone package (invalid ZIP, encrypted member, path traversal, duplicate member, oversized member, missing `knx_master.xml`, unsupported namespace, a full `.knxproj` project archive, or a legacy `.vd2` file) as a typed error with no rows published | Hand-built malformed archives plus the real `Weinzierl_730_KNX_IP_Interface_ETS2-3.vd2` (a pre-2013 ETS2-era SFX/`.vd_` container, not the same ZIP/XML family) | This plan's spec | `malformed_and_unsupported_packages_leave_no_rows` (`knx-productdb/tests/standalone_packages.rs`), `malformed_and_legacy_product_uploads_are_typed_bad_requests` (`knx-server/tests/http_product_install.rs`) |
 
 Every export this application produces is unsigned — see §3, "ETS re-import
 of a file we export."
@@ -60,7 +62,7 @@ of a file we export."
 | --- | --- | --- |
 | Schema 12 (ETS 4) | Documented only [D] | Import a real ETS 4 project of that schema and reconcile the unknown-construct report to empty |
 | Schema 13, 14 (ETS 5 up to 5.6) | Documented only [D] | Same, with an ETS 5 sample |
-| Schema 20 (ETS 5.7) | Documented only [D] | Same, with an ETS 5.7 sample |
+| Schema 20 (ETS 5.7) **`.knxproj` project** import | Documented only [D] — distinct from §2's now-verified standalone `.knxprod` scheme-20 *product-package* install; a full ETS 5.7 project has not been imported | Same, with an ETS 5.7 sample |
 | Schema 22 (ETS 6.x, early) | Documented only [D] | Same, with an ETS 6.0–6.2 sample |
 | Schema 23 (ETS 6.3.7959.0) | Container and content model diffed against schema 11 [V] (RESEARCH §2.4/§3.3); importer built, but module handling inferred not evidenced | Obtain an independent, module-using schema-23 sample and reconcile its unknown-construct report to empty |
 | Password-protected projects, schema < 21 (ZipCrypto) | Code path derived from `xknxproject` source [V], never executed here | Open a real protected ETS4/ETS5 project with its password |
@@ -78,7 +80,7 @@ is that we expect it to work and have not shown that it does.
 | Devices whose configuration depends on a vendor plug-in DLL | The behaviour lives in the binary; it is preserved and reported, never executed (RESEARCH §7, risk R5) |
 | Commissioning and device download | Bricking risk, an undocumented `Legacy*` matrix, vendor DLLs (RESEARCH §8.3) |
 | KNX Secure | No sample key material to verify against; the subsystem exists but stays empty (RESEARCH §9) |
-| Direct `.knxprod` import for master data scheme ≥ 12 | The encryption layer is unresolved (RESEARCH §10) |
+| Direct `.knxprod` import for master data scheme ≥ 12, **except schemes 11 and 20** (§2, standalone package install) | Schemes 12-19, 21, 22 have no standalone sample tested yet; `.vd2` is a distinct pre-2013 legacy container, permanently unsupported, not an encryption question |
 | Device parameter editing | The `Dynamic` tree grammar is unresearched (risk R3); parameter values are preserved but not interpreted |
 
 Each row here has a matching entry in

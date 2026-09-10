@@ -518,7 +518,12 @@ fn parse_ga_import_args(args: &[String]) -> Result<GaImportArgs, String> {
 /// plan and prints the identical report but returns before the `apply`/
 /// `save_project` calls below, so the store is provably untouched — the
 /// printed report is built solely from `plan.report`, never from whether
-/// the save happened, so it is byte-identical either way.
+/// the save happened, so it is byte-identical either way. A single
+/// trailing `store written: yes|no (reason)` line is appended *after*
+/// that report body on every terminal path, so it can never make the
+/// report itself diverge between a dry run and a real one, and a reader
+/// never has to infer from the exit code or counts alone whether a save
+/// actually happened.
 fn run_ga_import(args: &[String]) -> ExitCode {
     let parsed = match parse_ga_import_args(args) {
         Ok(parsed) => parsed,
@@ -567,21 +572,34 @@ fn run_ga_import(args: &[String]) -> ExitCode {
         // here, so nothing below would have applied anyway — returning
         // early just keeps that guarantee explicit and keeps the store
         // untouched for both a real run and `--dry-run` alike.
+        println!("store written: no (rejected)");
         return ExitCode::from(EXIT_IMPORTED_WITH_ERRORS);
     }
 
     if parsed.dry_run {
+        println!("store written: no (dry run)");
         return ExitCode::SUCCESS;
     }
 
-    if let Some(command) = plan.command {
-        if let Err(e) = command.apply(&mut project) {
-            eprintln!("failed to apply import: {e}");
-            return ExitCode::FAILURE;
+    match plan.command {
+        Some(command) => {
+            if let Err(e) = command.apply(&mut project) {
+                eprintln!("failed to apply import: {e}");
+                println!("store written: no (error)");
+                return ExitCode::FAILURE;
+            }
+            if let Err(e) = knx_store::save_project(&conn, &project) {
+                eprintln!("failed to save project to store: {e}");
+                println!("store written: no (error)");
+                return ExitCode::FAILURE;
+            }
+            println!("store written: yes");
         }
-        if let Err(e) = knx_store::save_project(&conn, &project) {
-            eprintln!("failed to save project to store: {e}");
-            return ExitCode::FAILURE;
+        None => {
+            // No row created or updated anything (the report's own "nothing
+            // to do" line already said so) — there is nothing to apply, so
+            // `save_project` is never called.
+            println!("store written: no (nothing to do)");
         }
     }
 

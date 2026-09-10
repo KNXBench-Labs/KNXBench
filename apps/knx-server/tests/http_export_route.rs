@@ -246,3 +246,88 @@ async fn exported_project_still_carries_opaque_and_manufacturer_data_after_save_
         "the exported .knxproj should still carry manufacturer manifest data on reimport"
     );
 }
+
+/// Regression test for the whole-branch review's round-2 finding: the B1
+/// fix made `save_project_as_impl` call `insert_opaque`/
+/// `insert_manufacturer_refs` on every save, including a plain repeated
+/// `POST /api/project/save` that reuses `store_path` — and those two
+/// functions used to be pure `INSERT`s with no clear-first step, so every
+/// repeated save duplicated every opaque/manifest row without bound.
+/// Confirms the fix (clear-before-insert, now inside `knx-store` itself)
+/// by saving the same already-populated store three times and asserting
+/// the row counts stay put.
+#[tokio::test]
+async fn saving_the_same_project_twice_does_not_duplicate_opaque_and_manifest_rows() {
+    let state = Arc::new(knx_server::AppState::default());
+    let app = knx_server::app(state, None);
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("roundtrip.knxdb");
+
+    let import_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/import")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "path": reference_ets4_path().to_string_lossy() }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(import_response.status(), StatusCode::OK);
+
+    let save_as_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/save-as")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "path": db_path.to_string_lossy() }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(save_as_response.status(), StatusCode::OK);
+
+    let conn = knx_store::open_and_migrate(&db_path).unwrap();
+    let opaque_count_after_first_save = knx_store::load_opaque(&conn).unwrap().len();
+    let manifest_count_after_first_save = knx_store::load_manufacturer_refs(&conn).unwrap().len();
+    assert!(opaque_count_after_first_save > 0);
+    assert!(manifest_count_after_first_save > 0);
+    drop(conn);
+
+    // Plain "Save" twice more, reusing `store_path` — the path the bug
+    // lived on.
+    for _ in 0..2 {
+        let save_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/project/save")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(save_response.status(), StatusCode::OK);
+    }
+
+    let conn = knx_store::open_and_migrate(&db_path).unwrap();
+    assert_eq!(
+        knx_store::load_opaque(&conn).unwrap().len(),
+        opaque_count_after_first_save,
+        "repeated saves must not duplicate opaque rows"
+    );
+    assert_eq!(
+        knx_store::load_manufacturer_refs(&conn).unwrap().len(),
+        manifest_count_after_first_save,
+        "repeated saves must not duplicate manufacturer manifest rows"
+    );
+}

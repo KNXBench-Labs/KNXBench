@@ -16,9 +16,20 @@
 
 pub mod html;
 mod model;
+mod render;
 mod testutil;
 
 use chrono::{DateTime, Utc};
+use knx_core::Project;
+
+/// Renders `project` into one self-contained HTML "project documentation"
+/// document, using `options.generated_at` as the only source of "now"
+/// (Task 3). A two-line wrapper so the crate's one public entry point has
+/// an obvious, stable location; all the actual walking lives in
+/// `render.rs`.
+pub fn render_html(project: &Project, options: &ReportOptions) -> HtmlReport {
+    render::render(project, options)
+}
 
 /// Caller-supplied inputs to [`render_html`] (Task 3) that must not be
 /// re-derived inside this crate.

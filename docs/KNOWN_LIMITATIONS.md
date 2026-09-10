@@ -995,3 +995,177 @@ data) in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6, added
 scheduled cycle. Until then the translations remain queryable directly
 from the `.knxdb` product database with SQL, which is a developer
 workaround and not a feature.
+
+## 38. Group-address CSV export/import (T12) has no verified ETS interoperability
+
+**Limitation.** "KNXBench group-address CSV v1" (`crates/knx-csv`,
+[IMPORT_EXPORT.md §11](IMPORT_EXPORT.md#11-group-address-csv-exchange)) is
+a format this project defines and documents itself. It is not, and cannot
+currently be shown to be, compatible with ETS's own "Export Group
+Addresses" CSV feature, or with the legacy `.esf`/OPC export format.
+
+**Cause.** No sample of either format exists anywhere in this repository,
+and searching all 179 documents of the extracted KNX Standard v3.0.0
+corpus for `csv`, `esf`, `OPC export`, and group-address-export
+terminology turned up nothing but two incidental prose hits (a
+data-security test report and an RF application note) — there is no
+standardized group-address exchange text format at all. Group-address CSV
+export is an ETS *application* feature, not something the KNX Association
+specifies, so there is nothing to read except a real file, and none has
+been obtained.
+
+**Impact.** A file exported by KNXBench is not guaranteed to open sensibly
+in ETS, and a CSV exported from ETS is not guaranteed to import cleanly
+here — the importer is column-name-driven and separator-detecting
+specifically so a foreign file has a *fair chance*, but that is a design
+mitigation, not a tested claim. Nothing in the UI, CLI output, or this
+documentation set may say "ETS CSV" or imply interoperability, and none of
+it does.
+
+**Lifted when.** A genuine ETS-produced group-address CSV export is
+obtained. At that point, adding a second, ETS-shaped column profile to
+`crates/knx-csv`'s reader is the stated upgrade path — the column-mapping
+layer that would carry it already exists for this exact purpose. `.esf`
+import is a separate, larger undertaking (writing a parser against
+remembered syntax with no sample to check it against is exactly what
+CLAUDE.md's "do not invent technical facts" forbids) and would need its
+own task, gated the same way on first obtaining a real file.
+
+## 39. CSV import never re-addresses, deletes, or manages group ranges
+
+**Limitation.** Importing a "KNXBench group-address CSV v1" file can only
+create new group addresses and update the `Name`/`Central`/`Unfiltered`
+fields of existing ones. Three related things it deliberately does not do:
+it never re-addresses an existing entry (changing the `Address` cell for a
+row that matched an existing entry is read as "create a new entry at the
+new address," leaving the old one in place, because the address is the
+row's match key); it never deletes an entry that exists in the project but
+is simply absent from the file; and it never creates, renames, or targets
+group ranges — a newly created address is placed into whatever existing
+range already contains it by bounds, or left without a range if none does,
+but the ranges themselves are untouched by a CSV import.
+
+**Cause.** A deliberate design choice
+(`docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`
+§4), not a missing feature: the address is the only stable identity a CSV
+row has (names are not unique), so treating an address edit as a move
+would require guessing intent from a spreadsheet diff; treating "absent
+from the file" as "delete this" would make a partial or filtered export
+catastrophic to re-import; and group-range CRUD is an unrelated, already
+separately-modelled concern (`Command::CreateGroupRange`/
+`RenameGroupRange`, T5/T23) that a bulk name/flag editor has no business
+reaching into.
+
+**Impact.** Re-addressing a group address still requires the existing
+delete-then-recreate workflow in the group-address view, or hand-editing
+via the group-address commands directly — a CSV round trip cannot do it in
+one step. Someone who deletes rows from an exported file before
+re-importing it, expecting a "sync to this file" semantics, will find the
+deleted rows' addresses untouched in the project rather than removed.
+
+**Lifted when.** Open. No task currently proposes changing this — it is
+recorded here as a boundary of the feature, not a gap awaiting a fix.
+
+## 40. CSV export-only columns are never applied on import, and there are no `Description`/`Comment` columns
+
+**Limitation.** `DatapointType`, `MainGroup`, and `MiddleGroup` appear in
+an exported CSV so the file is useful to read and edit, but importing that
+same file back never applies any of the three — they are recognized and
+reported as ignored, never rejected and never silently dropped, but never
+written to the project either. Separately, the CSV format has no
+`Description` or `Comment` column in either direction, even though the
+`.knxproj` schema itself defines `GroupAddress/@Description` and
+`@Comment` attributes.
+
+**Cause.** A group address in this domain model (`GroupAddressEntry`,
+`crates/knx-core/src/group.rs`) carries no datapoint type at all — a DPT
+belongs to the communication objects linked to the address, several of
+which may legitimately disagree, so there is no single value a CSV row
+could write back onto the address itself. `MainGroup`/`MiddleGroup` name a
+*containing* group range, which is structure, not a field of the address,
+so writing one back would mean silently moving the address between ranges
+from a rename-focused editor. `Description`/`Comment` are simply not
+modelled anywhere in `GroupAddressEntry` yet — the CSV cannot round-trip a
+field the domain model does not have.
+
+**Impact.** A user who edits the `DatapointType`, `MainGroup`, or
+`MiddleGroup` cell of an exported row and re-imports it will see that edit
+reported as ignored rather than applied — surprising the first time, but
+never silent. There is no way to bulk-set or bulk-view a description or
+comment for a group address via CSV, because there is nowhere in the
+project for it to live yet.
+
+**Lifted when.** `MainGroup`/`MiddleGroup` becoming applicable is tied to
+group-range assignment gaining its own dedicated editing UI/command rather
+than being folded into a name-and-flags import. `Description`/`Comment`
+becoming available is tied to `GroupAddressEntry` gaining those fields in
+the domain model — no task currently schedules either.
+
+## 41. A CSV file saved from Excel under a German locale may still surprise a user
+
+**Limitation.** The importer auto-detects `,` and `;` as the field
+separator per file, specifically because Excel's own CSV export/import
+behavior depends on the OS list separator setting: under a German
+(or otherwise comma-decimal) locale, Excel writes `;`-separated CSV and
+expects `;` back on open, while under an English locale it uses `,`. Both
+are accepted here. What is not handled is everything else Excel can do
+to a file beyond the separator — most notably re-saving with a different
+encoding, a different quoting style for edge-case cells, or altering
+numeric-looking cells (an `Address` value or a boolean-looking cell) in
+locale-specific ways during a manual edit.
+
+**Cause.** The separator auto-detection in `crates/knx-csv/src/read.rs`
+covers the one Excel behavior this project could concretely name and test
+against (`parses_the_same_file_semicolon_separated`). Excel's broader
+locale-dependent quirks are not enumerated anywhere in this codebase or
+its research, and guessing at more of them without a concrete failing
+sample would be exactly the kind of unverified assumption CLAUDE.md rules
+out.
+
+**Impact.** Most Excel round trips work because of the separator
+detection. A user on a German-locale machine who hand-edits an exported
+file in Excel and hits an import error on a cell Excel silently reformatted
+should not assume the importer is broken — it is a known category of risk
+with this specific tool, not a claim that every Excel edit is safe.
+
+**Lifted when.** A concrete Excel-induced parse failure is reported with a
+reproducing file, at which point it becomes a specific, testable case
+rather than a general caution.
+
+## 42. `command_sync.rs`'s module doc overstates its own role — pre-existing, not introduced by T12
+
+**Limitation.** `crates/knx-store/src/command_sync.rs`'s module-level doc
+comment describes `sync_after_command` as *the* incremental persistence
+mechanism for command edits ("writes only the row(s) that command's own
+target id(s) name … Incremental command sync"). Grepping `crates/` and
+`apps/` for `sync_after_command` finds exactly three kinds of hits: the
+function's own definition and tests inside `command_sync.rs`, a bare
+re-export at `lib.rs:18`, and three doc-comment mentions in `devices.rs`.
+There is no actual caller anywhere in either `crates/` or `apps/`.
+
+**Cause.** Pre-existing — this function predates T12 and was never wired
+into the server's or CLI's actual save path, both of which persist a
+command's effect by calling `save_project` (a full project write) after
+`Command::apply`, not by calling `sync_after_command`. Not caused by this
+task. T12's own `Command::UpdateGroupAddress` gained a `command_sync.rs`
+match arm that is itself a documented no-op stub — the same pattern
+already used there for the topology/group-range/group-link and
+device-create/delete variants — which sits in the same file as the
+overstated module doc and makes the discrepancy easier to trip over for
+the next person reading that file top to bottom.
+
+**Impact.** None on correctness today: every command-driven edit this
+application makes is actually persisted via `save_project`, which is
+unconditional and does not depend on `sync_after_command` at all. The risk
+is purely to a future reader who trusts the module doc at face value,
+concludes `sync_after_command` is live, and either relies on it being
+called somewhere it isn't or spends time looking for a caller that does
+not exist.
+
+**Lifted when.** Open. Either the module doc is corrected to say
+`sync_after_command` is currently unused and persistence runs through
+`save_project`, or `sync_after_command` is actually wired in as the
+faster incremental path its doc already claims to be (at which point
+every no-op stub arm, including T12's new one, would need a real
+implementation too). Neither is scheduled; flagged here so the gap is
+findable without re-deriving it from a grep.

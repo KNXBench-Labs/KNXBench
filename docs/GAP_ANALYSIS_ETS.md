@@ -260,7 +260,7 @@ Each task: **what**, **why**, **depends on**.
   suffix, before any byte is hashed, with
   `PackageError::LegacyVd2` → `"legacy .vd2 product data is unsupported"`
   (`crates/knx-productdb/src/package.rs`). `knx products ingest` (CLI) and
-  `POST /api/products/packages` (HTTP) both surface the same typed errors
+  `POST /api/catalog/install` (HTTP) both surface the same typed errors
   as plain strings today — the design spec's acceptance criterion "the
   caller receives the archive hash/size in the error report where
   available" is **not** implemented for the `.vd2` case specifically,

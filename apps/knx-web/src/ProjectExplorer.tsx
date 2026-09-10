@@ -228,24 +228,6 @@ function AreaItem(
   );
 }
 
-function BuildingItem(props: { building: BuildingNode } & SelectionProps) {
-  const { building, selection, onSelect } = props;
-  return (
-    <TreeNode
-      label={`${building.name} (${building.kind})`}
-      selected={selection?.kind === "building_part" && selection.id === building.id}
-      onSelect={() => onSelect({ kind: "building_part", id: building.id })}
-    >
-      {building.children.map((c) => (
-        <BuildingItem key={c.id} building={c} selection={selection} onSelect={onSelect} />
-      ))}
-      {building.devices.map((d) => (
-        <DeviceItem key={d.id} device={d} selection={selection} onSelect={onSelect} />
-      ))}
-    </TreeNode>
-  );
-}
-
 function GroupAddressItem(props: { ga: GroupAddressNode } & SelectionProps) {
   const { ga, selection, onSelect } = props;
   return (
@@ -396,6 +378,102 @@ function NewGroupRangeRow(props: {
   );
 }
 
+const BUILDING_PART_KINDS = [
+  "Building",
+  "Floor",
+  "Room",
+  "Corridor",
+  "DistributionBoard",
+  "BuildingPart",
+] as const;
+
+// The building-part counterpart of `NewGroupRangeRow`. `parentId` is
+// `undefined` when rendered directly under the "Buildings" branch
+// (creates a root part) and set to a `BuildingItem`'s own id when
+// rendered under that item (creates a nested part) — unlike
+// `NewGroupRangeRow`, nesting isn't capped at one level here: every
+// `BuildingItem` gets its own row, since `BuildingPart` has no depth
+// limit (`building.rs`'s own doc comment), unlike `GroupRange`'s
+// observed two-level depth.
+function NewBuildingPartRow(props: {
+  parentId?: number;
+  onCreated: (tree: ProjectTree) => void;
+}) {
+  const { parentId, onCreated } = props;
+  const [name, setName] = useState("");
+  const [kind, setKind] = useState<(typeof BUILDING_PART_KINDS)[number]>("Room");
+  const [error, setError] = useState<string | null>(null);
+  const canCreate = name.trim() !== "";
+
+  async function create() {
+    if (!canCreate) return;
+    setError(null);
+    try {
+      const tree = await api.createBuildingPart(name, kind, parentId);
+      onCreated(tree);
+      setName("");
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  return (
+    <li className="tree-new-row">
+      <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
+        {BUILDING_PART_KINDS.map((k) => (
+          <option key={k} value={k}>
+            {k}
+          </option>
+        ))}
+      </select>
+      <input
+        value={name}
+        placeholder={parentId === undefined ? "New building" : "New building part"}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void create();
+        }}
+      />
+      <button onClick={create} disabled={!canCreate}>
+        Add
+      </button>
+      {error && <span className="field-error">{error}</span>}
+    </li>
+  );
+}
+
+function BuildingItem(
+  props: {
+    building: BuildingNode;
+    isFirst: boolean;
+    onCreated: (tree: ProjectTree) => void;
+  } & SelectionProps,
+) {
+  const { building, isFirst, onCreated, selection, onSelect } = props;
+  return (
+    <TreeNode
+      label={`${building.name} (${building.kind})`}
+      selected={selection?.kind === "building_part" && selection.id === building.id}
+      onSelect={() => onSelect({ kind: "building_part", id: building.id })}
+    >
+      {building.children.map((c) => (
+        <BuildingItem
+          key={c.id}
+          building={c}
+          isFirst={isFirst}
+          onCreated={onCreated}
+          selection={selection}
+          onSelect={onSelect}
+        />
+      ))}
+      {building.devices.map((d) => (
+        <DeviceItem key={d.id} device={d} selection={selection} onSelect={onSelect} />
+      ))}
+      {isFirst && <NewBuildingPartRow parentId={building.id} onCreated={onCreated} />}
+    </TreeNode>
+  );
+}
+
 function GroupRangeItem(
   props: {
     node: GroupRangeTreeNode;
@@ -455,8 +533,16 @@ function InstallationItem(
       </TreeNode>
       <TreeNode label="Buildings">
         {installation.buildings.map((b) => (
-          <BuildingItem key={b.id} building={b} selection={selection} onSelect={onSelect} />
+          <BuildingItem
+            key={b.id}
+            building={b}
+            isFirst={isFirst}
+            onCreated={onTreeUpdate}
+            selection={selection}
+            onSelect={onSelect}
+          />
         ))}
+        {isFirst && <NewBuildingPartRow onCreated={onTreeUpdate} />}
       </TreeNode>
       {(installation.unassigned.length > 0 || isFirst) && (
         <TreeNode label="Unassigned">

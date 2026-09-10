@@ -13,10 +13,12 @@ import type { Selection } from "./selection";
 import {
   findArea,
   findBuildingPart,
+  findDeviceBuildingPartInFirstInstallation,
   findDeviceLineInFirstInstallation,
   findGroupAddress,
   findGroupRange,
   findLine,
+  flattenBuildingParts,
 } from "./treeUtils";
 
 function AddressField(props: { detail: DeviceDetail; onApplied: (tree: ProjectTree) => void }) {
@@ -327,6 +329,59 @@ function LineMoveField(props: {
   );
 }
 
+// The building-part counterpart of `LineMoveField`, via
+// `Command::MoveDeviceToBuildingPart`. Unlike `LineMoveField`, `null` in
+// the select means "not placed in any building part" — a normal steady
+// state, not a bucket the device is moved *into* the way `unassigned`
+// is for `MoveDeviceToLine` — so there is no dedicated "(unassigned)"
+// semantic beyond the same empty option every optional select here
+// uses. Rendering is gated by `findDeviceLineInFirstInstallation`, not
+// a building-specific check: both commands share the same
+// `installations[0]`-only restriction, and that helper already reports
+// it accurately (`current === undefined` below).
+function BuildingPartMoveField(props: {
+  detail: DeviceDetail;
+  tree: ProjectTree;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { detail, tree, onApplied } = props;
+  const current = findDeviceLineInFirstInstallation(tree, detail.id);
+  const currentPart = findDeviceBuildingPartInFirstInstallation(tree, detail.id);
+  const [error, setError] = useState<string | null>(null);
+
+  if (current === undefined) return null;
+
+  async function move(partId: number | null) {
+    setError(null);
+    try {
+      const tree = await api.moveDeviceToBuildingPart(detail.id, partId);
+      onApplied(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+    }
+  }
+
+  const parts = flattenBuildingParts(tree.installations[0]?.buildings ?? [], []);
+
+  return (
+    <label className="inspector-field">
+      Building part
+      <select
+        value={currentPart ?? ""}
+        onChange={(e) => move(e.target.value === "" ? null : Number(e.target.value))}
+      >
+        <option value="">(none)</option>
+        {parts.map(({ node, path }) => (
+          <option key={node.id} value={node.id}>
+            {path}
+          </option>
+        ))}
+      </select>
+      {error && <span className="field-error">{error}</span>}
+    </label>
+  );
+}
+
 function DeviceInspector(props: {
   detail: DeviceDetail;
   tree: ProjectTree;
@@ -339,6 +394,7 @@ function DeviceInspector(props: {
       <h2>{detail.name}</h2>
       <AddressField detail={detail} onApplied={onApplied} />
       <LineMoveField detail={detail} tree={tree} onApplied={onApplied} />
+      <BuildingPartMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <DeviceDescriptionField detail={detail} onApplied={onApplied} />
       <h3>Communication objects</h3>
       <ul className="com-object-list">
@@ -581,8 +637,77 @@ function LineInspector(props: {
   );
 }
 
-function BuildingPartInspector(props: { node: BuildingNode; path: string }) {
-  const { node, path } = props;
+function BuildingPartNameField(props: {
+  part: BuildingNode;
+  onApplied: (tree: ProjectTree) => void;
+}) {
+  const { part, onApplied } = props;
+  const [value, setValue] = useState(part.name);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValue(part.name);
+    setError(null);
+  }, [part.name]);
+
+  async function apply() {
+    if (value === part.name || value.trim() === "") {
+      setValue(part.name);
+      return;
+    }
+    setError(null);
+    try {
+      const tree = await api.renameBuildingPart(part.id, value);
+      onApplied(tree);
+    } catch (e) {
+      setError(api.errorMessage(e));
+      setValue(part.name);
+    }
+  }
+
+  return (
+    <label className="inspector-field">
+      Name
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={apply}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+      />
+      {error && <span className="field-error">{error}</span>}
+    </label>
+  );
+}
+
+function BuildingPartInspector(props: {
+  node: BuildingNode;
+  path: string;
+  // Same `installations[0]`-only gate as `GroupRangeInspector`'s
+  // `canEdit` — `Command::CreateBuildingPart`/`DeleteBuildingPart`/
+  // `RenameBuildingPart` only ever search the first installation
+  // (command.rs).
+  canEdit: boolean;
+  onApplied: (tree: ProjectTree) => void;
+  onDeleted: (tree: ProjectTree) => void;
+}) {
+  const { node, path, canEdit, onApplied, onDeleted } = props;
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setError(null);
+    try {
+      const tree = await api.deleteBuildingPart(node.id);
+      onDeleted(tree);
+    } catch (e) {
+      // Also where `CommandError::BuildingPartNotEmpty` surfaces — the
+      // server refuses to delete a part that still has a child or a
+      // device, so the user sees why instead of a silent no-op.
+      setError(api.errorMessage(e));
+    }
+  }
+
   return (
     <div className="inspector">
       <h2>{node.name}</h2>
@@ -592,6 +717,17 @@ function BuildingPartInspector(props: { node: BuildingNode; path: string }) {
         {node.devices.length} device{node.devices.length === 1 ? "" : "s"},{" "}
         {node.children.length} child part{node.children.length === 1 ? "" : "s"}
       </p>
+      {canEdit ? (
+        <>
+          <BuildingPartNameField part={node} onApplied={onApplied} />
+          <button onClick={remove}>Delete</button>
+        </>
+      ) : (
+        <p className="inspector-description">
+          Rename and Delete are only available for building parts in the first installation.
+        </p>
+      )}
+      {error && <span className="field-error">{error}</span>}
     </div>
   );
 }
@@ -649,5 +785,16 @@ export default function Inspector(props: {
 
   const found = findBuildingPart(tree, selection.id);
   if (!found) return null;
-  return <BuildingPartInspector node={found.node} path={found.path} />;
+  const canEdit = flattenBuildingParts(tree.installations[0]?.buildings ?? [], []).some(
+    ({ node }) => node.id === found.node.id,
+  );
+  return (
+    <BuildingPartInspector
+      node={found.node}
+      path={found.path}
+      canEdit={canEdit}
+      onApplied={onApplied}
+      onDeleted={onDeleted}
+    />
+  );
 }

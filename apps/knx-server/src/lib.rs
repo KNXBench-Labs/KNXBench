@@ -12,6 +12,7 @@ mod errors;
 mod fs_routes;
 mod paths;
 mod routes;
+mod session_log;
 
 pub type SharedState = Arc<AppState>;
 

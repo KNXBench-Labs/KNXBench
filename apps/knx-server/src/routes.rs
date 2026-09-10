@@ -564,10 +564,7 @@ impl From<domain::CreationDiagnostic> for CreationDiagnosticDto {
                 }
             }
             domain::CreationDiagnostic::DynamicOrModuleNotEvaluated { program_id } => {
-                Self::DynamicOrModuleNotEvaluated {
-                    program_id,
-                    detail,
-                }
+                Self::DynamicOrModuleNotEvaluated { program_id, detail }
             }
         }
     }

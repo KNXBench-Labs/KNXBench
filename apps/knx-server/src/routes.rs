@@ -502,11 +502,73 @@ struct CreateDeviceBody {
     name: String,
 }
 
+#[derive(serde::Serialize)]
+#[serde(
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    tag = "kind"
+)]
+enum CreationDiagnosticDto {
+    ProgramlessProduct {
+        catalog_item_id: String,
+    },
+    AmbiguousDpt {
+        ref_id: String,
+        alternatives: Vec<String>,
+    },
+    ComObjectRefMissing {
+        ref_id: String,
+    },
+    DynamicOrModuleNotEvaluated {
+        program_id: String,
+    },
+}
+
+impl From<domain::CreationDiagnostic> for CreationDiagnosticDto {
+    fn from(value: domain::CreationDiagnostic) -> Self {
+        match value {
+            domain::CreationDiagnostic::ProgramlessProduct { catalog_item_id } => {
+                Self::ProgramlessProduct { catalog_item_id }
+            }
+            domain::CreationDiagnostic::AmbiguousDpt {
+                ref_id,
+                alternatives,
+            } => Self::AmbiguousDpt {
+                ref_id,
+                alternatives,
+            },
+            domain::CreationDiagnostic::ComObjectRefMissing { ref_id } => {
+                Self::ComObjectRefMissing { ref_id }
+            }
+            domain::CreationDiagnostic::DynamicOrModuleNotEvaluated { program_id } => {
+                Self::DynamicOrModuleNotEvaluated { program_id }
+            }
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateDeviceResponseDto {
+    tree: knx_projection::ProjectTree,
+    diagnostics: Vec<CreationDiagnosticDto>,
+}
+
+impl From<domain::CreateDeviceResponse> for CreateDeviceResponseDto {
+    fn from(value: domain::CreateDeviceResponse) -> Self {
+        Self {
+            tree: value.tree,
+            diagnostics: value.diagnostics.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
 async fn create_device(
     State(state): State<SharedState>,
     Json(body): Json<CreateDeviceBody>,
-) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+) -> Result<Json<CreateDeviceResponseDto>, ApiError> {
     domain::create_device_impl(&state, body.line_id, body.catalog_item_id, body.name)
+        .map(CreateDeviceResponseDto::from)
         .map(Json)
         .map_err(ApiError::bad_request)
 }

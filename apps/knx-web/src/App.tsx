@@ -16,6 +16,7 @@ import { THEMES, useThemeId } from "./theme";
 import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
+import DocumentationExportButton from "./DocumentationExportButton";
 
 const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
 const EXPORT_FILTER = [{ name: "ETS project", extensions: ["knxproj"] }];
@@ -281,6 +282,12 @@ function App() {
       <GroupAddressCsvButtons
         tree={tree}
         onTreeUpdate={handleTreeUpdate}
+        onSummary={pushFun}
+        onError={reportError}
+        onClearErrors={clearErrors}
+      />
+      <DocumentationExportButton
+        tree={tree}
         onSummary={pushFun}
         onError={reportError}
         onClearErrors={clearErrors}

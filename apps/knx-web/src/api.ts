@@ -407,6 +407,29 @@ export function importGroupAddressesCsv(path: string): Promise<CsvImportResponse
   });
 }
 
+// `DocumentationWarningDto`/`DocumentationExportReportDto`
+// (apps/knx-server/src/routes.rs) — server-local, no `ts-rs` binding,
+// hand-written to match their `#[serde(rename_all = "camelCase")]` JSON
+// shape (a no-op here: every field is already a single word). The export
+// itself writes a self-contained "project documentation" HTML file —
+// never an "ETS report", since no ETS-produced sample exists anywhere in
+// this repository to be compatible with.
+export interface ReportWarning {
+  location: string;
+  detail: string;
+}
+
+export interface DocumentationExportReport {
+  warnings: ReportWarning[];
+}
+
+export function exportDocumentation(path: string): Promise<DocumentationExportReport> {
+  return request("/api/project/documentation-export", {
+    method: "POST",
+    body: JSON.stringify({ path }),
+  });
+}
+
 // `LogEntry` (apps/knx-server/src/session_log.rs) — server-local, no
 // `ts-rs` binding, hand-written to match its `#[serde(rename_all =
 // "camelCase")]` JSON shape (same pattern as `CatalogInstallReport` above).

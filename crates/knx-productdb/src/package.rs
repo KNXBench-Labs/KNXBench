@@ -266,7 +266,10 @@ fn validate_xml(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
         match reader.read_event().map_err(|e| xml_error(path, e))? {
             Event::Start(element) => {
                 for attribute in element.attributes().with_checks(true) {
-                    attribute.map_err(|e| xml_error(path, e))?;
+                    let attribute = attribute.map_err(|e| xml_error(path, e))?;
+                    attribute
+                        .normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                        .map_err(|e| xml_error(path, e))?;
                 }
                 if depth == 0 {
                     roots += 1;
@@ -275,7 +278,10 @@ fn validate_xml(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
             }
             Event::Empty(element) => {
                 for attribute in element.attributes().with_checks(true) {
-                    attribute.map_err(|e| xml_error(path, e))?;
+                    let attribute = attribute.map_err(|e| xml_error(path, e))?;
+                    attribute
+                        .normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                        .map_err(|e| xml_error(path, e))?;
                 }
                 if depth == 0 {
                     roots += 1;
@@ -289,16 +295,21 @@ fn validate_xml(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
             {
                 return Err(xml_error(path, "text outside XML root"))
             }
-            Event::CData(data) if depth == 0 && !data.as_ref().is_empty() => {
-                return Err(xml_error(path, "CDATA outside XML root"))
-            }
-            Event::GeneralRef(reference)
-                if !matches!(reference.as_ref(), "lt" | "gt" | "amp" | "apos" | "quot") =>
-            {
-                return Err(xml_error(
-                    path,
-                    format!("undeclared XML entity {:?}", reference.as_ref()),
-                ))
+            Event::CData(_) if depth == 0 => return Err(xml_error(path, "CDATA outside XML root")),
+            Event::GeneralRef(reference) => {
+                let name = reference.as_ref();
+                let predefined = matches!(name, "lt" | "gt" | "amp" | "apos" | "quot");
+                let numeric = name
+                    .strip_prefix("#x")
+                    .or_else(|| name.strip_prefix("#X"))
+                    .map(|digits| u32::from_str_radix(digits, 16).ok())
+                    .or_else(|| name.strip_prefix('#').map(|digits| digits.parse().ok()))
+                    .flatten()
+                    .and_then(char::from_u32)
+                    .is_some();
+                if depth == 0 || (!predefined && !numeric) {
+                    return Err(xml_error(path, format!("undeclared XML entity {name:?}")));
+                }
             }
             Event::Eof => break,
             _ => {}

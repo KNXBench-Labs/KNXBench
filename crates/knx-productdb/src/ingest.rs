@@ -5,9 +5,9 @@
 //! makes importing a second project that uses the same devices cheap
 //! instead of costing another 22 MB of parsing (RESEARCH §4.1).
 
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 
-use crate::blob::{has_source_file, sha256_hex, store_source_file, SourceFile};
+use crate::blob::{sha256_hex, store_source_file, SourceFile};
 use crate::parse::{catalog, hardware, program};
 use crate::report::{insert_conflicts, insert_unknown, IdConflict};
 use crate::ProductDbError;
@@ -45,7 +45,14 @@ pub fn ingest_file(
     bytes: &[u8],
 ) -> Result<IngestOutcome, ProductDbError> {
     let sha256 = sha256_hex(bytes);
-    if has_source_file(conn, &sha256)? {
+    let parsed: Option<i64> = conn
+        .query_row(
+            "SELECT 1 FROM source_parse_evidence WHERE sha256 = ?1",
+            [&sha256],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if parsed.is_some() {
         return Ok(IngestOutcome::Skipped { sha256 });
     }
     let tx = conn.unchecked_transaction()?;
@@ -61,7 +68,14 @@ pub(crate) fn ingest_file_in_transaction(
     parse_existing: bool,
 ) -> Result<IngestOutcome, ProductDbError> {
     let sha256 = sha256_hex(bytes);
-    if !parse_existing && has_source_file(conn, &sha256)? {
+    let parsed: Option<i64> = conn
+        .query_row(
+            "SELECT 1 FROM source_parse_evidence WHERE sha256 = ?1",
+            [&sha256],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if !parse_existing && parsed.is_some() {
         return Ok(IngestOutcome::Skipped { sha256 });
     }
 
@@ -100,6 +114,10 @@ pub(crate) fn ingest_file_in_transaction(
 
     insert_unknown(conn, &sha256, &unknown)?;
     insert_conflicts(conn, &conflicts)?;
+    conn.execute(
+        "INSERT OR IGNORE INTO source_parse_evidence (sha256) VALUES (?1)",
+        [&sha256],
+    )?;
 
     Ok(IngestOutcome::Ingested {
         sha256,

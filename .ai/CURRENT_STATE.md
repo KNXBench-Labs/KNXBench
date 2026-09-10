@@ -611,6 +611,17 @@
   meant to read as clean and sleek rather than noisy) — not decided, not
   designed, no task opened; kept in its own commit, separate from the T13/D4
   documentation work.
+
+  A second, similar mid-task live request followed: a memo for an
+  in-application LLM chat window for natural-language project interaction
+  (explicitly not just MCP-reachable from outside, but built directly in),
+  with an explicit admission that *how* it would work still needs research.
+  Added a new "Cross-cutting — LLM / natural-language interaction" section
+  to `docs/ROADMAP.md`, tied to the pre-existing deferred-MCP note in the
+  Session 7 section (same `Command`-layer prerequisite, same "premature
+  before Session 7" status), framed as a research item rather than a
+  design — not decided, no task opened. Also its own commit, also
+  unrelated to T13/D4.
 - **Pending/Next Steps:** This worktree has not been merged to `main` and has
   not been pushed (standing instruction: no GitHub workflow until further
   notice). The dispatching orchestrator still needs to review and merge (or

@@ -106,9 +106,19 @@
   original wording later, it is not retrievable from `git log` on this
   branch, only from the main checkout's working tree.
 - **Merge note (2026-09-10):** `codex/catalog-creation-diagnostics`
-  (Tasks 1-5 above) merged to `main`. `.worktrees/standalone-productdb-install`
-  (branch `codex/standalone-productdb-install`) still carries its own,
-  different, unmerged Task 4 commit (`2368a47`) — a separate implementation
-  of the same creation-diagnostics feature, predating and now superseded by
-  the merged one. Not touched, not deleted; owner of that worktree should
-  discard or rebase it before it causes confusion.
+  (Tasks 1-5 above) merged to `main` as `af5639a`, pushed to `origin/main`
+  (`6a4a858..af5639a`). `.worktrees/standalone-productdb-install` (branch
+  `codex/standalone-productdb-install`) carried its own, different,
+  unmerged Task 4 commit (`2368a47`) — a separate implementation of the
+  same creation-diagnostics feature, predating and superseded by the
+  merged one. Follow-up issue #1 opened, then closed on user confirmation:
+  worktree and branch discarded (`git worktree remove --force` +
+  `git branch -D`), including 2 never-committed `.ai/logs/*.md` notes with
+  no copy elsewhere. Nothing from that branch was pulled forward — its
+  content was superseded, not merely duplicated. `codex/catalog-creation-diagnostics`'s
+  own worktree/branch were also cleaned up after the merge (both deleted;
+  plan's `.superpowers/sdd/2026-09-09-standalone-product-database-install/`
+  workspace removed). Remaining worktrees: `.claude/worktrees/building-part-crud`
+  (branch `worktree-building-part-crud`, T8 building-part CRUD, 7 commits
+  unmerged, untouched, unrelated to this plan) and `.worktrees/session3-ets-import`
+  (0 commits ahead of `main`, clean, stale).

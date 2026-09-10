@@ -203,8 +203,11 @@ dependencies and is independent of our own licence
 **Limitation.** Manufacturer product files in the `.knxprod` container are
 fully readable, as a standalone package independent of any `.knxproj`, for
 master data scheme 11 and scheme 20 (2026-09-10,
-`knx_productdb::install_package`). Schemes 12-19, 21 and 22 remain unread by
-any path. `.vd2`, a pre-2013 ETS2-era legacy container (SFX/`.vd_`-style, not
+`knx_productdb::install_package`). Schemes 12-19, 21 and 22 remain unread as
+a *standalone package* — they can still reach the product database bundled
+inside a `.knxproj` that already contains them (see Impact below;
+`knx_productdb::ingest_file` performs no scheme/namespace gating). `.vd2`,
+a pre-2013 ETS2-era legacy container (SFX/`.vd_`-style, not
 the same ZIP/XML family as `.knxprod`/`.knxproj` at all — confirmed by
 inspection, it has no `knx_master.xml`), is explicitly and permanently
 rejected: `PackageError::LegacyVd2` → `"legacy .vd2 product data is

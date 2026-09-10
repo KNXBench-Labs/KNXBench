@@ -480,6 +480,145 @@ pub fn export_project(
     result
 }
 
+/// Writes the live project's group addresses to `path` as "KNXBench
+/// group-address CSV v1" text (`knx_csv::export_group_addresses`, design
+/// §3) — the same file `resolve_new_project_path` writes for `.knxproj`
+/// export, this format is entirely orthogonal to it. Never mutates the
+/// project. Every warning `knx_csv` produces (today: a contested
+/// `DatapointType`) is pushed into the session log individually, not just
+/// returned in the response body — CLAUDE.md forbids silently discarding
+/// information for being "merely" a warning.
+pub fn export_group_addresses_csv_impl(
+    state: &AppState,
+    path: &Path,
+) -> Result<knx_csv::CsvExport, String> {
+    let result = (|| -> Result<knx_csv::CsvExport, String> {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?;
+        let export = knx_csv::export_group_addresses(project);
+        std::fs::write(path, export.text.as_bytes()).map_err(|e| e.to_string())?;
+        Ok(export)
+    })();
+
+    if let Ok(export) = &result {
+        let mut log = state.session_log.lock().expect("state mutex poisoned");
+        for warning in &export.warnings {
+            log.push(LogEntry {
+                timestamp: session_log::now(),
+                severity: Severity::Warning,
+                source: "csv-export".to_string(),
+                message: warning.detail.clone(),
+                location: warning.row.map(|row| format!("row {row}")),
+                detail: None,
+            });
+        }
+    }
+
+    log_outcome(
+        state,
+        "csv-export",
+        match &result {
+            Ok(export) => format!(
+                "exported group addresses to {} ({} warning(s))",
+                path.display(),
+                export.warnings.len()
+            ),
+            Err(_) => String::new(),
+        },
+        None,
+        &result,
+    );
+
+    result
+}
+
+/// Reads `path` as "KNXBench group-address CSV v1" text, plans the edit
+/// against the live project (`knx_csv::parse_group_addresses` +
+/// `knx_csv::plan_import`, design §4), and — unless any row is a
+/// row-level error — applies the single resulting `Command::Batch` through
+/// [`apply`], exactly like every other project-editing route.
+///
+/// Every problem and ignored column `knx_csv` reports reaches the session
+/// log via [`session_log::from_csv_import_report`] before the
+/// all-or-nothing decision below is even made, so a rejected file still
+/// leaves its diagnostics behind — only the project itself stays
+/// untouched. `Err` carries every offending row's number and detail, for
+/// the route to surface as a `400` (never a `500`: a CSV a user hand-edited
+/// wrong is their mistake to fix, not this server's fault).
+pub fn import_group_addresses_csv_impl(
+    state: &AppState,
+    path: &Path,
+) -> Result<(knx_projection::ProjectTree, knx_csv::CsvImportReport), String> {
+    let result = (|| -> Result<(knx_projection::ProjectTree, knx_csv::CsvImportReport), String> {
+        let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+        let plan = {
+            let project = state.project.lock().expect("state mutex poisoned");
+            let project = project.as_ref().ok_or("no project open")?;
+            let parsed = knx_csv::parse_group_addresses(&text, project.info.group_address_style);
+            knx_csv::plan_import(project, &parsed)
+        };
+
+        {
+            let mut log = state.session_log.lock().expect("state mutex poisoned");
+            for entry in session_log::from_csv_import_report(&plan.report) {
+                log.push(entry);
+            }
+        }
+
+        let error_rows: Vec<String> = plan
+            .report
+            .problems
+            .iter()
+            .filter(|p| p.severity == knx_csv::Severity::Error)
+            .map(|p| match p.row {
+                Some(row) => format!("row {row}: {}", p.detail),
+                None => p.detail.clone(),
+            })
+            .collect();
+        if !error_rows.is_empty() {
+            return Err(format!(
+                "{} row(s) rejected, nothing applied: {}",
+                error_rows.len(),
+                error_rows.join("; ")
+            ));
+        }
+
+        let tree = match plan.command {
+            Some(cmd) => apply(state, cmd)?,
+            // Every row was `unchanged` (or the file was empty of data
+            // rows) — nothing to apply, but still a successful import that
+            // needs a current tree in the response.
+            None => {
+                let project = state.project.lock().expect("state mutex poisoned");
+                let project = project.as_ref().ok_or("no project open")?;
+                let stack = state.command_stack.lock().expect("state mutex poisoned");
+                let counts = *state.import_counts.lock().expect("state mutex poisoned");
+                tree_with_state(project, &stack, counts)
+            }
+        };
+        Ok((tree, plan.report))
+    })();
+
+    log_outcome(
+        state,
+        "csv-import",
+        match &result {
+            Ok((_, report)) => format!(
+                "imported {} (created {}, updated {}, unchanged {})",
+                path.display(),
+                report.created,
+                report.updated,
+                report.unchanged
+            ),
+            Err(_) => String::new(),
+        },
+        None,
+        &result,
+    );
+
+    result
+}
+
 /// Projects one device's detail. `Err` names the device id when it no
 /// longer exists in `project` — a stale selection after an edit, for
 /// instance.

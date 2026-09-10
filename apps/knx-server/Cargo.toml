@@ -18,6 +18,7 @@ path = "src/lib.rs"
 [dependencies]
 knx-app.workspace = true
 knx-core.workspace = true
+knx-csv.workspace = true
 knx-etsproj.workspace = true
 knx-projection.workspace = true
 knx-productdb.workspace = true

@@ -116,6 +116,11 @@ pub fn sync_after_command(
         Command::DeleteGroupAddress { id } => {
             delete_group_address(&tx, *id)?;
         }
+        Command::UpdateGroupAddress { .. } => {
+            // Group-address update persistence layer not yet implemented
+            // (out of scope for this plan's Task 2, which only added the
+            // `Command` variant and in-memory `apply` logic).
+        }
         Command::CreateDevice { .. } => {
             // Device create/delete persistence layer not yet implemented
             // (out of scope for this plan's Task 1, which only added the

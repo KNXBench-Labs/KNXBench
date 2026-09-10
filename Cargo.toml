@@ -7,6 +7,7 @@ members = [
     "crates/knx-etsproj",
     "crates/knx-productdb",
     "crates/knx-projection",
+    "crates/knx-csv",
     "crates/knx-net",
     "crates/knx-secure",
     "apps/knx-cli",
@@ -28,6 +29,7 @@ knx-store = { path = "crates/knx-store" }
 knx-etsproj = { path = "crates/knx-etsproj" }
 knx-productdb = { path = "crates/knx-productdb" }
 knx-projection = { path = "crates/knx-projection" }
+knx-csv = { path = "crates/knx-csv" }
 knx-net = { path = "crates/knx-net" }
 knx-secure = { path = "crates/knx-secure" }
 knx-server = { path = "apps/knx-server" }
@@ -39,6 +41,7 @@ tauri-build = "2.6"
 tauri-plugin-dialog = "2.7"
 zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 quick-xml = "0.42"
+csv = "1"
 sha2 = "0.10"
 socket2 = "0.6"
 serde = { version = "1", features = ["derive"] }

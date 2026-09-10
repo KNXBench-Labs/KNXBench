@@ -67,12 +67,21 @@ fn check_layering() -> ExitCode {
         "knx-projection",
         layering::CORE_FORBIDDEN,
     ));
+    // knx-csv (T12) is the group-address CSV reader/writer. It stays a pure
+    // text-in/typed-rows-out crate: it must not reach the project store or
+    // either of the other import/export crates, so that reading a
+    // spreadsheet never drags SQLite or ZIP/XML parsing along for the ride.
+    violations.extend(layering::forbidden_reachable(
+        &graph,
+        "knx-csv",
+        &["knx-store", "knx-etsproj", "knx-productdb"],
+    ));
 
     if violations.is_empty() {
         println!(
             "layering ok: knx-core reaches none of {:?}; knx-etsproj does not reach knx-store; \
              knx-productdb reaches neither knx-etsproj nor knx-store; knx-projection reaches \
-             none of {:?}",
+             none of {:?}; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb",
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN
         );

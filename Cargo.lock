@@ -1890,6 +1890,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "knx-diff"
+version = "0.0.0"
+dependencies = [
+ "knx-core",
+]
+
+[[package]]
 name = "knx-etsproj"
 version = "0.0.0"
 dependencies = [

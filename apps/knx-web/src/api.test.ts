@@ -132,6 +132,50 @@ describe("api", () => {
     expect(JSON.parse(init.body as string)).toEqual({ name: "Blinds" });
   });
 
+  it("createBuildingPart posts to /api/building-parts with camelCase parentId", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.createBuildingPart("Main building", "Building", 5);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/building-parts");
+    expect(JSON.parse(init.body as string)).toEqual({
+      name: "Main building",
+      kind: "Building",
+      parentId: 5,
+    });
+  });
+
+  it("deleteBuildingPart issues a DELETE to /api/building-parts/:id", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.deleteBuildingPart(9);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/building-parts/9");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("renameBuildingPart issues a PATCH with the new name", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.renameBuildingPart(9, "Living room");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/building-parts/9");
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body as string)).toEqual({ name: "Living room" });
+  });
+
+  it("moveDeviceToBuildingPart posts a part id", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.moveDeviceToBuildingPart(9, 7);
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/move-device-to-building-part");
+    expect(JSON.parse(init.body as string)).toEqual({ deviceId: 9, partId: 7 });
+  });
+
+  it("moveDeviceToBuildingPart posts null to un-place the device", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.moveDeviceToBuildingPart(9, null);
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({ deviceId: 9, partId: null });
+  });
+
   it("linkComObject posts to /api/group-links with camelCase field names", async () => {
     mockFetchOnce({ installations: [] });
     await api.linkComObject(3, 9, "Send");

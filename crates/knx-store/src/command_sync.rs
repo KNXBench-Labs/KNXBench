@@ -159,6 +159,18 @@ pub fn sync_after_command(
         Command::SetComObjectFlag { .. } | Command::RestoreComObjectFlag { .. } => {
             // Com-object-flag persistence layer not yet implemented.
         }
+        Command::CreateBuildingPart { .. } => {
+            // Building-part persistence layer not yet implemented (Task 4 scope).
+        }
+        Command::DeleteBuildingPart { .. } => {
+            // Building-part persistence layer not yet implemented (Task 4 scope).
+        }
+        Command::RenameBuildingPart { .. } => {
+            // Building-part persistence layer not yet implemented (Task 4 scope).
+        }
+        Command::MoveDeviceToBuildingPart { .. } => {
+            // Building-part persistence layer not yet implemented (Task 4 scope).
+        }
     }
     tx.commit()?;
     Ok(())

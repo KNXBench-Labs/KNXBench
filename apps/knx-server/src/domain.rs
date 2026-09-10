@@ -543,6 +543,92 @@ pub fn rename_group_range_impl(
     )
 }
 
+fn parse_building_part_kind(kind: &str) -> Result<knx_core::BuildingPartType, String> {
+    match kind {
+        "Building" => Ok(knx_core::BuildingPartType::Building),
+        "Floor" => Ok(knx_core::BuildingPartType::Floor),
+        "Room" => Ok(knx_core::BuildingPartType::Room),
+        "Corridor" => Ok(knx_core::BuildingPartType::Corridor),
+        "DistributionBoard" => Ok(knx_core::BuildingPartType::DistributionBoard),
+        "BuildingPart" => Ok(knx_core::BuildingPartType::BuildingPart),
+        other => Err(format!(
+            "unknown building-part kind '{other}', expected one of Building/Floor/Room/Corridor/DistributionBoard/BuildingPart"
+        )),
+    }
+}
+
+pub fn create_building_part_impl(
+    state: &AppState,
+    name: String,
+    kind: String,
+    parent_id: Option<u32>,
+) -> Result<knx_projection::ProjectTree, String> {
+    let kind = parse_building_part_kind(&kind)?;
+    let cmd = {
+        let mut project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_mut().ok_or("no project open")?;
+        let id = project.ids.next_building_part_id();
+        knx_core::Command::CreateBuildingPart {
+            part: knx_core::BuildingPart {
+                id,
+                source: knx_core::SourceRef {
+                    path: format!("KB-Building-{}", id.0),
+                    ets_id: format!("KB-Building-{}", id.0),
+                },
+                name,
+                number: None,
+                kind,
+                default_line: None,
+                completion: knx_core::CompletionStatus::Editing,
+                children: vec![],
+                devices: vec![],
+                parent: parent_id.map(knx_core::BuildingPartId),
+            },
+        }
+    };
+    apply(state, cmd)
+}
+
+pub fn delete_building_part_impl(
+    state: &AppState,
+    id: u32,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::DeleteBuildingPart {
+            id: knx_core::BuildingPartId(id),
+        },
+    )
+}
+
+pub fn rename_building_part_impl(
+    state: &AppState,
+    id: u32,
+    name: String,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::RenameBuildingPart {
+            id: knx_core::BuildingPartId(id),
+            name,
+        },
+    )
+}
+
+pub fn move_device_to_building_part_impl(
+    state: &AppState,
+    device_id: u32,
+    part_id: Option<u32>,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::MoveDeviceToBuildingPart {
+            device: knx_core::DeviceId(device_id),
+            part: part_id.map(knx_core::BuildingPartId),
+        },
+    )
+}
+
 fn parse_direction(direction: &str) -> Result<knx_core::Direction, String> {
     match direction {
         "Send" => Ok(knx_core::Direction::Send),

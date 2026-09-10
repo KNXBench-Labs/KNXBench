@@ -11,7 +11,7 @@ export type SearchEntry =
   | { kind: "group_address"; id: number; label: string; address: string }
   | { kind: "building_part"; id: number; label: string; path: string };
 
-function flattenBuildingParts(
+export function flattenBuildingParts(
   nodes: BuildingNode[],
   parentPath: string[],
 ): { node: BuildingNode; path: string }[] {
@@ -152,4 +152,26 @@ export function findDeviceLineInFirstInstallation(
   }
   if (inst.unassigned.some((d) => d.id === deviceId)) return null;
   return undefined;
+}
+
+// The building-part counterpart of `findDeviceLineInFirstInstallation`.
+// Building placement isn't exhaustive the way topology placement is
+// (`Command::MoveDeviceToBuildingPart`'s own doc comment) — a device
+// with no building part at all is a normal state, not a third bucket to
+// distinguish from "unreachable" the way `null` vs `undefined` does for
+// lines. So this only ever returns a part id or `null`; the "is this
+// device even reachable from installations[0]" question is already
+// answered by `findDeviceLineInFirstInstallation` wherever both fields
+// are shown together (`DeviceInspector`), since both commands share the
+// same `installations[0]`-only restriction.
+export function findDeviceBuildingPartInFirstInstallation(
+  tree: ProjectTree,
+  deviceId: number,
+): number | null {
+  const inst = tree.installations[0];
+  if (!inst) return null;
+  for (const { node } of flattenBuildingParts(inst.buildings, [])) {
+    if (node.devices.some((d) => d.id === deviceId)) return node.id;
+  }
+  return null;
 }

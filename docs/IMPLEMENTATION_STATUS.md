@@ -1196,3 +1196,30 @@ also found and fixed in passing (test-only, zero semantic risk): three
 `crates/knx-core/src/command.rs` (`assert_eq!(x, false/true)` →
 `assert!(!x)`/`assert!(x)`), not the `Frame` enum, not product-code
 behavior.
+
+**T8, building-part CRUD (2026-09-08).** `crates/knx-core` gains
+`Command::CreateBuildingPart`/`DeleteBuildingPart`/`RenameBuildingPart`/
+`MoveDeviceToBuildingPart`, the same flat-list tree-CRUD shape
+`CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange` already use —
+`installation.buildings` was already flat, linked by `parent`/`children`
+ids, so this only adds the commands, not the nesting. A new
+`remove_device_from_buildings` helper deliberately does *not* mirror
+`remove_device_from_topology`'s error-on-absent behavior: building
+placement isn't exhaustive (a device can have no building part at all),
+so "not found anywhere" is a normal `None`, not a `CommandError`.
+`apps/knx-server` gains `POST /api/building-parts`,
+`DELETE`/`PATCH /api/building-parts/{id}`, and
+`POST /api/move-device-to-building-part`, parsing the wire-format kind
+string the same way `parse_direction` already parses its own enum.
+`apps/knx-web` gains a `NewBuildingPartRow` in
+`ProjectExplorer` (every `BuildingItem` gets one, since building parts
+nest to unbounded depth, unlike group ranges' two-level cap), and in
+`Inspector`, a `BuildingPartNameField`/Delete button on the building-part
+panel plus a `BuildingPartMoveField` on `DeviceInspector` — both mirror
+`GroupRangeInspector`/`LineMoveField`'s own shape. `treeUtils.ts` gains
+`findDeviceBuildingPartInFirstInstallation` and exports the
+previously-private `flattenBuildingParts`. New `cargo test` tests in
+`knx-core` (create/delete/rename/move round trips, plus the not-found/
+not-empty rejection paths) and `knx-server` (4 HTTP integration tests),
+and 8 new `vitest` tests (`api.test.ts` x5, `treeUtils.test.ts` x3).
+Closes **T8** ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)), **B4**.

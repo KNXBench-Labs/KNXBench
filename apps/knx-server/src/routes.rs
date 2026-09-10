@@ -511,24 +511,40 @@ struct CreateDeviceBody {
 enum CreationDiagnosticDto {
     ProgramlessProduct {
         catalog_item_id: String,
+        detail: String,
     },
     AmbiguousDpt {
         ref_id: String,
         alternatives: Vec<String>,
+        detail: String,
     },
     ComObjectRefMissing {
         ref_id: String,
+        detail: String,
+    },
+    ProgramRefMissing {
+        program_ref: String,
+        detail: String,
     },
     DynamicOrModuleNotEvaluated {
         program_id: String,
+        detail: String,
     },
 }
 
 impl From<domain::CreationDiagnostic> for CreationDiagnosticDto {
     fn from(value: domain::CreationDiagnostic) -> Self {
+        // `detail()` is computed from `value` before it's moved apart below —
+        // it stays the single source of truth for the user-visible sentence
+        // (design doc: each diagnostic carries "a machine-readable kind and
+        // user-visible detail"), the DTO never re-derives its own wording.
+        let detail = value.detail();
         match value {
             domain::CreationDiagnostic::ProgramlessProduct { catalog_item_id } => {
-                Self::ProgramlessProduct { catalog_item_id }
+                Self::ProgramlessProduct {
+                    catalog_item_id,
+                    detail,
+                }
             }
             domain::CreationDiagnostic::AmbiguousDpt {
                 ref_id,
@@ -536,12 +552,22 @@ impl From<domain::CreationDiagnostic> for CreationDiagnosticDto {
             } => Self::AmbiguousDpt {
                 ref_id,
                 alternatives,
+                detail,
             },
             domain::CreationDiagnostic::ComObjectRefMissing { ref_id } => {
-                Self::ComObjectRefMissing { ref_id }
+                Self::ComObjectRefMissing { ref_id, detail }
+            }
+            domain::CreationDiagnostic::ProgramRefMissing { program_ref } => {
+                Self::ProgramRefMissing {
+                    program_ref,
+                    detail,
+                }
             }
             domain::CreationDiagnostic::DynamicOrModuleNotEvaluated { program_id } => {
-                Self::DynamicOrModuleNotEvaluated { program_id }
+                Self::DynamicOrModuleNotEvaluated {
+                    program_id,
+                    detail,
+                }
             }
         }
     }

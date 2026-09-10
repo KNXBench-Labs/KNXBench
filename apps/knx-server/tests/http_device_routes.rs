@@ -140,7 +140,8 @@ async fn creating_a_device_from_a_catalog_item_seeds_its_com_objects_then_delete
         response["diagnostics"],
         json!([{
             "kind": "dynamicOrModuleNotEvaluated",
-            "programId": "A-1"
+            "programId": "A-1",
+            "detail": "Dynamic and module activation was not evaluated for A-1; only static product data was seeded."
         }])
     );
     let devices = tree["installations"][0]["unassigned"].as_array().unwrap();

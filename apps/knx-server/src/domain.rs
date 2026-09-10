@@ -672,6 +672,14 @@ pub enum CreationDiagnostic {
     ComObjectRefMissing {
         ref_id: String,
     },
+    /// A device-level enrichment pass (unlike this create's own upfront
+    /// `resolve_catalog_item_program` chain check) found its program
+    /// reference unresolvable. Kept distinct from `ComObjectRefMissing` —
+    /// conflating a missing *program* with a missing *com-object* would
+    /// mislabel the problem for anyone reading the diagnostic.
+    ProgramRefMissing {
+        program_ref: String,
+    },
     /// Manufacturer product programs can contain `Dynamic` and module
     /// activation semantics.  This static seed deliberately does not infer
     /// either; the warning makes that boundary visible for every such create.
@@ -684,9 +692,7 @@ impl CreationDiagnostic {
     fn from_enrichment(issue: knx_productdb::EnrichmentIssue) -> Self {
         match issue {
             knx_productdb::EnrichmentIssue::ProgramMissing { program_ref, .. } => {
-                Self::ComObjectRefMissing {
-                    ref_id: program_ref,
-                }
+                Self::ProgramRefMissing { program_ref }
             }
             knx_productdb::EnrichmentIssue::ComObjectRefMissing { ref_id, .. } => {
                 Self::ComObjectRefMissing { ref_id }
@@ -698,6 +704,36 @@ impl CreationDiagnostic {
                 ref_id,
                 alternatives,
             },
+        }
+    }
+
+    /// Ready-to-display wording for API consumers that don't want to build
+    /// their own sentence from the structured fields (design doc §"the
+    /// creation response carries ... structured diagnostics"; mirrors the
+    /// `detail` convention `ProductDbError::Package` already uses for
+    /// package-install errors). `CatalogBrowser.tsx` prefers this over its
+    /// own client-side formatting.
+    pub fn detail(&self) -> String {
+        match self {
+            Self::ProgramlessProduct { .. } => {
+                "This product explicitly has no application program; it was created without communication objects.".to_string()
+            }
+            Self::AmbiguousDpt {
+                ref_id,
+                alternatives,
+            } => format!(
+                "No DPT was inferred for {ref_id}; alternatives: {}.",
+                alternatives.join(", ")
+            ),
+            Self::ComObjectRefMissing { ref_id } => format!(
+                "Communication-object reference is missing from the installed program: {ref_id}."
+            ),
+            Self::ProgramRefMissing { program_ref } => format!(
+                "The installed application program reference is missing: {program_ref}."
+            ),
+            Self::DynamicOrModuleNotEvaluated { program_id } => format!(
+                "Dynamic and module activation was not evaluated for {program_id}; only static product data was seeded."
+            ),
         }
     }
 }
@@ -1077,5 +1113,45 @@ mod tests {
 
         let tree = delete_device_impl(&state, device_id).unwrap();
         assert!(tree.installations[0].unassigned.is_empty());
+    }
+
+    // `enrich::apply` (the only source feeding `create_device_impl`'s own
+    // `from_enrichment` call) never emits `EnrichmentIssue::ProgramMissing`
+    // today — only the top-level `enrich()` pass does. Test the mapping
+    // directly and totally anyway, so a `ProgramMissing` issue can never
+    // silently collapse back onto `ComObjectRefMissing` if `from_enrichment`
+    // is ever reused against that pass's `EnrichmentReport.issues`.
+    #[test]
+    fn from_enrichment_keeps_program_and_com_object_issues_distinct() {
+        let program_missing = CreationDiagnostic::from_enrichment(
+            knx_productdb::EnrichmentIssue::ProgramMissing {
+                device_ets_id: "KB-DEV-1".into(),
+                program_ref: "A-1".into(),
+            },
+        );
+        assert_eq!(
+            program_missing,
+            CreationDiagnostic::ProgramRefMissing {
+                program_ref: "A-1".into(),
+            }
+        );
+        assert_eq!(
+            program_missing.detail(),
+            "The installed application program reference is missing: A-1."
+        );
+
+        let com_object_missing = CreationDiagnostic::from_enrichment(
+            knx_productdb::EnrichmentIssue::ComObjectRefMissing {
+                device_ets_id: "KB-DEV-1".into(),
+                ref_id: "A-1_O-1_R-1".into(),
+            },
+        );
+        assert_eq!(
+            com_object_missing,
+            CreationDiagnostic::ComObjectRefMissing {
+                ref_id: "A-1_O-1_R-1".into(),
+            }
+        );
+        assert_ne!(program_missing, com_object_missing);
     }
 }

@@ -14,7 +14,7 @@ fn reference_ets4_path() -> PathBuf {
         .parent()
         .and_then(Path::parent)
         .unwrap()
-        .join("Unser Zuhause ets4 - 2025-12-15.knxproj")
+        .join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
 }
 
 fn migrated_store() -> (tempfile::TempDir, Connection) {

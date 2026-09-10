@@ -1094,6 +1094,100 @@ pub fn delete_device_impl(
     )
 }
 
+/// Builds a `Command::Batch` of one `DeleteDevice` per id, refusing an
+/// empty `ids` up front (a `Batch([])` would apply as a documented no-op —
+/// see `Command::Batch`'s own doc comment — but an empty batch reaching
+/// here means the caller should not have enabled the action at all).
+pub fn batch_delete_devices_impl(
+    state: &AppState,
+    ids: Vec<u32>,
+) -> Result<knx_projection::ProjectTree, String> {
+    if ids.is_empty() {
+        return Err("ids must not be empty".into());
+    }
+    apply(
+        state,
+        knx_core::Command::Batch(
+            ids.into_iter()
+                .map(|id| knx_core::Command::DeleteDevice {
+                    id: knx_core::DeviceId(id),
+                })
+                .collect(),
+        ),
+    )
+}
+
+/// See `batch_delete_devices_impl` — same shape, `DeleteGroupAddress`.
+pub fn batch_delete_group_addresses_impl(
+    state: &AppState,
+    ids: Vec<u32>,
+) -> Result<knx_projection::ProjectTree, String> {
+    if ids.is_empty() {
+        return Err("ids must not be empty".into());
+    }
+    apply(
+        state,
+        knx_core::Command::Batch(
+            ids.into_iter()
+                .map(|id| knx_core::Command::DeleteGroupAddress {
+                    id: knx_core::GroupAddressId(id),
+                })
+                .collect(),
+        ),
+    )
+}
+
+/// See `batch_delete_devices_impl` — same shape, `MoveDeviceToLine`. Every
+/// device in `device_ids` moves to the same `line_id` (or unassigned, if
+/// `None`), mirroring `move_device_to_line_impl`'s own placement rule.
+pub fn batch_move_devices_to_line_impl(
+    state: &AppState,
+    device_ids: Vec<u32>,
+    line_id: Option<u32>,
+) -> Result<knx_projection::ProjectTree, String> {
+    if device_ids.is_empty() {
+        return Err("deviceIds must not be empty".into());
+    }
+    let line = line_id.map(knx_core::LineId);
+    apply(
+        state,
+        knx_core::Command::Batch(
+            device_ids
+                .into_iter()
+                .map(|device_id| knx_core::Command::MoveDeviceToLine {
+                    device: knx_core::DeviceId(device_id),
+                    line,
+                })
+                .collect(),
+        ),
+    )
+}
+
+/// See `batch_move_devices_to_line_impl` — same shape,
+/// `MoveDeviceToBuildingPart`.
+pub fn batch_move_devices_to_building_part_impl(
+    state: &AppState,
+    device_ids: Vec<u32>,
+    building_part_id: Option<u32>,
+) -> Result<knx_projection::ProjectTree, String> {
+    if device_ids.is_empty() {
+        return Err("deviceIds must not be empty".into());
+    }
+    let part = building_part_id.map(knx_core::BuildingPartId);
+    apply(
+        state,
+        knx_core::Command::Batch(
+            device_ids
+                .into_iter()
+                .map(|device_id| knx_core::Command::MoveDeviceToBuildingPart {
+                    device: knx_core::DeviceId(device_id),
+                    part,
+                })
+                .collect(),
+        ),
+    )
+}
+
 pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String> {
     let mut project = state.project.lock().expect("state mutex poisoned");
     let project = project.as_mut().ok_or("no project open")?;

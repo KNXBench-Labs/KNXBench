@@ -15,7 +15,7 @@ fn workspace_root() -> PathBuf {
 }
 
 fn reference_ets4_path() -> PathBuf {
-    workspace_root().join("Unser Zuhause ets4 - 2025-12-15.knxproj")
+    workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
 }
 
 async fn body_json(response: axum::response::Response) -> Value {

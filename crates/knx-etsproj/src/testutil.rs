@@ -72,11 +72,11 @@ pub(crate) fn reference_ets4_bytes() -> Vec<u8> {
 }
 
 pub(crate) fn reference_ets4_path() -> PathBuf {
-    workspace_root().join("Unser Zuhause ets4 - 2025-12-15.knxproj")
+    workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
 }
 
 pub(crate) fn reference_ets6_path() -> PathBuf {
-    workspace_root().join("Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj")
+    workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj")
 }
 
 /// A second, genuinely independent installation (KNX Association demo
@@ -85,7 +85,7 @@ pub(crate) fn reference_ets6_path() -> PathBuf {
 /// `Segment`/`GroupObjectTree`/`ModuleInstances`/`Locations` deltas
 /// previously attributed to schema 23 alone (RESEARCH §2.5/§3.4).
 pub(crate) fn reference_kv_schema21_path() -> PathBuf {
-    workspace_root().join("KV v2.5 - demo.knxproj")
+    workspace_root().join("OriginalData/DemoProjects/KV v2.5 - demo.knxproj")
 }
 
 pub(crate) fn reference_source_document() -> SourceDocument {

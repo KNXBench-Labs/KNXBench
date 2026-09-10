@@ -1391,11 +1391,11 @@ mod tests {
             )
             .unwrap();
         let updated = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
-        assert_eq!(updated.flags.read.value().unwrap().value, false);
+        assert!(!updated.flags.read.value().unwrap().value);
         assert_eq!(updated.flags.read.value().unwrap().layer, Layer::UserEdit);
         stack.undo(&mut project).unwrap();
         let restored = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
-        assert_eq!(restored.flags.read.value().unwrap().value, true);
+        assert!(restored.flags.read.value().unwrap().value);
         assert_eq!(restored.flags.read.value().unwrap().layer, Layer::Program);
     }
 
@@ -1429,7 +1429,7 @@ mod tests {
             )
             .unwrap();
         let updated = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
-        assert_eq!(updated.flags.communication.value().unwrap().value, true);
+        assert!(updated.flags.communication.value().unwrap().value);
         assert_eq!(
             updated.flags.communication.value().unwrap().layer,
             Layer::UserEdit

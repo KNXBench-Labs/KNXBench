@@ -171,3 +171,32 @@
   `AppState.opaque`/`manufacturer_refs` fields are the new single source of truth for "what opaque/manifest data does the in-memory project carry" —
   any future code path that swaps `state.project` (import, native load, or a not-yet-existing "new project" command) must also set these two fields
   consistently, or B1 recurs in a new shape.
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 (continued session, round 2)
+- **Completed:** Dispatched a round-2 whole-branch re-review (sonnet) of `t10-export-ui` after the B1/B2 fixes above. Verdict: **NOT READY** —
+  confirmed B1/B2 correctly and completely fixed, but found a new blocking bug (C1): `knx_store::insert_opaque`/`insert_manufacturer_refs` were
+  plain `INSERT`s with no clear-first step, unlike `save_project`'s own DELETE-then-insert convention. B1's fix made `save_project_as_impl` call
+  them on *every* save, not just the first, so a plain repeated `POST /api/project/save` — reusing an already-populated `store_path` — duplicated
+  every opaque/manifest row without bound. The reviewer reproduced this empirically in a standalone crate outside the worktree. Also flagged: an
+  Important non-blocking finding that `export_project` read opaque/manifest off disk via `store_path` rather than live `AppState`, compounding
+  `KNOWN_LIMITATIONS.md` #18's stale-`store_path` gap; a dangling `KNOWN_LIMITATIONS.md` cross-reference in `GAP_ANALYSIS_ETS.md`'s C4 row; a Minor
+  lock-ordering inversion in `export_project`. Ruling: fixed C1 at the `knx-store` level (`DELETE FROM` before `INSERT` inside the existing
+  transaction, in both `opaque.rs`/`manifest.rs`, so every caller gets the fix) rather than only at the `save_project_as_impl` call site — commit
+  `ac9ccaa`, with regression tests in `knx-store` (repeated insert calls) and `knx-server`
+  (`saving_the_same_project_twice_does_not_duplicate_opaque_and_manifest_rows`, exercising the real HTTP `/api/project/save` path). Also fixed the
+  Important finding and the Minor lock-ordering finding together: `export_project` now reads `AppState.opaque`/`AppState.manufacturer_refs` directly
+  instead of re-opening `store_path`, copying them into a throwaway in-memory `.knxdb` for `export_ets_project`'s `Connection`-shaped interface, and
+  locks/drops them before touching `project`/`product_db` — closing the staleness risk for this data and the lock-ordering inconsistency in one
+  change. Fixed the dangling cross-reference in `GAP_ANALYSIS_ETS.md`'s C4 row and documented all of this in `docs/KNOWN_LIMITATIONS.md` #18's new
+  "Related" note and `docs/IMPLEMENTATION_STATUS.md`'s T10 entry. The `ApiError::bad_request` coarsening Minor finding was already adjudicated in
+  an earlier round and parked as-is. Gates: `cargo fmt --all --check` clean, `cargo test --workspace` all green (one pre-existing,
+  environment-dependent `knx-productdb` failure needing `KNXBENCH_PRODUCT_CORPUS`, unrelated), `cargo clippy --workspace --all-targets` clean except
+  the two known pre-existing issues, `xtask check-layering` clean.
+- **Pending/Next Steps:** Dispatch a round-3 whole-branch re-review confirming READY TO MERGE, then merge `t10-export-ui` to `main` and clean up
+  this plan's worktree/`.superpowers/sdd/2026-09-10-ets-project-export/` workspace per `finishing-a-development-branch`. Not yet pushed or merged as
+  of this entry. After T10 lands: T9 (bulk/multi-select operations, `Command::Batch` design) is the next natural Tier-2 pick; `GAP_ANALYSIS_ETS.md`'s
+  B8-B11 and most of Section C/D/E/F gaps remain genuinely open.
+- **Notes for Codex:** Same caution as the prior entry: any future code path that swaps `state.project` must also keep `state.opaque`/
+  `state.manufacturer_refs` consistent. New addition: any future writer of the `opaque_entry`/`manufacturer_ref` tables must go through
+  `knx_store::insert_opaque`/`insert_manufacturer_refs` (now clear-before-insert) rather than hand-rolling an `INSERT`, or the duplication bug
+  recurs outside those two functions' protection.

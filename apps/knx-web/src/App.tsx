@@ -18,6 +18,25 @@ import { pickStartupToast, useToasts } from "./toast";
 const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
 const EXPORT_FILTER = [{ name: "ETS project", extensions: ["knxproj"] }];
 
+// `ExportWarningDto` (apps/knx-server/src/routes.rs) has no `tag` attribute,
+// so serde serializes it externally tagged: `{ "unsigned": { "detail":
+// "..." } }`, `{ "missingManufacturerData": { "sourcePath": "...", "sha256":
+// "..." } }`, etc — one key, whose value is the variant's fields. Unwrap
+// that single key, use `detail` if the variant has one, else fall back to
+// stringifying the inner value (covers `ManufacturerDataFromProductDb`'s
+// `entries`/`StaleSignature`'s `sourcePath`/`MissingManufacturerData`'s
+// `sourcePath`+`sha256`, none of which carry a `detail` field).
+function describeExportWarning(w: unknown): string {
+  if (typeof w === "object" && w !== null) {
+    const [variant, value] = Object.entries(w)[0] ?? [];
+    if (typeof value === "object" && value !== null) {
+      if ("detail" in value) return String((value as { detail: unknown }).detail);
+      return `${variant}: ${JSON.stringify(value)}`;
+    }
+  }
+  return JSON.stringify(w);
+}
+
 function App() {
   const [tree, setTree] = useState<ProjectTree | null>(null);
   const { toasts, pushError, clearErrors, pushFun, dismiss } = useToasts();
@@ -187,12 +206,14 @@ function App() {
     clearErrors();
     try {
       const { warnings } = await api.exportProject(path);
-      for (const w of warnings) {
-        pushError(
-          typeof w === "object" && w !== null && "detail" in w
-            ? String((w as { detail: unknown }).detail)
-            : JSON.stringify(w),
-        );
+      if (warnings.length > 0) {
+        // `pushError` is single-slot (each call evicts the previous error
+        // toast — see toast.ts's own doc comment), so N separate calls in a
+        // loop would only ever leave the last warning visible. Export
+        // warnings are commonly plural (one `MissingManufacturerData` per
+        // unresolved manufacturer reference, see knx-app's export code), so
+        // all of them are joined into a single toast instead.
+        pushError(warnings.map(describeExportWarning).join(" | "));
       }
     } catch (e) {
       pushError(api.errorMessage(e));

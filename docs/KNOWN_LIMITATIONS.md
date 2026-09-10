@@ -1171,3 +1171,45 @@ faster incremental path its doc already claims to be (at which point
 every no-op stub arm, including T12's new one, would need a real
 implementation too). Neither is scheduled; flagged here so the gap is
 findable without re-deriving it from a grep.
+
+## 43. Animations have no in-app switch; only the OS reduced-motion preference
+
+**Limitation.** The web UI's transitions and hover animations cannot be
+turned off, slowed, or otherwise controlled from inside the application.
+`apps/knx-web/src/styles.css` declares `--knx-transition-duration: 250ms`
+and wraps every transition in one of three `@media (prefers-reduced-motion:
+no-preference)` blocks, so the operating system's reduced-motion setting is
+the only switch a user has — and it is all-or-nothing. No `.ts` or `.tsx`
+file in `apps/knx-web/src` references motion, duration, or that token at
+all.
+
+**Cause.** Regression, not an omission. Session 5 cycle 11 shipped a
+three-level `off`/`subtle`/`standard` motion setting that wrote the
+duration token, living in `ThemePanel.tsx` alongside four user-colorable
+theme tokens. Cycle 13 replaced the whole theming approach with a named
+`ThemeDef`/`THEMES` registry and deleted `palette.ts`, `palette.test.ts`
+and `ThemePanel.tsx` outright, because a four-token override does not map
+onto a 12+-token theme package. The motion setting was collateral: it had
+nothing to do with color overrides but happened to share their surface.
+Cycle 13's own [design spec](superpowers/specs/2026-09-08-bitcoin-defi-theme-design.md)
+records the outcome plainly — "Motion: no user-facing setting (that was
+`palette.ts`'s job, now gone)" — so this was noticed at the time and
+accepted, not overlooked.
+
+**Impact.** Small today and growing. The current animations are short
+CSS transitions on hover and theme change, and a user bothered by them
+can set the OS preference. It matters more as soon as motion-heavy
+features arrive — a live Group Monitor, a line-scan progress display,
+graphical topology views, and the deferred "who talks to whom" telegram
+animation are all on the backlog and all inherently animated. A user who
+wants a still UI without telling their whole desktop environment so has
+no way to ask for one, and an engineer working in front of a customer
+has a reasonable claim to that.
+
+**Lifted when.** T27 (GAP_ANALYSIS_ETS.md Tier 7, gap D11) restores an
+in-app motion control and binds future animated features to it, with
+`prefers-reduced-motion: reduce` still overriding the in-app choice
+rather than the reverse. Requested explicitly on 2026-09-10
+("die Animationen sollen togglebar sein, wenn sie implementiert werden");
+not scheduled into a cycle yet, and deliberately written down before the
+animated features exist rather than after.

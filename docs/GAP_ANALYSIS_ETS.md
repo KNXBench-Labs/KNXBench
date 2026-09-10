@@ -89,9 +89,10 @@ underlying model field exists.
 | D5 | **No live Group Monitor GUI.** `knx bus monitor`/`bus write` exist as CLI subcommands (Session 6) with raw-byte, no-DPT-decoding output; ETS's Group Monitor is a GUI table, DPT-decoded, filterable, with send-from-the-table. | The bus-communication features that exist have no desktop/web front end at all — they're developer/CLI tools today, not end-user features. |
 | D6 | **No bus/line diagnostics UI.** ETS can scan a line for connected devices, ping/identify a device, and show its individual info (mask version, order number) read live from the bus. | `knx-net` has no such capability yet (see Session E below) and there is no UI slot reserved for it either. |
 | D7 | **Closed (2026-09-10, T11).** `ImportReport` (errors/warnings/unsupported list) is real and populated, but the frontend only surfaced it as toast notifications for errors — there was no dedicated screen to review the full report after the initial import moment had passed. | A new server-side `SessionLog` (`apps/knx-server`, in-memory, never persisted to `.knxdb`) plus a "Log" tab in the web UI (`LogPanel.tsx`) close this — see the T11 backlog entry below for the full shape. |
-| D8 | **No settings/preferences beyond theme.** ETS has a Workbench-wide options dialog (default group-address style, backup behavior, language, etc). | `ThemePanel.tsx` is the only settings surface that exists. |
+| D8 | **No settings/preferences beyond theme.** ETS has a Workbench-wide options dialog (default group-address style, backup behavior, language, etc). | `ThemeSwitcher.tsx` — a single `<select>` over the `THEMES` registry — is the only settings surface that exists. Cycle 11's `ThemePanel.tsx` was wider (four color tokens plus a three-level motion setting) but was deleted outright in cycle 13, so the application has *fewer* settings today than it had two cycles ago; the motion setting is tracked separately as **D11**. |
 | D9 | **Two near-duplicate modal-overlay implementations** (Search, Command Palette) with an unaddressed accessibility gap. | Already tracked: [KNOWN_LIMITATIONS.md §20](KNOWN_LIMITATIONS.md#20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap-unaddressed). Restated here only because it will get worse, not better, once D1/D5/D6 add more overlay-like screens without a shared shell. |
 | D10 | **The UI is English-only, and the translated data already in the model is never displayed in any language.** ETS ships a localized workbench and renders manufacturer/product/parameter text in the language the user picked. | Two distinct halves. (a) *Chrome:* every user-facing string in `apps/knx-web` is a hard-coded English literal; `package.json` has no i18n dependency of any kind and there is no message catalogue, locale detection, or language setting (D8's missing options dialog is where one would live). (b) *Data:* the plumbing exists but has no reader. `knx_core::string_table` defines `Language`/`LocalizedString`/`StringTable` with a `default_language` fallback, and `Project` owns a `strings: StringTable` (`project.rs:182`); `knx-productdb` parses `Languages`/`TranslationUnit`/`TranslationElement` into a `translation (program_id, language, ref_id, attribute_name, text)` table (`migration.rs:248`). **Nothing reads that table outside the parser that writes it**, and no code path anywhere selects an active language — see [KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only). |
+| D11 | **Animation and transition motion has no in-app switch.** Not an ETS parity gap — ETS has no comparable animation — but a user-facing control gap recorded here alongside D8, since that is where the switch would live. | Cycle 11 shipped a three-level `off`/`subtle`/`standard` motion setting in `ThemePanel.tsx`; cycle 13 deleted that file outright and did not replace the setting (its own design spec says so: "Motion: no user-facing setting (that was `palette.ts`'s job, now gone)"). What remains is `--knx-transition-duration: 250ms` in `styles.css` and three `@media (prefers-reduced-motion: no-preference)` blocks, so the OS preference is the only control a user has, and it is all-or-nothing. No `.ts`/`.tsx` file references motion at all. Tracked as **T27**; see [KNOWN_LIMITATIONS.md §43](KNOWN_LIMITATIONS.md#43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference). |
 
 ## E. KNXnet/IP & commissioning gaps
 
@@ -476,7 +477,9 @@ one). Neither has a design spec yet.
   belong in the design spec rather than here: which library (or whether a
   ~200-string catalogue needs one at all), and how the language setting
   is stored, since D8's options dialog does not exist yet and
-  `ThemePanel.tsx`'s `localStorage` convention is the only precedent.
+  `theme.ts`'s `loadThemeId`/`saveThemeId` `localStorage` convention is
+  the only precedent (cycle 11's `ThemePanel.tsx`, the earlier precedent,
+  no longer exists).
   Partially addresses **D8**, closes half of **D10**.
 - **T26. Language-aware display of imported KNX data.** Give the
   application an *active language* distinct from the UI's, resolve
@@ -491,6 +494,41 @@ one). Neither has a design spec yet.
   no project-wide language tag at all). Closes the other half of **D10**;
   a prerequisite for T18's parameter editor being usable in practice,
   since parameter text is exactly the data that arrives translated.
+
+### Tier 7 — motion and animation
+
+Added 2026-09-10 by explicit request ("die Animationen sollen togglebar
+sein, wenn sie implementiert werden"). One task plus one standing
+constraint that binds every *other* task in this backlog.
+
+- **T27. An in-app motion control, and the rule that every animation
+  obeys it.** Restore a user-facing motion setting — cycle 11's
+  `off`/`subtle`/`standard` shape is the obvious starting point, since it
+  already existed, already mapped onto `--knx-transition-duration`, and
+  was removed by accident of cycle 13's theme rewrite rather than by a
+  decision against it. Two parts, and the second is the one that matters
+  long-term:
+  1. The control itself, plus its storage, plus the rule that
+     `prefers-reduced-motion: reduce` always wins over the stored choice
+     (never the other way around — an OS-level accessibility setting is
+     not something an app setting may override).
+  2. **A standing constraint on this backlog:** no task here may ship an
+     animation that is not switchable off through that control. That
+     binds, concretely, **T15**'s live Group Monitor table, **T17**'s
+     line-scan progress UI, **T21**'s graphical topology and building
+     views (**D1**/**D2**), and the deferred "who talks to whom"
+     group-address/device telegram animation listed under
+     Session 7 in [ROADMAP.md](ROADMAP.md) — all of them motion-heavy by
+     nature, and all of them currently unscheduled, which is exactly when
+     a constraint like this is cheap to honour.
+
+  Closes **D11**, partially addresses **D8** (the control needs somewhere
+  to live, and today only a bare `<select>` exists). No design spec yet.
+  The one open question for it: whether the setting is a global duration
+  multiplier — cycle 11's approach, one token, trivially honoured by CSS
+  transitions — or a per-category switch, which is more useful once
+  animations mean "a telegram flying along a bus line" and not just "a
+  button fades on hover", and correspondingly more work.
 
 ### Not backlog items — durable non-goals, listed for completeness only
 

@@ -1,29 +1,31 @@
-- **Last Agent:** Claude
-- **Timestamp:** 2026-09-08 14:24
-- **Completed:** T7, communication-object flag editing. `knx-core` gains
-  `Command::SetComObjectFlag`/`RestoreComObjectFlag` (generic over a new
-  `ComFlagKind` enum via `ResolvedFlags::get`/`get_mut`, same
-  set-as-`UserEdit`/undo-restores-exact-`Override` shape as
-  `SetComObjectDpt`/`SetComObjectDescription`, but `value` is a bare
-  `bool` — no "clear to inherited" gesture for a checkbox).
-  `apps/knx-server` gains `POST /api/com-object-flag`. `apps/knx-web`
-  gains `ComObjectFlagsRow`, five checkboxes on the comm-object Inspector
-  row — the flags existed read-only on `ComObjectNode` from an earlier
-  cycle but were never actually rendered in the UI until now. 3 new
-  `cargo test` tests, 1 new `vitest` test, all green. Priority stays
-  unmodelled/out of scope (`ResolvedFlags` has no priority field).
-  `docs/GAP_ANALYSIS_ETS.md` and `docs/IMPLEMENTATION_STATUS.md` updated
-  (T7 closed).
-- **Pending/Next Steps:** Tier 2's remaining items: T8 (building-part
-  CRUD commands, `CreateBuildingPart`/`DeleteBuildingPart`/
-  `RenameBuildingPart`/`MoveDeviceToBuildingPart`, closes B4) and T9
-  (bulk/multi-select operations — flagged in `GAP_ANALYSIS_ETS.md` as
-  needing its own design spec for a `Command::Batch` wrapper before
-  implementation, unlike every other item in this backlog so far).
-- **Notes for Codex:** Work happened in a git worktree per this
-  project's usual flow; merge/rebase onto `main` before continuing from
-  here. No new `CommandError` variant was needed for T7 — every failure
-  path (unknown com-object, unknown flag name) reuses
-  `CommandError::ComObjectNotFound` or a plain `Err(String)` from the
-  server's own `parse_com_flag_kind`, same as `parse_direction`'s
-  existing convention.
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-10 09:32
+- **Review Note:** On 2026-09-09 Codex reviewed implementation status, roadmap, and known limitations; no product-code changes.
+- **Goal Instruction:** Added root `goal.md` as the durable `/goal` completion instruction. It requires evidence-backed closure of actionable work, reconciled status documents, honest external blockers, and explicit user acceptance for anything left out of scope. Its highest-priority goal is now direct device installation from manufacturer-supplied product databases, evidenced by six files in `OriginalData/ProductDatabases/` (five `.knxprod`, one legacy `.vd2`); `OriginalData/DemoProjects/` now has three ETS-project fixtures, including ETS4 and ETS 6.3.0 examples, for the versioned compatibility corpus. The instruction now also requires a VS-Code-safe, GitHub-aware workflow (remote verified as `KNXBench-Labs/KNXBench`), autonomously authorizing branches, verified commits, pushes, PRs, task/issue closure, and green-check merges while prohibiting force pushes, history rewriting, bypassed checks, and loss of unrelated changes.
+- **SDD Instruction:** `goal.md` now mandates token-conscious Subagent-Driven Development: parallelize only independent work in isolated worktrees (maximum three subagents plus coordinator), then use per-task and final reviews. Every dispatch explicitly sets model and effort: `gpt-5.6-luna`/low for mechanical work, `gpt-5.6-terra`/medium for integration and normal review, `gpt-6-astra`/high for research, architecture, integrity-critical work, and final review.
+- **KNX Standard Reference:** `goal.md` now mandates consulting the 179-document extracted KNX Standard v3.0.0 Markdown corpus at `/mnt/daten-i/Sourcecode/knx-spec-kb/extracted/The KNX Standard v3.0.0/` for unclear KNX behavior, citing the exact file and section and never inventing ambiguous semantics.
+- **Completed:** Session-log design approved in chat: the log is scoped to the
+  current application session and project, not persisted in `.knxdb`. Wrote
+  `docs/superpowers/specs/2026-09-08-session-log-design.md` and
+  `.ai/logs/2026-09-08_codex_session_log_design.md`. Previous work: T7,
+  communication-object flag editing, added `Command::SetComObjectFlag` /
+  `RestoreComObjectFlag`, `POST /api/com-object-flag`, and five editable
+  communication-object flags in the Inspector; focused Rust and Vitest tests
+  passed.
+- **Active Goal Progress:** Manufacturer-database audit completed; reports are in `.ai/reports/2026-09-09_{productdb_audit,corpus_probe,status_audit}.md`. Isolated branch `codex/standalone-productdb-install` at `.worktrees/standalone-productdb-install` contains reviewed integrity fix `2d1e001` (first-winner catalog/hardware/product/H2P rows, conflict reporting, regression coverage). Task 2 package ingestion changes are present but uncommitted and under review by the implementer; do not restart or redispatch the implementation. Agent `productdb_package_impl` was resumed after its usage-limit interruption. Its reported initial corpus tests passed for all five readable archives; coordinator requested additional retry-diagnostic and member-identity validation before acceptance. No complete standalone device-installation claim yet.
+- **Task 2 Review Update:** Package implementation committed as `b98a663`; implementer reports 89 passing productdb tests, strict clippy, focused formatting and layering. Independent reviewer reproduced blocking defects: package-to-file parse-cache poisoning; repeat-import conflict counts changing after overlapping package imports; non-transactional schema migration/version change; malformed XML acceptance. Original implementer resumed for fix round 1 with regression tests. Task 2 is not accepted or merged. This update supersedes the earlier uncommitted Task 2 status above.
+- **Pending/Next Steps:** Finish/review Task 2 fixes in the isolated worktree, then CLI/HTTP, browser/creation diagnostics, persistence/export provenance, corpus gates and GitHub delivery. Keep existing `.knxproj` CLI ingestion compatible when adding standalone formats. The full `goal.md` objective remains active; the current plan is only one slice. Previous lower-priority session-log work: user review of the session-log design, then write
+  its implementation plan and implement it. Tier 2 remains T8 (building-part
+  CRUD commands) and T9 (bulk/multi-select operations, needing a separate
+  `Command::Batch` design).
+- **Notes for Claude:** The session-log design intentionally leaves
+  `ImportReport` in `knx-etsproj` and makes `knx-server` the projection and
+  lifetime owner; no core/store change is appropriate. The specification was
+  not committed because the user did not request a commit. Earlier T7 work
+  happened in a git worktree; merge/rebase onto `main` before continuing from
+  there. No new `CommandError` variant was needed for T7: unknown com-object
+  and flag-name failures reuse `CommandError::ComObjectNotFound` or the
+  server's existing plain-`Err(String)` parsing convention.
+- **Current Goal Progress (2026-09-10 09:15):** Task 2 standalone product database package ingestion is complete and independently approved at `f6cb11f`. Fifteen standalone tests cover all five readable `.knxprod` corpus archives plus cache, conflict-snapshot, migration rollback, XML and malformed-input regressions. Task 3 CLI/HTTP entry points is now dispatched in the isolated branch; no CLI/server changes are accepted yet. Full goal remains active; `.vd2` decryption, Dynamic/module activation, creation diagnostics, export provenance, docs reconciliation and repository-wide gates remain open.
+- **Current Goal Progress (2026-09-10, continued):** Task 3 (CLI `knx products ingest` + `POST /api/catalog/install`) is complete and independently approved in `.worktrees/standalone-productdb-install` at `2afa28d` (impl `4b403e4`); a storage-error classification fix keeps persistent SQLite/storage failures at HTTP 500 vs. malformed-input 400. Existing `.knxproj` CLI ingest path is unchanged; 3 `http_product_install` tests plus existing CLI import tests pass. Task 4 (browser install action + creation diagnostics) dispatched to an implementer subagent (`gpt-5.6-terra`/medium) in the same worktree/branch, brief at `.superpowers/sdd/2026-09-09-standalone-product-database-install/task-4-brief.md` (gitignored, local-only). Task 4 also folds in a design-mandated behavior change: `create_device_impl` currently treats an unresolved `hardware2program_ref_id` the same as genuinely passive hardware (zero com objects, silent success); it must instead distinguish that case and return visible diagnostics. Not yet implemented, reviewed, or merged. Task 5 (docs/gates reconciliation) remains queued after Task 4 lands.
+- **Memory System (2026-09-10):** Codex applied the durable-memory guidance from OpenClaw commits `7d1fee7` and `9ffea23` to this workspace's `AGENTS.md` and created canonical `MEMORY.md`. The guidance keeps private long-term memory in main/direct sessions, raw notes in dated `memory/` files, and periodic maintenance in heartbeat or scheduled passes. Verification: `openclaw doctor --non-interactive` no longer reports the memory-system warning for agent `knxbench`.

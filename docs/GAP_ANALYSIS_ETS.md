@@ -325,26 +325,39 @@ Each task: **what**, **why**, **depends on**.
   import/open/save/export/undo/redo/edit funnels through it: import
   populates it from the same `ImportReport` used for `ProjectTree`'s
   counts (`from_import_report` maps `ImportError`/`UnknownConstruct`/
-  `Conflict`/`UnsupportedFeature` to warning/error entries, in that
-  order), and every other operation logs one info entry on success or
-  one error entry (the existing user-facing error string) on failure.
-  Export was folded in using the same info/error shape as save, even
-  though the design doc's own operation list didn't name it — the one
-  other fallible project-level operation would otherwise have been an
-  arbitrary, undocumented gap. `GET /api/log` returns every entry for the
-  session, oldest-first — filtering and ordering are frontend-only.
-  `apps/knx-web` adds a `LogPanel.tsx` component and a "Log" toolbar
-  button (disabled until a project is open) that swaps into the same
-  slot as the Inspector/Dashboard; it renders newest-first, with
-  Error/Warning/Info toggle filters (client-side only, never re-fetch),
-  distinct empty states for "no entries at all" vs. "entries exist but
-  every filter is off," and a rendered fetch-error message if `GET
-  /api/log` itself fails. `knx-server`: 20 unit tests (`session_log.rs`
-  + `domain.rs`) plus a dedicated `tests/http_log_route.rs` integration
-  test (import → failed edit → successful edit, correct append order).
-  `knx-web`: `LogPanel.test.tsx`, 7 tests (newest-first, per-severity
-  filter show/hide with no re-fetch, both empty states, fetch-error
-  rendering and clearing, refetch-on-tree-change). Full gate (`cargo fmt --check`, `cargo test
+  `OpaqueSummary`/`Conflict`/`UnsupportedFeature` to warning/info/error
+  entries, in that order — `report.opaque` entries are mapped to
+  info-level log entries the same as the other report categories;
+  `report.inferred` and `SourceInfo.namespace_disagreement` are
+  deliberately not mapped in this cycle, a residual rather than a silent
+  drop, see `KNOWN_LIMITATIONS.md`), and every other operation that
+  reaches a `Command` dispatch or a project-level operation's own
+  top-level `Result` logs one info entry on success or one error entry
+  (the existing user-facing error string) on failure. A failure that
+  never reaches that point — a bad address parse, an empty id list, no
+  project open, no product database configured, a catalog item not found
+  — produces a toast but no log entry. Export was folded in using the
+  same info/error shape as save, even though the design doc's own
+  operation list didn't name it — the one other fallible project-level
+  operation would otherwise have been an arbitrary, undocumented gap.
+  `GET /api/log` returns every entry for the session, oldest-first —
+  filtering and ordering are frontend-only. `apps/knx-web` adds a
+  `LogPanel.tsx` component and a "Log" toolbar button (disabled until a
+  project is open) that swaps into the same slot as the
+  Inspector/Dashboard; it renders newest-first, with Error/Warning/Info
+  toggle filters (client-side only, never re-fetch), distinct empty
+  states for "no entries at all" vs. "entries exist but every filter is
+  off," and a rendered fetch-error message if `GET /api/log` itself
+  fails. `knx-server`: 6 new unit tests (3 in `session_log.rs`, 3 in
+  `domain.rs`; the crate's `--lib` total is 20, the other 14 predate T11
+  or cover unrelated modules) plus a dedicated `tests/http_log_route.rs`
+  integration test suite (now 2 tests: a corpus-free
+  fresh-state-returns-empty-array check that always runs in CI, and the
+  gated import → failed edit → successful edit, correct append order
+  test). `knx-web`: `LogPanel.test.tsx`, 8 tests (newest-first,
+  per-severity filter show/hide with no re-fetch, both empty states,
+  fetch-error rendering and clearing, refetch-on-tree-change,
+  refetch-on-refreshKey-change). Full gate (`cargo fmt --check`, `cargo test
   --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`,
   `npx tsc --noEmit`, `npm test`, `npm run build`) green on the merged
   branch. See `docs/superpowers/specs/2026-09-08-session-log-design.md`

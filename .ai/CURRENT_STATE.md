@@ -779,9 +779,14 @@
   `npm run build` (`dist/.gitkeep` restored afterwards). Worktree
   `.worktrees/fix-36-log-tab` removed and branch `fix-36-log-tab` deleted.
 - **Pending/Next Steps:** **T13** (project documentation export) continues on
-  branch `t13-documentation-export` — Task 1 complete and reviewed clean at
-  `bcbaa6c`, Task 2 in flight, Tasks 3-7 queued with their briefs already
-  extracted. After T13: **T14** (project diff/compare, closes **C1**).
+  branch `t13-documentation-export` — Task 1 (the crate, its escaping and its
+  document shell) complete and reviewed clean at `bcbaa6c`; Task 2 (the pure
+  derived model in `model.rs`) complete and reviewed clean at `d44d566`, which
+  includes a fix for `build_range_forest` silently dropping group ranges whose
+  `parent`/`children` ids dangle; Task 3 (the renderer, `render.rs`) in flight;
+  Tasks 4-7 (CLI surface, HTTP route, web UI button, corpus test) queued with
+  their briefs already extracted. Nothing on that branch is merged yet.
+  After T13: **T14** (project diff/compare, closes **C1**).
   Nothing is pushed and nothing will be — the standing user instruction is
   to skip the GitHub workflow entirely until further notice, so `main` is
   ahead of `origin/main` by design. Still parked and unscheduled:

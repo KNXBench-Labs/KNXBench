@@ -205,9 +205,7 @@ export default function CatalogBrowser(props: {
             <h3>Creation diagnostics</h3>
             <ul>
               {diagnostics.map((diagnostic, index) => (
-                <li key={`${diagnostic.kind}-${index}`}>
-                  {formatDiagnostic(diagnostic)}
-                </li>
+                <li key={`${diagnostic.kind}-${index}`}>{diagnostic.detail}</li>
               ))}
             </ul>
           </section>
@@ -222,17 +220,4 @@ export default function CatalogBrowser(props: {
       </div>
     </div>
   );
-}
-
-function formatDiagnostic(diagnostic: CreationDiagnostic): string {
-  switch (diagnostic.kind) {
-    case "programlessProduct":
-      return "This product explicitly has no application program; it was created without communication objects.";
-    case "ambiguousDpt":
-      return `No DPT was inferred for ${diagnostic.refId}; alternatives: ${(diagnostic.alternatives ?? []).join(", ")}.`;
-    case "comObjectRefMissing":
-      return `Communication-object reference is missing from the installed program: ${diagnostic.refId}.`;
-    case "dynamicOrModuleNotEvaluated":
-      return `Dynamic and module activation was not evaluated for ${diagnostic.programId}; only static product data was seeded.`;
-  }
 }

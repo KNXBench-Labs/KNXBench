@@ -283,6 +283,7 @@ function App() {
         onTreeUpdate={handleTreeUpdate}
         onSummary={pushFun}
         onError={reportError}
+        onClearErrors={clearErrors}
       />
       <button onClick={undo} disabled={!tree?.can_undo}>
         Undo

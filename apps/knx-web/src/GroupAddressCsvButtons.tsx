@@ -50,12 +50,18 @@ export default function GroupAddressCsvButtons(props: {
   onTreeUpdate: (tree: ProjectTree) => void;
   onSummary: (message: string) => void;
   onError: (e: unknown) => void;
+  onClearErrors: () => void;
 }) {
-  const { tree, onTreeUpdate, onSummary, onError } = props;
+  const { tree, onTreeUpdate, onSummary, onError, onClearErrors } = props;
 
   async function exportCsv() {
     const path = await pickSavePath(CSV_FILTER, "group-addresses.csv");
     if (!path) return;
+    // Sequenced exactly like `App.tsx`'s neighbouring `exportProject`
+    // handler: clear any leftover error toast from an earlier, unrelated
+    // failure before this operation runs, not after — so a stale error
+    // never sits on screen through a subsequent success.
+    onClearErrors();
     try {
       const { warnings } = await api.exportGroupAddressesCsv(path);
       const n = warnings.length;
@@ -72,6 +78,7 @@ export default function GroupAddressCsvButtons(props: {
   async function importCsv() {
     const path = await pickOpenPath(CSV_FILTER);
     if (!path) return;
+    onClearErrors();
     try {
       const { tree: nextTree, report } = await api.importGroupAddressesCsv(path);
       onTreeUpdate(nextTree);

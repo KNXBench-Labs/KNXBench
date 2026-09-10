@@ -2682,7 +2682,9 @@ mod tests {
         stack
             .do_command(
                 &mut project,
-                Command::DeleteBuildingPart { id: BuildingPartId(1) },
+                Command::DeleteBuildingPart {
+                    id: BuildingPartId(1),
+                },
             )
             .unwrap();
         assert!(project.installations[0].buildings.is_empty());
@@ -2695,9 +2697,11 @@ mod tests {
     #[test]
     fn creating_a_nested_building_part_links_it_into_its_parents_children() {
         let mut project = test_project_with_one_device(None);
-        project.installations[0]
-            .buildings
-            .push(test_building_part(BuildingPartId(1), BuildingPartType::Building, None));
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(1),
+            BuildingPartType::Building,
+            None,
+        ));
         let mut stack = CommandStack::new();
         stack
             .do_command(
@@ -2746,17 +2750,17 @@ mod tests {
         let mut parent = test_building_part(BuildingPartId(1), BuildingPartType::Building, None);
         parent.children.push(BuildingPartId(2));
         project.installations[0].buildings.push(parent);
-        project.installations[0]
-            .buildings
-            .push(test_building_part(
-                BuildingPartId(2),
-                BuildingPartType::Floor,
-                Some(BuildingPartId(1)),
-            ));
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(2),
+            BuildingPartType::Floor,
+            Some(BuildingPartId(1)),
+        ));
         let mut stack = CommandStack::new();
         let result = stack.do_command(
             &mut project,
-            Command::DeleteBuildingPart { id: BuildingPartId(1) },
+            Command::DeleteBuildingPart {
+                id: BuildingPartId(1),
+            },
         );
         assert_eq!(
             result,
@@ -2774,7 +2778,9 @@ mod tests {
         let mut stack = CommandStack::new();
         let result = stack.do_command(
             &mut project,
-            Command::DeleteBuildingPart { id: BuildingPartId(1) },
+            Command::DeleteBuildingPart {
+                id: BuildingPartId(1),
+            },
         );
         assert_eq!(
             result,
@@ -2788,7 +2794,9 @@ mod tests {
         let mut stack = CommandStack::new();
         let result = stack.do_command(
             &mut project,
-            Command::DeleteBuildingPart { id: BuildingPartId(99) },
+            Command::DeleteBuildingPart {
+                id: BuildingPartId(99),
+            },
         );
         assert_eq!(
             result,
@@ -2799,9 +2807,11 @@ mod tests {
     #[test]
     fn rename_building_part_then_undo_restores_previous_name() {
         let mut project = test_project_with_one_device(None);
-        project.installations[0]
-            .buildings
-            .push(test_building_part(BuildingPartId(1), BuildingPartType::Room, None));
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(1),
+            BuildingPartType::Room,
+            None,
+        ));
         let mut stack = CommandStack::new();
         stack
             .do_command(
@@ -2837,9 +2847,11 @@ mod tests {
     #[test]
     fn move_device_into_a_building_part_and_back_via_undo() {
         let mut project = test_project_with_one_device(None);
-        project.installations[0]
-            .buildings
-            .push(test_building_part(BuildingPartId(1), BuildingPartType::Room, None));
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(1),
+            BuildingPartType::Room,
+            None,
+        ));
         let mut stack = CommandStack::new();
         stack
             .do_command(
@@ -2861,12 +2873,16 @@ mod tests {
     #[test]
     fn move_device_between_two_building_parts() {
         let mut project = test_project_with_one_device(None);
-        project.installations[0]
-            .buildings
-            .push(test_building_part(BuildingPartId(1), BuildingPartType::Room, None));
-        project.installations[0]
-            .buildings
-            .push(test_building_part(BuildingPartId(2), BuildingPartType::Room, None));
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(1),
+            BuildingPartType::Room,
+            None,
+        ));
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(2),
+            BuildingPartType::Room,
+            None,
+        ));
         let mut stack = CommandStack::new();
         stack
             .do_command(
@@ -2929,9 +2945,11 @@ mod tests {
     #[test]
     fn move_unknown_device_to_a_building_part_is_rejected() {
         let mut project = test_project_with_one_device(None);
-        project.installations[0]
-            .buildings
-            .push(test_building_part(BuildingPartId(1), BuildingPartType::Room, None));
+        project.installations[0].buildings.push(test_building_part(
+            BuildingPartId(1),
+            BuildingPartType::Room,
+            None,
+        ));
         let mut stack = CommandStack::new();
         let result = stack.do_command(
             &mut project,

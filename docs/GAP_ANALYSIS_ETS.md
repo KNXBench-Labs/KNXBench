@@ -74,7 +74,7 @@ underlying model field exists.
 | C1 | **No project comparison/diff.** ETS can compare two project versions structurally. KNXBench's `compare.rs` exists only as an internal roundtrip-equality oracle for tests, not a user-facing feature. | No way to answer "what changed between these two saves" without external tooling — compounded by [KNOWN_LIMITATIONS.md §9](KNOWN_LIMITATIONS.md#9-project-files-are-not-diffable) (SQLite isn't diffable at the file level either). |
 | C2 | **No CSV/Excel group-address import or export.** A common ETS workflow for bulk-authoring group addresses outside the tool. | Not present in any form — not import, not export. |
 | C3 | **No partial/selective import.** ETS import here is all-or-nothing per project. | Cannot import "just this one line" or "just this device" from a `.knxproj`. |
-| C4 | **Export has no UI caller anywhere.** `export_ets_project` (in `knx-app`) is exercised only by its own crate's tests — no CLI subcommand, no `knx-server` route, no frontend button. | A user cannot export a `.knxproj` from this application today, through any interface, despite the exporter itself being implemented and tested. This is worth stating plainly: **import works end-to-end for a user; export does not.** |
+| C4 | **Closed (2026-09-10, T10).** `export_ets_project` now has three real callers: `knx export` on the CLI, `POST /api/project/export` on the server, and an "Export to .knxproj…" button in the web Project Explorer. | Closing this also surfaced and fixed two real data-integrity bugs (see `IMPLEMENTATION_STATUS.md`'s T10 entry for the full account): (1) server-side ETS import used a throwaway store, so Save As never persisted opaque passthrough / manufacturer manifest data, and an export taken after it silently lost that data — fixed by carrying that data through `AppState` into every save; (2) the two functions that write those tables (`knx_store::insert_opaque`/`insert_manufacturer_refs`) were plain `INSERT`s with no clear-first step, so once (1)'s fix made every save call them, a plain repeated Save duplicated every row without bound — fixed by clearing the tables before insert, matching `save_project`'s own convention. `export_project` was also changed to read opaque/manifest from live `AppState` instead of re-opening `store_path` off disk, closing off the staleness risk described in [KNOWN_LIMITATIONS.md #18](KNOWN_LIMITATIONS.md#18-open_project-does-not-clear-the-previous-knxdb-store_path) for this specific data (the broader gap in #18 itself is unchanged and out of scope here). |
 | C5 | **No signed export**, and ETS acceptance of an unsigned one is unverified. | [KNOWN_LIMITATIONS.md §5](KNOWN_LIMITATIONS.md#5-exports-are-unsigned-and-ets-acceptance-is-untested). |
 | C6 | **No online device-catalog update.** ETS pulls manufacturer catalog updates from an online service (myKNX / KNX Online Catalog). | `knx-productdb` only ingests what a `.knxproj` already bundles — there is no independent product-database update path at all. |
 
@@ -302,10 +302,13 @@ Each task: **what**, **why**, **depends on**.
 
 ### Tier 3 — export & reporting parity
 
-- **T10. Wire up `export_ets_project` to a real interface.** A
-  `knx export` CLI subcommand, a `knx-server` route, and a frontend
-  "Export to .knxproj" action — the exporter itself is done and tested,
-  only its user-facing entry points are missing. Closes **C4**.
+- ~~**T10. Wire up `export_ets_project` to a real interface.**~~ **Closed
+  (2026-09-10).** `knx export` CLI subcommand, `POST /api/project/export`
+  on `knx-server`, and an "Export to .knxproj…" action in the web
+  Project Explorer all ship. Closes **C4**. Fixing it surfaced a
+  pre-existing data-integrity bug in the server's Save path (opaque
+  passthrough + manufacturer manifest data never persisted after an ETS
+  import) — fixed in the same branch, see `IMPLEMENTATION_STATUS.md`.
 - **T11. Import-report review screen.** A dedicated panel (reachable
   after the initial import, not just at import time) listing every
   warning, unsupported item, and opaque-passthrough summary from the

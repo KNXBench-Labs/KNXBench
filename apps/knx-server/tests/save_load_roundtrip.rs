@@ -30,7 +30,7 @@ fn saving_then_reopening_a_native_project_round_trips_the_golden_counts() {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("roundtrip.knxdb");
 
-    knx_server::save_project_as_impl(&db_path, &imported.project).unwrap();
+    knx_server::save_project_as_impl(&db_path, &imported.project, &[], &[]).unwrap();
     let tree = knx_server::open_native_project_impl(&db_path).unwrap();
 
     // A native load has no `ImportReport` — nothing was reinterpreted from

@@ -15,9 +15,14 @@ knx-store.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+chrono.workspace = true
 # Only `tests/csv_roundtrip.rs` needs this — no production `knx-app` code
 # calls into `knx-csv` yet (that is a later task's job). `knx-app` is
 # deliberately the one crate allowed to see both `knx-etsproj` and a CSV
 # writer that must itself never depend on `knx-etsproj` — see that test's
 # own doc comment.
 knx-csv.workspace = true
+# Only `tests/documentation_export.rs` needs this, for the same reason:
+# `knx-report` must itself never depend on `knx-etsproj`, and `knx-app` is
+# the one crate allowed to see both.
+knx-report.workspace = true

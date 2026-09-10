@@ -85,7 +85,7 @@ underlying model field exists.
 | D1 | **No graphical topology view.** ETS's Topology tab shows areas/lines/couplers/devices as a diagram. | KNXBench's Project Explorer is a tree, not a diagram; there is no visual representation of the bus structure at all. |
 | D2 | **No building/floor-plan graphical view.** ETS's Building view can show rooms spatially (and, with the right edition, overlay them on a floor plan image). | Building parts are a tree branch only, per Session 5's own scope; no spatial/graphical representation exists or is planned in DATA_MODEL. |
 | D3 | **Closed (2026-09-08, T2; extended 2026-09-10 with package install).** There was no UI screen listing manufacturers/products/hardware variants from `knx-productdb` at all. | `CatalogBrowser.tsx` (opened from a `+ Add device` row) lists catalog items via `GET /api/catalog/manufacturers`/`GET /api/catalog/items`, with a manufacturer filter and search; it also gained an install file-picker for standalone `.knxprod` packages (`installProductPackage`, install-report/error display, post-install catalog refresh, in-modal creation-diagnostics rendering) on 2026-09-10. |
-| D4 | **No printing / documentation export.** ETS can print topology, building, device, and group-address reports (to paper or PDF). | No print or PDF/document-export path exists anywhere in the application. |
+| D4 | **Closed for HTML only (2026-09-10, T13).** A new `crates/knx-report` crate (`render_html`) renders topology, buildings, group addresses, and devices into one self-contained HTML document — reachable via `POST /api/project/documentation-export` (`apps/knx-server`), `knx doc-export <store.knxdb> <out.html>` (`apps/knx-cli`), and an "Export documentation…" button (`DocumentationExportButton.tsx`, `apps/knx-web`). | Printing from inside the application and PDF generation without a browser both remain open — the document ships `@media print` rules and relies on the browser's own print-to-PDF dialog, which is not the same thing as native PDF generation or an in-app print preview. No claim of ETS report parity is made anywhere: no ETS-produced report sample exists in this repository to compare against, the same evidence gap [KNOWN_LIMITATIONS.md §38](KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability) records for T12's CSV format. See `IMPORT_EXPORT.md §12` and the new `KNOWN_LIMITATIONS.md` entries this task adds. |
 | D5 | **No live Group Monitor GUI.** `knx bus monitor`/`bus write` exist as CLI subcommands (Session 6) with raw-byte, no-DPT-decoding output; ETS's Group Monitor is a GUI table, DPT-decoded, filterable, with send-from-the-table. | The bus-communication features that exist have no desktop/web front end at all — they're developer/CLI tools today, not end-user features. |
 | D6 | **No bus/line diagnostics UI.** ETS can scan a line for connected devices, ping/identify a device, and show its individual info (mask version, order number) read live from the bus. | `knx-net` has no such capability yet (see Session E below) and there is no UI slot reserved for it either. |
 | D7 | **Closed (2026-09-10, T11).** `ImportReport` (errors/warnings/unsupported list) is real and populated, but the frontend only surfaced it as toast notifications for errors — there was no dedicated screen to review the full report after the initial import moment had passed. | A new server-side `SessionLog` (`apps/knx-server`, in-memory, never persisted to `.knxdb`) plus a "Log" tab in the web UI (`LogPanel.tsx`) close this — see the T11 backlog entry below for the full shape. |
@@ -409,10 +409,56 @@ Each task: **what**, **why**, **depends on**.
   in `GroupAddressCsvButtons.test.tsx` plus 4 more in `api.test.ts` for the
   two new client functions. Closes **C2**. Design spec:
   `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.
-- **T13. Project documentation export (PDF/HTML report).** Topology,
-  building, device, and group-address listings rendered to a printable
-  document — start with one format (HTML, easiest to generate and to
-  test deterministically) before considering PDF. Closes **D4**.
+- ~~**T13. Project documentation export (PDF/HTML report).**~~ **Closed for
+  HTML (2026-09-10).** A new `crates/knx-report` crate — depending only on
+  `knx-core`, `knx-projection`, and `chrono`, with a matching `xtask
+  check-layering` rule keeping it away from `knx-store`/`knx-etsproj`/
+  `knx-productdb` and every `CORE_FORBIDDEN` dependency — renders a
+  `&knx_core::Project` into one self-contained HTML "project documentation"
+  document via its one public entry point, `render_html(&Project,
+  &ReportOptions) -> HtmlReport`. `ReportOptions::generated_at` is the only
+  source of "now," so the same project and timestamp render to
+  byte-identical HTML on every call. Eight sections: Header, Contents,
+  Summary, Topology, Buildings, Group addresses, Devices, and "What this
+  report does not contain" — the last one names, inside the document
+  itself, exactly what it does not resolve (manufacturer/product/program
+  identifiers, parameter values, module arguments) rather than only in
+  `docs/`. **This is KNXBench's own document, not an ETS report:** no
+  ETS-produced report sample exists anywhere in this repository, so no
+  parity claim is made, the same evidence gap [KNOWN_LIMITATIONS.md
+  §38](KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability)
+  already records for T12's CSV format. Surfaces: `POST
+  /api/project/documentation-export` (`apps/knx-server/src/routes.rs`,
+  logging one T11 session-log entry per warning under `source:
+  "doc-export"`); `knx doc-export <store.knxdb> <out.html>`
+  (`apps/knx-cli`); an "Export documentation…" button
+  (`apps/knx-web/src/DocumentationExportButton.tsx`) in the same toolbar
+  row as the `.knxproj`/CSV export controls. Tested: `knx-report`'s own
+  suite (`html.rs`/`model.rs`/`render.rs` unit tests, including
+  determinism, escaping of `&`/`<`/`>`/`"`/`'` in names, self-containment,
+  and every orphan/dangling-reference finding) is 43 tests via `cargo test
+  -p knx-report -- --list`; `apps/knx-server/tests/http_documentation_export.rs`
+  (4 tests: a successful export, a warning-generating one with session-log
+  entries, a path-outside-data-directory rejection, and the
+  no-project-open 400 case); `apps/knx-cli/tests/cli_documentation_export.rs`
+  (4 tests, including per-warning printing and the missing-store exit-1
+  case); `DocumentationExportButton.test.tsx` (6 tests). A corpus-gated
+  integration test,
+  `rendering_the_reference_project_produces_a_complete_self_contained_document`
+  (`crates/knx-app/tests/documentation_export.rs`, living in `knx-app`
+  rather than `knx-report` for the same dev-dependency-layering reason
+  `csv_roundtrip.rs` does), imports the reference `.knxproj`
+  (36 devices, 907 communication objects, 514 group addresses) and asserts:
+  every group address's formatted string appears in the output; every
+  device name appears (escaped); `<table>`/`</table>` and `<tr>`/`</tr>`
+  counts balance; the Summary section's nine stated counts equal counts
+  computed independently from the `Project`; the output contains no
+  `<script`, `http://`, or `https://`; and a second render with the same
+  timestamp is byte-identical. **Closed for HTML only** — printing from
+  inside the application and native PDF generation (without a browser)
+  remain open, tracked in `KNOWN_LIMITATIONS.md`. Closes **D4**. Design
+  spec:
+  `docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`.
 - **T14. Project diff/compare.** Promote `knx-etsproj::compare` (or a
   new `knx-app`-level comparison) from an internal test oracle to a
   user-facing "what changed between these two saves" report. Closes

@@ -112,6 +112,38 @@ describe("LogPanel", () => {
     root.unmount();
   });
 
+  it("shows a distinct message when filters hide every entry (vs. a truly empty log)", async () => {
+    apiMock.getSessionLog.mockResolvedValue([entry({ severity: "info", message: "ok" })]);
+    const root = await renderPanel(baseTree());
+
+    const checkboxes = Array.from(host!.querySelectorAll<HTMLInputElement>(".log-panel-filter input"));
+    for (const cb of checkboxes) {
+      await act(async () => {
+        cb.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+    }
+
+    expect(host!.textContent).not.toContain("No log entries yet.");
+    expect(host!.textContent).toContain("No log entries match the current filters.");
+    root.unmount();
+  });
+
+  it("renders a fetch error and clears it on a subsequent successful fetch", async () => {
+    apiMock.getSessionLog.mockRejectedValueOnce(new Error("server unreachable"));
+    const root = await renderPanel(baseTree());
+
+    expect(host!.querySelector(".field-error")!.textContent).toBe("server unreachable");
+
+    apiMock.getSessionLog.mockResolvedValue([]);
+    const newTree = baseTree();
+    await act(async () => {
+      root.render(<LogPanel tree={newTree} />);
+    });
+    expect(host!.querySelector(".field-error")).toBeNull();
+
+    root.unmount();
+  });
+
   it("shows location and detail when present", async () => {
     apiMock.getSessionLog.mockResolvedValue([
       entry({ location: "/KNX/Project/Foo", detail: "extra info" }),

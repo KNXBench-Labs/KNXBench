@@ -168,6 +168,36 @@ describe("GroupAddressCsvButtons", () => {
     root.unmount();
   });
 
+  it("carries a successful import's warnings and ignored columns into the summary rather than dropping them", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/in.csv");
+    apiMock.importGroupAddressesCsv.mockResolvedValueOnce({
+      tree: { installations: [] } as unknown as ProjectTree,
+      report: {
+        separator: ",",
+        rowsRead: 4,
+        created: 1,
+        updated: 0,
+        unchanged: 2,
+        // Import applied fine (200), but the file carried a column this
+        // reader ignores and a row that only warranted a warning — a 200
+        // response is not the same as "nothing to tell the user".
+        ignoredColumns: [{ name: "Comment", reason: "unknown" }],
+        problems: [{ row: 3, severity: "warning", detail: "narrowest range chosen ambiguously" }],
+      },
+    });
+    const { root, onSummary, onError } = await renderButtons();
+    await click(importButton());
+    // This is the assertion that would still pass if the warning/ignored
+    // counts were silently dropped from the message, so it must check the
+    // exact string — not just that *a* summary fired.
+    expect(onSummary).toHaveBeenCalledWith(
+      "Group addresses imported from CSV: 1 created, 0 updated, 2 unchanged, 1 warning, " +
+        "1 column ignored — see Log.",
+    );
+    expect(onError).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
   it("rejects a bad import (400) without ever touching the open project's tree", async () => {
     filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/bad.csv");
     apiMock.importGroupAddressesCsv.mockRejectedValueOnce(

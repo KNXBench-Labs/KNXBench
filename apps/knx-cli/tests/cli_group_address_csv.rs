@@ -89,6 +89,17 @@ fn run_cli(args: &[&str]) -> Output {
         .expect("failed to run the knx binary")
 }
 
+/// Splits `ga-import` stdout into the report body (everything but the last
+/// line, trailing newline kept) and the trailing `store written: ...` line
+/// (no trailing newline) — the report body is what T12's byte-identical
+/// dry-run/real-run guarantee covers; the trailing line is deliberately
+/// outside that guarantee (review finding, task-5-review.md Ruling (a)).
+fn split_trailing_status_line(stdout: &str) -> (&str, &str) {
+    let trimmed = stdout.strip_suffix('\n').unwrap_or(stdout);
+    let idx = trimmed.rfind('\n').map(|i| i + 1).unwrap_or(0);
+    (&trimmed[..idx], &trimmed[idx..])
+}
+
 #[test]
 fn ga_export_writes_the_header_and_one_data_row() {
     let dir = tempfile::tempdir().unwrap();
@@ -151,6 +162,8 @@ fn ga_import_of_a_freshly_exported_file_reports_nothing_to_do() {
         "{stdout}"
     );
     assert!(stdout.contains("nothing to do"), "{stdout}");
+    let (_, status_line) = split_trailing_status_line(&stdout);
+    assert_eq!(status_line, "store written: no (nothing to do)", "{stdout}");
 
     // Re-importing an unchanged file must leave the store exactly as it
     // was.
@@ -186,6 +199,8 @@ fn ga_import_of_a_bad_row_exits_2_and_leaves_the_store_untouched() {
     );
     let stdout = String::from_utf8(out.stdout).unwrap();
     assert!(stdout.contains("error: row 3"), "{stdout}");
+    let (_, status_line) = split_trailing_status_line(&stdout);
+    assert_eq!(status_line, "store written: no (rejected)", "{stdout}");
 
     assert_eq!(
         store_addresses(&store),
@@ -238,6 +253,11 @@ fn ga_import_dry_run_matches_the_real_imports_report_and_leaves_the_store_untouc
         2,
         "the real run must have applied the create and the update: {real_addresses_after:?}"
     );
+    let (_, real_status_line) = split_trailing_status_line(&real_stdout);
+    assert_eq!(
+        real_status_line, "store written: yes",
+        "a real import that actually wrote must say so: {real_stdout}"
+    );
 
     let dry_out = run_cli(&[
         "ga-import",
@@ -252,10 +272,16 @@ fn ga_import_dry_run_matches_the_real_imports_report_and_leaves_the_store_untouc
         String::from_utf8_lossy(&dry_out.stderr)
     );
     let dry_stdout = String::from_utf8(dry_out.stdout).unwrap();
+    let (dry_body, dry_status_line) = split_trailing_status_line(&dry_stdout);
+    let (real_body, _) = split_trailing_status_line(&real_stdout);
 
     assert_eq!(
-        dry_stdout, real_stdout,
-        "--dry-run must print byte-identical output to a real import"
+        dry_body, real_body,
+        "--dry-run must print a byte-identical report body to a real import"
+    );
+    assert_eq!(
+        dry_status_line, "store written: no (dry run)",
+        "a dry run must never claim to have written the store: {dry_stdout}"
     );
     assert_eq!(
         store_addresses(&dry_store),

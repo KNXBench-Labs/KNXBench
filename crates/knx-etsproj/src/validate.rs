@@ -431,6 +431,10 @@ mod tests {
 
     #[test]
     fn the_reference_project_validates_clean() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let doc = reference_source_document();
         let out = validate(&doc);
         assert_eq!(out.errors, vec![]);

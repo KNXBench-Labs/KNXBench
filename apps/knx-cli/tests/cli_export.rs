@@ -22,6 +22,10 @@ fn run_cli(args: &[&str]) -> Output {
 
 #[test]
 fn export_after_import_succeeds_and_warns_about_unsigned() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let dir = tempfile::tempdir().unwrap();
     let store = dir.path().join("project.knxdb");
     let output = dir.path().join("exported.knxproj");
@@ -77,6 +81,10 @@ fn export_after_import_succeeds_and_warns_about_unsigned() {
 
 #[test]
 fn export_against_nonexistent_store_fails() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let dir = tempfile::tempdir().unwrap();
     let output = dir.path().join("exported.knxproj");
 

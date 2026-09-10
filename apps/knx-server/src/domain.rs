@@ -1131,6 +1131,10 @@ mod tests {
 
     #[test]
     fn opening_a_project_through_a_wired_product_db_enriches_more_than_without() {
+        if !reference_project_path().exists() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let dir = tempfile::tempdir().unwrap();
         let products_path = dir.path().join("products.sqlite");
         {

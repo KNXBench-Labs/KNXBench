@@ -1844,12 +1844,14 @@ dependencies = [
 name = "knx-cli"
 version = "0.0.0"
 dependencies = [
+ "chrono",
  "knx-app",
  "knx-core",
  "knx-csv",
  "knx-etsproj",
  "knx-net",
  "knx-productdb",
+ "knx-report",
  "knx-store",
  "serde_json",
  "tempfile",

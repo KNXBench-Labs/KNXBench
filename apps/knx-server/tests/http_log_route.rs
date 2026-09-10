@@ -70,6 +70,21 @@ fn first_device_id(tree: &Value) -> Option<u64> {
     }
 }
 
+/// Corpus-free, always runs in CI: `GET /api/log` on a state nothing has
+/// ever touched still answers `200 []`, not a 404. Split out of the test
+/// below (which needs the gitignored `OriginalData/` reference project and
+/// therefore returns early, before any assertion, when it isn't present)
+/// so this one check — previously never exercised in CI at all — always
+/// runs.
+#[tokio::test]
+async fn get_log_on_a_fresh_state_returns_an_empty_array() {
+    let state = Arc::new(knx_server::AppState::default());
+    let app = knx_server::app(state, None);
+    let response = call(&app, "GET", "/api/log", None).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(body_json(response).await, json!([]));
+}
+
 #[tokio::test]
 async fn get_log_reflects_import_a_failed_edit_and_a_successful_edit_in_order() {
     if !reference_ets4_path().exists() {
@@ -78,12 +93,6 @@ async fn get_log_reflects_import_a_failed_edit_and_a_successful_edit_in_order() 
     }
     let state = Arc::new(knx_server::AppState::default());
     let app = knx_server::app(state, None);
-
-    // No project, no history yet — the route still answers with `[]`, not
-    // a 404.
-    let empty = call(&app, "GET", "/api/log", None).await;
-    assert_eq!(empty.status(), StatusCode::OK);
-    assert_eq!(body_json(empty).await, json!([]));
 
     // 1. Import.
     let import = call(

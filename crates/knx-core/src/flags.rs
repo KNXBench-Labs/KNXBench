@@ -131,7 +131,10 @@ mod tests {
             layer: Layer::UserEdit,
         });
         assert_eq!(
-            flags.get(ComFlagKind::Communication).value().map(|r| r.value),
+            flags
+                .get(ComFlagKind::Communication)
+                .value()
+                .map(|r| r.value),
             Some(true)
         );
         // Untouched fields stay absent — `get_mut` must not alias another

@@ -1819,14 +1819,20 @@ mod tests {
             )
             .unwrap();
         assert!(project.devices.get(DeviceId(2)).is_some());
-        assert!(project.devices.com_object(ComObjectInstanceId(10)).is_some());
+        assert!(project
+            .devices
+            .com_object(ComObjectInstanceId(10))
+            .is_some());
         assert_eq!(
             project.installations[0].topology.unassigned,
             vec![DeviceId(2)]
         );
         stack.undo(&mut project).unwrap();
         assert!(project.devices.get(DeviceId(2)).is_none());
-        assert!(project.devices.com_object(ComObjectInstanceId(10)).is_none());
+        assert!(project
+            .devices
+            .com_object(ComObjectInstanceId(10))
+            .is_none());
         assert!(project.installations[0].topology.unassigned.is_empty());
     }
 
@@ -1944,13 +1950,13 @@ mod tests {
             .do_command(&mut project, Command::DeleteDevice { id: DeviceId(2) })
             .unwrap();
         assert!(project.devices.get(DeviceId(2)).is_none());
-        assert!(project.devices.com_object(ComObjectInstanceId(10)).is_none());
-
-        stack.undo(&mut project).unwrap(); // undoes the delete -> recreates
-        let restored = project
+        assert!(project
             .devices
             .com_object(ComObjectInstanceId(10))
-            .unwrap();
+            .is_none());
+
+        stack.undo(&mut project).unwrap(); // undoes the delete -> recreates
+        let restored = project.devices.com_object(ComObjectInstanceId(10)).unwrap();
         assert_eq!(
             restored.dpt.value().unwrap().value,
             DptRef {
@@ -1964,10 +1970,7 @@ mod tests {
         assert!(project.devices.get(DeviceId(2)).is_none());
 
         stack.undo(&mut project).unwrap(); // undoes the re-delete -> recreates again
-        let restored_again = project
-            .devices
-            .com_object(ComObjectInstanceId(10))
-            .unwrap();
+        let restored_again = project.devices.com_object(ComObjectInstanceId(10)).unwrap();
         assert_eq!(
             restored_again.dpt.value().unwrap().layer,
             Layer::Program,

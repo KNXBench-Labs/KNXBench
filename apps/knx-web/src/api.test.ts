@@ -330,6 +330,56 @@ describe("api", () => {
     expect(init.method).toBe("DELETE");
   });
 
+  it("exportGroupAddressesCsv posts the path to /api/group-addresses/csv-export", async () => {
+    mockFetchOnce({ warnings: [] });
+    const report = await api.exportGroupAddressesCsv("/data/group-addresses.csv");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/group-addresses/csv-export");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ path: "/data/group-addresses.csv" });
+    expect(report).toEqual({ warnings: [] });
+  });
+
+  it("exportGroupAddressesCsv surfaces the server's error message on a 400", async () => {
+    mockFetchOnce({ error: "no project open" }, false, 400);
+    await expect(api.exportGroupAddressesCsv("/data/group-addresses.csv")).rejects.toThrow(
+      "no project open",
+    );
+  });
+
+  it("importGroupAddressesCsv posts the path to /api/group-addresses/csv-import", async () => {
+    mockFetchOnce({
+      tree: { installations: [] },
+      report: {
+        separator: ",",
+        rowsRead: 1,
+        created: 1,
+        updated: 0,
+        unchanged: 0,
+        ignoredColumns: [],
+        problems: [],
+      },
+    });
+    const response = await api.importGroupAddressesCsv("/data/in.csv");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/group-addresses/csv-import");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ path: "/data/in.csv" });
+    expect(response.report.created).toBe(1);
+    expect(response.tree.installations).toEqual([]);
+  });
+
+  it("importGroupAddressesCsv surfaces the server's row-naming error message on a 400", async () => {
+    mockFetchOnce(
+      { error: "1 row(s) rejected, nothing applied: row 4: unknown group address style" },
+      false,
+      400,
+    );
+    await expect(api.importGroupAddressesCsv("/data/bad.csv")).rejects.toThrow(
+      "1 row(s) rejected, nothing applied: row 4: unknown group address style",
+    );
+  });
+
   it("errorMessage unwraps an Error's message without doubling 'Error: '", () => {
     expect(api.errorMessage(new Error("no project open"))).toBe("no project open");
   });

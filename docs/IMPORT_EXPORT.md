@@ -382,3 +382,113 @@ R3 — the raw bytes are retained regardless, per ADR-0011); a layer stack in
 risking the export change ADR-0012 rules out; `.knxprod` direct ingest for
 master data scheme ≥ 12 (KNOWN_LIMITATIONS §11); schema 23 manufacturer
 data (same blocker as schema 23 project data).
+
+## 11. Group-address CSV exchange
+
+**This is a format KNXBench defines and owns, not an ETS one.** ETS has its
+own "Export Group Addresses" feature, but no sample of what it actually
+writes exists in this repository, and none of the 179 documents in the
+extracted KNX Standard v3.0.0 corpus specifies a group-address CSV/Excel
+exchange format — group-address CSV export is an ETS *application* feature,
+not something the KNX Association standardizes. So this document does not,
+and cannot, claim that "KNXBench group-address CSV v1" round-trips through
+ETS, and nothing in the UI, CLI, or server API may say "ETS CSV" or imply
+that interoperability. If a genuine ETS-produced CSV sample is obtained
+later, a second, ETS-shaped column profile would fit alongside this one by
+extending the importer's header matching (`map_headers` in
+`crates/knx-csv/src/read.rs`) — one hard-coded `match` block, not a plug-in
+seam, so adding a profile means editing that function rather than
+registering with it, but the change stays contained to it. That is the
+upgrade path, and it is the only claim of ETS interoperability this feature
+is entitled to make.
+
+Implemented in `crates/knx-csv`, a pure crate depending only on `knx-core`,
+`csv`, and `serde` — it knows nothing of SQLite, HTTP, or the CLI. Its three
+entry points: `export_group_addresses(&Project) -> CsvExport`,
+`parse_group_addresses(text, style) -> ParsedCsv`, and
+`plan_import(&Project, &ParsedCsv) -> ImportPlan`. Orchestration (reading a
+path, applying the resulting command, saving the store) lives in
+`apps/knx-server` and `apps/knx-cli`, both calling the same three functions.
+
+**Encoding and framing.** Written UTF-8 with a leading BOM (Excel opens
+BOM-less UTF-8 as the system code page and mangles non-ASCII names), read
+with or without one. Written with CRLF line endings, read with either CRLF
+or LF, including a file that mixes the two. Written with `,` as the
+separator; read with `,` or `;`, auto-detected per file — a German-locale
+Excel writes `;` and reads `,` depending on the OS list separator, so both
+are accepted rather than picking one. Quoting follows RFC 4180: a field
+containing the separator, a quote character, or a line break is
+double-quote-quoted, with embedded quotes doubled.
+
+**Header row.** Required. Columns are matched by name, case-insensitively,
+with surrounding whitespace ignored; column order does not matter.
+
+| Column | Written on export | Read on import |
+| --- | --- | --- |
+| `Address` | the address in the project's own group-address style (`Free`, `TwoLevel`, or `ThreeLevel` — a project-wide setting, never per-address) | **required**; this is the row's identity, matched against existing entries |
+| `Name` | the entry's name | **required**, must be non-empty |
+| `Central` | `true`/`false` | optional; accepted spellings (case-insensitive): `true`/`false`/`1`/`0`/`yes`/`no`; empty means "false" when creating a new address and "leave unchanged" when updating an existing one |
+| `Unfiltered` | `true`/`false` | same rules as `Central` |
+| `DatapointType` | derived from the linked communication objects' DPTs: unanimous → that DPT, none linked → empty, disagreement → empty plus one export warning naming the address | accepted but **never applied** — a group address itself carries no DPT in this domain model (only its linked communication objects do), so this column is recognized and counted in the import report as ignored, never rejected and never silently dropped |
+| `MainGroup` | the name of the containing main group range, if any | accepted but **never applied**, same reporting treatment as `DatapointType` |
+| `MiddleGroup` | the name of the containing middle group range, if any | accepted but **never applied**, same reporting treatment as `DatapointType` |
+
+Unknown columns (anything not in the table above) are collected and
+reported by name once per file, never silently ignored.
+
+**Per row, import produces exactly one of four outcomes:** *create* (no
+existing entry has that address), *update* (an entry has that address and
+at least one applied column — `Name`, `Central`, or `Unfiltered` — differs),
+*unchanged* (an entry has that address and nothing differs), or *error*. A
+row is an error when: the address column is missing, unparseable, out of
+range for the project's address style, or is `0` (reserved for broadcast,
+never a valid group address); the name is missing or blank; a `Central`/
+`Unfiltered` cell is present but not a recognized boolean spelling; or an
+address appears more than once in the same file.
+
+**All-or-nothing.** If any row in the file is an error, nothing from the
+file is applied — the report names every offending row (1-based, counting
+the header, so it matches what a spreadsheet shows) so the user can fix the
+file and retry. A hand-edited spreadsheet that is half-good and half-broken
+either applies in full or not at all; there is no partial apply.
+
+**What import never does**, stated as plainly as what it does:
+
+- **It never deletes.** An address present in the project but absent from
+  the file is left alone. A CSV is an edit against the current project, not
+  a replacement of it.
+- **It never re-addresses.** The address is the match key, so changing an
+  address in the spreadsheet is read as "create a new entry at the new
+  address," not "move this entry." Deleting the old entry and creating the
+  new one — already possible from the group-address view — is the supported
+  way to re-address. See `KNOWN_LIMITATIONS.md`.
+- **It never applies `DatapointType`, `MainGroup`, or `MiddleGroup`.** These
+  three columns exist so an exported spreadsheet shows what each address is
+  for, not just its bare address and name; they are read back and reported
+  as recognized-but-ignored rather than rejected (which would make this
+  tool's own export un-importable) or silently dropped.
+- **It never creates or renames group ranges.** A newly created address is
+  placed into the innermost existing group range whose bounds already
+  contain it, if any; if none contains it, the address is created without a
+  range and the report says so. No range is ever created by a CSV import.
+- **There are no `Description`/`Comment` columns**, in either direction.
+  The `.knxproj` schema has `GroupAddress/@Description` and `@Comment`
+  attributes, but this domain model does not carry them yet
+  (`GroupAddressEntry`, `crates/knx-core/src/group.rs`), so the CSV format
+  cannot round-trip fields that do not exist here.
+
+**One undo step.** A successful import applies as a single
+`Command::Batch`, so the whole import is one undo, the same as T9's bulk
+operations.
+
+**Surfaces.** Server: `POST /api/group-addresses/csv-export` and
+`POST /api/group-addresses/csv-import` (`apps/knx-server`), both path-based
+like the existing `.knxproj` export/import routes, and both logging to the
+T11 session log. CLI: `knx ga-export <store.knxdb> <out.csv>` and
+`knx ga-import <store.knxdb> <in.csv> [--dry-run]` (`apps/knx-cli`) —
+`--dry-run` runs the identical plan and prints a byte-identical report body
+to a real import, then a trailing `store written: yes`/`no (…)` line makes
+explicit whether anything was actually saved. Web: two toolbar buttons in
+the group-address view (`GroupAddressCsvButtons.tsx`).
+
+Design record: `docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md`.

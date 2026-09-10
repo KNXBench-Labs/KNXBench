@@ -200,19 +200,54 @@ dependencies and is independent of our own licence
 
 ## 11. `.knxprod` files for master data scheme ≥ 12 cannot be imported directly
 
-**Limitation.** Manufacturer product files in the `.knxprod` container are only
-readable for master data scheme 11.
+**Limitation.** Manufacturer product files in the `.knxprod` container are
+fully readable, as a standalone package independent of any `.knxproj`, for
+master data scheme 11 and scheme 20 (2026-09-10,
+`knx_productdb::install_package`). Schemes 12-19, 21 and 22 remain unread as
+a *standalone package* — they can still reach the product database bundled
+inside a `.knxproj` that already contains them (see Impact below;
+`knx_productdb::ingest_file` performs no scheme/namespace gating). `.vd2`,
+a pre-2013 ETS2-era legacy container (SFX/`.vd_`-style, not
+the same ZIP/XML family as `.knxprod`/`.knxproj` at all — confirmed by
+inspection, it has no `knx_master.xml`), is explicitly and permanently
+rejected: `PackageError::LegacyVd2` → `"legacy .vd2 product data is
+unsupported"`, checked by filename suffix before any byte is read. This is a
+named, external blocker (a genuinely different, undocumented legacy format),
+not an untested general failure.
 
-**Cause.** `.knxprod` is the same XML family as `.knxproj`, but newer master
-data schemes add an encryption or obfuscation layer that Session 0 research did
-not establish (RESEARCH §10) [D, open].
+Note the scope: this is about standalone `.knxprod` *product packages*
+(`knx products ingest`, `POST /api/catalog/install`,
+`CatalogBrowser.tsx`'s install picker). Full `.knxproj` *project* import
+still only has evidenced coverage at schema 11/21/23 (see
+[COMPATIBILITY.md](COMPATIBILITY.md) §2/§3) — a `.knxproj` at schema 20 is
+still an "expected but unverified" claim, not the same thing as this row's
+now-verified scheme-20 `.knxprod` package support.
 
-**Impact.** Product data for newer devices has to reach the product database by
-another route — in practice, from a `.knxproj` that already contains the
-application programs it references.
+**Cause.** `.knxprod` is the same XML family as `.knxproj` (both root at
+`knx_master.xml`, `http://knx.org/xml/project/{scheme}`, per *Project
+Schema23 v01.00.00* §4.2.2-§4.2.3's MasterData/`M-iiii` layout); the earlier
+assumption that all schemes ≥ 12 needed a still-unresolved encryption layer
+(RESEARCH §10) has been disproven for schemes 11 and 20 specifically — the
+5 real-world corpus files at those two schemes contain no encryption at all,
+they simply hadn't been exercised through a standalone installer before.
+Schemes 12-19/21/22 remain unread only because no sample of those schemes as
+a *standalone `.knxprod` package* (as opposed to bundled inside a `.knxproj`)
+has been acquired and tested yet — not because a new blocker was found.
 
-**Lifted when.** The container layer for scheme ≥ 12 is understood, or an
-official route to that data becomes available. Out of v1 scope either way.
+**Impact.** A manufacturer's standalone `.knxprod` at scheme 11 or 20 can now
+be installed directly via `knx products ingest`, the HTTP endpoint, or
+`CatalogBrowser.tsx`'s install picker, without needing a `.knxproj` that
+bundles it. A `.knxprod` at any other scheme, or a legacy `.vd2`, still has
+to reach the product database another way (in practice, from a `.knxproj`
+that already contains the application programs it references) or not at
+all for `.vd2`.
+
+**Lifted when.** For the remaining schemes: a standalone `.knxprod` sample at
+that scheme becomes available and is exercised the same way
+`installs_the_readable_corpus` exercises 11/20
+(`crates/knx-productdb/tests/standalone_packages.rs`). For `.vd2`: never —
+it is a structurally different, pre-standard legacy container, not a
+variant of the current format needing decryption.
 
 ## 12. Manufacturer data resolution — lifted for communication objects, three gaps remain
 
@@ -836,9 +871,23 @@ the same fix Task 5 already applied to `Security` (per-device
 the schema-21/23 import/export plan's Task 7 (export only); tracked here
 for a future fast-follow.
 
-## 35. Device-creation `EnrichmentIssue`s are silently dropped
+## 35. Device-creation `EnrichmentIssue`s are silently dropped — RESOLVED (2026-09-10)
 
-**Limitation.** `apps/knx-server`'s `create_device_impl` seeds a newly
+**Resolved.** `POST /api/devices` now returns
+`CreateDeviceResponse { tree, diagnostics }`. `resolve_catalog_item_program`
+(`knx-productdb::query`) validates the full catalog item → product →
+hardware → hardware2program → program chain before `create_device_impl`
+builds a `Command::CreateDevice` at all — only a hardware row that
+explicitly declares itself programless may skip program seeding; every
+other dangling relation is a typed 400 before any command is applied. The
+`EnrichmentIssue`s produced by seeding the ones that do go through are
+mapped to typed `CreationDiagnostic`s (`ProgramlessProduct`/`AmbiguousDpt`/
+`ComObjectRefMissing`/`ProgramRefMissing`/`DynamicOrModuleNotEvaluated`),
+each carrying a server-computed `.detail()` string, and `CatalogBrowser.tsx`
+renders them in-modal with a "Done" button instead of auto-closing when
+diagnostics exist. The original limitation text is kept below for context.
+
+**Limitation (as it stood before 2026-09-10).** `apps/knx-server`'s `create_device_impl` seeds a newly
 created device's communication objects from the product database via
 `knx_productdb::enrich::apply`, exactly like import's own `enrich()`
 pass — except the `Vec<EnrichmentIssue>` it collects (ambiguous DPT
@@ -859,7 +908,7 @@ was never set on purpose. Recoverable by hand via the existing
 `SetComObjectDpt` command/UI once a user notices, but nothing prompts
 them to look.
 
-**Lifted when.** `create_device_impl` returns its `issues` alongside the
-projected tree (or a dedicated response field) and T2's future
-catalog-browser UI surfaces them — the same role import's own report
-screen (T11, still open) would play for import.
+**Lifted when.** Done, 2026-09-10: `create_device_impl` returns its
+`diagnostics` alongside the projected `tree`, and `CatalogBrowser.tsx`
+surfaces them in-modal — the same role import's own report screen (T11,
+still open) would play for import.

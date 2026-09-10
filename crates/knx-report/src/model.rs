@@ -8,10 +8,7 @@
 //! observable: every `Vec` here is either in the model's own stored order
 //! or in the id order a `BTreeMap` gives for free.
 //!
-//! `render_html` (Task 3) is this module's only intended caller and does
-//! not exist yet, so nothing outside `#[cfg(test)]` reaches `build` today —
-//! hence the blanket allow below, lifted the moment Task 3 wires it in.
-#![allow(dead_code)]
+//! `render_html`'s `render.rs` is this module's only intended caller.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 

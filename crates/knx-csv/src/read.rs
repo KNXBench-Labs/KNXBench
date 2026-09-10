@@ -155,30 +155,40 @@ pub fn parse_group_addresses(text: &str, style: GroupAddressStyle) -> ParsedCsv 
     let address_col = columns.address.expect("checked above");
     let name_col = columns.name.expect("checked above");
 
+    // The `csv` crate's `Position::line()` (verified empirically against
+    // `csv` 1.4.0, undocumented) is exactly 1 too low for the *entire* file
+    // when it uses CRLF terminators, and exactly correct for LF, even across
+    // records with embedded newlines in quoted fields. Counting records
+    // instead (as an earlier version of this function did) breaks down the
+    // moment any earlier record spans more than one physical line, because
+    // the record index no longer matches the line index at all.
+    //
+    // Fix: calibrate a single per-file additive offset once, right after the
+    // header row is consumed. The header is always exactly one physical
+    // line, so the first data row is always true physical line 2; comparing
+    // that known-good value against what `position().line()` reports at
+    // this point gives the file's constant (0 for LF, 1 for CRLF). Applying
+    // that offset to every subsequent `position().line()` — including on
+    // the malformed-row error path below — keeps line tracking correct for
+    // multi-line records too, since `line()` itself (unlike the record
+    // index) already accounts for embedded newlines correctly.
+    let line_offset = 2u64.saturating_sub(reader.position().line());
+    let line_of = |p: &csv::Position| (p.line() + line_offset) as usize;
+
     let mut rows = Vec::new();
     for result in reader.records() {
         let record = match result {
             Ok(r) => r,
             Err(e) => {
                 problems.push(CsvProblem {
-                    row: e.position().map(|p| p.record() as usize + 1),
+                    row: e.position().map(line_of),
                     severity: Severity::Error,
                     detail: format!("malformed row: {e}"),
                 });
                 continue;
             }
         };
-        // `Position::line()` itself is not used here: the `csv` crate's line
-        // counter is off by one across the header boundary when the file
-        // uses CRLF terminators (observed empirically, not documented). The
-        // record index is stable across both line endings and, for
-        // single-line records, `record index + 1` is exactly the 1-based
-        // line number counting the header — record 0 doesn't occur here
-        // since `records()` starts at 1.
-        let line = record
-            .position()
-            .map(|p| p.record() as usize + 1)
-            .unwrap_or(0);
+        let line = record.position().map(line_of).unwrap_or(0);
         let mut row_ok = true;
 
         let address_raw = record.get(address_col).unwrap_or("").trim();
@@ -576,6 +586,98 @@ mod tests {
         assert_eq!(parsed.problems.len(), 1);
         assert_eq!(parsed.problems[0].row, Some(2));
         assert_eq!(parsed.problems[0].severity, Severity::Error);
+    }
+
+    #[test]
+    fn empty_file_is_a_single_file_level_error() {
+        let parsed = parse_group_addresses("", GroupAddressStyle::Free);
+
+        assert_eq!(parsed.separator, ',');
+        assert!(parsed.rows.is_empty());
+        assert!(parsed.ignored_columns.is_empty());
+        assert_eq!(parsed.problems.len(), 1);
+        assert_eq!(parsed.problems[0].row, None);
+        assert_eq!(parsed.problems[0].severity, Severity::Error);
+        assert_eq!(parsed.problems[0].detail, "file is empty");
+    }
+
+    #[test]
+    fn whitespace_only_file_is_a_single_file_level_error() {
+        let parsed = parse_group_addresses("   \n\t\n  ", GroupAddressStyle::Free);
+
+        assert!(parsed.rows.is_empty());
+        assert_eq!(parsed.problems.len(), 1);
+        assert_eq!(parsed.problems[0].row, None);
+        assert_eq!(parsed.problems[0].severity, Severity::Error);
+        assert_eq!(parsed.problems[0].detail, "file is empty");
+    }
+
+    #[test]
+    fn malformed_row_under_strict_mode_reports_the_row_and_its_physical_line() {
+        // `flexible(false)` rejects a ragged row (3 fields where every other
+        // row has 2); the offending row itself never becomes a `CsvRow`.
+        let text = "Address,Name\n100,Kitchen Light\n200,Extra,Field\n";
+        let parsed = parse_group_addresses(text, GroupAddressStyle::Free);
+
+        assert_eq!(parsed.rows.len(), 1, "{:?}", parsed.rows);
+        assert_eq!(parsed.rows[0].name, "Kitchen Light");
+        assert_eq!(parsed.problems.len(), 1);
+        assert_eq!(parsed.problems[0].row, Some(3));
+        assert_eq!(parsed.problems[0].severity, Severity::Error);
+        assert!(
+            parsed.problems[0].detail.contains("malformed row"),
+            "{:?}",
+            parsed.problems[0]
+        );
+    }
+
+    // --- Finding 1 regression: line numbers after a multi-line quoted field ---
+    //
+    // Both cases put a name with an embedded newline in row 1 (a legal
+    // quoted field per design §3/§8), then a blank-name error in row 2.
+    // A spreadsheet opening either file shows the blank-name row on
+    // physical line 4 (1: header, 2-3: row 1's two physical lines, 4: row
+    // 2). Before this fix, `record()+1` reported line 3 instead, because it
+    // counts *records*, not physical lines, and row 1 consumed two of them.
+    //
+    // Values observed against the real `csv` 1.4.0 dependency while writing
+    // this fix (see the Task 1 fix report for the full table):
+    //   LF:   row 1 `position().line()` = 2, row 2 = 4, line_offset = 0.
+    //   CRLF: row 1 `position().line()` = 1, row 2 = 3, line_offset = 1.
+    // Both resolve to the same correct physical line 4 for row 2.
+
+    #[test]
+    fn line_number_stays_correct_after_a_multiline_quoted_field_lf() {
+        let text = "Address,Name\n100,\"Living Room\nAnnex\"\n200,\n";
+        let parsed = parse_group_addresses(text, GroupAddressStyle::Free);
+
+        assert_eq!(parsed.rows.len(), 1, "{:?}", parsed.rows);
+        assert_eq!(parsed.rows[0].line, 2);
+        assert_eq!(parsed.rows[0].name, "Living Room\nAnnex");
+        assert_eq!(parsed.problems.len(), 1);
+        assert_eq!(
+            parsed.problems[0].row,
+            Some(4),
+            "expected the blank-name row to be reported as physical line 4, got {:?}",
+            parsed.problems[0]
+        );
+    }
+
+    #[test]
+    fn line_number_stays_correct_after_a_multiline_quoted_field_crlf() {
+        let text = "Address,Name\r\n100,\"Living Room\r\nAnnex\"\r\n200,\r\n";
+        let parsed = parse_group_addresses(text, GroupAddressStyle::Free);
+
+        assert_eq!(parsed.rows.len(), 1, "{:?}", parsed.rows);
+        assert_eq!(parsed.rows[0].line, 2);
+        assert_eq!(parsed.rows[0].name, "Living Room\r\nAnnex");
+        assert_eq!(parsed.problems.len(), 1);
+        assert_eq!(
+            parsed.problems[0].row,
+            Some(4),
+            "expected the blank-name row to be reported as physical line 4, got {:?}",
+            parsed.problems[0]
+        );
     }
 
     #[test]

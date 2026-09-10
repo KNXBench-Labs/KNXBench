@@ -91,6 +91,7 @@ underlying model field exists.
 | D7 | **Closed (2026-09-10, T11).** `ImportReport` (errors/warnings/unsupported list) is real and populated, but the frontend only surfaced it as toast notifications for errors — there was no dedicated screen to review the full report after the initial import moment had passed. | A new server-side `SessionLog` (`apps/knx-server`, in-memory, never persisted to `.knxdb`) plus a "Log" tab in the web UI (`LogPanel.tsx`) close this — see the T11 backlog entry below for the full shape. |
 | D8 | **No settings/preferences beyond theme.** ETS has a Workbench-wide options dialog (default group-address style, backup behavior, language, etc). | `ThemePanel.tsx` is the only settings surface that exists. |
 | D9 | **Two near-duplicate modal-overlay implementations** (Search, Command Palette) with an unaddressed accessibility gap. | Already tracked: [KNOWN_LIMITATIONS.md §20](KNOWN_LIMITATIONS.md#20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap-unaddressed). Restated here only because it will get worse, not better, once D1/D5/D6 add more overlay-like screens without a shared shell. |
+| D10 | **The UI is English-only, and the translated data already in the model is never displayed in any language.** ETS ships a localized workbench and renders manufacturer/product/parameter text in the language the user picked. | Two distinct halves. (a) *Chrome:* every user-facing string in `apps/knx-web` is a hard-coded English literal; `package.json` has no i18n dependency of any kind and there is no message catalogue, locale detection, or language setting (D8's missing options dialog is where one would live). (b) *Data:* the plumbing exists but has no reader. `knx_core::string_table` defines `Language`/`LocalizedString`/`StringTable` with a `default_language` fallback, and `Project` owns a `strings: StringTable` (`project.rs:182`); `knx-productdb` parses `Languages`/`TranslationUnit`/`TranslationElement` into a `translation (program_id, language, ref_id, attribute_name, text)` table (`migration.rs:248`). **Nothing reads that table outside the parser that writes it**, and no code path anywhere selects an active language — see [KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only). |
 
 ## E. KNXnet/IP & commissioning gaps
 
@@ -413,6 +414,41 @@ Each task: **what**, **why**, **depends on**.
   once; needs its own design (locking vs. merge vs. last-writer-wins,
   and what "conflict" even means for a `Command`-based undo model).
   Closes **F2**.
+
+### Tier 6 — internationalization
+
+Added 2026-09-10 by explicit request ("multilang support für das UI").
+Two separate tasks on purpose: T25 is a self-contained frontend effort
+that could ship in a single cycle, T26 reaches into the domain model and
+the product database and is the larger of the two. T25 does not depend on
+T26, and T26 is useful even if T25 never ships (a German catalog rendered
+inside an English chrome is still strictly better than an untranslated
+one). Neither has a design spec yet.
+
+- **T25. Multi-language UI chrome.** Extract every hard-coded English
+  literal in `apps/knx-web` into a message catalogue, add locale
+  detection plus an explicit language setting, and render the UI in the
+  selected language. German is the obvious second locale — it is the
+  language of the KNX Association's own documentation, of the sample
+  projects in `OriginalData/`, and of this project's users. Two decisions
+  belong in the design spec rather than here: which library (or whether a
+  ~200-string catalogue needs one at all), and how the language setting
+  is stored, since D8's options dialog does not exist yet and
+  `ThemePanel.tsx`'s `localStorage` convention is the only precedent.
+  Partially addresses **D8**, closes half of **D10**.
+- **T26. Language-aware display of imported KNX data.** Give the
+  application an *active language* distinct from the UI's, resolve
+  `LocalizedString` through `StringTable` at every display site, and read
+  `knx-productdb`'s `translation` table when rendering catalog entries,
+  communication-object text and (once T18 exists) parameter text. The
+  storage side is already built and already populated on import; what is
+  missing is every reader. Also needs a decision on what the project's
+  own `Language` means once a user can pick a different one — today
+  `Project::new` is handed a placeholder `"en"` by both importers
+  (`map.rs:150`, and see that file's own comment: the `.knxproj` carries
+  no project-wide language tag at all). Closes the other half of **D10**;
+  a prerequisite for T18's parameter editor being usable in practice,
+  since parameter text is exactly the data that arrives translated.
 
 ### Not backlog items — durable non-goals, listed for completeness only
 

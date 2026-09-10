@@ -5,4 +5,8 @@
 //! returns typed values; turning them into text is each calling surface's
 //! own job (design spec §5).
 mod key;
+mod semantic;
+#[cfg(test)]
+mod testutil;
+
 pub use key::*;

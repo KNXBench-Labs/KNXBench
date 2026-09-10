@@ -44,6 +44,7 @@ async function renderButtons(tree: ProjectTree | null = fakeTree) {
   const onTreeUpdate = vi.fn();
   const onSummary = vi.fn();
   const onError = vi.fn();
+  const onClearErrors = vi.fn();
   await act(async () => {
     root.render(
       <GroupAddressCsvButtons
@@ -51,10 +52,11 @@ async function renderButtons(tree: ProjectTree | null = fakeTree) {
         onTreeUpdate={onTreeUpdate}
         onSummary={onSummary}
         onError={onError}
+        onClearErrors={onClearErrors}
       />,
     );
   });
-  return { root, onTreeUpdate, onSummary, onError };
+  return { root, onTreeUpdate, onSummary, onError, onClearErrors };
 }
 
 function exportButton() {
@@ -85,11 +87,29 @@ describe("GroupAddressCsvButtons", () => {
 
   it("does not call the export route when the save dialog is cancelled", async () => {
     filePickerMock.pickSavePath.mockResolvedValueOnce(null);
-    const { root, onSummary, onError } = await renderButtons();
+    const { root, onSummary, onError, onClearErrors } = await renderButtons();
     await click(exportButton());
     expect(apiMock.exportGroupAddressesCsv).not.toHaveBeenCalled();
     expect(onSummary).not.toHaveBeenCalled();
     expect(onError).not.toHaveBeenCalled();
+    // Matches `App.tsx`'s `exportProject`: a cancelled dialog returns
+    // before `clearErrors()` runs at all, same as it never reaches the
+    // route call above.
+    expect(onClearErrors).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
+  it("clears a prior error toast before running the export, like the neighbouring exportProject handler does", async () => {
+    filePickerMock.pickSavePath.mockResolvedValueOnce("/data/group-addresses.csv");
+    apiMock.exportGroupAddressesCsv.mockResolvedValueOnce({ warnings: [] });
+    const { root, onClearErrors, onSummary } = await renderButtons();
+    await click(exportButton());
+    // The assertion that matters: this fails if the `onClearErrors()` call
+    // is removed from `exportCsv`, so a stale error toast from an earlier,
+    // unrelated failure would otherwise still be showing after this
+    // success.
+    expect(onClearErrors).toHaveBeenCalledTimes(1);
+    expect(onSummary).toHaveBeenCalledTimes(1);
     root.unmount();
   });
 
@@ -133,11 +153,36 @@ describe("GroupAddressCsvButtons", () => {
 
   it("does not call the import route when the open dialog is cancelled", async () => {
     filePickerMock.pickOpenPath.mockResolvedValueOnce(null);
-    const { root, onTreeUpdate, onSummary } = await renderButtons();
+    const { root, onTreeUpdate, onSummary, onClearErrors } = await renderButtons();
     await click(importButton());
     expect(apiMock.importGroupAddressesCsv).not.toHaveBeenCalled();
     expect(onTreeUpdate).not.toHaveBeenCalled();
     expect(onSummary).not.toHaveBeenCalled();
+    expect(onClearErrors).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
+  it("clears a prior error toast before running the import, like the neighbouring exportProject handler does", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/in.csv");
+    apiMock.importGroupAddressesCsv.mockResolvedValueOnce({
+      tree: { installations: [] } as unknown as ProjectTree,
+      report: {
+        separator: ",",
+        rowsRead: 1,
+        created: 1,
+        updated: 0,
+        unchanged: 0,
+        ignoredColumns: [],
+        problems: [],
+      },
+    });
+    const { root, onClearErrors, onSummary } = await renderButtons();
+    await click(importButton());
+    // Same fix as the export button: fails if `onClearErrors()` is
+    // removed from `importCsv`, leaving a stale error toast visible after
+    // a successful import.
+    expect(onClearErrors).toHaveBeenCalledTimes(1);
+    expect(onSummary).toHaveBeenCalledTimes(1);
     root.unmount();
   });
 

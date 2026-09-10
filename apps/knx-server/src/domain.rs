@@ -1613,8 +1613,7 @@ mod tests {
         let (_dir, state) = state_with_product_db();
 
         // `do_command` itself fails: line 999 doesn't exist.
-        create_device_impl(&state, Some(999), "M-1_CI-1".into(), "Actuator 1".into())
-            .unwrap_err();
+        create_device_impl(&state, Some(999), "M-1_CI-1".into(), "Actuator 1".into()).unwrap_err();
         create_device_impl(&state, None, "M-1_CI-1".into(), "Actuator 1".into()).unwrap();
 
         let log = state.session_log.lock().unwrap();

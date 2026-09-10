@@ -284,6 +284,9 @@ theme via ordinary cascade. Motion ships as a three-level
 gated entirely inside `prefers-reduced-motion: no-preference` — the OS
 setting always wins over the user's choice. `ThemePanel.tsx`, opened from
 a new gear button beside `ThemeToggle`, is the settings surface for both.
+(Both were removed again by cycle 13 along with `ThemePanel.tsx` — the
+motion setting has not been replaced; see "Cross-cutting — Motion and
+animation" below.)
 Renaming the project to KNXBench (repo, README, docs) is done; renaming
 the crates themselves (`knx-core`, `knx-store`, `knx-desktop`,
 `knx-server`, `knx-cli`, …) is a deliberate non-goal — decided against,
@@ -352,6 +355,42 @@ The library choice for track 1, the storage of the language setting
 (D8's options dialog does not exist yet), and what a project's own
 `Language` means once the user can pick a different one all belong in a
 design spec, not here. Neither track has one yet.
+
+## Cross-cutting — Motion and animation
+
+**A standing constraint, not a cycle.** Added 2026-09-10 by explicit
+request: animations must be toggleable, at the moment they are
+implemented — not retrofitted with a switch afterwards.
+
+The rule, stated once so no later cycle has to re-decide it: **any
+animation this application ships is switchable off from inside the
+application, and `prefers-reduced-motion: reduce` always wins over
+whatever the user has chosen in-app.** An OS-level accessibility setting
+is not something an application setting may override; the in-app control
+exists for the people whose OS says nothing and who still want the UI to
+sit still.
+
+Where this stands today, which is worse than it was two cycles ago:
+cycle 11 shipped exactly such a control — a three-level
+`off`/`subtle`/`standard` motion setting driving
+`--knx-transition-duration` — and cycle 13's theme rewrite deleted
+`ThemePanel.tsx`, the surface it lived on, without replacing it (its own
+[design spec](superpowers/specs/2026-09-08-bitcoin-defi-theme-design.md)
+records the loss: "Motion: no user-facing setting (that was `palette.ts`'s
+job, now gone)"). What survives is the CSS token and three
+`prefers-reduced-motion: no-preference` blocks in `styles.css`. So the
+OS preference is currently the only control, and it is all-or-nothing.
+
+Restoring the control, and binding every future animation to it, is
+tracked as **T27** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s
+Tier 7, closing gap **D11**. The constraint applies to work already on
+this roadmap that has not been built yet: T15's Group Monitor table,
+T17's line-scan UI, T21's graphical topology/building views, and the
+"who talks to whom" telegram animation deferred beyond Session 7 below.
+That animation is the reason this is written down now rather than at
+implementation time — it is the first genuinely motion-heavy feature on
+the list, and the cheapest moment to require a switch for it is before
+anyone starts writing it.
 
 ## Cross-cutting — Web/Docker deployment target
 

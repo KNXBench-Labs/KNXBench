@@ -199,6 +199,49 @@ fn products_list_prints_what_was_ingested() {
     assert!(stdout.contains("M-0083"), "{stdout}");
 }
 
+fn write_standalone_product_package(path: &Path) {
+    let master = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><Manufacturers><Manufacturer Id="M-0001" Name="Example"/></Manufacturers></MasterData></KNX>"#;
+    let catalog = br#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001"><Catalog><CatalogSection Id="M-0001_CG-1" Name="Actuators" Number="1"><CatalogItem Id="M-0001_CI-1" Name="Example actuator" Number="EX-1" ProductRefId="M-0001_P-1"/></CatalogSection></Catalog></Manufacturer></ManufacturerData></KNX>"#;
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let options = zip::write::SimpleFileOptions::default();
+    for (name, bytes) in [
+        ("knx_master.xml", master.as_slice()),
+        ("M-0001/Catalog.xml", catalog.as_slice()),
+    ] {
+        writer.start_file(name, options).unwrap();
+        std::io::Write::write_all(&mut writer, bytes).unwrap();
+    }
+    std::fs::write(path, writer.finish().unwrap().into_inner()).unwrap();
+}
+
+#[test]
+fn products_ingest_installs_a_standalone_package() {
+    let dir = tempfile::tempdir().unwrap();
+    let products = dir.path().join("products.sqlite");
+    let package = dir.path().join("example.knxprod");
+    write_standalone_product_package(&package);
+
+    let out = run_cli(&[
+        "products",
+        "ingest",
+        package.to_str().unwrap(),
+        "--product-db",
+        products.to_str().unwrap(),
+    ]);
+
+    assert_eq!(out.status.code(), Some(0));
+    assert!(String::from_utf8(out.stdout)
+        .unwrap()
+        .contains("package installed"));
+    let conn = knx_productdb::open_and_migrate(&products).unwrap();
+    assert_eq!(
+        knx_productdb::query::catalog_items(&conn, Some("M-0001"), None)
+            .unwrap()
+            .len(),
+        1
+    );
+}
+
 #[test]
 fn products_verify_is_clean_after_an_ingest() {
     let dir = tempfile::tempdir().unwrap();

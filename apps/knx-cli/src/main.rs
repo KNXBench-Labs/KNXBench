@@ -10,7 +10,7 @@ const USAGE: &str =
     "usage: knx import <file.knxproj> [--store <path.knxdb>] [--report-json <path.json>]\n\
      \x20                  [--product-db <path>] [--no-product-db]\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
-     \x20     knx products ingest <file.knxproj> [--product-db <path>]\n\
+     \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>]\n\
      \x20     knx products show <program-id> [--product-db <path>]\n\
      \x20     knx products verify [--product-db <path>]\n\
      \x20     knx bus discover\n\
@@ -390,7 +390,7 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
         }
     };
     let Some(file) = rest.first() else {
-        eprintln!("missing <file.knxproj>\n{USAGE}");
+        eprintln!("missing <file.knxproj|file.knxprod|file.vd2>\n{USAGE}");
         return ExitCode::FAILURE;
     };
 
@@ -401,6 +401,38 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+
+    if matches!(
+        Path::new(file)
+            .extension()
+            .and_then(|extension| extension.to_str()),
+        Some("knxprod" | "vd2")
+    ) {
+        let bytes = match std::fs::read(file) {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                eprintln!("failed to read product package {file}: {error}");
+                return ExitCode::FAILURE;
+            }
+        };
+        return match knx_productdb::install_package(&conn, file, &bytes) {
+            Ok(report) => {
+                println!(
+                    "package installed: scheme {}, {} member(s), {} unknown construct(s), {} conflict(s){}",
+                    report.scheme,
+                    report.members.len(),
+                    report.unknown,
+                    report.conflicts.len(),
+                    if report.skipped { " (already known)" } else { "" },
+                );
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("failed to install product package {file}: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
 
     let outcome = match knx_etsproj::import_knxproj(Path::new(file)) {
         Ok(outcome) => outcome,

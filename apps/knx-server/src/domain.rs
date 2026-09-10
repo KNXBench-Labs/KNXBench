@@ -612,6 +612,22 @@ pub fn catalog_items_impl(
         .map_err(|e| e.to_string())
 }
 
+/// Installs one standalone manufacturer package into the shared catalog.
+/// Multipart parsing and response serialization remain at the HTTP boundary.
+pub fn install_catalog_package_impl(
+    state: &AppState,
+    source_name: &str,
+    bytes: &[u8],
+) -> Result<knx_productdb::InstallReport, String> {
+    let products = state
+        .product_db
+        .as_ref()
+        .ok_or("no product database configured")?
+        .lock()
+        .expect("state mutex poisoned");
+    knx_productdb::install_package(&products, source_name, bytes).map_err(|error| error.to_string())
+}
+
 /// Creates a device from a product-database catalog entry (design doc
 /// §3). A catalog item with no resolvable hardware program — passive
 /// hardware, or a `hardware2program_ref_id` this product database

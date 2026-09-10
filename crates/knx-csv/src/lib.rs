@@ -14,9 +14,15 @@
 //! `AppState` — orchestration lives in the callers (`apps/knx-server`,
 //! `apps/knx-cli`).
 
+mod plan;
 mod read;
+#[cfg(test)]
+mod testutil;
+mod write;
 
+pub use plan::{plan_import, CsvImportReport, ImportPlan};
 pub use read::{
     parse_group_addresses, CsvProblem, CsvRow, IgnoredColumn, IgnoredColumnReason, ParsedCsv,
     Severity,
 };
+pub use write::{export_group_addresses, CsvExport};

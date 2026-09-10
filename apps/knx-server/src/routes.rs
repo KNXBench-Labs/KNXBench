@@ -18,6 +18,7 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/project/open", post(open_native_project))
         .route("/api/project/save", post(save_project))
         .route("/api/project/save-as", post(save_project_as))
+        .route("/api/project/export", post(export_project))
         .route("/api/device/{id}", axum::routing::get(device_detail))
         .route("/api/individual-address", post(set_individual_address))
         .route("/api/device-description", post(set_device_description))
@@ -178,6 +179,65 @@ async fn save_project_as(
 ) -> Result<(), ApiError> {
     let path = resolve_new_project_path(&state.data_dir, &body.path)?;
     domain::save_project_as(&state, &path).map_err(ApiError::internal)
+}
+
+/// `ExportWarning` does not derive `Serialize` (it lives in `knx-etsproj`,
+/// which has no reason to know about JSON) — same conversion shape as
+/// `CreationDiagnosticDto` below, converted explicitly at the HTTP
+/// boundary rather than reaching into `knx-etsproj` to add a derive that
+/// would only ever be used here.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
+enum ExportWarningDto {
+    Unsigned { detail: String },
+    StaleSignature { source_path: String },
+    ManufacturerDataFromProductDb { entries: usize },
+    MissingManufacturerData { source_path: String, sha256: String },
+}
+
+impl From<knx_etsproj::export::ExportWarning> for ExportWarningDto {
+    fn from(value: knx_etsproj::export::ExportWarning) -> Self {
+        use knx_etsproj::export::ExportWarning as W;
+        match value {
+            W::Unsigned { detail } => Self::Unsigned { detail },
+            W::StaleSignature { source_path } => Self::StaleSignature { source_path },
+            W::ManufacturerDataFromProductDb { entries } => {
+                Self::ManufacturerDataFromProductDb { entries }
+            }
+            W::MissingManufacturerData {
+                source_path,
+                sha256,
+            } => Self::MissingManufacturerData {
+                source_path,
+                sha256,
+            },
+        }
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportReportDto {
+    warnings: Vec<ExportWarningDto>,
+}
+
+/// Unlike `save`/`save_project_as` (whose failures are filesystem/store
+/// problems -> `internal`, see `errors.rs`'s own doc comment), export's one
+/// realistic failure mode reachable from the UI is "no store path yet" —
+/// a caller-fixable precondition ("save as .knxdb first"), not an
+/// environment problem, so this maps to `bad_request` like the rest of the
+/// project-editing routes.
+async fn export_project(
+    State(state): State<SharedState>,
+    Json(body): Json<PathBody>,
+) -> Result<Json<ExportReportDto>, ApiError> {
+    let path = resolve_new_project_path(&state.data_dir, &body.path)?;
+    domain::export_project(&state, &path)
+        .map(|outcome| ExportReportDto {
+            warnings: outcome.warnings.into_iter().map(Into::into).collect(),
+        })
+        .map(Json)
+        .map_err(ApiError::bad_request)
 }
 
 async fn device_detail(

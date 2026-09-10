@@ -194,6 +194,40 @@ pub fn save_project(state: &AppState) -> Result<(), String> {
     save_project_as_impl(&path, project)
 }
 
+/// Exports the live in-memory project to a `.knxproj` file at `path`.
+/// Requires `store_path` already set (i.e. the project has been saved or
+/// opened as `.knxdb` at least once): the opaque passthrough table and
+/// manufacturer manifest `export_ets_project` needs are read from *that*
+/// `.knxdb` connection, never from a fresh empty one, so no opaque or
+/// manufacturer data silently goes missing from the export. The project
+/// content itself comes from `state.project` (live, possibly edited since
+/// the last save), not from re-loading the `.knxdb` file.
+pub fn export_project(
+    state: &AppState,
+    path: &Path,
+) -> Result<knx_etsproj::export::ExportOutcome, String> {
+    let store_path = state
+        .store_path
+        .lock()
+        .expect("state mutex poisoned")
+        .clone()
+        .ok_or(
+            "save the project as .knxdb first — export reads passthrough data from the saved store",
+        )?;
+    let conn = knx_store::open_and_migrate(&store_path).map_err(|e| e.to_string())?;
+    let project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_ref().ok_or("no project open")?;
+    let product_db_guard = state
+        .product_db
+        .as_ref()
+        .map(|m| m.lock().expect("state mutex poisoned"));
+    let outcome = knx_app::export_ets_project(project, &conn, product_db_guard.as_deref())
+        .map_err(|e| e.to_string())?;
+    drop(product_db_guard);
+    std::fs::write(path, &outcome.bytes).map_err(|e| e.to_string())?;
+    Ok(outcome)
+}
+
 /// Projects one device's detail. `Err` names the device id when it no
 /// longer exists in `project` — a stale selection after an edit, for
 /// instance.

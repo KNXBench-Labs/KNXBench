@@ -487,3 +487,61 @@
   `command_sync.rs`'s stale module doc) are deliberately *not* fixed here
   — don't treat them as regressions if you see them again; they're
   recorded, not forgotten.
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 21:20
+- **Completed:** Two things, in this order.
+
+  (1) **T12 closed and merged to `main` locally.** Both remaining reviews
+  returned clean: the Task 7 documentation review (spec ✅ / quality ✅,
+  0 findings — every count in the doc commit independently re-derived, the
+  pre-report amend confirmed to have lost nothing via an empty
+  `git diff --stat 354474d 3561220`) and the final whole-branch review over
+  all 17 commits (Critical 0, Important 0, Minor 1). The final reviewer ran
+  its own mutation against the seam this branch historically got wrong
+  twice — removing the `+1` byte-inclusion offset in `read.rs`'s `line_of`
+  failed 3 of 4 named line-number regression tests with no collateral — and
+  re-ran every gate itself. The one Minor finding: `IMPORT_EXPORT.md` §11 and
+  `KNOWN_LIMITATIONS.md` #38 claimed a second ETS-shaped column profile
+  could be added "without a rewrite" because "the column-mapping layer
+  already exists for this exact purpose", when `read.rs`'s `map_headers` is
+  a single hard-coded `match`. Fixed in `b85f92c` (prose only, both
+  sentences now describe the actual code). Merged as `04b7ef5`; worktree
+  `.worktrees/t12-csv-group-addresses` removed, branch deleted, SDD plan
+  workspace deleted from both checkouts. Merged-result verification on
+  `main`: `cargo test --workspace` exit 0, `npm test -- --run` 137/137.
+
+  (2) **Roadmap extended with a motion/animation constraint**, by explicit
+  user request ("die Animationen sollen togglebar sein, wenn sie
+  implementiert werden"). Branch `roadmap-motion-toggle`, single commit
+  `dc45f96`, merged as `0b2f8e5`, worktree and branch cleaned up. The rule:
+  every animation this application ships must be switchable off from inside
+  the application, and `prefers-reduced-motion: reduce` always wins over the
+  in-app choice. Investigating it surfaced a regression nobody had recorded:
+  cycle 11 shipped exactly such a control (three-level
+  `off`/`subtle`/`standard`, driving `--knx-transition-duration`), and cycle
+  13's theme rewrite deleted `ThemePanel.tsx` — the surface it lived on —
+  without replacing it. Verified: no `.ts`/`.tsx` file under
+  `apps/knx-web/src` mentions motion at all; only `styles.css`'s token and
+  three `@media (prefers-reduced-motion: no-preference)` blocks remain, so
+  the OS preference is currently the only control and it is all-or-nothing.
+  Recorded as gap **D11**, backlog **Tier 7 / T27**, `KNOWN_LIMITATIONS.md`
+  **#43**, and a "Cross-cutting — Motion and animation" section in
+  `ROADMAP.md`. Two stale references fixed while there: `D8` and `T25` both
+  still pointed at the deleted `ThemePanel.tsx`.
+- **Pending/Next Steps:** Nothing is pushed — the standing user instruction
+  is to skip the GitHub workflow entirely (no push, no PR, no CI, no remote
+  merge) until further notice, so `main` is ahead of `origin/main` by design.
+  Next backlog items in order: **T13** (project documentation export, HTML
+  first, closes **D4**) and **T14** (project diff/compare, closes **C1**).
+  Still parked and unscheduled: `KNOWN_LIMITATIONS.md` #36 (Log tab
+  unreachable without an open project, no `SessionLog` growth cap), #42
+  (`command_sync.rs`'s stale module doc), and now #43/T27.
+- **Notes for Codex:** T27's design question, if you pick it up, is whether
+  the motion setting is one global duration multiplier (cycle 11's approach —
+  one CSS token, trivially honoured) or a per-category switch, which is more
+  useful once "animation" means a telegram travelling along a bus line rather
+  than a button fading on hover. Not decided; deliberately left to a design
+  spec. Also note that D11 is *not* an ETS parity gap — ETS has no comparable
+  animation — it is filed in the UI section only because that is where the
+  control would live.

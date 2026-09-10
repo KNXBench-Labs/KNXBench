@@ -158,7 +158,7 @@ fn validate_manufacturer(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
 }
 
 fn package_conflicts(conn: &Connection, sha256: &str) -> Result<Vec<IdConflict>, ProductDbError> {
-    Ok(conn.prepare("SELECT xpath, name, source_sha256, sample FROM ingest_unknown WHERE kind = 'IdConflict' AND sample IN (SELECT source_sha256 FROM package_member WHERE package_sha256 = ?1) ORDER BY id")?.query_map([sha256], |r| Ok(IdConflict { table: r.get(0)?, id: r.get(1)?, kept_sha256: r.get(2)?, other_sha256: r.get(3)? }))?.collect::<Result<Vec<_>, _>>()?)
+    Ok(conn.prepare("SELECT table_name, logical_id, kept_sha256, other_sha256 FROM package_conflict WHERE package_sha256 = ?1 ORDER BY ordinal")?.query_map([sha256], |r| Ok(IdConflict { table: r.get(0)?, id: r.get(1)?, kept_sha256: r.get(2)?, other_sha256: r.get(3)? }))?.collect::<Result<Vec<_>, _>>()?)
 }
 
 // Bound metadata allocation before ZipArchive constructs its entry index.
@@ -264,13 +264,19 @@ fn validate_xml(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
     let mut roots = 0;
     loop {
         match reader.read_event().map_err(|e| xml_error(path, e))? {
-            Event::Start(_) => {
+            Event::Start(element) => {
+                for attribute in element.attributes().with_checks(true) {
+                    attribute.map_err(|e| xml_error(path, e))?;
+                }
                 if depth == 0 {
                     roots += 1;
                 }
                 depth += 1;
             }
-            Event::Empty(_) => {
+            Event::Empty(element) => {
+                for attribute in element.attributes().with_checks(true) {
+                    attribute.map_err(|e| xml_error(path, e))?;
+                }
                 if depth == 0 {
                     roots += 1;
                 }
@@ -282,6 +288,17 @@ fn validate_xml(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
                 if depth == 0 && !text.as_ref().bytes().all(|b| b.is_ascii_whitespace()) =>
             {
                 return Err(xml_error(path, "text outside XML root"))
+            }
+            Event::CData(data) if depth == 0 && !data.as_ref().is_empty() => {
+                return Err(xml_error(path, "CDATA outside XML root"))
+            }
+            Event::GeneralRef(reference)
+                if !matches!(reference.as_ref(), "lt" | "gt" | "amp" | "apos" | "quot") =>
+            {
+                return Err(xml_error(
+                    path,
+                    format!("undeclared XML entity {:?}", reference.as_ref()),
+                ))
             }
             Event::Eof => break,
             _ => {}
@@ -496,6 +513,19 @@ pub fn install_package(
         "UPDATE package SET unknown_count = ?2 WHERE sha256 = ?1",
         params![report.sha256, report.unknown as i64],
     )?;
+    for (ordinal, conflict) in report.conflicts.iter().enumerate() {
+        tx.execute(
+            "INSERT INTO package_conflict (package_sha256, ordinal, table_name, logical_id, kept_sha256, other_sha256) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                report.sha256,
+                ordinal as i64,
+                conflict.table,
+                conflict.id,
+                conflict.kept_sha256,
+                conflict.other_sha256,
+            ],
+        )?;
+    }
     report.conflicts = package_conflicts(&tx, &report.sha256)?;
     tx.commit().map_err(ProductDbError::from)?;
     Ok(report)

@@ -156,15 +156,18 @@ types only.
   - an address inside no range lands in `addresses_without_range` and produces
     a warning;
   - `links_by_address` maps an address to every communication object linked to
-    it, in `ComObjectInstanceId` order, and an address with no links maps to an
-    empty list (or is absent — assert which);
+    it, in `ComObjectInstanceId` order; an address with no links is **absent
+    from the map** rather than present with an empty `Vec`, and the renderer
+    treats a missing key as "no links";
   - a communication object whose `device` id names no device, and one whose
     device exists but does not list it in `com_objects`, both land in
     `orphan_com_objects` with a warning each;
   - a `GroupLink` naming a group address id that no installation holds
     produces a warning;
-  - a device with `address: None` produces a warning; a `Topology::unassigned`
-    device produces a warning;
+  - a `Topology::unassigned` device produces a warning. A device with
+    `address: None` does **not** — an absent individual address is valid state
+    (`device.rs:25-26`), and warning on it would bury the real findings under
+    noise from every half-authored project;
   - `counts` matches a hand-counted small project.
 
 - [ ] **Step 2: Run them and watch them fail.**

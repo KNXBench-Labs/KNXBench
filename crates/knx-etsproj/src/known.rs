@@ -318,8 +318,15 @@ const DEVICE_INSTANCE_ATTRS_21: &[&str] = &[
 /// module-based devices there, but are kept in the known table since they
 /// are attested for schema 23 (RESEARCH §3.3) on the same element and are
 /// expected, not exotic, on non-module devices.
-const COM_OBJECT_INSTANCE_REF_ATTRS_21: &[&str] =
-    &["RefId", "ChannelId", "Links", "IsActive", "DatapointType", "Text", "Description"];
+const COM_OBJECT_INSTANCE_REF_ATTRS_21: &[&str] = &[
+    "RefId",
+    "ChannelId",
+    "Links",
+    "IsActive",
+    "DatapointType",
+    "Text",
+    "Description",
+];
 
 /// Transcribed from `KV v2.5 - demo.knxproj` (`P-03DE/0.xml` and
 /// `P-03DE/project.xml`), a genuinely independent schema-21 sample (RESEARCH
@@ -669,8 +676,12 @@ mod tests {
                 .find(|e| e.path.ends_with("GroupObjectTree"))
                 .unwrap()
         };
-        assert!(!ga_tree(&SCHEMA_21).attributes.contains(&"GroupObjectInstances"));
-        assert!(ga_tree(&SCHEMA_23).attributes.contains(&"GroupObjectInstances"));
+        assert!(!ga_tree(&SCHEMA_21)
+            .attributes
+            .contains(&"GroupObjectInstances"));
+        assert!(ga_tree(&SCHEMA_23)
+            .attributes
+            .contains(&"GroupObjectInstances"));
     }
 
     #[test]

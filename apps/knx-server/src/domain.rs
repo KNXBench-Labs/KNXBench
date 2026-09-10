@@ -128,8 +128,7 @@ pub fn open_project(state: &AppState, path: &Path) -> Result<ProjectTree, String
         .product_db
         .as_ref()
         .map(|m| m.lock().expect("state mutex poisoned"));
-    let (tree, project) =
-        import_and_project(path, guard.as_deref()).map_err(|e| e.to_string())?;
+    let (tree, project) = import_and_project(path, guard.as_deref()).map_err(|e| e.to_string())?;
     drop(guard);
     *state.project.lock().expect("state mutex poisoned") = Some(project);
     *state.command_stack.lock().expect("state mutex poisoned") = knx_core::CommandStack::new();
@@ -588,7 +587,9 @@ pub fn unlink_com_object_impl(
     )
 }
 
-pub fn catalog_manufacturers_impl(state: &AppState) -> Result<Vec<(String, Option<String>)>, String> {
+pub fn catalog_manufacturers_impl(
+    state: &AppState,
+) -> Result<Vec<(String, Option<String>)>, String> {
     let products = state
         .product_db
         .as_ref()
@@ -650,22 +651,107 @@ pub fn install_catalog_package_impl(
     })
 }
 
-/// Creates a device from a product-database catalog entry (design doc
-/// §3). A catalog item with no resolvable hardware program — passive
-/// hardware, or a `hardware2program_ref_id` this product database
-/// doesn't have — still creates a device, just with zero communication
-/// objects; that is not an error.
+/// A catalog-created device and every fact the caller needs to present before
+/// closing the catalog dialog.  The domain command remains the sole mutation;
+/// diagnostics explain the product-data evidence around it.
+#[derive(Debug)]
+pub struct CreateDeviceResponse {
+    pub tree: ProjectTree,
+    pub diagnostics: Vec<CreationDiagnostic>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CreationDiagnostic {
+    ProgramlessProduct {
+        catalog_item_id: String,
+    },
+    AmbiguousDpt {
+        ref_id: String,
+        alternatives: Vec<String>,
+    },
+    ComObjectRefMissing {
+        ref_id: String,
+    },
+    /// A device-level enrichment pass (unlike this create's own upfront
+    /// `resolve_catalog_item_program` chain check) found its program
+    /// reference unresolvable. Kept distinct from `ComObjectRefMissing` —
+    /// conflating a missing *program* with a missing *com-object* would
+    /// mislabel the problem for anyone reading the diagnostic.
+    ProgramRefMissing {
+        program_ref: String,
+    },
+    /// Manufacturer product programs can contain `Dynamic` and module
+    /// activation semantics.  This static seed deliberately does not infer
+    /// either; the warning makes that boundary visible for every such create.
+    DynamicOrModuleNotEvaluated {
+        program_id: String,
+    },
+}
+
+impl CreationDiagnostic {
+    fn from_enrichment(issue: knx_productdb::EnrichmentIssue) -> Self {
+        match issue {
+            knx_productdb::EnrichmentIssue::ProgramMissing { program_ref, .. } => {
+                Self::ProgramRefMissing { program_ref }
+            }
+            knx_productdb::EnrichmentIssue::ComObjectRefMissing { ref_id, .. } => {
+                Self::ComObjectRefMissing { ref_id }
+            }
+            knx_productdb::EnrichmentIssue::AmbiguousDpt {
+                ref_id,
+                alternatives,
+            } => Self::AmbiguousDpt {
+                ref_id,
+                alternatives,
+            },
+        }
+    }
+
+    /// Ready-to-display wording for API consumers that don't want to build
+    /// their own sentence from the structured fields (design doc §"the
+    /// creation response carries ... structured diagnostics"; mirrors the
+    /// `detail` convention `ProductDbError::Package` already uses for
+    /// package-install errors). `CatalogBrowser.tsx` prefers this over its
+    /// own client-side formatting.
+    pub fn detail(&self) -> String {
+        match self {
+            Self::ProgramlessProduct { .. } => {
+                "This product explicitly has no application program; it was created without communication objects.".to_string()
+            }
+            Self::AmbiguousDpt {
+                ref_id,
+                alternatives,
+            } => format!(
+                "No DPT was inferred for {ref_id}; alternatives: {}.",
+                alternatives.join(", ")
+            ),
+            Self::ComObjectRefMissing { ref_id } => format!(
+                "Communication-object reference is missing from the installed program: {ref_id}."
+            ),
+            Self::ProgramRefMissing { program_ref } => format!(
+                "The installed application program reference is missing: {program_ref}."
+            ),
+            Self::DynamicOrModuleNotEvaluated { program_id } => format!(
+                "Dynamic and module activation was not evaluated for {program_id}; only static product data was seeded."
+            ),
+        }
+    }
+}
+
+/// Creates a device from a product-database catalog entry (design doc §3).
+/// Only a product whose hardware explicitly declares it programless may be
+/// created without a program; every dangling catalog relation is rejected.
 pub fn create_device_impl(
     state: &AppState,
     line_id: Option<u32>,
     catalog_item_id: String,
     name: String,
-) -> Result<knx_projection::ProjectTree, String> {
+) -> Result<CreateDeviceResponse, String> {
     // Step 1 (design doc §3.1): everything the product database can tell
     // us, gathered while only `product_db` is locked — dropped before
     // `project` is locked below, so the two mutexes are never held at
     // once.
-    let (product_ref, program_ref, seeds) = {
+    let (product_ref, program_ref, seeds, mut diagnostics) = {
         let products = state
             .product_db
             .as_ref()
@@ -676,28 +762,41 @@ pub fn create_device_impl(
             .map_err(|e| e.to_string())?
             .ok_or("catalog item not found")?;
         let mut seeds: Vec<(String, knx_productdb::query::ComObjectView)> = Vec::new();
-        if let Some(program_ref) = &item.hardware2program_ref_id {
-            if let Some(program_id) =
-                knx_productdb::query::resolve_program(&products, program_ref)
-                    .map_err(|e| e.to_string())?
+        let mut diagnostics = Vec::new();
+        let (product_ref, program_ref) =
+            match knx_productdb::query::resolve_catalog_item_program(&products, &item)
+                .map_err(|error| error.to_string())?
             {
-                for ref_id in knx_productdb::query::com_object_ref_ids(&products, &program_id)
-                    .map_err(|e| e.to_string())?
-                {
-                    if let Some(view) =
-                        knx_productdb::query::com_object_view(&products, &program_id, &ref_id)
-                            .map_err(|e| e.to_string())?
+                knx_productdb::query::CatalogItemProgram::Program {
+                    product_ref_id,
+                    hardware2program_ref_id,
+                    program_id,
+                } => {
+                    for ref_id in knx_productdb::query::com_object_ref_ids(&products, &program_id)
+                        .map_err(|e| e.to_string())?
                     {
+                        let view =
+                            knx_productdb::query::com_object_view(&products, &program_id, &ref_id)
+                                .map_err(|e| e.to_string())?
+                                .ok_or_else(|| {
+                                    format!(
+                                "catalog communication-object reference is missing: {ref_id}"
+                            )
+                                })?;
                         seeds.push((ref_id, view));
                     }
+                    diagnostics
+                        .push(CreationDiagnostic::DynamicOrModuleNotEvaluated { program_id });
+                    (product_ref_id, hardware2program_ref_id)
                 }
-            }
-        }
-        (
-            item.product_ref_id.unwrap_or_default(),
-            item.hardware2program_ref_id.unwrap_or_default(),
-            seeds,
-        )
+                knx_productdb::query::CatalogItemProgram::Programless { product_ref_id } => {
+                    diagnostics.push(CreationDiagnostic::ProgramlessProduct {
+                        catalog_item_id: item.id,
+                    });
+                    (product_ref_id, String::new())
+                }
+            };
+        (product_ref, program_ref, seeds, diagnostics)
     };
 
     // Step 2 (design doc §3.2): allocate ids and build the command,
@@ -761,22 +860,31 @@ pub fn create_device_impl(
     // stack — undoing `CreateDevice` removes the device regardless of
     // which slots got filled, and `DeleteDevice`'s own inverse captures
     // the enriched state for redo (Task 1). `issues` (ambiguous DPT
-    // lists, missing com-object-ref rows) are collected but not surfaced
-    // anywhere this slice — see KNOWN_LIMITATIONS.md.
+    // lists) are returned as creation diagnostics.
     let mut issues = Vec::new();
     for (com_id, ref_id, view) in &enrich_inputs {
         knx_productdb::enrich::apply(project, *com_id, ref_id, view, &mut issues);
     }
 
+    diagnostics.extend(issues.into_iter().map(CreationDiagnostic::from_enrichment));
     let stack = state.command_stack.lock().expect("state mutex poisoned");
     let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
-    Ok(tree_with_state(project, &stack, import_counts))
+    Ok(CreateDeviceResponse {
+        tree: tree_with_state(project, &stack, import_counts),
+        diagnostics,
+    })
 }
 
-pub fn delete_device_impl(state: &AppState, id: u32) -> Result<knx_projection::ProjectTree, String> {
-    apply(state, knx_core::Command::DeleteDevice {
-        id: knx_core::DeviceId(id),
-    })
+pub fn delete_device_impl(
+    state: &AppState,
+    id: u32,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(
+        state,
+        knx_core::Command::DeleteDevice {
+            id: knx_core::DeviceId(id),
+        },
+    )
 }
 
 pub fn undo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String> {
@@ -901,6 +1009,7 @@ mod tests {
     const CATALOG_HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
 <Hardware><Hardware Id="H-1" Name="X" SerialNumber="S" VersionNumber="1">
+<Products><Product Id="M-1_P-1" /></Products>
 <Hardware2Programs><Hardware2Program Id="H-1_HP-1" MediumTypes="MT-0">
 <ApplicationProgramRef RefId="A-1" /></Hardware2Program></Hardware2Programs>
 </Hardware></Hardware></Manufacturer></ManufacturerData></KNX>"#;
@@ -941,7 +1050,8 @@ mod tests {
     fn state_with_product_db() -> (tempfile::TempDir, AppState) {
         let state = state_with_one_installation();
         let dir = tempfile::tempdir().unwrap();
-        let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        let products =
+            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
         knx_productdb::parse::hardware::ingest_hardware(
             &products,
             "sha-h",
@@ -985,14 +1095,14 @@ mod tests {
     #[test]
     fn creating_a_device_seeds_its_com_objects_and_deleting_it_round_trips() {
         let (_dir, state) = state_with_product_db();
-        let tree =
+        let response =
             create_device_impl(&state, None, "M-1_CI-1".into(), "Actuator 1".into()).unwrap();
         assert_eq!(
-            tree.installations[0].unassigned.len(),
+            response.tree.installations[0].unassigned.len(),
             1,
             "the new device lands in unassigned when no line is given"
         );
-        let device_id = tree.installations[0].unassigned[0].id;
+        let device_id = response.tree.installations[0].unassigned[0].id;
 
         let detail = device_detail(&state, device_id).unwrap();
         assert_eq!(detail.com_objects.len(), 1);
@@ -1003,5 +1113,44 @@ mod tests {
 
         let tree = delete_device_impl(&state, device_id).unwrap();
         assert!(tree.installations[0].unassigned.is_empty());
+    }
+
+    // `enrich::apply` (the only source feeding `create_device_impl`'s own
+    // `from_enrichment` call) never emits `EnrichmentIssue::ProgramMissing`
+    // today — only the top-level `enrich()` pass does. Test the mapping
+    // directly and totally anyway, so a `ProgramMissing` issue can never
+    // silently collapse back onto `ComObjectRefMissing` if `from_enrichment`
+    // is ever reused against that pass's `EnrichmentReport.issues`.
+    #[test]
+    fn from_enrichment_keeps_program_and_com_object_issues_distinct() {
+        let program_missing =
+            CreationDiagnostic::from_enrichment(knx_productdb::EnrichmentIssue::ProgramMissing {
+                device_ets_id: "KB-DEV-1".into(),
+                program_ref: "A-1".into(),
+            });
+        assert_eq!(
+            program_missing,
+            CreationDiagnostic::ProgramRefMissing {
+                program_ref: "A-1".into(),
+            }
+        );
+        assert_eq!(
+            program_missing.detail(),
+            "The installed application program reference is missing: A-1."
+        );
+
+        let com_object_missing = CreationDiagnostic::from_enrichment(
+            knx_productdb::EnrichmentIssue::ComObjectRefMissing {
+                device_ets_id: "KB-DEV-1".into(),
+                ref_id: "A-1_O-1_R-1".into(),
+            },
+        );
+        assert_eq!(
+            com_object_missing,
+            CreationDiagnostic::ComObjectRefMissing {
+                ref_id: "A-1_O-1_R-1".into(),
+            }
+        );
+        assert_ne!(program_missing, com_object_missing);
     }
 }

@@ -322,6 +322,37 @@ left unbuilt.
 
 Cycle 14+ candidates (from `ideas.md`, not yet scheduled).
 
+## Cross-cutting — Internationalization
+
+**Planned, no cycle scheduled.** Added 2026-09-10 by explicit request.
+Not part of the original Session 0-7 breakdown, and deliberately not
+folded into Session 5 as "cycle 14", because only half of it is UI work:
+the other half reaches into `knx-core`'s string table and
+`knx-productdb`'s translation storage, which belong to Sessions 2 and 4.
+
+Two tracks, tracked as **T25** and **T26** in
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6, closing gap **D10**:
+
+1. **UI chrome (T25).** Every user-facing string in `apps/knx-web` is a
+   hard-coded English literal today, and the frontend has no i18n
+   dependency at all. Extract them into a message catalogue, detect the
+   locale, and add an explicit language setting. German first — it is the
+   language of the KNX Association's documentation and of the sample
+   projects this project is tested against.
+2. **KNX data (T26).** `knx_core::string_table` (`Language`,
+   `LocalizedString`, `StringTable` with a `default_language` fallback)
+   and `knx-productdb`'s `translation` table already exist and are
+   already populated on import — one application program alone carries
+   5919 translation elements, which is why the indirection went into the
+   model on day one. Nothing reads either of them. T26 adds an active
+   language and the display-side resolution that turns stored
+   translations into rendered text.
+
+The library choice for track 1, the storage of the language setting
+(D8's options dialog does not exist yet), and what a project's own
+`Language` means once the user can pick a different one all belong in a
+design spec, not here. Neither track has one yet.
+
 ## Cross-cutting — Web/Docker deployment target
 
 **Done.** Not part of the original Session 0-7 breakdown above — added by

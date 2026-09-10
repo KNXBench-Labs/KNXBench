@@ -218,11 +218,16 @@ export interface CreationDiagnostic {
     | "programlessProduct"
     | "ambiguousDpt"
     | "comObjectRefMissing"
+    | "programRefMissing"
     | "dynamicOrModuleNotEvaluated";
   catalogItemId?: string;
   refId?: string;
   alternatives?: string[];
+  programRef?: string;
   programId?: string;
+  /** Ready-to-display sentence built server-side; prefer this over
+   * re-deriving wording from the structured fields above. */
+  detail: string;
 }
 
 export interface CreateDeviceResponse {

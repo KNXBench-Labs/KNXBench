@@ -12,6 +12,7 @@ const USAGE: &str =
      \x20     knx export <store.knxdb> <out.knxproj> [--product-db <path>] [--no-product-db]\n\
      \x20     knx ga-export <store.knxdb> <out.csv>\n\
      \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run]\n\
+     \x20     knx doc-export <store.knxdb> <out.html>\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
      \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>]\n\
      \x20     knx products show <program-id> [--product-db <path>]\n\
@@ -39,6 +40,7 @@ fn main() -> ExitCode {
         Some("export") => run_export(&args[1..]),
         Some("ga-export") => run_ga_export(&args[1..]),
         Some("ga-import") => run_ga_import(&args[1..]),
+        Some("doc-export") => run_doc_export(&args[1..]),
         Some("products") => run_products(&args[1..]),
         Some("bus") => run_bus(&args[1..]),
         _ => {
@@ -478,6 +480,94 @@ fn print_csv_problem(problem: &knx_csv::CsvProblem) {
     match problem.row {
         Some(row) => println!("  {kind}: row {row}: {}", problem.detail),
         None => println!("  {kind}: {}", problem.detail),
+    }
+}
+
+struct DocExportArgs {
+    store: String,
+    output: String,
+}
+
+fn parse_doc_export_args(args: &[String]) -> Result<DocExportArgs, String> {
+    let mut store = None;
+    let mut output = None;
+    for arg in args {
+        match arg.as_str() {
+            other if other.starts_with("--") => {
+                return Err(format!("unknown flag: {other}"));
+            }
+            other if store.is_none() => store = Some(other.to_string()),
+            other if output.is_none() => output = Some(other.to_string()),
+            other => return Err(format!("unexpected extra argument: {other}")),
+        }
+    }
+    let store = store.ok_or_else(|| "missing <store.knxdb>".to_string())?;
+    let output = output.ok_or_else(|| "missing <out.html>".to_string())?;
+    Ok(DocExportArgs { store, output })
+}
+
+/// `knx doc-export` — writes the store's project as one self-contained
+/// "project documentation" HTML file (`knx_report::render_html`). This is
+/// a document this application defines and owns; it is not a claim of
+/// compatibility with any report ETS produces, and is never described as
+/// one.
+fn run_doc_export(args: &[String]) -> ExitCode {
+    let parsed = match parse_doc_export_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let conn = match knx_store::open_and_migrate(&PathBuf::from(&parsed.store)) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("failed to open store at {}: {e}", parsed.store);
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let project = match knx_store::load_project(&conn) {
+        Ok(project) => project,
+        Err(e) => {
+            eprintln!("failed to load project from store: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    // The clock read lives here, never inside `knx-report` — that crate
+    // reads only `ReportOptions`, which is what keeps its own tests
+    // deterministic (see `knx-report`'s doc comment; `knx-server` does the
+    // same thing on the HTTP side).
+    let options = knx_report::ReportOptions {
+        generated_at: chrono::Utc::now(),
+    };
+    let report = knx_report::render_html(&project, &options);
+
+    if let Err(e) = std::fs::write(&parsed.output, report.html.as_bytes()) {
+        eprintln!("failed to write {}: {e}", parsed.output);
+        return ExitCode::FAILURE;
+    }
+
+    print_doc_export_report(&parsed.output, &report);
+    // No third exit code here: unlike `import`'s `EXIT_IMPORTED_WITH_ERRORS`,
+    // `report.warnings` describes the project the render walked, not a
+    // failed export — `render_html` has no `Result` because it cannot
+    // fail this way. A document that carries warnings is still a
+    // complete, correct report.
+    ExitCode::SUCCESS
+}
+
+/// Prints a documentation export's report as human-readable lines, mirroring
+/// `print_export_report` — every warning `knx-report` found, not just a
+/// count, so nothing it reported is silently dropped on the way to the
+/// terminal.
+fn print_doc_export_report(output: &str, report: &knx_report::HtmlReport) {
+    println!("exported documentation to {output}");
+    println!("  {} warning(s)", report.warnings.len());
+    for warning in &report.warnings {
+        println!("  warning: {}: {}", warning.location, warning.detail);
     }
 }
 

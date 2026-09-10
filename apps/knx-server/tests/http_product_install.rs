@@ -52,10 +52,12 @@ async fn json(response: axum::response::Response) -> Value {
 
 fn state() -> (tempfile::TempDir, knx_server::AppState) {
     let dir = tempfile::tempdir().unwrap();
-    let mut state = knx_server::AppState::default();
-    state.product_db = Some(std::sync::Mutex::new(
-        knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
-    ));
+    let state = knx_server::AppState {
+        product_db: Some(std::sync::Mutex::new(
+            knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap(),
+        )),
+        ..Default::default()
+    };
     (dir, state)
 }
 

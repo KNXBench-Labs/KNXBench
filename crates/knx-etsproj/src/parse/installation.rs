@@ -37,7 +37,10 @@ enum Frame {
     Installation(SourceInstallation),
     Area(SourceArea),
     Line(SourceLine),
-    Device(SourceDevice),
+    // Boxed: `SourceDevice` is far larger than every other variant (clippy
+    // large_enum_variant), and a `Frame` is short-lived scaffolding anyway
+    // — the indirection costs nothing a caller notices.
+    Device(Box<SourceDevice>),
     ComObject(SourceComObjectInstance),
     Parameter(SourceParameterInstance),
     BuildingPart(SourceBuildingPart),
@@ -505,7 +508,7 @@ fn build_frame(
             bus_access: None,
             other: Vec::new(),
         }),
-        "DeviceInstance" => Frame::Device(SourceDevice {
+        "DeviceInstance" => Frame::Device(Box::new(SourceDevice {
             id: bag.require("Id", xpath)?,
             name: bag.take("Name"),
             description: bag.take("Description"),
@@ -531,7 +534,7 @@ fn build_frame(
             group_object_tree_raw: None,
             security_raw: None,
             other: Vec::new(),
-        }),
+        })),
         "ComObjectInstanceRef" => Frame::ComObject(SourceComObjectInstance {
             ref_id: bag.require("RefId", xpath)?,
             is_active: bag.take("IsActive"),
@@ -712,7 +715,7 @@ fn into_line(f: Frame) -> SourceLine {
 }
 fn into_device(f: Frame) -> SourceDevice {
     match f {
-        Frame::Device(v) => v,
+        Frame::Device(v) => *v,
         _ => unreachable!(),
     }
 }
@@ -901,6 +904,10 @@ mod tests {
 
     #[test]
     fn the_reference_project_parses_with_no_unknown_constructs() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         let bytes = c.read("P-0512/0.xml").unwrap();
         let out = parse_installation(&bytes, "P-0512/0.xml", known_schema(11).unwrap()).unwrap();

@@ -328,6 +328,10 @@ mod tests {
 
     #[test]
     fn counts_carry_both_read_and_mapped_figures() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let r = reference_report();
         let devices = r
             .counts
@@ -341,6 +345,10 @@ mod tests {
 
     #[test]
     fn a_report_with_no_losses_says_so() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let r = reference_report();
         assert_eq!(r.errors, vec![]);
         assert_eq!(r.unknown, vec![]);
@@ -349,6 +357,10 @@ mod tests {
 
     #[test]
     fn the_json_form_round_trips_and_names_every_section() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let json = reference_report().to_json();
         let v: serde_json::Value = serde_json::from_str(&json).unwrap();
         for key in [
@@ -368,6 +380,10 @@ mod tests {
 
     #[test]
     fn vendor_baggage_is_reported_as_unsupported() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let r = reference_report();
         let u = r
             .unsupported
@@ -379,6 +395,10 @@ mod tests {
 
     #[test]
     fn schema_23_carries_a_module_handling_capability_gap_but_11_and_21_do_not() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let ets6 = crate::import_knxproj(&crate::testutil::reference_ets6_path()).unwrap();
         assert!(ets6
             .report
@@ -403,6 +423,10 @@ mod tests {
 
     #[test]
     fn the_opaque_summary_does_not_repeat_the_bytes() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let json = reference_report().to_json();
         // 22 MB of manufacturer data must not end up inside a JSON report.
         assert!(json.len() < 512 * 1024);

@@ -178,6 +178,10 @@ fn installs_the_readable_corpus() {
         .unwrap_or_else(|| {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../OriginalData/ProductDatabases")
         });
+    if !root.exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     for name in [
         "MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod",
         "Dummy_Applikation_Secure.knxprod",

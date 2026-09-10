@@ -27,6 +27,10 @@ async fn body_json(response: axum::response::Response) -> Value {
 
 #[tokio::test]
 async fn exporting_without_a_store_path_is_a_400() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let state = Arc::new(knx_server::AppState::default());
     let app = knx_server::app(state, None);
     let dir = tempfile::tempdir().unwrap();
@@ -75,6 +79,10 @@ async fn exporting_without_a_store_path_is_a_400() {
 
 #[tokio::test]
 async fn importing_saving_then_exporting_round_trips_and_reports_the_unsigned_warning() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let state = Arc::new(knx_server::AppState::default());
     let app = knx_server::app(state, None);
     let dir = tempfile::tempdir().unwrap();
@@ -157,6 +165,10 @@ async fn importing_saving_then_exporting_round_trips_and_reports_the_unsigned_wa
 /// previous, buggy 29.9KB-from-1.7MB export also satisfied).
 #[tokio::test]
 async fn exported_project_still_carries_opaque_and_manufacturer_data_after_save_as() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let state = Arc::new(knx_server::AppState::default());
     let app = knx_server::app(state, None);
     let dir = tempfile::tempdir().unwrap();
@@ -258,6 +270,10 @@ async fn exported_project_still_carries_opaque_and_manufacturer_data_after_save_
 /// the row counts stay put.
 #[tokio::test]
 async fn saving_the_same_project_twice_does_not_duplicate_opaque_and_manifest_rows() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let state = Arc::new(knx_server::AppState::default());
     let app = knx_server::app(state, None);
     let dir = tempfile::tempdir().unwrap();

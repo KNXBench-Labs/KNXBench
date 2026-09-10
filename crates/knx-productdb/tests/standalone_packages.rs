@@ -73,13 +73,12 @@ fn retries_keep_conflicts_and_unknown_paths_cannot_supply_parsed_rows() {
     ]);
     let first = install_package(&conn, "second.knxprod", &bytes).unwrap();
     assert!(!first.conflicts.is_empty());
-    let third_changed = changed.replace("Conflicting", "Third");
     install_package(
         &conn,
         "third.knxprod",
         &archive(&[
             ("knx_master.xml", MASTER),
-            ("M-0001/Hardware.xml", third_changed.as_bytes()),
+            ("M-0001/Hardware.xml", changed.as_bytes()),
         ]),
     )
     .unwrap();

@@ -27,6 +27,10 @@ fn reference_ets4_path() -> PathBuf {
 
 #[test]
 fn the_reference_project_round_trips_through_save_and_load() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let project = knx_etsproj::import_knxproj(&reference_ets4_path())
         .expect("the reference ETS4 project imports")
         .project;
@@ -99,6 +103,10 @@ fn the_reference_project_round_trips_through_save_and_load() {
 
 #[test]
 fn saving_the_reference_project_twice_over_itself_is_idempotent() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let project = knx_etsproj::import_knxproj(&reference_ets4_path())
         .expect("the reference ETS4 project imports")
         .project;

@@ -19,6 +19,10 @@ fn reference_ets4_path() -> PathBuf {
 
 #[test]
 fn opening_the_reference_project_yields_the_measured_counts() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let tree = knx_server::open_project_impl(&reference_ets4_path()).unwrap();
 
     // The reference project's golden import has no real errors: `warnings`

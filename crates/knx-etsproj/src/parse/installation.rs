@@ -904,6 +904,10 @@ mod tests {
 
     #[test]
     fn the_reference_project_parses_with_no_unknown_constructs() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         let bytes = c.read("P-0512/0.xml").unwrap();
         let out = parse_installation(&bytes, "P-0512/0.xml", known_schema(11).unwrap()).unwrap();

@@ -47,6 +47,10 @@ fn count(conn: &knx_productdb::Connection, sql: &str) -> i64 {
 
 #[test]
 fn the_reference_projects_manufacturer_data_ingests_completely() {
+    if !reference_project_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let (_dir, conn) = ingest_all();
     assert_eq!(count(&conn, "SELECT count(*) FROM manufacturer"), 4);
     assert_eq!(count(&conn, "SELECT count(*) FROM source_file"), 24);
@@ -63,12 +67,20 @@ fn the_reference_projects_manufacturer_data_ingests_completely() {
 
 #[test]
 fn every_blob_verifies_against_its_own_hash() {
+    if !reference_project_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let (_dir, conn) = ingest_all();
     assert_eq!(knx_productdb::verify(&conn).unwrap(), vec![]);
 }
 
 #[test]
 fn a_second_ingest_of_the_same_files_stores_nothing_new() {
+    if !reference_project_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let (_dir, conn) = ingest_all();
     let before = count(&conn, "SELECT count(*) FROM source_file");
     for (path, bytes) in manufacturer_files() {
@@ -82,6 +94,10 @@ fn a_second_ingest_of_the_same_files_stores_nothing_new() {
 
 #[test]
 fn the_unknown_construct_table_is_a_short_list_not_a_flood() {
+    if !reference_project_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     // Not zero — this is one manufacturer sample of four vendors, and an
     // unmodelled attribute is expected. What matters is that it is
     // reported and bounded, and that every one of them is on record.
@@ -127,6 +143,10 @@ fn ref_id_from_oracle_key(key: &str) -> Option<&str> {
 /// measured to be false).
 #[test]
 fn com_object_texts_and_datapoint_types_agree_with_the_oracle_at_a_high_rate() {
+    if !reference_project_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let (_dir, conn) = ingest_all();
     let raw = std::fs::read_to_string(oracle_dump_path()).unwrap();
     let oracle: serde_json::Value = serde_json::from_str(&raw).unwrap();

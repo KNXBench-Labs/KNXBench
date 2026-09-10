@@ -75,6 +75,15 @@ pub(crate) fn reference_ets4_path() -> PathBuf {
     workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
 }
 
+/// True when the gitignored `OriginalData/` fixture corpus is present
+/// locally. It holds the maintainer's own real KNX installation and
+/// manufacturer files — never committed, so CI (and any contributor
+/// without a copy) has none of it. Every test that needs the corpus must
+/// check this first and skip, not panic, or CI is permanently red.
+pub(crate) fn corpus_available() -> bool {
+    reference_ets4_path().exists()
+}
+
 pub(crate) fn reference_ets6_path() -> PathBuf {
     workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj")
 }

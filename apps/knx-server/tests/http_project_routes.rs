@@ -27,6 +27,10 @@ async fn body_json(response: axum::response::Response) -> Value {
 
 #[tokio::test]
 async fn importing_the_reference_project_returns_the_golden_counts() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let state = Arc::new(knx_server::AppState::default());
     let app = knx_server::app(state, None);
 
@@ -102,6 +106,10 @@ async fn saving_without_an_open_project_is_a_500() {
 
 #[tokio::test]
 async fn importing_then_saving_as_then_reopening_round_trips() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let state = Arc::new(knx_server::AppState::default());
     let app = knx_server::app(state, None);
     let dir = tempfile::tempdir().unwrap();

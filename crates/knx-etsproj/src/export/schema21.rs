@@ -739,6 +739,10 @@ mod tests {
     /// `compare.rs` covers it.
     #[test]
     fn a_schema_21_export_reimports_to_an_equal_domain_model() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let first = crate::import_knxproj(&reference_kv_schema21_path()).unwrap();
         assert_eq!(first.project.info.ets_schema_version, 21);
         assert!(first.project.devices.module_instances().count() > 0);
@@ -759,6 +763,10 @@ mod tests {
 
     #[test]
     fn the_exported_xml_carries_the_schema_21_namespace_and_segment_wrapper() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let document = crate::testutil::reference_kv_source_document();
         let mapped = crate::map::map(&document, "P-03DE/0.xml");
         let xml =
@@ -770,6 +778,10 @@ mod tests {
 
     #[test]
     fn the_exported_project_xml_carries_no_completion_status_or_project_id() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let document = crate::testutil::reference_kv_source_document();
         let mapped = crate::map::map(&document, "P-03DE/0.xml");
         let xml = String::from_utf8(write_project_xml_v21(&mapped.project, &[]).unwrap()).unwrap();

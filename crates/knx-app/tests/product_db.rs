@@ -10,6 +10,10 @@ fn reference_project_path() -> PathBuf {
 
 #[test]
 fn importing_with_a_product_db_ingests_manufacturer_files_and_keeps_them_out_of_the_opaque_store() {
+    if !reference_project_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let dir = tempfile::tempdir().unwrap();
     let store = knx_store::open_and_migrate(&dir.path().join("p.knxdb")).unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
@@ -40,6 +44,10 @@ fn importing_with_a_product_db_ingests_manufacturer_files_and_keeps_them_out_of_
 
 #[test]
 fn a_second_import_into_the_same_product_db_skips_every_file() {
+    if !reference_project_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let dir = tempfile::tempdir().unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     let first_store = knx_store::open_and_migrate(&dir.path().join("a.knxdb")).unwrap();
@@ -69,6 +77,10 @@ fn a_second_import_into_the_same_product_db_skips_every_file() {
 
 #[test]
 fn export_is_byte_identical_with_and_without_the_product_database() {
+    if !reference_project_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     // The proof that routing manufacturer data through the product
     // database changes nothing about what we write back (spec §9).
     let dir = tempfile::tempdir().unwrap();
@@ -98,6 +110,10 @@ fn export_is_byte_identical_with_and_without_the_product_database() {
 
 #[test]
 fn a_project_opens_and_names_its_gap_when_the_product_database_is_gone() {
+    if !reference_project_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let dir = tempfile::tempdir().unwrap();
     let store = knx_store::open_and_migrate(&dir.path().join("p.knxdb")).unwrap();
     let products_path = dir.path().join("products.sqlite");

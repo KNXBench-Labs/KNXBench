@@ -25,6 +25,10 @@ fn reference_ets4_path() -> PathBuf {
 
 #[test]
 fn the_reference_project_imports_with_the_measured_counts() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let out = import_knxproj(&reference_ets4_path()).unwrap();
     let p = &out.project;
     let inst = &p.installations[0];
@@ -144,6 +148,10 @@ fn the_reference_project_imports_with_the_measured_counts() {
 
 #[test]
 fn nothing_in_the_reference_project_is_unknown_or_lost() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let out = import_knxproj(&reference_ets4_path()).unwrap();
     assert_eq!(out.report.unknown, vec![]);
     assert_eq!(out.report.errors, vec![]);

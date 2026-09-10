@@ -843,6 +843,10 @@ mod tests {
 
     #[test]
     fn an_exported_installation_is_well_formed_and_carries_the_namespace() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
         let xml = write_installation_xml(&out.project, &out.opaque).unwrap();
         let text = String::from_utf8(xml).unwrap();
@@ -854,6 +858,10 @@ mod tests {
 
     #[test]
     fn an_empty_override_is_written_as_an_empty_attribute() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
         let xml =
             String::from_utf8(write_installation_xml(&out.project, &out.opaque).unwrap()).unwrap();
@@ -862,6 +870,10 @@ mod tests {
 
     #[test]
     fn a_malformed_value_is_written_back_exactly_as_it_was_read() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut out = crate::import_knxproj(&reference_ets4_path()).unwrap();
         let id = *out
             .project
@@ -883,6 +895,10 @@ mod tests {
 
     #[test]
     fn retained_attributes_come_back_on_their_own_elements() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
         let xml =
             String::from_utf8(write_installation_xml(&out.project, &out.opaque).unwrap()).unwrap();
@@ -892,6 +908,10 @@ mod tests {
 
     #[test]
     fn an_inferred_value_is_never_written() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut out = crate::import_knxproj(&reference_ets4_path()).unwrap();
         // Force an inferred datapoint type onto an instance that had none.
         let id = *out
@@ -917,6 +937,10 @@ mod tests {
 
     #[test]
     fn the_project_xml_carries_the_group_address_style() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
         let xml = String::from_utf8(write_project_xml(&out.project, &out.opaque).unwrap()).unwrap();
         assert!(xml.contains(r#"GroupAddressStyle="ThreeLevel""#));

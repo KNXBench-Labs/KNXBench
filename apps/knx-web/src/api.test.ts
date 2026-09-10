@@ -380,6 +380,23 @@ describe("api", () => {
     );
   });
 
+  it("exportDocumentation posts the path to /api/project/documentation-export", async () => {
+    mockFetchOnce({ warnings: [] });
+    const report = await api.exportDocumentation("/data/project.html");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/project/documentation-export");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ path: "/data/project.html" });
+    expect(report).toEqual({ warnings: [] });
+  });
+
+  it("exportDocumentation surfaces the server's error message on a 400", async () => {
+    mockFetchOnce({ error: "no project open" }, false, 400);
+    await expect(api.exportDocumentation("/data/project.html")).rejects.toThrow(
+      "no project open",
+    );
+  });
+
   it("errorMessage unwraps an Error's message without doubling 'Error: '", () => {
     expect(api.errorMessage(new Error("no project open"))).toBe("no project open");
   });

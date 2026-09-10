@@ -35,6 +35,16 @@ export function saveProjectAs(path: string): Promise<void> {
   return request("/api/project/save-as", { method: "POST", body: JSON.stringify({ path }) });
 }
 
+// `warnings: unknown[]` is deliberate — the frontend only needs the count and
+// a stringified form of each warning for a toast (see App.tsx's
+// `exportProject` handler); it does not need a typed binding for the
+// server's `ExportWarningDto` (apps/knx-server/src/routes.rs) the way
+// `ProjectTree`/`DeviceDetail` have `ts-rs` bindings, since nothing renders
+// a warning's individual fields yet.
+export function exportProject(path: string): Promise<{ warnings: unknown[] }> {
+  return request("/api/project/export", { method: "POST", body: JSON.stringify({ path }) });
+}
+
 export function deviceDetail(deviceId: number): Promise<DeviceDetail> {
   return request(`/api/device/${deviceId}`);
 }

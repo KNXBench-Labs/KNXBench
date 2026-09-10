@@ -5,7 +5,7 @@
 //! is) is supplied by the caller as a closure, so the same engine matches
 //! devices, group addresses, or anything else a later task points it at.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// How a matched pair of entities was found to correspond.
 #[derive(Debug, Clone, PartialEq)]
@@ -79,9 +79,15 @@ pub struct MatchOutcome<'a, E> {
 
 /// Matches `left` against `right` in two passes.
 ///
-/// Pass 1 matches by `ets_id`: any id present on both sides is a match
-/// (`MatchKind::EtsId`), and both entities drop out of further
-/// consideration.
+/// Pass 1 matches by `ets_id`: an id present on both sides is a match
+/// (`MatchKind::EtsId`) **only if it identifies exactly one entity on each
+/// side**. An `ets_id` is not a usable identity when it is duplicated
+/// within its own side — a duplicated id is never guessed at, so every
+/// entity carrying it falls straight through to pass 2 as an ordinary
+/// leftover instead (where the natural key may still resolve it, or the
+/// existing ambiguity rule may catch it). Match order follows `left`'s own
+/// order, not any hash map's — this function must be deterministic run to
+/// run.
 ///
 /// Pass 2 groups each side's pass-1 leftovers by `natural_key` (entities
 /// for which it returns `None` skip this pass). A key with exactly one
@@ -97,16 +103,39 @@ pub fn match_entities<'a, E, NK: Ord + Clone>(
     ets_id: impl Fn(&E) -> &str,
     natural_key: impl Fn(&E) -> Option<NK>,
 ) -> MatchOutcome<'a, E> {
-    // Pass 1: ets_id.
-    let left_by_id: HashMap<&str, &'a E> = left.iter().map(|e| (ets_id(e), e)).collect();
-    let right_by_id: HashMap<&str, &'a E> = right.iter().map(|e| (ets_id(e), e)).collect();
+    // Pass 1: ets_id. Indexed by BTreeMap (not HashMap) so a duplicated id
+    // within one side is visible as `.len() > 1` rather than silently
+    // overwriting an earlier entity — CLAUDE.md forbids discarding data
+    // that quietly.
+    let mut left_by_id: BTreeMap<&str, Vec<&'a E>> = BTreeMap::new();
+    for e in left {
+        left_by_id.entry(ets_id(e)).or_default().push(e);
+    }
+    let mut right_by_id: BTreeMap<&str, Vec<&'a E>> = BTreeMap::new();
+    for e in right {
+        right_by_id.entry(ets_id(e)).or_default().push(e);
+    }
 
+    // Iterate `left` itself, not either map, so match order is the input's
+    // order rather than a map's iteration order (map iteration order is
+    // deterministic here since both are BTreeMaps, but it is alphabetical
+    // by id, not input order — the latter is what callers should see).
     let mut matched: Vec<(&'a E, &'a E, MatchKind)> = Vec::new();
     let mut matched_ets_ids: BTreeSet<&str> = BTreeSet::new();
-    for (id, l) in &left_by_id {
-        if let Some(r) = right_by_id.get(id) {
-            matched.push((*l, *r, MatchKind::EtsId));
-            matched_ets_ids.insert(id);
+    for e in left {
+        let id = ets_id(e);
+        if matched_ets_ids.contains(id) {
+            continue;
+        }
+        let lv = &left_by_id[id];
+        if lv.len() != 1 {
+            continue;
+        }
+        if let Some(rv) = right_by_id.get(id) {
+            if rv.len() == 1 {
+                matched.push((lv[0], rv[0], MatchKind::EtsId));
+                matched_ets_ids.insert(id);
+            }
         }
     }
 
@@ -274,6 +303,49 @@ mod tests {
         assert_eq!(outcome.ambiguous.len(), 1);
         assert_eq!(outcome.ambiguous[0].left.len(), 2);
         assert_eq!(outcome.ambiguous[0].right.len(), 1);
+
+        // An ambiguity group's members are not subtracted from the
+        // leftover lists here — that decision belongs to whichever caller
+        // looks at `ambiguous` too (Task 3). Pin that so a later "fix"
+        // that starts subtracting them cannot pass silently.
+        assert_eq!(outcome.left_leftover.len(), 2);
+        assert_eq!(outcome.right_leftover.len(), 1);
+        assert!(outcome.left_leftover.iter().any(|e| e.ets_id == "a"));
+        assert!(outcome.left_leftover.iter().any(|e| e.ets_id == "b"));
+        assert!(outcome.right_leftover.iter().any(|e| e.ets_id == "c"));
+    }
+
+    #[test]
+    fn a_duplicate_ets_id_on_one_side_falls_through_to_the_natural_key_pass() {
+        let left = [
+            Item {
+                ets_id: "x",
+                code: None,
+            },
+            Item {
+                ets_id: "x",
+                code: None,
+            },
+        ];
+        let right = [Item {
+            ets_id: "x",
+            code: None,
+        }];
+
+        let outcome = match_entities(&left, &right, id, key);
+
+        // A duplicated ets_id is not a usable identity, so pass 1 must not
+        // guess a match for it.
+        assert!(outcome
+            .matched
+            .iter()
+            .all(|(_, _, k)| *k != MatchKind::EtsId));
+        // Nothing vanishes: all three land somewhere accounted for. None
+        // of them carries a natural key here, so pass 2 leaves them as
+        // plain leftovers rather than matching or grouping them.
+        assert_eq!(outcome.left_leftover.len(), 2);
+        assert_eq!(outcome.right_leftover.len(), 1);
+        assert!(outcome.ambiguous.is_empty());
     }
 
     #[test]

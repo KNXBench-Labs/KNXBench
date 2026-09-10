@@ -392,6 +392,16 @@ implementation time — it is the first genuinely motion-heavy feature on
 the list, and the cheapest moment to require a switch for it is before
 anyone starts writing it.
 
+**Memo (2026-09-10), style direction — not decided, not designed, no
+task opened.** Two candidate visual directions were named for whenever
+T27's motion work (and any theme it rides alongside) actually gets
+designed: (1) an Apple-like direction — sleek, subtle, clean, restrained
+motion; (2) a "techy glitch / cyberpunk OS" direction that is still, per
+the same request, clean and sleek rather than noisy or gimmicky. Neither
+is chosen. Recorded here only so it is not lost before T27 gets a design
+spec; whoever writes that spec should treat this as a starting prompt,
+not a constraint.
+
 ## Cross-cutting — Web/Docker deployment target
 
 **Done.** Not part of the original Session 0-7 breakdown above — added by
@@ -433,6 +443,34 @@ problem early.
 **Entry condition.** None — this was schedulable independently of the
 Session 0-7 sequence, since it adds a transport layer in front of
 already-shipped application logic rather than new domain capability.
+
+## Cross-cutting — LLM / natural-language interaction
+
+**Memo (2026-09-10) — not decided, not designed, no task opened, no
+research done yet.** Added by explicit request: a chat window connected to
+an LLM, usable for natural-language interaction with the project — and,
+per the request, not limited to being MCP-capable from the outside, but
+also directly built into the application itself (an in-app chat surface,
+not only an MCP server other tools could drive).
+
+This is explicitly a research item before it is a design item: *how* such
+a thing should work — which capabilities it gets, how it is authorized
+against a live project, how "natural language" maps onto the existing
+`Command` layer (the same layer the deferred MCP note above already
+identifies as the load-bearing prerequisite), which LLM(s) it talks to and
+whether that is local, remote, or configurable, and what it must never be
+allowed to do unsupervised to project data — needs to be researched and
+written up (`docs/RESEARCH.md`, per this project's own documentation rule)
+before any design spec is attempted.
+
+Relationship to the existing deferred MCP note above: that note already
+says MCP capabilities need a mature, near-complete `Command` layer as their
+foundation, and are premature before Session 7. This item is the same
+dependency, plus a second, in-application surface on top of it — so it is
+at least as far out, and should not be scheduled ahead of the `Command`
+layer's own completion. Recorded here only so the idea is not lost before
+someone does that research; whoever picks it up should treat this
+paragraph as a starting prompt, not a constraint.
 
 ## Session 6 — KNXnet/IP
 

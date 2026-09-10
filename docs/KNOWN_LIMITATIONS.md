@@ -1261,3 +1261,153 @@ rather than the reverse. Requested explicitly on 2026-09-10
 ("die Animationen sollen togglebar sein, wenn sie implementiert werden");
 not scheduled into a cycle yet, and deliberately written down before the
 animated features exist rather than after.
+
+## 44. Project documentation export (T13) has no ETS report parity, and none can currently be measured
+
+**Limitation.** `crates/knx-report`'s HTML document
+([IMPORT_EXPORT.md §12](IMPORT_EXPORT.md#12-project-documentation-export))
+is KNXBench's own document. It is not, and cannot currently be shown to
+be, similar in content or layout to any report ETS's own printing feature
+produces.
+
+**Cause.** No ETS-produced report sample — no PDF, no printout, no
+exported document of any kind — exists anywhere in this repository, and
+`docs/RESEARCH.md` has no section describing ETS's report layout. This is
+the same evidence gap [§38](#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability)
+records for T12's CSV format: printing/reporting is an ETS *application*
+feature, not something the KNX Association standardizes, so there is
+nothing to read except a real sample, and none has been obtained.
+
+**Impact.** Nothing in the UI, CLI output, or this documentation set may
+say "ETS report" or imply compatibility with one, and none of it does. A
+user expecting the document to resemble an ETS printout in section order,
+wording, or completeness has no basis for that expectation from anything
+KNXBench ships.
+
+**Lifted when.** A genuine ETS-produced report sample (PDF or printed
+export) is obtained. At that point a content-set comparison becomes
+possible for the first time; whether that motivates layout changes is a
+separate decision to make once evidence exists.
+
+## 45. Project documentation export has no native PDF output
+
+**Limitation.** `crates/knx-report` produces HTML only. There is no Rust
+PDF renderer anywhere in this workspace, and none is planned.
+
+**Cause.** A deliberate scope decision
+(`docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`
+§2, §9): every modern browser already prints to PDF, the document ships
+`@media print` rules for exactly that, and a Rust PDF-rendering dependency
+would be a large addition serving a button the operating system already
+provides. CLAUDE.md: avoid unnecessary dependencies.
+
+**Impact.** Producing a PDF requires opening the exported `.html` file in
+a browser and using its print-to-PDF path. There is no `knx doc-export
+... --pdf` or equivalent, and no headless/server-side PDF generation for
+automation that cannot drive a browser.
+
+**Lifted when.** Open. No task currently proposes a native PDF renderer —
+recorded here as a boundary of the feature, not a gap awaiting a fix.
+
+## 46. Project documentation export does not resolve manufacturer, product, or program names
+
+**Limitation.** The Devices section of the exported document prints
+`product_ref` and `program_ref` as the raw, opaque identifiers stored on
+each `DeviceInstance` (`device.rs:27-31`) — never a resolved manufacturer
+or product name.
+
+**Cause.** `crates/knx-report` depends only on `knx-core`, `knx-projection`,
+and `chrono` (`xtask check-layering` enforces this, the same rule
+`knx-csv` is held to). Resolving those identifiers to a human-readable
+name requires querying `knx-productdb`, a separate, independently
+versioned database this crate must not reach.
+
+**Impact.** A reader has to cross-reference `product_ref`/`program_ref`
+against the product database (or the `CatalogBrowser` UI) by hand to learn
+what a device actually is beyond its own name/description.
+
+**Lifted when.** Open. A future task could pass an already-resolved
+lookup table into `ReportOptions` from a caller that *does* have
+`knx-productdb` access (`apps/knx-server`, `apps/knx-cli`), without
+`knx-report` itself gaining the dependency.
+
+## 47. Project documentation export does not list parameter values or module-instance arguments
+
+**Limitation.** Parameter values and module-instance arguments are
+counted in the Summary section's totals but never listed individually
+anywhere in the document.
+
+**Cause.** Both are stored uninterpreted in this domain model — parameter
+values as raw strings (RESEARCH R3, no `when`/`choose` grammar
+interpretation yet, [§3](#3-device-parameters-are-preserved-but-not-interpreted));
+module-instance arguments as opaque data. Printing raw `RefId`/value pairs
+by the hundreds or thousands would be volume without meaning until T18's
+parameter interpretation work exists to give them one.
+
+**Impact.** The document cannot answer "what is this device configured
+to do" beyond its communication objects' flags and DPTs — the same
+limitation the rest of the application has toward parameters, now visible
+in the exported document's own text (its "What this report does not
+contain" section states this explicitly).
+
+**Lifted when.** T18 (parameter interpretation and editor,
+`GAP_ANALYSIS_ETS.md` Tier 5) exists and a follow-up task extends
+`knx-report` to use it. Not scheduled.
+
+## 48. Project documentation export renders in one language only
+
+**Limitation.** The document renders text in the project's default
+language only — there is no language selector and no per-string
+translation lookup.
+
+**Cause.** [§37](#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only)
+already applies to this document: `knx-productdb`'s `translation` table
+has no reader anywhere in the codebase, and `knx-report` in particular
+must not reach `knx-productdb` at all (see §46).
+
+**Impact.** A multi-language project's translated strings never appear in
+the exported document, regardless of which language a user might prefer.
+
+**Lifted when.** T26 (language-aware display of imported KNX data,
+`GAP_ANALYSIS_ETS.md` Tier 6) gives the application an active-language
+concept and a translation reader; `knx-report` would need its own
+follow-up to consume it, since it cannot reach `knx-productdb` directly.
+
+## 49. Project documentation export has no in-application print preview
+
+**Limitation.** There is no preview of the exported document inside
+KNXBench itself, on the web frontend or the CLI. "Export documentation…"
+writes a file; seeing it means opening that file in a browser.
+
+**Cause.** A deliberate scope decision
+(`docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`
+§9): the browser already provides a preview (the page itself, and its own
+print-preview dialog), so building a second one inside the application
+would duplicate it.
+
+**Impact.** A user cannot see the rendered document without leaving the
+application and opening the written file in a browser tab.
+
+**Lifted when.** Open. No task currently proposes an in-app preview pane.
+
+## 50. Project documentation export has no section selection
+
+**Limitation.** `render_html` always renders every section — Header,
+Contents, Summary, Topology, Buildings, Group addresses, Devices, and
+"What this report does not contain." There is no way to request, say,
+"just the group addresses" or "just the devices."
+
+**Cause.** A deliberate scope decision
+(`docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`
+§6, §9): `ReportOptions` intentionally carries only `generated_at`.
+CLAUDE.md: avoid speculative abstractions — a selection knob is easy to
+add later if someone actually asks for a partial report; adding it before
+then is a guess about a feature nobody has requested.
+
+**Impact.** Exporting documentation for a large project always produces
+the full document, even if only one section is of interest — on the
+reference project, roughly 249 KB of HTML for 36 devices, 907
+communication objects, and 514 group addresses.
+
+**Lifted when.** Open. A real request for partial reports would motivate
+adding a selection parameter to `ReportOptions`; none has been made.

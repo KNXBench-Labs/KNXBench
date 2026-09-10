@@ -1832,10 +1832,12 @@ dependencies = [
 name = "knx-app"
 version = "0.0.0"
 dependencies = [
+ "chrono",
  "knx-core",
  "knx-csv",
  "knx-etsproj",
  "knx-productdb",
+ "knx-report",
  "knx-store",
  "tempfile",
 ]
@@ -1844,12 +1846,14 @@ dependencies = [
 name = "knx-cli"
 version = "0.0.0"
 dependencies = [
+ "chrono",
  "knx-app",
  "knx-core",
  "knx-csv",
  "knx-etsproj",
  "knx-net",
  "knx-productdb",
+ "knx-report",
  "knx-store",
  "serde_json",
  "tempfile",
@@ -1931,6 +1935,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "knx-report"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "knx-core",
+ "knx-projection",
+]
+
+[[package]]
 name = "knx-secure"
 version = "0.0.0"
 
@@ -1946,6 +1959,7 @@ dependencies = [
  "knx-etsproj",
  "knx-productdb",
  "knx-projection",
+ "knx-report",
  "knx-store",
  "serde",
  "serde_json",

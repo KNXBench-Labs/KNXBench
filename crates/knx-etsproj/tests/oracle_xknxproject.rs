@@ -17,6 +17,10 @@ fn oracle() -> serde_json::Value {
 
 #[test]
 fn group_addresses_agree_with_the_oracle_by_address_and_name() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let out = import_knxproj(&reference_ets4_path()).unwrap();
     let oracle = oracle();
     let theirs = oracle["group_addresses"].as_object().unwrap();
@@ -34,6 +38,10 @@ fn group_addresses_agree_with_the_oracle_by_address_and_name() {
 
 #[test]
 fn devices_agree_with_the_oracle_except_for_the_one_it_loses() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let out = import_knxproj(&reference_ets4_path()).unwrap();
     let oracle = oracle();
     let theirs = oracle["devices"].as_object().unwrap();
@@ -75,6 +83,10 @@ fn the_oracle_still_loses_exactly_what_research_measured() {
 
 #[test]
 fn the_project_metadata_agrees_with_the_oracle() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let out = import_knxproj(&reference_ets4_path()).unwrap();
     let oracle = oracle();
     assert_eq!(oracle["info"]["schema_version"].as_str().unwrap(), "11");
@@ -94,6 +106,10 @@ fn the_project_metadata_agrees_with_the_oracle() {
 
 #[test]
 fn our_linked_communication_objects_match_the_oracle_count() {
+    if !reference_ets4_path().exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
     let out = import_knxproj(&reference_ets4_path()).unwrap();
     let linked = out
         .project

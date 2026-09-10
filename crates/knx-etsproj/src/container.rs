@@ -202,6 +202,10 @@ mod tests {
 
     #[test]
     fn the_reference_project_inventory_has_thirty_eight_entries() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         assert_eq!(c.entries().len(), 38);
         // Measured: unlike the per-installation `0.xml` files, ETS4 writes
@@ -212,6 +216,10 @@ mod tests {
 
     #[test]
     fn entry_lookup_is_case_insensitive() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let c = Container::open(reference_ets4_bytes()).unwrap();
         assert_eq!(
             c.find("p-0512/project.xml").map(|e| e.path.as_str()),
@@ -221,6 +229,10 @@ mod tests {
 
     #[test]
     fn the_project_part_comes_from_the_signature_filename() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let c = Container::open(reference_ets4_bytes()).unwrap();
         assert_eq!(c.project_part().unwrap(), "P-0512");
     }

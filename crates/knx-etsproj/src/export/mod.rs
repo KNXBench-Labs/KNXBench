@@ -162,6 +162,10 @@ mod tests {
 
     #[test]
     fn every_export_is_unsigned_and_says_so() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
         let entries = all_entries(&out.opaque, &out.manufacturer);
         let exported = export_knxproj(&out.project, &entries).unwrap();
@@ -178,6 +182,10 @@ mod tests {
 
     #[test]
     fn the_exported_container_holds_every_entry_the_source_had() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
         let entries = all_entries(&out.opaque, &out.manufacturer);
         let exported = export_knxproj(&out.project, &entries).unwrap();
@@ -189,6 +197,10 @@ mod tests {
 
     #[test]
     fn copied_signatures_are_reported_as_stale() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
         let entries = all_entries(&out.opaque, &out.manufacturer);
         let exported = export_knxproj(&out.project, &entries).unwrap();
@@ -215,6 +227,10 @@ mod tests {
 
     #[test]
     fn a_schema_21_export_writes_lowercase_project_xml() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         // ETS itself spells this entry lowercase from schema ≥21 onward
         // (measured — `source.rs`'s own module doc, `unzip -l` on `KV v2.5
         // - demo.knxproj`), unlike schema 11's `Project.xml`.
@@ -231,6 +247,10 @@ mod tests {
 
     #[test]
     fn a_schema_11_export_still_writes_capitalized_project_xml() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let out = crate::import_knxproj(&reference_ets4_path()).unwrap();
         let entries = all_entries(&out.opaque, &out.manufacturer);
         let exported = export_knxproj(&out.project, &entries).unwrap();

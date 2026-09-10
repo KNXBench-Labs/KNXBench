@@ -197,6 +197,10 @@ mod tests {
 
     #[test]
     fn manufacturer_files_are_handed_out_separately_from_opaque_entries() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         let collected =
             collect_container_entries(&mut c, &["P-0512/0.xml", "P-0512/Project.xml"]).unwrap();
@@ -216,6 +220,10 @@ mod tests {
 
     #[test]
     fn manufacturer_signatures_stay_in_the_opaque_store() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         // M-0008.signature signs a container state, not a product; leaving
         // it here keeps the export path for signatures unchanged (spec §3).
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
@@ -232,6 +240,10 @@ mod tests {
 
     #[test]
     fn every_manufacturer_file_carries_the_hash_of_its_own_bytes() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         let collected = collect_container_entries(&mut c, &[]).unwrap();
         assert!(collected
@@ -250,6 +262,10 @@ mod tests {
 
     #[test]
     fn entries_are_classified_by_where_they_sit_in_the_container() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         let collected = collect_container_entries(&mut c, &[]).unwrap();
         let kind = |p: &str| {

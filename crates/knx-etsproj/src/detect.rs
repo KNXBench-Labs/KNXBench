@@ -202,6 +202,10 @@ mod tests {
 
     #[test]
     fn the_ets4_reference_project_is_schema_eleven() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         let d = detect(&mut c).unwrap();
         assert_eq!(d.version, SchemaVersion(11));
@@ -213,6 +217,10 @@ mod tests {
 
     #[test]
     fn the_ets6_reference_project_is_schema_twenty_three() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut c = Container::open(reference_ets6_bytes()).unwrap();
         assert_eq!(detect(&mut c).unwrap().version, SchemaVersion(23));
     }

@@ -233,6 +233,10 @@ mod tests {
 
     #[test]
     fn the_reference_project_information_is_read_verbatim() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         let bytes = c.read("P-0512/Project.xml").unwrap();
         let (info, unknown) =
@@ -246,6 +250,10 @@ mod tests {
 
     #[test]
     fn tool_state_attributes_are_retained_rather_than_modelled() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
         let mut c = Container::open(reference_ets4_bytes()).unwrap();
         let bytes = c.read("P-0512/Project.xml").unwrap();
         let (info, _) =

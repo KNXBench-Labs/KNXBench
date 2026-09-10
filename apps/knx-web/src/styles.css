@@ -232,6 +232,23 @@ main {
   min-width: 0;
 }
 
+.bulk-action-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  background: var(--knx-surface);
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+}
+
+.bulk-action-label {
+  font-weight: bold;
+  margin-right: 0.25rem;
+}
+
 .com-object-list {
   list-style: none;
   padding-left: 0;

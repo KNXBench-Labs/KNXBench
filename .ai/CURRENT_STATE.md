@@ -743,3 +743,53 @@
   whatever you change — it pins the actual invariant instead of a
   hard-coded number, which is what would have caught the original bug
   a round earlier.
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-10 22:30
+- **Completed:** **Limitation #36 closed and merged to `main` locally** as
+  merge commit `1ead75b` (five commits: `019ed90` cap, `b6853c8` reachable
+  Log tab, `6366002` docs, `bf60528` drop-count correction plus invariant
+  test, `5fc4737` a one-line doc fix). The final whole-branch review
+  (sonnet, `da79328..bf60528`) came back **Ready to merge**: 0 Critical, 0
+  Important, 3 Minor. It hand-traced `push()`'s arithmetic itself at the
+  cap, one past it and far past it rather than trusting the comments or the
+  tests, mentally reverted the accounting to confirm all six new tests would
+  fail against the old buggy version, and re-ran every gate independently.
+  One of its three Minor findings was acted on before merging (`5fc4737`):
+  `KNOWN_LIMITATIONS.md` #36 opened with "two independent fixes, one commit
+  each" while admitting two paragraphs later that Part B had needed a second
+  commit — a document disagreeing with itself, now fixed. The other two were
+  left: a `tree: null` unit test local to `LogPanel.test.tsx` (the path is
+  already covered through `App.test.tsx`, and the prop is used only as an
+  effect-dependency identity), and `entries.remove(1)`'s O(n) shift per
+  overflowing push (trivial at a 1000-entry cap; a `VecDeque` ring buffer
+  would only be worth it if the cap grew a lot, and CLAUDE.md wants
+  performance work driven by measurement).
+
+  The merge conflicted in this file only — both sides appended a dated block
+  to the end. Resolved by keeping both, in the order they were written.
+
+  Merged-result gates on `main`, all green and all re-run after the merge,
+  not before it: `cargo fmt --all --check`, `cargo clippy --workspace
+  --all-targets -- -D warnings` (clean — note the two `large_enum_variant`
+  errors that older entries in this file mention are long since fixed),
+  `cargo test --workspace` (0 failed across every crate), `cargo run -p
+  xtask -- check-layering`, `cargo deny check` (advisories/bans/licenses/
+  sources ok), `npx tsc --noEmit`, `npm test -- --run` (139/139),
+  `npm run build` (`dist/.gitkeep` restored afterwards). Worktree
+  `.worktrees/fix-36-log-tab` removed and branch `fix-36-log-tab` deleted.
+- **Pending/Next Steps:** **T13** (project documentation export) continues on
+  branch `t13-documentation-export` — Task 1 complete and reviewed clean at
+  `bcbaa6c`, Task 2 in flight, Tasks 3-7 queued with their briefs already
+  extracted. After T13: **T14** (project diff/compare, closes **C1**).
+  Nothing is pushed and nothing will be — the standing user instruction is
+  to skip the GitHub workflow entirely until further notice, so `main` is
+  ahead of `origin/main` by design. Still parked and unscheduled:
+  `KNOWN_LIMITATIONS.md` #42 (`command_sync.rs`'s stale module doc),
+  #43/T27 (motion toggle), D12/T28 (in-application help system).
+- **Notes for Codex:** Remaining worktrees are
+  `.worktrees/t13-documentation-export` (active work) and
+  `.worktrees/session3-ets-import` (stale, unrelated, untouched for several
+  sessions — 0 commits ahead of an old `main`). If you need a clean tree,
+  the second one is almost certainly safe to remove, but it is not mine to
+  delete on a guess.

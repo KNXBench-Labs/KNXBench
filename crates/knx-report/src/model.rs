@@ -28,8 +28,24 @@ pub(crate) struct ReportModel {
     /// `project.devices.com_objects()` that enumerates every instance,
     /// orphans included.
     pub orphan_com_objects: Vec<ComObjectInstanceId>,
+    /// A communication object instance whose `text`, `description` or `dpt`
+    /// was present in the source but unparseable
+    /// (`Override::Malformed(raw)`, `provenance.rs:59-64`). Keyed by the
+    /// instance so `render.rs` can show the raw source text next to the
+    /// object it belongs to, rather than only in the warning list — an
+    /// unreadable value is still the user's data and must not be dropped
+    /// (spec §5).
+    pub malformed_com_object_fields: BTreeMap<ComObjectInstanceId, Vec<MalformedField>>,
     pub warnings: Vec<ReportWarning>,
     pub counts: Counts,
+}
+
+/// One `Override::Malformed` field found on a communication object
+/// instance: which field (`"text"`, `"description"` or `"dpt"`) and the raw
+/// source text kept verbatim, exactly as `Override::Malformed` stored it.
+pub(crate) struct MalformedField {
+    pub field: &'static str,
+    pub raw: String,
 }
 
 /// The Summary section's row of counts, each a plain total across the whole
@@ -92,7 +108,7 @@ pub(crate) fn build(project: &Project) -> ReportModel {
     }
 
     let ga_installation = index_group_addresses_by_installation(project);
-    let orphan_com_objects =
+    let (orphan_com_objects, malformed_com_object_fields) =
         index_com_objects(project, &ga_installation, &mut installations, &mut warnings);
 
     let counts = compute_counts(project);
@@ -100,6 +116,7 @@ pub(crate) fn build(project: &Project) -> ReportModel {
     ReportModel {
         installations,
         orphan_com_objects,
+        malformed_com_object_fields,
         warnings,
         counts,
     }
@@ -138,6 +155,15 @@ fn build_installation(
 /// conflated. Mirrors `build_building_forest`'s technique
 /// (`knx-projection/src/lib.rs:396-428`), minus the recursive node build:
 /// `render.rs` walks the nesting itself from each root's own `.children`.
+///
+/// `children` is presence-checked too, the same way [`build_range_forest`]
+/// checks a `GroupRange`'s `children` — a dangling child id is not filtered
+/// out of `BuildingPart::children` here (there is no parallel filtered map
+/// for buildings the way `range_children` is for ranges; `render.rs` keeps
+/// its own defensive skip when it walks the raw list), but it is warned
+/// about, so the finding is visible in the document's anomalies list
+/// instead of silently dropped (CLAUDE.md: never silently discard a
+/// structural oddity).
 fn build_building_forest(
     parts: &[BuildingPart],
     warnings: &mut Vec<ReportWarning>,
@@ -159,6 +185,17 @@ fn build_building_forest(
             Some(_) => {
                 // An ordinary child: neither a root nor an orphan. Reached
                 // through its resolvable parent's own `children` list.
+            }
+        }
+
+        for &child_id in &part.children {
+            if !by_id.contains_key(&child_id) {
+                warnings.push(ReportWarning {
+                    location: format!("building part {}", part.id),
+                    detail: format!(
+                        "child building part {child_id} does not exist in this installation; omitted"
+                    ),
+                });
             }
         }
     }
@@ -286,16 +323,45 @@ fn index_group_addresses_by_installation(project: &Project) -> HashMap<GroupAddr
 /// enumerates every instance including orphans — that is exactly why
 /// orphan detection is possible here, and must not be replaced by a walk
 /// over each device's own `com_objects` list. Builds the inverse
-/// group-address → communication-object index in the same pass.
+/// group-address → communication-object index in the same pass, and (per
+/// spec §5) detects `Override::Malformed` on `text`/`description`/`dpt` —
+/// a direct read of data this pass already visits, not a re-derivation of
+/// `knx-projection`'s layer-cascade resolution.
 fn index_com_objects(
     project: &Project,
     ga_installation: &HashMap<GroupAddressId, usize>,
     installations: &mut [InstallationModel],
     warnings: &mut Vec<ReportWarning>,
-) -> Vec<ComObjectInstanceId> {
+) -> (
+    Vec<ComObjectInstanceId>,
+    BTreeMap<ComObjectInstanceId, Vec<MalformedField>>,
+) {
     let mut orphans = Vec::new();
+    let mut malformed = BTreeMap::new();
 
     for com in project.devices.com_objects() {
+        let fields: [(&'static str, Option<&str>); 3] = [
+            ("text", com.text.malformed()),
+            ("description", com.description.malformed()),
+            ("dpt", com.dpt.malformed()),
+        ];
+        let mut this_com_malformed = Vec::new();
+        for (field, raw) in fields {
+            if let Some(raw) = raw {
+                warnings.push(ReportWarning {
+                    location: format!("communication object {}", com.id),
+                    detail: format!("{field} is malformed and was kept verbatim: {raw:?}"),
+                });
+                this_com_malformed.push(MalformedField {
+                    field,
+                    raw: raw.to_string(),
+                });
+            }
+        }
+        if !this_com_malformed.is_empty() {
+            malformed.insert(com.id, this_com_malformed);
+        }
+
         let owned = match project.devices.get(com.device) {
             None => {
                 warnings.push(ReportWarning {
@@ -341,7 +407,7 @@ fn index_com_objects(
         }
     }
 
-    orphans
+    (orphans, malformed)
 }
 
 fn compute_counts(project: &Project) -> Counts {
@@ -372,7 +438,7 @@ fn compute_counts(project: &Project) -> Counts {
 
 #[cfg(test)]
 mod tests {
-    use knx_core::{BuildingPartType, DeviceId, GroupAddressStyle, IndividualAddress};
+    use knx_core::{BuildingPartType, DeviceId, GroupAddressStyle, IndividualAddress, Override};
 
     use super::*;
     use crate::testutil::{
@@ -409,6 +475,21 @@ mod tests {
             .warnings
             .iter()
             .any(|w| w.location.contains("building part 5") && w.detail.contains("99")));
+    }
+
+    #[test]
+    fn a_building_part_with_a_dangling_child_warns() {
+        let mut project = crate::testutil::empty_project(GroupAddressStyle::Free);
+        let parent = building_part(1, "Parent", BuildingPartType::Building, None, &[2, 99]);
+        let real_child = building_part(2, "Child", BuildingPartType::Room, Some(1), &[]);
+        project.installations[0].buildings = vec![parent, real_child];
+
+        let model = build(&project);
+
+        assert!(model
+            .warnings
+            .iter()
+            .any(|w| w.location.contains("building part 1") && w.detail.contains("99")));
     }
 
     #[test]
@@ -577,6 +658,47 @@ mod tests {
             .warnings
             .iter()
             .any(|w| w.detail.contains("404") && w.detail.contains("no installation holds")));
+    }
+
+    #[test]
+    fn a_malformed_dpt_warns_and_its_raw_text_is_recorded_against_its_com_object() {
+        let mut project = crate::testutil::empty_project(GroupAddressStyle::Free);
+        project.devices.insert(device(1, &[1]));
+        let mut com = linked_com_object(1, 1, 1);
+        com.dpt = Override::Malformed("not-a-real-dpt".to_string());
+        project.devices.insert_com_object(com);
+
+        let model = build(&project);
+
+        assert!(model
+            .warnings
+            .iter()
+            .any(|w| w.location.contains("communication object 1")
+                && w.detail.contains("dpt")
+                && w.detail.contains("not-a-real-dpt")));
+
+        let fields = model
+            .malformed_com_object_fields
+            .get(&ComObjectInstanceId(1))
+            .expect("malformed dpt should be recorded against its com object");
+        assert_eq!(fields.len(), 1);
+        assert_eq!(fields[0].field, "dpt");
+        assert_eq!(fields[0].raw, "not-a-real-dpt");
+    }
+
+    #[test]
+    fn a_com_object_with_no_malformed_fields_is_absent_from_the_malformed_map() {
+        let mut project = crate::testutil::empty_project(GroupAddressStyle::Free);
+        project.devices.insert(device(1, &[1]));
+        project
+            .devices
+            .insert_com_object(linked_com_object(1, 1, 1));
+
+        let model = build(&project);
+
+        assert!(!model
+            .malformed_com_object_fields
+            .contains_key(&ComObjectInstanceId(1)));
     }
 
     #[test]

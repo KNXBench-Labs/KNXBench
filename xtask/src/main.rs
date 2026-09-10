@@ -76,12 +76,31 @@ fn check_layering() -> ExitCode {
         "knx-csv",
         &["knx-store", "knx-etsproj", "knx-productdb"],
     ));
+    // knx-report (T13) renders the project-documentation HTML export. Like
+    // knx-csv it stays a pure text-out crate: no project store, no
+    // import/export archive parser, no product database. And like
+    // knx-projection, which it depends on to resolve communication-object
+    // text, it stays exactly as free of IO and storage as knx-core itself —
+    // a document renderer has no business with a database, an archive
+    // parser, or an async runtime.
+    violations.extend(layering::forbidden_reachable(
+        &graph,
+        "knx-report",
+        &["knx-store", "knx-etsproj", "knx-productdb"],
+    ));
+    violations.extend(layering::forbidden_reachable(
+        &graph,
+        "knx-report",
+        layering::CORE_FORBIDDEN,
+    ));
 
     if violations.is_empty() {
         println!(
             "layering ok: knx-core reaches none of {:?}; knx-etsproj does not reach knx-store; \
              knx-productdb reaches neither knx-etsproj nor knx-store; knx-projection reaches \
-             none of {:?}; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb",
+             none of {:?}; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; \
+             knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}",
+            layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN
         );

@@ -1931,6 +1931,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "knx-report"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "knx-core",
+ "knx-projection",
+]
+
+[[package]]
 name = "knx-secure"
 version = "0.0.0"
 

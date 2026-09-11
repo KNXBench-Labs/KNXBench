@@ -138,7 +138,10 @@ parameter.rs`.
 1. **Add `Command::SetParameterValue` and `Command::RestoreParameterValue`**
    exactly as design D24 specifies (fields: `id: ParameterInstanceId`,
    `device: DeviceId`, `ets_id: String`, `raw: String` for `Set`;
-   `raw: Override<String>` for `Restore`). Doc comments cross-reference
+   `raw: Option<String>` for `Restore` — `Override<String>` was this plan's
+   first answer and does not fit, since `ParameterInstance.raw` is a plain
+   `String` rather than a source-attribute `Override`; see D24). Doc
+   comments cross-reference
    `SetComObjectFlag`/`RestoreComObjectFlag` for why the two variants
    cannot share one shape, matching that pair's own existing comment
    style.

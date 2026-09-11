@@ -146,12 +146,21 @@ decisions. The facts below are either already-cited corpus evidence
   enum validation is structurally impossible inside `knx-core`. D24 states
   the consequence: that validation has to happen in `knx-server`, before a
   `Command` is even constructed.
-- **Code fact.** `Override<T>` (`Absent`/`Present`) already exists and is
-  already the undo-payload shape for `RestoreComObjectDescription`
-  (`Override<Text>`), `RestoreComObjectDpt` (`Override<DptRef>`) and
-  `RestoreComObjectFlag` (`Override<bool>`) in `crates/knx-core/src/
-  command.rs`. D24's inverse command reuses it rather than inventing a new
-  "did this exist before" shape.
+- **Code fact, corrected during Task 2.** `Override<T>` exists in
+  `crates/knx-core/src/provenance.rs:51` and is the undo-payload shape for
+  `RestoreComObjectDescription` (`Override<Text>`), `RestoreComObjectDpt`
+  (`Override<DptRef>`) and `RestoreComObjectFlag` (`Override<bool>`) in
+  `crates/knx-core/src/command.rs`. Its variants are **not** `Absent`/
+  `Present`, as an earlier revision of this design asserted; they are
+  `Absent`, `Empty`, `Value(Resolved<T>)` and `Malformed(String)` — it
+  models a *source attribute's* four real ETS states, which is why those
+  three commands use it: the fields they restore are themselves
+  `Override`s. `ParameterInstance.raw` is a plain `String`
+  (`crates/knx-core/src/parameter.rs:21`), so the state D24's inverse
+  command restores is only "a row existed carrying this string" versus "no
+  row existed at all". That is `Option<String>`, and D24 uses it; reusing
+  `Override<String>` here would have meant inventing an `Override` for a
+  field that is not one.
 - **Code fact.** `knx_core::device::DeviceInstance.source: SourceRef {
   path, ets_id }` already exists per device, and every existing
   `ParameterInstance` created by import shares its owning device's file
@@ -582,7 +591,7 @@ RestoreParameterValue {       // undo/redo form, same reason RestoreComObjectFla
     id: ParameterInstanceId,
     device: DeviceId,
     ets_id: String,
-    raw: Override<String>,    // Absent: no ParameterInstance existed before, undo deletes the row; Present(prior): restore that exact string
+    raw: Option<String>,      // None: no ParameterInstance existed before, undo deletes the row; Some(prior): restore that exact string
 },
 ```
 

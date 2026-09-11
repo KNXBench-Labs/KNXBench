@@ -174,7 +174,13 @@ states only the chain's *shape*; see [ADR-0013](adr/0013-module-instance-represe
 for why `ModuleInstance` is a first-class entity and
 [ADR-0014](adr/0014-group-object-tree-authoritative-source.md) for why
 `GroupObjectTree`, not `ComObjectInstanceRef`, is the authoritative source
-for which module instance a given object belongs to.
+for which module instance a given object belongs to. The `ModuleDef` side
+of the chain — its own `Arguments`/`Static`/`Dynamic`, argument binding,
+and the id-mangling rule connecting its internal ids to a project's
+instance-level ones — is now researched at the application-program level;
+see [RESEARCH.md](RESEARCH.md) §4.4 (R4 spike, 2026-09-11). Expansion
+itself is not implemented (`knx-productdb` still reports
+`ModuleNotExpanded`, [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted)).
 
 ## 4. Entities
 

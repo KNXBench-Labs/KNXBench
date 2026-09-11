@@ -22,7 +22,7 @@ Four things are explicitly out of v1:
 | Excluded | Reason |
 | --- | --- |
 | Device parameter editing | RESEARCH R3 — the Session 4 spike (RESEARCH §4.3) found the `@test` value grammar is Standard-normative, but the `choose`/`when`/`Channel`/`ParameterBlock` structural grammar is still corpus-observed only. T18 slice 1 (2026-09-11) built a headless evaluator over the stored `Dynamic` tree in `knx-productdb`; T18 slice 2 (same day) made it expand a `Module` node into its `ModuleDef`'s own tree too. No UI reads either, and no editor exists yet (T18, GAP_ANALYSIS_ETS.md) |
-| Commissioning and device download | RESEARCH §8.3 — bricking risk, an undocumented `Legacy*` matrix, vendor DLLs. **Not a permanent exclusion**: the user ruled 2026-09-11 that this is required, blocked until the KNX specification database is finished ([KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)) |
+| Commissioning and device download | RESEARCH §8.3/§8.4 — the generic load/unload/reset/memory-write procedures are now documented (R5 spike, §8.4), but a product-specific `Legacy*` compatibility-flag matrix, vendor DLLs and bricking risk on real hardware remain. **Not a permanent exclusion**: the user ruled 2026-09-11 that this is required ([KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)) |
 | KNX Secure | RESEARCH §9 — no sample material to verify against; the subsystem exists but stays empty |
 | Direct `.knxprod` import for master data scheme ≥ 12 | RESEARCH §10 — the encryption layer is unresolved |
 

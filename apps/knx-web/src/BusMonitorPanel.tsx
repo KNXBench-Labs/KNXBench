@@ -1,7 +1,21 @@
 // apps/knx-web/src/BusMonitorPanel.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
-import type { BusMonitorStartResponse, BusMonitorStopResponse, BusTelegramRow } from "./api";
+import type { BusMonitorStopResponse, BusTelegramRow } from "./api";
+import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
+
+// The identity of the one session this panel can ever be attached to
+// (`AppState.bus_session` holds at most one — D3/D6). Deliberately not
+// `BusMonitorStartResponse`: that DTO carries `assignedAddress`, which a
+// *reattached* session (see the mount effect below) does not have — a
+// `/telegrams` poll response never repeats the address `/start` returned
+// once, so there is nothing honest to put there. `assignedAddress: null`
+// means exactly "unknown, because this panel did not start the session
+// itself," not "the tunnel has no address."
+interface AttachedSession {
+  sessionId: number;
+  assignedAddress: string | null;
+}
 
 // The four `ApplicationService` variant names design spec §5's checkbox
 // filter enumerates. `bus.rs`'s synthetic `"SessionClosed"` marker (pushed
@@ -41,6 +55,40 @@ function decodedSummary(row: BusTelegramRow): string {
   return row.decoded.dpt ? `${row.decoded.dpt}: ${row.decoded.text}` : row.decoded.text;
 }
 
+/// `DecodedValue::Conflict`'s wire text is `"conflicting DPTs: <names>"`
+/// (`bus.rs`'s `format_dpt_list`, comma-joined `DptRef::to_string()`s) —
+/// there is no separate names array on the wire (`DecodedValueDto` carries
+/// only `kind`/`text` for the `conflict` case), so this strips the known
+/// prefix to recover exactly the `{names}` the compose form's verbatim
+/// message needs. Falls back to the whole text unchanged if the prefix
+/// ever stops matching, rather than silently emitting an empty name list —
+/// a fallback, not a case this is expected to hit.
+const CONFLICT_TEXT_PREFIX = "conflicting DPTs: ";
+
+function conflictNames(text: string): string {
+  return text.startsWith(CONFLICT_TEXT_PREFIX) ? text.slice(CONFLICT_TEXT_PREFIX.length) : text;
+}
+
+/// Task 5, item 1/2: what the compose form should prefill from a clicked
+/// row, mirroring `resolve_write_value`'s three-way outcome (design §6).
+/// Only a `"value"`-decoded row hands the form a `dpt` at all; every other
+/// `decoded.kind` (`"unresolved"`, `"conflict"`, `"error"`, or no `decoded`
+/// at all) prefills a blank DPT field — `"error"` collapses into the same
+/// `"none"` bucket as `"unresolved"` because `DecodedValueDto`'s `error`
+/// case does not carry a `dpt` either (`bus_routes.rs`'s `DecodedValueDto`
+/// `From` impl), so there is nothing more specific to tell the form.
+function resolutionFromRow(row: BusTelegramRow): ComposeResolution {
+  if (row.decoded?.kind === "value" && row.decoded.dpt) {
+    return { kind: "single", dpt: row.decoded.dpt };
+  }
+  if (row.decoded?.kind === "conflict") {
+    return { kind: "conflict", names: conflictNames(row.decoded.text) };
+  }
+  return { kind: "none" };
+}
+
+let nextComposeSeedKey = 1;
+
 /// Live view of `/api/bus/monitor/*` (design spec `docs/superpowers/specs/
 /// 2026-09-11-group-monitor-design.md` §4). Needs no open project — same
 /// reasoning as `LogPanel` (`KNOWN_LIMITATIONS.md` #36, part A):
@@ -52,12 +100,13 @@ function decodedSummary(row: BusTelegramRow): string {
 /// This is not a claim of ETS Group Monitor parity, nor of anything
 /// verified against real hardware — see the design spec's §5/§7.
 ///
-/// Composing and sending a value (`POST /api/bus/write`) is a different
-/// task's form; this panel only connects, watches, filters, and
-/// disconnects.
-export default function BusMonitorPanel() {
+/// `projectOpen` is threaded from `App.tsx` (same `tree !== null` fact
+/// `LogPanel` already receives as `tree`) purely so the compose form can
+/// state up front that no project means no automatic DPT resolution,
+/// rather than the user discovering that from a failed send.
+export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean }) {
   const [gatewayInput, setGatewayInput] = useState("");
-  const [session, setSession] = useState<BusMonitorStartResponse | null>(null);
+  const [session, setSession] = useState<AttachedSession | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [pollError, setPollError] = useState<string | null>(null);
   const [stopSummary, setStopSummary] = useState<BusMonitorStopResponse | null>(null);
@@ -69,11 +118,89 @@ export default function BusMonitorPanel() {
   const [textFilter, setTextFilter] = useState("");
   const [serviceFilters, setServiceFilters] = useState<ServiceFilters>(defaultServiceFilters);
 
+  // What `BusComposeForm` is seeded with — `key` changes every time a row
+  // is clicked so the form (a child component, task 5) fully remounts and
+  // picks up the new `destination`/`resolution` as fresh initial state,
+  // rather than this panel reaching into that component's internals to
+  // overwrite fields the user may already be mid-edit on for an unrelated
+  // send. Starts at a resting "nothing clicked yet" seed — the form still
+  // renders and works from here (design §6: "the form still works" with no
+  // row selected at all, not only with no project open).
+  const [composeSeed, setComposeSeed] = useState<{
+    key: number;
+    destination: string;
+    resolution: ComposeResolution;
+  }>({ key: 0, destination: "", resolution: { kind: "unknown" } });
+
+  function selectRow(row: BusTelegramRow) {
+    setComposeSeed({
+      key: nextComposeSeedKey++,
+      destination: row.destination,
+      resolution: resolutionFromRow(row),
+    });
+  }
+
   // Advanced by every poll response's `nextSince`. A `ref`, not state: the
   // next tick's poll must read the cursor synchronously as it fires, not
   // wait for a render that may not have happened yet (design spec §4.3:
   // "cursor advanced by nextSince").
   const sinceRef = useRef(0);
+
+  // Set by the mount-time reattach effect right before it adopts an
+  // existing session, so the *next* run of the polling effect below skips
+  // its own "first poll immediately" call — the reattach poll below already
+  // *was* that first poll (its rows/droppedBefore/cursor are already
+  // applied), so polling again immediately would just be a wasted request
+  // a beat before the interval would have fired anyway.
+  const skipNextImmediatePollRef = useRef(false);
+
+  // Task 5's second inherited fix: on mount, ask whether a session already
+  // exists instead of assuming there is none. Before this, navigating away
+  // from the panel (Log button, selecting an entity) left the server-side
+  // session running — correct, the session is not owned by a React
+  // component — but reopening the panel always showed the Connect form,
+  // and pressing Connect hit a `409` with no way to clear it short of a
+  // process restart. A `404` here means what it already means everywhere
+  // else on this API (`bus_routes.rs`'s `poll_telegrams`): no session
+  // exists, so the Connect form is exactly right, same as today. A `200`
+  // means one does, and its `droppedBefore` is real — it must reach the
+  // same gap notice a mid-session poll would trigger, not be discarded
+  // just because this panel was not mounted when the gap happened (the
+  // whole point of D3, applied here to the panel's own absence, not only
+  // to a slow poller). A session already `"closed"` (the gateway dropped it
+  // while nothing was mounted) still reattaches: its rows are worth
+  // showing and `stopBusMonitor()` still ends it, same as if the panel had
+  // stayed mounted the whole time — `status === "closed"` alone does not
+  // gate anything in the render below, so this falls out for free.
+  useEffect(() => {
+    let cancelled = false;
+    async function reattach() {
+      try {
+        const response = await api.pollBusTelegrams(0);
+        if (cancelled) return;
+        sinceRef.current = response.nextSince;
+        setRows(response.telegrams);
+        setDroppedBefore(response.droppedBefore);
+        setStatus(response.status);
+        skipNextImmediatePollRef.current = true;
+        setSession({ sessionId: response.sessionId, assignedAddress: null });
+      } catch (e) {
+        if (cancelled) return;
+        if (api.errorStatus(e) === 404) return; // no session — Connect form, as before.
+        // Anything else (network error, 500, …) is not silently
+        // swallowed either, even though it leaves the same Connect-form
+        // state a 404 would: the user can still see what went wrong.
+        setConnectError(api.errorMessage(e));
+      }
+    }
+    void reattach();
+    return () => {
+      cancelled = true;
+    };
+    // Deliberately empty deps — this runs once per mount, matching the
+    // brief's "on mount, ask GET /telegrams" (not on every session change;
+    // `connect()`/`disconnect()` manage `session` themselves afterwards).
+  }, []);
 
   useEffect(() => {
     if (!session) return;
@@ -93,7 +220,11 @@ export default function BusMonitorPanel() {
       }
     }
 
-    void poll(); // first poll immediately, not after the first interval tick
+    if (skipNextImmediatePollRef.current) {
+      skipNextImmediatePollRef.current = false;
+    } else {
+      void poll(); // first poll immediately, not after the first interval tick
+    }
     const id = setInterval(() => void poll(), POLL_INTERVAL_MS);
     return () => {
       cancelled = true;
@@ -111,7 +242,7 @@ export default function BusMonitorPanel() {
       setStatus("active");
       setStopSummary(null);
       setPollError(null);
-      setSession(started);
+      setSession({ sessionId: started.sessionId, assignedAddress: started.assignedAddress });
     } catch (e) {
       setConnectError(api.errorMessage(e));
     }
@@ -170,7 +301,8 @@ export default function BusMonitorPanel() {
       {connectError && <span className="field-error">{connectError}</span>}
       {session && (
         <p className="bus-monitor-session">
-          Session {session.sessionId} — assigned address {session.assignedAddress}
+          Session {session.sessionId}
+          {session.assignedAddress && <> — assigned address {session.assignedAddress}</>}
           {status === "closed" && " — closed by gateway"}
         </p>
       )}
@@ -193,6 +325,14 @@ export default function BusMonitorPanel() {
           {droppedBefore} telegram(s) could not be kept (buffer capacity or a slow poller) and are
           missing from this view.
         </p>
+      )}
+      {session && (
+        <BusComposeForm
+          key={composeSeed.key}
+          destination={composeSeed.destination}
+          resolution={composeSeed.resolution}
+          projectOpen={projectOpen}
+        />
       )}
       {session && (
         <div className="bus-monitor-filters">
@@ -237,6 +377,9 @@ export default function BusMonitorPanel() {
                 <tr
                   key={row.seq}
                   className={row.service === "SessionClosed" ? "bus-monitor-row-marker" : undefined}
+                  onClick={() => selectRow(row)}
+                  style={{ cursor: "pointer" }}
+                  title="Click to prefill the send form above with this row's destination"
                 >
                   <td>{row.seq}</td>
                   <td>{row.timestamp}</td>

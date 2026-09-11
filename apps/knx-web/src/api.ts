@@ -11,12 +11,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new Error(body?.error ?? `${response.status} ${response.statusText}`);
+    throw requestError(response.status, body?.error ?? `${response.status} ${response.statusText}`);
   }
   if (response.headers.get("content-length") === "0") {
     return undefined as T;
   }
   return response.json() as Promise<T>;
+}
+
+// A plain `Error` with the HTTP status tacked on — not a subclass, so a
+// caller can duck-type `(e as { status?: number }).status` without needing
+// an `instanceof` check against a class this module would then have to keep
+// exported through every `vi.mock("./api", ...)` factory in the test suite.
+// `BusMonitorPanel.tsx`'s mount-time reattach uses this to tell "no session
+// exists yet" (`404`) apart from every other failure, which it does not
+// silently swallow the same way.
+function requestError(status: number, message: string): Error {
+  const error = new Error(message) as Error & { status: number };
+  error.status = status;
+  return error;
 }
 
 export function importProject(path: string): Promise<ProjectTree> {
@@ -774,12 +787,11 @@ export interface BusMonitorTelegramsResponse {
   telegrams: BusTelegramRow[];
 }
 
-// `WriteRequest`/`WriteResponse` (bus_routes.rs) — bindings only; T15
-// task 4 (this file's panel) never calls `writeBusValue`. Composing and
-// sending a value is task 5's compose form, not this one, but the DTOs
-// are hand-written here alongside their three siblings since all four
-// routes share this file's provenance comment and none of the other
-// three has anywhere better to live either.
+// `WriteRequest`/`WriteResponse` (bus_routes.rs). `writeBusValue()` is
+// task 5's compose form's own binding; the DTO is hand-written here
+// alongside its three siblings since all four routes share this file's
+// provenance comment and none of the other three has anywhere better to
+// live either.
 export interface BusWriteResponse {
   encodedPayload: string;
   service: "GroupValueWrite";
@@ -822,4 +834,16 @@ export function redo(): Promise<ProjectTree> {
 /// `Error`, that produced a doubled `Error: <message>` in the UI.
 export function errorMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/// The HTTP status `request()` attached to an error it threw (see
+/// `requestError`), or `undefined` for anything that did not come from
+/// `request()` at all (a thrown non-`Error`, a bug elsewhere). Duck-typed
+/// rather than an `instanceof` check against an exported error class — see
+/// `requestError`'s own comment on why.
+export function errorStatus(e: unknown): number | undefined {
+  if (e instanceof Error && "status" in e && typeof (e as { status: unknown }).status === "number") {
+    return (e as { status: number }).status;
+  }
+  return undefined;
 }

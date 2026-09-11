@@ -695,6 +695,118 @@ export function diffProject(path: string): Promise<ProjectDiffReport> {
   });
 }
 
+// ---------------------------------------------------------------------
+// `/api/bus/*` (T15 task 3, `apps/knx-server/src/bus_routes.rs`) DTOs.
+// Server-local, no `ts-rs` binding — same hand-written convention as
+// `LogEntry` above, field names matching that file's `#[serde(rename_all
+// = "camelCase")]` DTO structs exactly (design spec
+// `docs/superpowers/specs/2026-09-11-group-monitor-design.md` §4.3 states
+// the wire shape in prose; where its JSON *examples* disagree with the
+// actual Rust — the DPT text below is the one confirmed case — the Rust
+// wins, per that file's own doc comment on `WriteRequest`).
+// ---------------------------------------------------------------------
+
+// `DecodedValueDto` (bus_routes.rs, struct `DecodedValueDto`) — D4's
+// four-way decode outcome. `dpt`/`error` are each only ever present for
+// one `kind` (`"value"`/`"error"` respectively) — modelled as always-
+// optional rather than a discriminated union per `kind`, because nothing
+// here needs the narrowing and a union would just move the same
+// `undefined` checks into every call site. `dpt`, when present, is
+// `DptRef`'s `Display` text (`"DPST-1-1"`, not the dotted `"1.001"` the
+// design spec's own §4.3 example shows — confirmed against the shipped
+// encoder, not invented here) — rendered exactly as received, no
+// dotted-notation prettifier added by this task.
+export interface BusDecodedValue {
+  kind: "value" | "unresolved" | "conflict" | "error";
+  dpt?: string;
+  text: string;
+  error?: string;
+}
+
+// `TelegramRowDto` (bus_routes.rs, struct `TelegramRowDto`). `service` is
+// typed as a plain `string`, not a literal union of
+// `ApplicationService`'s four variant names: `bus.rs`'s
+// `push_closed_marker` also pushes a row with `service: "SessionClosed"`,
+// a synthetic marker outside that enum on purpose (its own doc comment:
+// "cannot be mistaken for real bus traffic by anything that later renders
+// this row") — a union typed to only the four real services would make
+// that marker a type error the moment it arrived.
+export interface BusTelegramRow {
+  seq: number;
+  timestamp: string;
+  source: string;
+  destination: string;
+  destinationName: string | null;
+  service: string;
+  rawPayload: string | null;
+  decoded: BusDecodedValue | null;
+}
+
+// `StartResponse` (bus_routes.rs).
+export interface BusMonitorStartResponse {
+  sessionId: number;
+  assignedAddress: string;
+}
+
+// `StopResponse` (bus_routes.rs). `warning` is `skip_serializing_if`
+// there, hence optional here — present only when the drain task's own
+// teardown panicked after an otherwise-successful stop (its doc comment:
+// "a panic surfaced by the server and then swallowed by the UI is worse
+// than not surfacing it at all"). This is the one field the design spec's
+// §4.3 prose does not mention at all; it was added on review during task
+// 3 and is real on the wire.
+export interface BusMonitorStopResponse {
+  sessionId: number;
+  telegramCount: number;
+  droppedCount: number;
+  warning?: string;
+}
+
+// `TelegramsResponse` (bus_routes.rs). `droppedBefore` is the buffer's
+// running total at response time, not scoped to `since` — the caller
+// compares it against what it already knew to notice a fresh gap (see
+// `BusMonitorPanel.tsx`).
+export interface BusMonitorTelegramsResponse {
+  sessionId: number;
+  status: "active" | "closed";
+  nextSince: number;
+  droppedBefore: number;
+  telegrams: BusTelegramRow[];
+}
+
+// `WriteRequest`/`WriteResponse` (bus_routes.rs) — bindings only; T15
+// task 4 (this file's panel) never calls `writeBusValue`. Composing and
+// sending a value is task 5's compose form, not this one, but the DTOs
+// are hand-written here alongside their three siblings since all four
+// routes share this file's provenance comment and none of the other
+// three has anywhere better to live either.
+export interface BusWriteResponse {
+  encodedPayload: string;
+  service: "GroupValueWrite";
+}
+
+export function startBusMonitor(gateway: string): Promise<BusMonitorStartResponse> {
+  return request("/api/bus/monitor/start", { method: "POST", body: JSON.stringify({ gateway }) });
+}
+
+export function stopBusMonitor(): Promise<BusMonitorStopResponse> {
+  return request("/api/bus/monitor/stop", { method: "POST" });
+}
+
+// `since` defaults to `0` server-side too (`TelegramsQuery.since:
+// Option<u64>`) — always sent explicitly here so a caller never has to
+// remember that omitting it means "from the start."
+export function pollBusTelegrams(since: number): Promise<BusMonitorTelegramsResponse> {
+  return request(`/api/bus/monitor/telegrams?since=${since}`);
+}
+
+export function writeBusValue(destination: string, dpt: string | null, value: string): Promise<BusWriteResponse> {
+  return request("/api/bus/write", {
+    method: "POST",
+    body: JSON.stringify({ destination, dpt, value }),
+  });
+}
+
 export function undo(): Promise<ProjectTree> {
   return request("/api/undo", { method: "POST" });
 }

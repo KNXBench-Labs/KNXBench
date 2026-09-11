@@ -843,9 +843,12 @@ Known gaps carried forward, none blocking Session 5:
   `devices.rs`/`group.rs` if that module grows — harmless today.
 - The `when/@test` value grammar that would make device parameters
   interpretable is now documented (RESEARCH R3/§4.3, spike run
-  2026-09-11) — but device parameters are still not interpretable: the
-  `Dynamic` tree's structural grammar remains corpus-observed only, and
-  no evaluator or editor exists. See the dated entry below and T18
+  2026-09-11); the `Dynamic` tree's structural grammar remains
+  corpus-observed only. T18's first slice (also 2026-09-11) built a
+  headless evaluator over the stored tree in `knx-productdb` — but device
+  parameters are still not interpretable *by a user*: nothing wires the
+  evaluator into any UI, `Module` expansion is not implemented, and no
+  parameter editor exists. See the dated entry below and T18
   ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5).
 - A program value behind an instance-level `Empty` slot stays invisible in
   the model ([KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §12); lifted by
@@ -1875,3 +1878,76 @@ research — it now needs a design decision on the no-match-branch policy
 (common in the corpus: 5570/8732 no-default `choose` elements have a legal
 value no `when` covers) and a defensive parser posture, both ordinary
 implementation work, not research.
+
+**T18 slice 1, `Dynamic` tree parse/store/evaluate (2026-09-11).** The
+first of three planned slices ([design spec](superpowers/specs/2026-09-11-dynamic-tree-parse-and-evaluate-design.md),
+[plan](superpowers/plans/2026-09-11-dynamic-tree-parse-and-evaluate.md)).
+`knx-productdb` gains a `dynamic` module, no other crate touched:
+
+- **Parse and store (schema v3).** A new `dynamic_node` table stores one
+  row per element of the `ApplicationProgram`'s own `Dynamic` tree and
+  each `ModuleDef`'s own, in document order, `kind` as the literal XML
+  element name (never a mapped enum — an unrecognized kind is stored
+  under its own name, not dropped). Modelled attributes get dedicated
+  columns; every other attribute lands in `extra` and is reported through
+  the existing `UnknownCollector`. `@test` is stored verbatim, unparsed.
+  The `Static` parser's pre-existing `Dynamic`-skip is untouched; the new
+  parser runs as a second pass over the same bytes in the same ingest
+  transaction.
+- **v2→v3 backfill.** The migration re-reads every stored `source_file`
+  blob through the new parser, so a database installed before this build
+  gains its `dynamic_node` rows without a re-install (the payoff
+  [ADR-0011](adr/0011-product-database-storage.md)'s blob store was kept
+  for). Each blob's parse runs inside its own `SAVEPOINT`: a blob that
+  fails to parse leaves zero `dynamic_node` rows and a recorded
+  `ingest_unknown` diagnostic (`DynamicBackfillError`), and never aborts
+  the rest of the migration.
+- **A pure, headless evaluator** (`dynamic::evaluate`), single-pass,
+  depth-first, document order: given a loaded tree and a parameter-value
+  map (3-tier fallback — supplied value, then `parameter_ref.value`, then
+  `parameter.value`), it returns the active `ParameterRef`/`ComObjectRef`
+  ids (deduplicated by first occurrence) plus diagnostics. Every `Test`
+  shape in `Condition_t` is implemented (`=`, `!=`, `>`, `<`, `>=`, `<=`,
+  a single number, a space-separated list). No matching branch activates
+  nothing under that `choose` and is reported (`NoBranchMatched`) — an
+  **inference** (RESEARCH §4.3), not a documented rule. A missing or
+  non-numeric controlling value gets its own diagnostics
+  (`MissingValue`/`NonNumericValue`) rather than being folded into
+  `NoBranchMatched`. A `TypeNone`-controlled `choose` takes its sole
+  default branch without a comparison, exactly as all 604 corpus
+  occurrences look; any other shape under it is
+  `UnexpectedTypeNoneShape`. An unrecognized element kind is
+  `UnrecognizedNode` and its subtree is not descended. **`Module` is
+  recognized but not expanded — it evaluates to `ModuleNotExpanded`.**
+  Module expansion (slice 2) and the editor (slice 3) are not built.
+  Nothing outside the crate's own tests calls the evaluator; it is dead
+  code from every other crate's perspective, exactly as planned. Import
+  is unaffected — it still reads `GroupObjectTree` ([ADR-0014](adr/0014-group-object-tree-authoritative-source.md))
+  and never evaluates this tree.
+- **Corpus evidence**, measured against the four `.knxprod` archives under
+  `OriginalData/ProductDatabases/`: stored `choose`/`when` counts match
+  RESEARCH §4.3 exactly (1646/2252, 5/5, 509/982, 0/0), zero dangling
+  `choose/@ParamRefId`, zero `UnparsableTest`/`UnresolvedParamRef`/
+  `UnexpectedTypeNoneShape` diagnostics anywhere, and the `@test` shape
+  histogram matches §4.3 restricted to these archives. One research note
+  came out of this measurement, added to [RESEARCH.md §4.3](RESEARCH.md):
+  all 62 corpus `SPACE_LIST_OF_INTEGERS` `@test` values, like all 13
+  `OP_NUMBER` values, occur in the MDT archive (`prod3`) alone.
+
+Two commits (`66ef369` parse/store, `44b06a1` evaluate/backfill), one fix
+round each after review (`c7d9ed5`, `2368292`) — a `default="false"`
+attribute silently dropped, a self-closing `<ModuleDef/>` leaking its id
+onto later siblings, and a mid-file backfill parse failure leaving stray
+rows behind (the `SAVEPOINT` fix above) were the load-bearing findings;
+full detail in each fix round's own report. `cargo test --workspace`: 809
+passed / 0 failed / 3 ignored, up from 784 before this slice. Closes no
+`GAP_ANALYSIS_ETS.md` item outright — **A3** moves from "not interpreted"
+to "partially closed": an evaluator exists, nothing surfaces it. This
+docs-only pass (T18 slice 1's third task) reconciles
+[KNOWN_LIMITATIONS.md §3/§12/§47](KNOWN_LIMITATIONS.md), [COMPATIBILITY.md](COMPATIBILITY.md),
+[DATA_MODEL.md §10](DATA_MODEL.md), [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md),
+[ROADMAP.md](ROADMAP.md), [ARCHITECTURE.md](ARCHITECTURE.md) and
+[IMPORT_EXPORT.md](IMPORT_EXPORT.md) with what actually shipped, and
+retires the two source comments (`knx-core/src/parameter.rs`,
+`knx-core/src/module.rs`) that still called the `Dynamic` grammar
+unresearched.

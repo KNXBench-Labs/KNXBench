@@ -377,9 +377,10 @@ reported (`EnrichmentIssue::AmbiguousDpt`) instead of guessed.
 
 **Not part of this session's delivery**, carried forward: parameter
 *interpretation* (evaluating the `Dynamic` tree — its `when/@test` value
-grammar is now documented, RESEARCH §4.3/R3, but the tree's structural
-grammar and an evaluator are not — the raw bytes are retained regardless,
-per ADR-0011); a layer stack in
+grammar is now documented, RESEARCH §4.3/R3, and its structural grammar is
+corpus-observed; `knx-productdb` evaluates it headlessly as of T18 slice 1
+(2026-09-11), but nothing outside that crate calls it — the raw bytes are
+retained regardless, per ADR-0011); a layer stack in
 `Override<T>` that would make an `Empty`-slot program value visible without
 risking the export change ADR-0012 rules out; `.knxprod` direct ingest for
 master data scheme ≥ 12 (KNOWN_LIMITATIONS §11); schema 23 manufacturer
@@ -565,9 +566,10 @@ in this file: manufacturer, product and application-program names are not
 resolved (the identifiers are printed verbatim — resolving them needs
 `knx-productdb`, which this crate must not reach); parameter values and
 module-instance arguments are counted but not listed (they remain
-uninterpreted raw data — the `@test` value grammar that would let a future
-reader evaluate them is documented, RESEARCH §4.3/R3, but no evaluator
-exists yet); binary data is referenced by name and id
+uninterpreted raw data here — the `@test` value grammar that would let a
+reader evaluate them is documented, RESEARCH §4.3/R3, and `knx-productdb`
+now evaluates it headlessly (T18 slice 1), but `knx-report` does not reach
+that crate either); binary data is referenced by name and id
 only; text renders in the project's default language only; and the
 document says plainly that it is not an ETS report and has not been
 compared to one.

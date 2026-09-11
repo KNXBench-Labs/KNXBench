@@ -1,8 +1,11 @@
 //! Module instances (ADR-0013): a schema-≥21 device's modular application
 //! programs. Mirrors `parameter.rs`'s shape — retained but uninterpreted.
 //! `repeat_index` and `arguments` feed the `Dynamic/choose/when` grammar
-//! (KNOWN_LIMITATIONS §3, unresearched); import never needs to evaluate it,
-//! because `GroupObjectTree` already carries ETS's own answer (ADR-0014).
+//! (KNOWN_LIMITATIONS §3) — documented, not unresearched, since RESEARCH
+//! §4.3 (`knx-productdb` evaluates it headlessly as of T18 slice 1,
+//! 2026-09-11, but `Module` expansion is not part of that); import never
+//! needs to evaluate it, because `GroupObjectTree` already carries ETS's
+//! own answer (ADR-0014).
 
 use crate::ids::{DeviceId, ModuleInstanceId, SourceRef};
 

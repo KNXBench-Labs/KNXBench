@@ -382,9 +382,14 @@ but not interpreted in v1:
 - `ParameterInstance { ref: SourceRef, raw: String }` — 1390 values in the
   reference project, dropped entirely by `xknxproject`. Held as raw strings
   because interpreting them requires evaluating the `Dynamic` tree; its
-  `@test` value grammar is now documented (RESEARCH §4.3), but the tree's
-  own structural grammar and an evaluator are not, so no interpretation
-  happens yet (RESEARCH R3).
+  `@test` value grammar is now documented and its structural grammar is
+  corpus-observed (RESEARCH §4.3, RESEARCH R3). `knx-productdb` — a
+  separate crate and a separate schema from this one — now stores that tree
+  losslessly in a `dynamic_node` table (schema v3, backfilled into
+  existing databases from their stored blobs) and evaluates it headlessly
+  into active `ParameterRef`/`ComObjectRef` sets (T18 slice 1, 2026-09-11).
+  This domain model is untouched by that: `ParameterInstance` still holds
+  only the raw string, and nothing here reads the evaluator's output.
 - `Memory`, `AbsoluteSegment`, `LoadProcedures`, mask and resource data — held
   in the product database, not in the project.
 - `BusAccess`, `BCUKey`, `SplitType`, `BinaryData` and vendor baggage — held in

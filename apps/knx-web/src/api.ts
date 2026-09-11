@@ -446,6 +446,255 @@ export function getSessionLog(): Promise<LogEntry[]> {
   return request("/api/log");
 }
 
+// ---------------------------------------------------------------------
+// `POST /api/project/diff` (T14) DTOs (`apps/knx-server/src/routes.rs`,
+// search for "diff"). `knx_diff::*` has no `ts-rs` binding (the crate
+// deliberately does not derive `Serialize` — its own module doc), so
+// every interface below is hand-written to match its DTO's
+// `#[serde(rename_all = "camelCase")]` shape, same convention as
+// `CsvProblem` above. `EntityTable<K, F>`/`EntityChange<K, F>`/
+// `AmbiguityNote<K>` mirror `EntityTableDto`/`EntityChangeDto`/
+// `AmbiguityNoteDto`, generic there for the same reason they are generic
+// here. Devices get their own non-generic `DeviceTable`/`DeviceChange`,
+// mirroring `DeviceTableDto`/`DeviceChangeDto` — nesting a device's
+// communication objects/parameters inside a `Fields` type shared by a
+// generic `EntityChange` would duplicate the nested diff meaninglessly,
+// the same reasoning `knx-diff` itself and `routes.rs` both record.
+// ---------------------------------------------------------------------
+
+// `MatchKindDto` — mirrors `knx_diff::MatchKind`.
+export type MatchKind = "etsId" | "naturalKey";
+
+// `EntityStatusDto` — mirrors `knx_diff::EntityStatus`, an installation's
+// own added/removed/matched status.
+export type EntityStatus = "added" | "removed" | "matched";
+
+// `FieldChangeDto` — mirrors `knx_diff::FieldChange`, one changed
+// scalar field with its old and new value already stringified.
+export interface FieldChange {
+  field: string;
+  left: string;
+  right: string;
+}
+
+// `EntityChangeDto<K, F>` — mirrors `knx_diff::EntityChange<K, F>`.
+export interface EntityChange<K, F> {
+  key: K;
+  matchedBy: MatchKind;
+  left: F;
+  right: F;
+  changedFields: string[];
+}
+
+// `AmbiguityNoteDto<K>` — mirrors `knx_diff::AmbiguityNote<K>`: a key
+// that matched more than one candidate on at least one side, so it could
+// not be placed in `changed` and instead sits in both `added`/`removed`.
+export interface AmbiguityNote<K> {
+  key: K;
+  leftCandidates: number;
+  rightCandidates: number;
+}
+
+// `EntityTableDto<K, F>` — mirrors `knx_diff::EntityTable<K, F>`, used
+// for every entity kind except devices.
+export interface EntityTable<K, F> {
+  added: [K, F][];
+  removed: [K, F][];
+  changed: EntityChange<K, F>[];
+  ambiguous: AmbiguityNote<K>[];
+}
+
+// `AreaKeyDto`/`AreaFieldsDto` — mirror `knx_diff::AreaKey`/`AreaFields`.
+export interface AreaKey {
+  address: number;
+}
+
+export interface AreaFields {
+  name: string;
+  completion: string;
+}
+
+// `LineKeyDto`/`LineFieldsDto` — mirror `knx_diff::LineKey`/`LineFields`.
+export interface LineKey {
+  areaAddress: number;
+  lineAddress: number;
+}
+
+export interface LineFields {
+  name: string;
+  mediumRef: string;
+  domainAddress: string | null;
+  domainAddressIsChecked: boolean | null;
+  ipRoutingMulticastAddress: string | null;
+  multicastTtl: number | null;
+  completion: string;
+  area: AreaKey | null;
+}
+
+// `BuildingPartKeyDto`/`BuildingPartFieldsDto` — mirror
+// `knx_diff::BuildingPartKey`/`BuildingPartFields`.
+export interface BuildingPartKey {
+  path: string[];
+}
+
+export interface BuildingPartFields {
+  name: string;
+  number: string | null;
+  kind: string;
+  completion: string;
+  defaultLine: LineKey | null;
+}
+
+// `DeviceKeyDto` — mirrors `knx_diff::DeviceKey`.
+export interface DeviceKey {
+  etsId: string | null;
+  address: string | null;
+}
+
+// `CommissioningStateDto` — mirrors `knx_core::CommissioningState`.
+export interface CommissioningState {
+  completion: string;
+  individualAddressLoaded: boolean;
+  applicationProgramLoaded: boolean;
+  parametersLoaded: boolean;
+  communicationPartLoaded: boolean;
+  mediumConfigLoaded: boolean;
+  lastModified: string | null;
+  lastDownload: string | null;
+  broken: boolean;
+}
+
+// `DeviceFieldsDto` — mirrors `knx_diff::DeviceFields`.
+export interface DeviceFields {
+  name: string;
+  description: string | null;
+  address: string | null;
+  productRef: string;
+  programRef: string;
+  commissioning: CommissioningState;
+  line: LineKey | null;
+  building: BuildingPartKey | null;
+}
+
+// `GroupRangeKeyDto`/`GroupRangeFieldsDto` — mirror
+// `knx_diff::GroupRangeKey`/`GroupRangeFields`.
+export interface GroupRangeKey {
+  start: number;
+  end: number;
+}
+
+export interface GroupRangeFields {
+  name: string;
+  start: number;
+  end: number;
+  parent: GroupRangeKey | null;
+}
+
+// `GroupAddressKeyDto`/`GroupAddressFieldsDto` — mirror
+// `knx_diff::GroupAddressKey`/`GroupAddressFields`.
+export interface GroupAddressKey {
+  etsId: string | null;
+  address: string;
+}
+
+export interface GroupAddressFields {
+  name: string;
+  central: boolean;
+  unfiltered: boolean;
+  range: GroupRangeKey | null;
+}
+
+// `ComObjectKeyDto` — mirrors `knx_diff::ComObjectKey`.
+export interface ComObjectKey {
+  device: DeviceKey;
+  number: number;
+}
+
+// `ComObjectLinkDto` — one `ComObjectFields::links` entry: a group
+// address plus the direction it is used in ("Send"/"Receive", `Direction`'s
+// `Debug` form, same convention `ProjectTree`'s own group links use).
+export interface ComObjectLink {
+  groupAddress: GroupAddressKey;
+  direction: string;
+}
+
+// `ComObjectFieldsDto` — mirrors `knx_diff::ComObjectFields`.
+export interface ComObjectFields {
+  text: string | null;
+  description: string | null;
+  dpt: string | null;
+  read: boolean | null;
+  write: boolean | null;
+  transmit: boolean | null;
+  update: boolean | null;
+  communication: boolean | null;
+  links: ComObjectLink[];
+  moduleInstance: string | null;
+}
+
+// `ParameterKeyDto`/`ParameterFieldsDto` — mirror
+// `knx_diff::ParameterKey`/`ParameterFields`.
+export interface ParameterKey {
+  device: DeviceKey;
+  etsId: string;
+}
+
+export interface ParameterFields {
+  raw: string;
+}
+
+// `DeviceTableDto` — devices' own, non-generic table (see module comment
+// above for why).
+export interface DeviceTable {
+  added: [DeviceKey, DeviceFields][];
+  removed: [DeviceKey, DeviceFields][];
+  changed: DeviceChange[];
+  ambiguous: AmbiguityNote<DeviceKey>[];
+}
+
+// `DeviceChangeDto` — a changed device, plus its nested communication
+// object and parameter diffs.
+export interface DeviceChange {
+  key: DeviceKey;
+  matchedBy: MatchKind;
+  left: DeviceFields;
+  right: DeviceFields;
+  changedFields: string[];
+  comObjects: EntityTable<ComObjectKey, ComObjectFields>;
+  parameters: EntityTable<ParameterKey, ParameterFields>;
+}
+
+// `InstallationDiffDto` — mirrors `knx_diff::InstallationDiff`.
+export interface InstallationDiff {
+  id: number;
+  status: EntityStatus;
+  fieldChanges: FieldChange[];
+  areas: EntityTable<AreaKey, AreaFields>;
+  lines: EntityTable<LineKey, LineFields>;
+  devices: DeviceTable;
+  groupRanges: EntityTable<GroupRangeKey, GroupRangeFields>;
+  groupAddresses: EntityTable<GroupAddressKey, GroupAddressFields>;
+  buildings: EntityTable<BuildingPartKey, BuildingPartFields>;
+}
+
+// `ProjectDiffDto` — mirrors `knx_diff::ProjectDiff`, the whole response
+// body of `POST /api/project/diff`.
+export interface ProjectDiffReport {
+  infoChanges: FieldChange[];
+  installations: InstallationDiff[];
+}
+
+// Compares the server's live, possibly edited, in-memory project against
+// the `.knxdb` file at `path` — "what would Save change", never a
+// comparison of two files on disk, and never an ETS-parity claim (design
+// spec `docs/superpowers/specs/2026-09-10-project-diff-design.md` §7).
+export function diffProject(path: string): Promise<ProjectDiffReport> {
+  return request("/api/project/diff", {
+    method: "POST",
+    body: JSON.stringify({ path }),
+  });
+}
+
 export function undo(): Promise<ProjectTree> {
   return request("/api/undo", { method: "POST" });
 }

@@ -73,14 +73,20 @@ schema version into a report instead of a crash.
 are imported, stored and exported unchanged, but their meaning is not
 evaluated. There is no parameter editor in v1 (risk R3).
 
-**Cause.** Parameter visibility and semantics are driven by the `Dynamic` tree,
-whose `choose`/`when` expression grammar is unresearched.
+**Cause.** Parameter visibility and semantics are driven by the `Dynamic`
+tree. Its `choose`/`when` *value* grammar (`@test`) is now documented
+(RESEARCH §4.3, Session 4 spike, 2026-09-11); the tree's *structural*
+grammar (`Channel`, `ParameterBlock`, `choose`, `When_t`,
+`ChannelIndependentBlock`) remains corpus-observed only, and no evaluator
+or editor has been built against either.
 
 **Impact.** Device configuration must still be done in ETS. This application
 will not corrupt parameter data, but it will not let you change it either.
 
-**Lifted when.** The Session 4 research spike establishes the `when/@test`
-grammar, and a parameter editor is built on top of it.
+**Lifted when.** T18 (parameter interpretation and editor,
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5) is built on top of the
+now-documented grammar, including a decision on the no-match-branch policy
+RESEARCH §4.3 flags as still open.
 
 ## 4. Round trips are semantic, not byte-exact
 
@@ -270,11 +276,13 @@ did not itself state a value.
 What remains, each with its own cause:
 
 **Parameter interpretation is still absent.** The `Dynamic` tree
-(`choose`/`when`, visibility logic) is not parsed at all; the `when/@test`
-expression grammar that would make it interpretable is unresearched
-(RESEARCH R3). *Lifted when* that grammar is documented and a parameter
-editor is judged feasible — its own research spike, not a byproduct of
-this session.
+(`choose`/`when`, visibility logic) is not parsed at all. The `@test`
+value grammar that would make it interpretable is now documented
+(RESEARCH §4.3, Session 4 spike, 2026-09-11) — the tree's structural
+grammar is not, and remains corpus-observed only. *Lifted when* T18
+(parameter interpretation and editor, GAP_ANALYSIS_ETS.md Tier 5) is
+built and a no-match-branch policy is decided — an implementation task
+now, not a research spike.
 
 **A program value behind an `Empty` instance slot stays invisible in the
 model.** 497 of the reference project's 907 `ComObjectInstanceRef`
@@ -295,9 +303,10 @@ slot as it was. *Lifted when* the alternative to select can be determined
 from context (e.g. from a linked group address's own datapoint type) — not
 attempted this session.
 
-**Cause.** All three are, respectively: unresearched grammar (RESEARCH R3);
-a domain-model change intentionally scoped out of this session
-(ADR-0012); and a genuine ambiguity in the source data this session does
+**Cause.** All three are, respectively: no parameter evaluator/editor yet,
+though the underlying grammar is now documented (RESEARCH §4.3/R3); a
+domain-model change intentionally scoped out of this session (ADR-0012);
+and a genuine ambiguity in the source data this session does
 not attempt to resolve.
 
 **Impact.** A project opens completely and round-trips its manufacturer
@@ -1343,8 +1352,9 @@ counted in the Summary section's totals but never listed individually
 anywhere in the document.
 
 **Cause.** Both are stored uninterpreted in this domain model — parameter
-values as raw strings (RESEARCH R3, no `when`/`choose` grammar
-interpretation yet, [§3](#3-device-parameters-are-preserved-but-not-interpreted));
+values as raw strings (RESEARCH R3; the `@test` value grammar is
+documented, RESEARCH §4.3, but no `when`/`choose` evaluator exists yet,
+[§3](#3-device-parameters-are-preserved-but-not-interpreted));
 module-instance arguments as opaque data. Printing raw `RefId`/value pairs
 by the hundreds or thousands would be volume without meaning until T18's
 parameter interpretation work exists to give them one.

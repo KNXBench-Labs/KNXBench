@@ -21,7 +21,7 @@ Four things are explicitly out of v1:
 
 | Excluded | Reason |
 | --- | --- |
-| Device parameter editing, `Dynamic` tree evaluation | RESEARCH R3 — the `choose`/`when` grammar is unresearched and needs the Session 4 spike |
+| Device parameter editing, `Dynamic` tree evaluation | RESEARCH R3 — the Session 4 spike (RESEARCH §4.3) found the `@test` value grammar is Standard-normative, but the `choose`/`when`/`Channel`/`ParameterBlock` structural grammar is still corpus-observed only, and no evaluator or editor exists yet (T18, GAP_ANALYSIS_ETS.md) |
 | Commissioning and device download | RESEARCH §8.3 — bricking risk, an undocumented `Legacy*` matrix, vendor DLLs |
 | KNX Secure | RESEARCH §9 — no sample material to verify against; the subsystem exists but stays empty |
 | Direct `.knxprod` import for master data scheme ≥ 12 | RESEARCH §10 — the encryption layer is unresolved |

@@ -354,7 +354,12 @@ the model from day one.
 
 ## 9. Addresses and datapoint types
 
-*Implemented: `knx-core/src/address.rs`, `knx-core/src/dpt.rs`.*
+*Implemented: `knx-core/src/address.rs`, `knx-core/src/dpt/` (a module
+directory since T29, 2026-09-11: `mod.rs` for `DptRef` itself, `codec.rs`
+for decoding/encoding a value against one, `resolve.rs` for inferring a
+group address's DPT from its linked communication objects — see
+[KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md) for exactly what the
+codec covers).*
 
 Addresses are dedicated types, not integers. `IndividualAddress(u16)` exposes
 area, line and device; `GroupAddress(u16)` is rendered according to the

@@ -308,6 +308,57 @@ main {
   font-family: var(--knx-font-mono);
 }
 
+/* T18 slice 3 task 4: the parameter panel (ParameterPanel.tsx). */
+.parameter-panel {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--knx-border);
+  padding-top: 1rem;
+}
+
+.parameter-section {
+  margin-bottom: 0.75rem;
+}
+
+.parameter-section summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.parameter-fields {
+  padding-left: 0.75rem;
+}
+
+.parameter-field select,
+.parameter-field input {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.parameter-field-caption {
+  display: block;
+  font-size: 0.8em;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.parameter-stale-section,
+.parameter-diagnostics-banner {
+  margin-top: 0.75rem;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+  padding: 0.5rem 0.75rem;
+}
+
+.parameter-stale-section summary,
+.parameter-diagnostics-banner summary {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.parameter-stale-ets-id {
+  font-family: var(--knx-font-mono);
+}
+
 .search-overlay {
   position: fixed;
   inset: 0;

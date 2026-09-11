@@ -819,6 +819,85 @@ export function writeBusValue(destination: string, dpt: string | null, value: st
   });
 }
 
+// ---------------------------------------------------------------------
+// `/api/device/{id}/parameters` (T18 slice 3, task 4). `ParameterPanelDto`
+// and its nested DTOs (`apps/knx-server/src/routes.rs`) are server-local
+// (`#[derive(Serialize)]`, not `ts-rs` — that file's own doc comment on
+// `ParameterPanelDto` names the coordinator's ruling on DTO placement),
+// so these are hand-written to match the `#[serde(rename_all =
+// "camelCase")]` wire shape, same convention as `CsvProblem`/
+// `CreationDiagnostic` above. `displayOrder` rides along for completeness
+// but is informational only (design D22) — nothing here sorts by it; the
+// server already returns `sections`/`fields` in the order the panel must
+// render them.
+// ---------------------------------------------------------------------
+
+export interface ModuleScope {
+  moduleNode: number;
+  moduleId: string | null;
+  moduleDefId: string;
+}
+
+export interface EnumOption {
+  value: string;
+  text: string | null;
+}
+
+export interface ParameterField {
+  etsId: string;
+  name: string | null;
+  text: string | null;
+  kind: string;
+  value: string | null;
+  valueSource: string;
+  editable: boolean;
+  min: string | null;
+  max: string | null;
+  enumOptions: EnumOption[];
+  displayOrder: number | null;
+  access: string | null;
+}
+
+export interface ParameterSection {
+  scope: ModuleScope | null;
+  fields: ParameterField[];
+}
+
+export interface StaleParameter {
+  etsId: string;
+  raw: string;
+}
+
+export interface ParameterDiagnostic {
+  scope: ModuleScope | null;
+  message: string;
+  detail: string;
+}
+
+// The read model (`GET`) and a successful write's response (`POST`) ride
+// the same DTO — design D24's "same response, no second `GET`".
+export interface ParameterPanel {
+  programId: string | null;
+  sections: ParameterSection[];
+  stale: StaleParameter[];
+  diagnostics: ParameterDiagnostic[];
+}
+
+export function deviceParameters(deviceId: number): Promise<ParameterPanel> {
+  return request(`/api/device/${deviceId}/parameters`);
+}
+
+export function setParameterValue(
+  deviceId: number,
+  etsId: string,
+  raw: string,
+): Promise<ParameterPanel> {
+  return request(`/api/device/${deviceId}/parameters`, {
+    method: "POST",
+    body: JSON.stringify({ etsId, raw }),
+  });
+}
+
 export function undo(): Promise<ProjectTree> {
   return request("/api/undo", { method: "POST" });
 }

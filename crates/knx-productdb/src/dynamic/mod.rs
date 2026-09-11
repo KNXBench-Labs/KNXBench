@@ -22,6 +22,7 @@ pub mod parse;
 // ingest and the migration backfill both already spell it out in full,
 // and re-exporting it too would just give the same function two names.
 pub use evaluate::{
-    evaluate, load_tree, resolve_values, Activation, ControlKind, Diagnostic, DynamicNode,
-    DynamicTree, Op, Test, UnparsableTest, ValueMap,
+    evaluate, load_program_trees, load_tree, resolve_values, Activation, ActiveRef, ControlKind,
+    Diagnostic, DynamicNode, DynamicTree, ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test,
+    UnparsableTest, ValueMap,
 };

@@ -70,9 +70,11 @@ schema version into a report instead of a crash.
 ## 3. Device parameters are preserved but not interpreted
 
 **Limitation.** All 1390 `ParameterInstanceRef` values in the reference project
-are imported, stored and exported unchanged, but their meaning is not
-surfaced anywhere in the application. There is no parameter editor in v1
-(risk R3).
+are imported, stored and exported unchanged. As of **T18 slice 3
+(2026-09-11)** a parameter editor exists and interprets and writes
+top-level values; module-scoped (per-channel) values are read and
+displayed correctly but remain read-only (risk R3, now partially closed —
+see below for exactly what still is not).
 
 **Cause.** Parameter visibility and semantics are driven by the `Dynamic`
 tree. Its `choose`/`when` *value* grammar (`@test`) is now documented
@@ -85,49 +87,76 @@ databases) and adds a pure, headless evaluator
 (`knx_productdb::dynamic::evaluate`) that turns a stored tree plus a
 parameter-value map into the active `ParameterRef`/`ComObjectRef` sets,
 with every unmatched, missing, unresolved or unrecognized case reported as
-a diagnostic rather than guessed. This is not a parameter editor: nothing
-calls the evaluator outside its own tests and no UI exposes it, so this
-limitation stands exactly as before. **T18 slice 2 (2026-09-11)** closed
-part of what used to sit under this heading: the evaluator now follows a
-`Module` node into its referenced `ModuleDef`'s own stored tree
-(`knx_productdb::dynamic::{evaluate, load_program_trees, ProgramTrees}`),
-so a modular application program's active `ParameterRef`/`ComObjectRef`
-set is complete rather than truncated at the module boundary. Every
-activation and diagnostic is qualified by a `ModuleScope` naming the
-instantiating `Module`, so N sibling `Module`s instantiating one
-`ModuleDef` produce N separate results, not one collapsed into another.
-`Diagnostic::ModuleNotExpanded` no longer exists; `ModuleDefNotFound`
-(no `@RefId`, or the named `ModuleDef` has no stored tree) and
-`NestedModuleNotExpanded` (below) replace it. Nesting is **rejected by
-policy, not followed**: a `Module` found while already inside a module's
-own expanded tree yields `NestedModuleNotExpanded` and is not descended
-— the corpus has zero nested modules and the Standard extraction defines
-no application-program-side `ModuleDef` complexType to recurse against,
-so one level plus a loud diagnostic was chosen over an unbounded walk
-that nothing documents a cycle rule for (design D15). Confirmed as a
-corpus regression: zero `ModuleDefNotFound` and zero
-`NestedModuleNotExpanded` across the four installed `.knxprod` archives;
-for `prod3`'s three module-bearing programs specifically, activation
-totals grow from 22/18/14 (program tree only) to 382/258/134 (expanded).
-**This is scoped to `prod3` only** — RESEARCH §4.4 Q7 lists seven
-module-bearing programs, but the other four live in the `kv25` demo
-`.knxproj`, which these corpus tests do not install; nothing here is a
-claim about `kv25`.
+a diagnostic rather than guessed. **T18 slice 2 (2026-09-11)** taught the
+evaluator to follow a `Module` node into its referenced `ModuleDef`'s own
+stored tree (`knx_productdb::dynamic::{evaluate, load_program_trees,
+ProgramTrees}`), so a modular application program's active
+`ParameterRef`/`ComObjectRef` set is complete rather than truncated at the
+module boundary. Every activation and diagnostic is qualified by a
+`ModuleScope` naming the instantiating `Module`, so N sibling `Module`s
+instantiating one `ModuleDef` produce N separate results, not one
+collapsed into another. `Diagnostic::ModuleNotExpanded` no longer exists;
+`ModuleDefNotFound` (no `@RefId`, or the named `ModuleDef` has no stored
+tree) and `NestedModuleNotExpanded` (nesting rejected by policy, one level
+only, design D15) replace it. Confirmed as a corpus regression: zero
+`ModuleDefNotFound` and zero `NestedModuleNotExpanded` across the four
+installed `.knxprod` archives; for `prod3`'s three module-bearing programs
+specifically, activation totals grow from 22/18/14 (program tree only) to
+382/258/134 (expanded). **This is scoped to `prod3` only** — RESEARCH
+§4.4 Q7 lists seven module-bearing programs, but the other four live in
+the `kv25` demo `.knxproj`, which these corpus tests do not install;
+nothing here is a claim about `kv25`.
 
-**What did not close, and does not get quietly better because expansion
-shipped.** Three things, stated plainly rather than softened:
+**T18 slice 3 (2026-09-11)** wires the evaluator into a real editor:
+`GET`/`POST /api/device/{id}/parameters` (`apps/knx-server`, DTOs and
+decisions D20-D26,
+[design](superpowers/specs/2026-09-11-parameter-editor-design.md)) plus a
+web panel (`apps/knx-web/src/ParameterPanel.tsx`). A write to a top-level
+field goes through `knx_core::Command::SetParameterValue` (undo/redo via
+`RestoreParameterValue`), is validated against the program's declared
+`parameter_ref`/`parameter`/`parameter_type` chain before the command is
+even built, and the same response carries the evaluator's freshly
+recomputed activation set — no second `GET` needed to see which other
+fields or communication objects became active.
 
-- **All instantiations of one `ModuleDef` still evaluate against
-  identical parameter values (design D16).** A `ModuleDef`'s
-  `ParameterRef`/`ComObjectRef` ids — and therefore the `ValueMap` keys
-  the evaluator reads — are declared once and shared by every
-  instantiating `Module`; genuinely per-instantiation values
-  (`ParameterInstanceRef`, the mangled `_M-<m>_MI-<k>_` id scheme,
-  RESEARCH §4.4 Q5) are a *project*-side construct that `knx-productdb`
-  does not model, and ADR-0014 keeps out of the import path entirely.
-  Expansion closing the application-program-level gap does **not** make
-  this better — it is a separate, still-real limitation with a separate
-  cause.
+**Correction against the corpus, this revision.** An earlier draft of
+this document (and of the design that preceded it) assumed
+`ParameterInstance` had "nowhere to store" a per-channel value. That was
+wrong, and re-measuring changes what this limitation says: ETS already
+encodes the `Module` instantiation *inside* the stored `ets_id` string
+itself (`<Module/@Id>_MI-<k>_<declared ParameterRef's own suffix>`), and
+`ParameterInstance` (`crates/knx-store`, keyed by `(device, ets_id)`,
+unmodified by this slice) already stores exactly that shape in our own
+corpus today — the KV v2.5 demo project's `ParameterInstance` table holds
+5 distinct values (17, 33, 49, 32, 48) for the single declared
+`ParameterRef` `M-00FA_A-2504-10-C071_MD-2_P-1_R-1`, one per `Module`
+instantiation. This slice's decomposition (D21) recognizes that shape and
+D22/D23 surface each value in its own per-channel section, so a
+module-scoped value now *reads and displays correctly* — it is not a
+storage gap that happens to be unaddressed; it never was one.
+
+**What remains limited, restated accurately rather than smoothed over:**
+
+- **(a) Module-scoped fields are not *editable* in this slice (design
+  D25).** The blocker is the evaluator's flat `ValueMap`
+  (`evaluate.rs:797`/`:348`, one slot per declared id, project-wide, no
+  scope in the key) plus unresearched write-validation semantics — does
+  the `MI` instantiation index ever legitimately exceed `1`? Unattested in
+  the corpus, every occurrence anywhere in the three demo projects is
+  `MI-1`. Neither is a missing storage key; both are a real, separately-
+  decidable evaluator question named in the design's Non-goals, not solved
+  here.
+- **(b) Because no module-scoped value ever reaches `ValueMap`, a
+  `choose` controlled by a module-scoped parameter evaluates against the
+  program default in every channel**, so a channel's *active field set*
+  as shown here can differ from what ETS would compute from its own real
+  stored value — even though the *value* shown for an already-active
+  module-scoped field is correct. **Design D16 (all instantiations of one
+  `ModuleDef` still evaluate against identical parameter values) stays
+  true, in this precise, narrower sense.** It no longer means "displayed
+  values are identical" — D21/D22 fix that on the read side — it means
+  "the evaluated activation is identical," which is still the case and is
+  not downgraded by this slice.
 - **Argument values (`NumericArg`/`TextArg`) remain stored but
   uninterpreted.** They still fall through to the generic `extra` column;
   `choose` never branches on them (RESEARCH §4.4 Q3), so activation-set
@@ -135,23 +164,31 @@ shipped.** Three things, stated plainly rather than softened:
   `{{ChNo}}`-style text substitution are unresearched and unimplemented.
 - **`AllocatorRef`** (`ModuleDefArgType_t`'s third argument-type facet)
   has zero corpus occurrences and stays unattested and unimplemented.
-- **There is still no parameter editor and no UI.** Nothing outside
-  `knx-productdb`'s own tests calls the evaluator; it is dead code from
-  every other crate's perspective, exactly as before this slice.
-  `ParameterInstance` itself (`knx-core`) is untouched and still holds
-  only a raw string.
+- **`Access` has no attested correlation and is not used for write
+  gating.** RESEARCH §4.3 found no usable correlation for `Access`
+  (`Access="None"` alongside a `Memory` child came back roughly 50/50 in
+  the corpus, `Visible` never observed at all); the editor shows `access`
+  verbatim and never uses it to block, hide or grey out a write.
+- **`Float`/`Text`/`IPAddress`/`Picture`/`Raw` parameter kinds get only a
+  non-empty-string check on write.** Only `Number` (bounds) and
+  `Restriction` (enum membership) have columns the product database
+  actually carries. No IPv4 parsing, no byte-length check, no
+  fractional-format check — inventing rules with no spike behind them was
+  ruled out rather than attempted.
 
-**Impact.** Device configuration must still be done in ETS. This application
-will not corrupt parameter data, but it will not let you change it either,
-and nothing in the UI shows which parameters or communication objects are
-currently active for a device — even though the evaluator can now compute
-the complete answer for a modular application program, nothing surfaces
-it.
+**Impact.** Device configuration for a top-level field can now be done here,
+with the evaluator's own diagnostics surfaced in the same response. A
+module-scoped (per-channel) field's own stored value displays correctly,
+but editing one still has to happen in ETS, and the *set* of active fields
+shown for a module-scoped channel is computed from program defaults, not
+from that channel's own values, so it can legitimately differ from what
+ETS itself would show for the same channel.
 
-**Lifted when.** The rest of T18 — now just **slice 3, a parameter
-editor** ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5) — wires the
-now-complete evaluator into something a user can see, and is where
-per-instantiation values (D16) would first have a real consumer. The
+**Lifted when.** Module-scoped editing needs its own design: a
+scope-aware `ValueMap`/`evaluate` (most plausibly keyed by something like
+`(Option<module_node>, String)`) and a validated write path that settles
+what `MI` means when it is ever observed above `1`. Neither is scheduled;
+both are named, not solved, by T18 slice 3's design (Non-goals). The
 no-match-branch policy the evaluator implements (nothing under an
 unmatched `choose` is active) is itself an inference (RESEARCH §4.3,
 finding 2), not a documented rule — noted here, not hidden.
@@ -388,20 +425,20 @@ did not itself state a value.
 
 What remains, each with its own cause:
 
-**Parameter interpretation is still not surfaced anywhere.** The `Dynamic`
-tree (`choose`/`when`, visibility logic) is now parsed, stored and
+**Parameter interpretation is surfaced and writable — top-level only.** The
+`Dynamic` tree (`choose`/`when`, visibility logic) is parsed, stored and
 evaluated headlessly in `knx-productdb` (T18 slice 1, 2026-09-11 —
-[§3](#3-device-parameters-are-preserved-but-not-interpreted)), and as of
-**T18 slice 2 (same day)** the evaluator also follows `Module` into its
-`ModuleDef`'s own tree, so a modular application program's active set is
-complete — but nothing outside `knx-productdb`'s own tests calls the
-evaluator at all: no UI, no report, no enrichment path reads its output.
-See §3 for exactly what slice 2 closed and what it deliberately did not
-(D16's identical-values-per-instantiation limitation, argument values,
-`AllocatorRef`). *Lifted when* **T18 slice 3** — now the only remaining
-slice, a parameter editor
-([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5) — wires the evaluator
-up to something a user can see.
+[§3](#3-device-parameters-are-preserved-but-not-interpreted)); **T18 slice
+2 (same day)** made the evaluator follow `Module` into its `ModuleDef`'s
+own tree, so a modular application program's active set is complete; and
+**T18 slice 3 (2026-09-11)** wires the evaluator up to a real editor —
+`GET`/`POST /api/device/{id}/parameters` and `apps/knx-web`'s parameter
+panel — that reads every field, writes a top-level one, and shows the
+recomputed activation set in the same response. See §3 for exactly what
+slice 3 closed and what it deliberately did not (module-scoped editing,
+D16's activation-identity limitation restated narrower, argument values,
+`AllocatorRef`, deep format validation). *Lifted when* module-scoped
+editing gets its own design — see §3's "Lifted when" for what that needs.
 
 **A program value behind an `Empty` instance slot stays invisible in the
 model.** 497 of the reference project's 907 `ComObjectInstanceRef`
@@ -422,18 +459,20 @@ slot as it was. *Lifted when* the alternative to select can be determined
 from context (e.g. from a linked group address's own datapoint type) — not
 attempted this session.
 
-**Cause.** All three are, respectively: a headless evaluator now exists
-(RESEARCH §4.3/R3, T18 slice 1) but nothing wires it into enrichment,
-reporting or the UI, and no editor exists; a domain-model change
-intentionally scoped out of this session (ADR-0012); and a genuine
-ambiguity in the source data this session does not attempt to resolve.
+**Cause.** All three are, respectively: T18 slice 3 (2026-09-11) wired the
+evaluator into a real editor for top-level fields, but nothing wires it
+into enrichment or reporting, and module-scoped fields stay read-only
+(D25 — see §3); a domain-model change intentionally scoped out of this
+session (ADR-0012); and a genuine ambiguity in the source data this
+session does not attempt to resolve.
 
 **Impact.** A project opens completely and round-trips its manufacturer
 data byte-for-byte, with communication-object defaults now resolved where
-the instance did not override them. Parameter values remain preserved but
-uninterpreted; an `Empty`-slot program default and an ambiguous DPT list
-are both visible in the product database and in `EnrichmentReport`, but
-neither is written into the domain model.
+the instance did not override them. A top-level parameter value can now be
+read and written from the parameter editor; a module-scoped value is read
+and displayed correctly but not writable; an `Empty`-slot program default
+and an ambiguous DPT list are both visible in the product database and in
+`EnrichmentReport`, but neither is written into the domain model.
 
 **Lifted when.** See each gap above individually; none of the three shares
 a single condition.

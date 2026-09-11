@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-08 (Session 5 cycle 13 regression fix: `body`'s `mask-image` was clipping every fixed overlay invisible)
+Last updated: 2026-09-11 (T18 slice 2: `Module` expansion in the `Dynamic` evaluator, `knx-productdb`, see below)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -845,10 +845,11 @@ Known gaps carried forward, none blocking Session 5:
   interpretable is now documented (RESEARCH R3/§4.3, spike run
   2026-09-11); the `Dynamic` tree's structural grammar remains
   corpus-observed only. T18's first slice (also 2026-09-11) built a
-  headless evaluator over the stored tree in `knx-productdb` — but device
-  parameters are still not interpretable *by a user*: nothing wires the
-  evaluator into any UI, `Module` expansion is not implemented, and no
-  parameter editor exists. See the dated entry below and T18
+  headless evaluator over the stored tree in `knx-productdb`, and slice 2
+  (same day) taught it to expand a `Module` node into its `ModuleDef`'s
+  own tree — but device parameters are still not interpretable *by a
+  user*: nothing wires the evaluator into any UI, and no parameter editor
+  exists. See the dated entries below and T18
   ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5).
 - A program value behind an instance-level `Empty` slot stays invisible in
   the model ([KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §12); lifted by
@@ -1917,9 +1918,12 @@ first of three planned slices ([design spec](superpowers/specs/2026-09-11-dynami
   default branch without a comparison, exactly as all 604 corpus
   occurrences look; any other shape under it is
   `UnexpectedTypeNoneShape`. An unrecognized element kind is
-  `UnrecognizedNode` and its subtree is not descended. **`Module` is
-  recognized but not expanded — it evaluates to `ModuleNotExpanded`.**
-  Module expansion (slice 2) and the editor (slice 3) are not built.
+  `UnrecognizedNode` and its subtree is not descended. **At this point in
+  the slice, `Module` is recognized but not expanded — it evaluates to
+  `ModuleNotExpanded`.** *(Superseded the same day: T18 slice 2, below,
+  expands `Module` and removes this diagnostic. It is described here
+  exactly as slice 1 shipped it, for the record.)* Module expansion
+  (slice 2) and the editor (slice 3) are not built yet.
   Nothing outside the crate's own tests calls the evaluator; it is dead
   code from every other crate's perspective, exactly as planned. Import
   is unaffected — it still reads `GroupObjectTree` ([ADR-0014](adr/0014-group-object-tree-authoritative-source.md))
@@ -1951,3 +1955,109 @@ docs-only pass (T18 slice 1's third task) reconciles
 retires the two source comments (`knx-core/src/parameter.rs`,
 `knx-core/src/module.rs`) that still called the `Dynamic` grammar
 unresearched.
+
+**T18 slice 2, `Module` expansion (2026-09-11).** The second of the three
+slices planned above, same day as slice 1
+([design spec](superpowers/specs/2026-09-11-module-expansion-design.md),
+decisions D12-D19; [plan](superpowers/plans/2026-09-11-module-expansion.md)).
+`knx-productdb`'s evaluator now follows a `Module` node into its
+referenced `ModuleDef`'s own stored tree instead of stopping at it. No
+schema change — the product database stays at **v3**; `dynamic_node`
+already stored everything this slice reads (D12).
+
+- **`evaluate`'s input grows from one tree to a tree set, and stays pure.**
+  `evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation` —
+  still no `Connection`, no I/O, no logging (D13). `ProgramTrees` holds the
+  program's own tree plus one tree per `ModuleDef` the program references;
+  `load_program_trees(conn, program_id)` is the only new
+  database-touching function, loading the program tree and then every
+  `ModuleDef` tree named by `SELECT DISTINCT module_def_id FROM
+  dynamic_node WHERE program_id = ?1`. `ProgramTrees::single(tree)` is the
+  no-modules form every hand-built-tree unit test now uses.
+- **Every activation and every diagnostic carries its module scope
+  (D14).** `Activation`'s three fields became `Vec<ActiveRef>` /
+  `Vec<ActiveRef>` / `Vec<ScopedDiagnostic>`, each qualified by an
+  `Option<ModuleScope>` (`module_node`, `module_id`, `module_def_id`).
+  `module_node` — the instantiating `Module` element's own `node_id` in
+  the program's own tree — is what dedup actually keys on, because a
+  `ModuleDef`'s local `ParameterRef`/`ComObjectRef` ids are reused
+  verbatim by every sibling `Module` instantiating it, and
+  `dynamic_node.node_id` collides across trees (it resets at each
+  `Dynamic` root). The dedup key became `(Option<module_node>, ref_id)`
+  (D18); without this, twelve `Module`s instantiating one `ModuleDef`
+  would collapse into one set of results instead of twelve.
+- **Exactly one level of expansion (D15).** A `Module` found while already
+  inside a module scope is not followed: it produces
+  `Diagnostic::NestedModuleNotExpanded` and its subtree is not descended.
+  The corpus has zero nested modules and the Standard extraction defines
+  no application-program-side `ModuleDef` complexType at all, so there is
+  nothing to recurse against and no documented cycle rule to appeal to —
+  one level plus a loud diagnostic is complete for everything the corpus
+  contains and incapable of looping on anything it does not.
+- **`Diagnostic::ModuleNotExpanded` is gone.** `ModuleDefNotFound {
+  node_id, ref_id }` (no `@RefId`, or the named `ModuleDef` has no stored
+  tree) and `NestedModuleNotExpanded { node_id, ref_id }` (D15) replace it;
+  an empty-but-present `ModuleDef` tree is not a diagnostic (D17) — it
+  legitimately activates nothing.
+- **Corpus regression coverage**, over the four installed `.knxprod`
+  archives: zero `ModuleDefNotFound`, zero `NestedModuleNotExpanded` —
+  every `Module/@RefId` in the corpus resolves. For `prod3`'s three
+  programs, activation totals grow from 22/18/14 (program tree only,
+  slice 1's behaviour) to 382/258/134 (expanded), independently derived
+  from the raw `ApplicationProgram` XML by a from-scratch Python
+  reimplementation before a single Rust assertion was written, matching
+  the real implementation's output on the first non-sabotaged run. A
+  module-free control program (`prod1`,
+  `M-000C_A-5703-10-085F`) is pinned unchanged at 145 activations,
+  proving the slice is additive for everything that has no modules
+  (AC#7). **Scope note, worth stating precisely:** RESEARCH.md §4.4 Q7
+  lists seven module-bearing programs (`prod3`'s three, `kv25`'s four);
+  only `prod3`'s three are reachable from these tests — `kv25` is a
+  `.knxproj` demo project the corpus tests do not install, not one of the
+  four `.knxprod` archives. Nothing above is a claim about `kv25`.
+- **A finding worth recording honestly, not smoothing over:** `prod3`'s
+  three programs hold 44/28/14 structural `Module` rows each, but only
+  12/8/4 are actually walked by `evaluate` under the corpus's own default
+  parameter values — the `Module`s naming `MD-2`/`MD-3`/`MD-4` sit on
+  `choose` branches the defaults never select. This was independently
+  verified twice (the Python reimplementation and the real
+  `evaluate`/`--nocapture` output agree exactly). It is a fact about
+  evaluation under the corpus's own default values, not a bug or a gap in
+  the expansion itself — the plan's own Task 2 wording ("distinct
+  `ModuleScope`s equals `Module` rows in the program's own tree") turned
+  out to describe the structural count, not the reachable one; the tests
+  assert the reachable count (12/8/4), which is what `evaluate` actually
+  produces.
+- **What this slice deliberately does not do, per the design's own scope
+  cut (D16):** all instantiations of one `ModuleDef` still evaluate
+  against **identical** parameter values. A `ModuleDef`'s
+  `ParameterRef`/`ComObjectRef` ids — and therefore its `ValueMap` keys —
+  are shared by every instantiating `Module`; genuinely per-instantiation
+  values are a *project*-side construct (`ParameterInstanceRef`, the
+  mangled `_M-<m>_MI-<k>_` id scheme) that `knx-productdb` does not model
+  and that ADR-0014 keeps out of the import path entirely. This is a real,
+  documented limitation carried forward, not an oversight — see
+  [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted).
+  Structured argument values (`NumericArg`/`TextArg`), memory-offset
+  placement and text-template substitution, and project-side
+  `ModuleInstance` resolution are all still out of scope, for the same
+  reasons slice 1 left them out.
+
+Two commits (`d140923` the evaluator change, `22d1099` the corpus
+regression coverage), reviewed and passed after each. `cargo test
+--workspace`: 817 passed / 0 failed / 3 ignored, up from 809 before this
+slice (task 1: +6 net to 815 — 7 new unit tests minus the one deleted;
+task 2: +2 to 817 — the two new corpus regression tests). This docs-only
+pass (T18 slice 2's third task) reconciles
+[KNOWN_LIMITATIONS.md §3/§12](KNOWN_LIMITATIONS.md),
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md), [DATA_MODEL.md §10](DATA_MODEL.md),
+[ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md) with what
+actually shipped, and retires every remaining `ModuleNotExpanded`
+reference in `docs/` and `crates/` that stated the old behaviour as
+current rather than as history. Closes no `GAP_ANALYSIS_ETS.md` item
+outright — **A3** stays "partially closed": module expansion at the
+application-program level is done, but the evaluator is still dead code
+from every other crate's perspective, and **T18 slice 3** (a parameter
+editor, the only thing that would give per-instantiation values in D16 a
+real consumer) has not started. Never claimed here or anywhere else:
+ETS behavioural parity, or KNX certification.

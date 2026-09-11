@@ -511,6 +511,354 @@ manufacturer corpus would find more.
 
 ---
 
+### 4.4 `Module`/`ModuleDef` expansion semantics — R4 spike (Session 4, 2026-09-11)
+
+T18 slice 1 (§4.3, 2026-09-11) deliberately does not follow a `Module`
+node: it evaluates to a `ModuleNotExpanded` diagnostic and its subtree is
+not entered. This spike answers how following it — slice 2 — would
+actually have to work, before any design is written. Read-only research;
+no production code changed. Full spike report:
+`/home/knxbench/.claude/jobs/8098e9e6/tmp/r4-findings.md` (this section is
+the durable summary that survives outside that file).
+
+Corpus: the same `OriginalData/` archives as §4.3, re-extracted to
+`/home/knxbench/.claude/jobs/8098e9e6/tmp/r4/`. Standard source:
+`Project Schema23 v01.00.00.{md,json}` — cross-checked both, as §4.3 also
+notes; the `.json` twin's table-grid jumbling around wide tables is a
+rowspan/colspan artifact in the source document, not a conversion loss.
+Same three-level confidence marking as the rest of this document:
+**[D]** the Standard states it, **[V]** the corpus shows it (counts and
+method given), **[A]** an inference beyond both, stating what it rests on
+and what would falsify it.
+
+**Q1 — how does a `Module` name its `ModuleDef`? [V]** Via `@RefId`,
+whose value is the `ModuleDef`'s **full id**, byte-for-byte, never a short
+id recovered through an owning element (unlike `ComObjectInstanceRef`'s
+schema-23 `RELIDREF` form, §3.3). Example (`prod3`,
+`M-0083_A-0317-31-7DC6.xml`):
+
+```xml
+<ModuleDef Id="M-0083_A-0317-31-7DC6_MD-1" Name="ModuleDefSwitch">
+...
+<Module Id="M-0083_A-0317-31-7DC6_MD-1_M-10" RefId="M-0083_A-0317-31-7DC6_MD-1" Name="Channel A">
+```
+
+**[V] Never crosses an `ApplicationProgram` boundary.** Every `Module`
+element in every module-bearing AP file in the corpus — 102 across 7
+files (3 `prod3`, 4 `kv25`) — was checked by comparing its `@RefId`
+prefix against its own file's `ApplicationProgram/@Id` prefix: **0 of 102**
+cross-boundary. **[A]** A same-`program_id` lookup is therefore a
+reasonable design for slice 2's resolver, but it is an inference from a
+102-sample corpus — the Standard does not define `ModuleDef`/`Module` as
+AP-scoped complexTypes at all (next finding) — falsifiable by a single
+sample whose `Module/@RefId` prefix differs from its own AP id.
+
+**Q2 — a `ModuleDef`'s structure. [V], with a stated Standard gap.**
+`Project Schema23` documents the *Project*-instance schema and shared
+simpleTypes only, the same gap §4.3 already found for `Dynamic`/`choose`.
+Grepping both the `.md` and `.json` twin for `ModuleDef`, `Module` and
+`ChannelIndependentBlock` as complexType headings finds nothing beyond
+`ModuleInstance_t` (project-side, §1.2.5.18) and `ModuleDefArgType_t`
+(§1.1.2.38, below) — **there is no [D]-strength Standard definition of
+`ModuleDef`'s or `Module`'s own complexType in this extraction.**
+Everything about their structure below is [V], not [D].
+
+Observed: `ModuleDef -> ['Id', 'Name']`. `Module -> ['Id',
+'InternalDescription', 'Name', 'RefId']`. A `ModuleDef` owns exactly one
+`Arguments`, one `Static` and one `Dynamic` child in every sample examined.
+`ModuleDef/Static` contains its own `Parameters`/`ComObjects`/
+`ParameterRefs`/`ComObjectRefs`, plus constructs not seen in this corpus's
+AP-level `Static`: `LParameters`, `RParameters`, `ParameterCalculations`,
+`Union`, `Memory`, `LRTransformation`, `RLTransformation` — these look like
+a scaled/repeated-instance memory-layout mechanism but were **not**
+researched further, flagged not resolved. `ModuleDef/Dynamic` mirrors the
+top-level `Dynamic` vocabulary exactly (`Channel`, `ParameterBlock`,
+`choose`/`when`, `ComObjectRefRef`, `ParameterRefRef`, `ParameterSeparator`
+all observed inside it).
+
+Argument declaration: element `Argument`, child of `Arguments`, attributes
+`Id`, `Name`, `Type` (only `Text` seen; absent means numeric — the
+implicit default), `Allocates` (bit/byte count). Example (`prod3`,
+`M-0083_A-0317-31-7DC6_MD-1`):
+
+```xml
+<Arguments>
+  <Argument Id="M-0083_A-0317-31-7DC6_MD-1_A-1" Name="ParamOffsBase" Allocates="132" />
+  <Argument Id="M-0083_A-0317-31-7DC6_MD-1_A-2" Name="ObjNumberBase" Allocates="20" />
+  <Argument Id="M-0083_A-0317-31-7DC6_MD-1_A-3" Name="ChNo" Type="Text" />
+</Arguments>
+```
+
+**[D]** `Argument/@Type` corresponds to the Standard's `ModuleDefArgType_t`
+simpleType (§1.1.2.38), whose facets are `Numeric`, `Text`,
+`AllocatorRef`. Only `Numeric` (default) and `Text` are attested in the
+corpus; `AllocatorRef` has **zero corpus occurrences** (sharpest unknown
+#2, below). `@DefaultValue`/`@AllocatesPerSlot`, named as possibilities in
+the spike brief, were **not observed** on any `Argument` — absence, not
+proof of nonexistence elsewhere.
+
+**Q3 — how do argument values reach the module's `Dynamic` tree? [V]**
+`Module` carries argument values as children — `NumericArg` (`RefId`,
+`Value`) and `TextArg` (`Id`, `RefId`, `Value`) — bound 1:1 and
+exhaustively to the `ModuleDef`'s declared `Argument`s in every sample
+checked (`prod3` MD-1: 3 declared args × 44 `Module` elements = 88
+`NumericArg` + 44 `TextArg` = 132 bind elements, matching the raw count).
+Example:
+
+```xml
+<Module Id="M-0083_A-0317-31-7DC6_MD-1_M-10" RefId="M-0083_A-0317-31-7DC6_MD-1" Name="Channel A">
+  <NumericArg RefId="M-0083_A-0317-31-7DC6_MD-1_A-1" Value="32" />
+  <NumericArg RefId="M-0083_A-0317-31-7DC6_MD-1_A-2" Value="0" />
+  <TextArg RefId="M-0083_A-0317-31-7DC6_MD-1_A-3" Id="M-0083_A-0317-31-7DC6_MD-1_M-10_A-3" Value="A" />
+</Module>
+```
+
+**Central finding: `choose` does not branch on `Argument`, only on
+`ParameterRef`.** Every `choose/@ParamRefId` inside `ModuleDef/Dynamic`
+(58 distinct values, `prod3` MD-1) was checked against that `ModuleDef`'s
+declared `Argument/@Id` set (3) and `ParameterRef/@Id` set (208): **58/58**
+match a `ParameterRef`, **0/58** match an `Argument`. `ModuleDef/Dynamic`'s
+`choose` mechanism is **structurally identical** to the top-level tree's
+(§4.3): it branches on the current value of a `ParameterRef` declared in
+the module's own `Static`. An argument's role, evidenced separately by
+`Memory/@BaseOffset` literally holding the argument's own id (e.g.
+`BaseOffset="M-0083_A-0317-31-7DC6_MD-1_A-1"`), is **memory-offset
+placement** for numeric arguments and **text-template substitution** for
+text arguments (`{{ChNo}}`-style placeholders observed in `Channel/@Text`,
+e.g. `Text="Channel {{ChNo}}: {{0}}"` — seen, not exhaustively catalogued;
+flagged plausible, not fully verified).
+
+**Reconciliation with T18 slice 1's existing test.** `dynamic_tree.rs`'s
+zero-dangling-`choose/@ParamRefId` assertion carries no `module_def_id`
+filter — it checks every `choose` row in `dynamic_node` against
+`parameter_ref`, and `ModuleDef`-scoped `ParameterRef` rows are already
+ingested under the owning AP's `program_id` by slice 1's parser. Since
+this spike shows a `ModuleDef`-internal `choose` always targets a
+`ModuleDef`-internal `ParameterRef`, never an `Argument`, and those rows
+already exist in the table the test checks — **there is no gap, and the
+existing test needs no change once Module expansion ships.**
+
+**Q4 — what is repetition? [V]/[D] mixed.** At the AP level, repetition is
+purely **N sibling `Module` elements**, each with a distinct `@Id` and the
+same `@RefId` — there is **no repeat-count attribute anywhere at the AP
+level**, on neither `ModuleDef` nor `Module`. `prod3`
+`M-0083_A-0317-31-7DC6_MD-1` is instantiated by exactly 12 separate
+`Module` elements, no numeric repeat attribute among them. **Multiplicity
+is confirmed within a single AP's own `Dynamic` tree, not only at
+`DeviceInstance` level:** every `ModuleDef` in every module-bearing AP file
+is instantiated multiple times purely within that file's own tree — e.g.
+`prod3`'s `A-0317` file: `MD-1`×12, `MD-2`×12, `MD-3`×12, `MD-4`×8 (44
+total), all before any project-side repetition is applied at all.
+
+**`ModuleInstance/@RepeatIndex` is a project-side concept.** **[D]** The
+Standard defines `ModuleInstance_t` (§1.2.5.18) with a `RepeatIndex`
+attribute described in the abstract as XmlOrder×repeat-counter
+information. **[V]** Real KV values for `MD-2`'s 8 `ModuleInstance`s
+(`kv25/P-03DE/0.xml`): `"6x1"`, `"10x1"`, `"14x1"`, `"32x1"`, `"36x1"`,
+`"40x1"`, `"44x1"`, `"48x1"` — genuinely the two-component `"NxM"` form
+[`ModuleInstance::repeat_index`](../crates/knx-core/src/module.rs)
+already anticipates as an opaque string (ADR-0013), confirmed directly
+against the raw XML for this write-up. In this sample the second
+component is always `1`; whether and how it varies is unconfirmed (see
+sharpest unknown #1). The first component does not decode into an obvious
+formula across the 8 values (differences 4, 4, 18, 4, 4, 4, 4 — not
+constant), so the concrete encoding rule stays open. What is established:
+`RepeatIndex` is `ModuleInstance_t`-only (project-side), a separate,
+simpler mechanism from the AP-level `Module` multiplicity above (sibling
+elements, no counter), which any `DeviceInstance`-level repetition layers
+on top of.
+
+**Q5 — how do a `ModuleDef`'s internal ids relate to instance-level ids?
+[V], 35/35 (100%), two element types, two independent verification
+scripts.** Rule: a project-side, module-instance-scoped ref id splices
+`_M-<m>_MI-<k>_` into the middle of the `ModuleDef`'s own declared local
+ref id, immediately after the `MD-<n>` segment:
+
+```
+<owning-AP-id>_MD-<n>_M-<m>_MI-<k>_<local-ref-suffix>
+```
+
+where `<owning-AP-id>_MD-<n>_<local-ref-suffix>` is exactly the
+`ModuleDef`'s own declared `ParameterRef`/`ComObjectRef` id. Verified on
+the KV project: `ParameterInstanceRef` (full AP-prefixed form) 9/9,
+`ComObjectInstanceRef` (short, unprefixed form) 26/26 — both independently
+re-derived for this write-up directly against
+`kv25/P-03DE/0.xml`, matching the spike's counts.
+
+**A real inconsistency worth flagging on its own: the two instance-ref
+element types spell the same rule differently in the same file.**
+`ParameterInstanceRef/@RefId` uses the full AP-prefixed id form
+(`M-00FA_A-2504-10-C071_MD-2_M-4_MI-1_P-1_R-1`); `ComObjectInstanceRef/@RefId`
+in the same file uses the short, unprefixed form (`MD-2_M-1_MI-1_O-2-0_R-4`
+— no leading AP id). A parser/design for slice 2 must handle these as two
+distinct id-spelling conventions per element type, not one uniform
+spelling. **This is not a hypothetical edge case:** the mangled id
+`MD-1_M-2_MI-1_O-2-3_R-4` appears twice in `kv25/P-03DE/0.xml`, once under
+`DeviceInstance Id="P-03DE-0_DI-2"` and once under `DeviceInstance
+Id="P-03DE-0_DI-3"` — two different physical devices each independently
+instantiating the same `ModuleDef`'s `Module MD-1_M-2` as their own first
+`ModuleInstance`. The mangled id is scoped to (unique within) its own
+`DeviceInstance`, not globally unique across a project — expected
+behaviour, not a bug, and directly relevant to Q8(c) below.
+
+**Q6 — can modules nest or recurse? [V] zero in the corpus; [D] a related
+but distinct project-side concept exists.** A regex scan for `<Module\b`
+(the instantiation element) inside every `ModuleDef/Dynamic` block across
+all 7 module-bearing files found **0 occurrences**; `ModuleDef`'s own
+child-element vocabulary (Q2) contains no `SubModuleDef`. **[D]** The
+Standard *does* name a one-level-deeper nesting concept, but only on the
+**project-instance side**: `ModuleInstance_t/@Id`'s documented grammar
+(§1.2.5.18) provides for `SubModuleDef`/`SubModule`/`SubModuleInstance`
+segments beyond the plain `MD-<n>_M-<m>_MI-<k>` case this corpus exercises.
+This spike found **no equivalent AP-side Standard text** for whether a
+`ModuleDef` itself can declare a `SubModuleDef` — a genuine open question
+(sharpest unknown #3), not an artifact of the corpus being small. **[A]**
+Given (a) zero corpus nesting, (b) no Standard-documented AP-side
+`SubModuleDef` concept, and (c) the project-side concept is bounded to one
+extra level, not unbounded recursion — a defensible slice 2 design
+position is: implement Module expansion **one level only**, and treat a
+`Module` node encountered *inside* an already-expanded `ModuleDef`'s own
+`Dynamic` tree as an error diagnostic rather than recursing. This rests on
+the corpus never exhibiting nesting and the Standard never documenting an
+AP-side recursive form; it would be falsified by a single corpus file (or
+future Standard revision) showing a `Module` inside a `ModuleDef/Dynamic`
+block.
+
+**Q7 — distribution. [V]**
+
+| File | ModuleDefs | Module nodes | Args/ModuleDef | NumericArg binds | TextArg binds |
+| --- | --- | --- | --- | --- | --- |
+| `prod3` `M-0083_A-0317-31-7DC6.xml` | 4 | 44 | 3 each | 88 | 44 |
+| `prod3` `M-0083_A-0318-31-DB39.xml` | 4 | 28 | 3 each | 56 | 28 |
+| `prod3` `M-0083_A-0319-31-587B.xml` | 4 | 14 | 3 each | 28 | 14 |
+| `kv25` `M-00FA_A-2500-10-51CB.xml` | 1 | 8 | 3 | 24 | 0 |
+| `kv25` `M-00FA_A-2502-10-8698.xml` | 1 | 8 | 3 | 24 | 0 |
+| `kv25` `M-00FA_A-2504-10-C071.xml` | 1 | 8 | 3 | 24 | 0 |
+| `kv25` `M-00FA_A-2507-10-0DE5.xml` | 1 | 8 | 3 | 24 | 0 |
+
+Depth: every `ModuleDef/Dynamic` observed is a flat `Channel`/
+`ParameterBlock`/`choose`/`when` tree, 3-4 levels, similar shape to the
+AP's own top-level `Dynamic`. **Only `prod3` (MDT) and `kv25` (the KV demo
+project) exercise `Module`/`ModuleDef` anywhere in the available corpus** —
+confirmed zero in `prod1` (4 AP files), `prod2` (Weinzierl 730, 3 AP
+files), `prod4` (Dummy_Secure, 3 AP files), and in three further files
+scanned directly from `OriginalData/` without extraction: both `Unser
+Zuhause` exports and `Weinzierl_730_KNX_IP_Interface_ETS4_v1.knxprod`.
+**The sample is narrow: two manufacturers, no independent third source to
+cross-validate structural assumptions against.** Any acceptance test slice
+2 writes will need its module-bearing fixtures from just these two.
+
+**Q8 — what would change for slice 1's existing evaluator?**
+
+- **(a) No change needed — [V].** `Module/@RefId` is already captured into
+  `dynamic_node.ref_id` by the existing generic parser handling.
+  `load_tree`, `resolve_control_kind` and `resolve_values` in
+  `evaluate.rs` are scoped by `program_id` only, with no `module_def_id`
+  filter — once a `ModuleDef`'s own tree rows exist (already true as of
+  slice 1), these three functions need no modification to work against a
+  `ModuleDef`'s own tree.
+- **(b) Real gap, an addition not a behaviour change — [V].**
+  `NumericArg`/`TextArg` fall through to generic `UNMODELLED` handling
+  today — no entry in `parse.rs`'s `spec_for` table, so `@Value` lives
+  only in the free-text `extra` column. Q3's finding — argument values
+  drive memory-offset placement and text substitution, not `choose` —
+  suggests activation-set computation may not strictly need parsed
+  argument values at all; but reporting *which* values were bound, or any
+  future memory-layout work, needs structured columns. **No `argument` or
+  `module_def` table exists anywhere in `migration.rs` today.**
+- **(c) Forced behaviour change, not an addition — [V], a required design
+  constraint for slice 2.** Slice 1's `Activation` dedup-by-first-occurrence
+  keys on the raw `ref_id` string. Q5 already establishes that a single
+  `ModuleDef`'s local `ParameterRef`/`ComObjectRef` ids are **reused
+  verbatim** by every sibling `Module` instantiating it — differentiation
+  only exists in the mangled, instance-scoped id, a *project*-side
+  (`ModuleInstance`) construct that does not exist at the AP level at all.
+  Confirmed against real KV `ComObjectInstanceRef` data: local suffix
+  `O-2-1_R-2` appears under 4 distinct `ModuleDef`+`Module`+`ModuleInstance`
+  combinations, `O-2-0_R-1` under another 4 — real, non-hypothetical id
+  collisions. **If slice 2 walks a `ModuleDef`'s tree once per
+  instantiating `Module` sibling and reuses the existing flat
+  `HashSet<String>` dedup keyed on raw ModuleDef-local `ref_id`, it will
+  incorrectly collapse distinct per-instantiation activations into one**
+  (e.g. "Channel A" and "Channel B" instantiating the same `ModuleDef`
+  would wrongly report only one activated `ComObjectRef` where two really
+  exist). Design implication: any Module-expansion activation must be
+  qualified by the instantiating `Module`'s own id before dedup. This is
+  marked [V] for the id-collision evidence and **[A]** for the
+  consequence-for-slice-2's-code claim, since slice 2 does not exist yet —
+  falsified if slice 2's design already qualifies activations this way
+  before dedup, which is exactly the fix this finding recommends.
+- **(d) Scope boundary — [A].** Slice 1 (and the slice 2 this spike feeds)
+  operates at the `(program_id, module_def_id)` AP level only.
+  `ModuleInstance`/`RepeatIndex`/project-side id mangling (Q4, Q5) stay
+  outside `knx-productdb`'s scope per [ADR-0014](adr/0014-group-object-tree-authoritative-source.md):
+  import never needs to evaluate `Dynamic`/`choose` itself, because
+  `GroupObjectTree` already carries ETS's resolved answer for schema ≥21.
+  An AP-level Module-expansion evaluator only ever needs to reason about
+  `ModuleDef`+`Module`, never `ModuleInstance` — falsified if a future task
+  needs `knx-productdb` itself to resolve project-side `ModuleInstance`s, a
+  larger scope than T18 slice 2 as currently described.
+- **(e) No-match/`TypeNone`/document-order handling — [A], unresearched
+  beyond the above.** No evidence of a difference from the top-level
+  tree's behaviour was found, but this spike did not specifically
+  stress-test `TypeNone`/no-match handling *inside* a `ModuleDef` tree
+  against the evaluator's existing code paths. Treat as "no evidence of a
+  difference," not "confirmed identical."
+
+**Three sharpest remaining unknowns.**
+
+1. **`RepeatIndex`'s concrete multi-value encoding.** The two-component
+   `"NxM"` shape is now confirmed real (Q4), correcting this spike's own
+   earlier working notes, which had misread the KV sample as plain
+   integers. What the second component (`1` throughout this sample) means
+   or when it varies, and what formula produces the first component
+   (differences 4, 4, 18, 4, 4, 4, 4 — no obvious pattern), remain open.
+   Settled by either a normative worked example in a Standard section not
+   yet located, or a hand-built multi-repeat-level fixture.
+2. **`AllocatorRef` argument type is completely undemonstrated.**
+   `ModuleDefArgType_t` names it as a legal facet [D]; zero `Argument` in
+   the corpus uses it, and no corresponding `Value_t` usage was found
+   either. Settled by a corpus sample that uses it (none in the available
+   `OriginalData/`) or a normative worked example beyond the bare
+   enum-facet listing.
+3. **Whether an AP-side `ModuleDef` can itself declare a `SubModuleDef`.**
+   No Standard text defines `ModuleDef` as an AP-side complexType at all
+   (Q2's gap), so there is no [D]-strength answer independent of the
+   corpus, and the corpus has zero nesting examples to fall back on.
+   Settled by locating an AP-side complexType definition in a Standard
+   document not yet checked (an "Application Program Schema" document, if
+   one exists under a different filename in the extraction, was not
+   specifically searched for), or a corpus sample that exercises nesting.
+
+**Ready-to-design advisory: ready, with named constraints.** The core
+mechanism — how a `Module` names, binds arguments to, and should expand
+into its `ModuleDef`'s own `Dynamic` tree — is solidly evidenced (Q1, Q2,
+Q3, Q5, all [V]-backed with cross-checked counts, several at or near 100%
+verification). A slice 2 design can proceed on: resolving `Module/@RefId`
+as a full id, same-`program_id` lookup only (Q1); reusing `load_tree`/
+`resolve_control_kind`/`resolve_values` unmodified against
+`(program_id, module_def_id=<the ModuleDef's id>)` (Q8a); treating a
+`ModuleDef`'s internal `choose` exactly like the top-level tree's, no
+argument special-casing (Q3). It **must** design an explicit
+per-Module-instantiation qualification for activation identity before
+walking a `ModuleDef`'s tree once per instantiating sibling, to avoid the
+dedup-collision failure mode in Q8c — the one required design decision,
+not an optional refinement. It **should** explicitly decide and document a
+nesting policy (one-level, reject-if-nested, Q6) even though the corpus
+never exercises it, since "recurse until termination" is not defensible on
+its own, and no cycle guard exists today. What it does **not** yet support
+a design for: parsed (structured) argument *values* beyond activation-set
+computation (Q8b — no `argument`/`module_def` tables exist, and whether
+slice 2 needs them is an undecided scope question) and the `AllocatorRef`
+argument type (unattested, unknown #2). If slice 2's scope is "expand
+`Module` nodes to compute the correct active `ParameterRef`/`ComObjectRef`
+set," this evidence is sufficient. If its scope also includes reproducing
+memory-offset/text-template argument substitution, the
+`LParameters`/`RParameters`/`ParameterCalculations`/`Union`/`Memory`
+mechanism flagged in Q2 needs its own research first.
+
+---
+
 ## 5. `knx_master.xml`
 
 Content of the ETS4 master data file shipped inside our project [V]:

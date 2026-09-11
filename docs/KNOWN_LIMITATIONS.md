@@ -87,10 +87,16 @@ parameter-value map into the active `ParameterRef`/`ComObjectRef` sets,
 with every unmatched, missing, unresolved or unrecognized case reported as
 a diagnostic rather than guessed. This is not a parameter editor: nothing
 calls the evaluator outside its own tests, no UI exposes it, no value is
-ever written, and `Module`/`ModuleDef` expansion is not implemented (a
-`Module` node evaluates to a `ModuleNotExpanded` diagnostic, never
-followed). `ParameterInstance` itself (`knx-core`) is untouched and still
-holds only a raw string.
+ever written, and `Module`/`ModuleDef` expansion is **still not
+implemented** (a `Module` node evaluates to a `ModuleNotExpanded`
+diagnostic, never followed) — a research spike (R4, RESEARCH §4.4,
+2026-09-11) has since established *how* that expansion would work
+(naming, argument binding, repetition, id-mangling, a required dedup
+fix), but research existing is not the same as the gap closing: no code
+has changed, the diagnostic still fires on every `Module` node, and the
+evidence base is narrower than the rest of this document's corpus — only
+two of the corpus's manufacturers use modules at all. `ParameterInstance`
+itself (`knx-core`) is untouched and still holds only a raw string.
 
 **Impact.** Device configuration must still be done in ETS. This application
 will not corrupt parameter data, but it will not let you change it either,
@@ -99,11 +105,11 @@ currently active for a device.
 
 **Lifted when.** The rest of T18 (parameter interpretation and editor,
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5) is built on top of the
-now-existing evaluator: `Module` expansion, then wiring the evaluator into
-an actual UI/editor. The no-match-branch policy the evaluator implements
-(nothing under an unmatched `choose` is active) is itself an inference
-(RESEARCH §4.3, finding 2), not a documented rule — noted here, not
-hidden.
+now-existing evaluator: `Module` expansion (now researched, RESEARCH
+§4.4, but not built), then wiring the evaluator into an actual UI/editor.
+The no-match-branch policy the evaluator implements (nothing under an
+unmatched `choose` is active) is itself an inference (RESEARCH §4.3,
+finding 2), not a documented rule — noted here, not hidden.
 
 ## 4. Round trips are semantic, not byte-exact
 
@@ -298,9 +304,11 @@ evaluated headlessly in `knx-productdb` (T18 slice 1, 2026-09-11 —
 [§3](#3-device-parameters-are-preserved-but-not-interpreted)), but nothing
 outside that crate's own tests calls the evaluator: no UI, no report, no
 enrichment path reads its output. `Module` expansion is not implemented
-either. *Lifted when* T18's remaining work (module expansion, then an
-editor, [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5) wires the
-evaluator up to something a user can see.
+either — see §3 for the distinction between the R4 research now existing
+(RESEARCH §4.4) and the still-unbuilt behaviour. *Lifted when* T18's
+remaining work (module expansion, then an editor,
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5) wires the evaluator up
+to something a user can see.
 
 **A program value behind an `Empty` instance slot stays invisible in the
 model.** 497 of the reference project's 907 `ComObjectInstanceRef`

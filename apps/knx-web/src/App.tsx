@@ -17,6 +17,7 @@ import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
 import DocumentationExportButton from "./DocumentationExportButton";
+import ProjectDiffPanel from "./ProjectDiffPanel";
 
 const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
 const EXPORT_FILTER = [{ name: "ETS project", extensions: ["knxproj"] }];
@@ -292,6 +293,7 @@ function App() {
         onError={reportError}
         onClearErrors={clearErrors}
       />
+      <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
       <button onClick={undo} disabled={!tree?.can_undo}>
         Undo
       </button>

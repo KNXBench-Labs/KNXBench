@@ -451,6 +451,34 @@ main {
   margin-bottom: 0.5rem;
 }
 
+.settings-panel {
+  width: min(22rem, 90vw);
+}
+
+.settings-panel-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.settings-field-label {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.settings-field select {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 1rem;
+  padding: 0.4rem;
+}
+
 .catalog-create-row {
   display: flex;
   align-items: center;

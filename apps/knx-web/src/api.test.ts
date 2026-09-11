@@ -397,6 +397,21 @@ describe("api", () => {
     );
   });
 
+  it("diffProject posts the path to /api/project/diff", async () => {
+    mockFetchOnce({ infoChanges: [], installations: [] });
+    const report = await api.diffProject("/data/compare.knxdb");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/project/diff");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ path: "/data/compare.knxdb" });
+    expect(report).toEqual({ infoChanges: [], installations: [] });
+  });
+
+  it("diffProject surfaces the server's error message on a 400", async () => {
+    mockFetchOnce({ error: "no project open" }, false, 400);
+    await expect(api.diffProject("/data/compare.knxdb")).rejects.toThrow("no project open");
+  });
+
   it("errorMessage unwraps an Error's message without doubling 'Error: '", () => {
     expect(api.errorMessage(new Error("no project open"))).toBe("no project open");
   });

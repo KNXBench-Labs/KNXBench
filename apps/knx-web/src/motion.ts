@@ -10,6 +10,9 @@ export interface MotionStyleDef {
   name: string;
 }
 
+// index.html's inline pre-mount bootstrap script duplicates these ids
+// (it cannot import this module — it runs before any module loads). Keep
+// both lists in sync when a level or style is added or removed.
 export const MOTION_LEVELS: readonly MotionLevelDef[] = [
   { id: "off", name: "Off" },
   { id: "subtle", name: "Subtle" },

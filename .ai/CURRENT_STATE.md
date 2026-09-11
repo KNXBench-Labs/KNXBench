@@ -1078,3 +1078,85 @@
   printed hash/length line. From a git worktree `OriginalData` is unreachable
   unless you symlink it in by hand; this cycle's worktree did that and the
   symlink was deleted with it.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-11 06:15
+- **Completed:** Ran research risk **R3** — the `when/@test` expression grammar
+  inside an `ApplicationProgram`'s `Dynamic` tree — and wrote its findings into
+  the documentation. Merged to `main` as `793b7f4`.
+  R3 has been open since Session 0 and every parameter-related limitation in
+  `docs/` named it as the cause. The spike read the KNX Standard v3.0.0
+  extraction and 7 product archives (34 application programs, 4 manufacturers,
+  22630 `when`, 12149 `choose`).
+  The central result: **the KNX Standard does specify the `@test` value
+  grammar**, as simpleType `Condition_t` in `Project Schema23 v01.00.00`
+  §1.1.3.18 — three alternatives (a single number; a space-separated list of
+  numbers; a comparison `op number` with `op` one of `= != > < >= <=`), with
+  the controlling parameter required to be `TypeNumber` or `TypeRestriction`,
+  and for `TypeRestriction` the `Value` attribute being what gets compared. I
+  verified that citation myself before letting it into the repository: the
+  section is absent from the Markdown extraction's body text and lives only in
+  the `.json` twin at `#/tables/82`, which I dumped and read directly.
+  The Standard says **nothing** about the surrounding structural grammar
+  (`Dynamic`, `Channel`, `ParameterBlock`, `choose`, `When_t`,
+  `ChannelIndependentBlock`). That part is corpus-observed only, and the
+  documentation says so in exactly those words.
+  Three findings that will shape T18's design, all now in
+  `docs/RESEARCH.md` §4.3:
+  (1) 604 of 12149 `choose` elements are controlled by a `TypeNone` parameter,
+  which is neither of the two types the Standard permits — a real tooling idiom
+  a literal implementation would have no defined behaviour for. All 604 carry
+  exactly one `when default="true"`.
+  (2) "No branch matches" is reachable and common, not a corner case: 5570 of
+  the 8732 default-less `choose` elements have at least one legal enumeration
+  value covered by no `when`. Neither the Standard nor the KNX Association's
+  Manufacturer Tool cookbook says what that means.
+  (3) `ChannelIndependentBlock` was discovered during the spike and appeared
+  nowhere in this repository before. That a single spike turned up an unknown
+  construct is the standing proof that the observed element vocabulary is a
+  superset-so-far, not a closed grammar.
+  Of the six legal operators the corpus uses only `>` (13 occurrences, against
+  19138 single integers and 3417 `default="true"`).
+  Docs reconciled in the same change: `docs/RESEARCH.md` (new §4.3, the R3 risk
+  row, the open-questions list), `ARCHITECTURE.md`, `COMPATIBILITY.md`,
+  `DATA_MODEL.md`, `GAP_ANALYSIS_ETS.md` (the T18 entry), `IMPLEMENTATION_STATUS.md`,
+  `IMPORT_EXPORT.md`, `KNOWN_LIMITATIONS.md` (§3's *Cause* and *Lifted when*
+  lines), `ROADMAP.md`, plus
+  `.ai/logs/2026-09-11_claude_r3_dynamic_grammar.md`.
+  **No limitation was lifted.** KNXBench still cannot interpret or edit a
+  device parameter. What changed is the recorded *cause* — from "the grammar is
+  unresearched" to "the grammar is documented, the evaluator is not built" —
+  and the lift condition attached to it.
+  Review found one Major issue, since fixed (`31c5067`): `docs/RESEARCH.md`
+  §3.4's `ModuleInstance` bullet still called the tree "unresearched", which
+  the same diff had made false 400 lines further down.
+  Gates on the merged result: 784 Rust tests, 0 failed, 3 ignored — unchanged,
+  as a documentation-only change should be.
+- **Pending/Next Steps:** **T18** (parameter interpretation and editor) is no
+  longer blocked on research and is the largest remaining gap by effort. What
+  it needs first is a design decision, not more reading: a policy for the
+  no-match case (finding 2 above), and a parser defensive enough to preserve
+  unrecognized `Dynamic`-tree constructs rather than drop them (finding 3).
+  The rest of the backlog is unchanged: T25/T26 (i18n, gap D10), T27 (motion
+  toggle, gap D11 — the two-animation-styles memo belongs there), T28
+  (in-application help, gap D12), T20 (Functions, needs an ADR first), T21
+  (graphical views, D1/D2), T16 (catalog browser), T15/T17 (bus-facing UI),
+  T19 (KNX Secure, blocked on key material and hardware), T22 (multi-user,
+  needs a design decision). Four items still need the maintainer's explicit
+  out-of-scope acceptance before the standing goal can be called complete:
+  `.vd2` support, encrypted `.knxprod` (untested for want of a sample), T19's
+  deferral, and the permanent exclusion of commissioning (E1).
+- **Notes for Codex:** Keep the three confidence levels apart when you touch
+  §4.3 — the Standard specifies the `@test` *value* grammar and nothing else;
+  the corpus shows the structure, `default="true"`, the `TypeNone` idiom and
+  every count; the evaluation algorithm ("first matching test wins, default
+  covers the rest", "no match means nothing under this `choose` is active") is
+  *inferred* from consistency and is marked as such. Do not flatten those into
+  one voice. The `Condition_t` citation cannot be found by grepping the
+  extraction's Markdown — it is in the `.json` twin's table 82, so grep the
+  JSON, not the prose. `Visible` was searched for and never occurs in the
+  corpus (0 of 34 programs); `Access="None"` versus a `Memory` child was
+  inconclusive (4976 against 4878) and is listed as an open question rather
+  than an answer.

@@ -1835,6 +1835,7 @@ dependencies = [
  "chrono",
  "knx-core",
  "knx-csv",
+ "knx-diff",
  "knx-etsproj",
  "knx-productdb",
  "knx-report",

@@ -87,21 +87,34 @@ crates/
                    bindings for knx-web. No IO; depends on knx-core only.
   knx-net/         KNXnet/IP: discovery, tunnelling, routing, cEMI, telegrams
   knx-secure/      Isolated key material subsystem (empty for now, but present)
+  knx-diff/        Pure `Project`-to-`Project` comparison ("KNXBench project
+                   diff", never an ETS-comparison claim): `diff_projects`
+                   matches entities by `ets_id`/natural key and reports
+                   added/removed/changed per entity type. Depends on
+                   knx-core only (T14).
 
 xtask/             Repository verification tasks, including the layering gate
 ```
+
+Two other pure crates, `knx-csv` (T12) and `knx-report` (T13), are missing
+from the `crates/` listing above and from both dependency graphs below —
+a pre-existing omission from those tasks, not something this edit
+retroactively fixes. Flagged here rather than silently adding a third
+undocumented crate to the pile.
 
 ```text
 knx-desktop ─> knx-server ─┬─> knx-app ─> knx-core
                            ├─> knx-store ────> knx-core
                            ├─> knx-etsproj ──> knx-core
-                           └─> knx-projection ─> knx-core
+                           ├─> knx-projection ─> knx-core
+                           └─> knx-diff ──────> knx-core
 
 knx-cli ────────────────────> knx-app ─> knx-core
                                  ├─> knx-store ────> knx-core
                                  ├─> knx-etsproj ──> knx-core
                                  ├─> knx-productdb ─> knx-core
                                  ├─> knx-net ──────> knx-core
+                                 ├─> knx-diff ──────> knx-core
                                  └─> knx-secure
 ```
 

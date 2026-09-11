@@ -303,7 +303,7 @@ async fn an_encode_failure_is_a_bad_request() {
 
 #[tokio::test]
 async fn an_unresolved_dpt_with_none_given_is_a_bad_request_naming_the_reason() {
-    let (tunnel, _handle) = fake_tunnel();
+    let (tunnel, handle) = fake_tunnel();
     let state = state_with_project_and_connector(
         project_with_write_dpt_outcomes(),
         FakeConnector::succeeding(tunnel),
@@ -327,11 +327,19 @@ async fn an_unresolved_dpt_with_none_given_is_a_bad_request_naming_the_reason() 
         body["error"].as_str().unwrap(),
         "No DPT resolved for this group address — enter one explicitly."
     );
+    // Final review, criterion 7: an unresolved-DPT 400 is rejected before
+    // ever reaching the tunnel — same pattern as
+    // `a_tunnel_send_failure_is_reported_as_a_bad_gateway` below.
+    assert_eq!(
+        handle.sent_calls().len(),
+        0,
+        "a bad request must not touch the tunnel at all"
+    );
 }
 
 #[tokio::test]
 async fn a_conflicting_dpt_with_none_given_is_a_bad_request_naming_the_reason() {
-    let (tunnel, _handle) = fake_tunnel();
+    let (tunnel, handle) = fake_tunnel();
     let state = state_with_project_and_connector(
         project_with_write_dpt_outcomes(),
         FakeConnector::succeeding(tunnel),
@@ -353,6 +361,14 @@ async fn a_conflicting_dpt_with_none_given_is_a_bad_request_naming_the_reason() 
     assert_eq!(
         body["error"].as_str().unwrap(),
         "Conflicting DPTs for this group address: DPST-1-1, DPST-5-1 — enter one explicitly."
+    );
+    // Final review, criterion 7: a conflicting-DPT 400 is rejected before
+    // ever reaching the tunnel — same pattern as
+    // `a_tunnel_send_failure_is_reported_as_a_bad_gateway` below.
+    assert_eq!(
+        handle.sent_calls().len(),
+        0,
+        "a bad request must not touch the tunnel at all"
     );
 }
 

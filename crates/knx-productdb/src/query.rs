@@ -5,6 +5,8 @@
 //! point of the override chain (DATA_MODEL §3): a value without its layer
 //! cannot be written back correctly, so this view never returns one.
 
+use std::collections::HashSet;
+
 use rusqlite::{Connection, OptionalExtension};
 
 use crate::ProductDbError;
@@ -196,7 +198,13 @@ pub fn com_object_view(
 pub struct ParameterView {
     /// `parameter_ref.id`, the `ValueMap`/`ets_id` key (D21).
     pub id: String,
-    pub display_order: i64,
+    /// `parameter_ref.display_order`, verbatim, `None` when the package
+    /// declares no order at all. `ParameterRef/@DisplayOrder` is genuinely
+    /// optional in shipped packages — measured, not assumed: every one of
+    /// the 543 `parameter_ref` rows for `prod3`'s program
+    /// `M-0083_A-0317-31-7DC6` omits it. `None` is therefore its own real
+    /// value, distinct from `Some(0)`, not a magic-constant stand-in for it.
+    pub display_order: Option<i64>,
     pub tag: Option<String>,
     /// `parameter.name`.
     pub name: Option<String>,
@@ -217,7 +225,7 @@ pub struct ParameterView {
 
 struct ParameterRawRow {
     id: String,
-    display_order: i64,
+    display_order: Option<i64>,
     tag: Option<String>,
     name: Option<String>,
     p_text: Option<String>,
@@ -238,22 +246,37 @@ pub fn parameter_views(
     conn: &Connection,
     program_id: &str,
 ) -> Result<Vec<ParameterView>, ProductDbError> {
-    // `pr.display_order` is `COALESCE`d to 0: real-world packages exist
-    // where `ParameterRef/@DisplayOrder` is simply absent (observed on the
-    // full corpus, not a hypothetical — every one of one MDT program's 543
-    // `ParameterRef`s omits it), and `ParameterView.display_order` is `i64`
-    // per D22, not `Option<i64>`. `ORDER BY` still sorts on the raw
-    // (possibly-NULL) column so ties among absent values do not get a
-    // fabricated secondary order on top of what the plan asks for.
+    // `pr.display_order` is selected raw, not `COALESCE`d: real-world
+    // packages exist where `ParameterRef/@DisplayOrder` is simply absent —
+    // observed on the full corpus, not a hypothetical, every one of one MDT
+    // program's 543 `ParameterRef`s omits it — and `None` is its own real
+    // value there, distinct from a package that genuinely declares position
+    // zero. `rusqlite` maps a NULL INTEGER straight to `None` for an
+    // `Option<i64>` target, so no `COALESCE` is needed for that mapping.
+    //
+    // `ORDER BY pr.display_order, pr.rowid`: with `DisplayOrder` absent on
+    // every row (the common real-world case above), every row ties on the
+    // first key and the result would otherwise rest on SQLite's sorter,
+    // whose tie stability is not documented. `parameter_ref` is a plain
+    // rowid table (`PRIMARY KEY (program_id, id)`, not `WITHOUT ROWID`), and
+    // the parser inserts `ParameterRef` rows in document order as it streams
+    // the XML, so `rowid` recovers the package's own declaration order for
+    // ties. This cannot change any order where `DisplayOrder` *is* declared
+    // — it only breaks ties among rows sharing one value (including
+    // NULL). SQLite's default NULLs-first-ascending placement is kept
+    // as-is: how ETS orders a set that mixes declared and undeclared
+    // `DisplayOrder` is unattested anywhere in the corpus, and inverting it
+    // or adding `NULLS LAST` here would be an assumption dressed up as
+    // behaviour.
     let mut stmt = conn.prepare(
-        "SELECT pr.id, COALESCE(pr.display_order, 0), pr.tag,
+        "SELECT pr.id, pr.display_order, pr.tag,
                 p.name, p.text, pr.text,
                 pt.kind, p.access, pt.min_inclusive, pt.max_inclusive, pt.id
          FROM parameter_ref pr
          JOIN parameter p ON p.program_id = pr.program_id AND p.id = pr.parameter_id
          JOIN parameter_type pt ON pt.program_id = p.program_id AND pt.id = p.parameter_type_id
          WHERE pr.program_id = ?1
-         ORDER BY pr.display_order",
+         ORDER BY pr.display_order, pr.rowid",
     )?;
     let raw_rows: Vec<ParameterRawRow> = stmt
         .query_map([program_id], |r| {
@@ -327,11 +350,11 @@ fn parameter_type_enum_options(
 pub fn parameter_ref_ids(
     conn: &Connection,
     program_id: &str,
-) -> Result<std::collections::HashSet<String>, ProductDbError> {
+) -> Result<HashSet<String>, ProductDbError> {
     let mut stmt = conn.prepare("SELECT id FROM parameter_ref WHERE program_id = ?1")?;
     let rows = stmt
         .query_map([program_id], |r| r.get(0))?
-        .collect::<Result<std::collections::HashSet<_>, _>>()?;
+        .collect::<Result<HashSet<_>, _>>()?;
     Ok(rows)
 }
 
@@ -912,6 +935,7 @@ mod tests {
 
         let pr2 = &views[0];
         assert_eq!(pr2.kind, "Restriction");
+        assert_eq!(pr2.display_order, Some(10));
         assert_eq!(
             pr2.enum_options,
             vec![
@@ -922,10 +946,12 @@ mod tests {
 
         let pr3 = &views[1];
         assert_eq!(pr3.kind, "Text");
+        assert_eq!(pr3.display_order, Some(20));
         assert!(pr3.enum_options.is_empty());
 
         let pr1 = &views[2];
         assert_eq!(pr1.kind, "Number");
+        assert_eq!(pr1.display_order, Some(30));
         assert!(pr1.enum_options.is_empty());
         assert_eq!(pr1.min_inclusive.as_deref(), Some("0"));
         assert_eq!(pr1.max_inclusive.as_deref(), Some("255"));
@@ -937,11 +963,93 @@ mod tests {
         let ids = parameter_ref_ids(&conn, "A-2").unwrap();
         assert_eq!(
             ids,
-            std::collections::HashSet::from([
-                "PR-1".to_string(),
-                "PR-2".to_string(),
-                "PR-3".to_string(),
-            ])
+            HashSet::from(["PR-1".to_string(), "PR-2".to_string(), "PR-3".to_string(),])
+        );
+    }
+
+    /// A `ParameterRef` with no `DisplayOrder` attribute at all — the case
+    /// measured on the real corpus (543/543 rows for `prod3`'s program
+    /// `M-0083_A-0317-31-7DC6`) — must report `None`, not a fabricated `0`.
+    /// `0` would be indistinguishable from a package that genuinely declared
+    /// position zero, which is exactly the information loss `CLAUDE.md`
+    /// rules out.
+    const PARAMETER_PROGRAM_NO_DISPLAY_ORDER: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
+<ApplicationPrograms><ApplicationProgram Id="A-3" Name="P" ApplicationNumber="3"
+  ApplicationVersion="22" MaskVersion="MV-0701"><Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-1" Name="Delay" Text="Delay" ParameterType="PT-Num" Access="ReadWrite" Value="5" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="PR-1" RefId="P-1" Tag="1" />
+</ParameterRefs>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    #[test]
+    fn parameter_views_reports_none_when_display_order_is_not_declared() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_program(
+            &conn,
+            "sha-p3",
+            "M-006A/A3.xml",
+            PARAMETER_PROGRAM_NO_DISPLAY_ORDER.as_bytes(),
+        )
+        .unwrap();
+        let views = parameter_views(&conn, "A-3").unwrap();
+        assert_eq!(views.len(), 1);
+        assert_eq!(
+            views[0].display_order, None,
+            "an undeclared DisplayOrder must stay None, not collapse into Some(0)"
+        );
+    }
+
+    /// Two `ParameterRef`s that both lack `DisplayOrder` tie on the primary
+    /// sort key; the `pr.rowid` tiebreak must then return them in
+    /// declaration order, not some other order SQLite's sorter happens to
+    /// pick for a tie. Declared as `PR-Z` then `PR-A` deliberately — id
+    /// order would put `PR-A` first, so this only passes if the tiebreak is
+    /// really `rowid`, not a hidden secondary sort on `id`.
+    const PARAMETER_PROGRAM_TIEBREAK: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
+<ApplicationPrograms><ApplicationProgram Id="A-4" Name="P" ApplicationNumber="4"
+  ApplicationVersion="22" MaskVersion="MV-0701"><Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-1" Name="First" Text="First" ParameterType="PT-Num" Access="ReadWrite" Value="1" />
+  <Parameter Id="P-2" Name="Second" Text="Second" ParameterType="PT-Num" Access="ReadWrite" Value="2" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="PR-Z" RefId="P-1" Tag="1" />
+  <ParameterRef Id="PR-A" RefId="P-2" Tag="2" />
+</ParameterRefs>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    #[test]
+    fn parameter_views_ties_break_by_declaration_order_when_display_order_is_absent_for_all() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_program(
+            &conn,
+            "sha-p4",
+            "M-006A/A4.xml",
+            PARAMETER_PROGRAM_TIEBREAK.as_bytes(),
+        )
+        .unwrap();
+        let views = parameter_views(&conn, "A-4").unwrap();
+        assert_eq!(
+            views.iter().map(|v| v.id.as_str()).collect::<Vec<_>>(),
+            vec!["PR-Z", "PR-A"],
+            "rowid tiebreak preserves declaration order, not ascending id order"
+        );
+        assert!(
+            views.iter().all(|v| v.display_order.is_none()),
+            "both rows in this fixture omit DisplayOrder"
         );
     }
 

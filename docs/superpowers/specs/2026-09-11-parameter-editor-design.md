@@ -387,7 +387,11 @@ wrong shape):
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParameterView {
     pub id: String,               // parameter_ref.id, the ValueMap/ets_id key
-    pub display_order: i64,
+    pub display_order: Option<i64>, // ParameterRef/@DisplayOrder is genuinely optional in shipped
+                                     // packages — [V] measured: all 543 parameter_ref rows for
+                                     // prod3's program M-0083_A-0317-31-7DC6 omit it. None means
+                                     // "the package declared no order", distinct from Some(0);
+                                     // a plain i64 with a 0 fallback would erase that distinction.
     pub tag: Option<String>,
     pub name: Option<String>,     // parameter.name
     pub text: Option<String>,     // pick(parameter.text, parameter_ref.text)

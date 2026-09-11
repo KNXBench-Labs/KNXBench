@@ -574,12 +574,23 @@ Each task: **what**, **why**, **depends on**.
 
 ### Tier 5 — larger, multi-cycle efforts (own future "session")
 
-- **T18. Parameter interpretation and editor.** Requires the `when/@test`
-  grammar research spike (RESEARCH R3, still not started) before any
-  editor UI is possible. Closes **A3**, prerequisite for a large share
-  of realistic ETS parity. This is the single largest remaining gap by
-  effort, and every parameter-adjacent gap above (T7 aside) is smaller
-  in comparison.
+- **T18. Parameter interpretation and editor.** The `when/@test` research
+  spike (RESEARCH R3) ran 2026-09-11 (RESEARCH §4.3): the Standard
+  normatively specifies the `@test` value grammar and the
+  `choose`→`ParameterRef`→`ParameterType` resolution chain resolves
+  100% of the time in a 34-application-program corpus, so this is no
+  longer blocked on research. What it needs now: a design decision on
+  the no-match-branch policy (5570 of 8732 no-default `choose` elements
+  in that corpus have a legal parameter value no `when` covers — common,
+  not rare), explicit handling for the `TypeNone`-controlled "dummy
+  wrapper" `choose` idiom the Standard's own text has no defined
+  behaviour for, and a defensive parser that preserves or flags
+  unrecognized `Dynamic`/when-child constructs rather than dropping them
+  (the spike itself turned up one undocumented one,
+  `ChannelIndependentBlock`, mid-research). Closes **A3**, prerequisite
+  for a large share of realistic ETS parity. This is the single largest
+  remaining gap by effort, and every parameter-adjacent gap above (T7
+  aside) is smaller in comparison.
 - **T19. KNX Secure (Data Secure + IP Secure + keyring).** Needs sample
   key material and a real secured installation to verify against — a
   hard external dependency, not purely an engineering task. Closes

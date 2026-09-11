@@ -381,8 +381,10 @@ but not interpreted in v1:
 
 - `ParameterInstance { ref: SourceRef, raw: String }` — 1390 values in the
   reference project, dropped entirely by `xknxproject`. Held as raw strings
-  because interpreting them requires the `Dynamic` tree grammar, which is
-  unresearched (RESEARCH R3).
+  because interpreting them requires evaluating the `Dynamic` tree; its
+  `@test` value grammar is now documented (RESEARCH §4.3), but the tree's
+  own structural grammar and an evaluator are not, so no interpretation
+  happens yet (RESEARCH R3).
 - `Memory`, `AbsoluteSegment`, `LoadProcedures`, mask and resource data — held
   in the product database, not in the project.
 - `BusAccess`, `BCUKey`, `SplitType`, `BinaryData` and vendor baggage — held in

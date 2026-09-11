@@ -841,9 +841,12 @@ Known gaps carried forward, none blocking Session 5:
   `command_sync.rs` (a device's current placement; the next
   `group_address` position) should move behind named helpers in
   `devices.rs`/`group.rs` if that module grows — harmless today.
-- The `when/@test` expression grammar that would make device parameters
-  interpretable is unresearched (RESEARCH R3) — its own spike, prerequisite
-  for a parameter editor.
+- The `when/@test` value grammar that would make device parameters
+  interpretable is now documented (RESEARCH R3/§4.3, spike run
+  2026-09-11) — but device parameters are still not interpretable: the
+  `Dynamic` tree's structural grammar remains corpus-observed only, and
+  no evaluator or editor exists. See the dated entry below and T18
+  ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5).
 - A program value behind an instance-level `Empty` slot stays invisible in
   the model ([KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §12); lifted by
   a layer stack in `Override<T>`, a domain-model change deliberately not
@@ -1848,3 +1851,27 @@ spec §9 names both as out of scope). Closes **T14**, **C1**
 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). `ROADMAP.md` was checked
 and names neither T14 nor C1, so it was left untouched by this task.
 Design spec: `docs/superpowers/specs/2026-09-10-project-diff-design.md`.
+
+**R3 research spike, no code change (2026-09-11) — the `when/@test`
+grammar.** A read-only spike against 4 `.knxprod` product databases and 3
+`.knxproj` demo/reference projects (`OriginalData/`, 34 `ApplicationProgram`
+elements, 22630 `when`, 12149 `choose`) found that the KNX Standard v3.0.0
+normatively specifies the `@test` value grammar (`Condition_t`,
+`Project Schema23 v01.00.00.md` §1.1.3.18) and that the
+`choose`→`ParameterRef`→`ParameterType` resolution chain is 100%
+resolvable with zero dangling references. It also found the surrounding
+structural grammar (`Dynamic`, `Channel`, `ParameterBlock`, `choose`,
+`When_t`, and a previously-undocumented `ChannelIndependentBlock`) is not
+covered by any schema document in this repository's KNX Standard
+extraction, and remains corpus-observed only. Full findings:
+[RESEARCH.md §4.3](RESEARCH.md); log:
+`.ai/logs/2026-09-11_claude_r3_dynamic_grammar.md`. **This closes risk R3
+as a research question. It changes no code and lifts no limitation**: no
+parameter evaluator or editor exists, `ParameterInstance` values are still
+held as opaque raw strings, and [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md)
+stays open. What changed is that T18 (parameter interpretation and editor,
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5) is no longer blocked on
+research — it now needs a design decision on the no-match-branch policy
+(common in the corpus: 5570/8732 no-default `choose` elements have a legal
+value no `when` covers) and a defensive parser posture, both ordinary
+implementation work, not research.

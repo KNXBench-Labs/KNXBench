@@ -41,15 +41,20 @@ const WRITE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <Parameters>
   <Parameter Id="P-1" Name="Delay" Text="Delay" ParameterType="PT-Num" Access="ReadWrite" Value="5" />
   <Parameter Id="P-2" Name="Mode" Text="Mode" ParameterType="PT-Enum" Access="ReadWrite" Value="0" />
+  <Parameter Id="P-3" Name="NoOrder" Text="NoOrder" ParameterType="PT-Num" Access="ReadWrite" Value="3" />
 </Parameters>
 <ParameterRefs>
   <ParameterRef Id="P-1_R-1" RefId="P-1" DisplayOrder="10" Tag="1" />
   <ParameterRef Id="P-2_R-1" RefId="P-2" DisplayOrder="20" Tag="1" />
+  <!-- No DisplayOrder attribute at all -- fix round 1, item 1: this must
+       come back with displayOrder: null, not skipped, not 0. -->
+  <ParameterRef Id="P-3_R-1" RefId="P-3" Tag="1" />
 </ParameterRefs>
 </Static>
 <Dynamic>
   <ParameterRefRef RefId="P-1_R-1" />
   <ParameterRefRef RefId="P-2_R-1" />
+  <ParameterRefRef RefId="P-3_R-1" />
   <Module Id="MOD-1_M-1" RefId="MD-1" />
 </Dynamic>
 <ModuleDefs><ModuleDef Id="MD-1" Name="module">
@@ -140,6 +145,35 @@ const KV_SHAPE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
   <ParameterRefRef RefId="M-00FA_A-2504-10-C071_MD-2_P-1_R-1" />
 </Dynamic>
 </ModuleDef></ModuleDefs>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+/// Two top-level Number parameters whose `Static/ParameterRefs`
+/// `DisplayOrder` disagrees with the order `Dynamic/ParameterRefRef`
+/// activates them in: `P-1_R-1` declares `DisplayOrder="20"` but is
+/// activated first; `P-2_R-1` declares `DisplayOrder="10"` but is
+/// activated second. Fix round 1, item 4: the panel's field order is
+/// `Activation::parameter_refs`' document order, not a `display_order`
+/// sort — sorting by `display_order` would reverse this pair.
+const DOCUMENT_ORDER_DISAGREES_WITH_DISPLAY_ORDER_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-1" Name="First" Text="First" ParameterType="PT-Num" Access="ReadWrite" Value="1" />
+  <Parameter Id="P-2" Name="Second" Text="Second" ParameterType="PT-Num" Access="ReadWrite" Value="2" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="P-1_R-1" RefId="P-1" DisplayOrder="20" Tag="1" />
+  <ParameterRef Id="P-2_R-1" RefId="P-2" DisplayOrder="10" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterRefRef RefId="P-1_R-1" />
+  <ParameterRefRef RefId="P-2_R-1" />
+</Dynamic>
 </ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 
 /// One top-level Number parameter controlling a `choose` whose `when
@@ -305,10 +339,23 @@ async fn get_returns_stored_and_defaulted_top_level_fields() {
     let p1 = field(&dto, "P-1_R-1").expect("P-1_R-1 present");
     assert_eq!(p1["value"], "7");
     assert_eq!(p1["valueSource"], "Stored");
+    // Fix round 1, item 1: a declared DisplayOrder survives verbatim.
+    assert_eq!(p1["displayOrder"], 10);
+    // Fix round 1, item 2: `access` is carried verbatim too.
+    assert_eq!(p1["access"], "ReadWrite");
 
     let p2 = field(&dto, "P-2_R-1").expect("P-2_R-1 present");
     assert_eq!(p2["value"], "0");
     assert_eq!(p2["valueSource"], "ProgramDefault");
+
+    // Fix round 1, item 1: a `ParameterRef` declaring no `DisplayOrder` at
+    // all comes back `null`, not skipped and not `0`.
+    let p3 = field(&dto, "P-3_R-1").expect("P-3_R-1 present");
+    assert!(
+        p3["displayOrder"].is_null(),
+        "expected null, got {:?}",
+        p3["displayOrder"]
+    );
 }
 
 // AC2: an undecomposable id and a regex-match-but-undeclared id both land
@@ -652,4 +699,69 @@ async fn a_parameter_ref_whose_parameter_row_is_missing_is_reported_not_dropped_
         .as_str()
         .unwrap()
         .contains("1 dropped by an unresolved parameter/parameter_type join")));
+}
+
+// Fix round 1, item 4: field order is document order (`Activation::
+// parameter_refs`), not a `display_order` sort. `P-1_R-1` is activated
+// first but declares the higher `DisplayOrder`; a `display_order` sort
+// would put `P-2_R-1` first instead.
+#[tokio::test]
+async fn field_order_is_document_order_not_display_order() {
+    let (_dir, products) = temp_product_db(DOCUMENT_ORDER_DISAGREES_WITH_DISPLAY_ORDER_PROGRAM);
+    let state = Arc::new(state_with_device(products, vec![]));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let sections = dto["sections"].as_array().unwrap();
+    assert_eq!(sections.len(), 1);
+    let ids: Vec<&str> = sections[0]["fields"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["etsId"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        ids,
+        vec!["P-1_R-1", "P-2_R-1"],
+        "document (activation) order, not a display_order sort which would put P-2_R-1 first"
+    );
+}
+
+// Fix round 1, item 5: a device whose `program_ref` resolves to nothing
+// (product database present and ingested, but no `hardware2program` row
+// matches) returns the empty panel, not an error.
+#[tokio::test]
+async fn a_program_ref_that_resolves_to_nothing_returns_the_empty_panel() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = state_with_device(products, vec![("P-1_R-1", "7")]);
+    {
+        let mut project = state.project.lock().unwrap();
+        project
+            .as_mut()
+            .unwrap()
+            .devices
+            .get_mut(DeviceId(1))
+            .unwrap()
+            .program_ref = "H-1_HP-does-not-exist".into();
+    }
+    let state = Arc::new(state);
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(dto["programId"].is_null());
+    assert!(dto["sections"].as_array().unwrap().is_empty());
+    assert!(dto["diagnostics"].as_array().unwrap().is_empty());
+    // The stale-but-unresolvable stored value still round-trips through
+    // as `stale`, same as the `product_db == None` path -- it is not
+    // silently dropped just because the program didn't resolve either.
+    let stale_ids: Vec<&str> = dto["stale"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["etsId"].as_str().unwrap())
+        .collect();
+    assert_eq!(stale_ids, vec!["P-1_R-1"]);
 }

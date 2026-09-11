@@ -1962,6 +1962,8 @@ fn assemble_parameter_panel(state: &AppState, device_id: u32) -> Result<PanelAss
                         text: text.clone(),
                     })
                     .collect(),
+                display_order: view.display_order,
+                access: view.access.clone(),
             });
         }
         sections.push(crate::routes::ParameterSectionDto {
@@ -2144,6 +2146,23 @@ mod tests {
 
     fn reference_project_path() -> PathBuf {
         workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
+    }
+
+    // Fix round 1, item 3: an id containing two syntactically valid
+    // `_M-<digits>_MI-<digits>_` markers must decompose on the rightmost
+    // one, matching `^(.*)_M-(\d+)_MI-(\d+)_(.*)$`'s greedy-backtracking
+    // semantics (D21). This id's first marker (`_M-1_MI-1_`) is itself
+    // immediately followed by a second, later one (`_M-2_MI-2_`); only the
+    // rightmost split's prefix/suffix are correct.
+    #[test]
+    fn decompose_module_qualified_keeps_the_rightmost_of_two_valid_markers() {
+        let id = "P_M-1_MI-1_P_M-2_MI-2_TAIL";
+        let (prefix, module_digits, mi_digits, suffix) =
+            decompose_module_qualified(id).expect("two valid markers should decompose");
+        assert_eq!(prefix, "P_M-1_MI-1_P");
+        assert_eq!(module_digits, "2");
+        assert_eq!(mi_digits, "2");
+        assert_eq!(suffix, "TAIL");
     }
 
     #[test]

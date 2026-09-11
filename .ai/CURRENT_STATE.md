@@ -1,4 +1,86 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-11 23:32
+- **Completed:** **T18 slice 3, Task 3, fix round 1** — same worktree
+  (`.worktrees/t18-parameter-editor`, branch `t18-parameter-editor`), on
+  top of `f152ac4`. Review returned spec compliance approved, task
+  quality changes-requested (0 blocking, 3 should-fix, 2 nits); all five
+  addressed this round, test-first this time (unlike round 1, which
+  skipped that ordering and said so).
+  - `ParameterFieldDto` (`apps/knx-server/src/routes.rs`) gains two
+    fields: `display_order: Option<i64>` (serialised `displayOrder`,
+    `None` -> JSON `null`, never skipped, never `0`) and
+    `access: Option<String>` — both verbatim from `ParameterView`, both
+    populated at the one construction site in `domain.rs`'s
+    `assemble_parameter_panel`. `access` is shown, never used to gate
+    `editable` (D24 still doesn't gate on it). This also resolves a
+    standing self-contradiction in the design doc: its Non-Goals prose
+    already claimed `access` was shown verbatim while D22's own struct
+    listing omitted it; the struct listing
+    (`docs/superpowers/specs/2026-09-11-parameter-editor-design.md`) now
+    carries both fields so it matches the shipped DTO.
+  - Four new tests, written and run before any implementation change, as
+    required this round:
+    1. `domain::tests::decompose_module_qualified_keeps_the_rightmost_of_two_valid_markers`
+       (private function, so it lives in `domain.rs`'s own `mod tests`) —
+       an id with two valid `_M-<digits>_MI-<digits>_` markers back to
+       back; asserts the rightmost split. Ran green on first try, no
+       implementation change needed — the function was already correct,
+       this only pins it.
+    2. `field_order_is_document_order_not_display_order`
+       (`http_parameter_panel.rs`) — a new fixture,
+       `DOCUMENT_ORDER_DISAGREES_WITH_DISPLAY_ORDER_PROGRAM`, whose two
+       `ParameterRef`s declare `DisplayOrder="20"`/`"10"` but activate in
+       the opposite order. Also ran green on first try — field order was
+       already `Activation::parameter_refs`' document order, not a
+       `display_order` sort; this pins that too.
+    3. `a_program_ref_that_resolves_to_nothing_returns_the_empty_panel`
+       (`http_parameter_panel.rs`) — a device whose `program_ref` doesn't
+       match any ingested `hardware2program` row, product database
+       otherwise present. Also ran green on first try — `empty_assembly`
+       already covered this path (`resolve_program` returning `None`
+       distinct from `product_db` being absent entirely).
+    4. New assertions in the existing
+       `get_returns_stored_and_defaulted_top_level_fields` (AC1) test:
+       added a third top-level parameter `P-3_R-1` to `WRITE_PROGRAM`
+       whose `ParameterRef` declares no `DisplayOrder` attribute at all.
+       This one **did** fail first, genuinely: `assertion `left == right`
+       failed / left: Null / right: 10` against `p1["displayOrder"]`,
+       since the DTO didn't carry the field yet. Fixed by the DTO/
+       construction-site change above; both the verbatim (`p1`, `10`) and
+       null (`p3`) cases pass now.
+  - So: 3 of the 4 mandated tests turned out to be pinning tests against
+    already-correct behaviour (genuinely ran green before any code
+    change — reported honestly rather than manufacturing a failure that
+    wasn't there); only the `display_order`/`access` DTO gap was a real,
+    reproducible bug this round fixed.
+  - Gates, all in the foreground, one at a time: `cargo fmt --all --check`
+    clean (after one `cargo fmt --all` pass over the new test code);
+    `cargo clippy --workspace --all-targets -- -D warnings` clean;
+    `cargo test --workspace` = **975 passed / 0 failed / 3 ignored**
+    (baseline at `f152ac4` was 972/0/3; delta is exactly +3, one per new
+    `#[test]`/`#[tokio::test]` function — the DTO-field assertions landed
+    inside an existing test, so they don't add to the count); `cargo run
+    -p xtask -- check-layering` ok; `cargo deny check` exit 0 (same
+    pre-existing `advisory-not-detected` warnings as before, nothing
+    new); `npm run test` in `apps/knx-web` = 179 passed / 179, 17 files
+    (frontend untouched this round, as expected).
+  - No schema change in either database. `crates/knx-etsproj` and
+    `crates/knx-productdb/src/dynamic/evaluate.rs` untouched. DTOs stayed
+    in `routes.rs`. No new `CommandError`/error variants. No subagents of
+    my own.
+- **Pending/Next Steps:** Task 3 (including this fix round) is done
+  pending coordinator merge to `main`. No further work queued on this
+  branch by me.
+- **Notes for Codex:** The design doc's `ParameterFieldDto` struct listing
+  (D22) now lists `display_order`/`access` alongside the other fields —
+  if you're reading that doc to scaffold a client type, both are present
+  on the wire (`displayOrder`, `access`), both nullable. The frontend
+  (`apps/knx-web`) still has no parameter-panel UI at all as of this
+  entry — this task was server-only (D20-D26 explicitly scoped it that
+  way); a future slice presumably wires a UI to
+  `GET`/`POST /api/device/{id}/parameters`.
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-11 23:10
 - **Completed:** **T18 slice 3, Task 3** — `apps/knx-server`: the parameter
   panel read model and its write endpoint. Worktree

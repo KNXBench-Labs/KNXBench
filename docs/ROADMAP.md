@@ -392,9 +392,12 @@ OS preference is currently the only control, and it is all-or-nothing.
 Restoring the control, and binding every future animation to it, is
 tracked as **T27** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s
 Tier 7, closing gap **D11**. The constraint applies to work already on
-this roadmap that has not been built yet: T15's Group Monitor table,
-T17's line-scan UI, T21's graphical topology/building views, and the
-"who talks to whom" telegram animation deferred beyond Session 7 below.
+this roadmap that has not been built yet: T17's line-scan UI, T21's
+graphical topology/building views, and the "who talks to whom" telegram
+animation deferred beyond Session 7 below — plus T15's Group Monitor
+table, which shipped 2026-09-11 without ever being bound to a motion
+preference, making it the first item T27 has to retrofit rather than
+merely constrain.
 That animation is the reason this is written down now rather than at
 implementation time — it is the first genuinely motion-heavy feature on
 the list, and the cheapest moment to require a switch for it is before
@@ -570,6 +573,12 @@ write with `knx bus write --dpt DPST-9-1 23.5` instead of computing the
 wire encoding themselves — for the main types this cycle covers. Closes
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) row **E4** partially; the GUI
 (**D5**, **T15**) is still open and now has this codec to build on.
+
+**Update, 2026-09-11 (T15).** Landed later the same day: the GUI is no
+longer open. See row **D5** in
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and
+[KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway) —
+T15 closed the display side for tunnelling.
 
 **Entry condition.** All earlier sessions' deliverables exist and are tested.
 

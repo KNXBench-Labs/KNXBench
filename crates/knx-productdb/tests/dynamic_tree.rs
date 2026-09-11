@@ -1565,10 +1565,14 @@ fn corpus_evaluation_matches_research_no_unparsable_tests_no_unresolved_refs_and
         // bucket (RESEARCH.md §4.3's table: `SINGLE_INTEGER`,
         // `DEFAULT_ATTR(true)`, `SPACE_LIST_OF_INTEGERS`, `OP_NUMBER`).
         // Classified straight from the stored `test`/`is_default` columns,
-        // independently of `evaluate`'s own diagnostics (which only walk
-        // each program's own `module_def_id = ''` tree — `Module`/
-        // `ModuleDef` are deliberately unevaluated, see `ModuleNotExpanded`
-        // above). §4.3's own per-archive `when` totals (2252/5/982/0, the
+        // independently of `evaluate`'s own diagnostics (which, in *this*
+        // test, only walk each program's own `module_def_id = ''` tree —
+        // this test still calls `evaluate` with `ProgramTrees::single`, not
+        // `load_program_trees`, so any `Module` node here yields
+        // `ModuleDefNotFound` rather than being expanded; the corpus test
+        // that does expand `Module` into its `ModuleDef` tree is
+        // `corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_counts`,
+        // below). §4.3's own per-archive `when` totals (2252/5/982/0, the
         // same ones `corpus_choose_and_when_counts_match_research_and_every_choose_resolves`
         // already proves) count *every* stored `when` regardless of
         // `module_def_id`, so this counts the same way — over the whole

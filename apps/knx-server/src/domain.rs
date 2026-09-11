@@ -20,7 +20,18 @@ use std::sync::Mutex;
 use knx_app::{AppError, ImportOptions};
 use knx_projection::ProjectTree;
 
+use crate::bus::{BusTunnel, GatewayConnector, RealConnector};
 use crate::session_log::{self, LogEntry, SessionLog, Severity};
+
+/// One open KNXnet/IP monitor session (T15, design spec §4.1). This task
+/// (T15 task 1) adds only the shell — an id and the boxed tunnel `bus.rs`'s
+/// seam produced. A later task fills in the telegram buffer, the drain
+/// task, and the lagged-receiver accounting; nothing here yet reads or
+/// writes those, because nothing yet spawns a session.
+pub struct BusSession {
+    pub id: u64,
+    pub tunnel: Box<dyn BusTunnel>,
+}
 
 pub struct AppState {
     pub project: Mutex<Option<knx_core::Project>>,
@@ -61,6 +72,19 @@ pub struct AppState {
     /// other than a successful `open_project`/`open_native_project`. See
     /// `session_log.rs` for the append rules every call site below follows.
     pub session_log: Mutex<SessionLog>,
+    /// Opens a tunnel to a KNXnet/IP gateway (T15, design spec §3 D6) —
+    /// `RealConnector` in production, `crate::fake::FakeConnector` in
+    /// tests via the `AppState { connector: ..., ..Default::default() }`
+    /// struct-update pattern `tests/http_product_install.rs:40-67` already
+    /// uses for `product_db`. Not a `Mutex`: the trait object itself is
+    /// stateless/`Sync` (it only ever opens tunnels; each open tunnel's own
+    /// state lives in `bus_session` below).
+    pub connector: Box<dyn GatewayConnector>,
+    /// At most one open monitor session (T15, design spec §4.1: "a monitor
+    /// session is ... `AppState.bus_session: Mutex<Option<BusSession>>`
+    /// holds at most one"). Nothing in this task starts or stops one — no
+    /// route reads or writes this field yet.
+    pub bus_session: Mutex<Option<BusSession>>,
     /// Root directory web-originated file access is confined to:
     /// `fs_routes.rs`'s `/api/fs/*` routes entirely, plus any *relative*
     /// path a `/api/project/*` route is given (`crate::paths`). Absolute
@@ -84,6 +108,8 @@ impl AppState {
             import_counts: Mutex::new((0, 0)),
             product_db,
             session_log: Mutex::new(SessionLog::default()),
+            connector: Box::new(RealConnector::default()),
+            bus_session: Mutex::new(None),
             data_dir,
         }
     }

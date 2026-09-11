@@ -5,6 +5,9 @@ use axum::routing::get;
 use axum::Router;
 use tower_http::services::ServeDir;
 
+mod bus;
+pub use bus::*;
+
 mod domain;
 pub use domain::*;
 

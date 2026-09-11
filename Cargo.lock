@@ -1967,6 +1967,7 @@ dependencies = [
  "knx-csv",
  "knx-diff",
  "knx-etsproj",
+ "knx-net",
  "knx-productdb",
  "knx-projection",
  "knx-report",

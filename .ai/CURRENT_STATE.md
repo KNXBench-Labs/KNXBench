@@ -1,4 +1,18 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-12 04:35
+- **Completed:** Merged the entry below to `main` (`b480805`, `--no-ff`)
+  and re-ran all six gates **on the merged result**: fmt clean, clippy
+  clean, `cargo test --workspace` **975 passed / 0 failed / 3 ignored**,
+  layering ok, `cargo deny check` ok, `npm run test` **184 passed across 18
+  files** — unchanged from the pre-merge baseline, as a docs-only change
+  should be. Branch and worktree removed; `origin/main` is at `b480805`.
+- **Pending/Next Steps:** Next slice is **T27** (in-app motion control,
+  gap D11, partly D8) — design drafted this session, not yet in the repo.
+- **Notes for Codex:** Nothing in this merge changes runtime behaviour.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-12 04:20
 - **Completed:** **Docs-only: closed gap F2 (T22 backlog scope, not implemented).**
   Worktree `t22-concurrency-limitation` off `main` at `6112d3d`. Verified in

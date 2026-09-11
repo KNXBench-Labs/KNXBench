@@ -9,10 +9,13 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use rusqlite::Connection;
+use rusqlite::{params, Connection};
+
+use crate::ingest::{classify, FileKind};
+use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 2;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 3;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -268,7 +271,136 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
 type Migration = fn(&Connection) -> Result<(), ProductDbError>;
 
 fn migrations() -> Vec<Migration> {
-    vec![migrate_v0_to_v1, migrate_v1_to_v2]
+    vec![migrate_v0_to_v1, migrate_v1_to_v2, migrate_v2_to_v3]
+}
+
+/// v2 -> v3. Adds `dynamic_node` (design D2,
+/// `docs/superpowers/specs/2026-09-11-dynamic-tree-parse-and-evaluate-design.md`):
+/// one row per element of every `ApplicationProgram`/`ModuleDef` `Dynamic`
+/// tree, stored losslessly and unevaluated. `module_def_id` is `NOT NULL`
+/// with `''` as the sentinel for the program's own tree rather than
+/// nullable, because SQLite treats NULLs in a non-`INTEGER` `PRIMARY KEY`
+/// as pairwise distinct, which would silently defeat the uniqueness
+/// constraint for exactly the common case.
+///
+/// `extra` (every attribute not captured by a dedicated column, as
+/// `"name=value"` pairs, sorted, newline-joined) is a human-readable audit
+/// trail, not a re-parseable encoding: it cannot be split unambiguously
+/// back apart when a value itself contains `=` or a newline.
+///
+/// This is the first migration in this crate that runs Rust rather than
+/// plain SQL — see `backfill_dynamic_nodes` below, which is the payoff
+/// ADR-0011's blob store was designed for: a file's bytes are kept
+/// specifically so a later parser can read what an earlier one skipped,
+/// without asking the user to feed the file in again.
+fn migrate_v2_to_v3(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE dynamic_node (
+            program_id    TEXT NOT NULL,
+            module_def_id TEXT NOT NULL,
+            node_id       INTEGER NOT NULL,
+            parent_id     INTEGER,
+            position      INTEGER NOT NULL,
+            kind          TEXT NOT NULL,
+            element_id    TEXT,
+            ref_id        TEXT,
+            test          TEXT,
+            is_default    INTEGER,
+            text          TEXT,
+            extra         TEXT,
+            PRIMARY KEY (program_id, module_def_id, node_id)
+        ) STRICT;
+        CREATE UNIQUE INDEX dynamic_node_sibling
+            ON dynamic_node (program_id, module_def_id, parent_id, position);",
+    )?;
+    backfill_dynamic_nodes(conn)?;
+    Ok(())
+}
+
+/// Design D5: a product database that reached v2 before `dynamic_node`
+/// existed has `source_file` blobs and `application_program` rows, but
+/// nothing in `dynamic_node` for them — installation is content-hash
+/// idempotent (`source_parse_evidence`), so a file already on record is
+/// never re-parsed, and without this backfill such a database would stay
+/// empty forever with no visible sign of why. This replays every stored
+/// blob that looks like `ApplicationProgram` content through Task 1's
+/// `dynamic::parse::parse_dynamic_trees`, inside the same migration
+/// transaction `open_and_migrate` already holds.
+///
+/// `parse_dynamic_trees`'s own `program_should_be_skipped` check is *not*
+/// keyed on `application_program.source_sha256` matching (see its doc
+/// comment in `dynamic/parse.rs`) precisely so this call is not a silent
+/// no-op: every program already in `application_program` at this point has
+/// a long-since-stored `source_sha256` that trivially matches its own
+/// blob, and skipping on that basis would backfill nothing at all.
+///
+/// A single blob's parse failure is recorded into `ingest_unknown`
+/// (`kind = 'DynamicBackfillError'`) and does not abort the migration or
+/// undo the blobs already processed in this same pass — a database that
+/// refuses to open is worse than one with a gap.
+///
+/// `parse_dynamic_trees` inserts `dynamic_node` rows incrementally as it
+/// walks the XML event stream, so a malformed blob (e.g. a mismatched end
+/// tag) can leave a handful of rows behind before the error is even raised
+/// — quick-xml only notices the mismatch once it reaches the offending end
+/// tag, by which point every element opened before it is already inserted.
+/// Each blob therefore gets its own `SAVEPOINT`, released on success and
+/// rolled back to on error, *before* `record_backfill_failure` runs — this
+/// is the same "a parse error partway through leaves the database exactly
+/// as it was" invariant `ingest.rs`'s doc comment already promises for the
+/// ordinary install path (`ingest.rs:33-37`), now honoured here too. It is
+/// purely an inner boundary: the outer migration transaction
+/// `open_and_migrate` holds around this whole function is untouched, and a
+/// bad blob still does not stop the loop from reaching the next one.
+fn backfill_dynamic_nodes(conn: &Connection) -> Result<(), ProductDbError> {
+    let mut stmt = conn.prepare("SELECT sha256, source_path, bytes FROM source_file")?;
+    let blobs: Vec<(String, String, Vec<u8>)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    drop(stmt);
+
+    for (sha256, source_path, bytes) in blobs {
+        // Only `ApplicationProgram` content can carry a `Dynamic` tree;
+        // everything else (catalog, hardware, baggage, ...) is skipped
+        // without being parsed at all, exactly as the ordinary ingest path
+        // already dispatches by `classify`.
+        if classify(&bytes) != FileKind::ApplicationProgram {
+            continue;
+        }
+        conn.execute_batch("SAVEPOINT dynamic_backfill_blob;")?;
+        match crate::dynamic::parse::parse_dynamic_trees(conn, &sha256, &source_path, &bytes) {
+            Ok(outcome) => {
+                conn.execute_batch("RELEASE SAVEPOINT dynamic_backfill_blob;")?;
+                insert_unknown(conn, &sha256, &outcome.unknown)?;
+            }
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT dynamic_backfill_blob;
+                     RELEASE SAVEPOINT dynamic_backfill_blob;",
+                )?;
+                record_backfill_failure(conn, &sha256, &source_path, &error)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Records a backfill parse failure through the same `ingest_unknown` table
+/// every other diagnostic in this crate lands in (`report::insert_unknown`,
+/// `report::insert_conflicts`'s `'IdConflict'` rows follow the identical
+/// pattern of a literal `kind` string with no table of its own).
+fn record_backfill_failure(
+    conn: &Connection,
+    sha256: &str,
+    source_path: &str,
+    error: &ProductDbError,
+) -> Result<(), ProductDbError> {
+    conn.execute(
+        "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
+         VALUES (?1, NULL, ?2, 'DynamicBackfillError', ?3, 1, ?4)",
+        params![sha256, source_path, "parse_dynamic_trees", error.to_string()],
+    )?;
+    Ok(())
 }
 
 fn migrate_v1_to_v2(conn: &Connection) -> Result<(), ProductDbError> {

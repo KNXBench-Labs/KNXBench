@@ -21,7 +21,7 @@ Four things are explicitly out of v1:
 
 | Excluded | Reason |
 | --- | --- |
-| Device parameter editing, `Dynamic` tree evaluation | RESEARCH R3 — the Session 4 spike (RESEARCH §4.3) found the `@test` value grammar is Standard-normative, but the `choose`/`when`/`Channel`/`ParameterBlock` structural grammar is still corpus-observed only, and no evaluator or editor exists yet (T18, GAP_ANALYSIS_ETS.md) |
+| Device parameter editing | RESEARCH R3 — the Session 4 spike (RESEARCH §4.3) found the `@test` value grammar is Standard-normative, but the `choose`/`when`/`Channel`/`ParameterBlock` structural grammar is still corpus-observed only. T18 slice 1 (2026-09-11) built a headless evaluator over the stored `Dynamic` tree in `knx-productdb`, but no UI reads it, `Module` expansion is not implemented, and no editor exists yet (T18, GAP_ANALYSIS_ETS.md) |
 | Commissioning and device download | RESEARCH §8.3 — bricking risk, an undocumented `Legacy*` matrix, vendor DLLs |
 | KNX Secure | RESEARCH §9 — no sample material to verify against; the subsystem exists but stays empty |
 | Direct `.knxprod` import for master data scheme ≥ 12 | RESEARCH §10 — the encryption layer is unresolved |
@@ -297,7 +297,7 @@ Seven levels. Two of them exist today; the rest arrive with the code they test.
 | Golden | Import of the reference project against the entity counts from RESEARCH §3: 36 devices including the unassigned one, 514 group addresses, 907 `ComObjectInstanceRef`, 1390 parameter values, 569 send and 27 receive links. Session 4 adds its own golden ingest of the same project's manufacturer data (4 manufacturers, 24 source files, 12 application programs, 5,630 `com_object_ref` rows, 48,057 translations — `crates/knx-productdb/tests/golden_reference_products.rs`) | Session 3, extended Session 4 |
 | Oracle | Comparison against `xknxproject` output where it is not known to be lossy; every deviation must be explained. Session 4 adds a communication-object text/DPT comparison against `project_dump.json`, read as a committed output file per ADR-0002, never a dependency | Session 3, extended Session 4 |
 | Roundtrip | The three roundtrip guarantees defined in [IMPORT_EXPORT.md](IMPORT_EXPORT.md), now including `export_is_byte_identical_with_and_without_the_product_database` (`crates/knx-app/tests/product_db.rs`) | Session 3, extended Session 4 |
-| Migration | Every schema version has a frozen fixture that must keep loading — `knx-store` through v3, `knx-productdb`'s own v1 | Session 2, extended Session 4 |
+| Migration | Every schema version has a frozen fixture that must keep loading — `knx-store` through v3, `knx-productdb`'s own v1 through v3 (v2→v3 additionally backfills `dynamic_node` rows into existing databases from their stored blobs, T18 slice 1) | Session 2, extended Session 4 and T18 |
 | Malformed input | Broken ZIP, truncated XML, unknown schema, duplicate IDs, invalid addresses, dangling references, password-protected without a password. Session 4 adds `crates/knx-productdb/tests/malformed_input.rs`: a truncated program, an empty file, 10,000 levels of nesting, an id collision across two different content hashes | Session 3, extended Session 4 |
 | Licence and layering | The dependency graph reaches no GPL crate; `knx-core` stays IO-free | Done — `cargo deny check`, `cargo run -p xtask -- check-layering` |
 

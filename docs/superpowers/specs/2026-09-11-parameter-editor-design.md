@@ -24,20 +24,49 @@ current data model can store unambiguously** — decided in D24/D25 below,
 not assumed here. Two further, explicitly out-of-scope pieces this
 boundary produces:
 
-- **Editing a `Module`-scoped (per-channel) value.** `ParameterInstance` is
-  keyed by `(device, ets_id)` only (`crates/knx-core/src/parameter.rs`); it
-  has no field for *which* instantiation of a `ModuleDef` a value belongs
-  to. Slice 2's D16 already establishes that the evaluator reads every
-  instantiation of one `ModuleDef` against identical values, because
-  per-instantiation values are a project-side construct `knx-productdb`
-  does not model. This slice inherits that limitation on the *write* side
-  too: there is nowhere to store twelve independent channel values today.
-  Fixing it needs a real data-model decision (does `ParameterInstance` grow
-  a scope key? does the key point at the AP-level `Module`, matching
-  `ModuleScope::module_node`, or at a project-side `ModuleInstance`?) that
-  deserves its own design, not a side effect of this one. Module-scoped
-  values are read and displayed per channel in this slice; they are not
-  editable in this slice. Named as follow-on work below.
+- **Editing a `Module`-scoped (per-channel) value.** The premise this
+  bullet opened with in the first draft of this design — that
+  `ParameterInstance` "has nowhere to store twelve independent channel
+  values" — is false, and re-measuring it changes what this bullet says.
+  ETS already puts the instantiation *inside* the stored `ets_id` string,
+  not in a separate column: `<Module/@Id>_MI-<k>_<declared ParameterRef's
+  own suffix>` — e.g. `M-00FA_A-2504-10-C071_MD-2_M-4_MI-1_P-1_R-1` for
+  `Module/@Id M-00FA_A-2504-10-C071_MD-2_M-4`
+  (`RefId="M-00FA_A-2504-10-C071_MD-2"`) and declared `ParameterRef`
+  `M-00FA_A-2504-10-C071_MD-2_P-1_R-1`. **[V], corpus-observed:** the KV
+  v2.5 demo project's `ParameterInstance` table already stores exactly
+  this shape for all nine of its `ParameterInstanceRef` rows, and five of
+  the nine are five *distinct* values — 17, 33, 49, 32, 48 — for the
+  single declared `ParameterRef` `M-00FA_A-2504-10-C071_MD-2_P-1_R-1`, in
+  five different `Module` instantiations (`_M-2_` through `_M-6_`).
+  Per-channel values are not a hypothetical this slice has to design
+  storage for; they are already in the repository's own corpus, in the
+  table this slice already reads (`crates/knx-store` `ParameterInstance`,
+  keyed by `(device, ets_id)`, `crates/knx-core/src/parameter.rs`,
+  unchanged). The two other demo projects (Unser Zuhause ETS 6.3.0 and
+  ETS 4, 1343 and 1390 `ParameterInstanceRef` rows respectively) store
+  none of theirs module-qualified — every one matches a declared
+  `ParameterRef` id verbatim — so this is a real but bounded corpus shape,
+  not the common case; see D21 for the exact decomposition this slice
+  adds to read it.
+
+  What actually blocks a *write* is one level down, in the evaluator, not
+  in storage: `crates/knx-productdb/src/dynamic/evaluate.rs:797` resolves
+  a `choose`'s controlling value with `values.get(id)`, where `id` is the
+  bare declared `ParameterRef` id and `ValueMap` is `HashMap<String,
+  String>` (`evaluate.rs:348`) — one slot per declared id, project-wide,
+  with no scope in the key. A flat map cannot hold KV's five independent
+  values for one declared ref at once, so a `choose` inside a `ModuleDef`
+  takes the same branch in every instantiation regardless of what the
+  project stores per channel. Making a per-channel value actually *drive*
+  evaluation means changing the merged, tested evaluator's value lookup —
+  a separate slice with its own design (see D21's ruling on `supplied`,
+  and the Non-goals entry below). This slice reads and displays a
+  per-channel value where the corpus already provides one (D21's
+  decomposition, D22's per-section attachment); it does not write one
+  (D25) — not for lack of somewhere to put it, but because a write the
+  evaluator cannot see is worse than no write. Named as follow-on work
+  below.
 - **Deep format validation for `Float`/`Text`/`IPAddress`/`Picture`/`Raw`
   parameter kinds.** Only `Number` (bounds) and `Restriction` (enum
   membership) have columns this database actually carries
@@ -131,6 +160,61 @@ decisions. The facts below are either already-cited corpus evidence
   verbatim for a `ParameterInstance` the editor creates, rather than
   inventing a sentinel path — this is the existing convention, not a new
   one.
+- **[V], measured for this revision, all three demo projects
+  (`OriginalData/DemoProjects/`, extracted read-only).**
+  `ParameterInstanceRef` row counts: KV v2.5 demo 9, Unser Zuhause ETS
+  6.3.0 1343, Unser Zuhause ETS 4 1390. Module-qualified (id matches
+  `_M-\d+_MI-\d+_`): KV 9/9, both Unser Zuhause projects 0/0. Union-typed
+  (`_UP-`): KV 0, UZ 6.3.0 208, UZ 4 216. Verbatim match against a
+  declared `ParameterRef` id: KV 0/9, UZ 6.3.0 1343/1343 (all), UZ 4
+  1390/1390 (all) — every UZ instance row matches a declared id exactly,
+  including all 208/216 union ones; the gap between that row count and
+  the 788 *distinct* ids behind it is the same bare declared id reused
+  under different `DeviceInstance` elements (each device gets its own
+  copy of the id), not a module qualifier. Reproduced with `grep -o
+  '<ParameterInstanceRef RefId="[^"]*"' <project>/0.xml`, filtered per
+  column above, against each `.knxproj` zip's extracted `0.xml`.
+- **[V], same measurement.** KV's `M-00FA_A-2504-10-C071` application
+  program declares 6 `ParameterRef` ids total (2 top-level, 4 under
+  `MD-2`), none containing `_M-\d+_MI-\d+_`, and its `Dynamic` declares 8
+  `Module` elements under `MD-2` (`M-1` through `M-8`). KV's other three
+  `M-00FA` programs (`A-2502-10-8698`, `A-2500-10-51CB`,
+  `A-2507-10-0DE5`) each likewise declare 8 `Module` elements — 32 in
+  total across the four programs the KV project activates. **Correction
+  to the brief that produced this revision:** the brief's figure "32 such
+  Module ids in that program" is the sum across those four programs, not
+  the count for `A-2504-10-C071` alone (8) — re-measured and corrected
+  here; it does not change any decision below. Across all three demo
+  projects' declared `parameter_ref` id spaces (24 KV rows, 18,843 rows
+  shared by both Unser Zuhause projects), zero contain the
+  `_M-\d+_MI-\d+_` substring — the decomposition regex in D21 cannot
+  mistake a declared id for a module-qualified one anywhere in this
+  corpus.
+- **[V], same measurement.** Regex-stripping `_M-\d+_MI-\d+_` → `_` from
+  each of KV's 9 stored `ParameterInstanceRef` ids yields a string that
+  matches a declared `ParameterRef` id in the corresponding program, 9/9.
+  The `MI` index observed is `1` in every one of those 9 rows, and `_MI-`
+  never occurs anywhere in either Unser Zuhause project — this corpus
+  never exercises an `MI` value other than 1, so `MI`'s full semantics
+  (does it ever exceed 1? what would a second instance of one `Module`
+  reference mean?) are unattested. D25 relies on this gap staying
+  unresearched territory for the *write* side; it does not affect the
+  read side, where `MI`'s value is carried through unparsed.
+- **Code fact, re-verified for this revision.**
+  `crates/knx-productdb/src/dynamic/evaluate.rs:797`,
+  `evaluate_comparable_choose`, resolves a `choose`'s controlling value
+  with `values.get(id)` where `id` is `node.ref_id` (a bare declared
+  `ParameterRef` id) and `ValueMap` is `HashMap<String, String>`
+  (`evaluate.rs:348`) — confirmed no scope enters that lookup at all.
+- **Code fact.** `ModuleScope::module_id` (`evaluate.rs:475`) is set from
+  `node.element_id` when a `Module` node is walked (`evaluate.rs:680`) —
+  the same `@Id` `dynamic/parse.rs` already stores on every `DynamicNode`
+  (`evaluate.rs:130`). A program's declared `Module/@Id` set is therefore
+  already reachable two ways with no new SQL query: walking the
+  already-loaded `ProgramTrees` for `Module`-kind nodes directly, or
+  collecting the distinct `ModuleScope`s already present on
+  `Activation::parameter_refs` once D23's own grouping runs. D21's
+  decomposition step uses the latter, since D23 already computes it.
 
 ## Decisions
 
@@ -176,18 +260,64 @@ Precedence, using `resolve_values` exactly as it already exists:
    unchanged and is exactly D21's precedence — this decision is naming
    what `supplied` means for this consumer, not changing `resolve_values`.
 
-**The stale case.** A stored `ParameterInstance.source.ets_id` that names
-no `parameter_ref` row for the device's current `program_ref` (the program
-changed since the value was written, or the id was simply never valid) is
-never visited by `resolve_values`'s own loop — that loop only iterates
-`parameter_ref` rows for the program, so a stale `supplied` entry rides
-along unused in the returned `ValueMap` and is never flagged by anything
-inside `knx-productdb`. Per `CLAUDE.md`: never silently discard. The
-assembly step in `knx-server` computes the diff itself — the set of
-`ets_id`s in `supplied` minus the set of `parameter_ref` ids for the
-program (a new bulk query, D22) — and returns every orphan explicitly, in
-the read model's own `stale` list (D22), carrying its `ets_id` and its
-`raw` value unchanged.
+**Decomposing a stored `ets_id` (added by this revision).** A stored
+`ParameterInstance.source.ets_id` is not always a bare declared
+`ParameterRef` id — Evidence shows ETS encodes a `Module` instantiation
+*inside* the id string itself:
+`<Module/@Id>_MI-<k>_<declared ParameterRef's own suffix>`. Before an
+`ets_id` can be matched against the program, it must be decomposed:
+
+1. If `ets_id` is already a member of `parameter_ref_ids` (D22) verbatim,
+   it is unscoped — the common case (1343/1343 and 1390/1390 in the two
+   Unser Zuhause demo projects, Evidence).
+2. Otherwise, apply `^(.*)_M-(\d+)_MI-(\d+)_(.*)$` to `ets_id`. No match:
+   decomposition fails (see the corrected stale definition below). A
+   match yields candidate `module_id = "{prefix}_M-{n}"` and candidate
+   declared id `"{prefix}_{suffix}"`. Both must be validated before
+   either is trusted — a regex match alone is a coincidence, not a
+   decomposition: `module_id` must equal the `module_id` of some
+   `ModuleScope` the program's `Dynamic` tree actually declares
+   (Evidence: already reachable from the loaded `ProgramTrees`/
+   `Activation`, no new query), and the declared id must be a member of
+   `parameter_ref_ids` (D22). Both checks pass on all 9 of KV's rows
+   (Evidence); on this corpus the regex never matches a genuinely
+   unscoped id by accident, since no declared `parameter_ref` id in any
+   of the three demo projects contains `_M-\d+_MI-\d+_` (Evidence).
+
+Chosen over prefix-matching the `Module/@Id` set first: both routes
+decompose KV's 9 rows correctly (Evidence), but the regex route reads the
+section-routing key (`module_id`) and the `ValueMap`/`parameter_ref_ids`
+key (the declared id) out of one pattern match, so it does not need the
+`Module/@Id` set enumerated before it can even attempt a split — only to
+*validate* a candidate it already has. Validation against the known
+`Module/@Id` set and against `parameter_ref_ids` still runs either way;
+the difference is only which piece of data decides where to cut the
+string.
+
+Successfully decomposed, unscoped entries enter `supplied` exactly as
+step 1 above describes. Successfully decomposed, module-scoped entries do
+**not** enter `supplied` — see the flat-`ValueMap` ruling below — they
+feed D22's per-section value attachment instead.
+
+**The stale case, corrected.** `stale` means: decomposition failed
+outright (no verbatim `parameter_ref_ids` match and no regex match
+either — the program changed since the value was written, or the id was
+simply never valid), **or** decomposition (verbatim or via the regex
+above) recovered a candidate that names no `parameter_ref`/`Module` row
+the current program actually declares. `stale` does **not** mean "the id
+carries a module segment" — a module-qualified id that decomposes
+successfully (KV's shape, 9/9) is not stale; it is a per-channel value
+with a home (D22). A stale entry keeps carrying its original `ets_id` and
+`raw` unchanged, exactly as before this revision.
+
+Per `CLAUDE.md`: never silently discard. The assembly step in `knx-server`
+runs the decomposition above over every stored `ParameterInstance` for
+the device — not a separate diff query; the decomposition already visits
+every row — and sorts each into exactly one of three outcomes: unscoped
+(feeds `supplied`), module-scoped-and-valid (feeds D22's per-section
+attachment), or stale (decomposition failed, or its candidate is
+undeclared). Every orphan lands in the read model's own `stale` list
+(D22), carrying its `ets_id` and its `raw` value unchanged.
 
 **Rejected alternative: silently drop the stale row from the read
 model.** Rejected outright — this is precisely the case `CLAUDE.md` names.
@@ -202,6 +332,49 @@ The stale row is never deleted by this slice. Deleting project data based
 on a product-database observation is an even larger data-integrity
 decision than surfacing it, and nothing in the brief asks for a delete
 path — reporting it is the whole requirement.
+
+**The flat-`ValueMap` conflict: what `supplied` receives (added by this
+revision).** Five stored values (KV's shape) can map to one `ValueMap`
+key — `resolve_values` and `evaluate` (Evidence: `evaluate.rs:797`/
+`:348`) have exactly one flat slot per declared id, project-wide, with no
+scope. `supplied` cannot receive more than one of the five without
+silently picking a winner, and `CLAUDE.md` forbids that outright.
+
+**Ruling: `supplied` receives only unscoped, successfully-matched stored
+values.** Module-scoped, successfully-decomposed values never enter
+`supplied`/`ValueMap` at all; they are attached directly to their own
+`ParameterSectionDto`'s field at the D22 assembly step, after `evaluate`
+has already run, using the per-channel map the decomposition step already
+built (`(module_id, declared id) -> raw`). The evaluator never sees a
+module-scoped value in this slice, in either direction.
+
+**Rejected alternative: feed one (arbitrary) module-scoped value per
+declared id into `supplied` and report the conflict elsewhere.** Rejected.
+A value the evaluator uses to decide a `choose` branch for *every*
+instantiation, chosen from among several channels' worth of values by
+"whichever came first" or "the last one processed," is a silently-picked
+winner regardless of whether a diagnostic elsewhere also names the
+conflict — a report next to a silent decision is not the same as not
+making the silent decision. It would also make evaluation depend on
+processing order over data with no natural order (five stored rows for
+five channels do not rank), a new nondeterminism `CLAUDE.md`'s
+"deterministic behavior" rules out.
+
+**Consequence, stated plainly.** Because no module-scoped value ever
+reaches `ValueMap`, a `choose` inside a `ModuleDef` that is controlled by
+a module-scoped `ParameterRef` is evaluated against that parameter's
+*program-level default* (`parameter_ref.value`/`parameter.value`) in
+every instantiation, never against what a specific channel actually has
+stored. The *value shown* for a module-scoped field is correct per
+channel (D22 attaches it directly from the stored row); the *active field
+set* for that channel — which fields even appear, because a `choose`
+upstream of them took one branch or another — is computed as if every
+channel used the default. A channel whose `choose` decision ETS would
+make differently, based on its own stored value, can therefore show a
+different active field set here than ETS would show. This is real and
+belongs in Non-goals and in the `KNOWN_LIMITATIONS.md` text Task 5
+writes, not swept into "module values are read-only" as if that already
+covered it.
 
 ### D22. The read model: `query.rs` additions and the DTO shape
 
@@ -280,6 +453,23 @@ follows: a value without knowing which layer produced it cannot be edited
 correctly, and `value_source` is what lets the panel say "this is the
 program's own default" versus "you already changed this."
 
+**Per-section value sourcing (added by this revision).** The paragraph
+above is exactly right for the top-level section (`scope: None`): every
+field there draws `value`/`value_source` straight from the shared
+`ValueMap`, unchanged. A module-scoped section's fields do not: D21's
+decomposition step already sorts each stored, module-scoped value into a
+per-channel map keyed by `(module_id, declared id)`. When `knx-server`
+builds a `ParameterFieldDto` inside a section whose `scope` is `Some`, it
+looks up that section's `module_id` and the field's `id` in that map
+first; found, `value` is the decomposed `raw` and `value_source` is
+`"Stored"`; not found, it falls back to the same shared `ValueMap`
+default `resolve_values` already computed, `value_source`
+`"ProgramDefault"` — the same rule the top-level section uses, just
+per-section rather than project-wide. `ParameterView`/`query.rs` above
+are unchanged by this — the per-channel map is assembled in
+`apps/knx-server`, over rows `query.rs` already returns, not a new
+productdb query.
+
 **Rejected alternative: reuse `ValueLayer` (`Program`/`ProgramRef`) for
 `value_source`.** Rejected — that enum names *display-text* provenance
 inside the product database (which of two product-db-side layers supplied
@@ -311,14 +501,18 @@ instantiating `Module` (RESEARCH.md §4.4, carried forward) — joined
 against that scope's slice of the `Activation`'s active ids, so a section
 shows only the fields active for that specific channel, using the shared
 metadata (name/text/kind/min/max/enum) but each channel's own evaluated
-`value`/`value_source` (which, per D16 and this slice's own read-model
-construction, are identical across sections for now, since `ValueMap` has
-one entry per `ets_id`, not one per `(ets_id, module_node)` — D25 names
-this on the write side, this decision names it on the read side: the
-*evaluated activation* differs per channel, e.g. one channel's `choose`
-took a different branch than another's, but a *shown value* for the same
-`ets_id` is currently identical everywhere it appears, because there is
-exactly one stored value for it).
+`value`/`value_source` (which, after D21's decomposition and D22's
+per-section attachment, are **not** guaranteed identical across sections —
+KV's corpus shape stores five distinct values, 17/33/49/32/48, for the
+same declared `ParameterRef` across five `Module` instantiations, and
+each now surfaces in its own section. What *is* still shared across
+sections, per D16 and D21's flat-`ValueMap` ruling, is the *evaluated
+activation*: a `choose` upstream of a module-scoped field runs against
+the program-level default in every instantiation, since no per-channel
+value ever reaches `ValueMap` — so two channels can show a different set
+of *active* fields than ETS would, even though each channel's own field,
+once active, shows its own real stored value. D25 names the write-side
+consequence of the same flat map; this is its read-side counterpart).
 
 Wire representation: `module_node` (a `dynamic_node.node_id`, stable for a
 given `program_id`'s stored tree, D14) is the section's identity on the
@@ -411,20 +605,61 @@ panel on every write.
 
 ### D25. Module-scoped fields are read-only in this slice
 
-Direct consequence of D24 validation step 4 and the data-model fact this
-whole design opens with: `ParameterInstance` cannot distinguish which
-`Module` instantiation a value belongs to, so there is no correct thing
-for a write to `ets_id` under `scope: Some(_)` to do — writing it would
-silently change the value shown in every other instantiation of the same
-`ModuleDef` too, which is not what a user editing "Channel A" would
-expect from a field displayed as "Channel A"'s own setting.
+The conclusion stands; the reason changes. `ParameterInstance` is *not*
+blocked from storing a per-channel value — Evidence shows ETS already
+writes a scope-qualified `ets_id`, and `crates/knx-store`'s `(device,
+ets_id)` key already stores five distinct such rows for one declared
+`ParameterRef` in the KV corpus today, unmodified by this revision. The
+real blocker is two things, both in the evaluator, not the schema:
+
+1. **The flat `ValueMap` (D21's ruling, `evaluate.rs:797`/`:348`).** Even
+   a correctly-written, scope-qualified value can never reach
+   `evaluate`'s `choose` logic in this slice's design, because `supplied`
+   only ever receives unscoped values (D21). Accepting a module-scoped
+   write would silently violate D24's own "no second `GET` needed"
+   guarantee: the freshly re-assembled `ParameterPanelDto` returned in
+   the same response would not reflect the edit's effect on the active
+   field set, because nothing propagates a module-scoped value into the
+   evaluation that built that set. A write the evaluator cannot see is a
+   worse UX than no write — the user would have to already distrust the
+   response they just got back.
+2. **The write-side validation this would need is unresearched.**
+   Accepting a module-scoped `etsId` on `POST` would mean either
+   decomposing and validating it the way D21 now does for reads (a real
+   open question: does the `MI` index ever legitimately exceed `1`?
+   Evidence: every occurrence in all three demo projects is `MI-1`; its
+   full semantics are unattested) or accepting the fully-qualified string
+   as an opaque write target with no cross-check against the program at
+   all. Neither is designed here, and `CLAUDE.md`'s "do not invent
+   technical facts" rules out guessing at `MI`'s semantics from a corpus
+   that never exercises a second value.
+
+Given both, the honest and simplest choice (`CLAUDE.md`: "prefer the
+simpler [approach] unless there is a measurable reason not to") is the
+one already reached in the first draft: module-scoped fields stay
+`editable: false`, checked server-side. D24's write path needs **no code
+change** for this revision, only its stated justification does — its
+verbatim-match check against `parameter_ref_ids` (D24 step 2) already
+rejects a module-scoped `etsId` on its own, since Evidence shows no
+declared `parameter_ref` id in this corpus ever contains the
+`_M-\d+_MI-\d+_` pattern.
+
+**Explicitly:** module-scoped values are read, decomposed, displayed per
+channel (D21/D22/D23), and preserved untouched. No write in this slice
+may modify, delete or normalise one — not the top-level write path
+(which cannot even name one, per above), and nothing else in this slice
+touches `ParameterInstance` rows outside `Command::SetParameterValue`/
+`RestoreParameterValue`'s own top-level-only reach (D24, Task 2,
+unchanged).
 
 **Rejected alternative: allow the write and let it visibly affect every
 channel.** Rejected — technically simple, but it would present a
 misleading affordance (a field drawn inside "Channel A"'s section,
 editable, that actually edits "Channel B" through "Channel L" too) with
 no warning. A UI that looks like per-channel editing but is not is worse
-than no per-channel editing.
+than no per-channel editing. (This rejection stands regardless of which
+justification above is cited — it was never about *where* the value
+would be stored.)
 **Rejected alternative: silently no-op the write for module-scoped
 fields.** Rejected outright by the same never-silently-discard reading
 D21 already applies — `editable: false` in the DTO, checked server-side
@@ -432,8 +667,10 @@ too (D24 step 4), is the honest version of the same refusal.
 
 This is the line item that makes T18 slice 3 a bounded, single-branch
 slice rather than the full editor: the harder half of "the editor" —
-per-channel values — is a real, separately-decidable data-model question,
-named explicitly under Non-goals and follow-ups, not solved here.
+per-channel values driving evaluation, and a validated write path for
+them — is a real, separately-decidable evaluator question (not the
+data-model question the first draft named; Non-goals below corrects
+this), named explicitly, not solved here.
 
 ### D26. Diagnostics surface as a summarized, expandable list — never dropped, never a debugger
 
@@ -479,46 +716,63 @@ even if the `Vec` is not literally shortened; a user who wants to know
    match a hand-computed `resolve_values` result for a fixture with a
    known, non-empty `supplied` map (at least one stored, at least one
    defaulted field, asserted by `value_source`).
-2. A device with a stored `ParameterInstance` whose `ets_id` names no
-   `parameter_ref` in its current program appears in `stale`, not in any
-   section's `fields`, and the device's other, valid stored values are
-   unaffected (D21).
+2. A device with a stored `ParameterInstance` whose `ets_id` decomposes to
+   nothing valid — no verbatim `parameter_ref_ids` match, no successful
+   regex decomposition, or a regex match whose candidate names no
+   `parameter_ref`/`Module` the current program declares — appears in
+   `stale`, not in any section's `fields`, and the device's other valid
+   stored values (unscoped or successfully module-scoped) are unaffected
+   (D21, corrected by this revision).
 3. A device whose program has a `Module` instantiated twice produces two
    `ParameterSectionDto`s with distinct `scope.module_node`, both
    containing the same `ets_id`s, exactly matching D14/D18's two-
-   instantiations-two-results guarantee, now at the DTO layer (D23).
-4. `POST /api/device/{id}/parameters` with a valid top-level `etsId`/`raw`
+   instantiations-two-results guarantee, now at the DTO layer (D23). This
+   criterion is about the `ets_id` *sets* matching, not the values —
+   criterion 4 below checks that values may legitimately differ per
+   section.
+4. A device whose stored `ParameterInstance` rows are the KV v2.5 demo
+   shape — `ParameterInstanceRef` ids like
+   `M-00FA_A-2504-10-C071_MD-2_M-4_MI-1_P-1_R-1` — decomposes all of them
+   successfully: the five distinct stored values 17, 33, 49, 32, 48 (for
+   `Module` instantiations `M-2` through `M-6` of `ModuleDef`
+   `M-00FA_A-2504-10-C071_MD-2`, declared `ParameterRef`
+   `M-00FA_A-2504-10-C071_MD-2_P-1_R-1`) each appear as that field's
+   `value` with `value_source == "Stored"` in their own
+   `ParameterSectionDto`, and `stale` is empty (D21/D22, this revision).
+5. `POST /api/device/{id}/parameters` with a valid top-level `etsId`/`raw`
    pair returns 200 and a `ParameterPanelDto` whose relevant field's
    `value` equals the posted `raw` and whose `value_source` is `"Stored"`,
    in the same response — no second request needed to observe it (D24).
-5. The same request, repeated with a `raw` outside `min_inclusive`/
+6. The same request, repeated with a `raw` outside `min_inclusive`/
    `max_inclusive` for a `Number`-kind field, and with a `raw` absent from
    `parameter_type_enum` for a `Restriction`-kind field, both return 400
    and leave the previously stored value unchanged (verified by a
    follow-up `GET`).
-6. A `POST` naming an `etsId` whose field is currently `scope: Some(_)`
+7. A `POST` naming an `etsId` whose field is currently `scope: Some(_)`
    returns 400 and changes nothing (D25).
-7. A `POST` naming an `etsId` that is not declared by the device's program
+8. A `POST` naming an `etsId` that is not declared by the device's program
    at all (not even stale — never valid) returns 400.
-8. A write and its `Command::SetParameterValue`/`RestoreParameterValue`
+9. A write and its `Command::SetParameterValue`/`RestoreParameterValue`
    round-trip through `/api/undo` and `/api/redo`: after undo, a
    previously-absent `ParameterInstance` is gone again (not present with
    an empty string), and a previously-present one is restored to its
    exact prior `raw`.
-9. `ParameterPanelDto::diagnostics.len()` equals the underlying
-   `Activation::diagnostics.len()` for the same evaluation, for a fixture
-   constructed to produce at least one diagnostic (D26) — nothing is
-   filtered out between `evaluate` and the wire.
-10. All six gates pass: `cargo fmt --all --check`, `cargo clippy
+10. `ParameterPanelDto::diagnostics.len()` equals the underlying
+    `Activation::diagnostics.len()` for the same evaluation, for a fixture
+    constructed to produce at least one diagnostic (D26) — nothing is
+    filtered out between `evaluate` and the wire.
+11. All six gates pass: `cargo fmt --all --check`, `cargo clippy
     --workspace --all-targets -- -D warnings`, `cargo test --workspace`,
     `cargo run -p xtask -- check-layering`, `cargo deny check`, and
     `npm run test` from `apps/knx-web`.
-11. `docs/KNOWN_LIMITATIONS.md` §3, `docs/GAP_ANALYSIS_ETS.md`'s A3 row
+12. `docs/KNOWN_LIMITATIONS.md` §3, `docs/GAP_ANALYSIS_ETS.md`'s A3 row
     and T18 entry, and `docs/DATA_MODEL.md` §10 all state, in the same
     document set, both what this slice closes (a UI and a write path exist
-    now) and what it deliberately still does not do (module-scoped
-    editing, deep format validation) — no standing limitation is
-    downgraded past what D20-D26 actually deliver.
+    now, and module-scoped values are correctly read and displayed) and
+    what it deliberately still does not do (module-scoped editing, the
+    flat-`ValueMap` activation limitation D21/D23 name, deep format
+    validation) — no standing limitation is downgraded past what D20-D26
+    actually deliver.
 
 ## Non-goals and follow-ups
 
@@ -526,10 +780,20 @@ Specific and generous, per the brief — this list is the material for the
 new `KNOWN_LIMITATIONS.md` entry, not a summary of it.
 
 - **Per-channel (`Module`-instantiation) value editing.** Named in
-  "Status and scope" and D25. Needs its own design decision — most likely
-  a `ParameterInstance` scope key — which is itself a schema change and
-  therefore needs its own justification, deliberately not bundled into
-  this slice's "no v4" constraint.
+  "Status and scope" and D25. Storage is not the open question — Evidence
+  shows `ParameterInstance`'s existing `(device, ets_id)` key already
+  carries a module-qualified `ets_id` in the corpus today, unmodified by
+  this revision. What is open, and needs its own design: (1) a
+  scope-aware value lookup in `knx-productdb` — `resolve_values`/
+  `evaluate`'s flat `ValueMap` (`HashMap<String, String>`,
+  `evaluate.rs:348`) would need to become scope-aware (most plausibly
+  keyed by something like `(Option<i64 module_node>, String)`, mirroring
+  `ScopeKey`'s own existing dedup key) so a `choose` can see a channel's
+  own value instead of the program default; and (2) a validated write
+  path for a module-scoped `etsId`, including settling what the `MI`
+  index means when it is ever observed above `1` (unattested in this
+  corpus, D25). Neither is a schema change on present evidence; both are
+  deliberately not bundled into this slice.
 - **Deep validation for `Float`/`Text`/`IPAddress`/`Picture`/`Raw`.** Only
   a non-empty-string check. In particular: no IPv4 dotted-quad parsing for
   `IPAddress`, no byte-length check against `size_in_bit` for `Raw`, no

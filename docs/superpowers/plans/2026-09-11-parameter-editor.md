@@ -78,8 +78,10 @@ Files: `crates/knx-productdb/src/query.rs`,
 existing idiom, e.g. alongside `golden_reference_products.rs`).
 
 1. **Add `ValueLayer` reuse and the two new types/functions** exactly as
-   design D22 specifies: `ParameterView` (fields: `id`, `display_order`,
-   `tag`, `name`, `text`, `text_layer`, `kind`, `access`,
+   design D22 specifies: `ParameterView` (fields: `id`,
+   `display_order: Option<i64>` — `None` when the package declares no
+   order, not a non-optional integer with a fabricated fallback, see
+   D22's own note — `tag`, `name`, `text`, `text_layer`, `kind`, `access`,
    `min_inclusive`, `max_inclusive`, `enum_options: Vec<(String,
    Option<String>)>`), `parameter_views(conn, program_id) ->
    Result<Vec<ParameterView>, ProductDbError>`, and

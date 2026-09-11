@@ -364,7 +364,7 @@ function App() {
           {logOpen ? (
             <LogPanel tree={tree} refreshKey={logVersion} />
           ) : monitorOpen ? (
-            <BusMonitorPanel />
+            <BusMonitorPanel projectOpen={tree !== null} />
           ) : (
             tree &&
             (selection ? (

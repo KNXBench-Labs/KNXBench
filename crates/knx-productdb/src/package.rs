@@ -19,7 +19,7 @@ const MAX_MEMBERS: usize = 4096;
 
 #[derive(Debug)]
 pub enum PackageError {
-    LegacyVd2,
+    LegacyVd2 { sha256: String, len: usize },
     InvalidZip { cause: String },
     Encrypted { path: String },
     UnsafeMember { path: String },
@@ -35,7 +35,10 @@ pub enum PackageError {
 impl fmt::Display for PackageError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::LegacyVd2 => write!(f, "legacy .vd2 product data is unsupported"),
+            Self::LegacyVd2 { sha256, len } => write!(
+                f,
+                "legacy .vd2 product data is unsupported (sha256 {sha256}, {len} bytes)"
+            ),
             Self::InvalidZip { cause } => write!(f, "invalid product ZIP: {cause}"),
             Self::Encrypted { path } => write!(f, "encrypted product ZIP member: {path}"),
             Self::UnsafeMember { path } => write!(f, "unsafe product ZIP member: {path}"),
@@ -342,12 +345,15 @@ pub fn install_package(
     source_name: &str,
     bytes: &[u8],
 ) -> Result<InstallReport, PackageError> {
-    if source_name.to_ascii_lowercase().ends_with(".vd2") {
-        return Err(PackageError::LegacyVd2);
-    }
     if bytes.len() > MAX_PACKAGE_SIZE {
         return Err(PackageError::SizeLimit {
             path: source_name.into(),
+        });
+    }
+    if source_name.to_ascii_lowercase().ends_with(".vd2") {
+        return Err(PackageError::LegacyVd2 {
+            sha256: sha256_hex(bytes),
+            len: bytes.len(),
         });
     }
     let sha256 = sha256_hex(bytes);

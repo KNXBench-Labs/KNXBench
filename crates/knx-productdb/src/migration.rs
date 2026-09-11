@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use rusqlite::Connection;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 2;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 3;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -268,7 +268,38 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
 type Migration = fn(&Connection) -> Result<(), ProductDbError>;
 
 fn migrations() -> Vec<Migration> {
-    vec![migrate_v0_to_v1, migrate_v1_to_v2]
+    vec![migrate_v0_to_v1, migrate_v1_to_v2, migrate_v2_to_v3]
+}
+
+/// v2 -> v3. Adds `dynamic_node` (design D2,
+/// `docs/superpowers/specs/2026-09-11-dynamic-tree-parse-and-evaluate-design.md`):
+/// one row per element of every `ApplicationProgram`/`ModuleDef` `Dynamic`
+/// tree, stored losslessly and unevaluated. `module_def_id` is `NOT NULL`
+/// with `''` as the sentinel for the program's own tree rather than
+/// nullable, because SQLite treats NULLs in a non-`INTEGER` `PRIMARY KEY`
+/// as pairwise distinct, which would silently defeat the uniqueness
+/// constraint for exactly the common case.
+fn migrate_v2_to_v3(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE dynamic_node (
+            program_id    TEXT NOT NULL,
+            module_def_id TEXT NOT NULL,
+            node_id       INTEGER NOT NULL,
+            parent_id     INTEGER,
+            position      INTEGER NOT NULL,
+            kind          TEXT NOT NULL,
+            element_id    TEXT,
+            ref_id        TEXT,
+            test          TEXT,
+            is_default    INTEGER,
+            text          TEXT,
+            extra         TEXT,
+            PRIMARY KEY (program_id, module_def_id, node_id)
+        ) STRICT;
+        CREATE UNIQUE INDEX dynamic_node_sibling
+            ON dynamic_node (program_id, module_def_id, parent_id, position);",
+    )?;
+    Ok(())
 }
 
 fn migrate_v1_to_v2(conn: &Connection) -> Result<(), ProductDbError> {

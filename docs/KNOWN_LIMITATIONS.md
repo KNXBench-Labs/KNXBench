@@ -737,6 +737,9 @@ checks or warns about.
 its own design covering session/multi-user implications for the
 single-`Mutex`-guarded-project state model this server already has.
 
+See [§63](#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all)
+for exactly what that missing session/multi-user isolation costs today.
+
 ## 23. `/api/project/download` buffers the whole `.knxdb` file in memory
 
 **Limitation.** The route that lets the web UI save a project as a
@@ -2104,3 +2107,97 @@ client-side row cap with its own honestly-reported gap notice, a
 full-round-trip test (and, ideally, a fix) for the CLI's `ThreeLevel`
 hardcoding, or runs any part of this GUI against a physical KNX
 installation and records the result.
+
+## 63. `knx-server` has no multi-user/concurrent-edit support — one shared project, one shared undo stack, no conflict detection at all
+
+**Limitation.** `apps/knx-server`'s web/Docker deployment target holds
+exactly one project in one process-wide `AppState`, constructed once and
+shared by every connected browser for the life of the process:
+`Arc::new(knx_server::AppState::new(data_dir))`
+(`apps/knx-server/src/main.rs:23`), `pub type SharedState = Arc<AppState>`
+(`apps/knx-server/src/lib.rs:21`), handed to the router with
+`.with_state(state)` (`apps/knx-server/src/lib.rs:41`). There is no
+per-session or per-connection state, and no route or middleware reads any
+cookie, token, or other identity out of a request to tell one caller from
+another (consistent with [§22](#22-the-webdocker-deployment-target-has-no-authentication):
+a deployment with no authentication is also one that cannot tell two users
+apart). Verified concrete consequences:
+
+1. **A second client's undo can undo the first client's command.**
+   `command_stack: Mutex<knx_core::CommandStack>`
+   (`apps/knx-server/src/domain.rs:48`) is one stack for the whole
+   process; `undo_impl`/`redo_impl` (`apps/knx-server/src/domain.rs:1638-1658`)
+   pop/replay whatever is on top of it without regard to which client
+   pushed it there. Nothing associates a stack entry with the client that
+   created it.
+2. **No write route carries any optimistic-concurrency check.** No ETag,
+   `If-Match`, version/revision counter, or "expected current value"
+   field exists on any route in `apps/knx-server/src/routes.rs`,
+   `domain.rs`, or `fs_routes.rs` — every command-applying function
+   (`apply`, `apps/knx-server/src/domain.rs:781-796`; `undo_impl`/
+   `redo_impl`, `:1638-1658`; `save_project`/`save_project_as`, `:413-462`)
+   reads and mutates the shared state unconditionally, with no way for a
+   client to say "only if nothing changed since I last looked."
+3. **No client is told the project changed underneath it.** There is no
+   `WebSocket` or `EventSource` anywhere in `apps/knx-web`; the only
+   `setInterval` polling loop in the whole frontend is
+   `apps/knx-web/src/BusMonitorPanel.tsx:228`, and it polls bus telegrams,
+   not project state. A browser's view of the project tree only updates
+   from the response to its own request — it never learns about another
+   client's edit, undo, redo, or save except by the user manually
+   reopening the project.
+4. **File-level save is plain last-writer-wins, silently.**
+   `save_project`/`save_project_as` (`apps/knx-server/src/domain.rs:413-462`)
+   both funnel into `knx_store::save_project`
+   (`crates/knx-store/src/project.rs:72`), which unconditionally
+   `DELETE`s every row of every project table and reinserts the current
+   in-memory project inside one transaction (`crates/knx-store/src/project.rs:93-97`)
+   — no check against what is currently on disk, no file lock. Two
+   clients saving the same `.knxdb` path (via `store_path`,
+   `apps/knx-server/src/domain.rs:32`) end with whichever transaction
+   commits last silently discarding the other's work; neither client is
+   warned.
+
+**What is protected.** `apply`, `undo_impl`, and `redo_impl` each take the
+same `state.project`/`state.command_stack` locks for the full duration of
+one command (`apps/knx-server/src/domain.rs:787-790`, `:1638-1658`), so
+two simultaneous requests cannot interleave into a torn or corrupted
+in-memory `Project` — one command always finishes before the next one
+starts. That is a real, verified guarantee of memory-level consistency
+for a single command. It does not protect a user's mental model of the
+project, a browser's now-stale view of the tree, the one shared undo/redo
+history, or a `.knxdb` file from last-writer-wins.
+
+This is a limitation of the web/Docker deployment target specifically,
+where `main.rs` binds `0.0.0.0` and any number of browsers can reach the
+one process. The Tauri desktop shell constructs the identical
+`Arc<knx_server::AppState>` type — `state: Arc<knx_server::AppState>`
+and `Arc::new(knx_server::AppState::new(data_dir))`
+(`apps/knx-desktop/src-tauri/src/lib.rs:31,57`) — so it shares this
+limitation's state *shape*, not a different design. What makes it
+single-user in practice is deployment, not architecture: its embedded
+server binds `127.0.0.1` for exactly one locally-spawned webview window
+(`apps/knx-desktop/src-tauri/src/lib.rs:60-73`), so no second, remote
+client can ever reach it.
+
+**Cause.** `knx-server`'s state model (one project, one `Mutex`-guarded
+`AppState`) was built for a single open project per process, the
+assumption the desktop app started from; the web/Docker deployment (see
+[§22](#22-the-webdocker-deployment-target-has-no-authentication)'s design
+spec) reused it as-is. Session isolation, locking, or merge logic were
+never added, and without any client identity to isolate sessions by,
+none of that was reachable without first deciding on authentication.
+
+**Impact.** A `knx-server` deployment reached by more than one person at
+once has no conflict detection, merge, or locking: one person's undo can
+remove someone else's change, one person's save can silently overwrite
+another's, and neither browser shows any sign that the other exists or
+that a change came from outside its own actions.
+
+**Lifted when.** **T22** (multi-user/concurrent-edit support for
+`knx-server`) is designed and implemented. Per its own backlog entry
+([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md#f-non-functional--operational-gaps)),
+it "needs its own design (locking vs. merge vs. last-writer-wins, and
+what 'conflict' even means for a `Command`-based undo model)" — that
+design question is unresolved, and this limitation stands until it is
+answered and built.

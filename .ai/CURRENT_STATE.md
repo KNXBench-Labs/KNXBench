@@ -1,4 +1,52 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-12 00:02
+- **Completed:** **T18 slice 3, Task 4, fix round 1** — same worktree
+  (`.worktrees/t18-parameter-editor`, branch `t18-parameter-editor`),
+  commit `b25eb6d` on top of `e2ca2e7`. Review returned spec compliance
+  approved, task quality changes-requested (0 blocking, 1 should-fix, 2
+  nits). Both self-flagged concerns (blur-commit `<select>`, "Copy
+  details" with no feedback) were ruled correct-as-shipped by the
+  reviewer; the `(none)` placeholder nit was ruled leave-as-is by the
+  controller (the server already 400s an empty `raw`, so no client-side
+  required-field logic was added). Only the should-fix required action:
+  two behaviours the component already implemented correctly had no
+  pinning test.
+  - `apps/knx-web/src/ParameterPanel.test.tsx` gained two tests, no
+    change to `ParameterPanel.tsx` itself:
+    1. A rejected `setParameterValue` reverts the input to its pre-edit
+       value and shows the *exact* rejection message text in
+       `.field-error` (concrete-value assertion, not a presence check).
+    2. `programId === null` renders the empty-program sentence, renders
+       zero `.parameter-field` rows, and still renders a non-empty
+       `stale` list with its `etsId`/`raw` visible — pinning the
+       controller's pre-dispatch ruling from the original task (fetch
+       unconditionally, never hide `stale` behind an unresolved
+       program) so a future refactor can't silently re-gate the fetch
+       with every existing gate staying green.
+  - Test-first, genuinely: both assertions were written and run before
+    any other change; both passed immediately against the already-shipped
+    implementation. Reported plainly as pinning already-correct
+    behaviour, not framed as caught bugs — the honest and expected
+    outcome the brief itself predicted.
+  - Gates: Rust unchanged, **975 passed / 0 failed / 3 ignored**;
+    fmt/clippy/layering/deny all clean (deny: pre-existing
+    advisory/license warnings only, exit 0). `npm run test` in
+    `apps/knx-web`: **184 passed across 18 files** (182/18 baseline + 2
+    new, same file).
+- **Pending/Next Steps:** T18 slice 3 Task 4 and its fix round are both
+  done. Same as the prior entry: next is merging this worktree to `main`
+  (controller's call) and then deciding on a possible slice 4 (per-
+  channel module-scoped writes, D25's named non-goal) or moving on per
+  `docs/ROADMAP.md`.
+- **Notes for Codex:** The two new pinning tests in
+  `ParameterPanel.test.tsx` exist specifically to catch a regression of
+  the controller's "fetch unconditionally, never hide `stale`" ruling —
+  if you ever see a PR that reintroduces a `program_id != null` gate on
+  the parameters fetch, the `renders the empty-program state while still
+  rendering a non-empty stale list` test is what should catch it (and if
+  it doesn't fail, something else already broke first).
+---
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-11 23:55
 - **Completed:** **T18 slice 3, Task 4** (the last code task of this
   slice) — same worktree (`.worktrees/t18-parameter-editor`, branch

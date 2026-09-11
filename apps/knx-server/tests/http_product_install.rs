@@ -95,6 +95,8 @@ async fn malformed_and_legacy_product_uploads_are_typed_bad_requests() {
     let (_dir, state) = state();
     let app = knx_server::app(Arc::new(state), None);
     let legacy = package();
+    let legacy_sha256 = knx_productdb::sha256_hex(&legacy);
+    let legacy_len = legacy.len();
     let mut encrypted = package();
     for index in 0..encrypted.len() - 4 {
         if &encrypted[index..index + 4] == b"PK\x01\x02" {
@@ -123,10 +125,10 @@ async fn malformed_and_legacy_product_uploads_are_typed_bad_requests() {
         .unwrap();
     assert_eq!(legacy.status(), StatusCode::BAD_REQUEST);
     let body = json(legacy).await;
-    assert!(body["error"]
-        .as_str()
-        .unwrap()
-        .contains("legacy .vd2 product data is unsupported"));
+    let error = body["error"].as_str().unwrap();
+    assert!(error.contains("legacy .vd2 product data is unsupported"));
+    assert!(error.contains(&legacy_sha256), "{error}");
+    assert!(error.contains(&legacy_len.to_string()), "{error}");
 
     let encrypted = app
         .oneshot(multipart("encrypted.knxprod", &encrypted))

@@ -164,6 +164,16 @@ pub fn sync_after_command(
         Command::SetComObjectFlag { .. } | Command::RestoreComObjectFlag { .. } => {
             // Com-object-flag persistence layer not yet implemented.
         }
+        Command::SetParameterValue { .. } | Command::RestoreParameterValue { .. } => {
+            // Parameter-instance incremental persistence not yet
+            // implemented here — `upsert_parameter_instance` already exists
+            // (`crates/knx-store/src/parameter.rs`) and is used by the
+            // whole-installation save path (`project.rs`), but wiring an
+            // incremental delete for `RestoreParameterValue`'s "no row
+            // existed before" case is out of this task's scope (T18 slice
+            // 3 task 2 adds only the `Command` variants and their
+            // in-memory `apply` logic).
+        }
         Command::CreateBuildingPart { .. } => {
             // Building-part persistence layer not yet implemented (Task 4 scope).
         }

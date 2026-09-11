@@ -5,6 +5,8 @@
 //! point of the override chain (DATA_MODEL §3): a value without its layer
 //! cannot be written back correctly, so this view never returns one.
 
+use std::collections::HashSet;
+
 use rusqlite::{Connection, OptionalExtension};
 
 use crate::ProductDbError;
@@ -185,6 +187,175 @@ pub fn com_object_view(
         communication,
         communication_layer,
     }))
+}
+
+/// A single `Parameter`, resolved through its own program's `ParameterRef`
+/// and `ParameterType` (design D22). Follows `ComObjectView`'s `pick()`/
+/// `ValueLayer` idiom for the one field a `ParameterRef` can override —
+/// there is no three-layer override chain here, `ComObjectInstanceRef`'s
+/// wider one does not apply to parameters (ARCHITECTURE.md §5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParameterView {
+    /// `parameter_ref.id`, the `ValueMap`/`ets_id` key (D21).
+    pub id: String,
+    /// `parameter_ref.display_order`, verbatim, `None` when the package
+    /// declares no order at all. `ParameterRef/@DisplayOrder` is genuinely
+    /// optional in shipped packages — measured, not assumed: every one of
+    /// the 543 `parameter_ref` rows for `prod3`'s program
+    /// `M-0083_A-0317-31-7DC6` omits it. `None` is therefore its own real
+    /// value, distinct from `Some(0)`, not a magic-constant stand-in for it.
+    pub display_order: Option<i64>,
+    pub tag: Option<String>,
+    /// `parameter.name`.
+    pub name: Option<String>,
+    /// `pick(parameter.text, parameter_ref.text)`.
+    pub text: Option<String>,
+    pub text_layer: ValueLayer,
+    /// `parameter_type.kind`, verbatim: one of `Restriction`, `Number`,
+    /// `Text`, `None`, `Float`, `IPAddress`, `Picture`, `Raw`, `Other`.
+    pub kind: String,
+    /// `parameter.access`, verbatim — display only, D24 does not gate on it.
+    pub access: Option<String>,
+    pub min_inclusive: Option<String>,
+    pub max_inclusive: Option<String>,
+    /// `(value, text)`, only non-empty when `kind == "Restriction"` — the
+    /// other seven kinds never have rows in `parameter_type_enum`.
+    pub enum_options: Vec<(String, Option<String>)>,
+}
+
+struct ParameterRawRow {
+    id: String,
+    display_order: Option<i64>,
+    tag: Option<String>,
+    name: Option<String>,
+    p_text: Option<String>,
+    pr_text: Option<String>,
+    kind: String,
+    access: Option<String>,
+    min_inclusive: Option<String>,
+    max_inclusive: Option<String>,
+    parameter_type_id: String,
+}
+
+/// Every `ParameterView` a program declares, in `parameter_ref.
+/// display_order`. One query, not one per field — a single `ModuleDef` can
+/// own on the order of hundreds of these (RESEARCH.md §4.4 Q3), so N calls
+/// is the wrong shape, exactly as `com_object_view`'s own doc comment
+/// already reasons for communication objects.
+pub fn parameter_views(
+    conn: &Connection,
+    program_id: &str,
+) -> Result<Vec<ParameterView>, ProductDbError> {
+    // `pr.display_order` is selected raw, not `COALESCE`d: real-world
+    // packages exist where `ParameterRef/@DisplayOrder` is simply absent —
+    // observed on the full corpus, not a hypothetical, every one of one MDT
+    // program's 543 `ParameterRef`s omits it — and `None` is its own real
+    // value there, distinct from a package that genuinely declares position
+    // zero. `rusqlite` maps a NULL INTEGER straight to `None` for an
+    // `Option<i64>` target, so no `COALESCE` is needed for that mapping.
+    //
+    // `ORDER BY pr.display_order, pr.rowid`: with `DisplayOrder` absent on
+    // every row (the common real-world case above), every row ties on the
+    // first key and the result would otherwise rest on SQLite's sorter,
+    // whose tie stability is not documented. `parameter_ref` is a plain
+    // rowid table (`PRIMARY KEY (program_id, id)`, not `WITHOUT ROWID`), and
+    // the parser inserts `ParameterRef` rows in document order as it streams
+    // the XML, so `rowid` recovers the package's own declaration order for
+    // ties. This cannot change any order where `DisplayOrder` *is* declared
+    // — it only breaks ties among rows sharing one value (including
+    // NULL). SQLite's default NULLs-first-ascending placement is kept
+    // as-is: how ETS orders a set that mixes declared and undeclared
+    // `DisplayOrder` is unattested anywhere in the corpus, and inverting it
+    // or adding `NULLS LAST` here would be an assumption dressed up as
+    // behaviour.
+    let mut stmt = conn.prepare(
+        "SELECT pr.id, pr.display_order, pr.tag,
+                p.name, p.text, pr.text,
+                pt.kind, p.access, pt.min_inclusive, pt.max_inclusive, pt.id
+         FROM parameter_ref pr
+         JOIN parameter p ON p.program_id = pr.program_id AND p.id = pr.parameter_id
+         JOIN parameter_type pt ON pt.program_id = p.program_id AND pt.id = p.parameter_type_id
+         WHERE pr.program_id = ?1
+         ORDER BY pr.display_order, pr.rowid",
+    )?;
+    let raw_rows: Vec<ParameterRawRow> = stmt
+        .query_map([program_id], |r| {
+            Ok(ParameterRawRow {
+                id: r.get(0)?,
+                display_order: r.get(1)?,
+                tag: r.get(2)?,
+                name: r.get(3)?,
+                p_text: r.get(4)?,
+                pr_text: r.get(5)?,
+                kind: r.get(6)?,
+                access: r.get(7)?,
+                min_inclusive: r.get(8)?,
+                max_inclusive: r.get(9)?,
+                parameter_type_id: r.get(10)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let mut views = Vec::with_capacity(raw_rows.len());
+    for raw in raw_rows {
+        let (text, text_layer) = pick(raw.p_text, raw.pr_text);
+        // Only `Restriction` kinds ever have rows in `parameter_type_enum`
+        // (the other seven kinds have no enumeration concept at all) — the
+        // kind check keeps this a second query for the fraction of rows
+        // that need it, not a blind per-row lookup.
+        let enum_options = if raw.kind == "Restriction" {
+            parameter_type_enum_options(conn, program_id, &raw.parameter_type_id)?
+        } else {
+            Vec::new()
+        };
+        views.push(ParameterView {
+            id: raw.id,
+            display_order: raw.display_order,
+            tag: raw.tag,
+            name: raw.name,
+            text,
+            text_layer,
+            kind: raw.kind,
+            access: raw.access,
+            min_inclusive: raw.min_inclusive,
+            max_inclusive: raw.max_inclusive,
+            enum_options,
+        });
+    }
+    Ok(views)
+}
+
+fn parameter_type_enum_options(
+    conn: &Connection,
+    program_id: &str,
+    parameter_type_id: &str,
+) -> Result<Vec<(String, Option<String>)>, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT value, text FROM parameter_type_enum
+         WHERE program_id = ?1 AND parameter_type_id = ?2
+         ORDER BY display_order",
+    )?;
+    let rows = stmt
+        .query_map([program_id, parameter_type_id], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+/// The bare `parameter_ref.id` set for a program — D21's stale-value diff
+/// (a stored value whose id is no longer a declared `ParameterRef`) needs
+/// only this, not the full `ParameterView`, so it is kept as its own thin
+/// query rather than mapped off `parameter_views`'s output.
+pub fn parameter_ref_ids(
+    conn: &Connection,
+    program_id: &str,
+) -> Result<HashSet<String>, ProductDbError> {
+    let mut stmt = conn.prepare("SELECT id FROM parameter_ref WHERE program_id = ?1")?;
+    let rows = stmt
+        .query_map([program_id], |r| r.get(0))?
+        .collect::<Result<HashSet<_>, _>>()?;
+    Ok(rows)
 }
 
 /// `(id, name)` for every manufacturer, ordered by id — the listing
@@ -703,5 +874,198 @@ mod tests {
         assert_eq!(programs.len(), 1);
         assert_eq!(programs[0].id, "A-1");
         assert_eq!(programs[0].application_version.as_deref(), Some("22"));
+    }
+
+    // -----------------------------------------------------------------
+    // parameter_views / parameter_ref_ids (T18, design D22).
+    // -----------------------------------------------------------------
+
+    /// Three `ParameterRef`s of kind `Number`, `Restriction` and `Text`
+    /// respectively. `DisplayOrder` deliberately does not match id order
+    /// (`PR-2` first, then `PR-3`, then `PR-1`), so a test asserting
+    /// `parameter_views`'s output order actually proves it sorts by
+    /// `display_order` and not by id or insertion order.
+    const PARAMETER_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
+<ApplicationPrograms><ApplicationProgram Id="A-2" Name="P" ApplicationNumber="2"
+  ApplicationVersion="22" MaskVersion="MV-0701"><Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+  <ParameterType Id="PT-Enum" Name="enum"><TypeRestriction Base="Value" SizeInBit="8">
+    <Enumeration Id="PT-Enum_EN-0" Text="Off" Value="0" DisplayOrder="0" />
+    <Enumeration Id="PT-Enum_EN-1" Text="On" Value="1" DisplayOrder="1" />
+  </TypeRestriction></ParameterType>
+  <ParameterType Id="PT-Text" Name="text"><TypeText /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-1" Name="Delay" Text="Delay" ParameterType="PT-Num" Access="ReadWrite" Value="5" />
+  <Parameter Id="P-2" Name="Mode" Text="Mode" ParameterType="PT-Enum" Access="ReadWrite" Value="0" />
+  <Parameter Id="P-3" Name="Label" Text="Label" ParameterType="PT-Text" Access="ReadWrite" Value="hi" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="PR-1" RefId="P-1" DisplayOrder="30" Tag="1" />
+  <ParameterRef Id="PR-2" RefId="P-2" DisplayOrder="10" Tag="2" Text="On (override)" />
+  <ParameterRef Id="PR-3" RefId="P-3" DisplayOrder="20" Tag="3" />
+</ParameterRefs>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    fn parameter_db() -> (tempfile::TempDir, Connection) {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_program(
+            &conn,
+            "sha-p2",
+            "M-006A/A2.xml",
+            PARAMETER_PROGRAM.as_bytes(),
+        )
+        .unwrap();
+        (dir, conn)
+    }
+
+    #[test]
+    fn parameter_views_returns_three_views_in_display_order_with_enum_options_only_on_the_restriction(
+    ) {
+        let (_dir, conn) = parameter_db();
+        let views = parameter_views(&conn, "A-2").unwrap();
+        assert_eq!(
+            views.iter().map(|v| v.id.as_str()).collect::<Vec<_>>(),
+            vec!["PR-2", "PR-3", "PR-1"],
+            "sorted by display_order (10, 20, 30), not by id"
+        );
+
+        let pr2 = &views[0];
+        assert_eq!(pr2.kind, "Restriction");
+        assert_eq!(pr2.display_order, Some(10));
+        assert_eq!(
+            pr2.enum_options,
+            vec![
+                ("0".to_string(), Some("Off".to_string())),
+                ("1".to_string(), Some("On".to_string())),
+            ]
+        );
+
+        let pr3 = &views[1];
+        assert_eq!(pr3.kind, "Text");
+        assert_eq!(pr3.display_order, Some(20));
+        assert!(pr3.enum_options.is_empty());
+
+        let pr1 = &views[2];
+        assert_eq!(pr1.kind, "Number");
+        assert_eq!(pr1.display_order, Some(30));
+        assert!(pr1.enum_options.is_empty());
+        assert_eq!(pr1.min_inclusive.as_deref(), Some("0"));
+        assert_eq!(pr1.max_inclusive.as_deref(), Some("255"));
+    }
+
+    #[test]
+    fn parameter_ref_ids_returns_the_declared_id_set() {
+        let (_dir, conn) = parameter_db();
+        let ids = parameter_ref_ids(&conn, "A-2").unwrap();
+        assert_eq!(
+            ids,
+            HashSet::from(["PR-1".to_string(), "PR-2".to_string(), "PR-3".to_string(),])
+        );
+    }
+
+    /// A `ParameterRef` with no `DisplayOrder` attribute at all — the case
+    /// measured on the real corpus (543/543 rows for `prod3`'s program
+    /// `M-0083_A-0317-31-7DC6`) — must report `None`, not a fabricated `0`.
+    /// `0` would be indistinguishable from a package that genuinely declared
+    /// position zero, which is exactly the information loss `CLAUDE.md`
+    /// rules out.
+    const PARAMETER_PROGRAM_NO_DISPLAY_ORDER: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
+<ApplicationPrograms><ApplicationProgram Id="A-3" Name="P" ApplicationNumber="3"
+  ApplicationVersion="22" MaskVersion="MV-0701"><Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-1" Name="Delay" Text="Delay" ParameterType="PT-Num" Access="ReadWrite" Value="5" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="PR-1" RefId="P-1" Tag="1" />
+</ParameterRefs>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    #[test]
+    fn parameter_views_reports_none_when_display_order_is_not_declared() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_program(
+            &conn,
+            "sha-p3",
+            "M-006A/A3.xml",
+            PARAMETER_PROGRAM_NO_DISPLAY_ORDER.as_bytes(),
+        )
+        .unwrap();
+        let views = parameter_views(&conn, "A-3").unwrap();
+        assert_eq!(views.len(), 1);
+        assert_eq!(
+            views[0].display_order, None,
+            "an undeclared DisplayOrder must stay None, not collapse into Some(0)"
+        );
+    }
+
+    /// Two `ParameterRef`s that both lack `DisplayOrder` tie on the primary
+    /// sort key; the `pr.rowid` tiebreak must then return them in
+    /// declaration order, not some other order SQLite's sorter happens to
+    /// pick for a tie. Declared as `PR-Z` then `PR-A` deliberately — id
+    /// order would put `PR-A` first, so this only passes if the tiebreak is
+    /// really `rowid`, not a hidden secondary sort on `id`.
+    const PARAMETER_PROGRAM_TIEBREAK: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
+<ApplicationPrograms><ApplicationProgram Id="A-4" Name="P" ApplicationNumber="4"
+  ApplicationVersion="22" MaskVersion="MV-0701"><Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-1" Name="First" Text="First" ParameterType="PT-Num" Access="ReadWrite" Value="1" />
+  <Parameter Id="P-2" Name="Second" Text="Second" ParameterType="PT-Num" Access="ReadWrite" Value="2" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="PR-Z" RefId="P-1" Tag="1" />
+  <ParameterRef Id="PR-A" RefId="P-2" Tag="2" />
+</ParameterRefs>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    #[test]
+    fn parameter_views_ties_break_by_declaration_order_when_display_order_is_absent_for_all() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_program(
+            &conn,
+            "sha-p4",
+            "M-006A/A4.xml",
+            PARAMETER_PROGRAM_TIEBREAK.as_bytes(),
+        )
+        .unwrap();
+        let views = parameter_views(&conn, "A-4").unwrap();
+        assert_eq!(
+            views.iter().map(|v| v.id.as_str()).collect::<Vec<_>>(),
+            vec!["PR-Z", "PR-A"],
+            "rowid tiebreak preserves declaration order, not ascending id order"
+        );
+        assert!(
+            views.iter().all(|v| v.display_order.is_none()),
+            "both rows in this fixture omit DisplayOrder"
+        );
+    }
+
+    /// Mirrors `com_object_view`'s own `pick()` tests above: a `ParameterRef`
+    /// with no `Text` of its own falls back to its `Parameter`'s, reporting
+    /// `ValueLayer::Program`; one with an override reports `ProgramRef`.
+    #[test]
+    fn parameter_views_reports_pick_layer_the_same_way_com_object_view_does() {
+        let (_dir, conn) = parameter_db();
+        let views = parameter_views(&conn, "A-2").unwrap();
+        let pr1 = views.iter().find(|v| v.id == "PR-1").unwrap();
+        assert_eq!(pr1.text.as_deref(), Some("Delay"));
+        assert_eq!(pr1.text_layer, ValueLayer::Program);
+
+        let pr2 = views.iter().find(|v| v.id == "PR-2").unwrap();
+        assert_eq!(pr2.text.as_deref(), Some("On (override)"));
+        assert_eq!(pr2.text_layer, ValueLayer::ProgramRef);
     }
 }

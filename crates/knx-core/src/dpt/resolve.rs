@@ -339,12 +339,18 @@ mod tests {
     }
 
     #[test]
-    fn one_object_linked_to_the_same_address_in_both_directions_counts_once_not_twice() {
+    fn one_object_linked_to_the_same_address_in_both_directions_resolves_to_single() {
         let ga = GroupAddressId(1);
         // One object, two links to the same `ga` — one Send, one Receive.
-        // It still states one DPT, so this must resolve to `Single`, never
-        // a two-element `Conflict` manufactured out of counting the same
-        // object's DPT twice.
+        // It still states one DPT, so this resolves to `Single`.
+        //
+        // Note what this test does *not* prove: counting per link instead
+        // of per object would give the same answer here, because both
+        // links carry the identical `DptRef` and `group_address_dpt_from`
+        // dedups before it classifies. The per-object rule is therefore
+        // unobservable through this function's return type, and is stated
+        // at the `.filter()` for the reader rather than pinned by a test
+        // that cannot distinguish it.
         let project = project_with(vec![com_object(
             1,
             stated(1, 1),

@@ -615,9 +615,12 @@ Example:
 
 **Central finding: `choose` does not branch on `Argument`, only on
 `ParameterRef`.** Every `choose/@ParamRefId` inside `ModuleDef/Dynamic`
-(58 distinct values, `prod3` MD-1) was checked against that `ModuleDef`'s
-declared `Argument/@Id` set (3) and `ParameterRef/@Id` set (208): **58/58**
-match a `ParameterRef`, **0/58** match an `Argument`. `ModuleDef/Dynamic`'s
+(57 distinct values, `prod3` `M-0083_A-0317-31-7DC6_MD-1`) was checked
+against that `ModuleDef`'s declared `Argument/@Id` set (3) and
+`ParameterRef/@Id` set (208): **57/57** match a `ParameterRef`, **0/57**
+match an `Argument`. The same 57/57, 0/57 split reproduces in the archive's
+other two application programs' `MD-1` (`A-0318`, `A-0319`).
+`ModuleDef/Dynamic`'s
 `choose` mechanism is **structurally identical** to the top-level tree's
 (§4.3): it branches on the current value of a `ParameterRef` declared in
 the module's own `Static`. An argument's role, evidenced separately by
@@ -773,11 +776,20 @@ cross-validate structural assumptions against.** Any acceptance test slice
   verbatim** by every sibling `Module` instantiating it — differentiation
   only exists in the mangled, instance-scoped id, a *project*-side
   (`ModuleInstance`) construct that does not exist at the AP level at all.
-  Confirmed against real KV `ComObjectInstanceRef` data: local suffix
-  `O-2-1_R-2` appears under 4 distinct `ModuleDef`+`Module`+`ModuleInstance`
-  combinations, `O-2-0_R-1` under another 4 — real, non-hypothetical id
-  collisions. **If slice 2 walks a `ModuleDef`'s tree once per
-  instantiating `Module` sibling and reuses the existing flat
+  Confirmed directly in `prod3`: `M-0083_A-0317-31-7DC6_MD-1` declares its
+  41 `ComObjectRef` ids exactly once, and **12 sibling `Module` elements
+  reference it** — walking the `ModuleDef` once per `Module` emits each of
+  those 41 ids twelve times over. The KV project shows the same ids
+  surviving into a real project: local suffix `O-2-1_R-2` appears under 2
+  distinct `ModuleDef`+`Module`+`ModuleInstance` triples (`MD-1_M-1_MI-1_…`
+  and `MD-1_M-2_MI-1_…`), and `O-2-0_R-1` under the same 2 — each triple
+  then reused by 2 different `DeviceInstance`s (`P-03DE-0_DI-2`,
+  `P-03DE-0_DI-3`, different application programs). Two distinct collision
+  mechanisms, and only the first one — sibling `Module` instantiation
+  within a single application program — is what this finding rests on;
+  `DeviceInstance`-level reuse is a project-side concern that
+  `knx-productdb` never sees. **If slice 2 walks a `ModuleDef`'s tree once
+  per instantiating `Module` sibling and reuses the existing flat
   `HashSet<String>` dedup keyed on raw ModuleDef-local `ref_id`, it will
   incorrectly collapse distinct per-instantiation activations into one**
   (e.g. "Channel A" and "Channel B" instantiating the same `ModuleDef`

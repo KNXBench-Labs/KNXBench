@@ -279,6 +279,11 @@ fn migrations() -> Vec<Migration> {
 /// nullable, because SQLite treats NULLs in a non-`INTEGER` `PRIMARY KEY`
 /// as pairwise distinct, which would silently defeat the uniqueness
 /// constraint for exactly the common case.
+///
+/// `extra` (every attribute not captured by a dedicated column, as
+/// `"name=value"` pairs, sorted, newline-joined) is a human-readable audit
+/// trail, not a re-parseable encoding: it cannot be split unambiguously
+/// back apart when a value itself contains `=` or a newline.
 fn migrate_v2_to_v3(conn: &Connection) -> Result<(), ProductDbError> {
     conn.execute_batch(
         "CREATE TABLE dynamic_node (

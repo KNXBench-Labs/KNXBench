@@ -51,9 +51,11 @@ const UNMODELLED: ElementSpec = ElementSpec {
 };
 
 /// Design D4's table. `choose`'s `@ParamRefId`, `Channel`/`ParameterBlock`/
-/// `ParameterRefRef`/`ComObjectRefRef`/`Module`'s `@RefId` all resolve into
-/// the one `ref_id` column, matching the column's own doc comment in the
-/// schema (D2).
+/// `ParameterRefRef`/`ComObjectRefRef`/`Module`'s `@RefId` — the two
+/// spellings `spec_for` actually maps — resolve into the one `ref_id`
+/// column below. (D2's schema comment for this column also lists
+/// `@ParameterRefId`; nothing in the researched corpus or this table uses
+/// that spelling, so no kind below maps it.)
 fn spec_for(kind: &str) -> ElementSpec {
     match kind {
         "choose" => ElementSpec {
@@ -150,58 +152,36 @@ pub fn parse_dynamic_trees(
             Event::Start(e) => {
                 let name = local_name(&e);
                 let a = attrs(&e, source_path)?;
-                match name.as_str() {
-                    "ApplicationProgram" => {
-                        program_id = a.get("Id").unwrap_or_default().to_string();
-                        module_def_id.clear();
-                        skip_program = program_should_be_skipped(conn, &program_id, source_sha256)?;
-                    }
-                    "ModuleDef" => {
-                        module_def_id = a.get("Id").unwrap_or_default().to_string();
-                    }
-                    _ => {
-                        handle_dynamic_element(
-                            &mut stack,
-                            &mut next_node_id,
-                            conn,
-                            &program_id,
-                            &module_def_id,
-                            skip_program,
-                            &name,
-                            &a,
-                            &mut unknown,
-                            true,
-                        )?;
-                    }
-                }
+                handle_start_or_empty(
+                    conn,
+                    &name,
+                    &a,
+                    true,
+                    source_sha256,
+                    &mut program_id,
+                    &mut module_def_id,
+                    &mut skip_program,
+                    &mut stack,
+                    &mut next_node_id,
+                    &mut unknown,
+                )?;
             }
             Event::Empty(e) => {
                 let name = local_name(&e);
                 let a = attrs(&e, source_path)?;
-                match name.as_str() {
-                    "ApplicationProgram" => {
-                        program_id = a.get("Id").unwrap_or_default().to_string();
-                        module_def_id.clear();
-                        skip_program = program_should_be_skipped(conn, &program_id, source_sha256)?;
-                    }
-                    "ModuleDef" => {
-                        module_def_id = a.get("Id").unwrap_or_default().to_string();
-                    }
-                    _ => {
-                        handle_dynamic_element(
-                            &mut stack,
-                            &mut next_node_id,
-                            conn,
-                            &program_id,
-                            &module_def_id,
-                            skip_program,
-                            &name,
-                            &a,
-                            &mut unknown,
-                            false,
-                        )?;
-                    }
-                }
+                handle_start_or_empty(
+                    conn,
+                    &name,
+                    &a,
+                    false,
+                    source_sha256,
+                    &mut program_id,
+                    &mut module_def_id,
+                    &mut skip_program,
+                    &mut stack,
+                    &mut next_node_id,
+                    &mut unknown,
+                )?;
             }
             Event::End(e) => {
                 let name = e.local_name();
@@ -218,6 +198,62 @@ pub fn parse_dynamic_trees(
     Ok(DynamicIngest {
         unknown: unknown.into_vec(),
     })
+}
+
+/// Dispatches one `Event::Start` (`is_start = true`) or `Event::Empty`
+/// (`is_start = false`) element, shared by both event arms above so the two
+/// never drift apart (fix round 1, finding 3 — mirrors `parse/program.rs`'s
+/// own `handle_start_or_empty`).
+#[allow(clippy::too_many_arguments)]
+fn handle_start_or_empty(
+    conn: &Connection,
+    name: &str,
+    a: &Attrs,
+    is_start: bool,
+    source_sha256: &str,
+    program_id: &mut String,
+    module_def_id: &mut String,
+    skip_program: &mut bool,
+    stack: &mut Vec<Frame>,
+    next_node_id: &mut i64,
+    unknown: &mut UnknownCollector,
+) -> Result<(), ProductDbError> {
+    match name {
+        "ApplicationProgram" => {
+            *program_id = a.get("Id").unwrap_or_default().to_string();
+            module_def_id.clear();
+            *skip_program = program_should_be_skipped(conn, program_id, source_sha256)?;
+        }
+        "ModuleDef" => {
+            *module_def_id = a.get("Id").unwrap_or_default().to_string();
+            if !is_start {
+                // `quick-xml` never emits an `Event::End` for a self-closing
+                // element, so a `<ModuleDef .../>` would otherwise leak its
+                // id forward onto every element until the next
+                // `ModuleDef`/`ApplicationProgram` (fix round 1, finding 2).
+                // It has no children to attribute anyway — self-closing
+                // means no content — so the scope reverts synchronously
+                // here instead of waiting for an `End` that will never
+                // come.
+                module_def_id.clear();
+            }
+        }
+        _ => {
+            handle_dynamic_element(
+                stack,
+                next_node_id,
+                conn,
+                program_id,
+                module_def_id,
+                *skip_program,
+                name,
+                a,
+                unknown,
+                is_start,
+            )?;
+        }
+    }
+    Ok(())
 }
 
 /// True when this program's `dynamic_node` rows must not be (re-)written:
@@ -333,24 +369,47 @@ fn insert_node(
             "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/ModuleDefs/ModuleDef/Dynamic//{kind}"
         )
     };
-    crate::parse::report_unknown_attrs(unknown, &xpath, a, spec.known);
+    // `@default`'s only recognized spelling is the literal string `"true"`
+    // (design D4). Any other value — `"false"`, `"1"`, a typo — is not the
+    // modelled construct the `is_default` column represents, so (fix round
+    // 1, finding 1) it must not be captured out of `extra` either: it is
+    // treated exactly like an attribute this build does not understand,
+    // reported through `report_unknown_attrs` below and kept verbatim in
+    // `extra`, rather than silently vanishing because its spelling didn't
+    // match.
+    let default_value = spec.default_attr.and_then(|n| a.get(n));
+    let default_is_true = default_value == Some("true");
+    let is_default = default_is_true.then_some(1i64);
+    let known: Vec<&str> = if default_is_true {
+        spec.known.to_vec()
+    } else {
+        spec.known
+            .iter()
+            .copied()
+            .filter(|k| Some(*k) != spec.default_attr)
+            .collect()
+    };
+    crate::parse::report_unknown_attrs(unknown, &xpath, a, &known);
 
     let element_id = spec.id_attr.and_then(|n| a.get(n));
     let ref_id = spec.ref_attrs.iter().find_map(|n| a.get(n));
     let test = spec.test_attr.and_then(|n| a.get(n));
-    let is_default = spec
-        .default_attr
-        .and_then(|n| a.get(n))
-        .filter(|v| *v == "true")
-        .map(|_| 1i64);
     let text = spec.text_attr.and_then(|n| a.get(n));
 
     let mut captured: Vec<&str> = Vec::new();
     captured.extend(spec.id_attr);
     captured.extend(spec.ref_attrs.iter().copied());
     captured.extend(spec.test_attr);
-    captured.extend(spec.default_attr);
+    if default_is_true {
+        captured.extend(spec.default_attr);
+    }
     captured.extend(spec.text_attr);
+    // `extra` is a human-readable audit trail, not a re-parseable encoding:
+    // "name=value" pairs, sorted, newline-joined (design D2), which cannot
+    // be split unambiguously back apart when a value itself contains `=` or
+    // a newline — both occur in real manufacturer `@Text` values, just not,
+    // in the researched corpus, on an attribute that lands here unmodelled.
+    // Anything reading `extra` back must not assume a clean split.
     let extra: Vec<String> = a
         .names()
         .filter(|n| !captured.contains(n))

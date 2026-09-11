@@ -889,10 +889,10 @@ mechanism flagged in Q2 needs its own research first.
 shape, re-measured against all three demo projects. [V] throughout, corpus
 observation, not Standard text.** Q5 above already established the
 splicing rule from the KV project alone; this addendum re-derives it
-independently against all three `OriginalData/DemoProjects/` archives
-(extracted read-only to
-`/home/knxbench/.claude/jobs/8098e9e6/tmp/extract/{kv,uz63,uz4}`, never into
-`OriginalData/`) for the parameter-editor design that consumes it
+independently against all three `OriginalData/DemoProjects/` archives —
+each one a zip, unpacked read-only to a scratch directory outside the
+repository, never into `OriginalData/` — for the parameter-editor design
+that consumes it
 (`docs/superpowers/specs/2026-09-11-parameter-editor-design.md`,
 decisions D21-D25). Recorded here, not only in that dated spec, because a
 `docs/superpowers/` spec is a session artefact and this is a durable

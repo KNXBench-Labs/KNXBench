@@ -9,12 +9,20 @@
 use std::fmt;
 
 pub mod codec;
+pub mod resolve;
 
 pub use codec::{decode, encode, DptCodecError, DptValue};
+pub use resolve::{resolve_group_address_dpt, resolve_project_group_address_dpts, GroupAddressDpt};
 
 /// A reference to a datapoint type, e.g. `DPST-1-1` (main type 1, subtype 1)
 /// or `DPT-1` (main type only, no subtype selected).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+///
+/// Ordered by main type, then subtype — the order a human would expect, and
+/// the order `resolve::GroupAddressDpt::Conflict` sorts its entries in. That
+/// order must be deterministic across runs (a `Conflict` vector feeds
+/// straight into CLI output), which a derived `Ord` over two integer fields
+/// gives for free.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct DptRef {
     pub main: u16,
     pub sub: Option<u16>,

@@ -601,8 +601,11 @@ proof of nonexistence elsewhere.
 `Module` carries argument values as children — `NumericArg` (`RefId`,
 `Value`) and `TextArg` (`Id`, `RefId`, `Value`) — bound 1:1 and
 exhaustively to the `ModuleDef`'s declared `Argument`s in every sample
-checked (`prod3` MD-1: 3 declared args × 44 `Module` elements = 88
-`NumericArg` + 44 `TextArg` = 132 bind elements, matching the raw count).
+checked (`prod3` `M-0083_A-0317-31-7DC6`: each of its 4 `ModuleDef`s
+declares 3 arguments, 2 numeric and 1 text, and the AP holds 44 `Module`
+elements in total → 88 `NumericArg` + 44 `TextArg` = 132 bind elements,
+matching the raw count. Restricted to `MD-1` alone: 12 `Module`s, 24
+`NumericArg`, 12 `TextArg`).
 Example:
 
 ```xml

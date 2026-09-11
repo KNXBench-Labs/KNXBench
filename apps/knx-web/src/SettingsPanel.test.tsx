@@ -1,0 +1,127 @@
+// @vitest-environment happy-dom
+import { act } from "react";
+import { createRoot } from "react-dom/client";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import SettingsPanel from "./SettingsPanel";
+import { THEMES } from "./theme";
+import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
+
+let host: HTMLDivElement | undefined;
+
+afterEach(() => {
+  host?.remove();
+  host = undefined;
+  window.localStorage.clear();
+  document.documentElement.removeAttribute("data-motion-level");
+  document.documentElement.removeAttribute("data-motion-style");
+});
+
+// Wires SettingsPanel to the real `useMotion()` hook, exactly as App.tsx
+// does — a mocked callback would only prove a handler fired, not that the
+// control reaches the CSS's actual input (`document.documentElement`'s
+// `data-motion-*` attributes).
+function Harness(props: { onClose: () => void }) {
+  const { level, setLevel, style, setStyle } = useMotion();
+  return (
+    <SettingsPanel
+      themes={THEMES}
+      activeThemeId="bitcoin-defi"
+      onSelectTheme={vi.fn()}
+      motionStyles={MOTION_STYLES}
+      activeMotionStyle={style}
+      onSelectMotionStyle={setStyle}
+      motionLevels={MOTION_LEVELS}
+      activeMotionLevel={level}
+      onSelectMotionLevel={setLevel}
+      onClose={props.onClose}
+    />
+  );
+}
+
+async function renderPanel(onClose = vi.fn()) {
+  host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  await act(async () => {
+    root.render(<Harness onClose={onClose} />);
+  });
+  return { root, onClose };
+}
+
+describe("SettingsPanel", () => {
+  it("opens from the gear button (rendered by App.tsx) and shows its three labelled selects", async () => {
+    const { root } = await renderPanel();
+
+    expect(host!.querySelector(".search-overlay")).not.toBeNull();
+    expect(host!.querySelector('select[aria-label="Theme"]')).not.toBeNull();
+    expect(host!.querySelector('select[aria-label="Motion style"]')).not.toBeNull();
+    expect(host!.querySelector('select[aria-label="Motion level"]')).not.toBeNull();
+
+    root.unmount();
+  });
+
+  it("closes on Escape", async () => {
+    const { root, onClose } = await renderPanel();
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    root.unmount();
+  });
+
+  it("closes on a click outside the panel", async () => {
+    const { root, onClose } = await renderPanel();
+
+    const overlay = host!.querySelector(".search-overlay")!;
+    await act(async () => {
+      overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    root.unmount();
+  });
+
+  it("does not close on a click inside the panel", async () => {
+    const { root, onClose } = await renderPanel();
+
+    const panel = host!.querySelector(".settings-panel")!;
+    await act(async () => {
+      panel.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onClose).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
+  it("changing the motion level select sets document.documentElement's data-motion-level", async () => {
+    const { root } = await renderPanel();
+
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="Motion level"]')!;
+    expect(document.documentElement.getAttribute("data-motion-level")).toBe("standard");
+
+    await act(async () => {
+      select.value = "off";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(document.documentElement.getAttribute("data-motion-level")).toBe("off");
+    root.unmount();
+  });
+
+  it("changing the motion style select sets document.documentElement's data-motion-style", async () => {
+    const { root } = await renderPanel();
+
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="Motion style"]')!;
+    expect(document.documentElement.getAttribute("data-motion-style")).toBe("apple");
+
+    await act(async () => {
+      select.value = "glitch";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(document.documentElement.getAttribute("data-motion-style")).toBe("glitch");
+    root.unmount();
+  });
+});

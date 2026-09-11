@@ -9,11 +9,12 @@ import Inspector from "./Inspector";
 import Search from "./Search";
 import CommandPalette from "./CommandPalette";
 import type { CommandContext } from "./commandRegistry";
-import ThemeSwitcher from "./ThemeSwitcher";
+import SettingsPanel from "./SettingsPanel";
 import Dashboard from "./Dashboard";
 import LogPanel from "./LogPanel";
 import BusMonitorPanel from "./BusMonitorPanel";
 import { THEMES, useThemeId } from "./theme";
+import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
 import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
@@ -72,7 +73,9 @@ function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeId, setThemeId] = useThemeId();
+  const { level: motionLevel, setLevel: setMotionLevel, style: motionStyle, setStyle: setMotionStyle } = useMotion();
   // Mirrors `selection` synchronously so in-flight device_detail responses
   // can tell, once they land, whether the selection has since moved on —
   // state updates alone are too late to check inside the same async
@@ -342,7 +345,12 @@ function App() {
       >
         Commands… (Ctrl+Shift+P)
       </button>
-      <ThemeSwitcher themes={THEMES} activeId={themeId} onSelect={setThemeId} />
+      {/* Theme, motion style and motion level all live behind this one
+          gear button (design D32) instead of a toolbar that grows a new
+          bare `<select>` per setting — see SettingsPanel.tsx. */}
+      <button onClick={() => setSettingsOpen(true)} title="Settings" aria-label="Settings">
+        <GearIcon />
+      </button>
       <ToastStack toasts={toasts} onDismiss={dismiss} />
       {/* `ProjectExplorer` genuinely needs a project; `Inspector`/`Dashboard`
           likewise. `LogPanel`/`BusMonitorPanel` alone do not
@@ -386,7 +394,50 @@ function App() {
         <Search tree={tree} onSelect={selectEntity} onClose={() => setSearchOpen(false)} />
       )}
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
+      {settingsOpen && (
+        <SettingsPanel
+          themes={THEMES}
+          activeThemeId={themeId}
+          onSelectTheme={setThemeId}
+          motionStyles={MOTION_STYLES}
+          activeMotionStyle={motionStyle}
+          onSelectMotionStyle={setMotionStyle}
+          motionLevels={MOTION_LEVELS}
+          activeMotionLevel={motionLevel}
+          onSelectMotionLevel={setMotionLevel}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </main>
+  );
+}
+
+// Cycle 13's ThemeToggle drew its sun/moon/monitor icons the same way:
+// hand-written inline SVG, no icon library. This gear is that convention's
+// one new member.
+function GearIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="3.5" />
+      <line x1="12" y1="1.5" x2="12" y2="4.5" />
+      <line x1="12" y1="19.5" x2="12" y2="22.5" />
+      <line x1="1.5" y1="12" x2="4.5" y2="12" />
+      <line x1="19.5" y1="12" x2="22.5" y2="12" />
+      <line x1="4.6" y1="4.6" x2="6.7" y2="6.7" />
+      <line x1="17.3" y1="17.3" x2="19.4" y2="19.4" />
+      <line x1="19.4" y1="4.6" x2="17.3" y2="6.7" />
+      <line x1="6.7" y1="17.3" x2="4.6" y2="19.4" />
+    </svg>
   );
 }
 

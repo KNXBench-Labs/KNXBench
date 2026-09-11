@@ -82,7 +82,7 @@ is that we expect it to work and have not shown that it does.
 | Commissioning and device download | Bricking risk, an undocumented `Legacy*` matrix, vendor DLLs (RESEARCH §8.3) |
 | KNX Secure | No sample key material to verify against; the subsystem exists but stays empty (RESEARCH §9) |
 | Direct `.knxprod` import for master data scheme ≥ 12, **except schemes 11 and 20** (§2, standalone package install) | Schemes 12-19, 21, 22 have no standalone sample tested yet; `.vd2` is a distinct pre-2013 legacy container, permanently unsupported, not an encryption question |
-| Device parameter editing | The `Dynamic` tree grammar is unresearched (risk R3); parameter values are preserved but not interpreted |
+| Device parameter editing | The `@test` value grammar is now documented (risk R3, RESEARCH §4.3) but the `Dynamic` tree's structural grammar is corpus-observed only and no evaluator exists; parameter values are preserved but not interpreted |
 | ETS's own "Export Group Addresses" CSV/Excel format, `.esf` (OPC export) | No sample of either exists in this repository or in the KNX Standard v3.0.0 corpus, and neither is a KNX Association standard. KNXBench instead defines and documents its own format, "KNXBench group-address CSV v1" (IMPORT_EXPORT §11) — never presented as ETS-compatible. If a genuine ETS CSV sample is obtained, adding a matching column profile to the importer is the stated upgrade path |
 
 Each row here has a matching entry in

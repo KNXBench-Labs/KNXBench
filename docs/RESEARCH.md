@@ -885,6 +885,70 @@ memory-offset/text-template argument substitution, the
 `LParameters`/`RParameters`/`ParameterCalculations`/`Union`/`Memory`
 mechanism flagged in Q2 needs its own research first.
 
+**Addendum, T18 slice 3 design revision (2026-09-11) — the project-side id
+shape, re-measured against all three demo projects. [V] throughout, corpus
+observation, not Standard text.** Q5 above already established the
+splicing rule from the KV project alone; this addendum re-derives it
+independently against all three `OriginalData/DemoProjects/` archives
+(extracted read-only to
+`/home/knxbench/.claude/jobs/8098e9e6/tmp/extract/{kv,uz63,uz4}`, never into
+`OriginalData/`) for the parameter-editor design that consumes it
+(`docs/superpowers/specs/2026-09-11-parameter-editor-design.md`,
+decisions D21-D25). Recorded here, not only in that dated spec, because a
+`docs/superpowers/` spec is a session artefact and this is a durable
+format fact — see `.ai/logs/2026-09-11_claude_r5_commissioning_research.md`
+for the same ruling applied elsewhere.
+
+An application program declares `<ParameterRef Id="…_MD-2_P-1_R-1">` with
+no instantiation segment, while its `Dynamic` declares `<Module
+Id="…_MD-2_M-4" RefId="…_MD-2">`; a project then stores
+`<ParameterInstanceRef RefId="…_MD-2_M-4_MI-1_P-1_R-1" Value="17"/>` — that
+is `Module/@Id` + `_MI-<k>` + `_P-n_R-m`, the same shape Q5 names, spelled
+out again here in the parameter editor's own terms.
+
+Counts, reproduced with `grep -o '<ParameterInstanceRef RefId="[^"]*"'
+<project>/0.xml` against each `.knxproj` zip's extracted `0.xml`, and with
+`grep -rc '<ParameterRef '`/`grep -o '<ParameterRef Id="[^"]*"'` against
+every `M-*/M-*_A-*.xml` application-program file embedded in the same
+archive (not the project's own `0.xml`) for the declared-id side:
+
+| Project | `ParameterInstanceRef` rows | Module-qualified (`_M-\d+_MI-\d+_`) | Verbatim match to a declared `ParameterRef` id | Union-typed (`_UP-n_R-n`) among them |
+| --- | --- | --- | --- | --- |
+| KV v2.5 demo | 9 | 9 | 0 | 0 |
+| Unser Zuhause ETS 6.3.0 | 1343 | 0 | 1343 (all) | 208 |
+| Unser Zuhause ETS 4 | 1390 | 0 | 1390 (all) | 216 |
+
+Union-typed rows (`_UP-n_R-n`) match verbatim like any other row — they
+are already counted inside the "verbatim match" column, not a separate
+population.
+
+Stripping `_M-\d+_MI-\d+_` → `_` from each of KV's 9 stored ids recovers a
+declared `ParameterRef` id for 9 of 9 (verified by direct string
+comparison against the declared-id set extracted from
+`M-00FA_A-2504-10-C071.xml`/`A-2502-10-8698.xml`/`A-2500-10-51CB.xml`/
+`A-2507-10-0DE5.xml`); no declared `ParameterRef` id in any of the three
+projects contains that pattern (0/24 KV, 0/18843 for each Unser Zuhause
+project's shared declared-id space — the two Unser Zuhause projects embed
+the same four manufacturer catalogs, `M-0008`/`M-000C`/`M-006A`/`M-0083`,
+so their declared-id counts and content are identical), so the
+decomposition has no observed false-positive risk on this corpus.
+
+`_MI-` is `1` in every occurrence found anywhere in the corpus (`grep -oE
+'_MI-[0-9]+_'` against all three projects' `0.xml`, deduplicated); what an
+index above `1` would mean is **unattested**, stated as such rather than
+guessed at.
+
+KV stores five *different* values — 17, 33, 49, 32, 48, for `Module`
+instantiations `M-4`/`M-5`/`M-6`/`M-2`/`M-3` respectively — for the one
+declared `ParameterRef` `M-00FA_A-2504-10-C071_MD-2_P-1_R-1` across five
+`Module` instantiations of `ModuleDef` `M-00FA_A-2504-10-C071_MD-2`.
+Per-channel parameter values are real data in our own corpus, not a
+hypothetical this design had to imagine storage for.
+
+This addendum only restates the corpus shape; it does not restate the
+design decisions built on it — see D21-D25 in the design spec above for
+what the parameter editor does with it.
+
 ---
 
 ## 5. `knx_master.xml`

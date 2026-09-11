@@ -1,4 +1,61 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-12 01:15
+- **Completed:** **T18 slice 3, Task 5 (docs reconciliation, the slice's
+  last task)** — same worktree (`.worktrees/t18-parameter-editor`,
+  branch `t18-parameter-editor`), on top of `b25eb6d`. Docs-only, no
+  production logic change (code comments allowed, none needed). Updated:
+  `docs/IMPLEMENTATION_STATUS.md` (new dated T18-slice-3 entry between
+  the slice-2 and T29 entries, plus a fixed stale "no parameter editor
+  exists" bullet); `docs/KNOWN_LIMITATIONS.md` §3 (rewritten body, header
+  text left unchanged to preserve its anchor slug — 6 other files link
+  `#3-device-parameters-are-preserved-but-not-interpreted`) and §12
+  (surfaced/writable-top-level-only correction, plus its Cause/Impact
+  paragraphs further down, updated beyond the literal brief wording so
+  they don't contradict the rewritten paragraph immediately above);
+  `docs/GAP_ANALYSIS_ETS.md` (A3 row, Tier-5 T18 paragraph, and B8 row —
+  B8 also updated beyond the literal brief wording for the same
+  no-contradiction reason); `docs/DATA_MODEL.md` §10 (`ParameterInstance`
+  now has a reader/writer, still keyed by `(device, ets_id)`, cross-
+  references D25 by number); `docs/ARCHITECTURE.md` (only the "Device
+  parameter editing" v1-target-table row, nothing else in the file
+  touched); `docs/RESEARCH.md` §4.4 (new addendum recording the project-
+  side id-shape format fact `<Module/@Id>_MI-<k>_<declared suffix>` as
+  `[V]`, re-derived independently from the three demo `.knxproj` files
+  rather than copied from the brief — all figures matched: KV 9 rows/9
+  module-qualified/0 verbatim; UZ 6.3.0 1343 rows/0/1343, 208 of those
+  union-typed; UZ4 1390 rows/0/1390, 216 union-typed; stripping
+  `_M-\d+_MI-\d+_` → `_` recovers the declared id for 9/9 KV rows; no
+  declared id in any of the three projects already contains that
+  pattern; `_MI-` is always `1`, unattested above 1; KV stores five
+  distinct values 17/33/49/32/48 for one declared `ParameterRef` across
+  five `Module` instantiations). Also wrote
+  `.ai/logs/2026-09-11_claude_t18_parameter_editor_slice3.md` (the
+  slice's architecture-change log, covering what all four code tasks
+  changed plus the three decisions that moved during implementation:
+  D22's `display_order` becoming `Option<i64>`, D24's undo/redo payload
+  being `Option<String>` not `Override<T>`, D22 gaining `access`).
+  Nothing in `evaluate`/`resolve_values` touched; no schema change; D16
+  and D25 both restated as still true, not downgraded; no ETS parity or
+  KNX-certification claim added anywhere. Full detail, including the
+  step-7 re-derivation commands/output and the step-8 grep-occurrence
+  audit, in the task report at
+  `/home/knxbench/.claude/jobs/8098e9e6/tmp/t18s3-task5-report.md`.
+- **Pending/Next Steps:** T18 slice 3 is now fully done (all five tasks).
+  Next is merging this worktree to `main` (controller's call) and then
+  deciding on a possible slice 4 (per-channel module-scoped writes, D25's
+  named non-goal) or moving on per `docs/ROADMAP.md`.
+- **Notes for Codex:** The docs changes are prose-only; nothing here
+  should conflict with any in-flight code work. If a future slice adds
+  module-scoped writes, it will need to touch the same six docs files
+  again (`KNOWN_LIMITATIONS.md` §3/§12, `GAP_ANALYSIS_ETS.md` A3/B8/Tier
+  5, `DATA_MODEL.md` §10, `ARCHITECTURE.md`'s one row, `RESEARCH.md`
+  §4.4) plus whatever changes the evaluator's flat `ValueMap` needs to
+  gain a scope slot — that's the structural blocker named in D25, not a
+  missing storage key.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-12 00:02
 - **Completed:** **T18 slice 3, Task 4, fix round 1** — same worktree
   (`.worktrees/t18-parameter-editor`, branch `t18-parameter-editor`),

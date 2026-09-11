@@ -409,9 +409,14 @@ but not interpreted in v1:
   now *evaluated* too: the evaluator follows a `Module` node in the
   program's tree into the referenced `ModuleDef`'s stored tree (T18 slice
   2, 2026-09-11) — no schema change and no v4, `dynamic_node` already
-  stored everything this needed. This domain model is untouched by either
-  slice: `ParameterInstance` still holds only the raw string, and nothing
-  here reads the evaluator's output.
+  stored everything this needed. This domain model was untouched by
+  either slice; **T18 slice 3 (2026-09-11) gives `ParameterInstance` a
+  reader and a writer** — `apps/knx-server`'s parameter routes
+  (`GET`/`POST /api/device/{id}/parameters`) — without any schema change
+  here either: `ParameterInstance` is still keyed by `(device, ets_id)`
+  only and still holds a plain `raw: String`. That single-key shape is
+  exactly why module-scoped (per-channel) editing is out of scope for this
+  slice (design D25).
 - `Memory`, `AbsoluteSegment`, `LoadProcedures`, mask and resource data — held
   in the product database, not in the project.
 - `BusAccess`, `BCUKey`, `SplitType`, `BinaryData` and vendor baggage — held in

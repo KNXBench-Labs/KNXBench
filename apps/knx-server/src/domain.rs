@@ -20,18 +20,8 @@ use std::sync::Mutex;
 use knx_app::{AppError, ImportOptions};
 use knx_projection::ProjectTree;
 
-use crate::bus::{BusTunnel, GatewayConnector, RealConnector};
+use crate::bus::{BusSession, GatewayConnector, RealConnector};
 use crate::session_log::{self, LogEntry, SessionLog, Severity};
-
-/// One open KNXnet/IP monitor session (T15, design spec §4.1). This task
-/// (T15 task 1) adds only the shell — an id and the boxed tunnel `bus.rs`'s
-/// seam produced. A later task fills in the telegram buffer, the drain
-/// task, and the lagged-receiver accounting; nothing here yet reads or
-/// writes those, because nothing yet spawns a session.
-pub struct BusSession {
-    pub id: u64,
-    pub tunnel: Box<dyn BusTunnel>,
-}
 
 pub struct AppState {
     pub project: Mutex<Option<knx_core::Project>>,

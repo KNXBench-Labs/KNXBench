@@ -26,12 +26,24 @@ import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
 
 let host: HTMLDivElement | undefined;
 
-async function renderForm(destination: string, resolution: ComposeResolution, projectOpen = true) {
+async function renderForm(
+  destination: string,
+  resolution: ComposeResolution,
+  projectOpen = true,
+  sessionClosed = false,
+) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<BusComposeForm destination={destination} resolution={resolution} projectOpen={projectOpen} />);
+    root.render(
+      <BusComposeForm
+        destination={destination}
+        resolution={resolution}
+        projectOpen={projectOpen}
+        sessionClosed={sessionClosed}
+      />,
+    );
   });
   return root;
 }
@@ -188,5 +200,25 @@ describe("BusComposeForm", () => {
   it("shows no hint when a project is open", async () => {
     await renderForm("", { kind: "unknown" }, true);
     expect(host!.querySelector(".bus-compose-hint")).toBeNull();
+  });
+
+  it("disables every field and explains why for a closed session, and Send issues no request", async () => {
+    await renderForm("1/2/3", { kind: "single", dpt: "DPST-1-1" }, true, true);
+    await act(async () => {
+      setInputValue(".bus-compose-value", "on");
+    });
+
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-destination")!.disabled).toBe(true);
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-dpt")!.disabled).toBe(true);
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
+    const sendButton = Array.from(host!.querySelectorAll("button")).find((b) => b.textContent === "Send")!;
+    expect(sendButton.disabled).toBe(true);
+    expect(host!.querySelector(".bus-compose-closed-hint")!.textContent).toBe(
+      "This session is closed — sending is disabled.",
+    );
+
+    await clickSend();
+
+    expect(apiMock.writeBusValue).not.toHaveBeenCalled();
   });
 });

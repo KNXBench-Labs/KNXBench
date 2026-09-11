@@ -364,12 +364,26 @@ async fn poll_until_len(app: &axum::Router, len: usize) -> Value {
 
 #[tokio::test]
 async fn a_forced_lag_is_reported_as_a_nonzero_dropped_before() {
-    // Capacity 2: the third send before anything drains forces a real
-    // `RecvError::Lagged` on the session's own broadcast receiver.
-    let (tunnel, handle) = small_fake_tunnel(2);
+    // Capacity 2, 10 sends: the third send before anything drains forces a
+    // real `RecvError::Lagged` on the session's own broadcast receiver.
+    const CAPACITY: usize = 2;
+    const SENT: u16 = 10;
+    let (tunnel, handle) = small_fake_tunnel(CAPACITY);
     let state = state_with_connector(FakeConnector::succeeding(tunnel));
     let app = knx_server::app(Arc::new(state), None);
 
+    // `#[tokio::test]` defaults to the `current_thread` flavor, and
+    // neither `call()` (a bare `tower::ServiceExt::oneshot`, no spawned
+    // task) nor `POST /api/bus/monitor/start`'s own handler chain
+    // (`FakeConnector::connect_tunnel`'s `Box::pin` resolves on its first
+    // poll with no real await inside it; `state.bus_session`'s
+    // `tokio::sync::Mutex` is uncontended; `app()` adds no middleware
+    // layers) ever actually yields to the executor. So by the time this
+    // `.await` returns, the drain task has been *spawned* but never
+    // *polled* — cooperative scheduling guarantees that, exactly as
+    // `bus.rs`'s `session_receiver_lag_is_accounted_exactly_in_dropped_before`
+    // (`current_thread` flavor, explicit) relies on for the unit-level
+    // case this test mirrors at the HTTP layer.
     call(
         &app,
         "POST",
@@ -379,13 +393,28 @@ async fn a_forced_lag_is_reported_as_a_nonzero_dropped_before() {
     .await;
 
     // Flood past the channel capacity before the drain task gets a chance
-    // to read any of them.
-    for i in 0..10u16 {
+    // to read any of them — this loop is synchronous (`Sender::send` is
+    // not `async`), so it cannot yield either. All `SENT` sends land
+    // before the drain task's receiver is ever polled.
+    for i in 0..SENT {
         let _ = handle
             .sender()
             .send(group_value_write(i, GroupValue::Short(1)));
     }
 
+    // Exact count, not `> 0`: once the drain task's receiver is finally
+    // polled, `tokio::sync::broadcast` reports the *entire* backlog it
+    // missed as a single `RecvError::Lagged(SENT - CAPACITY)` on its first
+    // `recv()` — not incrementally, and no further messages are sent
+    // after the flood above, so `droppedBefore` jumps straight to its
+    // final value and never changes again. The polling loop below only
+    // has to find the first non-zero read; that value already equals the
+    // exact final one. `bus.rs`'s
+    // `session_receiver_lag_is_accounted_exactly_in_dropped_before` proves
+    // the same formula directly against `BusSession`, without going
+    // through HTTP; this test is the HTTP-layer half design spec §8
+    // criterion 4 asks for.
+    let expected_dropped = u64::from(SENT) - CAPACITY as u64;
     let mut dropped_before = 0u64;
     for _ in 0..200 {
         let response = call(&app, "GET", "/api/bus/monitor/telegrams?since=0", None).await;
@@ -396,9 +425,10 @@ async fn a_forced_lag_is_reported_as_a_nonzero_dropped_before() {
         }
         tokio::time::sleep(std::time::Duration::from_millis(2)).await;
     }
-    assert!(
-        dropped_before > 0,
-        "expected a forced Lagged(n) to advance droppedBefore"
+    assert_eq!(
+        dropped_before, expected_dropped,
+        "expected a forced Lagged(n) to advance droppedBefore by exactly \
+         SENT - CAPACITY"
     );
 }
 

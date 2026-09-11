@@ -438,10 +438,31 @@ condition" is the whole content of these answers:
 5. **E1 Commissioning — NOT excluded.** The user said plainly it must
    work too, but the work waits until the KNX specification database is
    finished. Its gap-analysis row stays **open**, with the blocker named.
-   Any existing wording anywhere in `docs/` that calls commissioning
-   permanently out of scope, a non-goal, or excluded by design must be
-   corrected in this task — that is now wrong, and leaving it would be
-   the documentation equivalent of a silent downgrade.
+   Every existing place that calls commissioning permanently out of
+   scope, a non-goal, or excluded by design is now wrong and must be
+   corrected here — leaving it would be the documentation equivalent of a
+   silent downgrade. The six known sites, to be re-checked rather than
+   trusted, since line numbers move:
+   - `docs/KNOWN_LIMITATIONS.md` §7 — title "…are out of scope", and its
+     "Lifted when: a deliberate decision to take it on" line;
+   - `docs/GAP_ANALYSIS_ETS.md:102` (row E1: "Explicit, permanent scope
+     decision … a durable non-goal, not a backlog item");
+   - `docs/GAP_ANALYSIS_ETS.md:760-761` ("permanent scope exclusion");
+   - `docs/ARCHITECTURE.md:25` and `:274` ("stay out of scope");
+   - `docs/COMPATIBILITY.md:83`.
+
+   **Keep the technical cause intact.** The bricking risk, the
+   undocumented `Legacy*` matrix and the vendor-DLL involvement in
+   download procedures are all still true, and CLAUDE.md's "only
+   implement protocol behaviour that is technically verified" still
+   binds. What changes is the *disposition*: from "we will never do this"
+   to "this is required, and it is blocked until the KNX specification
+   database makes the procedures verifiable". Do not delete the reasons;
+   re-file them as the blocker.
+
+   For items 3 and 4, note that `KNOWN_LIMITATIONS.md` §8 (KNX Secure)
+   and §26 (IP Secure in `BusConnection`) already exist and are honest —
+   they need the dated deferral and the T19 pointer, not a rewrite.
 
 **Done when:** the six gates pass; each of the five items is findable in
 the docs with its 2026-09-11 date and its exact disposition; no row was

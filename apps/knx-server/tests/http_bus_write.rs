@@ -320,7 +320,13 @@ async fn an_unresolved_dpt_with_none_given_is_a_bad_request_naming_the_reason() 
     .await;
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     let body = body_json(response).await;
-    assert!(body["error"].as_str().unwrap().contains("no DPT resolved"));
+    // Fix 3 (Task 5 review) — worded exactly like `BusComposeForm.tsx`'s
+    // own client-side `NO_DPT_RESOLVED_MESSAGE`, not a second, differently
+    // phrased opinion about the same fact.
+    assert_eq!(
+        body["error"].as_str().unwrap(),
+        "No DPT resolved for this group address — enter one explicitly."
+    );
 }
 
 #[tokio::test]
@@ -342,24 +348,30 @@ async fn a_conflicting_dpt_with_none_given_is_a_bad_request_naming_the_reason() 
     .await;
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     let body = body_json(response).await;
-    let message = body["error"].as_str().unwrap();
-    assert!(message.contains("conflicting"));
-    assert!(message.contains("DPST-1-1"));
-    assert!(message.contains("DPST-5-1"));
+    // Fix 3 (Task 5 review) — worded exactly like `BusComposeForm.tsx`'s own
+    // client-side `conflictingDptsMessage()`, names and all.
+    assert_eq!(
+        body["error"].as_str().unwrap(),
+        "Conflicting DPTs for this group address: DPST-1-1, DPST-5-1 — enter one explicitly."
+    );
 }
 
 // ---------------------------------------------------------------------------
 // Task 5 fix — `/write` parses `destination` in the *session's own* project
-// style, so whatever `/telegrams` rendered parses back. A Free-style
-// project is deliberately not three-level here: raw group address 1 renders
-// as the plain decimal `"1"` under `Free`, which the old hardcoded-
-// `ThreeLevel` parse rejected outright (`GroupAddress::parse` needs two
-// slashes for `ThreeLevel`) — the exact round trip this task exists to fix.
+// style, so whatever `/telegrams` rendered parses back. Raw group address 1
+// renders as the plain decimal `"1"` under `Free` and as `"0/1"` under
+// `TwoLevel` — both of which the old hardcoded-`ThreeLevel` parse rejected
+// outright (`GroupAddress::parse` needs exactly two slashes for
+// `ThreeLevel`, and `"0/1"` has only one) — the exact round trip this task
+// exists to fix. `ThreeLevel` itself needs no case here: it is already the
+// project default and is exercised end-to-end by
+// `write_with_an_explicit_dpt_sends_the_encoded_value_through_the_open_tunnel`
+// above, via its `"0/0/1"` destination.
 // ---------------------------------------------------------------------------
 
-fn project_with_free_style_and_single_dpt() -> knx_core::Project {
+fn project_with_style_and_single_dpt(style: GroupAddressStyle) -> knx_core::Project {
     let mut project = project_with_write_dpt_outcomes();
-    project.info.group_address_style = GroupAddressStyle::Free;
+    project.info.group_address_style = style;
     project
 }
 
@@ -376,45 +388,61 @@ async fn poll_until_first_destination(app: &axum::Router) -> String {
     panic!("no telegram ever appeared on the poll");
 }
 
+/// Table-driven over both non-three-level styles rather than one function
+/// per style — Fix 1 from Task 5's review: the original version of this
+/// test covered `Free` only, leaving `TwoLevel` (a distinct code path in
+/// both `GroupAddress::parse` and `::format`, not just a different string)
+/// unverified.
 #[tokio::test]
 async fn a_non_three_level_projects_telegram_destination_round_trips_through_write() {
-    let (tunnel, handle) = fake_tunnel();
-    let state = state_with_project_and_connector(
-        project_with_free_style_and_single_dpt(),
-        FakeConnector::succeeding(tunnel),
-    );
-    let app = knx_server::app(Arc::new(state), None);
-    start_session(&app).await;
+    let cases = [
+        (GroupAddressStyle::Free, "1"),
+        (GroupAddressStyle::TwoLevel, "0/1"),
+    ];
 
-    // A telegram arrives on group address 1; /telegrams renders it in the
-    // project's *Free* style, not three-level.
-    handle
-        .sender()
-        .send(knx_net::TunnelEvent::Telegram(knx_net::LDataFrame {
-            kind: knx_net::LDataMessageKind::Indication,
-            source: addr(9),
-            destination: Destination::Group(GroupAddress::from_raw(1)),
-            service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
-        }))
-        .unwrap();
+    for (style, expected_destination) in cases {
+        let (tunnel, handle) = fake_tunnel();
+        let state = state_with_project_and_connector(
+            project_with_style_and_single_dpt(style),
+            FakeConnector::succeeding(tunnel),
+        );
+        let app = knx_server::app(Arc::new(state), None);
+        start_session(&app).await;
 
-    let destination = poll_until_first_destination(&app).await;
-    assert_eq!(destination, "1", "Free style renders the raw value plainly");
+        // A telegram arrives on group address 1; /telegrams renders it in
+        // the project's own style, not three-level.
+        handle
+            .sender()
+            .send(knx_net::TunnelEvent::Telegram(knx_net::LDataFrame {
+                kind: knx_net::LDataMessageKind::Indication,
+                source: addr(9),
+                destination: Destination::Group(GroupAddress::from_raw(1)),
+                service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+            }))
+            .unwrap();
 
-    // The exact string /telegrams just emitted must be accepted by /write —
-    // before this fix it failed with 400 (no slashes for the hardcoded
-    // ThreeLevel parse).
-    let response = call(
-        &app,
-        "POST",
-        "/api/bus/write",
-        Some(json!({ "destination": destination, "dpt": "DPST-1-1", "value": "on" })),
-    )
-    .await;
-    assert_eq!(response.status(), StatusCode::OK);
-    let sent = handle.sent_calls();
-    assert_eq!(sent.len(), 1);
-    assert_eq!(sent[0].0, Destination::Group(GroupAddress::from_raw(1)));
+        let destination = poll_until_first_destination(&app).await;
+        assert_eq!(
+            destination, expected_destination,
+            "{style:?} renders group address 1 in its own format"
+        );
+
+        // The exact string /telegrams just emitted must be accepted by
+        // /write — before this fix it failed with 400 (the hardcoded
+        // ThreeLevel parse rejects both of these strings for want of a
+        // second slash).
+        let response = call(
+            &app,
+            "POST",
+            "/api/bus/write",
+            Some(json!({ "destination": destination, "dpt": "DPST-1-1", "value": "on" })),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK, "{style:?} round trip");
+        let sent = handle.sent_calls();
+        assert_eq!(sent.len(), 1, "{style:?} round trip");
+        assert_eq!(sent[0].0, Destination::Group(GroupAddress::from_raw(1)));
+    }
 }
 
 // ---------------------------------------------------------------------------

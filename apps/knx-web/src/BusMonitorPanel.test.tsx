@@ -378,6 +378,91 @@ describe("BusMonitorPanel", () => {
     expect(host!.querySelector(".bus-monitor-table")).toBeNull();
   });
 
+  describe("new-row entry highlight (design D34)", () => {
+    // jsdom does not run CSS animations, so these assert on the marker
+    // class `BusMonitorPanel.tsx` computes — never on computed styles or on
+    // whether anything visibly animates. A test that faked the latter would
+    // be lying about what jsdom can actually observe.
+    function rowElement(seq: number): Element {
+      return Array.from(host!.querySelectorAll(".bus-monitor-table tbody tr")).find(
+        (tr) => tr.querySelector("td")!.textContent === String(seq),
+      )!;
+    }
+
+    it("marks rows from the most recent poll as new, and not rows from an earlier one", async () => {
+      await renderPanel();
+      await flushReattach();
+      apiMock.pollBusTelegrams.mockResolvedValue(
+        telegramsResponse({ telegrams: [row({ seq: 0 }), row({ seq: 1 })], nextSince: 2 }),
+      );
+      await connect();
+
+      expect(rowElement(0).className).toContain("bus-monitor-row-new");
+      expect(rowElement(1).className).toContain("bus-monitor-row-new");
+
+      apiMock.pollBusTelegrams.mockResolvedValue(
+        telegramsResponse({ telegrams: [row({ seq: 2 })], nextSince: 3 }),
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      });
+
+      // The new batch carries the marker...
+      expect(rowElement(2).className).toContain("bus-monitor-row-new");
+      // ...and the previous poll's rows no longer do — the marker does not
+      // accumulate across polls.
+      expect(rowElement(0).className ?? "").not.toContain("bus-monitor-row-new");
+      expect(rowElement(1).className ?? "").not.toContain("bus-monitor-row-new");
+    });
+
+    it("clears the marker on a poll that returns no telegrams, rather than leaving the previous batch marked forever", async () => {
+      await renderPanel();
+      await flushReattach();
+      apiMock.pollBusTelegrams.mockResolvedValue(
+        telegramsResponse({ telegrams: [row({ seq: 0 })], nextSince: 1 }),
+      );
+      await connect();
+      expect(rowElement(0).className).toContain("bus-monitor-row-new");
+
+      apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ telegrams: [], nextSince: 1 }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+      });
+
+      expect(rowElement(0).className ?? "").not.toContain("bus-monitor-row-new");
+    });
+
+    it("does not mark rows adopted by the mount-time reattach's bulk load", async () => {
+      apiMock.pollBusTelegrams.mockReset();
+      apiMock.pollBusTelegrams.mockResolvedValueOnce(
+        telegramsResponse({ sessionId: 5, nextSince: 1, telegrams: [row({ seq: 0 })] }),
+      );
+      apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ sessionId: 5, nextSince: 1 }));
+
+      await renderPanel();
+      await flushReattach();
+
+      expect(rowElement(0).className ?? "").not.toContain("bus-monitor-row-new");
+    });
+
+    it("gives a SessionClosed row that just arrived both its existing marker class and the new-row class", async () => {
+      await renderPanel();
+      await flushReattach();
+      apiMock.pollBusTelegrams.mockResolvedValue(
+        telegramsResponse({
+          telegrams: [row({ seq: 0, service: "SessionClosed", decoded: null, rawPayload: null })],
+          nextSince: 1,
+          status: "closed",
+        }),
+      );
+      await connect();
+
+      const tr = rowElement(0);
+      expect(tr.className).toContain("bus-monitor-row-marker");
+      expect(tr.className).toContain("bus-monitor-row-new");
+    });
+  });
+
   it("surfaces a stop-time drain-task warning instead of swallowing it", async () => {
     apiMock.stopBusMonitor.mockResolvedValue({
       sessionId: 1,

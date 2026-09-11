@@ -847,11 +847,13 @@ Known gaps carried forward, none blocking Session 5:
   interpretable is now documented (RESEARCH R3/§4.3, spike run
   2026-09-11); the `Dynamic` tree's structural grammar remains
   corpus-observed only. T18's first slice (also 2026-09-11) built a
-  headless evaluator over the stored tree in `knx-productdb`, and slice 2
+  headless evaluator over the stored tree in `knx-productdb`, slice 2
   (same day) taught it to expand a `Module` node into its `ModuleDef`'s
-  own tree — but device parameters are still not interpretable *by a
-  user*: nothing wires the evaluator into any UI, and no parameter editor
-  exists. See the dated entries below and T18
+  own tree, and **slice 3 (also 2026-09-11) wired it into a real
+  editor** — `GET`/`POST /api/device/{id}/parameters` plus
+  `apps/knx-web`'s parameter panel — for top-level fields; module-scoped
+  (per-channel) fields are read and displayed but not editable (D25). See
+  the dated entries below and T18
   ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5).
 - A program value behind an instance-level `Empty` slot stays invisible in
   the model ([KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §12); lifted by
@@ -2063,6 +2065,110 @@ from every other crate's perspective, and **T18 slice 3** (a parameter
 editor, the only thing that would give per-instantiation values in D16 a
 real consumer) has not started. Never claimed here or anywhere else:
 ETS behavioural parity, or KNX certification.
+
+**T18 slice 3, the parameter editor (2026-09-11).** The third and last of
+the three planned slices, same day as slices 1 and 2
+([design spec](superpowers/specs/2026-09-11-parameter-editor-design.md),
+decisions D20-D26). Wires the now-complete evaluator (slice 2) into
+something a user can see and write to. No schema change in either
+database — the product database stays at **v3**, `knx-store`'s
+`parameter_instance` table is unchanged.
+
+- **The read model (`crates/knx-productdb/src/query.rs`).**
+  `ParameterView` (`display_order: Option<i64>` — `ParameterRef/@DisplayOrder`
+  is genuinely optional in shipped packages; **[V]** all 543 `parameter_ref`
+  rows for `prod3`'s program `M-0083_A-0317-31-7DC6` omit it, so `None` is
+  the common case, not an edge case) and `parameter_ref_ids()`, following
+  `com_object_view`'s own bulk-query idiom rather than one query per field
+  (D22).
+- **Decomposing a stored `ets_id` (D21).** A `ParameterInstance.source.
+  ets_id` is not always a bare declared `ParameterRef` id — ETS encodes a
+  `Module` instantiation *inside* the id string itself
+  (`<Module/@Id>_MI-<k>_<declared suffix>`). Verbatim match is the common
+  case (1343/1343 and 1390/1390 rows in the two Unser Zuhause demo
+  projects); when it fails, a regex split is attempted and validated
+  against the program's own declared `ModuleScope`/`parameter_ref` sets
+  before being trusted. A stored value that decomposes to nothing the
+  current program declares lands in the response's `stale` list, never
+  silently dropped and never silently treated as live.
+- **The write path.** `POST /api/device/{id}/parameters` validates
+  `etsId`/`raw` against the program's declared `parameter_ref`/
+  `parameter`/`parameter_type` chain — `Number` bounds, `Restriction`
+  enum membership, `None` rejected outright, every other kind a
+  non-empty-string check — before constructing exactly one
+  `knx_core::Command::SetParameterValue`, undo/redo through
+  `RestoreParameterValue` (`raw: Option<String>`, since
+  `ParameterInstance.raw` is a plain `String`, not an `Override<T>` —
+  D24 corrects an earlier draft of the design that assumed the
+  `Override` shape applied here). A rejected write is 400 with
+  `{"error": "..."}` and changes nothing. `crates/knx-store/src/
+  command_sync.rs` treats both commands as a no-op on save, since
+  `save_project` already deletes and re-inserts `parameter_instance`
+  wholesale.
+- **Response shape.** Both `GET` and `POST` return the same
+  `ParameterPanelDto` — a successful write's response carries the
+  evaluator's freshly recomputed activation set and diagnostics, so a
+  client never needs a follow-up `GET` to see which other fields or
+  communication objects just became active (D24). A device whose program
+  does not resolve returns **200** with `programId: null`, empty
+  `sections`, and its `stale` list intact — never a 404 that would hide
+  otherwise-valid stale data.
+- **The web panel (`apps/knx-web/src/ParameterPanel.tsx`).** Wired into
+  `Inspector.tsx`; fetches unconditionally on device selection (a device
+  has no program id of its own to gate on). Renders one section per
+  `Module` instantiation (D23) plus the program's own top-level section;
+  module-scoped fields render disabled with the caption "Shared across
+  every instantiation of this module; read-only in this release." A
+  rejected write reverts the input and shows the server's rejection
+  message; diagnostics render as a collapsed, expandable banner (D26),
+  never the evaluator's raw `Debug` output.
+- **Module-scoped values: read correctly, not written (D25).** An earlier
+  draft of this design assumed `ParameterInstance` had nowhere to store a
+  per-channel value — false, and corrected during design: ETS already
+  writes a scope-qualified `ets_id`, and the KV v2.5 demo project's own
+  `ParameterInstance` table stores 5 distinct values (17, 33, 49, 32, 48)
+  for one declared `ParameterRef` across 5 `Module` instantiations, today,
+  unmodified by this slice. Slice 3's decomposition (D21) reads and
+  displays each correctly, per channel (D22/D23). What blocks a *write* is
+  the evaluator, not storage: `evaluate`'s `ValueMap` is a flat
+  `HashMap<String, String>` (`evaluate.rs:348`, one slot per declared id,
+  project-wide) — a module-scoped value can never reach it in this
+  slice's design, so accepting a module-scoped write would silently break
+  D24's own "no second `GET` needed" guarantee. `editable: false`,
+  checked server-side too. D16 (all instantiations of one `ModuleDef`
+  evaluate against identical parameter values) stays true in this
+  narrower sense: the *evaluated activation* is still identical across
+  instantiations; only the *displayed value*, which D21/D22 now source
+  per channel, differs. This is the deliberate boundary that keeps T18
+  slice 3 one branch instead of the full editor — named in the design's
+  Non-goals, not silently left out.
+- **What this slice deliberately does not do**, cross-referencing the
+  design's own Non-goals list rather than re-deriving it: per-channel
+  (`Module`-instantiation) value *editing* (needs a scope-aware
+  `ValueMap` and a validated write path for a module-scoped `etsId`,
+  including what `MI` means above `1`, unattested in the corpus); deep
+  format validation for `Float`/`Text`/`IPAddress`/`Picture`/`Raw` beyond
+  a non-empty-string check; `Access` used for write gating (display-only,
+  RESEARCH §4.3 found no usable correlation); diagnostics gating a write;
+  `Argument` values; union-parameter cross-field validation; bulk/
+  multi-field write; pagination; product-database editing; search/filter
+  UI; commissioning.
+
+Four tasks (product-database read model, `Command` pair, HTTP endpoints,
+web panel), each reviewed before the next started, plus one fix round on
+the last task (two pinning tests, no production change — see
+`.ai/CURRENT_STATE.md`). `cargo test --workspace`: **975 passed / 0
+failed / 3 ignored**, up from 951 before this slice. `npm run test` in
+`apps/knx-web`: **184 passed across 18 files**, up from 179 across 17
+before this slice. Closes no `GAP_ANALYSIS_ETS.md` item outright — **A3**
+moves from "partially closed" to a still-partial but stronger statement:
+a UI now exists and can write a top-level value; module-scoped editing
+(D25) is the named remainder. This docs-only pass (T18 slice 3's fifth
+task) reconciles [KNOWN_LIMITATIONS.md §3/§12](KNOWN_LIMITATIONS.md),
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md), [DATA_MODEL.md §10](DATA_MODEL.md),
+[ARCHITECTURE.md](ARCHITECTURE.md) and [RESEARCH.md §4.4](RESEARCH.md)
+with what actually shipped. Never claimed here or anywhere else: ETS
+behavioural parity, or KNX certification.
 
 **T29, DPT codec (2026-09-11), branch `t29-dpt-codec`.** KNXBench's first
 Datapoint Type codec ([design spec](superpowers/specs/2026-09-11-dpt-codec-design.md),

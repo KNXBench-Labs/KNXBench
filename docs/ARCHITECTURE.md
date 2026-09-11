@@ -9,7 +9,8 @@ argued in [docs/adr/](adr/); the evidence they rest on is in
 A Linux-first, KNX-compatible engineering application, built as an independent
 alternative to ETS rather than a reimplementation of it.
 
-**v1 target — a project editor without device parameter configuration.** Import
+**v1 target — a project editor with top-level device parameter editing
+(module-scoped, per-channel editing still out).** Import
 `.knxproj`; inspect and edit group addresses, links, building structure,
 topology, device names and individual addresses; save to the native
 `.knxdb` format; and monitor the live bus against the open project.
@@ -21,7 +22,7 @@ Four things are explicitly out of v1:
 
 | Excluded | Reason |
 | --- | --- |
-| Device parameter editing | RESEARCH R3 — the Session 4 spike (RESEARCH §4.3) found the `@test` value grammar is Standard-normative, but the `choose`/`when`/`Channel`/`ParameterBlock` structural grammar is still corpus-observed only. T18 slice 1 (2026-09-11) built a headless evaluator over the stored `Dynamic` tree in `knx-productdb`; T18 slice 2 (same day) made it expand a `Module` node into its `ModuleDef`'s own tree too. No UI reads either, and no editor exists yet (T18, GAP_ANALYSIS_ETS.md) |
+| Device parameter editing | RESEARCH R3 — the Session 4 spike (RESEARCH §4.3) found the `@test` value grammar is Standard-normative, but the `choose`/`when`/`Channel`/`ParameterBlock` structural grammar is still corpus-observed only. T18 slice 1 (2026-09-11) built a headless evaluator over the stored `Dynamic` tree in `knx-productdb`; T18 slice 2 (same day) made it expand a `Module` node into its `ModuleDef`'s own tree too. **T18 slice 3 (2026-09-11)** adds a read/write API (`GET`/`POST /api/device/{id}/parameters`) and an `apps/knx-web` panel, scoped to top-level fields — module-scoped (per-channel) fields are read/displayed but not editable (decisions D20-D26, [design](superpowers/specs/2026-09-11-parameter-editor-design.md)) |
 | Commissioning and device download | RESEARCH §8.3/§8.4 — the generic load/unload/reset/memory-write procedures are now documented (R5 spike, §8.4), but a product-specific `Legacy*` compatibility-flag matrix, vendor DLLs and bricking risk on real hardware remain. **Not a permanent exclusion**: the user ruled 2026-09-11 that this is required ([KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)) |
 | KNX Secure | RESEARCH §9 — no sample material to verify against; the subsystem exists but stays empty |
 | Direct `.knxprod` import for master data scheme ≥ 12 | RESEARCH §10 — the encryption layer is unresolved |

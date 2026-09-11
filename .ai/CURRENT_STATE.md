@@ -1160,3 +1160,115 @@
   corpus (0 of 34 programs); `Access="None"` versus a `Memory` child was
   inconclusive (4976 against 4878) and is listed as an open question rather
   than an answer.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-11 07:05
+- **Completed:**
+  T18 slice 1 shipped and merged: the `ApplicationProgram/Dynamic` tree is now
+  parsed, stored, backfilled and evaluated. Branch `t18-dynamic-tree`, merged to
+  `main` as `1e0d073` (`--no-ff`), pushed `6e0403c..1e0d073`. Six commits:
+
+  - `05ae176` design spec + implementation plan (D1-D11, acceptance criteria 1-8)
+  - `66ef369` Task 1: schema v3, `dynamic_node`, lossless storage
+  - `c7d9ed5` Task 1 fix round (six review findings, two Major)
+  - `44b06a1` Task 2: v2->v3 migration backfill + pure headless evaluator
+  - `2368292` Task 2 fix round (two review findings, one Major)
+  - `512be02` Task 3: documentation reconciliation, stale comments retired
+  - `3f2fc5b` controller fix of two factual errors in the design document
+
+  **Storage.** `dynamic_node` holds one row per element of every `Dynamic` tree
+  — the `ApplicationProgram`'s own (`module_def_id = ''`) and each `ModuleDef`'s
+  (`module_def_id` = its `@Id`). `kind` is the XML local name verbatim: no enum,
+  no `'Unknown'` bucket. Modelled attributes go to columns, everything else to
+  `extra` *and* to the existing `UnknownCollector`. `@test` is stored verbatim by
+  the parser and only interpreted by the evaluator. `module_def_id` is `NOT NULL`
+  with `''` as the sentinel because SQLite permits NULLs in a non-`INTEGER
+  PRIMARY KEY` and treats them as distinct, which would have voided the
+  uniqueness constraint for the common case.
+
+  **Backfill.** `migrate_v2_to_v3` creates the table and then re-reads every
+  stored `source_file` blob through the same parser. This is the first
+  Rust-bearing migration in the crate and the reason ADR-0011's blob store
+  exists: ingest is content-hash idempotent, so "populate on next install" would
+  have been a permanent no-op for every already-installed file. Each blob parses
+  inside its own `SAVEPOINT`, rolled back on error before the diagnostic is
+  recorded, so a failing blob leaves **zero** rows rather than half a tree. One
+  bad blob never aborts the migration.
+
+  **Evaluator.** `dynamic::evaluate` is a pure function of tree plus value map,
+  returning active `ParameterRef`s and `ComObjectRef`s in document order
+  (deduplicated by first occurrence) plus diagnostics. All six `Condition_t`
+  operators are implemented although the corpus only ever shows `>`. Value
+  resolution: supplied value, then `parameter_ref.value`, then `parameter.value`,
+  then `MissingValue`. No branch matching means nothing activates and it is
+  always reported — `NoBranchMatched`, with `MissingValue`/`NonNumericValue` split
+  out for the two causes. `TypeNone`-controlled `choose` has its own path
+  (`UnexpectedTypeNoneShape` for any shape other than a sole
+  `when default="true"`). Unrecognized kinds are opaque, not descended,
+  `UnrecognizedNode`. `Module` is recognized but not expanded:
+  `ModuleNotExpanded`.
+
+  **Evidence.** `cargo test --workspace` 809 passed / 0 failed / 3 ignored on the
+  merged result (784 before this cycle). All five gates green on `main` including
+  `cargo deny check`. Corpus counts reproduced independently by three separate
+  reviewers and matching `docs/RESEARCH.md` §4.3 exactly: choose/when 1646/2252,
+  5/5, 509/982, 0/0; zero dangling `choose/@ParamRefId`; zero `UnparsableTest`,
+  `UnresolvedParamRef` and `UnexpectedTypeNoneShape` across all four archives.
+
+  **Documentation.** `IMPLEMENTATION_STATUS.md` (dated entry), `KNOWN_LIMITATIONS.md`,
+  `COMPATIBILITY.md`, `DATA_MODEL.md`, `GAP_ANALYSIS_ETS.md`, `ROADMAP.md`,
+  `ARCHITECTURE.md` and `IMPORT_EXPORT.md` all reconciled. The stale
+  "grammar is unresearched" comments in `knx-core/src/parameter.rs`,
+  `knx-core/src/module.rs` and `knx-productdb/src/parse/program.rs` are gone.
+  `RESEARCH.md` §4.3 gained one verified corpus observation: all 62
+  `SPACE_LIST_OF_INTEGERS` `@test` values, like all 13 `OP_NUMBER` values, occur
+  in `prod3` (`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`) alone.
+
+  **No limitation was downgraded.** "Parameter values are retained but not
+  interpreted, there is no parameter editor" still stands, verified explicitly by
+  the final review. An evaluator with no user interface above it is not an editor.
+
+- **Pending/Next Steps:**
+  T18 slices 2 and 3 remain: `Module` expansion (following a `Module` node into
+  its `ModuleDef`'s own stored tree, which slice 1 deliberately stops at) and the
+  parameter editor itself. Neither is started.
+
+  Remaining backlog beyond T18: T25/T26 (i18n, decision D10), T27 (motion toggle,
+  D11 — the user's memo asks for two motion styles, Apple-subtle and
+  cyberpunk-glitch, both clean and sleek), T28 (in-app help, D12), T20 (Functions,
+  needs an ADR first), T21 (graphical views, D1/D2), T16 (catalog browser),
+  T15/T17 (bus-facing UI), T19 (KNX Secure — blocked on key material and
+  hardware), T22 (multi-user — needs a design decision).
+
+  Four items still need the user's explicit out-of-scope acceptance before
+  `goal.md`'s completion condition can be met at all: `.vd2` support, encrypted
+  `.knxprod` (untestable without a sample), T19's deferral, and the permanent
+  exclusion of commissioning (E1).
+
+- **Notes for Codex:**
+  Keep the three confidence levels of `docs/RESEARCH.md` §4.3 apart. `[D]` is what
+  the KNX Standard states — that is the `@test` value grammar (`Condition_t`,
+  `Project Schema23 v01.00.00.md` §1.1.3.18) and nothing else on this branch.
+  `[V]` is corpus observation, which covers the whole structural grammar around
+  it. `[A]` is inference, which covers the no-match policy and
+  `@default`-is-the-fallback. Do not promote one to another in code or docs.
+
+  The evaluator is reachable from nowhere: `grep -rn "dynamic::" crates/ --include=*.rs`
+  outside `knx-productdb` returns zero hits, and that is deliberate. Import still
+  reads `GroupObjectTree` per ADR-0014 and must not start evaluating this tree.
+
+  Ingest now makes a second `quick-xml` pass over every `ApplicationProgram`'s
+  bytes. The cost is acknowledged in the code but was never measured; if product
+  installation ever feels slow, that is the first place to look.
+
+  A fresh v3 install and a v2->v3 backfill produce identical trees by
+  construction — both call `parse_dynamic_trees` — but only a nine-row fixture
+  test proves it, not a full-corpus comparison. Worth strengthening if the
+  migration path ever gets more complicated.
+
+  `program_should_be_skipped` in `dynamic/parse.rs` deliberately does *not* key on
+  `application_program.source_sha256` matching. That looks like an oversight and
+  is not: keying on it would have made the backfill a silent no-op for every
+  ordinary already-ingested program.

@@ -13,8 +13,8 @@ use rusqlite::Connection;
 use zip::write::SimpleFileOptions;
 
 use knx_productdb::dynamic::{
-    evaluate, ActiveRef, ControlKind, Diagnostic, DynamicNode, DynamicTree, ModuleScope, Op,
-    ProgramTrees, ScopedDiagnostic, Test,
+    evaluate, load_program_trees, ActiveRef, ControlKind, Diagnostic, DynamicNode, DynamicTree,
+    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test,
 };
 
 fn db() -> (tempfile::TempDir, Connection) {
@@ -1693,4 +1693,257 @@ fn corpus_evaluation_matches_research_no_unparsable_tests_no_unresolved_refs_and
             other => panic!("unexpected corpus archive {other} in this test's own list"),
         }
     }
+}
+
+// ---------------------------------------------------------------------
+// T18 Task 2 continued: corpus `Module` expansion. Same
+// `KNXBENCH_PRODUCT_CORPUS` env-override / loud-skip idiom as the two tests
+// above. Expected numbers below are not fitted to what `evaluate` prints:
+// they come from `/home/knxbench/.claude/jobs/8098e9e6/tmp/derive_module_counts.py`,
+// an independent, from-scratch reimplementation of this same evaluator
+// algorithm in Python, driven straight off the raw `ApplicationProgram` XML
+// (no sqlite, no knx_productdb). See the Task 2 report for its full output
+// and the corpus-derivation method.
+//
+// RESEARCH.md §4.4 Q7's distribution table lists seven module-bearing
+// application programs: three in `prod3`, four in `kv25`. Only `prod3`
+// (`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`) is reachable here —
+// `kv25` is a `.knxproj` demo project under `OriginalData/DemoProjects/`,
+// not one of the four `.knxprod` archives these corpus tests install. The
+// other three archives (`prod1`, `prod2`, `prod4`) contain zero `ModuleDef`
+// and zero `Module` and are this test's module-free control group.
+// ---------------------------------------------------------------------
+
+/// AC#6: every `prod3` `Module/@RefId` resolves (zero `ModuleDefNotFound`),
+/// nesting never occurs (zero `NestedModuleNotExpanded`), and expansion
+/// strictly grows each program's activation count over the program-tree-only
+/// baseline, by the exact amounts derived independently in Python.
+///
+/// The corpus's own default parameter values only ever steer every one of
+/// prod3's per-channel "operating mode" `choose`s onto its first `ModuleDef`
+/// (`..._MD-1`); the sibling `Module`s naming `MD-2`/`MD-3`/`MD-4` structurally
+/// exist (`corpus_choose_and_when_counts_match_research_and_every_choose_resolves`
+/// already pins 44/28/14 total `Module` rows per program) but sit on branches
+/// the defaults never select, so `evaluate` never even reaches them — this is
+/// why "distinct `ModuleScope`s" below (12/8/4) is smaller than the raw
+/// `Module` row count (44/28/14): the former counts instantiations `evaluate`
+/// actually walks under real default values, the latter counts every stored
+/// `Module` element regardless of reachability. Both are real, independently
+/// derived numbers; they are not expected to agree, and the difference is the
+/// finding, not a bug in either count (see the Task 2 report).
+#[test]
+fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_counts() {
+    let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../OriginalData/ProductDatabases")
+        });
+    if !root.exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
+
+    let name = "MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod";
+    let bytes = std::fs::read(root.join(name)).unwrap_or_else(|e| {
+        panic!(
+            "corpus fixture {name} unavailable: {e}; set KNXBENCH_PRODUCT_CORPUS to \
+             OriginalData/ProductDatabases"
+        )
+    });
+    let (_dir, conn) = db();
+    knx_productdb::install_package(&conn, name, &bytes).unwrap();
+
+    let program_ids: Vec<String> = conn
+        .prepare("SELECT DISTINCT program_id FROM dynamic_node WHERE module_def_id = ''")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(
+        program_ids.len(),
+        3,
+        "{name}: three module-bearing application programs, per §4.4 Q7"
+    );
+
+    for program_id in &program_ids {
+        let single_tree = knx_productdb::dynamic::load_tree(&conn, program_id, "").unwrap();
+        let values =
+            knx_productdb::dynamic::resolve_values(&conn, program_id, &HashMap::new()).unwrap();
+        let single = evaluate(&ProgramTrees::single(single_tree), &values);
+        let single_total = single.parameter_refs.len() + single.com_object_refs.len();
+
+        let trees = load_program_trees(&conn, program_id).unwrap();
+        let full = evaluate(&trees, &values);
+        let full_total = full.parameter_refs.len() + full.com_object_refs.len();
+
+        let module_def_not_found = full
+            .diagnostics
+            .iter()
+            .filter(|sd| matches!(sd.diagnostic, Diagnostic::ModuleDefNotFound { .. }))
+            .count();
+        let nested_not_expanded = full
+            .diagnostics
+            .iter()
+            .filter(|sd| matches!(sd.diagnostic, Diagnostic::NestedModuleNotExpanded { .. }))
+            .count();
+
+        let mut scope_nodes: std::collections::HashSet<i64> = std::collections::HashSet::new();
+        for r in full
+            .parameter_refs
+            .iter()
+            .chain(full.com_object_refs.iter())
+        {
+            if let Some(scope) = &r.scope {
+                scope_nodes.insert(scope.module_node);
+            }
+        }
+        for sd in &full.diagnostics {
+            if let Some(scope) = &sd.scope {
+                scope_nodes.insert(scope.module_node);
+            }
+        }
+        let distinct_scopes = scope_nodes.len();
+
+        eprintln!(
+            "corpus {name} program {program_id}: single_total={single_total} \
+             full_total={full_total} module_def_not_found={module_def_not_found} \
+             nested_not_expanded={nested_not_expanded} distinct_scopes={distinct_scopes}"
+        );
+
+        assert_eq!(
+            module_def_not_found, 0,
+            "{program_id}: AC#6 — every Module/@RefId in the corpus resolves"
+        );
+        assert_eq!(
+            nested_not_expanded, 0,
+            "{program_id}: AC#6 — §4.4 Q6's zero-nesting finding, enforced as a regression"
+        );
+        assert!(
+            full_total > single_total,
+            "{program_id}: expansion must strictly grow the activation count \
+             (single={single_total}, full={full_total})"
+        );
+
+        let (expected_single, expected_full, expected_scopes) = match program_id.as_str() {
+            "M-0083_A-0317-31-7DC6" => (22, 382, 12),
+            "M-0083_A-0318-31-DB39" => (18, 258, 8),
+            "M-0083_A-0319-31-587B" => (14, 134, 4),
+            other => panic!("unexpected prod3 program_id {other} in this test's own list"),
+        };
+        assert_eq!(
+            single_total, expected_single,
+            "{program_id}: program-tree-only activation count, independently derived"
+        );
+        assert_eq!(
+            full_total, expected_full,
+            "{program_id}: fully-expanded activation count, independently derived"
+        );
+        assert_eq!(
+            distinct_scopes, expected_scopes,
+            "{program_id}: distinct ModuleScopes — the number of Module rows this \
+             program's own default parameter values actually cause evaluate to walk \
+             (not the raw stored-row count; see this test's own doc comment)"
+        );
+    }
+}
+
+/// AC#7: a module-free program's activation counts are unaffected by this
+/// slice. `prod1` (`646704-04_ETS4_2012_47_DE_EN.knxprod`) has zero
+/// `ModuleDef` and zero `Module` (§4.4 Q7), so `load_program_trees` loads no
+/// module scopes at all and `evaluate` over it must behave identically to
+/// `ProgramTrees::single` — which is also what slice 1's own `evaluate(&tree,
+/// ...)` did before this slice existed.
+#[test]
+fn corpus_module_expansion_leaves_a_module_free_program_unchanged() {
+    let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../OriginalData/ProductDatabases")
+        });
+    if !root.exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
+
+    let name = "646704-04_ETS4_2012_47_DE_EN.knxprod";
+    let bytes = std::fs::read(root.join(name)).unwrap_or_else(|e| {
+        panic!(
+            "corpus fixture {name} unavailable: {e}; set KNXBENCH_PRODUCT_CORPUS to \
+             OriginalData/ProductDatabases"
+        )
+    });
+    let (_dir, conn) = db();
+    knx_productdb::install_package(&conn, name, &bytes).unwrap();
+
+    let program_ids: Vec<String> = conn
+        .prepare("SELECT DISTINCT program_id FROM dynamic_node WHERE module_def_id = ''")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(program_ids.len(), 1, "{name}: one application program");
+    let program_id = &program_ids[0];
+
+    let module_def_ids: Vec<String> = conn
+        .prepare("SELECT DISTINCT module_def_id FROM dynamic_node WHERE program_id = ?1 AND module_def_id != ''")
+        .unwrap()
+        .query_map([program_id], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert!(
+        module_def_ids.is_empty(),
+        "{name}: control group must be module-free, found {module_def_ids:?}"
+    );
+
+    let single_tree = knx_productdb::dynamic::load_tree(&conn, program_id, "").unwrap();
+    let values =
+        knx_productdb::dynamic::resolve_values(&conn, program_id, &HashMap::new()).unwrap();
+    let single = evaluate(&ProgramTrees::single(single_tree), &values);
+    let single_total = single.parameter_refs.len() + single.com_object_refs.len();
+
+    let trees = load_program_trees(&conn, program_id).unwrap();
+    let full = evaluate(&trees, &values);
+    let full_total = full.parameter_refs.len() + full.com_object_refs.len();
+
+    let no_branch_matched = |diags: &[ScopedDiagnostic]| {
+        diags
+            .iter()
+            .filter(|sd| matches!(sd.diagnostic, Diagnostic::NoBranchMatched { .. }))
+            .count()
+    };
+
+    eprintln!(
+        "corpus {name} program {program_id}: single_total={single_total} full_total={full_total} \
+         single_no_branch_matched={} full_no_branch_matched={}",
+        no_branch_matched(&single.diagnostics),
+        no_branch_matched(&full.diagnostics)
+    );
+
+    assert_eq!(
+        single_total, 145,
+        "{program_id}: program-tree-only activation count, independently derived"
+    );
+    assert_eq!(
+        full_total, 145,
+        "{program_id}: AC#7 — module expansion must not change a module-free program's count"
+    );
+    assert_eq!(
+        single_total, full_total,
+        "{program_id}: identical because there is nothing to expand"
+    );
+    assert_eq!(
+        no_branch_matched(&single.diagnostics),
+        24,
+        "{program_id}: program-tree-only NoBranchMatched count, independently derived"
+    );
+    assert_eq!(
+        no_branch_matched(&full.diagnostics),
+        24,
+        "{program_id}: AC#7 — diagnostics are unaffected too"
+    );
 }

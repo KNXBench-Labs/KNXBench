@@ -115,6 +115,22 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   const [status, setStatus] = useState<"active" | "closed" | null>(null);
   const [droppedBefore, setDroppedBefore] = useState(0);
 
+  // The lowest `seq` that counts as "arrived in the most recent incremental
+  // poll" (design D34: an entry highlight the stylesheet renders, driven by
+  // this threshold rather than by any per-row state — see `styles.css`'s
+  // `.bus-monitor-row-new`). `null` means "nothing is new right now."
+  //
+  // Deliberately reset on *every* poll tick, including one that comes back
+  // empty: the highlight is this row batch's for exactly one poll interval,
+  // never longer. Marking nothing on an empty poll means a quiet bus does
+  // not leave last poll's rows lit up forever, and it does not need a timer
+  // to say so — the next tick already is the clock.
+  //
+  // Deliberately *not* touched by the mount-time reattach effect or by
+  // `connect()`'s reset: adopting a running session's backlog, or starting
+  // a fresh one, is not "these rows just arrived" — see both call sites.
+  const [newRowThreshold, setNewRowThreshold] = useState<number | null>(null);
+
   const [textFilter, setTextFilter] = useState("");
   const [serviceFilters, setServiceFilters] = useState<ServiceFilters>(defaultServiceFilters);
 
@@ -212,6 +228,13 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
         if (cancelled) return;
         sinceRef.current = response.nextSince;
         setRows((previous) => [...previous, ...response.telegrams]);
+        // This tick's own batch only — never a running minimum kept across
+        // ticks, or the marker would accumulate exactly the way it must not.
+        setNewRowThreshold(
+          response.telegrams.length > 0
+            ? Math.min(...response.telegrams.map((t) => t.seq))
+            : null,
+        );
         setDroppedBefore(response.droppedBefore);
         setStatus(response.status);
         setPollError(null);
@@ -238,6 +261,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       const started = await api.startBusMonitor(gatewayInput);
       sinceRef.current = 0;
       setRows([]);
+      setNewRowThreshold(null);
       setDroppedBefore(0);
       setStatus("active");
       setStopSummary(null);
@@ -379,30 +403,40 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((row) => (
-                <tr
-                  key={row.seq}
-                  className={row.service === "SessionClosed" ? "bus-monitor-row-marker" : undefined}
-                  onClick={() => selectRow(row)}
-                  style={{ cursor: "pointer" }}
-                  title="Click to prefill the send form above with this row's destination"
-                >
-                  <td>{row.seq}</td>
-                  <td>{row.timestamp}</td>
-                  <td>{row.source}</td>
-                  <td>
-                    {row.destination}
-                    {row.destinationName && (
-                      <span className="bus-monitor-dest-name"> ({row.destinationName})</span>
-                    )}
-                  </td>
-                  <td>{row.service}</td>
-                  <td>{row.rawPayload ?? "—"}</td>
-                  <td className={row.decoded ? `bus-monitor-decoded-${row.decoded.kind}` : undefined}>
-                    {decodedSummary(row)}
-                  </td>
-                </tr>
-              ))}
+              {visibleRows.map((row) => {
+                // Combined, not replaced (design D34): a `SessionClosed`
+                // marker row that just arrived is both at once.
+                const rowClasses = [
+                  row.service === "SessionClosed" ? "bus-monitor-row-marker" : null,
+                  newRowThreshold !== null && row.seq >= newRowThreshold ? "bus-monitor-row-new" : null,
+                ]
+                  .filter((c): c is string => c !== null)
+                  .join(" ");
+                return (
+                  <tr
+                    key={row.seq}
+                    className={rowClasses || undefined}
+                    onClick={() => selectRow(row)}
+                    style={{ cursor: "pointer" }}
+                    title="Click to prefill the send form above with this row's destination"
+                  >
+                    <td>{row.seq}</td>
+                    <td>{row.timestamp}</td>
+                    <td>{row.source}</td>
+                    <td>
+                      {row.destination}
+                      {row.destinationName && (
+                        <span className="bus-monitor-dest-name"> ({row.destinationName})</span>
+                      )}
+                    </td>
+                    <td>{row.service}</td>
+                    <td>{row.rawPayload ?? "—"}</td>
+                    <td className={row.decoded ? `bus-monitor-decoded-${row.decoded.kind}` : undefined}>
+                      {decodedSummary(row)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         ))}

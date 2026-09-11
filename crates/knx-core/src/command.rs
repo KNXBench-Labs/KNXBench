@@ -12,8 +12,10 @@ use crate::flags::{ComFlagKind, Direction, GroupLink};
 use crate::group::{GroupAddressEntry, GroupRange};
 use crate::ids::{
     AreaId, BuildingPartId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId, LineId,
+    ParameterInstanceId, SourceRef,
 };
 use crate::installation::Installation;
+use crate::parameter::ParameterInstance;
 use crate::project::Project;
 use crate::provenance::{Layer, Override, Resolved};
 use crate::string_table::Text;
@@ -95,6 +97,47 @@ pub enum Command {
         com_object: ComObjectInstanceId,
         flag: ComFlagKind,
         value: Override<bool>,
+    },
+    /// Writes one `ParameterInstance`'s raw value as a user edit —
+    /// overwriting `raw` in place if `(device, ets_id)` already names an
+    /// entry in `installations[0].parameters`, else inserting a new one.
+    /// `ets_id` is `ParameterInstance::source::ets_id` (`parameter.rs`'s own
+    /// doc comment), matched verbatim; `knx-core` has no way to check it
+    /// names something a program actually declares — that validation lives
+    /// in `knx-server`, which alone can reach `knx-productdb`'s tables (see
+    /// the parameter-editor design, D24). `id` is used only for the
+    /// insert case — the existing row's own id is kept on an overwrite, the
+    /// same "this command does not allocate" split `CreateDevice` already
+    /// documents; the caller looks up an existing id or allocates a fresh
+    /// one via `Project::ids::next_parameter_instance_id` before
+    /// constructing this command.
+    SetParameterValue {
+        id: ParameterInstanceId,
+        device: DeviceId,
+        ets_id: String,
+        raw: String,
+    },
+    /// The undo/redo form of `SetParameterValue` — see
+    /// `RestoreComObjectFlag` for why the two cannot share one shape, with
+    /// one difference from that pair: a `ParameterInstance` row can itself
+    /// be created or deleted by these two commands (unlike a com object
+    /// instance, which `SetComObjectFlag` only ever toggles a flag on), so
+    /// a bare `String` cannot say "no row existed before this `Set`" the
+    /// way `Override<bool>` says "no override existed" for a flag. Nothing
+    /// here reuses `provenance::Override<T>` either: that type pairs a
+    /// value with a `Resolved`/`Layer` provenance chain, and
+    /// `ParameterInstance` carries none (`parameter.rs`'s own doc comment:
+    /// "retained but uninterpreted") — the same reasoning
+    /// `SetDeviceDescription` already gives for its own bare
+    /// `Option<String>`. `raw: None` means undoing a creation, so `apply`
+    /// deletes the row outright rather than leaving one behind with an
+    /// empty string; `raw: Some(prior)` means undoing an overwrite, so
+    /// `apply` restores `prior` onto the existing row.
+    RestoreParameterValue {
+        id: ParameterInstanceId,
+        device: DeviceId,
+        ets_id: String,
+        raw: Option<String>,
     },
     /// `entry.id` is pre-allocated by the caller via
     /// `Project::ids::next_group_address_id`.
@@ -399,6 +442,45 @@ fn remove_device_from_buildings(
     })
 }
 
+/// Finds `(device, ets_id)` in `installation.parameters` and overwrites its
+/// `raw` in place, or inserts a new `ParameterInstance` using `id`/
+/// `source_path` if none exists yet — the one piece of find-or-create logic
+/// `SetParameterValue::apply` and `RestoreParameterValue::apply`'s
+/// "overwrite" branch both need (T18 slice 3 task 2, design D24). Returns
+/// `None` for an insert, or `Some((existing row's own id, its raw before
+/// this call))` for an overwrite — the caller uses this to build the
+/// correct inverse without a new `ParameterInstanceId` ever being minted
+/// for an update.
+fn upsert_parameter_value(
+    installation: &mut Installation,
+    id: ParameterInstanceId,
+    device: DeviceId,
+    ets_id: &str,
+    raw: &str,
+    source_path: String,
+) -> Option<(ParameterInstanceId, String)> {
+    if let Some(entry) = installation
+        .parameters
+        .iter_mut()
+        .find(|p| p.device == device && p.source.ets_id == ets_id)
+    {
+        let previous = (entry.id, entry.raw.clone());
+        entry.raw = raw.to_string();
+        Some(previous)
+    } else {
+        installation.parameters.push(ParameterInstance {
+            id,
+            device,
+            source: SourceRef {
+                path: source_path,
+                ets_id: ets_id.to_string(),
+            },
+            raw: raw.to_string(),
+        });
+        None
+    }
+}
+
 impl Command {
     /// Applies the command to `project`, returning its inverse on success.
     /// On failure, `project` is left untouched.
@@ -552,6 +634,89 @@ impl Command {
                     flag,
                     value: previous,
                 })
+            }
+            Command::SetParameterValue {
+                id,
+                device,
+                ets_id,
+                raw,
+            } => {
+                let id = *id;
+                let device_id = *device;
+                let source_path = project
+                    .devices
+                    .get(device_id)
+                    .ok_or(CommandError::DeviceNotFound(device_id))?
+                    .source
+                    .path
+                    .clone();
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                match upsert_parameter_value(installation, id, device_id, ets_id, raw, source_path)
+                {
+                    Some((previous_id, previous_raw)) => Ok(Command::RestoreParameterValue {
+                        id: previous_id,
+                        device: device_id,
+                        ets_id: ets_id.clone(),
+                        raw: Some(previous_raw),
+                    }),
+                    None => Ok(Command::RestoreParameterValue {
+                        id,
+                        device: device_id,
+                        ets_id: ets_id.clone(),
+                        raw: None,
+                    }),
+                }
+            }
+            Command::RestoreParameterValue {
+                id: _,
+                device,
+                ets_id,
+                raw,
+            } => {
+                let device_id = *device;
+                let installation = project
+                    .installations
+                    .first_mut()
+                    .ok_or(CommandError::InstallationNotFound)?;
+                match raw {
+                    Some(prior) => {
+                        // Constructed only from a prior overwrite (`SetParameterValue`'s
+                        // "found" branch), so the row is expected to still be there;
+                        // `DeviceNotFound` is the closest existing variant if it
+                        // somehow is not (no new `CommandError` variant for this task).
+                        let entry = installation
+                            .parameters
+                            .iter_mut()
+                            .find(|p| p.device == device_id && p.source.ets_id == *ets_id)
+                            .ok_or(CommandError::DeviceNotFound(device_id))?;
+                        let entry_id = entry.id;
+                        let current_raw = entry.raw.clone();
+                        entry.raw = prior.clone();
+                        Ok(Command::SetParameterValue {
+                            id: entry_id,
+                            device: device_id,
+                            ets_id: ets_id.clone(),
+                            raw: current_raw,
+                        })
+                    }
+                    None => {
+                        let pos = installation
+                            .parameters
+                            .iter()
+                            .position(|p| p.device == device_id && p.source.ets_id == *ets_id)
+                            .ok_or(CommandError::DeviceNotFound(device_id))?;
+                        let removed = installation.parameters.remove(pos);
+                        Ok(Command::SetParameterValue {
+                            id: removed.id,
+                            device: device_id,
+                            ets_id: ets_id.clone(),
+                            raw: removed.raw,
+                        })
+                    }
+                }
             }
             Command::CreateGroupAddress { entry } => {
                 let installation = project
@@ -1134,6 +1299,7 @@ mod tests {
     use crate::group::GroupRange;
     use crate::ids::{InstallationId, LineId, SourceRef};
     use crate::installation::Installation;
+    use crate::parameter::ParameterInstance;
     use crate::string_table::Text;
     use crate::topology::{Area, Topology};
     use crate::{GroupAddress, Language};
@@ -3233,5 +3399,96 @@ mod tests {
         assert_eq!(project, before);
         stack.undo(&mut project).unwrap();
         assert_eq!(project, before);
+    }
+
+    #[test]
+    fn set_parameter_value_creates_a_new_instance_when_none_exists_and_undo_removes_it() {
+        let mut project = test_project_with_one_device(None);
+        let before_len = project.installations[0].parameters.len();
+        let inverse = Command::SetParameterValue {
+            id: ParameterInstanceId(1),
+            device: DeviceId(1),
+            ets_id: "M-1_P-1_R-1".into(),
+            raw: "7".into(),
+        }
+        .apply(&mut project)
+        .unwrap();
+        assert_eq!(
+            inverse,
+            Command::RestoreParameterValue {
+                id: ParameterInstanceId(1),
+                device: DeviceId(1),
+                ets_id: "M-1_P-1_R-1".into(),
+                raw: None,
+            }
+        );
+        assert_eq!(project.installations[0].parameters.len(), before_len + 1);
+        let created = &project.installations[0].parameters[0];
+        assert_eq!(created.raw, "7");
+        assert_eq!(created.source.ets_id, "M-1_P-1_R-1");
+        // The device's own `source.path` ("t", from `test_project_with_one_device`),
+        // not a fresh or empty one.
+        assert_eq!(created.source.path, "t");
+
+        inverse.apply(&mut project).unwrap();
+        assert_eq!(project.installations[0].parameters.len(), before_len);
+    }
+
+    #[test]
+    fn set_parameter_value_overwrites_an_existing_instance_and_undo_restores_the_same_id() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0].parameters.push(ParameterInstance {
+            id: ParameterInstanceId(9),
+            device: DeviceId(1),
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "M-1_P-1_R-1".into(),
+            },
+            raw: "3".into(),
+        });
+        let inverse = Command::SetParameterValue {
+            id: ParameterInstanceId(1), // a fresh id — must be ignored, an entry already exists
+            device: DeviceId(1),
+            ets_id: "M-1_P-1_R-1".into(),
+            raw: "7".into(),
+        }
+        .apply(&mut project)
+        .unwrap();
+        assert_eq!(
+            inverse,
+            Command::RestoreParameterValue {
+                id: ParameterInstanceId(9),
+                device: DeviceId(1),
+                ets_id: "M-1_P-1_R-1".into(),
+                raw: Some("3".into()),
+            }
+        );
+        assert_eq!(project.installations[0].parameters.len(), 1);
+        assert_eq!(project.installations[0].parameters[0].raw, "7");
+        assert_eq!(
+            project.installations[0].parameters[0].id,
+            ParameterInstanceId(9)
+        );
+
+        inverse.apply(&mut project).unwrap();
+        assert_eq!(project.installations[0].parameters.len(), 1);
+        let restored = &project.installations[0].parameters[0];
+        assert_eq!(restored.raw, "3");
+        // No new `ParameterInstanceId` was allocated for an update.
+        assert_eq!(restored.id, ParameterInstanceId(9));
+    }
+
+    #[test]
+    fn set_parameter_value_against_an_unknown_device_is_rejected() {
+        let mut project = test_project_with_one_device(None);
+        let result = Command::SetParameterValue {
+            id: ParameterInstanceId(1),
+            device: DeviceId(99),
+            ets_id: "M-1_P-1_R-1".into(),
+            raw: "7".into(),
+        }
+        .apply(&mut project);
+        assert_eq!(result, Err(CommandError::DeviceNotFound(DeviceId(99))));
+        assert!(project.installations[0].parameters.is_empty());
     }
 }

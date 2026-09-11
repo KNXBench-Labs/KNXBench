@@ -142,8 +142,11 @@ parameter.rs`.
    style.
 2. **`SetParameterValue::apply`**: look up the device (reuse
    `CommandError::DeviceNotFound` if absent — no new `CommandError`
-   variant is needed anywhere in this task). Search the owning
-   installation's `parameters: Vec<ParameterInstance>` for an entry with
+   variant is needed anywhere in this task). Search
+   `installations[0].parameters: Vec<ParameterInstance>` — that is the
+   scope every existing `Command::apply` already uses, and nothing in the
+   codebase resolves which installation owns a device
+   (`crates/knx-core/src/command.rs:30-33`) — for an entry with
    `device == self.device && source.ets_id == self.ets_id`. If found,
    overwrite `raw` in place and return an inverse
    `RestoreParameterValue { raw: Override::Present(<old raw>), .. }`. If
@@ -197,12 +200,19 @@ new file).
 1. **Add the DTOs from design D22** (`ParameterPanelDto`,
    `ParameterSectionDto`, `ModuleScopeDto`, `ParameterFieldDto`,
    `EnumOptionDto`, `StaleParameterDto`, `ParameterDiagnosticDto`) to
-   `apps/knx-server/src/domain.rs`, following `CatalogInstallReportDto`'s
-   own shape: plain `#[derive(serde::Serialize)] #[serde(rename_all =
-   "camelCase")]`, no `ts-rs`.
+   `apps/knx-server/src/routes.rs`, next to and following
+   `CatalogInstallReportDto` (`routes.rs:110`), which is where that
+   precedent actually lives: plain `#[derive(serde::Serialize)]
+   #[serde(rename_all = "camelCase")]`, no `ts-rs`. Do not put them in
+   `domain.rs` — it carries no `Serialize`-derived type today, and this
+   slice is not the place to start a second DTO location.
 2. **`parameter_panel_impl(project, product_db, device_id) ->
-   Result<ParameterPanelDto, String>`**, two-phase locking exactly like
-   `create_device_impl`'s existing pattern: Step 1 locks only `project`,
+   Result<ParameterPanelDto, String>`**, single-lock-at-a-time, matching
+   `create_device_impl`'s discipline (never both mutexes held at once) but
+   in the reverse order — that function takes `product_db` first
+   (`domain.rs:1402`) and `project` second (`domain.rs:1448`), whereas this
+   one needs `project`'s `program_ref` before `product_db` can be queried
+   at all: Step 1 locks only `project`,
    reads the device's `program_ref`, its `source.path`, and every stored
    `ParameterInstance` for this device into local values, drops the lock.
    Step 2 locks only `product_db`: `resolve_program`, `load_program_trees`,
@@ -341,10 +351,16 @@ new file).
 
 ## Task 4 — `apps/knx-web`: the parameter panel
 
-Files: `apps/knx-web/src/` — a new component directory (name to match the
-existing convention for a device-detail-adjacent panel; check how the
-communication-object list is organized before choosing a location and
-mirror it, rather than inventing a new layout convention).
+Files: `apps/knx-web/src/ParameterPanel.tsx` and
+`apps/knx-web/src/ParameterPanel.test.tsx`, plus the call site that renders
+it. `apps/knx-web/src/` is flat — its only subdirectory is `bindings/`, for
+generated TypeScript types — so a new panel is a new file beside
+`Inspector.tsx` and `BusMonitorPanel.tsx`, not a new directory. The
+communication-object editing UI is not a separate component at all: it is a
+set of functions (`ComObjectDescriptionField`, `DptField`,
+`ComObjectFlagsRow`) inside `Inspector.tsx`. Read those for the field-row
+idiom, then follow the flat-file convention the rest of the directory
+already uses.
 
 1. **Fetch `GET /api/device/{id}/parameters`** on selecting a device with
    a resolvable program (`program_id != null`), following the existing
@@ -449,13 +465,45 @@ No production logic. Code comments are allowed.
    panel now exist, scoped to top-level fields, with a pointer to this
    design's decision numbers. Only this row; do not touch anything else
    in the file that is still accurate.
-7. Grep `docs/` and `crates/` and `apps/` for `"no parameter editor"` and
+7. `docs/RESEARCH.md` §4.4 — record the project-side id shape itself, as a
+   format fact rather than as a decision. This is the one durable finding
+   of this slice's design revision, and a dated `docs/superpowers/` spec is
+   not where it can live: those are session artefacts, deliberately left
+   unmaintained (see `.ai/logs/2026-09-11_claude_r5_commissioning_research.md`).
+   State, all marked **[V]** and never **[D]** — this is corpus
+   observation, not Standard text:
+   - An application program declares `<ParameterRef Id="…_MD-2_P-1_R-1">`
+     with no instantiation segment, while its `Dynamic` declares
+     `<Module Id="…_MD-2_M-4" RefId="…_MD-2">`; a project then stores
+     `<ParameterInstanceRef RefId="…_MD-2_M-4_MI-1_P-1_R-1" Value="17"/>`
+     — that is `Module/@Id` + `_MI-<k>` + `_P-n_R-m`.
+   - Counts across all three demo projects: KV v2.5 demo 9 rows, 9
+     module-qualified, 0 matching a declared `ParameterRef` id verbatim;
+     Unser Zuhause ETS 6.3.0 1343 rows, 0 module-qualified, all 1343
+     matching verbatim; Unser Zuhause ETS 4 1390 rows, 0 module-qualified,
+     all 1390 matching verbatim (208 and 216 of the two Unser Zuhause
+     totals are union parameters, `_UP-n_R-n`, which match verbatim like
+     any other).
+   - Stripping `_M-\d+_MI-\d+_` to `_` recovers a declared `ParameterRef`
+     id for 9 of 9 KV rows, and no declared id in any of the three
+     projects contains that pattern, so the decomposition has no observed
+     false-positive risk on this corpus.
+   - `_MI-` is `1` in every occurrence anywhere in the corpus; what an
+     index above `1` means is **unattested**, and the section says so
+     rather than guessing.
+   - KV stores five *different* values — 17, 33, 49, 32, 48 — for the one
+     declared `ParameterRef` `M-00FA_A-2504-10-C071_MD-2_P-1_R-1` across
+     five `Module` instantiations. Per-channel parameter values are real
+     data in our own corpus, not a hypothetical.
+   Say which files the counts came from and how they were derived. Do not
+   restate D21-D25 here; cross-reference them.
+8. Grep `docs/` and `crates/` and `apps/` for `"no parameter editor"` and
    `"not interpreted"` and confirm every remaining occurrence is either
    historical narrative (ADRs, earlier dated specs/plans, which stay
    exactly as they are) or still true after this slice (module-scoped
    editing, the deep-validation gaps). List every occurrence deliberately
    left alone in the report, and why.
-8. Run all six gates. A docs-and-comments change should not move the test
+9. Run all six gates. A docs-and-comments change should not move the test
    numbers; if it does, the report says so rather than papering over it.
 
 ## Named follow-on work (not this branch)

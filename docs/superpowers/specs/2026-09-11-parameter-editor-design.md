@@ -584,8 +584,11 @@ RestoreParameterValue {       // undo/redo form, same reason RestoreComObjectFla
 
 `apply` validates only what `knx-core` can see: the device exists
 (reusing `CommandError::DeviceNotFound`). It finds an existing
-`ParameterInstance` for `(device, ets_id)` in the owning installation's
-`parameters` list and overwrites `raw` in place, or, if none exists,
+`ParameterInstance` for `(device, ets_id)` in `installations[0]`'s
+`parameters` list — every existing `Command::apply` targets that one
+installation and none resolves which installation owns a device
+(`crates/knx-core/src/command.rs:30-33`); this command inherits that scope
+rather than inventing routing — and overwrites `raw` in place, or, if none exists,
 pushes a new one with `source: SourceRef { path: device.source.path.
 clone(), ets_id }` (Evidence: this mirrors the path every
 import-created `ParameterInstance` already carries, since a

@@ -109,10 +109,12 @@ future cycle rather than bundled into "Session 4 leftovers":
   only. **T18's first slice shipped the same day**: `knx-productdb` now
   parses and stores the `Dynamic` tree losslessly (schema v3) and
   evaluates it headlessly, with the no-match-branch policy decided as an
-  inference (nothing under an unmatched `choose` activates). What remains
-  of T18 (parameter interpretation and editor,
-  [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5) — module expansion,
-  then an actual editor — has no fixed session yet.
+  inference (nothing under an unmatched `choose` activates). **T18 slice
+  2 also shipped the same day:** the evaluator now expands a `Module`
+  node into its `ModuleDef`'s own stored tree. What remains of T18
+  (parameter interpretation and editor,
+  [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5) is now just the
+  editor itself — no fixed session yet.
 - **A layer stack in `Override<T>`** that would make a program value
   behind an instance-level `Empty` slot visible without risking the export
   change ADR-0012 identifies. A domain-model change with a migration; not
@@ -622,7 +624,7 @@ architecture; each has a defined landing place.
 | --- | --- |
 | ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Schema 21 import+export shipped and round-trip verified (one sample, KV demo project); schema 23 import shipped, module handling inferred not evidenced (no independent module-using schema-23 sample); schema 12, 13, 14, 20, 22 remain undocumented-by-evidence — no fixed session, lands whenever a sample becomes available for each. `Dynamic`/`choose`/`when`'s grammar (mentioned in the row below this one) is now provably avoidable for import (ADR-0014: `GroupObjectTree` already carries ETS's own resolution of it) rather than blocking; the `@test` value grammar itself is documented (RESEARCH §4.3), so this is now purely a parameter-editing (T18) concern, no longer a research one, and not an import one either. |
 | `Functions` element semantics | Session 2 — a domain model addition; absent from the reference sample |
-| `when/@test` expression grammar | **Answered 2026-09-11** (RESEARCH §4.3): the Standard normatively specifies the `@test` value grammar; `Dynamic`'s structural grammar stays corpus-observed only. Session 4 built the product database around `Dynamic` staying unparsed regardless (`Dynamic`'s raw bytes retained, ADR-0011). **T18 slice 1, same day:** `knx-productdb` now parses, stores (schema v3, `dynamic_node`) and evaluates the tree headlessly. What remains — module expansion and the editor — lands in the rest of T18 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5), no fixed session yet. |
+| `when/@test` expression grammar | **Answered 2026-09-11** (RESEARCH §4.3): the Standard normatively specifies the `@test` value grammar; `Dynamic`'s structural grammar stays corpus-observed only. Session 4 built the product database around `Dynamic` staying unparsed regardless (`Dynamic`'s raw bytes retained, ADR-0011). **T18 slice 1, same day:** `knx-productdb` now parses, stores (schema v3, `dynamic_node`) and evaluates the tree headlessly. **T18 slice 2, same day:** the evaluator also expands `Module` into its `ModuleDef`'s own stored tree. What remains — the editor — lands in the rest of T18 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5), no fixed session yet. |
 | Whether ETS re-imports an unsigned third-party `.knxproj` | Session 3 delivered the mechanism (`ExportWarning::Unsigned`, always present); per ADR-0015 (Session 7), ETS reimport is no longer a project goal, so the verification itself (risk R9) is deprioritized — no fixed session, and none needed |
 | Whether Data Secure runtime keys are readable from `.knxproj` | Session 7 or later — `knx-secure` |
 | `.knxprod` encryption for master data scheme ≥ 12 | Session 4 delivered `.knxproj`-sourced product database ingest; 2026-09-10's standalone package installer (`knx_productdb::install_package`) showed the "encryption" premise was wrong for schemes 11 and 20 specifically — those 5 real-world files parse with no encryption at all, direct `.knxprod` ingest now works for both (see [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly)). Schemes 12-19/21/22 remain untested (no standalone sample acquired yet), no fixed session; `.vd2` is a distinct legacy format, permanently out of scope, not an encryption question at all. |

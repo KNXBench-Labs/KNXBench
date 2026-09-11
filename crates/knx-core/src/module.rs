@@ -3,12 +3,14 @@
 //! `repeat_index` and `arguments` feed the `Dynamic/choose/when` grammar
 //! (KNOWN_LIMITATIONS §3) — documented, not unresearched, since RESEARCH
 //! §4.3 (`knx-productdb` evaluates it headlessly as of T18 slice 1,
-//! 2026-09-11, but `Module` expansion is not part of that) and RESEARCH
-//! §4.4 (the R4 spike, same day, which establishes how `Module`/
-//! `ModuleDef` naming, argument binding and id-mangling actually work —
-//! still research, not an implemented expansion); import never needs to
-//! evaluate it, because `GroupObjectTree` already carries ETS's own
-//! answer (ADR-0014).
+//! 2026-09-11, and slice 2, same day, expands a `Module` node into its
+//! `ModuleDef`'s own stored tree) and RESEARCH §4.4 (the R4 spike, same
+//! day, which establishes how `Module`/`ModuleDef` naming, argument
+//! binding and id-mangling actually work). None of that is wired into a
+//! UI or a parameter editor yet, and this `ModuleInstance` type itself
+//! stays exactly as retained-but-uninterpreted as `parameter.rs`'s;
+//! import never needs to evaluate it, because `GroupObjectTree` already
+//! carries ETS's own answer (ADR-0014).
 
 use crate::ids::{DeviceId, ModuleInstanceId, SourceRef};
 

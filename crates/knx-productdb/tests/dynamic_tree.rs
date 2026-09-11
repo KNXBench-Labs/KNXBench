@@ -13,7 +13,8 @@ use rusqlite::Connection;
 use zip::write::SimpleFileOptions;
 
 use knx_productdb::dynamic::{
-    evaluate, ControlKind, Diagnostic, DynamicNode, DynamicTree, Op, Test,
+    evaluate, load_program_trees, ActiveRef, ControlKind, Diagnostic, DynamicNode, DynamicTree,
+    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test,
 };
 
 fn db() -> (tempfile::TempDir, Connection) {
@@ -617,6 +618,7 @@ fn nd(node_id: i64, parent_id: Option<i64>, kind: &str) -> DynamicNode {
         node_id,
         parent_id,
         kind: kind.to_string(),
+        element_id: None,
         ref_id: None,
         test: None,
         is_default: false,
@@ -629,6 +631,24 @@ fn values(pairs: &[(&str, &str)]) -> HashMap<String, String> {
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
         .collect()
+}
+
+/// An `ActiveRef` in the program's own (unscoped) tree — the shape every
+/// pre-T18-slice-2 unit test's activations had before `Activation` grew a
+/// `ModuleScope`.
+fn active(id: &str) -> ActiveRef {
+    ActiveRef {
+        scope: None,
+        ref_id: id.to_string(),
+    }
+}
+
+/// A `ScopedDiagnostic` in the program's own (unscoped) tree.
+fn diag(diagnostic: Diagnostic) -> ScopedDiagnostic {
+    ScopedDiagnostic {
+        scope: None,
+        diagnostic,
+    }
 }
 
 #[test]
@@ -681,7 +701,7 @@ fn every_comparison_operator_selects_its_matching_when_through_evaluate() {
                 ..nd(2, Some(1), "ParameterRefRef")
             },
         ]);
-        let activation = evaluate(&tree, &values(&[("P", observed)]));
+        let activation = evaluate(&ProgramTrees::single(tree), &values(&[("P", observed)]));
         assert_eq!(
             !activation.parameter_refs.is_empty(),
             should_match,
@@ -699,11 +719,11 @@ fn every_comparison_operator_selects_its_matching_when_through_evaluate() {
             // applies equally here, it is not a test-harness quirk.
             assert_eq!(
                 activation.diagnostics,
-                vec![Diagnostic::NoBranchMatched {
+                vec![diag(Diagnostic::NoBranchMatched {
                     choose_node: 0,
                     param_ref: Some("P".to_string()),
                     observed_value: observed.to_string(),
-                }],
+                })],
                 "op={op_str} observed={observed}"
             );
         }
@@ -728,8 +748,8 @@ fn a_space_separated_list_test_matches_any_member() {
             ..nd(2, Some(1), "ParameterRefRef")
         },
     ]);
-    let activation = evaluate(&tree, &values(&[("P", "2")]));
-    assert_eq!(activation.parameter_refs, vec!["PRR".to_string()]);
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[("P", "2")]));
+    assert_eq!(activation.parameter_refs, vec![active("PRR")]);
     assert!(activation.diagnostics.is_empty());
 }
 
@@ -759,8 +779,8 @@ fn a_default_when_covers_what_no_test_matches() {
             ..nd(4, Some(3), "ParameterRefRef")
         },
     ]);
-    let activation = evaluate(&tree, &values(&[("P", "999")]));
-    assert_eq!(activation.parameter_refs, vec!["FALLBACK".to_string()]);
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[("P", "999")]));
+    assert_eq!(activation.parameter_refs, vec![active("FALLBACK")]);
     assert!(activation.diagnostics.is_empty());
 }
 
@@ -783,16 +803,16 @@ fn no_matching_branch_and_no_default_activates_nothing_and_is_reported() {
             ..nd(2, Some(1), "ParameterRefRef")
         },
     ]);
-    let activation = evaluate(&tree, &values(&[("P", "999")]));
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[("P", "999")]));
     assert!(activation.parameter_refs.is_empty());
     assert!(activation.com_object_refs.is_empty());
     assert_eq!(
         activation.diagnostics,
-        vec![Diagnostic::NoBranchMatched {
+        vec![diag(Diagnostic::NoBranchMatched {
             choose_node: 0,
             param_ref: Some("P".to_string()),
             observed_value: "999".to_string(),
-        }]
+        })]
     );
 }
 
@@ -815,14 +835,14 @@ fn a_missing_controlling_value_is_reported_and_activates_nothing() {
             ..nd(2, Some(1), "ParameterRefRef")
         },
     ]);
-    let activation = evaluate(&tree, &values(&[]));
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[]));
     assert!(activation.parameter_refs.is_empty());
     assert_eq!(
         activation.diagnostics,
-        vec![Diagnostic::MissingValue {
+        vec![diag(Diagnostic::MissingValue {
             choose_node: 0,
             param_ref: Some("P".to_string()),
-        }]
+        })]
     );
 }
 
@@ -845,15 +865,18 @@ fn a_non_numeric_controlling_value_is_reported_and_activates_nothing() {
             ..nd(2, Some(1), "ParameterRefRef")
         },
     ]);
-    let activation = evaluate(&tree, &values(&[("P", "not-a-number")]));
+    let activation = evaluate(
+        &ProgramTrees::single(tree),
+        &values(&[("P", "not-a-number")]),
+    );
     assert!(activation.parameter_refs.is_empty());
     assert_eq!(
         activation.diagnostics,
-        vec![Diagnostic::NonNumericValue {
+        vec![diag(Diagnostic::NonNumericValue {
             choose_node: 0,
             param_ref: Some("P".to_string()),
             raw: "not-a-number".to_string(),
-        }]
+        })]
     );
 }
 
@@ -881,14 +904,14 @@ fn an_unparsable_test_is_reported_and_evaluation_continues_to_later_siblings() {
             ..nd(3, Some(2), "ParameterRefRef")
         },
     ]);
-    let activation = evaluate(&tree, &values(&[("P", "1")]));
-    assert_eq!(activation.parameter_refs, vec!["MATCH".to_string()]);
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[("P", "1")]));
+    assert_eq!(activation.parameter_refs, vec![active("MATCH")]);
     assert_eq!(
         activation.diagnostics,
-        vec![Diagnostic::UnparsableTest {
+        vec![diag(Diagnostic::UnparsableTest {
             when_node: 1,
             raw: "garbage".to_string(),
-        }]
+        })]
     );
 }
 
@@ -911,8 +934,8 @@ fn a_type_none_choose_with_its_sole_default_branch_activates_it_without_diagnost
             ..nd(2, Some(1), "ParameterRefRef")
         },
     ]);
-    let activation = evaluate(&tree, &values(&[]));
-    assert_eq!(activation.parameter_refs, vec!["ALWAYS".to_string()]);
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[]));
+    assert_eq!(activation.parameter_refs, vec![active("ALWAYS")]);
     assert!(activation.diagnostics.is_empty());
 }
 
@@ -940,11 +963,11 @@ fn a_type_none_choose_of_any_other_shape_is_reported_and_activates_nothing() {
             ..nd(3, Some(0), "when")
         },
     ]);
-    let activation = evaluate(&tree, &values(&[]));
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[]));
     assert!(activation.parameter_refs.is_empty());
     assert_eq!(
         activation.diagnostics,
-        vec![Diagnostic::UnexpectedTypeNoneShape { choose_node: 0 }]
+        vec![diag(Diagnostic::UnexpectedTypeNoneShape { choose_node: 0 })]
     );
 }
 
@@ -960,33 +983,262 @@ fn an_unrecognized_element_kind_is_reported_and_its_subtree_is_not_descended() {
             ..nd(1, Some(0), "ParameterRefRef")
         },
     ]);
-    let activation = evaluate(&tree, &values(&[]));
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[]));
     assert!(activation.parameter_refs.is_empty());
     assert_eq!(
         activation.diagnostics,
-        vec![Diagnostic::UnrecognizedNode {
+        vec![diag(Diagnostic::UnrecognizedNode {
             node_id: 0,
             kind: "Weird".to_string(),
-        }]
+        })]
     );
 }
 
-/// D10: a `Module` node is recognized but not expanded.
+// The plan's step 9 replaces `a_module_node_is_recognized_but_not_expanded`
+// (asserted `ModuleNotExpanded`, a variant this slice removes) with the
+// step 8 tests below, which cover every `Module`-expansion outcome
+// (expanded-and-scoped, `ModuleDefNotFound`, `NestedModuleNotExpanded`,
+// a scoped non-Module diagnostic, and an empty `ModuleDef` tree) more
+// precisely than the one test it replaces ever did.
+
+/// D17/AC#4: a `Module` with no `@RefId` at all yields `ModuleDefNotFound`
+/// and activates nothing.
 #[test]
-fn a_module_node_is_recognized_but_not_expanded() {
-    let tree = DynamicTree::from_nodes(vec![DynamicNode {
-        ref_id: Some("MD-1".into()),
-        ..nd(0, None, "Module")
-    }]);
-    let activation = evaluate(&tree, &values(&[]));
+fn a_module_with_no_ref_id_yields_module_def_not_found() {
+    let program = DynamicTree::from_nodes(vec![nd(0, None, "Module")]);
+    let activation = evaluate(&ProgramTrees::single(program), &values(&[]));
     assert!(activation.parameter_refs.is_empty());
     assert!(activation.com_object_refs.is_empty());
     assert_eq!(
         activation.diagnostics,
-        vec![Diagnostic::ModuleNotExpanded {
+        vec![diag(Diagnostic::ModuleDefNotFound {
             node_id: 0,
-            ref_id: Some("MD-1".to_string()),
+            ref_id: None,
+        })]
+    );
+}
+
+/// D17/AC#4: a `Module` naming a `ModuleDef` with no stored tree for this
+/// program also yields `ModuleDefNotFound` — the `modules` map is simply
+/// empty here (`ProgramTrees::single`), standing in for "no such scope was
+/// ever loaded."
+#[test]
+fn a_module_naming_an_absent_module_def_yields_module_def_not_found() {
+    let program = DynamicTree::from_nodes(vec![DynamicNode {
+        ref_id: Some("MD-GHOST".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let activation = evaluate(&ProgramTrees::single(program), &values(&[]));
+    assert!(activation.parameter_refs.is_empty());
+    assert_eq!(
+        activation.diagnostics,
+        vec![diag(Diagnostic::ModuleDefNotFound {
+            node_id: 0,
+            ref_id: Some("MD-GHOST".to_string()),
+        })]
+    );
+}
+
+/// D15/AC#3: a `Module` inside a `ModuleDef`'s own tree is not expanded —
+/// `NestedModuleNotExpanded`, no activations, regardless of whether the
+/// nested `Module`'s own `@RefId` would otherwise resolve.
+#[test]
+fn a_module_inside_a_module_defs_tree_is_reported_not_expanded() {
+    let program = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-A".into()),
+        ref_id: Some("MD-1".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let module_def = DynamicTree::from_nodes(vec![DynamicNode {
+        ref_id: Some("MD-1".into()), // even a self-reference is not followed
+        ..nd(0, None, "Module")
+    }]);
+    let trees =
+        ProgramTrees::from_parts(program, HashMap::from([("MD-1".to_string(), module_def)]));
+    let activation = evaluate(&trees, &values(&[]));
+    assert!(activation.parameter_refs.is_empty());
+    assert!(activation.com_object_refs.is_empty());
+    assert_eq!(
+        activation.diagnostics,
+        vec![ScopedDiagnostic {
+            scope: Some(ModuleScope {
+                module_node: 0,
+                module_id: Some("M-A".to_string()),
+                module_def_id: "MD-1".to_string(),
+            }),
+            diagnostic: Diagnostic::NestedModuleNotExpanded {
+                node_id: 0,
+                ref_id: Some("MD-1".to_string()),
+            },
         }]
+    );
+}
+
+/// D14: a diagnostic raised *inside* a module's expansion (here:
+/// `NoBranchMatched`, chosen because it exercises `evaluate_comparable_choose`)
+/// comes back carrying the instantiating `Module`'s scope, not `None` —
+/// the only thing that makes the node-id collision D14 names survivable.
+#[test]
+fn a_diagnostic_raised_inside_a_module_carries_that_modules_scope() {
+    let program = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-A".into()),
+        ref_id: Some("MD-1".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let module_def = DynamicTree::from_nodes(vec![
+        DynamicNode {
+            control_kind: Some(ControlKind::Comparable),
+            ref_id: Some("P".into()),
+            ..nd(0, None, "choose")
+        },
+        DynamicNode {
+            test: Some("1".to_string()),
+            ..nd(1, Some(0), "when")
+        },
+    ]);
+    let trees =
+        ProgramTrees::from_parts(program, HashMap::from([("MD-1".to_string(), module_def)]));
+    let activation = evaluate(&trees, &values(&[("P", "999")]));
+    assert_eq!(
+        activation.diagnostics,
+        vec![ScopedDiagnostic {
+            scope: Some(ModuleScope {
+                module_node: 0,
+                module_id: Some("M-A".to_string()),
+                module_def_id: "MD-1".to_string(),
+            }),
+            diagnostic: Diagnostic::NoBranchMatched {
+                choose_node: 0,
+                param_ref: Some("P".to_string()),
+                observed_value: "999".to_string(),
+            },
+        }]
+    );
+}
+
+/// D17's last line: a `Module` whose `ModuleDef` tree exists but is
+/// genuinely empty activates nothing and raises no diagnostic — an empty
+/// tree is not itself evidence of anything malformed.
+#[test]
+fn a_module_with_an_empty_module_def_tree_activates_nothing_and_is_silent() {
+    let program = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-A".into()),
+        ref_id: Some("MD-1".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let module_def = DynamicTree::from_nodes(vec![]);
+    let trees =
+        ProgramTrees::from_parts(program, HashMap::from([("MD-1".to_string(), module_def)]));
+    let activation = evaluate(&trees, &values(&[]));
+    assert!(activation.parameter_refs.is_empty());
+    assert!(activation.com_object_refs.is_empty());
+    assert!(activation.diagnostics.is_empty());
+}
+
+/// D18: within one module's expansion, a ref reachable through two active
+/// branches still appears once — the same first-occurrence dedup rule
+/// D11 established, now proven to hold *inside* a `ModuleScope` too.
+#[test]
+fn within_one_module_scope_a_ref_reachable_twice_is_deduplicated_once() {
+    let program = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-A".into()),
+        ref_id: Some("MD-1".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let module_def = DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        DynamicNode {
+            ref_id: Some("SHARED".into()),
+            ..nd(1, Some(0), "ParameterRefRef")
+        },
+        DynamicNode {
+            control_kind: Some(ControlKind::TypeNone),
+            ref_id: Some("P".into()),
+            ..nd(2, Some(0), "choose")
+        },
+        DynamicNode {
+            is_default: true,
+            ..nd(3, Some(2), "when")
+        },
+        DynamicNode {
+            ref_id: Some("SHARED".into()),
+            ..nd(4, Some(3), "ParameterRefRef")
+        },
+    ]);
+    let trees =
+        ProgramTrees::from_parts(program, HashMap::from([("MD-1".to_string(), module_def)]));
+    let activation = evaluate(&trees, &values(&[]));
+    assert!(
+        activation.diagnostics.is_empty(),
+        "{:?}",
+        activation.diagnostics
+    );
+    assert_eq!(
+        activation.parameter_refs,
+        vec![ActiveRef {
+            scope: Some(ModuleScope {
+                module_node: 0,
+                module_id: Some("M-A".to_string()),
+                module_def_id: "MD-1".to_string(),
+            }),
+            ref_id: "SHARED".to_string(),
+        }]
+    );
+}
+
+/// D14/D18, AC#2 — the regression this whole slice exists for. Two
+/// `Module` elements in the program's own tree instantiate the *same*
+/// `ModuleDef`, whose tree declares one `ComObjectRefRef`. Reusing the old
+/// flat `HashSet<String>` dedup would collapse both instantiations into a
+/// single activation; the fix is a dedup key qualified by the
+/// instantiating `Module`'s own `node_id` (`ModuleScope::module_node`).
+#[test]
+fn two_modules_instantiating_one_module_def_produce_two_scoped_activations() {
+    let program = DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        DynamicNode {
+            element_id: Some("M-A".into()),
+            ref_id: Some("MD-1".into()),
+            ..nd(1, Some(0), "Module")
+        },
+        DynamicNode {
+            element_id: Some("M-B".into()),
+            ref_id: Some("MD-1".into()),
+            ..nd(2, Some(0), "Module")
+        },
+    ]);
+    let module_def = DynamicTree::from_nodes(vec![DynamicNode {
+        ref_id: Some("O-1_R-1".into()),
+        ..nd(0, None, "ComObjectRefRef")
+    }]);
+    let trees =
+        ProgramTrees::from_parts(program, HashMap::from([("MD-1".to_string(), module_def)]));
+    let activation = evaluate(&trees, &values(&[]));
+    assert!(
+        activation.diagnostics.is_empty(),
+        "{:?}",
+        activation.diagnostics
+    );
+    assert_eq!(
+        activation.com_object_refs,
+        vec![
+            ActiveRef {
+                scope: Some(ModuleScope {
+                    module_node: 1,
+                    module_id: Some("M-A".to_string()),
+                    module_def_id: "MD-1".to_string(),
+                }),
+                ref_id: "O-1_R-1".to_string(),
+            },
+            ActiveRef {
+                scope: Some(ModuleScope {
+                    module_node: 2,
+                    module_id: Some("M-B".to_string()),
+                    module_def_id: "MD-1".to_string(),
+                }),
+                ref_id: "O-1_R-1".to_string(),
+            },
+        ]
     );
 }
 
@@ -1015,8 +1267,8 @@ fn a_ref_reachable_through_two_branches_is_deduplicated_by_first_occurrence() {
             ..nd(4, Some(3), "ParameterRefRef")
         },
     ]);
-    let activation = evaluate(&tree, &values(&[]));
-    assert_eq!(activation.parameter_refs, vec!["SHARED".to_string()]);
+    let activation = evaluate(&ProgramTrees::single(tree), &values(&[]));
+    assert_eq!(activation.parameter_refs, vec![active("SHARED")]);
     assert!(activation.diagnostics.is_empty());
 }
 
@@ -1247,9 +1499,14 @@ fn corpus_evaluation_matches_research_no_unparsable_tests_no_unresolved_refs_and
             let tree = knx_productdb::dynamic::load_tree(&conn, program_id, "").unwrap();
             let values =
                 knx_productdb::dynamic::resolve_values(&conn, program_id, &HashMap::new()).unwrap();
-            let activation = evaluate(&tree, &values);
-            for d in activation.diagnostics {
-                match d {
+            // `ProgramTrees::single`, not `load_program_trees`: this test's
+            // own docstring below states it evaluates only each program's
+            // own top-level tree, `Module`/`ModuleDef` deliberately
+            // unevaluated here — Task 1 keeps that scope unchanged; Task 2
+            // adds the module-expanding corpus coverage.
+            let activation = evaluate(&ProgramTrees::single(tree), &values);
+            for sd in activation.diagnostics {
+                match sd.diagnostic {
                     Diagnostic::UnparsableTest { .. } => unparsable_tests += 1,
                     Diagnostic::UnresolvedParamRef { .. } => unresolved_param_refs += 1,
                     Diagnostic::UnexpectedTypeNoneShape { .. } => unexpected_type_none_shapes += 1,
@@ -1308,10 +1565,14 @@ fn corpus_evaluation_matches_research_no_unparsable_tests_no_unresolved_refs_and
         // bucket (RESEARCH.md §4.3's table: `SINGLE_INTEGER`,
         // `DEFAULT_ATTR(true)`, `SPACE_LIST_OF_INTEGERS`, `OP_NUMBER`).
         // Classified straight from the stored `test`/`is_default` columns,
-        // independently of `evaluate`'s own diagnostics (which only walk
-        // each program's own `module_def_id = ''` tree — `Module`/
-        // `ModuleDef` are deliberately unevaluated, see `ModuleNotExpanded`
-        // above). §4.3's own per-archive `when` totals (2252/5/982/0, the
+        // independently of `evaluate`'s own diagnostics (which, in *this*
+        // test, only walk each program's own `module_def_id = ''` tree —
+        // this test still calls `evaluate` with `ProgramTrees::single`, not
+        // `load_program_trees`, so any `Module` node here yields
+        // `ModuleDefNotFound` rather than being expanded; the corpus test
+        // that does expand `Module` into its `ModuleDef` tree is
+        // `corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_counts`,
+        // below). §4.3's own per-archive `when` totals (2252/5/982/0, the
         // same ones `corpus_choose_and_when_counts_match_research_and_every_choose_resolves`
         // already proves) count *every* stored `when` regardless of
         // `module_def_id`, so this counts the same way — over the whole
@@ -1436,4 +1697,257 @@ fn corpus_evaluation_matches_research_no_unparsable_tests_no_unresolved_refs_and
             other => panic!("unexpected corpus archive {other} in this test's own list"),
         }
     }
+}
+
+// ---------------------------------------------------------------------
+// T18 Task 2 continued: corpus `Module` expansion. Same
+// `KNXBENCH_PRODUCT_CORPUS` env-override / loud-skip idiom as the two tests
+// above. Expected numbers below are not fitted to what `evaluate` prints:
+// they come from `/home/knxbench/.claude/jobs/8098e9e6/tmp/derive_module_counts.py`,
+// an independent, from-scratch reimplementation of this same evaluator
+// algorithm in Python, driven straight off the raw `ApplicationProgram` XML
+// (no sqlite, no knx_productdb). See the Task 2 report for its full output
+// and the corpus-derivation method.
+//
+// RESEARCH.md §4.4 Q7's distribution table lists seven module-bearing
+// application programs: three in `prod3`, four in `kv25`. Only `prod3`
+// (`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`) is reachable here —
+// `kv25` is a `.knxproj` demo project under `OriginalData/DemoProjects/`,
+// not one of the four `.knxprod` archives these corpus tests install. The
+// other three archives (`prod1`, `prod2`, `prod4`) contain zero `ModuleDef`
+// and zero `Module` and are this test's module-free control group.
+// ---------------------------------------------------------------------
+
+/// AC#6: every `prod3` `Module/@RefId` resolves (zero `ModuleDefNotFound`),
+/// nesting never occurs (zero `NestedModuleNotExpanded`), and expansion
+/// strictly grows each program's activation count over the program-tree-only
+/// baseline, by the exact amounts derived independently in Python.
+///
+/// The corpus's own default parameter values only ever steer every one of
+/// prod3's per-channel "operating mode" `choose`s onto its first `ModuleDef`
+/// (`..._MD-1`); the sibling `Module`s naming `MD-2`/`MD-3`/`MD-4` structurally
+/// exist (`corpus_choose_and_when_counts_match_research_and_every_choose_resolves`
+/// already pins 44/28/14 total `Module` rows per program) but sit on branches
+/// the defaults never select, so `evaluate` never even reaches them — this is
+/// why "distinct `ModuleScope`s" below (12/8/4) is smaller than the raw
+/// `Module` row count (44/28/14): the former counts instantiations `evaluate`
+/// actually walks under real default values, the latter counts every stored
+/// `Module` element regardless of reachability. Both are real, independently
+/// derived numbers; they are not expected to agree, and the difference is the
+/// finding, not a bug in either count (see the Task 2 report).
+#[test]
+fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_counts() {
+    let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../OriginalData/ProductDatabases")
+        });
+    if !root.exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
+
+    let name = "MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod";
+    let bytes = std::fs::read(root.join(name)).unwrap_or_else(|e| {
+        panic!(
+            "corpus fixture {name} unavailable: {e}; set KNXBENCH_PRODUCT_CORPUS to \
+             OriginalData/ProductDatabases"
+        )
+    });
+    let (_dir, conn) = db();
+    knx_productdb::install_package(&conn, name, &bytes).unwrap();
+
+    let program_ids: Vec<String> = conn
+        .prepare("SELECT DISTINCT program_id FROM dynamic_node WHERE module_def_id = ''")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(
+        program_ids.len(),
+        3,
+        "{name}: three module-bearing application programs, per §4.4 Q7"
+    );
+
+    for program_id in &program_ids {
+        let single_tree = knx_productdb::dynamic::load_tree(&conn, program_id, "").unwrap();
+        let values =
+            knx_productdb::dynamic::resolve_values(&conn, program_id, &HashMap::new()).unwrap();
+        let single = evaluate(&ProgramTrees::single(single_tree), &values);
+        let single_total = single.parameter_refs.len() + single.com_object_refs.len();
+
+        let trees = load_program_trees(&conn, program_id).unwrap();
+        let full = evaluate(&trees, &values);
+        let full_total = full.parameter_refs.len() + full.com_object_refs.len();
+
+        let module_def_not_found = full
+            .diagnostics
+            .iter()
+            .filter(|sd| matches!(sd.diagnostic, Diagnostic::ModuleDefNotFound { .. }))
+            .count();
+        let nested_not_expanded = full
+            .diagnostics
+            .iter()
+            .filter(|sd| matches!(sd.diagnostic, Diagnostic::NestedModuleNotExpanded { .. }))
+            .count();
+
+        let mut scope_nodes: std::collections::HashSet<i64> = std::collections::HashSet::new();
+        for r in full
+            .parameter_refs
+            .iter()
+            .chain(full.com_object_refs.iter())
+        {
+            if let Some(scope) = &r.scope {
+                scope_nodes.insert(scope.module_node);
+            }
+        }
+        for sd in &full.diagnostics {
+            if let Some(scope) = &sd.scope {
+                scope_nodes.insert(scope.module_node);
+            }
+        }
+        let distinct_scopes = scope_nodes.len();
+
+        eprintln!(
+            "corpus {name} program {program_id}: single_total={single_total} \
+             full_total={full_total} module_def_not_found={module_def_not_found} \
+             nested_not_expanded={nested_not_expanded} distinct_scopes={distinct_scopes}"
+        );
+
+        assert_eq!(
+            module_def_not_found, 0,
+            "{program_id}: AC#6 — every Module/@RefId in the corpus resolves"
+        );
+        assert_eq!(
+            nested_not_expanded, 0,
+            "{program_id}: AC#6 — §4.4 Q6's zero-nesting finding, enforced as a regression"
+        );
+        assert!(
+            full_total > single_total,
+            "{program_id}: expansion must strictly grow the activation count \
+             (single={single_total}, full={full_total})"
+        );
+
+        let (expected_single, expected_full, expected_scopes) = match program_id.as_str() {
+            "M-0083_A-0317-31-7DC6" => (22, 382, 12),
+            "M-0083_A-0318-31-DB39" => (18, 258, 8),
+            "M-0083_A-0319-31-587B" => (14, 134, 4),
+            other => panic!("unexpected prod3 program_id {other} in this test's own list"),
+        };
+        assert_eq!(
+            single_total, expected_single,
+            "{program_id}: program-tree-only activation count, independently derived"
+        );
+        assert_eq!(
+            full_total, expected_full,
+            "{program_id}: fully-expanded activation count, independently derived"
+        );
+        assert_eq!(
+            distinct_scopes, expected_scopes,
+            "{program_id}: distinct ModuleScopes — the number of Module rows this \
+             program's own default parameter values actually cause evaluate to walk \
+             (not the raw stored-row count; see this test's own doc comment)"
+        );
+    }
+}
+
+/// AC#7: a module-free program's activation counts are unaffected by this
+/// slice. `prod1` (`646704-04_ETS4_2012_47_DE_EN.knxprod`) has zero
+/// `ModuleDef` and zero `Module` (§4.4 Q7), so `load_program_trees` loads no
+/// module scopes at all and `evaluate` over it must behave identically to
+/// `ProgramTrees::single` — which is also what slice 1's own `evaluate(&tree,
+/// ...)` did before this slice existed.
+#[test]
+fn corpus_module_expansion_leaves_a_module_free_program_unchanged() {
+    let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../OriginalData/ProductDatabases")
+        });
+    if !root.exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
+
+    let name = "646704-04_ETS4_2012_47_DE_EN.knxprod";
+    let bytes = std::fs::read(root.join(name)).unwrap_or_else(|e| {
+        panic!(
+            "corpus fixture {name} unavailable: {e}; set KNXBENCH_PRODUCT_CORPUS to \
+             OriginalData/ProductDatabases"
+        )
+    });
+    let (_dir, conn) = db();
+    knx_productdb::install_package(&conn, name, &bytes).unwrap();
+
+    let program_ids: Vec<String> = conn
+        .prepare("SELECT DISTINCT program_id FROM dynamic_node WHERE module_def_id = ''")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(program_ids.len(), 1, "{name}: one application program");
+    let program_id = &program_ids[0];
+
+    let module_def_ids: Vec<String> = conn
+        .prepare("SELECT DISTINCT module_def_id FROM dynamic_node WHERE program_id = ?1 AND module_def_id != ''")
+        .unwrap()
+        .query_map([program_id], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert!(
+        module_def_ids.is_empty(),
+        "{name}: control group must be module-free, found {module_def_ids:?}"
+    );
+
+    let single_tree = knx_productdb::dynamic::load_tree(&conn, program_id, "").unwrap();
+    let values =
+        knx_productdb::dynamic::resolve_values(&conn, program_id, &HashMap::new()).unwrap();
+    let single = evaluate(&ProgramTrees::single(single_tree), &values);
+    let single_total = single.parameter_refs.len() + single.com_object_refs.len();
+
+    let trees = load_program_trees(&conn, program_id).unwrap();
+    let full = evaluate(&trees, &values);
+    let full_total = full.parameter_refs.len() + full.com_object_refs.len();
+
+    let no_branch_matched = |diags: &[ScopedDiagnostic]| {
+        diags
+            .iter()
+            .filter(|sd| matches!(sd.diagnostic, Diagnostic::NoBranchMatched { .. }))
+            .count()
+    };
+
+    eprintln!(
+        "corpus {name} program {program_id}: single_total={single_total} full_total={full_total} \
+         single_no_branch_matched={} full_no_branch_matched={}",
+        no_branch_matched(&single.diagnostics),
+        no_branch_matched(&full.diagnostics)
+    );
+
+    assert_eq!(
+        single_total, 145,
+        "{program_id}: program-tree-only activation count, independently derived"
+    );
+    assert_eq!(
+        full_total, 145,
+        "{program_id}: AC#7 — module expansion must not change a module-free program's count"
+    );
+    assert_eq!(
+        single_total, full_total,
+        "{program_id}: identical because there is nothing to expand"
+    );
+    assert_eq!(
+        no_branch_matched(&single.diagnostics),
+        24,
+        "{program_id}: program-tree-only NoBranchMatched count, independently derived"
+    );
+    assert_eq!(
+        no_branch_matched(&full.diagnostics),
+        24,
+        "{program_id}: AC#7 — diagnostics are unaffected too"
+    );
 }

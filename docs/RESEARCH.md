@@ -515,9 +515,16 @@ manufacturer corpus would find more.
 
 T18 slice 1 (§4.3, 2026-09-11) deliberately does not follow a `Module`
 node: it evaluates to a `ModuleNotExpanded` diagnostic and its subtree is
-not entered. This spike answers how following it — slice 2 — would
-actually have to work, before any design is written. Read-only research;
-no production code changed. Full spike report:
+not entered. This spike answers how following it — slice 2, which did not
+exist yet at spike time — would actually have to work, before any design
+is written. Read-only research; no production code changed. **Slice 2
+shipped later the same day** ([design](superpowers/specs/2026-09-11-module-expansion-design.md)
+D12-D19, [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)'s T18 slice
+2 entry): `Diagnostic::ModuleNotExpanded` no longer exists in the crate,
+replaced by `ModuleDefNotFound`/`NestedModuleNotExpanded`. This section
+is left exactly as the spike produced it — a record of what was known
+before slice 2 was designed, not a live status report; read it as
+history alongside §4.3. Full spike report:
 `/home/knxbench/.claude/jobs/8098e9e6/tmp/r4-findings.md` (this section is
 the durable summary that survives outside that file).
 
@@ -803,6 +810,12 @@ cross-validate structural assumptions against.** Any acceptance test slice
   consequence-for-slice-2's-code claim, since slice 2 does not exist yet —
   falsified if slice 2's design already qualifies activations this way
   before dedup, which is exactly the fix this finding recommends.
+  **Not falsified: slice 2 shipped 2026-09-11 with exactly this
+  qualification** (design D14/D18, `ModuleScope::module_node` folded into
+  the dedup key as `(Option<module_node>, ref_id)` before any activation
+  is recorded). The `[A]` marker stays as written — this is still a
+  record of what the spike could infer before slice 2 existed, not
+  promoted to `[D]` — but the prediction held.
 - **(d) Scope boundary — [A].** Slice 1 (and the slice 2 this spike feeds)
   operates at the `(program_id, module_def_id)` AP level only.
   `ModuleInstance`/`RepeatIndex`/project-side id mangling (Q4, Q5) stay

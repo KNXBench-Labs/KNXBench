@@ -1702,3 +1702,135 @@ separate, unrelated memo about future motion/animation style direction
 was added to its existing Motion and animation section, at explicit
 request, mid-task). Design spec:
 `docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`.
+
+**T14, project diff/compare, `.knxdb`-to-`.knxdb` only (2026-09-10).** A
+new `crates/knx-diff` crate — pure, depending on `knx-core` only, with a
+matching `xtask check-layering` rule keeping it away from
+`knx-store`/`knx-etsproj`/`knx-productdb` and every `CORE_FORBIDDEN`
+dependency, and carrying no `serde` (matching `knx-report`'s own
+no-`serde` precedent) — computes what changed between two
+`&knx_core::Project`s via its one public entry point,
+`diff_projects(&Project, &Project) -> ProjectDiff` (`lib.rs`). This is an
+independent reimplementation of `knx-etsproj::compare`'s matching
+technique, not a reuse of `compare.rs` itself: `compare.rs` answers "did
+import → export → import preserve everything" (byte-identical fields);
+`knx-diff` answers "what did a human change between two saves" (matched
+primarily by identity, a looser and different question) — folding the
+two into one type would make a future change to either risk silently
+breaking the other (design spec §2). Internally split into `key.rs`
+(the generic three-pass matching engine: an `ets_id` match wins
+regardless of field agreement; failing that, a natural key per entity
+type is tried only among each side's post-`ets_id` leftovers; a natural
+key with more than one leftover candidate on either side is never
+guessed at — both candidates land in `added`/`removed` and one
+`AmbiguityNote` records the collision), `semantic.rs` (per-entity key/
+field extraction, direct against `knx_core`, reimplementing
+`compare.rs`'s `Override<T>`/`Layer::is_exported()` resolution rather
+than depending on `knx-etsproj` to reuse it), and `diff.rs`
+(`diff_projects` itself, ties installations then each entity table
+within each installation together; devices get their own
+`DeviceTable`/`DeviceChange` instead of the generic `EntityTable`/
+`EntityChange`, so their nested `com_objects`/`parameters` tables live in
+one place, not duplicated across `left`/`right`). A matched pair with
+zero differing fields produces no output at all (`git diff` convention,
+not "unchanged"). `diff_projects` is pure — no clock, filesystem, or RNG
+— and every output list is sorted by the entity's own display key, never
+`HashMap` iteration order (design spec §4), the same determinism
+discipline `knx-report` holds itself to. **This is KNXBench's own diff,
+never described as an ETS comparison or a replacement for one** — no
+ETS-produced comparison sample of any kind exists anywhere in this
+repository, so no parity claim is made anywhere, the same evidence gap
+T12's CSV format (`KNOWN_LIMITATIONS.md` §38) and T13's HTML report
+(`KNOWN_LIMITATIONS.md` §44) already record. Surfaces: `POST
+/api/project/diff {path} -> ProjectDiffDto` (`apps/knx-server/src/routes.rs`),
+comparing the server's open, possibly-edited, in-memory project against a
+`.knxdb` file at `path` — deliberately "what would Save change," not
+"diff two files on disk" — rejecting a missing comparison path or no
+open project with `400`, and checking `path.exists()` itself before
+calling `knx_store::open_and_migrate` so a typo'd comparison target never
+silently becomes an empty, freshly created `.knxdb` reporting every
+entity as "removed" (design spec §7's own named correctness gotcha, not
+inherited here); every `knx-diff` type gets a hand-written
+`#[derive(Serialize)] #[serde(rename_all = "camelCase")]` DTO in
+`routes.rs`, generic where `knx-diff`'s own types are generic
+(`EntityTable`/`EntityChange`/`AmbiguityNote`) and bespoke where
+`knx-diff`'s are (`DeviceTable`/`DeviceChange`), the exact pattern
+`DocumentationWarningDto`/`DocumentationExportReportDto` already
+establish. `knx diff <a.knxdb> <b.knxdb>` (`apps/knx-cli`), loading both
+stores independently and printing plain text, `+`/`-`/`~` prefixed lines
+grouped by section, `"no differences found"` when nothing differs
+anywhere, exiting `0` whenever a comparison is successfully produced —
+mirroring `knx doc-export`'s own "a report with content is not a failed
+report" reasoning, so a diff with changes is not a failed diff either. A
+"Compare with…" button (`ProjectDiffPanel.tsx`, `apps/knx-web`) opens an
+*existing*-file picker (`pickOpenPath`, filtered to `.knxdb`, unlike
+`DocumentationExportButton`'s save-target picker) and renders one
+grouped-count summary line per non-empty table across every installation
+(e.g. `Devices: 1 added, 2 changed`; installations are prefixed with
+their id only when the report has more than one) — no tree view, no
+inline before/after value highlighting, the same visual register as the
+existing Log tab (design spec §5, §9). Tests, every count re-verified via
+`cargo test -p <crate> -- --list` at documentation time: `knx-diff`'s own
+suite (`key.rs`, `semantic.rs`, `diff.rs`) is 48 tests, covering the
+three-pass matching algorithm over hand-built collections, every
+entity's field extraction, `Override` resolution at every provenance
+layer, a determinism check (two runs on the same inputs produce
+`PartialEq`-equal `ProjectDiff`s), a genuine two-project test (one change
+per entity kind via `knx_core::Command` where a `Command` exists and a
+direct struct mutation where it does not), and
+`diff_projects(&p, &p)`'s own anchor property (design spec §3.7) against
+a hand-built fixture containing one of every entity type, including both
+a module-based and a monolithic device; `apps/knx-server/tests/http_project_diff.rs`
+(4 tests: an identical-project empty diff, a changed-device-description
+diff naming the change, a missing-comparison-path 400 that creates no
+file, and the no-project-open 400); `apps/knx-cli/tests/cli_project_diff.rs`
+(4 tests: two identical stores report no changes, one changed
+group-address name is printed, a missing first store exits 1 without
+creating a stray `.knxdb`, and wrong argument count prints usage and
+exits 1); `ProjectDiffPanel.test.tsx` (8 tests: disabled with no project
+open, a cancelled picker calls nothing, the picked path is passed with
+the right filter, an empty diff says so, a diff with changes renders
+grouped counts, a table with only ambiguous entries still renders a
+line, a rejected comparison surfaces through `onError`, and a prior error
+toast is cleared before comparing). A corpus-gated integration test,
+`rendering_diff_projects_between_two_independent_imports_of_the_reference_project_is_empty`
+(`crates/knx-app/tests/project_diff.rs`), imports the reference
+`.knxproj` **twice, independently** — not one project cloned, the
+strongest form of design spec §3.7's property, since it exercises two
+separate mapper runs' `ets_id` agreement end to end — getting 36 devices,
+907 communication objects, and 514 group addresses on this corpus each
+time, and asserts `diff_projects` between the two imports has empty
+`info_changes`, every installation `Matched` with empty
+`field_changes`, and every one of `areas`/`lines`/`devices`/
+`group_ranges`/`group_addresses`/`buildings` entirely empty
+(`added`/`removed`/`changed`/`ambiguous` all zero-length) at every
+level, plus a determinism re-run. It lives in `knx-app`, not `knx-diff`,
+for the same dev-dependency-layering reason `csv_roundtrip.rs`/
+`documentation_export.rs` do: `check-layering` walks dev-dependency
+edges too, so a `knx-etsproj` dev-dependency inside `knx-diff` would trip
+`knx-diff`'s own rule, and `knx-app` is deliberately the one crate
+already permitted to see both sides. Run standalone with `cargo test -p
+knx-app --test project_diff -- --nocapture`, it printed: `project_diff
+corpus test: 36 devices, 907 communication objects, 514 group addresses`
+and passed — proof the corpus path ran, not the skip path. **Closed for
+`.knxdb`-to-`.knxdb` comparison only**: comparing against a raw
+`.knxproj` is not supported on either side (only two `.knxdb` files on
+the CLI, or the open project against one `.knxdb` file on the
+server/web); there is no merge/apply of a diff back onto a project; no
+three-way comparison; no detection of an ETS re-import's regenerated
+`RefId`s as "the same entity"; no CI-friendly "exit nonzero on any
+difference" CLI flag; a device with no individual address and no
+matching `ets_id` cannot be correlated across two projects and surfaces
+as an unrelated add+remove; two same-named sibling building parts under
+the same matched parent collide under the path-based key and trigger the
+ambiguity path — recorded in new `KNOWN_LIMITATIONS.md` §51-§58. Two more
+entries (§59, §60) record rendering-scope findings from implementation
+and review, not from the original brief: the text/web renderers report
+the *names* of an entity's changed fields, not their before/after
+values — project-level and installation-level `FieldChange`s are the
+exception and do render both values — and the web panel shows grouped
+counts only, no tree view, no inline before/after highlighting (design
+spec §9 names both as out of scope). Closes **T14**, **C1**
+([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). `ROADMAP.md` was checked
+and names neither T14 nor C1, so it was left untouched by this task.
+Design spec: `docs/superpowers/specs/2026-09-10-project-diff-design.md`.

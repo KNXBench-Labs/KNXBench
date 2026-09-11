@@ -26,3 +26,7 @@ knx-csv.workspace = true
 # `knx-report` must itself never depend on `knx-etsproj`, and `knx-app` is
 # the one crate allowed to see both.
 knx-report.workspace = true
+# Only `tests/project_diff.rs` needs this, for the same reason again:
+# `knx-diff` must itself never depend on `knx-etsproj`, and `knx-app` is
+# the one crate allowed to see both.
+knx-diff.workspace = true

@@ -93,13 +93,31 @@ fn check_layering() -> ExitCode {
         "knx-report",
         layering::CORE_FORBIDDEN,
     ));
+    // knx-diff (T14) computes the "what changed between two saves" project
+    // comparison. Like knx-csv and knx-report it stays a pure crate: no
+    // project store, no import/export archive parser, no product database
+    // — and, like knx-projection and knx-report, it stays exactly as free of
+    // IO and storage as knx-core itself. A comparison engine has no business
+    // with a database, an archive parser, or an async runtime.
+    violations.extend(layering::forbidden_reachable(
+        &graph,
+        "knx-diff",
+        &["knx-store", "knx-etsproj", "knx-productdb"],
+    ));
+    violations.extend(layering::forbidden_reachable(
+        &graph,
+        "knx-diff",
+        layering::CORE_FORBIDDEN,
+    ));
 
     if violations.is_empty() {
         println!(
             "layering ok: knx-core reaches none of {:?}; knx-etsproj does not reach knx-store; \
              knx-productdb reaches neither knx-etsproj nor knx-store; knx-projection reaches \
              none of {:?}; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; \
-             knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}",
+             knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \
+             knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}",
+            layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN

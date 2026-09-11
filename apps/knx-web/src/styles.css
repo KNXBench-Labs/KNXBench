@@ -754,6 +754,32 @@ main {
   opacity: 0.85;
 }
 
+/* Entry highlight for a telegram row that arrived in the most recently
+   completed poll (design D34 — see `BusMonitorPanel.tsx`'s
+   `newRowThreshold`). A `transition:` never runs on an element that
+   mounts with its class already applied — the row exists and has this
+   class from its very first render — so this has to be a `@keyframes`
+   animation instead. The `@keyframes` body itself is inert without an
+   `animation:` declaration pointing at it, which is why only the rule
+   below sits inside the reduced-motion guard, not this block.
+
+   Combines with `.bus-monitor-row-marker` rather than replacing it: a
+   `SessionClosed` row that just arrived carries both classes. */
+@keyframes bus-monitor-row-new-highlight {
+  from {
+    background-color: var(--knx-overlay-shadow);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bus-monitor-row-new {
+    animation: bus-monitor-row-new-highlight var(--knx-transition-duration) var(--knx-motion-easing);
+  }
+}
+
 .bus-monitor-decoded-conflict {
   color: var(--knx-warning-color);
 }

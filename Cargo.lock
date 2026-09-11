@@ -1835,6 +1835,7 @@ dependencies = [
  "chrono",
  "knx-core",
  "knx-csv",
+ "knx-diff",
  "knx-etsproj",
  "knx-productdb",
  "knx-report",
@@ -1850,6 +1851,7 @@ dependencies = [
  "knx-app",
  "knx-core",
  "knx-csv",
+ "knx-diff",
  "knx-etsproj",
  "knx-net",
  "knx-productdb",
@@ -1887,6 +1889,13 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tokio",
+]
+
+[[package]]
+name = "knx-diff"
+version = "0.0.0"
+dependencies = [
+ "knx-core",
 ]
 
 [[package]]
@@ -1956,6 +1965,7 @@ dependencies = [
  "knx-app",
  "knx-core",
  "knx-csv",
+ "knx-diff",
  "knx-etsproj",
  "knx-productdb",
  "knx-projection",

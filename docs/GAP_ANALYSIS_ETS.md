@@ -71,7 +71,7 @@ underlying model field exists.
 
 | # | Gap | Notes |
 |---|-----|-------|
-| C1 | **No project comparison/diff.** ETS can compare two project versions structurally. KNXBench's `compare.rs` exists only as an internal roundtrip-equality oracle for tests, not a user-facing feature. | No way to answer "what changed between these two saves" without external tooling — compounded by [KNOWN_LIMITATIONS.md §9](KNOWN_LIMITATIONS.md#9-project-files-are-not-diffable) (SQLite isn't diffable at the file level either). |
+| C1 | **Closed for `.knxdb`-to-`.knxdb` comparison only (2026-09-10, T14).** A new `crates/knx-diff` crate (`diff_projects(&Project, &Project) -> ProjectDiff`, depending on `knx-core` only) computes a "KNXBench project diff" — never described as, or claiming parity with, ETS's own compare feature (no ETS-produced comparison sample exists anywhere in this repository to check against). Reachable from `knx diff <a.knxdb> <b.knxdb>` (`apps/knx-cli`), `POST /api/project/diff {path}` comparing the open project against a `.knxdb` file (`apps/knx-server`), and a "Compare with…" button (`ProjectDiffPanel.tsx`, `apps/knx-web`). | Answers "what changed between these two saves" for `.knxdb`-to-`.knxdb` comparisons. Does **not**: accept a raw `.knxproj` on either side; merge or apply a diff back onto a project; do a three-way (common-ancestor) comparison; do version history/time travel; or detect an ETS re-import's regenerated `RefId`s as "the same entity" (design spec §9 — full list in `KNOWN_LIMITATIONS.md` §51-§58). [KNOWN_LIMITATIONS.md §9](KNOWN_LIMITATIONS.md#9-project-files-are-not-diffable) is partially mitigated, not lifted: the `.knxdb` SQLite file itself is still not diffable at the file/version-control level — this closes the gap by giving the *application* a diff instead, per that entry's own "Lifted when" note. |
 | C2 | **Closed (2026-09-10, T12).** A new `knx-csv` crate reads and writes "KNXBench group-address CSV v1" — a format KNXBench defines and documents itself, **not** a claim of ETS CSV compatibility (no verified ETS sample exists anywhere in this repository or the KNX Standard v3.0.0 corpus). Reachable from `knx ga-export`/`knx ga-import [--dry-run]` on the CLI, `POST /api/group-addresses/csv-export`/`csv-import` on the server, and two toolbar buttons in the web group-address view. | Bulk-authoring group addresses in a spreadsheet is now possible without a full `.knxproj` round trip. See `IMPORT_EXPORT.md §11` for the format and `KNOWN_LIMITATIONS.md` for what it deliberately does not do (re-address, delete, touch group ranges, or apply `DatapointType`/`MainGroup`/`MiddleGroup`). |
 | C3 | **No partial/selective import.** ETS import here is all-or-nothing per project. | Cannot import "just this one line" or "just this device" from a `.knxproj`. |
 | C4 | **Closed (2026-09-10, T10).** `export_ets_project` now has three real callers: `knx export` on the CLI, `POST /api/project/export` on the server, and an "Export to .knxproj…" button in the web Project Explorer. | Closing this also surfaced and fixed two real data-integrity bugs (see `IMPLEMENTATION_STATUS.md`'s T10 entry for the full account): (1) server-side ETS import used a throwaway store, so Save As never persisted opaque passthrough / manufacturer manifest data, and an export taken after it silently lost that data — fixed by carrying that data through `AppState` into every save; (2) the two functions that write those tables (`knx_store::insert_opaque`/`insert_manufacturer_refs`) were plain `INSERT`s with no clear-first step, so once (1)'s fix made every save call them, a plain repeated Save duplicated every row without bound — fixed by clearing the tables before insert, matching `save_project`'s own convention. `export_project` was also changed to read opaque/manifest from live `AppState` instead of re-opening `store_path` off disk, closing off the staleness risk described in [KNOWN_LIMITATIONS.md #18](KNOWN_LIMITATIONS.md#18-open_project-does-not-clear-the-previous-knxdb-store_path) for this specific data (the broader gap in #18 itself is unchanged and out of scope here). |
@@ -459,10 +459,86 @@ Each task: **what**, **why**, **depends on**.
   remain open, tracked in `KNOWN_LIMITATIONS.md`. Closes **D4**. Design
   spec:
   `docs/superpowers/specs/2026-09-10-project-documentation-export-design.md`.
-- **T14. Project diff/compare.** Promote `knx-etsproj::compare` (or a
-  new `knx-app`-level comparison) from an internal test oracle to a
-  user-facing "what changed between these two saves" report. Closes
-  **C1**, partially mitigates [KNOWN_LIMITATIONS.md §9].
+- ~~**T14. Project diff/compare.**~~ **Closed for `.knxdb`-to-`.knxdb`
+  comparison only (2026-09-10).** A new `crates/knx-diff` crate —
+  depending on `knx-core` only, with a matching `xtask check-layering`
+  rule keeping it away from `knx-store`/`knx-etsproj`/`knx-productdb` and
+  every `CORE_FORBIDDEN` dependency, and carrying no `serde` (matching
+  `knx-report`'s own no-`serde` precedent) — computes what changed
+  between two `&knx_core::Project`s via its one public entry point,
+  `diff_projects(&Project, &Project) -> ProjectDiff`. It is an
+  independent reimplementation of `knx-etsproj::compare`'s matching
+  technique, not a promotion of `compare.rs` itself: `compare.rs` answers
+  "did a roundtrip preserve everything," a byte-identical-fields
+  question, while `knx-diff` answers "what did a human change," a
+  looser, identity-first question — folding the two together would make
+  every future change to either risk silently breaking the other (design
+  spec §2). Matching follows design spec §3.3: an `ets_id` match wins
+  regardless of field agreement; failing that, a natural key (per entity
+  type, §3.4) is tried only among each side's leftovers; a natural key
+  with more than one leftover candidate on either side is never guessed
+  at — both candidates land in `added`/`removed` and one `AmbiguityNote`
+  records the collision. A matched pair with zero differing fields
+  produces no output at all (`git diff` convention, not "unchanged").
+  `diff_projects` is pure — no clock, filesystem, or RNG — and every
+  output list is sorted by the entity's own display key, never `HashMap`
+  order (design spec §4). **This is KNXBench's own diff, never described
+  as an ETS comparison or a replacement for one** — no ETS-produced
+  comparison sample of any kind exists in this repository, so no parity
+  claim is made anywhere, the same evidence gap T12's CSV format
+  ([KNOWN_LIMITATIONS.md §38]) and T13's HTML report
+  ([KNOWN_LIMITATIONS.md §44]) already record. Surfaces: `POST
+  /api/project/diff {path}` (`apps/knx-server/src/routes.rs`), comparing
+  the open, possibly-edited, in-memory project against a `.knxdb` file at
+  `path` — deliberately "what would Save change," not "diff two files" —
+  rejecting a missing comparison path or no open project with `400`,
+  never silently creating an empty `.knxdb` at `path`; `knx diff
+  <a.knxdb> <b.knxdb>` (`apps/knx-cli`), loading both independently and
+  printing plain text, `+`/`-`/`~` prefixed lines, `"no differences
+  found"` when nothing differs anywhere; a "Compare with…" button
+  (`ProjectDiffPanel.tsx`, `apps/knx-web`) that renders one grouped-count
+  summary line per non-empty table (e.g. `Devices: 1 added, 2 changed`) —
+  no tree view, no inline before/after highlighting (design spec §9).
+  Tests, every count re-verified via `cargo test -p <crate> -- --list` at
+  documentation time: `knx-diff`'s own suite (`key.rs`, `semantic.rs`,
+  `diff.rs`) is 48 tests, covering the three-pass matching algorithm,
+  every entity's field extraction, `Override` resolution at every layer,
+  and `diff_projects(&p, &p)`'s own anchor property (design spec §3.7)
+  against hand-built fixtures; `apps/knx-server/tests/http_project_diff.rs`
+  (4 tests: an identical-project empty diff, a changed-device-description
+  diff, a missing-comparison-path 400, and the no-project-open 400);
+  `apps/knx-cli/tests/cli_project_diff.rs` (4 tests: identical stores, one
+  changed group-address name, a missing first store, and wrong argument
+  count); `ProjectDiffPanel.test.tsx` (8 tests). A corpus-gated
+  integration test,
+  `rendering_diff_projects_between_two_independent_imports_of_the_reference_project_is_empty`
+  (`crates/knx-app/tests/project_diff.rs`, living in `knx-app` rather than
+  `knx-diff` for the same dev-dependency-layering reason
+  `csv_roundtrip.rs`/`documentation_export.rs` do — `check-layering` walks
+  dev-dependency edges too, and `knx-app` is deliberately the one crate
+  already permitted to see both `knx-etsproj` and `knx-diff`), imports the
+  reference `.knxproj` twice, independently (36 devices, 907
+  communication objects, 514 group addresses), and asserts `diff_projects`
+  between the two imports is empty at every level, for every installation
+  and every entity table — the strongest form of design spec §3.7's
+  property, run against real, large, ETS-shaped data instead of a
+  hand-built fixture. **Closed for `.knxdb`-to-`.knxdb` comparison only**:
+  comparing against a raw `.knxproj` is not supported on either side; there
+  is no merge/apply of a diff back onto a project; no three-way
+  comparison; no detection of an ETS re-import's regenerated `RefId`s as
+  "the same entity"; no CI-friendly "exit nonzero on any difference" CLI
+  flag; a device with no individual address and no matching `ets_id`
+  cannot be correlated across two projects; two same-named sibling
+  building parts under the same matched parent collide under the
+  path-based key — all recorded in new `KNOWN_LIMITATIONS.md` entries
+  §51-§58, plus two rendering-scope entries (§59, §60) found during
+  implementation and review: the text/web renderers show which fields
+  changed, not their before/after values, for every entity table except
+  project/installation info (which do show both); and the web panel shows
+  grouped counts only, no tree view, no inline highlighting. Closes
+  **C1**. `ROADMAP.md` was checked and names neither T14 nor C1, so it was
+  left untouched by this task. Design spec:
+  `docs/superpowers/specs/2026-09-10-project-diff-design.md`.
 
 ### Tier 4 — bus-facing UI (builds on Session 6's KNXnet/IP work)
 

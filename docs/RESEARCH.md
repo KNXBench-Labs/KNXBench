@@ -204,7 +204,7 @@ Measured by walking both `0.xml`/`project.xml` trees and diffing element paths +
 * `Segment` level between `Line` and `DeviceInstance` — present, same shape as §3.3's schema-23 description.
 * `GroupObjectTree` — present per `DeviceInstance`, alongside `ComObjectInstanceRefs` (both coexist, as in schema 23), **but its internal shape differs from schema 23's.** Schema 23 (§3.3): a flat `GroupObjectTree/@GroupObjectInstances` attribute. Schema 21 (this sample): `GroupObjectTree/Nodes/Node[@Type='Channel']/@GroupObjectInstances` — one `Node` per module channel, each listing that channel's live communication-object `RefId`s space-separated. Both shapes serve the same role: verified on all 4 KV devices that every `ComObjectInstanceRef/@RefId` is a member of `GroupObjectTree`'s id set with zero exceptions, while `GroupObjectTree` carries substantially more ids (e.g. one device: 5 `ComObjectInstanceRef`s against 26 `GroupObjectTree` ids) — the same undercount §3.3 measured for schema 23 (24%), now confirmed on independent data and worse for module-heavy devices. See [ADR-0014](adr/0014-group-object-tree-authoritative-source.md).
 * **`ComObjectInstanceRef` carries almost no overrides for module-based devices.** Measured across every `ComObjectInstanceRef` in the sample: only `RefId`, `ChannelId`, `Links` ever appear — never `DatapointType`, `Text`, `Description`, or a flag override. `ChannelId` (new, not in schema 11 or §3.3's schema-23 diff) points at the `GroupObjectTree/Nodes/Node` grouping it belongs to. DPT/Text for these objects must be resolved through the module chain (below), not the instance layer.
-* **`ModuleInstance` → `ModuleDef` resolution chain**, measured against the KV project's `M-00FA` application programs: `DeviceInstance/ModuleInstances/ModuleInstance/@RefId` (local id, e.g. `MD-2_M-1`) resolves via the owning `DeviceInstance/@Hardware2ProgramRefId` to `ApplicationProgram/ModuleDefs/ModuleDef/@Id` (e.g. `M-00FA_A-2504-10-C071_MD-2`) — the same short-id-recovered-via-owning-element pattern §3.3 already established for schema-23 `ComObjectInstanceRef/@RefId`, now shown to apply to `ModuleInstance/@RefId` too. `ModuleDef` internally repeats the existing `ApplicationProgram` shape one level deeper: its own `Static/ComObjects` + `ComObjectRefs` (identical attribute set to the top-level ones already modelled by `knx-productdb`), plus a `Dynamic/Channel/ParameterBlock/choose/when` tree (the same grammar already flagged unresearched, KNOWN_LIMITATIONS §3) that picks which `ComObjectRef`s are active for given argument values. `ModuleInstance/Arguments/Argument/@RefId` supplies those argument values per instance (e.g. `argCH=1` — which channel number this repetition represents). Import does not need to evaluate `choose`/`when` itself: `GroupObjectTree` already carries ETS's own evaluation of it (previous bullet), so the active-object set is read, not recomputed.
+* **`ModuleInstance` → `ModuleDef` resolution chain**, measured against the KV project's `M-00FA` application programs: `DeviceInstance/ModuleInstances/ModuleInstance/@RefId` (local id, e.g. `MD-2_M-1`) resolves via the owning `DeviceInstance/@Hardware2ProgramRefId` to `ApplicationProgram/ModuleDefs/ModuleDef/@Id` (e.g. `M-00FA_A-2504-10-C071_MD-2`) — the same short-id-recovered-via-owning-element pattern §3.3 already established for schema-23 `ComObjectInstanceRef/@RefId`, now shown to apply to `ModuleInstance/@RefId` too. `ModuleDef` internally repeats the existing `ApplicationProgram` shape one level deeper: its own `Static/ComObjects` + `ComObjectRefs` (identical attribute set to the top-level ones already modelled by `knx-productdb`), plus a `Dynamic/Channel/ParameterBlock/choose/when` tree (the same grammar covered by §4.3: its `when/@test` value grammar is now documented from the KNX Standard, while the surrounding structural grammar remains corpus-observed only) that picks which `ComObjectRef`s are active for given argument values. `ModuleInstance/Arguments/Argument/@RefId` supplies those argument values per instance (e.g. `argCH=1` — which channel number this repetition represents). Import does not need to evaluate `choose`/`when` itself: `GroupObjectTree` already carries ETS's own evaluation of it (previous bullet), so the active-object set is read, not recomputed.
 * `Puid` — present (`Area`, `Line`, `GroupRange`, `GroupAddress`, …). **Corrects `known.rs`'s existing test comment, which called `Puid` "schema 23 only" — it is at least schema-21-and-up.**
 * `Locations`/`Space` — present, replacing `Buildings`/`BuildingPart` already at schema 21.
 * `GroupAddress` gained a `DatapointType` attribute directly (not present at schema 11) — potentially resolves the ambiguous space-separated `DatapointType` list problem (§4.2/KNOWN_LIMITATIONS §12) for schema ≥ 21 specifically, since the group address itself states its type rather than requiring inference from a linked communication object. Unverified whether it is ever ambiguous/multi-valued here — this sample's 13 group addresses all carry single, unambiguous values.
@@ -254,13 +254,14 @@ Manufacturer (M-xxxx)
 │       │   ├── LoadProcedures → LoadProcedure → LdCtrl*
 │       │   └── Options (≈25 Legacy* compatibility flags)
 │       └── Dynamic
-│           └── Channel → ParameterBlock → choose/when → ParameterRefRef / ComObjectRefRef
+│           └── Channel | choose | Module | ChannelIndependentBlock (§4.3)
+│               └── ParameterBlock → choose/when → ParameterRefRef / ComObjectRefRef / …
 └── Languages → Language → TranslationUnit → TranslationElement → Translation
 ```
 
 ### 4.1 Findings
 
-**The `Dynamic` tree is a conditional UI/visibility program, not a flat list.** `choose`/`when` nodes keyed on `ParamRefId` decide which parameters and which communication objects are visible and active for a given parameter configuration. Scale in one real device: 1211 `Parameter`, 2236 `ParameterRef`, 767 `ComObjectRef`, 526 `choose`, 1282 `when` [V]. Rendering a device editor faithfully means **evaluating this tree**, which is the single largest piece of work in an ETS alternative. `test` expressions on `when` need dedicated study (Session 4).
+**The `Dynamic` tree is a conditional UI/visibility program, not a flat list.** `choose`/`when` nodes keyed on `ParamRefId` decide which parameters and which communication objects are visible and active for a given parameter configuration. Scale in one real device: 1211 `Parameter`, 2236 `ParameterRef`, 767 `ComObjectRef`, 526 `choose`, 1282 `when` [V]. Rendering a device editor faithfully means **evaluating this tree**, which is the single largest piece of work in an ETS alternative. `test` expressions on `when` were the subject of the Session 4 R3 spike (2026-09-11) — see §4.3.
 
 **Parameter values live in memory layout, not in a property bag.** `Parameter/Memory` gives `CodeSegment`, `Offset`, `BitOffset`; `Union` packs several parameters into shared bits (104 `Union` elements in one program). Parameter *values* are stored per device in `0.xml` as `ParameterInstanceRef/@Value` (1390 in our project). Correct interpretation requires the `ParameterType` from the application program. This is also exactly what a device download must serialize into `AbsoluteSegment` memory images.
 
@@ -285,6 +286,226 @@ not yet handle this case (DATA_MODEL §9). Resolving which alternative
 applies — and whether it ever varies within one list — needs more samples
 than this project provides, so it is deferred to `knx-productdb`
 (Session 4), which owns DPT compatibility resolution generally.
+
+### 4.3 The `when/@test` grammar and `Dynamic`-tree evaluation semantics — R3 spike (Session 4, 2026-09-11)
+
+**Risk R3 (§11) is answered. Parameter interpretation itself does not
+exist yet** — no evaluator, no editor; see
+[KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md). What follows is the
+research; the implementation is future work (T18,
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). Full spike report:
+`.ai/logs/2026-09-11_claude_r3_dynamic_grammar.md`; this section is the
+durable summary that survives outside that log.
+
+Corpus: 34 `ApplicationProgram` elements across 7 archives — 4 `.knxprod`
+product databases and 3 `.knxproj` demo/reference projects, all under
+`OriginalData/` — 22630 `when` elements and 12149 `choose` elements,
+independently cross-checked against raw `grep -o` counts on the source
+XML, not just parser output.
+
+Three confidence levels are kept apart throughout, as in the rest of this
+document: **[D]** what the Standard states, **[V]** what the corpus shows
+(reproducible, but from a 34-application-program, 4-manufacturer sample),
+**[A]** inference beyond both.
+
+**[D] The Standard specifies the `@test` value grammar.**
+`Project Schema23 v01.00.00.md` §1.1.3.18, simpleType `Condition_t` — the
+type of `When_t/@test` — is normative (re-read directly against
+`Project Schema23 v01.00.00.json#/tables/82` for this section, not merely
+quoted from the spike report). It gives three alternatives: a single
+number (`number`); a space-separated list of numbers
+(`number (⎵number)*`); and a comparison expression (`op number`, where
+`op` is one of `= != > < >= <=`, with `<`/`>` written `&lt;`/`&gt;` in
+XML attributes). It states explicitly that **the controlling parameter
+must be of type `TypeNumber` or `TypeRestriction`**, and that for
+`TypeRestriction` the comparison uses the matching `Enumeration/@Value`,
+never the `Parameter`'s own raw value. §1.1.3.19 (`Value_t`), immediately
+following, separately documents how the numeric literals themselves are
+encoded (e.g. `TypeFloat` as C#'s `"E15"` scientific notation) — relevant
+to parsing `@test` literals correctly, but a distinct simpleType.
+
+The Standard does **not** define the surrounding structural grammar —
+`Dynamic`, `Channel`, `ParameterBlock`, `choose`, `When_t` itself, or
+`ChannelIndependentBlock` (below) — anywhere in this repository's KNX
+Standard v3.0.0 extraction. `Project Schema23` is the only
+project/application-program schema document present there; it documents
+the shared simpleTypes and the *Project*-instance schema (installations,
+topology, group addresses, …), not `ApplicationProgram`'s own
+complexTypes. Everything below the `@test` value grammar is therefore
+corpus-observed, or drawn from the KNX Association's Manufacturer Tool
+(MT4) cookbook (`02 Volume 2 Cookbook/02_04_01 Manufacturer Tool
+v01.00.01.md`, tooling documentation, not schema documentation) — never
+Standard-normative. This refines §4.1's "single largest piece of work"
+framing: the *value* grammar of `@test` turned out smaller and
+better-specified than feared; the *structural* grammar around it remains
+genuinely open.
+
+**[V] Four `@test` shapes, zero unparsed residue.** Every one of the
+22630 `when` elements in the corpus classifies cleanly into one of:
+
+| Shape | Count | Note |
+| --- | --- | --- |
+| `SINGLE_INTEGER` | 19138 | e.g. `test="3"` |
+| `DEFAULT_ATTR(true)` | 3417 | `<when default="true">`, no `@test` at all — not part of `Condition_t`, see below |
+| `SPACE_LIST_OF_INTEGERS` | 62 | e.g. `test="1 2"`; observed lists are length 2-3 only |
+| `OP_NUMBER(>)` | 13 | of the six operators `Condition_t` allows, only `>` was ever observed, all 13 in one `prod3` application program |
+
+**[V] The `choose` → `ParameterRef` → `Parameter` → `ParameterType`
+resolution chain is unambiguous and 100% resolvable.** All 12149
+`choose` elements resolve `@ParamRefId` successfully (0 dangling
+references anywhere in the corpus, including a cross-check against
+`ParameterRefRef`/`ComObjectRefRef`). Controlling-parameter type
+distribution: `TypeRestriction` 11464 (94.3%), `TypeNone` 604 (5.0%),
+`TypeNumber` 81 (0.7%). For `TypeRestriction`, 19132 of the 19138
+`SINGLE_INTEGER` `when`s independently match a real `Enumeration/@Value`
+of the resolved type; the small remainder are the `TypeNumber`-controlled
+ones, which have no enumeration to match against.
+
+**[A, corpus-consistent] `@default="true"` is the fallback branch
+selector.** It never co-occurs with `@test` on the same `when` (0/22630).
+No `choose` has more than one default `when` (0/12149); no `choose` has
+two `when` children with an identical `@test` value (0 duplicates in
+12149 `choose`); 3417 `choose` elements mix ordinary `test`-`when`
+siblings with one trailing default `when` — the overwhelmingly normal
+case, not an edge case. This is strong, consistent evidence for "first
+(and only) matching test wins, default covers the rest" — but it remains
+an **inference** from consistency: the Standard is silent on `@default`
+altogether, and no source consulted states the matching algorithm itself
+(e.g. whether two simultaneously-true `@test`s on sibling `when`s would
+be a validation error was never observed, but its absence could equally
+be an artifact of these particular sample programs).
+
+**Three findings that matter for T18's design, in order of how much they
+should shape it:**
+
+1. **`TypeNone`-controlled `choose` contradicts `Condition_t`'s own
+   stated constraint.** 604 of 12149 `choose` elements are controlled by
+   a `TypeNone` parameter — neither `TypeNumber` nor `TypeRestriction`.
+   All 604, with no exception, have exactly one `when default="true"`
+   child (604/604; confirmed against a concrete example,
+   `M-0008_A-C004-03-7AB2-O000A_PT-dummy`, a `ParameterType` whose sole
+   child is `TypeNone`, referenced by a `Parameter` with `@Access="None"`
+   and empty `@Value`). This is a real ETS/MT4 tooling idiom — an
+   always-true, single-branch "dummy" wrapper used to group a fixed block
+   of content structurally, with no actual conditional gating — that a
+   literal reading of the Standard's text has no defined behaviour for.
+   **[A]** An evaluator can safely treat it as "always take the sole
+   default branch", but this is inferred from 604/604 consistency, not
+   documented anywhere consulted.
+2. **"No branch matches" is a common, reachable state, not a corner
+   case.** Of the 8732 `choose` elements with no default `when` at all,
+   5570 (63.8%) are `TypeRestriction`-controlled and have at least one
+   legal enumeration value covered by no `@test` — a real parameter value
+   for which no `when` branch matches. Neither the Standard nor the MT4
+   cookbook states what that means structurally. The natural reading
+   ("nothing under this `choose` is active"), consistent with the
+   cookbook's own "comparable to if/then" framing, is a plausible **[A]**
+   inference, not a stated rule. An evaluator must pick a policy; this is
+   too common in this corpus to defer as a corner case.
+3. **`ChannelIndependentBlock` was discovered mid-spike** and appears in
+   no prior documentation in this repository and no schema extraction
+   available here: `<ChannelIndependentBlock>` wraps `ParameterBlock`,
+   `choose`, and `Module` children directly under `Dynamic`, outside any
+   `Channel`. Observed 5 times total (`kv25` ×1, `prod3` ×3, `prod4` ×1),
+   never in the `ez4`/`ez630` samples, no attributes ever seen on it. Its
+   late discovery, in only a 34-application-program corpus, is itself
+   evidence that the when-child vocabulary below should be read as an
+   **observed superset, not a closed grammar**.
+
+**[V] `when`-child vocabulary, by count, across the whole corpus:**
+`ParameterRefRef` 33468 (by far the most common), `ComObjectRefRef`
+12368, `choose` 7597 (nested — 62.5% of all 12149 `choose` elements are
+themselves a `when` child), `ParameterBlock` 2403, `ParameterSeparator`
+117, `Module` 89, `Channel` 15, `Assign` 3. The last four appear only in
+scheme-20/21 samples (`prod3`, `prod4`, `kv25`) — never as when-children
+in the scheme-11/23 (`ez4`/`ez630`) samples — but `ez4`/`ez630` are only
+2 of the corpus's 7 archives by element count, so this may be a
+sample-size artifact rather than a genuine schema-version cutoff; §6 of
+the full spike report names this explicitly as unresolved.
+
+This does refine one existing claim in this repository, precisely: §4.1
+above and [DATA_MODEL.md](DATA_MODEL.md) describe "Module-based objects"
+as **schema ≥21** — that claim is about *project*-level
+`ModuleInstance`/`ModuleDef` composition (`0.xml`'s `DeviceInstance` side)
+and was, and remains, observed only in the schema-21 KV project; this
+spike sampled no schema-20 *project*, so that claim is untouched. But at
+the *application-program* level, `ModuleDef` and the extended `Dynamic`
+when-child vocabulary above (`Module`, `Channel`, `Assign`,
+`ParameterSeparator`) are already present at scheme **20**
+(`prod3`, an MDT product database) — one scheme lower than the only place
+this repository had previously observed them. Read "schema ≥21" as
+accurate for project-level module composition, and "scheme ≥20" for the
+application-program `Dynamic` vocabulary, until a schema-20 *project*
+sample closes the gap either way.
+
+**Nesting and evaluation order [V/A].** Maximum observed nesting depth is
+10 (`M-000C_A-5701-...`, identical in `ez4` and `ez630`); all depths 1-10
+occur, with depth 3 (2074) and depths 6-7 (1920, 1944) the most common.
+Of the 7597 nested `choose` elements, 5578 (73.4%) have a controlling
+`ParamRefId` that is also a `ParameterRefRef` sibling within the very
+same enclosing `when` — "reveal parameter P, then immediately branch on
+P's own value" is the dominant nested idiom. **[A]** This is consistent
+with single-pass, top-down evaluation being sufficient (a parameter's
+controlling relevance never needs a later/forward value in this corpus),
+but it is demonstrated only by absence of counter-examples in this
+specific sample, not proven in general.
+
+**Other gating mechanisms, checked and inconclusive or absent [V].**
+`Access="None"` on `Parameter` and its correlation with a `Memory` child
+came back essentially 50/50 (4976 vs. 4878 parameters) — no discernible
+rule found. A `Visible` attribute, speculated about as a possible gating
+mechanism, was searched for across the entire corpus and never found (0
+occurrences on any element) — informative, but its absence in this
+sample does not prove it can never appear in unsampled manufacturer data.
+
+**Corpus evidence table:**
+
+| Archive | Format | Schema | AP count | `choose` | `when` | Max depth | Notable |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `ez4` (demo project) | `.knxproj` | 11 | 12 | 4985 | 9670 | 10 | Baseline; 7 distinct application programs |
+| `ez630` (demo project) | `.knxproj` | 23 | 12 | 4985 | 9670 | 10 | Byte-identical `choose`/`when` counts to `ez4` for the same 7 underlying application programs |
+| `kv25` (demo project) | `.knxproj` | 21 | 4 | 19 | 51 | 3 | Smallest sample; `ChannelIndependentBlock`/`Module`/`Channel` as when-children |
+| `prod1` (product DB) | `.knxprod` | 11 | 1 | 1646 | 2252 | 8 | |
+| `prod2` (product DB) | `.knxprod` | 11 | 1 | 5 | 5 | 3 | Minimal application program |
+| `prod3` (product DB) | `.knxprod` | 20 | 3 | 509 | 982 | 4 | Only archive with the `OP_NUMBER` (`>`) shape and `Assign` when-children |
+| `prod4` (product DB) | `.knxprod` | 20 | 1 | 0 | 0 | — | "Dummy_Applikation_Secure" KNX-Secure stub, genuinely empty Static tree — confirmed as a real minimal AP, not a parsing gap |
+| **Total** | | 11/20/21/23 | 34 | **12149** | **22630** | 10 | Independently verified against raw `grep` counts on the source XML |
+
+**Sharpest remaining unknowns**, each with what would resolve it (full
+detail in the spike report §6):
+
+1. The `Dynamic`/`Channel`/`ParameterBlock`/`choose`/`When_t`/
+   `ChannelIndependentBlock` complexType grammar is not backed by any
+   normative schema document available to this research — only the
+   `Condition_t` value grammar is. Resolvable by obtaining the actual
+   `ApplicationProgram.xsd` (or equivalent) from KNX Association, which
+   is not part of the current `knx-spec-kb` extraction, or by an
+   order-of-magnitude larger, more-manufacturer corpus.
+2. The no-match evaluation rule for a no-default `choose` (finding 2
+   above) is inferred, not documented. Resolvable by the missing
+   complexType schema, if it turns out to specify one, or by direct
+   behavioral observation of ETS itself rendering such a dialog — not
+   attempted in this read-only, ETS-free spike.
+3. `Access`/`Visible` as gating mechanisms independent of `choose`/`when`
+   remain open (the `Memory`-child correlation is inconclusive; `Visible`
+   was never observed at all). Resolvable by the EEPROM/memory-mapping
+   part of the KNX Standard not covered by this spike, or a much larger
+   corpus.
+
+**Advisory for T18** (research input, not a design decision made here):
+the `@test`/`@default` value grammar and the resolution chain are solid
+and simple enough to build a Dynamic-tree evaluator against now, without
+further research blocking it. `TypeNone`-controlled `choose` needs its
+own explicit code path rather than being forced through generic
+`TypeNumber`/`TypeRestriction` comparison logic. The no-default/no-match
+case needs an explicit, even conservative (e.g. "hide everything"),
+policy decision before shipping, since it is common, not rare. And the
+parser should preserve or loudly flag unrecognized `Dynamic`/when-child
+element kinds rather than silently drop them (consistent with this
+project's existing tolerant-parser posture, ADR-0011) — this spike found
+one previously-undocumented construct (`ChannelIndependentBlock`)
+partway through itself, which is a reasonable signal that a larger
+manufacturer corpus would find more.
 
 ---
 
@@ -460,7 +681,7 @@ Open question for a later session: can we read secured runtime keys directly out
 | --- | --- | --- | --- |
 | R1 | Single-sample bias: everything verified here is schema 11 / ETS 4.1 | High | Acquire ETS5 (13/14, 20) and ETS6 (21+) sample projects before Session 3. Treat §3 as version-specific until then. |
 | R2 | No authoritative XSD available | High | Tolerant parser + exhaustive unknown-element/attribute inventory, reported to the user (§12). |
-| R3 | `Dynamic` tree (`choose`/`when`) evaluation is the real complexity | High | Dedicated research spike in Session 4 before any device editor UI. |
+| R3 | `Dynamic` tree (`choose`/`when`) evaluation is the real complexity | High | **Done (2026-09-11).** The dedicated Session 4 research spike ran — see §4.3. The Standard normatively specifies the `@test` value grammar; the surrounding structural grammar remains corpus-observed only, not Standard-normative. This closes the research risk; it does not build the evaluator. T18 (the parameter editor, [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)) is no longer blocked on research — it now needs a no-match design decision and a defensive parser, both implementation work. |
 | R4 | Round-trip cannot be byte-exact (signatures, attribute ordering, ETS-internal ids) | Medium | Define round-trip fidelity as *semantic* equality over a declared model + verbatim passthrough of opaque parts. Never claim byte-exactness. |
 | R5 | Vendor plug-in DLLs make some devices unconfigurable by us | Medium | Detect `Baggages`, mark affected devices read-only, report clearly. |
 | R6 | GPL-2.0 contamination via `xknxproject` | Medium | Test-only dependency, enforced by CI. |
@@ -491,7 +712,7 @@ Recommendations carried forward, each traceable to a finding above:
 
 * ETS5/ETS6 schema deltas (13, 14, 20, 21+) — needs sample projects. (R1)
 * `Functions` element semantics — absent from our sample. (§3.1)
-* `when/@test` expression grammar in the `Dynamic` tree. (R3)
+* ~~`when/@test` expression grammar in the `Dynamic` tree. (R3)~~ — **answered, §4.3 (2026-09-11).** What is still open, carried forward from that section: the `Dynamic`/`Channel`/`ParameterBlock`/`choose`/`When_t`/`ChannelIndependentBlock` *structural* (complexType) grammar, which no schema document available here defines; the no-match evaluation rule for a no-default `choose`; and `Access`/`Visible` as gating mechanisms independent of `choose`/`when`.
 * Whether ETS re-imports an unsigned `.knxproj` written by a third-party tool. (R9)
 * Whether Data Secure runtime keys are readable from `.knxproj` or only from `.knxkeys`. (§9)
 * `.knxprod` encryption for master data scheme 12+. (§10)

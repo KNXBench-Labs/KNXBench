@@ -376,8 +376,10 @@ an ambiguous, space-separated `DatapointType` list fills nothing and is
 reported (`EnrichmentIssue::AmbiguousDpt`) instead of guessed.
 
 **Not part of this session's delivery**, carried forward: parameter
-*interpretation* (the `Dynamic` tree and the `when/@test` grammar, RESEARCH
-R3 — the raw bytes are retained regardless, per ADR-0011); a layer stack in
+*interpretation* (evaluating the `Dynamic` tree — its `when/@test` value
+grammar is now documented, RESEARCH §4.3/R3, but the tree's structural
+grammar and an evaluator are not — the raw bytes are retained regardless,
+per ADR-0011); a layer stack in
 `Override<T>` that would make an `Empty`-slot program value visible without
 risking the export change ADR-0012 rules out; `.knxprod` direct ingest for
 master data scheme ≥ 12 (KNOWN_LIMITATIONS §11); schema 23 manufacturer
@@ -562,8 +564,10 @@ between the two crates.
 in this file: manufacturer, product and application-program names are not
 resolved (the identifiers are printed verbatim — resolving them needs
 `knx-productdb`, which this crate must not reach); parameter values and
-module-instance arguments are counted but not listed (they are
-uninterpreted, RESEARCH R3); binary data is referenced by name and id
+module-instance arguments are counted but not listed (they remain
+uninterpreted raw data — the `@test` value grammar that would let a future
+reader evaluate them is documented, RESEARCH §4.3/R3, but no evaluator
+exists yet); binary data is referenced by name and id
 only; text renders in the project's default language only; and the
 document says plainly that it is not an ETS report and has not been
 compared to one.

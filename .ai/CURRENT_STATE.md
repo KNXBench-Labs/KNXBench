@@ -1005,3 +1005,76 @@
   `apps/knx-server`, and the TypeScript interfaces in `apps/knx-web/src/api.ts`
   are hand-written mirrors of those DTOs, so a field renamed on the server
   will compile fine on both sides and silently render zeroes.
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-11 04:32
+- **Completed:** Closed the two residuals left behind by T24 (standalone
+  `.knxprod` product-package install), merged to `main` as `5ff6935`.
+  Context first: an audit of the whole T24 plan
+  (`docs/superpowers/plans/2026-09-09-standalone-product-database-install.md`)
+  against the running code established that all five of its tasks had in fact
+  shipped — the plan carries no SDD ledger, which made it *look* unexecuted,
+  but it was implemented and merged on 2026-09-10 as `af5639a` from the
+  `codex/catalog-creation-diagnostics` branch. Verified by installing all six
+  corpus files through the real CLI into a scratch database: the three
+  scheme-11 and two scheme-20 archives install, the duplicate Weinzierl file
+  is correctly reported as already known, and the `.vd2` is refused. No
+  documentation over-claim was found anywhere.
+  Two real gaps did survive that audit, and this cycle closed both.
+  (1) Design-spec acceptance criterion 4 — "the caller receives the archive
+  hash/size in the error report where available" — was unimplemented for
+  `.vd2`: the filename check ran before anything was hashed and
+  `PackageError::LegacyVd2` was a payload-free unit variant. It is now
+  `LegacyVd2 { sha256, len }`, the `MAX_PACKAGE_SIZE` guard moved ahead of the
+  suffix check so the hashing stays bounded, and the evidence reaches both the
+  CLI and the HTTP 400 body. The leading sentence
+  `legacy .vd2 product data is unsupported` is unchanged, byte for byte.
+  (2) The real 77265-byte `Weinzierl_730_KNX_IP_Interface_ETS2-3.vd2` had never
+  been exercised by a test — only a synthetic three-byte stand-in had.
+  `rejects_the_real_legacy_vd2_corpus_file_with_its_hash_and_size` and
+  `a_small_vd2_still_reports_hash_and_length` now cover it, matching strictly
+  on the variant and comparing the digest against one the test computes
+  itself.
+  `.vd2` remains unsupported. Only the refusal's reporting changed.
+  Gates on the merged result: 784 Rust tests, 0 failed, 3 ignored (782 before,
+  +2 new); `cargo fmt --all --check`, `cargo clippy --workspace --all-targets
+  -D warnings`, `cargo run -p xtask -- check-layering` and `cargo deny check`
+  all clean. The frontend was untouched by this change, so its gates were not
+  re-run. The corpus test was confirmed to have really executed, with
+  `-- --nocapture` printing
+  `sha256=bc84765f511fbff6ec62325c43a68673fa930ee23b9e69399a1c1ee411a72a48
+  len=77265`.
+  Docs reconciled in the same change: `docs/IMPLEMENTATION_STATUS.md`,
+  `docs/GAP_ANALYSIS_ETS.md` and `docs/KNOWN_LIMITATIONS.md` no longer say the
+  hash/size criterion is unimplemented.
+- **Pending/Next Steps:** The standing goal's highest-priority item — installing
+  devices from freely downloadable manufacturer product databases — is now
+  complete end to end for the tested scheme-11/scheme-20 corpus, with no known
+  residual. The RESEARCH R3 spike (the `when/@test` grammar in the
+  ApplicationProgram `Dynamic` tree) has just been run and its findings are
+  being written into `docs/` as a separate change; that unblocks **T18**
+  (parameter interpretation and editor), the single largest remaining gap by
+  effort. The rest of the backlog is unchanged: T25/T26 (i18n, gap D10), T27
+  (motion toggle, gap D11 — the two-animation-styles memo belongs there), T28
+  (in-application help, gap D12), T20 (Functions, needs an ADR first), T21
+  (graphical views, D1/D2), T16 (catalog browser), T15/T17 (bus-facing UI),
+  T19 (KNX Secure, blocked on key material and hardware), T22 (multi-user,
+  needs a design decision). Four items still need the maintainer's explicit
+  out-of-scope acceptance before the standing goal can be called complete:
+  `.vd2` support, encrypted `.knxprod` (untested for want of a sample), T19's
+  deferral, and the permanent exclusion of commissioning (E1).
+- **Notes for Codex:** The `.vd2` refusal is deliberately ordered: size limit
+  first, then the filename suffix, then hashing, and only then — for anything
+  that is not a `.vd2` — any ZIP handling at all. Do not reorder those. The
+  consequence is intentional and worth knowing: a `.vd2` larger than
+  `MAX_PACKAGE_SIZE` reports `SizeLimit`, not `LegacyVd2`. That is honest (a
+  refusal to read that many bytes is not a claim about the format) and it
+  keeps the hash bounded. Also note `installs_the_readable_corpus` and the new
+  `.vd2` corpus test both skip loudly via `eprintln!` when `OriginalData/` is
+  absent, so a green run in an environment without the local-only corpus
+  proves nothing about real files — run with `-- --nocapture` and look for the
+  printed hash/length line. From a git worktree `OriginalData` is unreachable
+  unless you symlink it in by hand; this cycle's worktree did that and the
+  symlink was deleted with it.

@@ -9,7 +9,8 @@ argued in [docs/adr/](adr/); the evidence they rest on is in
 A Linux-first, KNX-compatible engineering application, built as an independent
 alternative to ETS rather than a reimplementation of it.
 
-**v1 target — a project editor without device parameter configuration.** Import
+**v1 target — a project editor with top-level device parameter editing
+(module-scoped, per-channel editing still out).** Import
 `.knxproj`; inspect and edit group addresses, links, building structure,
 topology, device names and individual addresses; save to the native
 `.knxdb` format; and monitor the live bus against the open project.

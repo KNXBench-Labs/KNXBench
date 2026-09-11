@@ -7,8 +7,11 @@
   `docs/IMPLEMENTATION_STATUS.md` (new dated T18-slice-3 entry between
   the slice-2 and T29 entries, plus a fixed stale "no parameter editor
   exists" bullet); `docs/KNOWN_LIMITATIONS.md` §3 (rewritten body, header
-  text left unchanged to preserve its anchor slug — 6 other files link
-  `#3-device-parameters-are-preserved-but-not-interpreted`) and §12
+  text left unchanged to preserve its anchor slug — 4 occurrences across
+  3 other files (`GAP_ANALYSIS_ETS.md` ×2, `DATA_MODEL.md` ×1,
+  `IMPLEMENTATION_STATUS.md` ×1) link
+  `#3-device-parameters-are-preserved-but-not-interpreted`, not counting
+  `KNOWN_LIMITATIONS.md`'s own 2 internal backlinks) and §12
   (surfaced/writable-top-level-only correction, plus its Cause/Impact
   paragraphs further down, updated beyond the literal brief wording so
   they don't contradict the rewritten paragraph immediately above);

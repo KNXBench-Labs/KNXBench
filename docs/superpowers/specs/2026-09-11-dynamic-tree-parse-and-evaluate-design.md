@@ -63,10 +63,15 @@ Load-bearing facts for this design:
 
 ### D1. The product database owns the tree
 
-`knx-productdb` parses, stores and evaluates. No new crate, no dependency
-on `knx-core`, `knx-store`, `knx-etsproj` or `knx-app`. The `Dynamic`
-tree is manufacturer data; it belongs beside the `Static` tree rows that
-it references. `cargo run -p xtask -- check-layering` must stay clean
+`knx-productdb` parses, stores and evaluates. No new crate, and no *new*
+crate dependency: nothing here reaches for `knx-store`, `knx-etsproj`,
+`knx-app`, the server or the UI. (`knx-productdb` already depended on
+`knx-core` before this slice — an earlier draft of this decision said
+otherwise, which was simply wrong about the existing `Cargo.toml`. The
+direction that matters, and that `xtask`'s `check-layering` enforces, is
+that `knx-core` must not reach back down here.) The `Dynamic` tree is
+manufacturer data; it belongs beside the `Static` tree rows that it
+references. `cargo run -p xtask -- check-layering` must stay clean
 without a new exception.
 
 ### D2. One row per element, in document order
@@ -82,7 +87,7 @@ CREATE TABLE dynamic_node (
     position      INTEGER NOT NULL,-- 0-based index among its parent's children
     kind          TEXT NOT NULL,   -- the XML local name, verbatim
     element_id    TEXT,            -- @Id
-    ref_id        TEXT,            -- @RefId / @ParamRefId / @ParameterRefId
+    ref_id        TEXT,            -- @RefId / @ParamRefId
     test          TEXT,            -- @test, verbatim, unparsed
     is_default    INTEGER,         -- 1 when @default="true"
     text          TEXT,            -- @Text

@@ -338,6 +338,20 @@ fn migrate_v2_to_v3(conn: &Connection) -> Result<(), ProductDbError> {
 /// (`kind = 'DynamicBackfillError'`) and does not abort the migration or
 /// undo the blobs already processed in this same pass — a database that
 /// refuses to open is worse than one with a gap.
+///
+/// `parse_dynamic_trees` inserts `dynamic_node` rows incrementally as it
+/// walks the XML event stream, so a malformed blob (e.g. a mismatched end
+/// tag) can leave a handful of rows behind before the error is even raised
+/// — quick-xml only notices the mismatch once it reaches the offending end
+/// tag, by which point every element opened before it is already inserted.
+/// Each blob therefore gets its own `SAVEPOINT`, released on success and
+/// rolled back to on error, *before* `record_backfill_failure` runs — this
+/// is the same "a parse error partway through leaves the database exactly
+/// as it was" invariant `ingest.rs`'s doc comment already promises for the
+/// ordinary install path (`ingest.rs:33-37`), now honoured here too. It is
+/// purely an inner boundary: the outer migration transaction
+/// `open_and_migrate` holds around this whole function is untouched, and a
+/// bad blob still does not stop the loop from reaching the next one.
 fn backfill_dynamic_nodes(conn: &Connection) -> Result<(), ProductDbError> {
     let mut stmt = conn.prepare("SELECT sha256, source_path, bytes FROM source_file")?;
     let blobs: Vec<(String, String, Vec<u8>)> = stmt
@@ -353,9 +367,19 @@ fn backfill_dynamic_nodes(conn: &Connection) -> Result<(), ProductDbError> {
         if classify(&bytes) != FileKind::ApplicationProgram {
             continue;
         }
+        conn.execute_batch("SAVEPOINT dynamic_backfill_blob;")?;
         match crate::dynamic::parse::parse_dynamic_trees(conn, &sha256, &source_path, &bytes) {
-            Ok(outcome) => insert_unknown(conn, &sha256, &outcome.unknown)?,
-            Err(error) => record_backfill_failure(conn, &sha256, &source_path, &error)?,
+            Ok(outcome) => {
+                conn.execute_batch("RELEASE SAVEPOINT dynamic_backfill_blob;")?;
+                insert_unknown(conn, &sha256, &outcome.unknown)?;
+            }
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT dynamic_backfill_blob;
+                     RELEASE SAVEPOINT dynamic_backfill_blob;",
+                )?;
+                record_backfill_failure(conn, &sha256, &source_path, &error)?;
+            }
         }
     }
     Ok(())

@@ -56,7 +56,11 @@ pub enum DptValue {
     /// deliberately does not apply.
     Scene { number: u8 },
     /// Scene control (learn/activate + scene number) — main type 18.
-    /// `number` is the same undecorated wire value as `Scene`'s.
+    /// `number` is the same undecorated wire value as `Scene`'s, 0-63,
+    /// even though — unlike main type 17 — this type's own section
+    /// (DPT-AS §3.19 NOTE 9) does carry a +1 display recommendation;
+    /// see `decode_scene_control`'s doc comment for why this codec
+    /// still hands back the untouched wire value regardless.
     SceneControl { learn: bool, number: u8 },
 }
 
@@ -1028,11 +1032,16 @@ fn encode_a14(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 // recommends displaying these scene numbers... numbered from 1 to 64,
 // this is, with an offset of 1 compared to the actual transmitted
 // value"). That NOTE is textually attached only to §3.25/26.001; §3.18
-// (this type) states no offset of its own, and applying the 26.001
-// recommendation here by analogy would invent a rule the Standard does
-// not state for 17.001. `DptValue::Scene` therefore holds and prints the
-// wire value 0-63 exactly, undecorated. A future UI slice can choose to
-// display `wire + 1`; that is a presentation decision, not this codec's.
+// (this type, 17.001 DPT_SceneNumber) carries no such note of its own —
+// its section ends at the datapoint-type table — so applying the
+// 26.001 recommendation here by analogy would invent a rule the
+// Standard does not state for 17.001. (Main type 18 is different: its
+// own section, §3.19, does carry a matching +1 recommendation in NOTE 9
+// — see `decode_scene_control`'s comment. That is 18.001's citation,
+// not 17.001's, and does not change this type's answer.) `DptValue::Scene`
+// therefore holds and prints the wire value 0-63 exactly, undecorated.
+// A future UI slice can choose to display `wire + 1`; that is a
+// presentation decision, not this codec's.
 
 fn decode_scene(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
     let raw = require_short(payload, dpt, 6)?;
@@ -1073,9 +1082,26 @@ fn encode_scene(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 // a `Short` payload is `WrongLength`, same as any other wrong-shaped
 // payload, never silently accepted as if it were the inline form.
 //
-// Same off-by-one non-ruling as main type 17: DPT-AS §3.25 NOTE 16's +1
-// display convention is stated for 26.001 only, not repeated here, so
-// this codec keeps the wire value undecorated.
+// Ruling on the wire value vs. the human scene number (do not relitigate
+// — see the brief, corrected in Fix round 1): unlike main type 17, this
+// type's own section does carry a display recommendation. DPT-AS §3.19
+// NOTE 9, attached to 18.001 DPT_SceneControl, states that KNX
+// Association recommends displaying scene numbers as 1-64 in ETS and
+// other software controllers, an offset of 1 from the actually
+// transmitted value. (Task 2's original comment here wrongly attributed
+// this +1 convention to §3.25 NOTE 16/26.001 only, the same as main
+// type 17's citation — that was incorrect specifically for main type
+// 18: §3.25 NOTE 16 belongs to 26.001 DPT_SceneInfo, but §3.19 NOTE 9
+// is 18.001's own, separate recommendation with the same +1 shape.)
+// NOTE 9's text is missing from this corpus's Markdown extraction —
+// the same shape of gap as 13.100's §3.14.3 — and was read from the
+// source PDF instead; a reader who greps the Markdown and finds
+// nothing here should not conclude this was invented. The
+// recommendation is about *display*, a decision for a later UI layer,
+// and that layer can only make it honestly if handed the untouched
+// wire value — so this codec keeps 0-63 undecorated in both directions
+// regardless, same as main type 17, and `format()` prints the wire
+// value too.
 
 fn decode_scene_control(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
     let [raw] = require_bytes::<1>(payload, dpt, 8)?;
@@ -2107,7 +2133,7 @@ mod tests {
         for (text, raw, learn, number) in [
             ("activate scene 0", 0b0000_0000u8, false, 0u8),
             ("learn scene 63", 0b1011_1111u8, true, 63u8),
-            ("activate scene 0", 0b0000_0000u8, false, 0u8),
+            ("activate scene 63", 0b0011_1111u8, false, 63u8),
             ("learn scene 30", 0b1001_1110u8, true, 30u8),
         ] {
             let payload = encode(d, text).unwrap();

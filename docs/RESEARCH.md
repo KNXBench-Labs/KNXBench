@@ -1044,7 +1044,16 @@ The two are **complementary, not ranked** — a gap in the programming
 database's coverage is a much weaker claim than a gap in both. Query either
 with `sqlite3`, e.g.
 `sqlite3 -json "$DB" "SELECT f.* FROM facts f JOIN factsSearch fs ON f.factId=fs.factId WHERE factsSearch MATCH '...' "`.
-Cite `sourcePdf` and quote `evidenceText` for every **[D]** claim; the CLI
+Every **[D]** claim below carries a quoted citation naming its source. Most
+quote `evidenceText` from a database fact row and cite `sourcePdf` directly.
+A minority — marked **[D, corpus]** at the point they occur — quote the
+extracted Markdown/PDF text directly, because exhaustive FTS search against
+both databases turned up no matching fact row for that specific sentence,
+even though the surrounding passage is present and correctly attributed.
+This is a known property of the extraction pipeline (it chunks/samples the
+document rather than indexing every sentence as its own fact), not a gap in
+this spike's searching, and not a licence to under-cite: every **[D, corpus]**
+claim still names the exact source file. The CLI
 described in `knowledge_base/KB_PROMPT.md` (`scripts/05_knowledge_base_v1.py
 --query`/`--query-figures`) works against either database via `-o`. The
 extracted Markdown corpus at
@@ -1053,8 +1062,10 @@ is where `sourceMarkdown` points, and is the right place to read a normative
 section in full context once the database has located it.
 
 Confidence markers, as elsewhere in this document: **[D]** the Standard
-states it (quoted `evidenceText` + named PDF), **[V]** verified by
-observation (here: the corpus itself, or a measured query count), **[A]**
+states it (quoted `evidenceText` + named PDF); **[D, corpus]** the same, but
+quoted directly from the extracted Markdown/PDF because no database fact row
+matches that sentence (see "Reusable pointer" above); **[V]** verified by
+observation (here: the corpus itself, or a measured query count); **[A]**
 inference beyond both. Markers are never promoted.
 
 **Note on this pass.** §8.4 was drafted against the programming database
@@ -1068,10 +1079,14 @@ usefully extended them; Q4 and Q8 gained one additional citation each. See
 
 ---
 
-**Q1 — Individual-address programming.** **[D]** Two Network Management
-Procedures carry this, both in `03_05_02 Management Procedures v02.01.02
-AS.pdf` §2.2/§2.3 (and §2.9 for the Domain-and-IA variant used on RF/PL110
-media): `NM_IndividualAddress_Read` and `NM_IndividualAddress_Write`.
+**Q1 — Individual-address programming.** **[D, corpus]** Two Network
+Management Procedures carry this, both in `03_05_02 Management Procedures
+v02.01.02 AS.pdf` §2.2/§2.3 (and §2.9 for the Domain-and-IA variant used on
+RF/PL110 media): `NM_IndividualAddress_Read` and `NM_IndividualAddress_Write`.
+All four quotes below are taken from the extracted Markdown/PDF directly —
+exhaustive FTS search of both databases found no matching fact row for any
+of these sentences, despite the surrounding procedure text being present and
+correctly attributed to this PDF.
 
 `NM_IndividualAddress_Read` — *"This Network Management Procedure shall be
 used to read out the Individual Addresses of all the devices that are in
@@ -1130,7 +1145,7 @@ by transitioning to `Error` (3); the reason is then readable via
 `PID_ERROR_CODE` (PID = 28, `PDT_ENUM8`, `DPT_ErrorClass_System` 20.011) —
 see Q5 for the full enum.
 
-**[D] "More than one Load State Machine is possible."** Each loadable part
+**[D] "More than one Load State Machine is possible in one device."** Each loadable part
 (Application Program 1, Application Program 2, Group Object Table, Address
 Table, Association Table, …) is its own Interface Object with its own LSM,
 addressed independently by `object_index` (`PID_OBJECT_INDEX`, PID = 29) —
@@ -1177,7 +1192,8 @@ CRC check step — *"Compare CRC checksum: MaC:
 PropertyRead(ID_ApplicationProgram_1, PID_MCB), MaS:
 PropertyResponse(ID_ApplicationProgram_1, PID_MCB, Data). The current CRC
 shall be responded and shall be compared with the stored CRC. If the CRC
-matches, then MaC shall us[e it as the precondition check]..."* — then
+matches, then MaC shall use differential download algorithm. Load data via
+direct memory access..."* — then
 `LoadControl = Load Completed` to leave `Loading` for `Loaded`. The same
 document specifies the Group Address Table, Association Table and Group
 Object Table loads with the equivalent load/allocate/write/complete
@@ -1264,9 +1280,10 @@ enum discriminant directly; no row above is inferred.
 
 ---
 
-**Q6 — Memory services.** **[D]** `03_03_07 Application Layer v02.01.01
+**Q6 — Memory services.** **[D, corpus]** `03_03_07 Application Layer v02.01.01
 AS.pdf` §3.5.4 `A_Memory_Write-service` / the preceding `A_Memory_Read-service`
-clause: *"The A_Memory_Write.req primitive shall be applied by the user of
+clause (quoted from the extracted Markdown directly — no matching database
+fact row was found for this sentence in either database): *"The A_Memory_Write.req primitive shall be applied by the user of
 Application Layer, to write between 1 octet and 63 octets in the address
 space of the remote communication controller. The parameter memory_address
 shall specify the 16 bit start address..."* — 1-63 octets per call, 16-bit
@@ -1274,35 +1291,45 @@ addressing, always relative to the target Interface Object's allocated base
 (`PID_TABLE_REFERENCE`, Q5). `A_Memory_Read` is symmetric, with the same
 16-bit addressing and a length field.
 
-**Verify Mode.** *"The service shall be a confirmed service if Verify Mode
-is active, otherwise it shall be an acknowledged service."* With Verify Mode
-**inactive**, the remote application process does not respond at the
-Application Layer at all (only the Transport Layer confirms delivery).
-With Verify Mode **active**: *"the remote application process shall respond
+**Verify Mode.** **[D, corpus]** *"The service shall be a confirmed service
+if Verify Mode is active, otherwise it shall be an acknowledged service."*
+This exact sentence recurs verbatim across several other service clauses in
+the same PDF — the one database fact row that captures it is titled for
+`A_MemoryBit_Write`, not `A_Memory_Write`, so citing that row here would
+misattribute the sentence to the wrong service; quoted from the Markdown
+directly instead. With Verify Mode **inactive**, the remote application
+process does not respond at the Application Layer at all (only the
+Transport Layer confirms delivery). With Verify Mode **active**: **[D,
+corpus]** *"the remote application process shall respond
 to the A_Memory_Write.ind primitive with an A_Memory_Write.res primitive
 containing the requested number of octets of the associated memory area.
 The value of the associated memory area shall be explicitly read back after
-writing to it."* Verify Mode itself is controlled via `PID_DEV_CONTROL`
+writing to it."* (also no matching fact row). Verify Mode itself is controlled via `PID_DEV_CONTROL`
 (PID = 14, per the Configuration Procedures "Set Verify Mode" fact) and
-defaults to disabled — *"The value of Verify Mode Control shall per default
-be 0 ('disabled')"* (`03_05_01 Resources`); a Profiles-volume footnote adds
-*"If Verify Mode is not implemented, it shall always be off."*
+defaults to disabled — **[D]** *"The value of Verify Mode Control shall per default
+be 0 ('disabled')"* (`03_05_01 Resources`, database fact row); a Profiles-volume footnote adds
+**[D]** *"If Verify Mode is not implemented, it shall always be off."* (database fact row)
 
-**What a device may legally refuse, and how.** *"If data are to be written
-to a protected area from any logical address that is not associated to
-physical memory then the service indication shall be ignored. ... If only a
-part of the addressed memory is protected or does not exist, then the
-complete write operation shall fail."* — refusal is **silent** (the
-indication is dropped, there is no explicit NAK APDU) rather than an error
-response, which matters for a Rust implementation's timeout/retry design.
-Length is also a hard refusal ground: *"the remote Application Layer shall
+**What a device may legally refuse, and how.** **[D, corpus]** *"If data are
+to be written to a protected area from any logical address that is not
+associated to physical memory then the service indication shall be
+ignored. ... If only a part of the addressed memory is protected or does
+not exist, then the complete write operation shall fail."* Quoted from the
+Markdown directly: the database captured only a near-duplicate instance of
+this same clause worded for the Filter Table write operation ("addressed
+Filter Table"), not this Memory-write-specific instance, even though the
+sentence recurs verbatim elsewhere in the same document too. Refusal is
+**silent** (the indication is dropped, there is no explicit NAK APDU)
+rather than an error response, which matters for a Rust implementation's
+timeout/retry design. Length is also a hard refusal ground: **[D, corpus]**
+*"the remote Application Layer shall
 ignore the A_Memory_Write.ind if the value of the parameter 'number' is
-greater than Maximum APDU Length - 3"* (read is `- 3` too; a related
+greater than Maximum APDU Length - 3"* (no matching fact row; read is `- 3` too; a related
 extended-addressing variant elsewhere in the same document uses `- 4`),
 and if `number` does not match the actually-received octet count. If Verify
-Mode is active and the write failed, *"the field number of the
+Mode is active and the write failed, **[D, corpus]** *"the field number of the
 A_Memory_Response-PDU shall be zero and there shall be no field data to
-indicate an error."*
+indicate an error."* (no matching fact row)
 
 ---
 
@@ -1318,22 +1345,27 @@ pass found `AN194 Master Reset of Resources` alone, which documents a
 per-Resource *effect* table for each Erase Code (`not influenced` /
 `recalculate` / `KNX default` / `implementation default` / `runtime` /
 `not applicable`) but explicitly defers the *triggering procedure itself*
-to *"[01] clause 3.7.1.2 'Master Reset'"* without identifying which
-document `[01]` is. The second pass located it: **it is in the same PDF
+to **[D, corpus]** *"[01] clause 3.7.1.2 'Master Reset'"* (quoted from
+`AN194 v02 Master Reset of Resources AS.md` directly; no matching fact row
+in either database) without identifying which document `[01]` is. The second pass located it: **it is in the same PDF
 already used for Q1**, `03_05_02 Management Procedures v02.01.02 AS.pdf`
 §3.7 `DM_Restart`, §3.7.1.1 "Basic Restart" and §3.7.1.2 "Master Reset" —
 missed on the first pass because the earlier search terms did not reach
 that far into the document. This closes a gap this spike had originally
 planned to report as unresolved.
 
-§3.7.1.1 Basic Restart — *"To perform a Basic Restart the Management Server
-shall switch off Programming Mode, clear runtime errors, reset all access
-levels, ... switch off safe state, ... reset its KNX communication system,
-close all KNX Transport Layer connections, close all KNXnet/IP connections
-..., close all KNX Secure Sessions, close all KNX TCP connections, apply
-changed configuration Parameters at the latest 30 s after completing the
-restart."* Identified by a cleared `A_Restart-PDU` `restart_type` field, not
-confirmed at the Application Layer (unconfirmed service).
+§3.7.1.1 Basic Restart — **[D, corpus]** *"To perform a Basic Restart the
+Management Server shall switch off Programming Mode, clear runtime errors,
+reset all access levels, ... switch off safe state, ... reset its KNX
+communication system, close all KNX Transport Layer connections, close all
+KNXnet/IP connections ..., close all KNX Secure Sessions, close all KNX TCP
+connections, apply changed configuration Parameters at the latest 30 s
+after completing the restart."* Quoted from `03_05_02 Management Procedures
+v02.01.02 AS.md` directly; no matching database fact row exists for this
+bulleted list in either database. The middle ellipsis above elides one
+further list item, "send an appropriate LM_Reset.ind message through the
+EMI interface." Identified by a cleared `A_Restart-PDU` `restart_type`
+field, not confirmed at the Application Layer (unconfirmed service).
 
 §3.7.1.2 Master Reset — *"To perform a Master Reset, the Management Server
 shall reset its configuration data according the following, if supported

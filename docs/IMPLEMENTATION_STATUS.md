@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-11 (T29: DPT codec in `knx-core`, `bus monitor`/`bus write` decode and encode against it, see below)
+Last updated: 2026-09-11 (T15: Group Monitor GUI — bus-monitor session in `knx-server`, `/api/bus/*` routes, telegram table + compose form in `knx-web`, see below)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -2119,3 +2119,100 @@ a raw hex payload, and `knx bus write --dpt DPST-9-1 23.5` instead of
 having to hand-encode an F16 payload themselves — for the fourteen main
 types this slice covers. Closes `GAP_ANALYSIS_ETS.md` row **E4**
 partially; **D5** (the GUI itself) is still open.
+
+**T15, Group Monitor GUI (2026-09-11), branch `t15-group-monitor`.** Builds
+on T29's codec ([design spec](superpowers/specs/2026-09-11-group-monitor-design.md);
+[ADR-0017](adr/0017-knx-server-depends-on-knx-net.md)). Gives
+`apps/knx-server` and `apps/knx-web` what T29 gave the CLI: a live,
+DPT-decoded telegram table and a send-from-the-table form, over a
+tunnelled KNXnet/IP connection.
+
+- **`apps/knx-server` gains a direct `knx-net` dependency** (ADR-0017,
+  first Infrastructure-crate-to-Infrastructure-crate edge of its kind for
+  this crate) and a `GatewayConnector`/`BusTunnel` seam
+  (`apps/knx-server/src/bus.rs`) narrower than `knx-net`'s own
+  `BusConnection` — exactly the two operations (open a tunnel, use it) a
+  monitor session needs. `RealConnector`/`RealTunnel` wrap
+  `knx_net::KnxNetIpClient`/`TunnelClient` in production; a `fake` module
+  (`FakeConnector`/`FakeTunnel`/`FakeTunnelHandle`) is `pub`, not
+  `#[cfg(test)]` (integration tests compile as a separate crate and can't
+  see `cfg(test)` items in the lib), and is what every test in this slice
+  drives instead of a socket.
+- **`BusSession`** (`apps/knx-server/src/bus.rs`) owns one open tunnel, a
+  capped `TelegramBuffer` (`MAX_TELEGRAMS = 5000`, a monotonic `seq`, and
+  a `dropped_before` counter advanced by both ring-buffer eviction *and*
+  `RecvError::Lagged(n)` — a lagged receiver's missed telegrams are
+  accounted exactly like an evicted one, never silently), and a
+  `tokio::spawn`ed drain task mirroring `apps/knx-cli`'s own
+  `run_bus_monitor_async` `tokio::select!` shape. `AppState.bus_session:
+  tokio::sync::Mutex<Option<BusSession>>` (widened from `std::sync::Mutex`
+  by Task 3, since `/write` must hold the guard across an `.await`) holds
+  at most one session; a second `start` while one is active is `409`,
+  naming the existing session, never a silent second gateway connection.
+  A gateway-side close (`TunnelEvent::Closed`/`RecvError::Closed`) pushes
+  a synthetic `"SessionClosed"` marker row, flips status to `closed`, and
+  leaves the buffer readable until an explicit `/stop` — exactly one code
+  path ever clears `bus_session`, avoiding a race between the drain task
+  exiting on its own and a client-initiated stop.
+- **Four routes**, a new sibling module `apps/knx-server/src/
+  bus_routes.rs` (not a 1500-line addition to `routes.rs`):
+  `POST /api/bus/monitor/start` (`{gateway}` → `{sessionId,
+  assignedAddress}`, `400`/`409`/`502`), `POST /api/bus/monitor/stop`
+  (`{sessionId, telegramCount, droppedCount, warning?}`, `409`),
+  `GET /api/bus/monitor/telegrams?since=<seq>` (`{sessionId, status,
+  nextSince, droppedBefore, telegrams[]}`, `404` with no session, never
+  `409` — a `GET` doesn't mutate), `POST /api/bus/write`
+  (`{destination, dpt?, value}` → `{encodedPayload, service}`,
+  `400`/`409`/`502`). `errors.rs` gained a documented `502` category
+  ("far-end failure" — the gateway refused, not this server, not the
+  caller). `/write` parses `destination` in the open session's project's
+  own `GroupAddressStyle` — fixed mid-branch (commit `b540264`) after
+  being found hardcoding `ThreeLevel` regardless of project, the same bug
+  `apps/knx-cli` still has and this branch deliberately left there (see
+  `KNOWN_LIMITATIONS.md` §29's 2026-09-11 update and §62 item 13).
+- **`apps/knx-web`**: `BusMonitorPanel.tsx` (session connect/disconnect,
+  a 1-second poll of `/telegrams`, a client-side text + service-type
+  filter, and a gap notice — `role="alert"`, never hidden by a filter —
+  whenever `droppedBefore > 0`) and `BusComposeForm.tsx` (a separate
+  component, prefilled by clicking a row, resolving DPT the way
+  `resolve_write_value --project` does: explicit DPT wins, else the
+  row's cached resolution, `None`/`Conflict` rejected client-side before
+  any request with a verbatim message matching the server's own 400 text
+  word-for-word since a later fix). All bus DTOs are hand-written TS
+  interfaces in `api.ts` (no `ts-rs` binding — these are `knx-server`-local
+  types, following the existing `LogEntry` precedent), including a
+  `warning?: string` field on the stop response the design document's own
+  prose never mentioned.
+- **Divergences from the design document, found while building it, kept
+  as the branch's own decision:** the wire's `dpt` field carries
+  `DptRef`'s `Display` form (`"DPST-1-1"`), not the design's worked
+  example's dotted `"1.001"` — `DptRef::parse` never accepted the dotted
+  form, and `/write` has to accept back exactly what `/telegrams` sends;
+  the stop response's `warning` field, absent from the design's prose,
+  exists because the drain task's `JoinHandle` can report a panic and
+  CLAUDE.md forbids swallowing that; and `service` is a plain `string` on
+  the wire, not a closed 4-way union, because the synthetic
+  `"SessionClosed"` marker is a real, intentional 5th value a narrow
+  union would have had to either lie about or invent a category for.
+- **What this slice deliberately does not do**, and three more limitations
+  found during this cycle's review: full accounting in
+  [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway).
+  In short — no routing, no auto-reconnect, no live DPT re-resolution
+  mid-session, one session at a time, no server-side filtering, no
+  hardware verification of any of it, an uncapped browser-side row list
+  (a deliberate choice over a second, possibly-disagreeing client-side
+  drop counter), a `/write` round-trip test covering `Free`/`TwoLevel`
+  but not a full round trip for `ThreeLevel`, and the CLI's own copy of
+  the `GroupAddressStyle` bug left unfixed on purpose.
+
+`cargo test --workspace`: **951 passed, 0 failed, 3 ignored** (re-run in
+this worktree for this docs pass, not taken from any task's own report;
+baseline before this branch, on `main` at `b88b286`, was 920/0/3).
+`cargo test -p knx-server`: **147 passed, 0 failed, 0 ignored**. `npm run
+test` (`apps/knx-web`, `vitest run`): **179 passed across 17 files**. A
+user with an open project and a reachable gateway can now watch a live,
+decoded telegram table and send a group value, from the web/desktop UI,
+without a terminal — for one tunnelled gateway at a time, filtered only
+by what the browser already has, and never run against real hardware in
+this branch. Closes `GAP_ANALYSIS_ETS.md` row **D5** for tunnelling;
+finishes **E4**'s display side for tunnelling.

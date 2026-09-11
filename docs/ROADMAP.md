@@ -392,9 +392,12 @@ OS preference is currently the only control, and it is all-or-nothing.
 Restoring the control, and binding every future animation to it, is
 tracked as **T27** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s
 Tier 7, closing gap **D11**. The constraint applies to work already on
-this roadmap that has not been built yet: T15's Group Monitor table,
-T17's line-scan UI, T21's graphical topology/building views, and the
-"who talks to whom" telegram animation deferred beyond Session 7 below.
+this roadmap that has not been built yet: T17's line-scan UI, T21's
+graphical topology/building views, and the "who talks to whom" telegram
+animation deferred beyond Session 7 below — plus T15's Group Monitor
+table, which shipped 2026-09-11 without ever being bound to a motion
+preference, making it the first item T27 has to retrofit rather than
+merely constrain.
 That animation is the reason this is written down now rather than at
 implementation time — it is the first genuinely motion-heavy feature on
 the list, and the cheapest moment to require a switch for it is before
@@ -516,6 +519,13 @@ RESEARCH.md §9 spike (ECDH handshake, TCP unicast transport, AES-CCM,
 only `.knxkeys`) before implementing. See
 [KNOWN_LIMITATIONS.md §26](KNOWN_LIMITATIONS.md).
 
+**Update, 2026-09-11.** T19 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md),
+Tier 5) folds IP Secure in alongside Data Secure and the keyring; the
+user's 2026-09-11 ruling on T19 — deferred, to be documented as a
+limitation, not rejected — applies to all of KNX Secure, IP Secure
+included. This shelving decision stands; it is now backed by an explicit
+ruling rather than only the 2026-09-06 planning call above.
+
 **Deliverables.** The `BusConnection` trait implemented against ISO 22510:
 discovery, tunnelling, routing, cEMI and telegram encoding; the bus monitor as
 a consumer that resolves telegrams against the open project; connection
@@ -571,6 +581,12 @@ wire encoding themselves — for the main types this cycle covers. Closes
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) row **E4** partially; the GUI
 (**D5**, **T15**) is still open and now has this codec to build on.
 
+**Update, 2026-09-11 (T15).** Landed later the same day: the GUI is no
+longer open. See row **D5** in
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and
+[KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway) —
+T15 closed the display side for tunnelling.
+
 **Entry condition.** All earlier sessions' deliverables exist and are tested.
 
 Deferred beyond Session 7 (from `ideas.md`, no fixed session): MCP
@@ -598,7 +614,7 @@ built invalidates its own help every cycle. Writing hover text for a
 panel that cycle 13 will delete (as cycle 13 deleted `ThemePanel.tsx`) is
 work done twice and wrong once. So this waits until the surfaces have
 stopped moving — which, per the sessions above, means after Session 7's
-hardening and after the outstanding UI backlog (T15, T17, T18, T21) has
+hardening and after the outstanding UI backlog (T17, T18, T21) has
 either shipped or been dropped.
 
 What exists today, measured rather than remembered: **one** `title`
@@ -635,9 +651,9 @@ architecture; each has a defined landing place.
 | Question | Lands in |
 | --- | --- |
 | ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Schema 21 import+export shipped and round-trip verified (one sample, KV demo project); schema 23 import shipped, module handling inferred not evidenced (no independent module-using schema-23 sample); schema 12, 13, 14, 20, 22 remain undocumented-by-evidence — no fixed session, lands whenever a sample becomes available for each. `Dynamic`/`choose`/`when`'s grammar (mentioned in the row below this one) is now provably avoidable for import (ADR-0014: `GroupObjectTree` already carries ETS's own resolution of it) rather than blocking; the `@test` value grammar itself is documented (RESEARCH §4.3), so this is now purely a parameter-editing (T18) concern, no longer a research one, and not an import one either. |
-| `Functions` element semantics | Session 2 — a domain model addition; absent from the reference sample |
+| `Functions` element semantics | Session 2 — a domain model addition; absent from the reference sample. Tracked as **T20** ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5); deferred 2026-09-11 by user ruling until the new KNX specification documentation is available — not rejected, stays on the roadmap. |
 | `when/@test` expression grammar | **Answered 2026-09-11** (RESEARCH §4.3): the Standard normatively specifies the `@test` value grammar; `Dynamic`'s structural grammar stays corpus-observed only. Session 4 built the product database around `Dynamic` staying unparsed regardless (`Dynamic`'s raw bytes retained, ADR-0011). **T18 slice 1, same day:** `knx-productdb` now parses, stores (schema v3, `dynamic_node`) and evaluates the tree headlessly. **T18 slice 2, same day:** the evaluator also expands `Module` into its `ModuleDef`'s own stored tree. What remains — the editor — lands in the rest of T18 ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5), no fixed session yet. |
 | Whether ETS re-imports an unsigned third-party `.knxproj` | Session 3 delivered the mechanism (`ExportWarning::Unsigned`, always present); per ADR-0015 (Session 7), ETS reimport is no longer a project goal, so the verification itself (risk R9) is deprioritized — no fixed session, and none needed |
 | Whether Data Secure runtime keys are readable from `.knxproj` | Session 7 or later — `knx-secure` |
-| `.knxprod` encryption for master data scheme ≥ 12 | Session 4 delivered `.knxproj`-sourced product database ingest; 2026-09-10's standalone package installer (`knx_productdb::install_package`) showed the "encryption" premise was wrong for schemes 11 and 20 specifically — those 5 real-world files parse with no encryption at all, direct `.knxprod` ingest now works for both (see [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly)). Schemes 12-19/21/22 remain untested (no standalone sample acquired yet), no fixed session; `.vd2` is a distinct legacy format, permanently out of scope, not an encryption question at all. |
+| `.knxprod` encryption for master data scheme ≥ 12 | Session 4 delivered `.knxproj`-sourced product database ingest; 2026-09-10's standalone package installer (`knx_productdb::install_package`) showed the "encryption" premise was wrong for schemes 11 and 20 specifically — those 5 real-world files parse with no encryption at all, direct `.knxprod` ingest now works for both (see [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly)). Schemes 12-19/21/22 remain untested (no standalone sample acquired yet) and, as of 2026-09-11, **accepted out of scope by user decision** rather than merely unscheduled — no further sample-hunting is planned, though whether they are genuinely encrypted was never established either way. `.vd2` is a distinct legacy format, also **accepted out of scope, user decision 2026-09-11** (not an encryption question at all). See [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly) for both dated notes. |
 | The project licence | Session 7 — currently a placeholder, see [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) |

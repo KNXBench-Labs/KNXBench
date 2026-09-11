@@ -8,6 +8,7 @@ use tower_http::services::ServeDir;
 mod bus;
 pub use bus::*;
 
+mod bus_routes;
 mod domain;
 pub use domain::*;
 
@@ -35,6 +36,7 @@ pub fn app(state: SharedState, static_dir: Option<PathBuf>) -> Router {
     let api = Router::new()
         .merge(routes::project_routes())
         .merge(fs_routes::fs_routes())
+        .merge(bus_routes::bus_routes())
         .route("/healthz", get(|| async { "ok" }))
         .with_state(state);
 

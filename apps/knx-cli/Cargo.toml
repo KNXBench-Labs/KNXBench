@@ -15,6 +15,7 @@ path = "src/main.rs"
 knx-app.workspace = true
 knx-core.workspace = true
 knx-csv.workspace = true
+knx-diff.workspace = true
 knx-etsproj.workspace = true
 knx-net.workspace = true
 knx-productdb.workspace = true

@@ -593,6 +593,31 @@ pub fn export_documentation_impl(
     result
 }
 
+/// Computes what changed between the server's live, possibly edited,
+/// in-memory project (`left`) and the `.knxdb` file at `path` (`right`) —
+/// "what would Save change", deliberately not a re-read of `store_path`
+/// (design spec `docs/superpowers/specs/2026-09-10-project-diff-design.md`
+/// §7). Never mutates the project, never touches the session log: a diff
+/// mutates nothing and produces no `ReportWarning`-shaped output, so there
+/// is nothing established for it to log (task-4 brief).
+///
+/// `path` is checked with `path.exists()` *before* anything touches
+/// `knx-store`: `knx_store::open_and_migrate` "opens, creating if absent"
+/// — handed a typo'd path it would happily create an empty `.knxdb` and
+/// this function would then dutifully report every entity in `left` as
+/// removed instead of failing with a clear "does not exist" (the exact
+/// gotcha design spec §7 calls out by name; regression-tested in
+/// `tests/http_project_diff.rs`).
+pub fn diff_project_impl(state: &AppState, path: &Path) -> Result<knx_diff::ProjectDiff, String> {
+    let project = state.project.lock().expect("state mutex poisoned");
+    let left = project.as_ref().ok_or("no project open")?;
+    if !path.exists() {
+        return Err(format!("{} does not exist", path.display()));
+    }
+    let (_, right, _) = load_native(path)?;
+    Ok(knx_diff::diff_projects(left, &right))
+}
+
 /// Reads `path` as "KNXBench group-address CSV v1" text, plans the edit
 /// against the live project (`knx_csv::parse_group_addresses` +
 /// `knx_csv::plan_import`, design §4), and — unless any row is a

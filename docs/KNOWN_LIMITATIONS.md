@@ -1411,3 +1411,226 @@ communication objects, and 514 group addresses.
 
 **Lifted when.** Open. A real request for partial reports would motivate
 adding a selection parameter to `ReportOptions`; none has been made.
+
+## 51. Project diff (T14) has no ETS-comparison parity, and none can currently be measured
+
+**Limitation.** `crates/knx-diff`'s output — a "KNXBench project diff" —
+is KNXBench's own comparison. It is not, and cannot currently be shown to
+be, similar in matching rules, content, or presentation to whatever
+ETS's own project-compare feature produces.
+
+**Cause.** No ETS-produced comparison output — no screenshot, no exported
+report, no printed diff — exists anywhere in this repository, the same
+evidence gap [§44](#44-project-documentation-export-t13-has-no-ets-report-parity-and-none-can-currently-be-measured)
+records for T13's HTML report and [§38](#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability)
+records for T12's CSV format: project comparison is an ETS *application*
+feature, not something the KNX Association standardizes, so there is
+nothing to read except a real sample, and none has been obtained.
+
+**Impact.** Nothing in the UI, CLI output, or this documentation set may
+say "ETS compare" or imply compatibility with it, and none of it does —
+`knx-diff`'s own module doc and its design spec (§1) state this
+explicitly. A user expecting the diff to match what ETS's own compare
+screen would show — which entities it matches, which fields it compares,
+how it presents a rename — has no basis for that expectation from
+anything KNXBench ships.
+
+**Lifted when.** A genuine ETS-produced comparison sample is obtained. At
+that point a content-set comparison becomes possible for the first time;
+whether that motivates changes to the matching rules or the rendered
+output is a separate decision to make once evidence exists.
+
+## 52. Project diff cannot correlate a device with no individual address and no matching `ets_id`
+
+**Limitation.** A device's natural key
+(`docs/superpowers/specs/2026-09-10-project-diff-design.md` §3.4) is its
+individual `address`, and only when `Some`. A device with no individual
+address relies entirely on an `ets_id` match; if that also fails to line
+up between the two projects being compared, `diff_projects` cannot
+correlate the two at all — the device surfaces as an unrelated `removed`
+on one side and `added` on the other, never as a match with field
+changes.
+
+**Cause.** A deliberate scope decision (design spec §3.4, §9): there is
+no stronger identity to fall back on. Guessing would risk a false match
+between two genuinely different devices, which CLAUDE.md's
+never-silently-discard/never-guess posture rules out.
+
+**Impact.** Two saves that differ only in, say, a description edit on an
+address-less device can be reported as one device removed and a
+different device added, obscuring what was actually a single edit.
+
+**Lifted when.** Open. No stronger per-device identity exists in the
+domain model today; recorded as a boundary of the natural-key approach,
+not a bug awaiting a fix.
+
+## 53. Project diff can collide two same-named sibling building parts
+
+**Limitation.** A building part's natural key is the path of names from
+the root (design spec §3.4). Two siblings under the same matched parent
+that share a name produce the identical path and therefore collide under
+the ambiguity rule (design spec §3.3 step 3): both are reported as
+individual `added`/`removed` entries, plus one `AmbiguityNote`, rather
+than matched to each other.
+
+**Cause.** The same limitation `knx-etsproj::compare`'s
+`semantic_building_part` already accepts for its own single-parent-hop
+identity (design spec §3.4's own note): a name-based key has no way to
+distinguish same-named siblings, and building parts carry no other
+stable identity once their `ets_id`s also fail to correlate.
+
+**Impact.** Renaming, or otherwise editing, one of two same-named sibling
+building parts between two saves can render as an ambiguous add/remove
+pair instead of a clean field change.
+
+**Lifted when.** Open. Recorded as a boundary of the path-based key, not
+a bug awaiting a fix.
+
+## 54. Project diff does not detect an ETS re-import's regenerated `RefId`s as "the same project"
+
+**Limitation.** ETS may regenerate `RefId` strings on a fresh re-import
+of a `.knxproj` it has seen before. `diff_projects` has no special case
+for this: if the natural key also does not line up for a given entity, a
+re-import can present as widespread adds/removes rather than "nothing
+changed" or "one field changed".
+
+**Cause.** Design spec §3.2, §9: no special-case re-import detection is
+built. The corpus test in `crates/knx-app/tests/project_diff.rs`
+demonstrates the property that *does* hold — two independent imports of
+the *same* `.knxproj`, by this repository's own importer, produce an
+empty diff, because this importer's own `RefId` mapping is stable
+run-to-run. Whether ETS's own `RefId` regeneration would break that
+stability is untested — no such case has been observed in this
+repository's corpus.
+
+**Impact.** A `.knxdb` re-created from a re-exported `.knxproj` whose
+`RefId`s changed may compare as a large, misleading set of adds/removes
+against the original `.knxdb`, even where nothing meaningful changed.
+
+**Lifted when.** Open. Would need either a documented, stable KNX
+`RefId`-regeneration rule to compensate for, or a demonstrated real-world
+case to design against; neither exists yet.
+
+## 55. Project diff cannot merge or apply a diff back onto a project
+
+**Limitation.** `diff_projects` computes and shows what changed; it does
+not turn a `ProjectDiff` back into a `Command` sequence that could replay
+one project's changes onto another.
+
+**Cause.** Design spec §9: a materially larger feature — every
+field-level change would need an inverse `Command`, and some fields (a
+device's `product_ref`/`program_ref`) have none today — not asked for by
+the T14 backlog line.
+
+**Impact.** Reviewing a diff and then manually re-applying the same
+edits to another project remains a manual, error-prone step; there is no
+"apply this change" control anywhere in the diff panel.
+
+**Lifted when.** Open. No task currently proposes it.
+
+## 56. Project diff does not do a three-way comparison
+
+**Limitation.** `diff_projects` takes exactly two projects. There is no
+common-ancestor-aware three-way comparison the way a VCS merge does one.
+
+**Cause.** Design spec §9: nothing in this codebase tracks project
+ancestry or a common base to diff against.
+
+**Impact.** Reconciling two independently edited copies of the same
+original project has no tool support beyond running the two-way diff
+twice, once against each candidate.
+
+**Lifted when.** Open. Would need a project-ancestry or version-history
+concept that does not exist today.
+
+## 57. Project diff cannot compare against a raw `.knxproj`
+
+**Limitation.** Both sides of a comparison must already be `.knxdb`
+files. `knx diff <a.knxdb> <b.knxdb>` on the CLI takes two `.knxdb`
+paths; `POST /api/project/diff {path}` compares the server's open,
+in-memory project against one `.knxdb` file at `path`. Neither accepts a
+`.knxproj` on either side.
+
+**Cause.** Design spec §7, §9: `knx-diff` must not depend on
+`knx-etsproj`, and importing a `.knxproj` first would need the surface
+layer to do it, doubling the failure modes a comparison route has to
+explain (a bad `.knxproj` fails for import reasons; a bad `.knxdb` fails
+for store reasons) for a use case the T14 backlog line does not ask for —
+"what changed between these two **saves**" is a `.knxdb` question, not a
+`.knxproj` one.
+
+**Impact.** Comparing an ETS-exported `.knxproj` directly against a
+KNXBench `.knxdb` save — or two `.knxproj` files against each other —
+requires importing each one into a `.knxdb` first (`knx import`), outside
+the diff feature itself.
+
+**Lifted when.** Open. No task currently proposes accepting a raw
+`.knxproj` as a comparison side.
+
+## 58. Project diff has no CI-friendly "exit nonzero on any difference" flag
+
+**Limitation.** `knx diff` always exits `0` when it successfully produces
+a comparison, whether or not the two projects differ. There is no flag
+to make a nonempty diff a nonzero exit code.
+
+**Cause.** Design spec §9: mirrors `knx doc-export`'s own reasoning
+(`apps/knx-cli/src/main.rs`) — a diff with changes is not a failed diff.
+
+**Impact.** A script cannot currently gate on "these two `.knxdb` files
+differ" using `knx diff`'s exit code alone; it would need to parse the
+printed text instead.
+
+**Lifted when.** A real feature request for scripted gating arrives; a
+small, well-scoped addition at that point, not built speculatively now.
+
+## 59. Project diff's text and web renderers show which fields changed, not their before/after values, for most entity types
+
+**Limitation.** For every entity table below the project/installation
+level (areas, lines, devices, group ranges, group addresses, building
+parts, communication objects, parameters), both `knx diff`'s plain text
+and the web diff panel print only the *names* of the fields that changed
+(`changed_fields`, e.g. `name, commissioning`) — never the old and new
+values themselves. Project-level (`ProjectDiff.info_changes`) and
+installation-level (`InstallationDiff.field_changes`) changes are the
+exception: both render as `FieldChange { field, left, right }`, so those
+two levels *do* show both values.
+
+**Cause.** A rendering-only scope decision, not a data-loss one:
+`knx_diff::EntityChange<K, F>` and `knx_diff::DeviceChange` retain the
+full matched pair (`left: F`, `right: F`) alongside `changed_fields` —
+nothing is discarded computing the diff (CLAUDE.md: never silently
+discard information). Neither the CLI's plain-text renderer
+(`apps/knx-cli/src/main.rs`) nor the web panel
+(`apps/knx-web/src/ProjectDiffPanel.tsx`) currently walks `left`/`right`
+field by field to print a value pair for these tables; only the summary
+list is rendered.
+
+**Impact.** Seeing what a changed device's `name` actually changed *to*
+means reading the JSON response from `POST /api/project/diff` directly,
+or extending the renderer — the CLI and web panel today answer "what
+changed" at the field-name level, not "what changed to what," for
+anything below project/installation scope.
+
+**Lifted when.** A renderer change (CLI and/or web) walks
+`EntityChange`/`DeviceChange`'s retained `left`/`right` and prints both
+values per changed field; the data to do so already exists in
+`knx-diff`'s own types today.
+
+## 60. Project diff's web panel shows grouped counts only
+
+**Limitation.** `ProjectDiffPanel.tsx` renders one summary line per
+non-empty entity table (e.g. `Devices: 1 added, 2 changed`) across the
+whole report. There is no tree view of individual added/removed/changed
+entities, and no inline before/after value highlighting anywhere in the
+panel.
+
+**Cause.** Design spec §9, explicit out-of-scope: "no tree view, no
+inline before/after text highlighting" — the same visual register as the
+existing Log tab (`LogPanel.tsx`), not a richer side-by-side diff view.
+
+**Impact.** A user who wants to see *which* device was added, or the
+actual old/new value of a changed field, cannot do so from the web panel
+alone — only counts per table, per installation.
+
+**Lifted when.** Open. A richer visual diff view is a real, larger
+feature a future task could propose; not built speculatively now.

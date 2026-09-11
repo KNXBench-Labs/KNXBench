@@ -185,6 +185,13 @@ pub(crate) struct ParameterFieldDto {
     pub(crate) min: Option<String>,
     pub(crate) max: Option<String>,
     pub(crate) enum_options: Vec<EnumOptionDto>,
+    /// Verbatim from `ParameterView.display_order` (fix round 1, item 1).
+    /// `None` means the package declared no order at all -- every row in
+    /// the real corpus -- and must serialise as JSON `null`, never `0`.
+    pub(crate) display_order: Option<i64>,
+    /// Verbatim from `ParameterView.access` (fix round 1, item 2). Shown,
+    /// never used to gate `editable` -- D24 deliberately does not.
+    pub(crate) access: Option<String>,
 }
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]

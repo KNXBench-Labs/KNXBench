@@ -451,6 +451,8 @@ struct ParameterFieldDto {
     min: Option<String>,
     max: Option<String>,
     enum_options: Vec<EnumOptionDto>,
+    display_order: Option<i64>,           // verbatim from ParameterView.display_order; None -> null
+    access: Option<String>,               // verbatim from ParameterView.access; never gates editable (D24)
 }
 struct EnumOptionDto { value: String, text: Option<String> }
 struct StaleParameterDto { ets_id: String, raw: String }

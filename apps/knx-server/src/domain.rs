@@ -13,6 +13,7 @@
 //! this app's own project state as a `.knxdb` SQLite file. Neither path
 //! calls into the other.
 
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -1654,6 +1655,478 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
     let tree = tree_with_state(project, &stack, import_counts);
     log_outcome(state, "redo", "redo".to_string(), None, &result);
     result.map(|()| tree)
+}
+
+// --- Parameter editor (T18 slice 3 task 3, design D20-D26) -----------
+
+/// A `Diagnostic`'s fixed, hand-authored sentence (design D26) — no
+/// `node_id`, no internal identifiers, just what a device-panel user
+/// needs to know. The `Debug` form still reaches the wire, unabridged, as
+/// `ParameterDiagnosticDto::detail`.
+fn diagnostic_message(diagnostic: &knx_productdb::dynamic::Diagnostic) -> &'static str {
+    use knx_productdb::dynamic::Diagnostic;
+    match diagnostic {
+        Diagnostic::NoBranchMatched { .. } => "A choice did not match any of its options.",
+        Diagnostic::UnparsableTest { .. } => "A choice's condition could not be understood.",
+        Diagnostic::UnresolvedParamRef { .. } => {
+            "A choice's controlling parameter could not be found."
+        }
+        Diagnostic::NonNumericValue { .. } => {
+            "A choice's controlling value was not a valid number."
+        }
+        Diagnostic::UnexpectedTypeNoneShape { .. } => "An unusual choice structure was skipped.",
+        Diagnostic::UnrecognizedNode { .. } => "An unrecognized program element was skipped.",
+        Diagnostic::ModuleDefNotFound { .. } => "A module could not be found in this program.",
+        Diagnostic::NestedModuleNotExpanded { .. } => {
+            "A module nested inside another module was not expanded."
+        }
+        Diagnostic::MissingValue { .. } => "A choice's controlling parameter has no value.",
+    }
+}
+
+fn module_scope_dto(scope: &knx_productdb::dynamic::ModuleScope) -> crate::routes::ModuleScopeDto {
+    crate::routes::ModuleScopeDto {
+        module_node: scope.module_node,
+        module_id: scope.module_id.clone(),
+        module_def_id: scope.module_def_id.clone(),
+    }
+}
+
+/// Takes the longest run of ASCII digits at the start of `s`, returning
+/// `None` for zero digits (`\d+` needs at least one) — `(digits, rest)`.
+fn take_digits(s: &str) -> Option<(&str, &str)> {
+    let end = s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len());
+    if end == 0 {
+        None
+    } else {
+        Some((&s[..end], &s[end..]))
+    }
+}
+
+/// Hand-rolled stand-in for `^(.*)_M-(\d+)_MI-(\d+)_(.*)$` — no `regex`
+/// crate exists anywhere in this workspace (checked; see the parameter
+/// editor design D21). A regex engine's greedy `.*` for the first group
+/// backtracks only as far as it must, which — since the trailing `.*`
+/// matches anything, including empty — is equivalent to picking the
+/// *rightmost* position in `ets_id` where the literal
+/// `_M-<digits>_MI-<digits>_` shape occurs. This scans left to right and
+/// keeps overwriting its candidate on every syntactically valid match, so
+/// whatever is left standing after the scan is that rightmost one.
+/// Returns `(prefix, module_digits, mi_digits, suffix)`.
+fn decompose_module_qualified(ets_id: &str) -> Option<(String, String, String, String)> {
+    const MARKER: &str = "_M-";
+    let mut best: Option<(usize, String, String, String, String)> = None;
+    let mut search_from = 0;
+    while let Some(relative) = ets_id.get(search_from..).and_then(|tail| tail.find(MARKER)) {
+        let start = search_from + relative;
+        let after_marker = &ets_id[start + MARKER.len()..];
+        if let Some((module_digits, rest)) = take_digits(after_marker) {
+            if let Some(rest) = rest.strip_prefix("_MI-") {
+                if let Some((mi_digits, rest)) = take_digits(rest) {
+                    if let Some(suffix) = rest.strip_prefix('_') {
+                        best = Some((
+                            start,
+                            ets_id[..start].to_string(),
+                            module_digits.to_string(),
+                            mi_digits.to_string(),
+                            suffix.to_string(),
+                        ));
+                    }
+                }
+            }
+        }
+        search_from = start + 1;
+    }
+    best.map(|(_, prefix, module_digits, mi_digits, suffix)| {
+        (prefix, module_digits, mi_digits, suffix)
+    })
+}
+
+/// Everything `parameter_panel_impl`/`set_parameter_value_impl` share:
+/// the assembled read model, plus the raw program-level ingredients D24's
+/// write validation needs (kind/bounds/enum live on a declared
+/// `ParameterRef` independent of whether it is currently active).
+struct PanelAssembly {
+    dto: crate::routes::ParameterPanelDto,
+    program_id: Option<String>,
+    views_by_id: HashMap<String, knx_productdb::query::ParameterView>,
+    ref_ids: HashSet<String>,
+}
+
+fn empty_assembly(stale: Vec<(String, String)>) -> PanelAssembly {
+    PanelAssembly {
+        dto: crate::routes::ParameterPanelDto {
+            program_id: None,
+            sections: vec![],
+            stale: stale
+                .into_iter()
+                .map(|(ets_id, raw)| crate::routes::StaleParameterDto { ets_id, raw })
+                .collect(),
+            diagnostics: vec![],
+        },
+        program_id: None,
+        views_by_id: HashMap::new(),
+        ref_ids: HashSet::new(),
+    }
+}
+
+/// Builds a device's parameter panel (design D20-D23, D26): project state
+/// and product database are each locked at most once, never together
+/// (Step 1 below locks only `project`; Step 2 locks only `product_db` —
+/// the reverse order from `create_device_impl`, per this task's own
+/// brief, since here the program reference comes from already-loaded
+/// project state rather than the other way around).
+fn assemble_parameter_panel(state: &AppState, device_id: u32) -> Result<PanelAssembly, String> {
+    let device = knx_core::DeviceId(device_id);
+
+    // Step 1: lock only `project`.
+    let (program_ref, stored) = {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?;
+        let dev = project
+            .devices
+            .get(device)
+            .ok_or_else(|| format!("device {device_id} not found"))?;
+        let stored: Vec<(String, String)> = project
+            .installations
+            .first()
+            .map(|installation| {
+                installation
+                    .parameters
+                    .iter()
+                    .filter(|p| p.device == device)
+                    .map(|p| (p.source.ets_id.clone(), p.raw.clone()))
+                    .collect()
+            })
+            .unwrap_or_default();
+        (dev.program_ref.clone(), stored)
+    };
+
+    let Some(products_mutex) = state.product_db.as_ref() else {
+        return Ok(empty_assembly(stored));
+    };
+
+    // Step 2: lock only `product_db` (`project`'s lock above is already
+    // dropped — the two mutexes are never held at once).
+    let products = products_mutex.lock().expect("state mutex poisoned");
+    let program_id = knx_productdb::query::resolve_program(&products, &program_ref)
+        .map_err(|e| e.to_string())?;
+    let Some(program_id) = program_id else {
+        return Ok(empty_assembly(stored));
+    };
+
+    let ref_ids = knx_productdb::query::parameter_ref_ids(&products, &program_id)
+        .map_err(|e| e.to_string())?;
+    let views =
+        knx_productdb::query::parameter_views(&products, &program_id).map_err(|e| e.to_string())?;
+    let views_by_id: HashMap<String, knx_productdb::query::ParameterView> =
+        views.iter().cloned().map(|v| (v.id.clone(), v)).collect();
+
+    // Coordinator addition: `parameter_views`' inner joins silently drop
+    // a row whose `parameter`/`parameter_type` does not resolve — name
+    // the gap instead of letting it vanish unremarked (measured 543/543
+    // on the current corpus, so this is not expected to fire on real
+    // data; it is here for the day a package does not join cleanly).
+    let mut diagnostics: Vec<crate::routes::ParameterDiagnosticDto> = Vec::new();
+    if views.len() != ref_ids.len() {
+        let dropped = ref_ids.len().saturating_sub(views.len());
+        diagnostics.push(crate::routes::ParameterDiagnosticDto {
+            scope: None,
+            message:
+                "Some declared parameters could not be read from the product database and are not shown."
+                    .to_string(),
+            detail: format!(
+                "parameter_views returned {} row(s) but parameter_ref_ids declares {} id(s) for program '{program_id}' ({dropped} dropped by an unresolved parameter/parameter_type join)",
+                views.len(),
+                ref_ids.len()
+            ),
+        });
+    }
+
+    // Pass A (design D21): sort every stored value into unscoped-supplied,
+    // a regex candidate awaiting module-id validation, or outright
+    // undecomposable (no verbatim match, no regex match at all).
+    let mut supplied: HashMap<String, String> = HashMap::new();
+    let mut candidates: Vec<(String, String, String, String, String)> = Vec::new();
+    let mut stale: Vec<crate::routes::StaleParameterDto> = Vec::new();
+    for (ets_id, raw) in stored {
+        if ref_ids.contains(&ets_id) {
+            supplied.insert(ets_id, raw);
+        } else if let Some((prefix, module_digits, _mi_digits, suffix)) =
+            decompose_module_qualified(&ets_id)
+        {
+            candidates.push((ets_id, raw, prefix, module_digits, suffix));
+        } else {
+            stale.push(crate::routes::StaleParameterDto { ets_id, raw });
+        }
+    }
+
+    let values = knx_productdb::dynamic::resolve_values(&products, &program_id, &supplied)
+        .map_err(|e| e.to_string())?;
+    let trees = knx_productdb::dynamic::load_program_trees(&products, &program_id)
+        .map_err(|e| e.to_string())?;
+    let activation = knx_productdb::dynamic::evaluate(&trees, &values);
+
+    // The declared `Module/@Id` set this activation actually reached —
+    // D21's second half of candidate validation.
+    let module_ids: HashSet<String> = activation
+        .parameter_refs
+        .iter()
+        .filter_map(|r| r.scope.as_ref().and_then(|s| s.module_id.clone()))
+        .collect();
+
+    // Pass B: validate every regex candidate against `module_ids` and
+    // `ref_ids` — both must hold, or the row is stale (D21's corrected
+    // definition).
+    let mut module_scoped: HashMap<(String, String), String> = HashMap::new();
+    for (ets_id, raw, prefix, module_digits, suffix) in candidates {
+        let module_id = format!("{prefix}_M-{module_digits}");
+        let declared_id = format!("{prefix}_{suffix}");
+        if module_ids.contains(&module_id) && ref_ids.contains(&declared_id) {
+            module_scoped.insert((module_id, declared_id), raw);
+        } else {
+            stale.push(crate::routes::StaleParameterDto { ets_id, raw });
+        }
+    }
+
+    // Group `Activation::parameter_refs` into one section per distinct
+    // scope (D23), preserving each ref's document-order position and the
+    // order sections are first encountered.
+    struct SectionBuild {
+        scope: Option<knx_productdb::dynamic::ModuleScope>,
+        ref_ids: Vec<String>,
+    }
+    let mut section_order: Vec<Option<i64>> = Vec::new();
+    let mut sections_by_key: HashMap<Option<i64>, SectionBuild> = HashMap::new();
+    for active in &activation.parameter_refs {
+        let key = active.scope.as_ref().map(|s| s.module_node);
+        sections_by_key
+            .entry(key)
+            .or_insert_with(|| {
+                section_order.push(key);
+                SectionBuild {
+                    scope: active.scope.clone(),
+                    ref_ids: Vec::new(),
+                }
+            })
+            .ref_ids
+            .push(active.ref_id.clone());
+    }
+
+    let mut sections = Vec::with_capacity(section_order.len());
+    for key in section_order {
+        let section = sections_by_key.remove(&key).expect("just inserted above");
+        let editable = section.scope.is_none();
+        let mut fields = Vec::with_capacity(section.ref_ids.len());
+        for ref_id in &section.ref_ids {
+            // A ref the join dropped (see the diagnostic above) has no
+            // metadata to show; it is not fabricated here.
+            let Some(view) = views_by_id.get(ref_id) else {
+                continue;
+            };
+            let (value, value_source) = match &section.scope {
+                None => {
+                    let value = values.get(ref_id).cloned();
+                    let source = if supplied.contains_key(ref_id) {
+                        "Stored"
+                    } else {
+                        "ProgramDefault"
+                    };
+                    (value, source.to_string())
+                }
+                Some(scope) => {
+                    let stored_match = scope.module_id.as_ref().and_then(|module_id| {
+                        module_scoped.get(&(module_id.clone(), ref_id.clone()))
+                    });
+                    match stored_match {
+                        Some(raw) => (Some(raw.clone()), "Stored".to_string()),
+                        None => (values.get(ref_id).cloned(), "ProgramDefault".to_string()),
+                    }
+                }
+            };
+            fields.push(crate::routes::ParameterFieldDto {
+                ets_id: view.id.clone(),
+                name: view.name.clone(),
+                text: view.text.clone(),
+                kind: view.kind.clone(),
+                value,
+                value_source,
+                editable,
+                min: view.min_inclusive.clone(),
+                max: view.max_inclusive.clone(),
+                enum_options: view
+                    .enum_options
+                    .iter()
+                    .map(|(value, text)| crate::routes::EnumOptionDto {
+                        value: value.clone(),
+                        text: text.clone(),
+                    })
+                    .collect(),
+            });
+        }
+        sections.push(crate::routes::ParameterSectionDto {
+            scope: section.scope.as_ref().map(module_scope_dto),
+            fields,
+        });
+    }
+
+    // D26: every `Activation` diagnostic, mapped 1:1, in order.
+    for scoped in &activation.diagnostics {
+        diagnostics.push(crate::routes::ParameterDiagnosticDto {
+            scope: scoped.scope.as_ref().map(module_scope_dto),
+            message: diagnostic_message(&scoped.diagnostic).to_string(),
+            detail: format!("{:?}", scoped.diagnostic),
+        });
+    }
+
+    Ok(PanelAssembly {
+        dto: crate::routes::ParameterPanelDto {
+            program_id: Some(program_id.clone()),
+            sections,
+            stale,
+            diagnostics,
+        },
+        program_id: Some(program_id),
+        views_by_id,
+        ref_ids,
+    })
+}
+
+pub(crate) fn parameter_panel_impl(
+    state: &AppState,
+    device_id: u32,
+) -> Result<crate::routes::ParameterPanelDto, String> {
+    assemble_parameter_panel(state, device_id).map(|assembly| assembly.dto)
+}
+
+/// D24 step 3: kind-appropriate validation of a candidate raw value
+/// against its declared `ParameterView`. `Number`/`Restriction` use the
+/// program's own bounds/enumeration; `None` is never writable (slice 1's
+/// D9); everything else is a non-empty-string check only (this design's
+/// stated non-goal on deep format validation).
+fn validate_kind_and_bounds(
+    view: &knx_productdb::query::ParameterView,
+    raw: &str,
+) -> Result<(), String> {
+    match view.kind.as_str() {
+        "None" => Err(format!(
+            "'{}' has parameter kind None, which carries no writable value",
+            view.id
+        )),
+        "Number" => {
+            let parsed: i64 = raw.parse().map_err(|_| {
+                format!(
+                    "'{}' is Number-kind; '{raw}' does not parse as an integer",
+                    view.id
+                )
+            })?;
+            if let Some(min) = &view.min_inclusive {
+                let min: i64 = min.parse().map_err(|_| {
+                    format!(
+                        "program declares an unparsable min_inclusive '{min}' for '{}'",
+                        view.id
+                    )
+                })?;
+                if parsed < min {
+                    return Err(format!("'{}' must be >= {min} (got {parsed})", view.id));
+                }
+            }
+            if let Some(max) = &view.max_inclusive {
+                let max: i64 = max.parse().map_err(|_| {
+                    format!(
+                        "program declares an unparsable max_inclusive '{max}' for '{}'",
+                        view.id
+                    )
+                })?;
+                if parsed > max {
+                    return Err(format!("'{}' must be <= {max} (got {parsed})", view.id));
+                }
+            }
+            Ok(())
+        }
+        "Restriction" => {
+            if view.enum_options.iter().any(|(value, _)| value == raw) {
+                Ok(())
+            } else {
+                Err(format!(
+                    "'{}' is Restriction-kind; '{raw}' is not one of its declared values",
+                    view.id
+                ))
+            }
+        }
+        _ => {
+            if raw.is_empty() {
+                Err(format!("'{}' requires a non-empty value", view.id))
+            } else {
+                Ok(())
+            }
+        }
+    }
+}
+
+/// Writes one parameter value (design D24): validates, applies exactly
+/// one `Command::SetParameterValue` (undo/redo-able via the same
+/// `command_stack` every other edit uses), then re-assembles and returns
+/// the fresh `ParameterPanelDto` — no second request needed to see the
+/// effect (D24's own rejected alternative names why).
+pub(crate) fn set_parameter_value_impl(
+    state: &AppState,
+    device_id: u32,
+    ets_id: String,
+    raw: String,
+) -> Result<crate::routes::ParameterPanelDto, String> {
+    let before = assemble_parameter_panel(state, device_id)?;
+    let program_id = before
+        .program_id
+        .ok_or("device has no resolvable application program")?;
+
+    if !before.ref_ids.contains(&ets_id) {
+        return Err(format!(
+            "'{ets_id}' is not a parameter declared by program '{program_id}'"
+        ));
+    }
+    let view = before.views_by_id.get(&ets_id).ok_or_else(|| {
+        format!(
+            "'{ets_id}' is declared by program '{program_id}' but its parameter/parameter_type row could not be resolved"
+        )
+    })?;
+    validate_kind_and_bounds(view, &raw)?;
+
+    // D25: a field currently shown in a module-scoped (`scope: Some(_)`)
+    // section is read-only in this slice — reject before any command is
+    // built. A field not currently active at all (hidden behind an
+    // unmatched `choose`) is not in this set either way, matching D24
+    // step 2's "does not require the parameter to be currently active".
+    let is_module_scoped_now = before.dto.sections.iter().any(|section| {
+        section.scope.is_some() && section.fields.iter().any(|field| field.ets_id == ets_id)
+    });
+    if is_module_scoped_now {
+        return Err(format!(
+            "'{ets_id}' is a module-scoped field; module-scoped fields are read-only in this slice"
+        ));
+    }
+
+    let device = knx_core::DeviceId(device_id);
+    let cmd = {
+        let mut project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_mut().ok_or("no project open")?;
+        let installation = project.installations.first().ok_or("no installation")?;
+        let existing_id = installation
+            .parameters
+            .iter()
+            .find(|p| p.device == device && p.source.ets_id == ets_id)
+            .map(|p| p.id);
+        let id = existing_id.unwrap_or_else(|| project.ids.next_parameter_instance_id());
+        knx_core::Command::SetParameterValue {
+            id,
+            device,
+            ets_id: ets_id.clone(),
+            raw: raw.clone(),
+        }
+    };
+    apply(state, cmd)?;
+
+    parameter_panel_impl(state, device_id)
 }
 
 #[cfg(test)]

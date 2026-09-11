@@ -20,6 +20,10 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/project/save-as", post(save_project_as))
         .route("/api/project/export", post(export_project))
         .route("/api/device/{id}", axum::routing::get(device_detail))
+        .route(
+            "/api/device/{id}/parameters",
+            get(parameter_panel).post(set_parameter_value),
+        )
         .route("/api/individual-address", post(set_individual_address))
         .route("/api/device-description", post(set_device_description))
         .route("/api/com-object-dpt", post(set_com_object_dpt))
@@ -136,6 +140,99 @@ impl From<knx_productdb::InstallReport> for CatalogInstallReportDto {
             conflicts: report.conflicts.len(),
         }
     }
+}
+
+/// T18 slice 3 task 3 (design D20-D26): the parameter panel's read model
+/// plus the response of a successful write, both riding this one DTO
+/// (D24's "same response, no second GET"). Plain `#[derive(Serialize)]`,
+/// following `CatalogInstallReportDto`'s own precedent above — not
+/// `ts-rs`, not `knx-projection`, per the coordinator's ruling on DTO
+/// placement (design doc D20: "no new crate").
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterPanelDto {
+    pub(crate) program_id: Option<String>,
+    pub(crate) sections: Vec<ParameterSectionDto>,
+    pub(crate) stale: Vec<StaleParameterDto>,
+    pub(crate) diagnostics: Vec<ParameterDiagnosticDto>,
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterSectionDto {
+    pub(crate) scope: Option<ModuleScopeDto>,
+    pub(crate) fields: Vec<ParameterFieldDto>,
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ModuleScopeDto {
+    pub(crate) module_node: i64,
+    pub(crate) module_id: Option<String>,
+    pub(crate) module_def_id: String,
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterFieldDto {
+    pub(crate) ets_id: String,
+    pub(crate) name: Option<String>,
+    pub(crate) text: Option<String>,
+    pub(crate) kind: String,
+    pub(crate) value: Option<String>,
+    pub(crate) value_source: String,
+    pub(crate) editable: bool,
+    pub(crate) min: Option<String>,
+    pub(crate) max: Option<String>,
+    pub(crate) enum_options: Vec<EnumOptionDto>,
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct EnumOptionDto {
+    pub(crate) value: String,
+    pub(crate) text: Option<String>,
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StaleParameterDto {
+    pub(crate) ets_id: String,
+    pub(crate) raw: String,
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterDiagnosticDto {
+    pub(crate) scope: Option<ModuleScopeDto>,
+    pub(crate) message: String,
+    pub(crate) detail: String,
+}
+
+async fn parameter_panel(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u32>,
+) -> Result<Json<ParameterPanelDto>, ApiError> {
+    domain::parameter_panel_impl(&state, id)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SetParameterValueRequest {
+    ets_id: String,
+    raw: String,
+}
+
+async fn set_parameter_value(
+    State(state): State<SharedState>,
+    AxumPath(id): AxumPath<u32>,
+    Json(body): Json<SetParameterValueRequest>,
+) -> Result<Json<ParameterPanelDto>, ApiError> {
+    domain::set_parameter_value_impl(&state, id, body.ets_id, body.raw)
+        .map(Json)
+        .map_err(ApiError::bad_request)
 }
 
 async fn install_catalog_package(

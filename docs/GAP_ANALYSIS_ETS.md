@@ -33,7 +33,7 @@ of ETS 5/6 as a professional tool, not a specific verified version — treat
 | A2 | **KNX Secure** (Data Secure, IP Secure, `.knxkeys` keyring) | Full support: secure group communication, secure tunnelling/routing, keyring import/export. | Not implemented; `knx-secure` is an empty, deliberately isolated crate. | [KNOWN_LIMITATIONS.md §8](KNOWN_LIMITATIONS.md#8-knx-secure-is-not-implemented), [§26](KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure). |
 | A3 | **Parameter semantics** (`Dynamic`/`choose`/`when` tree) | Renders a parameter UI per device, with visibility/enable rules. | **Partially closed (2026-09-11, T18 slice 2).** `knx-productdb` parses, stores (schema v3, `dynamic_node`) and evaluates the tree headlessly, including expanding a `Module` node into its `ModuleDef`'s own stored tree. No UI reads it and no value is ever written; D16 (all instantiations of one `ModuleDef` still evaluate against identical parameter values), argument values (`NumericArg`/`TextArg`, stored but uninterpreted) and `AllocatorRef` (unattested) all remain open — parameters are still preserved as opaque values as far as the rest of the application is concerned. | [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted). |
 | A4 | **Schema coverage** | Reads any ETS3/4/5/6 project. | Schema 11 (ETS4) fully known; schema 23 (ETS6) detected and refused by name; 12-22 undocumented. | [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md#1-single-sample-bias). |
-| A5 | **`.knxprod` scheme ≥ 12** | Reads current manufacturer product files directly. | **Partially closed (2026-09-10).** Standalone `.knxprod` product-package install (`knx_productdb::install_package`) reads scheme 11 and scheme 20 packages — verified against 3 real scheme-11 and 2 real scheme-20 files (`installs_the_readable_corpus`). Schemes 12-19, 21, 22 remain unread; `.vd2` (a pre-2013 legacy container, not the same ZIP/XML family at all) is explicitly rejected. Full `.knxproj` *project* import is still schema-11/21/23 only — this row is about standalone `.knxprod` *product packages*, a narrower claim. | [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly). |
+| A5 | **`.knxprod` scheme ≥ 12** | Reads current manufacturer product files directly. | **Partially closed (2026-09-10).** Standalone `.knxprod` product-package install (`knx_productdb::install_package`) reads scheme 11 and scheme 20 packages — verified against 3 real scheme-11 and 2 real scheme-20 files (`installs_the_readable_corpus`). Schemes 12-19, 21, 22 remain unread; `.vd2` (a pre-2013 legacy container, not the same ZIP/XML family at all) is explicitly rejected. **Both accepted out of scope, user decision 2026-09-11** — see [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly) for the dated notes. Full `.knxproj` *project* import is still schema-11/21/23 only — this row is about standalone `.knxprod` *product packages*, a narrower claim. | [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly). |
 | A6 | **Password-protected projects** | Opens ZipCrypto (ETS4/5) and AES/PBKDF2 (ETS6) protected projects. | Detected, refused, never decrypted. | [KNOWN_LIMITATIONS.md §13](KNOWN_LIMITATIONS.md#13-password-protected-projects-are-refused-not-decrypted). |
 
 ## B. Editing / CRUD gaps
@@ -86,7 +86,7 @@ underlying model field exists.
 | D2 | **No building/floor-plan graphical view.** ETS's Building view can show rooms spatially (and, with the right edition, overlay them on a floor plan image). | Building parts are a tree branch only, per Session 5's own scope; no spatial/graphical representation exists or is planned in DATA_MODEL. |
 | D3 | **Closed (2026-09-08, T2; extended 2026-09-10 with package install).** There was no UI screen listing manufacturers/products/hardware variants from `knx-productdb` at all. | `CatalogBrowser.tsx` (opened from a `+ Add device` row) lists catalog items via `GET /api/catalog/manufacturers`/`GET /api/catalog/items`, with a manufacturer filter and search; it also gained an install file-picker for standalone `.knxprod` packages (`installProductPackage`, install-report/error display, post-install catalog refresh, in-modal creation-diagnostics rendering) on 2026-09-10. |
 | D4 | **Closed for HTML only (2026-09-10, T13).** A new `crates/knx-report` crate (`render_html`) renders topology, buildings, group addresses, and devices into one self-contained HTML document — reachable via `POST /api/project/documentation-export` (`apps/knx-server`), `knx doc-export <store.knxdb> <out.html>` (`apps/knx-cli`), and an "Export documentation…" button (`DocumentationExportButton.tsx`, `apps/knx-web`). | Printing from inside the application and PDF generation without a browser both remain open — the document ships `@media print` rules and relies on the browser's own print-to-PDF dialog, which is not the same thing as native PDF generation or an in-app print preview. No claim of ETS report parity is made anywhere: no ETS-produced report sample exists in this repository to compare against, the same evidence gap [KNOWN_LIMITATIONS.md §38](KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability) records for T12's CSV format. See `IMPORT_EXPORT.md §12` and the new `KNOWN_LIMITATIONS.md` entries this task adds. |
-| D5 | **No live Group Monitor GUI.** `knx bus monitor`/`bus write` exist as CLI subcommands (Session 6); since T29 the monitor decodes values when given `--project`, and `bus write` encodes them, for the fourteen main types **E4** lists — without a project, and for every other main type, the output is still raw bytes. ETS's Group Monitor is a GUI table, DPT-decoded, filterable, with send-from-the-table. | The bus-communication features that exist have no desktop/web front end at all — they're developer/CLI tools today, not end-user features. |
+| D5 | **Closed for tunnelling, 2026-09-11 (T15).** `apps/knx-server` gains a `knx-net` dependency (ADR-0017) and a bus-monitor session (`apps/knx-server/src/bus.rs`); four routes (`POST /api/bus/monitor/start`, `POST /api/bus/monitor/stop`, `GET /api/bus/monitor/telegrams`, `POST /api/bus/write`); and `apps/knx-web` gets a live telegram table (`BusMonitorPanel.tsx`) with a client-side text/service-type filter and a compose/send form (`BusComposeForm.tsx`), DPT-decoded against the open project exactly as `bus monitor --project`/`bus write` already were. What did **not** close: routing (tunnelling only, D7 in the design spec); ETS-depth filtering (client-side text/service-type only, nothing like ETS's multi-criteria/saved filter sets); more than one session at a time (`409` on a second `start`); individual-addressed frames (not rendered as rows at all); and — the one that matters most — **none of it has been run against a physical KNX installation**. Full accounting: [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway). Design spec: `docs/superpowers/specs/2026-09-11-group-monitor-design.md`. | A user with an open project and a reachable gateway can now watch decoded group telegrams and send one, from the web/desktop UI, without a terminal — for one tunnelled gateway at a time. `knx bus monitor`/`bus write` remain the CLI-only path to routing and to a second concurrent connection. |
 | D6 | **No bus/line diagnostics UI.** ETS can scan a line for connected devices, ping/identify a device, and show its individual info (mask version, order number) read live from the bus. | `knx-net` has no such capability yet (see Session E below) and there is no UI slot reserved for it either. |
 | D7 | **Closed (2026-09-10, T11).** `ImportReport` (errors/warnings/unsupported list) is real and populated, but the frontend only surfaced it as toast notifications for errors — there was no dedicated screen to review the full report after the initial import moment had passed. | A new server-side `SessionLog` (`apps/knx-server`, in-memory, never persisted to `.knxdb`) plus a "Log" tab in the web UI (`LogPanel.tsx`) close this — see the T11 backlog entry below for the full shape. |
 | D8 | **No settings/preferences beyond theme.** ETS has a Workbench-wide options dialog (default group-address style, backup behavior, language, etc). | `ThemeSwitcher.tsx` — a single `<select>` over the `THEMES` registry — is the only settings surface that exists. Cycle 11's `ThemePanel.tsx` was wider (four color tokens plus a three-level motion setting) but was deleted outright in cycle 13, so the application has *fewer* settings today than it had two cycles ago; the motion setting is tracked separately as **D11**. |
@@ -99,10 +99,10 @@ underlying model field exists.
 
 | # | Gap | Notes |
 |---|-----|-------|
-| E1 | **No commissioning at all.** No individual-address programming (via the device's programming button), no application-program download, no memory read/write. | Explicit, permanent scope decision — [KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-out-of-scope). Listed here for completeness of the gap picture, not as a proposed task: CLAUDE.md's "only implement protocol behavior that is technically verified" plus the bricking risk on real hardware makes this a durable non-goal, not a backlog item. |
+| E1 | **No commissioning at all.** No individual-address programming (via the device's programming button), no application-program download, no memory read/write. | **Not excluded — required, blocked (ruling 2026-09-11).** Asked whether this is permanently out, the user said no: commissioning must work too, but the work waits until the KNX specification database is finished. [KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) has the full account; CLAUDE.md's "only implement protocol behavior that is technically verified" plus the bricking risk on real hardware are why it hasn't started, not why it never will. Tracked as backlog task **T30** (Tier 5); this row stays open. |
 | E2 | **No line-scan / device-discovery-on-the-bus.** `knx bus discover` (Session 6 cycle 3) finds *KNXnet/IP gateways* on the LAN, not KNX devices on a line (that needs an individual-address broadcast scan over the bus itself, a different operation). | Easy to conflate with "Device Discovery" in `ideas.md`, which is about the same gateway-discovery feature already shipped — this is a distinct, unaddressed capability. |
-| E3 | **No KNX IP Secure.** | [KNOWN_LIMITATIONS.md §26](KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure); explicitly shelved once already (Session 6 cycle 4/5 planning). |
-| E4 | **Partially closed 2026-09-11 (T29).** A Standard-cited codec now lives in `knx-core` (`crates/knx-core/src/dpt/codec.rs`), covering main types 1, 2, 3, 5, 6 (except `6.020`), 7, 8, 9, 12, 13, 14, 16, 17, 18. `apps/knx-cli bus monitor --project <path>` decodes; `bus write --dpt <DPST-m-s>` (or resolved from `--project`) encodes. What is still open: no GUI (that's **T15**); the main types this slice did not implement at all (4, 10, 11, 15, 19, 20, 21-30 and the rest of the 46 `knx_master.xml` main types beyond the fourteen listed); no `knx_master.xml` DPT catalogue is consulted, so there are no enumeration names and no units beyond what the scaled subtypes' own arithmetic already implies. See `docs/KNOWN_LIMITATIONS.md` for the full accounting. | A user still has to know the raw encoding for anything outside the implemented main types, and still has no GUI; for the main types that are implemented, the CLI now decodes/encodes per DPT the way ETS's Group Monitor does, given a project. |
+| E3 | **No KNX IP Secure.** | [KNOWN_LIMITATIONS.md §26](KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure); explicitly shelved once already (Session 6 cycle 4/5 planning). Folded into **T19**'s scope; deferred 2026-09-11 by user ruling, documented as a limitation, not rejected. |
+| E4 | **Partially closed 2026-09-11 (T29), display side finished for tunnelling 2026-09-11 (T15).** A Standard-cited codec lives in `knx-core` (`crates/knx-core/src/dpt/codec.rs`), covering main types 1, 2, 3, 5, 6 (except `6.020`), 7, 8, 9, 12, 13, 14, 16, 17, 18. `apps/knx-cli bus monitor --project <path>` decodes; `bus write --dpt <DPST-m-s>` (or resolved from `--project`) encodes; **T15** wires the same `decode`/`encode`/`resolve_project_group_address_dpts` calls into `apps/knx-server`'s bus session and `apps/knx-web`'s telegram table, so a web/desktop user gets the same decoding the CLI already had, without a terminal — for tunnelling only, one session at a time. What is still open: the main types this codec never implemented (4, 10, 11, 15, 19, 20, 21-30 and the rest of the 46 `knx_master.xml` main types beyond the fourteen listed); no `knx_master.xml` DPT catalogue is consulted, so there are no enumeration names and no units beyond what the scaled subtypes' own arithmetic already implies; and T15's own display-side gaps (routing, filtering depth, multi-session, individual-address frames — see **D5** above). See `docs/KNOWN_LIMITATIONS.md` §§61-62 for the full accounting. | A user still has to know the raw encoding for anything outside the implemented main types; for the main types that are implemented, both the CLI and now the web/desktop GUI decode/encode per DPT through the same `knx-core` codec — see [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-fourteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) for exactly what that codec's output does and does not match, including that it deliberately differs from a published ETS/AN188 reference figure by one step in a known case. |
 | E5 | **Docker discovery needs `--network host`.** | [ROADMAP.md](ROADMAP.md) "carried in from web/Docker deployment target"; unresolved, tracked but not fixed. |
 | E6 | **No custom routing multicast address.** | [KNOWN_LIMITATIONS.md §31](KNOWN_LIMITATIONS.md#31-knxnetip-routing-has-no-custom-multicast-address-override). |
 
@@ -557,15 +557,21 @@ Each task: **what**, **why**, **depends on**.
 
 ### Tier 4 — bus-facing UI (builds on Session 6's KNXnet/IP work)
 
-- **T15. Group Monitor GUI.** A live telegram table in the desktop/web
-  UI (not just the CLI), DPT-decoding values against the open project's
-  comm objects, with send-from-the-table. Closes **D5**, and finishes
-  what **E4** left open on the display side. The codec to build it on
-  already exists (**T29**, 2026-09-11): `knx_core::decode`/`encode`
-  plus `resolve_group_address_dpt`/`resolve_project_group_address_dpts`
-  are ready to be called from a GUI exactly as `apps/knx-cli`'s `bus
-  monitor`/`bus write` already call them from the CLI — this task is
-  wiring a table to an existing capability, not building the codec.
+- **T15. Group Monitor GUI. Closed 2026-09-11.** A live telegram table in
+  `apps/knx-web` (not just the CLI), DPT-decoding values against the open
+  project's comm objects via the same `knx_core::decode`/
+  `resolve_project_group_address_dpts` **T29** already wired into
+  `apps/knx-cli`, plus a compose/send form (`POST /api/bus/write`).
+  Closes **D5** for tunnelling; finishes what **E4** left open on the
+  display side, for tunnelling. Ships a new `apps/knx-server → knx-net`
+  dependency edge (ADR-0017) and a `GatewayConnector`/`BusTunnel`
+  testability seam so the session, buffer and HTTP layer are tested
+  without a real gateway anywhere. Does **not** close: routing (CLI-only,
+  by design); ETS-depth filtering; more than one session at a time;
+  individual-address frames as rows; or hardware verification of any of
+  it — see [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway).
+  Design spec: `docs/superpowers/specs/2026-09-11-group-monitor-design.md`.
+  ADR: `docs/adr/0017-knx-server-depends-on-knx-net.md`.
 - **T29. DPT codec (`knx-core`) and CLI wiring.** Shipped 2026-09-11.
   Closes **E4** partially — see the row above and
   `docs/KNOWN_LIMITATIONS.md` for exactly which main types and subtypes
@@ -627,11 +633,16 @@ Each task: **what**, **why**, **depends on**.
   comparison.
 - **T19. KNX Secure (Data Secure + IP Secure + keyring).** Needs sample
   key material and a real secured installation to verify against — a
-  hard external dependency, not purely an engineering task. Closes
-  **A2**, **E3**.
+  hard external dependency, not purely an engineering task. **Deferred
+  2026-09-11 by user ruling** — not rejected, documented as a limitation
+  ([KNOWN_LIMITATIONS.md §8](KNOWN_LIMITATIONS.md#8-knx-secure-is-not-implemented),
+  [§26](KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure)).
+  Closes **A2**, **E3**.
 - **T20. `Functions` domain concept.** Needs its own ADR (new domain
   concept, not in DATA_MODEL today) before implementation, same as
-  ROADMAP's existing rule for the project-notes idea. Closes **A1**.
+  ROADMAP's existing rule for the project-notes idea. **Deferred
+  2026-09-11 by user ruling until the new KNX specification documentation
+  is available** — not rejected, stays on the roadmap. Closes **A1**.
 - **T21. Graphical topology and building views.** A genuinely new UI
   paradigm (diagram/canvas rendering) alongside the existing tree-based
   Project Explorer, not a replacement for it. Closes **D1**, **D2**.
@@ -640,6 +651,17 @@ Each task: **what**, **why**, **depends on**.
   once; needs its own design (locking vs. merge vs. last-writer-wins,
   and what "conflict" even means for a `Command`-based undo model).
   Closes **F2**.
+- **T30. Commissioning and device download.** Individual-address
+  programming (via the device's programming button), application-program
+  download, memory read/write over the bus. **Not a durable non-goal** —
+  the user ruled 2026-09-11 that this must work, blocked until the KNX
+  specification database is finished, which is what would make the load
+  procedures (the undocumented `Legacy*` matrix, vendor-DLL-driven
+  download sequences) verifiable instead of reverse-engineered against
+  real bricking risk. Architecturally unblocked already: load procedures,
+  memory layout and mask data already live in the product database
+  ([KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)).
+  Closes **E1**.
 
 ### Tier 6 — internationalization
 
@@ -757,10 +779,13 @@ dropped.
 
 ### Not backlog items — durable non-goals, listed for completeness only
 
-- Commissioning/device download (**E1**) — permanent scope exclusion,
-  see [KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-out-of-scope).
-  Do not schedule without a deliberate, explicit decision to reverse
-  that exclusion, with real hardware to test against.
+Commissioning/device download (**E1**) **used to be listed here and no
+longer is.** The user ruled 2026-09-11 that it is required, not excluded —
+merely blocked until the KNX specification database is finished. It is now
+a real backlog item, **T30** in Tier 5 above; see
+[KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)
+for the full ruling.
+
 - Online device-catalog update (**C6**) — depends on an external KNX
   Association service whose terms/availability to a non-ETS tool are
   unknown; needs research before it's even a well-formed task.

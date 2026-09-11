@@ -71,6 +71,7 @@ of a file we export."
 | Password-protected projects, schema ≥ 21 (AES, PBKDF2) | As above | Open a real protected ETS6 project with its password |
 | ETS re-import of a file we export | Untested (risk R9) | Export a project and open it in a real ETS installation; record the result either way |
 | KNXnet/IP against other gateway models | One model tested | Test discovery, tunnelling and routing against further gateways |
+| Group Monitor GUI (T15) — starting a tunnelling session from `apps/knx-web`/`apps/knx-desktop`, watching telegrams decode live in a table, and sending a group write back through it | Code and tests only [D] — every test in `apps/knx-server/src/bus.rs` and its `tests/http_bus_monitor.rs`/`http_bus_write.rs` drives a `FakeConnector`/`FakeTunnel`, never a real socket; nothing in this GUI has been run against a physical KNX installation in this branch (`KNOWN_LIMITATIONS.md` §62) | Start a session against a real gateway, watch real telegrams decode and a real write go out, and record the result here |
 
 An unverified row is not a promise. Until it is verified, the honest statement
 is that we expect it to work and have not shown that it does.
@@ -80,7 +81,7 @@ is that we expect it to work and have not shown that it does.
 | Item | Reason |
 | --- | --- |
 | Devices whose configuration depends on a vendor plug-in DLL | The behaviour lives in the binary; it is preserved and reported, never executed (RESEARCH §7, risk R5) |
-| Commissioning and device download | Bricking risk, an undocumented `Legacy*` matrix, vendor DLLs (RESEARCH §8.3) |
+| Commissioning and device download | Not implemented yet, and — per the user's 2026-09-11 ruling — not permanently excluded either: required, blocked until the KNX specification database is finished. Bricking risk, an undocumented `Legacy*` matrix, and vendor DLLs (RESEARCH §8.3) remain why it hasn't started ([KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)) |
 | KNX Secure | No sample key material to verify against; the subsystem exists but stays empty (RESEARCH §9) |
 | Direct `.knxprod` import for master data scheme ≥ 12, **except schemes 11 and 20** (§2, standalone package install) | Schemes 12-19, 21, 22 have no standalone sample tested yet; `.vd2` is a distinct pre-2013 legacy container, permanently unsupported, not an encryption question |
 | Device parameter editing | The `@test` value grammar is now documented (risk R3, RESEARCH §4.3); the `Dynamic` tree's structural grammar is corpus-observed only. `knx-productdb` now parses, stores and evaluates the tree headlessly, including expanding a `Module` node into its `ModuleDef`'s own tree (T18 slices 1 and 2, both 2026-09-11), but nothing wires that evaluation into a UI, and no parameter value is ever written — parameter values are preserved but not editable |

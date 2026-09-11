@@ -451,11 +451,15 @@ fn encode_b1u3(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 fn decode_u8(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
     let [raw] = require_bytes(payload, dpt, 8)?;
     match dpt.sub {
-        // 5.001 DPT_Scaling (DPT-AS §3.31.A, the one place the exact
-        // formula is spelled out: "Encoding: 0 %...100 %. Full Datapoint
-        // Type value: 0...255, i.e. 1 % = value 255/100"). Confirmed
-        // against §3.5.1's own worked example (NOTE 4): 50 % -> 80h,
-        // 100 % -> FFh.
+        // 5.001 DPT_Scaling. Its home section is §3.5.1, which states the
+        // range and gives the worked example this code is checked against
+        // (NOTE 4): 50 % -> 80h, 100 % -> FFh. The formula itself is
+        // spelled out in a sentence only once in the whole document, and
+        // not there: DPT-AS §3.31.A, a cross-reference subsection under
+        // DPT_Angle/DPT_Percent_U8, says "Encoding: 0 %...100 %. Full
+        // Datapoint Type value: 0...255, i.e. 1 % = value 255/100". Both
+        // are cited on purpose — do not go to §3.31 expecting 5.001's own
+        // definition to live there.
         Some(1) => Ok(DptValue::Float(f64::from(raw) * 100.0 / 255.0)),
         // 5.003 DPT_Angle: DPT-AS §3.5.1 states the range ([0...360]) and
         // resolution ("≈ 1,4°") but, unlike 5.001, does not spell out the

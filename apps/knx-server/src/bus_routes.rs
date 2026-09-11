@@ -393,16 +393,24 @@ async fn write_value(
         match session.resolve_write_dpt(ga) {
             GroupAddressDpt::Single(dpt) => dpt,
             GroupAddressDpt::None => {
-                return Err(ApiError::bad_request(format!(
-                    "no DPT resolved for {} — supply \"dpt\" explicitly",
-                    body.destination
-                )));
+                // Fix 3 (Task 5 review): worded identically to
+                // `BusComposeForm.tsx`'s `NO_DPT_RESOLVED_MESSAGE`, the
+                // client-side check for the same fact — this route is the
+                // backstop for a request the UI's own check did not
+                // generate (or was bypassed), not a second, differently
+                // phrased opinion about it. The client's message never
+                // names the destination either (it only ever fires for the
+                // address already sitting in the form), so there is
+                // nothing lost by dropping it here too.
+                return Err(ApiError::bad_request(
+                    "No DPT resolved for this group address — enter one explicitly.",
+                ));
             }
             GroupAddressDpt::Conflict(dpts) => {
+                // Same alignment, for `conflictingDptsMessage()`.
                 let names: Vec<String> = dpts.iter().map(|d| d.to_string()).collect();
                 return Err(ApiError::bad_request(format!(
-                    "conflicting DPTs for {}: {} — supply \"dpt\" explicitly",
-                    body.destination,
+                    "Conflicting DPTs for this group address: {} — enter one explicitly.",
                     names.join(", ")
                 )));
             }

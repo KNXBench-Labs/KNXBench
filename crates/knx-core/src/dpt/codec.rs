@@ -744,33 +744,28 @@ mod tests {
 
     #[test]
     fn b2_round_trips_all_four_encodings() {
+        // All four raw 2-bit encodings (c,v). Three of them have a canonical
+        // text form and round trip through `encode` too; the fourth, c=0
+        // v=1, is still "no control" in text (§3.2: v is don't-care when
+        // c=0), so `encode("no control")` can never reproduce its raw bits —
+        // it is checked decode-only, proving the codec does not discard v
+        // just because c said it does not matter.
         let d = dpt(2, Some(1));
         for (text, raw, control, value) in [
-            ("no control", 0b00u8, false, false),
-            ("control off", 0b10u8, true, false),
-            ("control on", 0b11u8, true, true),
+            (Some("no control"), 0b00u8, false, false),
+            (None, 0b01u8, false, true),
+            (Some("control off"), 0b10u8, true, false),
+            (Some("control on"), 0b11u8, true, true),
         ] {
-            let payload = encode(d, text).unwrap();
-            assert_eq!(payload, GroupValue::Short(raw));
+            if let Some(text) = text {
+                let payload = encode(d, text).unwrap();
+                assert_eq!(payload, GroupValue::Short(raw));
+            }
             assert_eq!(
-                decode(d, &payload).unwrap(),
+                decode(d, &GroupValue::Short(raw)).unwrap(),
                 DptValue::ControlBool { control, value }
             );
         }
-    }
-
-    #[test]
-    fn b2_decode_reads_the_no_control_value_bit_too() {
-        // c=0, v=1: "no control", but the codec does not discard v — the
-        // Standard only says v is don't-care, not that it must be 0.
-        let d = dpt(2, Some(1));
-        assert_eq!(
-            decode(d, &GroupValue::Short(0b01)).unwrap(),
-            DptValue::ControlBool {
-                control: false,
-                value: true
-            }
-        );
     }
 
     #[test]
@@ -787,14 +782,6 @@ mod tests {
             encode(d, "control maybe"),
             Err(DptCodecError::Unparsable { .. })
         ));
-    }
-
-    #[test]
-    fn b2_unsupported_main_type_is_reported() {
-        assert_eq!(
-            decode(dpt(9, Some(1)), &GroupValue::Bytes(vec![0, 0])),
-            Err(DptCodecError::UnsupportedDpt(dpt(9, Some(1))))
-        );
     }
 
     // -- Main type 3 -----------------------------------------------------
@@ -1167,7 +1154,12 @@ mod tests {
 
     #[test]
     fn unimplemented_main_type_is_unsupported_not_a_panic() {
-        let d = dpt(9, Some(1));
+        // Main type 9 graduates out of "unimplemented" in the next task —
+        // main type 20 (1-octet enumeration) is spec §4.3's deliberately
+        // excluded type: its wire value is a bare octet whose *meaning*
+        // lives in enumeration tables this codec does not ingest, so
+        // decoding it would be a guess dressed up as an answer.
+        let d = dpt(20, Some(1));
         assert_eq!(
             decode(d, &GroupValue::Bytes(vec![0, 0])),
             Err(DptCodecError::UnsupportedDpt(d))

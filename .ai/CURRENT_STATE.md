@@ -1,4 +1,65 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-12 04:20
+- **Completed:** **Docs-only: closed gap F2 (T22 backlog scope, not implemented).**
+  Worktree `t22-concurrency-limitation` off `main` at `6112d3d`. Verified in
+  code (not assumed) that `apps/knx-server` shares one `Arc<AppState>`
+  across every connected browser (`main.rs:23`, `lib.rs:21,41`), that
+  `undo`/`redo` operate on one process-wide `Mutex<CommandStack>`
+  (`domain.rs:48,1638-1658` — a second client's undo can pop a first
+  client's command), that no write route carries any ETag/`If-Match`/
+  revision check, that no push/poll mechanism tells a client the project
+  changed (`apps/knx-web` has zero `WebSocket`/`EventSource`, and the one
+  `setInterval` in the whole frontend is `BusMonitorPanel.tsx:228`'s bus
+  telegram poll, unrelated), and that `save_project`/`save_project_as`
+  (`domain.rs:413-462` → `knx-store/src/project.rs:72,93-97`) do an
+  unconditional `DELETE`-all-then-reinsert with no on-disk version check —
+  two clients saving the same `.knxdb` is silent last-writer-wins. Also
+  confirmed what *is* protected: `apply`/`undo_impl`/`redo_impl` hold the
+  same locks for one command's full duration, so two requests cannot
+  interleave into a torn in-memory `Project` — a real guarantee, just a
+  narrow one. Added `docs/KNOWN_LIMITATIONS.md` §63 with that evidence,
+  cross-referenced from §22 (no-auth) and from `docs/GAP_ANALYSIS_ETS.md`
+  row F2 (still open, still unimplemented — not downgraded). Confirmed the
+  Tauri desktop shell builds the identical `Arc<knx_server::AppState>`
+  type (`src-tauri/lib.rs:31,57`) but binds `127.0.0.1` for one local
+  webview (`lib.rs:60-73`), so it shares this limitation's *shape* without
+  its exposure. `docs/ARCHITECTURE.md`/`IMPLEMENTATION_STATUS.md`/
+  `docs/ROADMAP.md` had no multi-user-safety claim to correct — checked,
+  none found, left untouched. No production code, schema, command, or UI
+  changed. Gates re-run on this branch, matching the `main`-at-`6112d3d`
+  baseline exactly: `cargo fmt --all --check` clean; `cargo clippy
+  --workspace --all-targets -- -D warnings` clean; `cargo test --workspace`
+  **975 passed / 0 failed / 3 ignored** across 72 `test result` lines;
+  `cargo run -p xtask -- check-layering` ok; `cargo deny check` ok
+  (pre-existing `advisory-not-detected` warnings only, exit 0); `npm run
+  test` in `apps/knx-web` **184 passed across 18 files** (a fresh `npm
+  install` was needed in this worktree — `node_modules` isn't shared
+  across worktrees).
+- **Pending/Next Steps:** T22 itself (the actual locking/merge/
+  last-writer-wins design and implementation) is still unstarted — this
+  task only documented the hazard, per its own brief. Next up per
+  `docs/ROADMAP.md`'s existing order: T27 (motion toggle, D11), T17 (line
+  scan, D6/E2), T21 (graphical views), T25/T26 (i18n), T28 (in-app help),
+  T16 (catalog browser), D8 (settings dialog), D9 (duplicate overlay
+  implementations + accessibility), T22 (multi-user — now documented,
+  still needs its own design decision). Blocked with named conditions:
+  T30 (commissioning), T19 (KNX Secure), T20 (Functions), A4 (schemas
+  12-22).
+- **Notes for Codex:** `docs/KNOWN_LIMITATIONS.md` gained one new numbered
+  entry (§63) at the end of the file, plus a one-line cross-reference
+  appended to §22's existing "Lifted when" paragraph — no existing entry
+  was reworded, renumbered, or softened otherwise. `docs/GAP_ANALYSIS_ETS.md`
+  row F2's second cell now links to §63 instead of saying "new finding";
+  the gap itself is still listed as open. If you pick up T22's actual
+  implementation later, the open design question §63/the T22 backlog
+  entry both point at is unchanged: locking vs. merge vs. last-writer-wins,
+  and what "conflict" even means for a `Command`-based undo model — no
+  decision has been made on that yet, this branch only wrote down the
+  symptom.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-12 03:05
 - **Completed:** **T18 slice 3 merged to `main`.** Branch
   `t18-parameter-editor` (19 task commits from `cc38de5`, plus `4f36e37`

@@ -1,4 +1,111 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-11 22:15
+- **Completed:** **T18 slice 3, Task 2** — `knx-core`/`knx-store`: writing a
+  parameter value. Worktree `.worktrees/t18-parameter-editor`, branch
+  `t18-parameter-editor` (still unmerged; started from `e493070`).
+  - `crates/knx-core/src/command.rs`: two new `Command` variants,
+    `SetParameterValue { id, device, ets_id, raw: String }` and
+    `RestoreParameterValue { id, device, ets_id, raw: Option<String> }`,
+    plus their `apply` arms and a shared private `upsert_parameter_value`
+    helper (find-or-create against `installations[0].parameters`, reused
+    by both `SetParameterValue::apply` and `RestoreParameterValue`'s
+    overwrite branch, so the "no new `ParameterInstanceId` minted on an
+    update" rule lives in one place). `SetParameterValue`'s inverse is
+    always `RestoreParameterValue`, and vice versa — they alternate, not a
+    self-referential `Restore↔Restore` pair like `SetComObjectFlag`'s —
+    because a `ParameterInstance` row can be created/deleted by these two,
+    not just flag-toggled in place.
+  - **One deliberate deviation from the task brief's literal field type**:
+    the brief and design D24's own Rust snippet write `raw:
+    Override<String>` for `RestoreParameterValue`, with comments
+    "`Absent`"/"`Present(prior)`". `crate::provenance::Override<T>` has no
+    such variants (`Absent`/`Empty`/`Value(Resolved<T>)`/`Malformed`,
+    confirmed via `git log -p` — it never had a `Present` case) and pairs
+    every value with a `Resolved`/`Layer` provenance chain that
+    `ParameterInstance` doesn't carry (`parameter.rs`: "retained but
+    uninterpreted"). Used `Option<String>` instead — `None` = no row
+    existed, `Some(prior)` = restore that exact string — the same
+    reasoning `SetDeviceDescription` already gives for its own bare
+    `Option<String>` ("no provenance layer exists to preserve"). This task
+    was explicitly mine to resolve (D24 assignment) where the brief and
+    the actual type shape disagreed; documented in the doc comment and
+    here rather than silently reusing an incompatible type or inventing a
+    new one.
+  - `crates/knx-store/src/command_sync.rs` needed one small addition not
+    named in the brief: its `sync_after_command` match is exhaustive over
+    every `Command` variant (own doc comment: "every `Command` variant has
+    a match arm here"), so the two new variants needed a stub arm to keep
+    the crate compiling. Added a no-op arm in the same style as the
+    existing `CreateArea`/`SetComObjectFlag` stubs ("persistence layer not
+    yet implemented ... out of this task's scope"). No new store function
+    was added — confirmed `upsert_parameter_instance` is already called,
+    unconditionally, from `crates/knx-store/src/project.rs`'s
+    whole-installation save loop (`for (i, p) in
+    installation.parameters.iter().enumerate() { upsert_parameter_instance
+    (&tx, i as i64, p)?; }`), so no gap existed there per the brief's own
+    acceptance criteria.
+  - Three new unit tests in `command.rs`'s own test module (no database),
+    following the `Command::Variant { .. }.apply(&mut project).unwrap()`
+    idiom (`update_group_address_inverse_carries_the_previous_values`):
+    create-when-absent + undo removes the row;
+    overwrite-when-present + undo restores the exact prior string on the
+    *same* `ParameterInstanceId` (no new id minted for an update);
+    unknown `DeviceId` → `Err(CommandError::DeviceNotFound(..))`, project
+    untouched. All three watched red first: temporarily reverted the
+    `Command` enum/`apply`/helper additions, ran
+    `cargo test -p knx-core --lib command::tests::set_parameter_value`,
+    got `error[E0599]: no variant named 'SetParameterValue' found for enum
+    'command::Command'` at each of the three call sites, then restored the
+    implementation and re-ran green.
+  - All six gates green: `cargo fmt --all --check` clean; `cargo clippy
+    --workspace --all-targets -- -D warnings` clean; `cargo test
+    --workspace` **960 passed / 0 failed / 3 ignored** (960 − 3 new tests
+    = 957, matching this task's stated pre-slice baseline exactly); `cargo
+    run -p xtask -- check-layering` ok; `cargo deny check` → advisories
+    ok, bans ok, licenses ok, sources ok (pre-existing
+    advisory-not-detected warnings only, unrelated to this change);
+    `npm run test` (apps/knx-web) unchanged at **179 passed across 17
+    files** (no frontend code touched).
+  - **Unexplained number, flagged rather than guessed at**: the previous
+    `.ai/CURRENT_STATE.md` entry below (Task 1 fix round, same branch,
+    commit `8747324`, one commit before the `e493070` this task started
+    from) reports `cargo test --workspace` as **1017 passed**. My own
+    measurement immediately before this task's changes, backed out from
+    this run's 960 (960 − 3 = 957), disagrees with that 1017 by 60 tests.
+    I did not re-run the suite at `8747324`/`e493070` to chase this down —
+    it does not affect Task 2's own correctness — but it is a real
+    discrepancy in the branch's test-count history, not a typo I can
+    explain away, and someone should reconcile it before trusting either
+    number blindly.
+  - Full report: `/home/knxbench/.claude/jobs/8098e9e6/tmp/t18s3-task2-report.md`.
+- **Pending/Next Steps:** Tasks 3-5 of the `t18-parameter-editor` plan
+  remain unstarted: Task 3 (`apps/knx-server` — validation, assembly,
+  `POST /api/device/{device_id}/parameters` route, read model), Task 4
+  (`apps/knx-web` — the parameter panel UI), Task 5 (reconcile the
+  documentation set). Do not merge `t18-parameter-editor` before a
+  whole-branch review.
+- **Notes for Codex:** (a) `RestoreParameterValue.raw` is `Option<String>`,
+  not `Override<String>` — see the deviation note above before assuming
+  the design doc's Rust snippet is the literal signature; the doc comment
+  on the variant explains why. (b) `SetParameterValue`/`RestoreParameterValue`
+  always alternate as each other's inverse (never a `Restore`↔`Restore`
+  pair) — if Task 3's server code builds a `CommandStack` sequence
+  assuming otherwise, that assumption is wrong. (c) `command_sync.rs`'s
+  new stub arm is a genuine no-op — writing a parameter value through the
+  command layer today does **not** persist to SQLite via incremental
+  sync; only the whole-installation save path does. If Task 3 or later
+  wires up incremental parameter-instance sync, it also needs a
+  `delete_parameter_instance`-shaped function for `RestoreParameterValue`'s
+  "no row existed" case, which does not exist yet. (d) The 1017-vs-957
+  test-count discrepancy above is unresolved — worth a quick `git stash`-
+  free re-run at `8747324` if it matters to whatever you're about to do.
+  (e) Standing rules unchanged: `OriginalData/` read-only, scratch files
+  under the job tmp directory, no ETS parity/certification claims,
+  module-scoped fields stay read-only (D25).
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-11 21:55
 - **Completed:** **T18 slice 3, Task 1 fix round 1** — coordinator ruling on the `display_order` concern flagged in Task 1's own report, implemented on the still-unmerged `t18-parameter-editor` branch. Worktree `.worktrees/t18-parameter-editor`, commit `8747324` (on top of `a7ab571`/`e21196e`; branch still unmerged, four tasks plus a whole-branch review remain).
   - `ParameterView.display_order` and the private `ParameterRawRow.display_order` are now `Option<i64>`, not `i64`. The `COALESCE(pr.display_order, 0)` in `parameter_views`'s `SELECT` is gone; `pr.display_order` is selected raw, so a NULL column maps to `None` via rusqlite's normal `Option<i64>` handling. Reasoning, now in the doc comment: `ParameterRef/@DisplayOrder` is genuinely optional in shipped packages (measured, not assumed — all 543/543 `parameter_ref` rows for `prod3`'s `M-0083_A-0317-31-7DC6` omit it), so `None` is its own real value, distinct from `Some(0)`; a `0` fallback was a magic constant erasing that distinction.

@@ -12,6 +12,7 @@ import type { CommandContext } from "./commandRegistry";
 import ThemeSwitcher from "./ThemeSwitcher";
 import Dashboard from "./Dashboard";
 import LogPanel from "./LogPanel";
+import BusMonitorPanel from "./BusMonitorPanel";
 import { THEMES, useThemeId } from "./theme";
 import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
@@ -70,6 +71,7 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  const [monitorOpen, setMonitorOpen] = useState(false);
   const [themeId, setThemeId] = useThemeId();
   // Mirrors `selection` synchronously so in-flight device_detail responses
   // can tell, once they land, whether the selection has since moved on —
@@ -124,6 +126,7 @@ function App() {
     selectionRef.current = sel;
     setSelection(sel);
     setLogOpen(false);
+    setMonitorOpen(false);
     clearErrors();
     if (sel.kind !== "device") {
       // Group-address/building-part detail resolves synchronously from
@@ -307,7 +310,30 @@ function App() {
           then too (routes.rs), specifically so a failed import with
           nothing loaded still leaves an inspectable trail
           (KNOWN_LIMITATIONS.md #36, part A). */}
-      <button onClick={() => setLogOpen((open) => !open)}>Log</button>
+      <button
+        onClick={() => {
+          setMonitorOpen(false);
+          setLogOpen((open) => !open);
+        }}
+      >
+        Log
+      </button>
+      {/* Also enabled with no project open, same reasoning as the Log
+          button above: the bus monitor talks straight to a KNXnet/IP
+          gateway (`apps/knx-server/src/bus_routes.rs`), not to the open
+          project — a project only supplies group-address names and DPTs
+          for decoding, so with none open the table still works, it just
+          shows raw addresses and undecoded/`unresolved` rows
+          (KNOWN_LIMITATIONS.md #36, part A, same slot the Log panel
+          uses). */}
+      <button
+        onClick={() => {
+          setLogOpen(false);
+          setMonitorOpen((open) => !open);
+        }}
+      >
+        Bus monitor
+      </button>
       <button
         onClick={() => {
           setSearchOpen(false);
@@ -319,11 +345,13 @@ function App() {
       <ThemeSwitcher themes={THEMES} activeId={themeId} onSelect={setThemeId} />
       <ToastStack toasts={toasts} onDismiss={dismiss} />
       {/* `ProjectExplorer` genuinely needs a project; `Inspector`/`Dashboard`
-          likewise. `LogPanel` alone does not (KNOWN_LIMITATIONS.md #36,
-          part A) — with no project open and the Log tab closed, there is
-          nothing for this slot to show, so it stays unrendered same as
-          before; with the Log tab open, it is the only thing in here. */}
-      {(tree || logOpen) && (
+          likewise. `LogPanel`/`BusMonitorPanel` alone do not
+          (KNOWN_LIMITATIONS.md #36, part A) — with no project open and
+          neither tab open, there is nothing for this slot to show, so it
+          stays unrendered same as before; with either tab open, that panel
+          is the only thing in here (they are mutually exclusive — opening
+          one closes the other, same slot). */}
+      {(tree || logOpen || monitorOpen) && (
         <div className="workspace">
           {tree && (
             <ProjectExplorer
@@ -335,6 +363,8 @@ function App() {
           )}
           {logOpen ? (
             <LogPanel tree={tree} refreshKey={logVersion} />
+          ) : monitorOpen ? (
+            <BusMonitorPanel />
           ) : (
             tree &&
             (selection ? (

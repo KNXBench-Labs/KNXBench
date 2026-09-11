@@ -20,7 +20,12 @@ const USAGE: &str =
      \x20     knx products verify [--product-db <path>]\n\
      \x20     knx bus discover\n\
      \x20     knx bus monitor --gateway <host:port> [--project <path.knxdb>]\n\
-     \x20     knx bus write --gateway <host:port> <main/middle/sub> <0|1|hex>\n\
+     \x20         (with --project, decodes against each address's resolved DPT)\n\
+     \x20     knx bus write --gateway <host:port> [--project <path.knxdb>] [--dpt <DPST-m-s>]\n\
+     \x20                  [--dry-run] <main/middle/sub> <value>\n\
+     \x20         (--dpt encodes <value> as that type; --project resolves it from the\n\
+     \x20         linked communication objects; neither given falls back to raw\n\
+     \x20         0|1|hex; --dry-run encodes and prints without opening a connection)\n\
      \x20     knx bus route-monitor --source-address <area.line.device> [--project <path.knxdb>]\n\
      \x20     knx bus route-send --source-address <area.line.device> <main/middle/sub> <0|1|hex>\n\
      exit codes: 0 = imported cleanly (warnings allowed), 1 = could not import,\n\
@@ -1434,6 +1439,21 @@ fn run_bus_monitor(args: &[String]) -> ExitCode {
         },
         None => std::collections::HashMap::new(),
     };
+    // `None` (not `Some(empty map)`) means "no --project", so `format_telegram`
+    // can tell "nothing resolved" from "resolution was never attempted" and
+    // stay byte-identical to today's output when the caller passed no
+    // `--project` at all (spec E4-D8).
+    let ga_dpts: Option<std::collections::HashMap<u16, knx_core::GroupAddressDpt>> =
+        match &parsed.project {
+            Some(path) => match load_group_address_dpts(Path::new(path)) {
+                Ok(dpts) => Some(dpts),
+                Err(e) => {
+                    eprintln!("could not load project {path}: {e}");
+                    return ExitCode::FAILURE;
+                }
+            },
+            None => None,
+        };
 
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -1446,12 +1466,13 @@ fn run_bus_monitor(args: &[String]) -> ExitCode {
         }
     };
 
-    runtime.block_on(run_bus_monitor_async(gateway, ga_names))
+    runtime.block_on(run_bus_monitor_async(gateway, ga_names, ga_dpts))
 }
 
 async fn run_bus_monitor_async(
     gateway: std::net::SocketAddrV4,
     ga_names: std::collections::HashMap<u16, String>,
+    ga_dpts: Option<std::collections::HashMap<u16, knx_core::GroupAddressDpt>>,
 ) -> ExitCode {
     use knx_net::BusConnection;
     let client = knx_net::KnxNetIpClient::new();
@@ -1478,7 +1499,7 @@ async fn run_bus_monitor_async(
             }
             received = telegrams.recv() => match received {
                 Ok(knx_net::TunnelEvent::Telegram(telegram)) => {
-                    println!("{}", format_telegram(&telegram, &ga_names));
+                    println!("{}", format_telegram(&telegram, &ga_names, ga_dpts.as_ref()));
                 }
                 Ok(knx_net::TunnelEvent::Closed) => {
                     eprintln!("gateway closed the tunnel");
@@ -1496,12 +1517,18 @@ async fn run_bus_monitor_async(
 
 struct BusWriteArgs {
     gateway: String,
+    project: Option<String>,
+    dpt: Option<String>,
+    dry_run: bool,
     group_address: String,
     value: String,
 }
 
 fn parse_bus_write_args(args: &[String]) -> Result<BusWriteArgs, String> {
     let mut gateway = None;
+    let mut project = None;
+    let mut dpt = None;
+    let mut dry_run = false;
     let mut positional = Vec::new();
     let mut i = 0;
     while i < args.len() {
@@ -1509,6 +1536,18 @@ fn parse_bus_write_args(args: &[String]) -> Result<BusWriteArgs, String> {
             "--gateway" => {
                 gateway = Some(take_value(args, i + 1, "--gateway")?);
                 i += 2;
+            }
+            "--project" => {
+                project = Some(take_value(args, i + 1, "--project")?);
+                i += 2;
+            }
+            "--dpt" => {
+                dpt = Some(take_value(args, i + 1, "--dpt")?);
+                i += 2;
+            }
+            "--dry-run" => {
+                dry_run = true;
+                i += 1;
             }
             other => {
                 positional.push(other.to_string());
@@ -1521,15 +1560,22 @@ fn parse_bus_write_args(args: &[String]) -> Result<BusWriteArgs, String> {
     };
     Ok(BusWriteArgs {
         gateway: gateway.ok_or_else(|| "--gateway is required".to_string())?,
+        project,
+        dpt,
+        dry_run,
         group_address: group_address.clone(),
         value: value.clone(),
     })
 }
 
-/// Parses a `GroupValueWrite` payload with no DPT interpretation (same
-/// scope cut as the read-only monitor's decode side): `0`/`1` is a 6-bit
-/// inline value (e.g. DPT-1), anything else is read as a hex byte string
-/// (optionally `0x`-prefixed, e.g. `2a99`).
+/// Parses a `GroupValueWrite` payload as raw wire bytes, with no DPT
+/// interpretation: `0`/`1` is a 6-bit inline value (e.g. DPT-1), anything
+/// else is read as a hex byte string (optionally `0x`-prefixed, e.g.
+/// `2a99`). This used to be `bus write`'s only value grammar; spec E4-D7
+/// keeps it as the explicit fallback for when the caller gives neither
+/// `--dpt` nor `--project` (see `resolve_write_value`) — not because raw
+/// values stopped mattering, but because a bus without a loaded project or
+/// a known DPT has nothing more informative to parse against.
 fn parse_group_value(s: &str) -> Result<knx_net::GroupValue, String> {
     match s {
         "0" => Ok(knx_net::GroupValue::Short(0)),
@@ -1551,6 +1597,55 @@ fn parse_group_value(s: &str) -> Result<knx_net::GroupValue, String> {
                 .map(knx_net::GroupValue::Bytes)
         }
     }
+}
+
+/// Picks the encode path per spec E4-D7 and returns the label the
+/// `--dry-run` line and any error should show alongside the payload: the
+/// `DptRef` actually used, or `"raw"` for the unchanged fallback. Never
+/// falls back silently — a `None`/`Conflict` resolution is an error that
+/// names what was found and tells the user to pass `--dpt`, because
+/// reinterpreting the user's value as raw would be exactly the kind of
+/// guess CLAUDE.md and spec E4-D5 forbid.
+fn resolve_write_value(
+    parsed: &BusWriteArgs,
+    ga: knx_core::GroupAddress,
+) -> Result<(String, knx_net::GroupValue), String> {
+    if let Some(dpt_str) = &parsed.dpt {
+        let dpt = knx_core::DptRef::parse(dpt_str).map_err(|e| e.to_string())?;
+        let value = knx_core::encode(dpt, &parsed.value).map_err(|e| e.to_string())?;
+        return Ok((dpt.to_string(), value));
+    }
+    if let Some(project_path) = &parsed.project {
+        let dpts = load_group_address_dpts(Path::new(project_path))
+            .map_err(|e| format!("could not load project {project_path}: {e}"))?;
+        let formatted = ga.format(knx_core::GroupAddressStyle::ThreeLevel);
+        return match dpts.get(&ga.raw()) {
+            None => Err(format!(
+                "no datapoint type resolved for group address {formatted}; pass --dpt"
+            )),
+            Some(knx_core::GroupAddressDpt::Conflict(dpts)) => {
+                let names = dpts
+                    .iter()
+                    .map(|d| d.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Err(format!(
+                    "group address {formatted} has conflicting datapoint types ({names}); pass --dpt"
+                ))
+            }
+            Some(knx_core::GroupAddressDpt::Single(dpt)) => {
+                let value = knx_core::encode(*dpt, &parsed.value).map_err(|e| e.to_string())?;
+                Ok((dpt.to_string(), value))
+            }
+            // `load_group_address_dpts` never stores `None` — a missing key
+            // means the same thing, and is handled above.
+            Some(knx_core::GroupAddressDpt::None) => Err(format!(
+                "no datapoint type resolved for group address {formatted}; pass --dpt"
+            )),
+        };
+    }
+    let value = parse_group_value(&parsed.value)?;
+    Ok(("raw".to_string(), value))
 }
 
 fn run_bus_write(args: &[String]) -> ExitCode {
@@ -1578,13 +1673,25 @@ fn run_bus_write(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let value = match parse_group_value(&parsed.value) {
+    // Everything — address, project, DPT, value — is parsed and validated
+    // here, before a socket is ever opened in any path.
+    let (dpt_label, value) = match resolve_write_value(&parsed, group_address) {
         Ok(v) => v,
         Err(e) => {
             eprintln!("{e}");
             return ExitCode::FAILURE;
         }
     };
+
+    if parsed.dry_run {
+        println!(
+            "{} {dpt_label} {} -> {}",
+            group_address.format(knx_core::GroupAddressStyle::ThreeLevel),
+            parsed.value,
+            format_group_value_payload(&value),
+        );
+        return ExitCode::SUCCESS;
+    }
 
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -1723,7 +1830,10 @@ async fn run_bus_route_monitor_async(
         tokio::select! {
             _ = tokio::signal::ctrl_c() => break,
             received = telegrams.recv() => match received {
-                Ok(telegram) => println!("{}", format_telegram(&telegram, &ga_names)),
+                // `route-monitor` does not resolve DPTs (out of scope for
+                // T29, spec E4-D7/D8 name only `monitor`/`write`) — `None`
+                // keeps its output exactly what it was before this task.
+                Ok(telegram) => println!("{}", format_telegram(&telegram, &ga_names, None)),
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     eprintln!("warning: {n} telegram(s) dropped (receiver too slow)");
                 }
@@ -1869,9 +1979,50 @@ fn load_group_address_names(path: &Path) -> Result<std::collections::HashMap<u16
     Ok(names)
 }
 
+/// Loads the group-address (raw 16-bit) -> resolved-DPT map for a stored
+/// project, once, so `format_telegram` never touches the project again per
+/// telegram (spec E4-D8). See `knx_core::resolve_project_group_address_dpts`
+/// for what "resolved" means; a missing key is the common case, not this
+/// function's problem to flag.
+fn load_group_address_dpts(
+    path: &Path,
+) -> Result<std::collections::HashMap<u16, knx_core::GroupAddressDpt>, String> {
+    let conn = knx_store::migration::open_and_migrate(path).map_err(|e| e.to_string())?;
+    let project = knx_store::project::load_project(&conn).map_err(|e| e.to_string())?;
+    Ok(knx_core::resolve_project_group_address_dpts(&project))
+}
+
+/// Renders a raw `GroupValue` the way it always has been rendered — a
+/// six-bit inline value visibly distinct from one or more octets — so a
+/// payload the codec could not (or was never asked to) turn into an
+/// engineering value still prints something a human can read off the bus.
+/// Shared between the monitor's undecoded fallback and `bus write
+/// --dry-run`'s preview line.
+fn format_group_value_payload(v: &knx_net::GroupValue) -> String {
+    match v {
+        knx_net::GroupValue::Short(bits) => format!("{bits:#04x} (6-bit)"),
+        knx_net::GroupValue::Bytes(bytes) => format!("{bytes:02x?}"),
+    }
+}
+
+/// What `format_telegram` knows about a telegram's destination DPT, folded
+/// down from the `Option<&HashMap<..>>` / `Option<&GroupAddressDpt>` double
+/// lookup into one match. `NotApplicable` covers both "no `--project` was
+/// given at all" (the monitor must stay byte-identical to today, spec
+/// E4-D8) and "this destination is not a group address" — a DPT is a group
+/// address concept, so an individually-addressed telegram is never
+/// annotated even if a project happens to be loaded.
+enum DptAnnotation<'a> {
+    NotApplicable,
+    None,
+    Single(&'a knx_core::DptRef),
+    Conflict(&'a [knx_core::DptRef]),
+}
+
 fn format_telegram(
     telegram: &knx_net::LDataFrame,
     ga_names: &std::collections::HashMap<u16, String>,
+    ga_dpts: Option<&std::collections::HashMap<u16, knx_core::GroupAddressDpt>>,
 ) -> String {
     use knx_net::Destination;
     let dest = match telegram.destination {
@@ -1884,27 +2035,60 @@ fn format_telegram(
         }
         Destination::Individual(ia) => ia.to_string(),
     };
+    let dpt = match (ga_dpts, telegram.destination) {
+        (Some(map), Destination::Group(ga)) => match map.get(&ga.raw()) {
+            None => DptAnnotation::None,
+            Some(knx_core::GroupAddressDpt::None) => DptAnnotation::None,
+            Some(knx_core::GroupAddressDpt::Single(dpt)) => DptAnnotation::Single(dpt),
+            Some(knx_core::GroupAddressDpt::Conflict(dpts)) => DptAnnotation::Conflict(dpts),
+        },
+        _ => DptAnnotation::NotApplicable,
+    };
     format!(
         "{} -> {dest}: {}",
         telegram.source,
-        format_service(&telegram.service)
+        format_service(&telegram.service, dpt)
     )
 }
 
-fn format_service(service: &knx_net::ApplicationService) -> String {
-    use knx_net::{ApplicationService, GroupValue};
-    let format_value = |v: &GroupValue| match v {
-        GroupValue::Short(bits) => format!("{bits:#04x} (6-bit)"),
-        GroupValue::Bytes(bytes) => format!("{bytes:02x?}"),
-    };
+fn format_service(service: &knx_net::ApplicationService, dpt: DptAnnotation) -> String {
+    use knx_net::ApplicationService;
     match service {
         ApplicationService::GroupValueRead => "GroupValueRead".to_string(),
         ApplicationService::GroupValueResponse(v) => {
-            format!("GroupValueResponse {}", format_value(v))
+            format!("GroupValueResponse {}", format_decoded_value(v, dpt))
         }
-        ApplicationService::GroupValueWrite(v) => format!("GroupValueWrite {}", format_value(v)),
+        ApplicationService::GroupValueWrite(v) => {
+            format!("GroupValueWrite {}", format_decoded_value(v, dpt))
+        }
         ApplicationService::Other { apci, data } => {
             format!("APCI {apci:#06x} data {data:02x?}")
+        }
+    }
+}
+
+/// Renders one `GroupValueWrite`/`GroupValueResponse` payload: decoded
+/// (`<DPST-m-s> <value>`) where `dpt` names exactly one type and decoding
+/// succeeds, the raw payload plus a stated reason otherwise (spec E4-D8) —
+/// never a silent fallback, because a monitor that goes quiet on what it
+/// cannot decode hides more than it shows (RESEARCH §6.1: 38% of group
+/// addresses resolve to no DPT at all).
+fn format_decoded_value(v: &knx_net::GroupValue, dpt: DptAnnotation) -> String {
+    let raw = format_group_value_payload(v);
+    match dpt {
+        DptAnnotation::NotApplicable => raw,
+        DptAnnotation::None => format!("{raw} (no DPT resolved)"),
+        DptAnnotation::Single(dpt_ref) => match knx_core::decode(*dpt_ref, v) {
+            Ok(value) => format!("{dpt_ref} {}", value.format(*dpt_ref)),
+            Err(e) => format!("{raw} ({e})"),
+        },
+        DptAnnotation::Conflict(dpts) => {
+            let names = dpts
+                .iter()
+                .map(|d| d.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("{raw} (conflicting DPTs: {names})")
         }
     }
 }

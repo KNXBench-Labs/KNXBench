@@ -259,9 +259,12 @@ unconfirmed `ROUTING_INDICATION` over the standard routing multicast
 group) are all implemented now; KNX IP Secure remains out of scope, handled
 separately by `knx-secure`. The bus monitor is a consumer that
 resolves telegrams against the open project (`apps/knx-cli`'s `bus monitor`
-subcommand, resolving against group address names only, no DPT
-interpretation yet); the connection itself knows nothing about projects,
-as this section originally specified.
+subcommand, resolving group address names and — since T29, 2026-09-11,
+`crates/knx-core/src/dpt/` — decoding each telegram's value against the
+DPT inferred from the project's linked communication objects, given
+`--project`; [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-fourteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) has the full
+accounting of what that codec does and does not cover); the connection
+itself knows nothing about projects, as this section originally specified.
 
 `BusAccess` from `0.xml` — the ETS commissioning interface connection string —
 is preserved verbatim and **not** translated into our own connection model

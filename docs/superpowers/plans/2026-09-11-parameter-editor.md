@@ -34,6 +34,13 @@ These bind every task. A reviewer checks them as written.
 - **Module-scoped fields stay read-only in this slice** (design D25).
   Nothing in any task adds a way to write one — this is the boundary that
   keeps this slice on one branch.
+- **Module-scoped stored values never enter `resolve_values`'s `supplied`
+  map.** Only unscoped, successfully-matched stored values do (design
+  D21's flat-`ValueMap` ruling). A module-scoped value reaches the user
+  only by direct per-section attachment in Task 3's assembly code, after
+  `evaluate` has already run against defaults for any `choose` a
+  module-scoped parameter controls — see D21/D23's stated consequence
+  before assuming a task can skip this distinction.
 - **Never claim ETS behavioural parity or KNX certification**, anywhere,
   including code comments.
 - **Never promote a `[V]`/`[A]` corpus fact to `[D]` Standard text.** This
@@ -199,20 +206,51 @@ new file).
    reads the device's `program_ref`, its `source.path`, and every stored
    `ParameterInstance` for this device into local values, drops the lock.
    Step 2 locks only `product_db`: `resolve_program`, `load_program_trees`,
-   build `supplied` from the values gathered in Step 1, `resolve_values`,
+   `parameter_ref_ids` (needed by decomposition below, before `supplied`
+   can even be built).
+
+   **Decompose every stored value first (design D21, this revision).**
+   For each `(ets_id, raw)` gathered in Step 1: if `ets_id` is in
+   `parameter_ref_ids`, it is unscoped — insert `(ets_id, raw)` into
+   `supplied`. Otherwise apply `^(.*)_M-(\d+)_MI-(\d+)_(.*)$`; no match is
+   stale. A match yields candidate `module_id = "{prefix}_M-{n}"` and
+   candidate declared id `"{prefix}_{suffix}"`; validate the declared id
+   against `parameter_ref_ids` and `module_id` against the distinct
+   `ModuleScope::module_id`s that come out of this program's `Activation`
+   (evaluate first, or walk `ProgramTrees` for `Module`-kind nodes
+   directly — either source is already loaded, no new query) — both must
+   hold, or the row is stale. A validated match is inserted into a
+   **separate** per-channel map, keyed by `(module_id, declared id) ->
+   raw`; it is never inserted into `supplied` (D21's `ValueMap` ruling —
+   the evaluator must not see a module-scoped value in this slice, in
+   either direction).
+
+   Then: build `supplied` (unscoped entries only, above), `resolve_values`,
    `evaluate` (pure, needs no lock itself but is called while product_db
-   is still held so its `parameter_views`/`parameter_ref_ids` calls share
-   the one connection), `parameter_views`, `parameter_ref_ids`, compute
-   the stale diff (D21), build every `ParameterSectionDto` by grouping
-   `Activation::parameter_refs` by `ActiveRef::scope` (D23), map
+   is still held so its `parameter_views` call shares the one
+   connection), `parameter_views`, build every `ParameterSectionDto` by
+   grouping `Activation::parameter_refs` by `ActiveRef::scope` (D23) —
+   this is also where the `module_id` set the decomposition step needed
+   becomes concrete, from the distinct `ModuleScope`s these groups
+   already carry; **for a field inside a module-scoped section, look up
+   `(that section's module_id, the field's id)` in the per-channel map
+   first — found, `value`/`value_source` are `(raw, "Stored")`; not
+   found, fall back to the shared `ValueMap` default exactly as the
+   top-level section already does (D22, this revision)** — map
    `Activation::diagnostics` 1:1 into `ParameterDiagnosticDto` with the
    fixed per-`Diagnostic`-variant `message` strings design D26 specifies,
    drop the lock. If the device has no resolvable `program_ref`, return
    `ParameterPanelDto { program_id: None, sections: vec![], stale: <all
-   stored values, unconditionally, since there is no program to check
+   stored values, unconditionally, since there is no program to decompose
    them against>, diagnostics: vec![] }` — matches
    `CreationDiagnostic::ProgramlessProduct`'s existing precedent for this
    case rather than inventing a new one.
+
+   **`crates/knx-productdb/src/query.rs` is untouched by this step** —
+   the decomposition, the per-channel map, and the corrected `stale`
+   classification all live in `apps/knx-server`'s own assembly code, over
+   `parameter_views`/`parameter_ref_ids` rows `query.rs` already returns
+   (Task 1 is unaffected by this revision).
 3. **`GET /api/device/{id}/parameters`** handler, calling
    `domain::parameter_panel_impl`, following `device_detail`'s existing
    handler shape (`State<SharedState>`, `AxumPath<u32>`,
@@ -232,6 +270,13 @@ new file).
    `set_individual_address`'s handler does this before writing this one),
    then re-runs the assembly from step 2 and returns the fresh
    `ParameterPanelDto`.
+
+   Unchanged by this revision: the `ets_id`-in-`parameter_ref_ids` check
+   (verbatim) already rejects a module-scoped `etsId` on its own — no
+   declared `parameter_ref` id in any of the three demo projects contains
+   `_M-\d+_MI-\d+_` (design Evidence, this revision) — so this validation
+   chain needs no decomposition logic added to it. D21's decomposition is
+   a read-path-only addition (step 2 above).
 5. **`POST /api/device/{id}/parameters`** handler, body
    `#[derive(Deserialize)] #[serde(rename_all = "camelCase")] struct
    SetParameterValueRequest { ets_id: String, raw: String }`, calling
@@ -247,33 +292,51 @@ new file).
      returns a `ParameterPanelDto` whose top-level section has both
      fields, `value_source` `"Stored"` and `"ProgramDefault"`
      respectively — acceptance criterion 1;
-   - a device with a stray `ParameterInstance` whose `ets_id` is not in
-     `parameter_ref_ids` for its program shows up in `stale`, not in
-     `sections` — acceptance criterion 2;
+   - a device with a stray `ParameterInstance` whose `ets_id` neither
+     names a `parameter_ref` verbatim nor decomposes to one (an
+     undecomposable id, and separately an id whose regex-decomposed
+     candidate names no real `Module`/`ParameterRef` the program
+     declares) shows up in `stale`, not in `sections`, while its other
+     valid — including module-scoped-and-valid — stored values are
+     unaffected — acceptance criterion 2 (corrected definition, this
+     revision);
    - a program with one `Module` instantiated twice (reuse or build a
      minimal `ProgramTrees` fixture with two `Module` elements
      referencing one `ModuleDef`, matching Task 1 of the module-expansion
      plan's own hand-built fixture idiom) produces two
-     `ParameterSectionDto`s with distinct `module_node` — acceptance
-     criterion 3;
+     `ParameterSectionDto`s with distinct `module_node`, both containing
+     the same `ets_id` set — acceptance criterion 3 (this bullet checks
+     the id sets match; the KV-shape bullet below checks that values may
+     legitimately differ);
+   - a device whose stored `ParameterInstance` rows are the KV v2.5 demo
+     shape — `ParameterInstanceRef` ids
+     `M-00FA_A-2504-10-C071_MD-2_M-2_MI-1_P-1_R-1` = `"32"`,
+     `..._M-3_MI-1_P-1_R-1` = `"48"`, `..._M-4_MI-1_P-1_R-1` = `"17"`,
+     `..._M-5_MI-1_P-1_R-1` = `"33"`, `..._M-6_MI-1_P-1_R-1` = `"49"`
+     (verbatim from the corpus; a minimal fixture with 5 `Module`
+     instantiations of one `ModuleDef` declaring one `ParameterRef`,
+     `M-00FA_A-2504-10-C071_MD-2_P-1_R-1`) — `GET` returns five
+     `ParameterSectionDto`s, each showing that `ParameterRef`'s field
+     with its own stored value and `value_source == "Stored"`, and
+     `stale` is empty — acceptance criterion 4 (this revision);
    - `POST` with a valid top-level `etsId`/`raw` returns 200, and the
      returned `ParameterPanelDto`'s matching field shows the new `raw`
      with `value_source == "Stored"` in that same response body —
-     acceptance criterion 4;
+     acceptance criterion 5;
    - `POST` with an out-of-range `Number` value and with a non-member
      `Restriction` value both return 400, and a following `GET` shows the
-     field unchanged — acceptance criterion 5;
+     field unchanged — acceptance criterion 6;
    - `POST` targeting a field whose current section has `scope:
-     Some(_)` returns 400 and changes nothing — acceptance criterion 6;
+     Some(_)` returns 400 and changes nothing — acceptance criterion 7;
    - `POST` with an `etsId` absent from `parameter_ref_ids` entirely
-     returns 400 — acceptance criterion 7;
+     returns 400 — acceptance criterion 8;
    - a `POST` followed by `/api/undo` restores the field to its prior
      state (absent, or its prior value) and `/api/redo` reapplies the
-     write — acceptance criterion 8;
+     write — acceptance criterion 9;
    - a fixture constructed to produce exactly one diagnostic (an
      unparsable `when/@test`, matching slice 1's own test idiom for
      provoking `Diagnostic::UnparsableTest`) shows exactly one entry in
-     `ParameterPanelDto.diagnostics` — acceptance criterion 9.
+     `ParameterPanelDto.diagnostics` — acceptance criterion 10.
 8. Run all six gates. Report the workspace numbers.
 
 ## Task 4 — `apps/knx-web`: the parameter panel
@@ -337,15 +400,30 @@ No production logic. Code comments are allowed.
 2. `docs/KNOWN_LIMITATIONS.md` §3 — rewritten to state plainly: a
    parameter editor now exists (`GET`/`POST /api/device/{id}/
    parameters`), and it can write a top-level value and see the
-   evaluator's updated activation set in the same response. What remains
-   exactly as limited as slice 2 left it: D16 (all instantiations of one
-   `ModuleDef` still evaluate against identical values) now has a stated
-   consequence on the write side too — module-scoped fields are
-   displayed but not editable (this slice's D25), pending its own future
-   data-model decision. Also restate, unchanged: argument values remain
-   stored-but-uninterpreted, `AllocatorRef` is unattested, `Access` has no
-   attested correlation and is not used for write gating, and
-   `Float`/`Text`/`IPAddress`/`Picture`/`Raw` kinds get only a
+   evaluator's updated activation set in the same response. It also
+   *reads and displays* a module-scoped (per-channel) value correctly
+   where the project stores one — corrected against the corpus for this
+   revision: `ParameterInstance` already stores per-channel values today
+   (the KV v2.5 demo project's shape, 5 distinct values for one declared
+   `ParameterRef` across 5 `Module` instantiations), and this slice's
+   decomposition (D21) surfaces them per section (D22/D23). What remains
+   limited, restated accurately: (a) module-scoped fields are not
+   *editable* in this slice (D25) — the blocker is the evaluator's flat
+   `ValueMap` (`evaluate.rs:797`/`:348`, one slot per declared id, no
+   scope) plus unresearched write-validation semantics (does `MI` ever
+   exceed `1`? unattested in the corpus), not a missing storage key; (b)
+   because no module-scoped value ever reaches `ValueMap`, a `choose`
+   controlled by a module-scoped parameter evaluates against the program
+   default in every channel, so a channel's *active field set* as shown
+   here can differ from what ETS would compute from its own real value,
+   even though the *value* shown for an already-active module-scoped
+   field is correct. D16 (all instantiations of one `ModuleDef` still
+   *evaluate* against identical values) stays true in this precise,
+   narrower sense — it no longer means "displayed values are identical,"
+   which D21/D22 fix on the read side. Also restate, unchanged: argument
+   values remain stored-but-uninterpreted, `AllocatorRef` is unattested,
+   `Access` has no attested correlation and is not used for write gating,
+   and `Float`/`Text`/`IPAddress`/`Picture`/`Raw` kinds get only a
    non-empty-string check.
 3. `docs/KNOWN_LIMITATIONS.md` §12 — update the "parameter interpretation
    remains unsurfaced" line: it is now surfaced and writable (top-level
@@ -385,8 +463,11 @@ No production logic. Code comments are allowed.
 Carried over verbatim from the design's Non-goals section, listed here so
 a future session can pick one without re-deriving the boundary:
 
-- Per-channel (`Module`-instantiation) value editing — needs its own
-  data-model decision before it needs any code.
+- Per-channel (`Module`-instantiation) value editing — storage already
+  works (Evidence, this revision); needs a scope-aware evaluator
+  (`ValueMap`/`resolve_values`/`evaluate`) and validated write semantics
+  (including what `MI` means when observed above `1`) before it needs any
+  schema change.
 - Deep format validation for `Float`/`Text`/`IPAddress`/`Picture`/`Raw`.
 - Diagnostic-gated writes, if ever wanted.
 - Bulk/multi-field write endpoint.

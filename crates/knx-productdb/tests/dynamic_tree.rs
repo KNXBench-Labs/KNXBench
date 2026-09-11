@@ -1163,6 +1163,28 @@ fn a_parse_failure_during_the_v2_to_v3_backfill_does_not_abort_the_migration() {
         recorded, 1,
         "the broken blob's failure must be recorded, not silently dropped"
     );
+
+    // Per-file atomicity: `parse_dynamic_trees` inserts rows incrementally
+    // as it walks the XML events (`<Channel>` lands before the mismatched
+    // `</Weird>` end tag is ever seen), so without an inner boundary around
+    // this call the broken program would keep whatever rows it managed to
+    // write before the error surfaced. That would contradict this crate's
+    // own documented per-file atomicity invariant (`ingest.rs`'s "a parse
+    // error partway through leaves the database exactly as it was") for
+    // exactly this code path. Every row for the broken program, under any
+    // `module_def_id`, must be gone — not just the top-level `''` tree.
+    let broken_rows: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM dynamic_node WHERE program_id = ?1",
+            ["M-BAD_A-9999-1-0000-O0000"],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        broken_rows, 0,
+        "a mid-file parse failure must leave zero dynamic_node rows for that program, \
+         not the partial prefix parsed before the error"
+    );
 }
 
 // ---------------------------------------------------------------------
@@ -1280,5 +1302,138 @@ fn corpus_evaluation_matches_research_no_unparsable_tests_no_unresolved_refs_and
             "{name}: RESEARCH.md §4.3 found the sole-default-when shape in all \
              604 corpus TypeNone occurrences"
         );
+
+        // Design AC#3 / plan Task 2 step 7: not just "0 UnparsableTest", but
+        // that every stored `when` lands in the *right* `Condition_t` shape
+        // bucket (RESEARCH.md §4.3's table: `SINGLE_INTEGER`,
+        // `DEFAULT_ATTR(true)`, `SPACE_LIST_OF_INTEGERS`, `OP_NUMBER`).
+        // Classified straight from the stored `test`/`is_default` columns,
+        // independently of `evaluate`'s own diagnostics (which only walk
+        // each program's own `module_def_id = ''` tree — `Module`/
+        // `ModuleDef` are deliberately unevaluated, see `ModuleNotExpanded`
+        // above). §4.3's own per-archive `when` totals (2252/5/982/0, the
+        // same ones `corpus_choose_and_when_counts_match_research_and_every_choose_resolves`
+        // already proves) count *every* stored `when` regardless of
+        // `module_def_id`, so this counts the same way — over the whole
+        // freshly-installed, single-archive database, not just the
+        // evaluated top-level trees — to actually be comparable to that
+        // table. This also independently re-verifies "0 UnparsableTest"
+        // over rows `evaluate` never reaches (`ModuleDef` trees): any
+        // stored `test` that fails `Test::parse` here panics on the spot.
+        let mut single_integer = 0usize;
+        let mut default_attr_true = 0usize;
+        let mut space_list = 0usize;
+        let mut op_number = 0usize;
+        let mut when_total = 0usize;
+
+        let mut stmt = conn
+            .prepare("SELECT test, is_default FROM dynamic_node WHERE kind = 'when'")
+            .unwrap();
+        let rows: Vec<(Option<String>, Option<i64>)> = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        drop(stmt);
+
+        for (test, is_default) in rows {
+            when_total += 1;
+            if is_default == Some(1) {
+                default_attr_true += 1;
+                continue;
+            }
+            match test.as_deref().map(Test::parse) {
+                Some(Ok(Test::Single(_))) => single_integer += 1,
+                Some(Ok(Test::List(_))) => space_list += 1,
+                Some(Ok(Test::Compare(_, _))) => op_number += 1,
+                other => panic!(
+                    "{name}: when row with test={test:?} is_default={is_default:?} \
+                     classified as {other:?} — every stored @test must be a legal Condition_t"
+                ),
+            }
+        }
+
+        eprintln!(
+            "corpus {name}: when_total={when_total} SINGLE_INTEGER={single_integer} \
+             DEFAULT_ATTR(true)={default_attr_true} SPACE_LIST_OF_INTEGERS={space_list} \
+             OP_NUMBER={op_number}"
+        );
+
+        // RESEARCH.md §4.3 states directly, whole-corpus: SINGLE_INTEGER
+        // 19138, DEFAULT_ATTR(true) 3417, SPACE_LIST_OF_INTEGERS 62,
+        // OP_NUMBER(>) 13 — "all 13 in one prod3 application program". It
+        // does not publish a per-archive breakdown of the first three
+        // shapes, only the per-archive `choose`/`when` totals (the
+        // "Corpus evidence table") and that `prod3` is the *only* archive
+        // with any `OP_NUMBER` at all. Those are the facts this asserts
+        // directly; the per-archive SINGLE_INTEGER/DEFAULT_ATTR/SPACE_LIST
+        // split itself is not written down anywhere in the document (the
+        // whole-corpus totals sum in seven archives, three of which —
+        // `ez4`, `ez630`, `kv25` — are `.knxproj` samples outside this
+        // four-archive `.knxprod`-only corpus test), so it is measured
+        // here from the real corpus rather than copied, then locked in and
+        // cross-checked against every constraint §4.3 *does* state:
+        assert_eq!(
+            single_integer + default_attr_true + space_list + op_number,
+            when_total,
+            "{name}: every when classifies into exactly one shape"
+        );
+        match name {
+            "646704-04_ETS4_2012_47_DE_EN.knxprod" => {
+                assert_eq!(
+                    when_total, 2252,
+                    "{name}: matches the evidence table's when count"
+                );
+                assert_eq!(
+                    op_number, 0,
+                    "{name}: §4.3 states all 13 OP_NUMBER instances belong to prod3 alone"
+                );
+                assert_eq!(single_integer, 1669, "{name}: measured shape split");
+                assert_eq!(default_attr_true, 583, "{name}: measured shape split");
+                assert_eq!(space_list, 0, "{name}: measured shape split");
+            }
+            "Weinzierl_730_KNX_IP_Interface_ETS4.knxprod" => {
+                assert_eq!(
+                    when_total, 5,
+                    "{name}: matches the evidence table's when count"
+                );
+                assert_eq!(
+                    op_number, 0,
+                    "{name}: §4.3 states all 13 OP_NUMBER instances belong to prod3 alone"
+                );
+                assert_eq!(single_integer, 1, "{name}: measured shape split");
+                assert_eq!(default_attr_true, 4, "{name}: measured shape split");
+                assert_eq!(space_list, 0, "{name}: measured shape split");
+            }
+            "MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod" => {
+                assert_eq!(
+                    when_total, 982,
+                    "{name}: matches the evidence table's when count"
+                );
+                assert_eq!(
+                    op_number, 13,
+                    "{name}: §4.3 states all 13 corpus-wide OP_NUMBER instances are in prod3"
+                );
+                assert_eq!(single_integer, 907, "{name}: measured shape split");
+                assert_eq!(default_attr_true, 0, "{name}: measured shape split");
+                assert_eq!(
+                    space_list, 62,
+                    "{name}: measured shape split — also equal to the whole-corpus \
+                     SPACE_LIST_OF_INTEGERS total (§4.3: 62), so all corpus-wide \
+                     instances of this shape are in prod3 too, same as OP_NUMBER"
+                );
+            }
+            "Dummy_Applikation_Secure.knxprod" => {
+                assert_eq!(
+                    when_total, 0,
+                    "{name}: genuinely empty Static/Dynamic tree per §4.3"
+                );
+                assert_eq!(single_integer, 0, "{name}: measured shape split");
+                assert_eq!(default_attr_true, 0, "{name}: measured shape split");
+                assert_eq!(space_list, 0, "{name}: measured shape split");
+                assert_eq!(op_number, 0, "{name}: measured shape split");
+            }
+            other => panic!("unexpected corpus archive {other} in this test's own list"),
+        }
     }
 }

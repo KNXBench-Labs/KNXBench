@@ -154,4 +154,43 @@ describe("ParameterPanel", () => {
 
     root.unmount();
   });
+
+  it("reverts to the prior value and surfaces the message on a rejected write", async () => {
+    apiMock.deviceParameters.mockResolvedValue(fixture);
+    apiMock.setParameterValue.mockRejectedValue(new Error("out of range"));
+    const root = await renderPanel();
+
+    const input = host!.querySelector<HTMLInputElement>('input[type="number"]')!;
+    await act(async () => {
+      setInputValue(input, "99");
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "99");
+    expect(host!.querySelector<HTMLInputElement>('input[type="number"]')!.value).toBe("5");
+    expect(host!.querySelector(".field-error")!.textContent).toBe("out of range");
+
+    root.unmount();
+  });
+
+  it("renders the empty-program state while still rendering a non-empty stale list", async () => {
+    const noProgram: ParameterPanelDto = {
+      programId: null,
+      sections: [],
+      stale: [{ etsId: "P9", raw: "legacy-raw" }],
+      diagnostics: [],
+    };
+    apiMock.deviceParameters.mockResolvedValue(noProgram);
+    const root = await renderPanel();
+
+    expect(host!.textContent).toContain(
+      "This device has no resolvable application program",
+    );
+    expect(host!.querySelectorAll(".parameter-field").length).toBe(0);
+    expect(host!.textContent).toContain("P9");
+    expect(host!.textContent).toContain("legacy-raw");
+
+    root.unmount();
+  });
 });

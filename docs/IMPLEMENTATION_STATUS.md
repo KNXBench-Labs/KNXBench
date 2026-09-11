@@ -1118,9 +1118,14 @@ an ordered member inventory, and rejects — as a typed `PackageError`,
 member, path traversal, a duplicate member name, an oversized member, a
 missing `knx_master.xml`, an unsupported namespace, a full `.knxproj`
 project archive passed where a product package was expected, or a
-`.vd2` filename (checked before any byte is hashed:
-`PackageError::LegacyVd2` → `"legacy .vd2 product data is
-unsupported"`). A second install of byte-identical content is a no-op
+`.vd2` filename (checked by suffix only — never opened as a ZIP,
+never decrypted or parsed — but, since 2026-09-11, the whole-archive
+bytes are hashed and the error carries the evidence:
+`PackageError::LegacyVd2 { sha256, len }` →
+`"legacy .vd2 product data is unsupported (sha256 <64 hex chars>,
+<len> bytes)"`; the archive size limit is enforced before that hash is
+computed, so hashing itself stays bounded). A second install of
+byte-identical content is a no-op
 (`InstallReport.skipped == true`, zero new rows). Verified against the
 full 6-file real-world corpus in `OriginalData/ProductDatabases/`: 3
 files at master data scheme 11, 2 at scheme 20 install cleanly
@@ -1175,9 +1180,18 @@ distinct from the now-verified `.knxprod` package claim; §4's blanket
 "not supported" row narrowed to schemes 12-19/21/22 plus `.vd2`).
 `docs/superpowers/specs/2026-09-09-standalone-product-database-install-design.md`'s
 acceptance criterion "the caller receives the archive hash/size in the
-error report where available" is **not implemented** for the `.vd2`
-case (the filename check runs before any hash/size is computed) —
-recorded as a known gap, not fixed, since Task 5 is documentation-only.
+error report where available" was **not implemented** for the `.vd2`
+case at the time (the filename check ran before any hash/size was
+computed) — recorded then as a known gap, out of scope for Task 5's
+documentation-only pass. **Closed 2026-09-11:** the `MAX_PACKAGE_SIZE`
+guard now runs first (so hashing itself stays bounded), then the
+`.vd2` filename check hashes the whole archive and returns
+`PackageError::LegacyVd2 { sha256, len }`, whose `Display` reports
+both; see `rejects_the_real_legacy_vd2_corpus_file_with_its_hash_and_size`
+and `a_small_vd2_still_reports_hash_and_length`
+(`crates/knx-productdb/tests/standalone_packages.rs`). `.vd2` itself
+remains unsupported — no byte of it is decrypted, parsed, or
+installed — only the evidence attached to its rejection changed.
 
 Gates run for Task 5 (`KNXBENCH_PRODUCT_CORPUS` pointed at
 `OriginalData/ProductDatabases`): `cargo fmt --all --check` (found and

@@ -210,10 +210,15 @@ inside a `.knxproj` that already contains them (see Impact below;
 a pre-2013 ETS2-era legacy container (SFX/`.vd_`-style, not
 the same ZIP/XML family as `.knxprod`/`.knxproj` at all — confirmed by
 inspection, it has no `knx_master.xml`), is explicitly and permanently
-rejected: `PackageError::LegacyVd2` → `"legacy .vd2 product data is
-unsupported"`, checked by filename suffix before any byte is read. This is a
-named, external blocker (a genuinely different, undocumented legacy format),
-not an untested general failure.
+rejected: `PackageError::LegacyVd2 { sha256, len }` → `"legacy .vd2 product
+data is unsupported (sha256 <64 hex chars>, <len> bytes)"`, identified by
+filename suffix alone — the archive is never opened as a ZIP, never
+decrypted, never parsed. As of 2026-09-11 its bytes are hashed (bounded by
+the same `MAX_PACKAGE_SIZE` guard every package is subject to) so the
+rejection carries the archive's hash and length as evidence; before that
+date the filename check reported no evidence at all. This is a named,
+external blocker (a genuinely different, undocumented legacy format), not
+an untested general failure.
 
 Note the scope: this is about standalone `.knxprod` *product packages*
 (`knx products ingest`, `POST /api/catalog/install`,

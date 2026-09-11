@@ -919,3 +919,89 @@
   two-source pattern a reviewer should double check stays in sync if either
   side changes shape.
 
+
+---
+
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-11 03:16
+- **Completed:** T14 (project diff/compare) implemented end to end and merged
+  into `main` as `5f852fe` (`--no-ff`), pushed (`bb2c88b..5f852fe`). Built by
+  subagent-driven development from
+  `docs/superpowers/specs/2026-09-10-project-diff-design.md` and
+  `docs/superpowers/plans/2026-09-10-project-diff.md` (both landed earlier in
+  `155b126`/`bb2c88b`), seven tasks, each individually reviewed, plus a
+  whole-branch review and one fix commit.
+  - **`crates/knx-diff`** — a new pure crate. Depends on `knx-core` only: no
+    filesystem, no clock, no serde, no SQLite, no `knx-store`, no
+    `knx-etsproj`. `xtask check-layering` gained a rule for it and the rule
+    was proven to fire (a reviewer temporarily injected
+    `knx-store.workspace = true` and watched the gate fail).
+    - `key.rs` — the generic matching engine. `match_entities` matches on
+      `ets_id` first, then on a natural key, and returns matched pairs,
+      per-side leftovers and ambiguity groups.
+    - `semantic.rs` — the per-entity `*Key`/`*Fields` types and their
+      extraction functions, reimplementing `knx-etsproj::compare`'s
+      `semantic_text`/`semantic_dpt`/`semantic_flag` techniques directly
+      against `knx-core` rather than depending on that crate.
+    - `diff.rs` — `diff_projects(&Project, &Project) -> ProjectDiff`.
+  - **`POST /api/project/diff`** on `knx-server` compares the *live
+    in-memory project* against a `.knxdb` file — "what would Save change",
+    not "compare two files". Both its failure modes map to
+    `ApiError::bad_request`.
+  - **`knx diff <a.knxdb> <b.knxdb>`** on `knx-cli` prints the same thing as
+    text: `+` added, `-` removed, `~` changed, `?` ambiguous. Exit `0`
+    whenever a comparison was produced — a diff with changes is not a failed
+    diff — and `1` only when a store could not be opened or loaded.
+  - **`apps/knx-web`** gained `ProjectDiffPanel.tsx`, a "Compare with…"
+    button in the existing toolbar row, and grouped counts per non-empty
+    entity table. No tree view and no inline before/after highlighting —
+    both are recorded as out of scope.
+  - **`crates/knx-app/tests/project_diff.rs`** imports the reference project
+    twice, independently, and asserts the diff between the two is empty at
+    every level. It ran for real on the merged result: "project_diff corpus
+    test: 36 devices, 907 communication objects, 514 group addresses".
+  - Docs: `GAP_ANALYSIS_ETS.md` C1 and the T14 backlog entry closed with
+    evidence, ten new `KNOWN_LIMITATIONS.md` entries (§51-60),
+    `ARCHITECTURE.md`'s dependency graph, a dated `IMPLEMENTATION_STATUS.md`
+    entry.
+  - Gates on the merged result: 782 Rust tests passed / 0 failed / 3 ignored,
+    157 frontend tests, `cargo fmt`, `cargo clippy -D warnings`,
+    `check-layering` and `cargo deny check` all clean, `tsc --noEmit` clean.
+  Three design decisions worth remembering, all made during the cycle:
+  (1) devices get dedicated `DeviceTable`/`DeviceChange` types rather than
+  reusing the generic `EntityTable`, because nesting communication objects
+  and parameters inside a `Fields` type would duplicate them meaninglessly on
+  both sides of a change; (2) a device whose own fields are unchanged but
+  whose communication objects or parameters changed still appears in
+  `devices.changed`, with an empty `changed_fields` — the alternative
+  silently discards change information; (3) ordering is deterministic
+  throughout and no `HashMap` may influence output anywhere, a rule the Task 1
+  review had to enforce once by rejecting the first implementation.
+- **Pending/Next Steps:** T14 is closed. The remaining backlog, roughly in
+  the order the roadmap implies: T25/T26 (i18n, gap D10), T27 (motion toggle,
+  gap D11 — the two-animation-styles memo in `ROADMAP.md` belongs here),
+  T28 (in-application help, gap D12), T20 (Functions, needs an ADR first),
+  T21 (graphical views, gaps D1/D2), T16 (catalog browser), T18 (parameter
+  editor, needs the RESEARCH R3 spike first), T15/T17 (bus-facing UI), T19
+  (KNX Secure, blocked on key material and hardware), T22 (multi-user, needs
+  a design decision before any task). Four items still need the maintainer's
+  explicit out-of-scope acceptance before the standing goal can be called
+  complete: `.vd2` support, encrypted `.knxprod` (untested for want of a
+  sample), T19's deferral, and the permanent exclusion of commissioning (E1).
+- **Notes for Codex:** The corpus test's skip guard is the same one
+  `documentation_export.rs` uses — it skips loudly with an `eprintln!` when
+  `OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj` is
+  absent, and a green test run therefore proves nothing on its own. Run it
+  with `-- --nocapture` and look for the counts line before believing it.
+  From a git worktree the file is unreachable unless you symlink
+  `OriginalData` in by hand (worktrees don't carry gitignored directories);
+  the T14 worktree did exactly that and the symlink was deleted with it.
+  Two things in the new crate are easy to break without noticing: the
+  ordering rule (any `HashMap` touching output order is a defect, not a
+  style question) and the device rule above — `apps/knx-cli`'s
+  `"~ device {id}: (own fields unchanged)"` branch exists solely to keep that
+  information visible, and there is now a CLI test that fails if it is
+  removed. `knx-diff` deliberately carries no serde: the JSON DTOs live in
+  `apps/knx-server`, and the TypeScript interfaces in `apps/knx-web/src/api.ts`
+  are hand-written mirrors of those DTOs, so a field renamed on the server
+  will compile fine on both sides and silently render zeroes.

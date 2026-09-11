@@ -19,8 +19,12 @@ pub mod frame;
 pub mod routing;
 pub mod tunnelling;
 
-pub use cemi::{ApplicationService, Destination, GroupValue, LDataFrame, LDataMessageKind};
+pub use cemi::{ApplicationService, Destination, LDataFrame, LDataMessageKind};
 pub use client::{
     BusConnection, BusError, DiscoveredGateway, KnxNetIpClient, RoutingClient, TunnelClient,
     TunnelEvent,
 };
+// `GroupValue` is a KNX domain concept (the payload of a group telegram),
+// not an IP-transport one — it lives in `knx-core` (spec E4-D2) and is
+// re-exported here so every existing call site keeps compiling unchanged.
+pub use knx_core::GroupValue;

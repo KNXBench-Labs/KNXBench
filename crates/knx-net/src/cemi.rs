@@ -5,6 +5,10 @@
 //! (`ApplicationService::Other`), never silently dropped.
 
 use knx_core::{GroupAddress, IndividualAddress};
+// Re-exported (not just imported) so `crate::cemi::GroupValue` keeps
+// resolving for call sites that named this module directly — `GroupValue`
+// itself now lives in `knx-core` (spec E4-D2).
+pub use knx_core::GroupValue;
 
 pub const L_DATA_REQ: u8 = 0x11;
 pub const L_DATA_CON: u8 = 0x2E;
@@ -25,17 +29,6 @@ pub enum LDataMessageKind {
 pub enum Destination {
     Individual(IndividualAddress),
     Group(GroupAddress),
-}
-
-/// The wire form of a group value, before any DPT interpretation (no DPT
-/// is resolved this cycle — RESEARCH.md §8.1's `DPTBinary`/`DPTArray`
-/// distinction, kept as raw bytes rather than decoded engineering values).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum GroupValue {
-    /// Fits in the TPCI/APCI-low octet's 6 data bits (e.g. a DPT-1 boolean).
-    Short(u8),
-    /// One or more full octets follow the TPCI/APCI-low octet.
-    Bytes(Vec<u8>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -251,6 +244,17 @@ pub fn encode_l_data(frame: &LDataFrame) -> Vec<u8> {
 
 fn encode_group_value(value: &GroupValue) -> (usize, u8, &[u8]) {
     match value {
+        // A `Short` whose value needs more than six bits does not fit the
+        // inline APCI-octet field: `short_apci`'s own two low bits share
+        // that octet with the top two bits of `inline6` (see the encoding
+        // below), so a `Short(v)` with `v > 0x3F` would overwrite them and
+        // change which `A_GroupValue_*` service the frame decodes as.
+        // Application Layer v02.01.01 AS §3.1.3 already draws the line at
+        // six bits ("Values that only consist of 6 bits or less have the
+        // following optimized A_GroupValue_Write-PDU format"), so an
+        // out-of-range `Short` is promoted to the one-octet `Bytes` form
+        // instead — the value survives, and the APCI is not touched.
+        GroupValue::Short(v) if *v > 0x3F => (2, 0, std::slice::from_ref(v)),
         GroupValue::Short(inline6) => (1, *inline6, &[]),
         GroupValue::Bytes(bytes) => (1 + bytes.len(), 0, bytes),
     }
@@ -285,7 +289,7 @@ fn finish_l_data(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use knx_core::{GroupAddress, IndividualAddress};
+    use knx_core::{GroupAddress, GroupValue, IndividualAddress};
 
     /// A minimal, hand-built `L_Data.ind` carrying `A_GroupValue_Write`
     /// with a 6-bit inline value (e.g. DPT-1 "on"): message code 29h, no
@@ -470,5 +474,29 @@ mod tests {
             ApplicationService::Other { .. } => {}
             other => panic!("expected Other, got {other:?}"),
         }
+    }
+
+    /// Regression for the APCI-corruption bug (spec E4-D3): before the
+    /// `encode_group_value` fix, `Short(0x40)` set `apci_lo`'s top two bits
+    /// (meant for `short_apci`) from `inline6`'s own top bit, so a
+    /// `GroupValueWrite` decoded back as `short_apci = 0b0011` —
+    /// `ApplicationService::Other`, with the value gone. `0x40` is the
+    /// smallest value that does not fit the six inline bits (`0x3F` is the
+    /// largest that does), so it is the minimal case that exercises the
+    /// bug.
+    #[test]
+    fn encode_promotes_out_of_range_short_instead_of_corrupting_apci() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            service: ApplicationService::GroupValueWrite(GroupValue::Short(0x40)),
+        };
+        let encoded = encode_l_data(&frame);
+        let decoded = decode_l_data(&encoded).unwrap();
+        assert_eq!(
+            decoded.service,
+            ApplicationService::GroupValueWrite(GroupValue::Bytes(vec![0x40]))
+        );
     }
 }

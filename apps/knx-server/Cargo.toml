@@ -21,6 +21,7 @@ knx-core.workspace = true
 knx-csv.workspace = true
 knx-diff.workspace = true
 knx-etsproj.workspace = true
+knx-net.workspace = true
 knx-projection.workspace = true
 knx-productdb.workspace = true
 knx-report.workspace = true

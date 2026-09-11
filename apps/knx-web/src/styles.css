@@ -565,6 +565,99 @@ main {
   gap: 0.5rem;
 }
 
+/* `BusMonitorPanel` — docked in `.workspace` the same way `.log-panel` is
+   (a toolbar toggle, not a modal), so it shares that `flex: 1 1 60%`
+   sizing rather than `.project-diff-panel`'s own card frame. */
+.bus-monitor-panel {
+  flex: 1 1 60%;
+  min-width: 0;
+}
+
+.bus-monitor-connect {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+
+.bus-monitor-session,
+.bus-monitor-stop-summary {
+  opacity: 0.85;
+}
+
+.bus-monitor-warning {
+  color: var(--knx-warning-color);
+  font-weight: bold;
+}
+
+/* The user-facing half of "never lose a telegram silently" — see
+   `BusMonitorPanel.tsx`'s own comment on `droppedBefore`. Styled like
+   `.field-error` on purpose: a gap in what the user is shown is not a
+   cosmetic note. */
+.bus-monitor-gap-notice {
+  display: block;
+  color: var(--knx-error-color);
+  font-weight: bold;
+  margin: 0.5rem 0;
+}
+
+.bus-monitor-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  margin: 0.75rem 0;
+}
+
+.bus-monitor-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.bus-monitor-empty {
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.bus-monitor-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.bus-monitor-table th,
+.bus-monitor-table td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--knx-border);
+  text-align: left;
+}
+
+.bus-monitor-dest-name {
+  opacity: 0.75;
+  font-style: italic;
+}
+
+/* The synthetic "session closed by gateway" marker row (`bus.rs`'s
+   `push_closed_marker`) — visually distinct so it reads as a status
+   notice, not another telegram. */
+.bus-monitor-row-marker {
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.bus-monitor-decoded-conflict {
+  color: var(--knx-warning-color);
+}
+
+.bus-monitor-decoded-error {
+  color: var(--knx-error-color);
+}
+
+.bus-monitor-decoded-unresolved {
+  opacity: 0.75;
+}
+
 .fs-picker-overlay {
   position: fixed;
   inset: 0;

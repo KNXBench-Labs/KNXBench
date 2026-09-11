@@ -23,6 +23,26 @@ use serde_json::json;
 /// may already be open, not an environment problem, so they follow the
 /// second half of the split instead (see the route's own doc comment for
 /// the full reasoning).
+///
+/// `bus_routes.rs` (T15 task 3) adds a third category the two constructors
+/// above cannot express, so it reaches for [`ApiError::with_status`]
+/// instead: `502` ("far-end failure"), for `BusSessionError::Transport` —
+/// a real KNXnet/IP gateway (or, in tests, a `FakeConnector`/`FakeTunnel`
+/// scripted to fail the same way) refused a connection, timed out, or
+/// otherwise misbehaved. This is neither `bad_request` (the caller sent a
+/// perfectly reasonable request; nothing about it needs fixing) nor
+/// `internal` (this server is not the thing that broke — it only relayed
+/// a failure from something on the far side of a socket it does not
+/// control), which is exactly what HTTP's own `502 Bad Gateway` names:
+/// this server, acting as a gateway to another system, got back a
+/// failure from that system. Naming it here keeps this doc comment the
+/// one place that answers "why did this route return that status", the
+/// same reason the 400/500 split above lives here instead of being
+/// rediscovered per-route; it does not weaken or replace that split —
+/// `bus_routes.rs` never needs a `500` at all (nothing in it touches the
+/// filesystem or `knx-store`), and its 400s/409s (a caller mistake, or a
+/// session-state conflict the caller could have avoided) still follow
+/// the rule above exactly.
 #[derive(Debug)]
 pub struct ApiError {
     status: StatusCode,

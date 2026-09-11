@@ -350,7 +350,10 @@ pub enum Diagnostic {
     /// (design D10). Its subtree is not descended.
     UnrecognizedNode { node_id: i64, kind: String },
     /// A `Module` node (design D10): recognized, but this slice does not
-    /// follow it into the referenced `ModuleDef`'s own tree.
+    /// follow it into the referenced `ModuleDef`'s own tree. How that
+    /// expansion would work — naming, argument binding, repetition,
+    /// id-mangling, and a required dedup fix — is researched but not yet
+    /// implemented; see RESEARCH.md §4.4 (the R4 spike, 2026-09-11).
     ModuleNotExpanded {
         node_id: i64,
         ref_id: Option<String>,

@@ -589,11 +589,16 @@ Each task: **what**, **why**, **depends on**.
   that stores an unrecognized `Dynamic`/when-child construct under its own
   name and reports it rather than dropping it (the spike itself turned up
   one undocumented one, `ChannelIndependentBlock`, mid-research). Two
-  slices remain, neither started: **module expansion** (follow
+  slices remain, **neither started**: **module expansion** (follow
   `Module/@RefId` into a `ModuleDef`'s own `Dynamic` tree — today a
   `Module` node evaluates to `ModuleNotExpanded` and is not followed), and
   **the editor** (a UI over the evaluator, writing values back into a
-  project). Partially closes **A3**, prerequisite for a large share of
+  project). The research for module expansion now exists — the R4 spike
+  (2026-09-11, RESEARCH §4.4) establishes how `Module`/`ModuleDef` naming,
+  argument binding, repetition and id-mangling actually work, against a
+  two-manufacturer corpus — but that is evidence, not implementation: no
+  code has changed and the diagnostic still fires on every `Module` node.
+  Partially closes **A3**, prerequisite for a large share of
   realistic ETS parity. This is still the single largest remaining gap by
   effort, and every parameter-adjacent gap above (T7 aside) is smaller in
   comparison.

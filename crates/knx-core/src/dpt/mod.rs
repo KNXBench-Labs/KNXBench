@@ -1,12 +1,28 @@
-//! Datapoint type references. Referenced, not inlined: the DPT catalogue
-//! (`knx_master.xml`, 289 subtypes) belongs to the product database, not to
-//! each project (DATA_MODEL §9).
+//! Datapoint type references, wire payloads and their codec.
+//!
+//! `DptRef` and `DptParseError` identify a datapoint type; `GroupValue` is
+//! the payload of a group telegram, however it got here (bus, CLI, tests);
+//! `codec` (in `codec.rs`) turns one into the other. The DPT catalogue
+//! itself (`knx_master.xml`, 289 subtypes) belongs to the product database,
+//! not to each project (DATA_MODEL §9) — referenced, not inlined.
 
 use std::fmt;
 
+pub mod codec;
+pub mod resolve;
+
+pub use codec::{decode, encode, DptCodecError, DptValue};
+pub use resolve::{resolve_group_address_dpt, resolve_project_group_address_dpts, GroupAddressDpt};
+
 /// A reference to a datapoint type, e.g. `DPST-1-1` (main type 1, subtype 1)
 /// or `DPT-1` (main type only, no subtype selected).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+///
+/// Ordered by main type, then subtype — the order a human would expect, and
+/// the order `resolve::GroupAddressDpt::Conflict` sorts its entries in. That
+/// order must be deterministic across runs (a `Conflict` vector feeds
+/// straight into CLI output), which a derived `Ord` over two integer fields
+/// gives for free.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct DptRef {
     pub main: u16,
     pub sub: Option<u16>,
@@ -70,6 +86,17 @@ impl fmt::Display for DptParseError {
             DptParseError::Malformed(s) => write!(f, "malformed datapoint type reference: {s:?}"),
         }
     }
+}
+
+/// The wire form of a group value, before any DPT interpretation. A group
+/// value is the payload of a group telegram — a domain concept (moved here
+/// from `knx-net::cemi`, spec E4-D2), not an IP-transport one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GroupValue {
+    /// Fits in the TPCI/APCI-low octet's 6 data bits (e.g. a DPT-1 boolean).
+    Short(u8),
+    /// One or more full octets follow the TPCI/APCI-low octet.
+    Bytes(Vec<u8>),
 }
 
 #[cfg(test)]

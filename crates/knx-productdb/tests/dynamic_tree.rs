@@ -2,7 +2,10 @@
 //! design D2-D4). These assert the tree lands losslessly, one row per
 //! element, in document order — nothing here evaluates `@test`.
 
+use std::io::{Cursor, Write};
+
 use rusqlite::Connection;
+use zip::write::SimpleFileOptions;
 
 fn db() -> (tempfile::TempDir, Connection) {
     let dir = tempfile::tempdir().unwrap();
@@ -222,6 +225,134 @@ fn a_modelled_attribute_without_a_dedicated_column_is_kept_but_not_reported() {
     assert_eq!(reported, 0);
 }
 
+/// Fix round 1, finding 1: `@default`'s only recognized spelling is the
+/// literal string `"true"`. Any other spelling must not vanish — it stays
+/// out of `is_default` (correct already) but must also stay *in* `extra`
+/// and be reported like any other unmatched attribute, instead of being
+/// silently excluded from both.
+const NON_TRUE_DEFAULT: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-006B">
+      <ApplicationPrograms>
+        <ApplicationProgram Id="M-006B_A-0002-22-26C0-O0080" Name="P" ApplicationVersion="22"
+                            MaskVersion="MV-0701">
+          <Static><ParameterRefs/></Static>
+          <Dynamic>
+            <Channel Id="CH-1">
+              <ParameterBlock Id="PB-1">
+                <choose ParamRefId="P-1_R-1">
+                  <when default="false" />
+                  <when default="1" />
+                </choose>
+              </ParameterBlock>
+            </Channel>
+          </Dynamic>
+        </ApplicationProgram>
+      </ApplicationPrograms>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+
+#[test]
+fn a_default_attribute_spelled_other_than_true_is_kept_in_extra_and_reported() {
+    let (_dir, conn) = db();
+    knx_productdb::ingest_file(&conn, "M-006B/A.xml", NON_TRUE_DEFAULT.as_bytes()).unwrap();
+    let pid = "M-006B_A-0002-22-26C0-O0080";
+
+    // node_id 4 = first <when default="false">, node_id 5 = second
+    // <when default="1">; both are children of node_id 3 (<choose>).
+    for (node_id, raw) in [(4i64, "false"), (5i64, "1")] {
+        let (is_default, extra): (Option<i64>, Option<String>) = conn
+            .query_row(
+                "SELECT is_default, extra FROM dynamic_node
+                 WHERE program_id = ?1 AND module_def_id = '' AND node_id = ?2",
+                (pid, node_id),
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            is_default, None,
+            "node {node_id}: default={raw:?} is not \"true\""
+        );
+        assert_eq!(
+            extra.as_deref(),
+            Some(format!("default={raw}")).as_deref(),
+            "node {node_id}: raw default=... must survive in extra"
+        );
+    }
+
+    let reported: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM ingest_unknown WHERE name = 'default' AND kind = 'Attribute'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        reported, 1,
+        "both non-\"true\" default= spellings collapse into one reported construct"
+    );
+    let occurrences: i64 = conn
+        .query_row(
+            "SELECT occurrences FROM ingest_unknown WHERE name = 'default' AND kind = 'Attribute'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        occurrences, 2,
+        "once per element carrying a non-\"true\" default="
+    );
+}
+
+/// Fix round 1, finding 2: a self-closing `<ModuleDef Id="..."/>` (no
+/// children of its own) must not leak its `module_def_id` forward onto the
+/// program's own `Dynamic` tree that follows it in document order.
+const SELF_CLOSING_MODULE_DEF: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/21"><ManufacturerData><Manufacturer RefId="M-00FB">
+<ApplicationPrograms><ApplicationProgram Id="M-00FB_A-0003-10-C071" Name="P" ApplicationVersion="10" MaskVersion="MV-0701">
+<Static><ComObjectTable/><ComObjectRefs/></Static>
+<ModuleDefs><ModuleDef Id="M-00FB_A-0003-10-C071_MD-1" Name="empty"/></ModuleDefs>
+<Dynamic>
+  <Channel Id="CH-1" />
+</Dynamic>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+#[test]
+fn a_self_closing_module_def_does_not_leak_its_id_onto_the_programs_own_tree() {
+    let (_dir, conn) = db();
+    knx_productdb::ingest_file(&conn, "M-00FB/A.xml", SELF_CLOSING_MODULE_DEF.as_bytes()).unwrap();
+    let pid = "M-00FB_A-0003-10-C071";
+
+    // The program's own <Dynamic> (Dynamic, Channel = 2 rows) must be keyed
+    // by the empty sentinel, not by the self-closing ModuleDef's id.
+    let program_rows: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM dynamic_node WHERE program_id = ?1 AND module_def_id = ''",
+            [pid],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(program_rows, 2);
+
+    let leaked: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM dynamic_node
+             WHERE program_id = ?1 AND module_def_id = 'M-00FB_A-0003-10-C071_MD-1'",
+            [pid],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        leaked, 0,
+        "the self-closing ModuleDef has no Dynamic tree of its own to leak into"
+    );
+
+    let (_, _, kind, ..) = node(&conn, pid, "", 1);
+    assert_eq!(kind, "Channel");
+}
+
 const MODULE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/21"><ManufacturerData><Manufacturer RefId="M-00FA">
 <ApplicationPrograms><ApplicationProgram Id="M-00FA_A-2504-10-C071" Name="P" ApplicationVersion="10" MaskVersion="MV-0701">
@@ -394,5 +525,74 @@ fn corpus_choose_and_when_counts_match_research_and_every_choose_resolves() {
     assert_eq!(
         before, after,
         "the byte-identical fifth archive must add no new rows"
+    );
+}
+
+fn archive(members: &[(&str, &[u8])]) -> Vec<u8> {
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (name, bytes) in members {
+        zip.start_file(*name, SimpleFileOptions::default()).unwrap();
+        zip.write_all(bytes).unwrap();
+    }
+    zip.finish().unwrap().into_inner()
+}
+
+const MASTER: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><MasterData><Manufacturers>
+    <Manufacturer Id="M-006A" Name="Example"/></Manufacturers></MasterData></KNX>"#;
+
+/// Fix round 1, finding 4: `package::install_package`'s whole-package
+/// content-hash dedup only ever catches a byte-identical *package*. Two
+/// different packages that happen to carry the same `ApplicationProgram`
+/// bytes (a common real shape — the same program shipped inside more than
+/// one manufacturer archive) must still reach `parse_dynamic_trees` a
+/// second time, via the `parse_existing` path
+/// (`ingest_file_in_transaction`), and that second pass must not duplicate
+/// rows or collide on `dynamic_node`'s primary key.
+#[test]
+fn two_different_packages_sharing_one_application_programs_bytes_do_not_duplicate_its_dynamic_tree()
+{
+    let (_dir, conn) = db();
+    let first = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-006A/A.xml", PROGRAM.as_bytes()),
+    ]);
+    // A second, differently-named package with an unrelated extra member —
+    // different whole-package sha256, same ApplicationProgram bytes at
+    // "M-006A/A.xml" — mirrors `retries_keep_conflicts_and_unknown_paths_-
+    // cannot_supply_parsed_rows` in tests/standalone_packages.rs, the
+    // Hardware-flavoured precedent for this fixture shape.
+    let second = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-006A/A.xml", PROGRAM.as_bytes()),
+        ("notes.xml", b"<Root/>"),
+    ]);
+
+    knx_productdb::install_package(&conn, "first.knxprod", &first).unwrap();
+    let pid = "M-006A_A-0001-22-26C0-O0079";
+    let before: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM dynamic_node WHERE program_id = ?1 AND module_def_id = ''",
+            [pid],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(before, 9);
+
+    let report = knx_productdb::install_package(&conn, "second.knxprod", &second).unwrap();
+    assert!(
+        !report.skipped,
+        "the second package's bytes differ from the first's, so it is not itself skipped"
+    );
+
+    let after: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM dynamic_node WHERE program_id = ?1 AND module_def_id = ''",
+            [pid],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        after, before,
+        "the shared ApplicationProgram's Dynamic tree must not be duplicated"
     );
 }

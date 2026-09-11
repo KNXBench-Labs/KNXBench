@@ -408,9 +408,48 @@ test file, `apps/knx-web/src/api.ts` if a binding is still missing.
 **Done when:** all six gates pass; every file above reflects the merged
 state; and `git diff` on `docs/KNOWN_LIMITATIONS.md` shows §61 untouched.
 
+## Task 7 — record the user's scope rulings of 2026-09-11
+
+**Files:** `docs/GAP_ANALYSIS_ETS.md`, `docs/KNOWN_LIMITATIONS.md`,
+`docs/ROADMAP.md`. **Its own commit**, separate from Task 6's — this is
+project scope, not group-monitor work. It rides on this branch only
+because it edits the same files Task 6 does and a parallel edit on `main`
+would conflict.
+
+On 2026-09-11 the user ruled on the five items that were neither
+implemented nor accepted out of scope. Record each **exactly as ruled** —
+the difference between "rejected" and "deferred with a named unblocking
+condition" is the whole content of these answers:
+
+1. **`.vd2` support — accepted out of scope, permanently.** Its
+   gap-analysis row is closed as "out of scope, user decision
+   2026-09-11", not deleted, and its limitation entry stays but says so.
+2. **Encrypted `.knxprod` — accepted out of scope.** The limitation entry
+   stays as written (it is honest about being untested for want of a
+   sample) and gains the same dated acceptance note. Do **not** reword it
+   into a claim about what encrypted files do or do not contain.
+3. **T19 KNX Secure — deferred, and explicitly to be documented as a
+   limitation.** The user asked for this in as many words. If there is no
+   standalone `KNOWN_LIMITATIONS.md` entry for KNX Secure today, add one;
+   if there is, date it and state the deferral. It is not rejected.
+4. **T20 Functions — deferred until the new KNX specification
+   documentation is available.** Record the unblocking condition, not
+   just "later". Stays on the roadmap.
+5. **E1 Commissioning — NOT excluded.** The user said plainly it must
+   work too, but the work waits until the KNX specification database is
+   finished. Its gap-analysis row stays **open**, with the blocker named.
+   Any existing wording anywhere in `docs/` that calls commissioning
+   permanently out of scope, a non-goal, or excluded by design must be
+   corrected in this task — that is now wrong, and leaving it would be
+   the documentation equivalent of a silent downgrade.
+
+**Done when:** the six gates pass; each of the five items is findable in
+the docs with its 2026-09-11 date and its exact disposition; no row was
+deleted; and item 5's wording nowhere reads as a permanent exclusion.
+
 ## Review
 
-After Task 6, the whole branch gets one broad review against the spec's
+After Task 7, the whole branch gets one broad review against the spec's
 §8 acceptance criteria — all ten, each independently checkable by a
 reviewer who has only this repository. The reviewer re-runs all six gates
 itself rather than trusting a report.

@@ -231,11 +231,28 @@ the new backlog task **T30**. The bricking risk, the undocumented `Legacy*`
 matrix and the vendor-DLL involvement above are unchanged; they are the
 reason it has not started, not a reason it never will.
 
-**Lifted when.** The KNX specification database is finished, so the load
-procedures can be verified against a documented specification instead of
-reverse-engineered guesswork, and hardware is available to test against.
-Architecturally nothing blocks it today: load procedures, memory layout and
-mask data already live in the product database.
+**Updated, 2026-09-11 (R5 research spike, RESEARCH §8.4).** The KNX
+specification database referenced above now exists and has been queried
+against all nine open commissioning questions. Result: the *generic*
+complete/partial download, unload, reset (Master Reset) and memory-write
+procedures, and the Load State Machine, are documented in the KNX Standard
+and are now cited in full in RESEARCH §8.4 — that part of the "Cause" above
+is resolved as a *research* matter. What is **not** resolved, and is
+confirmed absent from both KNX specification databases searched (not just
+under-searched): the product-specific `Legacy*` compatibility-flag matrix
+and vendor `Baggage` DLL involvement in download for specific devices. Those
+two, plus the bricking risk on real hardware and KNX Secure key handling
+(§9), are why this limitation stands unchanged below. Documented is not
+verified: nothing in this update has been run against a device.
+
+**Lifted when.** The generic load/unload/reset/memory procedures no longer
+block this — they are documented (RESEARCH §8.4). What remains: a
+`Legacy*`/vendor-DLL research pass against product data (`.knxprod` samples,
+manufacturer documentation) to close the two gaps above, and hardware
+available to verify the documented procedures actually work before they run
+against a customer's device. Architecturally nothing blocks it today: load
+procedures, memory layout and mask data already live in the product
+database.
 
 ## 8. KNX Secure is not implemented
 

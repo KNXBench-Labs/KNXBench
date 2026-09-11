@@ -557,7 +557,19 @@ that every structural delta previously attributed to schema 23 alone
 programs) — flagged as the next major format-support task, not attempted
 here (see [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md)). `knx-store`'s
 `.knxdb` migration chain (v1→v4, frozen fixtures) was verified, not
-touched — already complete, 14/14 tests green.
+touched — already complete, 14/14 tests green. **Cycle 2, T29
+(2026-09-11, branch `t29-dpt-codec`):** KNXBench's first DPT codec, in
+`knx-core` (fourteen main types — see
+[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and
+[KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md) for exactly which ones
+and why not the rest), with `bus monitor`/`bus write` in `apps/knx-cli`
+wired to decode/encode against it. `cargo test --workspace`: 920 passed, 0
+failed, 3 ignored. A user can now read `knx bus monitor --project <path>`
+output as `On`, `23.5`, or a percentage instead of a raw hex payload, and
+write with `knx bus write --dpt DPST-9-1 23.5` instead of computing the
+wire encoding themselves — for the main types this cycle covers. Closes
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) row **E4** partially; the GUI
+(**D5**, **T15**) is still open and now has this codec to build on.
 
 **Entry condition.** All earlier sessions' deliverables exist and are tested.
 

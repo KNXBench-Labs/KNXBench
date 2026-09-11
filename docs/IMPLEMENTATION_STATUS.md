@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-11 (T18 slice 2: `Module` expansion in the `Dynamic` evaluator, `knx-productdb`, see below)
+Last updated: 2026-09-11 (T29: DPT codec in `knx-core`, `bus monitor`/`bus write` decode and encode against it, see below)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -25,7 +25,9 @@ in scope.
 `knx-core` holds the full domain model of [DATA_MODEL.md](DATA_MODEL.md):
 identity (`ids.rs`), the provenance types `Layer`/`Resolved<T>`/`Override<T>`
 (`provenance.rs` — `Override<T>` added in Session 3, [ADR-0010](adr/0010-per-attribute-override-representation.md)),
-typed addresses (`address.rs`), datapoint type references (`dpt.rs`), the
+typed addresses (`address.rs`), datapoint type references, values, and the
+codec/resolution logic that reads and writes them (`dpt/` — a module
+directory since Session 7/T29, see below), the
 string table (`string_table.rs`), flags and directional links (`flags.rs`),
 commissioning state (`commissioning.rs`), group ranges/addresses
 (`group.rs`), building parts (`building.rs`), topology (`topology.rs`),
@@ -2061,3 +2063,59 @@ from every other crate's perspective, and **T18 slice 3** (a parameter
 editor, the only thing that would give per-instantiation values in D16 a
 real consumer) has not started. Never claimed here or anywhere else:
 ETS behavioural parity, or KNX certification.
+
+**T29, DPT codec (2026-09-11), branch `t29-dpt-codec`.** KNXBench's first
+Datapoint Type codec ([design spec](superpowers/specs/2026-09-11-dpt-codec-design.md),
+decisions E4-D1 through E4-D9; [plan](superpowers/plans/2026-09-11-dpt-codec.md);
+[ADR-0016](adr/0016-dpt-codec-in-knx-core.md)). `crates/knx-core/src/dpt.rs`
+became a module directory (`dpt/mod.rs`, `dpt/codec.rs`, `dpt/resolve.rs`);
+`GroupValue` moved down out of `knx-net` into `knx-core`, re-exported so no
+existing call site changed.
+
+- **`decode`/`encode` (`dpt/codec.rs`)** cover main types 1, 2, 3, 5, 6
+  (except `6.020 DPT_Status_Mode3`, whose `B5N3` layout has no matching
+  `DptValue` shape), 7, 8, 9, 12, 13, 14, 16, 17, 18 — fourteen of the 46
+  main types `knx_master.xml` defines. Two sentinel collisions the
+  Standard itself does not resolve were settled here rather than left
+  ambiguous: `8.010`'s printed 327.67% maximum collides with its own
+  invalid-data code (practical maximum 327.66%), and main type 9's
+  arithmetic maximum at `M=2047,E=15` collides with the same reserved code
+  (usable maximum 670433.28, matching DPT-AS's own printed figure over
+  AN188 §4's inconsistent 670760.96). Scene numbers (main types 17, 18)
+  are carried at wire value with no display offset applied, despite DPT-AS
+  §3.19 NOTE 9 recommending one for 18.001 — that is a UI-layer decision,
+  not this codec's.
+- **`resolve_group_address_dpt`/`resolve_project_group_address_dpts`
+  (`dpt/resolve.rs`)** infer a group address's DPT from its linked
+  communication objects' stated types, classifying into `None` / `Single` /
+  `Conflict`; a conflict is reported, never resolved to a guess (RESEARCH
+  §6.1 rule 3).
+- **A latent encoding bug surfaced and was fixed as part of the
+  `GroupValue` move**: `knx_net::cemi::encode_group_value` used to let a
+  `GroupValue::Short(v)` above the six-bit range overwrite two APCI
+  service-selector bits sharing its octet; it now promotes such a value to
+  `Bytes([v])` instead. See ADR-0016 for the full account.
+- **`apps/knx-cli`**: `bus monitor --project <path>` decodes each telegram's
+  value against the resolved DPT; `bus write --dpt <DPST-m-s>` (or a DPT
+  resolved from `--project`) encodes a human-typed value instead of
+  requiring the caller to already know the raw wire encoding.
+- **What this slice deliberately does not do:** no GUI (`T15` builds on
+  this codec, not the other way round); no `knx_master.xml` DPT catalogue
+  consultation, so no enumeration wording and no units beyond what a
+  scaled subtype's own arithmetic already implies; no `GroupAddress/@DatapointType`
+  reading for schema ≥ 21 projects (preserved, not modelled); no hardware
+  verification — every test checks the codec against the Standard's own
+  stated encodings, not a real device's actual telegrams. Full accounting:
+  [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md).
+
+`cargo test --workspace`: **920 passed, 0 failed, 3 ignored** (baseline
+before this cycle was 817/0/3, per the branch's Task 1 starting point; the
+four implementation tasks account for the entire +103 net — Task 1 +43,
+Task 2 +40, Task 3 +14, Task 4 +6 — independently re-run for this docs
+pass rather than taken on trust; no regressions). A user can now run `knx
+bus monitor
+--project <path>` and see `On`/`Off`/a percentage/a temperature instead of
+a raw hex payload, and `knx bus write --dpt DPST-9-1 23.5` instead of
+having to hand-encode an F16 payload themselves — for the fourteen main
+types this slice covers. Closes `GAP_ANALYSIS_ETS.md` row **E4**
+partially; **D5** (the GUI itself) is still open.

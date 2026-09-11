@@ -830,6 +830,20 @@ monitor output. Data is not lost — telegrams still resolve by address internal
 name resolution, either bundled into a general bus-monitor redesign or as a
 targeted enhancement to the CLI subcommand.
 
+**Update, 2026-09-11 (T29).** `bus monitor --project <path>` now also
+resolves and prints a DPT-decoded value for each telegram, via
+`resolve_project_group_address_dpts` (§61 below has the full accounting of
+what that resolution covers and does not). That resolution takes a
+different position on the exact problem this limitation already describes:
+where a group address's *name* is merged across installations with
+last-seen-wins on collision, a group address's *DPT* is merged across
+installations by reporting a `Conflict` and refusing to pick one. Two
+answers to the same shape of problem inside the same subcommand, arrived at
+in different sessions. This entry is left as-is rather than silently
+rewritten to match the newer, stricter behaviour — a future cycle that
+reconciles the two should treat that as its own decision, not an
+accidental side effect of a DPT codec landing.
+
 ## 30. `/api/project/download` has no frontend caller
 
 **Limitation.** `apps/knx-server`'s `/api/project/download` route is
@@ -1725,3 +1739,134 @@ alone — only counts per table, per installation.
 
 **Lifted when.** Open. A richer visual diff view is a real, larger
 feature a future task could propose; not built speculatively now.
+
+## 61. The DPT codec covers fourteen main types, infers rather than reads its input, and leaves several encoding questions to a stated ruling rather than the Standard
+
+**Limitation.** `crates/knx-core/src/dpt/codec.rs` (2026-09-11, T29) can
+decode and encode main types **1, 2, 3, 5, 6, 7, 8, 9, 12, 13, 14, 16, 17,
+18** — fourteen of the 46 main types `knx_master.xml` defines
+(`docs/RESEARCH.md` §5). Everything else (4, 10, 11, 15, 19, 20, and 21
+upward) returns `DptCodecError::UnsupportedDpt` unconditionally; nothing
+about them is guessed.
+
+**Excluded inside an otherwise-implemented main type.** `6.020
+DPT_Status_Mode3` is the one confirmed case: its wire layout (`B5N3` — five
+status bits plus a one-hot three-bit mode field, DPT-AS §3.7) does not fit
+`DptValue`'s existing shapes, so it is `UnsupportedDpt` rather than
+misread as a plain signed 8-bit integer the way the rest of main type 6
+is. The rest of main type 6's implemented subtypes are plain `V8`. No
+other subtype-level exclusion inside an implemented main type is known;
+this entry names the one that is.
+
+**Resolution is inference, not a stated fact.** `resolve_group_address_dpt`
+and `resolve_project_group_address_dpts`
+(`crates/knx-core/src/dpt/resolve.rs`) derive a group address's DPT by
+scanning every communication object linked to it and reading `dpt.value()`
+off each — a group address does not carry its own type in this domain
+model (except see the next paragraph). Per `docs/RESEARCH.md` §6.1, this
+inference is genuinely incomplete: **194 of 514 group addresses (38%)**
+in the `Unser Zuhause` reference project resolve to no DPT at all, and
+**110 of 514 (21%)** have no linked communication object at all to infer
+from. A conflicting set of linked DPTs is reported as
+`GroupAddressDpt::Conflict` and never resolved down to one guess — RESEARCH
+§6.1's rule 3.
+
+**`GroupAddress/@DatapointType` exists at schema ≥ 21 and is preserved but
+not modelled.** ETS versions that write schema 21 or later can state a
+group address's DPT directly on the `GroupAddress` element itself, instead
+of requiring inference from a linked communication object. This importer
+preserves that attribute (opaque passthrough, ADR-0006) but does not read
+it into the domain model or consult it for resolution — resolution is
+inference-only, as above, even on a project where the group address said
+its own type all along. Measured directly against the fixture projects:
+`KV v2.5 - demo.knxproj` (schema 21) carries the attribute on **13 of 13**
+group addresses; neither `Unser Zuhause` export (schema 11, and the
+schema-23 re-export of the same installation) carries it on **any of
+514**.
+
+**Two sentinel collisions the Standard does not resolve, where the codec
+picked one reading and says so.** `8.010 DPT_Percent_V16`'s printed maximum
+(327.67%) and its printed invalid-data code are the identical 16-bit value
+(`0x7FFF`); the codec honours the invalid-data sentinel unconditionally, so
+`8.010`'s practical maximum is **327.66%**, one step below the number
+DPT-AS itself prints. Main type 9 (F16, floating point) has the same
+collision at its arithmetic ceiling: `M = 2047, E = 15` is bit-identical to
+`0x7FFF`, the reserved invalid-data code, so `encode` rejects that one
+value and the family's usable maximum is **670433.28** (at `M = 2046, E =
+15`) times the subtype's unit — which is exactly the figure DPT-AS itself
+prints for the family, while application note AN188 §4 prints the larger
+**670760.96** by not accounting for the collision. Neither collision is
+settled by the Standard; both entries record which reading this codec
+ships and why.
+
+**Scene numbers are carried at wire value; no display offset is applied.**
+DPT-AS §3.19 NOTE 9, attached to `18.001 DPT_SceneControl`, recommends
+*displaying* a scene number with an offset of +1 (§3.25 NOTE 16 makes the
+same recommendation for `26.001 DPT_SceneInfo`, a main type this codec does
+not implement). No equivalent note exists for `17.001 DPT_SceneNumber` in
+§3.18. The codec applies no +1 to either main type 17 or main type 18: a
+decoded value means the octet it came from, not a display convention layered
+on top of it. Any UI presenting a scene number to a human owns that +1
+itself — applying it a second time here would make the wire value and the
+displayed value silently disagree. (NOTE 9 itself is absent from this
+corpus's Markdown extraction of the Standard; it was confirmed to exist
+against the source PDF. A previous round of this work briefly asserted §3.19
+carried no such note — that assertion was wrong and has been corrected.)
+
+**`DPT-16`'s fixed 14-octet field has no length indicator.** A string
+containing an interior NUL byte followed by further content is not
+representable: decode strips a trailing run of `0x00` as padding (DPT-AS
+§3.17: "unused trailing octets... shall be set to NULL"), because nothing
+in the Standard's definition of this type provides an escape sequence or a
+length prefix that would let interior NUL survive. This is a recorded gap,
+not a rule invented to paper over it.
+
+**A payload with bits set above a short type's significant width is
+rejected, not masked.** Where a `GroupValue::Short` carries more bits than
+its DPT's definition assigns meaning to, the codec returns
+`DptCodecError::InvalidData` rather than silently discarding the
+out-of-range bits — a device sending such a telegram gets it printed raw,
+with the rejection reason, instead of a decoded value that quietly hides
+what the device actually sent.
+
+**`bus monitor`/`bus write` only decode/encode when they have a DPT to work
+with.** `bus monitor` decodes only when given `--project <path>` — the DPT
+comes from resolving the project's linked communication objects, and there
+is nowhere else to get it from; without the flag, the monitor prints
+exactly what it printed before this slice. `bus write` needs either
+`--project` (to resolve one) or an explicit `--dpt <DPST-m-s>`.
+
+**Subtype wording and units beyond the scaled subtypes are not modelled.**
+The codec does not consult `knx_master.xml`'s DPT catalogue, so it has no
+source for a subtype's displayed unit beyond what a scaled subtype's own
+arithmetic already implies (e.g. `%`, `°C`), and no source for enumeration
+wording (`up`/`down`, `open`/`close`, and similar per-subtype vocabulary).
+A decoded `DptValue` is a typed number, boolean, or string — not a
+formatted, unit-labelled, human-worded string.
+
+**No decoded value has been verified against real hardware.** Every test in
+this slice checks the codec against the Standard's own stated encodings
+(round-trip tests, boundary tests, the two sentinel rulings above) — not
+against a telegram a real KNX device actually produced. That is a narrower
+claim than "matches what real devices send," and this entry exists so the
+difference is not lost.
+
+**Cause.** Scope decision for this slice (design spec
+`docs/superpowers/specs/2026-09-11-dpt-codec-design.md`, decisions E4-D1
+through E4-D9): implement main types the Standard extraction documents
+unambiguously and the reference corpus needs, leave the rest
+`UnsupportedDpt` rather than guess, and record every place the Standard
+itself is ambiguous or self-contradictory rather than resolve it silently.
+
+**Impact.** A user working with a group address whose DPT falls outside
+the fourteen implemented main types, or whose linked communication objects
+disagree, or who has none at all, sees `bus monitor` fall back to the
+pre-T29 raw output for that address. A user relying on `8.010`'s printed
+327.67% maximum, or AN188's 670760.96 figure for main type 9, will see this
+codec's numbers differ by one step, deliberately.
+
+**Lifted when.** A future slice adds more main types (see `docs/GAP_ANALYSIS_ETS.md`
+row E4 for what is still open), consults `knx_master.xml` for units and
+enumeration wording, or reads `GroupAddress/@DatapointType` directly for
+schema ≥ 21 projects instead of inferring from linked communication
+objects alone.

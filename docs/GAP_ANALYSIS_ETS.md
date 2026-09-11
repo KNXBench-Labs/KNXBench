@@ -102,7 +102,7 @@ underlying model field exists.
 | E1 | **No commissioning at all.** No individual-address programming (via the device's programming button), no application-program download, no memory read/write. | Explicit, permanent scope decision — [KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-out-of-scope). Listed here for completeness of the gap picture, not as a proposed task: CLAUDE.md's "only implement protocol behavior that is technically verified" plus the bricking risk on real hardware makes this a durable non-goal, not a backlog item. |
 | E2 | **No line-scan / device-discovery-on-the-bus.** `knx bus discover` (Session 6 cycle 3) finds *KNXnet/IP gateways* on the LAN, not KNX devices on a line (that needs an individual-address broadcast scan over the bus itself, a different operation). | Easy to conflate with "Device Discovery" in `ideas.md`, which is about the same gateway-discovery feature already shipped — this is a distinct, unaddressed capability. |
 | E3 | **No KNX IP Secure.** | [KNOWN_LIMITATIONS.md §26](KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure); explicitly shelved once already (Session 6 cycle 4/5 planning). |
-| E4 | **No DPT-aware bus tooling.** `bus monitor`/`bus write` operate on raw `GroupValue::Short`/`Bytes` — no decoding/encoding against a comm object's actual DPT. | A user has to know the raw encoding of the value they're reading or writing; ETS's Group Monitor decodes/encodes per DPT automatically. |
+| E4 | **Partially closed 2026-09-11 (T29).** A Standard-cited codec now lives in `knx-core` (`crates/knx-core/src/dpt/codec.rs`), covering main types 1, 2, 3, 5, 6 (except `6.020`), 7, 8, 9, 12, 13, 14, 16, 17, 18. `apps/knx-cli bus monitor --project <path>` decodes; `bus write --dpt <DPST-m-s>` (or resolved from `--project`) encodes. What is still open: no GUI (that's **T15**); the main types this slice did not implement at all (4, 10, 11, 15, 19, 20, 21-30 and the rest of the 46 `knx_master.xml` main types beyond the fourteen listed); no `knx_master.xml` DPT catalogue is consulted, so there are no enumeration names and no units beyond what the scaled subtypes' own arithmetic already implies. See `docs/KNOWN_LIMITATIONS.md` for the full accounting. | A user still has to know the raw encoding for anything outside the implemented main types, and still has no GUI; for the main types that are implemented, the CLI now decodes/encodes per DPT the way ETS's Group Monitor does, given a project. |
 | E5 | **Docker discovery needs `--network host`.** | [ROADMAP.md](ROADMAP.md) "carried in from web/Docker deployment target"; unresolved, tracked but not fixed. |
 | E6 | **No custom routing multicast address.** | [KNOWN_LIMITATIONS.md §31](KNOWN_LIMITATIONS.md#31-knxnetip-routing-has-no-custom-multicast-address-override). |
 
@@ -559,8 +559,19 @@ Each task: **what**, **why**, **depends on**.
 
 - **T15. Group Monitor GUI.** A live telegram table in the desktop/web
   UI (not just the CLI), DPT-decoding values against the open project's
-  comm objects, with send-from-the-table. Closes **D5**, **E4** (DPT
-  awareness) so far as display goes.
+  comm objects, with send-from-the-table. Closes **D5**, and finishes
+  what **E4** left open on the display side. The codec to build it on
+  already exists (**T29**, 2026-09-11): `knx_core::decode`/`encode`
+  plus `resolve_group_address_dpt`/`resolve_project_group_address_dpts`
+  are ready to be called from a GUI exactly as `apps/knx-cli`'s `bus
+  monitor`/`bus write` already call them from the CLI — this task is
+  wiring a table to an existing capability, not building the codec.
+- **T29. DPT codec (`knx-core`) and CLI wiring.** Shipped 2026-09-11.
+  Closes **E4** partially — see the row above and
+  `docs/KNOWN_LIMITATIONS.md` for exactly which main types and subtypes
+  are covered and which are not. Design spec:
+  `docs/superpowers/specs/2026-09-11-dpt-codec-design.md`. ADR:
+  `docs/adr/0016-dpt-codec-in-knx-core.md`.
 - **T16. Device-catalog browser used for topology, not just insertion**
   — i.e. the same T2 screen doubling as a way to inspect an existing
   device's product/hardware identity without opening the full Inspector.

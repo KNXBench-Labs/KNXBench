@@ -1,4 +1,48 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-12 03:05
+- **Completed:** **T18 slice 3 merged to `main`.** Branch
+  `t18-parameter-editor` (19 task commits from `cc38de5`, plus `4f36e37`
+  closing the final review's one nit — `docs/RESEARCH.md`'s §4.4 addendum
+  now cites the reproducible source, the three `OriginalData/DemoProjects/`
+  archives and the unpack-read-only method, instead of a job scratch path
+  that will not outlive the session) merged with `--no-ff`. Final
+  whole-branch review verdict before the merge: **fit to merge**, 0
+  blocking, 0 should-fix, 1 nit (now closed). Six gates re-run by the
+  controller **on the merged `main`, not on the branch**: `cargo fmt --all
+  --check` clean; `cargo clippy --workspace --all-targets -- -D warnings`
+  clean; `cargo test --workspace` **975 passed / 0 failed / 3 ignored**
+  across 72 `test result` lines (baseline at `cc38de5` was 951/0/3);
+  `cargo run -p xtask -- check-layering` ok; `cargo deny check` ok;
+  `npm run test` in `apps/knx-web` **184 passed across 18 files**
+  (baseline 179 across 17). What shipped: `GET`/`POST
+  /api/device/{id}/parameters`, a `ParameterPanel` in the web Inspector,
+  `SetParameterValue` as an undoable command, product-database-informed
+  validation assembled in `apps/knx-server` (the layering rule stands —
+  `knx-productdb` still reaches neither `knx-etsproj` nor `knx-store`),
+  and the docs set reconciled in the same change.
+- **Pending/Next Steps:** Module-scoped (per-channel) parameter writes
+  remain out (D25) and unscheduled — a slice 4 would first have to give
+  the evaluator's flat `ValueMap` a scope slot. Otherwise pick the next
+  item from `docs/ROADMAP.md`: T27 (motion toggle, D11), T17 (line scan,
+  D6/E2), T21 (graphical views), T25/T26 (i18n), T28 (in-app help), T16
+  (catalog browser), D8 (settings dialog), D9 (duplicate overlay
+  implementations + accessibility). Blocked with named conditions: T30
+  (commissioning — researched, blockers now physical), T19 (KNX Secure),
+  T20 (Functions), A4 (schemas 12-22). The `.worktrees/session3-ets-import`
+  worktree is fully merged dead weight and can be removed whenever the
+  user says so.
+- **Notes for Codex:** The merge is a `--no-ff` commit on `main`; no
+  history was rewritten and nothing was force-pushed. Parameter values now
+  have exactly one write path — the `SetParameterValue` command through
+  `knx-store` — and top-level only; if you add a second writer, it must go
+  through the same command or undo/redo silently diverges from the stored
+  rows. Stale values (stored ids the current program cannot interpret) are
+  deliberately surfaced in the panel rather than dropped; do not "clean
+  them up" on import or write.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-12 01:15
 - **Completed:** **T18 slice 3, Task 5 (docs reconciliation, the slice's
   last task)** — same worktree (`.worktrees/t18-parameter-editor`,

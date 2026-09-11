@@ -1,3 +1,70 @@
+- **Last Agent:** Claude
+- **Timestamp:** 2026-09-11 16:40
+- **Completed:** Task 5 (final task) of the `t15-group-monitor` branch
+  (`.worktrees/t15-group-monitor`), design spec
+  `docs/superpowers/specs/2026-09-11-group-monitor-design.md` — the
+  compose/send form that closes the loop (click a row, edit, send it
+  back to the bus), per §6, plus two inherited defect fixes. Server-side
+  fix, its own commit `b540264`: `POST /api/bus/write`
+  (`apps/knx-server/src/bus_routes.rs`) parsed `destination` as
+  `GroupAddressStyle::ThreeLevel` unconditionally, while `GET
+  /telegrams` renders it in the open project's actual configured style —
+  breaking the round trip for Free/TwoLevel projects. Fixed by a new
+  `BusSession::group_address_style()` accessor (`bus.rs`) and reordering
+  `write_value` to derive its parse style from the active session
+  (falling back to `ThreeLevel` only with no session/project); new
+  regression test
+  `a_non_three_level_projects_telegram_destination_round_trips_through_write`
+  in `apps/knx-server/tests/http_bus_write.rs` proves the full round
+  trip for a `Free`-style project, not just isolated parsing. CLI's
+  identical bug (same hardcoded `ThreeLevel`) was deliberately **not**
+  touched — out of scope for this task. Frontend, its own commit
+  `d494033`: new `apps/knx-web/src/BusComposeForm.tsx` (sibling
+  component to `BusMonitorPanel.tsx`, not folded in — different
+  lifetime, survives polls, resets only on a new row click via a
+  `key`-remount trick) implements the resolve/reject/defer state
+  machine mirroring `resolve_write_value`, rejecting an unresolvable
+  `None`/`Conflict` DPT client-side before any request, with the two
+  verbatim messages (em dash included) reproduced exactly. Also fixed
+  the inherited frontend dead end: unmounting `BusMonitorPanel`
+  orphaned the server-side session (correct — not React's to own), but
+  remounting assumed no session existed, so Connect hit an
+  unrecoverable `409`. Fixed with a mount-time `GET /telegrams`
+  reattach effect: `404` shows the Connect form as before, `200` adopts
+  the session/rows/cursor/status and feeds `droppedBefore` into the
+  existing gap notice, a `"closed"` session reattaches read-only (Stop
+  still works). `api.ts` gained a duck-typed `.status` on request
+  errors plus an `errorStatus()` helper (no new exported class, so
+  existing `vi.mock("./api", ...)` factories elsewhere don't need
+  touching). New test file `BusComposeForm.test.tsx` (12 tests, standalone
+  from session/polling mocking) plus 4 new mount-reattach tests and a
+  row-click-prefill integration test in `BusMonitorPanel.test.tsx`. All
+  six gates green: `cargo fmt --all --check` clean, `cargo clippy
+  --workspace --all-targets -- -D warnings` clean, `cargo test
+  --workspace` 951 passed/0 failed/3 ignored (was 950/0/3 — +1 net from
+  the new round-trip regression test), `cargo test -p knx-server` 147/0/0
+  (was 146/0/0), `cargo run -p xtask -- check-layering` ok, `cargo deny
+  check` ok (advisories/bans/licenses/sources all ok), `npm run test`
+  178 passed across 17 files (was 162/16 — +16 net: 12 new
+  `BusComposeForm.test.tsx` tests + 4 new mount-reattach tests, one
+  legacy assertion adjusted for the new per-mount `GET /telegrams`
+  call). Full report:
+  `/home/knxbench/.claude/jobs/8098e9e6/tmp/t15-task5-report.md`.
+- **Pending/Next Steps:** Task 5 was the final task listed for this
+  branch's plan; branch is ready for final review/merge to `main` by
+  whichever agent runs that step next — not done here (out of this
+  task's mandate; no `git checkout main`/merge performed). No other
+  loose ends known for this branch's own scope.
+- **Notes for Codex:** `service` on `BusTelegramRow` stays a plain
+  `string` in `api.ts` on purpose (not narrowed to a union) — the
+  synthetic `"SessionClosed"` marker row needs to fit it too, and this
+  task was told explicitly not to change that. The client-side `rows`
+  array's unbounded growth across a long session is a known, documented
+  limitation (not this task's to fix — see the design spec's own out-
+  of-scope list and `docs/KNOWN_LIMITATIONS.md`). Nothing in this work
+  claims ETS parity or hardware verification anywhere — server-side fix
+  and frontend form are both entirely `FakeConnector`/`FakeTunnel` and
+  mocked-`fetch` tested, no real gateway anywhere in the new tests.
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-10 09:32
 - **Review Note:** On 2026-09-09 Codex reviewed implementation status, roadmap, and known limitations; no product-code changes.

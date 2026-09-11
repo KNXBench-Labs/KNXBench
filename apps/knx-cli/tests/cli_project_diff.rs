@@ -10,8 +10,10 @@ use std::path::Path;
 use std::process::{Command, Output};
 
 use knx_core::{
-    CompletionStatus, GroupAddress, GroupAddressEntry, GroupRange, GroupRangeId, Installation,
-    InstallationId, Language, Project, SourceRef, Topology,
+    ComObjectInstance, ComObjectInstanceId, CommissioningState, CompletionStatus, DeviceId,
+    DeviceInstance, GroupAddress, GroupAddressEntry, GroupRange, GroupRangeId, IndividualAddress,
+    Installation, InstallationId, Language, Layer, Override, Project, Resolved, ResolvedFlags,
+    SourceRef, Topology,
 };
 
 fn source(tag: &str) -> SourceRef {
@@ -65,6 +67,74 @@ fn project_with_ga_name(ga_name: &str) -> Project {
             unfiltered: false,
             range: Some(GroupRangeId(1)),
         });
+
+    project
+}
+
+/// A project like [`project_with_ga_name`] (group address name held
+/// constant) plus one device (individual address `1.1.1`, unassigned) with
+/// one communication object numbered 1. `com_read_flag_present` toggles
+/// that object's own `ReadFlag` between absent and present — the only
+/// field this fixture ever varies, so the device's own fields
+/// (`DeviceFields`) never differ between two calls while its nested
+/// `com_objects` table does. This is the fixture finding 2 needs: a
+/// `~ device ...` line whose own `changed_fields` is empty because only a
+/// nested communication object changed.
+fn project_with_device_com_object_read_flag(com_read_flag_present: bool) -> Project {
+    let mut project = project_with_ga_name("Living Room Light");
+
+    project.devices.insert(DeviceInstance {
+        id: DeviceId(1),
+        source: source("D-1"),
+        name: "Dimmer".into(),
+        description: None,
+        address: Some(IndividualAddress::new(1, 1, 1).unwrap()),
+        product_ref: "P-0".into(),
+        program_ref: "H-0".into(),
+        commissioning: CommissioningState::default(),
+        visibility_calculated: true,
+        com_objects: vec![ComObjectInstanceId(1)],
+        binary_data: vec![],
+    });
+    project.installations[0]
+        .topology
+        .unassigned
+        .push(DeviceId(1));
+
+    // `Layer::Instance` is deliberate, not `Layer::Program`: only
+    // `Layer::Instance`/`Layer::UserEdit` are "exported"
+    // (`knx_core::provenance::Layer::is_exported`), and `semantic_flag`
+    // (`crates/knx-diff/src/semantic.rs`) collapses a non-exported layer's
+    // value back to `None` — a `Program`-layer flag here would make both
+    // sides look identical and defeat the whole fixture.
+    let read = if com_read_flag_present {
+        Override::Value(Resolved {
+            value: true,
+            layer: Layer::Instance,
+        })
+    } else {
+        Override::Absent
+    };
+    project.devices.insert_com_object(ComObjectInstance {
+        id: ComObjectInstanceId(1),
+        source: source("CO-1"),
+        device: DeviceId(1),
+        number: 1,
+        text: Override::Absent,
+        description: Override::Absent,
+        dpt: Override::Absent,
+        flags: ResolvedFlags {
+            read,
+            write: Override::Absent,
+            transmit: Override::Absent,
+            update: Override::Absent,
+            communication: Override::Absent,
+        },
+        size: None,
+        is_active: true,
+        links: vec![],
+        module_instance: None,
+    });
 
     project
 }
@@ -164,6 +234,42 @@ fn diff_with_a_missing_first_store_exits_one_and_prints_no_stray_knxdb() {
     assert!(
         !missing.exists(),
         "a failed diff must never create the store it could not find"
+    );
+}
+
+/// A device whose own fields are identical between left and right must
+/// still surface as `~ device ...: (own fields unchanged)` when only a
+/// nested communication object differs (`print_device_table`,
+/// `apps/knx-cli/src/main.rs`) — otherwise the change the domain layer
+/// went out of its way to keep would be silently dropped at render time.
+#[test]
+fn diff_of_two_stores_with_only_a_com_object_flag_changed_prints_own_fields_unchanged() {
+    let dir = tempfile::tempdir().unwrap();
+    let store_a = dir.path().join("a.knxdb");
+    let store_b = dir.path().join("b.knxdb");
+    write_store(&store_a, &project_with_device_com_object_read_flag(false));
+    write_store(&store_b, &project_with_device_com_object_read_flag(true));
+
+    let out = run_cli(&["diff", store_a.to_str().unwrap(), store_b.to_str().unwrap()]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    let lines: Vec<&str> = stdout.lines().map(str::trim_start).collect();
+    let device_line_idx = lines
+        .iter()
+        .position(|line| *line == "~ device 1.1.1: (own fields unchanged)")
+        .unwrap_or_else(|| panic!("expected the own-fields-unchanged device line: {stdout}"));
+    assert!(
+        lines[device_line_idx + 1..]
+            .iter()
+            .any(|line| line.starts_with("~ communication object 1: read")),
+        "expected the changed communication object beneath the device line: {stdout}"
     );
 }
 

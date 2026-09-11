@@ -539,6 +539,32 @@ main {
   width: 100%;
 }
 
+/* `ProjectDiffPanel` — a result panel `open`ed from a toolbar button
+   rather than docked in `.workspace` like `.log-panel`, so it gets its
+   own card frame instead of `.log-panel`'s `flex: 1 1 60%`; the empty
+   state and list otherwise follow `.log-panel-empty`/`.log-panel-list`
+   exactly. */
+.project-diff-panel {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--knx-surface);
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+}
+
+.project-diff-panel-empty {
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.project-diff-panel-list {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .fs-picker-overlay {
   position: fixed;
   inset: 0;

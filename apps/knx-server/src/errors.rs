@@ -14,6 +14,15 @@ use serde_json::json;
 /// Every other route only ever touches already-loaded in-memory state, so
 /// its failures (malformed input, stale id, "no project open") are always
 /// the caller's to fix -> `bad_request` (400).
+///
+/// `diff_project` (`routes.rs`) is the one deliberate exception to the
+/// first half of that rule: it also calls into `knx-store` (to load the
+/// comparison file), yet still maps its whole result to `bad_request`.
+/// Both of its failure modes — "no project open" and "comparison file
+/// does not exist" — are the caller's to fix relative to a project that
+/// may already be open, not an environment problem, so they follow the
+/// second half of the split instead (see the route's own doc comment for
+/// the full reasoning).
 #[derive(Debug)]
 pub struct ApiError {
     status: StatusCode,

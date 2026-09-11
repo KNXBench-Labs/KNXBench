@@ -242,11 +242,31 @@ describe("ProjectDiffPanel", () => {
   });
 
   it("clears a prior error toast before running the comparison", async () => {
-    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/compare.knxdb");
-    apiMock.diffProject.mockResolvedValueOnce(emptyReport);
-    const { root, onClearErrors } = await renderPanel();
+    // First run: a real prior error — `onError` fires exactly like
+    // "surfaces a rejected comparison through onError" above, so there is
+    // an actual error toast showing by the time the second run starts.
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/broken.knxdb");
+    apiMock.diffProject.mockRejectedValueOnce(new Error("comparison file does not exist"));
+    const { root, onError, onClearErrors } = await renderPanel();
     await click(compareButton());
-    expect(onClearErrors).toHaveBeenCalledTimes(1);
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    // Second run: record the order `onClearErrors` and `api.diffProject`
+    // fire in, not just that both fire — pins down "before", which the
+    // test's name promises.
+    const order: string[] = [];
+    onClearErrors.mockImplementationOnce(() => {
+      order.push("clear");
+    });
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/compare.knxdb");
+    apiMock.diffProject.mockImplementationOnce(async () => {
+      order.push("diff");
+      return emptyReport;
+    });
+
+    await click(compareButton());
+
+    expect(order).toEqual(["clear", "diff"]);
     root.unmount();
   });
 });

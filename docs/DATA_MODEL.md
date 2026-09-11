@@ -178,9 +178,13 @@ for which module instance a given object belongs to. The `ModuleDef` side
 of the chain — its own `Arguments`/`Static`/`Dynamic`, argument binding,
 and the id-mangling rule connecting its internal ids to a project's
 instance-level ones — is now researched at the application-program level;
-see [RESEARCH.md](RESEARCH.md) §4.4 (R4 spike, 2026-09-11). Expansion
-itself is not implemented (`knx-productdb` still reports
-`ModuleNotExpanded`, [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted)).
+see [RESEARCH.md](RESEARCH.md) §4.4 (R4 spike, 2026-09-11).
+`knx-productdb`'s `Dynamic` evaluator now expands a `Module` node into its
+`ModuleDef`'s own stored tree at the application-program level (T18 slice
+2, 2026-09-11), but this domain model and the import path are untouched
+by that — per-instantiation `ModuleInstance` resolution stays a
+project-side concern this model still does not evaluate
+([KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted)).
 
 ## 4. Entities
 
@@ -394,8 +398,15 @@ but not interpreted in v1:
   losslessly in a `dynamic_node` table (schema v3, backfilled into
   existing databases from their stored blobs) and evaluates it headlessly
   into active `ParameterRef`/`ComObjectRef` sets (T18 slice 1, 2026-09-11).
-  This domain model is untouched by that: `ParameterInstance` still holds
-  only the raw string, and nothing here reads the evaluator's output.
+  A `ModuleDef`'s own tree is stored under the same table as its own scope
+  (`module_def_id` set to the `ModuleDef`'s own `@Id`, rather than the
+  empty string the owning application program's own tree uses), and is
+  now *evaluated* too: the evaluator follows a `Module` node in the
+  program's tree into the referenced `ModuleDef`'s stored tree (T18 slice
+  2, 2026-09-11) — no schema change and no v4, `dynamic_node` already
+  stored everything this needed. This domain model is untouched by either
+  slice: `ParameterInstance` still holds only the raw string, and nothing
+  here reads the evaluator's output.
 - `Memory`, `AbsoluteSegment`, `LoadProcedures`, mask and resource data — held
   in the product database, not in the project.
 - `BusAccess`, `BCUKey`, `SplitType`, `BinaryData` and vendor baggage — held in

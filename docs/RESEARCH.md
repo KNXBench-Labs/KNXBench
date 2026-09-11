@@ -1046,7 +1046,8 @@ with `sqlite3`, e.g.
 `sqlite3 -json "$DB" "SELECT f.* FROM facts f JOIN factsSearch fs ON f.factId=fs.factId WHERE factsSearch MATCH '...' "`.
 Every **[D]** claim below carries a quoted citation naming its source. Most
 quote `evidenceText` from a database fact row and cite `sourcePdf` directly.
-A minority — marked **[D, corpus]** at the point they occur — quote the
+A substantial number — marked **[D, corpus]** at the point they occur, and
+roughly as many as the fact-row citations — quote the
 extracted Markdown/PDF text directly, because exhaustive FTS search against
 both databases turned up no matching fact row for that specific sentence,
 even though the surrounding passage is present and correctly attributed.

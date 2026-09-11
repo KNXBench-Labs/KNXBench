@@ -259,17 +259,32 @@ Each task: **what**, **why**, **depends on**.
   `installs_the_readable_corpus` (`knx-productdb/tests/standalone_packages.rs`).
   The 6th corpus file, `Weinzierl_730_KNX_IP_Interface_ETS2-3.vd2`, is a
   pre-2013 ETS2-era SFX/`.vd_` archive (no `knx_master.xml`, not the same
-  ZIP/XML container family at all) and is rejected purely by filename
-  suffix, before any byte is hashed, with
-  `PackageError::LegacyVd2` → `"legacy .vd2 product data is unsupported"`
-  (`crates/knx-productdb/src/package.rs`). `knx products ingest` (CLI) and
+  ZIP/XML container family at all) and is rejected by filename suffix
+  alone — still never opened as a ZIP, never decrypted or parsed — with
+  `PackageError::LegacyVd2 { sha256, len }` → `"legacy .vd2 product data
+  is unsupported (sha256 <64 hex chars>, <len> bytes)"`
+  (`crates/knx-productdb/src/package.rs`). **Closed 2026-09-11:** the
+  design spec's acceptance criterion "the caller receives the archive
+  hash/size in the error report where available" was unmet as of
+  2026-09-10 (the filename check ran before any hash/size was computed);
+  the whole-archive `MAX_PACKAGE_SIZE` guard now runs first so hashing
+  stays bounded, then the `.vd2` check hashes the bytes and returns the
+  evidence, verified against the real corpus file
+  (`rejects_the_real_legacy_vd2_corpus_file_with_its_hash_and_size`) and
+  a 3-byte synthetic fixture
+  (`a_small_vd2_still_reports_hash_and_length`,
+  `crates/knx-productdb/tests/standalone_packages.rs`), and against the
+  HTTP 400 body
+  (`malformed_and_legacy_product_uploads_are_typed_bad_requests`,
+  `apps/knx-server/tests/http_product_install.rs`). Both real-corpus
+  tests skip silently when the gitignored `OriginalData/` directory is
+  absent, so a CI run without the local-only corpus checked out gets
+  zero real-`.vd2`-file coverage of this path — a deliberate repository
+  convention (commit `10df2a8`), not new to this change, but worth
+  saying plainly. `knx products ingest` (CLI) and
   `POST /api/catalog/install` (HTTP) both surface the same typed errors
-  as plain strings today — the design spec's acceptance criterion "the
-  caller receives the archive hash/size in the error report where
-  available" is **not** implemented for the `.vd2` case specifically,
-  since the filename check runs before any hash/size is computed; not
-  fixed here (out of scope for this doc-reconciliation task), flagged as
-  a known gap. `POST /api/devices` also stopped silently dropping
+  as plain strings, so the evidence reaches both surfaces for free.
+  `POST /api/devices` also stopped silently dropping
   `EnrichmentIssue`s: `CreateDeviceResponse { tree, diagnostics }` now
   returns typed `CreationDiagnostic`s (`ProgramlessProduct`/
   `AmbiguousDpt`/`ComObjectRefMissing`/`ProgramRefMissing`/

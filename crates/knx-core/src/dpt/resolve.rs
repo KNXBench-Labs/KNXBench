@@ -61,6 +61,10 @@ pub fn resolve_group_address_dpt(project: &Project, ga: GroupAddressId) -> Group
     let dpts: Vec<DptRef> = project
         .devices
         .com_objects()
+        // `.any()`, not a count: an object with two links to `ga` (one per
+        // `Direction`) still contributes its DPT once — one object states
+        // one DPT, and direction says nothing about the type. Do not turn
+        // this into a per-link count.
         .filter(|com| com.links.iter().any(|link| link.ga == ga))
         .filter_map(|com| com.dpt.value().map(|resolved| resolved.value))
         .collect();
@@ -335,6 +339,25 @@ mod tests {
     }
 
     #[test]
+    fn one_object_linked_to_the_same_address_in_both_directions_counts_once_not_twice() {
+        let ga = GroupAddressId(1);
+        // One object, two links to the same `ga` — one Send, one Receive.
+        // It still states one DPT, so this must resolve to `Single`, never
+        // a two-element `Conflict` manufactured out of counting the same
+        // object's DPT twice.
+        let project = project_with(vec![com_object(
+            1,
+            stated(1, 1),
+            vec![send(ga), receive(ga)],
+            true,
+        )]);
+        assert_eq!(
+            resolve_group_address_dpt(&project, ga),
+            GroupAddressDpt::Single(dpt(1, 1))
+        );
+    }
+
+    #[test]
     fn an_inactive_communication_object_still_counts() {
         let ga = GroupAddressId(1);
         let project = project_with(vec![com_object(1, stated(1, 1), vec![send(ga)], false)]);
@@ -404,6 +427,41 @@ mod tests {
         assert_eq!(
             map.get(&500),
             Some(&GroupAddressDpt::Conflict(vec![dpt(1, 1), dpt(5, 1)]))
+        );
+    }
+
+    #[test]
+    fn an_installation_resolving_single_merges_with_another_resolving_conflict_on_the_same_raw_address(
+    ) {
+        // Installation 0's own group address has exactly one linked object,
+        // so `resolve_group_address_dpt` resolves it to a plain `Single`.
+        // Installation 1's own group address, same raw value, already has
+        // two disagreeing linked objects and resolves to `Conflict` all by
+        // itself, before the map ever combines anything. The map must not
+        // let the `Single` side win, or drop either of the `Conflict`
+        // side's entries — it pools everything stated for that raw address
+        // and reclassifies once.
+        let single_entry = group_address_entry(1, 700);
+        let conflict_entry = group_address_entry(2, 700);
+        let mut project = project_with(vec![
+            com_object(1, stated(1, 1), vec![send(single_entry.id)], true),
+            com_object(2, stated(5, 1), vec![send(conflict_entry.id)], true),
+            com_object(3, stated(9, 1), vec![send(conflict_entry.id)], true),
+        ]);
+        project.installations = vec![
+            installation(0, vec![single_entry]),
+            installation(1, vec![conflict_entry]),
+        ];
+
+        let map = resolve_project_group_address_dpts(&project);
+
+        assert_eq!(
+            map.get(&700),
+            Some(&GroupAddressDpt::Conflict(vec![
+                dpt(1, 1),
+                dpt(5, 1),
+                dpt(9, 1)
+            ]))
         );
     }
 }

@@ -11,6 +11,23 @@
           "data-theme",
           known.indexOf(t) !== -1 ? t : "bitcoin-defi",
         );
+
+        // Keep this id list in sync with MOTION_LEVELS/MOTION_STYLES in
+        // src/motion.ts — duplicated here because this script runs before
+        // any module loads, so it cannot import from motion.ts.
+        var level = localStorage.getItem("knx-desktop:motion-level");
+        var knownLevels = ["off", "subtle", "standard"];
+        document.documentElement.setAttribute(
+          "data-motion-level",
+          knownLevels.indexOf(level) !== -1 ? level : "standard",
+        );
+
+        var style = localStorage.getItem("knx-desktop:motion-style");
+        var knownStyles = ["apple", "glitch"];
+        document.documentElement.setAttribute(
+          "data-motion-style",
+          knownStyles.indexOf(style) !== -1 ? style : "apple",
+        );
       })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />

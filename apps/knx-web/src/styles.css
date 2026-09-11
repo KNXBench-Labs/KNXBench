@@ -37,6 +37,35 @@
   --knx-radius-input: 8px;
 
   --knx-transition-duration: 250ms;
+  /* Fallback easing for a document with no data-motion-* attribute yet
+     (a stale cached index.html, a test rendering without the bootstrap). */
+  --knx-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* The motion control's two axes (see motion.ts). Level sets the duration,
+   style sets the easing curve; together they drive every transition below.
+
+   Level "off" sets the duration to 0ms rather than deleting it — an
+   element mid-transition when the user flips the level must snap to its
+   end state, not freeze halfway there. */
+:root[data-motion-level="off"] {
+  --knx-transition-duration: 0ms;
+}
+
+:root[data-motion-level="subtle"] {
+  --knx-transition-duration: 120ms;
+}
+
+:root[data-motion-level="standard"] {
+  --knx-transition-duration: 250ms;
+}
+
+:root[data-motion-style="apple"] {
+  --knx-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root[data-motion-style="glitch"] {
+  --knx-motion-easing: steps(4, end);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -45,9 +74,9 @@
   .fs-picker,
   .tree-label.selected,
   .search-result.selected {
-    transition: background-color var(--knx-transition-duration) ease,
-      color var(--knx-transition-duration) ease,
-      border-color var(--knx-transition-duration) ease;
+    transition: background-color var(--knx-transition-duration) var(--knx-motion-easing),
+      color var(--knx-transition-duration) var(--knx-motion-easing),
+      border-color var(--knx-transition-duration) var(--knx-motion-easing);
   }
 }
 
@@ -265,9 +294,9 @@ main {
 @media (prefers-reduced-motion: no-preference) {
   .dashboard-stats,
   .com-object-list li {
-    transition: transform var(--knx-transition-duration) ease,
-      border-color var(--knx-transition-duration) ease,
-      box-shadow var(--knx-transition-duration) ease;
+    transition: transform var(--knx-transition-duration) var(--knx-motion-easing),
+      border-color var(--knx-transition-duration) var(--knx-motion-easing),
+      box-shadow var(--knx-transition-duration) var(--knx-motion-easing);
   }
 }
 
@@ -773,8 +802,8 @@ button {
 
 @media (prefers-reduced-motion: no-preference) {
   button {
-    transition: transform var(--knx-transition-duration) ease,
-      box-shadow var(--knx-transition-duration) ease;
+    transition: transform var(--knx-transition-duration) var(--knx-motion-easing),
+      box-shadow var(--knx-transition-duration) var(--knx-motion-easing);
   }
 }
 

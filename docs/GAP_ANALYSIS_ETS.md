@@ -31,7 +31,7 @@ of ETS 5/6 as a professional tool, not a specific verified version — treat
 |---|-----|---------|---------------|-------|
 | A1 | **`Functions`** | Groups several group addresses under one named function (e.g. "Living room ceiling light" = switch + status + dim). | Not modelled at all. | Flagged since RESEARCH §12/ROADMAP "open questions"; absent from the one reference project, never designed. |
 | A2 | **KNX Secure** (Data Secure, IP Secure, `.knxkeys` keyring) | Full support: secure group communication, secure tunnelling/routing, keyring import/export. | Not implemented; `knx-secure` is an empty, deliberately isolated crate. | [KNOWN_LIMITATIONS.md §8](KNOWN_LIMITATIONS.md#8-knx-secure-is-not-implemented), [§26](KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure). |
-| A3 | **Parameter semantics** (`Dynamic`/`choose`/`when` tree) | Renders a parameter UI per device, with visibility/enable rules. | **Partially closed (2026-09-11, T18 slice 1).** `knx-productdb` parses, stores (schema v3, `dynamic_node`) and evaluates the tree headlessly. No UI reads it, no value is ever written, `Module` expansion is not implemented — parameters are still preserved as opaque values as far as the rest of the application is concerned. | [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted). |
+| A3 | **Parameter semantics** (`Dynamic`/`choose`/`when` tree) | Renders a parameter UI per device, with visibility/enable rules. | **Partially closed (2026-09-11, T18 slice 2).** `knx-productdb` parses, stores (schema v3, `dynamic_node`) and evaluates the tree headlessly, including expanding a `Module` node into its `ModuleDef`'s own stored tree. No UI reads it and no value is ever written; D16 (all instantiations of one `ModuleDef` still evaluate against identical parameter values), argument values (`NumericArg`/`TextArg`, stored but uninterpreted) and `AllocatorRef` (unattested) all remain open — parameters are still preserved as opaque values as far as the rest of the application is concerned. | [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted). |
 | A4 | **Schema coverage** | Reads any ETS3/4/5/6 project. | Schema 11 (ETS4) fully known; schema 23 (ETS6) detected and refused by name; 12-22 undocumented. | [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md#1-single-sample-bias). |
 | A5 | **`.knxprod` scheme ≥ 12** | Reads current manufacturer product files directly. | **Partially closed (2026-09-10).** Standalone `.knxprod` product-package install (`knx_productdb::install_package`) reads scheme 11 and scheme 20 packages — verified against 3 real scheme-11 and 2 real scheme-20 files (`installs_the_readable_corpus`). Schemes 12-19, 21, 22 remain unread; `.vd2` (a pre-2013 legacy container, not the same ZIP/XML family at all) is explicitly rejected. Full `.knxproj` *project* import is still schema-11/21/23 only — this row is about standalone `.knxprod` *product packages*, a narrower claim. | [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly). |
 | A6 | **Password-protected projects** | Opens ZipCrypto (ETS4/5) and AES/PBKDF2 (ETS6) protected projects. | Detected, refused, never decrypted. | [KNOWN_LIMITATIONS.md §13](KNOWN_LIMITATIONS.md#13-password-protected-projects-are-refused-not-decrypted). |
@@ -588,16 +588,28 @@ Each task: **what**, **why**, **depends on**.
   wrapper" `choose` idiom given its own code path, and a defensive parser
   that stores an unrecognized `Dynamic`/when-child construct under its own
   name and reports it rather than dropping it (the spike itself turned up
-  one undocumented one, `ChannelIndependentBlock`, mid-research). Two
-  slices remain, **neither started**: **module expansion** (follow
-  `Module/@RefId` into a `ModuleDef`'s own `Dynamic` tree — today a
-  `Module` node evaluates to `ModuleNotExpanded` and is not followed), and
-  **the editor** (a UI over the evaluator, writing values back into a
-  project). The research for module expansion now exists — the R4 spike
-  (2026-09-11, RESEARCH §4.4) establishes how `Module`/`ModuleDef` naming,
-  argument binding, repetition and id-mangling actually work, against a
-  two-manufacturer corpus — but that is evidence, not implementation: no
-  code has changed and the diagnostic still fires on every `Module` node.
+  one undocumented one, `ChannelIndependentBlock`, mid-research).
+  **Slice 2, module expansion, shipped the same day (2026-09-11):** the
+  evaluator now follows `Module/@RefId` into the referenced `ModuleDef`'s
+  own stored `Dynamic` tree, with every activation and diagnostic
+  qualified by the instantiating `Module` (`ModuleScope`), so N sibling
+  `Module`s instantiating one `ModuleDef` produce N results, not one.
+  Nesting is rejected by policy, not followed
+  (`Diagnostic::NestedModuleNotExpanded`) — the corpus has zero nested
+  modules and the Standard extraction defines no application-program-side
+  `ModuleDef` complexType to recurse against. Corpus-regression-proven for
+  `prod3`'s three module-bearing programs (activation totals 22/18/14 →
+  382/258/134; RESEARCH §4.4 Q7's other four module-bearing programs live
+  in the `kv25` demo `.knxproj`, which these tests do not install, so
+  nothing here claims `kv25`). Not closed by slice 2, and not softened by
+  it either — see [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted):
+  all instantiations of one `ModuleDef` still evaluate against identical
+  parameter values (per-instantiation values are a project-side construct
+  this crate does not model), argument values stay stored-but-uninterpreted,
+  and `AllocatorRef` stays unattested. **Slice 3, the editor** (a UI over
+  the evaluator, writing values back into a project), remains open and
+  unstarted — the only thing that would give slice 2's per-instantiation
+  limitation a real consumer to matter to.
   Partially closes **A3**, prerequisite for a large share of
   realistic ETS parity. This is still the single largest remaining gap by
   effort, and every parameter-adjacent gap above (T7 aside) is smaller in

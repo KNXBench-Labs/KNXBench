@@ -29,7 +29,7 @@ pub use command::{Command, CommandError, CommandStack};
 pub use commissioning::{CommissioningState, CompletionStatus};
 pub use device::{BinaryDataRef, ComObjectInstance, DeviceInstance};
 pub use devices::Devices;
-pub use dpt::{DptParseError, DptRef};
+pub use dpt::{decode, encode, DptCodecError, DptParseError, DptRef, DptValue, GroupValue};
 pub use flags::{ComFlagKind, ComFlags, Direction, GroupLink, ObjectSize, ResolvedFlags};
 pub use group::{GroupAddressEntry, GroupRange};
 pub use ids::*;

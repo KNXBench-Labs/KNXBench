@@ -883,13 +883,12 @@ h6 {
   color: transparent;
 }
 
-.theme-switcher select {
-  font-family: var(--knx-font-mono);
-  text-transform: none;
-  letter-spacing: normal;
-  min-width: 10rem;
-}
-
+/* `.theme-switcher select` lived here until T27 moved the theme dropdown
+   into SettingsPanel and deleted ThemeSwitcher.tsx; `.settings-field
+   select` above replaces it. `.sr-only` below outlived the same component
+   on purpose — it currently has no consumer, but it is the standard
+   visually-hidden-label utility and §20's accessibility work will want
+   it back rather than reinvent it. */
 .sr-only {
   position: absolute;
   width: 1px;

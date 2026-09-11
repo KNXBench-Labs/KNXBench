@@ -1,4 +1,71 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-11 23:55
+- **Completed:** **T18 slice 3, Task 4** (the last code task of this
+  slice) — same worktree (`.worktrees/t18-parameter-editor`, branch
+  `t18-parameter-editor`), commit `dadc92b` on top of `f99da6e`. Built
+  the `apps/knx-web` UI consuming Task 3's `ParameterPanelDto` endpoints.
+  - `apps/knx-web/src/ParameterPanel.tsx` (new): fetches
+    `GET /api/device/{id}/parameters` unconditionally on device
+    selection (per the controller's ruling overriding the brief's
+    `program_id != null` gate — `DeviceDetail` carries no program id, and
+    a device with an unresolved program still returns 200 with its own
+    `stale` entries, which a conditional fetch would hide). Renders one
+    `<details open>` section per `ParameterSectionDto` (D23's
+    `module_id` / `"Module #{module_node}"` fallback label), a
+    select/number/text input per field `kind`, disabled input + a
+    read-only caption for `editable: false` module-scoped fields (D25),
+    a separate stale-values section (D21, never merged into the normal
+    list), and a collapsed count-headed diagnostics banner with `detail`
+    behind a "Copy details" button (D26). Submitting an editable field's
+    change POSTs `{ etsId, raw }` and replaces panel state directly from
+    the response — no second `GET`, per D24.
+  - `apps/knx-web/src/api.ts`: added `deviceParameters`/
+    `setParameterValue` plus hand-written `ParameterPanel`/
+    `ParameterSection`/`ModuleScope`/`ParameterField`/`EnumOption`/
+    `StaleParameter`/`ParameterDiagnostic` interfaces (server-local DTOs,
+    no `ts-rs` binding, same convention as `CsvProblem`).
+  - `apps/knx-web/src/Inspector.tsx`: one-line call site —
+    `<ParameterPanel deviceId={detail.id} />` at the end of
+    `DeviceInspector`. `apps/knx-web/src/styles.css`: new
+    `.parameter-*` classes alongside the existing `.inspector-field`/
+    `.field-error`/`.provenance-badge` ones.
+  - Test-first, genuinely: `ParameterPanel.test.tsx` was written and run
+    against a nonexistent component first — failed with `Failed to
+    resolve import "./ParameterPanel"`, the right reason — before any
+    implementation existed. All three tests (fixture render with two
+    section field-rows/stale entry/diagnostic count; submit-and-rerender
+    via a `focusout` blur-commit, mirroring `Inspector.tsx`'s existing
+    field idiom; module-scoped `<select>` present-but-disabled) passed on
+    the first implementation attempt — reported as such, not framed as a
+    caught bug. Also separately probed, then deleted, a throwaway spec
+    confirming happy-dom/React 18 only delivers a synthetic `onBlur` via
+    a bubbling `FocusEvent("focusout", ...)`, not a plain
+    `Event("blur")` — that's why the test dispatches `focusout`.
+  - Gates: `cargo fmt --all --check` clean; `cargo clippy --workspace
+    --all-targets -- -D warnings` clean; `cargo test --workspace` **975
+    passed / 0 failed / 3 ignored** (baseline, unchanged); `cargo run -p
+    xtask -- check-layering` clean; `cargo deny check` clean (pre-existing
+    advisory/license warnings only, exit 0); `npm run test` in
+    `apps/knx-web` **182 passed across 18 files** (179/17 baseline + 3
+    new in 1 new file). `npx tsc --noEmit` also clean (not a listed gate,
+    checked anyway since `package.json`'s `build` script runs `tsc`).
+- **Pending/Next Steps:** T18 slice 3's code tasks (1-4) are all done and
+  merged onto this branch. Next: get this worktree merged to `main` (not
+  done as part of this task — controller's call), then decide whether a
+  slice-4 (per-channel module-scoped writes, named as an explicit
+  non-goal in D25) is worth opening, or whether T18 moves to something
+  else entirely per `docs/ROADMAP.md`.
+- **Notes for Codex:** The parameter panel always fetches on device
+  selection now, even for devices with no resolvable program — check
+  `ParameterPanel.tsx`'s top-of-file comment before "fixing" that into a
+  conditional fetch; it's deliberate (see D21's `stale` framing). The
+  blur-commit test idiom needs `new FocusEvent("focusout", { bubbles:
+  true })`, not `new Event("blur", ...)` — happy-dom/React 18 doesn't
+  deliver the latter to `onBlur` handlers at all, so a test written with
+  `"blur"` will silently never fire the submit and can look like a
+  passing no-op test if you're not asserting the mock was called.
+---
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-11 23:32
 - **Completed:** **T18 slice 3, Task 3, fix round 1** — same worktree
   (`.worktrees/t18-parameter-editor`, branch `t18-parameter-editor`), on

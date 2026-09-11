@@ -845,10 +845,11 @@ Known gaps carried forward, none blocking Session 5:
   interpretable is now documented (RESEARCH R3/§4.3, spike run
   2026-09-11); the `Dynamic` tree's structural grammar remains
   corpus-observed only. T18's first slice (also 2026-09-11) built a
-  headless evaluator over the stored tree in `knx-productdb` — but device
-  parameters are still not interpretable *by a user*: nothing wires the
-  evaluator into any UI, `Module` expansion is not implemented, and no
-  parameter editor exists. See the dated entry below and T18
+  headless evaluator over the stored tree in `knx-productdb`, and slice 2
+  (same day) taught it to expand a `Module` node into its `ModuleDef`'s
+  own tree — but device parameters are still not interpretable *by a
+  user*: nothing wires the evaluator into any UI, and no parameter editor
+  exists. See the dated entries below and T18
   ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5).
 - A program value behind an instance-level `Empty` slot stays invisible in
   the model ([KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §12); lifted by

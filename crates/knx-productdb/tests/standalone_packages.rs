@@ -511,7 +511,7 @@ fn migrating_v1_preserves_existing_rows_and_blobs() {
     knx_productdb::ingest_file(&conn, "M-0001/Hardware.xml", HARDWARE).unwrap();
     conn.execute_batch(
         "DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
-         DROP TABLE package; PRAGMA user_version = 1;",
+         DROP TABLE package; DROP TABLE dynamic_node; PRAGMA user_version = 1;",
     )
     .unwrap();
     drop(conn);
@@ -519,7 +519,7 @@ fn migrating_v1_preserves_existing_rows_and_blobs() {
     assert_eq!(
         conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        2
+        3
     );
     assert_eq!(
         knx_productdb::load_source_file(&conn, &knx_productdb::sha256_hex(HARDWARE))
@@ -548,7 +548,7 @@ fn a_failed_v1_to_v2_migration_rolls_back_its_ddl_and_version() {
     let (dir, conn) = db();
     conn.execute_batch(
         "DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
-         DROP TABLE package; CREATE TABLE package_conflict (marker INTEGER); PRAGMA user_version = 1;",
+         DROP TABLE package; DROP TABLE dynamic_node; CREATE TABLE package_conflict (marker INTEGER); PRAGMA user_version = 1;",
     )
     .unwrap();
     drop(conn);
@@ -567,6 +567,6 @@ fn a_failed_v1_to_v2_migration_rolls_back_its_ddl_and_version() {
             .unwrap()
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        2
+        3
     );
 }

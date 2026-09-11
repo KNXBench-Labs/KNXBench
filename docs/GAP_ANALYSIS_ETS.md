@@ -31,7 +31,7 @@ of ETS 5/6 as a professional tool, not a specific verified version — treat
 |---|-----|---------|---------------|-------|
 | A1 | **`Functions`** | Groups several group addresses under one named function (e.g. "Living room ceiling light" = switch + status + dim). | Not modelled at all. | Flagged since RESEARCH §12/ROADMAP "open questions"; absent from the one reference project, never designed. |
 | A2 | **KNX Secure** (Data Secure, IP Secure, `.knxkeys` keyring) | Full support: secure group communication, secure tunnelling/routing, keyring import/export. | Not implemented; `knx-secure` is an empty, deliberately isolated crate. | [KNOWN_LIMITATIONS.md §8](KNOWN_LIMITATIONS.md#8-knx-secure-is-not-implemented), [§26](KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure). |
-| A3 | **Parameter semantics** (`Dynamic`/`choose`/`when` tree) | Renders a parameter UI per device, with visibility/enable rules. | Parameters preserved as opaque values only; no interpretation. | [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted). |
+| A3 | **Parameter semantics** (`Dynamic`/`choose`/`when` tree) | Renders a parameter UI per device, with visibility/enable rules. | **Partially closed (2026-09-11, T18 slice 1).** `knx-productdb` parses, stores (schema v3, `dynamic_node`) and evaluates the tree headlessly. No UI reads it, no value is ever written, `Module` expansion is not implemented — parameters are still preserved as opaque values as far as the rest of the application is concerned. | [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted). |
 | A4 | **Schema coverage** | Reads any ETS3/4/5/6 project. | Schema 11 (ETS4) fully known; schema 23 (ETS6) detected and refused by name; 12-22 undocumented. | [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md#1-single-sample-bias). |
 | A5 | **`.knxprod` scheme ≥ 12** | Reads current manufacturer product files directly. | **Partially closed (2026-09-10).** Standalone `.knxprod` product-package install (`knx_productdb::install_package`) reads scheme 11 and scheme 20 packages — verified against 3 real scheme-11 and 2 real scheme-20 files (`installs_the_readable_corpus`). Schemes 12-19, 21, 22 remain unread; `.vd2` (a pre-2013 legacy container, not the same ZIP/XML family at all) is explicitly rejected. Full `.knxproj` *project* import is still schema-11/21/23 only — this row is about standalone `.knxprod` *product packages*, a narrower claim. | [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly). |
 | A6 | **Password-protected projects** | Opens ZipCrypto (ETS4/5) and AES/PBKDF2 (ETS6) protected projects. | Detected, refused, never decrypted. | [KNOWN_LIMITATIONS.md §13](KNOWN_LIMITATIONS.md#13-password-protected-projects-are-refused-not-decrypted). |
@@ -578,19 +578,25 @@ Each task: **what**, **why**, **depends on**.
   spike (RESEARCH R3) ran 2026-09-11 (RESEARCH §4.3): the Standard
   normatively specifies the `@test` value grammar and the
   `choose`→`ParameterRef`→`ParameterType` resolution chain resolves
-  100% of the time in a 34-application-program corpus, so this is no
-  longer blocked on research. What it needs now: a design decision on
-  the no-match-branch policy (5570 of 8732 no-default `choose` elements
-  in that corpus have a legal parameter value no `when` covers — common,
-  not rare), explicit handling for the `TypeNone`-controlled "dummy
-  wrapper" `choose` idiom the Standard's own text has no defined
-  behaviour for, and a defensive parser that preserves or flags
-  unrecognized `Dynamic`/when-child constructs rather than dropping them
-  (the spike itself turned up one undocumented one,
-  `ChannelIndependentBlock`, mid-research). Closes **A3**, prerequisite
-  for a large share of realistic ETS parity. This is the single largest
-  remaining gap by effort, and every parameter-adjacent gap above (T7
-  aside) is smaller in comparison.
+  100% of the time in a 34-application-program corpus. **Slice 1 shipped
+  the same day**: `knx-productdb` parses and stores the `Dynamic` tree
+  losslessly (schema v3, `dynamic_node`, backfilled into existing
+  databases from stored blobs) and evaluates it headlessly into active
+  `ParameterRef`/`ComObjectRef` sets, with the no-match-branch policy
+  decided (nothing under an unmatched `choose` activates, an inference —
+  RESEARCH §4.3 — not a documented rule), the `TypeNone`-controlled "dummy
+  wrapper" `choose` idiom given its own code path, and a defensive parser
+  that stores an unrecognized `Dynamic`/when-child construct under its own
+  name and reports it rather than dropping it (the spike itself turned up
+  one undocumented one, `ChannelIndependentBlock`, mid-research). Two
+  slices remain, neither started: **module expansion** (follow
+  `Module/@RefId` into a `ModuleDef`'s own `Dynamic` tree — today a
+  `Module` node evaluates to `ModuleNotExpanded` and is not followed), and
+  **the editor** (a UI over the evaluator, writing values back into a
+  project). Partially closes **A3**, prerequisite for a large share of
+  realistic ETS parity. This is still the single largest remaining gap by
+  effort, and every parameter-adjacent gap above (T7 aside) is smaller in
+  comparison.
 - **T19. KNX Secure (Data Secure + IP Secure + keyring).** Needs sample
   key material and a real secured installation to verify against — a
   hard external dependency, not purely an engineering task. Closes

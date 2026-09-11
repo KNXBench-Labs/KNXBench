@@ -588,16 +588,28 @@ Each task: **what**, **why**, **depends on**.
   wrapper" `choose` idiom given its own code path, and a defensive parser
   that stores an unrecognized `Dynamic`/when-child construct under its own
   name and reports it rather than dropping it (the spike itself turned up
-  one undocumented one, `ChannelIndependentBlock`, mid-research). Two
-  slices remain, **neither started**: **module expansion** (follow
-  `Module/@RefId` into a `ModuleDef`'s own `Dynamic` tree — today a
-  `Module` node evaluates to `ModuleNotExpanded` and is not followed), and
-  **the editor** (a UI over the evaluator, writing values back into a
-  project). The research for module expansion now exists — the R4 spike
-  (2026-09-11, RESEARCH §4.4) establishes how `Module`/`ModuleDef` naming,
-  argument binding, repetition and id-mangling actually work, against a
-  two-manufacturer corpus — but that is evidence, not implementation: no
-  code has changed and the diagnostic still fires on every `Module` node.
+  one undocumented one, `ChannelIndependentBlock`, mid-research).
+  **Slice 2, module expansion, shipped the same day (2026-09-11):** the
+  evaluator now follows `Module/@RefId` into the referenced `ModuleDef`'s
+  own stored `Dynamic` tree, with every activation and diagnostic
+  qualified by the instantiating `Module` (`ModuleScope`), so N sibling
+  `Module`s instantiating one `ModuleDef` produce N results, not one.
+  Nesting is rejected by policy, not followed
+  (`Diagnostic::NestedModuleNotExpanded`) — the corpus has zero nested
+  modules and the Standard extraction defines no application-program-side
+  `ModuleDef` complexType to recurse against. Corpus-regression-proven for
+  `prod3`'s three module-bearing programs (activation totals 22/18/14 →
+  382/258/134; RESEARCH §4.4 Q7's other four module-bearing programs live
+  in the `kv25` demo `.knxproj`, which these tests do not install, so
+  nothing here claims `kv25`). Not closed by slice 2, and not softened by
+  it either — see [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted):
+  all instantiations of one `ModuleDef` still evaluate against identical
+  parameter values (per-instantiation values are a project-side construct
+  this crate does not model), argument values stay stored-but-uninterpreted,
+  and `AllocatorRef` stays unattested. **Slice 3, the editor** (a UI over
+  the evaluator, writing values back into a project), remains open and
+  unstarted — the only thing that would give slice 2's per-instantiation
+  limitation a real consumer to matter to.
   Partially closes **A3**, prerequisite for a large share of
   realistic ETS parity. This is still the single largest remaining gap by
   effort, and every parameter-adjacent gap above (T7 aside) is smaller in

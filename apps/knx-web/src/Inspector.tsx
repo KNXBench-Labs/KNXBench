@@ -10,6 +10,7 @@ import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { LineNode } from "./bindings/LineNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
+import ParameterPanel from "./ParameterPanel";
 import {
   findArea,
   findBuildingPart,
@@ -498,6 +499,9 @@ function DeviceInspector(props: {
           </li>
         ))}
       </ul>
+      {/* T18 slice 3 task 4: fetches its own panel keyed on `detail.id`,
+          unconditionally (see ParameterPanel.tsx's own comment on why). */}
+      <ParameterPanel deviceId={detail.id} />
     </div>
   );
 }

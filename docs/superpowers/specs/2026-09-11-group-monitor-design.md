@@ -472,6 +472,11 @@ ApiError>` returns.
 - Response `200`: `{ "sessionId": 1, "telegramCount": 42, "droppedCount": 0
   }`.
 - Errors: `409` (no active session).
+- **Correction, 2026-09-11 (T15):** the response also carries an optional
+  `warning?: string`, omitted from the shape above. The drain task's
+  `tokio::spawn`ed `JoinHandle` can report a panic; CLAUDE.md forbids
+  swallowing that silently, so `/stop` surfaces it here rather than
+  dropping it. Not present in the ordinary case.
 
 **`GET /api/bus/monitor/telegrams?since=<seq>`**
 - `since: u64` query param, default `0` (a client's first poll can omit it
@@ -492,7 +497,7 @@ ApiError>` returns.
         "destinationName": "Living room / light / switch",
         "service": "GroupValueWrite",
         "rawPayload": "0x01 (6-bit)",
-        "decoded": { "kind": "value", "dpt": "1.001", "text": "On" }
+        "decoded": { "kind": "value", "dpt": "DPST-1-1", "text": "On" }
       }
     ]
   }
@@ -512,6 +517,14 @@ ApiError>` returns.
   `format_decoded_value`'s output back apart to, say, colour conflicts
   differently from clean decodes). `error` case additionally carries
   `decoded.error: string` (the `DptCodecError` display text).
+  **Correction, 2026-09-11 (T15):** the `dpt` field is not the dotted
+  `"1.001"` this section's two worked examples originally showed — it is
+  `DptRef`'s own `Display` form (`"DPST-<main>-<sub>"` or `"DPT-<main>"`,
+  e.g. `"DPST-1-1"`). `DptRef::parse` (`crates/knx-core/src/dpt/mod.rs`)
+  never accepted the dotted notation, and `/write`'s optional `dpt` field
+  has to parse back exactly what `/telegrams` sends, so the wire form was
+  always going to be `DptRef::parse`/`Display`'s own shape. Both worked
+  examples above are corrected accordingly.
 - No active session and `since` given: `404` (there is nothing to page
   through — distinct from `409`, which means "you tried to mutate session
   state that doesn't exist"; a `GET` against a session that was never
@@ -527,7 +540,7 @@ ApiError>` returns.
   ```json
   {
     "destination": "1/2/3",
-    "dpt": "1.001",
+    "dpt": "DPST-1-1",
     "value": "on"
   }
   ```

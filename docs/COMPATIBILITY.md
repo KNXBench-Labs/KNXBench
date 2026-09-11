@@ -71,6 +71,7 @@ of a file we export."
 | Password-protected projects, schema ≥ 21 (AES, PBKDF2) | As above | Open a real protected ETS6 project with its password |
 | ETS re-import of a file we export | Untested (risk R9) | Export a project and open it in a real ETS installation; record the result either way |
 | KNXnet/IP against other gateway models | One model tested | Test discovery, tunnelling and routing against further gateways |
+| Group Monitor GUI (T15) — starting a tunnelling session from `apps/knx-web`/`apps/knx-desktop`, watching telegrams decode live in a table, and sending a group write back through it | Code and tests only [D] — every test in `apps/knx-server/src/bus.rs` and its `tests/http_bus_monitor.rs`/`http_bus_write.rs` drives a `FakeConnector`/`FakeTunnel`, never a real socket; nothing in this GUI has been run against a physical KNX installation in this branch (`KNOWN_LIMITATIONS.md` §62) | Start a session against a real gateway, watch real telegrams decode and a real write go out, and record the result here |
 
 An unverified row is not a promise. Until it is verified, the honest statement
 is that we expect it to work and have not shown that it does.

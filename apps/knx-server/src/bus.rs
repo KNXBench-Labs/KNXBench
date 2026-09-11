@@ -81,25 +81,48 @@ pub trait BusTunnel: Send + Sync {
 
 pub use knx_net::TunnelEvent;
 
-/// Failure surfaced by [`GatewayConnector`]/[`BusTunnel`]. `Transport`
+/// Failure surfaced by [`GatewayConnector`]/[`BusTunnel`], or by a
+/// server-side rule about how many sessions may exist at once. `Transport`
 /// carries whatever `knx_net::BusError` reported (I/O, timeout, gateway
 /// refusal, an unimplemented operation, a lower-layer codec error) —
 /// everything this seam's production side (`knx-net`) can fail with. An
 /// unparsable gateway address is deliberately *not* a variant here: that
-/// is a caller mistake the eventual HTTP route rejects before ever
-/// reaching a `GatewayConnector`, not something the connector/tunnel
-/// themselves can produce. Later tasks may add session-level variants (an
-/// already-active session, for instance) once a route exists to produce
-/// them; this task adds no route, so none exist yet.
+/// is a caller mistake the HTTP route rejects before ever reaching a
+/// `GatewayConnector`, not something the connector/tunnel themselves can
+/// produce.
+///
+/// `AlreadyActive`/`NoActiveSession` are the server-side cases Task 1's
+/// reviewer anticipated ("extend this enum when you need a session-level
+/// case — do not introduce a second, parallel error type beside it") —
+/// neither a `GatewayConnector` nor a `BusTunnel` ever produces them; the
+/// route layer (`bus_routes.rs`) constructs them directly from
+/// `AppState.bus_session`'s own state, then maps each to whichever status
+/// code its endpoint's contract requires (design spec §4.3: `409` for the
+/// three mutating routes, `404` for `GET /telegrams` — the same variant,
+/// two different status codes, because the HTTP meaning of "no session"
+/// depends on whether the request tried to read or to mutate, not on the
+/// underlying fact).
 #[derive(Debug)]
 pub enum BusSessionError {
     Transport(BusError),
+    /// `POST /api/bus/monitor/start` while `AppState.bus_session` already
+    /// holds a session whose drain task is still running (design spec
+    /// §4.1) — never a silent replacement.
+    AlreadyActive,
+    /// `AppState.bus_session` is `None` (or, for [`BusSession::send`],
+    /// the session's tunnel has already been taken by its own teardown —
+    /// see that method's doc comment) when a route needed one.
+    NoActiveSession,
 }
 
 impl fmt::Display for BusSessionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             BusSessionError::Transport(e) => write!(f, "{e}"),
+            BusSessionError::AlreadyActive => {
+                write!(f, "a monitor session is already active")
+            }
+            BusSessionError::NoActiveSession => write!(f, "no monitor session is active"),
         }
     }
 }
@@ -198,8 +221,8 @@ pub mod fake {
     use std::sync::{Arc, Mutex};
 
     use super::{
-        ApplicationService, BusSessionError, BusTunnel, Destination, Future, GatewayConnector,
-        IndividualAddress, Pin, SocketAddrV4, TunnelEvent,
+        ApplicationService, BusError, BusSessionError, BusTunnel, Destination, Future,
+        GatewayConnector, IndividualAddress, Pin, SocketAddrV4, TunnelEvent,
     };
     use tokio::sync::broadcast;
 
@@ -208,6 +231,25 @@ pub mod fake {
         tx: broadcast::Sender<TunnelEvent>,
         sent: Mutex<Vec<(Destination, ApplicationService)>>,
         disconnected: Mutex<bool>,
+        /// Set by [`FakeTunnelHandle::panic_on_disconnect`] — the Task 3
+        /// regression test for the carried `bus.rs:941` finding needs a
+        /// drain task to panic without any real gateway, and `disconnect()`
+        /// is the one call this task always makes on its way out
+        /// regardless of which branch broke its loop, so it is the
+        /// narrowest place to script a panic from.
+        panic_on_disconnect: Mutex<bool>,
+        /// Set by [`FakeTunnelHandle::fail_next_send`] — the `POST
+        /// /api/bus/write` `502` test (design spec §4.3) needs a tunnel
+        /// whose `send` fails without any real gateway. Always
+        /// `BusError::Timeout`: `BusError` does not derive `Clone` (its
+        /// `Io` variant holds a `std::io::Error`), so this cannot carry an
+        /// arbitrary scripted error the way [`FakeConnector`] can for
+        /// `connect_tunnel` — one fixed, easily recognised variant is
+        /// enough to prove the `502` mapping without adding a second,
+        /// heavier scripting mechanism for a single test. Consumed by the
+        /// next `send` call, then cleared, so a test can still assert a
+        /// later `send` succeeds normally.
+        fail_next_send: Mutex<bool>,
     }
 
     /// The boxed side of a fake tunnel — what `FakeConnector::connect_tunnel`
@@ -241,6 +283,8 @@ pub mod fake {
                 tx,
                 sent: Mutex::new(Vec::new()),
                 disconnected: Mutex::new(false),
+                panic_on_disconnect: Mutex::new(false),
+                fail_next_send: Mutex::new(false),
             });
             (
                 FakeTunnel {
@@ -279,6 +323,33 @@ pub mod fake {
                 .lock()
                 .expect("fake mutex poisoned")
         }
+
+        /// Scripts the linked [`FakeTunnel`]'s next `disconnect()` call to
+        /// panic instead of completing normally — the regression test for
+        /// the carried `bus.rs:941` finding ("a panicked drain task must
+        /// not be reported as a clean stop") drives a real panic through
+        /// this, with no gateway and no socket anywhere.
+        pub fn panic_on_disconnect(&self) {
+            *self
+                .shared
+                .panic_on_disconnect
+                .lock()
+                .expect("fake mutex poisoned") = true;
+        }
+
+        /// Scripts the linked [`FakeTunnel`]'s next `send()` call to fail
+        /// with `BusSessionError::Transport(BusError::Timeout)` instead of
+        /// recording and succeeding — the `POST /api/bus/write` `502` test
+        /// drives this, with no gateway and no socket anywhere. Consumed by
+        /// that one call; a later `send` on the same tunnel succeeds
+        /// normally unless this is called again.
+        pub fn fail_next_send(&self) {
+            *self
+                .shared
+                .fail_next_send
+                .lock()
+                .expect("fake mutex poisoned") = true;
+        }
     }
 
     impl BusTunnel for FakeTunnel {
@@ -296,6 +367,17 @@ pub mod fake {
             service: ApplicationService,
         ) -> Pin<Box<dyn Future<Output = Result<(), BusSessionError>> + Send + '_>> {
             Box::pin(async move {
+                let should_fail = {
+                    let mut flag = self
+                        .shared
+                        .fail_next_send
+                        .lock()
+                        .expect("fake mutex poisoned");
+                    std::mem::replace(&mut *flag, false)
+                };
+                if should_fail {
+                    return Err(BusSessionError::Transport(BusError::Timeout));
+                }
                 self.shared
                     .sent
                     .lock()
@@ -309,6 +391,14 @@ pub mod fake {
             self: Box<Self>,
         ) -> Pin<Box<dyn Future<Output = Result<(), BusSessionError>> + Send>> {
             Box::pin(async move {
+                if *self
+                    .shared
+                    .panic_on_disconnect
+                    .lock()
+                    .expect("fake mutex poisoned")
+                {
+                    panic!("FakeTunnel: scripted disconnect panic (test-only)");
+                }
                 *self
                     .shared
                     .disconnected
@@ -509,7 +599,24 @@ pub enum DecodedValue {
 /// mutex, only an owned snapshot, which is the whole point: the project
 /// can change (or vanish) after this is built and the session's rows keep
 /// using what was true when it started.
-struct GroupAddressContext {
+///
+/// `Clone`: [`BusSession`] keeps its own copy alongside the one moved into
+/// `drain_task` — both need to resolve against the same session-start
+/// snapshot (the task for incoming rows, the session itself for
+/// [`BusSession::resolve_write_dpt`]), and an owned snapshot is cheap
+/// enough (two small maps) that sharing it behind another `Arc` would be
+/// more machinery than the duplication it avoids.
+///
+/// `pub(crate)` (Task 3 addition, was module-private through Task 2): the
+/// `/start` route handler in `bus_routes.rs` must build one of these from
+/// `AppState.project` *before* calling [`BusSession::start`], so the
+/// project mutex is never held across that call's `.await` — see
+/// `BusSession::start`'s doc comment for why. Still opaque outside this
+/// module: only [`GroupAddressContext::from_project`] is constructible
+/// from `bus_routes.rs`, and the value it returns is only ever handed
+/// straight to `BusSession::start`, never inspected field-by-field there.
+#[derive(Clone)]
+pub(crate) struct GroupAddressContext {
     style: Option<GroupAddressStyle>,
     dpts: HashMap<u16, GroupAddressDpt>,
     names: HashMap<u16, String>,
@@ -522,7 +629,7 @@ impl GroupAddressContext {
     /// running server already holds the live `knx_core::Project` in
     /// `AppState.project`, so there is nothing to open here, only to
     /// borrow once).
-    fn from_project(project: Option<&knx_core::Project>) -> Self {
+    pub(crate) fn from_project(project: Option<&knx_core::Project>) -> Self {
         match project {
             None => Self {
                 style: None,
@@ -605,8 +712,11 @@ fn format_dpt_list(dpts: &[DptRef]) -> String {
 /// Renders one `GroupValueWrite`/`GroupValueResponse` payload exactly as
 /// `apps/knx-cli/src/main.rs`'s `format_group_value_payload` does — see
 /// [`GroupAddressContext::decode`]'s doc comment for why this is a
-/// deliberate re-derivation, not a shared call.
-fn format_group_value_payload(v: &GroupValue) -> String {
+/// deliberate re-derivation, not a shared call. `pub(crate)`: `bus_routes.rs`
+/// reuses this to render `POST /api/bus/write`'s `encodedPayload`
+/// (design spec §4.3) exactly as a monitored row would show the same
+/// payload, rather than a second, independently-drifting formatter.
+pub(crate) fn format_group_value_payload(v: &GroupValue) -> String {
     match v {
         GroupValue::Short(bits) => format!("{bits:#04x} (6-bit)"),
         GroupValue::Bytes(bytes) => format!("{bytes:02x?}"),
@@ -828,10 +938,18 @@ impl TelegramBuffer {
 /// Final tally handed back by [`BusSession::stop`] — design spec §4.3's
 /// `/stop` response fields (`telegramCount`/`droppedCount`), snake_cased
 /// here since JSON naming is Task 3's concern, not this module's.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BusSessionSummary {
     pub telegram_count: usize,
     pub dropped_count: u64,
+    /// `Some(message)` if the drain task's own `JoinHandle` reports a
+    /// panic (carried Task 2 review finding, `bus.rs:941` before this
+    /// fix) — `None` for the ordinary case, an orderly `break` out of the
+    /// select loop followed by a clean `disconnect()`. Never discarded:
+    /// see [`BusSession::stop`]'s doc comment for why a panic must not be
+    /// reported as an indistinguishable clean stop. Not `Copy` any more
+    /// (a `String` inside), hence dropping that derive here.
+    pub drain_panic: Option<String>,
 }
 
 /// One open KNXnet/IP monitor session (design spec §4.1): an id, the
@@ -852,7 +970,30 @@ pub struct BusSessionSummary {
 pub struct BusSession {
     id: u64,
     gateway: SocketAddrV4,
+    /// `TunnelClient::assigned_address()` (design spec §4.3's `/start`
+    /// response `assignedAddress`), captured once, synchronously, right
+    /// after `connect_tunnel` returns — a plain field rather than an async
+    /// method that would need to lock `tunnel` (below) for something that
+    /// never changes for the life of a session.
+    assigned_address: IndividualAddress,
     buffer: Arc<Mutex<TelegramBuffer>>,
+    /// The open tunnel, shared with `drain_task` — `tokio::sync::Mutex`,
+    /// not `std::sync::Mutex`: [`BusSession::send`] must hold the guard
+    /// across an `.await` (the tunnel's own `send` is async), which a
+    /// `std::sync::MutexGuard` cannot do (it is not `Send`). `Some` until
+    /// `drain_task`'s own teardown takes it to call `disconnect()` — after
+    /// that, [`BusSession::send`] sees `None` and reports
+    /// [`BusSessionError::NoActiveSession`] rather than reaching for a
+    /// tunnel that is already gone (the race window between a gateway-side
+    /// `Closed`/`Lagged`-driven exit and a write request that arrives just
+    /// after it; see that method's doc comment).
+    tunnel: Arc<tokio::sync::Mutex<Option<Box<dyn BusTunnel>>>>,
+    /// This session's own copy of the DPT/name snapshot — see
+    /// [`GroupAddressContext`]'s doc comment on why it is `Clone` rather
+    /// than shared behind another `Arc`. Used by
+    /// [`BusSession::resolve_write_dpt`]; `drain_task` keeps its own clone
+    /// for decoding incoming rows.
+    ctx: GroupAddressContext,
     /// `Some` until [`BusSession::stop`] consumes it (or the drain task's
     /// own exit makes it moot) — sending on this is how `stop` asks the
     /// task to leave its `tokio::select!` loop. Kept as an `Option` even
@@ -865,31 +1006,52 @@ pub struct BusSession {
 }
 
 impl BusSession {
-    /// Opens a tunnel via `connector`, snapshots the DPT/name maps from
-    /// `project` (design spec §4.4 — a session-start snapshot, never
-    /// re-resolved), and spawns the drain task. `project` is `None` when no
-    /// project is open in `AppState` at session-start time — the caller
-    /// (Task 3's `/start` handler) is expected to pass
-    /// `state.project.lock().unwrap().as_ref()` through; this function
-    /// takes an owned/borrowed snapshot rather than `AppState` itself so
-    /// every test in this module can call it without constructing one.
-    pub async fn start(
+    /// Opens a tunnel via `connector` and spawns the drain task around
+    /// `ctx`, an already-built session-start snapshot (design spec §4.4 —
+    /// never re-resolved once a session is running).
+    ///
+    /// Takes `ctx: GroupAddressContext`, not `project: Option<&Project>` —
+    /// the earlier shape this had through Task 2. The `/start` route
+    /// handler (Task 3) must build `ctx` from `AppState.project` *before*
+    /// calling this, then drop that lock: `state.project` is a
+    /// `std::sync::Mutex`, whose guard is not `Send` and must not be held
+    /// across `connector.connect_tunnel`'s `.await` inside this function —
+    /// besides the `Send` bound axum's handlers need, holding the
+    /// project-wide lock for the duration of a gateway connect (which, for
+    /// `RealConnector`, is a real network round trip) would stall every
+    /// other route that touches the project for no reason connected to
+    /// this session. `GroupAddressContext::from_project` is a synchronous,
+    /// no-await borrow, so building `ctx` first and handing over an owned
+    /// value here is the fix, not a workaround.
+    pub(crate) async fn start(
         id: u64,
         gateway: SocketAddrV4,
         connector: &dyn GatewayConnector,
-        project: Option<&knx_core::Project>,
+        ctx: GroupAddressContext,
     ) -> Result<Self, BusSessionError> {
         let tunnel = connector.connect_tunnel(gateway).await?;
-        let ctx = GroupAddressContext::from_project(project);
+        let assigned_address = tunnel.assigned_address();
         let receiver = tunnel.subscribe();
         let buffer = Arc::new(Mutex::new(TelegramBuffer::new()));
         let (stop_tx, stop_rx) = oneshot::channel();
         let task_buffer = Arc::clone(&buffer);
-        let join_handle = tokio::spawn(drain_task(tunnel, receiver, task_buffer, ctx, stop_rx));
+        let tunnel = Arc::new(tokio::sync::Mutex::new(Some(tunnel)));
+        let task_tunnel = Arc::clone(&tunnel);
+        let task_ctx = ctx.clone();
+        let join_handle = tokio::spawn(drain_task(
+            task_tunnel,
+            receiver,
+            task_buffer,
+            task_ctx,
+            stop_rx,
+        ));
         Ok(Self {
             id,
             gateway,
+            assigned_address,
             buffer,
+            tunnel,
+            ctx,
             stop_tx,
             join_handle,
         })
@@ -901,6 +1063,12 @@ impl BusSession {
 
     pub fn gateway(&self) -> SocketAddrV4 {
         self.gateway
+    }
+
+    /// `TunnelClient::assigned_address()`, `Display`-formatted — design
+    /// spec §4.3's `/start` response `assignedAddress` (e.g. `"1.1.5"`).
+    pub fn assigned_address(&self) -> IndividualAddress {
+        self.assigned_address
     }
 
     pub fn status(&self) -> SessionStatus {
@@ -917,6 +1085,49 @@ impl BusSession {
         Arc::clone(&self.buffer)
     }
 
+    /// `POST /api/bus/write`'s DPT resolution (design spec §4.4/§6, mirrors
+    /// `apps/knx-cli/src/main.rs`'s `resolve_write_value`'s `--project`
+    /// path): the session-start snapshot's answer for `ga`, or
+    /// `GroupAddressDpt::None` if the map has no entry at all — the same
+    /// thing `resolve_project_group_address_dpts` means by an absent key
+    /// (it never stores `None` itself, see that function's doc comment),
+    /// so collapsing "absent" and "explicitly `None`" here matches its own
+    /// convention rather than inventing a third case the caller would have
+    /// to handle identically anyway.
+    pub fn resolve_write_dpt(&self, ga: GroupAddress) -> GroupAddressDpt {
+        self.ctx
+            .dpts
+            .get(&ga.raw())
+            .cloned()
+            .unwrap_or(GroupAddressDpt::None)
+    }
+
+    /// Sends one group value through this session's open tunnel (design
+    /// spec §D5: send-from-the-table reuses the active session's tunnel,
+    /// never opens a second connection). Takes `&self`, not `self` —
+    /// multiple writes over one session's lifetime are expected, unlike
+    /// `stop`. Locks the shared tunnel only for the duration of the send;
+    /// `tokio::sync::Mutex` so the lock can be held across the tunnel's own
+    /// `.await`. Returns [`BusSessionError::NoActiveSession`] if the tunnel
+    /// has already been taken by `drain_task`'s teardown — the narrow race
+    /// where a gateway-side close (`Closed`/`RecvError::Closed`) finishes
+    /// tearing the tunnel down between this session being looked up in
+    /// `AppState.bus_session` and this call actually locking the tunnel;
+    /// the route layer's ordinary "no session" `409` covers the same case
+    /// when it happens before the lookup, so both timings answer the
+    /// caller identically.
+    pub async fn send(
+        &self,
+        destination: Destination,
+        service: ApplicationService,
+    ) -> Result<(), BusSessionError> {
+        let guard = self.tunnel.lock().await;
+        match guard.as_ref() {
+            Some(tunnel) => tunnel.send(destination, service).await,
+            None => Err(BusSessionError::NoActiveSession),
+        }
+    }
+
     /// Signals the drain task to stop, awaits its exit (so `disconnect()`
     /// has genuinely already run on the tunnel by the time this returns —
     /// not a fire-and-forget stop, design spec §4.1/acceptance criterion 5),
@@ -927,36 +1138,86 @@ impl BusSession {
     /// cleared (design spec §4.1's `[R]` ruling; see [`SessionStatus::Closed`]'s
     /// doc comment for the race it avoids). This method does not touch
     /// `AppState` at all, by design — it has no reference to one.
+    ///
+    /// **Panic handling (Task 2 review finding, `bus.rs:941` before this
+    /// fix):** a `JoinError` from `self.join_handle` is no longer
+    /// discarded. `is_panic()` distinguishes an actual drain-task panic
+    /// (its message, if any, becomes `BusSessionSummary::drain_panic`) from
+    /// a cancellation (this task never calls `.abort()` on the handle, so
+    /// that branch is unreached in production; kept so this match stays
+    /// exhaustive rather than a `.unwrap()` that would itself panic on the
+    /// one input this method exists to handle honestly). Either way, the
+    /// buffer is read *after* the join, under its own lock, same as
+    /// before — a panic inside `drain_task` (this module's only such task)
+    /// happens either while a buffer-lock guard is held (which would poison
+    /// that lock, and the `.expect` below already surfaces that loudly, by
+    /// design, same as every other buffer access in this module) or, as
+    /// the regression test below exercises, while the tunnel is being
+    /// disconnected — outside the buffer's lock scope entirely, so the
+    /// buffer stays perfectly readable and its contents are never thrown
+    /// away just because something else went wrong on the way out. A `500`
+    /// was considered and rejected for this case (see the task report):
+    /// the stop operation itself *did* succeed — the signal was sent, the
+    /// task exited, the session is genuinely gone — only the teardown that
+    /// followed it misbehaved, and a `500` would force discarding the
+    /// still-accurate `telegramCount`/`droppedCount` tally or awkwardly
+    /// smuggling it into an error body instead of the success shape §4.3
+    /// already defines.
     pub async fn stop(self) -> BusSessionSummary {
         // `stop_tx.send` fails only if the drain task already exited (e.g.
         // a gateway-side close beat this call) — the task is gone either
         // way, so a failed send changes nothing about what happens next.
         let _ = self.stop_tx.send(());
-        // The task always exits its own loop via `break` and then awaits
-        // `disconnect()` before returning, so by the time this `await`
-        // resolves, `disconnect()` has genuinely already run — a `JoinError`
-        // here would mean the task panicked, which no code path in
-        // `drain_task` does; a poisoned buffer lock is the only realistic
-        // way in, and that already panics loudly elsewhere.
-        let _ = self.join_handle.await;
+        let join_result = self.join_handle.await;
         let buffer = self.buffer.lock().expect("bus session buffer poisoned");
+        let drain_panic = match join_result {
+            Ok(()) => None,
+            Err(e) if e.is_panic() => Some(panic_payload_message(e.into_panic())),
+            Err(_) => Some("drain task was cancelled".to_string()),
+        };
         BusSessionSummary {
             telegram_count: buffer.len(),
             dropped_count: buffer.dropped_before(),
+            drain_panic,
         }
+    }
+}
+
+/// Extracts a human-readable message from a `JoinError::into_panic()`
+/// payload — `std::panic!`/`panic!("{msg}", ...)` payloads are almost
+/// always `&str` or `String` (what `std::panic::Location`'s default hook
+/// also assumes), covering every panic this module's own code or a test's
+/// `FakeTunnel` can produce; anything else still yields an honest, if
+/// generic, message rather than silently losing the fact that a panic
+/// happened at all.
+fn panic_payload_message(payload: Box<dyn std::any::Any + Send>) -> String {
+    if let Some(s) = payload.downcast_ref::<&str>() {
+        (*s).to_string()
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        s.clone()
+    } else {
+        "drain task panicked with a non-string payload".to_string()
     }
 }
 
 /// The background task a [`BusSession`] spawns (design spec §4.2), mirroring
 /// `apps/knx-cli/src/main.rs`'s `run_bus_monitor_async` — the same
 /// `tokio::select!` shape between a stop signal (there: `ctrl_c()`; here: a
-/// `oneshot::Receiver<()>`) and `receiver.recv()`. Owns the boxed tunnel
-/// outright (nothing else holds a reference to it), which is exactly why
-/// consuming `disconnect(self: Box<Self>)` at the end is natural rather than
-/// awkward (`BusTunnel`'s own doc comment already makes this point; restated
-/// here because this is where it plays out).
+/// `oneshot::Receiver<()>`) and `receiver.recv()`.
+///
+/// Holds the boxed tunnel behind the same `Arc<tokio::sync::Mutex<..>>` the
+/// owning [`BusSession`] keeps its own clone of (Task 3 addition —
+/// [`BusSession::send`] needs concurrent access to the same tunnel while
+/// this task is still draining it, which a task-owned `Box<dyn BusTunnel>`
+/// with no other reference, as Task 2 originally built it, could not
+/// offer). This task still is the one and only place `disconnect()` is
+/// called, and still calls it exactly once, on the way out, regardless of
+/// which branch broke the loop — `Option::take()` on the shared slot makes
+/// that "exactly once" true even though the slot is now reachable from two
+/// places, since whichever side calls `take()` first is the only side that
+/// ever gets `Some` back.
 async fn drain_task(
-    tunnel: Box<dyn BusTunnel>,
+    tunnel: Arc<tokio::sync::Mutex<Option<Box<dyn BusTunnel>>>>,
     mut receiver: broadcast::Receiver<TunnelEvent>,
     buffer: Arc<Mutex<TelegramBuffer>>,
     ctx: GroupAddressContext,
@@ -1002,7 +1263,16 @@ async fn drain_task(
     // task's exit. A gateway-side close only ever sets `status` (above) and
     // leaves the buffer fully readable — the session itself stays "active"
     // as far as `AppState` is concerned until a client explicitly stops it.
-    let _ = tunnel.disconnect().await;
+    //
+    // `take()` instead of an owned `Box` (Task 2's original shape): if
+    // `BusSession::send` is mid-call and already holds the lock, this
+    // `.lock().await` simply waits its turn, same as any other tunnel use
+    // would; if this task gets there first, `send` finds `None` afterwards
+    // and reports `BusSessionError::NoActiveSession` (see that method's
+    // doc comment) rather than a panic or a silent no-op.
+    if let Some(tunnel) = tunnel.lock().await.take() {
+        let _ = tunnel.disconnect().await;
+    }
 }
 
 #[cfg(test)]
@@ -1046,9 +1316,14 @@ mod tests {
     async fn start_drain_stop_carries_telegrams_through_and_disconnects() {
         let (tunnel, handle) = fake_tunnel();
         let connector = FakeConnector::succeeding(tunnel);
-        let session = BusSession::start(1, gateway(), &connector, None)
-            .await
-            .expect("fake connector always succeeds");
+        let session = BusSession::start(
+            1,
+            gateway(),
+            &connector,
+            GroupAddressContext::from_project(None),
+        )
+        .await
+        .expect("fake connector always succeeds");
 
         handle
             .sender()
@@ -1097,6 +1372,55 @@ mod tests {
         assert_eq!(buffer.len(), 0);
         assert_eq!(buffer.next_seq(), 0);
         assert_eq!(buffer.dropped_before(), 0);
+    }
+
+    // -- panicked drain task (carried Task 2 finding, bus.rs:941) ----------
+
+    /// The regression test the brief asks for: a real panic inside
+    /// `drain_task`, forced through `FakeTunnel::disconnect`'s scripted
+    /// panic (no gateway, no socket) — `stop()` must report it via
+    /// `drain_panic`, not discard the `JoinError` and pretend the stop was
+    /// clean, and it must not lose the telegram the buffer already holds.
+    #[tokio::test]
+    async fn stop_reports_a_panicked_drain_task_without_losing_buffered_telegrams() {
+        let (tunnel, handle) = fake_tunnel();
+        handle.panic_on_disconnect();
+        let connector = FakeConnector::succeeding(tunnel);
+        let session = BusSession::start(
+            1,
+            gateway(),
+            &connector,
+            GroupAddressContext::from_project(None),
+        )
+        .await
+        .expect("fake connector always succeeds");
+
+        handle
+            .sender()
+            .send(group_value_write(1, GroupValue::Short(1)))
+            .expect("receiver still subscribed");
+        for _ in 0..200 {
+            if session.buffer().lock().unwrap().len() == 1 {
+                break;
+            }
+            tokio::task::yield_now().await;
+            tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+        }
+        assert_eq!(session.buffer().lock().unwrap().len(), 1);
+
+        let summary = session.stop().await;
+        assert_eq!(
+            summary.telegram_count, 1,
+            "the telegram buffered before the panic must still be reported, not discarded"
+        );
+        assert_eq!(summary.dropped_count, 0);
+        let warning = summary
+            .drain_panic
+            .expect("a panicked drain task must surface as Some(..), not a silent clean stop");
+        assert!(
+            warning.contains("scripted disconnect panic"),
+            "expected the fake's own panic message, got: {warning}"
+        );
     }
 
     // -- eviction accounting at the cap -----------------------------------
@@ -1176,9 +1500,14 @@ mod tests {
         // receiver lag, the sends must happen after `start`, with the
         // drain task deliberately kept from running via a paused/never-
         // yielded window. See the second half of this test below.
-        let session = BusSession::start(1, gateway(), &connector, None)
-            .await
-            .expect("fake connector always succeeds");
+        let session = BusSession::start(
+            1,
+            gateway(),
+            &connector,
+            GroupAddressContext::from_project(None),
+        )
+        .await
+        .expect("fake connector always succeeds");
         let summary = session.stop().await;
         assert_eq!(summary.telegram_count, 0);
         assert_eq!(summary.dropped_count, 0);
@@ -1202,9 +1531,14 @@ mod tests {
         // — the same starting condition that produces a real `Lagged(n)`
         // from `tokio::sync::broadcast` on genuine hardware, just made
         // deterministic by controlling scheduling instead of timing.
-        let session = BusSession::start(1, gateway(), &connector, None)
-            .await
-            .expect("fake connector always succeeds");
+        let session = BusSession::start(
+            1,
+            gateway(),
+            &connector,
+            GroupAddressContext::from_project(None),
+        )
+        .await
+        .expect("fake connector always succeeds");
 
         for raw in 0..SENT {
             handle
@@ -1246,9 +1580,14 @@ mod tests {
     async fn gateway_close_sets_status_closed_and_leaves_buffer_readable() {
         let (tunnel, handle) = fake_tunnel();
         let connector = FakeConnector::succeeding(tunnel);
-        let session = BusSession::start(1, gateway(), &connector, None)
-            .await
-            .expect("fake connector always succeeds");
+        let session = BusSession::start(
+            1,
+            gateway(),
+            &connector,
+            GroupAddressContext::from_project(None),
+        )
+        .await
+        .expect("fake connector always succeeds");
 
         handle
             .sender()

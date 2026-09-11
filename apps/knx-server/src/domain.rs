@@ -72,9 +72,29 @@ pub struct AppState {
     pub connector: Box<dyn GatewayConnector>,
     /// At most one open monitor session (T15, design spec §4.1: "a monitor
     /// session is ... `AppState.bus_session: Mutex<Option<BusSession>>`
-    /// holds at most one"). Nothing in this task starts or stops one — no
-    /// route reads or writes this field yet.
-    pub bus_session: Mutex<Option<BusSession>>,
+    /// holds at most one"). `tokio::sync::Mutex`, not `std::sync::Mutex`
+    /// (Task 3 addition, was `std::sync::Mutex` through Task 2, when
+    /// nothing read or wrote it yet): `POST /api/bus/write`'s handler
+    /// (`bus_routes.rs`) must hold this lock across `BusSession::send`'s
+    /// own `.await` — the same tunnel a concurrent `/stop` could otherwise
+    /// tear down mid-send — and a `std::sync::MutexGuard` cannot cross an
+    /// `.await` (not `Send`). `POST /monitor/start` also holds it for the
+    /// duration of `BusSession::start`'s `.await` on purpose: only one
+    /// session may ever exist, so serializing concurrent `start` attempts
+    /// through this same lock is the correct behaviour, not a cost to
+    /// avoid.
+    pub bus_session: tokio::sync::Mutex<Option<BusSession>>,
+    /// Monotonic source of [`BusSession`] ids (T15 task 3, design spec
+    /// §4.1's "session identity": "a `Uuid`-or-incrementing `id`... though
+    /// this slice only ever has one [at a time]"). Starts at 1, incremented
+    /// on every successful `POST /api/bus/monitor/start`, never reused —
+    /// so a client that polls across a stop/restart can tell from
+    /// `sessionId` alone that it is looking at a genuinely new session, not
+    /// reused bookkeeping for an old one. `AtomicU64`, not behind the
+    /// `bus_session` mutex: a new id is read-and-incremented once per
+    /// `start`, before a `BusSession` exists to guard it, and this counter
+    /// has no other state to stay consistent with.
+    pub next_bus_session_id: std::sync::atomic::AtomicU64,
     /// Root directory web-originated file access is confined to:
     /// `fs_routes.rs`'s `/api/fs/*` routes entirely, plus any *relative*
     /// path a `/api/project/*` route is given (`crate::paths`). Absolute
@@ -99,7 +119,8 @@ impl AppState {
             product_db,
             session_log: Mutex::new(SessionLog::default()),
             connector: Box::new(RealConnector::default()),
-            bus_session: Mutex::new(None),
+            bus_session: tokio::sync::Mutex::new(None),
+            next_bus_session_id: std::sync::atomic::AtomicU64::new(1),
             data_dir,
         }
     }

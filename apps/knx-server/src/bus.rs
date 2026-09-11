@@ -1078,6 +1078,20 @@ impl BusSession {
             .status()
     }
 
+    /// The open project's configured `GroupAddressStyle` at session-start
+    /// time (design spec §4.4's snapshot), or `None` if no project was open
+    /// when this session started. Task 5 fix: `POST /api/bus/write`
+    /// (`bus_routes.rs`) uses this to parse an incoming `destination` string
+    /// in the same style `GET /telegrams` used to *render* it — before this
+    /// accessor existed, `/write` hardcoded `GroupAddressStyle::ThreeLevel`
+    /// regardless of the session's actual project, so a Free- or
+    /// TwoLevel-style project's own `/telegrams` output could not be sent
+    /// back through `/write` at all. See that route's doc comment for the
+    /// full defect.
+    pub fn group_address_style(&self) -> Option<GroupAddressStyle> {
+        self.ctx.style
+    }
+
     /// A cloned handle to the shared buffer — what a poll handler (Task 3)
     /// locks to read `status`/`droppedBefore`/`telegrams_since` together,
     /// under one lock, as one consistent snapshot.

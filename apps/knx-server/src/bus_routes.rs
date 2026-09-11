@@ -314,13 +314,28 @@ async fn poll_telegrams(
 // POST /api/bus/write
 // ---------------------------------------------------------------------------
 
-/// `destination` is parsed with [`GroupAddressStyle::ThreeLevel`] always,
-/// regardless of whether a project is open — mirrors `apps/knx-cli/src/
-/// main.rs`'s `run_bus_write`, which hardcodes the same style for its own
-/// group-address argument for the same reason: the wire value is a plain
-/// string the caller typed, not something a session's cached
-/// `GroupAddressStyle` (which may itself be `None`, if no project was open
-/// at session start) should govern.
+/// `destination` is parsed using the active session's own cached
+/// `GroupAddressStyle` (design spec §4.4's snapshot; see
+/// [`BusSession::group_address_style`]) — Free, TwoLevel or ThreeLevel,
+/// whichever the project open at session-start time was actually configured
+/// with — falling back to [`GroupAddressStyle::ThreeLevel`] only when no
+/// session is active yet, or a session is active but no project was open
+/// when it started.
+///
+/// **Task 5 fix**, previously a defect: this route used to parse
+/// `destination` with [`GroupAddressStyle::ThreeLevel`] unconditionally,
+/// mirroring `apps/knx-cli/src/main.rs`'s `run_bus_write` (which has the
+/// same bug, out of scope here — see the task report). But `GET
+/// /api/bus/monitor/telegrams` renders every row's `destination` in the
+/// *project's actual* style, so for a Free- or TwoLevel-style project, the
+/// string that route just emitted could never parse back through this one —
+/// clicking a table row and sending it failed with a `400` on an address
+/// this very server had just produced. Reading the style from the same
+/// session's snapshot closes that round trip without changing what
+/// `/telegrams` emits (fixing this by making `/telegrams` always emit
+/// three-level addresses was considered and rejected — that would break the
+/// display for two of the three project styles to make this one form
+/// easier).
 ///
 /// `dpt`, if given, is parsed with `knx_core::DptRef::parse` — which only
 /// accepts `DPST-<main>-<sub>`/`DPT-<main>`, not the dotted `"1.001"` form
@@ -350,14 +365,24 @@ async fn write_value(
     State(state): State<SharedState>,
     Json(body): Json<WriteRequest>,
 ) -> Result<Json<WriteResponse>, ApiError> {
-    let ga = GroupAddress::parse(&body.destination, GroupAddressStyle::ThreeLevel)
+    // One lock for the whole handler: resolving the group-address style,
+    // resolving the DPT (when not given explicitly) and sending all need
+    // the same active session, and `tokio::sync::Mutex` lets this guard stay
+    // held across `send`'s own `.await` below — see this module's doc
+    // comment.
+    let guard = state.bus_session.lock().await;
+
+    // The active session's own cached style (Free/TwoLevel/ThreeLevel), or
+    // the three-level fallback if no session is active yet or its project
+    // snapshot has none — see `WriteRequest`'s doc comment for why this
+    // must match what `/telegrams` rendered.
+    let style = guard
+        .as_ref()
+        .and_then(BusSession::group_address_style)
+        .unwrap_or(GroupAddressStyle::ThreeLevel);
+    let ga = GroupAddress::parse(&body.destination, style)
         .map_err(|e| ApiError::bad_request(e.to_string()))?;
 
-    // One lock for the whole handler: resolving the DPT (when not given
-    // explicitly) and sending both need the same active session, and
-    // `tokio::sync::Mutex` lets this guard stay held across `send`'s own
-    // `.await` below — see this module's doc comment.
-    let guard = state.bus_session.lock().await;
     let Some(session) = guard.as_ref() else {
         return Err(session_error_to_api_error(BusSessionError::NoActiveSession));
     };

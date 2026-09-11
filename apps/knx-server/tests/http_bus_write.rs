@@ -15,8 +15,8 @@ use tower::ServiceExt;
 
 use knx_core::{
     ComObjectInstance, ComObjectInstanceId, Direction, GroupAddress, GroupAddressEntry,
-    GroupAddressId, GroupLink, Installation, InstallationId, Language, Layer, Override, Resolved,
-    ResolvedFlags, SourceRef,
+    GroupAddressId, GroupAddressStyle, GroupLink, GroupValue, Installation, InstallationId,
+    Language, Layer, Override, Resolved, ResolvedFlags, SourceRef,
 };
 use knx_net::{ApplicationService, Destination};
 use knx_server::fake::{FakeConnector, FakeTunnel, FakeTunnelHandle};
@@ -346,6 +346,75 @@ async fn a_conflicting_dpt_with_none_given_is_a_bad_request_naming_the_reason() 
     assert!(message.contains("conflicting"));
     assert!(message.contains("DPST-1-1"));
     assert!(message.contains("DPST-5-1"));
+}
+
+// ---------------------------------------------------------------------------
+// Task 5 fix — `/write` parses `destination` in the *session's own* project
+// style, so whatever `/telegrams` rendered parses back. A Free-style
+// project is deliberately not three-level here: raw group address 1 renders
+// as the plain decimal `"1"` under `Free`, which the old hardcoded-
+// `ThreeLevel` parse rejected outright (`GroupAddress::parse` needs two
+// slashes for `ThreeLevel`) — the exact round trip this task exists to fix.
+// ---------------------------------------------------------------------------
+
+fn project_with_free_style_and_single_dpt() -> knx_core::Project {
+    let mut project = project_with_write_dpt_outcomes();
+    project.info.group_address_style = GroupAddressStyle::Free;
+    project
+}
+
+async fn poll_until_first_destination(app: &axum::Router) -> String {
+    for _ in 0..200 {
+        let response = call(app, "GET", "/api/bus/monitor/telegrams?since=0", None).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_json(response).await;
+        if let Some(row) = body["telegrams"].as_array().unwrap().first() {
+            return row["destination"].as_str().unwrap().to_string();
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(2)).await;
+    }
+    panic!("no telegram ever appeared on the poll");
+}
+
+#[tokio::test]
+async fn a_non_three_level_projects_telegram_destination_round_trips_through_write() {
+    let (tunnel, handle) = fake_tunnel();
+    let state = state_with_project_and_connector(
+        project_with_free_style_and_single_dpt(),
+        FakeConnector::succeeding(tunnel),
+    );
+    let app = knx_server::app(Arc::new(state), None);
+    start_session(&app).await;
+
+    // A telegram arrives on group address 1; /telegrams renders it in the
+    // project's *Free* style, not three-level.
+    handle
+        .sender()
+        .send(knx_net::TunnelEvent::Telegram(knx_net::LDataFrame {
+            kind: knx_net::LDataMessageKind::Indication,
+            source: addr(9),
+            destination: Destination::Group(GroupAddress::from_raw(1)),
+            service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+        }))
+        .unwrap();
+
+    let destination = poll_until_first_destination(&app).await;
+    assert_eq!(destination, "1", "Free style renders the raw value plainly");
+
+    // The exact string /telegrams just emitted must be accepted by /write —
+    // before this fix it failed with 400 (no slashes for the hardcoded
+    // ThreeLevel parse).
+    let response = call(
+        &app,
+        "POST",
+        "/api/bus/write",
+        Some(json!({ "destination": destination, "dpt": "DPST-1-1", "value": "on" })),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let sent = handle.sent_calls();
+    assert_eq!(sent.len(), 1);
+    assert_eq!(sent[0].0, Destination::Group(GroupAddress::from_raw(1)));
 }
 
 // ---------------------------------------------------------------------------

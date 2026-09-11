@@ -213,18 +213,29 @@ simply cannot be edited here.
 **Lifted when.** Never by us. Executing vendor binaries is not something this
 application does, on any platform.
 
-## 7. Commissioning and device download are out of scope
+## 7. Commissioning and device download are required, but blocked
 
 **Limitation.** The application does not program devices (RESEARCH §8.3).
 
 **Cause.** Bricking risk on real hardware, an undocumented `Legacy*`
 compatibility matrix, and vendor DLL involvement in download procedures.
 
-**Impact.** Planning and documentation happen here; downloading happens in ETS.
+**Impact.** Planning and documentation happen here; downloading happens in
+ETS, for now.
 
-**Lifted when.** A deliberate decision to take it on, with hardware to test
-against. The architecture does not block it: load procedures, memory layout and
-mask data are all present in the product database.
+**Ruling, 2026-09-11.** Asked whether commissioning is permanently out of
+scope, the user said no: it must work too, but the work waits until the KNX
+specification database is finished. This is **not** a scope exclusion — see
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) row **E1**, which stays open, and
+the new backlog task **T30**. The bricking risk, the undocumented `Legacy*`
+matrix and the vendor-DLL involvement above are unchanged; they are the
+reason it has not started, not a reason it never will.
+
+**Lifted when.** The KNX specification database is finished, so the load
+procedures can be verified against a documented specification instead of
+reverse-engineered guesswork, and hardware is available to test against.
+Architecturally nothing blocks it today: load procedures, memory layout and
+mask data already live in the product database.
 
 ## 8. KNX Secure is not implemented
 
@@ -241,6 +252,13 @@ The isolation boundary already exists — `knx-secure` is a separate crate with
 no dependency on `knx-core` — precisely so that this can be built without
 retrofitting secret handling into the model
 ([ADR-0008](adr/0008-key-material-isolation.md)).
+
+**Update, 2026-09-11.** Asked whether T19 (KNX Secure) should wait until
+hardware/sample key material exist, the user answered "raus erstmal, aber
+als limitation dokumentieren" — deferred for now, but document it as a
+limitation. This entry already does; nothing here is rejected, only deferred
+behind the precondition above. See [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s
+**T19** for the tracked task.
 
 ## 9. Project files are not diffable
 
@@ -327,6 +345,16 @@ that scheme becomes available and is exercised the same way
 (`crates/knx-productdb/tests/standalone_packages.rs`). For `.vd2`: never —
 it is a structurally different, pre-standard legacy container, not a
 variant of the current format needing decryption.
+
+**Update, 2026-09-11 (user decision).** Asked separately about `.vd2`
+support and about the schemes above that remain untested for want of a
+sample, the user said "ja" (take it out) to both — both are now **accepted
+out of scope, permanently**, not merely unscheduled. For `.vd2`, this only
+restates what "Lifted when" already said. For schemes 12-19/21/22: this is a
+decision to stop looking for a standalone sample, not a claim about what
+those files actually contain — whether they are genuinely encrypted was
+never established either way (see Cause above), and this update does not
+establish it now.
 
 ## 12. Manufacturer data resolution — lifted for communication objects, three gaps remain
 
@@ -764,6 +792,12 @@ case; IP Secure only matters for secure-only gateways or installations
 with it explicitly enabled. Revisit on demand (a real gateway needing
 it), doing the RESEARCH.md §9 spike first, not speculatively. See
 [ROADMAP.md, Session 6](ROADMAP.md).
+
+**Update, 2026-09-11.** Folded into **T19**'s scope (KNX Secure = Data
+Secure + IP Secure + keyring). The user's 2026-09-11 ruling on T19 —
+deferred, documented as a limitation, not rejected — applies here too; this
+2026-09-06 shelving decision and T19's ruling stand together, not as two
+separate calls.
 
 ## 27. `TunnelClient` heartbeat retry has a narrow race condition — resolved
 

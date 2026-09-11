@@ -289,8 +289,10 @@ than this project provides, so it is deferred to `knx-productdb`
 
 ### 4.3 The `when/@test` grammar and `Dynamic`-tree evaluation semantics — R3 spike (Session 4, 2026-09-11)
 
-**Risk R3 (§11) is answered. Parameter interpretation itself does not
-exist yet** — no evaluator, no editor; see
+**Risk R3 (§11) is answered.** At the time of this spike, parameter
+interpretation itself did not exist yet — no evaluator, no editor. A
+headless evaluator over the stored tree was built afterward (T18 slice 1,
+2026-09-11); no editor exists still. See
 [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md). What follows is the
 research; the implementation is future work (T18,
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)). Full spike report:
@@ -347,7 +349,7 @@ genuinely open.
 | --- | --- | --- |
 | `SINGLE_INTEGER` | 19138 | e.g. `test="3"` |
 | `DEFAULT_ATTR(true)` | 3417 | `<when default="true">`, no `@test` at all — not part of `Condition_t`, see below |
-| `SPACE_LIST_OF_INTEGERS` | 62 | e.g. `test="1 2"`; observed lists are length 2-3 only |
+| `SPACE_LIST_OF_INTEGERS` | 62 | e.g. `test="1 2"`; observed lists are length 2-3 only; **[V]** all 62, like `OP_NUMBER` below, occur in `prod3` alone (independently confirmed by T18 slice 1's corpus test, 2026-09-11) |
 | `OP_NUMBER(>)` | 13 | of the six operators `Condition_t` allows, only `>` was ever observed, all 13 in one `prod3` application program |
 
 **[V] The `choose` → `ParameterRef` → `Parameter` → `ParameterType`

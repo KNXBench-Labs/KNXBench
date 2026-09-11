@@ -2,10 +2,14 @@
 //! parameters (including `Union` members and their `Memory` layout) and
 //! parameter refs.
 //!
-//! `Dynamic` is skipped deliberately (spec §1): its `choose`/`when`
-//! visibility program depends on the `when/@test` grammar, which is
-//! unresearched (RESEARCH R3). The bytes survive in `source_file`, so
-//! nothing is lost by not modelling it yet.
+//! `Dynamic` is skipped here deliberately, not because it is unread: its
+//! grammar was unresearched at RESEARCH R3, but that research is now done
+//! (RESEARCH §4.3, 2026-09-11) and `crate::dynamic::parse` reads and stores
+//! it losslessly as a second pass over the same bytes, in the same
+//! ingest transaction (see `ingest::ingest_file_in_transaction`). This
+//! parser stays `Static`-only so the two passes stay independently
+//! testable; nothing is lost by keeping them apart, since the bytes also
+//! survive whole in `source_file` regardless (ADR-0011).
 //!
 //! `ModuleDefs/ModuleDef/Static/{ComObjectTable,ComObjectRefs}` (schema
 //! ≥21, ADR-0013) needs no dedicated handling here: `ComObject`/

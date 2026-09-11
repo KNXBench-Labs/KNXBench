@@ -6,6 +6,7 @@
 //! parser may not understand a construct, but nothing is ever lost.
 
 pub mod blob;
+pub mod dynamic;
 pub mod enrich;
 pub mod ingest;
 pub mod migration;

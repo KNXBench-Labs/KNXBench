@@ -8,6 +8,7 @@
 use rusqlite::{Connection, OptionalExtension};
 
 use crate::blob::{sha256_hex, store_source_file, SourceFile};
+use crate::dynamic;
 use crate::parse::{catalog, hardware, program};
 use crate::report::{insert_conflicts, insert_unknown, IdConflict};
 use crate::ProductDbError;
@@ -105,7 +106,13 @@ pub(crate) fn ingest_file_in_transaction(
         }
         FileKind::ApplicationProgram => {
             let out = program::ingest_program(conn, &sha256, source_path, bytes)?;
-            (out.unknown, out.conflicts)
+            // A second pass over the same bytes, in the same transaction:
+            // the `Static` pass above still skips `Dynamic` outright (its
+            // own doc comment says so); this is what actually reads it.
+            let dyn_out = dynamic::parse::parse_dynamic_trees(conn, &sha256, source_path, bytes)?;
+            let mut unknown = out.unknown;
+            unknown.extend(dyn_out.unknown);
+            (unknown, out.conflicts)
         }
         // Baggages.xml lists the blobs; the blobs themselves and anything
         // unrecognized are stored and not parsed.

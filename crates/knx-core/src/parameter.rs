@@ -1,7 +1,11 @@
 //! Parameter instances: retained but uninterpreted (DATA_MODEL §10). 1390
 //! values in the reference project, dropped entirely by `xknxproject`. Held
 //! as raw strings because interpreting them requires the `Dynamic` tree
-//! grammar, which is unresearched (RESEARCH R3).
+//! grammar — its `@test` value grammar is Standard-normative and its
+//! structural grammar is corpus-observed (RESEARCH §4.3). `knx-productdb`
+//! now parses, stores and evaluates that tree headlessly (T18 slice 1,
+//! 2026-09-11), but `knx-core` neither depends on it nor reads its output,
+//! so `ParameterInstance` values stay exactly this uninterpreted.
 
 use crate::ids::{DeviceId, ParameterInstanceId, SourceRef};
 

@@ -3491,4 +3491,42 @@ mod tests {
         assert_eq!(result, Err(CommandError::DeviceNotFound(DeviceId(99))));
         assert!(project.installations[0].parameters.is_empty());
     }
+
+    #[test]
+    fn set_parameter_value_do_undo_redo_round_trips_through_the_command_stack() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetParameterValue {
+                    id: ParameterInstanceId(1),
+                    device: DeviceId(1),
+                    ets_id: "M-1_P-1_R-1".into(),
+                    raw: "7".into(),
+                },
+            )
+            .unwrap();
+        assert_eq!(project.installations[0].parameters.len(), 1);
+        assert_eq!(project.installations[0].parameters[0].raw, "7");
+        assert_eq!(
+            project.installations[0].parameters[0].id,
+            ParameterInstanceId(1)
+        );
+
+        stack.undo(&mut project).unwrap();
+        assert!(project.installations[0].parameters.is_empty());
+
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.installations[0].parameters.len(), 1);
+        assert_eq!(project.installations[0].parameters[0].raw, "7");
+        assert_eq!(
+            project.installations[0].parameters[0].id,
+            ParameterInstanceId(1)
+        );
+        assert_eq!(
+            project.installations[0].parameters[0].source.ets_id,
+            "M-1_P-1_R-1"
+        );
+    }
 }

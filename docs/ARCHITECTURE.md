@@ -107,7 +107,8 @@ knx-desktop ─> knx-server ─┬─> knx-app ─> knx-core
                            ├─> knx-store ────> knx-core
                            ├─> knx-etsproj ──> knx-core
                            ├─> knx-projection ─> knx-core
-                           └─> knx-diff ──────> knx-core
+                           ├─> knx-diff ──────> knx-core
+                           └─> knx-net ──────> knx-core
 
 knx-cli ────────────────────> knx-app ─> knx-core
                                  ├─> knx-store ────> knx-core
@@ -145,6 +146,12 @@ section 9.
 `knx-projection` keep zero dependency on both Tauri and any HTTP
 framework — `knx-server` is the only crate that speaks HTTP, the same
 architectural role Tauri's command layer had before it.
+
+`knx-server` also depends directly on `knx-net` since T15 (Group Monitor
+GUI) — `knx-server`'s own bus-session/monitor routes need a tunnel, not
+just the project-file reading `knx-app` already provides. See
+[ADR-0017](adr/0017-knx-server-depends-on-knx-net.md) for why this edge
+was added instead of, say, routing bus traffic back through `knx-cli`.
 
 ## 4. Enforced rules
 
@@ -265,6 +272,12 @@ DPT inferred from the project's linked communication objects, given
 `--project`; [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-fourteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) has the full
 accounting of what that codec does and does not cover); the connection
 itself knows nothing about projects, as this section originally specified.
+Since T15 (2026-09-11), `apps/knx-server` runs the same kind of session
+server-side, behind `/api/bus/*`, for `apps/knx-web`/`apps/knx-desktop` —
+see [ADR-0017](adr/0017-knx-server-depends-on-knx-net.md) for why
+`knx-server` now depends on `knx-net` directly rather than shelling out to
+`knx-cli`, and [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway)
+for what that GUI does and does not cover.
 
 `BusAccess` from `0.xml` — the ETS commissioning interface connection string —
 is preserved verbatim and **not** translated into our own connection model

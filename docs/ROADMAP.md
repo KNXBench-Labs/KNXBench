@@ -598,7 +598,7 @@ built invalidates its own help every cycle. Writing hover text for a
 panel that cycle 13 will delete (as cycle 13 deleted `ThemePanel.tsx`) is
 work done twice and wrong once. So this waits until the surfaces have
 stopped moving — which, per the sessions above, means after Session 7's
-hardening and after the outstanding UI backlog (T15, T17, T18, T21) has
+hardening and after the outstanding UI backlog (T17, T18, T21) has
 either shipped or been dropped.
 
 What exists today, measured rather than remembered: **one** `title`

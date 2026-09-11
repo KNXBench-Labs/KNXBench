@@ -844,6 +844,20 @@ rewritten to match the newer, stricter behaviour — a future cycle that
 reconciles the two should treat that as its own decision, not an
 accidental side effect of a DPT codec landing.
 
+**Update, 2026-09-11 (T15).** The same hardcoding exists on the *write*
+side, not just the display side this entry originally described:
+`apps/knx-cli/src/main.rs`'s `bus write`/`route write` parse a
+caller-typed destination with `knx_core::GroupAddress::parse(&str,
+knx_core::GroupAddressStyle::ThreeLevel)` — the style is a literal, never
+the open project's own `info.group_address_style`. T15's own `/write`
+route (`apps/knx-server/src/bus_routes.rs`) had the identical bug and was
+fixed to parse in the session's project's actual style (commit
+`b540264`); the CLI's copy was deliberately left as-is, since fixing it
+was not this branch's scope and CLAUDE.md asks that unrelated changes not
+ride along with a feature branch. See
+[§62](#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway)
+item 13 for the full account.
+
 ## 30. `/api/project/download` has no frontend caller
 
 **Limitation.** `apps/knx-server`'s `/api/project/download` route is
@@ -1870,3 +1884,133 @@ row E4 for what is still open), consults `knx_master.xml` for units and
 enumeration wording, or reads `GroupAddress/@DatapointType` directly for
 schema ≥ 21 projects instead of inferring from linked communication
 objects alone.
+
+## 62. The Group Monitor GUI (T15) is tunnelling-only, single-session, client-filtered, and has never talked to a real gateway
+
+**Limitation.** T15 (2026-09-11, design spec
+`docs/superpowers/specs/2026-09-11-group-monitor-design.md`) gives
+`apps/knx-server`/`apps/knx-web` a live telegram table and a compose/send
+form. What it ships is narrower than "a Group Monitor," in the following
+ways, all deliberate and all recorded here per that design's own §7:
+
+1. **Tunnelling only.** `GatewayConnector`/`BusTunnel`
+   (`apps/knx-server/src/bus.rs`) expose only the two operations a
+   monitor session needs from a `TunnelClient` — nothing reaches
+   `RoutingClient`. `route-monitor` stays CLI-only.
+2. **No auto-reconnect.** A gateway-side disconnect (`TunnelEvent::Closed`
+   or the broadcast channel closing) marks the session `closed` and stops
+   the drain task; nothing reopens the tunnel automatically. The user
+   restarts explicitly.
+3. **No live re-resolution of the DPT map.** The group-address/DPT map is
+   computed once, from the project open in `AppState` at
+   `BusSession::start`, and cached for the session's life. Editing the
+   project (renaming a group address, changing a DPT override) while a
+   session is running does not change already-decoded rows, and new rows
+   keep using the start-of-session snapshot until the session is
+   restarted — inherited from `apps/knx-cli bus monitor`'s existing
+   behaviour (§29 below), more likely to surprise a GUI user who can edit
+   and monitor in the same window.
+4. **One session per server process.** `AppState.bus_session:
+   Mutex<Option<BusSession>>` holds at most one; a second
+   `POST /api/bus/monitor/start` while one is active is `409 Conflict`,
+   naming the existing session, never a silent second connection to the
+   gateway.
+5. **No persistence of the telegram buffer.** It is purely in-memory,
+   capped at `MAX_TELEGRAMS = 5000`; stopping a session and starting a
+   new one begins a fresh buffer and a fresh sequence counter at 0. A
+   server restart loses whatever was buffered.
+6. **No server-side filtering.** `GET /api/bus/monitor/telegrams` always
+   returns everything from `since` forward; the text filter over
+   destination/name and the service-type checkboxes
+   (`apps/knx-web/src/BusMonitorPanel.tsx`) apply only to what the
+   browser already fetched. This is nothing like ETS's own Group Monitor
+   filter (multiple simultaneous criteria, sender/receiver-specific,
+   saved filter sets) — it is a visibility toggle over an already-fetched
+   table, not a query language.
+7. **`Destination::Individual` frames are not rendered as rows.** The row
+   model (`destinationName`, DPT resolution) assumes a group address;
+   an individually-addressed frame reaching this path is dropped before
+   becoming a row — not counted against `droppedBefore`, since this is a
+   declared scope exclusion, not a loss (`bus::tests::individual_addressed_frames_are_not_rendered_as_rows`).
+8. **DPT/enumeration coverage.** Inherited unchanged from
+   [§61](#61-the-dpt-codec-covers-fourteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) —
+   this slice does not touch the codec. §61 is not edited, reworded, or
+   superseded by this entry; it still fully applies to every decoded
+   value the GUI shows.
+9. **No verification against real hardware.** Every test added by this
+   branch drives `BusSession`/the HTTP routes/the React panel against
+   `apps/knx-server/src/bus.rs`'s `fake` module (`FakeConnector`,
+   `FakeTunnel`) — no socket, no live gateway, anywhere. `crates/knx-net/
+   tests/live_gateway.rs` was not touched and stays what it was.
+   **Nothing in this GUI has been run against a physical KNX
+   installation**, and nothing in its code, tests, or UI strings says
+   otherwise.
+10. **No KNX certification or ETS-parity claim.** This is a monitor/write
+    table, not a certified diagnostic tool, and not a claim of matching
+    ETS's Group Monitor feature-for-feature — see item 6 above for
+    exactly where the filtering falls short.
+
+Three further limitations, ruled during this cycle's review and not in
+the design document's own §7:
+
+11. **The browser keeps every polled row for the life of a session, with
+    no cap.** `apps/knx-web/src/BusMonitorPanel.tsx`'s poll handler does
+    `setRows((previous) => [...previous, ...response.telegrams])` on every
+    tick, and only ever resets on a fresh `connect()`. The server's own
+    buffer is capped and honestly reports what it evicted
+    (`droppedBefore`); the browser's row list is not. This was a
+    deliberate choice, not an oversight: capping it client-side would
+    need the browser to make its own eviction decisions on top of the
+    server's, and a client-side gap notice that could disagree with the
+    server's `droppedBefore` accounting is worse than the memory growth —
+    two independent "what did we lose" answers in one UI is exactly the
+    kind of silent-disagreement risk CLAUDE.md's "never silently discard
+    information" rule is trying to prevent, applied here to *honesty about
+    loss* rather than to loss itself. A long session against a busy
+    installation will grow the browser tab's memory without bound; there
+    is no cap and no warning about this specific growth today.
+12. **The `/write` round trip is verified for two of three
+    group-address styles.** `POST /api/bus/write` parses `destination` in
+    the open project's own configured `GroupAddressStyle` (fixed
+    2026-09-11, commit `b540264`, after `/write` was found hardcoding
+    `ThreeLevel` regardless of the project). A regression test,
+    `a_non_three_level_projects_telegram_destination_round_trips_through_write`
+    (`apps/knx-server/tests/http_bus_write.rs`), drives the full
+    `/telegrams` (a telegram arrives, is rendered) → `/write` (the
+    rendered string round-trips back through `/write`) path for `Free`
+    and `TwoLevel` styles. `ThreeLevel` — the project default — is
+    exercised by a different test
+    (`write_with_an_explicit_dpt_sends_the_encoded_value_through_the_open_tunnel`)
+    that calls `/write` directly with a hand-typed `"0/0/1"` destination;
+    it proves the same parse path accepts three-level addresses, but not
+    the full receive-then-echo-back round trip the other two styles get.
+13. **`apps/knx-cli` has the same group-address-style bug this branch
+    fixed on the server, left alone on purpose.** `apps/knx-cli/src/
+    main.rs`'s `bus write`/`route write` still parse a destination with
+    `knx_core::GroupAddressStyle::ThreeLevel` hardcoded (e.g. lines 1666,
+    1897), regardless of the open project's own style — the identical bug
+    `b540264` fixed in `knx-server`. It was deliberately not fixed here:
+    CLAUDE.md's "do not perform unrelated refactors while implementing a
+    feature" argues against reaching into a sibling binary mid-branch for
+    a bug this branch's own scope did not require touching. See
+    [§29](#29-apps-knx-cli-bus-monitor-has-formatting-limitations)'s
+    2026-09-11 (T15) update for the record.
+
+**Cause.** Scope decisions for this slice, argued in the design document's
+§3/§7 and in this cycle's own review; items 11-13 were found and ruled on
+during review, after the design document was written.
+
+**Impact.** A user gets a live, DPT-decoded telegram table and a
+send-from-the-table form for one tunnelled gateway at a time, with a
+client-side text/service filter — genuinely more than the CLI's `bus
+monitor`/`bus write` offer a non-terminal user, but not a certified
+diagnostic tool, not ETS's Group Monitor, not verified against a real
+installation, and — for a very long browser session — not bounded in
+memory the way the server side already is.
+
+**Lifted when.** A future slice adds routing support, auto-reconnect,
+live DPT re-resolution, multi-session support, server-side filtering, a
+client-side row cap with its own honestly-reported gap notice, a
+full-round-trip test (and, ideally, a fix) for the CLI's `ThreeLevel`
+hardcoding, or runs any part of this GUI against a physical KNX
+installation and records the result.

@@ -13,6 +13,7 @@ const USAGE: &str =
      \x20     knx ga-export <store.knxdb> <out.csv>\n\
      \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run]\n\
      \x20     knx doc-export <store.knxdb> <out.html>\n\
+     \x20     knx diff <a.knxdb> <b.knxdb>\n\
      \x20     knx products list [--manufacturer M-xxxx] [--product-db <path>]\n\
      \x20     knx products ingest <file.knxproj|file.knxprod|file.vd2> [--product-db <path>]\n\
      \x20     knx products show <program-id> [--product-db <path>]\n\
@@ -41,6 +42,7 @@ fn main() -> ExitCode {
         Some("ga-export") => run_ga_export(&args[1..]),
         Some("ga-import") => run_ga_import(&args[1..]),
         Some("doc-export") => run_doc_export(&args[1..]),
+        Some("diff") => run_diff(&args[1..]),
         Some("products") => run_products(&args[1..]),
         Some("bus") => run_bus(&args[1..]),
         _ => {
@@ -568,6 +570,305 @@ fn print_doc_export_report(output: &str, report: &knx_report::HtmlReport) {
     println!("  {} warning(s)", report.warnings.len());
     for warning in &report.warnings {
         println!("  warning: {}: {}", warning.location, warning.detail);
+    }
+}
+
+struct DiffArgs {
+    a: String,
+    b: String,
+}
+
+fn parse_diff_args(args: &[String]) -> Result<DiffArgs, String> {
+    let mut a = None;
+    let mut b = None;
+    for arg in args {
+        match arg.as_str() {
+            other if other.starts_with("--") => {
+                return Err(format!("unknown flag: {other}"));
+            }
+            other if a.is_none() => a = Some(other.to_string()),
+            other if b.is_none() => b = Some(other.to_string()),
+            other => return Err(format!("unexpected extra argument: {other}")),
+        }
+    }
+    let a = a.ok_or_else(|| "missing <a.knxdb>".to_string())?;
+    let b = b.ok_or_else(|| "missing <b.knxdb>".to_string())?;
+    Ok(DiffArgs { a, b })
+}
+
+/// `knx diff` — computes and prints "what changed" between two `.knxdb`
+/// files (design spec §5, §7). Unlike the server's `POST /api/project/diff`,
+/// *both* sides here are files: `knx_store::open_and_migrate` + one
+/// `knx_store::load_project` call each, exactly `run_doc_export`'s own two
+/// calls, made twice.
+///
+/// Both paths are checked with `Path::exists` *before* either store is
+/// opened — this command's own new call site for the gotcha design spec §7
+/// names by name: `open_and_migrate` "opens, creating if absent", so a
+/// typo'd path would otherwise silently become an empty, freshly created
+/// `.knxdb`, and the diff would then dutifully report every entity on the
+/// other side as removed instead of failing with a clear "not found".
+fn run_diff(args: &[String]) -> ExitCode {
+    let parsed = match parse_diff_args(args) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    if !Path::new(&parsed.a).exists() {
+        eprintln!("store not found: {}", parsed.a);
+        return ExitCode::FAILURE;
+    }
+    if !Path::new(&parsed.b).exists() {
+        eprintln!("store not found: {}", parsed.b);
+        return ExitCode::FAILURE;
+    }
+
+    let conn_a = match knx_store::open_and_migrate(&PathBuf::from(&parsed.a)) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("failed to open store at {}: {e}", parsed.a);
+            return ExitCode::FAILURE;
+        }
+    };
+    let project_a = match knx_store::load_project(&conn_a) {
+        Ok(project) => project,
+        Err(e) => {
+            eprintln!("failed to load project from store {}: {e}", parsed.a);
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let conn_b = match knx_store::open_and_migrate(&PathBuf::from(&parsed.b)) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("failed to open store at {}: {e}", parsed.b);
+            return ExitCode::FAILURE;
+        }
+    };
+    let project_b = match knx_store::load_project(&conn_b) {
+        Ok(project) => project,
+        Err(e) => {
+            eprintln!("failed to load project from store {}: {e}", parsed.b);
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let diff = knx_diff::diff_projects(&project_a, &project_b);
+    print_diff_report(&diff);
+    ExitCode::SUCCESS
+}
+
+/// True when `table` carries no addition, removal, change or ambiguity —
+/// generic over every `knx_diff::EntityTable<K, F>` instantiation, so it
+/// serves areas, lines, group ranges, group addresses, building parts, and
+/// (nested, per device) communication objects and parameters alike.
+fn table_is_empty<K, F>(table: &knx_diff::EntityTable<K, F>) -> bool {
+    table.added.is_empty()
+        && table.removed.is_empty()
+        && table.changed.is_empty()
+        && table.ambiguous.is_empty()
+}
+
+fn device_table_is_empty(table: &knx_diff::DeviceTable) -> bool {
+    table.added.is_empty()
+        && table.removed.is_empty()
+        && table.changed.is_empty()
+        && table.ambiguous.is_empty()
+}
+
+fn installation_is_unchanged(installation: &knx_diff::InstallationDiff) -> bool {
+    installation.status == knx_diff::EntityStatus::Matched
+        && installation.field_changes.is_empty()
+        && table_is_empty(&installation.areas)
+        && table_is_empty(&installation.lines)
+        && device_table_is_empty(&installation.devices)
+        && table_is_empty(&installation.group_ranges)
+        && table_is_empty(&installation.group_addresses)
+        && table_is_empty(&installation.buildings)
+}
+
+// ---------------------------------------------------------------------
+// `knx diff` rendering — plain text, `+`/`-`/`~`/`?` prefixed lines (design
+// spec §5). Each `*Key` prints its own natural, human-readable form rather
+// than a `Debug` dump: an `AreaKey` prints its address, a `LineKey` prints
+// "area.line", a `BuildingPartKey` prints its path joined with `/`, a
+// `GroupRangeKey` prints "start-end", a `GroupAddressKey` prints the
+// address exactly as `knx-diff` already formatted it per the project's own
+// `GroupAddressStyle`, and a `DeviceKey` prints its individual address, or
+// its ETS id when it has none (design spec §6's `DeviceKey` shape).
+// ---------------------------------------------------------------------
+
+fn area_key_display(key: &knx_diff::AreaKey) -> String {
+    key.address.to_string()
+}
+
+fn line_key_display(key: &knx_diff::LineKey) -> String {
+    format!("{}.{}", key.area_address, key.line_address)
+}
+
+fn group_range_key_display(key: &knx_diff::GroupRangeKey) -> String {
+    format!("{}-{}", key.start, key.end)
+}
+
+fn group_address_key_display(key: &knx_diff::GroupAddressKey) -> String {
+    key.address.clone()
+}
+
+fn building_part_key_display(key: &knx_diff::BuildingPartKey) -> String {
+    key.path.join("/")
+}
+
+fn device_key_display(key: &knx_diff::DeviceKey) -> String {
+    match &key.address {
+        Some(address) => address.clone(),
+        None => key.ets_id.clone().unwrap_or_else(|| "-".to_string()),
+    }
+}
+
+fn com_object_key_display(key: &knx_diff::ComObjectKey) -> String {
+    key.number.to_string()
+}
+
+fn parameter_key_display(key: &knx_diff::ParameterKey) -> String {
+    key.ets_id.clone()
+}
+
+/// Prints one `+`/`-`/`~`/`?` line per `added`/`removed`/`changed`/
+/// `ambiguous` entry of a generic `EntityTable<K, F>`, in that order — the
+/// "four-line shape" every entity kind but devices shares. `indent` is `""`
+/// at the top level, `"  "` for a device's nested `com_objects`/
+/// `parameters` tables.
+fn print_entity_table<K, F>(
+    table: &knx_diff::EntityTable<K, F>,
+    label: &str,
+    indent: &str,
+    key_display: impl Fn(&K) -> String,
+) {
+    for (key, _) in &table.added {
+        println!("{indent}+ {label} {}", key_display(key));
+    }
+    for (key, _) in &table.removed {
+        println!("{indent}- {label} {}", key_display(key));
+    }
+    for change in &table.changed {
+        println!(
+            "{indent}~ {label} {}: {}",
+            key_display(&change.key),
+            change.changed_fields.join(", ")
+        );
+    }
+    for note in &table.ambiguous {
+        println!(
+            "{indent}? {label} {}: {} left candidate(s), {} right candidate(s)",
+            key_display(&note.key),
+            note.left_candidates,
+            note.right_candidates
+        );
+    }
+}
+
+/// Devices' own printer: same four-line shape as [`print_entity_table`],
+/// except a `~ device` line additionally prints, indented two spaces, one
+/// line per changed communication object and parameter — including when
+/// `changed_fields` is itself empty (`"(own fields unchanged)"`), so a
+/// device whose only change is a nested communication object or parameter
+/// is never silently dropped (orchestrator ruling 1).
+fn print_device_table(table: &knx_diff::DeviceTable) {
+    for (key, _) in &table.added {
+        println!("+ device {}", device_key_display(key));
+    }
+    for (key, _) in &table.removed {
+        println!("- device {}", device_key_display(key));
+    }
+    for change in &table.changed {
+        if change.changed_fields.is_empty() {
+            println!(
+                "~ device {}: (own fields unchanged)",
+                device_key_display(&change.key)
+            );
+        } else {
+            println!(
+                "~ device {}: {}",
+                device_key_display(&change.key),
+                change.changed_fields.join(", ")
+            );
+        }
+        print_entity_table(
+            &change.com_objects,
+            "communication object",
+            "  ",
+            com_object_key_display,
+        );
+        print_entity_table(&change.parameters, "parameter", "  ", parameter_key_display);
+    }
+    for note in &table.ambiguous {
+        println!(
+            "? device {}: {} left candidate(s), {} right candidate(s)",
+            device_key_display(&note.key),
+            note.left_candidates,
+            note.right_candidates
+        );
+    }
+}
+
+fn print_field_change(label: &str, change: &knx_diff::FieldChange) {
+    println!(
+        "~ {label}: {}: {} -> {}",
+        change.field, change.left, change.right
+    );
+}
+
+fn print_installation_diff(installation: &knx_diff::InstallationDiff) {
+    match installation.status {
+        knx_diff::EntityStatus::Added => println!("+ installation {}", installation.id),
+        knx_diff::EntityStatus::Removed => println!("- installation {}", installation.id),
+        knx_diff::EntityStatus::Matched => {}
+    }
+    for change in &installation.field_changes {
+        print_field_change(&format!("installation {}", installation.id), change);
+    }
+
+    print_entity_table(&installation.areas, "area", "", area_key_display);
+    print_entity_table(&installation.lines, "line", "", line_key_display);
+    print_entity_table(
+        &installation.group_ranges,
+        "group range",
+        "",
+        group_range_key_display,
+    );
+    print_entity_table(
+        &installation.group_addresses,
+        "group address",
+        "",
+        group_address_key_display,
+    );
+    print_entity_table(
+        &installation.buildings,
+        "building",
+        "",
+        building_part_key_display,
+    );
+    print_device_table(&installation.devices);
+}
+
+/// Prints a `ProjectDiff` as plain text (design spec §5): `"no differences
+/// found"` when nothing differs anywhere, otherwise `info_changes`, then
+/// each installation's own status/field changes and entity tables in turn.
+fn print_diff_report(diff: &knx_diff::ProjectDiff) {
+    if diff.info_changes.is_empty() && diff.installations.iter().all(installation_is_unchanged) {
+        println!("no differences found");
+        return;
+    }
+
+    for change in &diff.info_changes {
+        print_field_change("project info", change);
+    }
+
+    for installation in &diff.installations {
+        print_installation_diff(installation);
     }
 }
 

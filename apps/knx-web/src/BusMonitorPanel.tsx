@@ -332,6 +332,12 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           destination={composeSeed.destination}
           resolution={composeSeed.resolution}
           projectOpen={projectOpen}
+          // Task 5 review, fix 2: `status` already covers both ways a
+          // session can be closed while this panel shows it — the gateway
+          // dropping it mid-poll, and the mount-time reattach effect above
+          // adopting one that was already closed — so no separate tracking
+          // is needed here.
+          sessionClosed={status === "closed"}
         />
       )}
       {session && (

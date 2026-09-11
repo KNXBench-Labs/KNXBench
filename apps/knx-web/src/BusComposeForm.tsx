@@ -53,7 +53,25 @@ interface BusComposeFormProps {
   /// disabling itself" rule, instead of making the user discover it by
   /// trying to send and reading a 400.
   projectOpen: boolean;
+  /// Whether the session this form is attached to is already `"closed"` —
+  /// either the gateway dropped it mid-session, or `BusMonitorPanel.tsx`
+  /// reattached to one that was already closed before the panel ever
+  /// mounted (Task 5's own reattach fix: rows from a closed session are
+  /// still shown, correctly, as real data). Task 5 review, fix 2: a closed
+  /// session has nothing left to send a `GroupValueWrite` through, so
+  /// pressing Send here used to reach the server only to bounce off a `409`
+  /// for a session everybody already knew was gone. Same "say so rather
+  /// than silently disabling itself" rule as `projectOpen` above — the form
+  /// disables and explains, it does not just grey out.
+  sessionClosed: boolean;
 }
+
+/// Task 5 review, fix 2 — the message shown (and the reason `send()` below
+/// refuses to call `api.writeBusValue` at all) once `sessionClosed` is true.
+/// Same register as `projectOpen`'s hint just above: a plain fact-then-
+/// consequence sentence, not phrased as an error the user did something to
+/// cause.
+const SESSION_CLOSED_MESSAGE = "This session is closed — sending is disabled.";
 
 /// The two messages specified word for word by the design (§6) — echoing
 /// `format_decoded_value`'s vocabulary (`apps/knx-cli/src/main.rs:2076`)
@@ -69,6 +87,7 @@ export default function BusComposeForm({
   destination: initialDestination,
   resolution: initialResolution,
   projectOpen,
+  sessionClosed,
 }: BusComposeFormProps) {
   const [destination, setDestination] = useState(initialDestination);
   const [dpt, setDpt] = useState(initialResolution.kind === "single" ? initialResolution.dpt : "");
@@ -95,6 +114,16 @@ export default function BusComposeForm({
   async function send() {
     setSendError(null);
     setSent(null);
+
+    if (sessionClosed) {
+      // Belt and braces: the Send button (and every field) is already
+      // `disabled` below whenever `sessionClosed` is true, but guarding
+      // here too means a session that closes between renders — the
+      // gateway drops it, the next poll notices — can never reach
+      // `api.writeBusValue` through a click that raced the re-render.
+      setSendError(SESSION_CLOSED_MESSAGE);
+      return; // Rejected client-side — `fetch` is never called.
+    }
 
     const explicitDpt = dpt.trim();
     let dptToSend: string | null;
@@ -144,6 +173,9 @@ export default function BusComposeForm({
           No project open — no DPT resolves automatically here; type one explicitly.
         </p>
       )}
+      {sessionClosed && (
+        <p className="bus-compose-hint bus-compose-closed-hint">{SESSION_CLOSED_MESSAGE}</p>
+      )}
       <div className="bus-compose-fields">
         <label>
           Destination
@@ -152,6 +184,7 @@ export default function BusComposeForm({
             className="bus-compose-destination"
             value={destination}
             onChange={(e) => onDestinationChange(e.target.value)}
+            disabled={sessionClosed}
           />
         </label>
         <label>
@@ -162,6 +195,7 @@ export default function BusComposeForm({
             placeholder="DPST-1-1"
             value={dpt}
             onChange={(e) => setDpt(e.target.value)}
+            disabled={sessionClosed}
           />
         </label>
         <label>
@@ -171,9 +205,10 @@ export default function BusComposeForm({
             className="bus-compose-value"
             value={value}
             onChange={(e) => setValue(e.target.value)}
+            disabled={sessionClosed}
           />
         </label>
-        <button onClick={() => void send()} disabled={sending || !destination || !value}>
+        <button onClick={() => void send()} disabled={sending || !destination || !value || sessionClosed}>
           Send
         </button>
       </div>

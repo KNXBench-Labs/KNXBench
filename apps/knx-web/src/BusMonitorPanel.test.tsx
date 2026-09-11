@@ -225,6 +225,9 @@ describe("BusMonitorPanel", () => {
 
       expect(host!.querySelector(".bus-monitor-session")!.textContent).toContain("closed by gateway");
       expect(host!.querySelector(".bus-monitor-table")).not.toBeNull();
+      // Task 5 review, fix 2 — a session reattached already-closed is exactly
+      // the case the compose form must refuse to send through.
+      expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
 
       await act(async () => {
         clickButton("Disconnect");

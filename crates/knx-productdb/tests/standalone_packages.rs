@@ -233,6 +233,56 @@ fn installs_the_readable_corpus() {
 }
 
 #[test]
+fn rejects_the_real_legacy_vd2_corpus_file_with_its_hash_and_size() {
+    let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../OriginalData/ProductDatabases")
+        });
+    if !root.exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
+    let name = "Weinzierl_730_KNX_IP_Interface_ETS2-3.vd2";
+    let bytes = std::fs::read(root.join(name)).unwrap_or_else(|e| {
+        panic!("corpus fixture {name} unavailable: {e}; set KNXBENCH_PRODUCT_CORPUS to OriginalData/ProductDatabases")
+    });
+    let (_dir, conn) = db();
+    let err = install_package(&conn, name, &bytes).unwrap_err();
+    let (sha256, len) = match &err {
+        PackageError::LegacyVd2 { sha256, len } => (sha256.clone(), *len),
+        other => panic!("expected PackageError::LegacyVd2, got {other:?}"),
+    };
+    assert_eq!(len, bytes.len());
+    assert_eq!(sha256.len(), 64);
+    assert!(sha256
+        .chars()
+        .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+    assert_eq!(sha256, knx_productdb::sha256_hex(&bytes));
+    let rendered = err.to_string();
+    assert!(rendered.contains(&sha256), "{rendered}");
+    assert!(rendered.contains(&len.to_string()), "{rendered}");
+    assert_eq!(counts(&conn), vec![0; 9]);
+    eprintln!(
+        "rejects_the_real_legacy_vd2_corpus_file_with_its_hash_and_size: sha256={sha256} len={len}"
+    );
+}
+
+#[test]
+fn a_small_vd2_still_reports_hash_and_length() {
+    let (_dir, conn) = db();
+    let bytes = vec![1u8, 2, 3];
+    let err = install_package(&conn, "legacy.vd2", &bytes).unwrap_err();
+    match err {
+        PackageError::LegacyVd2 { sha256, len } => {
+            assert_eq!(len, 3);
+            assert_eq!(sha256, knx_productdb::sha256_hex(&bytes));
+        }
+        other => panic!("expected PackageError::LegacyVd2, got {other:?}"),
+    }
+}
+
+#[test]
 fn failures_preserve_an_existing_install_including_reports() {
     let (_dir, conn) = db();
     let valid = archive(&[

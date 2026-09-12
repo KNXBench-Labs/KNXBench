@@ -1576,6 +1576,11 @@ struct CatalogItemsQuery {
     manufacturer: Option<String>,
     #[serde(default)]
     search: Option<String>,
+    /// The optional display language (T32 Task 4). Absent means `None` —
+    /// today's untranslated behaviour, unchanged. Follows
+    /// `ParameterLanguageQuery`'s own precedent above.
+    #[serde(default)]
+    language: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -1608,7 +1613,7 @@ async fn catalog_items(
     State(state): State<SharedState>,
     Query(q): Query<CatalogItemsQuery>,
 ) -> Result<Json<Vec<CatalogItemDto>>, ApiError> {
-    domain::catalog_items_impl(&state, q.manufacturer, q.search)
+    domain::catalog_items_impl(&state, q.manufacturer, q.search, q.language)
         .map(|rows| Json(rows.into_iter().map(CatalogItemDto::from).collect()))
         .map_err(ApiError::bad_request)
 }

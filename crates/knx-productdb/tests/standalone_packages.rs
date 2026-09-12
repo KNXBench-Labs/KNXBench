@@ -223,9 +223,11 @@ fn installs_the_readable_corpus() {
         }
         assert_eq!(report.members.len(), member_count);
         assert!(knx_productdb::verify(&conn).unwrap().is_empty());
-        assert!(!knx_productdb::query::catalog_items(&conn, None, None)
-            .unwrap()
-            .is_empty());
+        assert!(
+            !knx_productdb::query::catalog_items(&conn, None, None, None)
+                .unwrap()
+                .is_empty()
+        );
         let before = counts(&conn);
         assert!(install_package(&conn, name, &bytes).unwrap().skipped);
         assert_eq!(counts(&conn), before);

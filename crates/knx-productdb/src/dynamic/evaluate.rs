@@ -340,12 +340,71 @@ fn resolve_control_kind(
     }))
 }
 
-/// Keyed by `ParameterRef` id — the same id `choose/@ParamRefId` and
-/// `ParameterRefRef/@RefId` use, and the same one a project's
-/// `ParameterInstance` carries (`DATA_MODEL.md` §10). A plain map, not an
-/// opaque type, so a unit test can build one with a literal without going
-/// through `resolve_values`.
-pub type ValueMap = HashMap<String, String>;
+/// Parameter values available to a `Dynamic` tree evaluation, in two
+/// scopes (design D35). `unscoped` is keyed by declared `ParameterRef`
+/// id — the same id `choose/@ParamRefId` and `ParameterRefRef/@RefId`
+/// use, and the same one a project's program-level `ParameterInstance`
+/// carries (`DATA_MODEL.md` §10). `scoped` is keyed by `(module_id,
+/// declared_ref_id)`, where `module_id` is the program-side `Module/@Id`
+/// (`ModuleScope::module_id`) — one `Module` instantiation's own stored
+/// values, held apart from every other instantiation of the same
+/// `ModuleDef` and from the program default (design D36). Not an opaque
+/// type: `From<HashMap<String, String>>` lets a unit test build the
+/// unscoped half with a literal, without going through `resolve_values`.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ValueMap {
+    unscoped: HashMap<String, String>,
+    scoped: HashMap<(String, String), String>,
+}
+
+impl ValueMap {
+    /// The value for `ref_id` within `scope`: the scope's own stored value
+    /// if it has one, otherwise the program-level value (design D36).
+    /// `scope: None` reads the program-level value only. Never falls back
+    /// to another instantiation's scoped value, and a scope with no
+    /// `module_id` (design D37) can never have a scoped value to find.
+    pub fn get(&self, scope: Option<&ModuleScope>, ref_id: &str) -> Option<&str> {
+        if let Some(module_id) = scope.and_then(|s| s.module_id.as_deref()) {
+            if let Some(v) = self
+                .scoped
+                .get(&(module_id.to_string(), ref_id.to_string()))
+            {
+                return Some(v.as_str());
+            }
+        }
+        self.unscoped.get(ref_id).map(String::as_str)
+    }
+
+    /// The program-level value for `ref_id`, ignoring scope entirely —
+    /// the display path's `ProgramDefault` fallback.
+    pub fn get_unscoped(&self, ref_id: &str) -> Option<&str> {
+        self.unscoped.get(ref_id).map(String::as_str)
+    }
+
+    /// Stores one instantiation's own value, keyed by `(module_id,
+    /// ref_id)` — never `module_node` (design D35: that `i64` is a
+    /// product-database row number, meaningless to the project side and
+    /// unstable across a package reinstall).
+    pub fn insert_scoped(&mut self, module_id: String, ref_id: String, value: String) {
+        self.scoped.insert((module_id, ref_id), value);
+    }
+
+    /// Number of stored scoped values, across every `module_id`.
+    pub fn len_scoped(&self) -> usize {
+        self.scoped.len()
+    }
+}
+
+impl From<HashMap<String, String>> for ValueMap {
+    /// Wraps a flat map as the unscoped half only — the shape every
+    /// pre-T18-slice-4 caller already had.
+    fn from(unscoped: HashMap<String, String>) -> Self {
+        ValueMap {
+            unscoped,
+            scoped: HashMap::new(),
+        }
+    }
+}
 
 /// Assembles a `ValueMap` per design D6's resolution order: `supplied`
 /// wins where present; everything else falls back to `parameter_ref.value`,
@@ -353,7 +412,10 @@ pub type ValueMap = HashMap<String, String>;
 /// from the result — `evaluate` turns that absence into `Diagnostic::MissingValue`
 /// only for the refs it actually needs during a given walk, rather than
 /// pre-flagging every parameter a tree happens to declare, most of which a
-/// given evaluation may never reach.
+/// given evaluation may never reach. Returns unscoped values only — no
+/// per-`Module`-instantiation value enters here (that is Task 3's write
+/// path); `evaluate` sees an empty `scoped` half for every caller of this
+/// function today.
 pub fn resolve_values(
     conn: &Connection,
     program_id: &str,
@@ -376,7 +438,7 @@ pub fn resolve_values(
             }
         }
     }
-    Ok(values)
+    Ok(values.into())
 }
 
 /// Everything `evaluate` could not decide. Returned, never logged, never
@@ -453,6 +515,11 @@ pub enum Diagnostic {
         choose_node: i64,
         param_ref: Option<String>,
     },
+    /// [V] `Module/@Id` is present on 102/102 corpus elements, but it is an
+    /// optional attribute. Without it, this instantiation cannot be matched
+    /// to a project-side `ModuleInstance`, so its stored per-channel values
+    /// are unreachable and it evaluates against program defaults.
+    ModuleWithoutId { node_id: i64 },
 }
 
 /// Which expansion produced a given activation or diagnostic (design D14).
@@ -675,6 +742,16 @@ fn walk(
                     .and_then(|rid| trees.module(rid).map(|t| (rid.to_string(), t)));
                 match hit {
                     Some((module_def_id, module_tree)) => {
+                        // Design D37: a nameless instantiation can never be
+                        // matched to a project-side `ModuleInstance`, so it
+                        // is worth saying out loud even when — as here —
+                        // nothing downstream has asked for its value yet.
+                        // Emitted once per instantiation, unconditionally,
+                        // before descending; the scope it would name is
+                        // the one that has no name.
+                        if node.element_id.is_none() {
+                            activation.diagnose(None, Diagnostic::ModuleWithoutId { node_id });
+                        }
                         let new_scope = ModuleScope {
                             module_node: node_id,
                             module_id: node.element_id.clone(),
@@ -794,7 +871,7 @@ fn evaluate_comparable_choose(
     scope: Option<&ModuleScope>,
 ) {
     let param_ref = node.ref_id.clone();
-    let Some(raw_value) = node.ref_id.as_deref().and_then(|id| values.get(id)) else {
+    let Some(raw_value) = node.ref_id.as_deref().and_then(|id| values.get(scope, id)) else {
         activation.diagnose(
             scope,
             Diagnostic::MissingValue {

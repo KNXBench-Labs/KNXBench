@@ -1824,6 +1824,9 @@ fn diagnostic_message(diagnostic: &knx_productdb::dynamic::Diagnostic) -> &'stat
             "A module nested inside another module was not expanded."
         }
         Diagnostic::MissingValue { .. } => "A choice's controlling parameter has no value.",
+        Diagnostic::ModuleWithoutId { .. } => {
+            "A module instance has no identifier and cannot be matched to stored values."
+        }
     }
 }
 
@@ -2075,7 +2078,7 @@ fn assemble_parameter_panel(
             };
             let (value, value_source) = match &section.scope {
                 None => {
-                    let value = values.get(ref_id).cloned();
+                    let value = values.get(None, ref_id).map(str::to_string);
                     let source = if supplied.contains_key(ref_id) {
                         "Stored"
                     } else {
@@ -2089,7 +2092,10 @@ fn assemble_parameter_panel(
                     });
                     match stored_match {
                         Some(raw) => (Some(raw.clone()), "Stored".to_string()),
-                        None => (values.get(ref_id).cloned(), "ProgramDefault".to_string()),
+                        None => (
+                            values.get(None, ref_id).map(str::to_string),
+                            "ProgramDefault".to_string(),
+                        ),
                     }
                 }
             };

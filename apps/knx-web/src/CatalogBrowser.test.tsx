@@ -37,6 +37,16 @@ const item = {
   hardware2programRefId: "HP-1",
 };
 
+const item2 = {
+  id: "cat-2",
+  manufacturerId: "M-1",
+  name: "Dimmer",
+  number: null,
+  visibleDescription: null,
+  productRefId: "P-2",
+  hardware2programRefId: "HP-2",
+};
+
 async function renderBrowser(onCreated = vi.fn(), onClose = vi.fn()) {
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -132,6 +142,65 @@ describe("CatalogBrowser", () => {
       );
     });
     expect(onClose).toHaveBeenCalledTimes(1);
+    root.unmount();
+  });
+
+  // Regression test for KNOWN_LIMITATIONS.md §20: the catalog result list
+  // had no keyboard path at all, so a keyboard-only user could not reach
+  // it. No mouse event appears anywhere in this test.
+  it("ArrowDown then Enter on the search input selects the second catalog item", async () => {
+    apiMock.catalogItems.mockResolvedValue([item, item2]);
+    const { root } = await renderBrowser();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+    const input = host!.querySelector<HTMLInputElement>('input[placeholder="Search catalog items…"]')!;
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    });
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+
+    const nameInput = host!.querySelector<HTMLInputElement>('input[placeholder="Device name"]')!;
+    expect(nameInput.value).toBe("Dimmer");
+    root.unmount();
+  });
+
+  it("ArrowUp at the top of the list stays at the top", async () => {
+    apiMock.catalogItems.mockResolvedValue([item, item2]);
+    const { root } = await renderBrowser();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+    const input = host!.querySelector<HTMLInputElement>('input[placeholder="Search catalog items…"]')!;
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+    });
+
+    expect(input.getAttribute("aria-activedescendant")).toBe("catalog-option-0");
+    root.unmount();
+  });
+
+  it("names the highlighted row via the input's aria-activedescendant", async () => {
+    apiMock.catalogItems.mockResolvedValue([item, item2]);
+    const { root } = await renderBrowser();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+    const input = host!.querySelector<HTMLInputElement>('input[placeholder="Search catalog items…"]')!;
+    expect(input.getAttribute("role")).toBe("combobox");
+    expect(input.getAttribute("aria-haspopup")).toBe("listbox");
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    });
+
+    expect(input.getAttribute("aria-activedescendant")).toBe("catalog-option-1");
+    const highlighted = host!.querySelector("#catalog-option-1")!;
+    expect(highlighted.textContent).toContain("Dimmer");
     root.unmount();
   });
 });

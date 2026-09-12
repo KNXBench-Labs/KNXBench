@@ -9,44 +9,12 @@ import Overlay from "./Overlay";
 import {
   exportEnglishTemplate,
   exportLanguagePack,
+  grandfatheredHint,
   importLanguagePack,
-  listLanguagePacks,
   removeLanguagePack,
+  useLanguagePacks,
 } from "./languagePack";
-import type { LanguagePack, LanguagePackImportReport } from "./languagePack";
-
-/**
- * RFC 5646 §4.5's handful of "irregular" grandfathered tags — the ones
- * `languagePack.ts`'s `BCP47_PATTERN` has no production for at all (an
- * `i-`/`sgn-` prefix isn't a legal primary subtag under any reading this
- * project uses) — each with its modern IANA-registered replacement. Not
- * this surface's job to accept them (that ship, per the brief, sailed with
- * `languagePack.ts`), only to be a little kinder about *why* one was
- * rejected when we happen to recognise it. Deliberately small: these are
- * the tags actually listed in the RFC, not a guess at every historical
- * form anyone ever used.
- */
-const GRANDFATHERED_TAG_HINTS: Record<string, string> = {
-  "i-ami": "ami",
-  "i-bnn": "bnn",
-  "i-hak": "hak",
-  "i-klingon": "tlh",
-  "i-lux": "lb",
-  "i-navajo": "nv",
-  "i-pwn": "pwn",
-  "i-tao": "tao",
-  "i-tay": "tay",
-  "i-tsu": "tsu",
-  "sgn-be-fr": "sfb",
-  "sgn-be-nl": "vgt",
-  "sgn-ch-de": "sgg",
-};
-
-function grandfatheredHint(rawTag: unknown): { oldTag: string; modernTag: string } | undefined {
-  if (typeof rawTag !== "string") return undefined;
-  const modernTag = GRANDFATHERED_TAG_HINTS[rawTag.toLowerCase()];
-  return modernTag ? { oldTag: rawTag, modernTag } : undefined;
-}
+import type { LanguagePackImportReport } from "./languagePack";
 
 /** Whether `tag` is one of the compiled-in catalogues — the shadowing trap
  * `languagePack.ts`'s `exportEnglishTemplate` doc comment warns about
@@ -151,12 +119,14 @@ function ImportReport(props: { t: Translate; outcome: ImportOutcome }) {
  * remount.
  *
  * T25 task 7 grows the UI-language field into a small language-pack
- * manager: `languagePack.ts` (task 6) built the format, the store, import
- * and export as plain functions with no UI of their own — this component
- * is the only place any of it becomes visible. Installed packs are held
- * in local `useState`, refreshed after every import/remove, rather than a
- * shared external store: unlike the active language, nothing outside this
- * panel needs to react to "a pack was installed" on its own.
+ * manager: `languagePack.ts` (task 6) built the format, import and export
+ * as plain functions with no UI of their own — this component is the
+ * only place any of it becomes visible. Installed packs are read through
+ * `useLanguagePacks()`, the same shared-store shape `useUiLanguage()`
+ * uses: `i18n.ts`'s `useTranslate()` subscribes to the very same store
+ * (fix round 1), so this panel no longer needs to hand-refresh a local
+ * copy after every import/remove — the shared store already notifies
+ * every mounted reader, itself included.
  */
 export default function SettingsPanel(props: {
   themes: readonly ThemeDef[];
@@ -192,7 +162,7 @@ export default function SettingsPanel(props: {
   const [uiLanguage, setUiLanguage] = useUiLanguage();
   const t = useTranslate();
 
-  const [packs, setPacks] = useState<LanguagePack[]>(() => listLanguagePacks());
+  const packs = useLanguagePacks();
   const [importOutcome, setImportOutcome] = useState<ImportOutcome | null>(null);
 
   async function handleImportFile(file: File) {
@@ -206,13 +176,17 @@ export default function SettingsPanel(props: {
 
     const result = importLanguagePack(raw);
     if (result.ok) {
-      setPacks(listLanguagePacks());
       setImportOutcome(result);
       return;
     }
 
     const rawTag = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>).tag : undefined;
-    setImportOutcome({ ok: false, error: result.error, hint: grandfatheredHint(rawTag) });
+    const modernTag = grandfatheredHint(rawTag);
+    setImportOutcome({
+      ok: false,
+      error: result.error,
+      hint: modernTag !== undefined ? { oldTag: rawTag as string, modernTag } : undefined,
+    });
   }
 
   function handleExportTemplate() {
@@ -226,21 +200,16 @@ export default function SettingsPanel(props: {
   }
 
   function handleRemovePack(tag: string) {
+    // No `setUiLanguage` here, deliberately: removing a pack is a
+    // pack-management action, not a request to change the active
+    // language preference. `languagePack.ts`'s `removeLanguagePack`
+    // notifies its own subscribers, which is what makes an
+    // already-mounted `useTranslate()` caller re-render and fall back to
+    // English the moment `i18n.ts`'s `resolveCatalog` finds no pack left
+    // for the active tag — the stored tag itself is untouched, so
+    // re-importing the same pack later restores the language with no
+    // trip through the select.
     removeLanguagePack(tag);
-    setPacks(listLanguagePacks());
-    // `i18n.ts`'s `resolveCatalog` already falls back to English for any
-    // tag naming a pack that doesn't exist — that resolution logic is not
-    // duplicated here. But nothing re-renders an *already-mounted* sibling
-    // just because this store changed underneath it (the packs store has
-    // no subscribers of its own); explicitly handing the active-language
-    // store back to English when the pack it names is the one just removed
-    // is what makes that fallback visible immediately, everywhere, rather
-    // than only on whatever next render happens to touch a translated
-    // string. If the same pack is re-imported later, the user picks it
-    // again — the alternative (leaving the stale tag in place so a
-    // re-import silently reactivates it) trades a surprise reappearance
-    // for a redundant click, and the click is the smaller surprise.
-    if (tag === uiLanguage) setUiLanguage("en");
   }
 
   // A pack whose own tag collides with a built-in (the exact

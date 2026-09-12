@@ -8,7 +8,7 @@ import {
   getActiveUiLanguage,
   useUiLanguage,
 } from "./uiLanguage";
-import { getLanguagePack } from "./languagePack";
+import { getLanguagePack, useLanguagePacks } from "./languagePack";
 
 export type { MessageKey } from "./messages/en";
 
@@ -188,15 +188,23 @@ export type Translate = (key: TranslatableKey, params?: MessageParams) => string
 
 /**
  * Reads the active UI language via `useUiLanguage()` and returns a bound
- * `t(key, params?)`. The returned function's identity only changes when
- * the language does, so it is safe as a `useMemo`/`useCallback` dependency
- * — a component that memoises something built with `t()` re-derives it on
- * a language switch and not on every render.
+ * `t(key, params?)`. The returned function's identity changes when the
+ * language does *or* when the installed language packs change — also
+ * subscribing to `languagePack.ts`'s `useLanguagePacks()` is what makes
+ * an already-mounted caller notice an import or a removal on its own:
+ * without it, a pack changing underneath an unrelated re-render would
+ * leave this hook returning a `t` that still resolves through
+ * `translateFor` correctly in theory, but nothing would have triggered
+ * the re-render to call it again. `packs` itself is never read — only
+ * its identity, as an `useCallback` dependency and (via
+ * `useSyncExternalStore` inside `useLanguagePacks()`) a subscription —
+ * `translateFor` re-resolves the active catalogue fresh on every call.
  */
 export function useTranslate(): Translate {
   const [language] = useUiLanguage();
+  const packs = useLanguagePacks();
   return useCallback<Translate>(
     (key, params) => translateFor(language, key, params),
-    [language],
+    [language, packs],
   );
 }

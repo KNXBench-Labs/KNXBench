@@ -2882,3 +2882,90 @@ language parameter at all. `FunctionText` is unread at every surface,
 same as `SuffixText`. What §64 already named — hardware- and master-scope
 translations ingested but read by nothing, and the chrome half tracked as
 T25 — is unaffected by this slice and stays open.
+
+**T25: multi-language UI chrome (2026-09-12), branch
+`t25-ui-chrome-language`.** Closes the chrome half of `GAP_ANALYSIS_ETS.md`
+gap **D10**; partially addresses **D8**. Plans
+`docs/superpowers/plans/2026-09-12-ui-chrome-language.md` and (the
+language-pack format, added mid-task by explicit user ruling)
+`docs/superpowers/plans/2026-09-12-ui-language-packs.md`. Seven tasks.
+
+- **The catalogue and lookup (`apps/knx-web/src/i18n.ts`,
+  `messages/en.ts`/`messages/de.ts`).** `messages/en.ts` holds **294
+  keys**, measured directly from the shipped file (the plan's own recon
+  estimated "~139 literals"; the gap comes from plural pairs — a
+  `key.one`/`key.other` pair for every count-sensitive sentence — and
+  per-attribute breakdowns, e.g. six delete-restriction sentences
+  collapsed into composable pieces, both of which add more catalogue
+  entries than a literal-string count predicts). `messages/de.ts` is kept
+  at exact parity by a `Record<MessageKey, string>` type annotation
+  TypeScript enforces at compile time — a missing German key is a build
+  failure, not a runtime gap. `translate()`/`useTranslate()`/`Translate`
+  resolve a key against the active language, falling back to English
+  exactly once if the active language (built-in or an installed pack)
+  has no value for it. `document.documentElement.lang` tracks the active
+  language.
+- **The UI-language setting (`SettingsPanel.tsx`).** A `<select>` listing
+  the two built-in languages (`en`/`de`, detected from
+  `navigator.language` on first run) plus any installed language pack,
+  each by its own declared `name`, persisted the same `localStorage`
+  pattern `theme.ts` already used.
+- **The extraction sweep, roughly 30 files.** Every hard-coded English
+  literal in the frontend now resolves through the catalogue.
+  `Inspector.tsx` alone accounts for the largest concentration, as
+  planned: 37 `t(...)` calls across 17 `useTranslate()` sites. Toast
+  copy (`toastCopy.ts`), the holiday/late-night joke messages and error
+  wrappers, the command palette, dashboard, catalog browser, bus monitor
+  and compose form, log panel, group-address CSV buttons, project
+  explorer and file picker were all swept in the same pass.
+- **The language-pack format, loader and store
+  (`apps/knx-web/src/languagePack.ts`, new).** An open-ended JSON format
+  — `formatVersion`, `tag`, `name`, `messages` required, everything else
+  (including fields a future format version might add) preserved
+  unread — that lets a user author a translation for any BCP 47-shaped
+  tag, including a language with no registry entry at all (`tlh`
+  Klingon, `bar` Bavarian, `art-x-sindarin` a private-use tag for
+  anything unregistered), validated for *shape*, never for registry
+  membership. A pack that translates a subset of the catalogue is
+  installed unconditionally — unknown/missing keys are reported, never
+  vetoed. Full user-facing account of the format, written for a
+  translator rather than a developer:
+  [docs/LANGUAGE_PACKS.md](LANGUAGE_PACKS.md).
+- **The Settings-panel surface for packs (`SettingsPanel.tsx`).** An
+  import file picker, an "Export English template…" button (the
+  intended starting point for a new pack) with a permanent hint about
+  its own shadowed-tag trap, a per-outcome import report (applied/
+  missing/unknown key counts, a shadowed-built-in-tag warning, a
+  grandfathered-BCP-47-tag hint), and a management list of installed
+  packs each with its own Export/Remove. Removing the active pack falls
+  the UI back to English immediately rather than leaving it pointed at a
+  tag that no longer resolves.
+
+**The two fallback rules, deliberately opposite, documented side by
+side so neither gets "fixed" into matching the other:** UI chrome always
+falls back to English, and only English — never German, never another
+installed pack, never a pack's own `basedOn` (a translator's-note field
+nothing in the application reads) — because the English string *is* the
+message key's own authoritative content, so a fallback shows real words.
+Product data (T26/T32/T33) never falls back to another language at all —
+it shows the original, untranslated text — because a manufacturer's
+parameter text is not this application's own content to substitute a
+guess for; a user configuring a physical device needs to know the text
+came from that vendor's package, not from a fallback chain.
+
+What no catalogue or pack can reach, because it is composed as plain
+text on the server rather than requested as a catalogue key:
+`ParameterDiagnostic.message`/`.detail`, `LogPanel`'s session-log entry
+fields, the error text quoted inside a translated toast wrapper, and
+`crates/knx-report`'s generated documentation export, which is not
+language-aware in any respect — no language parameter of any kind, not
+UI language, not product-data language. New backlog entry:
+[KNOWN_LIMITATIONS.md §65](KNOWN_LIMITATIONS.md#65-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack).
+A second, smaller instance: a rejected pack's own rejection reason is
+validator text, not a catalogue key, inside an otherwise-translated
+sentence —
+[KNOWN_LIMITATIONS.md §66](KNOWN_LIMITATIONS.md#66-a-rejected-language-packs-own-reason-is-shown-untranslated-inside-a-translated-sentence).
+
+`npx tsc -p apps/knx-web/tsconfig.json --noEmit`: clean. `npm --prefix
+apps/knx-web run test`: **324 passed across 31 files** (branch baseline
+before T25's first task: 271/29).

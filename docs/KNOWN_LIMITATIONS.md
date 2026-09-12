@@ -2790,25 +2790,36 @@ real, additive work inside `knx-net`, not a research gap.
 
 **Impact.** Twofold. First, the obvious one: no line scan exists to use.
 Second, and the reason this is its own entry rather than a line in the
-roadmap: **the moment a naive implementation does exist, running it
-unthrottled is dangerous on a live installation, not merely slow.** A
-controller measurement against nine occupied addresses on one real
-installation (2026-09-12, over a KNXnet/IP tunnelling connection) found
-round trips of 102.4-221.6 ms per occupied address — higher than this
-spike's own TP1-only arithmetic estimate of roughly 60-100 ms, because the
-measurement includes IP transport and gateway turnaround the arithmetic
-did not model. Scaled to a full 255-address line, that is roughly 26-57
-seconds of sustained connection-oriented bus traffic before any pacing is
-added — worse than the arithmetic's own ~18-second floor. For that whole
-window, a scan competes directly with whatever else needs that line's
-bandwidth, including genuinely safety-relevant devices that share it. The
-absent-address timing was not measured at all (every approved address on
-the test installation was occupied), so even the "vacant address" side of
-the budget remains an unconfirmed estimate.
+roadmap: **an unthrottled implementation is dangerous on a live
+installation, not merely slow — and now measured, not merely
+estimated.** A controller full-line scan (2026-09-12, 254 addresses,
+one installation, one gateway, over a KNXnet/IP tunnelling connection,
+200 ms between probes, zero probe errors) found 35 addresses occupied
+and 219 vacant, and timed both: occupied probes 13.6-6016.5 ms (median
+121.1 ms), vacant probes 6275.9-6323.8 ms (median 6279.9 ms). Summed:
+**1 385.75 s ≈ 23.1 minutes** for the whole line. That figure replaces
+this entry's earlier 26-57 second extrapolation, which scaled from nine
+addresses that all happened to be occupied — a real line is mostly
+vacant, and vacant is the expensive case (~6.28 s per address, a client
+connection-timeout policy, not bus retry cost — see
+[RESEARCH.md §8.5, Finding 1](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12)),
+so the earlier number understated the hazard by roughly two orders of
+magnitude, not a rounding error. For the full 23 minutes, a scan
+competes with whatever else needs that line's bandwidth, including
+genuinely safety-relevant devices that share it.
 
-**Lifted when.** Implementation lands with, at minimum, deliberate
-inter-request pacing and an installation-specific exclusion list that is
-honoured by construction — addresses to skip enumerated out of the scan
-range itself, in the domain layer, never filtered out afterward in the UI
-— plus a live measurement of the absent-address case to confirm or correct
-the current estimate.
+The same scan surfaced two further findings an implementation must
+account for, both documented in RESEARCH.md §8.5 rather than repeated in
+full here: a scan can mistake KNXnet/IP tunnelling endpoints — including
+its own connection — for bus devices, distinguishable by their timing but
+reliably excluded only by the client knowing its own assigned address
+(Finding 2); and the scan's results disagreed with the reference
+project's device list in both directions, which is not a defect but the
+reason this capability is worth building at all (Finding 3).
+
+**Lifted when.** Implementation lands with, at minimum, a deliberately
+chosen timeout/pacing policy — the controller's measurement shows this
+is a real design decision, not a constant to copy from the Standard — and
+an installation-specific exclusion list that is honoured by construction:
+addresses to skip enumerated out of the scan range itself, in the domain
+layer, never filtered out afterward in the UI.

@@ -2967,5 +2967,5 @@ sentence —
 [KNOWN_LIMITATIONS.md §66](KNOWN_LIMITATIONS.md#66-a-rejected-language-packs-own-reason-is-shown-untranslated-inside-a-translated-sentence).
 
 `npx tsc -p apps/knx-web/tsconfig.json --noEmit`: clean. `npm --prefix
-apps/knx-web run test`: **333 passed across 31 files** (branch baseline
+apps/knx-web run test`: **336 passed across 31 files** (branch baseline
 before T25's first task: 271/29).

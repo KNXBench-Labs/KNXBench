@@ -302,6 +302,23 @@ export function catalogItems(manufacturer?: string, search?: string): Promise<Ca
   return request(`/api/catalog/items${qs ? `?${qs}` : ""}`);
 }
 
+// `ProductLanguageDto` (apps/knx-server/src/routes.rs) — server-local, no
+// `ts-rs` binding, hand-written to match its `#[serde(rename_all =
+// "camelCase")]` shape, same convention as `CatalogManufacturer`/
+// `CatalogItem` above. `rows` is a plain count, not a completeness
+// judgement — the Settings panel's label just reports it verbatim.
+export interface ProductLanguage {
+  language: string;
+  rows: number;
+}
+
+// Returns `[]` when no product database is installed (the server's own
+// doc comment on `product_languages`), not an error — callers render that
+// as "no languages available" rather than treating it as a failed fetch.
+export function productLanguages(): Promise<ProductLanguage[]> {
+  return request("/api/product-languages");
+}
+
 /// Uses multipart directly rather than `request()`: setting JSON's
 /// `Content-Type` on a FormData request would remove the required boundary.
 export async function installProductPackage(file: File): Promise<CatalogInstallReport> {

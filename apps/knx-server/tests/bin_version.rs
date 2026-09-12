@@ -37,3 +37,16 @@ fn version_flag_prints_and_exits_without_binding_a_port() {
 fn short_version_flag_says_the_same_thing() {
     assert_eq!(run(&["-V"]).stdout, run(&["--version"]).stdout);
 }
+
+#[test]
+fn manifest_version_is_a_pre_release_while_the_project_is_alpha() {
+    // Same guard `apps/knx-cli/tests/cli_version.rs` keeps on `knx`: the
+    // version string is the one honest statement about maturity the
+    // binary makes about itself, and it must not lose its pre-release
+    // identifier before anyone means it to.
+    let version = env!("CARGO_PKG_VERSION");
+    assert!(
+        version.contains("-alpha.") || version.contains("-beta.") || version.contains("-rc."),
+        "expected a SemVer pre-release, got {version:?}"
+    );
+}

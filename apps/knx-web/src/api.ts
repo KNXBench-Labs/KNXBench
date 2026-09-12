@@ -900,16 +900,33 @@ export interface ParameterPanel {
   diagnostics: ParameterDiagnostic[];
 }
 
-export function deviceParameters(deviceId: number): Promise<ParameterPanel> {
-  return request(`/api/device/${deviceId}/parameters`);
+// `language` selects which stored translation row the server substitutes
+// into a field's `text` (empty/omitted means the package's untranslated
+// default) — it never changes which parameters exist or what a write
+// stores, only the wording the read model comes back with. Built the same
+// way `catalogItems` above builds its optional query string, so the two
+// don't drift into two different conventions for the same thing.
+function languageQuery(language?: string | null): string {
+  const params = new URLSearchParams();
+  if (language) params.set("language", language);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function deviceParameters(
+  deviceId: number,
+  language?: string | null,
+): Promise<ParameterPanel> {
+  return request(`/api/device/${deviceId}/parameters${languageQuery(language)}`);
 }
 
 export function setParameterValue(
   deviceId: number,
   etsId: string,
   raw: string,
+  language?: string | null,
 ): Promise<ParameterPanel> {
-  return request(`/api/device/${deviceId}/parameters`, {
+  return request(`/api/device/${deviceId}/parameters${languageQuery(language)}`, {
     method: "POST",
     body: JSON.stringify({ etsId, raw }),
   });

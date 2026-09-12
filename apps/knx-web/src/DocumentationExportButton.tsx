@@ -14,7 +14,6 @@ import { useTranslate } from "./i18n";
 // narrow callbacks from `App.tsx`, which already owns both. This export
 // never touches the open project's tree, so unlike `GroupAddressCsvButtons`
 // there is no `onTreeUpdate`.
-const DOCUMENTATION_FILTER = [{ name: "HTML document", extensions: ["html"] }];
 
 export default function DocumentationExportButton(props: {
   tree: ProjectTree | null;
@@ -24,9 +23,13 @@ export default function DocumentationExportButton(props: {
 }) {
   const { tree, onSummary, onError, onClearErrors } = props;
   const t = useTranslate();
+  // Rebuilt every render, not hoisted to module scope — a module-level
+  // `const` would call `t()` once at import time and freeze the filter name
+  // in whichever language was active then. Same trap as `App.tsx`'s filters.
+  const documentationFilter = [{ name: t("documentationExport.filterName"), extensions: ["html"] }];
 
   async function exportDocumentation() {
-    const path = await pickSavePath(DOCUMENTATION_FILTER, "project-documentation.html");
+    const path = await pickSavePath(documentationFilter, "project-documentation.html");
     if (!path) return;
     // Sequenced exactly like `GroupAddressCsvButtons`'s `exportCsv`: clear
     // any leftover error toast before this operation runs, not after — so

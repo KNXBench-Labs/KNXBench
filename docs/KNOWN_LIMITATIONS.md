@@ -649,39 +649,64 @@ potentially a future command palette too).
 
 ## 20. Command palette and search share overlay CSS and an accessibility gap, unaddressed
 
-**Limitation.** `apps/knx-web/src/Search.tsx` and `CommandPalette.tsx`
-are two near-identical modal-overlay implementations — an overlay div, a
-click-outside `stopPropagation` panel, an autofocused input, and
-`Escape`/arrow-key/`Enter` handling — kept as separate components rather
-than one shared shell. Neither overlay's result list has proper ARIA
-semantics either: `CommandPalette.tsx`'s disabled rows carry
-`aria-disabled="true"` but nothing backs it with `role="option"`/
-`role="listbox"` on the containing list, and neither overlay announces the
-highlighted row via `aria-activedescendant`.
+**Limitation.** Four components now share `styles.css`'s
+`.search-overlay`/`.search-panel` shape with no shared component behind
+it — counted, 2026-09-12, not remembered: `apps/knx-web/src/Search.tsx`,
+`CommandPalette.tsx`, `CatalogBrowser.tsx` (T2) and `SettingsPanel.tsx`
+(T27). Three of them — Search, Command Palette, Catalog Browser — go
+further and duplicate the whole modal shape by hand: an overlay div, a
+click-outside `stopPropagation` panel, an autofocused input, `Escape`
+handling, and a `.search-results` list of `.search-result` rows.
+`SettingsPanel.tsx` reuses the overlay and panel only; it has no result
+list, and it catches `Escape` on a `window` listener rather than on an
+input, because three `<select>`s give it no single field to hang it off.
 
-**Cause.** (a) The two overlays' keyboard-traversal semantics differ —
-`Search.tsx` navigates a grouped-by-kind list (both stop, rather than wrap,
-at the ends); `CommandPalette.tsx` navigates a flat list that additionally
-skips disabled rows — enough divergence that extracting a shared
-`<ModalOverlay>` shell was judged premature after only two consumers;
-`styles.css`'s `.search-overlay`/`.search-panel`/`.search-empty`/
-`.search-results`/`.search-result` classes are shared today, but the
-component logic is not. (b) Accessibility semantics for a custom
-listbox-like widget were out of scope for both the search and command
-palette design cycles, which focused on keyboard/mouse behavior, not
-screen-reader support.
+The accessibility gap is unchanged and now spans more surface. No
+result list anywhere carries `role="listbox"`/`role="option"`;
+`CommandPalette.tsx`'s disabled rows carry `aria-disabled="true"` with
+nothing backing it; no overlay announces the highlighted row via
+`aria-activedescendant`; and `CatalogBrowser.tsx`'s rows are
+`<li onClick>` with no `tabIndex`, no key handler and no role — that
+list cannot be reached by keyboard at all, which is worse than the
+palette's and search's incomplete semantics rather than merely equal
+to them.
 
-**Impact.** Two call sites to keep in sync by hand whenever overlay
-structure changes (e.g. a future scroll-into-view fix would need applying
-twice). A screen reader user gets no indication of which row is disabled
-or currently highlighted in either overlay.
+**Cause.** (a) The overlays' keyboard-traversal semantics genuinely
+differ — `Search.tsx` navigates a grouped-by-kind list (stopping, not
+wrapping, at the ends); `CommandPalette.tsx` navigates a flat list and
+skips disabled rows; `CatalogBrowser.tsx` navigates nothing;
+`SettingsPanel.tsx` has no list — so extracting a shared
+`<ModalOverlay>` shell was judged premature after two consumers, and
+each later consumer copied the CSS rather than reopening that judgement.
+The judgement was never revisited when the count rose, which is the
+actual defect here. (b) Accessibility semantics for a custom
+listbox-like widget were out of scope for the search and command palette
+design cycles, which focused on keyboard/mouse behavior, not
+screen-reader support, and each subsequent overlay inherited that scope
+decision without restating it.
 
-**Lifted when.** (a) A third overlay is added — the dark/light mode
-picker is next on [ROADMAP.md](ROADMAP.md) and would be that third case —
-at which point extracting a shared shell stops being speculative
-abstraction over two data points. (b) A joint accessibility pass covers
-both overlays together, not a palette-only or search-only fix, since the
-gap and its fix are identical in both.
+**Impact.** Four call sites to keep in sync by hand whenever overlay
+structure changes — a scroll-into-view fix, a focus trap, or a
+`role="dialog"` retrofit would need applying four times and would be
+applied inconsistently at least once. A screen reader user gets no
+indication of which row is disabled or highlighted in Search or the
+Command Palette, and no keyboard path into the Catalog Browser's result
+list whatsoever.
+
+**Lifted when.** (a) **This trigger has already fired and was missed.**
+The condition recorded here was "a third overlay is added", with the
+then-planned dark/light mode picker named as the likely third case.
+That picker never arrived in that form — cycle 13 replaced it with a
+toolbar theme `<select>`, which T27 folded into `SettingsPanel.tsx` —
+but `CatalogBrowser.tsx` became the third consumer independently, and
+`SettingsPanel.tsx` the fourth, so extracting a shared shell stopped
+being speculative abstraction some time ago. It is now overdue work
+with a concrete scope: one overlay shell owning the backdrop,
+click-outside, `Escape` and focus management, with list behaviour left
+to each caller. (b) Unchanged: a joint accessibility pass covering all
+list-bearing overlays together, not a palette-only or search-only fix,
+since the gap is the same shape in each and `CatalogBrowser.tsx`'s
+mouse-only list needs a keyboard path as part of it.
 
 ## 21. A UI-created group address without a range is still dropped on export — partially resolved
 

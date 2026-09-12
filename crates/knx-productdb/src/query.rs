@@ -391,7 +391,7 @@ fn translation_overlay(
 ) -> Result<HashMap<(String, String), String>, ProductDbError> {
     let mut stmt = conn.prepare(
         "SELECT ref_id, attribute_name, text FROM translation
-         WHERE program_id = ?1 AND language = ?2
+         WHERE scope = 'Program' AND scope_id = ?1 AND language = ?2
            AND attribute_name IN ('Text','FunctionText','SuffixText','VisibleDescription','Name')
            AND text IS NOT NULL",
     )?;
@@ -451,7 +451,7 @@ pub fn program_translation_languages(
 ) -> Result<Vec<TranslationLanguage>, ProductDbError> {
     let mut stmt = conn.prepare(
         "SELECT language, COUNT(*) FROM translation
-         WHERE program_id = ?1
+         WHERE scope = 'Program' AND scope_id = ?1
          GROUP BY language
          ORDER BY COUNT(*) DESC, language ASC",
     )?;

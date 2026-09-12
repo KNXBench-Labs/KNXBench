@@ -714,6 +714,7 @@ mod tests {
             &conn,
             "M-00FA_A-2504-10-C071",
             "M-00FA_A-2504-10-C071_MD-2_O-2-0_R-1",
+            None,
         )
         .unwrap();
         assert!(view.is_some());

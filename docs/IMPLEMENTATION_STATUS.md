@@ -2872,6 +2872,13 @@ teaching the string table anything. The project's own `Language` field is
 still the unread placeholder `"en"` both importers hand `Project::new`.
 Device creation and `enrich()` are untouched and still bake untranslated
 text into the project file — translation stays entirely display-only,
-never stored. What §64 already named — hardware- and master-scope
+never stored. Correction to this entry's own earlier framing: `com_object_view`
+overlays `FunctionText` on `ComObjectView` exactly like `Text` and
+`VisibleDescription`, but nothing reads `view.function_text` back out —
+`ComObjectNode` has no field for it, `enrich::apply()` never stores it,
+and `crates/knx-report`'s documentation exporter renders com-object names
+untranslated regardless of language, since `build_device_detail` takes no
+language parameter at all. `FunctionText` is unread at every surface,
+same as `SuffixText`. What §64 already named — hardware- and master-scope
 translations ingested but read by nothing, and the chrome half tracked as
 T25 — is unaffected by this slice and stays open.

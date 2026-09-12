@@ -1331,6 +1331,186 @@ fn a_scoped_value_wins_for_its_own_instantiation_and_the_other_sees_the_program_
     );
 }
 
+// ---------------------------------------------------------------------
+// Task 5: the fixture E2 says the repository has never had — a
+// module-scoped `ParameterRef` that both holds divergent per-channel
+// values *and* controls a `choose` in the same `ModuleDef`. `module_def_
+// gated_on_p()` above proves the value side (D36); this proves the other
+// half, with ids shaped like a real corpus program instead of the loose
+// `"M-A"`/`"M-B"`/`"P"` placeholders those unit tests use elsewhere.
+// ---------------------------------------------------------------------
+
+/// Two `Module` instantiations of one `ModuleDef`, id-shaped like KV's own
+/// switch actuator [V] (design doc `2026-09-12-module-scoped-editing-
+/// design.md` §E1's table): declared `ParameterRef`
+/// `M-00FA_A-2504-10-C071_MD-2_P-1_R-1`, program-side `Module/@Id`s
+/// `M-00FA_A-2504-10-C071_MD-2_M-4`/`_M-5` — two of the five real KV
+/// channels (`M-2`..`M-6`, E2), not the bare `M-<n>` shape an earlier
+/// fixture in this repository was corrected away from.
+fn kv_shaped_two_module_program() -> DynamicTree {
+    DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        DynamicNode {
+            element_id: Some("M-00FA_A-2504-10-C071_MD-2_M-4".into()),
+            ref_id: Some("M-00FA_A-2504-10-C071_MD-2".into()),
+            ..nd(1, Some(0), "Module")
+        },
+        DynamicNode {
+            element_id: Some("M-00FA_A-2504-10-C071_MD-2_M-5".into()),
+            ref_id: Some("M-00FA_A-2504-10-C071_MD-2".into()),
+            ..nd(2, Some(0), "Module")
+        },
+    ])
+}
+
+/// The `ModuleDef` tree E2 says never existed anywhere in this repository:
+/// its `choose` gates on `M-00FA_A-2504-10-C071_MD-2_P-1_R-1` — the exact
+/// declared ref [V] E2 measured holding five genuinely different stored
+/// values (`17`, `33`, `49`, `32`, `48`) across KV's real `M-2`..`M-6`
+/// instantiations — and the high branch also activates a `ComObjectRefRef`
+/// the low branch never reaches. [A]: everything below the gate (the
+/// `>10` threshold, `_P-2_R-1`/`_P-3_R-1`/`_O-1_R-1`, and the branch
+/// structure itself) is this fixture's own invention, not an observed
+/// program; KV's real `MD-2` declares no `choose` at all. This is a
+/// mirror of the id grammar plus the one combination E2 flags as
+/// untested, not a claim that any KNX package looks like this.
+fn module_def_gated_on_kv_shaped_scoped_ref() -> DynamicTree {
+    DynamicTree::from_nodes(vec![
+        DynamicNode {
+            control_kind: Some(ControlKind::Comparable),
+            ref_id: Some("M-00FA_A-2504-10-C071_MD-2_P-1_R-1".into()),
+            ..nd(0, None, "choose")
+        },
+        DynamicNode {
+            test: Some(">10".to_string()),
+            ..nd(1, Some(0), "when")
+        },
+        DynamicNode {
+            ref_id: Some("M-00FA_A-2504-10-C071_MD-2_P-2_R-1".into()),
+            ..nd(2, Some(1), "ParameterRefRef")
+        },
+        DynamicNode {
+            ref_id: Some("M-00FA_A-2504-10-C071_MD-2_O-1_R-1".into()),
+            ..nd(3, Some(1), "ComObjectRefRef")
+        },
+        DynamicNode {
+            is_default: true,
+            ..nd(4, Some(0), "when")
+        },
+        DynamicNode {
+            ref_id: Some("M-00FA_A-2504-10-C071_MD-2_P-3_R-1".into()),
+            ..nd(5, Some(4), "ParameterRefRef")
+        },
+    ])
+}
+
+/// Item 1 of the Task 5 brief: with the scoped values supplied, the two
+/// instantiations activate genuinely different sets, named by their exact
+/// `ref_id`s — not just different counts. `M-4` carries its own stored
+/// value (`20`, `>10`) and selects the high branch's parameter and com
+/// object; `M-5`, with no stored row of its own, falls back to the
+/// program default (`5`, not `>10`) and selects the low branch's
+/// parameter alone.
+#[test]
+fn two_kv_shaped_instantiations_with_divergent_scoped_values_activate_different_refs() {
+    let program = kv_shaped_two_module_program();
+    let module_def = module_def_gated_on_kv_shaped_scoped_ref();
+    let trees = ProgramTrees::from_parts(
+        program,
+        HashMap::from([("M-00FA_A-2504-10-C071_MD-2".to_string(), module_def)]),
+    );
+    let mut vm: ValueMap = values(&[("M-00FA_A-2504-10-C071_MD-2_P-1_R-1", "5")]).into();
+    vm.insert_scoped(
+        "M-00FA_A-2504-10-C071_MD-2_M-4".to_string(),
+        "M-00FA_A-2504-10-C071_MD-2_P-1_R-1".to_string(),
+        "20".to_string(),
+    );
+    let activation = evaluate(&trees, &vm);
+    assert!(
+        activation.diagnostics.is_empty(),
+        "{:?}",
+        activation.diagnostics
+    );
+
+    let params_for = |module_id: &str| -> Vec<&str> {
+        activation
+            .parameter_refs
+            .iter()
+            .filter(|r| r.scope.as_ref().and_then(|s| s.module_id.as_deref()) == Some(module_id))
+            .map(|r| r.ref_id.as_str())
+            .collect()
+    };
+    let coms_for = |module_id: &str| -> Vec<&str> {
+        activation
+            .com_object_refs
+            .iter()
+            .filter(|r| r.scope.as_ref().and_then(|s| s.module_id.as_deref()) == Some(module_id))
+            .map(|r| r.ref_id.as_str())
+            .collect()
+    };
+
+    assert_eq!(
+        params_for("M-00FA_A-2504-10-C071_MD-2_M-4"),
+        vec!["M-00FA_A-2504-10-C071_MD-2_P-2_R-1"],
+        "M-4's own scoped value (20, >10) selects the high branch"
+    );
+    assert_eq!(
+        params_for("M-00FA_A-2504-10-C071_MD-2_M-5"),
+        vec!["M-00FA_A-2504-10-C071_MD-2_P-3_R-1"],
+        "M-5, untouched, still sees the program default (5, not >10) and selects the low branch"
+    );
+    assert_eq!(
+        coms_for("M-00FA_A-2504-10-C071_MD-2_M-4"),
+        vec!["M-00FA_A-2504-10-C071_MD-2_O-1_R-1"],
+        "only the high branch's ComObjectRef activates, and only for M-4"
+    );
+    assert!(
+        coms_for("M-00FA_A-2504-10-C071_MD-2_M-5").is_empty(),
+        "the low branch activates no ComObjectRef"
+    );
+}
+
+/// Item 2 of the Task 5 brief: the explicit contrast, kept as the
+/// pre-T18-slice-4 behaviour. With no stored per-channel rows at all —
+/// not even one — both instantiations fall back to the identical unscoped
+/// program default and therefore agree on the same active set.
+#[test]
+fn without_any_scoped_rows_kv_shaped_instantiations_agree_on_the_program_default() {
+    let program = kv_shaped_two_module_program();
+    let module_def = module_def_gated_on_kv_shaped_scoped_ref();
+    let trees = ProgramTrees::from_parts(
+        program,
+        HashMap::from([("M-00FA_A-2504-10-C071_MD-2".to_string(), module_def)]),
+    );
+    let vm: ValueMap = values(&[("M-00FA_A-2504-10-C071_MD-2_P-1_R-1", "5")]).into();
+    let activation = evaluate(&trees, &vm);
+    assert!(
+        activation.diagnostics.is_empty(),
+        "{:?}",
+        activation.diagnostics
+    );
+
+    let params_for = |module_id: &str| -> Vec<&str> {
+        activation
+            .parameter_refs
+            .iter()
+            .filter(|r| r.scope.as_ref().and_then(|s| s.module_id.as_deref()) == Some(module_id))
+            .map(|r| r.ref_id.as_str())
+            .collect()
+    };
+    let m4 = params_for("M-00FA_A-2504-10-C071_MD-2_M-4");
+    let m5 = params_for("M-00FA_A-2504-10-C071_MD-2_M-5");
+    assert_eq!(m4, vec!["M-00FA_A-2504-10-C071_MD-2_P-3_R-1"]);
+    assert_eq!(
+        m5, m4,
+        "no scoped rows anywhere: both instantiations see the identical program default"
+    );
+    assert!(
+        activation.com_object_refs.is_empty(),
+        "the default branch activates no ComObjectRef, for either instantiation"
+    );
+}
+
 /// D36: a scoped value never leaks into a top-level (`scope: None`) read
 /// of the same declared ref id.
 #[test]
@@ -2005,6 +2185,17 @@ fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_coun
             .iter()
             .filter(|sd| matches!(sd.diagnostic, Diagnostic::NestedModuleNotExpanded { .. }))
             .count();
+        // Task 1's review nominated this loop for the check E2 already
+        // states as fact: `Module/@Id` is present on 102/102 corpus
+        // elements. A `ModuleWithoutId` here would mean this build can no
+        // longer match a stored per-channel value to its channel on a
+        // program the corpus actually ships — worth failing loudly on,
+        // not just leaving to go unnoticed by the two counts above.
+        let module_without_id = full
+            .diagnostics
+            .iter()
+            .filter(|sd| matches!(sd.diagnostic, Diagnostic::ModuleWithoutId { .. }))
+            .count();
 
         let mut scope_nodes: std::collections::HashSet<i64> = std::collections::HashSet::new();
         for r in full
@@ -2026,7 +2217,8 @@ fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_coun
         eprintln!(
             "corpus {name} program {program_id}: single_total={single_total} \
              full_total={full_total} module_def_not_found={module_def_not_found} \
-             nested_not_expanded={nested_not_expanded} distinct_scopes={distinct_scopes}"
+             nested_not_expanded={nested_not_expanded} module_without_id={module_without_id} \
+             distinct_scopes={distinct_scopes}"
         );
 
         assert_eq!(
@@ -2036,6 +2228,12 @@ fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_coun
         assert_eq!(
             nested_not_expanded, 0,
             "{program_id}: AC#6 — §4.4 Q6's zero-nesting finding, enforced as a regression"
+        );
+        assert_eq!(
+            module_without_id, 0,
+            "{program_id}: E2 — Module/@Id present on 102/102 corpus elements; \
+             a regression here would silently strand this program's stored \
+             per-channel values"
         );
         assert!(
             full_total > single_total,

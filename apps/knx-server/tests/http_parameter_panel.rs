@@ -147,6 +147,55 @@ const KV_SHAPE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 </ModuleDef></ModuleDefs>
 </ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 
+/// Task 5's fixture: the shape design doc `2026-09-12-module-scoped-
+/// editing-design.md` §E2 says no repository fixture has ever combined --
+/// a module-scoped `ParameterRef` (`_MD-2_P-1_R-1`, same id grammar as
+/// `KV_SHAPE_PROGRAM` [V] above) that both holds divergent per-channel
+/// stored values *and* itself controls a `choose` in the same `ModuleDef`.
+/// The `choose` gates which of two further module-scoped fields
+/// (`_P-2_R-1`/`_P-3_R-1`) is even present in a section at all -- not just
+/// what value an already-present field shows. Two `Module` instantiations,
+/// `_M-4`/`_M-5` — two of the KV shape's own real `M-2`..`M-6` (E2) --
+/// rather than a bare `M-<n>`, the shape a previous fixture in this file
+/// was corrected away from (S6, fix round 2, above `kv_shape_reconstructs
+/// _the_five_real_stored_write_ets_ids_exactly`). [A]: the `>10` threshold
+/// and the two gated parameters below the gate are this fixture's own
+/// invention -- KV's real `MD-2` declares no `choose` at all; only the id
+/// grammar is a corpus mirror, not the branch structure.
+const CHOOSE_GATED_MODULE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static><ParameterRefs/></Static>
+<Dynamic>
+  <Module Id="M-00FA_A-2504-10-C071_MD-2_M-4" RefId="M-00FA_A-2504-10-C071_MD-2" />
+  <Module Id="M-00FA_A-2504-10-C071_MD-2_M-5" RefId="M-00FA_A-2504-10-C071_MD-2" />
+</Dynamic>
+<ModuleDefs><ModuleDef Id="M-00FA_A-2504-10-C071_MD-2" Name="module">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="M-00FA_A-2504-10-C071_MD-2_PT-1" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="M-00FA_A-2504-10-C071_MD-2_P-1" Name="Channel" Text="Channel" ParameterType="M-00FA_A-2504-10-C071_MD-2_PT-1" Access="ReadWrite" Value="5" />
+  <Parameter Id="M-00FA_A-2504-10-C071_MD-2_P-2" Name="High" Text="High" ParameterType="M-00FA_A-2504-10-C071_MD-2_PT-1" Access="ReadWrite" Value="0" />
+  <Parameter Id="M-00FA_A-2504-10-C071_MD-2_P-3" Name="Low" Text="Low" ParameterType="M-00FA_A-2504-10-C071_MD-2_PT-1" Access="ReadWrite" Value="0" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="M-00FA_A-2504-10-C071_MD-2_P-1_R-1" RefId="M-00FA_A-2504-10-C071_MD-2_P-1" DisplayOrder="1" Tag="1" />
+  <ParameterRef Id="M-00FA_A-2504-10-C071_MD-2_P-2_R-1" RefId="M-00FA_A-2504-10-C071_MD-2_P-2" DisplayOrder="2" Tag="1" />
+  <ParameterRef Id="M-00FA_A-2504-10-C071_MD-2_P-3_R-1" RefId="M-00FA_A-2504-10-C071_MD-2_P-3" DisplayOrder="3" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterRefRef RefId="M-00FA_A-2504-10-C071_MD-2_P-1_R-1" />
+  <choose ParamRefId="M-00FA_A-2504-10-C071_MD-2_P-1_R-1">
+    <when test="&gt;10"><ParameterRefRef RefId="M-00FA_A-2504-10-C071_MD-2_P-2_R-1" /></when>
+    <when default="true"><ParameterRefRef RefId="M-00FA_A-2504-10-C071_MD-2_P-3_R-1" /></when>
+  </choose>
+</Dynamic>
+</ModuleDef></ModuleDefs>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
 /// Two top-level Number parameters whose `Static/ParameterRefs`
 /// `DisplayOrder` disagrees with the order `Dynamic/ParameterRefRef`
 /// activates them in: `P-1_R-1` declares `DisplayOrder="20"` but is
@@ -1358,4 +1407,109 @@ async fn a_duplicate_unscoped_stored_row_is_diagnosed_and_kept_stale() {
     let f = field(&dto, "P-1_R-1").expect("P-1_R-1 present");
     assert_eq!(f["value"], "4");
     assert_eq!(f["valueSource"], "Stored");
+}
+
+// ---------------------------------------------------------------------
+// Task 5: the sharp claim E2 flags and no existing test here settles --
+// that the server actually runs D42's second, scoped `evaluate` call,
+// rather than reusing the first (unscoped) one for everything but a
+// field's raw value/valueSource. Every field-presence assertion above
+// this point is satisfied identically whether or not that second call
+// runs, because none of `WRITE_PROGRAM`/`TWO_INSTANTIATION_PROGRAM`/
+// `KV_SHAPE_PROGRAM` has a `choose` whose outcome a module-scoped stored
+// value can flip -- only `CHOOSE_GATED_MODULE_PROGRAM` does.
+// ---------------------------------------------------------------------
+
+fn field_ids_for_module(dto: &Value, module_id: &str) -> Vec<String> {
+    dto["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["scope"]["moduleId"] == module_id)
+        .unwrap_or_else(|| panic!("no section for module '{module_id}'"))["fields"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["etsId"].as_str().unwrap().to_string())
+        .collect()
+}
+
+// Item 1: with the scoped values supplied, the two instantiations produce
+// different active *sets* -- not merely different values for the same
+// field, but a different field present at all (`_P-2_R-1` vs `_P-3_R-1`),
+// named by their exact `ref_id`s.
+#[tokio::test]
+async fn a_module_scoped_choose_shows_different_field_sets_when_stored_values_diverge() {
+    let (_dir, products) = temp_product_db(CHOOSE_GATED_MODULE_PROGRAM);
+    let state = Arc::new(state_with_device(
+        products,
+        vec![(
+            "M-00FA_A-2504-10-C071_MD-2_M-4_MI-1_P-1_R-1",
+            "20", // >10: M-4 selects the "High" branch
+        )],
+        // M-5 has no stored row at all, so it falls back to the program
+        // default (5, not >10) and selects the "Low" branch instead.
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        dto["stale"].as_array().unwrap().is_empty(),
+        "{:?}",
+        dto["stale"]
+    );
+
+    let m4 = field_ids_for_module(&dto, "M-00FA_A-2504-10-C071_MD-2_M-4");
+    let m5 = field_ids_for_module(&dto, "M-00FA_A-2504-10-C071_MD-2_M-5");
+    assert_eq!(
+        m4,
+        vec![
+            "M-00FA_A-2504-10-C071_MD-2_P-1_R-1",
+            "M-00FA_A-2504-10-C071_MD-2_P-2_R-1",
+        ],
+        "M-4's own stored value (20, >10) selects the High branch"
+    );
+    assert_eq!(
+        m5,
+        vec![
+            "M-00FA_A-2504-10-C071_MD-2_P-1_R-1",
+            "M-00FA_A-2504-10-C071_MD-2_P-3_R-1",
+        ],
+        "M-5, with no stored row of its own, sees the program default (5, not >10) \
+         and selects the Low branch"
+    );
+    assert_ne!(
+        m4, m5,
+        "the two sections' active field sets genuinely differ"
+    );
+}
+
+// Item 2: the explicit contrast -- with no stored rows anywhere, both
+// instantiations fall back to the identical program default and agree on
+// the same active set. This is the pre-T18-slice-4 behaviour, kept so the
+// diverging case above is read against a baseline, not in isolation.
+#[tokio::test]
+async fn a_module_scoped_choose_shows_the_same_field_set_without_any_stored_values() {
+    let (_dir, products) = temp_product_db(CHOOSE_GATED_MODULE_PROGRAM);
+    let state = Arc::new(state_with_device(products, vec![]));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let m4 = field_ids_for_module(&dto, "M-00FA_A-2504-10-C071_MD-2_M-4");
+    let m5 = field_ids_for_module(&dto, "M-00FA_A-2504-10-C071_MD-2_M-5");
+    let expected = vec![
+        "M-00FA_A-2504-10-C071_MD-2_P-1_R-1".to_string(),
+        "M-00FA_A-2504-10-C071_MD-2_P-3_R-1".to_string(),
+    ];
+    assert_eq!(
+        m4, expected,
+        "the program default (5) is not >10: Low branch"
+    );
+    assert_eq!(
+        m5, m4,
+        "no stored rows anywhere: both instantiations see the identical program default"
+    );
 }

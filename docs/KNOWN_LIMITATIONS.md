@@ -1308,7 +1308,13 @@ Of those three, only `Text` and `VisibleDescription` go anywhere:
 and `view.visible_description` and overwrites
 `ComObjectNode::name`/`description`, but **only** where the stored
 `Override<Text>`'s layer is `Layer::Program` or `Layer::ProgramRef` —
-values the product database itself supplied. `view.function_text` is
+values the product database itself supplied. **Narrowed further on
+2026-09-12 (T34, finding M6):** that layer condition is necessary but no
+longer sufficient. The overwrite also requires `view.text_translated` /
+`view.visible_description_translated`, so an overlay *miss* — a requested
+language with no `translation` row for that attribute — now leaves the
+project's own resolved text standing instead of replacing it with the
+product database's untranslated column. `view.function_text` is
 computed and then discarded at that call site: `ComObjectNode`
 (`crates/knx-projection/src/lib.rs`) has no field to hold it, `enrich()`'s
 `apply()` (`crates/knx-productdb/src/enrich.rs`) never stores it into a

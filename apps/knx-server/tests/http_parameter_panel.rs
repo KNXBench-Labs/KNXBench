@@ -856,12 +856,18 @@ async fn kv_shape_reconstructs_the_five_real_stored_write_ets_ids_exactly() {
             ("M-00FA_A-2504-10-C071_MD-2_M-5_MI-1_P-1_R-1", "33"),
             ("M-00FA_A-2504-10-C071_MD-2_M-6_MI-1_P-1_R-1", "49"),
         ],
+        // S6 (fix round 2): the real KV v2.5 demo's `ModuleInstance`
+        // `RefId`s are `MD-2_M-<n>` (read from `P-03DE/0.xml`), not the
+        // bare `M-<n>` this fixture declared before -- a bare `M-<n>` is
+        // the shortest possible anchored suffix, so it was exercising
+        // the loosest version of the `_`-anchoring rule rather than the
+        // corpus's own shape.
         vec![
-            ("M-2", "M-2_MI-1"),
-            ("M-3", "M-3_MI-1"),
-            ("M-4", "M-4_MI-1"),
-            ("M-5", "M-5_MI-1"),
-            ("M-6", "M-6_MI-1"),
+            ("MD-2_M-2", "MD-2_M-2_MI-1"),
+            ("MD-2_M-3", "MD-2_M-3_MI-1"),
+            ("MD-2_M-4", "MD-2_M-4_MI-1"),
+            ("MD-2_M-5", "MD-2_M-5_MI-1"),
+            ("MD-2_M-6", "MD-2_M-6_MI-1"),
         ],
     ));
     let app = knx_server::app(Arc::clone(&state), None);
@@ -1075,4 +1081,281 @@ async fn the_bare_declared_id_is_rejected_even_when_the_section_is_editable() {
     let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
     assert_eq!(f["valueSource"], "ProgramDefault");
     assert_eq!(f["editable"], true);
+}
+
+/// S4 (fix round 2): a malformed program declaring the same
+/// `Module/@Id` twice -- ETS's own id grammar makes `@Id` unique per
+/// instantiation so the corpus never shows this, but nothing before this
+/// fix round refused it. Same shape as `TWO_INSTANTIATION_PROGRAM`,
+/// except both `Module` elements share one `@Id` (`MOD-1_M-1`) instead
+/// of getting distinct ones.
+const REPEATED_MODULE_ID_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-Top" Name="Top" Text="Top" ParameterType="PT-Num" Access="ReadWrite" Value="1" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="P-Top_R-1" RefId="P-Top" DisplayOrder="1" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterRefRef RefId="P-Top_R-1" />
+  <Module Id="MOD-1_M-1" RefId="MD-1" />
+  <Module Id="MOD-1_M-1" RefId="MD-1" />
+</Dynamic>
+<ModuleDefs><ModuleDef Id="MD-1" Name="module">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="MOD-1_PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="MOD-1_P-1" Name="Channel" Text="Channel" ParameterType="MOD-1_PT-Num" Access="ReadWrite" Value="0" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="MOD-1_P-1_R-1" RefId="MOD-1_P-1" DisplayOrder="1" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterRefRef RefId="MOD-1_P-1_R-1" />
+</Dynamic>
+</ModuleDef></ModuleDefs>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+// S1 (fix round 2) -- reviewer's P1: a lone authority whose digit isn't
+// `1` reconstructs that digit, not a hardcoded `MI-1` guess. Kills the
+// mutation that hardcodes `MI-1` in the reconstruction (M2).
+#[tokio::test]
+async fn a_lone_authority_whose_digit_is_not_one_reconstructs_that_digit() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![("MOD-1_M-1_MI-2_P-1_R-1", "9")],
+        vec![("M-1", "M-1_MI-2")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["editable"], true);
+    assert_eq!(f["writeEtsId"], "MOD-1_M-1_MI-2_P-1_R-1");
+    assert_eq!(f["value"], "9");
+    assert_eq!(f["valueSource"], "Stored");
+}
+
+// S1 (fix round 2) -- reviewer's P2: an empty `instance_ets_id` (a
+// pre-schema-6 project) is `Malformed`, never promoted to `Found("1")`.
+// The only way to reach `MiAuthority::Malformed` at all in the committed
+// suite (also closes I6). Kills the mutation that promotes an empty
+// `instance_ets_id` to `Found("1")` (M8).
+#[tokio::test]
+async fn an_empty_instance_ets_id_is_malformed_not_promoted_to_mi_1() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("M-1", "")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["editable"], false);
+    assert!(f["writeEtsId"].is_null());
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "An imported module instance's identifier has an unexpected shape; this module's fields are read-only."
+        && d["detail"].as_str().unwrap().contains("has Id ''")));
+}
+
+// S2 (fix round 2): `resolve_mi_authority`'s doc comment claims the
+// leading underscore is what keeps a short suffix from matching --
+// prove it. `"MOD-1_M-1"` both contains and (unanchored) ends with
+// `"OD-1_M-1"`; only the anchored `ends_with("_OD-1_M-1")` is false, so
+// this instance must not earn authority. Kills the `contains` mutation
+// (M4) and the ends_with-without-underscore mutation (M6).
+#[tokio::test]
+async fn an_unanchored_suffix_match_does_not_earn_module_authority() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("OD-1_M-1", "OD-1_M-1_MI-1")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["editable"], false);
+    assert!(f["writeEtsId"].is_null());
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "No imported module instance matches this module; its fields are read-only."));
+}
+
+// S3 (fix round 2): a wrong-`MI-` digit or a foreign module's id is
+// module-qualified and genuinely well-formed -- the parameter *is*
+// declared, only its instance is wrong -- so the rejection message must
+// not claim it "is not a parameter declared by this program". Reuses
+// `decompose_module_qualified`, never a second id-shape parser (this
+// task's own rule).
+#[tokio::test]
+async fn a_wrong_mi_digit_or_foreign_module_write_is_rejected_honestly() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("M-1", "M-1_MI-1")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = post_panel(app.clone(), 1, "MOD-1_M-1_MI-9_P-1_R-1", "3").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let msg = dto["error"].as_str().unwrap().to_string();
+    assert!(!msg.contains("is not a parameter declared by this program"));
+    assert!(msg.contains("no editable field's write target matches it"));
+
+    let (status, dto) = post_panel(app, 1, "MOD-1_M-2_MI-1_P-1_R-1", "3").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let msg = dto["error"].as_str().unwrap().to_string();
+    assert!(!msg.contains("is not a parameter declared by this program"));
+    assert!(msg.contains("no editable field's write target matches it"));
+}
+
+// S4 (fix round 2) -- reviewer's P9: two sections sharing one
+// program-side `module_id` must not silently reconstruct the same
+// `write_ets_id`. Even with a genuine authoritative `ModuleInstance`
+// present, the repeat itself is refused (mirrors the `Ambiguous`
+// project-side refusal, D40) rather than letting both sections collapse
+// onto one write target.
+#[tokio::test]
+async fn a_program_repeating_one_module_id_refuses_to_guess_which_section_is_authoritative() {
+    let (_dir, products) = temp_product_db(REPEATED_MODULE_ID_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("M-1", "M-1_MI-1")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let module_sections: Vec<&Value> = dto["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|s| !s["scope"].is_null())
+        .collect();
+    assert_eq!(module_sections.len(), 2);
+    for s in &module_sections {
+        assert_eq!(s["fields"][0]["editable"], false);
+        assert!(s["fields"][0]["writeEtsId"].is_null());
+    }
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(
+        diagnostics
+            .iter()
+            .filter(|d| d["message"]
+                == "Two or more sections in this program declare the same module id; its fields are read-only.")
+            .count()
+            >= 2
+    );
+}
+
+// S5 (fix round 2) -- reviewer's P4: D41's collision path is reachable
+// without any imported `ModuleInstance` at all -- two stored rows for
+// the same module and declared parameter, differing only in their `MI-`
+// digit, on a device with no authority to prefer one over the other.
+// Kills the mutation that lets the row silently overwrite instead of
+// diagnosing and staling the loser (M10).
+#[tokio::test]
+async fn two_stored_rows_differing_only_in_mi_digit_collide_without_any_authority() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device(
+        products,
+        vec![
+            ("MOD-1_M-1_MI-1_P-1_R-1", "1"),
+            ("MOD-1_M-1_MI-2_P-1_R-1", "2"),
+        ],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let stale_ids: Vec<&str> = dto["stale"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["etsId"].as_str().unwrap())
+        .collect();
+    assert_eq!(stale_ids, vec!["MOD-1_M-1_MI-2_P-1_R-1"]);
+    assert_eq!(dto["stale"][0]["raw"], "2");
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "Two stored values target the same module-scoped parameter; the later one is ignored."
+        && d["detail"]
+            .as_str()
+            .unwrap()
+            .contains("MOD-1_M-1_MI-1_P-1_R-1")
+        && d["detail"]
+            .as_str()
+            .unwrap()
+            .contains("MOD-1_M-1_MI-2_P-1_R-1")));
+    // I2 (fix round 2): the collision diagnostic now carries the
+    // module's own scope, not `None`.
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "Two stored values target the same module-scoped parameter; the later one is ignored."
+        && d["scope"]["moduleId"] == "MOD-1_M-1"));
+
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["value"], "1");
+    assert_eq!(f["valueSource"], "Stored");
+    assert_eq!(f["editable"], false);
+}
+
+// I1 (fix round 2): a second stored row for the same unscoped id is now
+// diagnosed and kept in `stale`, not silently dropped the way the
+// committed round left it.
+#[tokio::test]
+async fn a_duplicate_unscoped_stored_row_is_diagnosed_and_kept_stale() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device(
+        products,
+        vec![("P-1_R-1", "4"), ("P-1_R-1", "5")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let stale_ids: Vec<&str> = dto["stale"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["etsId"].as_str().unwrap())
+        .collect();
+    assert_eq!(stale_ids, vec!["P-1_R-1"]);
+    assert_eq!(dto["stale"][0]["raw"], "5");
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "Two stored values target the same parameter; the later one is ignored."
+        && d["detail"].as_str().unwrap().contains("keeping '4'")));
+
+    let f = field(&dto, "P-1_R-1").expect("P-1_R-1 present");
+    assert_eq!(f["value"], "4");
+    assert_eq!(f["valueSource"], "Stored");
 }

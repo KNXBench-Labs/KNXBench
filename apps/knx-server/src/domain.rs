@@ -2112,7 +2112,25 @@ fn assemble_parameter_panel(
     let mut stale: Vec<crate::routes::StaleParameterDto> = Vec::new();
     for (ets_id, raw) in stored {
         if ref_ids.contains(&ets_id) {
-            supplied.insert(ets_id, raw);
+            // I1 (fix round 2): a second stored row for the same
+            // unscoped id must not vanish the way the first committed
+            // round let it -- named in a diagnostic and kept in `stale`,
+            // the same loud treatment Pass B already gives a module-
+            // scoped collision (D41) below.
+            if let Some(previous_raw) = supplied.get(&ets_id) {
+                diagnostics.push(crate::routes::ParameterDiagnosticDto {
+                    scope: None,
+                    message:
+                        "Two stored values target the same parameter; the later one is ignored."
+                            .to_string(),
+                    detail: format!(
+                        "'{ets_id}' has more than one stored row for this device; keeping '{previous_raw}'."
+                    ),
+                });
+                stale.push(crate::routes::StaleParameterDto { ets_id, raw });
+            } else {
+                supplied.insert(ets_id, raw);
+            }
         } else if let Some((prefix, module_digits, mi_digits, suffix)) =
             decompose_module_qualified(&ets_id)
         {
@@ -2168,8 +2186,21 @@ fn assemble_parameter_panel(
         }
         let key = (module_id, declared_id);
         if let Some(winner_ets_id) = validated_scoped_ets_id.get(&key) {
+            // I2 (fix round 2): every other section-scoped diagnostic
+            // carries a real `scope` the UI can filter by; this one used
+            // to say `None` despite naming one specific module. The
+            // provisional activation already resolved this exact
+            // `module_id` (that is what `module_ids.contains` above just
+            // checked), so its own `ModuleScope` is looked up rather
+            // than reinvented.
+            let scope_dto = provisional_activation.parameter_refs.iter().find_map(|r| {
+                r.scope
+                    .as_ref()
+                    .filter(|s| s.module_id.as_deref() == Some(key.0.as_str()))
+                    .map(module_scope_dto)
+            });
             diagnostics.push(crate::routes::ParameterDiagnosticDto {
-                scope: None,
+                scope: scope_dto,
                 message:
                     "Two stored values target the same module-scoped parameter; the later one is ignored."
                         .to_string(),
@@ -2224,6 +2255,23 @@ fn assemble_parameter_panel(
             .push(active.ref_id.clone());
     }
 
+    // S4 (fix round 2): a program that declares two `Module` elements
+    // with the same `@Id` is malformed -- ETS's own id grammar makes
+    // `@Id` unique per instantiation, so the corpus never shows this --
+    // but nothing before this slice refused it, and two sections sharing
+    // one `module_id` would silently reconstruct the identical
+    // `write_ets_id`, collapsing two channels into one write target. Same
+    // species of ambiguity D40 already refuses on the project side;
+    // counted once here, before any section decides its own authority.
+    let module_id_counts: HashMap<String, usize> = section_order
+        .iter()
+        .filter_map(|key| sections_by_key.get(key))
+        .filter_map(|s| s.scope.as_ref().and_then(|sc| sc.module_id.clone()))
+        .fold(HashMap::new(), |mut acc, module_id| {
+            *acc.entry(module_id).or_insert(0) += 1;
+            acc
+        });
+
     let mut sections = Vec::with_capacity(section_order.len());
     for key in section_order {
         let section = sections_by_key.remove(&key).expect("just inserted above");
@@ -2239,6 +2287,24 @@ fn assemble_parameter_panel(
             None => None,
             Some(scope) => match &scope.module_id {
                 None => None,
+                Some(module_id)
+                    if module_id_counts
+                        .get(module_id.as_str())
+                        .copied()
+                        .unwrap_or(0)
+                        > 1 =>
+                {
+                    diagnostics.push(crate::routes::ParameterDiagnosticDto {
+                        scope: section.scope.as_ref().map(module_scope_dto),
+                        message:
+                            "Two or more sections in this program declare the same module id; its fields are read-only."
+                                .to_string(),
+                        detail: format!(
+                            "Module id '{module_id}' is declared by more than one Module element in this program (a malformed program); refusing to guess which section is authoritative."
+                        ),
+                    });
+                    None
+                }
                 Some(module_id) => match resolve_mi_authority(&module_instances, module_id) {
                     MiAuthority::Found(digits) => Some(digits),
                     MiAuthority::NoMatch => {
@@ -2287,7 +2353,6 @@ fn assemble_parameter_panel(
                 },
             },
         };
-        let section_earned_authority = section.scope.is_none() || mi_digits.is_some();
         let mut fields = Vec::with_capacity(section.ref_ids.len());
         for ref_id in &section.ref_ids {
             // A ref the join dropped (see the diagnostic above) has no
@@ -2315,20 +2380,21 @@ fn assemble_parameter_panel(
             // D39/D43: the write target this field's own suffix
             // reconstructs to, if any — a per-field outcome, since one
             // field's suffix failing to strip the module prefix must not
-            // silently take its section-siblings down with it.
-            let write_ets_id = if !section_earned_authority {
-                None
-            } else {
-                match &section.scope {
-                    None => Some(view.id.clone()),
-                    Some(scope) => scope.module_id.as_ref().and_then(|module_id| {
-                        module_scoped_write_id(
-                            module_id,
-                            mi_digits.as_deref().unwrap_or(""),
-                            &view.id,
-                        )
-                    }),
-                }
+            // silently take its section-siblings down with it. S8 (fix
+            // round 2): matched on `(scope, mi_digits)` together rather
+            // than gating on a separately-computed `section_earned_
+            // authority` bool and falling back to an empty-string
+            // sentinel for "no authority" -- a missing `MI-` authority
+            // now has no string standing in for it anywhere, not even an
+            // unreachable one; the `(Some(_), None)` arm returns `None`
+            // directly.
+            let write_ets_id = match (&section.scope, mi_digits.as_deref()) {
+                (None, _) => Some(view.id.clone()),
+                (Some(_), None) => None,
+                (Some(scope), Some(digits)) => scope
+                    .module_id
+                    .as_ref()
+                    .and_then(|module_id| module_scoped_write_id(module_id, digits, &view.id)),
             };
             let editable = write_ets_id.is_some();
             fields.push(crate::routes::ParameterFieldDto {
@@ -2480,10 +2546,17 @@ pub(crate) fn set_parameter_value_impl(
     // entirely, rather than re-deriving an id shape independently here.
     let mut matched: Option<&crate::routes::ParameterFieldDto> = None;
     let mut bare_match_write_id: Option<Option<String>> = None;
-    for section in &before.dto.sections {
+    'search: for section in &before.dto.sections {
         for field in &section.fields {
             if field.write_ets_id.as_deref() == Some(ets_id.as_str()) {
                 matched = Some(field);
+                // I5 (fix round 2): S4 now refuses editability everywhere
+                // two sections could otherwise reconstruct the same
+                // `write_ets_id`, so at most one field in the whole panel
+                // can ever satisfy this. Stop as soon as it is found
+                // instead of reading like a last-wins scan over a
+                // uniqueness that was only ever assumed, not enforced.
+                break 'search;
             }
             if field.ets_id == ets_id {
                 bare_match_write_id = Some(field.write_ets_id.clone());
@@ -2503,6 +2576,20 @@ pub(crate) fn set_parameter_value_impl(
                 }
             } else if before.ref_ids.contains(&ets_id) {
                 "is declared by this program but not currently active".to_string()
+            } else if decompose_module_qualified(&ets_id).is_some() {
+                // S3 (fix round 2): a module-qualified id whose `MI-`
+                // digit or module component doesn't match any panel
+                // field used to fall through to "is not a parameter
+                // declared by this program" -- false whenever the
+                // parameter genuinely is declared and only the instance
+                // is wrong (a stale frontend, a foreign module, a wrong
+                // `MI-` digit). Reusing the existing decomposer (never a
+                // second id-shape parser, per this task's own rule) tells
+                // the truth instead: the shape is a module-qualified id,
+                // it is simply not one any editable field targets right
+                // now.
+                "is a module-qualified id, but no editable field's write target matches it"
+                    .to_string()
             } else {
                 "is not a parameter declared by this program".to_string()
             };

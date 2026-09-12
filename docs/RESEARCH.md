@@ -1655,7 +1655,7 @@ The sequence per candidate address `IA_test`, all **[D]** to the same
 clause unless noted: (1) `T_Connect.req` (via `A_Connect`) addressed to
 `IA_test`; (2) if a connection is accepted, `A_DeviceDescriptor_Read.req`
 with `descriptor_type = 0` sent as `T_Data_Connected`
-(`03_03_07 Application Layer v02.01.01 AS.md` §3.4.2.1); (3) `A_Disconnect`
+(`03_03_07 Application Layer v02.01.01 AS.md` §2.2, Table 1); (3) `A_Disconnect`
 to close the connection, best-effort, no confirmation required
 (`03_03_04 Transport Layer v01.02.03 AS.md` §3.8). Presence is decided at
 step (1)/(2), not by anything the application layer says — see below.
@@ -1741,8 +1741,8 @@ error:
 * **[A]**, built from **[D]** inputs (TP1 9600 bit/s per
   `03_02_02 Communication Medium TP1 v01.03.03 AS.md:151`; minimum
   `L_Data_Standard` frame 8 octets; 13-bit-time character slots; 50-bit-time
-  idle; 15-bit-time-plus-30µs acknowledge timeout; System 7/System B
-  Profile's optional `nak_retry = busy_retry = 3` per
+  idle; 15-bit-time-plus-30µs acknowledge timeout; All TP1 Profiles'
+  optional `nak_retry = busy_retry = 3` per
   `06 Profiles v02.01.01.md:775`; all same clauses as §8.4's style of
   citation): one minimal message cycle is roughly 17.6 ms; an absent
   address costs roughly 70 ms (retries exhausted, no ACK ever); an
@@ -1791,8 +1791,8 @@ error:
   Too short, and a slow-but-present device is reported absent; too long,
   and the scan is unusable on any real line, which is mostly vacant
   addresses, not mostly occupied ones. The Standard does not hand over a
-  number to copy here: the closest it comes is the System 7/System B
-  Profile's `nak_retry`/`busy_retry`, documented **[D]** as only
+  number to copy here: the closest it comes is All TP1 Profiles'
+  `nak_retry`/`busy_retry`, documented **[D]** as only
   *optionally* 3 (`06 Profiles v02.01.01.md:775`, already cited above) —
   a bus-level retry count, not a client connection timeout, and optional
   even as that. This is a genuine design decision for T17's

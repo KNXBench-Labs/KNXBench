@@ -858,6 +858,7 @@ mod tests {
             device: device_module,
             source: source("MD-1"),
             repeat_index: "1x1".into(),
+            instance_ets_id: "MD-1_MI-1".into(),
             arguments: vec![],
         });
         let mut com2 = com_object(2, device_module, 1);

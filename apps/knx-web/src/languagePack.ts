@@ -385,6 +385,17 @@ export function getLanguagePack(tag: string): LanguagePack | undefined {
   return getCache()[tag];
 }
 
+/** Unwraps the message from whatever `window.localStorage.setItem` threw
+ * — realistically a `DOMException` (`QuotaExceededError` when a pack
+ * carries enough unread bulk to blow the quota, this being the only
+ * store in the app that accepts arbitrary user-supplied JSON of
+ * unbounded size), but caught as `unknown` because nothing guarantees
+ * that shape. Same fallback `api.ts`'s `errorMessage` uses. */
+function describeStorageFailure(error: unknown): string {
+  const detail = error instanceof Error ? error.message : String(error);
+  return `Could not save the change: the browser's storage rejected the write (${detail}).`;
+}
+
 /**
  * Validates and installs a pack, keyed by its own `tag` (re-importing the
  * same tag replaces the previous install). Validation failure rejects the
@@ -392,14 +403,31 @@ export function getLanguagePack(tag: string): LanguagePack | undefined {
  * unconditionally — unknown/missing keys are reported, not vetoed, per
  * the brief's "a pack that translates 12 of 150 keys is a legitimate
  * pack" rule.
+ *
+ * The cache write and the `persist()` call are treated as one
+ * transaction: if `persist()` throws — `localStorage.setItem` has no
+ * guaranteed success, `QuotaExceededError` being the realistic case here
+ * — the in-memory mutation is rolled back (restoring whatever pack used
+ * to live under this tag, if any) before the rejection is returned, so a
+ * failed import can never be smuggled into storage by a *later*
+ * successful one calling `persist()` on the same cache object. Rolled
+ * back means unchanged, so subscribers are not notified.
  */
 export function importLanguagePack(raw: unknown): LanguagePackImportResult {
   const parsed = parseLanguagePack(raw);
   if (!parsed.ok) return parsed;
 
   const packs = getCache();
-  packs[parsed.pack.tag] = parsed.pack;
-  persist();
+  const tag = parsed.pack.tag;
+  const previous = packs[tag];
+  packs[tag] = parsed.pack;
+  try {
+    persist();
+  } catch (error) {
+    if (previous === undefined) delete packs[tag];
+    else packs[tag] = previous;
+    return fail(describeStorageFailure(error));
+  }
   notifyPackSubscribers();
 
   return { ok: true, report: computeImportReport(parsed.pack) };
@@ -413,12 +441,27 @@ export function importLanguagePack(raw: unknown): LanguagePackImportResult {
  * noticing that the pack behind its active tag is gone; `i18n.ts`'s
  * `translateFor` already falls back to English the moment
  * `getLanguagePack` returns `undefined`, but only a render triggers that
- * lookup, and nothing forces one without `notifyPackSubscribers()` below. */
+ * lookup, and nothing forces one without `notifyPackSubscribers()` below.
+ *
+ * Same transaction shape as `importLanguagePack`: if `persist()` throws,
+ * the deletion is rolled back — the pack it was about to remove is put
+ * back — instead of leaving it deleted in the cache for a later,
+ * unrelated `persist()` call to finish removing on this call's behalf.
+ * There is no `LanguagePackImportResult` to reject through here (this
+ * isn't an import), so a failed removal is simply undone; the caller
+ * sees the pack still present, which is the removal not having
+ * happened. */
 export function removeLanguagePack(tag: string): void {
   const packs = getCache();
   if (!(tag in packs)) return;
+  const previous = packs[tag];
   delete packs[tag];
-  persist();
+  try {
+    persist();
+  } catch {
+    packs[tag] = previous;
+    return;
+  }
   notifyPackSubscribers();
 }
 

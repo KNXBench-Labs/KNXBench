@@ -583,11 +583,18 @@ Each task: **what**, **why**, **depends on**.
   device's product/hardware identity without opening the full Inspector.
   Minor, bundle with T2 rather than schedule separately.
 - **T17. Line-scan (bus-side device discovery).** A genuinely new
-  `knx-net` capability — broadcasting/probing individual addresses on a
-  connected line to enumerate real devices present, distinct from
-  gateway discovery already shipped. Closes **E2**. Needs its own
-  research spike against the spec (individual-address serial-number
-  read services), same rigor as Session 6's existing cycles.
+  `knx-net` capability — probing individual addresses on a connected
+  line to enumerate real devices present, distinct from gateway
+  discovery already shipped. Closes **E2**. **Corrected, 2026-09-12**:
+  the original guess above ("individual-address serial-number read
+  services") named the wrong service — `A_IndividualAddressSerialNumber_Read`
+  is a reverse lookup that needs a known serial number, not an
+  occupancy probe. The research spike ran; the Standard's own procedure
+  is `NM_IndividualAddress_Check` (`03_05_02 Management Procedures`
+  §2.19, also named `NM_IndividualAddress_Scan`). See
+  [RESEARCH.md §8.5](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12)
+  for the full procedure, citations and bus-load measurements. Remaining
+  work is implementation, not research.
 
 ### Tier 5 — larger, multi-cycle efforts (own future "session")
 

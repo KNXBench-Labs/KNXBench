@@ -52,7 +52,7 @@ describe("SettingsPanel", () => {
   it("opens from the gear button (rendered by App.tsx) and shows its three labelled selects", async () => {
     const { root } = await renderPanel();
 
-    expect(host!.querySelector(".search-overlay")).not.toBeNull();
+    expect(host!.querySelector('[role="dialog"]')).not.toBeNull();
     expect(host!.querySelector('select[aria-label="Theme"]')).not.toBeNull();
     expect(host!.querySelector('select[aria-label="Motion style"]')).not.toBeNull();
     expect(host!.querySelector('select[aria-label="Motion level"]')).not.toBeNull();
@@ -60,11 +60,12 @@ describe("SettingsPanel", () => {
     root.unmount();
   });
 
-  it("closes on Escape", async () => {
+  it("closes on Escape (the Overlay shell's handler, not a local one)", async () => {
     const { root, onClose } = await renderPanel();
 
+    const panel = host!.querySelector('[role="dialog"]')!;
     await act(async () => {
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
 
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -74,7 +75,7 @@ describe("SettingsPanel", () => {
   it("closes on a click outside the panel", async () => {
     const { root, onClose } = await renderPanel();
 
-    const overlay = host!.querySelector(".search-overlay")!;
+    const overlay = host!.querySelector(".settings-panel")!.parentElement!;
     await act(async () => {
       overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });

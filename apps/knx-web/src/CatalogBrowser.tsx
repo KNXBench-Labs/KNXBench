@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import * as api from "./api";
 import type {
   CatalogInstallReport,
@@ -7,13 +8,15 @@ import type {
   CreationDiagnostic,
 } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import Overlay from "./Overlay";
 
 // T2 (GAP_ANALYSIS_ETS.md) — the device-from-catalog browser. Feeds T1's
-// `Command::CreateDevice` (backend-only since 2026-09-08). Reuses
-// `.search-overlay`/`.search-panel`, the modal shape already shared by
-// `Search.tsx` and `CommandPalette.tsx`. Click-only selection — no
-// arrow-key nav, a deliberate scope cut (unlike Search.tsx) since this
-// modal's own text field already needs Enter for "create", not "navigate".
+// `Command::CreateDevice` (backend-only since 2026-09-08). Built on the
+// shared `Overlay` shell (T31). The catalog search input is a combobox
+// over the results list: ArrowUp/ArrowDown move a highlight and Enter
+// picks the highlighted item, pre-filling the name field exactly as
+// clicking the row does — it does not create the device, since creation
+// stays behind the name field's own Enter/Create.
 export default function CatalogBrowser(props: {
   lineId: number | null;
   onCreated: (tree: ProjectTree) => void;
@@ -25,6 +28,7 @@ export default function CatalogBrowser(props: {
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [itemsLoaded, setItemsLoaded] = useState(false);
+  const [highlight, setHighlight] = useState(0);
   const [selected, setSelected] = useState<CatalogItem | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,10 +44,15 @@ export default function CatalogBrowser(props: {
   const requestIdRef = useRef(0);
   const filtersRef = useRef({ manufacturer: "", search: "" });
   const createInFlightRef = useRef(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api.catalogManufacturers().then(setManufacturers).catch((e) => setError(api.errorMessage(e)));
   }, []);
+
+  useEffect(() => {
+    setHighlight(0);
+  }, [items]);
 
   // Debounced so a fast typist doesn't fire one request per keystroke —
   // `catalogItems` is a real round trip (server-side LIKE query), unlike
@@ -72,6 +81,19 @@ export default function CatalogBrowser(props: {
     setError(null);
     setDiagnostics([]);
     setCreatedWithDiagnostics(false);
+  }
+
+  function handleSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((h) => Math.min(h + 1, items.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((h) => Math.max(h - 1, 0));
+    } else if (e.key === "Enter") {
+      const item = items[highlight];
+      if (item) pick(item);
+    }
   }
 
   function changeManufacturer(value: string) {
@@ -133,91 +155,93 @@ export default function CatalogBrowser(props: {
   }
 
   return (
-    <div className="search-overlay" onClick={onClose}>
-      <div className="search-panel" onClick={(e) => e.stopPropagation()}>
-        <label className="catalog-install">
-          {installing ? "Installing product database…" : "Install product database"}
-          <input
-            type="file"
-            accept=".knxprod,.vd2,application/zip"
-            disabled={installing}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void install(file);
-              e.currentTarget.value = "";
-            }}
-          />
-        </label>
-        {installReport && (
-          <p className="catalog-report">
-            {installReport.skipped ? "Already installed" : "Installed"}: scheme {installReport.scheme}, {installReport.members.length} members, {installReport.unknown} unknown, {installReport.conflicts} conflicts.
-          </p>
-        )}
-        <select value={manufacturer} onChange={(e) => changeManufacturer(e.target.value)}>
-          <option value="">All manufacturers</option>
-          {manufacturers.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name ?? m.id}
-            </option>
-          ))}
-        </select>
+    <Overlay label="Device catalog" onClose={onClose} initialFocusRef={searchRef}>
+      <label className="catalog-install">
+        {installing ? "Installing product database…" : "Install product database"}
         <input
-          autoFocus
-          value={search}
-          onChange={(e) => changeSearch(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") onClose();
+          type="file"
+          accept=".knxprod,.vd2,application/zip"
+          disabled={installing}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void install(file);
+            e.currentTarget.value = "";
           }}
-          placeholder="Search catalog items…"
         />
-        {itemsLoaded && items.length === 0 && <p className="search-empty">No matches.</p>}
-        <ul className="search-results">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className={selected?.id === item.id ? "search-result selected" : "search-result"}
-              onClick={() => pick(item)}
-            >
-              {item.name ?? item.id}
-              {item.number ? ` (${item.number})` : ""}
-              {item.visibleDescription ? ` — ${item.visibleDescription}` : ""}
-            </li>
-          ))}
-        </ul>
-        {selected && !createdWithDiagnostics && (
-          <div className="catalog-create-row">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void create();
-                if (e.key === "Escape") onClose();
-              }}
-              placeholder="Device name"
-            />
-            <button onClick={create} disabled={name.trim() === "" || creating}>
-              {creating ? "Creating…" : "Create"}
-            </button>
-          </div>
-        )}
-        {diagnostics.length > 0 && (
-          <section className="catalog-diagnostics" aria-live="polite">
-            <h3>Creation diagnostics</h3>
-            <ul>
-              {diagnostics.map((diagnostic, index) => (
-                <li key={`${diagnostic.kind}-${index}`}>{diagnostic.detail}</li>
-              ))}
-            </ul>
-          </section>
-        )}
-        {createdWithDiagnostics && (
-          <div className="catalog-create-row">
-            <span>Device created with diagnostics.</span>
-            <button onClick={onClose}>Done</button>
-          </div>
-        )}
-        {error && <span className="field-error">{error}</span>}
-      </div>
-    </div>
+      </label>
+      {installReport && (
+        <p className="catalog-report">
+          {installReport.skipped ? "Already installed" : "Installed"}: scheme {installReport.scheme}, {installReport.members.length} members, {installReport.unknown} unknown, {installReport.conflicts} conflicts.
+        </p>
+      )}
+      <select value={manufacturer} onChange={(e) => changeManufacturer(e.target.value)}>
+        <option value="">All manufacturers</option>
+        {manufacturers.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.name ?? m.id}
+          </option>
+        ))}
+      </select>
+      <input
+        ref={searchRef}
+        value={search}
+        onChange={(e) => changeSearch(e.target.value)}
+        onKeyDown={handleSearchKeyDown}
+        placeholder="Search catalog items…"
+        role="combobox"
+        aria-expanded={items.length > 0}
+        aria-controls="catalog-results"
+        aria-activedescendant={items[highlight] ? `catalog-option-${highlight}` : undefined}
+      />
+      {itemsLoaded && items.length === 0 && <p className="search-empty">No matches.</p>}
+      <ul className="search-results" id="catalog-results" role="listbox">
+        {items.map((item, i) => (
+          <li
+            key={item.id}
+            id={`catalog-option-${i}`}
+            role="option"
+            aria-selected={selected?.id === item.id}
+            className={selected?.id === item.id ? "search-result selected" : "search-result"}
+            onClick={() => pick(item)}
+          >
+            {item.name ?? item.id}
+            {item.number ? ` (${item.number})` : ""}
+            {item.visibleDescription ? ` — ${item.visibleDescription}` : ""}
+          </li>
+        ))}
+      </ul>
+      {selected && !createdWithDiagnostics && (
+        <div className="catalog-create-row">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void create();
+            }}
+            placeholder="Device name"
+          />
+          <button onClick={create} disabled={name.trim() === "" || creating}>
+            {creating ? "Creating…" : "Create"}
+          </button>
+        </div>
+      )}
+      {diagnostics.length > 0 && (
+        <section className="catalog-diagnostics" aria-live="polite">
+          <h3>Creation diagnostics</h3>
+          <ul>
+            {diagnostics.map((diagnostic, index) => (
+              <li key={`${diagnostic.kind}-${index}`}>{diagnostic.detail}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {createdWithDiagnostics && (
+        <div className="catalog-create-row">
+          <span>Device created with diagnostics.</span>
+          <button onClick={onClose}>Done</button>
+        </div>
+      )}
+      {error && <span className="field-error">{error}</span>}
+    </Overlay>
   );
 }

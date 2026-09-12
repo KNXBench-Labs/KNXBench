@@ -84,15 +84,107 @@ export const messages: Record<MessageKey, string> = {
   "toast.holiday.christmasDay.santa":
     "Frohe Weihnachten! Sogar der Weihnachtsmann braucht eine Gruppenadresse für den Kaminsensor.",
   "toast.holiday.christmasDay.greetings": "Frohe Festtage von deiner KNX-App.",
-  "toast.holiday.newYearsEve.oneMoreSave": "Noch ein Speichern vor Mitternacht?",
+  "toast.holiday.newYearsEve.oneMoreSave": "Noch einmal speichern vor Mitternacht?",
   "toast.holiday.newYearsEve.seeYou": "Bis nächstes Jahr, Projektdatei.",
 
   "toast.lateNight.midnightOil": "Nachtschicht? Dein KNX-Bus macht auch keine Pause.",
   // "Linie" doubles as "line" in the mundane sense and as the KNX topology
   // term (a Line of up to 255 devices under a Line Coupler) — the same
-  // double meaning the English "bus line" trades on, preserved rather than
-  // flattened into an unambiguous but joke-free word.
-  "toast.lateNight.busLineRest": "Es ist spät. Sogar die Buslinie braucht mal Ruhe.",
+  // double meaning the English "bus line" trades on. "Buslinie" reads to a
+  // German ear as a public-transit bus route, which kills the pun, so we
+  // drop the "Bus" prefix and let "Linie" alone carry both meanings.
+  "toast.lateNight.busLineRest": "Es ist spät. Auch die Linie braucht mal Pause.",
   "toast.lateNight.stillAwake": "Noch wach? Die Gruppenadressen bewundern deinen Einsatz.",
   "toast.lateNight.nightOwl": "Nachteulen-Modus aktiviert.",
+
+  "inspector.address": "Adresse",
+  "inspector.description": "Beschreibung",
+  "inspector.dpt": "DPT",
+  // The German ETS's own flag names, not a fresh translation of the
+  // English ones — "Transmit"/"Update" become "Übertragen"/"Aktualisieren",
+  // not a literal "Senden"/"Erneuern" a dictionary would suggest.
+  "inspector.comFlag.read": "Lesen",
+  "inspector.comFlag.write": "Schreiben",
+  "inspector.comFlag.transmit": "Übertragen",
+  "inspector.comFlag.update": "Aktualisieren",
+  "inspector.comFlag.communication": "Kommunikation",
+  "inspector.direction.send": "Senden",
+  "inspector.direction.receive": "Empfangen",
+  "inspector.unlink": "Trennen",
+  "inspector.chooseGroupAddress": "(Gruppenadresse wählen)",
+  "inspector.link": "Verknüpfen",
+  "inspector.line": "Linie",
+  "inspector.unassigned": "(nicht zugeordnet)",
+  "inspector.areaLabel": "Bereich {address}: {name}",
+  "inspector.lineLabel": "Linie {address}: {name}",
+  "inspector.buildingPart": "Gebäudeteil",
+  "inspector.none": "(keine)",
+  "inspector.delete": "Löschen",
+  "inspector.restrictedAction.delete": "Löschen ist",
+  "inspector.restrictedAction.renameAndDelete": "Umbenennen und Löschen sind",
+  "inspector.restrictedToFirstInstallation":
+    "{action} nur für {entity} in der ersten Installation verfügbar.",
+  "inspector.entity.devices": "Geräte",
+  "inspector.entity.groupAddresses": "Gruppenadressen",
+  "inspector.entity.groupRanges": "Gruppenbereiche",
+  "inspector.entity.areas": "Bereiche",
+  "inspector.entity.lines": "Linien",
+  "inspector.entity.buildingParts": "Gebäudeteile",
+  "inspector.communicationObjects": "Kommunikationsobjekte",
+  "inspector.unnamed": "(unbenannt)",
+  "inspector.name": "Name",
+  "inspector.lineCount.one": "{count} Linie",
+  "inspector.lineCount.other": "{count} Linien",
+  "inspector.deviceCount.one": "{count} Gerät",
+  "inspector.deviceCount.other": "{count} Geräte",
+  "inspector.childPartCount.one": "{count} untergeordneter Gebäudeteil",
+  "inspector.childPartCount.other": "{count} untergeordnete Gebäudeteile",
+
+  "buildingPartKind.building": "Gebäude",
+  "buildingPartKind.floor": "Etage",
+  "buildingPartKind.room": "Raum",
+  "buildingPartKind.corridor": "Flur",
+  "buildingPartKind.distributionBoard": "Verteiler",
+  "buildingPartKind.buildingPart": "Gebäudeteil",
+
+  "parameters.deviceScope": "Gerät",
+  "parameters.moduleNumber": "Modul #{number}",
+  "parameters.sharedReadOnlyCaption":
+    "Wird von jeder Instanziierung dieses Moduls gemeinsam genutzt; in dieser Version nur lesbar.",
+  "parameters.staleValuesHeading": "Veraltete Werte ({count})",
+  "parameters.staleDescription":
+    "Diese gespeicherten Werte entsprechen keinem Parameter des aktuellen Anwendungsprogramms mehr.",
+  "parameters.diagnosticsCount.one":
+    "{count} Problem beim Auswerten der Parameter dieses Geräts gefunden",
+  "parameters.diagnosticsCount.other":
+    "{count} Probleme beim Auswerten der Parameter dieses Geräts gefunden",
+  "parameters.copyDetails": "Details kopieren",
+  "parameters.title": "Parameter",
+  "parameters.loading": "Parameter werden geladen…",
+  "parameters.noProgram":
+    "Für dieses Gerät lässt sich kein Anwendungsprogramm auflösen; Parameter können nicht angezeigt werden.",
+  "parameters.none": "(keine)",
+
+  "explorer.addDevice": "+ Gerät hinzufügen",
+  "explorer.lineLabel": "Linie {address}: {name}",
+  "explorer.areaLabel": "Bereich {address}: {name}",
+  "explorer.newLinePlaceholder": "Neue Linie",
+  "explorer.newAreaPlaceholder": "Neuer Bereich",
+  "explorer.add": "Hinzufügen",
+  "explorer.newGroupAddressPlaceholder": "Neue Gruppenadresse",
+  "explorer.noRange": "(kein Bereich)",
+  "explorer.newGroupRangePlaceholder": "Neuer Gruppenbereich",
+  "explorer.newMiddleRangePlaceholder": "Neuer Mittelbereich",
+  "explorer.newBuildingPlaceholder": "Neues Gebäude",
+  "explorer.newBuildingPartPlaceholder": "Neuer Gebäudeteil",
+  "explorer.buildingLabel": "{name} ({kind})",
+  "explorer.topology": "Topologie",
+  "explorer.buildings": "Gebäude",
+  "explorer.unassigned": "Nicht zugeordnet",
+  "explorer.groupAddresses": "Gruppenadressen",
+  "explorer.groupRanges": "Gruppenbereiche",
+  "explorer.importErrorsCount.one": "{count} Importfehler — Daten könnten fehlen oder falsch sein",
+  "explorer.importErrorsCount.other": "{count} Importfehler — Daten könnten fehlen oder falsch sein",
+  "explorer.importWarningsCount.one": "{count} Importwarnung",
+  "explorer.importWarningsCount.other": "{count} Importwarnungen",
 };

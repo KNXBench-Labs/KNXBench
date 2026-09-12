@@ -28,6 +28,15 @@
 // error wrappers) — the joke pairing per occasion is preserved key-by-key
 // so `toastCopy.ts` and `toast.ts` don't need to know which language is
 // active, only which key to ask for.
+//
+// Task 4 (T25) added everything from `inspector.*` down: `Inspector.tsx`,
+// `ParameterPanel.tsx` and `ProjectExplorer.tsx`. `buildingPartKind.*` is
+// the one namespace that breaks the per-surface convention on purpose — it
+// is the same six-value `BuildingPartType` label shown both in
+// `Inspector.tsx`'s `BuildingPartInspector` and in `ProjectExplorer.tsx`'s
+// `BuildingItem`/`NewBuildingPartRow`, and translating the same domain word
+// two different ways in two files is a bug waiting to happen, not a
+// feature of the namespacing convention.
 export const messages = {
   "toolbar.openProject": "Open project…",
   "toolbar.openNativeProject": "Open (.knxdb)…",
@@ -94,6 +103,102 @@ export const messages = {
   "toast.lateNight.busLineRest": "It's late. Even the bus line needs rest.",
   "toast.lateNight.stillAwake": "Still awake? The group addresses admire your dedication.",
   "toast.lateNight.nightOwl": "Night owl mode engaged.",
+
+  // `Inspector.tsx`. `inspector.entity.*` and `inspector.restrictedAction.*`
+  // are the two halves `inspector.restrictedToFirstInstallation` composes
+  // itself from — see that key's own comment for why it's built this way
+  // instead of six near-duplicate sentences.
+  "inspector.address": "Address",
+  "inspector.description": "Description",
+  "inspector.dpt": "DPT",
+  "inspector.comFlag.read": "Read",
+  "inspector.comFlag.write": "Write",
+  "inspector.comFlag.transmit": "Transmit",
+  "inspector.comFlag.update": "Update",
+  "inspector.comFlag.communication": "Communication",
+  "inspector.direction.send": "Send",
+  "inspector.direction.receive": "Receive",
+  "inspector.unlink": "Unlink",
+  "inspector.chooseGroupAddress": "(choose a group address)",
+  "inspector.link": "Link",
+  "inspector.line": "Line",
+  "inspector.unassigned": "(unassigned)",
+  "inspector.areaLabel": "Area {address}: {name}",
+  "inspector.lineLabel": "Line {address}: {name}",
+  "inspector.buildingPart": "Building part",
+  "inspector.none": "(none)",
+  "inspector.delete": "Delete",
+  // The two verb clauses `inspector.restrictedToFirstInstallation`'s
+  // `{action}` slot takes — carrying their own verb (`is`/`are`) so the
+  // base sentence never has to conjugate around how many verbs it's naming.
+  "inspector.restrictedAction.delete": "Delete is",
+  "inspector.restrictedAction.renameAndDelete": "Rename and Delete are",
+  "inspector.restrictedToFirstInstallation": "{action} only available for {entity} in the first installation.",
+  "inspector.entity.devices": "devices",
+  "inspector.entity.groupAddresses": "group addresses",
+  "inspector.entity.groupRanges": "group ranges",
+  "inspector.entity.areas": "areas",
+  "inspector.entity.lines": "lines",
+  "inspector.entity.buildingParts": "building parts",
+  "inspector.communicationObjects": "Communication objects",
+  "inspector.unnamed": "(unnamed)",
+  "inspector.name": "Name",
+  "inspector.lineCount.one": "{count} line",
+  "inspector.lineCount.other": "{count} lines",
+  "inspector.deviceCount.one": "{count} device",
+  "inspector.deviceCount.other": "{count} devices",
+  "inspector.childPartCount.one": "{count} child part",
+  "inspector.childPartCount.other": "{count} child parts",
+
+  // Shared between `Inspector.tsx` and `ProjectExplorer.tsx` — see the
+  // header comment above for why this one namespace isn't per-surface.
+  "buildingPartKind.building": "Building",
+  "buildingPartKind.floor": "Floor",
+  "buildingPartKind.room": "Room",
+  "buildingPartKind.corridor": "Corridor",
+  "buildingPartKind.distributionBoard": "Distribution Board",
+  "buildingPartKind.buildingPart": "Building Part",
+
+  // `ParameterPanel.tsx`.
+  "parameters.deviceScope": "Device",
+  "parameters.moduleNumber": "Module #{number}",
+  "parameters.sharedReadOnlyCaption":
+    "Shared across every instantiation of this module; read-only in this release.",
+  "parameters.staleValuesHeading": "Stale values ({count})",
+  "parameters.staleDescription":
+    "These stored values no longer correspond to any parameter in the current application program.",
+  "parameters.diagnosticsCount.one": "{count} issue found while evaluating this device's parameters",
+  "parameters.diagnosticsCount.other": "{count} issues found while evaluating this device's parameters",
+  "parameters.copyDetails": "Copy details",
+  "parameters.title": "Parameters",
+  "parameters.loading": "Loading parameters…",
+  "parameters.noProgram":
+    "This device has no resolvable application program; parameters cannot be shown.",
+  "parameters.none": "(none)",
+
+  // `ProjectExplorer.tsx`.
+  "explorer.addDevice": "+ Add device",
+  "explorer.lineLabel": "Line {address}: {name}",
+  "explorer.areaLabel": "Area {address}: {name}",
+  "explorer.newLinePlaceholder": "New line",
+  "explorer.newAreaPlaceholder": "New area",
+  "explorer.add": "Add",
+  "explorer.newGroupAddressPlaceholder": "New group address",
+  "explorer.noRange": "(no range)",
+  "explorer.newGroupRangePlaceholder": "New group range",
+  "explorer.newMiddleRangePlaceholder": "New middle range",
+  "explorer.newBuildingPlaceholder": "New building",
+  "explorer.newBuildingPartPlaceholder": "New building part",
+  "explorer.buildingLabel": "{name} ({kind})",
+  "explorer.topology": "Topology",
+  "explorer.buildings": "Buildings",
+  "explorer.unassigned": "Unassigned",
+  "explorer.groupAddresses": "Group Addresses",
+  "explorer.groupRanges": "Group Ranges",
+  "explorer.importErrorsCount.one": "{count} import error — data may be missing or incorrect",
+  "explorer.importErrorsCount.other": "{count} import errors — data may be missing or incorrect",
+  "explorer.importWarningsCount.one": "{count} import warning",
+  "explorer.importWarningsCount.other": "{count} import warnings",
 } as const;
 
 export type Messages = typeof messages;

@@ -12,6 +12,26 @@ import type { MultiSelection, MultiSelectionKind, Selection } from "./selection"
 import { nestGroupRanges, type GroupRangeTreeNode } from "./treeUtils";
 import CatalogBrowser from "./CatalogBrowser";
 import BulkActionToolbar from "./BulkActionToolbar";
+import { useTranslate, type MessageKey, type Translate } from "./i18n";
+
+// The same discriminant-vs-label lookup `Inspector.tsx`'s
+// `buildingPartKindLabel` uses, duplicated rather than shared — both files
+// stay in their own edit scope (task 4 brief) and the table is four lines.
+// `BUILDING_PART_KINDS` (below) stays the raw discriminant array sent to
+// `api.createBuildingPart`; this table only maps that same value to its
+// catalogue key for display.
+const BUILDING_PART_KIND_KEYS: Record<string, MessageKey> = {
+  Building: "buildingPartKind.building",
+  Floor: "buildingPartKind.floor",
+  Room: "buildingPartKind.room",
+  Corridor: "buildingPartKind.corridor",
+  DistributionBoard: "buildingPartKind.distributionBoard",
+  BuildingPart: "buildingPartKind.buildingPart",
+};
+function buildingPartKindLabel(t: Translate, kind: string): string {
+  const key = BUILDING_PART_KIND_KEYS[kind];
+  return key ? t(key) : kind;
+}
 
 function TreeNode(props: {
   label: string;
@@ -83,6 +103,7 @@ function DeviceItem(props: { device: DeviceNode } & SelectionProps) {
 // for twisted-pair) is pre-filled so the common case needs no typing.
 function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTree) => void }) {
   const { areaId, onCreated } = props;
+  const t = useTranslate();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [mediumRef, setMediumRef] = useState("MT-0");
@@ -114,7 +135,7 @@ function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTree) => v
       />
       <input
         value={name}
-        placeholder="New line"
+        placeholder={t("explorer.newLinePlaceholder")}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") void create();
@@ -129,7 +150,7 @@ function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTree) => v
         }}
       />
       <button onClick={create} disabled={!canCreate}>
-        Add
+        {t("explorer.add")}
       </button>
       {error && <span className="field-error">{error}</span>}
     </li>
@@ -138,6 +159,7 @@ function NewLineRow(props: { areaId: number; onCreated: (tree: ProjectTree) => v
 
 function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
   const { onCreated } = props;
+  const t = useTranslate();
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -168,14 +190,14 @@ function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
       />
       <input
         value={name}
-        placeholder="New area"
+        placeholder={t("explorer.newAreaPlaceholder")}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") void create();
         }}
       />
       <button onClick={create} disabled={!canCreate}>
-        Add
+        {t("explorer.add")}
       </button>
       {error && <span className="field-error">{error}</span>}
     </li>
@@ -187,9 +209,10 @@ function NewAreaRow(props: { onCreated: (tree: ProjectTree) => void }) {
 // `isFirst`-gated like every other create affordance: `Command::CreateDevice`
 // only ever targets `installations[0]`.
 function AddDeviceRow(props: { onAdd: () => void }) {
+  const t = useTranslate();
   return (
     <li className="tree-new-row">
-      <button onClick={props.onAdd}>+ Add device</button>
+      <button onClick={props.onAdd}>{t("explorer.addDevice")}</button>
     </li>
   );
 }
@@ -198,9 +221,10 @@ function LineItem(
   props: { line: LineNode; isFirst: boolean; onAddDevice: (lineId: number) => void } & SelectionProps,
 ) {
   const { line, isFirst, onAddDevice, selection, onSelect, multiSelection, onItemClick } = props;
+  const t = useTranslate();
   return (
     <TreeNode
-      label={`Line ${line.address}: ${line.name}`}
+      label={t("explorer.lineLabel", { address: line.address, name: line.name })}
       selected={selection?.kind === "line" && selection.id === line.id}
       onSelect={() => onSelect({ kind: "line", id: line.id })}
     >
@@ -229,9 +253,10 @@ function AreaItem(
 ) {
   const { area, isFirst, onCreated, onAddDevice, selection, onSelect, multiSelection, onItemClick } =
     props;
+  const t = useTranslate();
   return (
     <TreeNode
-      label={`Area ${area.address}: ${area.name}`}
+      label={t("explorer.areaLabel", { address: area.address, name: area.name })}
       selected={selection?.kind === "area" && selection.id === area.id}
       onSelect={() => onSelect({ kind: "area", id: area.id })}
     >
@@ -282,6 +307,7 @@ function NewGroupAddressRow(props: {
   onCreated: (tree: ProjectTree) => void;
 }) {
   const { ranges, onCreated } = props;
+  const t = useTranslate();
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
   const [rangeId, setRangeId] = useState("");
@@ -318,14 +344,14 @@ function NewGroupAddressRow(props: {
       />
       <input
         value={name}
-        placeholder="New group address"
+        placeholder={t("explorer.newGroupAddressPlaceholder")}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") void create();
         }}
       />
       <select value={rangeId} onChange={(e) => setRangeId(e.target.value)}>
-        <option value="">(no range)</option>
+        <option value="">{t("explorer.noRange")}</option>
         {ranges.map((r) => (
           <option key={r.id} value={r.id}>
             {r.start}–{r.end} {r.name}
@@ -333,7 +359,7 @@ function NewGroupAddressRow(props: {
         ))}
       </select>
       <button onClick={create} disabled={!canCreate}>
-        Add
+        {t("explorer.add")}
       </button>
       {error && <span className="field-error">{error}</span>}
     </li>
@@ -352,6 +378,7 @@ function NewGroupRangeRow(props: {
   onCreated: (tree: ProjectTree) => void;
 }) {
   const { parentId, onCreated } = props;
+  const t = useTranslate();
   const [name, setName] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -392,14 +419,18 @@ function NewGroupRangeRow(props: {
       />
       <input
         value={name}
-        placeholder={parentId === undefined ? "New group range" : "New middle range"}
+        placeholder={
+          parentId === undefined
+            ? t("explorer.newGroupRangePlaceholder")
+            : t("explorer.newMiddleRangePlaceholder")
+        }
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") void create();
         }}
       />
       <button onClick={create} disabled={!canCreate}>
-        Add
+        {t("explorer.add")}
       </button>
       {error && <span className="field-error">{error}</span>}
     </li>
@@ -428,6 +459,7 @@ function NewBuildingPartRow(props: {
   onCreated: (tree: ProjectTree) => void;
 }) {
   const { parentId, onCreated } = props;
+  const t = useTranslate();
   const [name, setName] = useState("");
   const [kind, setKind] = useState<(typeof BUILDING_PART_KINDS)[number]>("Room");
   const [error, setError] = useState<string | null>(null);
@@ -450,20 +482,24 @@ function NewBuildingPartRow(props: {
       <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
         {BUILDING_PART_KINDS.map((k) => (
           <option key={k} value={k}>
-            {k}
+            {buildingPartKindLabel(t, k)}
           </option>
         ))}
       </select>
       <input
         value={name}
-        placeholder={parentId === undefined ? "New building" : "New building part"}
+        placeholder={
+          parentId === undefined
+            ? t("explorer.newBuildingPlaceholder")
+            : t("explorer.newBuildingPartPlaceholder")
+        }
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") void create();
         }}
       />
       <button onClick={create} disabled={!canCreate}>
-        Add
+        {t("explorer.add")}
       </button>
       {error && <span className="field-error">{error}</span>}
     </li>
@@ -478,9 +514,10 @@ function BuildingItem(
   } & SelectionProps,
 ) {
   const { building, isFirst, onCreated, selection, onSelect, multiSelection, onItemClick } = props;
+  const t = useTranslate();
   return (
     <TreeNode
-      label={`${building.name} (${building.kind})`}
+      label={t("explorer.buildingLabel", { name: building.name, kind: buildingPartKindLabel(t, building.kind) })}
       selected={selection?.kind === "building_part" && selection.id === building.id}
       onSelect={() => onSelect({ kind: "building_part", id: building.id })}
     >
@@ -565,9 +602,10 @@ function InstallationItem(
     multiSelection,
     onItemClick,
   } = props;
+  const t = useTranslate();
   return (
     <TreeNode label={installation.name}>
-      <TreeNode label="Topology">
+      <TreeNode label={t("explorer.topology")}>
         {installation.topology.map((a) => (
           <AreaItem
             key={a.id}
@@ -583,7 +621,7 @@ function InstallationItem(
         ))}
         {isFirst && <NewAreaRow onCreated={onTreeUpdate} />}
       </TreeNode>
-      <TreeNode label="Buildings">
+      <TreeNode label={t("explorer.buildings")}>
         {installation.buildings.map((b) => (
           <BuildingItem
             key={b.id}
@@ -599,7 +637,7 @@ function InstallationItem(
         {isFirst && <NewBuildingPartRow onCreated={onTreeUpdate} />}
       </TreeNode>
       {(installation.unassigned.length > 0 || isFirst) && (
-        <TreeNode label="Unassigned">
+        <TreeNode label={t("explorer.unassigned")}>
           {installation.unassigned.map((d) => (
             <DeviceItem
               key={d.id}
@@ -613,7 +651,7 @@ function InstallationItem(
           {isFirst && <AddDeviceRow onAdd={() => onAddDevice(null)} />}
         </TreeNode>
       )}
-      <TreeNode label="Group Addresses">
+      <TreeNode label={t("explorer.groupAddresses")}>
         {installation.group_addresses.map((ga) => (
           <GroupAddressItem
             key={ga.id}
@@ -628,7 +666,7 @@ function InstallationItem(
           <NewGroupAddressRow ranges={installation.group_ranges} onCreated={onTreeUpdate} />
         )}
       </TreeNode>
-      <TreeNode label="Group Ranges">
+      <TreeNode label={t("explorer.groupRanges")}>
         {nestGroupRanges(installation.group_ranges).map((node) => (
           <GroupRangeItem
             key={node.range.id}
@@ -691,6 +729,7 @@ export default function ProjectExplorer(
   },
 ) {
   const { tree, onTreeUpdate, selection, onSelect } = props;
+  const t = useTranslate();
   // `undefined` = closed; `number | null` = open, targeting that line
   // (or `null` for unassigned) — CatalogBrowser (T2) is only ever opened
   // from the first installation, same restriction every other create
@@ -797,13 +836,12 @@ export default function ProjectExplorer(
         <footer>
           {tree.errors > 0 && (
             <div className="import-errors">
-              {tree.errors} import error{tree.errors === 1 ? "" : "s"} — data may be missing or
-              incorrect
+              {t("explorer.importErrorsCount", { count: tree.errors })}
             </div>
           )}
           {tree.warnings > 0 && (
             <div className="import-warnings">
-              {tree.warnings} import warning{tree.warnings === 1 ? "" : "s"}
+              {t("explorer.importWarningsCount", { count: tree.warnings })}
             </div>
           )}
         </footer>

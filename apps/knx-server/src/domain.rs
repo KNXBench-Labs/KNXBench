@@ -1888,6 +1888,105 @@ fn decompose_module_qualified(ets_id: &str) -> Option<(String, String, String, S
     })
 }
 
+/// The trailing `_M-<digits>` component of a program-side `Module/@Id`,
+/// split into `module_id`'s own prefix (D39: "its text before `_M-<n>`")
+/// and the digits. Same hand-rolled greedy-rightmost scan as
+/// `decompose_module_qualified`, anchored at the string's end instead of
+/// allowing a suffix after it — equivalent to `^(.*)_M-(\d+)$`. `None`
+/// when `module_id` has no such trailing component at all, a shape this
+/// slice's corpus evidence (E1) never shows but does not assume either.
+fn module_id_own_prefix(module_id: &str) -> Option<&str> {
+    const MARKER: &str = "_M-";
+    let mut best: Option<usize> = None;
+    let mut search_from = 0;
+    while let Some(relative) = module_id
+        .get(search_from..)
+        .and_then(|tail| tail.find(MARKER))
+    {
+        let start = search_from + relative;
+        let after_marker = &module_id[start + MARKER.len()..];
+        if let Some((_digits, rest)) = take_digits(after_marker) {
+            if rest.is_empty() {
+                best = Some(start);
+            }
+        }
+        search_from = start + 1;
+    }
+    best.map(|start| &module_id[..start])
+}
+
+/// D39's write target: `format!("{module_id}_MI-{digits}_{suffix}")`,
+/// where `suffix` is `declared_id` with `module_id`'s own prefix and one
+/// `_` stripped — reproduces the corpus's real stored ids exactly (E1).
+/// `None` when `declared_id` does not actually start with that prefix, or
+/// `module_id` has no `_M-<n>` shape to strip at all; never invented.
+fn module_scoped_write_id(module_id: &str, mi_digits: &str, declared_id: &str) -> Option<String> {
+    let prefix = module_id_own_prefix(module_id)?;
+    let suffix = declared_id.strip_prefix(prefix)?.strip_prefix('_')?;
+    Some(format!("{module_id}_MI-{mi_digits}_{suffix}"))
+}
+
+/// D39 rules 2-3: whether one imported `ModuleInstance` can serve as the
+/// `MI-` authority for a program-side `module_id`, and if not, exactly
+/// why — never a guess, never a default (D40).
+enum MiAuthority {
+    /// Exactly one imported `ModuleInstance` matches, and its
+    /// `instance_ets_id` decomposes cleanly — these are the `MI-` digits
+    /// a write target uses.
+    Found(String),
+    /// No imported `ModuleInstance`'s `source.ets_id` is the trailing
+    /// component of `module_id` (D39 rule 2, zero matches).
+    NoMatch,
+    /// Two or more imported `ModuleInstance`s match one `module_id` — a
+    /// genuinely repeated module (`MI-` > 1) whose channels this slice
+    /// cannot tell apart on the read side (D40). Carries the shared
+    /// `RefId` and every matching `instance_ets_id`, for the diagnostic.
+    Ambiguous {
+        source_ets_id: String,
+        instance_ets_ids: Vec<String>,
+    },
+    /// Exactly one match, but its `instance_ets_id` is empty or does not
+    /// decompose as `<source.ets_id>_MI-<digits>` (D39 rule 3) — D38's
+    /// migration note treats empty exactly like a missing instance.
+    Malformed {
+        source_ets_id: String,
+        instance_ets_id: String,
+    },
+}
+
+/// D39 rules 2-3, verbatim: the instance-matching rule is
+/// `module_id.ends_with("_" + instance.source.ets_id)` — the leading
+/// underscore is what keeps `MD-1_M-2` from matching a `..._MD-11_M-2`
+/// module id. `digits` must be all-ASCII (`\d+`), matching
+/// `decompose_module_qualified`'s own definition of a valid `MI-`.
+fn resolve_mi_authority(instances: &[knx_core::ModuleInstance], module_id: &str) -> MiAuthority {
+    let matches: Vec<&knx_core::ModuleInstance> = instances
+        .iter()
+        .filter(|m| module_id.ends_with(&format!("_{}", m.source.ets_id)))
+        .collect();
+    match matches.as_slice() {
+        [] => MiAuthority::NoMatch,
+        [one] => {
+            let expected_prefix = format!("{}_MI-", one.source.ets_id);
+            match one
+                .instance_ets_id
+                .strip_prefix(expected_prefix.as_str())
+                .filter(|digits| !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit()))
+            {
+                Some(digits) => MiAuthority::Found(digits.to_string()),
+                None => MiAuthority::Malformed {
+                    source_ets_id: one.source.ets_id.clone(),
+                    instance_ets_id: one.instance_ets_id.clone(),
+                },
+            }
+        }
+        many => MiAuthority::Ambiguous {
+            source_ets_id: many[0].source.ets_id.clone(),
+            instance_ets_ids: many.iter().map(|m| m.instance_ets_id.clone()).collect(),
+        },
+    }
+}
+
 /// Everything `parameter_panel_impl`/`set_parameter_value_impl` share:
 /// the assembled read model, plus the raw program-level ingredients D24's
 /// write validation needs (kind/bounds/enum live on a declared
@@ -1930,7 +2029,7 @@ fn assemble_parameter_panel(
     let device = knx_core::DeviceId(device_id);
 
     // Step 1: lock only `project`.
-    let (program_ref, stored) = {
+    let (program_ref, stored, module_instances) = {
         let project = state.project.lock().expect("state mutex poisoned");
         let project = project.as_ref().ok_or("no project open")?;
         let dev = project
@@ -1949,7 +2048,17 @@ fn assemble_parameter_panel(
                     .collect()
             })
             .unwrap_or_default();
-        (dev.program_ref.clone(), stored)
+        // D39/D40: this device's own imported `ModuleInstance`s — the
+        // project's own answer to "which channel is this," read once here
+        // while `project` is locked, cloned so the lock can drop before
+        // `product_db` is taken (same discipline as `stored` above).
+        let module_instances: Vec<knx_core::ModuleInstance> = project
+            .devices
+            .module_instances()
+            .filter(|m| m.device == device)
+            .cloned()
+            .collect();
+        (dev.program_ref.clone(), stored, module_instances)
     };
 
     let Some(products_mutex) = state.product_db.as_ref() else {
@@ -1999,47 +2108,97 @@ fn assemble_parameter_panel(
     // a regex candidate awaiting module-id validation, or outright
     // undecomposable (no verbatim match, no regex match at all).
     let mut supplied: HashMap<String, String> = HashMap::new();
-    let mut candidates: Vec<(String, String, String, String, String)> = Vec::new();
+    let mut candidates: Vec<(String, String, String, String, String, String)> = Vec::new();
     let mut stale: Vec<crate::routes::StaleParameterDto> = Vec::new();
     for (ets_id, raw) in stored {
         if ref_ids.contains(&ets_id) {
             supplied.insert(ets_id, raw);
-        } else if let Some((prefix, module_digits, _mi_digits, suffix)) =
+        } else if let Some((prefix, module_digits, mi_digits, suffix)) =
             decompose_module_qualified(&ets_id)
         {
-            candidates.push((ets_id, raw, prefix, module_digits, suffix));
+            candidates.push((ets_id, raw, prefix, module_digits, mi_digits, suffix));
         } else {
             stale.push(crate::routes::StaleParameterDto { ets_id, raw });
         }
     }
 
-    let values = knx_productdb::dynamic::resolve_values(&products, &program_id, &supplied)
+    // D42, step 1 of 2: the unscoped-only `ValueMap`, evaluated once to
+    // learn which `Module/@Id`s this program's `choose` chain actually
+    // reaches — Pass B needs that set before it can validate a single
+    // scoped candidate, and `evaluate` is the only place that set is
+    // computed (E3: no parallel module-expansion implementation).
+    let mut values = knx_productdb::dynamic::resolve_values(&products, &program_id, &supplied)
         .map_err(|e| e.to_string())?;
     let trees = knx_productdb::dynamic::load_program_trees(&products, &program_id)
         .map_err(|e| e.to_string())?;
-    let activation = knx_productdb::dynamic::evaluate(&trees, &values);
+    let provisional_activation = knx_productdb::dynamic::evaluate(&trees, &values);
 
-    // The declared `Module/@Id` set this activation actually reached —
+    // The declared `Module/@Id` set this provisional activation reached —
     // D21's second half of candidate validation.
-    let module_ids: HashSet<String> = activation
+    let module_ids: HashSet<String> = provisional_activation
         .parameter_refs
         .iter()
         .filter_map(|r| r.scope.as_ref().and_then(|s| s.module_id.clone()))
         .collect();
 
-    // Pass B: validate every regex candidate against `module_ids` and
-    // `ref_ids` — both must hold, or the row is stale (D21's corrected
-    // definition).
-    let mut module_scoped: HashMap<(String, String), String> = HashMap::new();
-    for (ets_id, raw, prefix, module_digits, suffix) in candidates {
+    // Pass B (D21, D41): validate every regex candidate against
+    // `module_ids` and `ref_ids` as before, plus two new conditions —
+    // its `MI-` digits must agree with the one authoritative
+    // `ModuleInstance` when one exists (no authority: not checked, so a
+    // pre-migration project displays exactly as it did before this
+    // slice), and it must not collide with an already-validated row on
+    // the same `(module_id, declared_id)` key (no silent overwrite: the
+    // loser is `stale`, named alongside the winner in a diagnostic).
+    let mut validated_scoped: HashMap<(String, String), String> = HashMap::new();
+    let mut validated_scoped_ets_id: HashMap<(String, String), String> = HashMap::new();
+    for (ets_id, raw, prefix, module_digits, mi_digits, suffix) in candidates {
         let module_id = format!("{prefix}_M-{module_digits}");
         let declared_id = format!("{prefix}_{suffix}");
-        if module_ids.contains(&module_id) && ref_ids.contains(&declared_id) {
-            module_scoped.insert((module_id, declared_id), raw);
-        } else {
+        if !module_ids.contains(&module_id) || !ref_ids.contains(&declared_id) {
             stale.push(crate::routes::StaleParameterDto { ets_id, raw });
+            continue;
         }
+        if let MiAuthority::Found(authoritative_digits) =
+            resolve_mi_authority(&module_instances, &module_id)
+        {
+            if authoritative_digits != mi_digits {
+                stale.push(crate::routes::StaleParameterDto { ets_id, raw });
+                continue;
+            }
+        }
+        let key = (module_id, declared_id);
+        if let Some(winner_ets_id) = validated_scoped_ets_id.get(&key) {
+            diagnostics.push(crate::routes::ParameterDiagnosticDto {
+                scope: None,
+                message:
+                    "Two stored values target the same module-scoped parameter; the later one is ignored."
+                        .to_string(),
+                detail: format!(
+                    "'{winner_ets_id}' and '{ets_id}' both resolve to module '{}' parameter '{}'; keeping '{winner_ets_id}'.",
+                    key.0, key.1
+                ),
+            });
+            stale.push(crate::routes::StaleParameterDto { ets_id, raw });
+            continue;
+        }
+        validated_scoped_ets_id.insert(key.clone(), ets_id);
+        validated_scoped.insert(key, raw);
     }
+
+    // D42, step 2 of 2: feed the validated scoped values back into the
+    // same `ValueMap` and evaluate again, so a module-scoped `choose`
+    // sees its own channel's value instead of the program default (D16).
+    // Skipped entirely when there is nothing to feed — every corpus
+    // project except KV (E2) — since a second `evaluate` over an
+    // unchanged `ValueMap` can only reproduce the first activation.
+    let activation = if validated_scoped.is_empty() {
+        provisional_activation
+    } else {
+        for ((module_id, ref_id), raw) in validated_scoped.clone() {
+            values.insert_scoped(module_id, ref_id, raw);
+        }
+        knx_productdb::dynamic::evaluate(&trees, &values)
+    };
 
     // Group `Activation::parameter_refs` into one section per distinct
     // scope (D23), preserving each ref's document-order position and the
@@ -2068,7 +2227,67 @@ fn assemble_parameter_panel(
     let mut sections = Vec::with_capacity(section_order.len());
     for key in section_order {
         let section = sections_by_key.remove(&key).expect("just inserted above");
-        let editable = section.scope.is_none();
+        // D39: a section earns editability, it does not start with it. An
+        // unscoped section is editable exactly as before D39. A
+        // module-scoped section is editable only when exactly one
+        // imported `ModuleInstance` is its `MI-` authority (rules 2-3);
+        // every other reason is named in a section diagnostic and the
+        // section stays read-only rather than guessing (D40). A module
+        // with no `@Id` at all is covered by D37's own diagnostic
+        // (`activation.diagnostics`, folded in below) — not repeated here.
+        let mi_digits: Option<String> = match &section.scope {
+            None => None,
+            Some(scope) => match &scope.module_id {
+                None => None,
+                Some(module_id) => match resolve_mi_authority(&module_instances, module_id) {
+                    MiAuthority::Found(digits) => Some(digits),
+                    MiAuthority::NoMatch => {
+                        diagnostics.push(crate::routes::ParameterDiagnosticDto {
+                            scope: section.scope.as_ref().map(module_scope_dto),
+                            message:
+                                "No imported module instance matches this module; its fields are read-only."
+                                    .to_string(),
+                            detail: format!(
+                                "No imported ModuleInstance's RefId matches module '{module_id}' (D39 rule 2, zero matches)."
+                            ),
+                        });
+                        None
+                    }
+                    MiAuthority::Ambiguous {
+                        source_ets_id,
+                        instance_ets_ids,
+                    } => {
+                        diagnostics.push(crate::routes::ParameterDiagnosticDto {
+                            scope: section.scope.as_ref().map(module_scope_dto),
+                            message:
+                                "Two or more imported module instances share this module; its fields are read-only."
+                                    .to_string(),
+                            detail: format!(
+                                "RefId '{source_ets_id}' matches module '{module_id}', but {} ModuleInstances claim it ({}); refusing to guess which one is 'MI-' (D40)."
+                                    , instance_ets_ids.len(), instance_ets_ids.join(", ")
+                            ),
+                        });
+                        None
+                    }
+                    MiAuthority::Malformed {
+                        source_ets_id,
+                        instance_ets_id,
+                    } => {
+                        diagnostics.push(crate::routes::ParameterDiagnosticDto {
+                            scope: section.scope.as_ref().map(module_scope_dto),
+                            message:
+                                "An imported module instance's identifier has an unexpected shape; this module's fields are read-only."
+                                    .to_string(),
+                            detail: format!(
+                                "The ModuleInstance for RefId '{source_ets_id}' has Id '{instance_ets_id}', which does not decompose as '<RefId>_MI-<digits>' (D39 rule 3)."
+                            ),
+                        });
+                        None
+                    }
+                },
+            },
+        };
+        let section_earned_authority = section.scope.is_none() || mi_digits.is_some();
         let mut fields = Vec::with_capacity(section.ref_ids.len());
         for ref_id in &section.ref_ids {
             // A ref the join dropped (see the diagnostic above) has no
@@ -2076,29 +2295,42 @@ fn assemble_parameter_panel(
             let Some(view) = views_by_id.get(ref_id) else {
                 continue;
             };
-            let (value, value_source) = match &section.scope {
-                None => {
-                    let value = values.get(None, ref_id).map(str::to_string);
-                    let source = if supplied.contains_key(ref_id) {
-                        "Stored"
-                    } else {
-                        "ProgramDefault"
-                    };
-                    (value, source.to_string())
-                }
-                Some(scope) => {
-                    let stored_match = scope.module_id.as_ref().and_then(|module_id| {
-                        module_scoped.get(&(module_id.clone(), ref_id.clone()))
-                    });
-                    match stored_match {
-                        Some(raw) => (Some(raw.clone()), "Stored".to_string()),
-                        None => (
-                            values.get(None, ref_id).map(str::to_string),
-                            "ProgramDefault".to_string(),
-                        ),
-                    }
+            // D42: display reads through `ValueMap` alone — it already
+            // knows, per scope, whether a stored (possibly module-scoped)
+            // value or the program default answers.
+            let value = values
+                .get(section.scope.as_ref(), ref_id)
+                .map(str::to_string);
+            let is_scoped_stored = section.scope.as_ref().is_some_and(|scope| {
+                scope.module_id.as_ref().is_some_and(|module_id| {
+                    validated_scoped.contains_key(&(module_id.clone(), ref_id.clone()))
+                })
+            });
+            let value_source =
+                if is_scoped_stored || (section.scope.is_none() && supplied.contains_key(ref_id)) {
+                    "Stored".to_string()
+                } else {
+                    "ProgramDefault".to_string()
+                };
+            // D39/D43: the write target this field's own suffix
+            // reconstructs to, if any — a per-field outcome, since one
+            // field's suffix failing to strip the module prefix must not
+            // silently take its section-siblings down with it.
+            let write_ets_id = if !section_earned_authority {
+                None
+            } else {
+                match &section.scope {
+                    None => Some(view.id.clone()),
+                    Some(scope) => scope.module_id.as_ref().and_then(|module_id| {
+                        module_scoped_write_id(
+                            module_id,
+                            mi_digits.as_deref().unwrap_or(""),
+                            &view.id,
+                        )
+                    }),
                 }
             };
+            let editable = write_ets_id.is_some();
             fields.push(crate::routes::ParameterFieldDto {
                 ets_id: view.id.clone(),
                 name: view.name.clone(),
@@ -2119,6 +2351,7 @@ fn assemble_parameter_panel(
                     .collect(),
                 display_order: view.display_order,
                 access: view.access.clone(),
+                write_ets_id,
             });
         }
         sections.push(crate::routes::ParameterSectionDto {
@@ -2237,33 +2470,53 @@ pub(crate) fn set_parameter_value_impl(
     let before = assemble_parameter_panel(state, device_id, language)?;
     let program_id = before
         .program_id
+        .clone()
         .ok_or("device has no resolvable application program")?;
 
-    if !before.ref_ids.contains(&ets_id) {
-        return Err(format!(
-            "'{ets_id}' is not a parameter declared by program '{program_id}'"
-        ));
+    // D43: the assembled panel is the single authority on what is
+    // writable — a field's `write_ets_id` (never `None` unless it is
+    // read-only) is the only id this request may legitimately name.
+    // Walking the panel replaces the old two-step `ref_ids`/scope check
+    // entirely, rather than re-deriving an id shape independently here.
+    let mut matched: Option<&crate::routes::ParameterFieldDto> = None;
+    let mut bare_match_write_id: Option<Option<String>> = None;
+    for section in &before.dto.sections {
+        for field in &section.fields {
+            if field.write_ets_id.as_deref() == Some(ets_id.as_str()) {
+                matched = Some(field);
+            }
+            if field.ets_id == ets_id {
+                bare_match_write_id = Some(field.write_ets_id.clone());
+            }
+        }
     }
-    let view = before.views_by_id.get(&ets_id).ok_or_else(|| {
+
+    let field = match matched {
+        Some(field) => field,
+        None => {
+            let reason = if let Some(actual_write_id) = bare_match_write_id {
+                match actual_write_id {
+                    Some(correct) => format!(
+                        "is shown, but must be written using its module-qualified id '{correct}', not this one"
+                    ),
+                    None => "is currently shown but not writable (its module-scoped section has no single authoritative module instance, or its write target could not be reconstructed)".to_string(),
+                }
+            } else if before.ref_ids.contains(&ets_id) {
+                "is declared by this program but not currently active".to_string()
+            } else {
+                "is not a parameter declared by this program".to_string()
+            };
+            return Err(format!("'{ets_id}' {reason} (program '{program_id}')"));
+        }
+    };
+
+    let view = before.views_by_id.get(&field.ets_id).ok_or_else(|| {
         format!(
-            "'{ets_id}' is declared by program '{program_id}' but its parameter/parameter_type row could not be resolved"
+            "'{}' is declared by program '{program_id}' but its parameter/parameter_type row could not be resolved",
+            field.ets_id
         )
     })?;
     validate_kind_and_bounds(view, &raw)?;
-
-    // D25: a field currently shown in a module-scoped (`scope: Some(_)`)
-    // section is read-only in this slice — reject before any command is
-    // built. A field not currently active at all (hidden behind an
-    // unmatched `choose`) is not in this set either way, matching D24
-    // step 2's "does not require the parameter to be currently active".
-    let is_module_scoped_now = before.dto.sections.iter().any(|section| {
-        section.scope.is_some() && section.fields.iter().any(|field| field.ets_id == ets_id)
-    });
-    if is_module_scoped_now {
-        return Err(format!(
-            "'{ets_id}' is a module-scoped field; module-scoped fields are read-only in this slice"
-        ));
-    }
 
     let device = knx_core::DeviceId(device_id);
     let cmd = {

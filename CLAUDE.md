@@ -408,4 +408,21 @@ Integration / Hardening
 ```
 
 Do not prematurely implement later phases when an earlier architectural dependency is unresolved.
-·
+
+## Handover Protocol (.ai/)
+
+Du arbeitest in diesem Projekt abwechselnd mit Codex. Halte den Arbeitsstand strikt synchron.
+
+### Weitere Regeln
+1. **Startup:** Lies vor jeder Aufgabe zuerst `.ai/CURRENT_STATE.md`.
+2. **Shutdown:** Aktualisiere **immer** vor Beendigung einer Aufgabe `.ai/CURRENT_STATE.md`.
+3. **Logs:** Erstelle bei Architekturänderungen, Refactorings oder größeren Blocks eine Datei in `.ai/logs/YYYY-MM-DD_claude_<topic>.md`.
+
+### Format für `.ai/CURRENT_STATE.md`
+Achte darauf, das folgende Format bei Updates beizubehalten:
+
+- **Last Agent:** Claude
+- **Timestamp:** YYYY-MM-DD HH:MM
+- **Completed:** Was wurde exakt geändert/umgesetzt?
+- **Pending/Next Steps:** Was muss als Nächstes getan werden?
+- **Notes for Codex:** Spezifische Hinweise, offene Edge-Cases oder Kontext für das Nachfolgemodell.

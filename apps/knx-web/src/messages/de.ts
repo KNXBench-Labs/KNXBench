@@ -297,4 +297,9 @@ export const messages: Record<MessageKey, string> = {
   "projectDiff.entity.buildings": "Gebäude",
 
   "groupAddressCsv.filterName": "Gruppenadressen-CSV",
+
+  "app.filterName.etsProject": "ETS-Projekt",
+  "app.filterName.knxDesktopProject": "knx-desktop-Projekt",
+
+  "documentationExport.filterName": "HTML-Dokument",
 };

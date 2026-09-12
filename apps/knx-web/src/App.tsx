@@ -24,9 +24,6 @@ import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
 import DocumentationExportButton from "./DocumentationExportButton";
 import ProjectDiffPanel from "./ProjectDiffPanel";
 
-const KNXDB_FILTER = [{ name: "knx-desktop project", extensions: ["knxdb"] }];
-const EXPORT_FILTER = [{ name: "ETS project", extensions: ["knxproj"] }];
-
 // `ExportWarningDto` (apps/knx-server/src/routes.rs) has no `tag` attribute,
 // so serde serializes it externally tagged: `{ "unsigned": { "detail":
 // "..." } }`, `{ "missingManufacturerData": { "sourcePath": "...", "sha256":
@@ -53,6 +50,12 @@ function App() {
   // session, not only for whoever happens to open Settings first. See
   // `App.test.tsx`'s "lang attribute is correct on a fresh mount" test.
   const t = useTranslate();
+  // Rebuilt every render instead of hoisted to module scope: a module-level
+  // `const` would call `t()` exactly once at import time and freeze the
+  // filter name in whatever language happened to be active then — the same
+  // trap `commandRegistry.ts`'s `COMMANDS` had before task 3's fix.
+  const etsProjectFilter = [{ name: t("app.filterName.etsProject"), extensions: ["knxproj"] }];
+  const knxdbFilter = [{ name: t("app.filterName.knxDesktopProject"), extensions: ["knxdb"] }];
   const [tree, setTree] = useState<ProjectTree | null>(null);
   const { toasts, pushError, clearErrors, pushFun, dismiss } = useToasts();
   // Bumped on every error path below, threaded into `LogPanel` as a second
@@ -255,7 +258,7 @@ function App() {
   }, [productLanguage]);
 
   async function pickProject() {
-    const path = await pickOpenPath([{ name: "ETS project", extensions: ["knxproj"] }]);
+    const path = await pickOpenPath(etsProjectFilter);
     if (!path) return;
     clearErrors();
     try {
@@ -267,7 +270,7 @@ function App() {
   }
 
   async function openNativeProject() {
-    const path = await pickOpenPath(KNXDB_FILTER);
+    const path = await pickOpenPath(knxdbFilter);
     if (!path) return;
     clearErrors();
     try {
@@ -279,7 +282,7 @@ function App() {
   }
 
   async function saveProjectAs() {
-    const path = await pickSavePath(KNXDB_FILTER, "project.knxdb");
+    const path = await pickSavePath(knxdbFilter, "project.knxdb");
     if (!path) return;
     clearErrors();
     try {
@@ -301,7 +304,7 @@ function App() {
   }
 
   async function exportProject() {
-    const path = await pickSavePath(EXPORT_FILTER, "project.knxproj");
+    const path = await pickSavePath(etsProjectFilter, "project.knxproj");
     if (!path) return;
     clearErrors();
     try {

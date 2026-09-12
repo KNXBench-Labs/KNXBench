@@ -104,6 +104,10 @@ describe("DocumentationExportButton", () => {
     });
     const { root, onSummary, onError } = await renderButton();
     await click(exportButton());
+    // "HTML document" now comes from `t("documentationExport.filterName")`
+    // (`messages/en.ts`), not a module-level literal — this still holds
+    // because the test renders without a `LanguageProvider`, and `useTranslate()`
+    // falls back to the English catalog in that case.
     expect(filePickerMock.pickSavePath).toHaveBeenCalledWith(
       [{ name: "HTML document", extensions: ["html"] }],
       expect.any(String),

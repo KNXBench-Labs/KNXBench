@@ -217,9 +217,10 @@ pub(crate) struct ParameterDiagnosticDto {
     pub(crate) detail: String,
 }
 
-/// The optional display language on both parameter endpoints (T26 Task 2).
-/// Absent means `None` — today's untranslated behaviour, unchanged. Follows
-/// `CatalogItemsQuery`'s own precedent above.
+/// The optional display language, shared by both parameter endpoints
+/// (T26 Task 2) and `device_detail` (T33 Task 2). Absent means `None` —
+/// today's untranslated behaviour, unchanged. Follows `CatalogItemsQuery`'s
+/// own precedent above.
 #[derive(Deserialize)]
 struct ParameterLanguageQuery {
     #[serde(default)]
@@ -386,8 +387,9 @@ async fn export_project(
 async fn device_detail(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
+    Query(q): Query<ParameterLanguageQuery>,
 ) -> Result<Json<knx_projection::DeviceDetail>, ApiError> {
-    domain::device_detail(&state, id)
+    domain::device_detail(&state, id, q.language.as_deref())
         .map(Json)
         .map_err(ApiError::bad_request)
 }

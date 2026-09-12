@@ -63,6 +63,8 @@ describe("CommandPalette", () => {
     // "open-project" is COMMANDS[0], unconditionally enabled, so it is the
     // highlight on mount even with no project loaded.
     const input = host!.querySelector("input")!;
+    expect(input.getAttribute("role")).toBe("combobox");
+    expect(input.getAttribute("aria-haspopup")).toBe("listbox");
     expect(input.getAttribute("aria-activedescendant")).toBe("palette-option-0");
 
     const first = host!.querySelector("#palette-option-0")!;

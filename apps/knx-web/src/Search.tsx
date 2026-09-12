@@ -72,6 +72,7 @@ export default function Search(props: {
         onKeyDown={handleKeyDown}
         placeholder="Search devices, group addresses, building parts…"
         role="combobox"
+        aria-haspopup="listbox"
         aria-expanded={ordered.length > 0}
         aria-controls="search-results"
         aria-activedescendant={ordered[highlight] ? `search-option-${highlight}` : undefined}

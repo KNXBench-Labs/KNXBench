@@ -66,6 +66,9 @@ jobs:
       - name: Layering gate
         run: cargo run -p xtask -- check-layering
 
+      - name: Header gate
+        run: cargo run -p xtask -- check-headers
+
   deny:
     name: License and advisory gate
     runs-on: ubuntu-latest

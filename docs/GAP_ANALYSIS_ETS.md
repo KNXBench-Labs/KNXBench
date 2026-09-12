@@ -911,9 +911,10 @@ dropped.
   same thing as **T13**'s documentation export (which prints a project
   rather than explaining the application).
 
-None of Tiers 1-8 fits **T31**: it closes an existing gap (**D9**)
-rather than opening new ETS-comparison surface, so it is listed here
-undecorated rather than under an invented tier heading.
+None of Tiers 1-8 fits **T31** or **T35**: the first closes an existing
+gap (**D9**) rather than opening new ETS-comparison surface, the second
+is repository hygiene with no ETS counterpart at all, so both are listed
+here undecorated rather than under an invented tier heading.
 
 - **T31. Done (2026-09-12).** A shared modal overlay shell
   (`apps/knx-web/src/Overlay.tsx`), and the accessibility pass its four
@@ -932,6 +933,29 @@ undecorated rather than under an invented tier heading.
   [KNOWN_LIMITATIONS.md §20](KNOWN_LIMITATIONS.md#20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap--partially-resolved),
   which stays open for it. Design spec:
   `docs/superpowers/specs/2026-09-12-modal-overlay-shell-design.md`.
+
+- **T35. Done (2026-09-12).** Every program gets a version, and every
+  file a first line that says what it is for. All 14 Cargo packages and
+  `apps/knx-web/package.json` moved from `0.0.0` to `0.1.0-alpha.1`,
+  independently (no workspace inheritance, by requirement);
+  `tauri.conf.json` lost its duplicate `version` key so `knx-desktop`
+  has one source of truth. `knx --version` and `knx-server --version`
+  print `<name> 0.1.0-alpha.1+g<sha>`, the commit coming from a
+  dependency-free `build.rs` that degrades to the bare version when
+  there is no git to ask (Docker, tarball; the `Dockerfile` takes
+  `--build-arg KNX_BUILD_SHA=`). A one-sentence first-line header
+  convention (`//! ...` / `/** ... */`, one sentence, one period, at
+  most 100 columns) applies to files created or edited from now on —
+  no repo-wide sweep — and `cargo run -p xtask -- check-headers`
+  fails on a malformed header and ratchets the 201 files that have
+  none yet: the count may fall, never rise, so a new bare file or a
+  header edited back into a paragraph fails the gate. **No per-file version**: the user's own
+  condition was feasibility, and a number nothing can verify is worse
+  than none; [ADR-0018](adr/0018-program-versions-and-file-headers.md)
+  argues it out and names what delivers the underlying want instead
+  (the sentence, the manifest version, the build sha). Not enforced,
+  and said so: the alpha bump rule, and whether any header sentence is
+  still true.
 
 ### Not backlog items — durable non-goals, listed for completeness only
 

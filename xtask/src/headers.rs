@@ -78,6 +78,9 @@ impl Language {
 /// not `Invalid`. A blank `//!` line or any non-doc line on line 2 is
 /// fine; the rest of the module doc is free-form.
 pub fn check_rust(source: &str) -> Header {
+    if let Some(rejected) = reject_bom(source) {
+        return rejected;
+    }
     let mut lines = source.lines();
     let Some(first) = lines.next() else {
         return Header::Absent;
@@ -102,6 +105,9 @@ pub fn check_rust(source: &str) -> Header {
 /// single-line docblock holding only a pragma such as
 /// `/** @vitest-environment happy-dom */`.
 pub fn check_ts(source: &str) -> Header {
+    if let Some(rejected) = reject_bom(source) {
+        return rejected;
+    }
     let Some(first) = source.lines().next() else {
         return Header::Absent;
     };
@@ -114,11 +120,24 @@ pub fn check_ts(source: &str) -> Header {
     if body.trim_start().starts_with('@') {
         return Header::Absent;
     }
-    let (Some(text), true) = (body.strip_prefix(' '), body.ends_with(' ')) else {
+    if body.trim().is_empty() {
+        return Header::Invalid("header sentence is empty".to_string());
+    }
+    let Some(text) = body.strip_prefix(' ').and_then(|t| t.strip_suffix(' ')) else {
         return Header::Invalid("expected exactly one space inside `/** ... */`".to_string());
     };
-    let text = &text[..text.len() - 1];
     check_sentence(first, text)
+}
+
+/// A UTF-8 byte-order mark is not a header and would hide one: `//!` or
+/// `/**` behind it is no longer at column 0, so the file would read as
+/// "no header" and quietly dodge the lint. Rejected outright rather than
+/// stripped — nothing in this tree wants a BOM, and a silent skip is the
+/// one outcome this lint exists to avoid.
+fn reject_bom(source: &str) -> Option<Header> {
+    source.starts_with('\u{feff}').then(|| {
+        Header::Invalid("file starts with a UTF-8 byte-order mark, which hides line 1".to_string())
+    })
 }
 
 /// The one grammar both languages share, applied to the sentence with the
@@ -431,6 +450,22 @@ mod tests {
         assert!(invalid(check_ts("/**Fetches things. */\n")).contains("exactly one space"));
         assert!(invalid(check_ts("/** Fetches things.*/\n")).contains("exactly one space"));
         assert!(invalid(check_ts("/**  Fetches things. */\n")).contains("whitespace"));
+    }
+
+    #[test]
+    fn ts_empty_docblock_is_invalid_not_a_crash() {
+        // `/** */` once underflowed `text.len() - 1`; a header-shaped
+        // comment with nothing in it is a malformed header, not a panic.
+        assert!(invalid(check_ts("/** */\n")).contains("empty"));
+        assert!(invalid(check_ts("/**  */\n")).contains("empty"));
+        assert!(invalid(check_ts("/***/\n")).contains("empty"));
+    }
+
+    #[test]
+    fn byte_order_mark_is_rejected_in_both_languages() {
+        assert!(invalid(check_rust("\u{feff}//! Hidden.\n")).contains("byte-order mark"));
+        assert!(invalid(check_ts("\u{feff}/** Hidden. */\n")).contains("byte-order mark"));
+        assert!(invalid(check_rust("\u{feff}use x;\n")).contains("byte-order mark"));
     }
 
     #[test]

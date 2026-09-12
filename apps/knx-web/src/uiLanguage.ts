@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 export const UI_LANGUAGE_STORAGE_KEY = "knx-desktop:ui-language";
 
@@ -95,9 +95,24 @@ export function saveUiLanguage(storage: Pick<Storage, "setItem">, language: UiLa
  * persists on every change, the same pattern as `useProductLanguage()`:
  * setting it in one component is observed immediately by every other
  * mounted component that reads it, with no remount required.
+ *
+ * Also applies `language` to `<html lang>`, the same
+ * `document.documentElement`-side-effect-lives-inside-the-hook convention
+ * `useThemeId`'s `data-theme` and `useMotion`'s `data-motion-*` use — so
+ * the browser and assistive technology agree with whatever `messages/*.ts`
+ * catalogue is currently on screen, without a separate effect anywhere
+ * else. Unlike those two, this hook has no local `useState` of its own to
+ * hang the effect on (the value comes from `useSyncExternalStore`
+ * instead), but the placement rule — react to this hook's own current
+ * value, right here — is the same one.
  */
 export function useUiLanguage(): [UiLanguage, (language: UiLanguage) => void] {
   const language = useSyncExternalStore(subscribe, getSnapshot);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("lang", language);
+  }, [language]);
+
   return [language, setStoredUiLanguage];
 }
 

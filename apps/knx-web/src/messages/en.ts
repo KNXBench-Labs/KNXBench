@@ -5,10 +5,13 @@
 // string>` annotation means the compiler rejects a German catalogue that
 // falls behind this one by even a single key.
 //
-// Ten keys are seeded here, lifted verbatim from `App.tsx`'s toolbar
-// (T25 task 1's job is the catalogue and the plumbing around it, not the
-// extraction). The other ~129 arrive with the extraction tasks (T25
-// tasks 2-6), each adding its own keys to this object and to `de.ts`.
+// Ten keys were seeded here by task 1, lifted verbatim from `App.tsx`'s
+// toolbar (its job was the catalogue and the plumbing around it, not the
+// extraction). Task 2 added three more for the Settings panel's own
+// UI-language control (`settings.uiLanguage`, and one `language.*` entry
+// per catalogue this file has a sibling for — see `AVAILABLE_UI_LANGUAGES`
+// in `uiLanguage.ts`). The rest arrive with the extraction tasks (T25
+// tasks 3-5), each adding its own keys to this object and to `de.ts`.
 //
 // Plural keys use the `key.one` / `key.other` convention: both are ordinary
 // entries here (see `i18n.ts`'s `resolvePluralBase` for how a base like
@@ -26,6 +29,9 @@ export const messages = {
   "toolbar.search": "Search… (Ctrl+K)",
   "toolbar.log": "Log",
   "toolbar.settings": "Settings",
+  "settings.uiLanguage": "UI language",
+  "language.en": "English",
+  "language.de": "Deutsch",
 } as const;
 
 export type Messages = typeof messages;

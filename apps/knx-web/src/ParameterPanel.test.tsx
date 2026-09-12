@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ParameterPanel as ParameterPanelDto } from "./api";
+import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests } from "./productLanguage";
 
 const apiMock = vi.hoisted(() => ({
   deviceParameters: vi.fn(),
@@ -22,6 +23,8 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
+  window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
+  resetProductLanguageForTests();
 });
 
 // Two sections (top-level + one module instantiation, D23), one stale
@@ -105,7 +108,7 @@ describe("ParameterPanel", () => {
     apiMock.deviceParameters.mockResolvedValue(fixture);
     const root = await renderPanel();
 
-    expect(apiMock.deviceParameters).toHaveBeenCalledWith(1);
+    expect(apiMock.deviceParameters).toHaveBeenCalledWith(1, null);
     expect(host!.querySelectorAll(".parameter-field").length).toBe(2);
     expect(host!.textContent).toContain("Module #7");
     expect(host!.textContent).toContain("P3");
@@ -139,7 +142,7 @@ describe("ParameterPanel", () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "6");
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "6", null);
     expect(host!.querySelector<HTMLInputElement>('input[type="number"]')!.value).toBe("6");
     root.unmount();
   });
@@ -167,7 +170,7 @@ describe("ParameterPanel", () => {
       await Promise.resolve();
     });
 
-    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "99");
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "99", null);
     expect(host!.querySelector<HTMLInputElement>('input[type="number"]')!.value).toBe("5");
     expect(host!.querySelector(".field-error")!.textContent).toBe("out of range");
 
@@ -190,6 +193,54 @@ describe("ParameterPanel", () => {
     expect(host!.querySelectorAll(".parameter-field").length).toBe(0);
     expect(host!.textContent).toContain("P9");
     expect(host!.textContent).toContain("legacy-raw");
+
+    root.unmount();
+  });
+
+  it("sends the active product language when loading the panel", async () => {
+    window.localStorage.setItem(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    apiMock.deviceParameters.mockResolvedValue(fixture);
+    const root = await renderPanel();
+
+    expect(apiMock.deviceParameters).toHaveBeenCalledWith(1, "de");
+
+    root.unmount();
+  });
+
+  it("sends the active product language when writing a value", async () => {
+    window.localStorage.setItem(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    apiMock.deviceParameters.mockResolvedValue(fixture);
+    apiMock.setParameterValue.mockResolvedValue(fixture);
+    const root = await renderPanel();
+
+    const input = host!.querySelector<HTMLInputElement>('input[type="number"]')!;
+    await act(async () => {
+      setInputValue(input, "6");
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "P1", "6", "de");
+
+    root.unmount();
+  });
+
+  it("renders a field's text in preference to its name", async () => {
+    const withText: ParameterPanelDto = {
+      ...fixture,
+      sections: [
+        {
+          scope: null,
+          fields: [{ ...fixture.sections[0].fields[0], name: "General", text: "Allgemein" }],
+        },
+        fixture.sections[1],
+      ],
+    };
+    apiMock.deviceParameters.mockResolvedValue(withText);
+    const root = await renderPanel();
+
+    expect(host!.textContent).toContain("Allgemein");
+    expect(host!.textContent).not.toContain("General");
 
     root.unmount();
   });

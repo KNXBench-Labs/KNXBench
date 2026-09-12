@@ -72,6 +72,7 @@ pub fn project_routes() -> Router<SharedState> {
         )
         .route("/api/catalog/manufacturers", get(catalog_manufacturers))
         .route("/api/catalog/items", get(catalog_items))
+        .route("/api/product-languages", get(product_languages))
         .route(
             "/api/catalog/install",
             post(install_catalog_package).layer(DefaultBodyLimit::max(MAX_CATALOG_PACKAGE_BYTES)),
@@ -216,11 +217,21 @@ pub(crate) struct ParameterDiagnosticDto {
     pub(crate) detail: String,
 }
 
+/// The optional display language on both parameter endpoints (T26 Task 2).
+/// Absent means `None` — today's untranslated behaviour, unchanged. Follows
+/// `CatalogItemsQuery`'s own precedent above.
+#[derive(Deserialize)]
+struct ParameterLanguageQuery {
+    #[serde(default)]
+    language: Option<String>,
+}
+
 async fn parameter_panel(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
+    Query(q): Query<ParameterLanguageQuery>,
 ) -> Result<Json<ParameterPanelDto>, ApiError> {
-    domain::parameter_panel_impl(&state, id)
+    domain::parameter_panel_impl(&state, id, q.language.as_deref())
         .map(Json)
         .map_err(ApiError::bad_request)
 }
@@ -235,9 +246,10 @@ struct SetParameterValueRequest {
 async fn set_parameter_value(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
+    Query(q): Query<ParameterLanguageQuery>,
     Json(body): Json<SetParameterValueRequest>,
 ) -> Result<Json<ParameterPanelDto>, ApiError> {
-    domain::set_parameter_value_impl(&state, id, body.ets_id, body.raw)
+    domain::set_parameter_value_impl(&state, id, body.ets_id, body.raw, q.language.as_deref())
         .map(Json)
         .map_err(ApiError::bad_request)
 }
@@ -1598,6 +1610,37 @@ async fn catalog_items(
 ) -> Result<Json<Vec<CatalogItemDto>>, ApiError> {
     domain::catalog_items_impl(&state, q.manufacturer, q.search)
         .map(|rows| Json(rows.into_iter().map(CatalogItemDto::from).collect()))
+        .map_err(ApiError::bad_request)
+}
+
+/// One language identifier the product database has any translation rows
+/// for, with its row count — backs the Settings panel's "Product data
+/// language" control (T26). `rows` is a plain `i64` count, not a UI-facing
+/// judgement of completeness.
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ProductLanguageDto {
+    pub(crate) language: String,
+    pub(crate) rows: i64,
+}
+
+impl From<knx_productdb::query::TranslationLanguage> for ProductLanguageDto {
+    fn from(t: knx_productdb::query::TranslationLanguage) -> Self {
+        Self {
+            language: t.language,
+            rows: t.rows,
+        }
+    }
+}
+
+/// `GET /api/product-languages`. With no product database configured this
+/// returns `200 []`, not an error — see `domain::product_languages_impl`'s
+/// own doc comment for why.
+async fn product_languages(
+    State(state): State<SharedState>,
+) -> Result<Json<Vec<ProductLanguageDto>>, ApiError> {
+    domain::product_languages_impl(&state)
+        .map(|rows| Json(rows.into_iter().map(ProductLanguageDto::from).collect()))
         .map_err(ApiError::bad_request)
 }
 

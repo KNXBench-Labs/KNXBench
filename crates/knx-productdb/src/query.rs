@@ -5,7 +5,7 @@
 //! point of the override chain (DATA_MODEL §3): a value without its layer
 //! cannot be written back correctly, so this view never returns one.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use rusqlite::{Connection, OptionalExtension};
 
@@ -227,6 +227,12 @@ struct ParameterRawRow {
     id: String,
     display_order: Option<i64>,
     tag: Option<String>,
+    /// `parameter.id` — not exposed on `ParameterView` (which carries the
+    /// `ParameterRef` id, `id` above), but needed as the overlay lookup key
+    /// for `p.text`/`p.name`, since the translation table is keyed by
+    /// `ref_id` and a `Parameter`-layer translation's `ref_id` is the
+    /// `Parameter`'s own id, not its `ParameterRef`'s.
+    parameter_id: String,
     name: Option<String>,
     p_text: Option<String>,
     pr_text: Option<String>,
@@ -237,14 +243,42 @@ struct ParameterRawRow {
     parameter_type_id: String,
 }
 
+/// One overlay lookup, or `None` when there is no overlay for this call at
+/// all (the `language: None` path) or the overlay has no row for this exact
+/// `(ref_id, attribute)`. There is deliberately no second lookup on a miss —
+/// Global Constraint 4 (no fallback chain between languages): a miss falls
+/// straight through to the package's own untranslated column, never to
+/// another language.
+fn overlay_text(
+    overlay: Option<&HashMap<(String, String), String>>,
+    ref_id: &str,
+    attribute_name: &str,
+) -> Option<String> {
+    overlay?
+        .get(&(ref_id.to_string(), attribute_name.to_string()))
+        .cloned()
+}
+
 /// Every `ParameterView` a program declares, in `parameter_ref.
 /// display_order`. One query, not one per field — a single `ModuleDef` can
 /// own on the order of hundreds of these (RESEARCH.md §4.4 Q3), so N calls
 /// is the wrong shape, exactly as `com_object_view`'s own doc comment
 /// already reasons for communication objects.
+///
+/// `language` is the requested display language, `None` meaning the
+/// package's own untranslated text — today's behaviour, unchanged, and
+/// issuing no `translation` query at all. `Some` loads one overlay
+/// (`translation_overlay`) for the whole call and applies it **before**
+/// `pick()`, per element: a translated `Parameter/@Text` lands at the
+/// `Program` layer and a translated `ParameterRef/@Text` at the
+/// `ProgramRef` layer, exactly where their untranslated counterparts would.
+/// `ValueLayer` therefore keeps its one existing meaning — which structural
+/// layer supplied the value — instead of also having to mean "which
+/// language did" (design D22's translation slice).
 pub fn parameter_views(
     conn: &Connection,
     program_id: &str,
+    language: Option<&str>,
 ) -> Result<Vec<ParameterView>, ProductDbError> {
     // `pr.display_order` is selected raw, not `COALESCE`d: real-world
     // packages exist where `ParameterRef/@DisplayOrder` is simply absent —
@@ -270,7 +304,7 @@ pub fn parameter_views(
     // behaviour.
     let mut stmt = conn.prepare(
         "SELECT pr.id, pr.display_order, pr.tag,
-                p.name, p.text, pr.text,
+                p.id, p.name, p.text, pr.text,
                 pt.kind, p.access, pt.min_inclusive, pt.max_inclusive, pt.id
          FROM parameter_ref pr
          JOIN parameter p ON p.program_id = pr.program_id AND p.id = pr.parameter_id
@@ -284,27 +318,42 @@ pub fn parameter_views(
                 id: r.get(0)?,
                 display_order: r.get(1)?,
                 tag: r.get(2)?,
-                name: r.get(3)?,
-                p_text: r.get(4)?,
-                pr_text: r.get(5)?,
-                kind: r.get(6)?,
-                access: r.get(7)?,
-                min_inclusive: r.get(8)?,
-                max_inclusive: r.get(9)?,
-                parameter_type_id: r.get(10)?,
+                parameter_id: r.get(3)?,
+                name: r.get(4)?,
+                p_text: r.get(5)?,
+                pr_text: r.get(6)?,
+                kind: r.get(7)?,
+                access: r.get(8)?,
+                min_inclusive: r.get(9)?,
+                max_inclusive: r.get(10)?,
+                parameter_type_id: r.get(11)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
+    // Loaded once for the whole call, never once per row (see this
+    // function's own doc comment above and `translation_overlay`'s).
+    // `None` issues no `translation` query at all: a caller that never asks
+    // for a language must not pay for one.
+    let overlay = language
+        .map(|lang| translation_overlay(conn, program_id, lang))
+        .transpose()?;
+
     let mut views = Vec::with_capacity(raw_rows.len());
     for raw in raw_rows {
-        let (text, text_layer) = pick(raw.p_text, raw.pr_text);
+        // Overlaid **before** `pick()`, per element, so a translated string
+        // lands at the same structural layer its untranslated counterpart
+        // would have (see the doc comment above `pick()` is unchanged).
+        let p_text = overlay_text(overlay.as_ref(), &raw.parameter_id, "Text").or(raw.p_text);
+        let pr_text = overlay_text(overlay.as_ref(), &raw.id, "Text").or(raw.pr_text);
+        let (text, text_layer) = pick(p_text, pr_text);
+        let name = overlay_text(overlay.as_ref(), &raw.parameter_id, "Name").or(raw.name);
         // Only `Restriction` kinds ever have rows in `parameter_type_enum`
         // (the other seven kinds have no enumeration concept at all) — the
         // kind check keeps this a second query for the fraction of rows
         // that need it, not a blind per-row lookup.
         let enum_options = if raw.kind == "Restriction" {
-            parameter_type_enum_options(conn, program_id, &raw.parameter_type_id)?
+            parameter_type_enum_options(conn, program_id, &raw.parameter_type_id, overlay.as_ref())?
         } else {
             Vec::new()
         };
@@ -312,7 +361,7 @@ pub fn parameter_views(
             id: raw.id,
             display_order: raw.display_order,
             tag: raw.tag,
-            name: raw.name,
+            name,
             text,
             text_layer,
             kind: raw.kind,
@@ -325,22 +374,127 @@ pub fn parameter_views(
     Ok(views)
 }
 
+/// `(ref_id, attribute_name) -> text` for one program and language, loaded
+/// once per `parameter_views` call: a single `ModuleDef` can own hundreds of
+/// parameters, so a per-row lookup would be the wrong shape — the same
+/// reasoning `parameter_views`'s own doc comment already gives for its own
+/// query. Restricted to the five attributes a display label may legally be
+/// overlaid from; `Value` is excluded even though it appears in the same
+/// table, because a parameter's value is a key written into the project
+/// file (`ParameterFieldDto.value`), and translating it by display language
+/// would corrupt stored project data the moment someone switched languages
+/// (Global Constraint 3).
+fn translation_overlay(
+    conn: &Connection,
+    program_id: &str,
+    language: &str,
+) -> Result<HashMap<(String, String), String>, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT ref_id, attribute_name, text FROM translation
+         WHERE program_id = ?1 AND language = ?2
+           AND attribute_name IN ('Text','FunctionText','SuffixText','VisibleDescription','Name')
+           AND text IS NOT NULL",
+    )?;
+    let rows = stmt
+        .query_map([program_id, language], |r| {
+            let ref_id: String = r.get(0)?;
+            let attribute_name: String = r.get(1)?;
+            let text: String = r.get(2)?;
+            Ok(((ref_id, attribute_name), text))
+        })?
+        .collect::<Result<HashMap<_, _>, _>>()?;
+    Ok(rows)
+}
+
+/// One language identifier's row count, as returned by
+/// `translation_languages`/`program_translation_languages`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TranslationLanguage {
+    pub language: String,
+    pub rows: i64,
+}
+
+/// Every language identifier any program in this database declares, with
+/// how many translation rows it has, most rows first then identifier
+/// ascending. Database-wide: a settings screen offering "every language
+/// this installation has ever seen" wants this; a single device's parameter
+/// panel wants `program_translation_languages` instead — see that
+/// function's doc comment for why the two must not be conflated.
+pub fn translation_languages(
+    conn: &Connection,
+) -> Result<Vec<TranslationLanguage>, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT language, COUNT(*) FROM translation
+         GROUP BY language
+         ORDER BY COUNT(*) DESC, language ASC",
+    )?;
+    let rows = stmt
+        .query_map([], |r| {
+            Ok(TranslationLanguage {
+                language: r.get(0)?,
+                rows: r.get(1)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
+/// The same count as `translation_languages`, narrowed to one application
+/// program. Languages are declared per `ApplicationProgram`'s own
+/// `Languages` block, not per database — measured on the real corpus, the
+/// programs in one database declare 10, 5, 5, 5, 4 and 2 languages
+/// respectively, so a database-wide answer would be wrong for any single
+/// device's parameter panel, which only ever renders one program's rows.
+pub fn program_translation_languages(
+    conn: &Connection,
+    program_id: &str,
+) -> Result<Vec<TranslationLanguage>, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT language, COUNT(*) FROM translation
+         WHERE program_id = ?1
+         GROUP BY language
+         ORDER BY COUNT(*) DESC, language ASC",
+    )?;
+    let rows = stmt
+        .query_map([program_id], |r| {
+            Ok(TranslationLanguage {
+                language: r.get(0)?,
+                rows: r.get(1)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
+}
+
 fn parameter_type_enum_options(
     conn: &Connection,
     program_id: &str,
     parameter_type_id: &str,
+    overlay: Option<&HashMap<(String, String), String>>,
 ) -> Result<Vec<(String, Option<String>)>, ProductDbError> {
     let mut stmt = conn.prepare(
-        "SELECT value, text FROM parameter_type_enum
+        "SELECT id, value, text FROM parameter_type_enum
          WHERE program_id = ?1 AND parameter_type_id = ?2
          ORDER BY display_order",
     )?;
     let rows = stmt
         .query_map([program_id, parameter_type_id], |r| {
-            Ok((r.get(0)?, r.get(1)?))
+            let id: String = r.get(0)?;
+            let value: String = r.get(1)?;
+            let text: Option<String> = r.get(2)?;
+            Ok((id, value, text))
         })?
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(rows)
+        .collect::<Result<Vec<(String, String, Option<String>)>, _>>()?;
+    // `value` is never overlaid, even when a `Value` translation row exists
+    // for this same `id` (Global Constraint 3) — only `text` is a display
+    // string, and only `text` is looked up, by this row's own `id`.
+    Ok(rows
+        .into_iter()
+        .map(|(id, value, text)| {
+            let text = overlay_text(overlay, &id, "Text").or(text);
+            (value, text)
+        })
+        .collect())
 }
 
 /// The bare `parameter_ref.id` set for a program — D21's stale-value diff
@@ -926,7 +1080,7 @@ mod tests {
     fn parameter_views_returns_three_views_in_display_order_with_enum_options_only_on_the_restriction(
     ) {
         let (_dir, conn) = parameter_db();
-        let views = parameter_views(&conn, "A-2").unwrap();
+        let views = parameter_views(&conn, "A-2", None).unwrap();
         assert_eq!(
             views.iter().map(|v| v.id.as_str()).collect::<Vec<_>>(),
             vec!["PR-2", "PR-3", "PR-1"],
@@ -999,7 +1153,7 @@ mod tests {
             PARAMETER_PROGRAM_NO_DISPLAY_ORDER.as_bytes(),
         )
         .unwrap();
-        let views = parameter_views(&conn, "A-3").unwrap();
+        let views = parameter_views(&conn, "A-3", None).unwrap();
         assert_eq!(views.len(), 1);
         assert_eq!(
             views[0].display_order, None,
@@ -1041,7 +1195,7 @@ mod tests {
             PARAMETER_PROGRAM_TIEBREAK.as_bytes(),
         )
         .unwrap();
-        let views = parameter_views(&conn, "A-4").unwrap();
+        let views = parameter_views(&conn, "A-4", None).unwrap();
         assert_eq!(
             views.iter().map(|v| v.id.as_str()).collect::<Vec<_>>(),
             vec!["PR-Z", "PR-A"],
@@ -1059,7 +1213,7 @@ mod tests {
     #[test]
     fn parameter_views_reports_pick_layer_the_same_way_com_object_view_does() {
         let (_dir, conn) = parameter_db();
-        let views = parameter_views(&conn, "A-2").unwrap();
+        let views = parameter_views(&conn, "A-2", None).unwrap();
         let pr1 = views.iter().find(|v| v.id == "PR-1").unwrap();
         assert_eq!(pr1.text.as_deref(), Some("Delay"));
         assert_eq!(pr1.text_layer, ValueLayer::Program);
@@ -1067,5 +1221,318 @@ mod tests {
         let pr2 = views.iter().find(|v| v.id == "PR-2").unwrap();
         assert_eq!(pr2.text.as_deref(), Some("On (override)"));
         assert_eq!(pr2.text_layer, ValueLayer::ProgramRef);
+    }
+
+    // -----------------------------------------------------------------
+    // The translation overlay and the language queries (T26 Task 1).
+    // -----------------------------------------------------------------
+
+    /// Four `ParameterRef`s exercising every layer/translation combination
+    /// this task's tests need, plus a `Restriction` type with two
+    /// enumeration options:
+    ///
+    /// - `PR-1` (`RefId="P-1"`) has no `Text` of its own; `P-1/@Text` has a
+    ///   `de-DE` translation.
+    /// - `PR-2` (`RefId="P-2"`) is the `Restriction` parameter; its type's
+    ///   enumeration `PT-Enum_EN-0` has a `de-DE` `Text` translation,
+    ///   `PT-Enum_EN-1` has both a legitimate `de-DE` `Text` translation and
+    ///   an illegitimate `de-DE` `Value` translation that must be ignored.
+    /// - `PR-3` (`RefId="P-3"`) has no translation row at all in `de-DE`.
+    /// - `PR-4` (`RefId="P-4"`) has no `Text` of its own; `P-4/@Text` is
+    ///   never translated, but `PR-4` itself (the `ParameterRef` layer) has
+    ///   a `de-DE` `Text` translation.
+    const PARAMETER_PROGRAM_TRANSLATED: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
+<ApplicationPrograms><ApplicationProgram Id="A-5" Name="P" ApplicationNumber="5"
+  ApplicationVersion="22" MaskVersion="MV-0701"><Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+  <ParameterType Id="PT-Enum" Name="enum"><TypeRestriction Base="Value" SizeInBit="8">
+    <Enumeration Id="PT-Enum_EN-0" Text="Off" Value="0" DisplayOrder="0" />
+    <Enumeration Id="PT-Enum_EN-1" Text="On" Value="1" DisplayOrder="1" />
+  </TypeRestriction></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-1" Name="Delay" Text="Delay" ParameterType="PT-Num" Access="ReadWrite" Value="5" />
+  <Parameter Id="P-2" Name="Mode" Text="Mode" ParameterType="PT-Enum" Access="ReadWrite" Value="0" />
+  <Parameter Id="P-3" Name="Untranslated" Text="Untranslated" ParameterType="PT-Num" Access="ReadWrite" Value="1" />
+  <Parameter Id="P-4" Name="RefWins" Text="RefWins English" ParameterType="PT-Num" Access="ReadWrite" Value="2" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="PR-1" RefId="P-1" DisplayOrder="10" Tag="1" />
+  <ParameterRef Id="PR-2" RefId="P-2" DisplayOrder="20" Tag="2" />
+  <ParameterRef Id="PR-3" RefId="P-3" DisplayOrder="30" Tag="3" />
+  <ParameterRef Id="PR-4" RefId="P-4" DisplayOrder="40" Tag="4" />
+</ParameterRefs>
+</Static>
+<Languages>
+  <Language Identifier="de-DE">
+    <TranslationUnit RefId="A-5">
+      <TranslationElement RefId="P-1">
+        <Translation AttributeName="Text" Text="Verzoegerung" />
+      </TranslationElement>
+      <TranslationElement RefId="PR-4">
+        <Translation AttributeName="Text" Text="RefWins Deutsch" />
+      </TranslationElement>
+      <TranslationElement RefId="PT-Enum_EN-0">
+        <Translation AttributeName="Text" Text="Aus" />
+      </TranslationElement>
+      <TranslationElement RefId="PT-Enum_EN-1">
+        <Translation AttributeName="Text" Text="An" />
+        <Translation AttributeName="Value" Text="99" />
+      </TranslationElement>
+    </TranslationUnit>
+  </Language>
+</Languages>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    fn translated_parameter_db() -> (tempfile::TempDir, Connection) {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_program(
+            &conn,
+            "sha-p5",
+            "M-006A/A5.xml",
+            PARAMETER_PROGRAM_TRANSLATED.as_bytes(),
+        )
+        .unwrap();
+        (dir, conn)
+    }
+
+    #[test]
+    fn parameter_views_without_a_language_returns_the_untranslated_text() {
+        let (_dir, conn) = translated_parameter_db();
+        let views = parameter_views(&conn, "A-5", None).unwrap();
+
+        let pr1 = views.iter().find(|v| v.id == "PR-1").unwrap();
+        assert_eq!(pr1.text.as_deref(), Some("Delay"));
+        let pr2 = views.iter().find(|v| v.id == "PR-2").unwrap();
+        assert_eq!(
+            pr2.enum_options,
+            vec![
+                ("0".to_string(), Some("Off".to_string())),
+                ("1".to_string(), Some("On".to_string())),
+            ],
+            "no language requested: enum labels stay the package's own"
+        );
+    }
+
+    #[test]
+    fn parameter_views_with_a_language_returns_the_translated_text() {
+        let (_dir, conn) = translated_parameter_db();
+        let views = parameter_views(&conn, "A-5", Some("de-DE")).unwrap();
+
+        let pr1 = views.iter().find(|v| v.id == "PR-1").unwrap();
+        assert_eq!(pr1.text.as_deref(), Some("Verzoegerung"));
+        assert_eq!(
+            pr1.text_layer,
+            ValueLayer::Program,
+            "the translation overlaid Parameter/@Text, so it still reports the Program layer"
+        );
+    }
+
+    #[test]
+    fn a_parameter_without_a_row_in_that_language_keeps_its_own_text() {
+        let (_dir, conn) = translated_parameter_db();
+        let views = parameter_views(&conn, "A-5", Some("de-DE")).unwrap();
+
+        let pr3 = views.iter().find(|v| v.id == "PR-3").unwrap();
+        assert_eq!(
+            pr3.text.as_deref(),
+            Some("Untranslated"),
+            "PR-3/P-3 has no de-DE translation row; it must keep its own text \
+             in the very call that translates PR-1's neighbour"
+        );
+    }
+
+    #[test]
+    fn a_translated_parameter_ref_text_still_beats_an_untranslated_parameter_text() {
+        let (_dir, conn) = translated_parameter_db();
+        let views = parameter_views(&conn, "A-5", Some("de-DE")).unwrap();
+
+        let pr4 = views.iter().find(|v| v.id == "PR-4").unwrap();
+        assert_eq!(
+            pr4.text.as_deref(),
+            Some("RefWins Deutsch"),
+            "P-4/@Text ('RefWins English') is never translated; PR-4's own \
+             translated text must still win"
+        );
+        assert_eq!(
+            pr4.text_layer,
+            ValueLayer::ProgramRef,
+            "the translation overlaid ParameterRef/@Text, so it still reports \
+             the ProgramRef layer — translation is a language dimension, not \
+             a layer dimension"
+        );
+    }
+
+    #[test]
+    fn enum_option_labels_are_translated() {
+        let (_dir, conn) = translated_parameter_db();
+        let views = parameter_views(&conn, "A-5", Some("de-DE")).unwrap();
+
+        let pr2 = views.iter().find(|v| v.id == "PR-2").unwrap();
+        assert_eq!(
+            pr2.enum_options,
+            vec![
+                ("0".to_string(), Some("Aus".to_string())),
+                ("1".to_string(), Some("An".to_string())),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_value_translation_never_changes_a_stored_value() {
+        let (_dir, conn) = translated_parameter_db();
+        let views = parameter_views(&conn, "A-5", Some("de-DE")).unwrap();
+
+        let pr2 = views.iter().find(|v| v.id == "PR-2").unwrap();
+        let on_option = pr2
+            .enum_options
+            .iter()
+            .find(|(value, _)| value == "1")
+            .unwrap();
+        assert_eq!(
+            on_option,
+            &("1".to_string(), Some("An".to_string())),
+            "PT-Enum_EN-1 carries a de-DE Value=99 translation row alongside \
+             its legitimate Text=An row; the value must stay the package's \
+             own '1', never '99', while the sibling Text translation still \
+             applies"
+        );
+    }
+
+    /// Three languages on one program with counts 3, 2 and 2 — the tie
+    /// between `de-DE` and `fr-FR` only passes if the ordering really is
+    /// `COUNT(*) DESC, language ASC` and not, say, insertion order.
+    const TRANSLATION_LANGUAGES_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
+<ApplicationPrograms><ApplicationProgram Id="A-6" Name="P" ApplicationNumber="6"
+  ApplicationVersion="1" MaskVersion="MV-0701"><Static>
+<ComObjectTable>
+  <ComObject Id="A-6_O-0" Number="0" Text="X" ObjectSize="1 Bit" />
+</ComObjectTable>
+</Static>
+<Languages>
+  <Language Identifier="en-US"><TranslationUnit RefId="A-6"><TranslationElement RefId="A-6_O-0">
+    <Translation AttributeName="Text" Text="Output" />
+    <Translation AttributeName="FunctionText" Text="Switch" />
+    <Translation AttributeName="VisibleDescription" Text="Desc" />
+  </TranslationElement></TranslationUnit></Language>
+  <Language Identifier="de-DE"><TranslationUnit RefId="A-6"><TranslationElement RefId="A-6_O-0">
+    <Translation AttributeName="Text" Text="Ausgang" />
+    <Translation AttributeName="FunctionText" Text="Schalten" />
+  </TranslationElement></TranslationUnit></Language>
+  <Language Identifier="fr-FR"><TranslationUnit RefId="A-6"><TranslationElement RefId="A-6_O-0">
+    <Translation AttributeName="Text" Text="Sortie" />
+    <Translation AttributeName="FunctionText" Text="Commuter" />
+  </TranslationElement></TranslationUnit></Language>
+</Languages>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    /// A second program declaring only `it-IT` — used to prove
+    /// `program_translation_languages` narrows to one program's set rather
+    /// than answering for the whole database (the real corpus has programs
+    /// declaring 2 and 10 languages; this fixture mirrors that shape with
+    /// 3 and 1).
+    const TRANSLATION_LANGUAGES_PROGRAM_IT: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
+<ApplicationPrograms><ApplicationProgram Id="A-8" Name="P" ApplicationNumber="8"
+  ApplicationVersion="1" MaskVersion="MV-0701"><Static>
+<ComObjectTable>
+  <ComObject Id="A-8_O-0" Number="0" Text="Y" ObjectSize="1 Bit" />
+</ComObjectTable>
+</Static>
+<Languages>
+  <Language Identifier="it-IT"><TranslationUnit RefId="A-8"><TranslationElement RefId="A-8_O-0">
+    <Translation AttributeName="Text" Text="Uscita" />
+    <Translation AttributeName="FunctionText" Text="Commutare" />
+  </TranslationElement></TranslationUnit></Language>
+</Languages>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    #[test]
+    fn translation_languages_orders_by_row_count_then_identifier() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_program(
+            &conn,
+            "sha-a6",
+            "M-006A/A6.xml",
+            TRANSLATION_LANGUAGES_PROGRAM.as_bytes(),
+        )
+        .unwrap();
+
+        let langs = translation_languages(&conn).unwrap();
+        assert_eq!(
+            langs,
+            vec![
+                TranslationLanguage {
+                    language: "en-US".to_string(),
+                    rows: 3
+                },
+                TranslationLanguage {
+                    language: "de-DE".to_string(),
+                    rows: 2
+                },
+                TranslationLanguage {
+                    language: "fr-FR".to_string(),
+                    rows: 2
+                },
+            ],
+            "en-US has more rows and sorts first; de-DE and fr-FR tie on \
+             count and must then sort by identifier"
+        );
+    }
+
+    #[test]
+    fn program_translation_languages_returns_only_that_programs_set() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_program(
+            &conn,
+            "sha-a6",
+            "M-006A/A6.xml",
+            TRANSLATION_LANGUAGES_PROGRAM.as_bytes(),
+        )
+        .unwrap();
+        ingest_program(
+            &conn,
+            "sha-a8",
+            "M-006A/A8.xml",
+            TRANSLATION_LANGUAGES_PROGRAM_IT.as_bytes(),
+        )
+        .unwrap();
+
+        let a6 = program_translation_languages(&conn, "A-6").unwrap();
+        assert_eq!(
+            a6,
+            vec![
+                TranslationLanguage {
+                    language: "en-US".to_string(),
+                    rows: 3
+                },
+                TranslationLanguage {
+                    language: "de-DE".to_string(),
+                    rows: 2
+                },
+                TranslationLanguage {
+                    language: "fr-FR".to_string(),
+                    rows: 2
+                },
+            ],
+            "A-6's own set, unaffected by A-8 sharing the same database"
+        );
+
+        let a8 = program_translation_languages(&conn, "A-8").unwrap();
+        assert_eq!(
+            a8,
+            vec![TranslationLanguage {
+                language: "it-IT".to_string(),
+                rows: 2
+            }],
+            "A-8 declares only it-IT; a database-wide answer would wrongly \
+             include A-6's languages too"
+        );
     }
 }

@@ -1,7 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "KNXBench",
-  "version": "0.0.0",
   "identifier": "com.knxbench.knxbench-labs",
   "build": {
     "frontendDist": "../../knx-web/dist",

@@ -1,5 +1,5 @@
 - **Last Agent:** Claude
-- **Timestamp:** 2026-09-12 20:15
+- **Timestamp:** 2026-09-12 02:05
 - **Completed:** **T27 task 5 (docs-only): reconciled documentation with
   the shipped in-app motion control.** Branch `t27-motion-control`,
   worktree `.worktrees/t27-motion-control`, head `b2aac7d` before this

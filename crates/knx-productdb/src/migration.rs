@@ -15,7 +15,7 @@ use crate::ingest::{classify, FileKind};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 3;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 4;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -271,7 +271,50 @@ fn migrate_v0_to_v1(conn: &Connection) -> Result<(), ProductDbError> {
 type Migration = fn(&Connection) -> Result<(), ProductDbError>;
 
 fn migrations() -> Vec<Migration> {
-    vec![migrate_v0_to_v1, migrate_v1_to_v2, migrate_v2_to_v3]
+    vec![
+        migrate_v0_to_v1,
+        migrate_v1_to_v2,
+        migrate_v2_to_v3,
+        migrate_v3_to_v4,
+    ]
+}
+
+/// v3 -> v4. Widens `translation` from a program-only table to one that can
+/// hold translations for anything an ingest pass wants to attach a language
+/// override to (`Catalog`/`Hardware`/`Master`, added by later tasks in this
+/// plan): `program_id` becomes the generic `(scope, scope_id)` pair, `scope`
+/// naming which table `scope_id` refers into. SQLite cannot widen a primary
+/// key in place, so the table is rebuilt: a new `translation_v4` is created,
+/// every existing row is copied across with `scope = 'Program'` and
+/// `scope_id` set to the old `program_id`, then the old table is dropped and
+/// the new one renamed into its place.
+///
+/// `scope_id` is `NOT NULL` with `''` as the sentinel for a master-scope row
+/// (one that is not attached to any particular program, catalog item or
+/// piece of hardware) rather than nullable, for exactly the reason
+/// `migrate_v2_to_v3`'s `dynamic_node.module_def_id` sentinel exists: SQLite
+/// treats NULLs in a non-`INTEGER` `PRIMARY KEY` as pairwise distinct, which
+/// would defeat the uniqueness constraint for exactly the rows ingested once
+/// per package rather than once per program/catalog item/hardware entry.
+fn migrate_v3_to_v4(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE translation_v4 (
+            scope          TEXT NOT NULL,
+            scope_id       TEXT NOT NULL,
+            language       TEXT NOT NULL,
+            ref_id         TEXT NOT NULL,
+            attribute_name TEXT NOT NULL,
+            text           TEXT,
+            PRIMARY KEY (scope, scope_id, language, ref_id, attribute_name)
+        ) STRICT;
+        INSERT INTO translation_v4 (scope, scope_id, language, ref_id, attribute_name, text)
+            SELECT 'Program', program_id, language, ref_id, attribute_name, text FROM translation;
+        DROP INDEX translation_lookup;
+        DROP TABLE translation;
+        ALTER TABLE translation_v4 RENAME TO translation;
+        CREATE INDEX translation_lookup ON translation (scope, scope_id, language, ref_id);",
+    )?;
+    Ok(())
 }
 
 /// v2 -> v3. Adds `dynamic_node` (design D2,
@@ -553,5 +596,80 @@ mod tests {
         // machine-specific absolute path.
         let p = default_path().expect("HOME or XDG_DATA_HOME is set in CI");
         assert!(p.ends_with("knx/products.sqlite"), "{}", p.display());
+    }
+
+    #[test]
+    fn a_v3_database_keeps_every_translation_row_through_the_v4_rebuild() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..3] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 3i64).unwrap();
+            conn.execute_batch(
+                "INSERT INTO translation (program_id, language, ref_id, attribute_name, text)
+                 VALUES ('A-1', 'en-US', 'A-1_O-0', 'Text', 'Output');
+                 INSERT INTO translation (program_id, language, ref_id, attribute_name, text)
+                 VALUES ('A-1', 'de-DE', 'A-1_O-0', 'Text', 'Ausgang');
+                 INSERT INTO translation (program_id, language, ref_id, attribute_name, text)
+                 VALUES ('A-2', 'en-US', 'A-2_O-0', 'FunctionText', 'Switch');",
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(version, 4);
+
+        let count: i64 = conn
+            .query_row("SELECT count(*) FROM translation", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 3);
+
+        let scopes: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM translation WHERE scope = 'Program'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(scopes, 3);
+
+        let scope_id: String = conn
+            .query_row(
+                "SELECT scope_id FROM translation
+                 WHERE language = 'en-US' AND ref_id = 'A-1_O-0' AND attribute_name = 'Text'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(scope_id, "A-1");
+    }
+
+    #[test]
+    fn the_master_scope_id_sentinel_is_the_empty_string_not_null() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        conn.execute_batch(
+            "INSERT OR IGNORE INTO translation (scope, scope_id, language, ref_id, attribute_name, text)
+             VALUES ('Master', '', 'en-US', 'M-1', 'Text', 'Foo');
+             INSERT OR IGNORE INTO translation (scope, scope_id, language, ref_id, attribute_name, text)
+             VALUES ('Master', '', 'en-US', 'M-2', 'Text', 'Bar');
+             INSERT OR IGNORE INTO translation (scope, scope_id, language, ref_id, attribute_name, text)
+             VALUES ('Master', '', 'en-US', 'M-1', 'Text', 'Duplicate');",
+        )
+        .unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM translation WHERE scope = 'Master'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 2);
     }
 }

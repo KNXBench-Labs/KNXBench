@@ -8,6 +8,10 @@ COPY apps/knx-web/ ./
 RUN npm run build
 
 FROM rust:1.98-slim AS backend
+# .dockerignore drops .git, so `knx-server --version` cannot ask git which
+# commit this is. Pass it in: --build-arg KNX_BUILD_SHA=$(git rev-parse --short HEAD)
+ARG KNX_BUILD_SHA=
+ENV KNX_BUILD_SHA=$KNX_BUILD_SHA
 WORKDIR /src
 COPY . .
 RUN cargo build --release -p knx-server

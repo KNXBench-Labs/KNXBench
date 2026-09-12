@@ -1,4 +1,74 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-12 03:00
+- **Completed:** **T31 (shared modal overlay shell) — all five tasks
+  done on branch `t31-overlay-shell`** (worktree
+  `.worktrees/t31-overlay-shell`, `ea54b0c`..HEAD, four code commits
+  `bdba7cb`/`a0c6dbe`/`8d6220d`/`3eff155` plus this docs commit). Not
+  merged to `main` yet — that is the coordinator's call, not this task's.
+  `apps/knx-web/src/Overlay.tsx` (new, 94 lines, no new dependency) is
+  now the one component behind `.search-overlay`/`.search-panel`:
+  `role="dialog"`/`aria-modal`, backdrop and panel-level `Escape`
+  (a `keydown` listener on the panel, not `window`, not an input),
+  initial focus (`initialFocusRef`, else first focusable descendant,
+  else the panel), a hand-written `Tab` focus trap, and focus
+  restoration on unmount. All four former hand-rolled consumers —
+  `Search.tsx`, `CommandPalette.tsx`, `CatalogBrowser.tsx`,
+  `SettingsPanel.tsx` (whose `window` `Escape` listener is now deleted
+  outright) — render it instead. Listbox semantics
+  (`combobox`/`listbox`/`option`/`aria-activedescendant`) are applied
+  uniformly across the three list-bearing overlays.
+  `CatalogBrowser.tsx`'s result list — previously `<li onClick>` with no
+  keyboard path at all — gained `ArrowDown`/`ArrowUp`/`Enter`-to-pick,
+  matching what a mouse click already did (selects and pre-fills the
+  name field; does not create the device). `overlayShell.test.ts` fails
+  the suite, naming the offender, if a fifth `.tsx` file ever contains
+  the literal `search-overlay` outside `Overlay.tsx` — the exact failure
+  mode (a missed lift trigger, twice) that let this reach four consumers
+  unnoticed. `styles.css` untouched; no npm dependency added; no Rust
+  file touched anywhere in the slice.
+  Docs reconciled in task 5 (docs-only, no code): `KNOWN_LIMITATIONS.md`
+  §20 rewritten from "unaddressed" to "resolved" in its body (header
+  line kept byte-identical — `GAP_ANALYSIS_ETS.md` links its anchor
+  slug), naming what shipped and, honestly, what didn't (no
+  scroll-into-view, no `inert` background, no focus-visible pass, no
+  screen-reader verification — jsdom asserts wiring, not
+  assistive-technology behaviour; no WCAG or other conformance claimed,
+  no audit performed); `GAP_ANALYSIS_ETS.md` row **D9** closed and a
+  **T31** backlog entry added (no existing tier fit, said so instead of
+  inventing one); `IMPLEMENTATION_STATUS.md` dated entry added and
+  `Last updated:` moved to 2026-09-12; `ROADMAP.md` checked and left
+  alone — nothing there was falsified by this slice;
+  `.ai/logs/2026-09-12_claude_t31_overlay_shell.md` written. Gates
+  re-measured on this branch: `npm run test` (`apps/knx-web`) **235
+  passed across 25 files** (up from 215/21 at the branch point,
+  `ea54b0c`); `npx tsc -p apps/knx-web/tsconfig.json --noEmit` clean;
+  Rust gates unchanged (no Rust file touched).
+- **Pending/Next Steps:** T31 is ready for coordinator review and merge
+  to `main`; the `.worktrees/t31-overlay-shell` worktree can be removed
+  once merged. Remaining backlog, unchanged by this slice: T17 (line
+  scan, D6/E2), T21 (graphical views, D1/D2), T25/T26 (i18n, D10), T28
+  (in-app help, D12), T16 (catalog browser for topology), T22
+  (multi-user, §63), D8's real settings contents, D10 (i18n). Blocked
+  with named conditions: T30/E1 (commissioning), T19/E3 (KNX Secure),
+  T20/A1 (Functions), A4 (schemas 12-22).
+- **Notes for Codex:** Same two traps as T27's entry below, still live
+  and now with a second guard test proving the pattern: (1) `npm run
+  test` is `vitest run`, not a build — `npm run build` (`tsc && vite
+  build`, `include: ["src"]`, no `@types/node`) is a separate gate, run
+  as `npx tsc -p apps/knx-web/tsconfig.json --noEmit` instead of the
+  real `vite build`, because a real build deletes the tracked
+  `apps/knx-web/dist/.gitkeep`. (2) Vitest does not process CSS or
+  bundle `?raw` — `import x from "./y?raw"` silently resolves to the
+  empty string and produces a green test that checks nothing;
+  `overlayShell.test.ts` and `motionGuard.test.ts` both read source off
+  disk with `node:fs` and the `node-builtins.d.ts` declarations instead.
+  Net new for whoever touches an overlay next: don't hand-roll
+  `.search-overlay`/`.search-panel` again — use `Overlay.tsx`, or
+  `overlayShell.test.ts` will fail the suite and name the file.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-12 02:25
 - **Completed:** **Merged T27 (in-app motion control) to `main`** —
   `c22d5f9`, `--no-ff`, from branch `t27-motion-control` (nine commits,

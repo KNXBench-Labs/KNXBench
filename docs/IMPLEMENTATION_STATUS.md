@@ -3180,3 +3180,93 @@ corrects two passages in
 [the design spec](superpowers/specs/2026-09-12-module-scoped-editing-design.md)
 itself (D40's heading, D41's "unreachable" claim) that no longer matched
 the shipped behaviour once a Task 3 reviewer traced through it.
+
+**T34: com-object overlay batching, and three riders from T33's review
+(2026-09-12), branch `t34-com-object-overlay-batch`.** Closes four
+non-blocking findings T33's own whole-branch review raised against
+itself. Plan
+`docs/superpowers/plans/2026-09-12-com-object-overlay-batch.md`, four
+tasks; full accounting in `GAP_ANALYSIS_ETS.md`'s T34 entry (Tier 6),
+this entry is the short form.
+
+- **The batch load.** `crates/knx-productdb/src/query.rs` gained
+  `com_object_views(conn, program_id, com_object_ref_ids: &[&str],
+  language) -> Result<HashMap<String, ComObjectView>, ProductDbError>`,
+  the same bulk shape `parameter_views` already had: one `IN (...)` query
+  per 900-id chunk, the overlay loaded exactly once for the whole call,
+  and an empty slice never touching the database. `com_object_view`
+  survives as a one-element wrapper around it, so `create_device`'s
+  per-ref loop (which has no batch of ref ids to offer, and passes
+  `None`) is untouched. `apps/knx-server/src/domain.rs`'s
+  `device_detail` — described in T33's own entry above as calling
+  `com_object_view(.., Some(lang))` per com object — now collects every
+  lookup id first and calls `com_object_views` once per fetch instead;
+  that sentence in T33's entry describes what shipped that day and is
+  left as written, not edited, since this entry supersedes it going
+  forward. Measured on `M-0083_A-0317-31-7DC6`
+  (`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`, 104 declared
+  `com_object_ref` rows): before, 104 overlay loads of 1,249 `de-DE`
+  `translation` rows each, 70–72 ms; after, 1 load of 1,249 rows,
+  0.92–0.96 ms — roughly 75× faster for this device's fetch.
+- **Finding M4.** `apps/knx-web/src/App.tsx`'s three `deviceDetail` call
+  sites (`selectEntity`, `handleTreeUpdate`, the `[productLanguage]`
+  effect) now share one monotonic counter, `deviceDetailRequestIdRef`
+  (renamed from `languageRequestIdRef`), bumped before each request and
+  checked on both the success and the error path — previously only the
+  language effect had a request-id guard, so an in-flight language reply
+  could land after, and overwrite, a later edit-triggered refetch.
+- **Finding M6.** `ComObjectView` gained
+  `text_translated`/`function_text_translated`/
+  `visible_description_translated`, true iff the value `pick()` chose was
+  itself an overlay hit. `device_detail` now overwrites
+  `name`/`description` only when the stored layer is
+  `Layer::Program`/`Layer::ProgramRef` **and** the matching flag is true,
+  so a requested language with no translation row for a given attribute
+  no longer falls back to the product database's current untranslated
+  column in place of the project's own resolved value. Global
+  Constraint 2 (layer gating from the project's own `ComObjectInstance`)
+  is unaffected.
+- **Finding M5, ruled.** `GET /api/device/{id}`'s `Query
+  <ParameterLanguageQuery>` extractor (T33) 400s a malformed `language`
+  query exactly as `GET /api/parameters/{id}` and `POST
+  /api/parameters/{id}/value` already do (T26) — kept, not loosened, for
+  consistency across all three routes the extractor guards. Pinned by
+  `apps/knx-server/tests/http_com_object_language.rs`'s
+  `a_malformed_language_query_is_rejected_and_an_absent_one_is_not`: a
+  repeated `language` key (`?language=a&language=b`) is the form that
+  actually trips `serde_urlencoded`'s deserializer ("duplicate field
+  `language`"); `?language[]=de` does not — it parses as an unrecognized
+  key distinct from `language` and reaches the handler as an absent
+  language, not a rejected one.
+
+Correction, not a silent swap: `GAP_ANALYSIS_ETS.md`'s T34 entry, before
+this branch, cited "3,876 rows / ~1.26 ms" as the per-overlay-load cost.
+That figure does not reproduce against any denominator either this
+branch's implementer or an independent reviewer could construct — not
+per-language filtered or unfiltered, not the all-languages-for-program
+total, not the whole-database total. It is withdrawn as unverifiable;
+the measured per-load cost above (1,249 rows) is what replaces it. One
+property is deliberately not pinned by a test: "one overlay load per
+device fetch" has no regression test, because proving it needs SQL
+query-count instrumentation (a `rusqlite` trace feature) whose cost
+exceeds the risk, and performance sits last in this project's stated
+priority order. The property is structural — the batch call sits
+outside the per-object loop — not asserted by a test.
+
+`cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D
+warnings`, `cargo run -p xtask -- check-layering` and `cargo run -p
+xtask -- check-headers` (74 well-formed / 169 without, ceiling 169 / 22
+generated skipped, unchanged) all clean. `cargo test --workspace
+--no-fail-fast`: **1091 passed / 0 failed / 3 ignored** across 77 `test
+result` lines, up from the T18 closing baseline of 1080/0/3 across 77 —
+Task 1 added 9 (8 plus one fix-round reverse-polarity fixture), Task 2
+added 1 (the M6 regression test, landing at 1090/0/3, independently
+reviewer-confirmed), Task 3 touched only `apps/knx-web` and left the
+Rust count unchanged, and this task adds the eleventh and last:
+`a_malformed_language_query_is_rejected_and_an_absent_one_is_not` in
+`apps/knx-server/tests/http_com_object_language.rs`. Web gates
+(`npm test -- --run`, `tsc --noEmit`) not run — this branch's diff is
+`crates/knx-productdb/src/query.rs`, `apps/knx-server/src/domain.rs`,
+`apps/knx-web/src/App.tsx`/`App.test.tsx` (Tasks 1-3, already merged
+before this entry's task) and `docs/`; Task 4 itself, which wrote this
+entry, touched no `apps/knx-web` file.

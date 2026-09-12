@@ -2,7 +2,12 @@
 //
 // happy-dom, not node: the installed-packs store lazily reads
 // `window.localStorage` on its first call in a given test run, the same
-// reasoning as `uiLanguage.test.tsx`/`productLanguage.test.tsx`.
+// reasoning as `uiLanguage.test.tsx`/`productLanguage.test.tsx`. The
+// `useLanguagePacks` tests below also render real components through
+// `react-dom/client`'s `createRoot`, same as `uiLanguage.test.tsx`'s
+// writer/reader test.
+import { act, useState } from "react";
+import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   LANGUAGE_PACKS_STORAGE_KEY,
@@ -10,12 +15,14 @@ import {
   exportEnglishTemplate,
   exportLanguagePack,
   getLanguagePack,
+  grandfatheredHint,
   importLanguagePack,
   isWellFormedBcp47Tag,
   listLanguagePacks,
   parseLanguagePack,
   removeLanguagePack,
   resetLanguagePacksForTests,
+  useLanguagePacks,
 } from "./languagePack";
 
 afterEach(() => {
@@ -51,6 +58,29 @@ describe("isWellFormedBcp47Tag", () => {
     expect(isWellFormedBcp47Tag("xx-not-a-language")).toBe(false);
     expect(isWellFormedBcp47Tag("en_US")).toBe(false);
     expect(isWellFormedBcp47Tag("en US")).toBe(false);
+  });
+});
+
+// Moved here from `SettingsPanel.tsx` (fix round 1): a second UI surface
+// should not need to keep its own copy of an RFC 5646 §4.5 lookup table.
+describe("grandfatheredHint", () => {
+  it("maps a known grandfathered tag to its modern replacement", () => {
+    expect(grandfatheredHint("i-klingon")).toBe("tlh");
+    expect(grandfatheredHint("sgn-be-nl")).toBe("vgt");
+  });
+
+  it("is case-insensitive", () => {
+    expect(grandfatheredHint("I-Klingon")).toBe("tlh");
+  });
+
+  it("returns undefined for a tag that isn't a grandfathered form", () => {
+    expect(grandfatheredHint("nl-NL")).toBeUndefined();
+    expect(grandfatheredHint("xx-not-a-language")).toBeUndefined();
+  });
+
+  it("returns undefined for a non-string input", () => {
+    expect(grandfatheredHint(undefined)).toBeUndefined();
+    expect(grandfatheredHint(42)).toBeUndefined();
   });
 });
 
@@ -219,5 +249,82 @@ describe("export", () => {
 
   it("exporting a pack that isn't installed returns undefined", () => {
     expect(exportLanguagePack("xx")).toBeUndefined();
+  });
+});
+
+// Fix round 1: the packs store gained its own subscriber set and
+// `getSnapshot`, mirroring `uiLanguage.ts`'s shape, so that
+// `i18n.ts`'s `useTranslate()` (and anything else) can react to an
+// import or a removal without `SettingsPanel.tsx` having to rewrite an
+// unrelated store (`setUiLanguage`) to fake the same effect.
+describe("useLanguagePacks", () => {
+  it("an already-mounted reader observes an import and a removal without remounting", async () => {
+    function Reader() {
+      const packs = useLanguagePacks();
+      return <div data-testid="reader">{packs.map((p) => p.tag).join(",")}</div>;
+    }
+
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(<Reader />);
+      });
+      expect(host.querySelector('[data-testid="reader"]')?.textContent).toBe("");
+
+      await act(async () => {
+        importLanguagePack(dutchPack());
+      });
+      expect(host.querySelector('[data-testid="reader"]')?.textContent).toBe("nl-NL");
+
+      await act(async () => {
+        removeLanguagePack("nl-NL");
+      });
+      expect(host.querySelector('[data-testid="reader"]')?.textContent).toBe("");
+    } finally {
+      root.unmount();
+      host.remove();
+    }
+  });
+
+  it("returns the same array reference across renders when nothing changed, so React never loops", async () => {
+    const seenSnapshots: (readonly LanguagePack[])[] = [];
+
+    function Reader() {
+      const packs = useLanguagePacks();
+      const [, forceRerender] = useState(0);
+      seenSnapshots.push(packs);
+      return (
+        <button type="button" onClick={() => forceRerender((n) => n + 1)}>
+          rerender
+        </button>
+      );
+    }
+
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(<Reader />);
+      });
+
+      const button = host.querySelector("button")!;
+      // A render triggered by something else entirely (local state, not
+      // the packs store) must not see a new `packs` reference — a fresh
+      // array on every `getSnapshot()` call is exactly what would trip
+      // `useSyncExternalStore`'s "getSnapshot should be cached" loop
+      // protection.
+      await act(async () => {
+        button.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      });
+
+      expect(seenSnapshots.length).toBeGreaterThanOrEqual(2);
+      expect(seenSnapshots[0]).toBe(seenSnapshots[seenSnapshots.length - 1]);
+    } finally {
+      root.unmount();
+      host.remove();
+    }
   });
 });

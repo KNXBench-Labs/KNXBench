@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { messages as enMessages } from "./messages/en";
 
 /**
@@ -140,6 +141,46 @@ export function isWellFormedBcp47Tag(tag: string): boolean {
   return BCP47_PATTERN.test(tag);
 }
 
+/**
+ * RFC 5646 §4.5's handful of "irregular" grandfathered tags — the ones
+ * `BCP47_PATTERN` above has no production for at all (an `i-`/`sgn-`
+ * prefix isn't a legal primary subtag under any reading this project
+ * uses) — each mapped to its modern IANA-registered replacement.
+ * Accepting them isn't this feature's job (an unrecognised tag is simply
+ * rejected by `parseLanguagePack`); this table only powers
+ * `grandfatheredHint`, which lets a caller be a little kinder about *why*
+ * one was rejected when it happens to recognise it. Deliberately small:
+ * these are the tags actually listed in the RFC, not a guess at every
+ * historical form anyone ever used.
+ */
+const GRANDFATHERED_TAG_HINTS: Record<string, string> = {
+  "i-ami": "ami",
+  "i-bnn": "bnn",
+  "i-hak": "hak",
+  "i-klingon": "tlh",
+  "i-lux": "lb",
+  "i-navajo": "nv",
+  "i-pwn": "pwn",
+  "i-tao": "tao",
+  "i-tay": "tay",
+  "i-tsu": "tsu",
+  "sgn-be-fr": "sfb",
+  "sgn-be-nl": "vgt",
+  "sgn-ch-de": "sgg",
+};
+
+/**
+ * The modern replacement for a rejected grandfathered tag, or `undefined`
+ * when `tag` isn't one of RFC 5646 §4.5's irregular forms (including
+ * when it isn't even a string — callers hand this a parsed JSON field of
+ * unknown shape). Case-insensitive, matching how the RFC's examples are
+ * usually typed by hand.
+ */
+export function grandfatheredHint(tag: unknown): string | undefined {
+  if (typeof tag !== "string") return undefined;
+  return GRANDFATHERED_TAG_HINTS[tag.toLowerCase()];
+}
+
 function fail(error: string): { ok: false; error: string } {
   return { ok: false, error };
 }
@@ -244,6 +285,39 @@ function computeImportReport(pack: LanguagePack): LanguagePackImportReport {
 // happen before that runs.
 let cache: Record<string, LanguagePack> | undefined;
 
+/**
+ * The reactive half of the store, mirroring `uiLanguage.ts`'s
+ * `subscribers`/`getSnapshot` shape: `useLanguagePacks()` below is how
+ * `i18n.ts`'s `useTranslate()` (and anything else that renders installed
+ * packs) learns that an import or a removal happened, without the
+ * mutating call site — `SettingsPanel.tsx`'s `handleRemovePack`, for
+ * instance — having to know who else is mounted or coordinate with any
+ * other store to make that visible. `listSnapshot` is invalidated
+ * (`undefined`) rather than eagerly recomputed on every mutation, so a
+ * `getListSnapshot()` call between two mutations still returns the same
+ * cached array reference — `useSyncExternalStore` compares snapshots with
+ * `Object.is`, and a fresh array on every call would loop it.
+ */
+let listSnapshot: readonly LanguagePack[] | undefined;
+const subscribers = new Set<() => void>();
+
+function getListSnapshot(): readonly LanguagePack[] {
+  if (listSnapshot === undefined) {
+    listSnapshot = Object.values(getCache());
+  }
+  return listSnapshot;
+}
+
+function subscribeToPacks(onStoreChange: () => void): () => void {
+  subscribers.add(onStoreChange);
+  return () => subscribers.delete(onStoreChange);
+}
+
+function notifyPackSubscribers(): void {
+  listSnapshot = undefined;
+  for (const onStoreChange of subscribers) onStoreChange();
+}
+
 function readStore(storage: Pick<Storage, "getItem">): Record<string, LanguagePack> {
   const raw = storage.getItem(LANGUAGE_PACKS_STORAGE_KEY);
   if (!raw) return {};
@@ -279,11 +353,27 @@ function persist(): void {
  */
 export function resetLanguagePacksForTests(): void {
   cache = undefined;
+  listSnapshot = undefined;
 }
 
 /** All installed packs, in no particular order. */
 export function listLanguagePacks(): LanguagePack[] {
   return Object.values(getCache());
+}
+
+/**
+ * Reads the installed packs through a shared, module-level store, the
+ * same pattern as `useUiLanguage()`/`useProductLanguage()`: every
+ * mounted caller re-renders the moment `importLanguagePack` or
+ * `removeLanguagePack` changes what's installed, with no prop drilling
+ * and no remount required. `i18n.ts`'s `useTranslate()` subscribes
+ * through this hook purely for the re-render — it re-resolves the active
+ * catalogue itself on every call, so it never reads the returned array —
+ * while `SettingsPanel.tsx` (the one place packs are actually listed)
+ * reads it directly.
+ */
+export function useLanguagePacks(): readonly LanguagePack[] {
+  return useSyncExternalStore(subscribeToPacks, getListSnapshot);
 }
 
 /** The installed pack for `tag`, or `undefined` if none is installed —
@@ -310,20 +400,26 @@ export function importLanguagePack(raw: unknown): LanguagePackImportResult {
   const packs = getCache();
   packs[parsed.pack.tag] = parsed.pack;
   persist();
+  notifyPackSubscribers();
 
   return { ok: true, report: computeImportReport(parsed.pack) };
 }
 
 /** Removes an installed pack. A no-op if `tag` isn't installed. Removing
- * the *active* pack is handled entirely on the read side — `i18n.ts`'s
- * `translateFor` falls back to English the moment `getLanguagePack`
- * returns `undefined` for the active tag — so there is nothing for this
- * function to coordinate with `uiLanguage.ts` about. */
+ * the *active* pack touches nothing in `uiLanguage.ts` — the stored
+ * active tag is left exactly as it was, so re-importing the same pack
+ * later restores the language with no trip through the select. What
+ * *does* need to happen is every already-mounted `useTranslate()` caller
+ * noticing that the pack behind its active tag is gone; `i18n.ts`'s
+ * `translateFor` already falls back to English the moment
+ * `getLanguagePack` returns `undefined`, but only a render triggers that
+ * lookup, and nothing forces one without `notifyPackSubscribers()` below. */
 export function removeLanguagePack(tag: string): void {
   const packs = getCache();
   if (!(tag in packs)) return;
   delete packs[tag];
   persist();
+  notifyPackSubscribers();
 }
 
 /**

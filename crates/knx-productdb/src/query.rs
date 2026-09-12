@@ -31,10 +31,17 @@ pub struct ComObjectView {
     pub number: Option<i64>,
     pub text: Option<String>,
     pub text_layer: ValueLayer,
+    /// `true` iff `text` came out of the translation overlay rather than
+    /// the product database's own column — see `overlaid_pick`'s doc
+    /// comment for exactly what "came out of" means once a layer is
+    /// involved.
+    pub text_translated: bool,
     pub function_text: Option<String>,
     pub function_text_layer: ValueLayer,
+    pub function_text_translated: bool,
     pub visible_description: Option<String>,
     pub description_layer: ValueLayer,
+    pub visible_description_translated: bool,
     pub object_size: Option<String>,
     pub object_size_layer: ValueLayer,
     pub priority: Option<String>,
@@ -70,6 +77,12 @@ pub fn resolve_program(
 }
 
 struct RawRow {
+    /// `com_object_ref.id` — the row's own key in `com_object_views`'
+    /// returned map. `com_object_view` (the one-element wrapper) already
+    /// has this as its `com_object_ref_id` argument, so it is not selected
+    /// there; `com_object_views` selects it because a batch call is the
+    /// only source it has for which ref each row belongs to.
+    cor_id: String,
     /// `com_object.id` — not exposed on `ComObjectView`, but needed as the
     /// overlay lookup key for `co.text`/`co.function_text`/
     /// `co.visible_description`, since the translation table is keyed by
@@ -104,8 +117,225 @@ struct RawRow {
     cor_communication: Option<String>,
 }
 
+/// `pick()`, plus whether the value it returned came out of the
+/// translation overlay rather than the product database's own column.
+///
+/// This is deliberately **not** "did an overlay entry exist for either
+/// layer" — it is "did an overlay entry exist for the layer `pick()`
+/// actually chose". A `ComObject`-scope translation that loses to a raw,
+/// untranslated `ComObjectRef` override must report `false`; the reverse
+/// (a `ComObjectRef`-scope translation winning over a `ComObject`-scope
+/// one) must report `true`. Folding the overlay lookup into `pick()`'s own
+/// two inputs, rather than computing "translated" as a separate pass over
+/// the finished `ComObjectView`, is what keeps that correct without a
+/// second branch mirroring `pick()`'s own.
+fn overlaid_pick(
+    overlay: Option<&HashMap<(String, String), String>>,
+    co_id: &str,
+    cor_id: &str,
+    attribute_name: &str,
+    program_value: Option<String>,
+    program_ref_value: Option<String>,
+) -> (Option<String>, ValueLayer, bool) {
+    let co_overlay = overlay_text(overlay, co_id, attribute_name);
+    let cor_overlay = overlay_text(overlay, cor_id, attribute_name);
+    let co_translated = co_overlay.is_some();
+    let cor_translated = cor_overlay.is_some();
+    let (value, layer) = pick(
+        co_overlay.or(program_value),
+        cor_overlay.or(program_ref_value),
+    );
+    let translated = match layer {
+        ValueLayer::Program => co_translated,
+        ValueLayer::ProgramRef => cor_translated,
+    };
+    (value, layer, translated)
+}
+
+/// Every `ComObjectView` a program's `com_object_ref_ids` resolve to, keyed
+/// by `com_object_ref.id`. One query for the whole slice (chunked, see
+/// below) and the overlay loaded exactly once for the whole call — the
+/// server used to call `com_object_view` in a loop, once per communication
+/// object, reloading the overlay on every single iteration; a device can
+/// own hundreds of communication objects, so that per-row shape is exactly
+/// as wrong as `parameter_views`'s own doc comment already argues for
+/// parameters.
+///
+/// Ref ids absent from the database are simply absent from the returned
+/// map; this function never errors on a partial match, the caller decides
+/// what a missing id means. An empty `com_object_ref_ids` returns an empty
+/// map without touching the database at all — not one query with an empty
+/// `IN ()`, which SQLite accepts but which would still load the overlay
+/// for nothing (Global Constraint 1: `language: None` is the common case
+/// this guards, but a caller that passes zero ids must not pay for a query
+/// either, regardless of `language`).
+///
+/// `language`, the overlay and `ValueLayer` follow exactly what
+/// `com_object_view`'s own doc comment already describes, applied once per
+/// row instead of to one row.
+///
+/// **Chunking.** SQLite's default `SQLITE_MAX_VARIABLE_NUMBER` is 999, and
+/// a program can declare more `ComObjectRef`s than that (the corpus has a
+/// program with 543 `ParameterRef`s, so the order of magnitude is real).
+/// `com_object_ref_ids` is chunked at 900 ids per statement — comfortably
+/// under the limit alongside the `program_id` parameter — one prepared
+/// statement per chunk, never one per id. The overlay is loaded once,
+/// outside the chunk loop, for the whole call regardless of how many
+/// chunks the slice needed.
+pub fn com_object_views(
+    conn: &Connection,
+    program_id: &str,
+    com_object_ref_ids: &[&str],
+    language: Option<&str>,
+) -> Result<HashMap<String, ComObjectView>, ProductDbError> {
+    if com_object_ref_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    const CHUNK_SIZE: usize = 900;
+
+    let mut raw_rows: Vec<RawRow> = Vec::with_capacity(com_object_ref_ids.len());
+    for chunk in com_object_ref_ids.chunks(CHUNK_SIZE) {
+        let placeholders = std::iter::repeat_n("?", chunk.len())
+            .collect::<Vec<_>>()
+            .join(",");
+        let sql = format!(
+            "SELECT cor.id, co.id, co.number,
+                    co.text, co.function_text, co.visible_description, co.object_size,
+                    co.priority, co.dpt_list, co.read_flag, co.write_flag,
+                    co.transmit_flag, co.update_flag, co.communication_flag,
+                    cor.text, cor.function_text, cor.visible_description, cor.object_size,
+                    cor.priority, cor.dpt_list, cor.read_flag, cor.write_flag,
+                    cor.transmit_flag, cor.update_flag, cor.communication_flag
+             FROM com_object_ref cor
+             JOIN com_object co
+               ON co.program_id = cor.program_id AND co.id = cor.com_object_id
+             WHERE cor.program_id = ? AND cor.id IN ({placeholders})"
+        );
+        let mut stmt = conn.prepare(&sql)?;
+        let params = std::iter::once(&program_id as &dyn rusqlite::ToSql)
+            .chain(chunk.iter().map(|id| id as &dyn rusqlite::ToSql));
+        let chunk_rows = stmt
+            .query_map(rusqlite::params_from_iter(params), |r| {
+                Ok(RawRow {
+                    cor_id: r.get(0)?,
+                    co_id: r.get(1)?,
+                    number: r.get(2)?,
+                    co_text: r.get(3)?,
+                    co_function_text: r.get(4)?,
+                    co_visible_description: r.get(5)?,
+                    co_object_size: r.get(6)?,
+                    co_priority: r.get(7)?,
+                    co_dpt_list: r.get(8)?,
+                    co_read: r.get(9)?,
+                    co_write: r.get(10)?,
+                    co_transmit: r.get(11)?,
+                    co_update: r.get(12)?,
+                    co_communication: r.get(13)?,
+                    cor_text: r.get(14)?,
+                    cor_function_text: r.get(15)?,
+                    cor_visible_description: r.get(16)?,
+                    cor_object_size: r.get(17)?,
+                    cor_priority: r.get(18)?,
+                    cor_dpt_list: r.get(19)?,
+                    cor_read: r.get(20)?,
+                    cor_write: r.get(21)?,
+                    cor_transmit: r.get(22)?,
+                    cor_update: r.get(23)?,
+                    cor_communication: r.get(24)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        raw_rows.extend(chunk_rows);
+    }
+
+    // Loaded once for the whole call, across every chunk above, and only
+    // when a language was actually requested — see this function's own
+    // doc comment and `translation_overlay`'s.
+    let overlay = language
+        .map(|lang| translation_overlay(conn, program_id, lang))
+        .transpose()?;
+
+    let mut views = HashMap::with_capacity(raw_rows.len());
+    for raw in raw_rows {
+        // Overlaid **before** `pick()`, per layer, so a translated string
+        // lands at the same structural layer its untranslated counterpart
+        // would have, and `*_translated` reflects the layer that actually
+        // won (see `overlaid_pick`'s own doc comment).
+        let (text, text_layer, text_translated) = overlaid_pick(
+            overlay.as_ref(),
+            &raw.co_id,
+            &raw.cor_id,
+            "Text",
+            raw.co_text,
+            raw.cor_text,
+        );
+        let (function_text, function_text_layer, function_text_translated) = overlaid_pick(
+            overlay.as_ref(),
+            &raw.co_id,
+            &raw.cor_id,
+            "FunctionText",
+            raw.co_function_text,
+            raw.cor_function_text,
+        );
+        let (visible_description, description_layer, visible_description_translated) =
+            overlaid_pick(
+                overlay.as_ref(),
+                &raw.co_id,
+                &raw.cor_id,
+                "VisibleDescription",
+                raw.co_visible_description,
+                raw.cor_visible_description,
+            );
+        let (object_size, object_size_layer) = pick(raw.co_object_size, raw.cor_object_size);
+        let (dpt_list, dpt_layer) = pick(raw.co_dpt_list, raw.cor_dpt_list);
+        let (read, read_layer) = pick(raw.co_read, raw.cor_read);
+        let (write, write_layer) = pick(raw.co_write, raw.cor_write);
+        let (transmit, transmit_layer) = pick(raw.co_transmit, raw.cor_transmit);
+        let (update, update_layer) = pick(raw.co_update, raw.cor_update);
+        let (communication, communication_layer) =
+            pick(raw.co_communication, raw.cor_communication);
+        let priority = raw.cor_priority.or(raw.co_priority);
+
+        views.insert(
+            raw.cor_id,
+            ComObjectView {
+                number: raw.number,
+                text,
+                text_layer,
+                text_translated,
+                function_text,
+                function_text_layer,
+                function_text_translated,
+                visible_description,
+                description_layer,
+                visible_description_translated,
+                object_size,
+                object_size_layer,
+                priority,
+                dpt_list,
+                dpt_layer,
+                read,
+                read_layer,
+                write,
+                write_layer,
+                transmit,
+                transmit_layer,
+                update,
+                update_layer,
+                communication,
+                communication_layer,
+            },
+        );
+    }
+    Ok(views)
+}
+
 /// Joins one `ComObjectRef` row to the `ComObject` it refers to, within the
-/// same program, and folds every attribute through `pick`.
+/// same program, and folds every attribute through `pick`. A one-element
+/// call into `com_object_views` — resolving more than one ref through a
+/// loop of these is the shape that function's own doc comment exists to
+/// replace.
 ///
 /// `language` is the requested display language, `None` meaning the
 /// package's own untranslated text — today's behaviour, unchanged, issuing
@@ -127,112 +357,10 @@ pub fn com_object_view(
     com_object_ref_id: &str,
     language: Option<&str>,
 ) -> Result<Option<ComObjectView>, ProductDbError> {
-    let raw: Option<RawRow> = conn
-        .query_row(
-            "SELECT co.id, co.number,
-                    co.text, co.function_text, co.visible_description, co.object_size,
-                    co.priority, co.dpt_list, co.read_flag, co.write_flag,
-                    co.transmit_flag, co.update_flag, co.communication_flag,
-                    cor.text, cor.function_text, cor.visible_description, cor.object_size,
-                    cor.priority, cor.dpt_list, cor.read_flag, cor.write_flag,
-                    cor.transmit_flag, cor.update_flag, cor.communication_flag
-             FROM com_object_ref cor
-             JOIN com_object co
-               ON co.program_id = cor.program_id AND co.id = cor.com_object_id
-             WHERE cor.program_id = ?1 AND cor.id = ?2",
-            [program_id, com_object_ref_id],
-            |r| {
-                Ok(RawRow {
-                    co_id: r.get(0)?,
-                    number: r.get(1)?,
-                    co_text: r.get(2)?,
-                    co_function_text: r.get(3)?,
-                    co_visible_description: r.get(4)?,
-                    co_object_size: r.get(5)?,
-                    co_priority: r.get(6)?,
-                    co_dpt_list: r.get(7)?,
-                    co_read: r.get(8)?,
-                    co_write: r.get(9)?,
-                    co_transmit: r.get(10)?,
-                    co_update: r.get(11)?,
-                    co_communication: r.get(12)?,
-                    cor_text: r.get(13)?,
-                    cor_function_text: r.get(14)?,
-                    cor_visible_description: r.get(15)?,
-                    cor_object_size: r.get(16)?,
-                    cor_priority: r.get(17)?,
-                    cor_dpt_list: r.get(18)?,
-                    cor_read: r.get(19)?,
-                    cor_write: r.get(20)?,
-                    cor_transmit: r.get(21)?,
-                    cor_update: r.get(22)?,
-                    cor_communication: r.get(23)?,
-                })
-            },
-        )
-        .optional()?;
-
-    let Some(raw) = raw else {
-        return Ok(None);
-    };
-
-    // Loaded once per call, `None` issuing no `translation` query at all —
-    // see this function's own doc comment and `translation_overlay`'s.
-    let overlay = language
-        .map(|lang| translation_overlay(conn, program_id, lang))
-        .transpose()?;
-
-    // Overlaid **before** `pick()`, per layer, so a translated string lands
-    // at the same structural layer its untranslated counterpart would have.
-    let co_text = overlay_text(overlay.as_ref(), &raw.co_id, "Text").or(raw.co_text);
-    let cor_text = overlay_text(overlay.as_ref(), com_object_ref_id, "Text").or(raw.cor_text);
-    let co_function_text =
-        overlay_text(overlay.as_ref(), &raw.co_id, "FunctionText").or(raw.co_function_text);
-    let cor_function_text =
-        overlay_text(overlay.as_ref(), com_object_ref_id, "FunctionText").or(raw.cor_function_text);
-    let co_visible_description = overlay_text(overlay.as_ref(), &raw.co_id, "VisibleDescription")
-        .or(raw.co_visible_description);
-    let cor_visible_description =
-        overlay_text(overlay.as_ref(), com_object_ref_id, "VisibleDescription")
-            .or(raw.cor_visible_description);
-
-    let (text, text_layer) = pick(co_text, cor_text);
-    let (function_text, function_text_layer) = pick(co_function_text, cor_function_text);
-    let (visible_description, description_layer) =
-        pick(co_visible_description, cor_visible_description);
-    let (object_size, object_size_layer) = pick(raw.co_object_size, raw.cor_object_size);
-    let (dpt_list, dpt_layer) = pick(raw.co_dpt_list, raw.cor_dpt_list);
-    let (read, read_layer) = pick(raw.co_read, raw.cor_read);
-    let (write, write_layer) = pick(raw.co_write, raw.cor_write);
-    let (transmit, transmit_layer) = pick(raw.co_transmit, raw.cor_transmit);
-    let (update, update_layer) = pick(raw.co_update, raw.cor_update);
-    let (communication, communication_layer) = pick(raw.co_communication, raw.cor_communication);
-    let priority = raw.cor_priority.or(raw.co_priority);
-
-    Ok(Some(ComObjectView {
-        number: raw.number,
-        text,
-        text_layer,
-        function_text,
-        function_text_layer,
-        visible_description,
-        description_layer,
-        object_size,
-        object_size_layer,
-        priority,
-        dpt_list,
-        dpt_layer,
-        read,
-        read_layer,
-        write,
-        write_layer,
-        transmit,
-        transmit_layer,
-        update,
-        update_layer,
-        communication,
-        communication_layer,
-    }))
+    Ok(
+        com_object_views(conn, program_id, &[com_object_ref_id], language)?
+            .remove(com_object_ref_id),
+    )
 }
 
 /// A single `Parameter`, resolved through its own program's `ParameterRef`
@@ -1365,6 +1493,167 @@ mod tests {
             "A-7_O-1 carries a de-DE ObjectSize translation row; object_size \
              is a value, not display text, and must stay the package's own"
         );
+    }
+
+    // -----------------------------------------------------------------
+    // *_translated flags and com_object_views (T34 Task 1).
+    // -----------------------------------------------------------------
+
+    #[test]
+    fn an_overlay_hit_sets_the_translated_flag() {
+        let (_dir, conn) = translated_com_object_db();
+        let v = com_object_view(&conn, "A-7", "A-7_O-1_R-1", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        assert!(v.text_translated);
+        assert!(v.function_text_translated);
+        assert!(v.visible_description_translated);
+    }
+
+    #[test]
+    fn an_overlay_miss_leaves_the_translated_flag_false_and_the_value_untranslated() {
+        // `A-1` (plain `db()`) declares no `<Languages>` block at all, so
+        // `translation_overlay` returns an empty (not absent) map: `Some`
+        // overlay, zero matching rows — the miss case, distinct from
+        // `language: None` below.
+        let (_dir, conn) = db();
+        let v = com_object_view(&conn, "A-1", "A-1_O-1_R-1", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(v.text.as_deref(), Some("Schalten"));
+        assert!(!v.text_translated);
+        assert!(!v.function_text_translated);
+        assert!(!v.visible_description_translated);
+    }
+
+    #[test]
+    fn without_a_language_every_translated_flag_is_false() {
+        let (_dir, conn) = translated_com_object_db();
+        let v = com_object_view(&conn, "A-7", "A-7_O-1_R-1", None)
+            .unwrap()
+            .unwrap();
+        assert_eq!(v.text.as_deref(), Some("Schalten"));
+        assert!(!v.text_translated);
+        assert!(!v.function_text_translated);
+        assert!(!v.visible_description_translated);
+    }
+
+    #[test]
+    fn a_com_object_ref_scope_translation_winning_over_a_com_object_scope_one_is_still_reported_translated(
+    ) {
+        // `A-7_O-1` itself carries a de-DE `Text` translation ("Schalten
+        // DE"); `R-2` carries its own de-DE `Text` translation ("Dimmen
+        // DE") and always wins `pick()` because a `ComObjectRef`-scope
+        // value beats a `ComObject`-scope one whenever it is `Some`. Both
+        // layers being translated at once is the point: `translated` must
+        // follow the *winning* (`ProgramRef`) layer's own overlay hit, not
+        // merely "some layer had one" — see `overlaid_pick`'s doc comment.
+        let (_dir, conn) = translated_com_object_db();
+        let v = com_object_view(&conn, "A-7", "A-7_O-1_R-2", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(v.text.as_deref(), Some("Dimmen DE"));
+        assert_eq!(v.text_layer, ValueLayer::ProgramRef);
+        assert!(v.text_translated);
+    }
+
+    #[test]
+    fn com_object_views_resolves_every_ref_matching_the_one_element_calls() {
+        let (_dir, conn) = translated_com_object_db();
+        let batch =
+            com_object_views(&conn, "A-7", &["A-7_O-1_R-1", "A-7_O-1_R-2"], Some("de-DE")).unwrap();
+        assert_eq!(batch.len(), 2);
+
+        let single_r1 = com_object_view(&conn, "A-7", "A-7_O-1_R-1", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        let single_r2 = com_object_view(&conn, "A-7", "A-7_O-1_R-2", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(batch["A-7_O-1_R-1"], single_r1);
+        assert_eq!(batch["A-7_O-1_R-2"], single_r2);
+    }
+
+    #[test]
+    fn com_object_views_omits_unknown_ref_ids_without_erroring() {
+        let (_dir, conn) = db();
+        let views = com_object_views(&conn, "A-1", &["A-1_O-1_R-1", "A-1_O-9_R-9"], None).unwrap();
+        assert_eq!(
+            views.len(),
+            1,
+            "the unknown id is simply absent, not an error"
+        );
+        assert!(views.contains_key("A-1_O-1_R-1"));
+        assert!(!views.contains_key("A-1_O-9_R-9"));
+    }
+
+    #[test]
+    fn com_object_views_with_an_empty_slice_touches_the_database_not_at_all() {
+        let (_dir, conn) = translated_com_object_db();
+        // Both tables a real query (or an overlay load) would need are
+        // gone; if `com_object_views` ran either one it would return
+        // `Err`, not `Ok(empty map)`.
+        conn.execute_batch("DROP TABLE com_object_ref; DROP TABLE translation;")
+            .unwrap();
+
+        let views = com_object_views(&conn, "A-7", &[], Some("de-DE")).unwrap();
+        assert!(views.is_empty());
+    }
+
+    /// `count` `ComObject`/`ComObjectRef` pairs, each ref taking its
+    /// `ComObject`'s own value (no overrides) — enough to synthesize a
+    /// program larger than the 900-id chunk size without the corpus.
+    fn com_object_table_and_refs(count: usize) -> (String, String) {
+        let mut table = String::new();
+        let mut refs = String::new();
+        for i in 0..count {
+            table.push_str(&format!(
+                r#"<ComObject Id="A-9_O-{i}" Number="{i}" Text="T{i}" ObjectSize="1 Bit" />"#
+            ));
+            refs.push_str(&format!(
+                r#"<ComObjectRef Id="A-9_O-{i}_R-1" RefId="A-9_O-{i}" />"#
+            ));
+        }
+        (table, refs)
+    }
+
+    #[test]
+    fn com_object_views_resolves_a_slice_larger_than_one_chunk() {
+        // 900 ids per statement (see `com_object_views`'s own doc comment);
+        // 950 forces a second, smaller chunk.
+        const COUNT: usize = 950;
+        let (table, refs) = com_object_table_and_refs(COUNT);
+        let xml = format!(
+            r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
+<ApplicationPrograms><ApplicationProgram Id="A-9" Name="P" ApplicationNumber="9"
+  ApplicationVersion="1" MaskVersion="MV-0701"><Static>
+<ComObjectTable>{table}</ComObjectTable>
+<ComObjectRefs>{refs}</ComObjectRefs>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#
+        );
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_program(&conn, "sha-a9", "M-006A/A9.xml", xml.as_bytes()).unwrap();
+
+        let ids = com_object_ref_ids(&conn, "A-9").unwrap();
+        assert_eq!(ids.len(), COUNT);
+        let id_refs: Vec<&str> = ids.iter().map(String::as_str).collect();
+
+        let views = com_object_views(&conn, "A-9", &id_refs, None).unwrap();
+        assert_eq!(
+            views.len(),
+            COUNT,
+            "every ref across both chunks must resolve, not just the first 900"
+        );
+        // Spot-check across the chunk boundary (indices 899/900) and both
+        // ends of the slice.
+        for i in [0usize, 899, 900, COUNT - 1] {
+            let id = format!("A-9_O-{i}_R-1");
+            let expected_text = format!("T{i}");
+            let v = views.get(&id).unwrap_or_else(|| panic!("missing {id}"));
+            assert_eq!(v.text.as_deref(), Some(expected_text.as_str()));
+        }
     }
 
     #[test]

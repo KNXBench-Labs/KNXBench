@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-12 (T26 first slice: the device parameter panel reads product-database translations, see below)
+Last updated: 2026-09-12 (T26 first slice, fix round 1: the product-data language now reaches an already-open parameter panel; see below)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -2580,8 +2580,10 @@ for a gap this slice found but deliberately did not fix.
   it on every load and every write; fixed a pre-existing label-order bug
   in the same file while there — a field's `text` now takes precedence
   over its `name` (`field.text ?? field.name ?? field.etsId`, was
-  reversed) — pinned by a test that fails without the fix. 12 new/renamed
-  tests across `productLanguage.test.ts` (new), `SettingsPanel.test.tsx`,
+  reversed) — pinned by a test that fails without the fix. 9 new tests
+  plus 1 renamed (10 total, matching the 235 → 244 delta below — a
+  renamed test doesn't move that count) across `productLanguage.test.ts`
+  (new), `SettingsPanel.test.tsx`,
   `ParameterPanel.test.tsx`, and one mock-shape fix in `App.test.tsx` (its
   `vi.mock("./api", ...)` needed a `productLanguages` stub once `App.tsx`
   started calling it on mount).
@@ -2624,3 +2626,63 @@ UI chrome itself (`T25`, a separate task). Also found, not fixed:
 backlog item, **T32**, in `GAP_ANALYSIS_ETS.md`, since fixing it needs a
 schema decision (`translation.program_id` is `NOT NULL`, and a catalog
 item belongs to no program).
+
+**T26, first slice, fix round 1 (2026-09-12).** A whole-branch review of
+the five commits above, each clean at task level, found one blocker in
+the seam between two of them plus two minor documentation/coverage gaps.
+
+- **Blocker — the setting never reached an already-open panel.**
+  `App.tsx`'s Settings select and `ParameterPanel.tsx` each called
+  `useProductLanguage()` independently; each got its own `useState`, and
+  `Inspector.tsx` renders `ParameterPanel` with no `key`, so it is never
+  remounted on a device switch. Changing the language in Settings updated
+  only `App`'s copy — the open panel kept showing whatever language it had
+  when it first mounted, directly contradicting `SettingsPanel.tsx`'s own
+  doc comment ("applies immediately"). Fixed by giving
+  `apps/knx-web/src/productLanguage.ts` a single module-level store (a
+  cached value plus a subscriber set) read through React 19's
+  `useSyncExternalStore` — no new dependency, `react` already ships it.
+  `useProductLanguage()` keeps its exact signature, so neither call site
+  changed shape. The value is seeded from `localStorage` lazily, on first
+  `getSnapshot()` call rather than at module-evaluation time, and a new
+  `resetProductLanguageForTests()` export un-seeds it — without that,
+  module state would leak between tests in the same file even after
+  `localStorage` is cleared. `ParameterPanel.test.tsx` and
+  `SettingsPanel.test.tsx` were updated to call it in their existing
+  `afterEach`s. A regression test in `productLanguage.test.tsx` (renamed
+  from `.test.ts` — the new test renders through `react-dom/client`, which
+  needs a `.tsx` file to parse JSX) mounts a reader and a writer side by
+  side, changes the language only through the writer, and asserts the
+  reader observes it without remounting; reverted against the old
+  two-`useState` implementation it fails with `AssertionError: expected
+  '(default)' to be 'de-DE'` on the post-write assertion — i.e. the
+  reader's copy never moved.
+- **Minor — a miscounted test total.** The first slice's own summary
+  said "12 new/renamed tests"; corrected to 9 new plus 1 renamed (10
+  total), matching the 235 → 244 web delta quoted two paragraphs below it.
+- **Minor — no end-to-end test for an enum write with a language.**
+  `knx-productdb`'s `a_value_translation_never_changes_a_stored_value` and
+  `domain.rs`'s `validate_kind_and_bounds` prove, separately, that a
+  `Restriction`-kind option's `Value` is never translated. Neither proves
+  it together over HTTP. Added
+  `enum_write_with_a_language_keeps_the_raw_value_but_translates_its_label`
+  to `apps/knx-server/tests/http_product_language.rs`, extending
+  `TRANSLATED_PROGRAM` with a second, `Restriction`-kind parameter
+  (`P-2`, options `"0"`/`"1"`) whose option labels carry `de-DE`
+  translations: `POST /api/device/1/parameters?language=de-DE` writing
+  raw `"1"` returns a DTO whose `value` is exactly `"1"` and whose
+  matching `enumOptions` entry's `text` is the translated `"An"`.
+
+No new dependency, no schema migration, no change to what a write stores
+— same global constraints as the first slice, unchanged by this round.
+
+`cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D
+warnings`, `cargo run -p xtask -- check-layering`, and `cargo deny check`
+all clean. `cargo test --workspace`: **989 passed / 0 failed / 3
+ignored** across 73 `test result` lines (up from this slice's own
+988/0/3 across 73 — the delta is exactly the one new
+`http_product_language.rs` test; the fix touched no other Rust file).
+`npm --prefix apps/knx-web run test`: **245 passed across 26 files** (up
+from 244/26 — the one new `productLanguage.test.tsx` regression test;
+the file count is unchanged because it's a rename, not a new file).
+`npx tsc -p apps/knx-web/tsconfig.json --noEmit`: clean.

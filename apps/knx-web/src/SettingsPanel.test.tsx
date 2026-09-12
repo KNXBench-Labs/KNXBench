@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import SettingsPanel from "./SettingsPanel";
 import { THEMES } from "./theme";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
-import { useProductLanguage } from "./productLanguage";
+import { resetProductLanguageForTests, useProductLanguage } from "./productLanguage";
 import type { ProductLanguage } from "./api";
 
 let host: HTMLDivElement | undefined;
@@ -16,6 +16,7 @@ afterEach(() => {
   window.localStorage.clear();
   document.documentElement.removeAttribute("data-motion-level");
   document.documentElement.removeAttribute("data-motion-style");
+  resetProductLanguageForTests();
 });
 
 // Wires SettingsPanel to the real `useMotion()` hook, exactly as App.tsx

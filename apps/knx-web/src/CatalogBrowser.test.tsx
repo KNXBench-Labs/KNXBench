@@ -192,6 +192,8 @@ describe("CatalogBrowser", () => {
       await new Promise((resolve) => setTimeout(resolve, 250));
     });
     const input = host!.querySelector<HTMLInputElement>('input[placeholder="Search catalog items…"]')!;
+    expect(input.getAttribute("role")).toBe("combobox");
+    expect(input.getAttribute("aria-haspopup")).toBe("listbox");
     await act(async () => {
       input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
     });

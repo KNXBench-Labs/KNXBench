@@ -189,6 +189,7 @@ export default function CatalogBrowser(props: {
         onKeyDown={handleSearchKeyDown}
         placeholder="Search catalog items…"
         role="combobox"
+        aria-haspopup="listbox"
         aria-expanded={items.length > 0}
         aria-controls="catalog-results"
         aria-activedescendant={items[highlight] ? `catalog-option-${highlight}` : undefined}

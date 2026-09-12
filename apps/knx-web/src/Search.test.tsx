@@ -69,6 +69,8 @@ describe("Search", () => {
     });
 
     const input = host!.querySelector("input")!;
+    expect(input.getAttribute("role")).toBe("combobox");
+    expect(input.getAttribute("aria-haspopup")).toBe("listbox");
     // matchEntries ranks the starts-with match first: "Dimmer hallway".
     expect(input.getAttribute("aria-activedescendant")).toBe("search-option-0");
 

@@ -61,6 +61,7 @@ export default function CommandPalette(props: { ctx: CommandContext; onClose: ()
         onKeyDown={handleKeyDown}
         placeholder="Type a command…"
         role="combobox"
+        aria-haspopup="listbox"
         aria-expanded={results.length > 0}
         aria-controls="palette-results"
         aria-activedescendant={results[highlight] ? `palette-option-${highlight}` : undefined}

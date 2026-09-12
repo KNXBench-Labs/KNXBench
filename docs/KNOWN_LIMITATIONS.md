@@ -2770,3 +2770,56 @@ generic no-authority diagnostic.
 `.knxproj` is re-imported (not merely re-opened) — re-import re-parses
 `ModuleInstance/@Id` from the file and repopulates the column for every
 row.
+
+## 72. Line-scan (T17) is researched, not implemented, and an unthrottled scan is a live-bus hazard, not a theoretical one
+
+**Limitation.** T17, bus-side device discovery, has a documented procedure
+([RESEARCH.md §8.5](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12))
+but no code. There is no way today to ask KNXBench "which individual
+addresses on this line have a device behind them." Anyone wanting that
+answer still has to fall back to ETS or another tool.
+
+**Cause.** The procedure the Standard defines for this,
+`NM_IndividualAddress_Check` (`03_05_02 Management Procedures` §2.19), is
+connection-oriented: it needs `T_Connect`/`T_Disconnect` and numbered
+`T_Data_Connected` at the KNX bus-level Transport Layer. `crates/knx-net`
+does not have that layer yet — its TPCI encode/decode is hardcoded to
+connectionless, unnumbered mode, with no representation of `T_CONNECT`,
+`T_DISCONNECT`, or a per-target connection state machine. Building it is
+real, additive work inside `knx-net`, not a research gap.
+
+**Impact.** Twofold. First, the obvious one: no line scan exists to use.
+Second, and the reason this is its own entry rather than a line in the
+roadmap: **an unthrottled implementation is dangerous on a live
+installation, not merely slow — and now measured, not merely
+estimated.** A controller full-line scan (2026-09-12, 254 addresses,
+one installation, one gateway, over a KNXnet/IP tunnelling connection,
+200 ms between probes, zero probe errors) found 35 addresses occupied
+and 219 vacant, and timed both: occupied probes 13.6-6016.5 ms (median
+121.1 ms), vacant probes 6275.9-6323.8 ms (median 6279.9 ms). Summed:
+**1 385.75 s ≈ 23.1 minutes** for the whole line. That figure replaces
+this entry's earlier 26-57 second extrapolation, which scaled from nine
+addresses that all happened to be occupied — a real line is mostly
+vacant, and vacant is the expensive case (~6.28 s per address, a client
+connection-timeout policy, not bus retry cost — see
+[RESEARCH.md §8.5, Finding 1](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12)),
+so the earlier number understated the hazard by roughly two orders of
+magnitude, not a rounding error. For the full 23 minutes, a scan
+competes with whatever else needs that line's bandwidth, including
+genuinely safety-relevant devices that share it.
+
+The same scan surfaced two further findings an implementation must
+account for, both documented in RESEARCH.md §8.5 rather than repeated in
+full here: a scan can mistake KNXnet/IP tunnelling endpoints — including
+its own connection — for bus devices, distinguishable by their timing but
+reliably excluded only by the client knowing its own assigned address
+(Finding 2); and the scan's results disagreed with the reference
+project's device list in both directions, which is not a defect but the
+reason this capability is worth building at all (Finding 3).
+
+**Lifted when.** Implementation lands with, at minimum, a deliberately
+chosen timeout/pacing policy — the controller's measurement shows this
+is a real design decision, not a constant to copy from the Standard — and
+an installation-specific exclusion list that is honoured by construction:
+addresses to skip enumerated out of the scan range itself, in the domain
+layer, never filtered out afterward in the UI.

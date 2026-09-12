@@ -50,6 +50,7 @@ const fixture: ParameterPanelDto = {
           enumOptions: [],
           displayOrder: null,
           access: null,
+          writeEtsId: "P1",
         },
       ],
     },
@@ -74,6 +75,7 @@ const fixture: ParameterPanelDto = {
           ],
           displayOrder: null,
           access: null,
+          writeEtsId: null,
         },
       ],
     },
@@ -102,6 +104,12 @@ function setInputValue(input: HTMLInputElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
   setter.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function setSelectValue(select: HTMLSelectElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, "value")!.set!;
+  setter.call(select, value);
+  select.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
 describe("ParameterPanel", () => {
@@ -267,6 +275,130 @@ describe("ParameterPanel", () => {
 
     expect(host!.textContent).toContain("Allgemein");
     expect(host!.textContent).not.toContain("General");
+
+    root.unmount();
+  });
+
+  it("writes a module-scoped field's writeEtsId, not its declared etsId", async () => {
+    const scopedPanel: ParameterPanelDto = {
+      programId: "PROG-1",
+      sections: [
+        {
+          scope: { moduleNode: 7, moduleId: "M-7", moduleDefId: "MD-1" },
+          fields: [
+            {
+              etsId: "P2",
+              name: "Field B",
+              text: null,
+              kind: "Number",
+              value: "1",
+              valueSource: "Default",
+              editable: true,
+              min: "0",
+              max: "10",
+              enumOptions: [],
+              displayOrder: null,
+              access: null,
+              writeEtsId: "M-7_MI-3_P2",
+            },
+          ],
+        },
+      ],
+      stale: [],
+      diagnostics: [],
+    };
+    apiMock.deviceParameters.mockResolvedValue(scopedPanel);
+    apiMock.setParameterValue.mockResolvedValue(scopedPanel);
+    const root = await renderPanel();
+
+    const input = host!.querySelector<HTMLInputElement>('input[type="number"]')!;
+    await act(async () => {
+      setInputValue(input, "2");
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(apiMock.setParameterValue).toHaveBeenCalledWith(1, "M-7_MI-3_P2", "2", null);
+    expect(apiMock.setParameterValue).not.toHaveBeenCalledWith(1, "P2", "2", null);
+
+    root.unmount();
+  });
+
+  it("disables a field and refuses to submit it when writeEtsId is null, even if editable says true", async () => {
+    // The server's contract makes `editable === false` and
+    // `writeEtsId === null` exact opposites (never a third state), but
+    // this fixture deliberately breaks that contract to prove the
+    // control's own belt-and-braces check (`ParameterPanel.tsx`'s
+    // `disabled`/`apply()` guards) does not simply trust `editable`.
+    const contractBrokenPanel: ParameterPanelDto = {
+      programId: "PROG-1",
+      sections: [
+        {
+          scope: { moduleNode: 7, moduleId: "M-7", moduleDefId: "MD-1" },
+          fields: [
+            {
+              etsId: "P2",
+              name: "Field B",
+              text: null,
+              kind: "Restriction",
+              value: "1",
+              valueSource: "Default",
+              editable: true,
+              min: null,
+              max: null,
+              enumOptions: [
+                { value: "1", text: "On" },
+                { value: "0", text: "Off" },
+              ],
+              displayOrder: null,
+              access: null,
+              writeEtsId: null,
+            },
+          ],
+        },
+      ],
+      stale: [],
+      diagnostics: [],
+    };
+    apiMock.deviceParameters.mockResolvedValue(contractBrokenPanel);
+    const root = await renderPanel();
+
+    const select = host!.querySelector<HTMLSelectElement>("select")!;
+    expect(select.disabled).toBe(true);
+
+    await act(async () => {
+      setSelectValue(select, "0");
+      select.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(apiMock.setParameterValue).not.toHaveBeenCalled();
+
+    root.unmount();
+  });
+
+  it("shows a read-only section's own diagnostic reason inside that section", async () => {
+    const reason = "No imported module instance matches this module; its fields are read-only.";
+    const panelWithSectionDiagnostic: ParameterPanelDto = {
+      ...fixture,
+      diagnostics: [
+        ...fixture.diagnostics,
+        {
+          scope: { moduleNode: 7, moduleId: null, moduleDefId: "MD-1" },
+          message: reason,
+          detail: "No imported ModuleInstance's RefId matches module 'M-7' (D39 rule 2, zero matches).",
+        },
+      ],
+    };
+    apiMock.deviceParameters.mockResolvedValue(panelWithSectionDiagnostic);
+    const root = await renderPanel();
+
+    const sections = host!.querySelectorAll(".parameter-section");
+    expect(sections.length).toBe(2);
+    // The device-scope section (no matching diagnostic) must not show it.
+    expect(sections[0].textContent).not.toContain(reason);
+    // The module-scoped section (matching scope) must.
+    expect(sections[1].textContent).toContain(reason);
 
     root.unmount();
   });

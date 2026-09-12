@@ -1,4 +1,98 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-12 05:40
+- **Completed:** **T26 (product-data language) merged to `main`
+  (`0912ea5`, `--no-ff`).** Branch `t26-product-language`,
+  `c19aa94`..`0c51ca9`, nine commits, 20 files / 2253 insertions / 119
+  deletions. `knx-productdb`'s `translation` table — populated on every
+  product import since the database layer existed, read by nothing — now
+  has a reader. `crates/knx-productdb/src/query.rs` gained a private
+  `translation_overlay(conn, program_id, language)` keyed by
+  `(ref_id, attribute_name)` whose SQL allow-lists
+  `Text`/`FunctionText`/`SuffixText`/`VisibleDescription`/`Name`, making
+  a `Value` translation **structurally unreachable** rather than merely
+  unusual (translating `Value` would rewrite a stored parameter value);
+  `parameter_views(conn, program_id, language: Option<&str>)` applies the
+  overlay per element **before** `pick()`;
+  `parameter_type_enum_options` overlays `text` only. Public
+  `translation_languages` / `program_translation_languages` return
+  `TranslationLanguage { language, rows }`; the second has no caller yet
+  — a documented seam for the com-object slice. `apps/knx-server` threads
+  `language: Option<&str>` through `assemble_parameter_panel`,
+  `parameter_panel_impl` and `set_parameter_value_impl` (**both**
+  assembly paths), adds `?language=` to `GET`/`POST
+  /api/device/{id}/parameters` (`Query` **before** `Json`, axum demands
+  the body extractor last) and `GET /api/product-languages` (returns
+  `200 []` with no product database — a Settings panel must render on a
+  fresh install; a real database error still propagates). `apps/knx-web`
+  persists the choice under `knx-desktop:product-language`, adds a fourth
+  Settings select, and threads the language into `ParameterPanel`.
+  **The whole-branch review found one blocker no task-level review could
+  have seen:** `useProductLanguage()` was a plain `useState` called
+  independently at `App.tsx:81` and `ParameterPanel.tsx:204`, and
+  `Inspector.tsx:504` renders `<ParameterPanel>` with no `key`, so the
+  panel never remounts — picking a language in Settings never reached an
+  already-open panel. Fixed in `e26ce82` with a module-level cache plus a
+  subscriber `Set` behind React 19's built-in `useSyncExternalStore`
+  (lazy seeding from `localStorage`, unchanged hook signature, no new
+  dependency), pinned by a regression test that asserts `readerMounts
+  === 1` so a remount cannot make it pass. Fix round 1 also added the
+  missing enum-write-with-language HTTP test and corrected a doc
+  miscount; the scoped re-review returned **ALL FINDINGS ADDRESSED**
+  (0/0/1/2), and the residual MINOR plus both NITs were parked with
+  written rulings (see the log). Docs reconciled in the same slice:
+  `KNOWN_LIMITATIONS.md` §37 → "partially resolved", §48's cause
+  repointed, **new §64** (1705 `Languages`-block translations discarded
+  on import — Catalog.xml 40/5, Hardware.xml 30/5, knx_master.xml
+  1635/24, measured on `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`);
+  `GAP_ANALYSIS_ETS.md` D10 kept open with the reader recorded, new **T32**
+  backlog item; dated `IMPLEMENTATION_STATUS.md` entries; `ROADMAP.md`'s
+  two false Internationalization statements fixed;
+  `.ai/logs/2026-09-12_claude_t26_product_language.md` written.
+  **Gates re-measured on merged `main` (`0912ea5`), all green:** `cargo
+  fmt --all --check` clean; `cargo clippy --workspace --all-targets -- -D
+  warnings` clean; `cargo test --workspace` **989 passed / 0 failed / 3
+  ignored across 73 `test result` lines**; `check-layering` ok; `cargo
+  deny check` ok; web **245 passed across 26 files**; `tsc --noEmit`
+  clean.
+- **Pending/Next Steps:** Next slice not yet chosen. The strongest
+  candidate is the one this slice opened: **T32** — ingest the
+  `Languages` blocks that live outside an application program
+  (`KNOWN_LIMITATIONS.md` §64). It is a data-integrity item, which
+  outranks UI work under `CLAUDE.md`'s priority order, and it needs a
+  schema decision first: `translation.program_id` is `TEXT NOT NULL`, so
+  a catalog- or master-scoped translation has no program to belong to.
+  **T25** (UI chrome i18n, the other half of D10) is the alternative and
+  needs a library choice. Also still open: **the com-object half of §37**
+  — `com_object_view` was deliberately untouched, so communication-object
+  text is still untranslated and D10 stays open. Other open work
+  unchanged: T17 (line scan, needs a spec research spike), T21 (graphical
+  views, D1/D2), T28 (in-app help, D12), T16, T22, D8's real settings
+  contents, B10, C3, C5, C6, E5, E6, F3. Blocked with named conditions:
+  T30/E1 (commissioning), T19/E3 (KNX Secure), T20/A1 (Functions), A4
+  (schemas 12-22).
+- **Notes for Codex:** Three traps in this slice. (1) **`Value` is never
+  translated, and that is load-bearing.** The allow-list in
+  `translation_overlay`'s SQL is the only thing standing between a
+  translated label and a project file containing the string "An" where
+  `1` belongs. `enum_write_with_a_language_keeps_the_raw_value_but_translates_its_label`
+  in `apps/knx-server/tests/http_product_language.rs` is the guard —
+  injection-tested, fails with `left: 400, right: 200` if the overlay
+  ever reaches `value`. (2) **There is no fallback language chain.**
+  Asking for `de-DE` when only `de` exists returns untranslated text, by
+  decision, not omission — adding one needs a language-tag matching
+  policy written down first. (3) **`productLanguage.ts` is a module-level
+  store, not per-component state.** If you add a third consumer it will
+  share the same value automatically; if you write a test touching the
+  language, call `resetProductLanguageForTests()` in `afterEach`, because
+  clearing `localStorage` does not un-seed the module cache. Note also
+  that `productLanguage.test.ts` became `.test.tsx` — esbuild only parses
+  JSX in `.tsx`, whatever the `@vitest-environment` pragma says. The
+  worktree `.worktrees/session3-ets-import` is still fully merged dead
+  weight, left in place pending the user's call.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-12 03:12
 - **Completed:** **T31 merged to `main` (`ae1cb94`, `--no-ff`).** Branch
   `t31-overlay-shell` (`ea54b0c`..`ced4499`, ten commits) is in. After

@@ -96,6 +96,15 @@ function App() {
   // state updates alone are too late to check inside the same async
   // callback that reads them.
   const selectionRef = useRef<Selection | null>(null);
+  // Guards the language-change effect below against its own stale
+  // replies: the selection check alone (`selectionRef.current` still
+  // naming the same device) is always true across a language change,
+  // since the selection never moves — only the language does. Two rapid
+  // language switches would otherwise race, with whichever response
+  // happens to land last winning regardless of which request it answers.
+  // Same `requestId` idiom `CatalogBrowser.tsx`'s `requestIdRef` and
+  // `ParameterPanel.tsx`'s own use for the identical hazard.
+  const languageRequestIdRef = useRef(0);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -203,17 +212,35 @@ function App() {
   // effect's only dependency is `productLanguage`: listing `selection`
   // too would make an ordinary device pick run this effect a second time,
   // duplicating the fetch `selectEntity` already issued for that pick.
+  //
+  // The selection-identity check below still matters (a device switch
+  // mid-flight must still discard the reply), but on its own it guards
+  // nothing against two language changes racing each other: the selection
+  // never moves across a language change, so that check alone is always
+  // true. `languageRequestIdRef` closes that gap — a reply is applied
+  // only if it belongs to the most recently issued request, so if the
+  // request for an earlier language happens to resolve after a later
+  // one's, it loses.
   useEffect(() => {
     const sel = selectionRef.current;
     if (sel?.kind !== "device") return;
+    const requestId = ++languageRequestIdRef.current;
     (async () => {
       try {
         const detail = await api.deviceDetail(sel.id, productLanguage);
-        if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
+        if (
+          requestId === languageRequestIdRef.current &&
+          selectionRef.current?.kind === "device" &&
+          selectionRef.current.id === sel.id
+        ) {
           setDeviceDetail(detail);
         }
       } catch (e) {
-        if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
+        if (
+          requestId === languageRequestIdRef.current &&
+          selectionRef.current?.kind === "device" &&
+          selectionRef.current.id === sel.id
+        ) {
           reportError(e);
         }
       }

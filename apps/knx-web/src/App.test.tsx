@@ -299,4 +299,112 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
 
     root.unmount();
   });
+
+  // Fix round 1 regression test: two language changes in quick succession
+  // race each other, not just the selection. The selection-identity guard
+  // `selectEntity`/`handleTreeUpdate` already carry is always satisfied
+  // here — the selection never moves across a language change — so on its
+  // own it cannot tell the de-DE reply and the fr-FR reply apart. Only a
+  // per-request generation counter (`languageRequestIdRef` in `App.tsx`)
+  // can, and only by discarding whichever reply is no longer current
+  // rather than whichever happens to have started first.
+  it("keeps the newer language's detail even when the older language's response resolves later", async () => {
+    function Writer() {
+      const [, setLanguage] = useProductLanguage();
+      return (
+        <>
+          <button type="button" onClick={() => setLanguage("de-DE")}>
+            set de-DE
+          </button>
+          <button type="button" onClick={() => setLanguage("fr-FR")}>
+            set fr-FR
+          </button>
+        </>
+      );
+    }
+
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(treeWithDevice());
+    // The initial selection's own fetch (language `null`) resolves right
+    // away. The two language-change fetches that follow are held open by
+    // the test — deliberately released out of request order below — so
+    // one call queues to each of the two `mockImplementationOnce`s in the
+    // order `App` is expected to issue them: de-DE first, fr-FR second.
+    let resolveDe: ((detail: DeviceDetail) => void) | undefined;
+    let resolveFr: ((detail: DeviceDetail) => void) | undefined;
+    apiMock.deviceDetail
+      .mockResolvedValueOnce(deviceDetailFixture())
+      .mockImplementationOnce(
+        () =>
+          new Promise<DeviceDetail>((resolve) => {
+            resolveDe = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<DeviceDetail>((resolve) => {
+            resolveFr = resolve;
+          }),
+      );
+
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        <>
+          <App />
+          <Writer />
+        </>,
+      );
+    });
+
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+
+    await act(async () => {
+      deviceLabel().dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    const deButton = Array.from(host!.querySelectorAll("button")).find(
+      (b) => b.textContent === "set de-DE",
+    )!;
+    const frButton = Array.from(host!.querySelectorAll("button")).find(
+      (b) => b.textContent === "set fr-FR",
+    )!;
+
+    // Two rapid language changes: de-DE requested first, fr-FR second —
+    // both requests are now in flight, with de-DE's `languageRequestIdRef`
+    // generation the older of the two.
+    await act(async () => {
+      deButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      frButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(apiMock.deviceDetail).toHaveBeenCalledTimes(3);
+    expect(resolveDe).toBeDefined();
+    expect(resolveFr).toBeDefined();
+
+    // Resolve out of order: the OLDER request (de-DE) answers LAST.
+    await act(async () => {
+      resolveFr!({ ...deviceDetailFixture(), name: "Device D (fr-FR)" });
+      await Promise.resolve();
+    });
+    await act(async () => {
+      resolveDe!({ ...deviceDetailFixture(), name: "Device D (de-DE)" });
+      await Promise.resolve();
+    });
+
+    // Without `languageRequestIdRef`, the de-DE reply — delivered last —
+    // would silently overwrite the fr-FR detail already on screen, even
+    // though `productLanguage` has been "fr-FR" the whole time.
+    expect(host!.textContent).toContain("Device D (fr-FR)");
+    expect(host!.textContent).not.toContain("Device D (de-DE)");
+
+    root.unmount();
+  });
 });

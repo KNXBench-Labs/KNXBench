@@ -2545,7 +2545,10 @@ therefore sees a German sentence with an English clause describing why
 their own pack failed to import.
 
 **Cause.** Deliberate, for now — surfaced and ruled on during T25 Task 7's
-review (2026-09-12). `parseLanguagePack`'s `fail(...)` calls return a
+review (2026-09-12). Every rejection reason in `languagePack.ts` goes
+through the same `fail(...)` helper, whether it comes from
+`parseLanguagePack`'s validation or from `describeStorageFailure` when a
+write to `localStorage` fails; all of them return a
 free-form English string, not a discriminated `kind` the frontend could
 map to its own catalogue key the way `CatalogBrowser.tsx`'s
 `describeCreationDiagnostic` does for `CreationDiagnostic` (see

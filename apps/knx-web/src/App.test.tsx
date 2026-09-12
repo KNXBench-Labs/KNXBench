@@ -15,6 +15,7 @@ import type { DeviceNode } from "./bindings/DeviceNode";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { LogEntry } from "./api";
 import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests, useProductLanguage } from "./productLanguage";
+import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   importProject: vi.fn(),
@@ -54,6 +55,9 @@ afterEach(() => {
   apiMock.deviceParameters.mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] });
   window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
   resetProductLanguageForTests();
+  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  document.documentElement.removeAttribute("lang");
+  resetUiLanguageForTests();
 });
 
 function baseTree(): ProjectTree {
@@ -404,6 +408,24 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
     // though `productLanguage` has been "fr-FR" the whole time.
     expect(host!.textContent).toContain("Device D (fr-FR)");
     expect(host!.textContent).not.toContain("Device D (de-DE)");
+
+    root.unmount();
+  });
+});
+
+// T25 task 3: before this change, `useUiLanguage()`'s `document
+// .documentElement.lang`-setting effect only ran once `SettingsPanel`
+// mounted, since it was the sole caller of the hook — leaving
+// `index.html`'s static `lang="en"` in place for a whole session that
+// never opens Settings. `App` now calls `useTranslate()` (which calls
+// `useUiLanguage()` internally) for its own toolbar labels, unconditional
+// on every render, closing that gap.
+describe("App — <html lang> reflects the UI language without opening Settings", () => {
+  it("sets lang=\"en\" on a fresh mount, before Settings is ever opened", async () => {
+    const root = await renderApp();
+
+    expect(document.documentElement.getAttribute("lang")).toBe("en");
+    expect(host!.querySelector(".settings-panel")).toBeNull();
 
     root.unmount();
   });

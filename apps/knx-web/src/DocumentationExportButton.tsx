@@ -1,6 +1,7 @@
 import { pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { useTranslate } from "./i18n";
 
 // Writes the live project as one self-contained "project documentation"
 // HTML file (`crates/knx-report`, `POST /api/project/documentation-export`).
@@ -22,6 +23,7 @@ export default function DocumentationExportButton(props: {
   onClearErrors: () => void;
 }) {
   const { tree, onSummary, onError, onClearErrors } = props;
+  const t = useTranslate();
 
   async function exportDocumentation() {
     const path = await pickSavePath(DOCUMENTATION_FILTER, "project-documentation.html");
@@ -35,8 +37,8 @@ export default function DocumentationExportButton(props: {
       const n = warnings.length;
       onSummary(
         n === 0
-          ? "Project documentation exported, no warnings."
-          : `Project documentation exported, ${n} warning${n === 1 ? "" : "s"} — see Log.`,
+          ? t("documentationExport.summaryNone")
+          : t("documentationExport.summaryWithWarnings", { count: n }),
       );
     } catch (e) {
       onError(e);
@@ -45,7 +47,7 @@ export default function DocumentationExportButton(props: {
 
   return (
     <button onClick={exportDocumentation} disabled={!tree}>
-      Export documentation…
+      {t("documentationExport.button")}
     </button>
   );
 }

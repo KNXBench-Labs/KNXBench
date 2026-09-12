@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { ERROR_WRAPPERS, HOLIDAYS, LATE_NIGHT_MESSAGES } from "./toastCopy";
 import type { HolidayEntry } from "./toastCopy";
+import { formatTemplate, translate } from "./i18n";
+import type { TranslatableKey } from "./i18n";
 
 export type ToastKind = "error" | "fun";
 
@@ -26,6 +28,21 @@ function pickRandom(options: string[], random: () => number): string {
   return options[Math.floor(random() * options.length)];
 }
 
+/**
+ * Resolves `key` via `translate()` with no params — for a real catalogue
+ * key this returns the *unsubstituted* template text (`translate()`'s own
+ * `formatTemplate` call is a no-op with `params` omitted, see `i18n.ts`),
+ * and for a fixture string that isn't a catalogue key at all (as
+ * `toast.test.ts` injects), `translate()`'s last-resort fallback returns
+ * the string itself unchanged — either way, a template `params` can still
+ * be substituted into via `formatTemplate` afterwards. This is what lets
+ * `humorizeError`'s `{msg}` substitution work uniformly whether `key` is a
+ * real `toast.error.*` entry or a raw test fixture template.
+ */
+function resolveTemplate(key: string, params?: Record<string, string | number>): string {
+  return formatTemplate(translate(key as TranslatableKey), params);
+}
+
 /** Holiday beats late-night; neither beats nothing. */
 export function pickStartupToast(
   date: Date,
@@ -33,8 +50,8 @@ export function pickStartupToast(
   holidays: HolidayEntry[] = HOLIDAYS,
 ): string | undefined {
   const holiday = findHoliday(date, holidays);
-  if (holiday) return pickRandom(holiday.messages, random);
-  if (isLateNight(date)) return pickRandom(LATE_NIGHT_MESSAGES, random);
+  if (holiday) return resolveTemplate(pickRandom(holiday.messages, random));
+  if (isLateNight(date)) return resolveTemplate(pickRandom(LATE_NIGHT_MESSAGES, random));
   return undefined;
 }
 
@@ -45,7 +62,7 @@ export function humorizeError(
   random: () => number = Math.random,
   wrappers: string[] = ERROR_WRAPPERS,
 ): string {
-  return pickRandom(wrappers, random).replace("{msg}", () => message);
+  return resolveTemplate(pickRandom(wrappers, random), { msg: message });
 }
 
 export function useToasts() {

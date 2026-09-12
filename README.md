@@ -159,8 +159,9 @@ product data remain separately owned.
 
 `check-headers` keeps the first-line convention honest: a source file's
 first line is one sentence saying what the file is for (`//! ...` in Rust,
-`/** ... */` in TypeScript), checked wherever one exists and never demanded
-where one does not. Every program carries its own SemVer version;
+`/** ... */` in TypeScript), checked wherever one exists; the number of
+files without one is a ratchet that may only go down, so new files get a
+header and old ones are not swept. Every program carries its own SemVer version;
 `knx --version` and `knx-server --version` add the commit they were built
 from. See [ADR-0018](docs/adr/0018-program-versions-and-file-headers.md).
 

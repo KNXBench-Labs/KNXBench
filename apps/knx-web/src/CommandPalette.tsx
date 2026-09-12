@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { CommandContext, PaletteCommand } from "./commandRegistry";
 import { COMMANDS, filterCommands } from "./commandRegistry";
+import Overlay from "./Overlay";
 
 function firstEnabledIndex(commands: PaletteCommand[], ctx: CommandContext): number {
   return commands.findIndex((cmd) => cmd.isEnabled(ctx));
@@ -9,6 +10,7 @@ function firstEnabledIndex(commands: PaletteCommand[], ctx: CommandContext): num
 
 export default function CommandPalette(props: { ctx: CommandContext; onClose: () => void }) {
   const { ctx, onClose } = props;
+  const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
   const results = useMemo(() => filterCommands(COMMANDS, query), [query]);
@@ -38,9 +40,7 @@ export default function CommandPalette(props: { ctx: CommandContext; onClose: ()
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Escape") {
-      onClose();
-    } else if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       moveHighlight(1);
     } else if (e.key === "ArrowUp") {
@@ -53,36 +53,42 @@ export default function CommandPalette(props: { ctx: CommandContext; onClose: ()
   }
 
   return (
-    <div className="search-overlay" onClick={onClose}>
-      <div className="search-panel" onClick={(e) => e.stopPropagation()}>
-        <input
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a command…"
-        />
-        {results.length === 0 && <p className="search-empty">No matching commands.</p>}
-        <ul className="search-results">
-          {results.map((cmd, i) => {
-            const enabled = cmd.isEnabled(ctx);
-            const classes = ["search-result"];
-            if (i === highlight) classes.push("selected");
-            if (!enabled) classes.push("disabled");
-            return (
-              <li
-                key={cmd.id}
-                className={classes.join(" ")}
-                aria-disabled={!enabled}
-                onClick={() => enabled && runCommand(cmd)}
-              >
-                <span>{cmd.label}</span>
-                {cmd.shortcutHint && <span className="provenance-badge">{cmd.shortcutHint}</span>}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </div>
+    <Overlay label="Command palette" onClose={onClose} initialFocusRef={inputRef}>
+      <input
+        ref={inputRef}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Type a command…"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={results.length > 0}
+        aria-controls="palette-results"
+        aria-activedescendant={results[highlight] ? `palette-option-${highlight}` : undefined}
+      />
+      {results.length === 0 && <p className="search-empty">No matching commands.</p>}
+      <ul className="search-results" id="palette-results" role="listbox">
+        {results.map((cmd, i) => {
+          const enabled = cmd.isEnabled(ctx);
+          const classes = ["search-result"];
+          if (i === highlight) classes.push("selected");
+          if (!enabled) classes.push("disabled");
+          return (
+            <li
+              key={cmd.id}
+              id={`palette-option-${i}`}
+              role="option"
+              aria-selected={i === highlight}
+              className={classes.join(" ")}
+              aria-disabled={!enabled}
+              onClick={() => enabled && runCommand(cmd)}
+            >
+              <span>{cmd.label}</span>
+              {cmd.shortcutHint && <span className="provenance-badge">{cmd.shortcutHint}</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </Overlay>
   );
 }

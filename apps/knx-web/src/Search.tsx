@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { Selection } from "./selection";
 import { buildSearchIndex } from "./treeUtils";
 import type { SearchEntry } from "./treeUtils";
 import { matchEntries } from "./searchMatch";
+import Overlay from "./Overlay";
 
 const KIND_LABELS: Record<SearchEntry["kind"], string> = {
   device: "Devices",
@@ -28,6 +29,7 @@ export default function Search(props: {
   onClose: () => void;
 }) {
   const { tree, onSelect, onClose } = props;
+  const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
   const index = useMemo(() => buildSearchIndex(tree), [tree]);
@@ -49,9 +51,7 @@ export default function Search(props: {
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Escape") {
-      onClose();
-    } else if (e.key === "ArrowDown") {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setHighlight((h) => Math.min(h + 1, ordered.length - 1));
     } else if (e.key === "ArrowUp") {
@@ -64,38 +64,46 @@ export default function Search(props: {
   }
 
   return (
-    <div className="search-overlay" onClick={onClose}>
-      <div className="search-panel" onClick={(e) => e.stopPropagation()}>
-        <input
-          autoFocus
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Search devices, group addresses, building parts…"
-        />
-        {query.trim() !== "" && results.length === 0 && <p className="search-empty">No matches.</p>}
-        <ul className="search-results">
-          {grouped.map(({ kind, entries }) => (
-            <li key={kind} className="search-group">
-              <div className="search-group-label">{KIND_LABELS[kind]}</div>
-              <ul>
-                {entries.map((entry) => {
-                  const position = ordered.indexOf(entry);
-                  return (
-                    <li
-                      key={`${entry.kind}-${entry.id}`}
-                      className={position === highlight ? "search-result selected" : "search-result"}
-                      onClick={() => pick(entry)}
-                    >
-                      {describeEntry(entry)}
-                    </li>
-                  );
-                })}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+    <Overlay label="Search" onClose={onClose} initialFocusRef={inputRef}>
+      <input
+        ref={inputRef}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Search devices, group addresses, building parts…"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={ordered.length > 0}
+        aria-controls="search-results"
+        aria-activedescendant={ordered[highlight] ? `search-option-${highlight}` : undefined}
+      />
+      {query.trim() !== "" && results.length === 0 && <p className="search-empty">No matches.</p>}
+      <ul className="search-results" id="search-results" role="listbox">
+        {grouped.map(({ kind, entries }) => (
+          <li key={kind} className="search-group" role="group" aria-label={KIND_LABELS[kind]}>
+            <div className="search-group-label" aria-hidden="true">
+              {KIND_LABELS[kind]}
+            </div>
+            <ul role="presentation">
+              {entries.map((entry) => {
+                const position = ordered.indexOf(entry);
+                return (
+                  <li
+                    key={`${entry.kind}-${entry.id}`}
+                    id={`search-option-${position}`}
+                    role="option"
+                    aria-selected={position === highlight}
+                    className={position === highlight ? "search-result selected" : "search-result"}
+                    onClick={() => pick(entry)}
+                  >
+                    {describeEntry(entry)}
+                  </li>
+                );
+              })}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </Overlay>
   );
 }

@@ -647,66 +647,76 @@ cycle's surface to keep search and tree-navigation state disjoint.
 for a selection that originates outside the tree itself (search today,
 potentially a future command palette too).
 
-## 20. Command palette and search share overlay CSS and an accessibility gap, unaddressed
+## 20. Command palette and search share overlay CSS and an accessibility gap — partially resolved
 
-**Limitation.** Four components now share `styles.css`'s
+**Resolved (2026-09-12, T31)** — for the shell and the keyboard defect;
+not for accessibility conformance in general, which is not a thing this
+entry can ever claim closed by fiat. `apps/knx-web/src/Overlay.tsx` (new,
+94 lines, no new dependency) is now the one component behind
+`.search-overlay`/`.search-panel`, and all four former hand-rolled
+copies — `Search.tsx`, `CommandPalette.tsx`, `CatalogBrowser.tsx` (T2)
+and `SettingsPanel.tsx` (T27) — render it instead of their own overlay
+divs. It owns `role="dialog"`/`aria-modal="true"` on the panel,
+backdrop-click and single-`keydown`-on-the-panel `Escape` dismissal
+(replacing `SettingsPanel.tsx`'s old `window` listener outright),
+initial focus (`initialFocusRef`, else the first focusable descendant,
+else the panel itself via `tabIndex={-1}`), a `Tab`/`Shift+Tab` focus
+trap, and focus restoration to whatever had focus before the dialog
+opened. `overlayShell.test.ts` enforces the "one shell" half
+structurally: it scans every `.tsx` file under `apps/knx-web/src` with
+`node:fs` and fails, naming the offender, if the literal `search-overlay`
+appears anywhere outside `Overlay.tsx` — so a fifth hand-rolled copy
+cannot slip in by copy-paste the way the second, third and fourth did.
+
+The keyboard defect that made this a user-facing bug rather than a
+cosmetic one is also fixed: `CatalogBrowser.tsx`'s result rows, `<li
+onClick>` with no `tabIndex`, no key handler and no role, gained
+`ArrowDown`/`ArrowUp` highlight movement (stopping, not wrapping, at the
+ends, matching `Search.tsx`) and `Enter`-to-pick, matching what clicking
+a row already did — pre-filling the device-name field, not creating the
+device, which still needs the name field's own `Enter` or the Create
+button. A keyboard-only user can now reach and choose a catalog item;
+previously they could not reach the list at all.
+
+Listbox semantics are now applied uniformly across all three
+list-bearing overlays: each text input is `role="combobox"` with
+`aria-expanded`/`aria-controls`/`aria-activedescendant`; each `<ul>` is
+`role="listbox"`; each row is `role="option"` with `aria-selected` and a
+stable id — so `CommandPalette.tsx`'s `aria-disabled="true"` now sits on
+a row that carries a role for it to qualify, and the highlighted row in
+every list is announced via `aria-activedescendant` rather than not at
+all. `Search.tsx`'s kind groups became `role="group"`/`aria-label`
+wrappers around `role="presentation"` `<ul>`s, with the visible
+`.search-group-label` marked `aria-hidden="true"` since the group's
+`aria-label` already says the same thing.
+
+**What did not ship, on purpose (spec §5).** No scroll-into-view: a
+highlight moved past the panel's visible area by arrow keys still does
+not scroll into view in any of the three lists — the same defect §19
+records for a different widget, and `Overlay.tsx` deliberately has no
+list knowledge to fix it with. No `inert`/`aria-hidden` on background
+content: the focus trap stops `Tab` from leaving the dialog, but a
+screen reader's browse/virtual-cursor mode (as opposed to sequential
+Tab) can still reach content behind the overlay. No focus-visible
+styling pass: the trap makes every control in the dialog *reachable* by
+keyboard, not *visibly* focused in every theme. And, the one that bounds
+every claim above: **none of this has been verified against a real
+screen reader.** The test suite (`Overlay.test.tsx` plus the extended
+`CatalogBrowser.test.tsx`/`SettingsPanel.test.tsx`) runs under jsdom,
+which asserts that focus moves, the trap cycles, and ARIA attributes are
+wired to the right elements — it says nothing about what NVDA, JAWS,
+Orca or VoiceOver actually announce. No conformance to WCAG or any other
+accessibility standard is claimed; no audit of any kind has been
+performed. Design: `docs/superpowers/specs/2026-09-12-modal-overlay-shell-design.md`.
+
+**Originally.** Four components shared `styles.css`'s
 `.search-overlay`/`.search-panel` shape with no shared component behind
-it — counted, 2026-09-12, not remembered: `apps/knx-web/src/Search.tsx`,
-`CommandPalette.tsx`, `CatalogBrowser.tsx` (T2) and `SettingsPanel.tsx`
-(T27). Three of them — Search, Command Palette, Catalog Browser — go
-further and duplicate the whole modal shape by hand: an overlay div, a
-click-outside `stopPropagation` panel, an autofocused input, `Escape`
-handling, and a `.search-results` list of `.search-result` rows.
-`SettingsPanel.tsx` reuses the overlay and panel only; it has no result
-list, and it catches `Escape` on a `window` listener rather than on an
-input, because three `<select>`s give it no single field to hang it off.
-
-The accessibility gap is unchanged and now spans more surface. No
-result list anywhere carries `role="listbox"`/`role="option"`;
-`CommandPalette.tsx`'s disabled rows carry `aria-disabled="true"` with
-nothing backing it; no overlay announces the highlighted row via
-`aria-activedescendant`; and `CatalogBrowser.tsx`'s rows are
-`<li onClick>` with no `tabIndex`, no key handler and no role — that
-list cannot be reached by keyboard at all, which is worse than the
-palette's and search's incomplete semantics rather than merely equal
-to them.
-
-**Cause.** (a) The overlays' keyboard-traversal semantics genuinely
-differ — `Search.tsx` navigates a grouped-by-kind list (stopping, not
-wrapping, at the ends); `CommandPalette.tsx` navigates a flat list and
-skips disabled rows; `CatalogBrowser.tsx` navigates nothing;
-`SettingsPanel.tsx` has no list — so extracting a shared
-`<ModalOverlay>` shell was judged premature after two consumers, and
-each later consumer copied the CSS rather than reopening that judgement.
-The judgement was never revisited when the count rose, which is the
-actual defect here. (b) Accessibility semantics for a custom
-listbox-like widget were out of scope for the search and command palette
-design cycles, which focused on keyboard/mouse behavior, not
-screen-reader support, and each subsequent overlay inherited that scope
-decision without restating it.
-
-**Impact.** Four call sites to keep in sync by hand whenever overlay
-structure changes — a scroll-into-view fix, a focus trap, or a
-`role="dialog"` retrofit would need applying four times and would be
-applied inconsistently at least once. A screen reader user gets no
-indication of which row is disabled or highlighted in Search or the
-Command Palette, and no keyboard path into the Catalog Browser's result
-list whatsoever.
-
-**Lifted when.** (a) **This trigger has already fired and was missed.**
-The condition recorded here was "a third overlay is added", with the
-then-planned dark/light mode picker named as the likely third case.
-That picker never arrived in that form — cycle 13 replaced it with a
-toolbar theme `<select>`, which T27 folded into `SettingsPanel.tsx` —
-but `CatalogBrowser.tsx` became the third consumer independently, and
-`SettingsPanel.tsx` the fourth, so extracting a shared shell stopped
-being speculative abstraction some time ago. It is now overdue work
-with a concrete scope: one overlay shell owning the backdrop,
-click-outside, `Escape` and focus management, with list behaviour left
-to each caller. (b) Unchanged: a joint accessibility pass covering all
-list-bearing overlays together, not a palette-only or search-only fix,
-since the gap is the same shape in each and `CatalogBrowser.tsx`'s
-mouse-only list needs a keyboard path as part of it.
+it, three of them duplicating the whole modal shape by hand (overlay
+div, click-outside `stopPropagation` panel, autofocused input, `Escape`
+handling); no result list anywhere carried `role="listbox"`/`role="option"`;
+`CommandPalette.tsx`'s disabled rows carried `aria-disabled="true"` with
+nothing backing it; and `CatalogBrowser.tsx`'s rows had no keyboard path
+into the list at all.
 
 ## 21. A UI-created group address without a range is still dropped on export — partially resolved
 

@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-12 (T27: in-app motion control — level/style axes, a CSS token layer, a guard test, a settings panel, and a Group Monitor retrofit, see below)
+Last updated: 2026-09-12 (T31: a shared modal overlay shell, listbox semantics, and a keyboard path into the catalog browser, see below)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -2426,3 +2426,109 @@ apps/knx-web/tsconfig.json --noEmit` — clean.
 No claim of ETS parity or KNX certification is made anywhere in this
 slice — ETS has no comparable motion control, so there is no parity
 claim to make in either direction.
+
+**T31, a shared modal overlay shell (2026-09-12), branch
+`t31-overlay-shell`.** Four components — `Search.tsx`,
+`CommandPalette.tsx`, `CatalogBrowser.tsx`, `SettingsPanel.tsx` — had
+each hand-rolled `styles.css`'s `.search-overlay`/`.search-panel` shape,
+and `KNOWN_LIMITATIONS.md` §20's "lifted when a third overlay is added"
+trigger had already fired twice, unnoticed, before this slice ([design
+spec](superpowers/specs/2026-09-12-modal-overlay-shell-design.md);
+[plan](superpowers/plans/2026-09-12-modal-overlay-shell.md)). Closes
+`GAP_ANALYSIS_ETS.md` gap **D9**.
+
+- **`apps/knx-web/src/Overlay.tsx`** (new, 94 lines): the one component
+  behind `.search-overlay`/`.search-panel` from here on. Renders
+  `div.search-overlay > div.search-panel[role="dialog"][aria-modal="true"][tabIndex=-1]`;
+  closes on backdrop click (`onClick` + `stopPropagation` on the panel,
+  as every hand-rolled copy already did) and on `Escape` via a `keydown`
+  listener on the panel itself — not `window`, not an input, so the key
+  works no matter which control inside the dialog has focus and stops
+  working the instant the dialog unmounts. On mount it focuses
+  `initialFocusRef.current` if the caller named one, else the first
+  focusable descendant (`FOCUSABLE_SELECTOR`, exported), else the panel
+  itself. The explicit ref exists because `CatalogBrowser.tsx`'s first
+  focusable descendant is the "Install product database" file input, not
+  its search field — "first focusable" alone would have silently
+  misdirected that dialog's opening focus. `Tab`/`Shift+Tab` cycle
+  within the panel's focusable descendants (a hand-written trap, no
+  library), and focus returns to whatever had it before the dialog
+  opened, on unmount.
+- **All four consumers migrated**: `Search.tsx` (`label="Search"`),
+  `CommandPalette.tsx` (`label="Command palette"`), `CatalogBrowser.tsx`
+  (`label="Device catalog"`), `SettingsPanel.tsx`
+  (`labelledBy="settings-panel-title"`, `className="settings-panel"`
+  preserving its distinct panel width). Each dropped its own overlay/panel
+  divs, its own `Escape` handling and its `autoFocus`; `SettingsPanel.tsx`'s
+  `window` `keydown` listener — the odd one out, since three `<select>`s
+  gave it no single field to hang `Escape` off of — is deleted outright
+  now that the shell provides it structurally.
+- **Listbox semantics, applied uniformly.** In all three list-bearing
+  overlays the text input becomes `role="combobox"` with
+  `aria-haspopup="listbox"` and
+  `aria-expanded`/`aria-controls`/`aria-activedescendant`; the `<ul>`
+  becomes `role="listbox"`; each row becomes `role="option"` with
+  `aria-selected` and a stable id — so `CommandPalette.tsx`'s
+  `aria-disabled="true"` now sits on a row with a role to qualify it,
+  and a screen reader has something to announce for the highlighted row
+  in every one of the three lists, not none of them.
+  `Search.tsx`'s kind-grouped `<li className="search-group">` wrappers
+  cannot sit inside a `role="listbox"` as bare items, so each group
+  became `role="group"`/`aria-label`, its inner `<ul>` dropped to
+  `role="presentation"`, and the visible `.search-group-label` gained
+  `aria-hidden="true"` since the group's `aria-label` already announces
+  the same text.
+- **`CatalogBrowser.tsx` gains the keyboard path it never had** — the
+  one change in this slice that is a correctness fix, not a
+  maintainability one. Its result rows were `<li onClick>` with no
+  `tabIndex`, no key handler and no role: a keyboard-only user could not
+  create a device from the catalog at all. `ArrowDown`/`ArrowUp` on the
+  search input now move a `highlight` index (stopping, not wrapping, at
+  the ends, matching `Search.tsx`), and `Enter` **picks** the highlighted
+  item — selects it and pre-fills the device-name field, exactly what
+  clicking the row already did. It does not create the device; creation
+  stays behind the name field's own `Enter` and the Create button, since
+  the name field only renders once an item is selected. Rows still carry
+  no `tabIndex` on purpose: focus stays on the input, which drives the
+  list through `aria-activedescendant`, the same combobox pattern
+  `Search.tsx`/`CommandPalette.tsx` already use — a roving tabindex
+  alongside it would be two competing keyboard models in one widget.
+- **`apps/knx-web/src/overlayShell.test.ts`** (new): reads every
+  non-test `.tsx` file under `apps/knx-web/src` with `node:fs` and fails
+  the suite, naming the offender, if anything other than `Overlay.tsx`
+  contains the literal `search-overlay` — modeled on `motionGuard.test.ts`,
+  for the same reason: `KNOWN_LIMITATIONS.md` §20's lift trigger was
+  prose, prose does not fail a build, and it was missed for two
+  consumers running. Verified by injecting `search-overlay` into a
+  second file and watching the guard name it, then reverting.
+
+`styles.css` was not touched at all in this slice — no visual redesign,
+per the design spec's non-goals. No npm dependency was added; the trap,
+the `Escape` handling and the focus-restore logic are hand-written, as
+the spec's "no `<dialog>` element, no focus-trap library" non-goal
+required.
+
+What this slice deliberately does not do, because the design spec ruled
+it out of scope rather than missing it: no scroll-into-view for a
+highlight moved off-panel by arrow keys; no `inert`/`aria-hidden` on
+background content, so a screen reader's browse mode can still reach it
+past the focus trap; no focus-visible styling pass; and no verification
+against a real screen reader anywhere in this slice — the new and
+extended tests run under jsdom, which asserts that focus moves, the trap
+cycles and ARIA attributes point at the right elements, not what an
+actual screen reader announces. `KNOWN_LIMITATIONS.md` §20 is rewritten
+to state exactly this rather than closed outright.
+
+`cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D
+warnings`, `cargo run -p xtask -- check-layering`, and `cargo deny check`
+are unchanged by this slice — no Rust file was touched anywhere in it.
+`npm run test` (`apps/knx-web`, `vitest run`): **235 passed across 25
+files** (up from 215/21 at the branch point, `ea54b0c`) — 11 files
+changed under `apps/knx-web/src`, 875 insertions/225 deletions across
+four code commits (`bdba7cb`, `a0c6dbe`, `8d6220d`, `3eff155`). `npx tsc
+-p apps/knx-web/tsconfig.json --noEmit`: clean.
+
+No claim of ETS parity or accessibility-standard conformance is made
+anywhere in this slice — ETS has no directly comparable overlay
+accessibility audit to compare against, and no WCAG or other audit was
+performed here.

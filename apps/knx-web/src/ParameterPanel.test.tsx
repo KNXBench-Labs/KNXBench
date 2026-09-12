@@ -225,6 +225,31 @@ describe("ParameterPanel", () => {
     root.unmount();
   });
 
+  it("renders the diagnostics count's plural branch for more than one diagnostic", async () => {
+    const twoDiagnostics: ParameterPanelDto = {
+      ...fixture,
+      diagnostics: [
+        fixture.diagnostics[0],
+        {
+          scope: null,
+          message: "A restriction field's value fell outside its option list.",
+          detail: "ValueNotInOptions { field: \"P2\" }",
+        },
+      ],
+    };
+    apiMock.deviceParameters.mockResolvedValue(twoDiagnostics);
+    const root = await renderPanel();
+
+    expect(host!.textContent).toContain(
+      "2 issues found while evaluating this device's parameters",
+    );
+    expect(host!.textContent).not.toContain(
+      "1 issue found while evaluating this device's parameters",
+    );
+
+    root.unmount();
+  });
+
   it("renders a field's text in preference to its name", async () => {
     const withText: ParameterPanelDto = {
       ...fixture,

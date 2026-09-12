@@ -3260,14 +3260,19 @@ outside the per-object loop — not asserted by a test.
 warnings`, `cargo run -p xtask -- check-layering` and `cargo run -p
 xtask -- check-headers` (74 well-formed / 169 without, ceiling 169 / 22
 generated skipped, unchanged) all clean. `cargo test --workspace
---no-fail-fast`: **1091 passed / 0 failed / 3 ignored** across 77 `test
+--no-fail-fast`: **1092 passed / 0 failed / 3 ignored** across 77 `test
 result` lines, up from the T18 closing baseline of 1080/0/3 across 77 —
 Task 1 added 9 (8 plus one fix-round reverse-polarity fixture), Task 2
 added 1 (the M6 regression test, landing at 1090/0/3, independently
 reviewer-confirmed), Task 3 touched only `apps/knx-web` and left the
-Rust count unchanged, and this task adds the eleventh and last:
+Rust count unchanged, this task added the eleventh,
 `a_malformed_language_query_is_rejected_and_an_absent_one_is_not` in
-`apps/knx-server/tests/http_com_object_language.rs`. Web gates on the
+`apps/knx-server/tests/http_com_object_language.rs`, and the final
+review's fix round added the twelfth,
+`com_object_views_without_a_language_never_queries_the_translation_table`
+in `crates/knx-productdb/src/query.rs` — the other half of Global
+Constraint 1, pinned by dropping the `translation` table and resolving a
+non-empty slice anyway. Web gates on the
 branch head: **340 passed across 31 files**, `tsc --noEmit` clean. They
 were not re-run after each Rust-only task; the branch's diff is
 `crates/knx-productdb/src/query.rs`, `apps/knx-server/src/domain.rs`,

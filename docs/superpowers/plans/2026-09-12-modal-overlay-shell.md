@@ -164,9 +164,12 @@ Create `apps/knx-web/src/Overlay.test.tsx` covering, in this order:
 8. after unmount, `Escape` fired on `document.body` does not call
    `onClose`.
 
-Follow the testing idiom already used in `SettingsPanel.test.tsx`
-(`@testing-library/react`, `fireEvent`, `describe`/`it`/`expect` from
-`vitest`). Read that file first.
+Follow the testing idiom already used in `SettingsPanel.test.tsx` — read
+that file first. Corrected 2026-09-12 after task 1 checked:
+`@testing-library/react` is **not** a dependency of this package and is not
+installed. The actual idiom is `react-dom/client`'s `createRoot` plus
+React's `act()` and native `dispatchEvent`, with `describe`/`it`/`expect`
+from `vitest`, under `// @vitest-environment happy-dom`.
 
 Commit. Nothing else changes in this task — the four existing overlays are
 untouched and still work.

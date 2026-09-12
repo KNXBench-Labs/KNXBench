@@ -91,7 +91,7 @@ underlying model field exists.
 | D7 | **Closed (2026-09-10, T11).** `ImportReport` (errors/warnings/unsupported list) is real and populated, but the frontend only surfaced it as toast notifications for errors — there was no dedicated screen to review the full report after the initial import moment had passed. | A new server-side `SessionLog` (`apps/knx-server`, in-memory, never persisted to `.knxdb`) plus a "Log" tab in the web UI (`LogPanel.tsx`) close this — see the T11 backlog entry below for the full shape. |
 | D8 | **Partially addressed. No settings/preferences beyond theme and motion.** ETS has a Workbench-wide options dialog (default group-address style, backup behavior, language, etc). | A settings surface now exists — `SettingsPanel.tsx`, reached via a gear button in the toolbar — but it holds exactly three `<select>`s: Theme (over `THEMES`), Motion style, and Motion level (the last two new in T27, 2026-09-12, closing **D11**; see the rewritten [KNOWN_LIMITATIONS.md §43](KNOWN_LIMITATIONS.md#43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference)). It replaced `ThemeSwitcher.tsx`'s single theme `<select>`, which T27 deleted outright once its one consumer moved into the panel. None of ETS's actual options — default group-address style, backup behaviour, language (**D10**) — live in it or anywhere else. Row stays open: the surface got wider, not more ETS-equivalent. |
 | D9 | **Closed (2026-09-12, T31).** Four consumers of the same overlay CSS with no shared component behind it — three of them (Search, Command Palette, Catalog Browser) near-duplicate modal *implementations*, plus Settings Panel, which reused the shape only — with an accessibility gap on top. | `apps/knx-web/src/Overlay.tsx` (new) is now the one component behind `.search-overlay`/`.search-panel`, rendered by all four former hand-rolled consumers: `role="dialog"`/`aria-modal="true"`, backdrop and panel-level `Escape` dismissal, initial focus, a `Tab` focus trap, and focus restoration on close, all in one place instead of four. `overlayShell.test.ts` fails the suite, naming the offender, if a fifth `.tsx` file ever contains the literal `search-overlay` outside `Overlay.tsx` — the same lift-trigger-missed failure mode that let this row reach four consumers unnoticed cannot repeat silently. The listbox half of the accessibility gap is also closed uniformly (`role="combobox"`/`listbox`/`option`, `aria-activedescendant`), and `CatalogBrowser.tsx`'s result list — previously `<li onClick>` with no keyboard path at all — gained `ArrowDown`/`ArrowUp`/`Enter`-to-pick, matching `Search.tsx`. What stays open, tracked in [KNOWN_LIMITATIONS.md §20](KNOWN_LIMITATIONS.md#20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap--partially-resolved), which itself stays open for exactly these residues: no scroll-into-view for an off-panel highlight, no `inert`/`aria-hidden` on background content, no focus-visible styling pass, and no verification against a real screen reader — jsdom asserts wiring, not assistive-technology behaviour. Design: `docs/superpowers/specs/2026-09-12-modal-overlay-shell-design.md`. |
-| D10 | **The UI is English-only, and the translated data already in the model is never displayed in any language.** ETS ships a localized workbench and renders manufacturer/product/parameter text in the language the user picked. | Two distinct halves. (a) *Chrome:* every user-facing string in `apps/knx-web` is a hard-coded English literal; `package.json` has no i18n dependency of any kind and there is no message catalogue, locale detection, or language setting (D8's missing options dialog is where one would live). (b) *Data:* the plumbing exists but has no reader. `knx_core::string_table` defines `Language`/`LocalizedString`/`StringTable` with a `default_language` fallback, and `Project` owns a `strings: StringTable` (`project.rs:182`); `knx-productdb` parses `Languages`/`TranslationUnit`/`TranslationElement` into a `translation (program_id, language, ref_id, attribute_name, text)` table (`migration.rs:248`). **Nothing reads that table outside the parser that writes it**, and no code path anywhere selects an active language — see [KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only). |
+| D10 | **Open.** The UI is English-only, and the translated data already in the model is displayed in only one place. ETS ships a localized workbench and renders manufacturer/product/parameter text in the language the user picked. | Two distinct halves, still open on the chrome side. (a) *Chrome:* untouched — every user-facing string in `apps/knx-web` is a hard-coded English literal; `package.json` has no i18n dependency of any kind and there is no message catalogue, locale detection, or language setting (D8's missing options dialog is where one would live). (b) *Data:* T26's first slice (2026-09-12) gave this half its first reader. `knx-productdb`'s `parameter_views`/`parameter_type_enum_options` overlay the `translation (program_id, language, ref_id, attribute_name, text)` table (`migration.rs:248`) onto parameter text, parameter-ref text and enum option labels at exactly one surface — the device parameter panel (`GET`/`POST /api/device/{id}/parameters?language=`) — selected by a persisted Settings-panel setting. `knx_core::string_table`'s `Language`/`LocalizedString`/`StringTable` (with its `default_language` fallback, `Project::strings`, `project.rs:182`) still has no resolver anywhere, and communication-object text, the catalog browser, and the project's own `Language` field remain untranslated — see [KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12). Row stays open: the chrome half (T25) is untouched, and the data half's own ingestion is incomplete — see [KNOWN_LIMITATIONS.md §64](KNOWN_LIMITATIONS.md#64-languages-blocks-outside-an-application-program-are-discarded-on-import). |
 | D11 | **Closed (2026-09-12, T27).** Not an ETS parity gap — ETS has no comparable animation — but the user-facing control gap recorded here alongside D8 is resolved. | `apps/knx-web/src/motion.ts` adds two independent, persisted axes — level (`off`/`subtle`/`standard`) and style (`apple`/`glitch`) — surfaced in the new `SettingsPanel.tsx` and enforced structurally: every `transition:`/`animation:` declaration in `styles.css` sits inside a `@media (prefers-reduced-motion: no-preference)` block, and a new guard test (`motionGuard.test.ts`) fails the suite if a future declaration doesn't. `prefers-reduced-motion: reduce` still always wins — no `.ts`/`.tsx` file calls `window.matchMedia`, so nothing in-app can override it. T15's Group Monitor table, the one animated feature that had shipped ahead of this control, has been retrofitted with a guarded new-row highlight (`BusMonitorPanel.tsx`). What the switch and its guard still cannot do — no per-category control, guard blind spots for longhands/other stylesheets — is recorded rather than hidden: [KNOWN_LIMITATIONS.md §43](KNOWN_LIMITATIONS.md#43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference). |
 | D12 | **No in-application help of any kind, and no end-user documentation.** ETS ships context help, tooltips throughout the workbench, and a user manual. | Measured, not remembered: the entire frontend contains **one** `title` attribute (`Inspector.tsx:218`, a communication-object flag's raw name), four `aria-label`s, zero `aria-describedby`, no tooltip component, no help panel, and no `F1` handler. All nine files in `docs/` are architecture/format documentation written for developers; none is reachable from inside the application. `commandRegistry.ts`'s `shortcutHint` is the only user-facing explanatory text, and it appears only inside the Command Palette. Distinct from **D8** (settings): this is explanation, not configuration. Tracked as **T28**, deliberately scheduled last — see [ROADMAP.md](ROADMAP.md)'s "In-application help and user documentation". |
 
@@ -697,7 +697,8 @@ that could ship in a single cycle, T26 reaches into the domain model and
 the product database and is the larger of the two. T25 does not depend on
 T26, and T26 is useful even if T25 never ships (a German catalog rendered
 inside an English chrome is still strictly better than an untranslated
-one). Neither has a design spec yet.
+one). T25 has no design spec yet; T26's first slice does —
+`docs/superpowers/specs/2026-09-12-product-data-language-design.md`.
 
 - **T25. Multi-language UI chrome.** Extract every hard-coded English
   literal in `apps/knx-web` into a message catalogue, add locale
@@ -712,19 +713,52 @@ one). Neither has a design spec yet.
   the only precedent (cycle 11's `ThemePanel.tsx`, the earlier precedent,
   no longer exists).
   Partially addresses **D8**, closes half of **D10**.
-- **T26. Language-aware display of imported KNX data.** Give the
-  application an *active language* distinct from the UI's, resolve
-  `LocalizedString` through `StringTable` at every display site, and read
-  `knx-productdb`'s `translation` table when rendering catalog entries,
-  communication-object text and (once T18 exists) parameter text. The
-  storage side is already built and already populated on import; what is
-  missing is every reader. Also needs a decision on what the project's
-  own `Language` means once a user can pick a different one — today
-  `Project::new` is handed a placeholder `"en"` by both importers
-  (`map.rs:150`, and see that file's own comment: the `.knxproj` carries
-  no project-wide language tag at all). Closes the other half of **D10**;
-  a prerequisite for T18's parameter editor being usable in practice,
-  since parameter text is exactly the data that arrives translated.
+- **T26. Language-aware display of imported KNX data.** **First slice
+  shipped 2026-09-12** (design spec
+  `docs/superpowers/specs/2026-09-12-product-data-language-design.md`,
+  plan `docs/superpowers/plans/2026-09-12-product-data-language.md`).
+  `knx-productdb`'s `parameter_views`/`parameter_type_enum_options` gained
+  an `Option<&str>` language that overlays the `translation` table's
+  `Text`/`FunctionText`/`SuffixText`/`VisibleDescription`/`Name` rows
+  (never `Value` — a value is a key written into the project file, not
+  display text) over the package's own untranslated attribute;
+  `translation_languages`/`program_translation_languages` list what a
+  database or a program actually has. `apps/knx-server` exposes `GET
+  /api/product-languages` and an optional `?language=` on the device
+  parameter panel's GET and POST. `apps/knx-web` persists the choice
+  (`productLanguage.ts`, a "Product data language" Settings-panel select)
+  and `ParameterPanel` sends it on load and on write. That is the entire
+  surface this slice reads translations at: parameter text, parameter-ref
+  text, and enum option labels, nothing else. Still missing, for a later
+  T26 slice: an *active language* concept distinct from the UI's,
+  `LocalizedString`/`StringTable` resolution at any display site (neither
+  was touched — the overlay is entirely `knx-productdb`-side), reading the
+  translations of communication-object text (baked into the project at
+  device creation, which is why translating it there would make the
+  *stored project* depend on a display setting), and a decision on what
+  the project's own `Language` means once a user can pick a different one
+  — today `Project::new` is still handed a placeholder `"en"` by both
+  importers (`map.rs:150`; the `.knxproj` carries no project-wide language
+  tag at all). Also unresolved by this slice: the ingestion gap in
+  **T32** below, and no locale-prefix matching or `navigator.language`
+  detection anywhere. Closes half of **D10** (the half T25 does not
+  cover); a prerequisite for T18's parameter editor being usable in
+  practice, since parameter text is exactly the data that arrives
+  translated. Full accounting:
+  [KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12).
+- **T32. Ingest `Languages` blocks outside an application program.**
+  `Catalog.xml`, `Hardware.xml`, and `knx_master.xml` each carry their own
+  `Languages` blocks — measured at 40 (`Name`, 5 languages), 30 (`Text`, 5
+  languages) and 1635 (`Text`, 24 languages) `<Translation>` elements on
+  one real package — and `knx-productdb`'s importer drops every one of
+  them, because `insert_translations` is only ever called from
+  `parse/program.rs` and `translation.program_id` is `TEXT NOT NULL`: a
+  catalog item or a hardware entry belongs to no program. This is a
+  genuine "never silently discard" violation, not a preserved-and-unread
+  situation like T26's data was before its first slice, so it needs a
+  schema decision before it needs code. See
+  [KNOWN_LIMITATIONS.md §64](KNOWN_LIMITATIONS.md#64-languages-blocks-outside-an-application-program-are-discarded-on-import).
+  Not scheduled.
 
 ### Tier 7 — motion and animation
 

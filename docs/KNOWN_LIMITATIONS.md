@@ -1246,47 +1246,50 @@ saw (a single server process, one project at a time, log never
 persisted), but nothing stopped it from becoming one over a very long
 session.
 
-## 37. Imported translations are stored but never read, and the UI is English-only
+## 37. Imported translations are stored but never read, and the UI is English-only — partially resolved (2026-09-12)
 
-**Limitation.** `knx-productdb` parses
-`Languages`/`TranslationUnit`/`TranslationElement`
-out of every application program it ingests and writes them to a
-`translation (program_id, language, ref_id, attribute_name, text)` table
-(`crates/knx-productdb/src/migration.rs:248`, written by
-`parse/translation.rs`). `knx-core` has carried the matching model
-indirection since day one: `Language`, `TranslationKey`,
-`LocalizedString`, and a `StringTable` that resolves against an active
-language with a `default_language` fallback, with `Project` owning a
-`strings: StringTable` (`crates/knx-core/src/project.rs:182`).
+**Resolved.** Parameter text, parameter-ref text, and enum option labels
+are read from the `translation` table at exactly one surface: the device
+parameter panel. `knx-productdb`'s `parameter_views(conn, program_id,
+language)` and `parameter_type_enum_options` take an `Option<&str>`
+language and, when set, overlay the requested language's `Text`,
+`FunctionText`, `SuffixText`, `VisibleDescription`, and `Name` rows over
+the package's own untranslated attribute before `pick()` runs —
+`ValueLayer`'s meaning is unaffected. `apps/knx-server` exposes `GET
+/api/product-languages` (the database-wide language list, `200 []` with
+no product database installed) and an optional `?language=` on both the
+GET and the POST of `/api/device/{id}/parameters`. `apps/knx-web`
+persists the chosen language as a per-user setting
+(`productLanguage.ts`, `knx-desktop:product-language` in
+`localStorage`, default `null` meaning "package default"), surfaces it
+as a "Product data language" select in the Settings panel, and
+`ParameterPanel` sends it on every load and every write.
 
-Nothing reads any of it for display. `grep` for `translation` across the
-workspace finds the parser that writes the table, the migration that
-creates it, and nothing else — no query, no join, no resolution at any
-render site. Separately, every user-facing string in `apps/knx-web` is a
-hard-coded English literal, and `apps/knx-web/package.json` has no i18n
-dependency of any kind.
+**Still open.** Communication-object text is never translated, including
+at device creation — creation bakes the text into the project file, so
+translating it there would make the *stored project* depend on a display
+setting, the same integrity line this slice was careful not to cross for
+parameter values. The UI chrome itself is still hard-coded English,
+tracked separately as **T25**. `Value` translations are deliberately
+never applied, for the identical stored-data-integrity reason: a
+parameter's value is a key written into the project file, not display
+text. `parameter.suffix` is stored but displayed nowhere, so all 879
+`SuffixText` rows measured for this slice's design spec remain unread.
+There is no locale-prefix matching (a stored `de` selection does not
+match a package's `de-DE` rows) and no `navigator.language` detection —
+the setting defaults to "package default" and stays there until a user
+picks explicitly. And a project's own `Language` field is still the
+placeholder `"en"` both importers hand `Project::new`.
 
-**Cause.** The storage side was built where it belonged (Session 4's
-product-database ingestion, Session 2's domain model) and the reading
-side was never scheduled, because no screen that needed it existed yet.
-The frontend was built English-first and no cycle since has revisited
-that. Neither is a bug in anything that shipped; both are simply
-unbuilt halves.
-
-**Impact.** A German-language product catalog imported from a `.knxprod`
-displays whatever single string the parser happened to put in the
-non-translated attribute, with the translations sitting unread in the
-database beside it. Users outside English see an English application. No
-data is lost — this is the good case for the "never silently discard"
-rule, since the translations *are* preserved on disk — but preserved and
-unreachable is not the same as available.
-
-**Lifted when.** Open. Tracked as **T25** (UI chrome) and **T26** (KNX
-data) in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6, added
-2026-09-10, closing gap **D10**. Neither has a design spec or a
-scheduled cycle. Until then the translations remain queryable directly
-from the `.knxdb` product database with SQL, which is a developer
-workaround and not a feature.
+**Lifted when.** Partially, 2026-09-12 (this slice, first of T26).
+What remains is tracked as **T25** (UI chrome) and a later T26 slice
+(communication-object text, the project's own `Language`, and
+`StringTable`/`LocalizedString` resolution — none of which this slice
+touched; the overlay added here is `knx-productdb`-side only) in
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6, closing half of gap
+**D10** — the chrome half stays open. Also open, and deliberately not
+fixed by this slice: the ingestion gap recorded in the new
+[§64](#64-languages-blocks-outside-an-application-program-are-discarded-on-import).
 
 ## 38. Group-address CSV export/import (T12) has no verified ETS interoperability
 
@@ -1669,10 +1672,11 @@ contain" section states this explicitly).
 language only — there is no language selector and no per-string
 translation lookup.
 
-**Cause.** [§37](#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only)
-already applies to this document: `knx-productdb`'s `translation` table
-has no reader anywhere in the codebase, and `knx-report` in particular
-must not reach `knx-productdb` at all (see §46).
+**Cause.** [§37](#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12)
+now has one reader — the device parameter panel, via
+`knx_productdb::query::parameter_views` — but this document cannot use
+it: `knx-report` in particular must not reach `knx-productdb` at all
+(see §46).
 
 **Impact.** A multi-language project's translated strings never appear in
 the exported document, regardless of which language a user might prefer.
@@ -2298,3 +2302,55 @@ it "needs its own design (locking vs. merge vs. last-writer-wins, and
 what 'conflict' even means for a `Command`-based undo model)" — that
 design question is unresolved, and this limitation stands until it is
 answered and built.
+
+## 64. `Languages` blocks outside an application program are discarded on import
+
+**Limitation.** `knx-productdb`'s importer only ever calls
+`insert_translations` from `parse/program.rs`, i.e. only while ingesting
+an `ApplicationProgram`'s own XML. `Languages` blocks that appear
+anywhere else in a `.knxprod` package — `Catalog.xml`, `Hardware.xml`,
+and the shared `knx_master.xml` — are parsed past and dropped; no row for
+them is ever written to the `translation` table.
+
+Measured directly on one real package,
+`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod` (extracted with
+`unzip`, then `grep -oE '<Translation '`/`grep -oE '<Language
+Identifier="[^"]*"'` per file):
+
+| file | `<Translation>` elements | languages | attribute |
+|---|---|---|---|
+| `M-0083/Catalog.xml` | 40 | 5 (`de-DE`, `en-US`, `es-ES`, `fr-FR`, `it-IT`) | `Name` |
+| `M-0083/Hardware.xml` | 30 | 5 (same five) | `Text` |
+| `knx_master.xml` | 1635 | 24 | `Text` |
+
+1705 `<Translation>` rows from this one package alone, none of which
+reach the database. This is not the preserved-and-unread situation §37
+described before this slice — it is genuinely discarded, in violation of
+`CLAUDE.md`'s "never silently discard information" rule, and is therefore
+a data-integrity item, not a nice-to-have.
+
+**Cause.** `translation.program_id` is `TEXT NOT NULL`
+(`crates/knx-productdb/src/migration.rs:248`), because every translation
+row this project has read so far belongs to exactly one
+`ApplicationProgram`. A `Catalog.xml` item or a `Hardware.xml` entry
+belongs to no program, and `knx_master.xml` is shared across every
+package a database has ever ingested, not scoped to one program at all —
+none of them have a `program_id` to put in that column. Fixing this needs
+a schema migration (either a nullable `program_id` plus a discriminator
+for what kind of thing the translation belongs to, or a second table), a
+parser change to call `insert_translations` from the `Catalog.xml`/
+`Hardware.xml`/`knx_master.xml` ingestion paths, and an import-report
+change to say what was captured. That is a different slice with a
+different risk profile — a schema change touching every existing
+`translation` row — not a line added to this one.
+
+**Impact.** Catalog item names, hardware entry text, and the entire
+`knx_master.xml` vocabulary (24 languages' worth of shared KNX terms) are
+available in the source package but never queryable from
+`knx-productdb`, in any language, at any surface. Nothing in this slice's
+overlay (§37) can reach them even in principle, since they were never
+written to the table it reads from.
+
+**Lifted when.** Open. Tracked as its own backlog item, **T32** (see
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6), next to T26.
+Not scheduled.

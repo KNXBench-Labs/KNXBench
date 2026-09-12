@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-12 (T31: a shared modal overlay shell, listbox semantics, and a keyboard path into the catalog browser, see below)
+Last updated: 2026-09-12 (T26 first slice: the device parameter panel reads product-database translations, see below)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -2532,3 +2532,95 @@ No claim of ETS parity or accessibility-standard conformance is made
 anywhere in this slice — ETS has no directly comparable overlay
 accessibility audit to compare against, and no WCAG or other audit was
 performed here.
+
+**T26, first slice: language-aware display of imported KNX data
+(2026-09-12), branch `t26-product-language`.** The first of two slices
+this task needs (design spec
+`docs/superpowers/specs/2026-09-12-product-data-language-design.md`;
+plan `docs/superpowers/plans/2026-09-12-product-data-language.md`).
+Reads translations already sitting unread in `knx-productdb`'s
+`translation` table at exactly one surface: the device parameter panel.
+Closes half of `GAP_ANALYSIS_ETS.md` gap **D10**; rewrites
+[KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12)
+from open to partially resolved, and adds a new
+[§64](KNOWN_LIMITATIONS.md#64-languages-blocks-outside-an-application-program-are-discarded-on-import)
+for a gap this slice found but deliberately did not fix.
+
+- **`crates/knx-productdb/src/query.rs`**: `parameter_views(conn,
+  program_id, language: Option<&str>)` and `parameter_type_enum_options`
+  gained the language parameter. When `Some`, a private `translation_overlay`
+  query loads that language's `(ref_id, attribute_name) -> text` rows,
+  restricted by SQL to `Text`, `FunctionText`, `SuffixText`,
+  `VisibleDescription`, `Name` — `Value` is structurally excluded, not
+  just avoided by convention, because a parameter's value is a key
+  written into the project file and translating it would corrupt stored
+  data. The overlay is applied per element *before* the existing `pick()`
+  runs, so `ValueLayer`'s meaning (which layer a displayed value actually
+  came from) is unaffected by translation. New `translation_languages`
+  (database-wide) and `program_translation_languages` (one program) list
+  what languages exist; the latter has no caller yet, left in place for a
+  later communication-object slice. 8 new tests.
+- **`apps/knx-server`**: `GET /api/product-languages` (returns `200 []`
+  when no product database is installed, matching the Settings panel's
+  fresh-install state rather than erroring) and an optional `?language=`
+  query parameter on both `GET` and `POST /api/device/{id}/parameters`,
+  threaded through `assemble_parameter_panel`/`parameter_panel_impl`/
+  `set_parameter_value_impl` (both of the latter's internal panel-assembly
+  call sites — missing either one would have meant editing a parameter
+  silently reset the panel to English). 5 new tests.
+- **`apps/knx-web`**: `productLanguage.ts` (new) —
+  `loadProductLanguage`/`saveProductLanguage`/`useProductLanguage`,
+  modelled on `theme.ts`; storage key `knx-desktop:product-language` in
+  `localStorage`; `null` means "package default" and is never stored as
+  the literal string `"null"`. `SettingsPanel.tsx` gains a fourth select,
+  "Product data language", populated from `api.productLanguages()`
+  (fetched once, in `App.tsx`, on mount), showing a disabled
+  "No product database installed" option when the list is empty.
+  `ParameterPanel.tsx` reads the active language via the hook and forwards
+  it on every load and every write; fixed a pre-existing label-order bug
+  in the same file while there — a field's `text` now takes precedence
+  over its `name` (`field.text ?? field.name ?? field.etsId`, was
+  reversed) — pinned by a test that fails without the fix. 12 new/renamed
+  tests across `productLanguage.test.ts` (new), `SettingsPanel.test.tsx`,
+  `ParameterPanel.test.tsx`, and one mock-shape fix in `App.test.tsx` (its
+  `vi.mock("./api", ...)` needed a `productLanguages` stub once `App.tsx`
+  started calling it on mount).
+
+No new dependency, npm or cargo. No schema migration — `translation` is
+read exactly as `migration.rs` created it. No fallback chain between
+languages: a requested language with no row for a given element falls
+straight to the package's own untranslated attribute, never through
+`en-US` as a middle step. Nothing that writes a project file changed —
+device creation, `.knxproj` import/export, and `set_parameter_value`'s
+stored raw value are all untouched; only displayed text varies with
+language. `com_object_view` was deliberately not given a language in this
+slice — its only caller bakes text into the project at creation time, a
+different problem than display-time translation.
+
+`cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D
+warnings`, `cargo run -p xtask -- check-layering`, and `cargo deny check`
+all clean throughout. `cargo test --workspace`: **988 passed / 0 failed /
+3 ignored** across 73 `test result` lines (up from the branch's baseline
+of 975/0/3 across 72 — the delta is exactly the 8 `knx-productdb` tests
+plus the new `knx-server` binary `http_product_language.rs`). `npm
+--prefix apps/knx-web run test`: **244 passed across 26 files** (up from
+235/25 at the branch point). `npx tsc -p
+apps/knx-web/tsconfig.json --noEmit`: clean throughout.
+
+No claim of KNX certification, ETS compatibility, or accessibility
+conformance is made anywhere in this slice, and translations are not
+described as "supported" in general — they are read at exactly one
+surface, the device parameter panel, named explicitly above. What
+remains for a later T26 slice: communication-object text (never
+translated, baked into the project at device creation), the project's
+own `Language` field (still the placeholder `"en"` both importers hand
+`Project::new`), `StringTable`/`LocalizedString` resolution (untouched —
+this slice's overlay is entirely `knx-productdb`-side), locale-prefix
+matching and `navigator.language` detection (neither exists), and the
+UI chrome itself (`T25`, a separate task). Also found, not fixed:
+`Languages` blocks in `Catalog.xml`, `Hardware.xml`, and
+`knx_master.xml` are dropped on import rather than merely unread —
+1705 `<Translation>` rows on one measured package — tracked as its own
+backlog item, **T32**, in `GAP_ANALYSIS_ETS.md`, since fixing it needs a
+schema decision (`translation.program_id` is `NOT NULL`, and a catalog
+item belongs to no program).

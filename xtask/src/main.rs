@@ -3,16 +3,19 @@
 //! These are architectural rules that would otherwise erode silently, so they
 //! run in CI rather than living in a document.
 
+mod headers;
 mod layering;
 
+use std::path::Path;
 use std::process::ExitCode;
 
-const AVAILABLE_TASKS: &str = "check-layering, freeze-fixture <path>";
+const AVAILABLE_TASKS: &str = "check-layering, check-headers, freeze-fixture <path>";
 
 fn main() -> ExitCode {
     let task = std::env::args().nth(1);
     match task.as_deref() {
         Some("check-layering") => check_layering(),
+        Some("check-headers") => check_headers(),
         Some("freeze-fixture") => freeze_fixture(std::env::args().nth(2)),
         Some(other) => {
             eprintln!("unknown task: {other}");
@@ -138,6 +141,46 @@ fn check_layering() -> ExitCode {
          storage or async runtime (architecture spec, section 3.1). \
          knx-etsproj must not depend on knx-store: the conversion between \
          OpaqueEntry and StoredOpaqueEntry belongs in knx-app alone."
+    );
+    ExitCode::FAILURE
+}
+
+/// Walks `apps/`, `crates/` and `xtask/` and fails on any file whose
+/// first-line header breaks the ADR-0018 grammar. Files without a header
+/// are counted and reported, not failed: the convention spreads as files
+/// are created or edited, and this lint's job is to keep the headers that
+/// exist honest in shape, not to force a repo-wide sweep.
+fn check_headers() -> ExitCode {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("xtask lives one level below the workspace root");
+    let report = match headers::scan(root) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    for (path, why) in &report.invalid {
+        eprintln!("header violation: {}: {why}", path.display());
+    }
+    if report.invalid.is_empty() {
+        println!(
+            "headers ok: {} files with a well-formed header, {} without one (not checked), \
+             {} generated files skipped",
+            report.ok.len(),
+            report.absent.len(),
+            report.generated.len()
+        );
+        return ExitCode::SUCCESS;
+    }
+    eprintln!(
+        "\nA header is the file's first line and nothing else: `//! One sentence.` in \
+         Rust, `/** One sentence. */` in TypeScript, at most {} columns, ending in a \
+         single period, with no second sentence (docs/adr/0018). A file without a \
+         header is fine; a header that does not follow the grammar is not.",
+        headers::MAX_WIDTH
     );
     ExitCode::FAILURE
 }

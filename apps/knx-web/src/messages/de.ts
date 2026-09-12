@@ -302,4 +302,50 @@ export const messages: Record<MessageKey, string> = {
   "app.filterName.knxDesktopProject": "knx-desktop-Projekt",
 
   "documentationExport.filterName": "HTML-Dokument",
+
+  "bulkAction.deviceLabel.one": "{count} Gerät ausgewählt",
+  "bulkAction.deviceLabel.other": "{count} Geräte ausgewählt",
+  "bulkAction.groupAddressLabel.one": "{count} Gruppenadresse ausgewählt",
+  "bulkAction.groupAddressLabel.other": "{count} Gruppenadressen ausgewählt",
+  "bulkAction.delete": "Löschen",
+  "bulkAction.moveToLine": "Auf Linie verschieben…",
+  "bulkAction.unassigned": "(nicht zugewiesen)",
+  "bulkAction.moveToBuildingPart": "Auf Gebäudeteil verschieben…",
+  "bulkAction.none": "(keiner)",
+  "bulkAction.dismissSelection": "Auswahl aufheben",
+
+  "busCompose.heading": "Wert senden",
+  "busCompose.noProjectHint":
+    "Kein Projekt geöffnet — hier wird kein DPT automatisch aufgelöst; einen explizit eingeben.",
+  "busCompose.sessionClosedMessage": "Diese Sitzung ist geschlossen — Senden ist deaktiviert.",
+  "busCompose.noDptResolvedMessage": "Für diese Gruppenadresse konnte kein DPT aufgelöst werden — einen explizit eingeben.",
+  "busCompose.conflictingDptsMessage":
+    "Widersprüchliche DPTs für diese Gruppenadresse: {names} — einen explizit eingeben.",
+  "busCompose.destinationLabel": "Ziel",
+  "busCompose.dptLabel": "DPT",
+  "busCompose.valueLabel": "Wert",
+  "busCompose.send": "Senden",
+  "busCompose.sent": "Gesendet {service}: {payload}",
+
+  "fsPicker.open": "Öffnen",
+  "fsPicker.saveAs": "Speichern unter",
+  "fsPicker.filenamePlaceholder": "Dateiname",
+  "fsPicker.upload": "Hochladen…",
+  "fsPicker.save": "Speichern",
+  "fsPicker.cancel": "Abbrechen",
+
+  "groupAddressCsv.exportButton": "Gruppenadressen exportieren (CSV)…",
+  "groupAddressCsv.importButton": "Gruppenadressen importieren (CSV)…",
+  "groupAddressCsv.exportSummaryNone": "Gruppenadressen als CSV exportiert, keine Warnungen.",
+  "groupAddressCsv.exportSummaryWithWarnings.one":
+    "Gruppenadressen als CSV exportiert, {count} Warnung — siehe Log.",
+  "groupAddressCsv.exportSummaryWithWarnings.other":
+    "Gruppenadressen als CSV exportiert, {count} Warnungen — siehe Log.",
+  "groupAddressCsv.importSummaryBase":
+    "Gruppenadressen aus CSV importiert: {created} erstellt, {updated} aktualisiert, {unchanged} unverändert",
+  "groupAddressCsv.importSummaryWarnings.one": "{count} Warnung",
+  "groupAddressCsv.importSummaryWarnings.other": "{count} Warnungen",
+  "groupAddressCsv.importSummaryIgnoredColumns.one": "{count} Spalte ignoriert",
+  "groupAddressCsv.importSummaryIgnoredColumns.other": "{count} Spalten ignoriert",
+  "groupAddressCsv.importSummarySeeLog": "— siehe Log.",
 };

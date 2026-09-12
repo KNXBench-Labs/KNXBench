@@ -1,3 +1,4 @@
+/** Tests for App's log-tab reachability, language-aware device fetches, and document language. */
 // @vitest-environment happy-dom
 //
 // KNOWN_LIMITATIONS.md #36, part A: the Log tab used to be unreachable

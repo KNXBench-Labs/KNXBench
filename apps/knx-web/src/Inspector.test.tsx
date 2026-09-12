@@ -1,3 +1,4 @@
+/** Tests for Inspector's collapsed delete-restriction message on non-empty group ranges. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";

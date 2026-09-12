@@ -1,3 +1,4 @@
+/** Tests for translateFor, formatTemplate, plural resolution, and the useTranslate hook. */
 // @vitest-environment happy-dom
 //
 // happy-dom, not node: `useTranslate()`'s hook test below renders a real

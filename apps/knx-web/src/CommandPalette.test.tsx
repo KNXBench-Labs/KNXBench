@@ -1,3 +1,4 @@
+/** Tests for CommandPalette's overlay behaviour and listbox keyboard navigation. */
 // @vitest-environment happy-dom
 //
 // commandRegistry.test.ts already covers filtering and enablement logic in

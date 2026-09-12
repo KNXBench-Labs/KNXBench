@@ -200,8 +200,9 @@ fn check_sentence(line: &str, text: &str) -> Header {
 /// Lowering this number is the only edit it accepts: when headers get
 /// added, `check-headers` prints the new count, and the constant follows
 /// it down. Raising it means deciding the convention no longer applies,
-/// which is an ADR, not a constant. Measured 2026-09-12 (ADR-0018 §5).
-pub const ABSENT_CEILING: usize = 201;
+/// which is an ADR, not a constant. Measured 2026-09-12 (ADR-0018 §5);
+/// lowered the same day once the T25 frontend files gained headers.
+pub const ABSENT_CEILING: usize = 169;
 
 /// The ratchet's verdict on a report: the message to print if it trips,
 /// `None` if the count is at or below [`ABSENT_CEILING`].

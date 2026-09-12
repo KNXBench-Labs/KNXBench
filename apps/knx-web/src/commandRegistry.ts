@@ -1,3 +1,4 @@
+/** Registry of command-palette commands, their enablement rules, and keyboard-shortcut hints. */
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { MessageKey } from "./messages/en";
 

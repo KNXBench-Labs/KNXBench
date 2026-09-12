@@ -1,3 +1,4 @@
+/** English UI message catalogue whose keys define MessageKey and every catalogue's key set. */
 // The English UI chrome catalogue — every button, heading, placeholder and
 // error message in `apps/knx-web`, keyed by a dotted identifier. This
 // object's own type is the source of truth for which keys exist at all:

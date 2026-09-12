@@ -1,3 +1,4 @@
+/** Buttons for exporting/importing group addresses in the project's own CSV format, not ETS's. */
 import { pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";

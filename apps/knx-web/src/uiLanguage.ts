@@ -1,3 +1,4 @@
+/** Detects, stores, and exposes the active UI language, built-in or an imported pack's tag. */
 import { useEffect, useSyncExternalStore } from "react";
 import { isWellFormedBcp47Tag } from "./languagePack";
 

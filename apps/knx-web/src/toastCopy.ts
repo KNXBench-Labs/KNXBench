@@ -1,3 +1,4 @@
+/** Message-key lists for the error wrappers and holiday jokes that toast.ts resolves. */
 // Typed as plain `string[]`/`HolidayEntry.messages: string[]`, not
 // `MessageKey[]` — deliberately, matching `toast.ts`'s existing
 // `wrappers: string[]`/`holidays: HolidayEntry[]` parameters, which

@@ -1,3 +1,4 @@
+/** Modal file browser mounted imperatively as a promise-based stand-in for a native file picker. */
 //! Modal file browser over `/api/fs/list` + `/api/fs/upload` for the web
 //! build (no native OS picker in a browser). Mounted imperatively by
 //! filePicker.ts's openMountPicker/saveMountPicker so callers can

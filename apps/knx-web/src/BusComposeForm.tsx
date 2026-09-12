@@ -1,3 +1,4 @@
+/** Compose-and-send form for writing a value to a group address from the bus monitor. */
 // apps/knx-web/src/BusComposeForm.tsx
 //! Task 5's compose/send form (design spec `docs/superpowers/specs/
 //! 2026-09-11-group-monitor-design.md` §6) — the other half of the loop

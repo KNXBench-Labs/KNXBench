@@ -754,13 +754,131 @@ pub fn device_detail_impl(
         .ok_or_else(|| format!("device {device_id} not found"))
 }
 
+/// Everything `device_detail`'s language overlay (T33 Task 2) needs from
+/// the project, gathered while only `project` is locked — mirrors
+/// `assemble_parameter_panel`'s own step 1, so `product_db`'s lock, taken
+/// afterwards if at all, never overlaps this one.
+struct ComObjectOverlayInput {
+    program_ref: String,
+    /// Keyed by `ComObjectNode::id` (== `ComObjectInstanceId.0`): the
+    /// instance's ETS ref id, whether it is module-based, and the `Layer`
+    /// its `text`/`description` overrides currently sit at. `None` for a
+    /// layer means the override is `Absent`/`Empty`/`Malformed` — there is
+    /// nothing to overlay, and `build_device_detail`'s own output is left
+    /// exactly as it is.
+    com_objects: HashMap<
+        u32,
+        (
+            String,
+            bool,
+            Option<knx_core::Layer>,
+            Option<knx_core::Layer>,
+        ),
+    >,
+}
+
+/// Builds one device's detail panel, optionally overlaying communication
+/// object `name`/`description` with a product-database translation
+/// (T33 Task 2; Global Constraint 2 is the invariant this guards: only a
+/// `Program`/`ProgramRef`-layer value is product-supplied text, so only
+/// those may be overlaid — `Instance`/`Inferred`/`UserEdit` are the
+/// project's own words and are never translated). `language: None`, or no
+/// product database open, issues no product-database query at all and
+/// returns byte-identical to `device_detail_impl` alone (Global
+/// Constraint 3).
 pub fn device_detail(
     state: &AppState,
     device_id: u32,
+    language: Option<&str>,
 ) -> Result<knx_projection::DeviceDetail, String> {
-    let project = state.project.lock().expect("state mutex poisoned");
-    let project = project.as_ref().ok_or("no project open")?;
-    device_detail_impl(project, device_id)
+    // Step 1: lock only `project`.
+    let (mut detail, overlay_input) = {
+        let project = state.project.lock().expect("state mutex poisoned");
+        let project = project.as_ref().ok_or("no project open")?;
+        let detail = device_detail_impl(project, device_id)?;
+        let overlay_input = language.and_then(|_| {
+            let dev = project.devices.get(knx_core::DeviceId(device_id))?;
+            Some(ComObjectOverlayInput {
+                program_ref: dev.program_ref.clone(),
+                com_objects: dev
+                    .com_objects
+                    .iter()
+                    .filter_map(|com_id| project.devices.com_object(*com_id))
+                    .map(|com| {
+                        (
+                            com.id.0,
+                            (
+                                com.source.ets_id.clone(),
+                                com.module_instance.is_some(),
+                                com.text.layer(),
+                                com.description.layer(),
+                            ),
+                        )
+                    })
+                    .collect(),
+            })
+        });
+        (detail, overlay_input)
+    };
+
+    let (Some(lang), Some(overlay_input)) = (language, overlay_input) else {
+        return Ok(detail);
+    };
+
+    let Some(products_mutex) = state.product_db.as_ref() else {
+        return Ok(detail);
+    };
+
+    // Step 2: lock only `product_db` (`project`'s lock above is already
+    // dropped — the two mutexes are never held at once).
+    let products = products_mutex.lock().expect("state mutex poisoned");
+    let program_id = knx_productdb::query::resolve_program(&products, &overlay_input.program_ref)
+        .map_err(|e| e.to_string())?;
+    // A device whose program is not installed is ordinary project state,
+    // not an error — return the untranslated detail unchanged.
+    let Some(program_id) = program_id else {
+        return Ok(detail);
+    };
+
+    for com in &mut detail.com_objects {
+        let Some((ref_id, module_based, text_layer, description_layer)) =
+            overlay_input.com_objects.get(&com.id)
+        else {
+            continue;
+        };
+        let lookup_id = knx_productdb::com_object_lookup_id(&program_id, ref_id, *module_based);
+        let Some(view) =
+            knx_productdb::query::com_object_view(&products, &program_id, &lookup_id, Some(lang))
+                .map_err(|e| e.to_string())?
+        else {
+            continue;
+        };
+        // Only a `Program`/`ProgramRef`-layer value came from the product
+        // database and may be overlaid (Global Constraint 2). The layer
+        // read here is the one stored on the project's own
+        // `ComObjectInstance`, never the layer `view` itself reports —
+        // those two can legitimately disagree (a `ComObjectRef`
+        // translation with no matching structural override), and trusting
+        // the latter would translate project-authored text.
+        if matches!(
+            text_layer,
+            Some(knx_core::Layer::Program) | Some(knx_core::Layer::ProgramRef)
+        ) {
+            if let Some(text) = view.text {
+                com.name = Some(text);
+            }
+        }
+        if matches!(
+            description_layer,
+            Some(knx_core::Layer::Program) | Some(knx_core::Layer::ProgramRef)
+        ) {
+            if let Some(description) = view.visible_description {
+                com.description = Some(description);
+            }
+        }
+    }
+
+    Ok(detail)
 }
 
 /// Rebuilds `tree` from `project` and overlays the counts/undo-redo state
@@ -2425,7 +2543,7 @@ mod tests {
         );
         let device_id = response.tree.installations[0].unassigned[0].id;
 
-        let detail = device_detail(&state, device_id).unwrap();
+        let detail = device_detail(&state, device_id, None).unwrap();
         assert_eq!(detail.com_objects.len(), 1);
         assert!(
             detail.com_objects[0].dpt.is_some(),

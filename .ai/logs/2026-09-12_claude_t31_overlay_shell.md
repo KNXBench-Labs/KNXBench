@@ -160,3 +160,41 @@ moved to 2026-09-12; `ROADMAP.md` checked and left untouched — nothing
 there makes a claim this slice falsifies. Dated specs and plans under
 `docs/superpowers/` — including this slice's own — were left untouched
 as historical record, per project convention.
+
+## Coordinator work after the five tasks
+
+**`8fb1c68` — §20's header renamed.** Task 5 deliberately froze the
+heading byte-identical (`GAP_ANALYSIS_ETS.md` links its anchor slug), so
+the file ended up with a heading reading "unaddressed" two lines above a
+body opening "Resolved (2026-09-12, T31)". Renamed to "— partially
+resolved", matching the convention §17, §21, §27 and §36 already use, and
+repointed all three references to the new slug (`GAP_ANALYSIS_ETS.md`'s
+D9 row and its T31 backlog entry, plus the design spec's "Closes:" line).
+An em dash becomes a double hyphen in GitHub's anchor slug — verified
+against §21's working links rather than guessed.
+
+**Final whole-branch review (Sonnet, read-only).** Verdict APPROVE: no
+blocker, major or minor findings; one nit. The review re-ran all seven
+gates itself rather than trusting reported numbers, and proved three
+claimed behaviours are load-bearing by deleting them and confirming the
+named tests fail: `Overlay.tsx`'s focus-restore cleanup (one test failed,
+by name), `CatalogBrowser.tsx`'s `ArrowDown` branch (two failed), and the
+`search-overlay` guard (injected into `SettingsPanel.tsx`, failed naming
+that file). Each injection was reverted and the tree proven clean.
+
+**`c77c9e5` — the nit, fixed.** The three combobox inputs carried
+`role="combobox"` with `aria-controls`/`aria-expanded`/
+`aria-activedescendant` but no `aria-haspopup="listbox"`, which the ARIA
+Authoring Practices Guide lists for this pattern so assistive technology
+announces a popup listbox rather than inline autocomplete. Added to all
+three inputs; the three existing `aria-activedescendant` tests now assert
+both `role="combobox"` and the new attribute, so it cannot fall off
+silently. Test count unchanged (235/25) because the assertions went into
+existing tests; `tsc --noEmit` clean.
+
+**What the review could not verify, restated so it is not lost:** no real
+screen reader and no real browser were involved anywhere in this slice.
+jsdom/happy-dom asserts DOM state and attribute values, not what NVDA,
+JAWS, Orca or VoiceOver announce, and nothing here checks focus-ring
+visibility in either theme. `KNOWN_LIMITATIONS.md` §20 says so and stays
+open for exactly that.

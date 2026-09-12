@@ -8,7 +8,7 @@
 // writer/reader test.
 import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   LANGUAGE_PACKS_STORAGE_KEY,
   type LanguagePack,
@@ -249,6 +249,83 @@ describe("export", () => {
 
   it("exporting a pack that isn't installed returns undefined", () => {
     expect(exportLanguagePack("xx")).toBeUndefined();
+  });
+});
+
+// Final fix round: `persist()` (a bare `window.localStorage.setItem`)
+// has no guaranteed success — `QuotaExceededError` is the realistic
+// failure, since a pack accepts arbitrary user-supplied JSON of
+// unbounded size and unknown fields are deliberately kept. Before this
+// round, `importLanguagePack`/`removeLanguagePack` mutated the live
+// cache *before* calling `persist()`, so a thrown `setItem` left the
+// mutation standing: the exception escaped uncaught, and the very next
+// unrelated `persist()` call (a later import or removal) would write the
+// half-finished change to storage on the failed one's behalf. These
+// tests throw from `setItem` for exactly one call to prove the mutation
+// is rolled back instead.
+describe("a persist() failure is rolled back, not smuggled in later", () => {
+  function throwOnceFromSetItem() {
+    return vi.spyOn(window.localStorage, "setItem").mockImplementationOnce(() => {
+      throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+    });
+  }
+
+  it("a fresh import whose persist() throws is rejected and never installed", () => {
+    const spy = throwOnceFromSetItem();
+
+    const result = importLanguagePack(dutchPack());
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/storage/i);
+    expect(listLanguagePacks()).toEqual([]);
+    expect(getLanguagePack("nl-NL")).toBeUndefined();
+
+    spy.mockRestore();
+
+    // A later, unrelated successful import must not carry the rejected
+    // pack into storage retroactively — it would if the cache mutation
+    // from the failed import had never been rolled back.
+    const second = importLanguagePack(dutchPack({ tag: "fr-FR", name: "Français" }));
+    expect(second.ok).toBe(true);
+    expect(listLanguagePacks().map((p) => p.tag)).toEqual(["fr-FR"]);
+
+    const stored = JSON.parse(window.localStorage.getItem(LANGUAGE_PACKS_STORAGE_KEY) ?? "{}") as Record<
+      string,
+      unknown
+    >;
+    expect(stored["nl-NL"]).toBeUndefined();
+  });
+
+  it("re-importing over an existing pack whose persist() throws leaves the old install unchanged", () => {
+    importLanguagePack(dutchPack());
+    const before = getLanguagePack("nl-NL");
+
+    const spy = throwOnceFromSetItem();
+    const result = importLanguagePack(dutchPack({ messages: { "toolbar.save": "Bewaren" } }));
+    expect(result.ok).toBe(false);
+    expect(getLanguagePack("nl-NL")).toEqual(before);
+
+    spy.mockRestore();
+  });
+
+  it("a removal whose persist() throws restores the pack instead of leaving it half-deleted", () => {
+    importLanguagePack(dutchPack());
+
+    const spy = throwOnceFromSetItem();
+    removeLanguagePack("nl-NL");
+    expect(getLanguagePack("nl-NL")?.name).toBe("Nederlands");
+
+    spy.mockRestore();
+
+    // Same retroactive-smuggling check as the import case: an unrelated
+    // successful persist() afterwards must not finish the removal that
+    // failed.
+    const second = importLanguagePack(dutchPack({ tag: "fr-FR", name: "Français" }));
+    expect(second.ok).toBe(true);
+    const stored = JSON.parse(window.localStorage.getItem(LANGUAGE_PACKS_STORAGE_KEY) ?? "{}") as Record<
+      string,
+      unknown
+    >;
+    expect(stored["nl-NL"]).toBeDefined();
   });
 });
 

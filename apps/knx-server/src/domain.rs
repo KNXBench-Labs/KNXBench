@@ -1247,6 +1247,7 @@ pub fn catalog_items_impl(
     state: &AppState,
     manufacturer: Option<String>,
     search: Option<String>,
+    language: Option<String>,
 ) -> Result<Vec<knx_productdb::query::CatalogItemRow>, String> {
     let products = state
         .product_db
@@ -1254,8 +1255,13 @@ pub fn catalog_items_impl(
         .ok_or("no product database configured")?
         .lock()
         .expect("state mutex poisoned");
-    knx_productdb::query::catalog_items(&products, manufacturer.as_deref(), search.as_deref())
-        .map_err(|e| e.to_string())
+    knx_productdb::query::catalog_items(
+        &products,
+        manufacturer.as_deref(),
+        search.as_deref(),
+        language.as_deref(),
+    )
+    .map_err(|e| e.to_string())
 }
 
 /// Every language identifier the installed product database has any

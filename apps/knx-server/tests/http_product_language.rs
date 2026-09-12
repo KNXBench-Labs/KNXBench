@@ -28,28 +28,50 @@ const HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 /// @Text` ("Delay") has a `de-DE` translation ("Verzoegerung") — enough to
 /// exercise the `?language=` query parameter end to end without dragging in
 /// the module/`choose` machinery `http_parameter_panel.rs` covers already.
+///
+/// Plus a second, `Restriction`-kind parameter (`P-2`, an enum over
+/// `PT-Enum`'s two options `"0"`/`"1"`) whose option labels — not their
+/// `Value`s — carry `de-DE` translations, mirroring
+/// `crates/knx-productdb/src/query.rs`'s own `PARAMETER_PROGRAM_TRANSLATED`
+/// fixture. Fix round 1, Finding 3: `a_value_translation_never_changes_a_stored_value`
+/// proves this at the `knx-productdb` layer already; this fixture lets
+/// `enum_write_with_a_language_keeps_the_raw_value_but_translates_its_label`
+/// prove the same thing over HTTP, end to end.
 const TRANSLATED_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
 <ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
 <Static>
 <ParameterTypes>
   <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+  <ParameterType Id="PT-Enum" Name="enum"><TypeRestriction Base="Value" SizeInBit="8">
+    <Enumeration Id="PT-Enum_EN-0" Text="Off" Value="0" DisplayOrder="0" />
+    <Enumeration Id="PT-Enum_EN-1" Text="On" Value="1" DisplayOrder="1" />
+  </TypeRestriction></ParameterType>
 </ParameterTypes>
 <Parameters>
   <Parameter Id="P-1" Name="Delay" Text="Delay" ParameterType="PT-Num" Access="ReadWrite" Value="5" />
+  <Parameter Id="P-2" Name="Mode" Text="Mode" ParameterType="PT-Enum" Access="ReadWrite" Value="0" />
 </Parameters>
 <ParameterRefs>
   <ParameterRef Id="P-1_R-1" RefId="P-1" DisplayOrder="10" Tag="1" />
+  <ParameterRef Id="P-2_R-1" RefId="P-2" DisplayOrder="20" Tag="2" />
 </ParameterRefs>
 </Static>
 <Dynamic>
   <ParameterRefRef RefId="P-1_R-1" />
+  <ParameterRefRef RefId="P-2_R-1" />
 </Dynamic>
 <Languages>
   <Language Identifier="de-DE">
     <TranslationUnit RefId="A-1">
       <TranslationElement RefId="P-1">
         <Translation AttributeName="Text" Text="Verzoegerung" />
+      </TranslationElement>
+      <TranslationElement RefId="PT-Enum_EN-0">
+        <Translation AttributeName="Text" Text="Aus" />
+      </TranslationElement>
+      <TranslationElement RefId="PT-Enum_EN-1">
+        <Translation AttributeName="Text" Text="An" />
       </TranslationElement>
     </TranslationUnit>
   </Language>
@@ -276,5 +298,44 @@ async fn setting_a_parameter_value_keeps_the_requested_language() {
     assert_eq!(
         p1["text"], "Verzoegerung",
         "the response DTO returned by the write must still be translated"
+    );
+}
+
+// Fix round 1, Finding 3: an end-to-end version of `knx-productdb`'s
+// `a_value_translation_never_changes_a_stored_value` unit test and
+// `domain.rs`'s `validate_kind_and_bounds`, which together guarantee a
+// `Restriction`-kind write is checked against the package's own
+// untranslated option values. Neither test proves it over HTTP: a route
+// that validated/stored the *translated* option label instead of the raw
+// `Value` — or one that lost the translation on the way back out — would
+// pass both of those in isolation and still corrupt this exact write.
+#[tokio::test]
+async fn enum_write_with_a_language_keeps_the_raw_value_but_translates_its_label() {
+    let (_dir, products) = temp_product_db(TRANSLATED_PROGRAM);
+    let state = Arc::new(state_with_device(products, vec![]));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = post_panel(
+        app,
+        "/api/device/1/parameters?language=de-DE",
+        "P-2_R-1",
+        "1",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let p2 = field(&dto, "P-2_R-1").expect("P-2_R-1 present");
+    assert_eq!(
+        p2["value"], "1",
+        "the stored value must be exactly the untranslated raw value that was posted, \
+         never the translated label or anything derived from it"
+    );
+    let options = p2["enumOptions"].as_array().unwrap();
+    let on_option = options
+        .iter()
+        .find(|o| o["value"] == "1")
+        .expect("option '1' present");
+    assert_eq!(
+        on_option["text"], "An",
+        "the option label for the posted value must be the de-DE translation"
     );
 }

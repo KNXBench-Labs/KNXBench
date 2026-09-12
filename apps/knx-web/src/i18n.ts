@@ -2,7 +2,13 @@ import { useCallback } from "react";
 import { messages as enMessages } from "./messages/en";
 import type { MessageKey } from "./messages/en";
 import { messages as deMessages } from "./messages/de";
-import { type UiLanguage, getActiveUiLanguage, useUiLanguage } from "./uiLanguage";
+import {
+  type BuiltInUiLanguage,
+  type UiLanguage,
+  getActiveUiLanguage,
+  useUiLanguage,
+} from "./uiLanguage";
+import { getLanguagePack } from "./languagePack";
 
 export type { MessageKey } from "./messages/en";
 
@@ -27,19 +33,49 @@ export type TranslatableKey = MessageKey | PluralMessageKey;
  * selects its category from. */
 export type MessageParams = Record<string, string | number>;
 
-const catalogs: Record<UiLanguage, Record<string, string>> = {
+const catalogs: Record<BuiltInUiLanguage, Record<string, string>> = {
   en: enMessages,
   de: deMessages,
 };
 
-const pluralRulesCache = new Map<UiLanguage, Intl.PluralRules>();
+/**
+ * The catalogue for `language`: a built-in catalogue when `language` is
+ * `"en"`/`"de"`, otherwise the `messages` of an installed pack matching
+ * that tag (`languagePack.ts`). `undefined` when `language` names a pack
+ * that isn't installed — removed, or a stale/hand-edited active tag —
+ * which `translateFor` treats exactly like a catalogue with no entries at
+ * all: straight through to the English fallback, never an error.
+ */
+function resolveCatalog(language: UiLanguage): Record<string, string> | undefined {
+  if (language === "en" || language === "de") return catalogs[language];
+  return getLanguagePack(language)?.messages;
+}
 
-function getPluralRules(language: UiLanguage): Intl.PluralRules {
-  let rules = pluralRulesCache.get(language);
-  if (!rules) {
-    rules = new Intl.PluralRules(language);
-    pluralRulesCache.set(language, rules);
+/**
+ * `Intl.PluralRules` for `language`, cached per tag. Built-in languages
+ * (`"en"`/`"de"`) always resolve — every runtime this app ships on
+ * supports them, so this cache behaves exactly as it did before pack tags
+ * existed. A pack tag's rules are looked up the same way
+ * `languagePack.ts`'s `pluralRulesSupportedFor` does — via
+ * `supportedLocalesOf`, not by constructing and hoping it throws — and
+ * `null` is cached (not retried) for a tag the runtime has no data for,
+ * so `resolveFromCatalog` can degrade to the `"other"` category instead
+ * of ever letting `Intl.PluralRules` throw out of the lookup.
+ */
+const pluralRulesCache = new Map<string, Intl.PluralRules | null>();
+
+function getPluralRules(language: string): Intl.PluralRules | null {
+  if (pluralRulesCache.has(language)) return pluralRulesCache.get(language) ?? null;
+
+  let rules: Intl.PluralRules | null = null;
+  try {
+    if (Intl.PluralRules.supportedLocalesOf(language).length > 0) {
+      rules = new Intl.PluralRules(language);
+    }
+  } catch {
+    rules = null;
   }
+  pluralRulesCache.set(language, rules);
   return rules;
 }
 
@@ -66,9 +102,11 @@ export function formatTemplate(template: string, params?: MessageParams): string
  * exists, treats `key` as a plural base instead — selecting `.one`/`.other`
  * (or whatever category `Intl.PluralRules` names for `language`, falling
  * back to `.other` for any category the two-entry convention doesn't
- * cover, e.g. Arabic's `.few`/`.many`) using `params.count` (default `0`).
- * Returns `undefined` on a genuine miss, leaving the fallback-to-English
- * decision to the caller.
+ * cover, e.g. Arabic's `.few`/`.many`, *and* for a `language` the runtime
+ * has no plural data for at all — a pack tag such as `"art-x-sindarin"` —
+ * see `getPluralRules`) using `params.count` (default `0`). Returns
+ * `undefined` on a genuine miss, leaving the fallback-to-English decision
+ * to the caller.
  *
  * Exported standalone, same reasoning as `formatTemplate`: it takes a
  * plain `Record<string, string>`, so plural-branch tests can hand it a
@@ -80,7 +118,7 @@ export function resolveFromCatalog(
   catalog: Record<string, string>,
   key: string,
   params: MessageParams | undefined,
-  language: UiLanguage,
+  language: string,
 ): string | undefined {
   const direct = catalog[key];
   if (direct !== undefined) return direct;
@@ -89,7 +127,7 @@ export function resolveFromCatalog(
   if (catalog[otherKey] === undefined) return undefined;
 
   const count = typeof params?.count === "number" ? params.count : 0;
-  const category = getPluralRules(language).select(count);
+  const category = getPluralRules(language)?.select(count) ?? "other";
   return catalog[`${key}.${category}`] ?? catalog[otherKey];
 }
 
@@ -100,14 +138,22 @@ export function resolveFromCatalog(
  * resolved, key itself as a last-resort label if even English has
  * nothing (unreachable given `MessageKey`/`de.ts`'s typing, but a key
  * beats a blank string if it ever happens).
+ *
+ * `language` is an open tag (T25 task 6): a built-in id or an installed
+ * pack's tag, resolved via `resolveCatalog`. The fallback chain is
+ * exactly two long — `language`, then English — never German, never
+ * another installed pack, and never the pack's own `basedOn` (that field
+ * isn't even read here). A Bavarian pack missing a key falls to English,
+ * not to German, even though `basedOn: "de"` would suggest otherwise —
+ * see `languagePack.ts`'s `LanguagePack.basedOn` for why.
  */
 export function translateFor(
   language: UiLanguage,
   key: TranslatableKey,
   params?: MessageParams,
 ): string {
-  const active = catalogs[language] ?? catalogs.en;
-  let template = resolveFromCatalog(active, key, params, language);
+  const active = resolveCatalog(language);
+  let template = active ? resolveFromCatalog(active, key, params, language) : undefined;
 
   if (template === undefined && language !== "en") {
     template = resolveFromCatalog(catalogs.en, key, params, "en");

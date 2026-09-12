@@ -1727,10 +1727,16 @@ therefore not fully pinned down from this corpus; §3.7's prose reads as the
 latter but that is **[A]**, inferred from adjacent text, not a direct
 reading of the two blank sections.
 
-**Bus-load budget.** Two layers of evidence here, kept apart deliberately —
-one is arithmetic on Standard-documented constants, the other is a live
-measurement on one installation, and neither is a Standard-normative
-timing figure:
+**Bus-load budget.** This subsection originally carried an **[A]**
+extrapolation for the absent-address case and the whole-line duration,
+scaled from nine occupied-address samples — no vacant address was
+available to probe at the time. The controller has since run a full line
+scan, and the measurement below replaces both **[A]** figures with **[V]**
+ones. The arithmetic estimate is kept alongside it, not deleted, because
+it is still useful evidence of what the Standard's documented constants
+alone predict — see Finding 1 for why that prediction and the measurement
+disagree by two orders of magnitude, and why the disagreement is not an
+error:
 
 * **[A]**, built from **[D]** inputs (TP1 9600 bit/s per
   `03_02_02 Communication Medium TP1 v01.03.03 AS.md:151`; minimum
@@ -1742,47 +1748,113 @@ timing figure:
   address costs roughly 70 ms (retries exhausted, no ACK ever); an
   occupied, responsive address costs a similar order of magnitude, roughly
   60-100 ms, dominated by the round trip for the actual
-  `A_DeviceDescriptor_Response`. Scaled to a 255-address, mostly-vacant
-  line with no pacing: on the order of 18 seconds as a floor.
-* **[V]**, measured by the controller against nine of this installation's
-  approved individual addresses, 300 ms apart, on 2026-09-12, using
-  `xknx`'s `nm_individual_address_check` (an implementation of the same
-  §2.19 procedure) over a KNXnet/IP tunnelling connection. All nine
-  addresses were occupied; round trips ranged **102.4-221.6 ms**, with the
-  first probe (221.6 ms) plausibly a warm-up effect rather than
-  representative steady-state cost — it is reported as measured, not
-  explained away. This is **higher** than the **[A]** arithmetic estimate
-  above, not lower, and the difference is not a contradiction: the
-  measurement is an end-to-end round trip over KNXnet/IP tunnelling, which
-  adds IP transport and gateway turnaround on top of the TP1-only bus
-  timing the arithmetic modelled. One installation, one gateway, nine
-  addresses — this stays project-local **[V]**, never promoted to a
-  Standard-normative figure.
+  `A_DeviceDescriptor_Response`. This models the KNX medium's own retry
+  budget only — it does not, and cannot, model a KNXnet/IP client's own
+  connection-timeout policy, which is what the measurement below actually
+  hit.
+* **[V]**, full scan of area 1 / line 1, one installation, one gateway,
+  2026-09-12, via `NM_IndividualAddress_Check` (`xknx`'s
+  `nm_individual_address_check`, the same §2.19 procedure cited above)
+  over a KNXnet/IP tunnelling connection, sequential, 200 ms pause between
+  probes. **254 addresses probed** — the whole line except one address
+  excluded by construction (see the exclusion-list paragraph below) —
+  with **zero probe errors**: 35 reported occupied, 219 reported vacant.
+  Occupied-probe round trips ranged 13.6-6016.5 ms (median 121.1 ms);
+  vacant-probe round trips ranged 6275.9-6323.8 ms (median 6279.9 ms).
+  Summed probe duration: **1 385.75 s ≈ 23.1 minutes**. One installation,
+  one gateway, one client implementation — this stays project-local
+  **[V]**, never promoted to a Standard-normative figure, and none of
+  these numbers may be written as one either.
 
-  The absent-address case was **not measured**: all nine addresses
-  approved for active reads on this installation turned out to be
-  occupied, and no address outside that approved set may be probed. The
-  **[A]** ~70 ms absent-address estimate therefore stays unconfirmed; what
-  would close it is permission to probe one address confirmed vacant in
-  advance.
+  **Finding 1 — the absent-address cost is set by the client, not the
+  bus.** The vacant-probe figures above are the tell: **~6.28 s** median,
+  with under 50 ms of spread across 219 samples, is far too tight to be
+  bus retry behaviour and far too slow to be a KNX medium timing at all —
+  it is a client timeout expiring on schedule. `xknx`'s own constants say
+  so directly: `MANAGAMENT_ACK_TIMEOUT = 3` seconds with one resend, and
+  `MANAGAMENT_CONNECTION_TIMEOUT = 6` seconds
+  (`xknx/management/management.py:35-36`, the copy installed in this
+  project's `.venv`) — the measured ~6.28 s tracks the 6 s connection
+  timeout plus transport overhead, not the ~70 ms the **[A]** bus
+  arithmetic above predicted.
 
-  Scaling the measured 102.4-221.6 ms per occupied address to a
-  255-address line gives roughly **26-57 seconds** of bus occupancy before
-  any deliberate pacing — worse than the **[A]** arithmetic floor of ~18
-  seconds. This is **[A]**: arithmetic on a nine-sample measurement from
-  one installation, presented as the honest order of magnitude, not a
-  precise prediction.
+  The consequence is the design conclusion this whole subsection was
+  building toward: **the scan's duration is dominated by a policy
+  constant KNXBench will choose for itself**, roughly two orders of
+  magnitude away from the Standard-derived arithmetic. That arithmetic
+  was not wrong about the bus — it modelled the bus faithfully. It
+  modelled the wrong thing: the KNX medium's own retry budget, not a
+  KNXnet/IP client's connection-timeout policy, and the policy is what
+  actually governs how long "nobody answered" takes to conclude. Whoever
+  implements T17 picks that timeout value, and that choice — not the KNX
+  medium — decides whether a full-line scan takes twenty minutes or one.
+  Too short, and a slow-but-present device is reported absent; too long,
+  and the scan is unusable on any real line, which is mostly vacant
+  addresses, not mostly occupied ones. The Standard does not hand over a
+  number to copy here: the closest it comes is the System 7/System B
+  Profile's `nak_retry`/`busy_retry`, documented **[D]** as only
+  *optionally* 3 (`06 Profiles v02.01.01.md:775`, already cited above) —
+  a bus-level retry count, not a client connection timeout, and optional
+  even as that. This is a genuine design decision for T17's
+  implementation, not a lookup.
 
-  Either way — **[A]** floor or **[V]**-scaled ceiling — an unthrottled
-  full-line scan is a multi-second-to-tens-of-seconds sustained burst of
-  connection-oriented traffic on a live line, competing directly with
-  whatever else needs that line's bandwidth, including devices where a
-  delayed response matters. Any real implementation needs an explicit
-  pacing/priority policy, and an installation-specific exclusion list that
-  is honoured **by construction** — addresses to skip must be enumerated
-  out of the scan range itself, never filtered out afterwards — belonging
-  in the domain layer, not the UI, consistent with this repository's
-  standing rule against UI workarounds for domain-layer problems.
+  The earlier **[A]** 26-57 second full-line extrapolation this
+  subsection carried is corrected here rather than silently replaced: it
+  scaled from nine addresses that were *all occupied*, reasoning that a
+  line looks like those nine. A real line is mostly *vacant*, and vacant
+  is the expensive case here, not the cheap one — the earlier
+  extrapolation scaled the wrong sample, in the direction that made the
+  answer look better than it is. The measured figure, **23.1 minutes**,
+  is dominated almost entirely by 219 vacant-address timeouts at ~6.28 s
+  each.
+
+  An unthrottled full-line scan is therefore not a multi-second burst as
+  first estimated — it is a multi-minute, sustained run of
+  connection-oriented traffic on a live line, for as long as the chosen
+  timeout policy makes it. It still competes directly with whatever else
+  needs that line's bandwidth for that whole window, including devices
+  where a delayed response matters, which is exactly why pacing and an
+  exclusion list are not optional polish. Any real implementation needs
+  an explicit pacing/timeout policy, and an installation-specific
+  exclusion list honoured **by construction** — addresses to skip
+  enumerated out of the scan range itself, never filtered out afterwards
+  — belonging in the domain layer, not the UI, consistent with this
+  repository's standing rule against UI workarounds for domain-layer
+  problems. This scan exercised exactly that rule for real: one address
+  on this installation must never be read (a hazard on any read while a
+  condition holds) and was dropped while the address range was built,
+  with an assertion that refuses to start if the address survives into
+  the list, rather than filtered out of the results afterward. That is
+  the shape T17's own exclusion list needs, not a UI checkbox someone can
+  forget to tick.
+
+**Finding 2 — a scan sees its own tunnel, and the gateway's.** **[V]**
+Three of the 35 addresses this scan reported occupied were not devices on
+the twisted pair at all — they were KNXnet/IP tunnelling endpoints
+answering from the gateway itself, and their timing gives them away. Two
+answered in **13.6 ms** and **14.0 ms**, roughly an order of magnitude
+faster than the 100-150 ms a real device on the bus typically needs,
+because the answer never left the IP side of the gateway. The third took
+**6016.5 ms** and was still reported occupied — the present-but-busy
+outcome documented above (`A_Disconnect` received, no
+`A_DeviceDescriptor_Response`), not silence.
+
+One of those three was the scanner's own tunnelling connection: asking
+the gateway what individual address it had assigned that connection
+returned the same address the scan had just reported occupied. A line
+scan detects itself, unless it is told not to.
+
+Both facts are implementation requirements for T17, not just
+observations. A scan must know its own tunnelling connection's assigned
+individual address and exclude or clearly mark it rather than reporting
+it as a device — this needs no heuristic, since the gateway hands that
+address over during connection setup. A scan should also not present
+*other* tunnelling endpoints as bus devices. The sub-20 ms response time
+is a usable heuristic for spotting those, but it stays **[A]**: three
+samples on one gateway with one client implementation. A genuinely fast
+device, or a slower IP path on a different gateway, could break it —
+nothing in the Standard promises this gap.
+
 
 **What a scan does not learn.** **[D]** `A_DeviceDescriptor_Read` with
 `descriptor_type = 0` returns DD0, the Mask Version — *"Identification of
@@ -1810,6 +1882,32 @@ occupied/absent and, where the device answers, its Mask Version. It cannot
 by itself populate a topology view with product identity; T16's
 device-catalog work would need the extra `A_PropertyValue_Read` step per
 occupied address, as a real, visible scope distinction.
+
+**Finding 3 — the bus and the project disagree, and that is the whole
+point of E2.** **[V]** On this installation, the reference project's
+device list and the bus scan's results did not match: addresses answered
+that the project's own records did not account for, and an address the
+project lists did not answer at all. Only the counts are recorded here,
+deliberately: this repository is public-facing, and no addresses, device
+names, or manufacturer inventory belonging to this installation are
+written into it.
+
+This mismatch is not a scan defect; it is the reason **E2**
+([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)) is a gap worth closing at
+all. An ETS project file is a *plan*; the bus is the *installation*. They
+drift apart in ordinary use — devices get added by hand, replaced,
+re-addressed, or removed without the project file being updated to
+match. A scan that only ever confirmed what the project already claims
+would be visible but pointless busywork; the value is entirely in where
+the two disagree. The two directions of disagreement mean different
+things, and belong in a report as two distinct findings rather than one
+"mismatch" bucket: an address the scan finds occupied but the project
+does not know about is an **undocumented device**; an address the
+project lists that the scan finds vacant is either a **removed device, a
+failed one, or one whose individual address changed** — three
+possibilities a bus scan alone cannot distinguish between, and which
+would need a second signal (serial number, product identity read after
+the scan — see above) to tell apart.
 
 **What exists and what is missing for an implementation — documented, not
 built.** The KNXnet/IP tunnelling transport, cEMI `L_Data` encode/decode,

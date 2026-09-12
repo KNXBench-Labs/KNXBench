@@ -145,6 +145,7 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo run -p xtask -- check-layering
+cargo run -p xtask -- check-headers
 
 cd apps/knx-web
 npm ci
@@ -155,6 +156,13 @@ npm run build
 `check-layering` protects the important seams: the domain remains independent
 of UI, SQL, XML, and networking frameworks; project import, storage, and
 product data remain separately owned.
+
+`check-headers` keeps the first-line convention honest: a source file's
+first line is one sentence saying what the file is for (`//! ...` in Rust,
+`/** ... */` in TypeScript), checked wherever one exists and never demanded
+where one does not. Every program carries its own SemVer version;
+`knx --version` and `knx-server --version` add the commit they were built
+from. See [ADR-0018](docs/adr/0018-program-versions-and-file-headers.md).
 
 ## Further reading
 

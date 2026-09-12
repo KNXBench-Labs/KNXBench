@@ -949,6 +949,33 @@ This addendum only restates the corpus shape; it does not restate the
 design decisions built on it — see D21-D25 in the design spec above for
 what the parameter editor does with it.
 
+**Addendum, T18 slice 4 design revision (2026-09-12) — the `MI-`/
+`@RepeatIndex` relationship, measured, still open. [V] each reading on
+its own, [A] the connection between them.** The two facts above were
+measured separately (this paragraph's own is that they were never
+compared on the same element before). On the very same KV v2.5
+`ModuleInstance` element:
+
+```xml
+<ModuleInstance Id="MD-2_M-2_MI-1" RefId="MD-2_M-2" RepeatIndex="10x1">
+```
+
+the `MI-` token is the literal digit `1`, and `@RepeatIndex` is the
+string `"10x1"` — two different strings on the same element, so the
+embedded `MI-<k>` is **not** `@RepeatIndex`'s own string. But `MI-<k>`'s
+digit is `1` in all 32 `ModuleInstance` elements of this project (line
+936 above), and `@RepeatIndex`'s second ("repeat counter") component is
+`1` in every sample checked (Q4 above) — so `MI-<k>` is *consistent with*
+being that second component specifically, not the attribute's string as
+a whole. Nothing in the extraction states this correlation normatively,
+and a corpus where both digits happened to agree while being fed by two
+genuinely unrelated counters would look identical to this one. **Sharpest
+unknown #1 stays open** — this measurement narrows what a future answer
+could look like without supplying one. T18 slice 4 (design D35-D43,
+specifically D40) is built so that it does not need the answer either
+way: a device with two `ModuleInstance`s sharing one `RefId` is refused,
+not resolved by guessing which repeat-counter value is "right".
+
 ---
 
 ## 5. `knx_master.xml`

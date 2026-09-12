@@ -501,11 +501,16 @@ already parses but previously discarded after using it only as a local
 wiring key. `knx_core::ModuleInstance` gains the matching
 `instance_ets_id: String` field, retained uninterpreted next to
 `repeat_index`; existing rows migrate to `''`, treated identically to a
-missing instance by the (later-task) read side. `source.ets_id` keeps
-holding the `@RefId` unchanged — the two differ by exactly the `_MI-<k>`
-suffix, which is the entire point of keeping both. See the design doc at
-`docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md`
-(Evidence E1/E5, Decision D38).
+missing instance by the read/write path (design D39): every module-scoped
+section for such a `ModuleInstance` stays read-only until the project is
+re-imported, since the migration cannot invent the id
+([KNOWN_LIMITATIONS.md §71](KNOWN_LIMITATIONS.md#71-a-project-imported-before-store-schema-6-has-no-module-instance-ids-to-write-with)).
+`source.ets_id` keeps holding the `@RefId` unchanged — the two differ by
+exactly the `_MI-<k>` suffix, which is the entire point of keeping both.
+The server reads `instance_ets_id` to reconstruct the exact id a write
+must target, never a guessed `MI-1` (design D38/D39). See the design doc
+at `docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md`
+(Evidence E1/E5, Decisions D35-D43).
 
 ```rust
 pub struct Project {

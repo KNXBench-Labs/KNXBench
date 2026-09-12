@@ -89,10 +89,10 @@ underlying model field exists.
 | D5 | **Closed for tunnelling, 2026-09-11 (T15).** `apps/knx-server` gains a `knx-net` dependency (ADR-0017) and a bus-monitor session (`apps/knx-server/src/bus.rs`); four routes (`POST /api/bus/monitor/start`, `POST /api/bus/monitor/stop`, `GET /api/bus/monitor/telegrams`, `POST /api/bus/write`); and `apps/knx-web` gets a live telegram table (`BusMonitorPanel.tsx`) with a client-side text/service-type filter and a compose/send form (`BusComposeForm.tsx`), DPT-decoded against the open project exactly as `bus monitor --project`/`bus write` already were. What did **not** close: routing (tunnelling only, D7 in the design spec); ETS-depth filtering (client-side text/service-type only, nothing like ETS's multi-criteria/saved filter sets); more than one session at a time (`409` on a second `start`); individual-addressed frames (not rendered as rows at all); and — the one that matters most — **none of it has been run against a physical KNX installation**. Full accounting: [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway). Design spec: `docs/superpowers/specs/2026-09-11-group-monitor-design.md`. | A user with an open project and a reachable gateway can now watch decoded group telegrams and send one, from the web/desktop UI, without a terminal — for one tunnelled gateway at a time. `knx bus monitor`/`bus write` remain the CLI-only path to routing and to a second concurrent connection. |
 | D6 | **No bus/line diagnostics UI.** ETS can scan a line for connected devices, ping/identify a device, and show its individual info (mask version, order number) read live from the bus. | `knx-net` has no such capability yet (see Session E below) and there is no UI slot reserved for it either. |
 | D7 | **Closed (2026-09-10, T11).** `ImportReport` (errors/warnings/unsupported list) is real and populated, but the frontend only surfaced it as toast notifications for errors — there was no dedicated screen to review the full report after the initial import moment had passed. | A new server-side `SessionLog` (`apps/knx-server`, in-memory, never persisted to `.knxdb`) plus a "Log" tab in the web UI (`LogPanel.tsx`) close this — see the T11 backlog entry below for the full shape. |
-| D8 | **No settings/preferences beyond theme.** ETS has a Workbench-wide options dialog (default group-address style, backup behavior, language, etc). | `ThemeSwitcher.tsx` — a single `<select>` over the `THEMES` registry — is the only settings surface that exists. Cycle 11's `ThemePanel.tsx` was wider (four color tokens plus a three-level motion setting) but was deleted outright in cycle 13, so the application has *fewer* settings today than it had two cycles ago; the motion setting is tracked separately as **D11**. |
-| D9 | **Two near-duplicate modal-overlay implementations** (Search, Command Palette) with an unaddressed accessibility gap. | Already tracked: [KNOWN_LIMITATIONS.md §20](KNOWN_LIMITATIONS.md#20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap-unaddressed). Restated here only because it will get worse, not better, once D1/D5/D6 add more overlay-like screens without a shared shell. |
+| D8 | **Partially addressed. No settings/preferences beyond theme and motion.** ETS has a Workbench-wide options dialog (default group-address style, backup behavior, language, etc). | A settings surface now exists — `SettingsPanel.tsx`, reached via a gear button in the toolbar — but it holds exactly three `<select>`s: Theme (over `THEMES`), Motion style, and Motion level (the last two new in T27, 2026-09-12, closing **D11**; see the rewritten [KNOWN_LIMITATIONS.md §43](KNOWN_LIMITATIONS.md#43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference)). It replaced `ThemeSwitcher.tsx`'s single theme `<select>`, which T27 deleted outright once its one consumer moved into the panel. None of ETS's actual options — default group-address style, backup behaviour, language (**D10**) — live in it or anywhere else. Row stays open: the surface got wider, not more ETS-equivalent. |
+| D9 | **Four near-duplicate modal-overlay implementations** (Search, Command Palette, Catalog Browser, and — new since T27 — Settings Panel) sharing overlay CSS, with an unaddressed accessibility gap. | Still open, and this row already undercounted before T27: `CatalogBrowser.tsx` (T2, device catalog browser) was already a third consumer of `.search-overlay`/`.search-panel`, unrelated to this slice. T27's `SettingsPanel.tsx` reuses those same classes and the same click-outside/`stopPropagation` pattern verbatim rather than inventing a fifth shape, so no new duplication *pattern* was introduced — but it is a fourth consumer of CSS with no shared component behind it, and the accessibility gap [KNOWN_LIMITATIONS.md §20](KNOWN_LIMITATIONS.md#20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap-unaddressed) tracks remains exactly as untouched as before. Not improved; arguably worse, since there is now one more call site to keep in sync by hand. |
 | D10 | **The UI is English-only, and the translated data already in the model is never displayed in any language.** ETS ships a localized workbench and renders manufacturer/product/parameter text in the language the user picked. | Two distinct halves. (a) *Chrome:* every user-facing string in `apps/knx-web` is a hard-coded English literal; `package.json` has no i18n dependency of any kind and there is no message catalogue, locale detection, or language setting (D8's missing options dialog is where one would live). (b) *Data:* the plumbing exists but has no reader. `knx_core::string_table` defines `Language`/`LocalizedString`/`StringTable` with a `default_language` fallback, and `Project` owns a `strings: StringTable` (`project.rs:182`); `knx-productdb` parses `Languages`/`TranslationUnit`/`TranslationElement` into a `translation (program_id, language, ref_id, attribute_name, text)` table (`migration.rs:248`). **Nothing reads that table outside the parser that writes it**, and no code path anywhere selects an active language — see [KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only). |
-| D11 | **Animation and transition motion has no in-app switch.** Not an ETS parity gap — ETS has no comparable animation — but a user-facing control gap recorded here alongside D8, since that is where the switch would live. | Cycle 11 shipped a three-level `off`/`subtle`/`standard` motion setting in `ThemePanel.tsx`; cycle 13 deleted that file outright and did not replace the setting (its own design spec says so: "Motion: no user-facing setting (that was `palette.ts`'s job, now gone)"). What remains is `--knx-transition-duration: 250ms` in `styles.css` and three `@media (prefers-reduced-motion: no-preference)` blocks, so the OS preference is the only control a user has, and it is all-or-nothing. No `.ts`/`.tsx` file references motion at all. Tracked as **T27**; see [KNOWN_LIMITATIONS.md §43](KNOWN_LIMITATIONS.md#43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference). |
+| D11 | **Closed (2026-09-12, T27).** Not an ETS parity gap — ETS has no comparable animation — but the user-facing control gap recorded here alongside D8 is resolved. | `apps/knx-web/src/motion.ts` adds two independent, persisted axes — level (`off`/`subtle`/`standard`) and style (`apple`/`glitch`) — surfaced in the new `SettingsPanel.tsx` and enforced structurally: every `transition:`/`animation:` declaration in `styles.css` sits inside a `@media (prefers-reduced-motion: no-preference)` block, and a new guard test (`motionGuard.test.ts`) fails the suite if a future declaration doesn't. `prefers-reduced-motion: reduce` still always wins — no `.ts`/`.tsx` file calls `window.matchMedia`, so nothing in-app can override it. T15's Group Monitor table, the one animated feature that had shipped ahead of this control, has been retrofitted with a guarded new-row highlight (`BusMonitorPanel.tsx`). What the switch and its guard still cannot do — no per-category control, guard blind spots for longhands/other stylesheets — is recorded rather than hidden: [KNOWN_LIMITATIONS.md §43](KNOWN_LIMITATIONS.md#43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference). |
 | D12 | **No in-application help of any kind, and no end-user documentation.** ETS ships context help, tooltips throughout the workbench, and a user manual. | Measured, not remembered: the entire frontend contains **one** `title` attribute (`Inspector.tsx:218`, a communication-object flag's raw name), four `aria-label`s, zero `aria-describedby`, no tooltip component, no help panel, and no `F1` handler. All nine files in `docs/` are architecture/format documentation written for developers; none is reachable from inside the application. `commandRegistry.ts`'s `shortcutHint` is the only user-facing explanatory text, and it appears only inside the Command Palette. Distinct from **D8** (settings): this is explanation, not configuration. Tracked as **T28**, deliberately scheduled last — see [ROADMAP.md](ROADMAP.md)'s "In-application help and user documentation". |
 
 ## E. KNXnet/IP & commissioning gaps
@@ -732,34 +732,45 @@ Added 2026-09-10 by explicit request ("die Animationen sollen togglebar
 sein, wenn sie implementiert werden"). One task plus one standing
 constraint that binds every *other* task in this backlog.
 
-- **T27. An in-app motion control, and the rule that every animation
-  obeys it.** Restore a user-facing motion setting — cycle 11's
-  `off`/`subtle`/`standard` shape is the obvious starting point, since it
-  already existed, already mapped onto `--knx-transition-duration`, and
-  was removed by accident of cycle 13's theme rewrite rather than by a
-  decision against it. Two parts, and the second is the one that matters
-  long-term:
-  1. The control itself, plus its storage, plus the rule that
-     `prefers-reduced-motion: reduce` always wins over the stored choice
-     (never the other way around — an OS-level accessibility setting is
-     not something an app setting may override).
-  2. **A standing constraint on this backlog:** no task here may ship an
-     animation that is not switchable off through that control. That
-     binds, concretely, **T15**'s live Group Monitor table, **T17**'s
-     line-scan progress UI, **T21**'s graphical topology and building
-     views (**D1**/**D2**), and the deferred "who talks to whom"
-     group-address/device telegram animation listed under
-     Session 7 in [ROADMAP.md](ROADMAP.md) — all of them motion-heavy by
-     nature, and all of them currently unscheduled, which is exactly when
-     a constraint like this is cheap to honour.
+- **T27. Done (2026-09-12).** An in-app motion control, and the rule that
+  every animation obeys it. Restored the user-facing motion setting cycle
+  13 removed by accident, and answered the open question below: not a
+  global duration multiplier alone and not a per-category switch, but
+  **two orthogonal axes** — level (`off`/`subtle`/`standard`, intensity)
+  and style (`apple`/`glitch`, feel) — because the 2026-09-10 style memo
+  named two independent visual directions rather than asking for finer
+  targeting.
+  1. **The control itself** — `motion.ts`'s two registries and
+     `useMotion()`, surfaced in the gear-button `SettingsPanel.tsx`,
+     persisted to `localStorage`, applied as `data-motion-level`/
+     `data-motion-style` on `<html>` both before React mounts
+     (`index.html`'s bootstrap script) and by `useMotion()` afterward. The
+     rule that `prefers-reduced-motion: reduce` always wins is structural,
+     not conventional: no `.ts`/`.tsx` file calls `window.matchMedia`,
+     so there is nothing in-app to override it with.
+  2. **The standing constraint** — no task on this backlog may ship an
+     animation that is not switchable off through the control — is now
+     enforced by a test, `motionGuard.test.ts`, rather than by prose: it
+     fails the suite if a `transition:`/`animation:` declaration in
+     `styles.css` sits outside a `@media (prefers-reduced-motion:
+     no-preference)` block or uses a literal duration. It still binds
+     **T17**'s line-scan progress UI, **T21**'s graphical topology and
+     building views (**D1**/**D2**), and the deferred "who talks to whom"
+     telegram animation under Session 7 in [ROADMAP.md](ROADMAP.md). And
+     the retrofit the constraint's own text warned about was actually
+     performed: **T15**'s Group Monitor table, which had shipped
+     2026-09-11 ahead of this control, now has a guarded new-row
+     highlight (`BusMonitorPanel.tsx`'s `bus-monitor-row-new`).
 
-  Closes **D11**, partially addresses **D8** (the control needs somewhere
-  to live, and today only a bare `<select>` exists). No design spec yet.
-  The one open question for it: whether the setting is a global duration
-  multiplier — cycle 11's approach, one token, trivially honoured by CSS
-  transitions — or a per-category switch, which is more useful once
-  animations mean "a telegram flying along a bus line" and not just "a
-  button fades on hover", and correspondingly more work.
+  Closes **D11**. Partially addresses **D8** — the control has somewhere
+  proper to live now (`SettingsPanel.tsx`, three `<select>`s), but none
+  of ETS's own options dialog contents exist, so D8 stays open. Design
+  spec: `docs/superpowers/specs/2026-09-12-motion-control-design.md`.
+  Five specific, deliberate remaining limits (no per-category control,
+  guard coverage gaps, no visual verification, the `node:fs`/`?raw`
+  guard trap) are recorded in full at
+  [KNOWN_LIMITATIONS.md §43](KNOWN_LIMITATIONS.md#43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference)
+  rather than claimed away.
 
 ### Tier 8 — in-application help
 

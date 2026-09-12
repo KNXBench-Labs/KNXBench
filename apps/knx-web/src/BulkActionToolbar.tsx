@@ -3,6 +3,7 @@ import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { MultiSelection } from "./selection";
 import { flattenBuildingParts } from "./treeUtils";
+import { useTranslate } from "./i18n";
 
 // The bulk-action counterpart of `Inspector.tsx`'s single-entity Delete
 // buttons/`LineMoveField`/`BuildingPartMoveField` — same "act immediately,
@@ -18,6 +19,7 @@ export default function BulkActionToolbar(props: {
   onDone: () => void;
 }) {
   const { multiSelection, tree, onTreeUpdate, onDone } = props;
+  const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
   const ids = Array.from(multiSelection.ids);
   const count = ids.length;
@@ -51,15 +53,15 @@ export default function BulkActionToolbar(props: {
 
   const label =
     multiSelection.kind === "device"
-      ? `${count} device${count === 1 ? "" : "s"} selected`
-      : `${count} group address${count === 1 ? "" : "s"} selected`;
+      ? t("bulkAction.deviceLabel", { count })
+      : t("bulkAction.groupAddressLabel", { count });
 
   const parts = flattenBuildingParts(tree.installations[0]?.buildings ?? [], []);
 
   return (
     <div className="bulk-action-toolbar">
       <span className="bulk-action-label">{label}</span>
-      <button onClick={deleteSelected}>Delete</button>
+      <button onClick={deleteSelected}>{t("bulkAction.delete")}</button>
       {multiSelection.kind === "device" && (
         <>
           <select
@@ -72,14 +74,17 @@ export default function BulkActionToolbar(props: {
             }}
           >
             <option value="" disabled>
-              Move to line…
+              {t("bulkAction.moveToLine")}
             </option>
-            <option value="unassigned">(unassigned)</option>
+            <option value="unassigned">{t("bulkAction.unassigned")}</option>
             {tree.installations[0]?.topology.map((area) => (
-              <optgroup key={area.id} label={`Area ${area.address}: ${area.name}`}>
+              <optgroup
+                key={area.id}
+                label={t("explorer.areaLabel", { address: area.address, name: area.name })}
+              >
                 {area.lines.map((line) => (
                   <option key={line.id} value={line.id}>
-                    Line {line.address}: {line.name}
+                    {t("explorer.lineLabel", { address: line.address, name: line.name })}
                   </option>
                 ))}
               </optgroup>
@@ -95,9 +100,9 @@ export default function BulkActionToolbar(props: {
             }}
           >
             <option value="" disabled>
-              Move to building part…
+              {t("bulkAction.moveToBuildingPart")}
             </option>
-            <option value="none">(none)</option>
+            <option value="none">{t("bulkAction.none")}</option>
             {parts.map(({ node, path }) => (
               <option key={node.id} value={node.id}>
                 {path}
@@ -106,7 +111,7 @@ export default function BulkActionToolbar(props: {
           </select>
         </>
       )}
-      <button aria-label="Dismiss selection" onClick={onDone}>
+      <button aria-label={t("bulkAction.dismissSelection")} onClick={onDone}>
         ✕
       </button>
       {error && <span className="field-error">{error}</span>}

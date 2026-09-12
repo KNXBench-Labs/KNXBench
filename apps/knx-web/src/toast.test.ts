@@ -1,7 +1,24 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment happy-dom
+//
+// happy-dom, not node: the "honors the active UI language" describe block
+// below drives `pickStartupToast`/`humorizeError` through the real
+// `HOLIDAYS`/`ERROR_WRAPPERS` default keys and `uiLanguage.ts`'s
+// `saveUiLanguage`/`resetUiLanguageForTests`, which read/write
+// `window.localStorage` — same reasoning as `uiLanguage.test.tsx`. The
+// rest of this file passes its own fixture arrays and doesn't touch the
+// DOM at all, so the switch from `node` is otherwise a no-op for it.
+import { afterEach, describe, expect, it } from "vitest";
 import { findHoliday, humorizeError, isLateNight, pickStartupToast } from "./toast";
 import { LATE_NIGHT_MESSAGES } from "./toastCopy";
 import type { HolidayEntry } from "./toastCopy";
+import { messages as enMessages } from "./messages/en";
+import { messages as deMessages } from "./messages/de";
+import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+
+afterEach(() => {
+  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetUiLanguageForTests();
+});
 
 describe("isLateNight", () => {
   it("is false at 22:00", () => {
@@ -40,7 +57,10 @@ describe("pickStartupToast", () => {
 
   it("falls back to a late-night message when not a holiday", () => {
     const date = new Date(2026, 0, 2, 23, 30);
-    expect(pickStartupToast(date, () => 0, holidays)).toBe(LATE_NIGHT_MESSAGES[0]);
+    // `LATE_NIGHT_MESSAGES[0]` is a catalogue key (`toastCopy.ts`), not
+    // display text — `pickStartupToast` resolves it through `translate()`
+    // before returning, so the assertion checks the resolved English text.
+    expect(pickStartupToast(date, () => 0, holidays)).toBe(enMessages[LATE_NIGHT_MESSAGES[0] as keyof typeof enMessages]);
   });
 
   it("returns undefined when neither a holiday nor late night", () => {
@@ -68,6 +88,27 @@ describe("humorizeError", () => {
   it("keeps a message containing $-patterns verbatim", () => {
     expect(humorizeError("Cost is $100 and $$200 or $&here", () => 0, ["Nope: {msg}"])).toBe(
       "Nope: Cost is $100 and $$200 or $&here",
+    );
+  });
+});
+
+// T25 task 3: `pickStartupToast`/`humorizeError` resolve `toastCopy.ts`'s
+// default keys through `translate()`, so a toast renders in whichever UI
+// language is currently active — proven here against the real default
+// `HOLIDAYS`/`ERROR_WRAPPERS` arrays, not a synthetic fixture.
+describe("toast copy honors the active UI language", () => {
+  it("resolves a default holiday message in German once the UI language is German", () => {
+    saveUiLanguage(window.localStorage, "de");
+    resetUiLanguageForTests();
+    const date = new Date(2026, 0, 1, 12, 0); // New Year's Day
+    expect(pickStartupToast(date, () => 0)).toBe(deMessages["toast.holiday.newYear.groupAddresses"]);
+  });
+
+  it("resolves a default error wrapper in German once the UI language is German", () => {
+    saveUiLanguage(window.localStorage, "de");
+    resetUiLanguageForTests();
+    expect(humorizeError("Duplicate group address", () => 0)).toBe(
+      deMessages["toast.error.notAsPlanned"].replace("{msg}", "Duplicate group address"),
     );
   });
 });

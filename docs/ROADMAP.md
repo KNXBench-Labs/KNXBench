@@ -341,22 +341,32 @@ Cycle 14+ candidates (from `ideas.md`, not yet scheduled).
 
 ## Cross-cutting — Internationalization
 
-**T25 planned, no cycle scheduled; T26's first slice, T32, and T33 all
-shipped 2026-09-12.** Added 2026-09-10 by explicit request. Not part of the
-original Session 0-7 breakdown, and deliberately not folded into
-Session 5 as "cycle 14", because only half of it is UI work: the other
-half reaches into `knx-core`'s string table and `knx-productdb`'s
-translation storage, which belong to Sessions 2 and 4.
+**T25, T26's first slice, T32, and T33 all shipped 2026-09-12; no cycle
+scheduled — this track ran outside the Session 0-7 numbering, by explicit
+request.** Added 2026-09-10. Not part of the original Session 0-7
+breakdown, and deliberately not folded into Session 5 as "cycle 14",
+because only half of it is UI work: the other half reaches into
+`knx-core`'s string table and `knx-productdb`'s translation storage,
+which belong to Sessions 2 and 4.
 
 Two tracks, tracked as **T25** and **T26** in
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6, closing gap **D10**:
 
-1. **UI chrome (T25).** Every user-facing string in `apps/knx-web` is a
-   hard-coded English literal today, and the frontend has no i18n
-   dependency at all. Extract them into a message catalogue, detect the
-   locale, and add an explicit language setting. German first — it is the
-   language of the KNX Association's documentation and of the sample
-   projects this project is tested against.
+1. **UI chrome (T25) — done.** Every user-facing string in `apps/knx-web`
+   now resolves through a message catalogue (`messages/en.ts`/
+   `messages/de.ts`, **294 keys**, measured directly from the shipped
+   file — the plan's own recon estimate of "~139 literals" undercounted
+   because plural pairs and per-attribute breakdowns both add more
+   catalogue entries than a literal-string count predicts), locale
+   detection, an explicit UI-language setting in `SettingsPanel.tsx`, and
+   — beyond the two built-in catalogues — an open-ended language-pack
+   format a user can author and import for any BCP 47-shaped tag,
+   including invented languages and dialects with no registered code.
+   German was the second built-in locale, as planned, for exactly the
+   reason given below. Full user-facing format documentation:
+   [LANGUAGE_PACKS.md](LANGUAGE_PACKS.md). Full accounting of the task
+   breakdown and residues: `GAP_ANALYSIS_ETS.md`'s Tier 6 T25 entry and
+   [KNOWN_LIMITATIONS.md §66](KNOWN_LIMITATIONS.md#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack)/[§67](KNOWN_LIMITATIONS.md#67-a-rejected-language-packs-own-reason-is-shown-untranslated-inside-a-translated-sentence).
 2. **KNX data (T26).** `knx_core::string_table` (`Language`,
    `LocalizedString`, `StringTable` with a `default_language` fallback)
    and `knx-productdb`'s `translation` table already exist and are
@@ -394,10 +404,15 @@ Two tracks, tracked as **T25** and **T26** in
    concept and for the project's own `Language` field, still a
    placeholder.
 
-The library choice for track 1 and the storage of the language setting
-(D8's options dialog does not exist yet) still belong in a design spec
-of their own, not here — track 1 has none yet. Track 2's first slice has
-one: `docs/superpowers/specs/2026-09-12-product-data-language-design.md`.
+Track 1 shipped without a dedicated library: the catalogue is a plain
+`Record<string, string>` pair (`messages/en.ts`/`messages/de.ts`) behind
+a small hand-written `translate()`/`useTranslate()`, judged sufficient
+for a 294-key catalogue rather than pulling in an i18n framework for it.
+The language setting lives in `SettingsPanel.tsx` — the settings surface
+D8 asked for, which existed by the time T25 shipped — persisted the same
+`localStorage` way `theme.ts` already did. Track 2's first slice has its
+own design spec:
+`docs/superpowers/specs/2026-09-12-product-data-language-design.md`.
 What a project's own `Language` field means once a user can pick a
 different one is still undecided, tracked above as part of T26's
 remaining work.

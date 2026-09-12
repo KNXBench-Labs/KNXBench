@@ -14,6 +14,7 @@
 import { useState } from "react";
 import * as api from "./api";
 import type { BusWriteResponse } from "./api";
+import { useTranslate } from "./i18n";
 
 /// What the parent (`BusMonitorPanel.tsx`) knows about this destination's
 /// DPT resolution *at the moment it was prefilled* — mirrors
@@ -66,22 +67,12 @@ interface BusComposeFormProps {
   sessionClosed: boolean;
 }
 
-/// Task 5 review, fix 2 — the message shown (and the reason `send()` below
-/// refuses to call `api.writeBusValue` at all) once `sessionClosed` is true.
-/// Same register as `projectOpen`'s hint just above: a plain fact-then-
-/// consequence sentence, not phrased as an error the user did something to
-/// cause.
-const SESSION_CLOSED_MESSAGE = "This session is closed — sending is disabled.";
-
-/// The two messages specified word for word by the design (§6) — echoing
-/// `format_decoded_value`'s vocabulary (`apps/knx-cli/src/main.rs:2076`)
-/// rather than inventing a second tone for the same fact. Reproduced
-/// verbatim, including the em dash.
-const NO_DPT_RESOLVED_MESSAGE = "No DPT resolved for this group address — enter one explicitly.";
-
-function conflictingDptsMessage(names: string): string {
-  return `Conflicting DPTs for this group address: ${names} — enter one explicitly.`;
-}
+// Task 5 review round 2: `SESSION_CLOSED_MESSAGE`/`NO_DPT_RESOLVED_MESSAGE`/
+// `conflictingDptsMessage()` used to be module-level, English-only — the
+// same freeze-at-import trap `commandRegistry.ts`'s `COMMANDS` had, except
+// these never even called `t()` at all. All three are now built inside the
+// component from `messages/en.ts`/`messages/de.ts` via `t()`, resolved
+// fresh on every render.
 
 export default function BusComposeForm({
   destination: initialDestination,
@@ -89,6 +80,7 @@ export default function BusComposeForm({
   projectOpen,
   sessionClosed,
 }: BusComposeFormProps) {
+  const t = useTranslate();
   const [destination, setDestination] = useState(initialDestination);
   const [dpt, setDpt] = useState(initialResolution.kind === "single" ? initialResolution.dpt : "");
   const [value, setValue] = useState("");
@@ -121,7 +113,7 @@ export default function BusComposeForm({
       // here too means a session that closes between renders — the
       // gateway drops it, the next poll notices — can never reach
       // `api.writeBusValue` through a click that raced the re-render.
-      setSendError(SESSION_CLOSED_MESSAGE);
+      setSendError(t("busCompose.sessionClosedMessage"));
       return; // Rejected client-side — `fetch` is never called.
     }
 
@@ -137,10 +129,10 @@ export default function BusComposeForm({
           dptToSend = resolution.dpt;
           break;
         case "none":
-          setSendError(NO_DPT_RESOLVED_MESSAGE);
+          setSendError(t("busCompose.noDptResolvedMessage"));
           return; // Rejected client-side — `fetch` is never called.
         case "conflict":
-          setSendError(conflictingDptsMessage(resolution.names));
+          setSendError(t("busCompose.conflictingDptsMessage", { names: resolution.names }));
           return; // Rejected client-side — `fetch` is never called.
         case "unknown":
           // No local basis to accept or reject — defer to the server's own
@@ -167,18 +159,16 @@ export default function BusComposeForm({
 
   return (
     <div className="bus-compose-form">
-      <h3>Send a value</h3>
-      {!projectOpen && (
-        <p className="bus-compose-hint">
-          No project open — no DPT resolves automatically here; type one explicitly.
-        </p>
-      )}
+      <h3>{t("busCompose.heading")}</h3>
+      {!projectOpen && <p className="bus-compose-hint">{t("busCompose.noProjectHint")}</p>}
       {sessionClosed && (
-        <p className="bus-compose-hint bus-compose-closed-hint">{SESSION_CLOSED_MESSAGE}</p>
+        <p className="bus-compose-hint bus-compose-closed-hint">
+          {t("busCompose.sessionClosedMessage")}
+        </p>
       )}
       <div className="bus-compose-fields">
         <label>
-          Destination
+          {t("busCompose.destinationLabel")}
           <input
             type="text"
             className="bus-compose-destination"
@@ -188,7 +178,7 @@ export default function BusComposeForm({
           />
         </label>
         <label>
-          DPT
+          {t("busCompose.dptLabel")}
           <input
             type="text"
             className="bus-compose-dpt"
@@ -199,7 +189,7 @@ export default function BusComposeForm({
           />
         </label>
         <label>
-          Value
+          {t("busCompose.valueLabel")}
           <input
             type="text"
             className="bus-compose-value"
@@ -209,13 +199,13 @@ export default function BusComposeForm({
           />
         </label>
         <button onClick={() => void send()} disabled={sending || !destination || !value || sessionClosed}>
-          Send
+          {t("busCompose.send")}
         </button>
       </div>
       {sendError && <span className="field-error bus-compose-error">{sendError}</span>}
       {sent && (
         <p className="bus-compose-sent">
-          Sent {sent.service}: {sent.encodedPayload}
+          {t("busCompose.sent", { service: sent.service, payload: sent.encodedPayload })}
         </p>
       )}
     </div>

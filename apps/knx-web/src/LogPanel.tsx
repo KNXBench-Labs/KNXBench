@@ -3,10 +3,21 @@ import { useEffect, useState } from "react";
 import * as api from "./api";
 import type { LogEntry } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { useTranslate } from "./i18n";
+import type { MessageKey } from "./messages/en";
 
 type Severity = LogEntry["severity"];
 
 const SEVERITIES: Severity[] = ["error", "warning", "info"];
+
+// Small closed enum -> its own label key. Not a domain discriminant used for
+// wire communication (that's `entry.severity` as sent/received verbatim);
+// this is purely how the three severities are rendered as UI chrome.
+const SEVERITY_LABEL_KEYS: Record<Severity, MessageKey> = {
+  error: "logPanel.severity.error",
+  warning: "logPanel.severity.warning",
+  info: "logPanel.severity.info",
+};
 
 /// Renders the backend session log (`GET /api/log`). Fetches on mount and
 /// whenever `props.tree` changes (a new tree reference means an
@@ -23,6 +34,7 @@ const SEVERITIES: Severity[] = ["error", "warning", "info"];
 /// refetches on every `tree`/`refreshKey` change — with or without one
 /// (KNOWN_LIMITATIONS.md #36, part A).
 export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: number }) {
+  const t = useTranslate();
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Record<Severity, boolean>>({
@@ -57,7 +69,7 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
 
   return (
     <div className="log-panel">
-      <h2>Session log</h2>
+      <h2>{t("logPanel.title")}</h2>
       <div className="log-panel-filters">
         {SEVERITIES.map((severity) => (
           <label key={severity} className="log-panel-filter">
@@ -66,20 +78,20 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
               checked={filters[severity]}
               onChange={() => toggleFilter(severity)}
             />
-            {severity[0].toUpperCase() + severity.slice(1)}
+            {t(SEVERITY_LABEL_KEYS[severity])}
           </label>
         ))}
       </div>
       {error && <span className="field-error">{error}</span>}
       {entries.length === 0 ? (
-        <p className="log-panel-empty">No log entries yet.</p>
+        <p className="log-panel-empty">{t("logPanel.emptyNoEntries")}</p>
       ) : visible.length === 0 ? (
-        <p className="log-panel-empty">No log entries match the current filters.</p>
+        <p className="log-panel-empty">{t("logPanel.emptyFiltered")}</p>
       ) : (
         <ul className="log-panel-list">
           {visible.map((entry, index) => (
             <li key={`${entry.timestamp}-${index}`} className={`log-entry log-entry-${entry.severity}`}>
-              <span className="log-entry-severity">{entry.severity}</span>
+              <span className="log-entry-severity">{t(SEVERITY_LABEL_KEYS[entry.severity])}</span>
               <span className="log-entry-source">{entry.source}</span>
               <span className="log-entry-message">{entry.message}</span>
               {entry.location && <span className="log-entry-location">{entry.location}</span>}

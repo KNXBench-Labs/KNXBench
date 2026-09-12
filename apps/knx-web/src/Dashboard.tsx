@@ -1,44 +1,47 @@
 // apps/knx-desktop/src/Dashboard.tsx
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { computeStats } from "./dashboardStats";
+import { useTranslate } from "./i18n";
 
 export default function Dashboard(props: { tree: ProjectTree }) {
+  const t = useTranslate();
   const stats = computeStats(props.tree);
   return (
     <div className="dashboard">
-      <h2>Project status</h2>
+      <h2>{t("dashboard.title")}</h2>
       <dl className="dashboard-stats">
-        <dt>Schema version</dt>
+        <dt>{t("dashboard.schemaVersion")}</dt>
         <dd>{props.tree.schema_version}</dd>
-        <dt>Installations</dt>
+        <dt>{t("dashboard.installations")}</dt>
         <dd>{stats.installations}</dd>
-        <dt>Areas</dt>
+        <dt>{t("dashboard.areas")}</dt>
         <dd>{stats.areas}</dd>
-        <dt>Lines</dt>
+        <dt>{t("dashboard.lines")}</dt>
         <dd>{stats.lines}</dd>
-        <dt>Devices</dt>
+        <dt>{t("dashboard.devices")}</dt>
         <dd>
           {stats.devicesAssigned + stats.devicesUnassigned}
-          {stats.devicesUnassigned > 0 && ` (${stats.devicesUnassigned} unassigned)`}
+          {stats.devicesUnassigned > 0 &&
+            t("dashboard.devicesUnassigned", { count: stats.devicesUnassigned })}
         </dd>
-        <dt>Group addresses</dt>
+        <dt>{t("dashboard.groupAddresses")}</dt>
         <dd>{stats.groupAddresses}</dd>
-        <dt>Building parts</dt>
+        <dt>{t("dashboard.buildingParts")}</dt>
         <dd>{stats.buildingParts}</dd>
-        <dt>Communication objects</dt>
+        <dt>{t("dashboard.comObjects")}</dt>
         <dd>{stats.comObjects}</dd>
       </dl>
       {(props.tree.errors > 0 || props.tree.warnings > 0) && (
         <dl className="dashboard-stats dashboard-issues">
           {props.tree.errors > 0 && (
             <>
-              <dt>Import errors</dt>
+              <dt>{t("dashboard.importErrors")}</dt>
               <dd className="dashboard-errors">{props.tree.errors}</dd>
             </>
           )}
           {props.tree.warnings > 0 && (
             <>
-              <dt>Import warnings</dt>
+              <dt>{t("dashboard.importWarnings")}</dt>
               <dd>{props.tree.warnings}</dd>
             </>
           )}

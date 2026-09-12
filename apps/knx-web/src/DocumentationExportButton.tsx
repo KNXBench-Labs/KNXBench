@@ -1,6 +1,7 @@
 import { pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { useTranslate } from "./i18n";
 
 // Writes the live project as one self-contained "project documentation"
 // HTML file (`crates/knx-report`, `POST /api/project/documentation-export`).
@@ -13,7 +14,6 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 // narrow callbacks from `App.tsx`, which already owns both. This export
 // never touches the open project's tree, so unlike `GroupAddressCsvButtons`
 // there is no `onTreeUpdate`.
-const DOCUMENTATION_FILTER = [{ name: "HTML document", extensions: ["html"] }];
 
 export default function DocumentationExportButton(props: {
   tree: ProjectTree | null;
@@ -22,9 +22,14 @@ export default function DocumentationExportButton(props: {
   onClearErrors: () => void;
 }) {
   const { tree, onSummary, onError, onClearErrors } = props;
+  const t = useTranslate();
+  // Rebuilt every render, not hoisted to module scope — a module-level
+  // `const` would call `t()` once at import time and freeze the filter name
+  // in whichever language was active then. Same trap as `App.tsx`'s filters.
+  const documentationFilter = [{ name: t("documentationExport.filterName"), extensions: ["html"] }];
 
   async function exportDocumentation() {
-    const path = await pickSavePath(DOCUMENTATION_FILTER, "project-documentation.html");
+    const path = await pickSavePath(documentationFilter, "project-documentation.html");
     if (!path) return;
     // Sequenced exactly like `GroupAddressCsvButtons`'s `exportCsv`: clear
     // any leftover error toast before this operation runs, not after — so
@@ -35,8 +40,8 @@ export default function DocumentationExportButton(props: {
       const n = warnings.length;
       onSummary(
         n === 0
-          ? "Project documentation exported, no warnings."
-          : `Project documentation exported, ${n} warning${n === 1 ? "" : "s"} — see Log.`,
+          ? t("documentationExport.summaryNone")
+          : t("documentationExport.summaryWithWarnings", { count: n }),
       );
     } catch (e) {
       onError(e);
@@ -45,7 +50,7 @@ export default function DocumentationExportButton(props: {
 
   return (
     <button onClick={exportDocumentation} disabled={!tree}>
-      Export documentation…
+      {t("documentationExport.button")}
     </button>
   );
 }

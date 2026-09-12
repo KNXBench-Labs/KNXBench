@@ -24,4 +24,10 @@ export const messages: Record<MessageKey, string> = {
   "toolbar.search": "Suchen… (Strg+K)",
   "toolbar.log": "Protokoll",
   "toolbar.settings": "Einstellungen",
+  "settings.uiLanguage": "UI-Sprache",
+  // A language names itself, not the currently active UI language — this
+  // pair is meant to read identically in both catalogues, not a copy-paste
+  // slip that skipped translation.
+  "language.en": "English",
+  "language.de": "Deutsch",
 };

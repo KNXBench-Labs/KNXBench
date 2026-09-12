@@ -6,6 +6,8 @@ import SettingsPanel from "./SettingsPanel";
 import { THEMES } from "./theme";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
 import { resetProductLanguageForTests, useProductLanguage } from "./productLanguage";
+import { resetUiLanguageForTests } from "./uiLanguage";
+import { useTranslate } from "./i18n";
 import type { ProductLanguage } from "./api";
 
 let host: HTMLDivElement | undefined;
@@ -16,8 +18,21 @@ afterEach(() => {
   window.localStorage.clear();
   document.documentElement.removeAttribute("data-motion-level");
   document.documentElement.removeAttribute("data-motion-style");
+  document.documentElement.removeAttribute("lang");
   resetProductLanguageForTests();
+  resetUiLanguageForTests();
 });
+
+// A sibling that never remounts across the test, reading the same
+// `uiLanguage.ts` store as SettingsPanel's own select but through
+// `useTranslate()` — the call sites the extraction tasks will use. Its
+// only job is to prove the "no remount, no prop drilling" requirement:
+// SettingsPanel doesn't hand this component anything, yet flipping the
+// select changes what it renders.
+function Reader() {
+  const t = useTranslate();
+  return <div data-testid="reader">{t("toolbar.save")}</div>;
+}
 
 // Wires SettingsPanel to the real `useMotion()` hook, exactly as App.tsx
 // does — a mocked callback would only prove a handler fired, not that the
@@ -27,21 +42,24 @@ function Harness(props: { onClose: () => void; productLanguages?: readonly Produ
   const { level, setLevel, style, setStyle } = useMotion();
   const [productLanguage, setProductLanguage] = useProductLanguage();
   return (
-    <SettingsPanel
-      themes={THEMES}
-      activeThemeId="bitcoin-defi"
-      onSelectTheme={vi.fn()}
-      motionStyles={MOTION_STYLES}
-      activeMotionStyle={style}
-      onSelectMotionStyle={setStyle}
-      motionLevels={MOTION_LEVELS}
-      activeMotionLevel={level}
-      onSelectMotionLevel={setLevel}
-      productLanguages={props.productLanguages ?? []}
-      activeProductLanguage={productLanguage}
-      onSelectProductLanguage={setProductLanguage}
-      onClose={props.onClose}
-    />
+    <>
+      <Reader />
+      <SettingsPanel
+        themes={THEMES}
+        activeThemeId="bitcoin-defi"
+        onSelectTheme={vi.fn()}
+        motionStyles={MOTION_STYLES}
+        activeMotionStyle={style}
+        onSelectMotionStyle={setStyle}
+        motionLevels={MOTION_LEVELS}
+        activeMotionLevel={level}
+        onSelectMotionLevel={setLevel}
+        productLanguages={props.productLanguages ?? []}
+        activeProductLanguage={productLanguage}
+        onSelectProductLanguage={setProductLanguage}
+        onClose={props.onClose}
+      />
+    </>
   );
 }
 
@@ -56,7 +74,7 @@ async function renderPanel(onClose = vi.fn(), productLanguages?: readonly Produc
 }
 
 describe("SettingsPanel", () => {
-  it("opens from the gear button (rendered by App.tsx) and shows its four labelled selects", async () => {
+  it("opens from the gear button (rendered by App.tsx) and shows its five labelled selects", async () => {
     const { root } = await renderPanel();
 
     expect(host!.querySelector('[role="dialog"]')).not.toBeNull();
@@ -64,6 +82,7 @@ describe("SettingsPanel", () => {
     expect(host!.querySelector('select[aria-label="Motion style"]')).not.toBeNull();
     expect(host!.querySelector('select[aria-label="Motion level"]')).not.toBeNull();
     expect(host!.querySelector('select[aria-label="Product data language"]')).not.toBeNull();
+    expect(host!.querySelector('select[aria-label="UI language"]')).not.toBeNull();
 
     root.unmount();
   });
@@ -176,6 +195,51 @@ describe("SettingsPanel", () => {
 
     expect(select.disabled).toBe(true);
     expect(Array.from(select.options).map((o) => o.text)).toEqual(["No product database installed"]);
+
+    root.unmount();
+  });
+
+  it("lists exactly the catalogues messages/ actually ships, named in themselves", async () => {
+    const { root } = await renderPanel();
+
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+    const options = Array.from(select.options).map((o) => ({ value: o.value, text: o.text }));
+
+    expect(options).toEqual([
+      { value: "en", text: "English" },
+      { value: "de", text: "Deutsch" },
+    ]);
+
+    root.unmount();
+  });
+
+  it("the UI language select shows the active language", async () => {
+    const { root } = await renderPanel();
+
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+    expect(select.value).toBe("en");
+
+    root.unmount();
+  });
+
+  it("changing the UI language re-renders an already-mounted sibling and sets document.documentElement.lang", async () => {
+    const { root } = await renderPanel();
+
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+    const reader = host!.querySelector('[data-testid="reader"]')!;
+
+    expect(reader.textContent).toBe("Save");
+    expect(document.documentElement.getAttribute("lang")).toBe("en");
+
+    await act(async () => {
+      select.value = "de";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(select.value).toBe("de");
+    expect(reader.textContent).toBe("Speichern");
+    expect(document.documentElement.getAttribute("lang")).toBe("de");
+    expect(window.localStorage.getItem("knx-desktop:ui-language")).toBe("de");
 
     root.unmount();
   });

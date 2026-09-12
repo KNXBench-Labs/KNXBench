@@ -1,12 +1,16 @@
 import type { ThemeDef } from "./theme";
 import type { MotionLevelDef, MotionStyleDef } from "./motion";
 import type { ProductLanguage } from "./api";
+import { AVAILABLE_UI_LANGUAGES, useUiLanguage } from "./uiLanguage";
+import type { UiLanguage } from "./uiLanguage";
+import { useTranslate } from "./i18n";
 import Overlay from "./Overlay";
 
 /**
  * The application's one settings surface (design D32): Theme, Motion
- * style, Motion level and Product data language, each a registry-backed
- * `<select>` that applies immediately — no Save button, no reload.
+ * style, Motion level, Product data language and UI language, each a
+ * registry-backed `<select>` that applies immediately — no Save button,
+ * no reload.
  *
  * Built on the shared `Overlay` shell (T31), the same one `Search.tsx`
  * and `CommandPalette.tsx` use — dismissal by backdrop click and by
@@ -14,9 +18,14 @@ import Overlay from "./Overlay";
  * from there now, closing the gap KNOWN_LIMITATIONS.md §20 used to
  * describe.
  *
- * Purely presentational (T26): `App.tsx` owns every setting's state and
- * fetches `productLanguages` itself; this component only renders props
- * and forwards `onChange`, same as the other three fields.
+ * Purely presentational (T26) for the first four fields: `App.tsx` owns
+ * their state and fetches `productLanguages` itself; this component only
+ * renders props and forwards `onChange`. UI language (T25 task 2) is the
+ * deliberate exception — it reads `uiLanguage.ts`'s shared store directly
+ * via `useUiLanguage()` instead of taking it as a prop, precisely so that
+ * changing it needs no `App.tsx` wiring and reaches every other mounted
+ * consumer of that store (any future `useTranslate()` caller) without a
+ * remount.
  */
 export default function SettingsPanel(props: {
   themes: readonly ThemeDef[];
@@ -49,15 +58,18 @@ export default function SettingsPanel(props: {
     onClose,
   } = props;
 
+  const [uiLanguage, setUiLanguage] = useUiLanguage();
+  const t = useTranslate();
+
   return (
     <Overlay labelledBy="settings-panel-title" className="settings-panel" onClose={onClose}>
       <h2 className="settings-panel-title" id="settings-panel-title">Settings</h2>
       <label className="settings-field">
         <span className="settings-field-label">Theme</span>
         <select value={activeThemeId} onChange={(e) => onSelectTheme(e.target.value)} aria-label="Theme">
-          {themes.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
+          {themes.map((theme) => (
+            <option key={theme.id} value={theme.id}>
+              {theme.name}
             </option>
           ))}
         </select>
@@ -110,6 +122,20 @@ export default function SettingsPanel(props: {
             ))}
           </select>
         )}
+      </label>
+      <label className="settings-field">
+        <span className="settings-field-label">{t("settings.uiLanguage")}</span>
+        <select
+          value={uiLanguage}
+          onChange={(e) => setUiLanguage(e.target.value as UiLanguage)}
+          aria-label={t("settings.uiLanguage")}
+        >
+          {AVAILABLE_UI_LANGUAGES.map((language) => (
+            <option key={language} value={language}>
+              {t(`language.${language}`)}
+            </option>
+          ))}
+        </select>
       </label>
     </Overlay>
   );

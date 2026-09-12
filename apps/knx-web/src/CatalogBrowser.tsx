@@ -22,24 +22,35 @@ import type { Translate } from "./i18n";
 // frontend build doesn't know about yet) falls back to the server's raw
 // `detail` string verbatim rather than rendering nothing — better an
 // English sentence slips through once than a blank diagnostic line.
+//
+// The `!` below (task 5 review, minor): `CreationDiagnostic`'s TS interface
+// is flat, so these fields are typed optional even though the server's
+// tagged-enum serialization guarantees each is present for the `kind` that
+// reads it — `catalogItemId` always accompanies `"programlessProduct"`,
+// `refId` always accompanies `"ambiguousDpt"`/`"comObjectRefMissing"`, and
+// so on. A `?? ""` fallback here was unreachable dead code, and worse, if
+// it ever did fire (a future server bug lying about its own `kind`) it
+// would render the sentence with a double space rather than surface the
+// contradiction. A non-null assertion is the more honest way to say "this
+// is guaranteed", loudly, at the one place it matters.
 function describeCreationDiagnostic(t: Translate, diagnostic: CreationDiagnostic): string {
   switch (diagnostic.kind) {
     case "programlessProduct":
       return t("catalogDiagnostic.programlessProduct", {
-        catalogItemId: diagnostic.catalogItemId ?? "",
+        catalogItemId: diagnostic.catalogItemId!,
       });
     case "ambiguousDpt":
       return t("catalogDiagnostic.ambiguousDpt", {
-        refId: diagnostic.refId ?? "",
+        refId: diagnostic.refId!,
         alternatives: (diagnostic.alternatives ?? []).join(", "),
       });
     case "comObjectRefMissing":
-      return t("catalogDiagnostic.comObjectRefMissing", { refId: diagnostic.refId ?? "" });
+      return t("catalogDiagnostic.comObjectRefMissing", { refId: diagnostic.refId! });
     case "programRefMissing":
-      return t("catalogDiagnostic.programRefMissing", { programRef: diagnostic.programRef ?? "" });
+      return t("catalogDiagnostic.programRefMissing", { programRef: diagnostic.programRef! });
     case "dynamicOrModuleNotEvaluated":
       return t("catalogDiagnostic.dynamicOrModuleNotEvaluated", {
-        programId: diagnostic.programId ?? "",
+        programId: diagnostic.programId!,
       });
     default:
       return diagnostic.detail;

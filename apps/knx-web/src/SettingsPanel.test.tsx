@@ -326,6 +326,67 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     root.unmount();
   });
 
+  // Fix round 1: `handleRemovePack` no longer calls `setUiLanguage("en")`
+  // to force the fallback above — the packs store now notifies its own
+  // subscribers instead. This test proves the fix didn't just move the
+  // symptom: the *stored* active-language preference must survive a
+  // removal untouched, not get silently rewritten to "en".
+  it("removing the active pack leaves the stored active-language preference untouched", async () => {
+    importLanguagePack(dutchPack());
+    const { root } = await renderPanel();
+
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+    await act(async () => {
+      select.value = "nl-NL";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(window.localStorage.getItem("knx-desktop:ui-language")).toBe("nl-NL");
+
+    const removeButton = host!.querySelector<HTMLButtonElement>(
+      '[aria-label="Remove Nederlands"]',
+    )!;
+    await act(async () => {
+      removeButton.click();
+    });
+
+    expect(window.localStorage.getItem("knx-desktop:ui-language")).toBe("nl-NL");
+
+    root.unmount();
+  });
+
+  it("re-importing the removed pack's tag restores the language without re-selecting it", async () => {
+    importLanguagePack(dutchPack());
+    const { root } = await renderPanel();
+
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+    const reader = host!.querySelector('[data-testid="reader"]')!;
+
+    await act(async () => {
+      select.value = "nl-NL";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(reader.textContent).toBe("Opslaan");
+
+    const removeButton = host!.querySelector<HTMLButtonElement>(
+      '[aria-label="Remove Nederlands"]',
+    )!;
+    await act(async () => {
+      removeButton.click();
+    });
+    expect(reader.textContent).toBe("Save");
+
+    // Nothing here touches the UI-language select — re-importing the
+    // same tag is the only action taken.
+    await act(async () => {
+      importLanguagePack(dutchPack());
+    });
+
+    expect(select.value).toBe("nl-NL");
+    expect(reader.textContent).toBe("Opslaan");
+
+    root.unmount();
+  });
+
   it("importing a partial pack shows the report: applied/missing counts, unknown keys, plural support", async () => {
     const { root } = await renderPanel();
 
@@ -348,6 +409,34 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     expect(report.textContent).toContain("this build doesn't recognise");
     expect(report.textContent).toContain("some.future.key");
     expect(report.textContent).toContain("Plural forms are supported for this language.");
+
+    root.unmount();
+  });
+
+  // The export-side hint (`exportEnglishTemplate`'s own doc comment, and
+  // "shows no packs installed... shadowed tag" above) was already
+  // covered. This is the import side: a pack that translates the
+  // exported template in place and gets re-imported with its `tag` left
+  // at `"en"` — the trap `languagePack.ts`'s `exportEnglishTemplate` warns
+  // about — must still report that it's shadowed, not just import silently.
+  it("importing a pack tagged \"en\" reports that it is shadowed by the built-in catalogue", async () => {
+    const { root } = await renderPanel();
+
+    const input = host!.querySelector<HTMLInputElement>('.language-pack-manager input[type="file"]')!;
+    const file = jsonFile(
+      "en-in-place.json",
+      dutchPack({ tag: "en", name: "English (translated in place, oops)" }),
+    );
+    await act(async () => {
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const report = host!.querySelector(".language-pack-report")!;
+    expect(report.textContent).toContain("matches a built-in language");
+    expect(report.textContent).toContain('"en"');
 
     root.unmount();
   });

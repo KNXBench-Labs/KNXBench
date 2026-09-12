@@ -888,6 +888,12 @@ export interface ParameterField {
   enumOptions: EnumOption[];
   displayOrder: number | null;
   access: string | null;
+  // The `etsId` a write must actually name (T18 slice 4, design D43):
+  // `null` exactly when `editable` is `false`, otherwise the id `POST`
+  // has to send — `etsId` above for an unscoped field, a module-qualified
+  // id for an editable module-scoped one. `ParameterPanel.tsx` writes
+  // this, never `etsId`.
+  writeEtsId: string | null;
 }
 
 export interface ParameterSection {

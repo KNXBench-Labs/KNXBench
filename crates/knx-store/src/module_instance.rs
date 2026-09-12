@@ -14,13 +14,21 @@ pub fn upsert_module_instance(
     m: &ModuleInstance,
 ) -> Result<(), StoreError> {
     conn.execute(
-        "INSERT INTO module_instance (id, device_id, position, source_path, source_ets_id, repeat_index)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+        "INSERT INTO module_instance (id, device_id, position, source_path, source_ets_id, repeat_index, instance_ets_id)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
          ON CONFLICT(id) DO UPDATE SET
              device_id = excluded.device_id, position = excluded.position,
              source_path = excluded.source_path, source_ets_id = excluded.source_ets_id,
-             repeat_index = excluded.repeat_index",
-        params![m.id.0, m.device.0, position, m.source.path, m.source.ets_id, m.repeat_index],
+             repeat_index = excluded.repeat_index, instance_ets_id = excluded.instance_ets_id",
+        params![
+            m.id.0,
+            m.device.0,
+            position,
+            m.source.path,
+            m.source.ets_id,
+            m.repeat_index,
+            m.instance_ets_id,
+        ],
     )?;
     conn.execute(
         "DELETE FROM module_instance_argument WHERE module_instance_id = ?1",
@@ -41,11 +49,11 @@ pub fn load_module_instances_for_installation(
     installation_id: InstallationId,
 ) -> Result<Vec<ModuleInstance>, StoreError> {
     let mut stmt = conn.prepare(
-        "SELECT m.id, m.device_id, m.source_path, m.source_ets_id, m.repeat_index
+        "SELECT m.id, m.device_id, m.source_path, m.source_ets_id, m.repeat_index, m.instance_ets_id
          FROM module_instance m JOIN device d ON m.device_id = d.id
          WHERE d.installation_id = ?1 ORDER BY m.position",
     )?;
-    let rows: Vec<(ModuleInstanceId, DeviceId, String, String, String)> = stmt
+    let rows: Vec<(ModuleInstanceId, DeviceId, String, String, String, String)> = stmt
         .query_map(params![installation_id.0], |row| {
             Ok((
                 ModuleInstanceId(row.get(0)?),
@@ -53,12 +61,13 @@ pub fn load_module_instances_for_installation(
                 row.get(2)?,
                 row.get(3)?,
                 row.get(4)?,
+                row.get(5)?,
             ))
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
     let mut out = Vec::with_capacity(rows.len());
-    for (id, device, path, ets_id, repeat_index) in rows {
+    for (id, device, path, ets_id, repeat_index, instance_ets_id) in rows {
         let mut arg_stmt = conn.prepare(
             "SELECT source_path, source_ets_id, value FROM module_instance_argument
              WHERE module_instance_id = ?1 ORDER BY position",
@@ -79,6 +88,7 @@ pub fn load_module_instances_for_installation(
             device,
             source: SourceRef { path, ets_id },
             repeat_index,
+            instance_ets_id,
             arguments,
         });
     }
@@ -134,6 +144,10 @@ mod tests {
         }
     }
 
+    /// Also covers D38's `instance_ets_id` — `m1`/`m2` give it a value
+    /// distinct from `source.ets_id` on purpose, so a load that mixed the
+    /// two columns up (or dropped the new one) would fail this equality
+    /// check, not just compile.
     #[test]
     fn module_instances_round_trip_in_position_order() {
         let conn = open_and_migrate_in_memory().unwrap();
@@ -149,6 +163,7 @@ mod tests {
                 ets_id: "MD-1_M-1".into(),
             },
             repeat_index: "1x1".into(),
+            instance_ets_id: "MD-1_M-1_MI-1".into(),
             arguments: vec![],
         };
         let m2 = ModuleInstance {
@@ -159,6 +174,7 @@ mod tests {
                 ets_id: "MD-2_M-1".into(),
             },
             repeat_index: "6x1".into(),
+            instance_ets_id: "MD-2_M-1_MI-1".into(),
             arguments: vec![
                 (
                     SourceRef {

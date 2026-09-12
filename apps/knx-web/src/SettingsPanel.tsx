@@ -63,10 +63,16 @@ export default function SettingsPanel(props: {
 
   return (
     <Overlay labelledBy="settings-panel-title" className="settings-panel" onClose={onClose}>
-      <h2 className="settings-panel-title" id="settings-panel-title">Settings</h2>
+      <h2 className="settings-panel-title" id="settings-panel-title">
+        {t("settings.title")}
+      </h2>
       <label className="settings-field">
-        <span className="settings-field-label">Theme</span>
-        <select value={activeThemeId} onChange={(e) => onSelectTheme(e.target.value)} aria-label="Theme">
+        <span className="settings-field-label">{t("settings.theme")}</span>
+        <select
+          value={activeThemeId}
+          onChange={(e) => onSelectTheme(e.target.value)}
+          aria-label={t("settings.theme")}
+        >
           {themes.map((theme) => (
             <option key={theme.id} value={theme.id}>
               {theme.name}
@@ -75,11 +81,11 @@ export default function SettingsPanel(props: {
         </select>
       </label>
       <label className="settings-field">
-        <span className="settings-field-label">Motion style</span>
+        <span className="settings-field-label">{t("settings.motionStyle")}</span>
         <select
           value={activeMotionStyle}
           onChange={(e) => onSelectMotionStyle(e.target.value)}
-          aria-label="Motion style"
+          aria-label={t("settings.motionStyle")}
         >
           {motionStyles.map((s) => (
             <option key={s.id} value={s.id}>
@@ -89,11 +95,11 @@ export default function SettingsPanel(props: {
         </select>
       </label>
       <label className="settings-field">
-        <span className="settings-field-label">Motion level</span>
+        <span className="settings-field-label">{t("settings.motionLevel")}</span>
         <select
           value={activeMotionLevel}
           onChange={(e) => onSelectMotionLevel(e.target.value)}
-          aria-label="Motion level"
+          aria-label={t("settings.motionLevel")}
         >
           {motionLevels.map((l) => (
             <option key={l.id} value={l.id}>
@@ -103,21 +109,21 @@ export default function SettingsPanel(props: {
         </select>
       </label>
       <label className="settings-field">
-        <span className="settings-field-label">Product data language</span>
+        <span className="settings-field-label">{t("settings.productDataLanguage")}</span>
         {productLanguages.length === 0 ? (
-          <select aria-label="Product data language" disabled>
-            <option>No product database installed</option>
+          <select aria-label={t("settings.productDataLanguage")} disabled>
+            <option>{t("settings.noProductDatabase")}</option>
           </select>
         ) : (
           <select
             value={activeProductLanguage ?? ""}
             onChange={(e) => onSelectProductLanguage(e.target.value === "" ? null : e.target.value)}
-            aria-label="Product data language"
+            aria-label={t("settings.productDataLanguage")}
           >
-            <option value="">Package default</option>
+            <option value="">{t("settings.packageDefault")}</option>
             {productLanguages.map((l) => (
               <option key={l.language} value={l.language}>
-                {`${l.language} (${l.rows} strings)`}
+                {t("settings.productLanguageOption", { language: l.language, count: l.rows })}
               </option>
             ))}
           </select>

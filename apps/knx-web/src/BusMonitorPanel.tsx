@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import type { BusMonitorStopResponse, BusTelegramRow } from "./api";
 import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
+import { useTranslate } from "./i18n";
 
 // The identity of the one session this panel can ever be attached to
 // (`AppState.bus_session` holds at most one — D3/D6). Deliberately not
@@ -105,6 +106,7 @@ let nextComposeSeedKey = 1;
 /// state up front that no project means no automatic DPT resolution,
 /// rather than the user discovering that from a failed send.
 export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean }) {
+  const t = useTranslate();
   const [gatewayInput, setGatewayInput] = useState("");
   const [session, setSession] = useState<AttachedSession | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
@@ -305,7 +307,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
 
   return (
     <div className="bus-monitor-panel">
-      <h2>Bus monitor</h2>
+      <h2>{t("busMonitor.title")}</h2>
       <div className="bus-monitor-connect">
         <input
           type="text"
@@ -315,25 +317,30 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           disabled={!!session}
         />
         {session ? (
-          <button onClick={disconnect}>Disconnect</button>
+          <button onClick={disconnect}>{t("busMonitor.disconnect")}</button>
         ) : (
           <button onClick={connect} disabled={!gatewayInput}>
-            Connect
+            {t("busMonitor.connect")}
           </button>
         )}
       </div>
       {connectError && <span className="field-error">{connectError}</span>}
       {session && (
         <p className="bus-monitor-session">
-          Session {session.sessionId}
-          {session.assignedAddress && <> — assigned address {session.assignedAddress}</>}
-          {status === "closed" && " — closed by gateway"}
+          {t("busMonitor.session", { id: session.sessionId })}
+          {session.assignedAddress && (
+            <>{t("busMonitor.assignedAddress", { address: session.assignedAddress })}</>
+          )}
+          {status === "closed" && t("busMonitor.closedByGateway")}
         </p>
       )}
       {stopSummary && (
         <p className="bus-monitor-stop-summary">
-          Stopped session {stopSummary.sessionId}: {stopSummary.telegramCount} telegram(s) seen,{" "}
-          {stopSummary.droppedCount} dropped.
+          {t("busMonitor.stopSummary", {
+            id: stopSummary.sessionId,
+            count: stopSummary.telegramCount,
+            dropped: stopSummary.droppedCount,
+          })}
           {stopSummary.warning && <span className="bus-monitor-warning"> {stopSummary.warning}</span>}
         </p>
       )}
@@ -346,8 +353,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           the row count. */}
       {droppedBefore > 0 && (
         <p className="bus-monitor-gap-notice" role="alert">
-          {droppedBefore} telegram(s) could not be kept (buffer capacity or a slow poller) and are
-          missing from this view.
+          {t("busMonitor.gapNotice", { count: droppedBefore })}
         </p>
       )}
       {session && (
@@ -368,7 +374,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
         <div className="bus-monitor-filters">
           <input
             type="text"
-            placeholder="Filter by destination or name…"
+            placeholder={t("busMonitor.filterPlaceholder")}
             value={textFilter}
             onChange={(e) => setTextFilter(e.target.value)}
           />
@@ -386,20 +392,20 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       )}
       {session &&
         (rows.length === 0 ? (
-          <p className="bus-monitor-empty">No telegrams yet.</p>
+          <p className="bus-monitor-empty">{t("busMonitor.emptyNoTelegrams")}</p>
         ) : visibleRows.length === 0 ? (
-          <p className="bus-monitor-empty">No telegrams match the current filters.</p>
+          <p className="bus-monitor-empty">{t("busMonitor.emptyFiltered")}</p>
         ) : (
           <table className="bus-monitor-table">
             <thead>
               <tr>
-                <th>Seq</th>
-                <th>Time</th>
-                <th>Source</th>
-                <th>Destination</th>
-                <th>Service</th>
-                <th>Payload</th>
-                <th>Decoded</th>
+                <th>{t("busMonitor.column.seq")}</th>
+                <th>{t("busMonitor.column.time")}</th>
+                <th>{t("busMonitor.column.source")}</th>
+                <th>{t("busMonitor.column.destination")}</th>
+                <th>{t("busMonitor.column.service")}</th>
+                <th>{t("busMonitor.column.payload")}</th>
+                <th>{t("busMonitor.column.decoded")}</th>
               </tr>
             </thead>
             <tbody>
@@ -418,7 +424,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                     className={rowClasses || undefined}
                     onClick={() => selectRow(row)}
                     style={{ cursor: "pointer" }}
-                    title="Click to prefill the send form above with this row's destination"
+                    title={t("busMonitor.rowTitle")}
                   >
                     <td>{row.seq}</td>
                     <td>{row.timestamp}</td>

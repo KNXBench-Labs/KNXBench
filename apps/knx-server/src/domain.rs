@@ -1442,14 +1442,16 @@ pub fn create_device_impl(
                     for ref_id in knx_productdb::query::com_object_ref_ids(&products, &program_id)
                         .map_err(|e| e.to_string())?
                     {
-                        let view =
-                            knx_productdb::query::com_object_view(&products, &program_id, &ref_id)
-                                .map_err(|e| e.to_string())?
-                                .ok_or_else(|| {
-                                    format!(
-                                "catalog communication-object reference is missing: {ref_id}"
-                            )
-                                })?;
+                        let view = knx_productdb::query::com_object_view(
+                            &products,
+                            &program_id,
+                            &ref_id,
+                            None,
+                        )
+                        .map_err(|e| e.to_string())?
+                        .ok_or_else(|| {
+                            format!("catalog communication-object reference is missing: {ref_id}")
+                        })?;
                         seeds.push((ref_id, view));
                     }
                     diagnostics

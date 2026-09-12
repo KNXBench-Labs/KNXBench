@@ -20,7 +20,7 @@ pub use blob::{
     has_source_file, load_source_file, sha256_hex, store_source_file, verify, BlobMismatch,
     SourceFile,
 };
-pub use enrich::{enrich, EnrichmentIssue, EnrichmentReport};
+pub use enrich::{com_object_lookup_id, enrich, EnrichmentIssue, EnrichmentReport};
 pub use ingest::{ingest_file, FileKind, IngestOutcome};
 pub use migration::{default_path, open_and_migrate, ProductDbError, CURRENT_PRODUCTDB_VERSION};
 pub use package::{install_package, InstallReport, PackageError, PackageMember};

@@ -9,6 +9,7 @@ use rusqlite::{Connection, OptionalExtension};
 
 use crate::blob::{sha256_hex, store_source_file, SourceFile};
 use crate::dynamic;
+use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::parse::{catalog, hardware, program};
 use crate::report::{insert_conflicts, insert_unknown, IdConflict};
 use crate::ProductDbError;
@@ -98,10 +99,17 @@ pub(crate) fn ingest_file_in_transaction(
     let (unknown, conflicts) = match kind {
         FileKind::Catalog => {
             let out = catalog::ingest_catalog(conn, &sha256, source_path, bytes)?;
+            // A second pass over the same bytes, in the same transaction:
+            // `Catalog.xml`'s own `Languages` block is not read by
+            // `ingest_catalog` at all.
+            ingest_translations(conn, TranslationScope::Catalog, source_path, bytes)?;
             (out.unknown, out.conflicts)
         }
         FileKind::Hardware => {
             let out = hardware::ingest_hardware(conn, &sha256, source_path, bytes)?;
+            // Same second pass as `Catalog` above, for `Hardware.xml`'s own
+            // `Languages` block.
+            ingest_translations(conn, TranslationScope::Hardware, source_path, bytes)?;
             (out.unknown, out.conflicts)
         }
         FileKind::ApplicationProgram => {

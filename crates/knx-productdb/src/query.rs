@@ -391,7 +391,7 @@ fn translation_overlay(
 ) -> Result<HashMap<(String, String), String>, ProductDbError> {
     let mut stmt = conn.prepare(
         "SELECT ref_id, attribute_name, text FROM translation
-         WHERE program_id = ?1 AND language = ?2
+         WHERE scope = 'Program' AND scope_id = ?1 AND language = ?2
            AND attribute_name IN ('Text','FunctionText','SuffixText','VisibleDescription','Name')
            AND text IS NOT NULL",
     )?;
@@ -451,7 +451,7 @@ pub fn program_translation_languages(
 ) -> Result<Vec<TranslationLanguage>, ProductDbError> {
     let mut stmt = conn.prepare(
         "SELECT language, COUNT(*) FROM translation
-         WHERE program_id = ?1
+         WHERE scope = 'Program' AND scope_id = ?1
          GROUP BY language
          ORDER BY COUNT(*) DESC, language ASC",
     )?;
@@ -585,27 +585,71 @@ fn row_to_catalog_item(r: &rusqlite::Row) -> rusqlite::Result<CatalogItemRow> {
 const CATALOG_ITEM_COLUMNS: &str = "id, manufacturer_id, name, number, visible_description, product_ref_id, hardware2program_ref_id";
 
 /// Every `catalog_item` row, optionally narrowed to one manufacturer and/or
-/// a case-insensitive substring match on `name`/`number` — backs the future
-/// catalog browser (T2). Device creation (`apps/knx-server`) goes straight
-/// to `catalog_item` by id instead: nothing yet picks an id through this
+/// a case-insensitive substring match on `name`/`number` — backs the catalog
+/// browser (T2/T32). Device creation (`apps/knx-server`) goes straight to
+/// `catalog_item` by id instead: nothing yet picks an id through this
 /// listing.
+///
+/// `language` is `None` for today's untranslated behaviour, in which case
+/// this issues the exact same statement it always has — no `translation`
+/// join, no `COALESCE`, nothing that could make SQLite pick a different
+/// plan or a different tie-break for two rows sorting equal. `Some(lang)`
+/// `LEFT JOIN`s `translation` twice, once for `Name` and once for
+/// `VisibleDescription`, scoped to `scope = 'Catalog' AND scope_id =
+/// catalog_item.manufacturer_id` (Catalog-scope rows are keyed by the
+/// *manufacturer's* RefId, not the item's own id — T32 Task 1/2) and `ref_id
+/// = catalog_item.id`. Both the search filter and the `ORDER BY` follow the
+/// overlaid name, so a translated-only match is findable and the list still
+/// sorts the way it displays; `number` is never translated and keeps
+/// matching/sorting on its own untranslated column exactly as before.
 pub fn catalog_items(
     conn: &Connection,
     manufacturer: Option<&str>,
     search: Option<&str>,
+    language: Option<&str>,
 ) -> Result<Vec<CatalogItemRow>, ProductDbError> {
-    let sql = format!(
-        "SELECT {CATALOG_ITEM_COLUMNS}
-         FROM catalog_item
-         WHERE (?1 IS NULL OR manufacturer_id = ?1)
-           AND (?2 IS NULL
-                OR LOWER(name) LIKE '%' || LOWER(?2) || '%'
-                OR LOWER(number) LIKE '%' || LOWER(?2) || '%')
-         ORDER BY manufacturer_id, name"
-    );
-    let mut stmt = conn.prepare(&sql)?;
+    let Some(lang) = language else {
+        let sql = format!(
+            "SELECT {CATALOG_ITEM_COLUMNS}
+             FROM catalog_item
+             WHERE (?1 IS NULL OR manufacturer_id = ?1)
+               AND (?2 IS NULL
+                    OR LOWER(name) LIKE '%' || LOWER(?2) || '%'
+                    OR LOWER(number) LIKE '%' || LOWER(?2) || '%')
+             ORDER BY manufacturer_id, name"
+        );
+        let mut stmt = conn.prepare(&sql)?;
+        let rows = stmt
+            .query_map([manufacturer, search], row_to_catalog_item)?
+            .collect::<Result<Vec<_>, _>>()?;
+        return Ok(rows);
+    };
+
+    let sql = "SELECT ci.id, ci.manufacturer_id,
+                      COALESCE(tn.text, ci.name),
+                      ci.number,
+                      COALESCE(td.text, ci.visible_description),
+                      ci.product_ref_id, ci.hardware2program_ref_id
+               FROM catalog_item ci
+               LEFT JOIN translation tn
+                 ON tn.scope = 'Catalog' AND tn.scope_id = ci.manufacturer_id
+                    AND tn.ref_id = ci.id AND tn.attribute_name = 'Name'
+                    AND tn.language = ?3
+               LEFT JOIN translation td
+                 ON td.scope = 'Catalog' AND td.scope_id = ci.manufacturer_id
+                    AND td.ref_id = ci.id AND td.attribute_name = 'VisibleDescription'
+                    AND td.language = ?3
+               WHERE (?1 IS NULL OR ci.manufacturer_id = ?1)
+                 AND (?2 IS NULL
+                      OR LOWER(COALESCE(tn.text, ci.name)) LIKE '%' || LOWER(?2) || '%'
+                      OR LOWER(ci.number) LIKE '%' || LOWER(?2) || '%')
+               ORDER BY ci.manufacturer_id, COALESCE(tn.text, ci.name)";
+    let mut stmt = conn.prepare(sql)?;
     let rows = stmt
-        .query_map([manufacturer, search], row_to_catalog_item)?
+        .query_map(
+            rusqlite::params![manufacturer, search, lang],
+            row_to_catalog_item,
+        )?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(rows)
 }
@@ -829,7 +873,10 @@ mod tests {
     use super::*;
     use crate::open_and_migrate;
     use crate::parse::{
-        catalog::ingest_catalog, hardware::ingest_hardware, program::ingest_program,
+        catalog::ingest_catalog,
+        hardware::ingest_hardware,
+        program::ingest_program,
+        translation::{ingest_translations, TranslationScope},
     };
 
     const HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
@@ -883,23 +930,144 @@ mod tests {
         let (_dir, conn) = db();
         ingest_catalog(&conn, "sha-c", "M-006A/Catalog.xml", CATALOG.as_bytes()).unwrap();
 
-        let all = catalog_items(&conn, None, None).unwrap();
+        let all = catalog_items(&conn, None, None, None).unwrap();
         assert_eq!(all.len(), 1);
         assert_eq!(all[0].id, "M-006A_CI-1");
 
-        assert_eq!(catalog_items(&conn, Some("M-006A"), None).unwrap().len(), 1);
-        assert_eq!(catalog_items(&conn, Some("M-999X"), None).unwrap().len(), 0);
         assert_eq!(
-            catalog_items(&conn, None, Some("schalt")).unwrap().len(),
+            catalog_items(&conn, Some("M-006A"), None, None)
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            catalog_items(&conn, Some("M-999X"), None, None)
+                .unwrap()
+                .len(),
+            0
+        );
+        assert_eq!(
+            catalog_items(&conn, None, Some("schalt"), None)
+                .unwrap()
+                .len(),
             1,
             "search is case-insensitive"
         );
         assert_eq!(
-            catalog_items(&conn, None, Some("EM12102")).unwrap().len(),
+            catalog_items(&conn, None, Some("EM12102"), None)
+                .unwrap()
+                .len(),
             1,
             "search also matches on number"
         );
-        assert_eq!(catalog_items(&conn, None, Some("nope")).unwrap().len(), 0);
+        assert_eq!(
+            catalog_items(&conn, None, Some("nope"), None)
+                .unwrap()
+                .len(),
+            0
+        );
+    }
+
+    /// A `de-DE` translation of the catalog item's `Name`, mirroring
+    /// `parse::translation`'s own `CATALOG` fixture: the `Languages` block
+    /// is a sibling of `Catalog`, scoped by `Manufacturer/@RefId`, not the
+    /// item's own id (T32 Task 1/2's `(scope, scope_id)` key).
+    const CATALOG_WITH_TRANSLATION: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-006A">
+      <Catalog>
+        <CatalogSection Id="M-006A_CG-1" Name="Actuators" Number="1" DefaultLanguage="de-DE">
+          <CatalogItem Id="M-006A_CI-1" Name="Schaltaktor" Number="EM12102"
+                       DefaultLanguage="de-DE"
+                       ProductRefId="M-006A_H-1_P-1"
+                       Hardware2ProgramRefId="H-1_HP-1" />
+        </CatalogSection>
+      </Catalog>
+      <Languages>
+        <Language Identifier="de-DE">
+          <TranslationUnit RefId="M-006A_CI-1">
+            <TranslationElement RefId="M-006A_CI-1">
+              <Translation AttributeName="Name" Text="Umschaltaktor" />
+            </TranslationElement>
+          </TranslationUnit>
+        </Language>
+      </Languages>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+
+    /// `ingest_catalog` alone never reads `Catalog.xml`'s own `Languages`
+    /// block (see `ingest.rs`'s own `ingest_file_in_transaction` doc
+    /// comment) — the second `ingest_translations` pass below is what
+    /// actually does, mirroring how `ingest_file` runs both in one
+    /// transaction outside of tests.
+    fn ingest_catalog_with_translation(conn: &Connection) {
+        ingest_catalog(
+            conn,
+            "sha-c",
+            "M-006A/Catalog.xml",
+            CATALOG_WITH_TRANSLATION.as_bytes(),
+        )
+        .unwrap();
+        ingest_translations(
+            conn,
+            TranslationScope::Catalog,
+            "M-006A/Catalog.xml",
+            CATALOG_WITH_TRANSLATION.as_bytes(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn catalog_items_without_a_language_returns_the_stored_name_unchanged() {
+        let (_dir, conn) = db();
+        ingest_catalog_with_translation(&conn);
+
+        let items = catalog_items(&conn, None, None, None).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].name.as_deref(), Some("Schaltaktor"));
+    }
+
+    #[test]
+    fn catalog_items_with_a_language_overlays_the_translated_name() {
+        let (_dir, conn) = db();
+        ingest_catalog_with_translation(&conn);
+
+        let items = catalog_items(&conn, None, None, Some("de-DE")).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].name.as_deref(), Some("Umschaltaktor"));
+    }
+
+    #[test]
+    fn catalog_items_search_finds_a_translated_only_match_only_when_the_language_is_set() {
+        let (_dir, conn) = db();
+        ingest_catalog_with_translation(&conn);
+
+        assert_eq!(
+            catalog_items(&conn, None, Some("umschalt"), Some("de-DE"))
+                .unwrap()
+                .len(),
+            1,
+            "the translated name is searchable once a language is set"
+        );
+        assert_eq!(
+            catalog_items(&conn, None, Some("umschalt"), None)
+                .unwrap()
+                .len(),
+            0,
+            "without a language the search only sees the stored (untranslated) name"
+        );
+    }
+
+    #[test]
+    fn catalog_items_with_a_language_that_has_no_rows_returns_stored_names_unchanged() {
+        let (_dir, conn) = db();
+        ingest_catalog_with_translation(&conn);
+
+        let items = catalog_items(&conn, None, None, Some("fr-FR")).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].name.as_deref(), Some("Schaltaktor"));
     }
 
     #[test]

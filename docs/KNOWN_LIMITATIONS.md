@@ -1287,8 +1287,12 @@ What remains is tracked as **T25** (UI chrome) and a later T26 slice
 `StringTable`/`LocalizedString` resolution — none of which this slice
 touched; the overlay added here is `knx-productdb`-side only) in
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6, closing half of gap
-**D10** — the chrome half stays open. Also open, and deliberately not
-fixed by this slice: the ingestion gap recorded in the new
+**D10** — the chrome half stays open. The ingestion gap this slice
+deliberately did not fix has since been closed by T32 (2026-09-12):
+`Catalog.xml`, `Hardware.xml` and `knx_master.xml` translations are
+ingested, and the catalog browser reads the catalog-scope ones. What is
+ingested but still read by nothing — hardware and master text — is
+recorded in
 [§64](#64-languages-blocks-outside-an-application-program-are-discarded-on-import).
 
 ## 38. Group-address CSV export/import (T12) has no verified ETS interoperability
@@ -2305,52 +2309,67 @@ answered and built.
 
 ## 64. `Languages` blocks outside an application program are discarded on import
 
-**Limitation.** `knx-productdb`'s importer only ever calls
-`insert_translations` from `parse/program.rs`, i.e. only while ingesting
-an `ApplicationProgram`'s own XML. `Languages` blocks that appear
-anywhere else in a `.knxprod` package — `Catalog.xml`, `Hardware.xml`,
-and the shared `knx_master.xml` — are parsed past and dropped; no row for
-them is ever written to the `translation` table.
+**Resolved for ingestion (2026-09-12, T32); still unread at most
+surfaces.** The heading is kept verbatim because five documents link to
+its anchor; read the status here, not in the title.
 
-Measured directly on one real package,
-`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod` (extracted with
-`unzip`, then `grep -oE '<Translation '`/`grep -oE '<Language
-Identifier="[^"]*"'` per file):
+**Ingested now.** `translation` was widened in schema v4 to `(scope,
+scope_id, language, ref_id, attribute_name)`
+(`crates/knx-productdb/src/migration.rs`), with `''` as the master-scope
+`scope_id` sentinel — `knx_master.xml` has no owning element, and SQLite
+treats NULLs in a non-`INTEGER` primary key as pairwise distinct, so the
+one thing a sentinel is needed for is the one thing NULL will not do. A
+single `ingest_translations` pass (`parse/translation.rs`) now reads the
+`Languages` block of `Catalog.xml` and `Hardware.xml` (keyed by
+`Manufacturer/@RefId`) and of `knx_master.xml` (`FileKind::MasterData`,
+master sentinel). `parse/program.rs` keeps its own inline handling
+unchanged. A v3→v4 backfill replays the blobs already stored, so a
+database installed before this slice does not stay translation-less;
+a blob that fails to parse records itself into `ingest_unknown` as a
+`TranslationBackfillError` and the migration continues.
 
-| file | `<Translation>` elements | languages | attribute |
-|---|---|---|---|
-| `M-0083/Catalog.xml` | 40 | 5 (`de-DE`, `en-US`, `es-ES`, `fr-FR`, `it-IT`) | `Name` |
-| `M-0083/Hardware.xml` | 30 | 5 (same five) | `Text` |
-| `knx_master.xml` | 1635 | 24 | `Text` |
+Re-measured on the same package this section first cited,
+`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`, by installing it with
+`knx products ingest` and counting `translation` rows per scope:
 
-1705 `<Translation>` rows from this one package alone, none of which
-reach the database. This is not the preserved-and-unread situation §37
-described before this slice — it is genuinely discarded, in violation of
-`CLAUDE.md`'s "never silently discard information" rule, and is therefore
-a data-integrity item, not a nice-to-have.
+| scope | rows | distinct languages |
+|---|---|---|
+| `Catalog` | 40 | 5 (`de-DE`, `en-US`, `es-ES`, `fr-FR`, `it-IT`) |
+| `Hardware` | 30 | 5 (same five) |
+| `Master` | 1635 | 18 |
+| `Program` | 18546 | 5 |
+| **total** | **20251** | |
 
-**Cause.** `translation.program_id` is `TEXT NOT NULL`
-(`crates/knx-productdb/src/migration.rs:248`), because every translation
-row this project has read so far belongs to exactly one
-`ApplicationProgram`. A `Catalog.xml` item or a `Hardware.xml` entry
-belongs to no program, and `knx_master.xml` is shared across every
-package a database has ever ingested, not scoped to one program at all —
-none of them have a `program_id` to put in that column. Fixing this needs
-a schema migration (either a nullable `program_id` plus a discriminator
-for what kind of thing the translation belongs to, or a second table), a
-parser change to call `insert_translations` from the `Catalog.xml`/
-`Hardware.xml`/`knx_master.xml` ingestion paths, and an import-report
-change to say what was captured. That is a different slice with a
-different risk profile — a schema change touching every existing
-`translation` row — not a line added to this one.
+The 1705 rows this section was opened for — 40 + 30 + 1635 — are in the
+database. The golden corpus assertion moved with them: 48,190 rows for
+the reference project (48,057 program + 109 catalog + 24 hardware),
+re-measured rather than predicted.
 
-**Impact.** Catalog item names, hardware entry text, and the entire
-`knx_master.xml` vocabulary (24 languages' worth of shared KNX terms) are
-available in the source package but never queryable from
-`knx-productdb`, in any language, at any surface. Nothing in this slice's
-overlay (§37) can reach them even in principle, since they were never
-written to the table it reads from.
+**Correction to the earlier figure.** The table previously published here
+said `knx_master.xml` carried 1635 translations in **24** languages. The
+row count was right; the language count was not. The file's single
+`<Languages>` block holds those 1635 translations across **18**
+languages. The file declares 42 `<Language>` elements in total, and the
+other 24 sit in a separate `<MasterData><ProductLanguages>` block — a
+catalogue of language identifiers with no translations attached to them
+at all. The earlier number came from grepping the whole file instead of
+the block. Measured wrongly here first, corrected here now.
 
-**Lifted when.** Open. Tracked as its own backlog item, **T32** (see
-[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6), next to T26.
-Not scheduled.
+**Still open.** Ingestion is no longer the gap; reading is. Exactly one
+surface reads any of these rows: the catalog browser, whose item `Name`
+and `VisibleDescription` are overlaid by `query::catalog_items(conn, …,
+language)` behind `GET /api/catalog/items?language=` (T32 Task 4).
+`Hardware`-scope and `Master`-scope translations are stored, queryable,
+and read by nothing — the entire shared KNX vocabulary of
+`knx_master.xml` included. The import report still does not state how
+many translations a package contributed, so a user is told about
+unknown constructs but not about captured text. Locale-prefix matching
+is still absent, as recorded in §37: a stored `de` does not match a
+package's `de-DE` rows. And no translated string is ever allowed to
+become a stored identifier — `query::catalog_item`, the single-row
+lookup device creation uses, is deliberately untranslated.
+
+**Lifted when.** Ingestion: lifted 2026-09-12 (T32, branch
+`t32-shared-translations`). The reading residue above stays open under
+**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and under §37's own
+"still open" list. Not scheduled.

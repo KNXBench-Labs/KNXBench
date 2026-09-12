@@ -9,6 +9,7 @@ use rusqlite::{Connection, OptionalExtension};
 
 use crate::blob::{sha256_hex, store_source_file, SourceFile};
 use crate::dynamic;
+use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::parse::{catalog, hardware, program};
 use crate::report::{insert_conflicts, insert_unknown, IdConflict};
 use crate::ProductDbError;
@@ -20,6 +21,7 @@ pub enum FileKind {
     ApplicationProgram,
     Baggages,
     Baggage,
+    MasterData,
     Unrecognized,
 }
 
@@ -98,10 +100,17 @@ pub(crate) fn ingest_file_in_transaction(
     let (unknown, conflicts) = match kind {
         FileKind::Catalog => {
             let out = catalog::ingest_catalog(conn, &sha256, source_path, bytes)?;
+            // A second pass over the same bytes, in the same transaction:
+            // `Catalog.xml`'s own `Languages` block is not read by
+            // `ingest_catalog` at all.
+            ingest_translations(conn, TranslationScope::Catalog, source_path, bytes)?;
             (out.unknown, out.conflicts)
         }
         FileKind::Hardware => {
             let out = hardware::ingest_hardware(conn, &sha256, source_path, bytes)?;
+            // Same second pass as `Catalog` above, for `Hardware.xml`'s own
+            // `Languages` block.
+            ingest_translations(conn, TranslationScope::Hardware, source_path, bytes)?;
             (out.unknown, out.conflicts)
         }
         FileKind::ApplicationProgram => {
@@ -115,8 +124,14 @@ pub(crate) fn ingest_file_in_transaction(
             (unknown, out.conflicts)
         }
         // Baggages.xml lists the blobs; the blobs themselves and anything
-        // unrecognized are stored and not parsed.
-        FileKind::Baggages | FileKind::Baggage | FileKind::Unrecognized => (Vec::new(), Vec::new()),
+        // unrecognized are stored and not parsed. `knx_master.xml` is
+        // ingested through `ingest_master_data` instead (its three call
+        // sites — `package.rs`, `knx-app`'s importer, `knx-cli` — stay
+        // unchanged), so a `MasterData` blob reaching this generic path is
+        // stored, not parsed, exactly like `Unrecognized`.
+        FileKind::Baggages | FileKind::Baggage | FileKind::MasterData | FileKind::Unrecognized => {
+            (Vec::new(), Vec::new())
+        }
     };
 
     insert_unknown(conn, &sha256, &unknown)?;
@@ -134,9 +149,10 @@ pub(crate) fn ingest_file_in_transaction(
     })
 }
 
-/// Classifies by the first recognized element inside `ManufacturerData`,
-/// not by file name: the name is a convention, the content is the fact.
-/// A `Baggages/` blob is not XML at all, so it is recognized by its bytes.
+/// Classifies by the first recognized element inside `ManufacturerData` (or,
+/// for `knx_master.xml`, `MasterData` itself), not by file name: the name is
+/// a convention, the content is the fact. A `Baggages/` blob is not XML at
+/// all, so it is recognized by its bytes.
 pub(crate) fn classify(bytes: &[u8]) -> FileKind {
     if bytes.is_empty() {
         return FileKind::Unrecognized;
@@ -157,6 +173,7 @@ pub(crate) fn classify(bytes: &[u8]) -> FileKind {
                     "Hardware" => return FileKind::Hardware,
                     "ApplicationPrograms" => return FileKind::ApplicationProgram,
                     "Baggages" => return FileKind::Baggages,
+                    "MasterData" => return FileKind::MasterData,
                     _ => {}
                 }
             }
@@ -177,6 +194,15 @@ mod tests {
 <Product Id="H-1_P-1" Text="X" OrderNumber="N1" /></Products></Hardware></Hardware>
 </Manufacturer></ManufacturerData></KNX>"#;
 
+    const MASTER: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Siemens" />
+    </Manufacturers>
+  </MasterData>
+</KNX>"#;
+
     fn db() -> (tempfile::TempDir, Connection) {
         let dir = tempfile::tempdir().unwrap();
         let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
@@ -194,6 +220,26 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn a_master_file_is_classified_by_its_content() {
+        let (_dir, conn) = db();
+        let out = ingest_file(&conn, "knx_master.xml", MASTER.as_bytes()).unwrap();
+        assert!(matches!(
+            out,
+            IngestOutcome::Ingested {
+                kind: FileKind::MasterData,
+                ..
+            }
+        ));
+        // `ingest_file` stores the blob but does not parse it — that is
+        // `ingest_master_data`'s job, called separately by every one of its
+        // three call sites. No `manufacturer` row appears from this path.
+        let manufacturers: i64 = conn
+            .query_row("SELECT count(*) FROM manufacturer", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(manufacturers, 0);
     }
 
     #[test]

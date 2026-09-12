@@ -9,6 +9,7 @@ import type {
 } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import Overlay from "./Overlay";
+import { useProductLanguage } from "./productLanguage";
 
 // T2 (GAP_ANALYSIS_ETS.md) — the device-from-catalog browser. Feeds T1's
 // `Command::CreateDevice` (backend-only since 2026-09-08). Built on the
@@ -23,6 +24,7 @@ export default function CatalogBrowser(props: {
   onClose: () => void;
 }) {
   const { lineId, onCreated, onClose } = props;
+  const [language] = useProductLanguage();
   const [manufacturers, setManufacturers] = useState<CatalogManufacturer[]>([]);
   const [manufacturer, setManufacturer] = useState("");
   const [search, setSearch] = useState("");
@@ -61,7 +63,7 @@ export default function CatalogBrowser(props: {
     const handle = setTimeout(() => {
       const requestId = ++requestIdRef.current;
       api
-        .catalogItems(manufacturer || undefined, search.trim() || undefined)
+        .catalogItems(manufacturer || undefined, search.trim() || undefined, language)
         .then((rows) => {
           if (requestId !== requestIdRef.current) return;
           setItems(rows);
@@ -73,7 +75,7 @@ export default function CatalogBrowser(props: {
         });
     }, 200);
     return () => clearTimeout(handle);
-  }, [manufacturer, search]);
+  }, [manufacturer, search, language]);
 
   function pick(item: CatalogItem) {
     setSelected(item);
@@ -119,7 +121,11 @@ export default function CatalogBrowser(props: {
       const requestId = ++requestIdRef.current;
       const [manufacturers, items] = await Promise.all([
         api.catalogManufacturers(),
-        api.catalogItems(filters.manufacturer || undefined, filters.search.trim() || undefined),
+        api.catalogItems(
+          filters.manufacturer || undefined,
+          filters.search.trim() || undefined,
+          language,
+        ),
       ]);
       if (requestId !== requestIdRef.current) return;
       setManufacturers(manufacturers);

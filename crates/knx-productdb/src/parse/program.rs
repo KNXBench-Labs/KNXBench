@@ -27,7 +27,7 @@ use rusqlite::{params, Connection, OptionalExtension};
 use super::comobject::{
     insert_com_object, insert_com_object_ref, COM_OBJECT_ATTRS, COM_OBJECT_REF_ATTRS,
 };
-use super::translation::insert_translations;
+use super::translation::{insert_translations, TranslationScope};
 use super::{bool_flag, report_unknown_attrs};
 use crate::report::{IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name, skip_subtree, Attrs};
@@ -367,6 +367,7 @@ fn handle_start_or_empty(
             {
                 insert_translations(
                     conn,
+                    TranslationScope::Program,
                     program_id,
                     language,
                     ref_id,

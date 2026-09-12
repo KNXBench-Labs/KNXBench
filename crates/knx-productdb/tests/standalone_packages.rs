@@ -223,9 +223,11 @@ fn installs_the_readable_corpus() {
         }
         assert_eq!(report.members.len(), member_count);
         assert!(knx_productdb::verify(&conn).unwrap().is_empty());
-        assert!(!knx_productdb::query::catalog_items(&conn, None, None)
-            .unwrap()
-            .is_empty());
+        assert!(
+            !knx_productdb::query::catalog_items(&conn, None, None, None)
+                .unwrap()
+                .is_empty()
+        );
         let before = counts(&conn);
         assert!(install_package(&conn, name, &bytes).unwrap().skipped);
         assert_eq!(counts(&conn), before);
@@ -509,9 +511,26 @@ fn duplicate_encrypted_truncated_and_oversized_members_are_rejected() {
 fn migrating_v1_preserves_existing_rows_and_blobs() {
     let (dir, conn) = db();
     knx_productdb::ingest_file(&conn, "M-0001/Hardware.xml", HARDWARE).unwrap();
+    // `translation` is also rolled back to its pre-Task-1 (v0-v1) shape: `db()`
+    // already ran the full chain up to v4, so `translation` already has
+    // `scope`/`scope_id`, and rerunning `migrate_v3_to_v4`'s rebuild against a
+    // table that is already in its own target shape would fail looking for
+    // the `program_id` column it expects to migrate away from.
     conn.execute_batch(
         "DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
-         DROP TABLE package; DROP TABLE dynamic_node; PRAGMA user_version = 1;",
+         DROP TABLE package; DROP TABLE dynamic_node;
+         DROP INDEX translation_lookup;
+         DROP TABLE translation;
+         CREATE TABLE translation (
+             program_id     TEXT NOT NULL,
+             language       TEXT NOT NULL,
+             ref_id         TEXT NOT NULL,
+             attribute_name TEXT NOT NULL,
+             text           TEXT,
+             PRIMARY KEY (program_id, language, ref_id, attribute_name)
+         ) STRICT;
+         CREATE INDEX translation_lookup ON translation (program_id, language, ref_id);
+         PRAGMA user_version = 1;",
     )
     .unwrap();
     drop(conn);
@@ -519,7 +538,7 @@ fn migrating_v1_preserves_existing_rows_and_blobs() {
     assert_eq!(
         conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        3
+        4
     );
     assert_eq!(
         knx_productdb::load_source_file(&conn, &knx_productdb::sha256_hex(HARDWARE))
@@ -546,9 +565,25 @@ fn migrating_v1_preserves_existing_rows_and_blobs() {
 #[test]
 fn a_failed_v1_to_v2_migration_rolls_back_its_ddl_and_version() {
     let (dir, conn) = db();
+    // `translation` is also rolled back to its pre-Task-1 (v0-v1) shape, for
+    // the same reason `migrating_v1_preserves_existing_rows_and_blobs` does:
+    // `db()` already ran the full chain up to v4, so `migrate_v3_to_v4`'s
+    // rebuild must find `program_id` still there to migrate away from.
     conn.execute_batch(
         "DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
-         DROP TABLE package; DROP TABLE dynamic_node; CREATE TABLE package_conflict (marker INTEGER); PRAGMA user_version = 1;",
+         DROP TABLE package; DROP TABLE dynamic_node;
+         DROP INDEX translation_lookup;
+         DROP TABLE translation;
+         CREATE TABLE translation (
+             program_id     TEXT NOT NULL,
+             language       TEXT NOT NULL,
+             ref_id         TEXT NOT NULL,
+             attribute_name TEXT NOT NULL,
+             text           TEXT,
+             PRIMARY KEY (program_id, language, ref_id, attribute_name)
+         ) STRICT;
+         CREATE INDEX translation_lookup ON translation (program_id, language, ref_id);
+         CREATE TABLE package_conflict (marker INTEGER); PRAGMA user_version = 1;",
     )
     .unwrap();
     drop(conn);
@@ -567,6 +602,6 @@ fn a_failed_v1_to_v2_migration_rolls_back_its_ddl_and_version() {
             .unwrap()
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        3
+        4
     );
 }

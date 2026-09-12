@@ -263,7 +263,7 @@ fn products_ingest_installs_a_standalone_package() {
         .contains("package installed"));
     let conn = knx_productdb::open_and_migrate(&products).unwrap();
     assert_eq!(
-        knx_productdb::query::catalog_items(&conn, Some("M-0001"), None)
+        knx_productdb::query::catalog_items(&conn, Some("M-0001"), None, None)
             .unwrap()
             .len(),
         1

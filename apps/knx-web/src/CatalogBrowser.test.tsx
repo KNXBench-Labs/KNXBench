@@ -2,6 +2,11 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  PRODUCT_LANGUAGE_STORAGE_KEY,
+  resetProductLanguageForTests,
+  useProductLanguage,
+} from "./productLanguage";
 
 const apiMock = vi.hoisted(() => ({
   catalogManufacturers: vi.fn().mockResolvedValue([]),
@@ -25,6 +30,8 @@ afterEach(() => {
   vi.clearAllMocks();
   apiMock.catalogManufacturers.mockResolvedValue([]);
   apiMock.catalogItems.mockResolvedValue([]);
+  window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
+  resetProductLanguageForTests();
 });
 
 const item = {
@@ -99,7 +106,7 @@ describe("CatalogBrowser", () => {
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    expect(apiMock.catalogItems).toHaveBeenLastCalledWith("M-2", undefined);
+    expect(apiMock.catalogItems).toHaveBeenLastCalledWith("M-2", undefined, null);
     expect(host!.textContent).toContain("Installed: scheme 11");
     root.unmount();
   });
@@ -181,6 +188,68 @@ describe("CatalogBrowser", () => {
     });
 
     expect(input.getAttribute("aria-activedescendant")).toBe("catalog-option-0");
+    root.unmount();
+  });
+
+  // T32 Task 4: the catalog browser must forward the active product
+  // language to `api.catalogItems`, exactly the way `ParameterPanel.test.
+  // tsx`'s "sends the active product language" tests already prove for the
+  // parameter panel's own fetch.
+  it("sends the active product language when fetching catalog items", async () => {
+    window.localStorage.setItem(PRODUCT_LANGUAGE_STORAGE_KEY, "de-DE");
+    apiMock.catalogItems.mockResolvedValue([]);
+    const { root } = await renderBrowser();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+
+    expect(apiMock.catalogItems).toHaveBeenLastCalledWith(undefined, undefined, "de-DE");
+    root.unmount();
+  });
+
+  // The effect's dependency array must include `language`: changing the
+  // setting while the browser is already open must refetch, not leave the
+  // list showing the previously selected language's names. Mounts a
+  // "Writer" alongside `CatalogBrowser`, the same `useProductLanguage()`
+  // reader/writer shape `productLanguage.test.tsx`'s own "a writer's
+  // change reaches an already-mounted reader" test uses — `CatalogBrowser`
+  // itself has no UI to change the setting, so this is the only way to
+  // flip it while it's mounted.
+  it("refetches catalog items when the product language changes while open", async () => {
+    function Writer() {
+      const [, setLanguage] = useProductLanguage();
+      return (
+        <button type="button" onClick={() => setLanguage("fr-FR")}>
+          set fr-FR
+        </button>
+      );
+    }
+
+    apiMock.catalogItems.mockResolvedValue([]);
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        <>
+          <CatalogBrowser lineId={null} onCreated={vi.fn()} onClose={vi.fn()} />
+          <Writer />
+        </>,
+      );
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+    expect(apiMock.catalogItems).toHaveBeenLastCalledWith(undefined, undefined, null);
+
+    const button = host.querySelector("button")!;
+    await act(async () => {
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+
+    expect(apiMock.catalogItems).toHaveBeenLastCalledWith(undefined, undefined, "fr-FR");
     root.unmount();
   });
 

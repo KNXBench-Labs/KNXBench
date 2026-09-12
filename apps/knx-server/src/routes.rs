@@ -193,6 +193,13 @@ pub(crate) struct ParameterFieldDto {
     /// Verbatim from `ParameterView.access` (fix round 1, item 2). Shown,
     /// never used to gate `editable` -- D24 deliberately does not.
     pub(crate) access: Option<String>,
+    /// The `ets_id` a `POST` must send to write this field (design D43):
+    /// `Some(ets_id)` for an unscoped field, `Some(module-qualified id)`
+    /// for an editable module-scoped one (D39's reconstruction), `None`
+    /// exactly when `editable` is `false`. The panel is the single
+    /// authority on what is writable -- the write path checks this field,
+    /// not a second id-shape parser.
+    pub(crate) write_ets_id: Option<String>,
 }
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]

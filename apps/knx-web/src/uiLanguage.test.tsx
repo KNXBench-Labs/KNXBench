@@ -20,6 +20,7 @@ import {
 
 afterEach(() => {
   window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  document.documentElement.removeAttribute("lang");
   resetUiLanguageForTests();
 });
 
@@ -115,6 +116,38 @@ describe("useUiLanguage / getActiveUiLanguage", () => {
 
       expect(host.querySelector('[data-testid="reader"]')?.textContent).toBe("de");
       expect(getActiveUiLanguage()).toBe("de");
+    } finally {
+      root.unmount();
+      host.remove();
+    }
+  });
+
+  it("sets document.documentElement's lang attribute to the active language", async () => {
+    function Component() {
+      const [, setLanguage] = useUiLanguage();
+      return (
+        <button type="button" onClick={() => setLanguage("de")}>
+          set de
+        </button>
+      );
+    }
+
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    try {
+      await act(async () => {
+        root.render(<Component />);
+      });
+
+      expect(document.documentElement.getAttribute("lang")).toBe("en");
+
+      const button = host.querySelector("button");
+      await act(async () => {
+        button?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      });
+
+      expect(document.documentElement.getAttribute("lang")).toBe("de");
     } finally {
       root.unmount();
       host.remove();

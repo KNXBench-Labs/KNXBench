@@ -1817,8 +1817,12 @@ fn assemble_parameter_panel(state: &AppState, device_id: u32) -> Result<PanelAss
 
     let ref_ids = knx_productdb::query::parameter_ref_ids(&products, &program_id)
         .map_err(|e| e.to_string())?;
-    let views =
-        knx_productdb::query::parameter_views(&products, &program_id).map_err(|e| e.to_string())?;
+    // `None`: this task (T26 Task 1) only makes the product database able to
+    // return translated text. Threading an actual requested language through
+    // the server is Task 2's job — done here, it would make two tasks edit
+    // this same call for two different reasons.
+    let views = knx_productdb::query::parameter_views(&products, &program_id, None)
+        .map_err(|e| e.to_string())?;
     let views_by_id: HashMap<String, knx_productdb::query::ParameterView> =
         views.iter().cloned().map(|v| (v.id.clone(), v)).collect();
 

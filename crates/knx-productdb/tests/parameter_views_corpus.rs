@@ -65,7 +65,7 @@ fn parameter_views_and_parameter_ref_ids_match_the_ap_level_count_on_prod3() {
         "AP-level parameter_ref count for {PROD3_PROGRAM_ID} (RESEARCH.md §4.4 Q3's 208 is one ModuleDef's count, not this)"
     );
 
-    let views = knx_productdb::query::parameter_views(&conn, PROD3_PROGRAM_ID).unwrap();
+    let views = knx_productdb::query::parameter_views(&conn, PROD3_PROGRAM_ID, None).unwrap();
     eprintln!("corpus {name}: parameter_views(..).len() = {}", views.len());
     assert_eq!(
         views.len() as i64,

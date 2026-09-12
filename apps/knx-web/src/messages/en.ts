@@ -199,6 +199,148 @@ export const messages = {
   "explorer.importErrorsCount.other": "{count} import errors — data may be missing or incorrect",
   "explorer.importWarningsCount.one": "{count} import warning",
   "explorer.importWarningsCount.other": "{count} import warnings",
+
+  // Task 5 (T25) — the last extraction pass: `LogPanel.tsx`,
+  // `BusMonitorPanel.tsx`, `CatalogBrowser.tsx`, `CommandPalette.tsx`,
+  // `Search.tsx`, `SettingsPanel.tsx`, `ProjectDiffPanel.tsx`, plus the
+  // file-dialog filter name in `GroupAddressCsvButtons.tsx` (and, via
+  // `ProjectDiffPanel.tsx`'s own filter, `projectDiff.compareFilterName`).
+  // `catalogDiagnostic.*` is the one namespace here that doesn't belong to
+  // a single component: it's D4's exception, composing `CreationDiagnostic`
+  // sentences in the frontend from the server's structured `kind` instead
+  // of translating its ready-made `detail` prose (which stays English by
+  // design — see that field's own comment in `api.ts`).
+  "logPanel.title": "Session log",
+  "logPanel.severity.error": "Error",
+  "logPanel.severity.warning": "Warning",
+  "logPanel.severity.info": "Info",
+  "logPanel.emptyNoEntries": "No log entries yet.",
+  "logPanel.emptyFiltered": "No log entries match the current filters.",
+
+  "busMonitor.title": "Bus monitor",
+  "busMonitor.connect": "Connect",
+  "busMonitor.disconnect": "Disconnect",
+  "busMonitor.session": "Session {id}",
+  "busMonitor.assignedAddress": " — assigned address {address}",
+  "busMonitor.closedByGateway": " — closed by gateway",
+  "busMonitor.stopSummary.one": "Stopped session {id}: {count} telegram seen, {dropped} dropped.",
+  "busMonitor.stopSummary.other": "Stopped session {id}: {count} telegrams seen, {dropped} dropped.",
+  "busMonitor.gapNotice.one":
+    "{count} telegram could not be kept (buffer capacity or a slow poller) and is missing from this view.",
+  "busMonitor.gapNotice.other":
+    "{count} telegrams could not be kept (buffer capacity or a slow poller) and are missing from this view.",
+  "busMonitor.filterPlaceholder": "Filter by destination or name…",
+  "busMonitor.rowTitle": "Click to prefill the send form above with this row's destination",
+  "busMonitor.emptyNoTelegrams": "No telegrams yet.",
+  "busMonitor.emptyFiltered": "No telegrams match the current filters.",
+  "busMonitor.column.seq": "Seq",
+  "busMonitor.column.time": "Time",
+  "busMonitor.column.source": "Source",
+  "busMonitor.column.destination": "Destination",
+  "busMonitor.column.service": "Service",
+  "busMonitor.column.payload": "Payload",
+  "busMonitor.column.decoded": "Decoded",
+
+  // `CatalogBrowser.tsx`.
+  "catalog.title": "Device catalog",
+  "catalog.installing": "Installing product database…",
+  "catalog.installLabel": "Install product database",
+  "catalog.installReport.status.already": "Already installed",
+  "catalog.installReport.status.new": "Installed",
+  "catalog.installReport.summary": "{status}: scheme {scheme}, {members}, {unknown}, {conflicts}.",
+  "catalog.installReport.membersCount.one": "{count} member",
+  "catalog.installReport.membersCount.other": "{count} members",
+  "catalog.installReport.unknownCount": "{count} unknown",
+  "catalog.installReport.conflictsCount.one": "{count} conflict",
+  "catalog.installReport.conflictsCount.other": "{count} conflicts",
+  "catalog.allManufacturers": "All manufacturers",
+  "catalog.searchPlaceholder": "Search catalog items…",
+  "catalog.noMatches": "No matches.",
+  "catalog.deviceNamePlaceholder": "Device name",
+  "catalog.creating": "Creating…",
+  "catalog.create": "Create",
+  "catalog.diagnosticsHeading": "Creation diagnostics",
+  "catalog.createdWithDiagnostics": "Device created with diagnostics.",
+  "catalog.done": "Done",
+
+  // D4 exception — one key per `CreationDiagnostic.kind` (`api.ts`, around
+  // line 276), composed from the structured fields instead of the server's
+  // own ready-made `detail` string. An unknown future `kind` still falls
+  // back to `detail` verbatim in `CatalogBrowser.tsx` — never to a blank
+  // line — so this list widening is the only maintenance this exception
+  // asks for.
+  "catalogDiagnostic.programlessProduct":
+    "Product {catalogItemId} has no application program; it was created without communication objects.",
+  "catalogDiagnostic.ambiguousDpt": "No DPT could be inferred for {refId}; alternatives: {alternatives}.",
+  "catalogDiagnostic.comObjectRefMissing":
+    "Communication-object reference {refId} is missing from the installed program.",
+  "catalogDiagnostic.programRefMissing": "The installed application program reference {programRef} is missing.",
+  "catalogDiagnostic.dynamicOrModuleNotEvaluated":
+    "Dynamic and module activation was not evaluated for {programId}; only static product data was seeded.",
+
+  // `Search.tsx`.
+  "search.overlayLabel": "Search",
+  "search.placeholder": "Search devices, group addresses, building parts…",
+  "search.noMatches": "No matches.",
+  "search.kind.device": "Devices",
+  "search.kind.groupAddress": "Group addresses",
+  "search.kind.buildingPart": "Building parts",
+
+  // `CommandPalette.tsx`. `command.shortcutHint.*` translates the palette's
+  // `shortcutHint` badges (`commandRegistry.ts` keeps the literal
+  // "Ctrl+Z"-style strings — a fixed, non-localized lookup key, same
+  // discriminant-vs-label split as `BUILDING_PART_KIND_KEYS` in
+  // `Inspector.tsx`) so a German user doesn't see "Strg+K" on the toolbar
+  // and "Ctrl+K" on the same palette row.
+  "command.overlayLabel": "Command palette",
+  "command.placeholder": "Type a command…",
+  "command.noMatches": "No matching commands.",
+  "command.shortcutHint.undo": "Ctrl+Z",
+  "command.shortcutHint.redo": "Ctrl+Shift+Z",
+  "command.shortcutHint.search": "Ctrl+K",
+
+  // `SettingsPanel.tsx`. `settings.uiLanguage`/`language.*` already existed
+  // (task 2); the rest of the panel's field labels are this task's.
+  "settings.title": "Settings",
+  "settings.theme": "Theme",
+  "settings.motionStyle": "Motion style",
+  "settings.motionLevel": "Motion level",
+  "settings.productDataLanguage": "Product data language",
+  "settings.noProductDatabase": "No product database installed",
+  "settings.packageDefault": "Package default",
+  "settings.productLanguageOption.one": "{language} ({count} string)",
+  "settings.productLanguageOption.other": "{language} ({count} strings)",
+
+  // `ProjectDiffPanel.tsx`. `projectDiff.entityStatus.*` doubles as both the
+  // per-table count word ("1 {status}") and the whole-installation status
+  // word (`projectDiff.installationStatusLine`'s `{status}`) — the same
+  // vocabulary either way, so one namespace instead of two.
+  "projectDiff.compareButton": "Compare with…",
+  "projectDiff.compareFilterName": "KNXBench project",
+  "projectDiff.title": "Comparison result",
+  "projectDiff.noDifferences": "No differences found.",
+  "projectDiff.close": "Close",
+  "projectDiff.projectInfoChanged.one": "Project info: {count} field changed",
+  "projectDiff.projectInfoChanged.other": "Project info: {count} fields changed",
+  "projectDiff.installationInfoChanged.one": "Installation info: {count} field changed",
+  "projectDiff.installationInfoChanged.other": "Installation info: {count} fields changed",
+  "projectDiff.installationPrefix": "Installation {id}: ",
+  "projectDiff.installationStatusLine": "installation {status}",
+  "projectDiff.entityStatus.added": "added",
+  "projectDiff.entityStatus.removed": "removed",
+  "projectDiff.entityStatus.changed": "changed",
+  "projectDiff.entityStatus.ambiguous": "ambiguous",
+  "projectDiff.entity.areas": "Areas",
+  "projectDiff.entity.lines": "Lines",
+  "projectDiff.entity.devices": "Devices",
+  "projectDiff.entity.groupRanges": "Group ranges",
+  "projectDiff.entity.groupAddresses": "Group addresses",
+  "projectDiff.entity.buildings": "Buildings",
+
+  // `GroupAddressCsvButtons.tsx` — controller ruling after the task 3
+  // review: only the native file-dialog filter name is in scope here,
+  // nothing else in that file.
+  "groupAddressCsv.filterName": "Group-address CSV",
 } as const;
 
 export type Messages = typeof messages;

@@ -3,10 +3,30 @@ import type { KeyboardEvent } from "react";
 import type { CommandContext, ResolvedPaletteCommand } from "./commandRegistry";
 import { COMMANDS, filterCommands } from "./commandRegistry";
 import { useTranslate } from "./i18n";
+import type { Translate } from "./i18n";
+import type { MessageKey } from "./messages/en";
 import Overlay from "./Overlay";
 
 function firstEnabledIndex(commands: ResolvedPaletteCommand[], ctx: CommandContext): number {
   return commands.findIndex((cmd) => cmd.isEnabled(ctx));
+}
+
+// `commandRegistry.ts`'s `shortcutHint` strings (e.g. `"Ctrl+Z"`) are not
+// display text — they're the *keys* this lookup translates from, following
+// German ETS convention (Strg for Ctrl, Umschalt for Shift, Alt stays Alt,
+// Entf for Delete — no Alt/Delete hint exists in the registry today, but
+// the convention is noted here for whoever adds the next one). A hint this
+// map has never heard of renders verbatim, same fallback shape as
+// `BUILDING_PART_KIND_KEYS` in Inspector.tsx.
+const SHORTCUT_HINT_KEYS: Record<string, MessageKey> = {
+  "Ctrl+Z": "command.shortcutHint.undo",
+  "Ctrl+Shift+Z": "command.shortcutHint.redo",
+  "Ctrl+K": "command.shortcutHint.search",
+};
+
+function shortcutHintLabel(t: Translate, hint: string): string {
+  const key = SHORTCUT_HINT_KEYS[hint];
+  return key ? t(key) : hint;
 }
 
 export default function CommandPalette(props: { ctx: CommandContext; onClose: () => void }) {
@@ -64,20 +84,20 @@ export default function CommandPalette(props: { ctx: CommandContext; onClose: ()
   }
 
   return (
-    <Overlay label="Command palette" onClose={onClose} initialFocusRef={inputRef}>
+    <Overlay label={t("command.overlayLabel")} onClose={onClose} initialFocusRef={inputRef}>
       <input
         ref={inputRef}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Type a command…"
+        placeholder={t("command.placeholder")}
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={results.length > 0}
         aria-controls="palette-results"
         aria-activedescendant={results[highlight] ? `palette-option-${highlight}` : undefined}
       />
-      {results.length === 0 && <p className="search-empty">No matching commands.</p>}
+      {results.length === 0 && <p className="search-empty">{t("command.noMatches")}</p>}
       <ul className="search-results" id="palette-results" role="listbox">
         {results.map((cmd, i) => {
           const enabled = cmd.isEnabled(ctx);
@@ -95,7 +115,9 @@ export default function CommandPalette(props: { ctx: CommandContext; onClose: ()
               onClick={() => enabled && runCommand(cmd)}
             >
               <span>{cmd.label}</span>
-              {cmd.shortcutHint && <span className="provenance-badge">{cmd.shortcutHint}</span>}
+              {cmd.shortcutHint && (
+                <span className="provenance-badge">{shortcutHintLabel(t, cmd.shortcutHint)}</span>
+              )}
             </li>
           );
         })}

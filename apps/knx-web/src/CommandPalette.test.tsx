@@ -125,13 +125,30 @@ describe("CommandPalette", () => {
     });
 
     // `.provenance-badge` is the separate `shortcutHint` span ("Ctrl+Z")
-    // Undo's row also renders — excluded here since this test is about
-    // the resolved *label*, not the (untranslated, see the task 3 report)
-    // shortcut hint.
+    // Undo's row also renders — excluded here since this test is about the
+    // resolved *label*, not the shortcut hint (covered separately below).
     const labels = Array.from(host!.querySelectorAll(".search-result span:not(.provenance-badge)")).map(
       (el) => el.textContent,
     );
     expect(labels).toEqual(["Rückgängig"]);
+
+    root.unmount();
+  });
+
+  // T25 task 5: the shortcut hint itself is now translated too (German ETS
+  // convention: "Strg" for Ctrl), so the badge is no longer a verbatim
+  // "Ctrl+Z" once the UI language is German.
+  it("translates the shortcut hint badge when the UI language is German", async () => {
+    saveUiLanguage(window.localStorage, "de");
+    resetUiLanguageForTests();
+    const { root } = await renderPalette(noopCtx());
+
+    await act(async () => {
+      setQuery("gängig"); // substring of "Rückgängig" (Undo's German label) only
+    });
+
+    const badge = host!.querySelector(".search-result .provenance-badge");
+    expect(badge!.textContent).toBe("Strg+Z");
 
     root.unmount();
   });

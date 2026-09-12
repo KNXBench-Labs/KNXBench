@@ -152,6 +152,7 @@ mod tests {
                 ets_id: "MD-2_M-1".into(),
             },
             repeat_index: "6x1".into(),
+            instance_ets_id: "MD-2_M-1_MI-1".into(),
             arguments: vec![],
         });
         assert!(d.module_instance(ModuleInstanceId(1)).is_some());

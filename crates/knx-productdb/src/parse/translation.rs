@@ -1,23 +1,51 @@
 //! `Languages`/`Language`/`TranslationUnit`/`TranslationElement`/
-//! `Translation`: per-language overrides of one attribute on one program
-//! element, keyed by `(program_id, language, ref_id, attribute_name)`.
+//! `Translation`: per-language overrides of one attribute on one element,
+//! keyed by `(scope, scope_id, language, ref_id, attribute_name)`. `scope`
+//! names which table `scope_id` refers into, so translations that do not
+//! belong to an application program (catalog, hardware, master data) can
+//! share this same table.
 
 use rusqlite::Connection;
 
 use crate::ProductDbError;
 
+/// Which table `insert_translations`' `scope_id` refers into. `Master`
+/// covers translations that are not attached to any particular program,
+/// catalog item or piece of hardware; its rows use `scope_id = ""` (see
+/// `migrate_v3_to_v4`'s doc comment in `migration.rs` for why that sentinel
+/// is required rather than `NULL`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TranslationScope {
+    Program,
+    Catalog,
+    Hardware,
+    Master,
+}
+
+impl TranslationScope {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            TranslationScope::Program => "Program",
+            TranslationScope::Catalog => "Catalog",
+            TranslationScope::Hardware => "Hardware",
+            TranslationScope::Master => "Master",
+        }
+    }
+}
+
 pub fn insert_translations(
     conn: &Connection,
-    program_id: &str,
+    scope: TranslationScope,
+    scope_id: &str,
     language: &str,
     ref_id: &str,
     attribute_name: &str,
     text: &str,
 ) -> Result<(), ProductDbError> {
     conn.execute(
-        "INSERT OR IGNORE INTO translation (program_id, language, ref_id, attribute_name, text)
-         VALUES (?1, ?2, ?3, ?4, ?5)",
-        rusqlite::params![program_id, language, ref_id, attribute_name, text],
+        "INSERT OR IGNORE INTO translation (scope, scope_id, language, ref_id, attribute_name, text)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        rusqlite::params![scope.as_str(), scope_id, language, ref_id, attribute_name, text],
     )?;
     Ok(())
 }
@@ -75,7 +103,7 @@ mod tests {
         let text: String = conn
             .query_row(
                 "SELECT text FROM translation
-                 WHERE program_id = 'A-1' AND language = 'en-US'
+                 WHERE scope = 'Program' AND scope_id = 'A-1' AND language = 'en-US'
                    AND ref_id = 'A-1_O-0' AND attribute_name = 'Text'",
                 [],
                 |r| r.get(0),

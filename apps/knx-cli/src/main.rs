@@ -1,7 +1,8 @@
-//! Headless entry point. Keeping a real CLI alongside the desktop application
-//! is what forces the core to stay free of user-interface dependencies and
-//! makes import, roundtrip and regression tests runnable in CI without a
-//! display.
+//! The headless `knx` command-line entry point.
+//!
+//! Keeping a real CLI alongside the desktop application is what forces the
+//! core to stay free of user-interface dependencies and makes import,
+//! roundtrip and regression tests runnable in CI without a display.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -28,6 +29,7 @@ const USAGE: &str =
      \x20         0|1|hex; --dry-run encodes and prints without opening a connection)\n\
      \x20     knx bus route-monitor --source-address <area.line.device> [--project <path.knxdb>]\n\
      \x20     knx bus route-send --source-address <area.line.device> <main/middle/sub> <0|1|hex>\n\
+     \x20     knx --version\n\
      exit codes: 0 = imported cleanly (warnings allowed), 1 = could not import,\n\
      2 = imported, but the report contains errors";
 
@@ -50,10 +52,35 @@ fn main() -> ExitCode {
         Some("diff") => run_diff(&args[1..]),
         Some("products") => run_products(&args[1..]),
         Some("bus") => run_bus(&args[1..]),
+        Some("--version" | "-V") => {
+            println!("{}", version_line());
+            ExitCode::SUCCESS
+        }
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE
         }
+    }
+}
+
+/// `knx <version>[+g<sha>]`: the manifest version, plus SemVer 2.0.0 build
+/// metadata naming the commit when the build knew it (`build.rs` asks git;
+/// a tarball or Docker build may not have one). The manifest version is
+/// what the program *is*; the sha is which sources it was built from —
+/// every file's state at once, which is why no file carries a version of
+/// its own (ADR-0018).
+fn version_line() -> String {
+    format_version_line(
+        env!("CARGO_BIN_NAME"),
+        env!("CARGO_PKG_VERSION"),
+        option_env!("KNX_BUILD_SHA").filter(|sha| !sha.is_empty()),
+    )
+}
+
+fn format_version_line(name: &str, version: &str, sha: Option<&str>) -> String {
+    match sha {
+        Some(sha) => format!("{name} {version}+g{sha}"),
+        None => format!("{name} {version}"),
     }
 }
 
@@ -2090,5 +2117,26 @@ fn format_decoded_value(v: &knx_net::GroupValue, dpt: DptAnnotation) -> String {
                 .join(", ");
             format!("{raw} (conflicting DPTs: {names})")
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::format_version_line;
+
+    #[test]
+    fn version_line_carries_the_commit_as_build_metadata_when_known() {
+        assert_eq!(
+            format_version_line("knx", "0.1.0-alpha.1", Some("4cde085")),
+            "knx 0.1.0-alpha.1+g4cde085"
+        );
+    }
+
+    #[test]
+    fn version_line_degrades_to_the_manifest_version_without_git() {
+        assert_eq!(
+            format_version_line("knx", "0.1.0-alpha.1", None),
+            "knx 0.1.0-alpha.1"
+        );
     }
 }

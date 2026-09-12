@@ -154,7 +154,7 @@ function App() {
       return;
     }
     try {
-      const detail = await api.deviceDetail(sel.id);
+      const detail = await api.deviceDetail(sel.id, productLanguage);
       if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
         setDeviceDetail(detail);
       }
@@ -182,7 +182,7 @@ function App() {
     const sel = selectionRef.current;
     if (sel?.kind !== "device") return;
     try {
-      const detail = await api.deviceDetail(sel.id);
+      const detail = await api.deviceDetail(sel.id, productLanguage);
       if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
         setDeviceDetail(detail);
       }
@@ -192,6 +192,33 @@ function App() {
       }
     }
   }
+
+  // A language change while a device is already selected must refetch its
+  // detail — otherwise the com-object names/descriptions on screen keep
+  // showing the previous language until some unrelated edit happens to
+  // trigger `handleTreeUpdate`. Neither `selectEntity` nor
+  // `handleTreeUpdate` fires here on its own, since neither the selection
+  // nor the tree changed — only the language setting did. Reads
+  // `selectionRef.current` rather than the `selection` state so this
+  // effect's only dependency is `productLanguage`: listing `selection`
+  // too would make an ordinary device pick run this effect a second time,
+  // duplicating the fetch `selectEntity` already issued for that pick.
+  useEffect(() => {
+    const sel = selectionRef.current;
+    if (sel?.kind !== "device") return;
+    (async () => {
+      try {
+        const detail = await api.deviceDetail(sel.id, productLanguage);
+        if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
+          setDeviceDetail(detail);
+        }
+      } catch (e) {
+        if (selectionRef.current?.kind === "device" && selectionRef.current.id === sel.id) {
+          reportError(e);
+        }
+      }
+    })();
+  }, [productLanguage]);
 
   async function pickProject() {
     const path = await pickOpenPath([{ name: "ETS project", extensions: ["knxproj"] }]);

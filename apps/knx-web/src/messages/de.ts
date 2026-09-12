@@ -274,6 +274,38 @@ export const messages: Record<MessageKey, string> = {
   "settings.productLanguageOption.one": "{language} ({count} Zeichenkette)",
   "settings.productLanguageOption.other": "{language} ({count} Zeichenketten)",
 
+  "languagePack.importLabel": "Sprachpaket importieren…",
+  "languagePack.exportTemplateButton": "Englische Vorlage exportieren…",
+  "languagePack.exportTemplateHint":
+    "Eine übersetzbereite Kopie jeder Zeichenkette, die diese Version kennt, damit ein Sprachpaket ohne Blick in den Quellcode entstehen kann. Das Tag (\"en\") muss vor dem erneuten Import geändert werden — so exportiert wird es von der eingebauten englischen Sprache verdeckt und käme nie zum Einsatz.",
+  "languagePack.installedTitle": "Installierte Sprachpakete",
+  "languagePack.noPacksInstalled": "Keine Sprachpakete installiert.",
+  "languagePack.exportPackButton": "Exportieren…",
+  "languagePack.exportPackAriaLabel": "{name} exportieren",
+  "languagePack.removePackButton": "Entfernen",
+  "languagePack.removePackAriaLabel": "{name} entfernen",
+  "languagePack.importReport.invalidJson": "Diese Datei ist kein gültiges JSON.",
+  "languagePack.importReport.rejected": "Import abgelehnt: {reason}",
+  "languagePack.importReport.grandfatheredHint":
+    "Tipp: \"{oldTag}\" ist ein historisches (grandfathered) Tag; die moderne registrierte Form lautet \"{modernTag}\".",
+  "languagePack.importReport.heading": "„{name}“ importiert.",
+  "languagePack.importReport.appliedKeys.one": "{count} Zeichenkette übersetzt.",
+  "languagePack.importReport.appliedKeys.other": "{count} Zeichenketten übersetzt.",
+  "languagePack.importReport.missingKeys.one":
+    "{count} Zeichenkette nicht übersetzt — fällt auf Englisch zurück.",
+  "languagePack.importReport.missingKeys.other":
+    "{count} Zeichenketten nicht übersetzt — fallen auf Englisch zurück.",
+  "languagePack.importReport.missingKeysSample": "Zum Beispiel: {keys}.",
+  "languagePack.importReport.unknownKeys.one":
+    "{count} Schlüssel, den diese Version nicht kennt — das Paket zielt vermutlich auf eine andere Version:",
+  "languagePack.importReport.unknownKeys.other":
+    "{count} Schlüssel, die diese Version nicht kennt — das Paket zielt vermutlich auf eine andere Version:",
+  "languagePack.importReport.pluralSupported": "Pluralformen werden für diese Sprache unterstützt.",
+  "languagePack.importReport.pluralUnsupported":
+    "Für diese Sprache liegen auf diesem System keine Pluraldaten vor; Pluraltexte verwenden immer die allgemeine Form.",
+  "languagePack.importReport.shadowedByBuiltIn":
+    "Das Tag dieses Pakets (\"{tag}\") entspricht einer eingebauten Sprache und käme nie zum Einsatz — \"tag\" ändern, bevor es aktiviert oder weitergegeben wird.",
+
   "projectDiff.compareButton": "Vergleichen mit…",
   "projectDiff.compareFilterName": "KNXBench-Projekt",
   "projectDiff.title": "Vergleichsergebnis",

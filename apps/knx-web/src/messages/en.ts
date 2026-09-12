@@ -311,6 +311,44 @@ export const messages = {
   "settings.productLanguageOption.one": "{language} ({count} string)",
   "settings.productLanguageOption.other": "{language} ({count} strings)",
 
+  // `SettingsPanel.tsx`'s language-pack manager (T25 task 7) — the only
+  // place `languagePack.ts` (task 6) becomes visible: import a pack, export
+  // the English catalogue as a translate-me template, export/remove an
+  // installed one, and the report a user sees after each import. The
+  // report's own wording is always picked between these keys, never
+  // assembled from the pack's data; a pack's `name` and the reasons/keys
+  // `languagePack.ts` hands back are interpolated as `{placeholders}`,
+  // never used to choose a key.
+  "languagePack.importLabel": "Import a language pack…",
+  "languagePack.exportTemplateButton": "Export English template…",
+  "languagePack.exportTemplateHint":
+    'A ready-to-translate copy of every string this build knows, so a pack can be written without reading source code. Its tag ("en") must be changed before the result is imported as its own language — as exported, it is shadowed by the built-in English catalogue and would never be used.',
+  "languagePack.installedTitle": "Installed language packs",
+  "languagePack.noPacksInstalled": "No language packs installed.",
+  "languagePack.exportPackButton": "Export…",
+  "languagePack.exportPackAriaLabel": "Export {name}",
+  "languagePack.removePackButton": "Remove",
+  "languagePack.removePackAriaLabel": "Remove {name}",
+  "languagePack.importReport.invalidJson": "That file isn't valid JSON.",
+  "languagePack.importReport.rejected": "Import rejected: {reason}",
+  "languagePack.importReport.grandfatheredHint":
+    'Tip: "{oldTag}" is an old-style (grandfathered) tag; its modern registered form is "{modernTag}".',
+  "languagePack.importReport.heading": '"{name}" imported.',
+  "languagePack.importReport.appliedKeys.one": "{count} string translated.",
+  "languagePack.importReport.appliedKeys.other": "{count} strings translated.",
+  "languagePack.importReport.missingKeys.one": "{count} string not translated — falls back to English.",
+  "languagePack.importReport.missingKeys.other": "{count} strings not translated — fall back to English.",
+  "languagePack.importReport.missingKeysSample": "For example: {keys}.",
+  "languagePack.importReport.unknownKeys.one":
+    "{count} key this build doesn't recognise — the pack may target a different version:",
+  "languagePack.importReport.unknownKeys.other":
+    "{count} keys this build doesn't recognise — the pack may target a different version:",
+  "languagePack.importReport.pluralSupported": "Plural forms are supported for this language.",
+  "languagePack.importReport.pluralUnsupported":
+    "Plural forms have no data for this language on this system; plural text always uses the general form.",
+  "languagePack.importReport.shadowedByBuiltIn":
+    'This pack\'s tag ("{tag}") matches a built-in language and will never be used — edit "tag" before activating or sharing it.',
+
   // `ProjectDiffPanel.tsx`. `projectDiff.entityStatus.*` doubles as both the
   // per-table count word ("1 {status}") and the whole-installation status
   // word (`projectDiff.installationStatusLine`'s `{status}`) — the same

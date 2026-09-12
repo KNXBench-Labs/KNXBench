@@ -3,16 +3,19 @@
 //! These are architectural rules that would otherwise erode silently, so they
 //! run in CI rather than living in a document.
 
+mod headers;
 mod layering;
 
+use std::path::Path;
 use std::process::ExitCode;
 
-const AVAILABLE_TASKS: &str = "check-layering, freeze-fixture <path>";
+const AVAILABLE_TASKS: &str = "check-layering, check-headers, freeze-fixture <path>";
 
 fn main() -> ExitCode {
     let task = std::env::args().nth(1);
     match task.as_deref() {
         Some("check-layering") => check_layering(),
+        Some("check-headers") => check_headers(),
         Some("freeze-fixture") => freeze_fixture(std::env::args().nth(2)),
         Some(other) => {
             eprintln!("unknown task: {other}");
@@ -138,6 +141,53 @@ fn check_layering() -> ExitCode {
          storage or async runtime (architecture spec, section 3.1). \
          knx-etsproj must not depend on knx-store: the conversion between \
          OpaqueEntry and StoredOpaqueEntry belongs in knx-app alone."
+    );
+    ExitCode::FAILURE
+}
+
+/// Walks `apps/`, `crates/` and `xtask/` and fails on any file whose
+/// first-line header breaks the ADR-0018 grammar, or when the number of
+/// files *without* a header rises above `headers::ABSENT_CEILING`. The
+/// second check is the ratchet: it is what makes "a file created or
+/// edited from now on gets a header" a rule rather than a wish, without
+/// forcing a repo-wide sweep — the count may only ever go down.
+fn check_headers() -> ExitCode {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("xtask lives one level below the workspace root");
+    let report = match headers::scan(root) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    for (path, why) in &report.invalid {
+        eprintln!("header violation: {}: {why}", path.display());
+    }
+    let ratchet = headers::ratchet_violation(&report);
+    if let Some(why) = &ratchet {
+        eprintln!("header violation: {why}");
+    }
+    if report.invalid.is_empty() && ratchet.is_none() {
+        println!(
+            "headers ok: {} files with a well-formed header, {} without one (ceiling {}), \
+             {} generated files skipped",
+            report.ok.len(),
+            report.absent.len(),
+            headers::ABSENT_CEILING,
+            report.generated.len()
+        );
+        return ExitCode::SUCCESS;
+    }
+    eprintln!(
+        "\nA header is the file's first line and nothing else: `//! One sentence.` in \
+         Rust, `/** One sentence. */` in TypeScript, at most {} columns, ending in a \
+         single period, with no second sentence (docs/adr/0018). A file without a \
+         header is fine, up to the ceiling; a header that does not follow the grammar is \
+         not.",
+        headers::MAX_WIDTH
     );
     ExitCode::FAILURE
 }

@@ -1,8 +1,14 @@
+//! The standalone `knx-server` binary: HTTP API and built frontend on one port.
+
 use std::path::PathBuf;
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
+    if matches!(std::env::args().nth(1).as_deref(), Some("--version" | "-V")) {
+        println!("{}", knx_server::version_line());
+        return;
+    }
     let port: u16 = std::env::var("KNX_PORT")
         .ok()
         .and_then(|s| s.parse().ok())

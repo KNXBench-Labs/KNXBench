@@ -23,6 +23,11 @@ const apiMock = vi.hoisted(() => ({
   getSessionLog: vi.fn().mockResolvedValue([]),
   productLanguages: vi.fn().mockResolvedValue([]),
   deviceDetail: vi.fn(),
+  // Only the "edit-triggered refetch races a language reply" regression
+  // test below drives this — it needs `handleTreeUpdate`'s own fetch to
+  // fire from a real command, and `undo` is the cheapest one on the
+  // toolbar.
+  undo: vi.fn(),
   // `Inspector` renders `ParameterPanel` unconditionally once a device's
   // detail has loaded (see `Inspector.tsx`'s own comment on why), and
   // `ParameterPanel` fetches on mount — every test in the T33 describe
@@ -310,7 +315,7 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
   // `selectEntity`/`handleTreeUpdate` already carry is always satisfied
   // here — the selection never moves across a language change — so on its
   // own it cannot tell the de-DE reply and the fr-FR reply apart. Only a
-  // per-request generation counter (`languageRequestIdRef` in `App.tsx`)
+  // per-request generation counter (`deviceDetailRequestIdRef` in `App.tsx`)
   // can, and only by discarding whichever reply is no longer current
   // rather than whichever happens to have started first.
   it("keeps the newer language's detail even when the older language's response resolves later", async () => {
@@ -382,7 +387,7 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
     )!;
 
     // Two rapid language changes: de-DE requested first, fr-FR second —
-    // both requests are now in flight, with de-DE's `languageRequestIdRef`
+    // both requests are now in flight, with de-DE's `deviceDetailRequestIdRef`
     // generation the older of the two.
     await act(async () => {
       deButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -404,10 +409,116 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
       await Promise.resolve();
     });
 
-    // Without `languageRequestIdRef`, the de-DE reply — delivered last —
+    // Without `deviceDetailRequestIdRef`, the de-DE reply — delivered last —
     // would silently overwrite the fr-FR detail already on screen, even
     // though `productLanguage` has been "fr-FR" the whole time.
     expect(host!.textContent).toContain("Device D (fr-FR)");
+    expect(host!.textContent).not.toContain("Device D (de-DE)");
+
+    root.unmount();
+  });
+
+  // Task 3 regression test: the counter above only closed the
+  // language-vs-language gap — it was bumped by the language effect alone,
+  // so a stale language reply could still land after, and overwrite, a
+  // *later* edit-triggered refetch from `handleTreeUpdate` (Undo/Redo/any
+  // command), since that site's selection-identity check is satisfied too
+  // (the selection never moves for either kind of request). Sharing one
+  // `deviceDetailRequestIdRef` across all three `api.deviceDetail` call
+  // sites closes that gap as well.
+  it("keeps an edit-triggered refetch issued after a language change, even when the older language reply resolves later", async () => {
+    function Writer() {
+      const [, setLanguage] = useProductLanguage();
+      return (
+        <button type="button" onClick={() => setLanguage("de-DE")}>
+          set de-DE
+        </button>
+      );
+    }
+
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    // `can_undo: true` from the start keeps the toolbar's Undo button
+    // enabled without needing a real command to flip it first.
+    apiMock.importProject.mockResolvedValue({ ...treeWithDevice(), can_undo: true });
+    apiMock.undo.mockResolvedValue({ ...treeWithDevice(), can_undo: true });
+
+    // Call order: (1) the initial selection's own fetch, resolved right
+    // away; (2) the language-change effect's fetch, held open; (3) Undo's
+    // `handleTreeUpdate` refetch, issued after (2) while it is still
+    // in flight, also held open.
+    let resolveLang: ((detail: DeviceDetail) => void) | undefined;
+    let resolveEdit: ((detail: DeviceDetail) => void) | undefined;
+    apiMock.deviceDetail
+      .mockResolvedValueOnce(deviceDetailFixture())
+      .mockImplementationOnce(
+        () =>
+          new Promise<DeviceDetail>((resolve) => {
+            resolveLang = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<DeviceDetail>((resolve) => {
+            resolveEdit = resolve;
+          }),
+      );
+
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        <>
+          <App />
+          <Writer />
+        </>,
+      );
+    });
+
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+
+    await act(async () => {
+      deviceLabel().dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    const langButton = Array.from(host!.querySelectorAll("button")).find(
+      (b) => b.textContent === "set de-DE",
+    )!;
+    await act(async () => {
+      langButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(apiMock.deviceDetail).toHaveBeenCalledTimes(2);
+    expect(resolveLang).toBeDefined();
+
+    // The edit-triggered refetch, issued after the still-in-flight
+    // language request.
+    await act(async () => {
+      findButton("Undo").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(apiMock.deviceDetail).toHaveBeenCalledTimes(3);
+    expect(resolveEdit).toBeDefined();
+
+    // Resolve out of order: the NEWER request (the edit refetch) answers
+    // first, the OLDER request (the language change) answers last.
+    await act(async () => {
+      resolveEdit!({ ...deviceDetailFixture(), name: "Device D (edit)" });
+      await Promise.resolve();
+    });
+    await act(async () => {
+      resolveLang!({ ...deviceDetailFixture(), name: "Device D (de-DE)" });
+      await Promise.resolve();
+    });
+
+    // Without a request id shared across all three call sites, the stale
+    // de-DE reply would silently overwrite the newer edit result, since
+    // `handleTreeUpdate`'s selection-identity check alone is satisfied
+    // here too.
+    expect(host!.textContent).toContain("Device D (edit)");
     expect(host!.textContent).not.toContain("Device D (de-DE)");
 
     root.unmount();

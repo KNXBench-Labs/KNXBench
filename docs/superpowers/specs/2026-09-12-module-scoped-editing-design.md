@@ -288,11 +288,11 @@ ids exactly (E1), and is asserted to do so against KV's five real ids.
 Two `ModuleInstance`s sharing a `RefId` (a genuinely repeated module, MI > 1)
 fails rule 2 → read-only with a diagnostic. That is D40.
 
-### D40. `MI-` > 1 is refused, not supported
+### D40. Ambiguity is refused; a lone `MI-` > 1 is not
 
 `ValueMap`'s scoped key is `(module_id, ref_id)` with no `MI-` dimension,
 because a program-side `Module` node carries no repeat index at all — the
-evaluator has nothing to key it by. So a device with two `ModuleInstance`s
+evaluator has nothing to key it by. So a device with **two** `ModuleInstance`s
 sharing one `RefId` cannot have its channels told apart on the read side,
 and this slice does not pretend otherwise:
 
@@ -304,8 +304,20 @@ and this slice does not pretend otherwise:
   RESEARCH.md's sharpest unknown #1 as the thing that would have to be
   researched first.
 
-0/32 `ModuleInstance` elements in the corpus need this. Supporting it on
-present evidence would mean inventing the key.
+**What this heading used to claim, and does not: a lone `ModuleInstance`
+whose own `@Id` ends `MI-2` (or higher) is not refused.** D39 rule 2 asks
+only "does exactly one `ModuleInstance` match this module?", not "does its
+`MI-` digit equal 1?" — a single such instance earns authority like any
+other, and its digit is reconstructed verbatim into the write target,
+because that digit is the project's own answer, not a guess (D38's
+rationale for existing at all). Refusing it would mean substituting
+KNXBench's judgement for the project file's — exactly what D38 exists to
+avoid. What *is* refused is the case the evaluator genuinely cannot tell
+apart: two or more instances claiming one `RefId`, not the digit's value.
+
+0/32 `ModuleInstance` elements in the corpus exercise either case.
+Supporting genuine repetition (two-or-more) on present evidence would mean
+inventing the key.
 
 ### D41. Stored-row validation gains the `MI-` check, and stops overwriting silently
 
@@ -321,9 +333,16 @@ gains:
 - **no silent collapse**: `module_scoped.insert((module_id, declared_id),
   raw)` today lets a second row overwrite the first with no trace. Two rows
   reaching the same key now produce a diagnostic naming both `ets_id`s, and
-  the loser is listed `stale` rather than vanishing. With the `MI-` check in
-  place this is unreachable through the decomposition route, which is
-  precisely why it is cheap to make loud.
+  the loser is listed `stale` rather than vanishing. **Reachable, not
+  theoretical:** the `MI-` check above only fires when an authoritative
+  instance exists (D39 rules 2-3). A device imported before store schema 6
+  has `instance_ets_id == ""` for every `ModuleInstance` (D38) — no
+  authority exists, the `MI-` check is skipped, and two stored rows
+  differing only in their `MI-` digit collide at this exact key. That is
+  not a hypothetical: a Task 3 reviewer reached it exactly that way, on a
+  device with no imported module instances, i.e. precisely a project saved
+  before this slice. Making the collapse loud rather than silent is for
+  that project, not a corner nothing can reach.
 
 ### D42. The validated scoped values feed `evaluate`, and the panel's display reads through the same map
 

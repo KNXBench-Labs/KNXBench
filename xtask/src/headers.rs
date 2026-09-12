@@ -190,6 +190,33 @@ fn check_sentence(line: &str, text: &str) -> Header {
     Header::Ok
 }
 
+/// The ratchet: how many files may lack a header. The lint fails when
+/// the count *exceeds* this — which is what a new file without a header
+/// does, and what an existing header broken back into a multi-line
+/// paragraph does. Without it the lint could never fail a file that
+/// simply has no `//!`, and "applies to files created or edited from now
+/// on" would be a sentence in an ADR rather than a rule.
+///
+/// Lowering this number is the only edit it accepts: when headers get
+/// added, `check-headers` prints the new count, and the constant follows
+/// it down. Raising it means deciding the convention no longer applies,
+/// which is an ADR, not a constant. Measured 2026-09-12 (ADR-0018 §5).
+pub const ABSENT_CEILING: usize = 201;
+
+/// The ratchet's verdict on a report: the message to print if it trips,
+/// `None` if the count is at or below [`ABSENT_CEILING`].
+pub fn ratchet_violation(report: &Report) -> Option<String> {
+    let absent = report.absent.len();
+    (absent > ABSENT_CEILING).then(|| {
+        format!(
+            "{absent} files without a header, the ceiling is {ABSENT_CEILING}: a file \
+             created or edited from now on carries one (ADR-0018). If you added headers \
+             elsewhere and this is a net gain, lower ABSENT_CEILING in \
+             xtask/src/headers.rs to the new count; it never goes up."
+        )
+    })
+}
+
 /// What a walk of the workspace found.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Report {
@@ -562,6 +589,22 @@ mod tests {
             .map(|(p, _)| p.to_string_lossy().into_owned())
             .collect();
         assert_eq!(invalid, vec!["apps/web/src/bad.tsx", "crates/a/src/bad.rs"]);
+    }
+
+    fn report_with_absent(n: usize) -> Report {
+        Report {
+            absent: (0..n).map(|i| PathBuf::from(format!("f{i}.rs"))).collect(),
+            ..Report::default()
+        }
+    }
+
+    #[test]
+    fn ratchet_holds_at_the_ceiling_and_trips_one_above_it() {
+        assert_eq!(ratchet_violation(&report_with_absent(0)), None);
+        assert_eq!(ratchet_violation(&report_with_absent(ABSENT_CEILING)), None);
+        let tripped = ratchet_violation(&report_with_absent(ABSENT_CEILING + 1)).unwrap();
+        assert!(tripped.contains(&format!("{} files without a header", ABSENT_CEILING + 1)));
+        assert!(tripped.contains("never goes up"), "{tripped}");
     }
 
     #[test]

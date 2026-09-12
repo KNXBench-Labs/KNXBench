@@ -595,6 +595,7 @@ mod tests {
             device: device_id,
             source: source("MD-2_M-1"),
             repeat_index: "6x1".into(),
+            instance_ets_id: "MD-2_M-1_MI-1".into(),
             arguments: vec![],
         });
         p.devices.insert(DeviceInstance {

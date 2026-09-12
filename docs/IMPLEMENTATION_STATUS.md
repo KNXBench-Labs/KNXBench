@@ -3061,3 +3061,30 @@ sentence —
 `npx tsc -p apps/knx-web/tsconfig.json --noEmit`: clean. `npm --prefix
 apps/knx-web run test`: **336 passed across 31 files** (branch baseline
 before T25's first task: 271/29).
+
+**T18, module-scoped editing slice, Task 2 — the `MI-` component, retained
+(2026-09-12), branch `t18-module-scoped-editing`.** Second of six planned
+tasks ([design spec](superpowers/specs/2026-09-12-module-scoped-editing-design.md),
+D38). `crates/knx-etsproj/src/parse/installation_v21.rs` already parsed
+`ModuleInstance/@Id`; `map.rs` used it only as a local wiring key and threw
+it away afterward — exactly the datum a per-channel write needs, since it
+carries the `_MI-<k>` component `@RefId` does not. Fixed at the source:
+`knx_core::ModuleInstance` gains `instance_ets_id: String` (verbatim `@Id`,
+retained uninterpreted, `crates/knx-core/src/module.rs`), populated from
+`mi.id` in `map.rs` while `source.ets_id` keeps holding `@RefId` unchanged.
+`knx-store` gained a matching `module_instance.instance_ets_id` column via
+migration `v5 → v6` (`CURRENT_SCHEMA_VERSION` now 6 in both
+`knx-core::project` and `knx-store::migration`, a frozen `v5-empty.sqlite`
+fixture added, `v4`-`v1` untouched). Every other construction site the new
+field broke (`knx-core::devices`, `knx-etsproj::compare`,
+`knx-productdb::enrich`, `knx-diff::diff`, `knx-store::project`) got a
+plausible-looking but inert test value — none of them feed real data.
+`crates/knx-etsproj/src/compare.rs`'s `SemanticModuleInstance` was
+deliberately left alone: it does not carry `instance_ets_id`, so the
+semantic-diff surface `knx-diff` reports is unchanged. This task does not
+resolve what the `MI-` token means (RESEARCH.md's "sharpest unknown #1"
+stays open) and does not touch the read/write path, the parameter panel, or
+the frontend — those are Tasks 3 and 4. A project saved before this
+migration has `instance_ets_id == ""` for every existing `ModuleInstance`
+row, same treatment D39 (a later task) gives a genuinely missing one:
+read-only, reported, never guessed.

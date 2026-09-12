@@ -1047,6 +1047,7 @@ fn map_device_v21(
                 ets_id: mi.ref_id.clone(),
             },
             repeat_index: mi.repeat_index.clone().unwrap_or_default(),
+            instance_ets_id: mi.id.clone(),
             arguments: mi
                 .arguments
                 .iter()
@@ -2020,6 +2021,28 @@ mod tests {
             .devices
             .module_instance(com.module_instance.unwrap())
             .is_some());
+    }
+
+    /// D38: the project's own `ModuleInstance/@Id` is retained as
+    /// `instance_ets_id`, distinct from `source.ets_id` (`@RefId`) — this is
+    /// the KV v2.5 demo's real switch actuator instance (design doc E1's
+    /// table), not a synthesised value.
+    #[test]
+    fn a_module_instance_retains_its_id_distinct_from_its_ref_id() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
+        let out = map(&reference_kv_source_document(), "P-03DE/0.xml");
+        let mi = out
+            .project
+            .devices
+            .module_instances()
+            .find(|m| m.source.ets_id == "MD-2_M-4")
+            .unwrap();
+        assert_eq!(mi.instance_ets_id, "MD-2_M-4_MI-1");
+        assert_eq!(mi.source.ets_id, "MD-2_M-4");
+        assert_ne!(mi.instance_ets_id, mi.source.ets_id);
     }
 
     #[test]

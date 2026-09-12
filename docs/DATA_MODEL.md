@@ -448,10 +448,10 @@ round-trips.
 ## 11. Versioning and migration
 
 *Implemented: `Project::schema_version` and `CURRENT_SCHEMA_VERSION` (now
-`5`, schema 21/23 import support — see amendments below) in
-`knx-core/src/project.rs`; the migration chain (`open_and_migrate`,
-`migrate_v0_to_v1` through `migrate_v4_to_v5`, the frozen `v1-empty.sqlite`
-through `v4-empty.sqlite` fixtures) in `knx-store/src/migration.rs`.*
+`6`, module-scoped parameter editing's id retention — see amendments below)
+in `knx-core/src/project.rs`; the migration chain (`open_and_migrate`,
+`migrate_v0_to_v1` through `migrate_v5_to_v6`, the frozen `v1-empty.sqlite`
+through `v5-empty.sqlite` fixtures) in `knx-store/src/migration.rs`.*
 
 **Amendment (Session 3):** `migrate_v1_to_v2` adds the opaque-passthrough
 table (`opaque_entry`, section 10 / [ADR-0006](adr/0006-opaque-passthrough-store.md)).
@@ -492,6 +492,20 @@ amendments above, this one *does* change `knx-core`'s Rust shape: a new
 `ComObjectInstance` (`module_instance: Option<ModuleInstanceId>`, section 4),
 and one new field on `ProjectInfo` (`ets_schema_version: u32`, defaulting to
 11). See [ADR-0013](adr/0013-module-instance-representation.md).
+
+**Amendment (module-scoped parameter editing, D38):** `migrate_v5_to_v6`
+bumps `CURRENT_SCHEMA_VERSION` 5 → 6, adding `module_instance.
+instance_ets_id TEXT NOT NULL DEFAULT ''` — the verbatim project-side
+`ModuleInstance/@Id` (e.g. `"MD-2_M-4_MI-1"`), which schema-≥21 import
+already parses but previously discarded after using it only as a local
+wiring key. `knx_core::ModuleInstance` gains the matching
+`instance_ets_id: String` field, retained uninterpreted next to
+`repeat_index`; existing rows migrate to `''`, treated identically to a
+missing instance by the (later-task) read side. `source.ets_id` keeps
+holding the `@RefId` unchanged — the two differ by exactly the `_MI-<k>`
+suffix, which is the entire point of keeping both. See the design doc at
+`docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md`
+(Evidence E1/E5, Decision D38).
 
 ```rust
 pub struct Project {

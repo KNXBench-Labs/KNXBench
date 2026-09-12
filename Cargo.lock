@@ -1830,7 +1830,7 @@ dependencies = [
 
 [[package]]
 name = "knx-app"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "chrono",
  "knx-core",
@@ -1845,7 +1845,7 @@ dependencies = [
 
 [[package]]
 name = "knx-cli"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "chrono",
  "knx-app",
@@ -1865,14 +1865,14 @@ dependencies = [
 
 [[package]]
 name = "knx-core"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "chrono",
 ]
 
 [[package]]
 name = "knx-csv"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "csv",
  "knx-core",
@@ -1881,7 +1881,7 @@ dependencies = [
 
 [[package]]
 name = "knx-desktop"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "axum",
  "knx-server",
@@ -1893,14 +1893,14 @@ dependencies = [
 
 [[package]]
 name = "knx-diff"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "knx-core",
 ]
 
 [[package]]
 name = "knx-etsproj"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "chrono",
  "knx-core",
@@ -1914,7 +1914,7 @@ dependencies = [
 
 [[package]]
 name = "knx-net"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "knx-core",
  "socket2",
@@ -1923,7 +1923,7 @@ dependencies = [
 
 [[package]]
 name = "knx-productdb"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "knx-core",
  "quick-xml 0.42.0",
@@ -1936,7 +1936,7 @@ dependencies = [
 
 [[package]]
 name = "knx-projection"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "knx-core",
  "serde",
@@ -1945,7 +1945,7 @@ dependencies = [
 
 [[package]]
 name = "knx-report"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "chrono",
  "knx-core",
@@ -1954,11 +1954,11 @@ dependencies = [
 
 [[package]]
 name = "knx-secure"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 
 [[package]]
 name = "knx-server"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "axum",
  "chrono",
@@ -1983,7 +1983,7 @@ dependencies = [
 
 [[package]]
 name = "knx-store"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "chrono",
  "knx-core",
@@ -5129,7 +5129,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.0.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "cargo_metadata 0.18.1",
  "knx-store",

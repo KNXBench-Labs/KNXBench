@@ -373,4 +373,118 @@ mod tests {
             .unwrap();
         assert_eq!(rows, 3);
     }
+
+    // A `Translation` sitting directly under `TranslationUnit`, with no
+    // `TranslationElement` wrapping it, never fires a fresh `TranslationElement`
+    // `Start`/`Empty` event — so the only thing that can stop it inheriting
+    // the previous sibling's `ref_id` is the `</TranslationElement>` reset.
+    // Not a shape the real schema produces, but the right shape to pin the
+    // reset itself rather than the `RefId` attribute lookup, which already
+    // overwrites `ref_id` unconditionally on every `TranslationElement` open
+    // tag regardless of whether the reset ever ran.
+    const A_LOOSE_TRANSLATION_AFTER_A_CLOSED_ELEMENT: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <Languages>
+    <Language Identifier="en-US">
+      <TranslationUnit RefId="X">
+        <TranslationElement RefId="EL-1">
+          <Translation AttributeName="Name" Text="First" />
+        </TranslationElement>
+        <Translation AttributeName="Name" Text="Loose" />
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+
+    #[test]
+    fn a_translation_elements_ref_id_does_not_leak_past_its_own_end_tag() {
+        let (_dir, conn) = db();
+        ingest_translations(
+            &conn,
+            TranslationScope::Master,
+            "t.xml",
+            A_LOOSE_TRANSLATION_AFTER_A_CLOSED_ELEMENT.as_bytes(),
+        )
+        .unwrap();
+        let first: String = conn
+            .query_row(
+                "SELECT text FROM translation WHERE ref_id = 'EL-1' AND attribute_name = 'Name'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(first, "First");
+        // The "Loose" `Translation` is outside any `TranslationElement`, so
+        // no `Start`/`Empty` event ever reassigns `ref_id` before it is
+        // read — it must land under the empty-string ref_id. Without the
+        // `"TranslationElement" => ref_id = None` reset on
+        // `</TranslationElement>`, `ref_id` would still read `EL-1` here,
+        // colliding with the row above; `INSERT OR IGNORE` would then
+        // silently drop it and this query would find nothing.
+        let second: String = conn
+            .query_row(
+                "SELECT text FROM translation WHERE ref_id = '' AND attribute_name = 'Name'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(second, "Loose");
+    }
+
+    // Same idea, one level up: a `TranslationUnit` sitting directly under
+    // `Languages`, outside any `Language`, never fires a fresh `Language`
+    // `Start`/`Empty` event, so only the `</Language>` reset can stop its
+    // `Translation` inheriting the previous `Language`'s identifier.
+    const A_LOOSE_TRANSLATION_UNIT_AFTER_A_CLOSED_LANGUAGE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <Languages>
+    <Language Identifier="en-US">
+      <TranslationUnit RefId="X">
+        <TranslationElement RefId="EL-2">
+          <Translation AttributeName="Name" Text="English" />
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+    <TranslationUnit RefId="X">
+      <TranslationElement RefId="EL-2">
+        <Translation AttributeName="Name" Text="Loose" />
+      </TranslationElement>
+    </TranslationUnit>
+  </Languages>
+</KNX>"#;
+
+    #[test]
+    fn a_languages_identifier_does_not_leak_past_its_own_end_tag() {
+        let (_dir, conn) = db();
+        ingest_translations(
+            &conn,
+            TranslationScope::Master,
+            "t.xml",
+            A_LOOSE_TRANSLATION_UNIT_AFTER_A_CLOSED_LANGUAGE.as_bytes(),
+        )
+        .unwrap();
+        let first: String = conn
+            .query_row(
+                "SELECT text FROM translation WHERE language = 'en-US' AND ref_id = 'EL-2'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(first, "English");
+        // The second `TranslationUnit` is outside any `Language`, so no
+        // `Start`/`Empty` event ever reassigns `language` before its
+        // `Translation` is read — it must land under the empty-string
+        // language. Without the `"Language" => language = None` reset on
+        // `</Language>`, `language` would still read `en-US` here, colliding
+        // with the row above; `INSERT OR IGNORE` would then silently drop it
+        // and this query would find nothing.
+        let second: String = conn
+            .query_row(
+                "SELECT text FROM translation WHERE language = '' AND ref_id = 'EL-2'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(second, "Loose");
+    }
 }

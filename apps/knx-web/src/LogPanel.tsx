@@ -1,3 +1,4 @@
+/** Panel rendering the backend session log, refetched on tree changes and failed operations. */
 // apps/knx-web/src/LogPanel.tsx
 import { useEffect, useState } from "react";
 import * as api from "./api";

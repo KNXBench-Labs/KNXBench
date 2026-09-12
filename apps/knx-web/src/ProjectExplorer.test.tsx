@@ -1,3 +1,4 @@
+/** Tests for ProjectExplorer's multi-select behaviour and building-part label translation. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";

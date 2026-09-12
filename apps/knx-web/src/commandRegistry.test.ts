@@ -1,3 +1,4 @@
+/** Tests for command filtering and enablement in the command registry. */
 // @vitest-environment happy-dom
 //
 // happy-dom, not node: `translate()` (via `getActiveUiLanguage()`) reads

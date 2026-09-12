@@ -1,3 +1,4 @@
+/** Toolbar for bulk delete/move actions on multi-selected devices or group addresses. */
 import { useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";

@@ -2449,3 +2449,34 @@ lookup device creation uses, is deliberately untranslated.
 `t32-shared-translations`). The reading residue above stays open under
 **D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and under §37's own
 "still open" list. Not scheduled.
+
+## 65. `--version` names a commit, never a working tree
+
+`knx --version` and `knx-server --version` print
+`<name> 0.1.0-alpha.1+g<short-sha>` ([ADR-0018 §2](adr/0018-program-versions-and-file-headers.md)).
+The sha is the `HEAD` commit at the time cargo last ran that binary's
+`build.rs`. It says nothing about whether the tree was clean: uncommitted
+edits, staged or not, are invisible, and there is no `.dirty` marker,
+because cargo re-runs a build script for files it has been told to
+watch and has no notion of "anything changed anywhere". A build from a
+modified tree therefore reports the last commit's sha with a straight
+face. Cost: someone bisecting from a `--version` string is looking at
+that commit *plus whatever was uncommitted at build time*. Lifted if: a
+build ever runs `git status --porcelain` and accepts that the marker can
+then be stale in the other direction (a `dirty` stamp that outlives the
+edits, until the script next happens to re-run) — a trade this project
+has not taken.
+
+Two ways the sha could have been *wrong* rather than merely incomplete
+were found in review (2026-09-12) and are handled. After `git pack-refs`
+— routine under `git gc --auto` — the loose branch file disappears, and a
+watch on it alone went stale: every later commit was invisible to
+`--version` until `HEAD` itself moved. The `HEAD` reflog is watched too
+now; it is appended on every commit, checkout and reset, packed or not.
+And a source tree unpacked inside an unrelated repository was stamped
+with *that* repository's commit; `git rev-parse --show-toplevel` must now
+equal the workspace root, canonicalized, or nothing is emitted. Without
+git at all, or with `.git` excluded (the Docker build), the metadata is
+simply absent — `knx 0.1.0-alpha.1` — unless `KNX_BUILD_SHA` is passed
+in. Absence is the intended failure direction; a false number is the one
+this section, and the ADR, exist to rule out.

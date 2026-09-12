@@ -1313,15 +1313,35 @@ fn migrating_from_v2_backfills_dynamic_node_from_stored_blobs_without_a_reinstal
     // `ingest_file` above — alone. This mirrors the existing
     // `migrating_v1_preserves_existing_rows_and_blobs` idiom in
     // `standalone_packages.rs`, one version further along the chain.
-    conn.execute_batch("DROP TABLE dynamic_node; PRAGMA user_version = 2;")
-        .unwrap();
+    // `translation` is also rolled back to its pre-Task-1 (v0-v1) shape,
+    // alongside `dynamic_node`: `db()` already ran the full chain up to
+    // v4, so `translation` already has `scope`/`scope_id`, and rerunning
+    // `migrate_v3_to_v4`'s rebuild against a table that is already in its
+    // own target shape would fail looking for the `program_id` column it
+    // expects to migrate away from.
+    conn.execute_batch(
+        "DROP TABLE dynamic_node;
+         DROP INDEX translation_lookup;
+         DROP TABLE translation;
+         CREATE TABLE translation (
+             program_id     TEXT NOT NULL,
+             language       TEXT NOT NULL,
+             ref_id         TEXT NOT NULL,
+             attribute_name TEXT NOT NULL,
+             text           TEXT,
+             PRIMARY KEY (program_id, language, ref_id, attribute_name)
+         ) STRICT;
+         CREATE INDEX translation_lookup ON translation (program_id, language, ref_id);
+         PRAGMA user_version = 2;",
+    )
+    .unwrap();
     drop(conn);
 
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     assert_eq!(
         conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        3
+        4
     );
 
     let after: i64 = conn
@@ -1379,15 +1399,35 @@ fn a_parse_failure_during_the_v2_to_v3_backfill_does_not_abort_the_migration() {
     )
     .unwrap();
 
-    conn.execute_batch("DROP TABLE dynamic_node; PRAGMA user_version = 2;")
-        .unwrap();
+    // `translation` is also rolled back to its pre-Task-1 (v0-v1) shape,
+    // alongside `dynamic_node`: `db()` already ran the full chain up to
+    // v4, so `translation` already has `scope`/`scope_id`, and rerunning
+    // `migrate_v3_to_v4`'s rebuild against a table that is already in its
+    // own target shape would fail looking for the `program_id` column it
+    // expects to migrate away from.
+    conn.execute_batch(
+        "DROP TABLE dynamic_node;
+         DROP INDEX translation_lookup;
+         DROP TABLE translation;
+         CREATE TABLE translation (
+             program_id     TEXT NOT NULL,
+             language       TEXT NOT NULL,
+             ref_id         TEXT NOT NULL,
+             attribute_name TEXT NOT NULL,
+             text           TEXT,
+             PRIMARY KEY (program_id, language, ref_id, attribute_name)
+         ) STRICT;
+         CREATE INDEX translation_lookup ON translation (program_id, language, ref_id);
+         PRAGMA user_version = 2;",
+    )
+    .unwrap();
     drop(conn);
 
     let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     assert_eq!(
         conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        3,
+        4,
         "a single blob's parse failure must not abort the migration"
     );
 

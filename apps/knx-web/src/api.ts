@@ -294,10 +294,15 @@ export function catalogManufacturers(): Promise<CatalogManufacturer[]> {
   return request("/api/catalog/manufacturers");
 }
 
-export function catalogItems(manufacturer?: string, search?: string): Promise<CatalogItem[]> {
+export function catalogItems(
+  manufacturer?: string,
+  search?: string,
+  language?: string | null,
+): Promise<CatalogItem[]> {
   const params = new URLSearchParams();
   if (manufacturer) params.set("manufacturer", manufacturer);
   if (search) params.set("search", search);
+  if (language) params.set("language", language);
   const qs = params.toString();
   return request(`/api/catalog/items${qs ? `?${qs}` : ""}`);
 }

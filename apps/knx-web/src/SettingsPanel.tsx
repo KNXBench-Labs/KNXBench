@@ -1,17 +1,22 @@
 import type { ThemeDef } from "./theme";
 import type { MotionLevelDef, MotionStyleDef } from "./motion";
+import type { ProductLanguage } from "./api";
 import Overlay from "./Overlay";
 
 /**
  * The application's one settings surface (design D32): Theme, Motion
- * style and Motion level, each a registry-backed `<select>` that applies
- * immediately — no Save button, no reload.
+ * style, Motion level and Product data language, each a registry-backed
+ * `<select>` that applies immediately — no Save button, no reload.
  *
  * Built on the shared `Overlay` shell (T31), the same one `Search.tsx`
  * and `CommandPalette.tsx` use — dismissal by backdrop click and by
  * `Escape`, initial focus, a focus trap and focus restoration all come
  * from there now, closing the gap KNOWN_LIMITATIONS.md §20 used to
  * describe.
+ *
+ * Purely presentational (T26): `App.tsx` owns every setting's state and
+ * fetches `productLanguages` itself; this component only renders props
+ * and forwards `onChange`, same as the other three fields.
  */
 export default function SettingsPanel(props: {
   themes: readonly ThemeDef[];
@@ -23,6 +28,9 @@ export default function SettingsPanel(props: {
   motionLevels: readonly MotionLevelDef[];
   activeMotionLevel: string;
   onSelectMotionLevel: (id: string) => void;
+  productLanguages: readonly ProductLanguage[];
+  activeProductLanguage: string | null;
+  onSelectProductLanguage: (language: string | null) => void;
   onClose: () => void;
 }) {
   const {
@@ -35,6 +43,9 @@ export default function SettingsPanel(props: {
     motionLevels,
     activeMotionLevel,
     onSelectMotionLevel,
+    productLanguages,
+    activeProductLanguage,
+    onSelectProductLanguage,
     onClose,
   } = props;
 
@@ -78,6 +89,27 @@ export default function SettingsPanel(props: {
             </option>
           ))}
         </select>
+      </label>
+      <label className="settings-field">
+        <span className="settings-field-label">Product data language</span>
+        {productLanguages.length === 0 ? (
+          <select aria-label="Product data language" disabled>
+            <option>No product database installed</option>
+          </select>
+        ) : (
+          <select
+            value={activeProductLanguage ?? ""}
+            onChange={(e) => onSelectProductLanguage(e.target.value === "" ? null : e.target.value)}
+            aria-label="Product data language"
+          >
+            <option value="">Package default</option>
+            {productLanguages.map((l) => (
+              <option key={l.language} value={l.language}>
+                {`${l.language} (${l.rows} strings)`}
+              </option>
+            ))}
+          </select>
+        )}
       </label>
     </Overlay>
   );

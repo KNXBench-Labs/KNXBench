@@ -15,6 +15,8 @@ import LogPanel from "./LogPanel";
 import BusMonitorPanel from "./BusMonitorPanel";
 import { THEMES, useThemeId } from "./theme";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
+import { useProductLanguage } from "./productLanguage";
+import type { ProductLanguage } from "./api";
 import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
@@ -76,6 +78,19 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeId, setThemeId] = useThemeId();
   const { level: motionLevel, setLevel: setMotionLevel, style: motionStyle, setStyle: setMotionStyle } = useMotion();
+  const [productLanguage, setProductLanguage] = useProductLanguage();
+  // `[]` both before the fetch resolves and if it fails — SettingsPanel
+  // already renders that state honestly (a disabled select explaining "no
+  // product database installed"), so a failed fetch needs no separate
+  // error toast here.
+  const [productLanguages, setProductLanguages] = useState<ProductLanguage[]>([]);
+
+  useEffect(() => {
+    api
+      .productLanguages()
+      .then(setProductLanguages)
+      .catch(() => setProductLanguages([]));
+  }, []);
   // Mirrors `selection` synchronously so in-flight device_detail responses
   // can tell, once they land, whether the selection has since moved on —
   // state updates alone are too late to check inside the same async
@@ -405,6 +420,9 @@ function App() {
           motionLevels={MOTION_LEVELS}
           activeMotionLevel={motionLevel}
           onSelectMotionLevel={setMotionLevel}
+          productLanguages={productLanguages}
+          activeProductLanguage={productLanguage}
+          onSelectProductLanguage={setProductLanguage}
           onClose={() => setSettingsOpen(false)}
         />
       )}

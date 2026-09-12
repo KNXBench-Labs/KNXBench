@@ -31,7 +31,7 @@ of ETS 5/6 as a professional tool, not a specific verified version — treat
 |---|-----|---------|---------------|-------|
 | A1 | **`Functions`** | Groups several group addresses under one named function (e.g. "Living room ceiling light" = switch + status + dim). | Not modelled at all. | Flagged since RESEARCH §12/ROADMAP "open questions"; absent from the one reference project, never designed. |
 | A2 | **KNX Secure** (Data Secure, IP Secure, `.knxkeys` keyring) | Full support: secure group communication, secure tunnelling/routing, keyring import/export. | Not implemented; `knx-secure` is an empty, deliberately isolated crate. | [KNOWN_LIMITATIONS.md §8](KNOWN_LIMITATIONS.md#8-knx-secure-is-not-implemented), [§26](KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure). |
-| A3 | **Parameter semantics** (`Dynamic`/`choose`/`when` tree) | Renders a parameter UI per device, with visibility/enable rules. | **Partially closed (2026-09-11, T18 slice 3).** `knx-productdb` parses, stores (schema v3, `dynamic_node`) and evaluates the tree headlessly, including expanding a `Module` node into its `ModuleDef`'s own stored tree (slice 2). **Slice 3 adds a real UI**: `GET`/`POST /api/device/{id}/parameters` plus `apps/knx-web`'s parameter panel read every field, write a top-level one, and show the recomputed activation set in the same response — the "No UI reads it and no value is ever written" claim this row used to make is no longer accurate. What stays open: module-scoped (per-channel) fields are read and displayed correctly but not *editable* (design D25 — the evaluator's flat `ValueMap` has no scope in its key); D16 (all instantiations of one `ModuleDef` still evaluate against identical parameter values) stays true in the narrower sense that the *activation* is identical even though D21/D22 now make the *displayed value* per channel correct; argument values (`NumericArg`/`TextArg`, stored but uninterpreted) and `AllocatorRef` (unattested) remain open; deep format validation for `Float`/`Text`/`IPAddress`/`Picture`/`Raw` is a non-empty-string check only. | [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted). |
+| A3 | **Parameter semantics** (`Dynamic`/`choose`/`when` tree) | Renders a parameter UI per device, with visibility/enable rules. | **Mostly closed (2026-09-12, T18 slice 4).** `knx-productdb` parses, stores (schema v3, `dynamic_node`) and evaluates the tree headlessly, expanding a `Module` node into its `ModuleDef`'s own stored tree (slice 2). Slice 3 added the UI: `GET`/`POST /api/device/{id}/parameters` plus `apps/knx-web`'s parameter panel read every field, write a top-level one, and show the recomputed activation set in the same response. **Slice 4 closes the module-scoped (per-channel) write side those slices left open**: `ValueMap` gained a scope dimension (D35/D36), a project's own `ModuleInstance/@Id` is retained and used to reconstruct the exact write target (D38/D39), and a module-scoped `choose` now evaluates against that channel's own stored value — D16 (all instantiations of one `ModuleDef` evaluate against identical parameter values) is closed in its general form, proven by a fixture where two channels' `choose` pick different branches ([KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted)). What stays open: a genuinely repeated module (two or more `ModuleInstance`s sharing one `RefId`) is refused, not supported ([§68](KNOWN_LIMITATIONS.md#68-repeated-module-instantiation-is-refused-not-supported)); a `Module` with no `@Id` cannot be matched to a project instance ([§69](KNOWN_LIMITATIONS.md#69-a-module-with-no-id-cannot-be-matched-to-a-project-instance)); a project imported before store schema 6 stays read-only for every module-scoped field until re-imported ([§71](KNOWN_LIMITATIONS.md#71-a-project-imported-before-store-schema-6-has-no-module-instance-ids-to-write-with)); argument values (`NumericArg`/`TextArg`, stored but uninterpreted) and `AllocatorRef` (unattested) remain open; nested modules are still not expanded; deep format validation for `Float`/`Text`/`IPAddress`/`Picture`/`Raw` is a non-empty-string check only. | [KNOWN_LIMITATIONS.md §3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted). |
 | A4 | **Schema coverage** | Reads any ETS3/4/5/6 project. | Schema 11 (ETS4) fully known; schema 23 (ETS6) detected and refused by name; 12-22 undocumented. | [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md#1-single-sample-bias). |
 | A5 | **`.knxprod` scheme ≥ 12** | Reads current manufacturer product files directly. | **Partially closed (2026-09-10).** Standalone `.knxprod` product-package install (`knx_productdb::install_package`) reads scheme 11 and scheme 20 packages — verified against 3 real scheme-11 and 2 real scheme-20 files (`installs_the_readable_corpus`). Schemes 12-19, 21, 22 remain unread; `.vd2` (a pre-2013 legacy container, not the same ZIP/XML family at all) is explicitly rejected. **Both accepted out of scope, user decision 2026-09-11** — see [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly) for the dated notes. Full `.knxproj` *project* import is still schema-11/21/23 only — this row is about standalone `.knxprod` *product packages*, a narrower claim. | [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly). |
 | A6 | **Password-protected projects** | Opens ZipCrypto (ETS4/5) and AES/PBKDF2 (ETS6) protected projects. | Detected, refused, never decrypted. | [KNOWN_LIMITATIONS.md §13](KNOWN_LIMITATIONS.md#13-password-protected-projects-are-refused-not-decrypted). |
@@ -62,7 +62,7 @@ underlying model field exists.
 | B5 | **Closed (2026-09-07, T23 slice 1).** `CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange` existed as commands/routes but only individual group addresses had a UI. | The "Group Ranges" branch in the Project Explorer (create/rename/delete, `nestGroupRanges`) plus the range `<select>` on `NewGroupAddressRow` close this. |
 | B6 | **Closed (2026-09-08, T7).** Read/write/transmit/update/communication flags were projected and shown but display-only. | `Command::SetComObjectFlag`/`RestoreComObjectFlag` (one flag at a time, no bulk "clear to inherited" gesture) plus `ComObjectFlagsRow`'s five checkboxes on the comm-object Inspector row close this. |
 | B7 | **Closed (2026-09-07, T23 slice 2).** `LinkComObject`/`UnlinkComObject` existed as a command/route but no frontend screen drove it. | The link/unlink control on the comm-object Inspector row (`NewGroupLinkRow`/`GroupLinkRow`) closes this. |
-| B8 | **Closed for top-level fields (2026-09-11, T18 slice 3).** (See A3.) `Command::SetParameterValue`/`RestoreParameterValue` plus `ParameterPanel.tsx` let a user write a top-level parameter value with undo/redo. Module-scoped (per-channel) fields stay read-only (design D25); see A3 for why. | |
+| B8 | **Closed for top-level fields (2026-09-11, T18 slice 3); closed for module-scoped fields with a single authoritative instance (2026-09-12, T18 slice 4).** (See A3.) `Command::SetParameterValue`/`RestoreParameterValue` plus `ParameterPanel.tsx` let a user write a top-level or module-scoped parameter value with undo/redo, writing the server-reconstructed module-qualified id (design D38/D43) rather than the declared one. Still read-only: a genuinely repeated module, a `Module` with no `@Id`, and any project not yet re-imported since store schema 6 — see A3 and [KNOWN_LIMITATIONS.md §§68-71](KNOWN_LIMITATIONS.md#68-repeated-module-instantiation-is-refused-not-supported) for why. | |
 | B9 | **Closed (2026-09-10, T9).** Every edit in the UI targeted exactly one entity (one device's address, one comm object's DPT, one group address create/delete). | `Command::Batch(Vec<Command>)` composes existing single-entity commands with all-or-nothing apply/rollback; ctrl/shift-click multi-select of devices and group addresses in the Project Explorer plus a bulk-action toolbar (batch delete, batch move-to-line, batch move-to-building-part) drive it, undoable as one `Ctrl+Z`. Copy/paste of a device with its parameters remains out of scope. |
 | B10 | **No drag-and-drop anywhere in the UI.** CLAUDE.md's UI/UX section lists drag & drop as a target capability. | Every structural change that ETS does by dragging (device onto a line, device onto a room, GA onto a comm object) has no equivalent gesture here, and per B1-B7 mostly has no non-drag equivalent either. |
 | B11 | **Undo history is session-only**, never persisted to `.knxdb` (explicit design choice, restated across several cycles). | Closing and reopening a project loses all undo history — ETS's own undo is also session-scoped, so this one is closer to parity than most, but worth listing since it's a real behavioral difference from a saved-and-reopened ETS project's expectations. |
@@ -637,20 +637,43 @@ Each task: **what**, **why**, **depends on**.
   stores per-channel values in our own corpus (the KV v2.5 demo project's
   shape, 5 distinct values for one declared `ParameterRef` across 5
   `Module` instantiations), and slice 3's decomposition (D21) surfaces
-  each in its own section (D22/D23). **Module-scoped editing is
+  each in its own section (D22/D23). **Module-scoped editing was
   explicitly out of scope for this slice (D25)** — not because storage
   cannot hold a per-channel value (it already does), but because the
-  evaluator's flat `ValueMap` has no scope in its key
+  evaluator's flat `ValueMap` had no scope in its key
   (`evaluate.rs:797`/`:348`), so a module-scoped write could never affect
   the same response's recomputed activation set the way a top-level write
   does; D16 (all instantiations of one `ModuleDef` evaluate against
-  identical values) stays true in that narrower sense. This is the last of
-  the three slices this entry named; T18 as a whole is now feature-complete
-  for the scope this row describes, with module-scoped editing named as
-  its own follow-on, not silently dropped.
-  Partially closes **A3** — a UI now exists and can write a top-level
-  value, which is real progress toward realistic ETS parity, but
-  module-scoped editing (the harder half) is not done.
+  identical values) stayed true in that narrower sense.
+  **Slice 4, module-scoped editing, closed that hole (2026-09-12,
+  [design](superpowers/specs/2026-09-12-module-scoped-editing-design.md),
+  D35-D43).** `ValueMap` gained a scope dimension (D35): a value stored
+  for one `Module` instantiation is visible to that instantiation only,
+  falls back to the program default, and never leaks to a sibling (D36).
+  `knx_core::ModuleInstance` now retains the project's own
+  `ModuleInstance/@Id` verbatim (`instance_ets_id`, D38, store schema v6)
+  instead of discarding it after import, which the server uses to
+  reconstruct the exact `MI-`-qualified id a write must target (D39) —
+  never guessed, per section, with a named reason whenever it cannot
+  (D37/D39/D40). `apps/knx-web/src/ParameterPanel.tsx` writes that
+  server-named id (D43). D16 is now closed in its general form: a
+  module-scoped `choose` evaluates against its own channel's stored value,
+  so two sibling channels holding different values for the same declared
+  parameter can show genuinely different active field sets — proven by a
+  fixture at both the evaluator and HTTP layers where two channels'
+  `choose` pick different branches, since no fixture anywhere previously
+  exercised that combination. Still refused, by design rather than by
+  gap: a genuinely repeated module (two or more `ModuleInstance`s sharing
+  one `RefId`, D40); a `Module` with no `@Id` (D37); a project not yet
+  re-imported since store schema 6, which has `instance_ets_id == ""` for
+  every existing `ModuleInstance` and so stays read-only until re-import
+  ([KNOWN_LIMITATIONS.md §§68-71](KNOWN_LIMITATIONS.md#68-repeated-module-instantiation-is-refused-not-supported)).
+  This is the last of the four slices this entry named; T18 as a whole is
+  now feature-complete for the scope this row describes.
+  Mostly closes **A3** — a UI now exists and can write both a top-level
+  and (for the common, single-instance case) a module-scoped value; the
+  named exceptions above are what remains, and none of this claims ETS
+  behavioural parity.
 - **T19. KNX Secure (Data Secure + IP Secure + keyring).** Needs sample
   key material and a real secured installation to verify against — a
   hard external dependency, not purely an engineering task. **Deferred

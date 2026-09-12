@@ -6,7 +6,9 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { InstallationNode } from "./bindings/InstallationNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
+import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
+import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   batchDeleteDevices: vi.fn(),
@@ -28,6 +30,8 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
+  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetUiLanguageForTests();
 });
 
 function device(id: number, name: string): DeviceNode {
@@ -36,6 +40,10 @@ function device(id: number, name: string): DeviceNode {
 
 function ga(id: number, name: string, address: string): GroupAddressNode {
   return { id, name, address };
+}
+
+function building(id: number, name: string, kind: string): BuildingNode {
+  return { id, name, kind, children: [], devices: [] };
 }
 
 function baseTree(): ProjectTree {
@@ -276,6 +284,32 @@ describe("ProjectExplorer multi-select", () => {
 
     expect(host!.querySelector(".bulk-action-toolbar")).toBeNull();
     expect(apiMock.batchDeleteDevices).not.toHaveBeenCalled();
+
+    await unmount(root);
+  });
+});
+
+describe("ProjectExplorer — building-part kind: translated label vs. untouched discriminant", () => {
+  it("renders a translated kind word in the building's label while the same node's raw kind stays the wire value", async () => {
+    window.localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, "de");
+    const tree = baseTree();
+    tree.installations[0].buildings = [building(501, "Erdgeschoss", "Room")];
+    const { root } = await renderExplorer(tree);
+
+    // German UI language: the rendered label carries the translated word
+    // ("Raum"), never the raw "Room" discriminant.
+    expect(host!.textContent).toContain("Erdgeschoss (Raum)");
+    expect(host!.textContent).not.toContain("(Room)");
+
+    // The create-row's kind <option>s prove the split directly: the
+    // displayed text is translated, but the `value` attribute — what
+    // actually reaches `api.createBuildingPart` — is still the untouched
+    // domain discriminant.
+    const roomOption = Array.from(
+      host!.querySelectorAll<HTMLOptionElement>("select option"),
+    ).find((o) => o.textContent === "Raum")!;
+    expect(roomOption).toBeTruthy();
+    expect(roomOption.value).toBe("Room");
 
     await unmount(root);
   });

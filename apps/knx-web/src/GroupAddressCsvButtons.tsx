@@ -1,6 +1,8 @@
 import { pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { useTranslate } from "./i18n";
+import type { Translate } from "./i18n";
 
 // T12 (GAP_ANALYSIS_ETS.md C2) — export/import of group addresses as
 // "KNXBench group-address CSV v1" (crates/knx-csv, design
@@ -22,7 +24,16 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 // already in the session log via `session_log::from_csv_import_report`,
 // which both routes populate server-side; the Log tab a previous task built
 // is where that detail lives, not here.
-const CSV_FILTER = [{ name: "Group-address CSV", extensions: ["csv"] }];
+//
+// The filter's `name` is built from `t()` inside the component, not as a
+// module-level constant, so it follows the active UI language rather than
+// freezing at whichever one was active on module load.
+//
+// Task 5 review, round 2: an earlier controller ruling had scoped this
+// file to that one field only, on the theory that nothing else here was
+// user-visible English worth chasing. That ruling was wrong — the two
+// button labels and both toast summaries below were every bit as English
+// and every bit as reachable, so the gap it left is closed here.
 
 // A successful (200) import can still carry `problems` of severity
 // `"warning"` and non-empty `ignoredColumns` — a column the file had that
@@ -32,17 +43,23 @@ const CSV_FILTER = [{ name: "Group-address CSV", extensions: ["csv"] }];
 // the "information never silently discarded" rule this project holds
 // itself to. Folded into the one-line summary, matching export's own
 // "— see Log." pointer, rather than reopening a report viewer here.
-function importSummary(report: api.CsvImportReport): string {
-  const base = `Group addresses imported from CSV: ${report.created} created, ${report.updated} updated, ${report.unchanged} unchanged`;
+function importSummary(t: Translate, report: api.CsvImportReport): string {
+  const base = t("groupAddressCsv.importSummaryBase", {
+    created: report.created,
+    updated: report.updated,
+    unchanged: report.unchanged,
+  });
   const warningCount = report.problems.filter((p) => p.severity === "warning").length;
   const ignoredCount = report.ignoredColumns.length;
   const extras: string[] = [];
-  if (warningCount > 0) extras.push(`${warningCount} warning${warningCount === 1 ? "" : "s"}`);
+  if (warningCount > 0) {
+    extras.push(t("groupAddressCsv.importSummaryWarnings", { count: warningCount }));
+  }
   if (ignoredCount > 0) {
-    extras.push(`${ignoredCount} column${ignoredCount === 1 ? "" : "s"} ignored`);
+    extras.push(t("groupAddressCsv.importSummaryIgnoredColumns", { count: ignoredCount }));
   }
   if (extras.length === 0) return `${base}.`;
-  return `${base}, ${extras.join(", ")} — see Log.`;
+  return `${base}, ${extras.join(", ")} ${t("groupAddressCsv.importSummarySeeLog")}`;
 }
 
 export default function GroupAddressCsvButtons(props: {
@@ -53,9 +70,11 @@ export default function GroupAddressCsvButtons(props: {
   onClearErrors: () => void;
 }) {
   const { tree, onTreeUpdate, onSummary, onError, onClearErrors } = props;
+  const t = useTranslate();
+  const csvFilter = [{ name: t("groupAddressCsv.filterName"), extensions: ["csv"] }];
 
   async function exportCsv() {
-    const path = await pickSavePath(CSV_FILTER, "group-addresses.csv");
+    const path = await pickSavePath(csvFilter, "group-addresses.csv");
     if (!path) return;
     // Sequenced exactly like `App.tsx`'s neighbouring `exportProject`
     // handler: clear any leftover error toast from an earlier, unrelated
@@ -67,8 +86,8 @@ export default function GroupAddressCsvButtons(props: {
       const n = warnings.length;
       onSummary(
         n === 0
-          ? "Group addresses exported to CSV, no warnings."
-          : `Group addresses exported to CSV, ${n} warning${n === 1 ? "" : "s"} — see Log.`,
+          ? t("groupAddressCsv.exportSummaryNone")
+          : t("groupAddressCsv.exportSummaryWithWarnings", { count: n }),
       );
     } catch (e) {
       onError(e);
@@ -76,13 +95,13 @@ export default function GroupAddressCsvButtons(props: {
   }
 
   async function importCsv() {
-    const path = await pickOpenPath(CSV_FILTER);
+    const path = await pickOpenPath(csvFilter);
     if (!path) return;
     onClearErrors();
     try {
       const { tree: nextTree, report } = await api.importGroupAddressesCsv(path);
       onTreeUpdate(nextTree);
-      onSummary(importSummary(report));
+      onSummary(importSummary(t, report));
     } catch (e) {
       // A rejected import (400 — a row-level problem) never reaches the
       // `.then` above: `onTreeUpdate` is not called, and the project the
@@ -94,10 +113,10 @@ export default function GroupAddressCsvButtons(props: {
   return (
     <>
       <button onClick={exportCsv} disabled={!tree}>
-        Export group addresses (CSV)…
+        {t("groupAddressCsv.exportButton")}
       </button>
       <button onClick={importCsv} disabled={!tree}>
-        Import group addresses (CSV)…
+        {t("groupAddressCsv.importButton")}
       </button>
     </>
   );

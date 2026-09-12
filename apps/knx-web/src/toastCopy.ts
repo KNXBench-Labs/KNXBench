@@ -1,13 +1,24 @@
+// Typed as plain `string[]`/`HolidayEntry.messages: string[]`, not
+// `MessageKey[]` — deliberately, matching `toast.ts`'s existing
+// `wrappers: string[]`/`holidays: HolidayEntry[]` parameters, which
+// `toast.test.ts` overrides with synthetic fixture strings that are not
+// catalogue keys at all. The real entries below *are* `MessageKey`
+// literals (a typo here would be caught the moment `translate()` fails to
+// resolve it and falls back to displaying the raw key), just not
+// type-checked as such, so the test fixtures stay simple raw strings.
 
-/** Wrapping templates for kind: "error" toasts. `{msg}` is the untouched backend message. */
+/** Wrapping templates for kind: "error" toasts. `{msg}` is the untouched
+ * backend message, substituted in by `toast.ts`'s `humorizeError()` after
+ * translation, not before — the placeholder itself is part of the
+ * catalogue entry (`messages/en.ts`/`messages/de.ts`), not this array. */
 export const ERROR_WRAPPERS: string[] = [
-  "Well, that didn't go as planned: {msg}",
-  "The bus objects: {msg}",
-  "Gremlins in the wiring: {msg}",
-  "KNX says no: {msg}",
-  "Not today: {msg}",
-  "Houston, we have a problem: {msg}",
-  "That's a hard pass: {msg}",
+  "toast.error.notAsPlanned",
+  "toast.error.busObjects",
+  "toast.error.gremlins",
+  "toast.error.knxSaysNo",
+  "toast.error.notToday",
+  "toast.error.houston",
+  "toast.error.hardPass",
 ];
 
 export interface HolidayEntry {
@@ -18,50 +29,52 @@ export interface HolidayEntry {
   messages: string[];
 }
 
+// Each entry's two keys are a matched pair (same occasion, two jokes) in
+// both `messages/en.ts` and `messages/de.ts` — the German catalogue
+// translates for effect rather than word-for-word, but keeps the pairing:
+// key N in English and key N in German are "the same joke", not
+// necessarily the same sentence.
 export const HOLIDAYS: HolidayEntry[] = [
   {
     month: 1,
     day: 1,
-    messages: ["Happy New Year! May your group addresses stay unique.", "New year, same group addresses."],
+    messages: ["toast.holiday.newYear.groupAddresses", "toast.holiday.newYear.sameAddresses"],
   },
   {
     month: 2,
     day: 14,
-    messages: ["Roses are red, buses are twisted pair.", "Be my Valentine, my favorite communication object."],
+    messages: ["toast.holiday.valentine.roses", "toast.holiday.valentine.favorite"],
   },
   {
     month: 4,
     day: 1,
-    messages: ["No bugs today. Probably.", "Everything in this build is 100% real. Trust us."],
+    messages: ["toast.holiday.aprilFools.noBugs", "toast.holiday.aprilFools.real"],
   },
   {
     month: 10,
     day: 31,
-    messages: ["Spooky season: even the ghosts use KNX for the lighting.", "Boo! Your project is still safe."],
+    messages: ["toast.holiday.halloween.spooky", "toast.holiday.halloween.boo"],
   },
   {
     month: 12,
     day: 24,
-    messages: ["Ho ho ho, don't forget to save your project.", "Silent night, wired bright."],
+    messages: ["toast.holiday.christmasEve.hoho", "toast.holiday.christmasEve.silentNight"],
   },
   {
     month: 12,
     day: 25,
-    messages: [
-      "Merry Christmas! Even Santa needs a group address for the chimney sensor.",
-      "Season's greetings from your KNX app.",
-    ],
+    messages: ["toast.holiday.christmasDay.santa", "toast.holiday.christmasDay.greetings"],
   },
   {
     month: 12,
     day: 31,
-    messages: ["One more save before midnight?", "See you next year, project file."],
+    messages: ["toast.holiday.newYearsEve.oneMoreSave", "toast.holiday.newYearsEve.seeYou"],
   },
 ];
 
 export const LATE_NIGHT_MESSAGES: string[] = [
-  "Burning the midnight oil? So is your KNX bus.",
-  "It's late. Even the bus line needs rest.",
-  "Still awake? The group addresses admire your dedication.",
-  "Night owl mode engaged.",
+  "toast.lateNight.midnightOil",
+  "toast.lateNight.busLineRest",
+  "toast.lateNight.stillAwake",
+  "toast.lateNight.nightOwl",
 ];

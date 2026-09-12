@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import CommandPalette from "./CommandPalette";
 import type { CommandContext } from "./commandRegistry";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -18,7 +19,20 @@ let host: HTMLDivElement | undefined;
 afterEach(() => {
   host?.remove();
   host = undefined;
+  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetUiLanguageForTests();
 });
+
+function setQuery(value: string) {
+  const input = host!.querySelector<HTMLInputElement>("input")!;
+  // A plain `input.value = x` does not make React's controlled `<input>`
+  // see a change — same reasoning `BusMonitorPanel.test.tsx`'s
+  // `setInputValue` documents; going through the native setter keeps
+  // React's own change-tracking from treating this as a no-op.
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+  setter.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
 
 function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
   return {
@@ -93,6 +107,48 @@ describe("CommandPalette", () => {
     expect(host!.querySelector("#palette-option-6")!.getAttribute("aria-selected")).toBe("true");
     expect(host!.querySelector("#palette-option-4")!.getAttribute("aria-selected")).toBe("false");
     expect(host!.querySelector("#palette-option-5")!.getAttribute("aria-selected")).toBe("false");
+
+    root.unmount();
+  });
+
+  // T25 task 3: `COMMANDS` now holds `labelKey`s (commandRegistry.ts),
+  // resolved to display text here at render time — this pins that the
+  // resolution and the filtering both use the *German* label once the UI
+  // language is German, not the (English) catalogue key underneath it.
+  it("finds a command by its German label when the UI language is German", async () => {
+    saveUiLanguage(window.localStorage, "de");
+    resetUiLanguageForTests();
+    const { root } = await renderPalette(noopCtx());
+
+    await act(async () => {
+      setQuery("gängig"); // substring of "Rückgängig" (Undo's German label) only
+    });
+
+    // `.provenance-badge` is the separate `shortcutHint` span ("Ctrl+Z")
+    // Undo's row also renders — excluded here since this test is about the
+    // resolved *label*, not the shortcut hint (covered separately below).
+    const labels = Array.from(host!.querySelectorAll(".search-result span:not(.provenance-badge)")).map(
+      (el) => el.textContent,
+    );
+    expect(labels).toEqual(["Rückgängig"]);
+
+    root.unmount();
+  });
+
+  // T25 task 5: the shortcut hint itself is now translated too (German ETS
+  // convention: "Strg" for Ctrl), so the badge is no longer a verbatim
+  // "Ctrl+Z" once the UI language is German.
+  it("translates the shortcut hint badge when the UI language is German", async () => {
+    saveUiLanguage(window.localStorage, "de");
+    resetUiLanguageForTests();
+    const { root } = await renderPalette(noopCtx());
+
+    await act(async () => {
+      setQuery("gängig"); // substring of "Rückgängig" (Undo's German label) only
+    });
+
+    const badge = host!.querySelector(".search-result .provenance-badge");
+    expect(badge!.textContent).toBe("Strg+Z");
 
     root.unmount();
   });

@@ -1,4 +1,66 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-12 02:25
+- **Completed:** **Merged T27 (in-app motion control) to `main`** —
+  `c22d5f9`, `--no-ff`, from branch `t27-motion-control` (nine commits,
+  `bb43da4`..`b0e37ce`). The whole slice in one place: `motion.ts`'s two
+  persisted axes (level `off`/`subtle`/`standard`, style `apple`/`glitch`)
+  applied as `data-motion-level`/`data-motion-style` on `<html>`; a
+  `styles.css` token layer (`--knx-transition-duration`,
+  `--knx-motion-easing`) plus an `index.html` pre-mount bootstrap;
+  `motionGuard.test.ts`, which fails the suite if a `transition:`/
+  `animation:` declaration in `styles.css` sits outside a
+  `@media (prefers-reduced-motion: no-preference)` block or uses a literal
+  duration; `SettingsPanel.tsx` behind a gear button (Theme, Motion style,
+  Motion level), replacing the deleted `ThemeSwitcher.tsx`; and the T15
+  retrofit the roadmap's own text demanded — `BusMonitorPanel.tsx`'s
+  new-row entry highlight. Docs reconciled in the same slice
+  (`KNOWN_LIMITATIONS.md` §43 rewritten with five remaining limits stated,
+  `GAP_ANALYSIS_ETS.md` D11 closed / D8 partial / D9 corrected,
+  `ROADMAP.md`'s motion section and its 2026-09-10 style memo answered,
+  a dated `IMPLEMENTATION_STATUS.md` entry, `.ai/logs/2026-09-12_claude_t27_motion_control.md`).
+  Two coordinator corrections after task 5: `KNOWN_LIMITATIONS.md` §20's
+  "lifted when a third overlay is added" trigger had already fired at
+  `CatalogBrowser.tsx` unnoticed — four components now consume
+  `.search-overlay`/`.search-panel`, and `CatalogBrowser.tsx`'s result
+  rows have no keyboard path at all, so §20 and D9 both say so now; and
+  `styles.css`'s comment over `.sr-only` now calls it dead code, which it
+  is. A final whole-branch review verified the guard by injecting a
+  violation and watching it name the line, confirmed no `matchMedia` and
+  no `!important` anywhere in `apps/knx-web/src`, and returned two minor
+  findings, both fixed before the merge. All seven gates re-measured on
+  the merged `main`: `cargo fmt --all --check` clean; `cargo clippy
+  --workspace --all-targets -- -D warnings` clean; `cargo test
+  --workspace` **975 passed / 0 failed / 3 ignored** across 72
+  `test result` lines (unchanged — no Rust file was touched); `cargo run
+  -p xtask -- check-layering` ok; `cargo deny check` ok; `npm run test`
+  (`apps/knx-web`) **215 passed across 21 files**, up from 184/18 before
+  the slice; `npx tsc -p apps/knx-web/tsconfig.json --noEmit` clean.
+- **Pending/Next Steps:** T27 is closed. The `.worktrees/t27-motion-control`
+  worktree can be removed. Remaining backlog, unchanged by this slice: T17
+  (line scan, D6/E2), T21 (graphical views, D1/D2), T25/T26 (i18n, D10),
+  T28 (in-app help, D12), T16 (catalog browser for topology), T22
+  (multi-user, §63), D8's real settings contents, D9/§20 (overlay shell
+  extraction — now overdue rather than speculative, plus the accessibility
+  pass), B10 (drag & drop), C3 (partial import), C5 (signed export), C6
+  (online catalog update), E5 (Docker `--network host`), E6 (custom
+  routing multicast), F3 (licence). Blocked with named conditions:
+  T30/E1 (commissioning), T19/E3 (KNX Secure), T20/A1 (Functions), A4
+  (schemas 12-22).
+- **Notes for Codex:** Two things worth knowing before touching
+  `apps/knx-web`. (1) **`npm run test` does not build the application.**
+  It is `vitest run`; `npm run build` is `tsc && vite build` over
+  `include: ["src"]`. A `node:` import in a test file passes Vitest and
+  breaks the build — it did, on this branch, and `apps/knx-web/src/node-builtins.d.ts`
+  is the 27-line fix. `npx tsc -p apps/knx-web/tsconfig.json --noEmit` is
+  a gate now; please keep running it. (2) **Vitest does not process CSS.**
+  `import css from "./styles.css?raw"` resolves to the empty string, so
+  `motionGuard.test.ts` reads the stylesheet with `node:fs` on purpose.
+  Tidying that import away would leave a green test that checks nothing.
+  Both are recorded in `KNOWN_LIMITATIONS.md` §43.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-12 02:05
 - **Completed:** **T27 task 5 (docs-only): reconciled documentation with
   the shipped in-app motion control.** Branch `t27-motion-control`,

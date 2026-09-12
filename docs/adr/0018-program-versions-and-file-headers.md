@@ -38,13 +38,17 @@ decides the per-file half:
 - A **per-file version** has no such property. No tool can tell whether a
   given edit "deserved" a bump, nor which of major/minor/patch; a lint can
   check only that the number parses. The one mechanical proxy — "every
-  file in `git diff <base>` must have changed its version line" — needs a
-  base ref (available on a pull request, not on a push to `main`), still
-  cannot judge the *size* of the bump, and guarantees a merge conflict on
-  line 1 whenever two branches touch the same file. This repository runs
-  concurrent worktrees as a matter of course (`t25-ui-chrome-language` was
-  being written beside this slice); a convention that manufactures
-  conflicts there is a convention that gets deleted.
+  file in `git diff <base>` must have changed its version line" — has a
+  base ref readily enough (`github.event.before` on a push event,
+  `git merge-base main HEAD` locally); what it lacks is any way to judge
+  the *size* of the bump, or whether one was deserved, so it would
+  enforce a ritual and not a meaning. And under concurrent edits it fails
+  in the quiet direction: two branches that each bump the same file from
+  the same base to the same number merge *cleanly* — two changes, one
+  bump, no signal — while two that pick different numbers conflict on
+  line 1 over nothing. This repository runs concurrent worktrees as a
+  matter of course (`t25-ui-chrome-language` was being written beside
+  this slice).
 
 What the existing files look like, measured: 166 Rust files, 144 open with
 a `//!` module doc, 24 of those with a first paragraph of exactly one line
@@ -66,7 +70,15 @@ carry it in their own manifest; nothing uses `version.workspace = true`,
 because the requirement is that programs version independently, and a
 shared number would bump fifteen packages for a change in one.
 `tauri.conf.json` drops its `version` key so `knx-desktop` has exactly one
-source of truth, its `Cargo.toml`.
+source of truth, its `Cargo.toml`. The trade recorded with that: Tauri
+stamps a Windows `.exe`'s `FILEVERSION`/`PRODUCTVERSION` and a macOS
+bundle's `CFBundleShortVersionString` only from that key
+(`tauri-build` 2.6.3 `src/lib.rs` reads `config.version` for the Windows
+resource and nothing else; the fallback itself was checked in
+`tauri-codegen` and the CLI at review). Linux-first with
+`bundle.active = false` means no shipped artefact loses a number today.
+The day a Windows or macOS bundle is built, the key comes back — set from
+`Cargo.toml` by the build, not typed twice — and this paragraph is why.
 
 Bump rule for the alpha phase: when a merged slice changes what a program
 does (a binary's or app's user-visible behaviour, a library crate's public
@@ -82,11 +94,19 @@ release decision and there is no release, so this ADR does not make it.
 manifest.** `knx --version` and `knx-server --version` (also `-V`) print
 `<name> <version>+g<short-sha>` — SemVer build metadata, the `g` prefix as
 `git describe` uses it. A `build.rs` in each binary package (identical
-copies, ~40 lines of `std`) asks `git rev-parse --short HEAD`, tells cargo
-to re-run when `HEAD` or the loose branch ref it points to changes, honours
-an explicit `KNX_BUILD_SHA` environment variable first (a source tarball or
-a Docker build has no `.git` to ask — `.dockerignore` drops it, and the
-`Dockerfile` gained the matching `ARG`), and when neither is available
+copies, ~70 lines of `std`) asks `git rev-parse --short HEAD` — after
+checking that `git rev-parse --show-toplevel` *is* this workspace, so a
+tree unpacked inside someone else's checkout is stamped with nothing
+rather than with their commit — and tells cargo to re-run when `HEAD`,
+the `HEAD` reflog, or the loose branch ref changes. The reflog is the
+watch that matters: it is appended on every commit, checkout and reset
+whether or not the branch ref is packed, and `git gc --auto` packs refs
+routinely; a watch on the loose branch file alone went stale the moment
+it did, and every later commit was invisible to `--version` until `HEAD`
+itself moved (found in review, reproduced, fixed). It honours an explicit
+`KNX_BUILD_SHA` environment variable first (a source tarball or a Docker
+build has no `.git` to ask — `.dockerignore` drops it, and the
+`Dockerfile` gained the matching `ARG`), and when nothing is available
 emits nothing, so the build proceeds and prints the bare manifest version.
 A sha written into a manifest would change on every commit and turn every
 manifest diff into noise, which is why it does not go there. Uncommitted
@@ -133,8 +153,18 @@ request, and the reasoning is the point of this ADR:
   loop, and the `+g<sha>` in `--version` pins every file's state at once
   for any built binary. A hand-maintained counter would be a lossy copy of
   that.
-- *It fights the workflow.* Bump-on-touch puts line 1 in every diff and
-  conflicts it on every concurrent edit of the same file.
+- *It fights the workflow, and quietly.* Bump-on-touch puts line 1 in
+  every diff. Two branches that bump the same file from the same base to
+  the same number merge without a conflict — two changes, one bump, no
+  signal — and only branches that disagree on the number conflict, on a
+  line that carries no information either way.
+- *The same objection applies to the sentence, and the answer differs.*
+  Nothing verifies that a header sentence is still true either. The
+  difference is how each rots: a stale sentence reads as an approximate
+  description and a reader corrects it in passing; a stale number asserts
+  false precision, and a reader has no way to tell `1.4.2` from "`1.4.2`,
+  nobody bumped it". The convention keeps the failure mode that degrades
+  gracefully and refuses the one that does not.
 
 What the user actually wanted from the per-file half — "a reader learns a
 file's purpose from its first line" — the sentence delivers alone. What a
@@ -155,14 +185,27 @@ single-line `/** ... */`, has *no header* and is counted, not failed. A
 line 1 that is shaped like a header but breaks the grammar fails the
 lint with the file and the reason. A single-line docblock holding only a
 pragma (`/** @vitest-environment happy-dom */`) is not a header either.
-The lint prints three counts — well-formed, without a header, generated
-and skipped — so the convention's spread is visible without anyone
-claiming coverage the tree does not have. It runs in CI beside
-`check-layering`.
+A UTF-8 byte-order mark on line 1 is a violation in its own right, since
+it would hide a header from every check here. The lint prints three
+counts — well-formed, without a header, generated and skipped — so the
+convention's spread is visible without anyone claiming coverage the tree
+does not have.
+
+The "without a header" count is also a **ratchet**.
+`headers::ABSENT_CEILING` (201, measured 2026-09-12) is the most the tree
+may have; the lint fails when the count exceeds it, and lowering the
+constant is the only edit it accepts — raising it is a decision to end
+the convention, which is an ADR, not a constant. This is what makes "a
+file created or edited from now on gets a header" enforceable with no
+base ref and no sweep, by the same command in CI and locally: a new file
+without a header raises the count, and so does an existing header edited
+back into a multi-line paragraph. It runs in CI beside `check-layering`.
 
 What it deliberately does not do: judge whether the sentence is true or
-still current (review does that); demand coverage; or check any per-file
-version, because there is none to check.
+still current (review does that); notice a pre-convention file that was
+edited and left without a header — the count does not move for that, and
+review carries it; or check any per-file version, because there is none
+to check.
 
 ## Alternatives considered
 
@@ -170,9 +213,25 @@ version, because there is none to check.
 the user's requirement is per-program identity, and one number for fifteen
 packages would bump all of them for a change in any.
 
-**A per-file version with a `git diff`-based bump lint.** Rejected for the
-reasons in Decision 4: it needs a base ref, cannot judge bump size, and
-creates line-1 conflicts across concurrent worktrees.
+**A per-file version with a `git diff`-based bump lint.** Rejected: a base
+ref is available, but the lint would be checking a ritual — it cannot
+judge whether a bump was the right size or deserved at all — and under
+concurrent edits it fails quietly, as Context describes: the same bump
+from both sides merges clean.
+
+**`$Id$` keyword expansion via `.gitattributes` `ident`.** Rejected: git
+expands `$Id$` to the *blob* hash, which is content-addressed and
+unordered — it cannot say which of two states is newer — and the
+expansion exists only in the working tree, never in the committed file,
+so a diff or a code-hosting view shows the bare `$Id$`.
+
+**A per-file version only for files that leave the tree standalone.** The
+git argument in Decision 4 holds inside the repository; a `tools/*.py`
+script or an SQL migration copied somewhere on its own has no `git log`
+to fall back on. Deferred, not rejected: nothing in this tree ships alone
+today — the migrations are compiled into `knx-store` and `knx-productdb`,
+the Python tools are test oracles run in place — and when something does,
+it gets a version line by a decision that names it, not by this ADR.
 
 **A per-file version, unlinted — "just add the number and trust people".**
 Rejected: the user's own condition was feasibility, and a number nobody
@@ -195,10 +254,19 @@ parser gains one match arm.
 `Cargo.toml`.** Rejected: deleting a duplicate is simpler than checking it,
 and Tauri documents the fallback.
 
-**Enforcing header coverage on the files a branch changed.** Deferred, not
-rejected: it needs a base ref, so it would be a pull-request-only check,
-and review carries the rule today. If the "without a header" count does
-not fall as files are touched, this is the next step.
+**Enforcing header coverage on the files a branch changed**
+(`git diff <base> --name-only`). Rejected in favour of the ratchet: a base
+ref is available, but the check would run only where one is chosen, while
+the ratchet catches the same two cases — a new file without a header, a
+header broken back into a paragraph — from the tree alone,
+deterministically, with the same command everywhere. What neither catches
+is a pre-convention file edited and left header-less; that stays with
+review.
+
+**Stating the rule as review-only.** Rejected: a lint whose only verdicts
+are "malformed" and "fine" can never fail a file that simply has no
+header, so its meaning would decay to "we check punctuation". The ratchet
+costs one constant.
 
 **A multi-line header** (the whole first paragraph as the header).
 Rejected: the user asked for the *first line*, and a one-line first
@@ -219,13 +287,19 @@ pre-convention module doc without inventing a tag like `//! @header`.
   files say so.
 - The 24 pre-existing one-line module docs became valid headers by
   coincidence, which the lint confirms rather than assumes. 201 files have
-  no header today; the number is printed on every run and is expected to
-  fall as files are touched. Nobody is asked to sweep.
+  no header today; the number is printed on every run, cannot rise, and
+  `ABSENT_CEILING` follows it down as files are touched. Nobody is asked
+  to sweep; nobody gets to add a bare file either.
 - The sentence-boundary heuristic is stated, so a false positive (`e.g.
   Foo`) is a documented "reword the header", not a mystery.
 - `--version` says which commit, never whether the tree was clean. Anyone
   bisecting from a `--version` string is looking at that commit plus
-  whatever was uncommitted at build time, and this ADR tells them so.
-- Enforced: `check-headers` in CI; the two `--version` tests; cargo's own
-  SemVer parsing on every manifest. Not enforced, and said so: the alpha
-  bump rule, and the truth of any header sentence.
+  whatever was uncommitted at build time, and this ADR tells them so. In
+  the two cases where it could have been *wrong* rather than incomplete —
+  a packed branch ref, a tree inside a foreign repository — it is now
+  silent instead ([KNOWN_LIMITATIONS.md §65](../KNOWN_LIMITATIONS.md#65-version-names-a-commit-never-a-working-tree)).
+- Enforced: `check-headers` in CI, grammar and ratchet both; the
+  `--version` tests in both binaries, including that the manifest stays a
+  pre-release; cargo's own SemVer parsing on every manifest. Not enforced,
+  and said so: the alpha bump rule, the truth of any header sentence, and
+  a pre-convention file edited without gaining one.

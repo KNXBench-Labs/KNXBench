@@ -947,8 +947,9 @@ here undecorated rather than under an invented tier heading.
   convention (`//! ...` / `/** ... */`, one sentence, one period, at
   most 100 columns) applies to files created or edited from now on —
   no repo-wide sweep — and `cargo run -p xtask -- check-headers`
-  fails on a malformed header while counting, not failing, the 201
-  files that have none yet. **No per-file version**: the user's own
+  fails on a malformed header and ratchets the 201 files that have
+  none yet: the count may fall, never rise, so a new bare file or a
+  header edited back into a paragraph fails the gate. **No per-file version**: the user's own
   condition was feasibility, and a number nothing can verify is worse
   than none; [ADR-0018](adr/0018-program-versions-and-file-headers.md)
   argues it out and names what delivers the underlying want instead

@@ -1258,6 +1258,23 @@ pub fn catalog_items_impl(
         .map_err(|e| e.to_string())
 }
 
+/// Every language identifier the installed product database has any
+/// translation rows for, database-wide. Unlike `catalog_manufacturers_impl`/
+/// `catalog_items_impl`, "no product database configured" is not an error
+/// here: the Settings panel that lists these languages must still render on
+/// a fresh install that has not imported a single package yet, so `None`
+/// yields an empty list, not `Err`. Follows `assemble_parameter_panel`'s own
+/// `let Some(products_mutex) = state.product_db.as_ref() else { .. }` idiom.
+pub fn product_languages_impl(
+    state: &AppState,
+) -> Result<Vec<knx_productdb::query::TranslationLanguage>, String> {
+    let Some(products_mutex) = state.product_db.as_ref() else {
+        return Ok(Vec::new());
+    };
+    let products = products_mutex.lock().expect("state mutex poisoned");
+    knx_productdb::query::translation_languages(&products).map_err(|e| e.to_string())
+}
+
 /// Installs one standalone manufacturer package into the shared catalog.
 /// Multipart parsing and response serialization remain at the HTTP boundary.
 #[derive(Debug)]
@@ -1776,7 +1793,11 @@ fn empty_assembly(stale: Vec<(String, String)>) -> PanelAssembly {
 /// the reverse order from `create_device_impl`, per this task's own
 /// brief, since here the program reference comes from already-loaded
 /// project state rather than the other way around).
-fn assemble_parameter_panel(state: &AppState, device_id: u32) -> Result<PanelAssembly, String> {
+fn assemble_parameter_panel(
+    state: &AppState,
+    device_id: u32,
+    language: Option<&str>,
+) -> Result<PanelAssembly, String> {
     let device = knx_core::DeviceId(device_id);
 
     // Step 1: lock only `project`.
@@ -1817,8 +1838,10 @@ fn assemble_parameter_panel(state: &AppState, device_id: u32) -> Result<PanelAss
 
     let ref_ids = knx_productdb::query::parameter_ref_ids(&products, &program_id)
         .map_err(|e| e.to_string())?;
-    let views =
-        knx_productdb::query::parameter_views(&products, &program_id).map_err(|e| e.to_string())?;
+    // `language` is the request-supplied display language (T26 Task 2);
+    // `None` keeps today's untranslated behaviour exactly as Task 1 left it.
+    let views = knx_productdb::query::parameter_views(&products, &program_id, language)
+        .map_err(|e| e.to_string())?;
     let views_by_id: HashMap<String, knx_productdb::query::ParameterView> =
         views.iter().cloned().map(|v| (v.id.clone(), v)).collect();
 
@@ -1997,8 +2020,9 @@ fn assemble_parameter_panel(state: &AppState, device_id: u32) -> Result<PanelAss
 pub(crate) fn parameter_panel_impl(
     state: &AppState,
     device_id: u32,
+    language: Option<&str>,
 ) -> Result<crate::routes::ParameterPanelDto, String> {
-    assemble_parameter_panel(state, device_id).map(|assembly| assembly.dto)
+    assemble_parameter_panel(state, device_id, language).map(|assembly| assembly.dto)
 }
 
 /// D24 step 3: kind-appropriate validation of a candidate raw value
@@ -2076,8 +2100,9 @@ pub(crate) fn set_parameter_value_impl(
     device_id: u32,
     ets_id: String,
     raw: String,
+    language: Option<&str>,
 ) -> Result<crate::routes::ParameterPanelDto, String> {
-    let before = assemble_parameter_panel(state, device_id)?;
+    let before = assemble_parameter_panel(state, device_id, language)?;
     let program_id = before
         .program_id
         .ok_or("device has no resolvable application program")?;
@@ -2128,7 +2153,7 @@ pub(crate) fn set_parameter_value_impl(
     };
     apply(state, cmd)?;
 
-    parameter_panel_impl(state, device_id)
+    parameter_panel_impl(state, device_id, language)
 }
 
 #[cfg(test)]

@@ -302,6 +302,23 @@ export function catalogItems(manufacturer?: string, search?: string): Promise<Ca
   return request(`/api/catalog/items${qs ? `?${qs}` : ""}`);
 }
 
+// `ProductLanguageDto` (apps/knx-server/src/routes.rs) — server-local, no
+// `ts-rs` binding, hand-written to match its `#[serde(rename_all =
+// "camelCase")]` shape, same convention as `CatalogManufacturer`/
+// `CatalogItem` above. `rows` is a plain count, not a completeness
+// judgement — the Settings panel's label just reports it verbatim.
+export interface ProductLanguage {
+  language: string;
+  rows: number;
+}
+
+// Returns `[]` when no product database is installed (the server's own
+// doc comment on `product_languages`), not an error — callers render that
+// as "no languages available" rather than treating it as a failed fetch.
+export function productLanguages(): Promise<ProductLanguage[]> {
+  return request("/api/product-languages");
+}
+
 /// Uses multipart directly rather than `request()`: setting JSON's
 /// `Content-Type` on a FormData request would remove the required boundary.
 export async function installProductPackage(file: File): Promise<CatalogInstallReport> {
@@ -883,16 +900,33 @@ export interface ParameterPanel {
   diagnostics: ParameterDiagnostic[];
 }
 
-export function deviceParameters(deviceId: number): Promise<ParameterPanel> {
-  return request(`/api/device/${deviceId}/parameters`);
+// `language` selects which stored translation row the server substitutes
+// into a field's `text` (empty/omitted means the package's untranslated
+// default) — it never changes which parameters exist or what a write
+// stores, only the wording the read model comes back with. Built the same
+// way `catalogItems` above builds its optional query string, so the two
+// don't drift into two different conventions for the same thing.
+function languageQuery(language?: string | null): string {
+  const params = new URLSearchParams();
+  if (language) params.set("language", language);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function deviceParameters(
+  deviceId: number,
+  language?: string | null,
+): Promise<ParameterPanel> {
+  return request(`/api/device/${deviceId}/parameters${languageQuery(language)}`);
 }
 
 export function setParameterValue(
   deviceId: number,
   etsId: string,
   raw: string,
+  language?: string | null,
 ): Promise<ParameterPanel> {
-  return request(`/api/device/${deviceId}/parameters`, {
+  return request(`/api/device/${deviceId}/parameters${languageQuery(language)}`, {
     method: "POST",
     body: JSON.stringify({ etsId, raw }),
   });

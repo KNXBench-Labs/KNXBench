@@ -341,11 +341,12 @@ Cycle 14+ candidates (from `ideas.md`, not yet scheduled).
 
 ## Cross-cutting — Internationalization
 
-**Planned, no cycle scheduled.** Added 2026-09-10 by explicit request.
-Not part of the original Session 0-7 breakdown, and deliberately not
-folded into Session 5 as "cycle 14", because only half of it is UI work:
-the other half reaches into `knx-core`'s string table and
-`knx-productdb`'s translation storage, which belong to Sessions 2 and 4.
+**T25 planned, no cycle scheduled; T26's first slice shipped
+2026-09-12.** Added 2026-09-10 by explicit request. Not part of the
+original Session 0-7 breakdown, and deliberately not folded into
+Session 5 as "cycle 14", because only half of it is UI work: the other
+half reaches into `knx-core`'s string table and `knx-productdb`'s
+translation storage, which belong to Sessions 2 and 4.
 
 Two tracks, tracked as **T25** and **T26** in
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6, closing gap **D10**:
@@ -361,14 +362,31 @@ Two tracks, tracked as **T25** and **T26** in
    and `knx-productdb`'s `translation` table already exist and are
    already populated on import — one application program alone carries
    5919 translation elements, which is why the indirection went into the
-   model on day one. Nothing reads either of them. T26 adds an active
-   language and the display-side resolution that turns stored
-   translations into rendered text.
+   model on day one. **First slice shipped 2026-09-12**: `knx-productdb`
+   gained a per-element translation overlay (`parameter_views`/
+   `parameter_type_enum_options`, `Text`/`FunctionText`/`SuffixText`/
+   `VisibleDescription`/`Name` only, never `Value`), `knx-server` exposes
+   it via `GET /api/product-languages` and `?language=` on the device
+   parameter panel's routes, and `apps/knx-web` persists the choice as a
+   Settings-panel setting that `ParameterPanel` sends on load and write.
+   That closes half of gap **D10** — but only at that one surface.
+   `knx_core::string_table`'s own resolver is still unused everywhere,
+   communication-object text is still never translated (it is baked into
+   the project at device creation, so translating it there would make the
+   *stored project* depend on a display setting), and `Catalog.xml`/
+   `Hardware.xml`/`knx_master.xml`'s own `Languages` blocks are dropped on
+   import rather than merely unread (tracked as **T32**,
+   [KNOWN_LIMITATIONS.md §64](KNOWN_LIMITATIONS.md#64-languages-blocks-outside-an-application-program-are-discarded-on-import)).
+   A later T26 slice is needed for a real active-language concept and for
+   the project's own `Language` field, still a placeholder.
 
-The library choice for track 1, the storage of the language setting
-(D8's options dialog does not exist yet), and what a project's own
-`Language` means once the user can pick a different one all belong in a
-design spec, not here. Neither track has one yet.
+The library choice for track 1 and the storage of the language setting
+(D8's options dialog does not exist yet) still belong in a design spec
+of their own, not here — track 1 has none yet. Track 2's first slice has
+one: `docs/superpowers/specs/2026-09-12-product-data-language-design.md`.
+What a project's own `Language` field means once a user can pick a
+different one is still undecided, tracked above as part of T26's
+remaining work.
 
 ## Cross-cutting — Motion and animation
 

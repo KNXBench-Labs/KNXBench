@@ -8,6 +8,7 @@ import type {
   ParameterSection,
   StaleParameter,
 } from "./api";
+import { useProductLanguage } from "./productLanguage";
 
 // T18 slice 3, task 4 (design docs/superpowers/specs/2026-09-11-parameter-editor-design.md).
 // Fetches `GET /api/device/{id}/parameters` on every device selection —
@@ -33,9 +34,10 @@ function sectionLabel(scope: ModuleScope | null): string {
 function ParameterFieldRow(props: {
   field: ParameterField;
   deviceId: number;
+  language: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
 }) {
-  const { field, deviceId, onUpdated } = props;
+  const { field, deviceId, language, onUpdated } = props;
   const [value, setValue] = useState(field.value ?? "");
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +52,7 @@ function ParameterFieldRow(props: {
     if (value === current) return;
     setError(null);
     try {
-      const panel = await api.setParameterValue(deviceId, field.etsId, value);
+      const panel = await api.setParameterValue(deviceId, field.etsId, value, language);
       onUpdated(panel);
     } catch (e) {
       setError(api.errorMessage(e));
@@ -58,7 +60,14 @@ function ParameterFieldRow(props: {
     }
   }
 
-  const label = field.name ?? field.text ?? field.etsId;
+  // `text` before `name`, not the other way round: measured on the real
+  // corpus, `Name` has zero rows in the translation table for `parameter`
+  // while `Text` has 9915, and every one of the 3557 corpus parameter rows
+  // populates both columns (typically `name = "General"`, `text =
+  // "Allgemein"`). `name ?? text` would make every translated string
+  // unreachable behind the untranslated one that is always present — the
+  // whole point of this slice. Do not "fix" this back.
+  const label = field.text ?? field.name ?? field.etsId;
 
   return (
     <label className="inspector-field parameter-field">
@@ -119,9 +128,10 @@ function ParameterFieldRow(props: {
 function ParameterSectionView(props: {
   section: ParameterSection;
   deviceId: number;
+  language: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
 }) {
-  const { section, deviceId, onUpdated } = props;
+  const { section, deviceId, language, onUpdated } = props;
   return (
     <details className="parameter-section" open>
       <summary>{sectionLabel(section.scope)}</summary>
@@ -131,6 +141,7 @@ function ParameterSectionView(props: {
             key={field.etsId}
             field={field}
             deviceId={deviceId}
+            language={language}
             onUpdated={onUpdated}
           />
         ))}
@@ -190,11 +201,14 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
 
 export default function ParameterPanel(props: { deviceId: number }) {
   const { deviceId } = props;
+  const [language] = useProductLanguage();
   const [panel, setPanel] = useState<ParameterPanelDto | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   // Guards against a slower, earlier device's response landing after a
   // faster, later one's — same stale-reply hazard `CatalogBrowser.tsx`'s
-  // `requestIdRef` guards for its own server round trips.
+  // `requestIdRef` guards for its own server round trips. A language
+  // change re-fetches through this same effect and races the same way a
+  // device change always has, so it needs no guard of its own.
   const requestIdRef = useRef(0);
 
   useEffect(() => {
@@ -202,7 +216,7 @@ export default function ParameterPanel(props: { deviceId: number }) {
     setLoadError(null);
     const requestId = ++requestIdRef.current;
     api
-      .deviceParameters(deviceId)
+      .deviceParameters(deviceId, language)
       .then((p) => {
         if (requestId !== requestIdRef.current) return;
         setPanel(p);
@@ -211,7 +225,7 @@ export default function ParameterPanel(props: { deviceId: number }) {
         if (requestId !== requestIdRef.current) return;
         setLoadError(api.errorMessage(e));
       });
-  }, [deviceId]);
+  }, [deviceId, language]);
 
   if (loadError) {
     return (
@@ -245,6 +259,7 @@ export default function ParameterPanel(props: { deviceId: number }) {
             key={i}
             section={section}
             deviceId={deviceId}
+            language={language}
             onUpdated={setPanel}
           />
         ))

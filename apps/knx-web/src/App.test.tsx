@@ -16,6 +16,7 @@ import type { LogEntry } from "./api";
 const apiMock = vi.hoisted(() => ({
   importProject: vi.fn(),
   getSessionLog: vi.fn().mockResolvedValue([]),
+  productLanguages: vi.fn().mockResolvedValue([]),
 }));
 
 const filePickerMock = vi.hoisted(() => ({
@@ -39,6 +40,7 @@ afterEach(() => {
   host = undefined;
   vi.clearAllMocks();
   apiMock.getSessionLog.mockResolvedValue([]);
+  apiMock.productLanguages.mockResolvedValue([]);
 });
 
 function baseTree(): ProjectTree {

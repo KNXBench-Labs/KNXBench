@@ -381,11 +381,15 @@ Two tracks, tracked as **T25** and **T26** in
    ([KNOWN_LIMITATIONS.md §64](KNOWN_LIMITATIONS.md#64-languages-blocks-outside-an-application-program-are-discarded-on-import)).
    **T33** (2026-09-12) gave communication-object text the same overlay:
    `com_object_view` reads `Text`/`FunctionText`/`VisibleDescription` in
-   the selected language, and `GET /api/device/{id}?language=` applies it
-   to a device's com objects — but only where the stored override's layer
-   is `Layer::Program`/`Layer::ProgramRef`; project-authored layers stay
-   verbatim, and device creation/`enrich()` still bake untranslated text
-   into the project on purpose, since translation remains display-only.
+   the selected language, and `GET /api/device/{id}?language=` applies
+   `Text` and `VisibleDescription` to a device's com objects — but only
+   where the stored override's layer is `Layer::Program`/
+   `Layer::ProgramRef`; project-authored layers stay verbatim, and device
+   creation/`enrich()` still bake untranslated text into the project on
+   purpose, since translation remains display-only. `FunctionText` is
+   translated by the query and then read by nothing: no surface displays
+   it, and `knx-report`'s exporter is not language-aware at all
+   ([KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md)).
    A later T26/T33 slice is still needed for a real active-language
    concept and for the project's own `Language` field, still a
    placeholder.

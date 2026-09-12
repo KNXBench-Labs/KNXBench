@@ -107,12 +107,8 @@ pub fn enrich(
                 .com_object(com_id)
                 .and_then(|c| c.module_instance)
                 .is_some();
-            let lookup_id = if is_module_based {
-                module_ref_id(&program_id, &ref_id).unwrap_or_else(|| ref_id.clone())
-            } else {
-                ref_id.clone()
-            };
-            let Some(view) = com_object_view(conn, &program_id, &lookup_id)? else {
+            let lookup_id = com_object_lookup_id(&program_id, &ref_id, is_module_based);
+            let Some(view) = com_object_view(conn, &program_id, &lookup_id, None)? else {
                 report.issues.push(EnrichmentIssue::ComObjectRefMissing {
                     device_ets_id: device_ets_id.clone(),
                     ref_id,
@@ -141,6 +137,20 @@ fn module_ref_id(program_id: &str, device_ref_id: &str) -> Option<String> {
     parts.next()?; // MI-<k>
     let tail = parts.next()?; // O-<a>-<b>_R-<c>
     Some(format!("{program_id}_MD-{md_digits}_{tail}"))
+}
+
+/// The `ComObjectRef` id to look up for one device-level `RefId`: the
+/// module-reconstructed id when `module_based`, the `RefId` itself
+/// otherwise, with `module_ref_id`'s own `unwrap_or_else` fallback to the
+/// raw `RefId` when reconstruction fails — `enrich()` and any other caller
+/// wanting the exact same id share this one implementation instead of each
+/// keeping their own copy of the `if`.
+pub fn com_object_lookup_id(program_id: &str, ref_id: &str, module_based: bool) -> String {
+    if module_based {
+        module_ref_id(program_id, ref_id).unwrap_or_else(|| ref_id.to_string())
+    } else {
+        ref_id.to_string()
+    }
 }
 
 /// Writes `value` only into an `Override::Absent` slot. Every other state
@@ -422,7 +432,7 @@ mod tests {
     #[test]
     fn apply_can_be_called_directly_without_going_through_enrich() {
         let (_dir, conn) = db();
-        let view = com_object_view(&conn, "A-1", "A-1_O-1_R-1")
+        let view = com_object_view(&conn, "A-1", "A-1_O-1_R-1", None)
             .unwrap()
             .unwrap();
         let mut p = project_with("A-1_O-1_R-1", Override::Absent);

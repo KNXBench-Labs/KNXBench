@@ -341,8 +341,8 @@ Cycle 14+ candidates (from `ideas.md`, not yet scheduled).
 
 ## Cross-cutting — Internationalization
 
-**T25 planned, no cycle scheduled; T26's first slice shipped
-2026-09-12.** Added 2026-09-10 by explicit request. Not part of the
+**T25 planned, no cycle scheduled; T26's first slice, T32, and T33 all
+shipped 2026-09-12.** Added 2026-09-10 by explicit request. Not part of the
 original Session 0-7 breakdown, and deliberately not folded into
 Session 5 as "cycle 14", because only half of it is UI work: the other
 half reaches into `knx-core`'s string table and `knx-productdb`'s
@@ -370,10 +370,8 @@ Two tracks, tracked as **T25** and **T26** in
    parameter panel's routes, and `apps/knx-web` persists the choice as a
    Settings-panel setting that `ParameterPanel` sends on load and write.
    That closes half of gap **D10** — but only at that one surface.
-   `knx_core::string_table`'s own resolver is still unused everywhere,
-   communication-object text is still never translated (it is baked into
-   the project at device creation, so translating it there would make the
-   *stored project* depend on a display setting). `Catalog.xml`/
+   `knx_core::string_table`'s own resolver is still unused everywhere
+   except `build_device_detail`'s fixed-default call. `Catalog.xml`/
    `Hardware.xml`/`knx_master.xml`'s own `Languages` blocks were dropped
    on import rather than merely unread until **T32** (2026-09-12) gave
    them schema v4's `(scope, scope_id)` key, a shared ingest pass, a
@@ -381,8 +379,16 @@ Two tracks, tracked as **T25** and **T26** in
    browser; hardware- and master-scope rows are now ingested but still
    read by nothing
    ([KNOWN_LIMITATIONS.md §64](KNOWN_LIMITATIONS.md#64-languages-blocks-outside-an-application-program-are-discarded-on-import)).
-   A later T26 slice is needed for a real active-language concept and for
-   the project's own `Language` field, still a placeholder.
+   **T33** (2026-09-12) gave communication-object text the same overlay:
+   `com_object_view` reads `Text`/`FunctionText`/`VisibleDescription` in
+   the selected language, and `GET /api/device/{id}?language=` applies it
+   to a device's com objects — but only where the stored override's layer
+   is `Layer::Program`/`Layer::ProgramRef`; project-authored layers stay
+   verbatim, and device creation/`enrich()` still bake untranslated text
+   into the project on purpose, since translation remains display-only.
+   A later T26/T33 slice is still needed for a real active-language
+   concept and for the project's own `Language` field, still a
+   placeholder.
 
 The library choice for track 1 and the storage of the language setting
 (D8's options dialog does not exist yet) still belong in a design spec

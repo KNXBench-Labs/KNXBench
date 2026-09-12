@@ -22,6 +22,16 @@ language change. `parameter_views` already has the right shape for this
 (one query for the whole program, one overlay for the whole call); the com
 object path never got it.
 
+**Correction, added 2026-09-12 after Task 2 measured it.** The "3,876
+overlay rows / ~1.26 ms" above is T33's figure and it does not reproduce
+against any denominator this branch could construct — not the language-
+filtered overlay, not the program's rows across all languages, not the
+whole database. The measured cost is 1,249 `de-DE` `translation` rows per
+load on `M-0083_A-0317-31-7DC6`, loaded 104 times per device fetch before
+this change and once after. The paragraph above is left standing as the
+argument the plan was written from; the number in it is withdrawn. See
+[GAP_ANALYSIS_ETS.md](../../GAP_ANALYSIS_ETS.md)'s T34 entry.
+
 The other three findings are independent of the performance one and ride
 along because they live in the same T33 surface.
 

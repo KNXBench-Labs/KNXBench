@@ -3196,8 +3196,11 @@ this entry is the short form.
   per 900-id chunk, the overlay loaded exactly once for the whole call,
   and an empty slice never touching the database. `com_object_view`
   survives as a one-element wrapper around it, so `create_device`'s
-  per-ref loop (which has no batch of ref ids to offer, and passes
-  `None`) is untouched. `apps/knx-server/src/domain.rs`'s
+  per-ref loop is untouched. It does hold a batch of ref ids — it loops
+  `com_object_ref_ids`' own Vec — but it resolves them one at a time on
+  purpose: each gets an `ok_or_else` naming the ref id that is missing
+  from the catalog, and with `language: None` it pays no overlay cost
+  worth batching away. `apps/knx-server/src/domain.rs`'s
   `device_detail` — described in T33's own entry above as calling
   `com_object_view(.., Some(lang))` per com object — now collects every
   lookup id first and calls `com_object_views` once per fetch instead;
@@ -3264,8 +3267,9 @@ added 1 (the M6 regression test, landing at 1090/0/3, independently
 reviewer-confirmed), Task 3 touched only `apps/knx-web` and left the
 Rust count unchanged, and this task adds the eleventh and last:
 `a_malformed_language_query_is_rejected_and_an_absent_one_is_not` in
-`apps/knx-server/tests/http_com_object_language.rs`. Web gates
-(`npm test -- --run`, `tsc --noEmit`) not run — this branch's diff is
+`apps/knx-server/tests/http_com_object_language.rs`. Web gates on the
+branch head: **340 passed across 31 files**, `tsc --noEmit` clean. They
+were not re-run after each Rust-only task; the branch's diff is
 `crates/knx-productdb/src/query.rs`, `apps/knx-server/src/domain.rs`,
 `apps/knx-web/src/App.tsx`/`App.test.tsx` (Tasks 1-3, already merged
 before this entry's task) and `docs/`; Task 4 itself, which wrote this

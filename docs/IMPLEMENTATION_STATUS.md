@@ -447,7 +447,7 @@ across the workspace (up from 314), plus 64 `vitest` tests in
 | `apps/knx-server/` | **New, web/Docker deployment target.** The axum HTTP API binary (`knx-server`) and library (`knx_server`) — see the paragraph above. `src/domain.rs` holds `AppState` and the same `_impl` functions the old Tauri commands wrapped; `src/routes.rs`/`fs_routes.rs` are the axum route handlers; `src/errors.rs` maps `AppError` to an HTTP status plus a `{"error": ...}` body. `main.rs` reads `KNX_PORT`/`KNX_STATIC_DIR`/`KNX_DATA_DIR` from the environment. `Dockerfile` is the three-stage build (Node frontend, Rust backend, Debian-slim runtime); `scripts/smoke-test.sh` builds and runs the image and exercises `/healthz` plus an import over HTTP. |
 | `apps/knx-web/` | **New, moved from `apps/knx-desktop/src`.** The React + Vite frontend, now a standalone npm package consumed by both `knx-server`'s static-file serving and the Tauri desktop shell. `src/api.ts` is the `fetch()`-based client (replaces Tauri's `invoke()`); `src/FsPicker.tsx` is the mount-directory listing/upload UI shown when `window.__TAURI__` is absent (the server's `/api/project/download` route has no UI caller yet, see [KNOWN_LIMITATIONS.md #26](KNOWN_LIMITATIONS.md#26-apiprojectdownload-has-no-frontend-caller)); `src/filePicker.ts` picks between it and the native Tauri dialog. `src/theme.ts` is cycle 13's named-theme registry, replacing cycle 7's `theme.ts`/`ThemeToggle.tsx` cycle and cycle 11's now-deleted `palette.ts`/`ThemePanel.tsx` token overrides outright — see the Session 5 paragraph above. Its `<select>` picker was `src/ThemeSwitcher.tsx` until T27 (2026-09-12) moved the Theme select into a new `src/SettingsPanel.tsx` alongside two new motion settings and deleted `ThemeSwitcher.tsx` outright, its one consumer gone. Everything else (`ProjectExplorer`, `Inspector`, `Search.tsx`/`CommandPalette.tsx`, `Dashboard.tsx`, `Toast.tsx`, the `ts-rs`-generated bindings under `src/bindings/`) moved unchanged from `knx-desktop`. `vitest` suite: 89 tests across 8 files, including `api.test.ts` against a mocked `fetch` and cycle 13's rewritten `theme.test.ts` (`palette.test.ts` is gone with `palette.ts`). |
 | `apps/knx-desktop/` | **Thin native wrapper as of the web/Docker deployment target** — see the paragraph above. `src-tauri/` is now just window/process wiring (`lib.rs`, ~80 lines): spawn `knx-server`'s router locally, point one `WebviewWindowBuilder` at it, keep the native file-dialog plugin available for `apps/knx-web`'s `window.__TAURI__` check. No `#[tauri::command]` handlers and no integration tests remain here — both moved to `apps/knx-server`. No `src/` of its own any more; it loads `apps/knx-web`'s build output (dev: Vite HMR on a fixed port; release: bundled as a Tauri resource). |
-| `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `check-headers` (T35) checks the shape of every first-line header that exists — one sentence, one period, at most 100 columns — and counts rather than fails the files that have none; `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
+| `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `check-headers` (T35) checks the shape of every first-line header that exists — one sentence, one period, at most 100 columns — and ratchets the count of files without one (`ABSENT_CEILING`, lowered as headers are added, never raised); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |
 | `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, `knx-web`'s own `npm test` (Vitest, Session 5 cycle 5; path updated from `knx-desktop` to `knx-web` with the web/Docker deployment target), the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-web/src/bindings` are not stale (Session 5; path likewise updated). Does not build or smoke-test the `knx-server` Docker image — that stays a local/manual step (`apps/knx-server/scripts/smoke-test.sh`), not yet wired into CI. |
 | `docs/ARCHITECTURE.md` | Layering, workspace layout, enforced rules, core approach, UI boundary, KNXnet/IP, key material, test strategy. |
@@ -2899,17 +2899,22 @@ reader, `knx-etsproj`'s `KNX/@ToolVersion` on export, now writes
 `knx --version` and `knx-server --version` (or `-V`) print
 `<name> 0.1.0-alpha.1+g<short-sha>`. The sha comes from a new `build.rs`
 in each binary package — `git rev-parse --short HEAD` via
-`std::process::Command`, no dependency — which re-runs when `HEAD` or the
-loose branch ref moves, honours an explicit `KNX_BUILD_SHA` first (the
+`std::process::Command`, no dependency — which first checks that
+`git rev-parse --show-toplevel` is this workspace (a tree unpacked inside
+a foreign checkout gets nothing, not their sha), re-runs when `HEAD`, the
+`HEAD` reflog or the loose branch ref moves (the reflog is what survives
+`git pack-refs`; a watch on the branch file alone went stale after it,
+found in review), honours an explicit `KNX_BUILD_SHA` first (the
 `Dockerfile` gained the matching `ARG`, since `.dockerignore` drops
 `.git`), and emits nothing when there is no git to ask, so the build
-still builds and prints the bare version. All three paths were exercised
-by hand (override, no git, restored) and the sha was observed to follow
-`HEAD` across a commit. `apps/knx-cli/tests/cli_version.rs` and
+still builds and prints the bare version. Exercised by hand: override, no
+git, restored, foreign toplevel, no repository; and the sha was observed
+to follow `HEAD` across a commit. What it cannot say — whether the tree
+was clean — is [KNOWN_LIMITATIONS.md §65](KNOWN_LIMITATIONS.md#65-version-names-a-commit-never-a-working-tree). `apps/knx-cli/tests/cli_version.rs` and
 `apps/knx-server/tests/bin_version.rs` pin the shape against
 `CARGO_PKG_VERSION` and check the metadata, when present, is `+g<hex>`;
-`cli_version.rs` also fails if the manifest ever loses its pre-release
-identifier before anyone means it to. `knx_server::version_line()` is
+both also fail if their manifest ever loses its pre-release identifier
+before anyone means it to. `knx_server::version_line()` is
 public so the desktop shell can say the same thing if it ever wants to.
 
 A first-line header convention, and its lint. A source file's first line
@@ -2919,9 +2924,14 @@ in TypeScript, at most 100 columns, one period, no second sentence. It
 applies to files created or edited from now on — no repo-wide sweep, by
 the user's explicit instruction — and this slice applied it to its own
 three edited and four new Rust files. `cargo run -p xtask -- check-headers`
-(`xtask/src/headers.rs`, 22 unit tests, wired into CI beside
-`check-layering`) fails on a malformed header and *counts* files without
-one: 32 well-formed, 201 without, 22 generated `ts-rs` files skipped (the
+(`xtask/src/headers.rs`, 25 unit tests, wired into CI beside
+`check-layering`) fails on a malformed header — including `/** */`, which
+once panicked on an underflow, and a UTF-8 BOM on line 1, which once hid
+a header silently — and *ratchets* the files without one: `ABSENT_CEILING`
+is 201, the lint fails above it, and the constant only ever goes down, so
+a new bare file or a header split back into a paragraph fails the gate
+without a base ref or a sweep (tripped on both before commit). Counts
+today: 32 well-formed, 201 without, 22 generated `ts-rs` files skipped (the
 11 committed bindings and the 11 gitignored ones `cargo test -p
 knx-projection` drops into `crates/knx-projection/bindings/` — the
 latter had to be named explicitly, or the count moved by 11 depending on
@@ -2944,16 +2954,21 @@ the row for ADR-0017, which had never been listed.
 
 `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D
 warnings`, `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
-check-headers` (32 well-formed / 201 without / 22 generated skipped) and
-`cargo deny check` all clean. `cargo test --workspace`: **1049 passed / 0
-failed / 3 ignored** across 77 `test result` lines (last documented
-baseline, T33: 1018/0/3 across 75 — the two new binaries are
-`apps/knx-cli/tests/cli_version.rs` and
-`apps/knx-server/tests/bin_version.rs`; the 31 new tests are 22 in
-`xtask/src/headers.rs`, 3 + 2 in those two binaries, and 2 + 2 unit tests
-beside each `format_version_line`). `npm --prefix apps/knx-web test`:
-**251 passed across 26 files** (unchanged — no TypeScript file was
-touched); `npx tsc --noEmit` clean.
+check-headers` (32 well-formed / 201 without, ceiling 201 / 22 generated
+skipped) and `cargo deny check` all clean. `cargo test --workspace`:
+**1053 passed / 0 failed / 3 ignored** across 77 `test result` lines
+(last documented baseline, T33: 1018/0/3 across 75 — the two new
+binaries are `apps/knx-cli/tests/cli_version.rs` and
+`apps/knx-server/tests/bin_version.rs`; the 35 new tests are 25 in
+`xtask/src/headers.rs`, 3 + 3 in those two binaries, and 2 + 2 unit
+tests beside each `format_version_line`). `npm --prefix apps/knx-web
+test`: **251 passed across 26 files** (unchanged — no TypeScript file was
+touched); `npx tsc --noEmit` clean. Whole-branch review (2026-09-12)
+returned four required fixes, all landed before merge: the packed-ref
+staleness and the foreign-toplevel stamp in `build.rs`, the `/** */`
+panic and the BOM blind spot in the lint, and the ratchet; the ADR's
+per-file-version ruling was upheld and its argument corrected as noted
+in the ADR itself.
 
 Deliberately not touched: any `apps/knx-web/src/*.ts`/`*.tsx` file (the
 concurrent `t25-ui-chrome-language` branch owns those), so the TypeScript

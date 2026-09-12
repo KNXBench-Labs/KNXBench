@@ -285,8 +285,12 @@ export interface CreationDiagnostic {
   alternatives?: string[];
   programRef?: string;
   programId?: string;
-  /** Ready-to-display sentence built server-side; prefer this over
-   * re-deriving wording from the structured fields above. */
+  /** Ready-to-display English sentence built server-side. The UI no
+   * longer prefers this: `CatalogBrowser.tsx`'s `describeCreationDiagnostic`
+   * re-composes the sentence from the structured fields above so it can
+   * render in the active UI language, and only falls back to this raw
+   * string for a `kind` it doesn't recognise yet (see that function's own
+   * comment, the D4 exception). */
   detail: string;
 }
 

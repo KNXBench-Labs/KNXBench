@@ -356,6 +356,80 @@ export const messages = {
   // same mislocated string, same fix: the filter name moves from a
   // module-level const into the component, resolved via `t()`.
   "documentationExport.filterName": "HTML document",
+
+  // Task 5 review, round 2: three files the brief never named at all
+  // (`BulkActionToolbar.tsx`, `BusComposeForm.tsx`, `FsPicker.tsx`) plus
+  // the rest of `GroupAddressCsvButtons.tsx` beyond its filter name, which
+  // an earlier controller ruling had put out of scope for the wrong
+  // reason. All four were entirely, everyday-reachable English until now.
+
+  // `BulkActionToolbar.tsx`. `count === 1 ? "" : "s"` became a real plural
+  // pair — that inline ternary is exactly the case `.one`/`.other` exists
+  // for. `bulkAction.moveToLine`/`bulkAction.moveToBuildingPart` reuse the
+  // `explorer.areaLabel`/`explorer.lineLabel` keys already seeded for the
+  // option list's area/line labels — same tree, same vocabulary.
+  "bulkAction.deviceLabel.one": "{count} device selected",
+  "bulkAction.deviceLabel.other": "{count} devices selected",
+  "bulkAction.groupAddressLabel.one": "{count} group address selected",
+  "bulkAction.groupAddressLabel.other": "{count} group addresses selected",
+  "bulkAction.delete": "Delete",
+  "bulkAction.moveToLine": "Move to line…",
+  "bulkAction.unassigned": "(unassigned)",
+  "bulkAction.moveToBuildingPart": "Move to building part…",
+  "bulkAction.none": "(none)",
+  "bulkAction.dismissSelection": "Dismiss selection",
+
+  // `BusComposeForm.tsx` — `BusMonitorPanel.tsx`'s compose/send sibling.
+  // `SESSION_CLOSED_MESSAGE`/`NO_DPT_RESOLVED_MESSAGE`/
+  // `conflictingDptsMessage()` used to live outside any component at all;
+  // all three are now `t()` calls made from inside the component body.
+  "busCompose.heading": "Send a value",
+  "busCompose.noProjectHint":
+    "No project open — no DPT resolves automatically here; type one explicitly.",
+  "busCompose.sessionClosedMessage": "This session is closed — sending is disabled.",
+  "busCompose.noDptResolvedMessage": "No DPT resolved for this group address — enter one explicitly.",
+  "busCompose.conflictingDptsMessage":
+    "Conflicting DPTs for this group address: {names} — enter one explicitly.",
+  "busCompose.destinationLabel": "Destination",
+  "busCompose.dptLabel": "DPT",
+  "busCompose.valueLabel": "Value",
+  "busCompose.send": "Send",
+  "busCompose.sent": "Sent {service}: {payload}",
+
+  // `FsPicker.tsx` — the plain-web-build fallback dialog `filePicker.ts`
+  // routes to when not running under Tauri. Had no `useTranslate()` call
+  // anywhere; this is the file dialog every non-Tauri user actually sees.
+  "fsPicker.open": "Open",
+  "fsPicker.saveAs": "Save as",
+  "fsPicker.filenamePlaceholder": "filename",
+  "fsPicker.upload": "Upload…",
+  "fsPicker.save": "Save",
+  "fsPicker.cancel": "Cancel",
+
+  // `GroupAddressCsvButtons.tsx`, everything past its filter name: the two
+  // button labels, and the export/import toast summaries — the latter's
+  // `count === 1 ? "" : "s"` ternaries became real `.one`/`.other` pairs,
+  // same as `BulkActionToolbar.tsx` above. `importSummarySeeLog` is one
+  // fragment among several composed together at the call site (see
+  // `importSummary()` in `GroupAddressCsvButtons.tsx`) rather than one
+  // full sentence per combination of warnings/ignored-columns, since the
+  // component can carry both counts independently and enumerating every
+  // combination would multiply the catalogue for no translation benefit —
+  // the join punctuation itself (", ") needs no localization.
+  "groupAddressCsv.exportButton": "Export group addresses (CSV)…",
+  "groupAddressCsv.importButton": "Import group addresses (CSV)…",
+  "groupAddressCsv.exportSummaryNone": "Group addresses exported to CSV, no warnings.",
+  "groupAddressCsv.exportSummaryWithWarnings.one":
+    "Group addresses exported to CSV, {count} warning — see Log.",
+  "groupAddressCsv.exportSummaryWithWarnings.other":
+    "Group addresses exported to CSV, {count} warnings — see Log.",
+  "groupAddressCsv.importSummaryBase":
+    "Group addresses imported from CSV: {created} created, {updated} updated, {unchanged} unchanged",
+  "groupAddressCsv.importSummaryWarnings.one": "{count} warning",
+  "groupAddressCsv.importSummaryWarnings.other": "{count} warnings",
+  "groupAddressCsv.importSummaryIgnoredColumns.one": "{count} column ignored",
+  "groupAddressCsv.importSummaryIgnoredColumns.other": "{count} columns ignored",
+  "groupAddressCsv.importSummarySeeLog": "— see Log.",
 } as const;
 
 export type Messages = typeof messages;

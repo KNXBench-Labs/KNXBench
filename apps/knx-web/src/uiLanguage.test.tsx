@@ -1,3 +1,4 @@
+/** Tests for UI-language detection, storage, and the useUiLanguage/getActiveUiLanguage hooks. */
 // @vitest-environment happy-dom
 //
 // happy-dom, not node: `useUiLanguage()`'s module-level store lazily reads

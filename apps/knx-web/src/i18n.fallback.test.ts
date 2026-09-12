@@ -1,3 +1,4 @@
+/** Proves translateFor's runtime English fallback for a German key the compiler cannot omit. */
 // A dedicated file for one test, because `vi.mock` below replaces
 // `./messages/de` for every test in this module — mixing it with the rest
 // of `i18n.test.tsx`'s tests would mean unmocking partway through, which

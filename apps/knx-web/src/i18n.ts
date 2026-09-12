@@ -1,3 +1,4 @@
+/** Translation engine: catalogue lookup, plural resolution, and placeholder substitution. */
 import { useCallback } from "react";
 import { messages as enMessages } from "./messages/en";
 import type { MessageKey } from "./messages/en";

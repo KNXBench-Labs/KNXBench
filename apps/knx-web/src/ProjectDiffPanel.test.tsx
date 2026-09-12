@@ -1,3 +1,4 @@
+/** Tests for ProjectDiffPanel's diff request flow and rendered entity counts. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

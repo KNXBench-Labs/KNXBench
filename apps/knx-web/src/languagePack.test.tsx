@@ -1,3 +1,4 @@
+/** Tests for language-pack validation, import, storage, export, and the useLanguagePacks hook. */
 // @vitest-environment happy-dom
 //
 // happy-dom, not node: the installed-packs store lazily reads

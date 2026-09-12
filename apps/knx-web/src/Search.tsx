@@ -1,3 +1,4 @@
+/** Global search overlay indexing devices, group addresses, and building parts across the tree. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";

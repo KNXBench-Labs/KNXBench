@@ -1,3 +1,4 @@
+/** Overlay for browsing the product catalogue, installing packages, and creating devices. */
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import * as api from "./api";

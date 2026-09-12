@@ -1,3 +1,4 @@
+/** Renders the active toast queue as a dismissible alert/status stack. */
 import type { ToastEntry } from "./toast";
 import { useTranslate } from "./i18n";
 

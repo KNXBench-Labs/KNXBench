@@ -1,3 +1,4 @@
+/** Settings overlay for theme, motion, UI/product language, and language-pack management. */
 import { useState } from "react";
 import type { ThemeDef } from "./theme";
 import type { MotionLevelDef, MotionStyleDef } from "./motion";

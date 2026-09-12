@@ -1265,30 +1265,64 @@ persists the chosen language as a per-user setting
 as a "Product data language" select in the Settings panel, and
 `ParameterPanel` sends it on every load and every write.
 
-**Still open.** Communication-object text is never translated, including
-at device creation — creation bakes the text into the project file, so
-translating it there would make the *stored project* depend on a display
-setting, the same integrity line this slice was careful not to cross for
-parameter values. The UI chrome itself is still hard-coded English,
-tracked separately as **T25**. `Value` translations are deliberately
-never applied, for the identical stored-data-integrity reason: a
-parameter's value is a key written into the project file, not display
-text. `parameter.suffix` is stored but displayed nowhere, so all 879
-`SuffixText` rows measured for this slice's design spec remain unread.
-There is no locale-prefix matching (a stored `de` selection does not
-match a package's `de-DE` rows) and no `navigator.language` detection —
-the setting defaults to "package default" and stays there until a user
-picks explicitly. And a project's own `Language` field is still the
-placeholder `"en"` both importers hand `Project::new`.
+**Also resolved, 2026-09-12 (T33).** Communication-object text is read
+too now, at a second, narrower surface. `knx-productdb`'s
+`com_object_view(conn, program_id, com_object_ref_id, language)` gained
+the same `Option<&str>` overlay `parameter_views` already had, applied
+before `pick()`: a `ComObject`-scope translation is keyed by the
+`ComObject`'s own id, a `ComObjectRef`-scope one by the `ComObjectRef`'s
+id, and exactly `Text`, `FunctionText` and `VisibleDescription` are ever
+overlaid — the same three attributes, nothing new. `apps/knx-server`'s
+`GET /api/device/{id}?language=` calls it and overwrites
+`ComObjectNode::name`/`description`, but **only** where the stored
+`Override<Text>`'s layer is `Layer::Program` or `Layer::ProgramRef` —
+values the product database itself supplied. `Layer::Instance`,
+`Layer::Inferred` and `Layer::UserEdit` are project-authored (the first
+and third are exported to `.knxproj`) and are shown back verbatim
+regardless of the selected language, never translated. `apps/knx-web`'s
+Inspector sends the persisted product-language setting on every
+device-detail fetch and refetches when it changes mid-selection, guarded
+against an older language's response landing after a newer one's.
 
-**Lifted when.** Partially, 2026-09-12 (this slice, first of T26).
-What remains is tracked as **T25** (UI chrome) and a later T26 slice
-(communication-object text, the project's own `Language`, and
-`StringTable`/`LocalizedString` resolution — none of which this slice
-touched; the overlay added here is `knx-productdb`-side only) in
-[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6, closing half of gap
-**D10** — the chrome half stays open. The ingestion gap this slice
-deliberately did not fix has since been closed by T32 (2026-09-12):
+Re-measured, not assumed, on the same package §64 uses:
+`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`'s application program
+`M-0083_A-0317-31-7DC6` carries 53 `ComObject`-scope `Text` and 50
+`ComObject`-scope `FunctionText` translations per language, across all
+five declared languages (`de-DE`, `en-US`, `fr-FR`, `es-ES`, `it-IT`) —
+already ingested since T26/T32, now finally read.
+
+**Still open.** Device creation and `enrich()` still bake untranslated
+text into the project file — deliberately: translating there would make
+the *stored project* depend on a display setting, the same integrity
+line T26 was careful not to cross for parameter values, and T33 did not
+cross it either. The UI chrome itself is still hard-coded English,
+tracked separately as **T25**. `knx_core::string_table`'s `StringTable`
+still has no resolver anywhere except `build_device_detail`'s own
+`project.strings.default_language()` call (`crates/knx-projection/src/lib.rs`)
+— a fixed default, not a user choice — so `LocalizedString` resolution
+against the *selected* product language does not exist; the com-object
+overlay above works entirely by substituting `knx-productdb` text before
+it reaches that call, not by teaching the string table anything. A
+project's own `Language` field is still the placeholder `"en"` both
+importers hand `Project::new`, and remains unread by anything. `Value`
+translations are deliberately never applied, for the identical
+stored-data-integrity reason: a parameter's value is a key written into
+the project file, not display text. `parameter.suffix` is stored but
+displayed nowhere, so all 879 `SuffixText` rows measured for this
+slice's design spec remain unread. There is no locale-prefix matching (a
+stored `de` selection does not match a package's `de-DE` rows) and no
+`navigator.language` detection — the setting defaults to "package
+default" and stays there until a user picks explicitly.
+
+**Lifted when.** Partially, 2026-09-12: first the parameter panel (T26's
+first slice), then communication-object text (T33, same day). What
+remains is tracked as **T25** (UI chrome) and a later T26/T33 follow-up
+(the project's own `Language`, and `StringTable`/`LocalizedString`
+resolution against a user-selected language — neither touched by either
+slice; both overlays added so far are `knx-productdb`-side only) in
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s Tier 6, closing more of gap
+**D10** — the chrome half stays open. The ingestion gap T26's first
+slice deliberately did not fix has since been closed by T32 (2026-09-12):
 `Catalog.xml`, `Hardware.xml` and `knx_master.xml` translations are
 ingested, and the catalog browser reads the catalog-scope ones. What is
 ingested but still read by nothing — hardware and master text — is

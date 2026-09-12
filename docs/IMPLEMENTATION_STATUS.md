@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-12 (T32: `Languages` blocks outside an application program are ingested, schema v4, and the catalog browser reads the catalog-scope half; see the end of this document)
+Last updated: 2026-09-12 (T33: communication-object `Text`/`FunctionText`/`VisibleDescription` are read at display time, at the `Layer::Program`/`Layer::ProgramRef` overrides only; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -2765,3 +2765,113 @@ No claim of ETS parity is made here. Translations are ingested from every
 by any surface: hardware- and master-scope text sits in the database
 unread, and the import report still does not state how many translations
 a package contributed. Both residues stay recorded in §64.
+
+**T33: language-aware communication-object text (2026-09-12), branch
+`t33-comobject-language`.** Closes the remaining half of
+[KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12)
+T26's first slice left open: communication-object text was ingested since
+T26/T32 (it lives in the `Program`-scope rows of `translation`, not a new
+table) but read by nothing. Design/plan
+`docs/superpowers/plans/2026-09-12-com-object-language.md`, four tasks.
+
+- **`com_object_view` learns a language
+  (`crates/knx-productdb/src/query.rs`, commit `9b41290`).** A fourth
+  parameter, `language: Option<&str>`, reuses `parameter_views`'s
+  `translation_overlay`/`overlay_text` helpers verbatim and applies the
+  overlay before `pick()`. The `SELECT` now also returns `co.id`, because
+  a `ComObject`-layer translation's `RefId` is the `ComObject`'s own id,
+  not the `ComObjectRef`'s — measured, not assumed (see below). Only
+  `Text`, `FunctionText` and `VisibleDescription` are ever overlaid;
+  `object_size`, `priority`, `dpt_list`, `number` and the four flags stay
+  untranslated, the same values-vs-display-text line T26 drew for
+  `Value`. `None` issues no `translation` query, byte-identical to
+  before. Also extracted `enrich()`'s inline module-vs-plain `RefId`
+  branch into a new public `com_object_lookup_id()`, now the one
+  implementation of that reconstruction instead of one per caller; all
+  four existing callers (`enrich.rs`'s two call sites and its unit test,
+  `apps/knx-server/src/domain.rs`, and a fourth site in
+  `parse/program.rs` the plan's own file list missed) now pass `None`,
+  since none of them have a language to offer. Six new tests: the `None`
+  passthrough, both translation layers, `FunctionText`/
+  `VisibleDescription` landing in their own fields, a language with zero
+  rows for the program, and an `ObjectSize` translation row present in the
+  fixture purely to prove it is never applied.
+- **`GET /api/device/{id}?language=` overlays com-object text
+  (`apps/knx-server/src/domain.rs`, `routes.rs`, commit `b7bc747`).**
+  `device_detail(state, device_id, language)` takes the project lock
+  first, builds the base `DeviceDetail` via the unchanged
+  `device_detail_impl`, and — only when `language` is `Some` — collects
+  each com object's `program_ref`/`ets_id`/`module_instance` and the
+  `Layer` of its `text`/`description` overrides while that lock is still
+  held. It then drops the project lock, locks `product_db`, resolves the
+  program, and calls `com_object_view(.., Some(lang))` per com object,
+  overwriting `ComObjectNode::name`/`description` **only** where the
+  matching override's stored layer is `Layer::Program` or
+  `Layer::ProgramRef`. `Layer::Instance`, `Layer::Inferred` and
+  `Layer::UserEdit` are project-authored and are never touched — a
+  load-bearing invariant with its own test,
+  `an_instance_layer_text_is_never_translated_because_the_project_owns_it`.
+  `language: None`, an unresolvable program, or no open product database
+  all return the untranslated detail, no product-database query issued.
+  Deviation from the plan, accepted: `device_detail_impl` itself was left
+  unchanged rather than also gaining a `language` parameter, since it
+  only ever holds a bare `&Project` (never the product-database
+  connection) and has 13 other call sites outside this task's file list
+  that have no language to supply. New
+  `apps/knx-server/tests/http_com_object_language.rs`, six tests.
+- **The Inspector asks for the user's language
+  (`apps/knx-web/src/api.ts`, `App.tsx`, commits `d4f4dc5`/`ca1cdfd`).**
+  `deviceDetail(deviceId, language?)` reuses the existing `languageQuery`
+  helper `deviceParameters`/`setParameterValue` already call. `App.tsx`'s
+  two existing `deviceDetail` call sites now pass the persisted product
+  language, and a new effect keyed on that setting refetches the
+  currently selected device's detail when the language changes — guarded
+  by a monotonic `languageRequestIdRef` (the same idiom
+  `CatalogBrowser.tsx`/`ParameterPanel.tsx` already use) so an older
+  language's response landing after a newer one's cannot overwrite it.
+  That guard was added in a fix round after review found the original
+  submission's selection-only check guarded nothing across a language
+  switch, since the selection never moves when only the language does; a
+  regression test proves the race by resolving two in-flight requests out
+  of order and asserting the DOM shows the newer language's text.
+- **Measured, not assumed.** Application program `M-0083_A-0317-31-7DC6`
+  (`OriginalData/ProductDatabases/MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`)
+  declares five `<Language>` blocks (`de-DE`, `en-US`, `fr-FR`, `es-ES`,
+  `it-IT`), each carrying 53 `ComObject/@Text` and 50
+  `ComObject/@FunctionText` translations, and every one of those
+  `TranslationElement/@RefId`s matches a declared `ComObject/@Id` — none
+  target a `ComObjectRef/@Id`. Confirmed independently by this
+  documentation pass by extracting the package and cross-referencing
+  every `TranslationElement/@RefId` in its `Languages` blocks against
+  both `ComObject/@Id` and `ComObjectRef/@Id`: the count matches exactly,
+  and there is no counter-example in either direction for `Text`. One
+  thing this plan's own measurement did not mention: the same package
+  also carries 39 `ComObjectRef`-scope `FunctionText` translations per
+  language (zero `ComObjectRef`-scope `Text`) — so the plan's aside that
+  "the `ComObjectRef` overlay path has no coverage in this package" is
+  not quite right for `FunctionText`, only for `Text`. Not a code
+  concern: the overlay is attribute-generic, and Task 1's synthetic test
+  fixtures already exercise the `ComObjectRef`/`ProgramRef` layer
+  directly rather than relying on this corpus package for coverage.
+
+`cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D
+warnings`, `cargo run -p xtask -- check-layering`, `cargo deny check`, and
+`npx tsc -p apps/knx-web/tsconfig.json --noEmit` all clean. `cargo test
+--workspace`: **1018 passed / 0 failed / 3 ignored** across 75 `test
+result` lines (branch baseline: 1006/0/3 across 74 — 12 new tests, one
+new test binary, `apps/knx-server/tests/http_com_object_language.rs`).
+`npm --prefix apps/knx-web run test`: **251 passed across 26 files** (up
+from 247/26).
+
+No claim of ETS parity is made here, and no claim that the project's own
+string table (`knx_core::string_table`) is translated: `StringTable` still
+has no resolver anywhere except `build_device_detail`'s own fixed-default
+`project.strings.default_language()` call, and the com-object overlay
+above substitutes `knx-productdb` text before that call runs rather than
+teaching the string table anything. The project's own `Language` field is
+still the unread placeholder `"en"` both importers hand `Project::new`.
+Device creation and `enrich()` are untouched and still bake untranslated
+text into the project file — translation stays entirely display-only,
+never stored. What §64 already named — hardware- and master-scope
+translations ingested but read by nothing, and the chrome half tracked as
+T25 — is unaffected by this slice and stays open.

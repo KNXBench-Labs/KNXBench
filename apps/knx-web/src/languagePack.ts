@@ -1,3 +1,4 @@
+/** User-importable UI language packs: validate, store, import, and export beyond built-in ones. */
 import { useSyncExternalStore } from "react";
 import { messages as enMessages } from "./messages/en";
 

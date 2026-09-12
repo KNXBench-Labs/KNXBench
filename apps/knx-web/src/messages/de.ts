@@ -1,3 +1,4 @@
+/** German UI message catalogue, typed against MessageKey so a missing key fails compilation. */
 // The German UI chrome catalogue. Typed `Record<MessageKey, string>`
 // rather than `as const` like `en.ts` — deliberately: this is the
 // catalogue the compiler holds to *English's* key set, so an extraction

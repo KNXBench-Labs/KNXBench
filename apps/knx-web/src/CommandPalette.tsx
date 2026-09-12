@@ -1,3 +1,4 @@
+/** Keyboard-driven overlay listing and filtering the registered commands. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { CommandContext, ResolvedPaletteCommand } from "./commandRegistry";

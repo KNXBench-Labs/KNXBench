@@ -1,3 +1,4 @@
+/** Root component wiring project state, panels, and toolbars into the KNX Web UI shell. */
 import { useEffect, useRef, useState } from "react";
 import { pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";

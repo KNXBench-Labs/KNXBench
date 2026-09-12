@@ -1,3 +1,4 @@
+/** Toast queue state and holiday/late-night joke selection for startup and error toasts. */
 import { useRef, useState } from "react";
 import { ERROR_WRAPPERS, HOLIDAYS, LATE_NIGHT_MESSAGES } from "./toastCopy";
 import type { HolidayEntry } from "./toastCopy";

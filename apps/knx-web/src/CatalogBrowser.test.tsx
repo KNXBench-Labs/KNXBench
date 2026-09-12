@@ -1,3 +1,4 @@
+/** Tests for CatalogBrowser's install/refresh, diagnostic translation, and keyboard navigation. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

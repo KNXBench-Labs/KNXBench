@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import type { CommandContext, PaletteCommand } from "./commandRegistry";
+import type { CommandContext, ResolvedPaletteCommand } from "./commandRegistry";
 import { COMMANDS, filterCommands } from "./commandRegistry";
+import { useTranslate } from "./i18n";
 import Overlay from "./Overlay";
 
-function firstEnabledIndex(commands: PaletteCommand[], ctx: CommandContext): number {
+function firstEnabledIndex(commands: ResolvedPaletteCommand[], ctx: CommandContext): number {
   return commands.findIndex((cmd) => cmd.isEnabled(ctx));
 }
 
@@ -13,13 +14,23 @@ export default function CommandPalette(props: { ctx: CommandContext; onClose: ()
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
-  const results = useMemo(() => filterCommands(COMMANDS, query), [query]);
+  const t = useTranslate();
+  // `COMMANDS` holds `labelKey`s, not display text (see commandRegistry.ts)
+  // — resolved here, at render time, so a UI language switch (which
+  // changes `t`'s identity, per `useTranslate()`) re-resolves every label
+  // instead of leaving stale text from whichever language was active when
+  // the module first loaded.
+  const resolvedCommands = useMemo<ResolvedPaletteCommand[]>(
+    () => COMMANDS.map(({ labelKey, ...cmd }) => ({ ...cmd, label: t(labelKey) })),
+    [t],
+  );
+  const results = useMemo(() => filterCommands(resolvedCommands, query), [resolvedCommands, query]);
 
   useEffect(() => {
     setHighlight(firstEnabledIndex(results, ctx));
   }, [results, ctx]);
 
-  function runCommand(cmd: PaletteCommand) {
+  function runCommand(cmd: ResolvedPaletteCommand) {
     cmd.run(ctx);
     onClose();
   }

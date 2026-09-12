@@ -62,7 +62,9 @@ fn the_reference_projects_manufacturer_data_ingests_completely() {
         count(&conn, "SELECT count(*) FROM parameter_type_enum"),
         3846
     );
-    assert_eq!(count(&conn, "SELECT count(*) FROM translation"), 48057);
+    // Program 48057 + Catalog 109 + Hardware 24 = 48190 (measured; matches
+    // the design's prediction exactly).
+    assert_eq!(count(&conn, "SELECT count(*) FROM translation"), 48190);
 }
 
 #[test]

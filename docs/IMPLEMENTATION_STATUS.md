@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-12 (T26 first slice, fix round 1: the product-data language now reaches an already-open parameter panel; see below)
+Last updated: 2026-09-12 (T32: `Languages` blocks outside an application program are ingested, schema v4, and the catalog browser reads the catalog-scope half; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -2619,13 +2619,14 @@ own `Language` field (still the placeholder `"en"` both importers hand
 `Project::new`), `StringTable`/`LocalizedString` resolution (untouched —
 this slice's overlay is entirely `knx-productdb`-side), locale-prefix
 matching and `navigator.language` detection (neither exists), and the
-UI chrome itself (`T25`, a separate task). Also found, not fixed:
-`Languages` blocks in `Catalog.xml`, `Hardware.xml`, and
-`knx_master.xml` are dropped on import rather than merely unread —
+UI chrome itself (`T25`, a separate task). Also found by this slice and
+not fixed in it: `Languages` blocks in `Catalog.xml`, `Hardware.xml`, and
+`knx_master.xml` were dropped on import rather than merely unread —
 1705 `<Translation>` rows on one measured package — tracked as its own
-backlog item, **T32**, in `GAP_ANALYSIS_ETS.md`, since fixing it needs a
-schema decision (`translation.program_id` is `NOT NULL`, and a catalog
-item belongs to no program).
+backlog item, **T32**, in `GAP_ANALYSIS_ETS.md`, since fixing it needed a
+schema decision (`translation.program_id` was `NOT NULL`, and a catalog
+item belongs to no program). T32 shipped later the same day; see its own
+entry at the end of this document.
 
 **T26, first slice, fix round 1 (2026-09-12).** A whole-branch review of
 the five commits above, each clean at task level, found one blocker in
@@ -2686,3 +2687,81 @@ ignored** across 73 `test result` lines (up from this slice's own
 from 244/26 — the one new `productLanguage.test.tsx` regression test;
 the file count is unchanged because it's a rename, not a new file).
 `npx tsc -p apps/knx-web/tsconfig.json --noEmit`: clean.
+
+**T32: translations outside an application program (2026-09-12), branch
+`t32-shared-translations`.** Closes the ingestion gap
+[KNOWN_LIMITATIONS.md §64](KNOWN_LIMITATIONS.md#64-languages-blocks-outside-an-application-program-are-discarded-on-import)
+was opened for by T26's first slice, and gives the catalog browser a
+translated name. Design spec
+`docs/superpowers/specs/2026-09-12-shared-translations-design.md`, plan
+`docs/superpowers/plans/2026-09-12-shared-translations.md`, five tasks.
+
+- **Schema v4 (`crates/knx-productdb/src/migration.rs`).** `translation`
+  loses `program_id` and gains `(scope, scope_id)`: `Program` keys off the
+  application program's `@Id` as before, `Catalog` and `Hardware` off the
+  owning `Manufacturer/@RefId`, `Master` off `''`. The empty-string
+  sentinel is there because SQLite considers NULLs in a non-`INTEGER`
+  primary key pairwise distinct, so NULL would permit exactly the
+  duplicates the key exists to reject — the same reason
+  `dynamic_node.module_def_id` already carries one. The v3→v4 migration
+  rebuilds the table and asserts, in test, that the row count before
+  equals the row count after.
+- **One shared pass (`crates/knx-productdb/src/parse/translation.rs`).**
+  `ingest_translations(conn, scope, name, bytes)` walks
+  `Languages/Language/TranslationUnit/TranslationElement/Translation` and
+  reuses the existing `insert_translations`. `ingest.rs` runs it as a
+  second pass over `Catalog.xml` and `Hardware.xml` in the same
+  transaction; `classify()` gained `FileKind::MasterData` so
+  `knx_master.xml` gets the same treatment through
+  `ingest_master_data`. `parse/program.rs` keeps its own inline handling
+  untouched — 48,057 known-good rows were not worth a tidy-up.
+- **Backfill.** The v4 migration replays every stored
+  `Catalog`/`Hardware`/`MasterData` blob through the new pass inside its
+  own `SAVEPOINT`, so databases installed before this slice are not left
+  translation-less (content-hash idempotence means nothing would ever
+  re-ingest them). A blob that fails to parse writes a
+  `TranslationBackfillError` into `ingest_unknown` and the migration
+  continues; `record_backfill_failure` is now shared with the existing
+  `dynamic_node` backfill rather than copied.
+- **Reader (`query::catalog_items`, `apps/knx-server`, `apps/knx-web`).**
+  `catalog_items(conn, manufacturer, search, language)` with `language =
+  None` issues the byte-identical statement it always did — no join, no
+  `COALESCE`, nothing that could change SQLite's plan or tie-break. With a
+  language it `LEFT JOIN`s `translation` twice (`Name`,
+  `VisibleDescription`) on `scope = 'Catalog' AND scope_id =
+  catalog_item.manufacturer_id AND ref_id = catalog_item.id` and applies
+  the overlay to the search filter and the `ORDER BY` as well as the
+  output, so a translated-only match is findable and the list sorts the
+  way it displays. `number` is never translated. `GET
+  /api/catalog/items` gained `?language=` on its existing query struct;
+  `CatalogBrowser.tsx` passes `useProductLanguage()` at both fetch sites
+  and has `language` in the effect's dependency array, so changing the
+  setting mid-browse refetches. `query::catalog_item`, the single-row
+  lookup device creation uses, was deliberately left untranslated: no
+  translated string may become a stored identifier.
+- **Measured, not assumed.** Installing
+  `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod` with `knx products
+  ingest` and counting `translation` rows per scope gives Catalog 40 (5
+  languages), Hardware 30 (5), Master 1635 (18), Program 18546 (5),
+  20251 total. The golden corpus assertion moved from 48,057 to 48,190
+  rows (48,057 program + 109 catalog + 24 hardware), re-measured rather
+  than predicted. §64's published figure of "24 languages" for
+  `knx_master.xml` was wrong and is corrected there: 18 languages carry
+  those 1635 translations; the 24 are `<ProductLanguages>` catalogue
+  entries with no translations attached. The original number came from
+  grepping the whole file instead of the `Languages` block.
+
+`cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D
+warnings`, `cargo run -p xtask -- check-layering`, `cargo deny check` and
+`npx tsc -p apps/knx-web/tsconfig.json --noEmit` all clean. `cargo test
+--workspace`: **1006 passed / 0 failed / 3 ignored** across 74 `test
+result` lines (branch baseline at `566406a`: 989/0/3 across 73 — 17 new
+tests and one new test binary, `apps/knx-server/tests/http_catalog_translation.rs`).
+`npm --prefix apps/knx-web run test`: **247 passed across 26 files** (up
+from 245/26).
+
+No claim of ETS parity is made here. Translations are ingested from every
+`Languages` block a package carries, but only catalog-scope rows are read
+by any surface: hardware- and master-scope text sits in the database
+unread, and the import report still does not state how many translations
+a package contributed. Both residues stay recorded in §64.

@@ -352,6 +352,25 @@ This is retrofit-hostile — replacing `String` with a handle after the fact
 touches every entity, every projection and every test — which is why it is in
 the model from day one.
 
+**Amendment (T32, 2026-09-12).** Product-data translations live in
+`knx-productdb` — a separate crate and a separate schema from this model —
+and that table changed shape. `translation` was keyed by `(program_id,
+language, ref_id, attribute_name)`, which only a translation belonging to
+an `ApplicationProgram` could satisfy; schema v4 replaces `program_id`
+with `(scope, scope_id)`, where `scope` is `Program`, `Catalog`,
+`Hardware` or `Master`. `Catalog`/`Hardware` rows key off the owning
+`Manufacturer/@RefId`, `Program` rows off the application program's `@Id`
+exactly as before, and `Master` rows — `knx_master.xml` has no owning
+element at all — use `''` as their `scope_id`. The empty string is a
+deliberate sentinel, not laziness: SQLite treats NULLs in a
+non-`INTEGER` primary key as pairwise distinct, so a NULL `scope_id`
+would silently permit duplicate master rows, the one thing the key
+exists to prevent (`dynamic_node.module_def_id` carries the identical
+sentinel for the identical reason). A v3→v4 backfill replays already
+stored blobs so existing databases gain the rows without a reinstall.
+The core model's own `StringTable` is untouched by this and still has no
+resolver ([KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12)).
+
 ## 9. Addresses and datapoint types
 
 *Implemented: `knx-core/src/address.rs`, `knx-core/src/dpt/` (a module

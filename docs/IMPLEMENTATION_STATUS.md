@@ -2465,6 +2465,7 @@ spec](superpowers/specs/2026-09-12-modal-overlay-shell-design.md);
   now that the shell provides it structurally.
 - **Listbox semantics, applied uniformly.** In all three list-bearing
   overlays the text input becomes `role="combobox"` with
+  `aria-haspopup="listbox"` and
   `aria-expanded`/`aria-controls`/`aria-activedescendant`; the `<ul>`
   becomes `role="listbox"`; each row becomes `role="option"` with
   `aria-selected` and a stable id — so `CommandPalette.tsx`'s

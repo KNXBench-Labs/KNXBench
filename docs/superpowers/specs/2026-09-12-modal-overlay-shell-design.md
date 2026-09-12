@@ -110,7 +110,10 @@ listbox:
 - each row: `role="option"`, `aria-selected={isHighlighted}`, a stable
   `id` (`<overlay>-option-<n>`), and `aria-disabled` where the concept
   exists (Command Palette only).
-- the overlay's text input gets `role="combobox"`, `aria-controls` naming
+- the overlay's text input gets `role="combobox"`, `aria-haspopup="listbox"`
+  (added during final review — the ARIA Authoring Practices Guide lists it
+  for this pattern so a screen reader announces a popup listbox rather than
+  inline autocomplete), `aria-controls` naming
   the list, `aria-expanded`, and `aria-activedescendant` pointing at the
   highlighted row's id — which is how a screen reader is told which row
   the arrow keys are on without focus ever leaving the input.

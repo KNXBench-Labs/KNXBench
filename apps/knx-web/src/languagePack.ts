@@ -1,0 +1,372 @@
+import { messages as enMessages } from "./messages/en";
+
+/**
+ * `localStorage` key for installed language packs, a sibling of
+ * `uiLanguage.ts`'s `UI_LANGUAGE_STORAGE_KEY`: that key names which
+ * language is *active*, this one holds the packs that make an
+ * imported-but-not-compiled-in language available to name in the first
+ * place. Stored as a JSON object keyed by `tag`, so importing a pack with
+ * a tag that's already installed replaces it — an upgrade, not a
+ * duplicate.
+ */
+export const LANGUAGE_PACKS_STORAGE_KEY = "knx-desktop:ui-language-packs";
+
+/** The format version this build writes. A pack may declare a different
+ * (including higher) `formatVersion` and is still accepted — see
+ * `parseLanguagePack` — this constant is only what `exportEnglishTemplate`
+ * stamps on a freshly generated template. */
+export const LANGUAGE_PACK_FORMAT_VERSION = 1;
+
+/**
+ * A language pack: the on-disk/JSON shape a user imports to teach the UI
+ * a language nobody compiled in. `formatVersion`, `tag`, `name` and
+ * `messages` are required and validated by `parseLanguagePack`; every
+ * other field, known or not, rides along unvalidated-but-preserved so a
+ * pack written for a later format version survives a round trip through
+ * this one instead of being silently stripped down to what this build
+ * happens to recognise.
+ */
+export interface LanguagePack {
+  [key: string]: unknown;
+
+  /** The format this document was written against. This build only reads
+   * versions it knows about; it does not reject a higher one — the
+   * unknown-field passthrough below is what keeps a newer pack intact
+   * even though this build can't interpret whatever new meaning it adds. */
+  formatVersion: number;
+
+  /** BCP 47 language tag. Validated for *shape* only — see
+   * `isWellFormedBcp47Tag` — never against a registry: an unregistered
+   * private-use tag (`"art-x-sindarin"`) is exactly the kind of language
+   * this feature exists to let in. */
+  tag: string;
+
+  /** How the language names itself — what a language picker shows. */
+  name: string;
+
+  /** English name of the language, for diagnostics/logging only; never
+   * shown in place of `name`. */
+  englishName?: string;
+
+  /**
+   * Metadata for the human translator's own bookkeeping — which
+   * catalogue they translated from — and NOTHING else. The lookup chain
+   * a missing key falls through is always exactly [active language,
+   * English], full stop (user ruling, 2026-09-12). This field must never
+   * be read as a fallback target, no matter how tempting it looks when a
+   * Bavarian pack is obviously closer to German than to English — see
+   * `i18n.ts`'s `translateFor`, which does not import this field at all.
+   */
+  basedOn?: string;
+
+  /** The pack author's own version string for their translation, distinct
+   * from `formatVersion` (the file format) — free-form, not validated. */
+  packVersion?: string;
+
+  /** The plural categories the pack's messages were written against
+   * (informational). Actual category *selection* at lookup time always
+   * goes through `Intl.PluralRules` for `tag`, degrading to `"other"`
+   * when the runtime has no data for it — see `i18n.ts`. */
+  pluralCategories?: string[];
+
+  /** Dotted message key -> translated string. A pack that translates 12
+   * of 150 keys is complete as far as this type is concerned: the other
+   * 138 are simply absent, and `translateFor` fills them from English. */
+  messages: Record<string, string>;
+}
+
+/**
+ * Everything `importLanguagePack` reports back about one import, so the
+ * caller (Task 7's Settings UI) can show the user what actually happened
+ * instead of a bare "imported" toast.
+ */
+export interface LanguagePackImportReport {
+  tag: string;
+  name: string;
+  /** Keys the pack translates that this build also knows. */
+  appliedKeyCount: number;
+  /** Keys the pack translates that this build has never heard of — listed
+   * in full, not just counted, because they mean the pack targets a
+   * different application version and the user may want to know which
+   * ones. */
+  unknownKeys: string[];
+  /** Keys this build has that the pack leaves untranslated. Not an error —
+   * this is exactly what the English fallback exists for — so only a
+   * count plus a short sample, not the full list. */
+  missingKeyCount: number;
+  missingKeysSample: string[];
+  /** Whether `Intl.PluralRules` has real data for `tag` on this runtime.
+   * `false` means plural lookups for this pack always resolve to the
+   * `"other"` category. */
+  pluralRulesSupported: boolean;
+}
+
+export type LanguagePackParseResult =
+  | { ok: true; pack: LanguagePack }
+  | { ok: false; error: string };
+
+export type LanguagePackImportResult =
+  | { ok: true; report: LanguagePackImportReport }
+  | { ok: false; error: string };
+
+/** How many missing-key names `LanguagePackImportReport.missingKeysSample`
+ * carries — enough to give a translator a starting point, not so many the
+ * report reads like the full list `unknownKeys` deliberately is. */
+const MISSING_KEYS_SAMPLE_SIZE = 5;
+
+/**
+ * A structural (not registry) check for BCP 47: language, optional
+ * extlang/script/region/variant subtags, optional private-use suffix, or
+ * a standalone private-use tag (`x-...`) — RFC 5646's `langtag`
+ * production minus the rarely-used `extension` singleton production
+ * (`-a-...`, `-u-...`), which is deliberately left out: without it, a
+ * string like `"xx-not-a-language"` is correctly rejected as not shaped
+ * like a language tag, whereas RFC 5646 taken completely literally would
+ * accept "a" as a valid (if unregistered) extension singleton and
+ * "language" as its subtag. This still happily accepts tags with no
+ * registry entry at all — `"tlh"` (Klingon), `"bar"` (Bavarian),
+ * `"art-x-sindarin"` — because rejecting an unregistered tag would be
+ * exactly the gatekeeping this feature exists to avoid.
+ */
+const BCP47_PATTERN =
+  /^(?:(?:[A-Za-z]{2,3}(?:-[A-Za-z]{3}){0,3}|[A-Za-z]{4,8})(?:-[A-Za-z]{4})?(?:-(?:[A-Za-z]{2}|[0-9]{3}))?(?:-(?:[A-Za-z0-9]{5,8}|[0-9][A-Za-z0-9]{3}))*(?:-x(?:-[A-Za-z0-9]{1,8})+)?|x(?:-[A-Za-z0-9]{1,8})+)$/;
+
+/** What `parseLanguagePack`'s error message shows a user whose tag was
+ * rejected, so the fix is obvious without them reading RFC 5646. */
+export const BCP47_SHAPE_HINT =
+  'a well-formed BCP 47 tag, e.g. "nl-NL", "tlh" (Klingon), "bar" (Bavarian), or "art-x-sindarin" (a private-use tag for anything unregistered)';
+
+export function isWellFormedBcp47Tag(tag: string): boolean {
+  return BCP47_PATTERN.test(tag);
+}
+
+function fail(error: string): { ok: false; error: string } {
+  return { ok: false, error };
+}
+
+/**
+ * Validates the *shape* of a parsed JSON value against the required
+ * fields (`formatVersion`, `tag`, `name`, `messages`) and the types of
+ * the optional ones when present. Every other top-level field — known to
+ * a future format version or not — is carried into the returned `pack`
+ * unexamined and unmodified, which is what makes the round trip in
+ * `languagePack.test.ts` ("an unknown top-level field survives") hold:
+ * this function only ever adds validation, it never subtracts fields.
+ */
+export function parseLanguagePack(raw: unknown): LanguagePackParseResult {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return fail("A language pack must be a JSON object.");
+  }
+  const obj = raw as Record<string, unknown>;
+
+  if (typeof obj.formatVersion !== "number" || !Number.isFinite(obj.formatVersion)) {
+    return fail('"formatVersion" is required and must be a number.');
+  }
+  if (typeof obj.tag !== "string" || obj.tag.length === 0) {
+    return fail('"tag" is required and must be a non-empty string.');
+  }
+  if (!isWellFormedBcp47Tag(obj.tag)) {
+    return fail(`"tag" (${JSON.stringify(obj.tag)}) is not ${BCP47_SHAPE_HINT}.`);
+  }
+  if (typeof obj.name !== "string" || obj.name.length === 0) {
+    return fail('"name" is required and must be a non-empty string.');
+  }
+  if (typeof obj.messages !== "object" || obj.messages === null || Array.isArray(obj.messages)) {
+    return fail('"messages" is required and must be an object mapping keys to strings.');
+  }
+  const messagesObj = obj.messages as Record<string, unknown>;
+  for (const [key, value] of Object.entries(messagesObj)) {
+    if (typeof value !== "string") {
+      return fail(`"messages.${key}" must be a string, got ${typeof value}.`);
+    }
+  }
+  if (obj.englishName !== undefined && typeof obj.englishName !== "string") {
+    return fail('"englishName" must be a string when present.');
+  }
+  if (obj.basedOn !== undefined && typeof obj.basedOn !== "string") {
+    return fail('"basedOn" must be a string when present.');
+  }
+  if (obj.packVersion !== undefined && typeof obj.packVersion !== "string") {
+    return fail('"packVersion" must be a string when present.');
+  }
+  if (obj.pluralCategories !== undefined) {
+    const categories = obj.pluralCategories;
+    if (!Array.isArray(categories) || categories.some((c) => typeof c !== "string")) {
+      return fail('"pluralCategories" must be an array of strings when present.');
+    }
+  }
+
+  return {
+    ok: true,
+    pack: { ...obj, messages: messagesObj as Record<string, string> } as LanguagePack,
+  };
+}
+
+/**
+ * Whether `Intl.PluralRules` has real category data for `tag` on this
+ * runtime, checked via `supportedLocalesOf` rather than by constructing
+ * the object and hoping it throws: a locale with no data does not
+ * reliably throw (implementations differ, and some silently substitute a
+ * default locale's rules instead — which would quietly hand a Sindarin
+ * pack English's "one"/"other" split under the Sindarin label, worse than
+ * admitting there is no data at all). Never throws itself.
+ */
+export function pluralRulesSupportedFor(tag: string): boolean {
+  try {
+    return Intl.PluralRules.supportedLocalesOf(tag).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function computeImportReport(pack: LanguagePack): LanguagePackImportReport {
+  const knownKeys = new Set(Object.keys(enMessages));
+  const packKeys = Object.keys(pack.messages);
+  const unknownKeys = packKeys.filter((key) => !knownKeys.has(key));
+  const appliedKeyCount = packKeys.length - unknownKeys.length;
+  const missingKeys = [...knownKeys].filter((key) => !(key in pack.messages));
+
+  return {
+    tag: pack.tag,
+    name: pack.name,
+    appliedKeyCount,
+    unknownKeys,
+    missingKeyCount: missingKeys.length,
+    missingKeysSample: missingKeys.slice(0, MISSING_KEYS_SAMPLE_SIZE),
+    pluralRulesSupported: pluralRulesSupportedFor(pack.tag),
+  };
+}
+
+// The installed-packs store, structured exactly like `uiLanguage.ts`'s
+// cache: a module-level value seeded lazily from `localStorage` on first
+// access rather than at module-evaluation time, because `happy-dom` only
+// wires up `window.localStorage` per test file and module evaluation can
+// happen before that runs.
+let cache: Record<string, LanguagePack> | undefined;
+
+function readStore(storage: Pick<Storage, "getItem">): Record<string, LanguagePack> {
+  const raw = storage.getItem(LANGUAGE_PACKS_STORAGE_KEY);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+    return parsed as Record<string, LanguagePack>;
+  } catch {
+    // Corrupted/hand-edited storage is treated as "no packs installed",
+    // the same always-safe-default philosophy `theme.ts`'s `loadThemeId`
+    // uses for an unrecognised value, not a thrown error mid-render.
+    return {};
+  }
+}
+
+function getCache(): Record<string, LanguagePack> {
+  if (cache === undefined) {
+    cache = readStore(window.localStorage);
+  }
+  return cache;
+}
+
+function persist(): void {
+  window.localStorage.setItem(LANGUAGE_PACKS_STORAGE_KEY, JSON.stringify(getCache()));
+}
+
+/**
+ * Resets the module-level cache seeded by `getCache()`, the same reason
+ * `uiLanguage.ts` needs `resetUiLanguageForTests()`: clearing
+ * `localStorage` in `afterEach` doesn't un-seed this module's cache, so a
+ * later test in the same file would still observe whatever an earlier
+ * test last installed.
+ */
+export function resetLanguagePacksForTests(): void {
+  cache = undefined;
+}
+
+/** All installed packs, in no particular order. */
+export function listLanguagePacks(): LanguagePack[] {
+  return Object.values(getCache());
+}
+
+/** The installed pack for `tag`, or `undefined` if none is installed —
+ * including the case where `tag` names a pack that used to exist and was
+ * removed, or an active tag hand-edited into `localStorage`. Callers (in
+ * particular `i18n.ts`'s `translateFor`) treat `undefined` the same way:
+ * fall straight through to English. */
+export function getLanguagePack(tag: string): LanguagePack | undefined {
+  return getCache()[tag];
+}
+
+/**
+ * Validates and installs a pack, keyed by its own `tag` (re-importing the
+ * same tag replaces the previous install). Validation failure rejects the
+ * import outright with the reason; anything past validation is installed
+ * unconditionally — unknown/missing keys are reported, not vetoed, per
+ * the brief's "a pack that translates 12 of 150 keys is a legitimate
+ * pack" rule.
+ */
+export function importLanguagePack(raw: unknown): LanguagePackImportResult {
+  const parsed = parseLanguagePack(raw);
+  if (!parsed.ok) return parsed;
+
+  const packs = getCache();
+  packs[parsed.pack.tag] = parsed.pack;
+  persist();
+
+  return { ok: true, report: computeImportReport(parsed.pack) };
+}
+
+/** Removes an installed pack. A no-op if `tag` isn't installed. Removing
+ * the *active* pack is handled entirely on the read side — `i18n.ts`'s
+ * `translateFor` falls back to English the moment `getLanguagePack`
+ * returns `undefined` for the active tag — so there is nothing for this
+ * function to coordinate with `uiLanguage.ts` about. */
+export function removeLanguagePack(tag: string): void {
+  const packs = getCache();
+  if (!(tag in packs)) return;
+  delete packs[tag];
+  persist();
+}
+
+/**
+ * Exports an installed pack exactly as stored — unknown fields and all —
+ * so a user can share it or hand-edit and re-import it. `undefined` if
+ * `tag` isn't installed.
+ */
+export function exportLanguagePack(tag: string): LanguagePack | undefined {
+  const pack = getLanguagePack(tag);
+  return pack ? { ...pack } : undefined;
+}
+
+/**
+ * Exports the compiled-in English catalogue as a ready-to-translate
+ * template: every key this build knows, English values, a valid-shaped
+ * (if placeholder) `tag`/`name` so the export round-trips cleanly through
+ * `parseLanguagePack` unmodified. Without this, writing a pack means
+ * reading `messages/en.ts` by hand.
+ *
+ * The template's `tag`/`name` (`"en"`/`"English"`) are a starting point
+ * for a translator to overwrite before sharing or re-importing for real,
+ * not a claim that this *is* the built-in English catalogue — an
+ * installed pack tagged `"en"` is simply shadowed by the real one
+ * (`i18n.ts`'s `translateFor` checks the built-in catalogues before any
+ * installed pack), so importing the template unedited is harmless, just
+ * pointless.
+ */
+export function exportEnglishTemplate(): LanguagePack {
+  let pluralCategories: string[] = ["other"];
+  try {
+    pluralCategories = [...new Intl.PluralRules("en").resolvedOptions().pluralCategories];
+  } catch {
+    // Keep the "other"-only default; every runtime we ship on supports
+    // "en", so this branch is belt-and-braces, not expected to run.
+  }
+
+  return {
+    formatVersion: LANGUAGE_PACK_FORMAT_VERSION,
+    tag: "en",
+    name: "English",
+    englishName: "English",
+    packVersion: "1.0.0",
+    pluralCategories,
+    messages: { ...enMessages },
+  };
+}

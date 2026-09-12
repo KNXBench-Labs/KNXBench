@@ -9,16 +9,87 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatTemplate, resolveFromCatalog, translateFor, useTranslate } from "./i18n";
 import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests, useUiLanguage } from "./uiLanguage";
+import {
+  LANGUAGE_PACKS_STORAGE_KEY,
+  importLanguagePack,
+  resetLanguagePacksForTests,
+} from "./languagePack";
 
 afterEach(() => {
   window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  window.localStorage.removeItem(LANGUAGE_PACKS_STORAGE_KEY);
   resetUiLanguageForTests();
+  resetLanguagePacksForTests();
 });
 
 describe("translateFor", () => {
   it("looks up the active language's string", () => {
     expect(translateFor("en", "toolbar.save")).toBe("Save");
     expect(translateFor("de", "toolbar.save")).toBe("Speichern");
+  });
+
+  it("resolves an installed pack's translated key", () => {
+    importLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "Nederlands",
+      messages: { "toolbar.save": "Opslaan" },
+    });
+    expect(translateFor("nl-NL", "toolbar.save")).toBe("Opslaan");
+  });
+
+  it("falls back to English for a key the pack omits — never to German, even when basedOn says de", () => {
+    // Bavarian, plausibly translated from German (basedOn: "de"), but
+    // missing toolbar.save entirely. The rule is not negotiable: the
+    // fallback chain is [active language, English], full stop.
+    importLanguagePack({
+      formatVersion: 1,
+      tag: "bar",
+      name: "Boarisch",
+      basedOn: "de",
+      messages: { "toolbar.saveAs": "Speichan untern..." },
+    });
+    expect(translateFor("bar", "toolbar.save")).toBe("Save");
+    expect(translateFor("bar", "toolbar.save")).not.toBe("Speichern");
+  });
+
+  it("an active tag naming a pack that was never installed resolves to English, not an error", () => {
+    expect(translateFor("xx-nonexistent-pack", "toolbar.save")).toBe("Save");
+  });
+
+  it("an active tag naming a pack that was removed resolves to English", () => {
+    importLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "Nederlands",
+      messages: { "toolbar.save": "Opslaan" },
+    });
+    expect(translateFor("nl-NL", "toolbar.save")).toBe("Opslaan");
+
+    resetLanguagePacksForTests();
+    window.localStorage.removeItem(LANGUAGE_PACKS_STORAGE_KEY);
+    expect(translateFor("nl-NL", "toolbar.save")).toBe("Save");
+  });
+
+  it("a fantasy tag with no native plural data still resolves and degrades plural selection to 'other'", () => {
+    importLanguagePack({
+      formatVersion: 1,
+      tag: "art-x-sindarin",
+      name: "Eledhrim",
+      messages: {
+        "inspector.deviceCount.one": "{count} vân (one)",
+        "inspector.deviceCount.other": "{count} vain (other)",
+      },
+    });
+    // Never throws, and count === 1 — which real plural data (e.g.
+    // English's) would route to the .one category — resolves to .other
+    // instead, since Intl.PluralRules has no data for this tag at all.
+    expect(translateFor("art-x-sindarin", "inspector.deviceCount", { count: 1 })).toBe(
+      "1 vain (other)",
+    );
+    expect(translateFor("art-x-sindarin", "inspector.deviceCount", { count: 5 })).toBe(
+      "5 vain (other)",
+    );
   });
 });
 

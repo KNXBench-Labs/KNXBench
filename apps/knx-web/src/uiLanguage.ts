@@ -1,20 +1,33 @@
 import { useEffect, useSyncExternalStore } from "react";
+import { isWellFormedBcp47Tag } from "./languagePack";
 
 export const UI_LANGUAGE_STORAGE_KEY = "knx-desktop:ui-language";
 
 /**
  * The closed set of UI chrome languages `messages/*.ts` actually ships a
- * catalogue for. Unlike `productLanguage.ts`'s language string — an
- * open-ended value naming whatever product package happens to be
- * installed — this one indexes `i18n.ts`'s `catalogs` record directly, so
- * it has to stay a compile-time-known union, not an arbitrary string.
+ * compile-time catalogue for. This one indexes `i18n.ts`'s `catalogs`
+ * record directly, so it has to stay a compile-time-known union, not an
+ * arbitrary string — that safety over the two shipped catalogues is
+ * exactly what `UiLanguage` below does not give up when it opens the
+ * *active* language to more than these two.
  */
 export const AVAILABLE_UI_LANGUAGES = ["en", "de"] as const;
-export type UiLanguage = (typeof AVAILABLE_UI_LANGUAGES)[number];
+export type BuiltInUiLanguage = (typeof AVAILABLE_UI_LANGUAGES)[number];
 
-const DEFAULT_UI_LANGUAGE: UiLanguage = "en";
+/**
+ * The *active* UI language: a built-in id (`"en"`/`"de"`), or the `tag`
+ * of a pack installed through `languagePack.ts` — Dutch, Klingon,
+ * Bavarian, Sindarin, whatever a user imported (T25 task 6). Open by
+ * design: unlike `BuiltInUiLanguage`, membership here isn't
+ * compile-time-checked, because an imported pack's tag is only known at
+ * runtime. `detectUiLanguage` below still only ever returns a
+ * `BuiltInUiLanguage` — pack tags are never guessed at, only chosen.
+ */
+export type UiLanguage = string;
 
-function isUiLanguage(value: string): value is UiLanguage {
+const DEFAULT_UI_LANGUAGE: BuiltInUiLanguage = "en";
+
+function isBuiltInUiLanguage(value: string): value is BuiltInUiLanguage {
   return (AVAILABLE_UI_LANGUAGES as readonly string[]).includes(value);
 }
 
@@ -24,11 +37,11 @@ function isUiLanguage(value: string): value is UiLanguage {
  * falls back to the default when the primary subtag has no catalogue of
  * its own (`"fr-FR"` has no French catalogue, so it becomes `"en"`).
  */
-export function detectUiLanguage(nav: Pick<Navigator, "language"> | undefined): UiLanguage {
+export function detectUiLanguage(nav: Pick<Navigator, "language"> | undefined): BuiltInUiLanguage {
   const raw = nav?.language;
   if (!raw) return DEFAULT_UI_LANGUAGE;
   const primary = raw.split("-")[0]?.toLowerCase() ?? "";
-  return isUiLanguage(primary) ? primary : DEFAULT_UI_LANGUAGE;
+  return isBuiltInUiLanguage(primary) ? primary : DEFAULT_UI_LANGUAGE;
 }
 
 // The store behind `useUiLanguage()`, structured exactly like
@@ -74,15 +87,22 @@ export function resetUiLanguageForTests(): void {
 
 /**
  * Reads the persisted UI language, or detects one from `nav` when nothing
- * is stored. An explicit stored choice always wins over detection — only
- * an empty/unknown stored value falls through to `detectUiLanguage`.
+ * is stored. An explicit stored choice always wins over detection — not
+ * just a built-in id, but *any well-formed BCP 47 tag*, because the
+ * stored value may name an installed language pack rather than a
+ * compiled-in catalogue. This is why a pack survives a reload: nothing
+ * here checks whether a pack for that tag still exists (that's a render
+ * concern — see `i18n.ts`'s `translateFor`, which falls back to English
+ * for a tag naming a pack that's gone) — only whether the stored value is
+ * *shaped* like a language tag at all. Only an empty/malformed stored
+ * value falls through to `detectUiLanguage`.
  */
 export function loadUiLanguage(
   storage: Pick<Storage, "getItem">,
   nav?: Pick<Navigator, "language">,
 ): UiLanguage {
   const raw = storage.getItem(UI_LANGUAGE_STORAGE_KEY);
-  if (raw && isUiLanguage(raw)) return raw;
+  if (raw && isWellFormedBcp47Tag(raw)) return raw;
   return detectUiLanguage(nav);
 }
 

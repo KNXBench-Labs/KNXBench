@@ -872,30 +872,96 @@ slice has its own design spec —
   still names). Full accounting: [KNOWN_LIMITATIONS.md
   §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12).
   Plan: `docs/superpowers/plans/2026-09-12-com-object-language.md`.
-- **T34. Open.** Non-blocking findings from T33's whole-branch review
-  (2026-09-12), none of them Critical. `com_object_view` loads the
-  *entire* program/language translation overlay on every call instead of
-  accepting a batch of ref ids, so one device fetch costs O(com objects ×
-  overlay rows) — measured at 3,876 rows / ~1.26ms of SQL for the
-  largest program actually attached to a device, times up to 66 com
-  objects per device in the reference project, repeated on every device
-  click, every edit-triggered refetch, and every language change. Fix: a
-  batched `com_object_views(conn, program_id, &[ref_id], language)`, or
-  an overlay-accepting variant, mirroring `parameter_views`'s own
-  bulk-query shape. Three smaller items ride along: `apps/knx-web/src/App.tsx`'s
-  language-change refetch effect guards against out-of-order replies with
-  a monotonic request id, but the two older `deviceDetail` call sites
-  (device selection, edit-triggered refetch) do not share that guard, so
-  an in-flight language reply can still land after — and overwrite — a
-  later edit-triggered refetch; the new `Query<ParameterLanguageQuery>`
-  extractor on `GET /api/device/{id}` turns a malformed query string into
-  a 400 where it was previously ignored outright (no `Query` extractor
-  existed on that route before T33); and on an overlay miss (no
-  translation row for the requested language) `com_object_view`'s `pick()`
-  still falls back to the product database's *current* untranslated
-  column, so `apps/knx-server` overwrites `ComObjectNode::name` with
-  whatever that column holds today rather than leaving the value already
-  resolved from the project.
+- **T34. Done (2026-09-12).** Four non-blocking findings from T33's
+  whole-branch review, none Critical, all closed. Plan:
+  `docs/superpowers/plans/2026-09-12-com-object-overlay-batch.md`.
+  **The batch load.** `com_object_view` loaded the *entire*
+  program/language translation overlay on every call instead of accepting
+  a batch of ref ids, so one device fetch cost O(com objects × overlay
+  rows). Fix: `crates/knx-productdb/src/query.rs` gained
+  `com_object_views(conn, program_id, com_object_ref_ids: &[&str],
+  language) -> Result<HashMap<String, ComObjectView>, ProductDbError>`,
+  chunking the `IN` list at 900 — under `SQLITE_MAX_VARIABLE_NUMBER`,
+  which is 32766 in the bundled SQLite 3.53.2 this crate links and was 999
+  before SQLite 3.32 — with the overlay loaded exactly once per call; an
+  empty slice never touches the database. `apps/knx-server/src/domain.rs`'s `device_detail`
+  now collects every lookup id first and calls it once per fetch instead
+  of once per com object. Measured, not assumed, on `M-0083_A-0317-31-7DC6`
+  (`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`, 104 declared
+  `com_object_ref` rows, the largest device-attached program in that
+  package): **before**, 104 overlay loads of 1,249 `de-DE` `translation`
+  rows each, 70–72 ms wall time for the fetch; **after**, 1 load of 1,249
+  rows, 0.92–0.96 ms — roughly 75× faster for this device. Independently
+  re-verified: 1,249 de-DE rows, 6,387 rows for the program across all
+  five languages, 104 `com_object_ref` rows, all reproduced exactly.
+  *Correction, not a silent swap:* the figure this row originally cited —
+  "3,876 rows / ~1.26 ms" — does **not** reproduce against any
+  denominator either the implementer or an independent reviewer could
+  construct: not the per-language filtered or unfiltered count, not the
+  all-languages-for-program total, not the whole-database total. It is
+  withdrawn as unverifiable; the measured per-load cost is 1,249 rows, and
+  the shape of the original finding (one overlay load per com object,
+  now one per device fetch) was correct regardless of the disputed
+  number. One property this fix does **not** have a regression test for:
+  "one overlay load per device fetch" itself. Proving it needs SQL
+  query-count instrumentation (a `rusqlite` trace feature) whose cost
+  exceeds the risk, and performance sits last in this project's stated
+  priority order (Correctness → Data Integrity → Compatibility →
+  Maintainability → UX → Performance). The property is structural — the
+  batch call sits outside the per-object loop — but it is asserted by
+  code shape, not by a test.
+  **Finding M4 — the two unguarded `deviceDetail` call sites.**
+  `apps/knx-web/src/App.tsx`'s language-change refetch effect guarded
+  against out-of-order replies with a monotonic request id, but device
+  selection and edit-triggered refetch did not share it, so an in-flight
+  language reply could land after, and overwrite, a later edit. Fix: all
+  three call sites (`selectEntity`, `handleTreeUpdate`, the
+  `[productLanguage]` effect) now share one counter,
+  `deviceDetailRequestIdRef`, bumped before each request and checked on
+  both the success and the error path. Regression test in
+  `apps/knx-web/src/App.test.tsx`: an Undo-triggered refetch issued after
+  a language-change request applies its result, and the older,
+  still-in-flight language reply does not overwrite it; confirmed to fail
+  against the pre-fix `App.tsx` with the predicted symptom (a stale
+  language-reply string overwriting the newer edit result).
+  **Finding M6 — the overlay-miss fallback.** On a miss (no translation
+  row for the requested language) `com_object_view`'s `pick()` fell back
+  to the product database's *current* untranslated column, so
+  `apps/knx-server` could overwrite `ComObjectNode::name`/`description`
+  with today's database text instead of leaving the project's own
+  resolved value alone. Fix: `ComObjectView` gained
+  `text_translated`/`function_text_translated`/
+  `visible_description_translated`, each true iff the value that won
+  `pick()` was itself an overlay hit; `device_detail` now overwrites
+  `name`/`description` only when the stored layer is
+  `Layer::Program`/`Layer::ProgramRef` **and** the matching flag is true.
+  Global Constraint 2 (layer gating from the project's own
+  `ComObjectInstance`, never from `ComObjectView`) is untouched.
+  Regression test in `apps/knx-server/tests/http_com_object_language.rs`
+  (`PROGRAM_WITHOUT_A_TEXT_TRANSLATION` fixture, a real packaged language
+  with partial attribute coverage) confirmed to fail against the pre-fix
+  condition (`"Switch"` instead of the project's own `"Old Switch
+  Name"`), then pass restored.
+  **Finding M5 — the malformed-query 400.** `GET /api/device/{id}`'s new
+  `Query<ParameterLanguageQuery>` extractor (T33) turns a malformed
+  `language` query into a `400` where it was previously ignored outright.
+  Ruled: keep the 400 — the same extractor already guards `GET
+  /api/parameters/{id}` and `POST /api/parameters/{id}/value` (T26), so
+  leniency on this one route would be the inconsistency, and silently
+  ignoring a query string the client meant something by is how a
+  language setting goes missing without a log line. Pinned by
+  `a_malformed_language_query_is_rejected_and_an_absent_one_is_not` in
+  `apps/knx-server/tests/http_com_object_language.rs`, which also asserts
+  the absent-language, 200-untranslated half of the pairing. The malformed form
+  that actually trips `serde_urlencoded`'s deserializer is a **repeated**
+  key for the same scalar field (`?language=a&language=b`, "duplicate
+  field `language`"); `?language[]=de` was tried too and does not —
+  `language[]` parses as a key distinct from `language`, is silently
+  ignored as an unrecognized field, and the query reaches the handler as
+  an absent language (200, untranslated), not a rejected one. This is the
+  one place in the codebase describing the 400 behaviour of the shared
+  `ParameterLanguageQuery` extractor across all three routes it guards;
+  no other document names it.
 
 ### Tier 7 — motion and animation
 

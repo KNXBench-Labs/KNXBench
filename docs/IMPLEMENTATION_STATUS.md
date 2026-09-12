@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-11 (T15: Group Monitor GUI — bus-monitor session in `knx-server`, `/api/bus/*` routes, telegram table + compose form in `knx-web`, see below)
+Last updated: 2026-09-12 (T27: in-app motion control — level/style axes, a CSS token layer, a guard test, a settings panel, and a Group Monitor retrofit, see below)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -17,7 +17,7 @@ in scope.
 | 2 | KNX core | **Done** — see [DATA_MODEL.md](DATA_MODEL.md) |
 | 3 | ETS project import | **Done** — see [IMPORT_EXPORT.md](IMPORT_EXPORT.md), [COMPATIBILITY.md](COMPATIBILITY.md) |
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
-| 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)), cycle 8 (project status dashboard, [design spec](superpowers/specs/2026-09-04-dashboard-design.md)), cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) — CLAUDE.md's full UI/UX deliverable list complete as of cycle 9 — and cycle 10 (a toast notification stack replacing the old persistent error banner, humor-wrapped error text, and a one-shot holiday/late-night startup toast, [design spec](superpowers/specs/2026-09-05-toast-easter-eggs-design.md)) and cycle 11 (user-customizable theme tokens — accent/background/surface/text — plus a three-level motion setting, layered on top of the cycle 7 theme toggle, via a new `ThemePanel.tsx`) and cycle 12 (device and communication-object descriptions are now editable, not just displayed: `Command::SetDeviceDescription` and `Command::SetComObjectDescription`/`RestoreComObjectDescription` clone the `SetIndividualAddress`/`SetComObjectDpt` command-layer pattern exactly, wired through `knx-store::command_sync`, `knx-server`'s `/api/device-description` and `/api/com-object-description` routes, and two new `Inspector.tsx` fields; `ComObjectNode` also gains `description`/`description_layer` so a communication object's description — modelled and persisted since Session 5 cycle 2 but never shown — is finally visible at all. An ETS feature audit done alongside this found no other silently-missing field: `GroupAddress`/`GroupRange`/`BuildingPart` genuinely carry no `Description` attribute in the one schema-11 project this project's evidence comes from — see [KNOWN_LIMITATIONS.md #1](KNOWN_LIMITATIONS.md#1-single-sample-bias), not a bug here) and cycle 13 (a named, selectable theme replacing cycle 7's System/Light/Dark cycle and cycle 11's four-token palette override outright — a complete visual package, not a per-user tweak layered on a light/dark base — with "Bitcoin DeFi" as the first theme and today's default, [design spec](superpowers/specs/2026-09-08-bitcoin-defi-theme-design.md)): `theme.ts` rewritten from a cycling function into a `ThemeDef`/`THEMES` registry (`loadThemeId`/`saveThemeId`/`useThemeId`); `palette.ts`, `palette.test.ts`, and `ThemePanel.tsx` deleted outright; `ThemeToggle.tsx` replaced by `ThemeSwitcher.tsx`, a `<select>` built against the registry; `index.html` now always sets `data-theme` (Bitcoin DeFi is dark-only by design, no more "system"/unthemed state) and silently falls back cycle 7's old stored values to the new default; self-hosted `@fontsource` fonts and a Google Fonts `<link>` both load Space Grotesk/Inter/JetBrains Mono; and a full `styles.css` restyle — a 24-custom-property design-token layer plus component recipes app-wide (pill gradient/glow buttons, glass-morphism overlays, mono/gold technical text, gradient-text Dashboard heading, card hover-lift, fading grid-pattern background) done, see [ROADMAP.md](ROADMAP.md) |
+| 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)), cycle 8 (project status dashboard, [design spec](superpowers/specs/2026-09-04-dashboard-design.md)), cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) — CLAUDE.md's full UI/UX deliverable list complete as of cycle 9 — and cycle 10 (a toast notification stack replacing the old persistent error banner, humor-wrapped error text, and a one-shot holiday/late-night startup toast, [design spec](superpowers/specs/2026-09-05-toast-easter-eggs-design.md)) and cycle 11 (user-customizable theme tokens — accent/background/surface/text — plus a three-level motion setting, layered on top of the cycle 7 theme toggle, via a new `ThemePanel.tsx`) and cycle 12 (device and communication-object descriptions are now editable, not just displayed: `Command::SetDeviceDescription` and `Command::SetComObjectDescription`/`RestoreComObjectDescription` clone the `SetIndividualAddress`/`SetComObjectDpt` command-layer pattern exactly, wired through `knx-store::command_sync`, `knx-server`'s `/api/device-description` and `/api/com-object-description` routes, and two new `Inspector.tsx` fields; `ComObjectNode` also gains `description`/`description_layer` so a communication object's description — modelled and persisted since Session 5 cycle 2 but never shown — is finally visible at all. An ETS feature audit done alongside this found no other silently-missing field: `GroupAddress`/`GroupRange`/`BuildingPart` genuinely carry no `Description` attribute in the one schema-11 project this project's evidence comes from — see [KNOWN_LIMITATIONS.md #1](KNOWN_LIMITATIONS.md#1-single-sample-bias), not a bug here) and cycle 13 (a named, selectable theme replacing cycle 7's System/Light/Dark cycle and cycle 11's four-token palette override outright — a complete visual package, not a per-user tweak layered on a light/dark base — with "Bitcoin DeFi" as the first theme and today's default, [design spec](superpowers/specs/2026-09-08-bitcoin-defi-theme-design.md)): `theme.ts` rewritten from a cycling function into a `ThemeDef`/`THEMES` registry (`loadThemeId`/`saveThemeId`/`useThemeId`); `palette.ts`, `palette.test.ts`, and `ThemePanel.tsx` deleted outright; `ThemeToggle.tsx` replaced by `ThemeSwitcher.tsx`, a `<select>` built against the registry (itself deleted 2026-09-12 by T27, its `<select>` moved into a new `SettingsPanel.tsx` — see the T27 entry below); `index.html` now always sets `data-theme` (Bitcoin DeFi is dark-only by design, no more "system"/unthemed state) and silently falls back cycle 7's old stored values to the new default; self-hosted `@fontsource` fonts and a Google Fonts `<link>` both load Space Grotesk/Inter/JetBrains Mono; and a full `styles.css` restyle — a 24-custom-property design-token layer plus component recipes app-wide (pill gradient/glow buttons, glass-morphism overlays, mono/gold technical text, gradient-text Dashboard heading, card hover-lift, fading grid-pattern background) done, see [ROADMAP.md](ROADMAP.md) |
 | 6 | KNXnet/IP | Cycles 1-5 shipped (tunnelling, sending, discovery, routing, connection management/diagnostics). KNX IP Secure scoped, then shelved indefinitely (2026-09-06) — see [ROADMAP.md](ROADMAP.md), [KNOWN_LIMITATIONS.md §26](KNOWN_LIMITATIONS.md) |
 | 7 | Integration & hardening | In progress (cycles 1-2) — see below |
 
@@ -445,7 +445,7 @@ across the workspace (up from 314), plus 64 `vitest` tests in
 | `crates/knx-net/`, `knx-secure/` | Empty crates with their responsibility stated in a doc comment. `knx-secure` deliberately has no dependencies at all. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
 | `apps/knx-server/` | **New, web/Docker deployment target.** The axum HTTP API binary (`knx-server`) and library (`knx_server`) — see the paragraph above. `src/domain.rs` holds `AppState` and the same `_impl` functions the old Tauri commands wrapped; `src/routes.rs`/`fs_routes.rs` are the axum route handlers; `src/errors.rs` maps `AppError` to an HTTP status plus a `{"error": ...}` body. `main.rs` reads `KNX_PORT`/`KNX_STATIC_DIR`/`KNX_DATA_DIR` from the environment. `Dockerfile` is the three-stage build (Node frontend, Rust backend, Debian-slim runtime); `scripts/smoke-test.sh` builds and runs the image and exercises `/healthz` plus an import over HTTP. |
-| `apps/knx-web/` | **New, moved from `apps/knx-desktop/src`.** The React + Vite frontend, now a standalone npm package consumed by both `knx-server`'s static-file serving and the Tauri desktop shell. `src/api.ts` is the `fetch()`-based client (replaces Tauri's `invoke()`); `src/FsPicker.tsx` is the mount-directory listing/upload UI shown when `window.__TAURI__` is absent (the server's `/api/project/download` route has no UI caller yet, see [KNOWN_LIMITATIONS.md #26](KNOWN_LIMITATIONS.md#26-apiprojectdownload-has-no-frontend-caller)); `src/filePicker.ts` picks between it and the native Tauri dialog. `src/theme.ts`/`src/ThemeSwitcher.tsx` are cycle 13's named-theme registry and `<select>` picker, replacing cycle 7's `theme.ts`/`ThemeToggle.tsx` cycle and cycle 11's now-deleted `palette.ts`/`ThemePanel.tsx` token overrides outright — see the Session 5 paragraph above. Everything else (`ProjectExplorer`, `Inspector`, `Search.tsx`/`CommandPalette.tsx`, `Dashboard.tsx`, `Toast.tsx`, the `ts-rs`-generated bindings under `src/bindings/`) moved unchanged from `knx-desktop`. `vitest` suite: 89 tests across 8 files, including `api.test.ts` against a mocked `fetch` and cycle 13's rewritten `theme.test.ts` (`palette.test.ts` is gone with `palette.ts`). |
+| `apps/knx-web/` | **New, moved from `apps/knx-desktop/src`.** The React + Vite frontend, now a standalone npm package consumed by both `knx-server`'s static-file serving and the Tauri desktop shell. `src/api.ts` is the `fetch()`-based client (replaces Tauri's `invoke()`); `src/FsPicker.tsx` is the mount-directory listing/upload UI shown when `window.__TAURI__` is absent (the server's `/api/project/download` route has no UI caller yet, see [KNOWN_LIMITATIONS.md #26](KNOWN_LIMITATIONS.md#26-apiprojectdownload-has-no-frontend-caller)); `src/filePicker.ts` picks between it and the native Tauri dialog. `src/theme.ts` is cycle 13's named-theme registry, replacing cycle 7's `theme.ts`/`ThemeToggle.tsx` cycle and cycle 11's now-deleted `palette.ts`/`ThemePanel.tsx` token overrides outright — see the Session 5 paragraph above. Its `<select>` picker was `src/ThemeSwitcher.tsx` until T27 (2026-09-12) moved the Theme select into a new `src/SettingsPanel.tsx` alongside two new motion settings and deleted `ThemeSwitcher.tsx` outright, its one consumer gone. Everything else (`ProjectExplorer`, `Inspector`, `Search.tsx`/`CommandPalette.tsx`, `Dashboard.tsx`, `Toast.tsx`, the `ts-rs`-generated bindings under `src/bindings/`) moved unchanged from `knx-desktop`. `vitest` suite: 89 tests across 8 files, including `api.test.ts` against a mocked `fetch` and cycle 13's rewritten `theme.test.ts` (`palette.test.ts` is gone with `palette.ts`). |
 | `apps/knx-desktop/` | **Thin native wrapper as of the web/Docker deployment target** — see the paragraph above. `src-tauri/` is now just window/process wiring (`lib.rs`, ~80 lines): spawn `knx-server`'s router locally, point one `WebviewWindowBuilder` at it, keep the native file-dialog plugin available for `apps/knx-web`'s `window.__TAURI__` check. No `#[tauri::command]` handlers and no integration tests remain here — both moved to `apps/knx-server`. No `src/` of its own any more; it loads `apps/knx-web`'s build output (dev: Vite HMR on a fixed port; release: bundled as a Tauri resource). |
 | `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for four roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — and `knx-projection`, the fourth, added Session 5); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |
@@ -2322,3 +2322,107 @@ without a terminal — for one tunnelled gateway at a time, filtered only
 by what the browser already has, and never run against real hardware in
 this branch. Closes `GAP_ANALYSIS_ETS.md` row **D5** for tunnelling;
 finishes **E4**'s display side for tunnelling.
+
+**T27, in-app motion control (2026-09-12), branch `t27-motion-control`.**
+Restores the user-facing motion setting cycle 13's theme rewrite deleted
+by accident ([design spec](superpowers/specs/2026-09-12-motion-control-design.md),
+decisions D27-D34; [plan](superpowers/plans/2026-09-12-motion-control.md)).
+Closes `GAP_ANALYSIS_ETS.md` gap **D11**; partially addresses **D8**.
+
+- **`apps/knx-web/src/motion.ts`** (new, modeled on `theme.ts`'s
+  `Pick<Storage, ...>`-injection style): two independent registries,
+  `MOTION_LEVELS` (`off`/`subtle`/`standard`, default `standard`) and
+  `MOTION_STYLES` (`apple`/`glitch`, displayed "Smooth"/"Glitch", default
+  `apple`), each with its own `localStorage` key
+  (`knx-desktop:motion-level`, `knx-desktop:motion-style`) and its own
+  always-safe-default fallback for a missing/empty/unknown stored value.
+  `useMotion()` returns `{level, setLevel, style, setStyle}` and applies
+  both as `data-motion-level`/`data-motion-style` on `<html>` via two
+  independent effects. No `window.matchMedia` call anywhere in the file —
+  deliberate, documented in a comment, so `prefers-reduced-motion` stays
+  enforced only in CSS, never overridable from TypeScript.
+- **`apps/knx-web/src/styles.css`**: a token layer —
+  `--knx-transition-duration` (`0ms`/`120ms`/`250ms` per level) and
+  `--knx-motion-easing` (a cubic-bezier ease for `apple`, `steps(4, end)`
+  for `glitch`) — added to the existing `:root[data-theme="bitcoin-defi"]`
+  block, selected by `:root[data-motion-level="…"]`/
+  `:root[data-motion-style="…"]` attribute selectors.
+- **`apps/knx-web/index.html`**: the pre-mount bootstrap script now also
+  applies both `data-motion-*` attributes before React mounts, avoiding a
+  flash of default motion. It hard-codes the same id lists as
+  `motion.ts` (it cannot import a module at that point) — cross-commented
+  in both files as a duplication to keep in sync by hand.
+- **`apps/knx-web/src/motionGuard.test.ts`** (new): a brace-counting
+  checker that reads `styles.css` off disk with `node:fs` and fails if
+  any `transition:`/`animation:` declaration sits outside a
+  `@media (prefers-reduced-motion: no-preference)` block or uses a
+  literal duration instead of `var(--knx-transition-duration)`. Verified
+  end-to-end by injecting a literal `200ms ease` into `styles.css` and
+  watching the guard name the offending line, then restoring the file.
+  Mid-slice fix (`056b4a0`): the `node:fs`/`node:url`/`node:path` imports
+  type-checked under Vitest but failed `npm run build` (`tsc && vite
+  build`, `include: ["src"]`, no `@types/node`) with TS2591 — caught
+  because this task ran the production `tsc` as a seventh gate, which
+  `npm run test` alone would not have exercised. Fixed with a 27-line
+  `apps/knx-web/src/node-builtins.d.ts` declaring exactly the four
+  functions used, rather than adding `@types/node`. The tidier-looking
+  alternative, Vite's `import css from "./styles.css?raw"`, was tried and
+  rejected: Vitest doesn't process CSS, so it resolves to the empty
+  string and the guard passes against nothing — confirmed by injecting
+  the same literal `200ms` and watching the suite stay green.
+- **`apps/knx-web/src/SettingsPanel.tsx`** (new) + `App.tsx` wiring: a
+  gear-button overlay panel reusing `Search.tsx`/`CommandPalette.tsx`'s
+  `.search-overlay`/`.search-panel` shape and click-outside pattern
+  verbatim, with three labelled `<select>`s (Theme, Motion style, Motion
+  level), each applying immediately. `apps/knx-web/src/ThemeSwitcher.tsx`
+  — its one consumer now this panel — is **deleted**; the toolbar's
+  always-visible theme `<select>` is gone with it (one settings entry
+  point, not two, especially since `THEMES` currently has exactly one
+  entry). Escape closes the panel via a `window` keydown listener
+  (`useEffect`), since three `<select>`s have no single natural field to
+  hang Escape off of. Labels are visible `<span>`s plus `aria-label`s,
+  not `.sr-only` — a deliberate reading of the brief's explicit "visible
+  label" instruction over `ThemeSwitcher.tsx`'s original sr-only pattern.
+  Coordinator follow-up (`0604180`): the now-orphaned `.theme-switcher
+  select` CSS rule was removed, with a comment recording that `.sr-only`
+  is kept despite also losing its only consumer, since it is the standard
+  visually-hidden-label utility and the accessibility work
+  `KNOWN_LIMITATIONS.md` §20 still owes will want it.
+- **`apps/knx-web/src/BusMonitorPanel.tsx`** (T15 retrofit, design D34):
+  a `newRowThreshold` state tracks the lowest `seq` from the most
+  recently completed incremental poll; rows at or above it get a
+  `bus-monitor-row-new` class in addition to the existing
+  `bus-monitor-row-marker`. The threshold resets on *every* poll tick,
+  including one that returns zero telegrams, so the highlight lasts
+  exactly one poll interval and never accumulates — no timer, no
+  per-row React state. `styles.css` pairs it with a new
+  `@keyframes bus-monitor-row-new-highlight` (`background-color`
+  fading from `--knx-overlay-shadow` to transparent) inside the same
+  `no-preference` block, as a compliant `animation:` shorthand the guard
+  above accepts without complaint. The mount-time reattach effect (a
+  bulk-adopted backlog on connect) never sets the threshold, so nothing
+  is marked new on first load.
+
+`SettingsPanel` reuses the overlay CSS `Search.tsx`/`CommandPalette.tsx`
+already shared — but it was not the third consumer of it:
+`CatalogBrowser.tsx` (T2) already was, unrelated to this slice, so
+`SettingsPanel` is a fourth. `GAP_ANALYSIS_ETS.md` row **D9** is updated
+to say so; it stays open and is, if anything, slightly worse, since there
+is now one more call site sharing CSS with no shared component behind it.
+
+`cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D
+warnings`, `cargo run -p xtask -- check-layering`, and `cargo deny check`
+all clean, unchanged by a frontend-only slice. `cargo test --workspace`:
+**975 passed / 0 failed / 3 ignored** across 72 `test result` lines,
+identical to the branch's baseline — no Rust file touched anywhere in
+this slice. `npm run test` (`apps/knx-web`, `vitest run`): **215 passed
+across 21 files** (up from 184/18 before this slice: task 1 added 16
+tests in a new `motion.test.ts`, task 2 added 5 in a new
+`motionGuard.test.ts`, task 3 added 6 in a new `SettingsPanel.test.tsx`,
+task 4 added 4 to `BusMonitorPanel.test.tsx`). A seventh gate, added
+mid-slice after the `node:fs`/production-build break: `npx tsc -p
+apps/knx-web/tsconfig.json --noEmit` — clean.
+
+No claim of ETS parity or KNX certification is made anywhere in this
+slice — ETS has no comparable motion control, so there is no parity
+claim to make in either direction.

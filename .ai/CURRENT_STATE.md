@@ -1,4 +1,70 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-12 03:12
+- **Completed:** **T31 merged to `main` (`ae1cb94`, `--no-ff`).** Branch
+  `t31-overlay-shell` (`ea54b0c`..`ced4499`, ten commits) is in. After
+  task 5 the coordinator added three commits: `8fb1c68` renamed
+  `KNOWN_LIMITATIONS.md` §20's header from "unaddressed" to "— partially
+  resolved" (its body already said "Resolved (2026-09-12, T31)", so the
+  heading was contradicting itself two lines later) and repointed all
+  three links to the new anchor slug — `GAP_ANALYSIS_ETS.md`'s D9 row and
+  T31 backlog entry, plus the design spec's "Closes:" line; an em dash
+  becomes a double hyphen in a GitHub slug. `c77c9e5` fixed the final
+  review's one nit: the three combobox inputs lacked
+  `aria-haspopup="listbox"`, which the ARIA Authoring Practices Guide
+  lists for this pattern so a screen reader announces a popup listbox
+  rather than inline autocomplete — added to `Search.tsx`,
+  `CommandPalette.tsx` and `CatalogBrowser.tsx`, with assertions folded
+  into the three existing `aria-activedescendant` tests. `ced4499`
+  appended the review record to
+  `.ai/logs/2026-09-12_claude_t31_overlay_shell.md`.
+  The final whole-branch review (Sonnet, read-only) returned **APPROVE**
+  with 0 blocker / 0 major / 0 minor / 1 nit. It re-ran all seven gates
+  itself and proved three behaviours load-bearing by deleting them and
+  watching named tests fail: `Overlay.tsx`'s focus-restore cleanup, the
+  `ArrowDown` branch of `CatalogBrowser.tsx`'s `handleSearchKeyDown`, and
+  the `search-overlay` copy-paste guard. Each injection was reverted and
+  the tree proven clean.
+  **Gates re-measured on merged `main` (`ae1cb94`), all green:** web
+  **235 passed across 25 files**, `tsc --noEmit` clean, `cargo fmt`
+  clean, `cargo clippy --workspace --all-targets -- -D warnings` clean,
+  `cargo test --workspace` **975 passed / 0 failed / 3 ignored across 72
+  binaries**, `check-layering` ok, `cargo deny check` ok.
+- **Pending/Next Steps:** Next slice not yet chosen. The standing
+  candidate on priority grounds is **T26** (KNX data translations, gap
+  **D10**'s data half, `KNOWN_LIMITATIONS.md` §37): `knx_core::string_table`
+  and `knx-productdb`'s `translation` table are populated on import and
+  read by nothing — a data-integrity gap, which outranks **T25**'s UI
+  chrome i18n under `CLAUDE.md`'s priority order and needs no new npm
+  dependency. Neither track has a design spec yet; `ROADMAP.md`'s
+  Internationalization section says the library choice, the storage of the
+  language setting (D8's options dialog still does not exist) and what a
+  project's own `Language` means once the user can pick another all belong
+  in one. Other open work unchanged: T17 (line scan, needs a spec research
+  spike), T21 (graphical views, D1/D2), T28 (in-app help, D12), T16, T22,
+  D8's real settings contents, B10, C3, C5, C6, E5, E6, F3. Blocked with
+  named conditions: T30/E1 (commissioning), T19/E3 (KNX Secure), T20/A1
+  (Functions), A4 (schemas 12-22).
+- **Notes for Codex:** §20 stays **open** and must not be closed: no
+  scroll-into-view for an off-panel highlight, no `inert`/`aria-hidden`
+  background, no focus-visible styling pass, and **no verification against
+  a real screen reader or a real browser anywhere in this slice** —
+  happy-dom asserts DOM attributes, not what NVDA, JAWS, Orca or VoiceOver
+  announce. No WCAG or other conformance is claimed and no audit was
+  performed. `overlayShell.test.ts` is a hard guard: a fifth `.tsx` file
+  under `apps/knx-web/src` containing the literal `search-overlay` fails
+  the suite by name. Import `Overlay` instead. Note also that the guard
+  enumerates filenames via `import.meta.glob` keys rather than
+  `readdirSync`, which is **not** declared — `node-builtins.d.ts` declares
+  exactly `readFileSync`, `fileURLToPath`, `dirname`, `join`, and
+  `@types/node` is not in this tsconfig's scope. Do not run
+  `npm run build` while iterating: Vite's `outDir` clean step deletes the
+  tracked `apps/knx-web/dist/.gitkeep`; `npx tsc -p apps/knx-web/tsconfig.json
+  --noEmit` is the type gate. The worktree `.worktrees/session3-ets-import`
+  is fully merged dead weight, left in place pending the user's call.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-12 03:00
 - **Completed:** **T31 (shared modal overlay shell) — all five tasks
   done on branch `t31-overlay-shell`** (worktree

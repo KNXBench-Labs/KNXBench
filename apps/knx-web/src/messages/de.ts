@@ -151,7 +151,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.deviceScope": "Gerät",
   "parameters.moduleNumber": "Modul #{number}",
   "parameters.sharedReadOnlyCaption":
-    "Wird von jeder Instanziierung dieses Moduls gemeinsam genutzt; in dieser Version nur lesbar.",
+    "Wird von jeder Instanziierung dieses Moduls gemeinsam genutzt; hier nicht bearbeitbar – siehe die Diagnosen für den Grund.",
   "parameters.staleValuesHeading": "Veraltete Werte ({count})",
   "parameters.staleDescription":
     "Diese gespeicherten Werte entsprechen keinem Parameter des aktuellen Anwendungsprogramms mehr.",

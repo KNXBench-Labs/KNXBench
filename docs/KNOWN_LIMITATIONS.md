@@ -70,11 +70,11 @@ schema version into a report instead of a crash.
 ## 3. Device parameters are preserved but not interpreted
 
 **Limitation.** All 1390 `ParameterInstanceRef` values in the reference project
-are imported, stored and exported unchanged. As of **T18 slice 3
-(2026-09-11)** a parameter editor exists and interprets and writes
-top-level values; module-scoped (per-channel) values are read and
-displayed correctly but remain read-only (risk R3, now partially closed —
-see below for exactly what still is not).
+are imported, stored and exported unchanged. As of **T18 slice 4
+(2026-09-12)** a module-scoped (per-channel) value is not just read and
+displayed correctly but also *editable*, whenever its section has exactly
+one authoritative `ModuleInstance` (risk R3, now closed for that case — see
+below for exactly what still is not).
 
 **Cause.** Parameter visibility and semantics are driven by the `Dynamic`
 tree. Its `choose`/`when` *value* grammar (`@test`) is now documented
@@ -135,28 +135,53 @@ D22/D23 surface each value in its own per-channel section, so a
 module-scoped value now *reads and displays correctly* — it is not a
 storage gap that happens to be unaddressed; it never was one.
 
+**T18 slice 4, module-scoped editing (2026-09-12,
+[design](superpowers/specs/2026-09-12-module-scoped-editing-design.md),
+D35-D43) closes the write side (a) and the `choose`-evaluation side (b)
+below name.** `knx-productdb`'s `ValueMap` gained a scope dimension
+(D35/D36): a value stored for one `Module` instantiation is visible to
+that instantiation only, falls back to the program default, and never
+leaks to a sibling. `knx_core::ModuleInstance` now retains the project's
+verbatim `ModuleInstance/@Id` (`instance_ets_id`, D38, store schema 6,
+[DATA_MODEL.md §11](DATA_MODEL.md#11-versioning-and-migration)), which the
+server uses to reconstruct the exact id a write must target — never
+guessed, per section (D39). `apps/knx-web/src/ParameterPanel.tsx` writes
+that server-named id instead of the declared one (D43).
+
 **What remains limited, restated accurately rather than smoothed over:**
 
-- **(a) Module-scoped fields are not *editable* in this slice (design
-  D25).** The blocker is the evaluator's flat `ValueMap`
-  (`evaluate.rs:797`/`:348`, one slot per declared id, project-wide, no
-  scope in the key) plus unresearched write-validation semantics — does
-  the `MI` instantiation index ever legitimately exceed `1`? Unattested in
-  the corpus, every occurrence anywhere in the three demo projects is
-  `MI-1`. Neither is a missing storage key; both are a real, separately-
-  decidable evaluator question named in the design's Non-goals, not solved
-  here.
-- **(b) Because no module-scoped value ever reaches `ValueMap`, a
-  `choose` controlled by a module-scoped parameter evaluates against the
-  program default in every channel**, so a channel's *active field set*
-  as shown here can differ from what ETS would compute from its own real
-  stored value — even though the *value* shown for an already-active
-  module-scoped field is correct. **Design D16 (all instantiations of one
-  `ModuleDef` still evaluate against identical parameter values) stays
-  true, in this precise, narrower sense.** It no longer means "displayed
-  values are identical" — D21/D22 fix that on the read side — it means
-  "the evaluated activation is identical," which is still the case and is
-  not downgraded by this slice.
+- **(a) Module-scoped fields are editable when, and only when, their
+  section has exactly one authoritative `ModuleInstance` (D38-D39).**
+  Still read-only, each for its own reported reason: two or more
+  `ModuleInstance`s sharing one `RefId` — genuinely repeated
+  instantiation, told apart only by guessing — [§68](#68-repeated-module-instantiation-is-refused-not-supported);
+  a `Module` with no `@Id` at all — [§69](#69-a-module-with-no-id-cannot-be-matched-to-a-project-instance);
+  and a project imported before store schema 6, whose every
+  `ModuleInstance` has `instance_ets_id == ""` until re-imported —
+  [§71](#71-a-project-imported-before-store-schema-6-has-no-module-instance-ids-to-write-with).
+  Separately, the *write-validation* rule narrowed while closing this: a
+  field must now be a currently-shown panel field with a non-null write
+  target, not merely a declared id — [§70](#70-writing-a-declared-but-not-currently-shown-parameter-is-now-refused).
+- **(b) A module-scoped value now reaches `ValueMap` (D35/D36/D42), so a
+  `choose` controlled by a module-scoped parameter evaluates against
+  *that channel's own* stored value.** Two sibling channels holding
+  different values for the same declared parameter can therefore show
+  genuinely different active field sets — proven, not only designed:
+  `crates/knx-productdb/tests/dynamic_tree.rs` and
+  `apps/knx-server/tests/http_parameter_panel.rs` each carry a fixture
+  where two channels' `choose` picks a different branch (T18 slice 4,
+  Task 5). **Design D16 (all instantiations of one `ModuleDef` evaluate
+  against identical parameter values) is closed in its general form** — it
+  now holds only when the channels' own stored values agree, or none
+  exist; that was always the narrower, read-side meaning slice 3 gave it,
+  and slice 4 makes it true on the write/activation side too, for the
+  case D38-D39 can authorize.
+- **Nested modules and `Module` arguments stay exactly as limited as
+  before.** Nothing in slice 4 touches `NestedModuleNotExpanded` (design
+  D15, one level only, policy not capability) or the scoped key, which is
+  `(module_id, ref_id)` — a single `Module` node's position, not a path —
+  so a scope-aware key for a nested `Module` remains a follow-up if
+  nesting is ever observed (design Non-goals).
 - **Argument values (`NumericArg`/`TextArg`) remain stored but
   uninterpreted.** They still fall through to the generic `extra` column;
   `choose` never branches on them (RESEARCH §4.4 Q3), so activation-set
@@ -176,22 +201,27 @@ storage gap that happens to be unaddressed; it never was one.
   fractional-format check — inventing rules with no spike behind them was
   ruled out rather than attempted.
 
-**Impact.** Device configuration for a top-level field can now be done here,
-with the evaluator's own diagnostics surfaced in the same response. A
-module-scoped (per-channel) field's own stored value displays correctly,
-but editing one still has to happen in ETS, and the *set* of active fields
-shown for a module-scoped channel is computed from program defaults, not
-from that channel's own values, so it can legitimately differ from what
-ETS itself would show for the same channel.
+**Impact.** Device configuration for a top-level field, and now for a
+module-scoped field with exactly one authoritative instance, can be done
+here, with the evaluator's own diagnostics surfaced in the same response —
+including for a channel whose own value flips a `choose`. Editing still has
+to happen in ETS for a genuinely repeated module (two or more
+`ModuleInstance`s sharing one `RefId`), for a `Module` with no `@Id`, and
+for a project that has not yet been re-imported since store schema 6
+(§§68-71).
 
-**Lifted when.** Module-scoped editing needs its own design: a
-scope-aware `ValueMap`/`evaluate` (most plausibly keyed by something like
-`(Option<module_node>, String)`) and a validated write path that settles
-what `MI` means when it is ever observed above `1`. Neither is scheduled;
-both are named, not solved, by T18 slice 3's design (Non-goals). The
+**Lifted when.** For [§68](#68-repeated-module-instantiation-is-refused-not-supported):
+RESEARCH.md's sharpest unknown #1 (what a `ModuleInstance/@RepeatIndex`
+above `"1"` means) would have to be settled first — inventing the key on
+present evidence is exactly what D40 refuses to do. For
+[§69](#69-a-module-with-no-id-cannot-be-matched-to-a-project-instance): only
+the application program itself can supply the missing `@Id`; nothing here
+can invent one. [§71](#71-a-project-imported-before-store-schema-6-has-no-module-instance-ids-to-write-with)
+lifts itself, per row, the moment the project is re-imported. The
 no-match-branch policy the evaluator implements (nothing under an
 unmatched `choose` is active) is itself an inference (RESEARCH §4.3,
-finding 2), not a documented rule — noted here, not hidden.
+finding 2), not a documented rule — noted here, not hidden, and unaffected
+by this slice.
 
 ## 4. Round trips are semantic, not byte-exact
 
@@ -2598,3 +2628,145 @@ non-English speaker debugging their own pack file.
 own catalogue keys, the same restructuring §66 names as the general fix
 for server-composed prose — except this one is entirely frontend-side
 and does not need a Rust change.
+
+## 68. Repeated module instantiation is refused, not supported
+
+**Limitation.** When two or more `ModuleInstance` elements in a project
+share one `RefId` — a genuinely repeated module, i.e. its `MI-` component
+would need to exceed `1` to tell the copies apart — that module's fields
+stay read-only, with a diagnostic ("Two or more imported module instances
+share this module; its fields are read-only.") naming the shared `RefId`
+and every claiming `instance_ets_id`.
+
+**Not the same case, and not refused:** a **lone** `ModuleInstance` whose
+own `@Id` happens to end `MI-2` or higher is accepted and writable — D39
+rule 2 asks only "does exactly one `ModuleInstance` match this module?",
+not "does its `MI-` digit equal `1`?". Refusing a project's own `MI-2`
+would mean guessing that it must be wrong, which is precisely what D38
+exists to avoid (see design D40, corrected in this revision — it used to
+say the opposite).
+
+**Cause.** `ValueMap`'s scoped key is `(module_id, ref_id)`, with no `MI-`
+dimension, because a program-side `Module` node carries no repeat-index
+concept at all — the evaluator has nothing to key sibling channels by.
+Two `ModuleInstance`s instantiating one `Module` therefore cannot be told
+apart on the read side, and this slice does not pretend otherwise
+(design D40).
+
+**Impact.** 0/32 `ModuleInstance` elements in the corpus exercise this —
+nothing observed regresses. A device that genuinely has repeated
+instantiation falls back entirely to the pre-T18-slice-4 behaviour for
+that module: displayed, not writable, evaluated against the program
+default in every copy.
+
+**Also recorded here, cosmetic and deliberately left as-is:** when the
+two-or-more claiming instances have *different* `RefId`s, the diagnostic's
+detail string says `"RefId '{X}' matches module '{module_id}' …"` —
+singular, naming only the first (`apps/knx-server/src/domain.rs:2308-2334`,
+`MiAuthority::Ambiguous`). It already names every claiming
+`instance_ets_id` in the same sentence, which is the information a user
+needs; making the `RefId` clause itself plural would touch the
+`MiAuthority::Ambiguous` variant's shape, its one construction site, and
+the format string — more than a one-line fix, so left for a future pass
+rather than done here.
+
+**Lifted when.** RESEARCH.md's sharpest unknown #1 (what
+`ModuleInstance/@RepeatIndex`'s embedded `MI-<k>` component means, and
+whether/how it legitimately exceeds `1`,
+[docs/RESEARCH.md §4.4](RESEARCH.md#44-modulemoduledef-expansion-semantics--r4-spike-session-4-2026-09-11))
+would have to be settled — by a normative worked example or a hand-built
+multi-repeat fixture — before a scoped key that tells repeated copies
+apart could be designed without inventing one.
+
+## 69. A `Module` with no `@Id` cannot be matched to a project instance
+
+**Limitation.** `Module/@Id` is an optional XML attribute
+(`ModuleScope::module_id: Option<String>`). When a program instantiates a
+`Module` with no `@Id`, that instantiation's stored per-channel values are
+unreachable — there is nothing to decompose an `MI-` authority against —
+so the section evaluates against the program default and stays read-only,
+with a diagnostic: "A module instance has no identifier and cannot be
+matched to stored values." (`Diagnostic::ModuleWithoutId`,
+`apps/knx-server/src/domain.rs:1827-1829`).
+
+**Cause.** Design D37: `Module/@Id` is present on 102/102 `<Module>`
+elements across the corpus's seven module-bearing program files (E2), but
+nothing in the Standard extraction guarantees that for a package not yet
+seen. The diagnostic is emitted per instantiation, unconditionally — a
+`Module` this slice cannot name is worth reporting even when no stored
+value would have applied to it.
+
+**Impact.** Unexercised in the corpus today (0/102). If it ever fires,
+that `Module`'s channel behaves exactly as every module-scoped channel did
+before T18 slice 4: displayed where a value happens to already resolve,
+never editable.
+
+**Lifted when.** Never by invention — a synthesised id would be a
+fabricated identifier that looks like project data and matches nothing
+real (D37's own reasoning). Only the manufacturer's own application
+program, carrying its own `@Id`, lifts this.
+
+## 70. Writing a declared-but-not-currently-shown parameter is now refused
+
+**Limitation.** Before T18 slice 4, a `POST` naming a parameter's declared
+`ets_id` was accepted even when that field was not currently active/shown
+(old D24 check 2: "this check does not require the parameter to be
+currently active"). This slice narrows that: a write is now accepted only
+if the named id is the `ets_id` of an unscoped field the just-assembled
+panel currently shows, or the `write_ets_id` of an editable module-scoped
+field in that same panel (design D43). Naming a bare declared id that the
+program has but the current panel does not currently show is now rejected
+with `"is declared by this program but not currently active"`
+(`apps/knx-server/src/domain.rs:2578`).
+
+**Cause.** D43 replaces the old two-check validation with one rule: "the
+panel is the single authority on what is writable." Accepting a bare
+declared id unconditionally would mean guessing whether that id names a
+top-level field or a module-scoped one — `knx-productdb`'s `parameter_ref`
+table carries no `module_def_id` column
+(`crates/knx-productdb/src/migration.rs:201-210`) to answer that question
+without inference, and inferring scope is exactly what this slice's own
+constraint forbids (D38's rationale, applied here to the read side of the
+same question).
+
+**Impact.** Narrow: a client that wrote to a hidden-but-declared top-level
+field (one sitting behind a currently-unmatched `choose` branch) before
+this slice can no longer do so directly — it must wait until that field is
+shown, i.e. until the `choose` that gates it resolves to a matching
+branch. No corpus-observed workflow depends on writing a hidden field
+sight-unseen; `Access` itself has no attested write-gating correlation
+either ([§3](#3-device-parameters-are-preserved-but-not-interpreted)).
+
+**Lifted when.** Would need `parameter_ref` (or a sibling table) to carry
+a `module_def_id` or equivalent scope marker, so the server could resolve
+a bare id's scope without first evaluating the tree it belongs to. Not
+scheduled.
+
+## 71. A project imported before store schema 6 has no module-instance ids to write with
+
+**Limitation.** `migrate_v5_to_v6` (design D38) cannot invent a
+`ModuleInstance`'s own `@Id` for rows that predate the migration; every
+such row's `instance_ets_id` becomes `''` ([DATA_MODEL.md §11](DATA_MODEL.md#11-versioning-and-migration)).
+A user opening a `.knxdb` last saved before this slice therefore sees
+every module-scoped section read-only, with the same "no imported
+`ModuleInstance` matches" family of diagnostics a genuinely missing
+authority produces — nothing in the diagnostic text distinguishes "this
+project predates schema 6" from "this project has no matching instance at
+all."
+
+**Cause.** The id can only come from the project file's own
+`<ModuleInstance Id="…">` attribute (D38). Before this slice, the import
+path read that attribute (`installation_v21.rs:764-769`) but discarded it
+after using it only as a local wiring key (`map.rs:1038-1049`, design E5)
+— so a project imported under an earlier binary never had the id to carry
+into the store, and the migration has nothing to backfill it from.
+
+**Impact.** User-visible, and easy to mistake for a bug: a user who has
+not re-imported since upgrading sees read-only channels with no reason
+that names "schema version" or "re-import" specifically — only the
+generic no-authority diagnostic.
+
+**Lifted when.** Automatically, the moment the project's source
+`.knxproj` is re-imported (not merely re-opened) — re-import re-parses
+`ModuleInstance/@Id` from the file and repopulates the column for every
+row.

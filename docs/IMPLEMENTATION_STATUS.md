@@ -2119,8 +2119,10 @@ database — the product database stays at **v3**, `knx-store`'s
   has no program id of its own to gate on). Renders one section per
   `Module` instantiation (D23) plus the program's own top-level section;
   module-scoped fields render disabled with the caption "Shared across
-  every instantiation of this module; read-only in this release." A
-  rejected write reverts the input and shows the server's rejection
+  every instantiation of this module; read-only in this release." (T18
+  slice 4 later made some module-scoped fields editable, so this exact
+  wording no longer fit and was revised — see that slice's own entry
+  below.) A rejected write reverts the input and shows the server's rejection
   message; diagnostics render as a collapsed, expandable banner (D26),
   never the evaluator's raw `Debug` output.
 - **Module-scoped values: read correctly, not written (D25).** An earlier
@@ -2142,7 +2144,10 @@ database — the product database stays at **v3**, `knx-store`'s
   instantiations; only the *displayed value*, which D21/D22 now source
   per channel, differs. This is the deliberate boundary that keeps T18
   slice 3 one branch instead of the full editor — named in the design's
-  Non-goals, not silently left out.
+  Non-goals, not silently left out. **Closed by T18 slice 4 (2026-09-12,
+  see that slice's own entry below):** a module-scoped value now reaches
+  `ValueMap`, so D16 no longer holds unconditionally, only when the
+  channels' own stored values agree or none exist.
 - **What this slice deliberately does not do**, cross-referencing the
   design's own Non-goals list rather than re-deriving it: per-channel
   (`Module`-instantiation) value *editing* (needs a scope-aware
@@ -3061,3 +3066,117 @@ sentence —
 `npx tsc -p apps/knx-web/tsconfig.json --noEmit`: clean. `npm --prefix
 apps/knx-web run test`: **336 passed across 31 files** (branch baseline
 before T25's first task: 271/29).
+
+**T18, module-scoped editing slice, Task 2 — the `MI-` component, retained
+(2026-09-12), branch `t18-module-scoped-editing`.** Second of six planned
+tasks ([design spec](superpowers/specs/2026-09-12-module-scoped-editing-design.md),
+D38). `crates/knx-etsproj/src/parse/installation_v21.rs` already parsed
+`ModuleInstance/@Id`; `map.rs` used it only as a local wiring key and threw
+it away afterward — exactly the datum a per-channel write needs, since it
+carries the `_MI-<k>` component `@RefId` does not. Fixed at the source:
+`knx_core::ModuleInstance` gains `instance_ets_id: String` (verbatim `@Id`,
+retained uninterpreted, `crates/knx-core/src/module.rs`), populated from
+`mi.id` in `map.rs` while `source.ets_id` keeps holding `@RefId` unchanged.
+`knx-store` gained a matching `module_instance.instance_ets_id` column via
+migration `v5 → v6` (`CURRENT_SCHEMA_VERSION` now 6 in both
+`knx-core::project` and `knx-store::migration`, a frozen `v5-empty.sqlite`
+fixture added, `v4`-`v1` untouched). Every other construction site the new
+field broke (`knx-core::devices`, `knx-etsproj::compare`,
+`knx-productdb::enrich`, `knx-diff::diff`, `knx-store::project`) got a
+plausible-looking but inert test value — none of them feed real data.
+`crates/knx-etsproj/src/compare.rs`'s `SemanticModuleInstance` was
+deliberately left alone: it does not carry `instance_ets_id`, so the
+semantic-diff surface `knx-diff` reports is unchanged. This task does not
+resolve what the `MI-` token means (RESEARCH.md's "sharpest unknown #1"
+stays open) and does not touch the read/write path, the parameter panel, or
+the frontend — those are Tasks 3 and 4. A project saved before this
+migration has `instance_ets_id == ""` for every existing `ModuleInstance`
+row, same treatment D39 (a later task) gives a genuinely missing one:
+read-only, reported, never guessed.
+
+**T18, module-scoped editing slice, closing entry (2026-09-12), branch
+`t18-module-scoped-editing`.** Covers Tasks 1, 3, 4 and 5 of the same six
+([design spec](superpowers/specs/2026-09-12-module-scoped-editing-design.md),
+decisions D35-D43); Task 2 (`instance_ets_id`, above) has its own entry.
+Together these close **D25**, the deliberate hole T18 slice 3 left open
+(`docs/superpowers/specs/2026-09-11-parameter-editor-design.md`): a
+module-scoped field is now writable, and its write changes the same
+response's recomputed activation set, per channel.
+
+- **Task 1 — a scope-aware `ValueMap`
+  (`crates/knx-productdb/src/dynamic/evaluate.rs`).** `ValueMap` stops
+  being a bare `HashMap<String, String>` alias and becomes a struct
+  holding an `unscoped` map plus a `scoped: HashMap<(String, String),
+  String>` map keyed by `(module_id, ref_id)`. `get(scope, ref_id)` tries
+  the scoped map first when `scope.module_id` is `Some`, falls back to
+  `unscoped`, and never falls sideways to a different `module_id` (D36).
+  New `Diagnostic::ModuleWithoutId` reports a `Module` expansion whose
+  `@Id` is absent, once, at the expansion site (D37) — the case a
+  per-channel write can never target.
+- **Task 3 — write-target reconstruction and validation
+  (`apps/knx-server/src/domain.rs`).** A module-scoped write arrives as a
+  module-qualified `ets_id` (`MD-<d>_M-<n>_MI-<k>_...`); the server
+  decomposes it, resolves which stored `ModuleInstance` (if any) is the
+  authority for that `MI-` digit via `resolve_mi_authority` /
+  `MiAuthority` (`Found`/`NoMatch`/`Ambiguous`/`Malformed`, D39 rules
+  2-3), and refuses the write — loudly, via a `ParameterDiagnosticDto`
+  naming both colliding instance ids, not a silent pick — when two or
+  more stored instances claim the same `RefId` (D40). Stored-row
+  validation gained the same `MI-` check and stopped overwriting one row
+  with another silently (D41).
+- **Task 4 — the web panel writes the server's own id
+  (`apps/knx-web/src`).** A field's DTO now carries the exact id a write
+  must use (D43); the panel writes that id verbatim instead of
+  reconstructing one client-side, so client and server never disagree
+  about which stored row a write targets.
+- **Task 5 — fixture proof.** New KV v2.5-derived fixtures give two
+  channels of the same `Module` different stored values for the same
+  declared parameter and prove, end to end, that each channel's own
+  `choose` now resolves differently — the general form of D16 ("all
+  instantiations evaluate against the same values") no longer holds
+  unconditionally; it holds only when the channels' own values happen to
+  agree, or none exist. A deletion experiment (removing the fix) proved
+  the new HTTP test genuinely depends on **D42**'s second `evaluate` call
+  recomputing against the just-written scoped value — the thing a Task 3
+  review round's finding S7 had flagged as asserted but unverified at the
+  time. As of this slice, D42's second call is test-covered.
+
+What stays out of scope, named in the design's own Non-goals rather than
+silently left out: `Module` *arguments* (`NumericArg`/`TextArg`/
+`AllocatorRef`) remain stored-but-uninterpreted; a project's own repeated
+instantiation of one `ModuleDef` with two or more stored instances sharing
+a `RefId` is refused, not supported (D40) — see
+[KNOWN_LIMITATIONS.md §68](KNOWN_LIMITATIONS.md#68-repeated-module-instantiation-is-refused-not-supported);
+a `Module` with no `@Id` cannot be matched to a project instance — see
+[KNOWN_LIMITATIONS.md §69](KNOWN_LIMITATIONS.md#69-a-module-with-no-id-cannot-be-matched-to-a-project-instance);
+a declared-but-not-currently-shown field can no longer be written, because
+`parameter_ref` carries no `module_def_id` column to check it against —
+see
+[KNOWN_LIMITATIONS.md §70](KNOWN_LIMITATIONS.md#70-writing-a-declared-but-not-currently-shown-parameter-is-now-refused);
+a project imported before store schema 6 has an empty `instance_ets_id`
+on every `ModuleInstance`, so its module-scoped sections stay read-only
+until re-import — see
+[KNOWN_LIMITATIONS.md §71](KNOWN_LIMITATIONS.md#71-a-project-imported-before-store-schema-6-has-no-module-instance-ids-to-write-with).
+Nothing here resolves what the `MI-` token itself means beyond "the
+project's own repeat counter" — RESEARCH.md §4.4's "sharpest unknown #1"
+stays open.
+
+Four tasks (Task 1 evaluator, Task 3 server, Task 4 web panel, Task 5
+fixtures), each reviewed before the next started; this entry and its
+sibling docs-only pass are Task 6, the sixth and last. `cargo test
+--workspace`: **1080 passed / 0 failed / 3 ignored**, up from 1053 before
+this slice began (Task 1's own baseline). `apps/knx-web`: `npm test` —
+**339 passed across 31 files**, up from 336 before this slice. `cargo run
+-p xtask -- check-headers`: ceiling unchanged at **169**. Closes
+`GAP_ANALYSIS_ETS.md` **A3** from "partially closed" to "mostly closed",
+and **B8** to describe module-scoped write closure with its named
+exceptions above; neither claims full closure, and nothing here or
+anywhere else claims ETS behavioural parity. This docs-only pass (T18
+slice 4's sixth task) reconciles
+[KNOWN_LIMITATIONS.md §3/§68-§71](KNOWN_LIMITATIONS.md),
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md), [DATA_MODEL.md §11](DATA_MODEL.md),
+and [RESEARCH.md §4.4](RESEARCH.md) with what actually shipped, and
+corrects two passages in
+[the design spec](superpowers/specs/2026-09-12-module-scoped-editing-design.md)
+itself (D40's heading, D41's "unreachable" claim) that no longer matched
+the shipped behaviour once a Task 3 reviewer traced through it.

@@ -34,9 +34,11 @@ function sectionLabel(t: Translate, scope: ModuleScope | null): string {
 // `ComObjectDescriptionField`/`DptField`: local draft state, commit on
 // blur, revert and surface the error inline on a rejected write — applied
 // here to `api.setParameterValue` instead of one of the ProjectTree
-// commands. A module-scoped field (`editable: false`, D25) renders its
-// input disabled, never hidden, with a caption naming the read-only
-// reason instead of leaving the user to guess at a silently inert field.
+// commands. A module-scoped field is writable exactly when the server
+// names a `writeEtsId` for it (design D43, superseding D25's blanket
+// read-only rule) — that happens when exactly one imported module
+// instance is its authority; every other case stays disabled with a
+// caption naming the read-only reason.
 function ParameterFieldRow(props: {
   field: ParameterField;
   deviceId: number;
@@ -47,6 +49,11 @@ function ParameterFieldRow(props: {
   const t = useTranslate();
   const [value, setValue] = useState(field.value ?? "");
   const [error, setError] = useState<string | null>(null);
+  // Belt-and-braces on purpose (see `api.ts`'s `writeEtsId` doc comment):
+  // the server's contract makes the two conditions exact opposites of
+  // each other, but the control checks both rather than trusting either
+  // one alone.
+  const disabled = !field.editable || field.writeEtsId === null;
 
   useEffect(() => {
     setValue(field.value ?? "");
@@ -54,12 +61,12 @@ function ParameterFieldRow(props: {
   }, [field.etsId, field.value]);
 
   async function apply() {
-    if (!field.editable) return;
+    if (!field.editable || field.writeEtsId === null) return;
     const current = field.value ?? "";
     if (value === current) return;
     setError(null);
     try {
-      const panel = await api.setParameterValue(deviceId, field.etsId, value, language);
+      const panel = await api.setParameterValue(deviceId, field.writeEtsId, value, language);
       onUpdated(panel);
     } catch (e) {
       setError(api.errorMessage(e));
@@ -83,7 +90,7 @@ function ParameterFieldRow(props: {
       {field.kind === "Restriction" ? (
         <select
           value={value}
-          disabled={!field.editable}
+          disabled={disabled}
           onChange={(e) => setValue(e.target.value)}
           onBlur={apply}
         >
@@ -100,7 +107,7 @@ function ParameterFieldRow(props: {
           value={value}
           min={field.min ?? undefined}
           max={field.max ?? undefined}
-          disabled={!field.editable}
+          disabled={disabled}
           onChange={(e) => setValue(e.target.value)}
           onBlur={apply}
           onKeyDown={(e) => {
@@ -111,7 +118,7 @@ function ParameterFieldRow(props: {
         <input
           type="text"
           value={value}
-          disabled={!field.editable}
+          disabled={disabled}
           onChange={(e) => setValue(e.target.value)}
           onBlur={apply}
           onKeyDown={(e) => {
@@ -119,7 +126,7 @@ function ParameterFieldRow(props: {
           }}
         />
       )}
-      {!field.editable && (
+      {disabled && (
         <span className="parameter-field-caption">
           {t("parameters.sharedReadOnlyCaption")}
         </span>
@@ -129,20 +136,42 @@ function ParameterFieldRow(props: {
   );
 }
 
+// `ParameterDiagnostic.scope` is built server-side from the very same
+// section's own scope (`module_scope_dto`), so comparing field by field
+// — rather than reference or `JSON.stringify` — is enough to find a
+// section's own diagnostics.
+function sameScope(a: ModuleScope | null, b: ModuleScope | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.moduleNode === b.moduleNode && a.moduleId === b.moduleId && a.moduleDefId === b.moduleDefId;
+}
+
 // One collapsible group per `ParameterSectionDto` — the top-level
 // (`scope: null`) section and one per module instantiation (D23: "12
 // instantiations are 12 results," never collapsed back into one list).
+// Its own diagnostics (design D43) render inline, right below the
+// summary — the same `parameters.*` text `DiagnosticsBanner` already
+// shows panel-wide, surfaced again here so a section's read-only reason
+// doesn't require hunting through that collapsed, unfiltered list.
 function ParameterSectionView(props: {
   section: ParameterSection;
+  diagnostics: ParameterDiagnostic[];
   deviceId: number;
   language: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
 }) {
-  const { section, deviceId, language, onUpdated } = props;
+  const { section, diagnostics, deviceId, language, onUpdated } = props;
   const t = useTranslate();
+  const ownDiagnostics = diagnostics.filter((d) => sameScope(d.scope, section.scope));
   return (
     <details className="parameter-section" open>
       <summary>{sectionLabel(t, section.scope)}</summary>
+      {/* Server-composed prose, shown verbatim (KNOWN_LIMITATIONS §66) —
+          not run through `t()`. */}
+      {ownDiagnostics.map((d, i) => (
+        <p key={i} className="inspector-description">
+          {d.message}
+        </p>
+      ))}
       <div className="parameter-fields">
         {section.fields.map((field) => (
           <ParameterFieldRow
@@ -261,6 +290,7 @@ export default function ParameterPanel(props: { deviceId: number }) {
           <ParameterSectionView
             key={i}
             section={section}
+            diagnostics={panel.diagnostics}
             deviceId={deviceId}
             language={language}
             onUpdated={setPanel}

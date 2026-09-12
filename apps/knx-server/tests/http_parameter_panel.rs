@@ -147,6 +147,55 @@ const KV_SHAPE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 </ModuleDef></ModuleDefs>
 </ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 
+/// Task 5's fixture: the shape design doc `2026-09-12-module-scoped-
+/// editing-design.md` §E2 says no repository fixture has ever combined --
+/// a module-scoped `ParameterRef` (`_MD-2_P-1_R-1`, same id grammar as
+/// `KV_SHAPE_PROGRAM` [V] above) that both holds divergent per-channel
+/// stored values *and* itself controls a `choose` in the same `ModuleDef`.
+/// The `choose` gates which of two further module-scoped fields
+/// (`_P-2_R-1`/`_P-3_R-1`) is even present in a section at all -- not just
+/// what value an already-present field shows. Two `Module` instantiations,
+/// `_M-4`/`_M-5` — two of the KV shape's own real `M-2`..`M-6` (E2) --
+/// rather than a bare `M-<n>`, the shape a previous fixture in this file
+/// was corrected away from (S6, fix round 2, above `kv_shape_reconstructs
+/// _the_five_real_stored_write_ets_ids_exactly`). [A]: the `>10` threshold
+/// and the two gated parameters below the gate are this fixture's own
+/// invention -- KV's real `MD-2` declares no `choose` at all; only the id
+/// grammar is a corpus mirror, not the branch structure.
+const CHOOSE_GATED_MODULE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static><ParameterRefs/></Static>
+<Dynamic>
+  <Module Id="M-00FA_A-2504-10-C071_MD-2_M-4" RefId="M-00FA_A-2504-10-C071_MD-2" />
+  <Module Id="M-00FA_A-2504-10-C071_MD-2_M-5" RefId="M-00FA_A-2504-10-C071_MD-2" />
+</Dynamic>
+<ModuleDefs><ModuleDef Id="M-00FA_A-2504-10-C071_MD-2" Name="module">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="M-00FA_A-2504-10-C071_MD-2_PT-1" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="M-00FA_A-2504-10-C071_MD-2_P-1" Name="Channel" Text="Channel" ParameterType="M-00FA_A-2504-10-C071_MD-2_PT-1" Access="ReadWrite" Value="5" />
+  <Parameter Id="M-00FA_A-2504-10-C071_MD-2_P-2" Name="High" Text="High" ParameterType="M-00FA_A-2504-10-C071_MD-2_PT-1" Access="ReadWrite" Value="0" />
+  <Parameter Id="M-00FA_A-2504-10-C071_MD-2_P-3" Name="Low" Text="Low" ParameterType="M-00FA_A-2504-10-C071_MD-2_PT-1" Access="ReadWrite" Value="0" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="M-00FA_A-2504-10-C071_MD-2_P-1_R-1" RefId="M-00FA_A-2504-10-C071_MD-2_P-1" DisplayOrder="1" Tag="1" />
+  <ParameterRef Id="M-00FA_A-2504-10-C071_MD-2_P-2_R-1" RefId="M-00FA_A-2504-10-C071_MD-2_P-2" DisplayOrder="2" Tag="1" />
+  <ParameterRef Id="M-00FA_A-2504-10-C071_MD-2_P-3_R-1" RefId="M-00FA_A-2504-10-C071_MD-2_P-3" DisplayOrder="3" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterRefRef RefId="M-00FA_A-2504-10-C071_MD-2_P-1_R-1" />
+  <choose ParamRefId="M-00FA_A-2504-10-C071_MD-2_P-1_R-1">
+    <when test="&gt;10"><ParameterRefRef RefId="M-00FA_A-2504-10-C071_MD-2_P-2_R-1" /></when>
+    <when default="true"><ParameterRefRef RefId="M-00FA_A-2504-10-C071_MD-2_P-3_R-1" /></when>
+  </choose>
+</Dynamic>
+</ModuleDef></ModuleDefs>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
 /// Two top-level Number parameters whose `Static/ParameterRefs`
 /// `DisplayOrder` disagrees with the order `Dynamic/ParameterRefRef`
 /// activates them in: `P-1_R-1` declares `DisplayOrder="20"` but is
@@ -197,6 +246,45 @@ const DIAGNOSTIC_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
     <when test="bogus"><ParameterRefRef RefId="P-1_R-1" /></when>
   </choose>
 </Dynamic>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+/// Same shape as `WRITE_PROGRAM`, except its one `Module` declares no
+/// `@Id` at all (D37: a nameless instantiation can never be matched to a
+/// project-side `ModuleInstance`).
+const MODULE_WITHOUT_ID_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-1" Name="Delay" Text="Delay" ParameterType="PT-Num" Access="ReadWrite" Value="5" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="P-1_R-1" RefId="P-1" DisplayOrder="10" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterRefRef RefId="P-1_R-1" />
+  <Module RefId="MD-1" />
+</Dynamic>
+<ModuleDefs><ModuleDef Id="MD-1" Name="module">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="MOD-1_PT-Num" Name="num"><TypeNumber maxInclusive="10" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="MOD-1_P-1" Name="Channel" Text="Channel" ParameterType="MOD-1_PT-Num" Access="ReadWrite" Value="1" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="MOD-1_P-1_R-1" RefId="MOD-1_P-1" DisplayOrder="1" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterRefRef RefId="MOD-1_P-1_R-1" />
+</Dynamic>
+</ModuleDef></ModuleDefs>
 </ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 
 fn temp_product_db(program_xml: &str) -> (tempfile::TempDir, knx_productdb::Connection) {
@@ -267,6 +355,39 @@ fn state_with_device(
     let mut state = knx_server::AppState::default();
     state.product_db = Some(Mutex::new(products));
     *state.project.lock().unwrap() = Some(project);
+    state
+}
+
+/// Same as `state_with_device`, plus `DeviceId(1)`'s imported
+/// `ModuleInstance`s (T18 slice 4, D38-D40): `(source_ets_id,
+/// instance_ets_id)` pairs, e.g. `("MD-2_M-4", "MD-2_M-4_MI-1")` -- the
+/// project's own retained answer to "which channel is this," which D39's
+/// editability rule and D43's `writeEtsId` both key off.
+fn state_with_device_and_modules(
+    products: knx_productdb::Connection,
+    parameters: Vec<(&str, &str)>,
+    module_instances: Vec<(&str, &str)>,
+) -> knx_server::AppState {
+    let state = state_with_device(products, parameters);
+    {
+        let mut project = state.project.lock().unwrap();
+        let project = project.as_mut().unwrap();
+        for (i, (source_ets_id, instance_ets_id)) in module_instances.into_iter().enumerate() {
+            project
+                .devices
+                .insert_module_instance(knx_core::ModuleInstance {
+                    id: knx_core::ModuleInstanceId(i as u32 + 1),
+                    device: DeviceId(1),
+                    source: SourceRef {
+                        path: "device-1".into(),
+                        ets_id: source_ets_id.into(),
+                    },
+                    repeat_index: "1x1".into(),
+                    instance_ets_id: instance_ets_id.into(),
+                    arguments: vec![],
+                });
+        }
+    }
     state
 }
 
@@ -764,4 +885,631 @@ async fn a_program_ref_that_resolves_to_nothing_returns_the_empty_panel() {
         .map(|s| s["etsId"].as_str().unwrap())
         .collect();
     assert_eq!(stale_ids, vec!["P-1_R-1"]);
+}
+
+// T18 task 3 (design D39, D42, D43): the KV v2.5 demo shape, now with its
+// five imported `ModuleInstance`s declared too. Each section earns
+// editability (a single authoritative instance each) and each field's own
+// `writeEtsId` reconstructs to exactly the real stored id the corpus (E2)
+// shows -- not a guess, the same string the module's own suffix and the
+// instance's own `MI-` digit produce.
+#[tokio::test]
+async fn kv_shape_reconstructs_the_five_real_stored_write_ets_ids_exactly() {
+    let (_dir, products) = temp_product_db(KV_SHAPE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![
+            ("M-00FA_A-2504-10-C071_MD-2_M-2_MI-1_P-1_R-1", "32"),
+            ("M-00FA_A-2504-10-C071_MD-2_M-3_MI-1_P-1_R-1", "48"),
+            ("M-00FA_A-2504-10-C071_MD-2_M-4_MI-1_P-1_R-1", "17"),
+            ("M-00FA_A-2504-10-C071_MD-2_M-5_MI-1_P-1_R-1", "33"),
+            ("M-00FA_A-2504-10-C071_MD-2_M-6_MI-1_P-1_R-1", "49"),
+        ],
+        // S6 (fix round 2): the real KV v2.5 demo's `ModuleInstance`
+        // `RefId`s are `MD-2_M-<n>` (read from `P-03DE/0.xml`), not the
+        // bare `M-<n>` this fixture declared before -- a bare `M-<n>` is
+        // the shortest possible anchored suffix, so it was exercising
+        // the loosest version of the `_`-anchoring rule rather than the
+        // corpus's own shape.
+        vec![
+            ("MD-2_M-2", "MD-2_M-2_MI-1"),
+            ("MD-2_M-3", "MD-2_M-3_MI-1"),
+            ("MD-2_M-4", "MD-2_M-4_MI-1"),
+            ("MD-2_M-5", "MD-2_M-5_MI-1"),
+            ("MD-2_M-6", "MD-2_M-6_MI-1"),
+        ],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(dto["stale"].as_array().unwrap().is_empty());
+
+    let sections = dto["sections"].as_array().unwrap();
+    assert_eq!(sections.len(), 5);
+
+    let mut write_ids: Vec<String> = sections
+        .iter()
+        .map(|s| {
+            let f = s["fields"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|f| f["etsId"] == "M-00FA_A-2504-10-C071_MD-2_P-1_R-1")
+                .expect("declared field present in every section");
+            assert_eq!(f["editable"], true);
+            f["writeEtsId"].as_str().unwrap().to_string()
+        })
+        .collect();
+    write_ids.sort();
+    assert_eq!(
+        write_ids,
+        vec![
+            "M-00FA_A-2504-10-C071_MD-2_M-2_MI-1_P-1_R-1",
+            "M-00FA_A-2504-10-C071_MD-2_M-3_MI-1_P-1_R-1",
+            "M-00FA_A-2504-10-C071_MD-2_M-4_MI-1_P-1_R-1",
+            "M-00FA_A-2504-10-C071_MD-2_M-5_MI-1_P-1_R-1",
+            "M-00FA_A-2504-10-C071_MD-2_M-6_MI-1_P-1_R-1",
+        ]
+    );
+}
+
+// D39/D43: a module-scoped field with exactly one authoritative
+// `ModuleInstance` is genuinely writable -- the write lands on the
+// module-qualified `writeEtsId`, not the bare declared id, and shows up
+// as "Stored" in the very same response.
+#[tokio::test]
+async fn post_to_a_module_scoped_field_with_a_single_authoritative_instance_succeeds() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("M-1", "M-1_MI-1")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = post_panel(app, 1, "MOD-1_M-1_MI-1_P-1_R-1", "7").await;
+    assert_eq!(status, StatusCode::OK);
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["value"], "7");
+    assert_eq!(f["valueSource"], "Stored");
+    assert_eq!(f["editable"], true);
+    assert_eq!(f["writeEtsId"], "MOD-1_M-1_MI-1_P-1_R-1");
+}
+
+// D43: the write above is a normal `Command::SetParameterValue` on the
+// same undo stack as any other edit -- undo restores the module-scoped
+// field to its program default exactly like an unscoped one.
+#[tokio::test]
+async fn undo_restores_a_module_scoped_write_to_program_default() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("M-1", "M-1_MI-1")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, _) = post_panel(app.clone(), 1, "MOD-1_M-1_MI-1_P-1_R-1", "7").await;
+    assert_eq!(status, StatusCode::OK);
+
+    let undo = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(undo.status(), StatusCode::OK);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["valueSource"], "ProgramDefault");
+}
+
+// D40: two imported `ModuleInstance`s both claiming the same program
+// module is a genuine ambiguity this slice refuses to guess through --
+// its fields stay read-only, and the reason is named in a diagnostic.
+// The sibling instantiation with zero matching instances is named by its
+// own, distinct diagnostic (D39 rule 2) -- the two reasons are not
+// conflated into one message.
+#[tokio::test]
+async fn two_module_instances_sharing_a_ref_id_leave_module_scoped_fields_read_only() {
+    let (_dir, products) = temp_product_db(TWO_INSTANTIATION_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("M-2", "M-2_MI-1"), ("M-2", "M-2_MI-2")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let module_sections: Vec<&Value> = dto["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|s| !s["scope"].is_null())
+        .collect();
+    assert_eq!(module_sections.len(), 2);
+    for s in &module_sections {
+        assert_eq!(s["fields"][0]["editable"], false);
+        assert!(s["fields"][0]["writeEtsId"].is_null());
+    }
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "Two or more imported module instances share this module; its fields are read-only."
+        && d["detail"].as_str().unwrap().contains("M-2_MI-1")
+        && d["detail"].as_str().unwrap().contains("M-2_MI-2")));
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "No imported module instance matches this module; its fields are read-only."));
+}
+
+// D37/D39: a `Module` with no `@Id` at all was already diagnosed before
+// this task; now it also stays read-only for the same reason its
+// `ModuleScope.module_id` is `None` -- there is nothing to look an
+// authoritative `ModuleInstance` up by.
+#[tokio::test]
+async fn a_module_with_no_id_is_read_only_and_diagnosed() {
+    let (_dir, products) = temp_product_db(MODULE_WITHOUT_ID_PROGRAM);
+    let state = Arc::new(state_with_device(products, vec![]));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let module_section = dto["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| !s["scope"].is_null())
+        .expect("the nameless Module still produces a section");
+    assert_eq!(module_section["fields"][0]["editable"], false);
+    assert!(module_section["fields"][0]["writeEtsId"].is_null());
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "A module instance has no identifier and cannot be matched to stored values."));
+}
+
+// D41: a stored row whose `MI-` digit disagrees with the one
+// authoritative `ModuleInstance` is stale, not silently overwritten by
+// or silently preferred over the authority's own answer -- it keeps its
+// raw value in `stale` and the field falls back to the program default.
+#[tokio::test]
+async fn a_stored_row_whose_mi_digit_disagrees_with_the_authority_is_stale() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![("MOD-1_M-1_MI-2_P-1_R-1", "9")],
+        vec![("M-1", "M-1_MI-1")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let stale_ids: Vec<&str> = dto["stale"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["etsId"].as_str().unwrap())
+        .collect();
+    assert_eq!(stale_ids, vec!["MOD-1_M-1_MI-2_P-1_R-1"]);
+    assert_eq!(dto["stale"][0]["raw"], "9");
+
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["valueSource"], "ProgramDefault");
+}
+
+// D43: the panel is the single authority on what is writable -- even
+// once a section has earned editability, the bare declared id (as
+// opposed to its own `writeEtsId`) is still not a valid write target.
+#[tokio::test]
+async fn the_bare_declared_id_is_rejected_even_when_the_section_is_editable() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("M-1", "M-1_MI-1")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, _) = post_panel(app.clone(), 1, "MOD-1_P-1_R-1", "3").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["valueSource"], "ProgramDefault");
+    assert_eq!(f["editable"], true);
+}
+
+/// S4 (fix round 2): a malformed program declaring the same
+/// `Module/@Id` twice -- ETS's own id grammar makes `@Id` unique per
+/// instantiation so the corpus never shows this, but nothing before this
+/// fix round refused it. Same shape as `TWO_INSTANTIATION_PROGRAM`,
+/// except both `Module` elements share one `@Id` (`MOD-1_M-1`) instead
+/// of getting distinct ones.
+const REPEATED_MODULE_ID_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-Top" Name="Top" Text="Top" ParameterType="PT-Num" Access="ReadWrite" Value="1" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="P-Top_R-1" RefId="P-Top" DisplayOrder="1" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterRefRef RefId="P-Top_R-1" />
+  <Module Id="MOD-1_M-1" RefId="MD-1" />
+  <Module Id="MOD-1_M-1" RefId="MD-1" />
+</Dynamic>
+<ModuleDefs><ModuleDef Id="MD-1" Name="module">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="MOD-1_PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="MOD-1_P-1" Name="Channel" Text="Channel" ParameterType="MOD-1_PT-Num" Access="ReadWrite" Value="0" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="MOD-1_P-1_R-1" RefId="MOD-1_P-1" DisplayOrder="1" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterRefRef RefId="MOD-1_P-1_R-1" />
+</Dynamic>
+</ModuleDef></ModuleDefs>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+// S1 (fix round 2) -- reviewer's P1: a lone authority whose digit isn't
+// `1` reconstructs that digit, not a hardcoded `MI-1` guess. Kills the
+// mutation that hardcodes `MI-1` in the reconstruction (M2).
+#[tokio::test]
+async fn a_lone_authority_whose_digit_is_not_one_reconstructs_that_digit() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![("MOD-1_M-1_MI-2_P-1_R-1", "9")],
+        vec![("M-1", "M-1_MI-2")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["editable"], true);
+    assert_eq!(f["writeEtsId"], "MOD-1_M-1_MI-2_P-1_R-1");
+    assert_eq!(f["value"], "9");
+    assert_eq!(f["valueSource"], "Stored");
+}
+
+// S1 (fix round 2) -- reviewer's P2: an empty `instance_ets_id` (a
+// pre-schema-6 project) is `Malformed`, never promoted to `Found("1")`.
+// The only way to reach `MiAuthority::Malformed` at all in the committed
+// suite (also closes I6). Kills the mutation that promotes an empty
+// `instance_ets_id` to `Found("1")` (M8).
+#[tokio::test]
+async fn an_empty_instance_ets_id_is_malformed_not_promoted_to_mi_1() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("M-1", "")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["editable"], false);
+    assert!(f["writeEtsId"].is_null());
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "An imported module instance's identifier has an unexpected shape; this module's fields are read-only."
+        && d["detail"].as_str().unwrap().contains("has Id ''")));
+}
+
+// S2 (fix round 2): `resolve_mi_authority`'s doc comment claims the
+// leading underscore is what keeps a short suffix from matching --
+// prove it. `"MOD-1_M-1"` both contains and (unanchored) ends with
+// `"OD-1_M-1"`; only the anchored `ends_with("_OD-1_M-1")` is false, so
+// this instance must not earn authority. Kills the `contains` mutation
+// (M4) and the ends_with-without-underscore mutation (M6).
+#[tokio::test]
+async fn an_unanchored_suffix_match_does_not_earn_module_authority() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("OD-1_M-1", "OD-1_M-1_MI-1")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["editable"], false);
+    assert!(f["writeEtsId"].is_null());
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "No imported module instance matches this module; its fields are read-only."));
+}
+
+// S3 (fix round 2): a wrong-`MI-` digit or a foreign module's id is
+// module-qualified and genuinely well-formed -- the parameter *is*
+// declared, only its instance is wrong -- so the rejection message must
+// not claim it "is not a parameter declared by this program". Reuses
+// `decompose_module_qualified`, never a second id-shape parser (this
+// task's own rule).
+#[tokio::test]
+async fn a_wrong_mi_digit_or_foreign_module_write_is_rejected_honestly() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("M-1", "M-1_MI-1")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = post_panel(app.clone(), 1, "MOD-1_M-1_MI-9_P-1_R-1", "3").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let msg = dto["error"].as_str().unwrap().to_string();
+    assert!(!msg.contains("is not a parameter declared by this program"));
+    assert!(msg.contains("no editable field's write target matches it"));
+
+    let (status, dto) = post_panel(app, 1, "MOD-1_M-2_MI-1_P-1_R-1", "3").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let msg = dto["error"].as_str().unwrap().to_string();
+    assert!(!msg.contains("is not a parameter declared by this program"));
+    assert!(msg.contains("no editable field's write target matches it"));
+}
+
+// S4 (fix round 2) -- reviewer's P9: two sections sharing one
+// program-side `module_id` must not silently reconstruct the same
+// `write_ets_id`. Even with a genuine authoritative `ModuleInstance`
+// present, the repeat itself is refused (mirrors the `Ambiguous`
+// project-side refusal, D40) rather than letting both sections collapse
+// onto one write target.
+#[tokio::test]
+async fn a_program_repeating_one_module_id_refuses_to_guess_which_section_is_authoritative() {
+    let (_dir, products) = temp_product_db(REPEATED_MODULE_ID_PROGRAM);
+    let state = Arc::new(state_with_device_and_modules(
+        products,
+        vec![],
+        vec![("M-1", "M-1_MI-1")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let module_sections: Vec<&Value> = dto["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|s| !s["scope"].is_null())
+        .collect();
+    assert_eq!(module_sections.len(), 2);
+    for s in &module_sections {
+        assert_eq!(s["fields"][0]["editable"], false);
+        assert!(s["fields"][0]["writeEtsId"].is_null());
+    }
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(
+        diagnostics
+            .iter()
+            .filter(|d| d["message"]
+                == "Two or more sections in this program declare the same module id; its fields are read-only.")
+            .count()
+            >= 2
+    );
+}
+
+// S5 (fix round 2) -- reviewer's P4: D41's collision path is reachable
+// without any imported `ModuleInstance` at all -- two stored rows for
+// the same module and declared parameter, differing only in their `MI-`
+// digit, on a device with no authority to prefer one over the other.
+// Kills the mutation that lets the row silently overwrite instead of
+// diagnosing and staling the loser (M10).
+#[tokio::test]
+async fn two_stored_rows_differing_only_in_mi_digit_collide_without_any_authority() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device(
+        products,
+        vec![
+            ("MOD-1_M-1_MI-1_P-1_R-1", "1"),
+            ("MOD-1_M-1_MI-2_P-1_R-1", "2"),
+        ],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let stale_ids: Vec<&str> = dto["stale"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["etsId"].as_str().unwrap())
+        .collect();
+    assert_eq!(stale_ids, vec!["MOD-1_M-1_MI-2_P-1_R-1"]);
+    assert_eq!(dto["stale"][0]["raw"], "2");
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "Two stored values target the same module-scoped parameter; the later one is ignored."
+        && d["detail"]
+            .as_str()
+            .unwrap()
+            .contains("MOD-1_M-1_MI-1_P-1_R-1")
+        && d["detail"]
+            .as_str()
+            .unwrap()
+            .contains("MOD-1_M-1_MI-2_P-1_R-1")));
+    // I2 (fix round 2): the collision diagnostic now carries the
+    // module's own scope, not `None`.
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "Two stored values target the same module-scoped parameter; the later one is ignored."
+        && d["scope"]["moduleId"] == "MOD-1_M-1"));
+
+    let f = field(&dto, "MOD-1_P-1_R-1").expect("MOD-1_P-1_R-1 present");
+    assert_eq!(f["value"], "1");
+    assert_eq!(f["valueSource"], "Stored");
+    assert_eq!(f["editable"], false);
+}
+
+// I1 (fix round 2): a second stored row for the same unscoped id is now
+// diagnosed and kept in `stale`, not silently dropped the way the
+// committed round left it.
+#[tokio::test]
+async fn a_duplicate_unscoped_stored_row_is_diagnosed_and_kept_stale() {
+    let (_dir, products) = temp_product_db(WRITE_PROGRAM);
+    let state = Arc::new(state_with_device(
+        products,
+        vec![("P-1_R-1", "4"), ("P-1_R-1", "5")],
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let stale_ids: Vec<&str> = dto["stale"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["etsId"].as_str().unwrap())
+        .collect();
+    assert_eq!(stale_ids, vec!["P-1_R-1"]);
+    assert_eq!(dto["stale"][0]["raw"], "5");
+
+    let diagnostics = dto["diagnostics"].as_array().unwrap();
+    assert!(diagnostics.iter().any(|d| d["message"]
+        == "Two stored values target the same parameter; the later one is ignored."
+        && d["detail"].as_str().unwrap().contains("keeping '4'")));
+
+    let f = field(&dto, "P-1_R-1").expect("P-1_R-1 present");
+    assert_eq!(f["value"], "4");
+    assert_eq!(f["valueSource"], "Stored");
+}
+
+// ---------------------------------------------------------------------
+// Task 5: the sharp claim E2 flags and no existing test here settles --
+// that the server actually runs D42's second, scoped `evaluate` call,
+// rather than reusing the first (unscoped) one for everything but a
+// field's raw value/valueSource. Every field-presence assertion above
+// this point is satisfied identically whether or not that second call
+// runs, because none of `WRITE_PROGRAM`/`TWO_INSTANTIATION_PROGRAM`/
+// `KV_SHAPE_PROGRAM` has a `choose` whose outcome a module-scoped stored
+// value can flip -- only `CHOOSE_GATED_MODULE_PROGRAM` does.
+// ---------------------------------------------------------------------
+
+fn field_ids_for_module(dto: &Value, module_id: &str) -> Vec<String> {
+    dto["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["scope"]["moduleId"] == module_id)
+        .unwrap_or_else(|| panic!("no section for module '{module_id}'"))["fields"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["etsId"].as_str().unwrap().to_string())
+        .collect()
+}
+
+// Item 1: with the scoped values supplied, the two instantiations produce
+// different active *sets* -- not merely different values for the same
+// field, but a different field present at all (`_P-2_R-1` vs `_P-3_R-1`),
+// named by their exact `ref_id`s.
+#[tokio::test]
+async fn a_module_scoped_choose_shows_different_field_sets_when_stored_values_diverge() {
+    let (_dir, products) = temp_product_db(CHOOSE_GATED_MODULE_PROGRAM);
+    let state = Arc::new(state_with_device(
+        products,
+        vec![(
+            "M-00FA_A-2504-10-C071_MD-2_M-4_MI-1_P-1_R-1",
+            "20", // >10: M-4 selects the "High" branch
+        )],
+        // M-5 has no stored row at all, so it falls back to the program
+        // default (5, not >10) and selects the "Low" branch instead.
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        dto["stale"].as_array().unwrap().is_empty(),
+        "{:?}",
+        dto["stale"]
+    );
+
+    let m4 = field_ids_for_module(&dto, "M-00FA_A-2504-10-C071_MD-2_M-4");
+    let m5 = field_ids_for_module(&dto, "M-00FA_A-2504-10-C071_MD-2_M-5");
+    assert_eq!(
+        m4,
+        vec![
+            "M-00FA_A-2504-10-C071_MD-2_P-1_R-1",
+            "M-00FA_A-2504-10-C071_MD-2_P-2_R-1",
+        ],
+        "M-4's own stored value (20, >10) selects the High branch"
+    );
+    assert_eq!(
+        m5,
+        vec![
+            "M-00FA_A-2504-10-C071_MD-2_P-1_R-1",
+            "M-00FA_A-2504-10-C071_MD-2_P-3_R-1",
+        ],
+        "M-5, with no stored row of its own, sees the program default (5, not >10) \
+         and selects the Low branch"
+    );
+    assert_ne!(
+        m4, m5,
+        "the two sections' active field sets genuinely differ"
+    );
+}
+
+// Item 2: the explicit contrast -- with no stored rows anywhere, both
+// instantiations fall back to the identical program default and agree on
+// the same active set. This is the pre-T18-slice-4 behaviour, kept so the
+// diverging case above is read against a baseline, not in isolation.
+#[tokio::test]
+async fn a_module_scoped_choose_shows_the_same_field_set_without_any_stored_values() {
+    let (_dir, products) = temp_product_db(CHOOSE_GATED_MODULE_PROGRAM);
+    let state = Arc::new(state_with_device(products, vec![]));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let m4 = field_ids_for_module(&dto, "M-00FA_A-2504-10-C071_MD-2_M-4");
+    let m5 = field_ids_for_module(&dto, "M-00FA_A-2504-10-C071_MD-2_M-5");
+    let expected = vec![
+        "M-00FA_A-2504-10-C071_MD-2_P-1_R-1".to_string(),
+        "M-00FA_A-2504-10-C071_MD-2_P-3_R-1".to_string(),
+    ];
+    assert_eq!(
+        m4, expected,
+        "the program default (5) is not >10: Low branch"
+    );
+    assert_eq!(
+        m5, m4,
+        "no stored rows anywhere: both instantiations see the identical program default"
+    );
 }

@@ -26,6 +26,13 @@ pub struct ModuleInstance {
     /// `RepeatIndex`, e.g. `"6x1"`. Retained opaque (ADR-0013) — its
     /// `"NxM"` shape is not parsed.
     pub repeat_index: String,
+    /// The verbatim `ModuleInstance/@Id` — e.g. `"MD-2_M-4_MI-1"`, the
+    /// `RefId` (`source.ets_id`) plus the `_MI-<k>` component the id grammar
+    /// puts on it ([D] Project Schema23 §1.2.5.18, [V] KV v2.5 demo).
+    /// Retained uninterpreted, same policy as `repeat_index`; the parameter
+    /// editor reads it to reconstruct the module-qualified `ets_id` a write
+    /// must target, rather than guessing `MI-1`.
+    pub instance_ets_id: String,
     /// `Arguments/Argument`, as `(source, value)` pairs. Uninterpreted, same
     /// policy as `ParameterInstanceRef::value`.
     pub arguments: Vec<(SourceRef, String)>,
@@ -49,6 +56,7 @@ mod tests {
             device: DeviceId(1),
             source: source("MD-2_M-1"),
             repeat_index: "6x1".into(),
+            instance_ets_id: "MD-2_M-1_MI-1".into(),
             arguments: vec![
                 (source("MD-2_A-1"), "1".into()),
                 (source("MD-2_A-2"), "1".into()),
@@ -58,6 +66,24 @@ mod tests {
         assert_eq!(m.repeat_index, "6x1");
     }
 
+    /// D38: `instance_ets_id` is the verbatim `ModuleInstance/@Id`, distinct
+    /// from `source.ets_id` (the `@RefId`) — the whole reason this field
+    /// exists is that the two differ by exactly the `_MI-<k>` suffix.
+    #[test]
+    fn instance_ets_id_is_retained_distinct_from_source_ets_id() {
+        let m = ModuleInstance {
+            id: ModuleInstanceId(1),
+            device: DeviceId(1),
+            source: source("MD-2_M-4"),
+            repeat_index: "32x1".into(),
+            instance_ets_id: "MD-2_M-4_MI-1".into(),
+            arguments: vec![],
+        };
+        assert_eq!(m.source.ets_id, "MD-2_M-4");
+        assert_eq!(m.instance_ets_id, "MD-2_M-4_MI-1");
+        assert_ne!(m.source.ets_id, m.instance_ets_id);
+    }
+
     #[test]
     fn two_module_instances_with_different_arguments_are_not_equal() {
         let base = ModuleInstance {
@@ -65,6 +91,7 @@ mod tests {
             device: DeviceId(1),
             source: source("MD-2_M-1"),
             repeat_index: "6x1".into(),
+            instance_ets_id: "MD-2_M-1_MI-1".into(),
             arguments: vec![(source("MD-2_A-1"), "1".into())],
         };
         let mut other = base.clone();

@@ -934,6 +934,7 @@ mod tests {
             device: DeviceId(1),
             source: source(),
             repeat_index: "6x1".into(),
+            instance_ets_id: "t_MI-1".into(),
             arguments: vec![(source(), "1".into()), (source(), "0".into())],
         });
 

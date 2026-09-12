@@ -58,6 +58,36 @@ const TRANSLATED_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 </Languages>
 </ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 
+/// Same `ComObject`/`ComObjectRef` pair as `TRANSLATED_PROGRAM`, but `de-DE`
+/// translates only `VisibleDescription` for `A-1_O-1`, never `Text` — a
+/// package with partial translation coverage, which shipped packages do
+/// have (not every attribute of every object is translated into every
+/// language). Exists for Finding M6's regression test: `de-DE` is a real,
+/// packaged language, yet this specific com object's `Text` has no
+/// `translation` row for it.
+const PROGRAM_WITHOUT_A_TEXT_TRANSLATION: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static>
+<ComObjectTable>
+  <ComObject Id="A-1_O-1" Number="1" Text="Switch" VisibleDescription="Switch description"
+             ObjectSize="1 Bit" DatapointType="DPST-1-1" />
+</ComObjectTable>
+<ComObjectRefs>
+  <ComObjectRef Id="A-1_O-1_R-1" RefId="A-1_O-1" />
+</ComObjectRefs>
+</Static>
+<Languages>
+  <Language Identifier="de-DE">
+    <TranslationUnit RefId="A-1">
+      <TranslationElement RefId="A-1_O-1">
+        <Translation AttributeName="VisibleDescription" Text="Schalterbeschreibung" />
+      </TranslationElement>
+    </TranslationUnit>
+  </Language>
+</Languages>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
 fn source(ets_id: &str) -> SourceRef {
     SourceRef {
         path: "device-1".into(),
@@ -171,6 +201,25 @@ async fn get(app: axum::Router, uri: &str) -> (StatusCode, Value) {
         .unwrap();
     let body = serde_json::from_slice(&bytes).unwrap();
     (status, body)
+}
+
+// Companion of `get` above, for the one case where the response body is
+// not JSON at all: a `Query` extraction failure is an axum rejection that
+// never reaches the handler (and so never reaches `ApiError`'s JSON
+// encoding), so parsing its body as JSON the way `get` does would panic
+// on the rejection's plain-text body before the status assertion runs.
+async fn get_status(app: axum::Router, uri: &str) -> StatusCode {
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("GET")
+                .uri(uri)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    response.status()
 }
 
 fn com_object(detail: &Value) -> &Value {
@@ -289,6 +338,39 @@ async fn a_program_not_in_the_product_database_returns_200_untranslated() {
     assert_eq!(com["description"], "Switch description");
 }
 
+// Test 6, Finding M6: `de-DE` is a genuinely packaged language, but this
+// com object's `Text` has no `translation` row for it (only its
+// `VisibleDescription` does — see `PROGRAM_WITHOUT_A_TEXT_TRANSLATION`).
+// The project's own resolved `name` ("Old Switch Name") deliberately
+// differs from the product database's current, untranslated `Text` column
+// ("Switch"), so a naive overlay that falls back to that column on a miss
+// is caught red-handed: it would show "Switch", not the project's own
+// value. `description` has a real translation and must still come through.
+#[tokio::test]
+async fn a_missing_translation_row_leaves_the_projects_resolved_text_unchanged() {
+    let (_dir, products) = temp_product_db(PROGRAM_WITHOUT_A_TEXT_TRANSLATION);
+    let state = Arc::new(state_with_com_object(
+        Some(products),
+        true,
+        program_layer("Old Switch Name"),
+        program_layer("Switch description"),
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, detail) = get(app, "/api/device/1?language=de-DE").await;
+    assert_eq!(status, StatusCode::OK);
+    let com = com_object(&detail);
+    assert_eq!(
+        com["name"], "Old Switch Name",
+        "Finding M6: a miss on the requested language must leave the project's own resolved \
+         value untouched, not fall back to the product database's untranslated column"
+    );
+    assert_eq!(
+        com["description"], "Schalterbeschreibung",
+        "a real translation for this attribute must still be applied"
+    );
+}
+
 // Companion of Test 5: no product database open at all, still 200
 // untranslated, and no panic taking a lock on a `None`.
 #[tokio::test]
@@ -302,6 +384,42 @@ async fn no_product_database_open_returns_200_untranslated() {
     let app = knx_server::app(Arc::clone(&state), None);
 
     let (status, detail) = get(app, "/api/device/1?language=de-DE").await;
+    assert_eq!(status, StatusCode::OK);
+    let com = com_object(&detail);
+    assert_eq!(com["name"], "Switch");
+    assert_eq!(com["description"], "Switch description");
+}
+
+// Finding M5, ruled in T34 Task 4: `Query<ParameterLanguageQuery>` already
+// guards `GET /api/parameters/{id}` and `POST /api/parameters/{id}/value`
+// (T26), and now guards `GET /api/device/{id}` too (T33) — a malformed
+// `language` query 400s here exactly as it does on the other two routes,
+// rather than being silently ignored, while an absent one is not malformed
+// at all and still returns the untranslated detail with 200 (companion of
+// `no_language_query_parameter_returns_the_untranslated_name` above; named
+// here explicitly so the M5 ruling has both halves in one place).
+// `language=a&language=b` (a repeated key for a scalar field) is the form
+// that actually trips `serde_urlencoded`'s deserializer, with "duplicate
+// field `language`"; `language[]=de` was also tried and does not —
+// `serde_urlencoded` parses `language[]` as an unrecognized key distinct
+// from `language` and leaves the field at its `#[serde(default)]` of
+// `None`, which reaches the handler as an absent language, not a rejected
+// one.
+#[tokio::test]
+async fn a_malformed_language_query_is_rejected_and_an_absent_one_is_not() {
+    let (_dir, products) = temp_product_db(TRANSLATED_PROGRAM);
+    let state = Arc::new(state_with_com_object(
+        Some(products),
+        true,
+        program_layer("Switch"),
+        program_layer("Switch description"),
+    ));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let status = get_status(app.clone(), "/api/device/1?language=a&language=b").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    let (status, detail) = get(app, "/api/device/1").await;
     assert_eq!(status, StatusCode::OK);
     let com = com_object(&detail);
     assert_eq!(com["name"], "Switch");

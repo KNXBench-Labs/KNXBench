@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ParameterPanel as ParameterPanelDto } from "./api";
-import { PRODUCT_LANGUAGE_STORAGE_KEY } from "./productLanguage";
+import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests } from "./productLanguage";
 
 const apiMock = vi.hoisted(() => ({
   deviceParameters: vi.fn(),
@@ -24,6 +24,7 @@ afterEach(() => {
   host = undefined;
   vi.clearAllMocks();
   window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
+  resetProductLanguageForTests();
 });
 
 // Two sections (top-level + one module instantiation, D23), one stale

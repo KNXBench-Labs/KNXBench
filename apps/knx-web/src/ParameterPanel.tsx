@@ -9,6 +9,7 @@ import type {
   StaleParameter,
 } from "./api";
 import { useProductLanguage } from "./productLanguage";
+import { useTranslate, type Translate } from "./i18n";
 
 // T18 slice 3, task 4 (design docs/superpowers/specs/2026-09-11-parameter-editor-design.md).
 // Fetches `GET /api/device/{id}/parameters` on every device selection —
@@ -19,9 +20,13 @@ import { useProductLanguage } from "./productLanguage";
 // conditional fetch would have hidden exactly where they matter most.
 
 // D23's own fallback: `module_id` when present, else `"Module #{module_node}"`.
-function sectionLabel(scope: ModuleScope | null): string {
-  if (scope === null) return "Device";
-  return scope.moduleId ?? `Module #${scope.moduleNode}`;
+// Takes `t` rather than calling `useTranslate()` itself — this isn't a
+// component, so it has no hook rules to follow, but it also has no render
+// of its own to re-run on a language switch; the caller's `t` (from its own
+// `useTranslate()`) is what makes this re-derive correctly.
+function sectionLabel(t: Translate, scope: ModuleScope | null): string {
+  if (scope === null) return t("parameters.deviceScope");
+  return scope.moduleId ?? t("parameters.moduleNumber", { number: scope.moduleNode });
 }
 
 // One editable/disabled field row. Mirrors `Inspector.tsx`'s
@@ -38,6 +43,7 @@ function ParameterFieldRow(props: {
   onUpdated: (panel: ParameterPanelDto) => void;
 }) {
   const { field, deviceId, language, onUpdated } = props;
+  const t = useTranslate();
   const [value, setValue] = useState(field.value ?? "");
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +86,7 @@ function ParameterFieldRow(props: {
           onChange={(e) => setValue(e.target.value)}
           onBlur={apply}
         >
-          <option value="">(none)</option>
+          <option value="">{t("parameters.none")}</option>
           {field.enumOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.text ?? opt.value}
@@ -114,7 +120,7 @@ function ParameterFieldRow(props: {
       )}
       {!field.editable && (
         <span className="parameter-field-caption">
-          Shared across every instantiation of this module; read-only in this release.
+          {t("parameters.sharedReadOnlyCaption")}
         </span>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -132,9 +138,10 @@ function ParameterSectionView(props: {
   onUpdated: (panel: ParameterPanelDto) => void;
 }) {
   const { section, deviceId, language, onUpdated } = props;
+  const t = useTranslate();
   return (
     <details className="parameter-section" open>
-      <summary>{sectionLabel(section.scope)}</summary>
+      <summary>{sectionLabel(t, section.scope)}</summary>
       <div className="parameter-fields">
         {section.fields.map((field) => (
           <ParameterFieldRow
@@ -154,13 +161,11 @@ function ParameterSectionView(props: {
 // field list, never merged in and never hidden.
 function StaleParametersSection(props: { stale: StaleParameter[] }) {
   const { stale } = props;
+  const t = useTranslate();
   return (
     <details className="parameter-stale-section" open>
-      <summary>Stale values ({stale.length})</summary>
-      <p className="inspector-description">
-        These stored values no longer correspond to any parameter in the current application
-        program.
-      </p>
+      <summary>{t("parameters.staleValuesHeading", { count: stale.length })}</summary>
+      <p className="inspector-description">{t("parameters.staleDescription")}</p>
       <ul>
         {stale.map((s) => (
           <li key={s.etsId} className="parameter-stale-entry">
@@ -176,6 +181,7 @@ function StaleParametersSection(props: { stale: StaleParameter[] }) {
 // behind a "copy details" affordance, not printed inline.
 function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
   const { diagnostics } = props;
+  const t = useTranslate();
 
   function copyDetail(detail: string) {
     void navigator.clipboard?.writeText(detail);
@@ -183,15 +189,12 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
 
   return (
     <details className="parameter-diagnostics-banner">
-      <summary>
-        {diagnostics.length} issue{diagnostics.length === 1 ? "" : "s"} found while evaluating
-        this device&apos;s parameters
-      </summary>
+      <summary>{t("parameters.diagnosticsCount", { count: diagnostics.length })}</summary>
       <ul>
         {diagnostics.map((d, i) => (
           <li key={i}>
             {d.message}
-            <button onClick={() => copyDetail(d.detail)}>Copy details</button>
+            <button onClick={() => copyDetail(d.detail)}>{t("parameters.copyDetails")}</button>
           </li>
         ))}
       </ul>
@@ -201,6 +204,7 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
 
 export default function ParameterPanel(props: { deviceId: number }) {
   const { deviceId } = props;
+  const t = useTranslate();
   const [language] = useProductLanguage();
   const [panel, setPanel] = useState<ParameterPanelDto | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -230,7 +234,7 @@ export default function ParameterPanel(props: { deviceId: number }) {
   if (loadError) {
     return (
       <div className="parameter-panel">
-        <h3>Parameters</h3>
+        <h3>{t("parameters.title")}</h3>
         <span className="field-error">{loadError}</span>
       </div>
     );
@@ -239,20 +243,18 @@ export default function ParameterPanel(props: { deviceId: number }) {
   if (!panel) {
     return (
       <div className="parameter-panel parameter-panel-loading">
-        <h3>Parameters</h3>
-        <p className="inspector-description">Loading parameters…</p>
+        <h3>{t("parameters.title")}</h3>
+        <p className="inspector-description">{t("parameters.loading")}</p>
       </div>
     );
   }
 
   return (
     <div className="parameter-panel">
-      <h3>Parameters</h3>
+      <h3>{t("parameters.title")}</h3>
       {panel.diagnostics.length > 0 && <DiagnosticsBanner diagnostics={panel.diagnostics} />}
       {panel.programId === null ? (
-        <p className="inspector-description">
-          This device has no resolvable application program; parameters cannot be shown.
-        </p>
+        <p className="inspector-description">{t("parameters.noProgram")}</p>
       ) : (
         panel.sections.map((section, i) => (
           <ParameterSectionView

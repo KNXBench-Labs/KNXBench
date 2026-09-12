@@ -11,6 +11,7 @@ import type { LineNode } from "./bindings/LineNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
 import ParameterPanel from "./ParameterPanel";
+import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import {
   findArea,
   findBuildingPart,
@@ -22,8 +23,68 @@ import {
   flattenBuildingParts,
 } from "./treeUtils";
 
+// `BuildingNode.kind` is the raw `BuildingPartType` discriminant from the
+// server ("Building", "Floor", … — see `bindings/BuildingNode.ts`'s own
+// comment on why it stays a plain `string` rather than a `ts-rs` union).
+// It doubles as a rendered label in `BuildingPartInspector` below, which is
+// exactly the discriminant trap the brief calls out: this map translates
+// the *display* text without ever touching `kind` itself, which keeps
+// flowing untranslated into `treeUtils`/the API calls that compare it.
+// `ProjectExplorer.tsx` carries the identical map for the same reason —
+// see `buildingPartKind.*`'s own comment in `messages/en.ts` for why that
+// one namespace is shared instead of split per surface.
+const BUILDING_PART_KIND_KEYS: Record<string, MessageKey> = {
+  Building: "buildingPartKind.building",
+  Floor: "buildingPartKind.floor",
+  Room: "buildingPartKind.room",
+  Corridor: "buildingPartKind.corridor",
+  DistributionBoard: "buildingPartKind.distributionBoard",
+  BuildingPart: "buildingPartKind.buildingPart",
+};
+
+function buildingPartKindLabel(t: Translate, kind: string): string {
+  const key = BUILDING_PART_KIND_KEYS[kind];
+  return key ? t(key) : kind;
+}
+
+// `GroupLinkNode.direction`/`NewGroupLinkRow`'s own `direction` state are
+// `"Send"`/`"Receive"` wire values (`Direction`'s `Debug` form, sent
+// straight into `unlinkComObject`/`linkComObject`) — never translated.
+// Only the rendered word is.
+const DIRECTION_KEYS: Record<string, MessageKey> = {
+  Send: "inspector.direction.send",
+  Receive: "inspector.direction.receive",
+};
+
+function directionLabel(t: Translate, direction: string): string {
+  const key = DIRECTION_KEYS[direction];
+  return key ? t(key) : direction;
+}
+
+// The six near-duplicate "Delete is only available for … in the first
+// installation."/"Rename and Delete are only available for … in the first
+// installation." sentences (one per entity type this file gates a create/
+// edit/delete affordance on `installations[0]` for) collapsed into one
+// template. `action` carries its own verb ("Delete is"/"Rename and Delete
+// are") so the base sentence never needs to conjugate around how many
+// verbs it's naming — see `inspector.restrictedAction.*`'s own comment in
+// `messages/en.ts`.
+function restrictedToFirstInstallationMessage(
+  t: Translate,
+  action: "delete" | "renameAndDelete",
+  entityKey: MessageKey,
+): string {
+  const actionKey: MessageKey =
+    action === "delete" ? "inspector.restrictedAction.delete" : "inspector.restrictedAction.renameAndDelete";
+  return t("inspector.restrictedToFirstInstallation", {
+    action: t(actionKey),
+    entity: t(entityKey),
+  });
+}
+
 function AddressField(props: { detail: DeviceDetail; onApplied: (tree: ProjectTree) => void }) {
   const { detail, onApplied } = props;
+  const t = useTranslate();
   const [value, setValue] = useState(detail.address ?? "");
   const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +108,7 @@ function AddressField(props: { detail: DeviceDetail; onApplied: (tree: ProjectTr
 
   return (
     <label className="inspector-field">
-      Address
+      {t("inspector.address")}
       <input
         value={value}
         placeholder="1.1.1"
@@ -67,6 +128,7 @@ function DeviceDescriptionField(props: {
   onApplied: (tree: ProjectTree) => void;
 }) {
   const { detail, onApplied } = props;
+  const t = useTranslate();
   const [value, setValue] = useState(detail.description ?? "");
   const [error, setError] = useState<string | null>(null);
 
@@ -90,7 +152,7 @@ function DeviceDescriptionField(props: {
 
   return (
     <label className="inspector-field">
-      Description
+      {t("inspector.description")}
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -109,6 +171,7 @@ function ComObjectDescriptionField(props: {
   onApplied: (tree: ProjectTree) => void;
 }) {
   const { com, onApplied } = props;
+  const t = useTranslate();
   const [value, setValue] = useState(com.description ?? "");
   const [error, setError] = useState<string | null>(null);
 
@@ -132,7 +195,7 @@ function ComObjectDescriptionField(props: {
 
   return (
     <label className="inspector-field">
-      Description
+      {t("inspector.description")}
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -148,6 +211,7 @@ function ComObjectDescriptionField(props: {
 
 function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) => void }) {
   const { com, onApplied } = props;
+  const t = useTranslate();
   const [value, setValue] = useState(com.dpt ?? "");
   const [error, setError] = useState<string | null>(null);
 
@@ -171,7 +235,7 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
 
   return (
     <label className="inspector-field">
-      DPT
+      {t("inspector.dpt")}
       <input
         value={value}
         placeholder="DPST-9-1"
@@ -193,6 +257,7 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
 // `Command::SetComObjectFlag`'s own bare-`bool` shape (see command.rs).
 function ComObjectFlagsRow(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) => void }) {
   const { com, onApplied } = props;
+  const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
 
   async function toggle(flag: api.ComFlagName, value: boolean) {
@@ -205,18 +270,28 @@ function ComObjectFlagsRow(props: { com: ComObjectNode; onApplied: (tree: Projec
     }
   }
 
-  const flags: { label: string; name: api.ComFlagName; value: boolean }[] = [
-    { label: "R", name: "Read", value: com.read },
-    { label: "W", name: "Write", value: com.write },
-    { label: "T", name: "Transmit", value: com.transmit },
-    { label: "U", name: "Update", value: com.update },
-    { label: "C", name: "Communication", value: com.communication },
+  // `label` (the R/W/T/U/C letter) and `name` (`api.ComFlagName`, sent
+  // verbatim to `setComObjectFlag`) are not translatable — the letters are
+  // KNX's own flag abbreviations and `name` is a wire value, not display
+  // text. Only `titleKey` — the tooltip a mouse hover shows — is language
+  // text, so only it gets a catalogue key.
+  const flags: { label: string; name: api.ComFlagName; titleKey: MessageKey; value: boolean }[] = [
+    { label: "R", name: "Read", titleKey: "inspector.comFlag.read", value: com.read },
+    { label: "W", name: "Write", titleKey: "inspector.comFlag.write", value: com.write },
+    { label: "T", name: "Transmit", titleKey: "inspector.comFlag.transmit", value: com.transmit },
+    { label: "U", name: "Update", titleKey: "inspector.comFlag.update", value: com.update },
+    {
+      label: "C",
+      name: "Communication",
+      titleKey: "inspector.comFlag.communication",
+      value: com.communication,
+    },
   ];
 
   return (
     <div className="com-object-flags">
       {flags.map((f) => (
-        <label key={f.name} title={f.name}>
+        <label key={f.name} title={t(f.titleKey)}>
           <input
             type="checkbox"
             checked={f.value}
@@ -242,6 +317,7 @@ function GroupLinkRow(props: {
   onApplied: (tree: ProjectTree) => void;
 }) {
   const { com, link, onApplied } = props;
+  const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -257,10 +333,10 @@ function GroupLinkRow(props: {
   return (
     <li className="group-link-row">
       <span>
-        {link.direction}: {link.address ?? `#${link.ga_id}`}
+        {directionLabel(t, link.direction)}: {link.address ?? `#${link.ga_id}`}
         {link.name ? ` ${link.name}` : ""}
       </span>
-      <button onClick={remove}>Unlink</button>
+      <button onClick={remove}>{t("inspector.unlink")}</button>
       {error && <span className="field-error">{error}</span>}
     </li>
   );
@@ -277,6 +353,7 @@ function NewGroupLinkRow(props: {
   onApplied: (tree: ProjectTree) => void;
 }) {
   const { com, groupAddresses, onApplied } = props;
+  const t = useTranslate();
   const [gaId, setGaId] = useState("");
   const [direction, setDirection] = useState<"Send" | "Receive">("Send");
   const [error, setError] = useState<string | null>(null);
@@ -297,7 +374,7 @@ function NewGroupLinkRow(props: {
   return (
     <li className="tree-new-row">
       <select value={gaId} onChange={(e) => setGaId(e.target.value)}>
-        <option value="">(choose a group address)</option>
+        <option value="">{t("inspector.chooseGroupAddress")}</option>
         {groupAddresses.map((ga) => (
           <option key={ga.id} value={ga.id}>
             {ga.address} {ga.name}
@@ -308,11 +385,11 @@ function NewGroupLinkRow(props: {
         value={direction}
         onChange={(e) => setDirection(e.target.value as "Send" | "Receive")}
       >
-        <option value="Send">Send</option>
-        <option value="Receive">Receive</option>
+        <option value="Send">{t("inspector.direction.send")}</option>
+        <option value="Receive">{t("inspector.direction.receive")}</option>
       </select>
       <button onClick={link} disabled={!canLink}>
-        Link
+        {t("inspector.link")}
       </button>
       {error && <span className="field-error">{error}</span>}
     </li>
@@ -336,6 +413,7 @@ function LineMoveField(props: {
   onApplied: (tree: ProjectTree) => void;
 }) {
   const { detail, tree, onApplied } = props;
+  const t = useTranslate();
   const current = findDeviceLineInFirstInstallation(tree, detail.id);
   const [error, setError] = useState<string | null>(null);
 
@@ -353,17 +431,20 @@ function LineMoveField(props: {
 
   return (
     <label className="inspector-field">
-      Line
+      {t("inspector.line")}
       <select
         value={current ?? ""}
         onChange={(e) => move(e.target.value === "" ? null : Number(e.target.value))}
       >
-        <option value="">(unassigned)</option>
+        <option value="">{t("inspector.unassigned")}</option>
         {tree.installations[0]?.topology.map((area) => (
-          <optgroup key={area.id} label={`Area ${area.address}: ${area.name}`}>
+          <optgroup
+            key={area.id}
+            label={t("inspector.areaLabel", { address: area.address, name: area.name })}
+          >
             {area.lines.map((line) => (
               <option key={line.id} value={line.id}>
-                Line {line.address}: {line.name}
+                {t("inspector.lineLabel", { address: line.address, name: line.name })}
               </option>
             ))}
           </optgroup>
@@ -390,6 +471,7 @@ function BuildingPartMoveField(props: {
   onApplied: (tree: ProjectTree) => void;
 }) {
   const { detail, tree, onApplied } = props;
+  const t = useTranslate();
   const current = findDeviceLineInFirstInstallation(tree, detail.id);
   const currentPart = findDeviceBuildingPartInFirstInstallation(tree, detail.id);
   const [error, setError] = useState<string | null>(null);
@@ -410,12 +492,12 @@ function BuildingPartMoveField(props: {
 
   return (
     <label className="inspector-field">
-      Building part
+      {t("inspector.buildingPart")}
       <select
         value={currentPart ?? ""}
         onChange={(e) => move(e.target.value === "" ? null : Number(e.target.value))}
       >
-        <option value="">(none)</option>
+        <option value="">{t("inspector.none")}</option>
         {parts.map(({ node, path }) => (
           <option key={node.id} value={node.id}>
             {path}
@@ -440,6 +522,7 @@ function DeviceInspector(props: {
   onDeleted: (tree: ProjectTree) => void;
 }) {
   const { detail, tree, canDelete, onApplied, onDeleted } = props;
+  const t = useTranslate();
   const groupAddresses = tree.installations[0]?.group_addresses ?? [];
   const [error, setError] = useState<string | null>(null);
 
@@ -460,10 +543,10 @@ function DeviceInspector(props: {
     <div className="inspector">
       <h2>{detail.name}</h2>
       {canDelete ? (
-        <button onClick={remove}>Delete</button>
+        <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
         <p className="inspector-description">
-          Delete is only available for devices in the first installation.
+          {restrictedToFirstInstallationMessage(t, "delete", "inspector.entity.devices")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -471,12 +554,12 @@ function DeviceInspector(props: {
       <LineMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <BuildingPartMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <DeviceDescriptionField detail={detail} onApplied={onApplied} />
-      <h3>Communication objects</h3>
+      <h3>{t("inspector.communicationObjects")}</h3>
       <ul className="com-object-list">
         {detail.com_objects.map((com) => (
           <li key={com.id}>
             <span className="com-object-label">
-              {com.number}: {com.name ?? "(unnamed)"}
+              {com.number}: {com.name ?? t("inspector.unnamed")}
             </span>
             <DptField com={com} onApplied={onApplied} />
             {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
@@ -518,6 +601,7 @@ function GroupAddressInspector(props: {
   onDeleted: (tree: ProjectTree) => void;
 }) {
   const { ga, canDelete, onDeleted } = props;
+  const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -535,10 +619,10 @@ function GroupAddressInspector(props: {
       <h2>{ga.name}</h2>
       <p className="inspector-address">{ga.address}</p>
       {canDelete ? (
-        <button onClick={remove}>Delete</button>
+        <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
         <p className="inspector-description">
-          Delete is only available for group addresses in the first installation.
+          {restrictedToFirstInstallationMessage(t, "delete", "inspector.entity.groupAddresses")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -551,6 +635,7 @@ function GroupRangeNameField(props: {
   onApplied: (tree: ProjectTree) => void;
 }) {
   const { range, onApplied } = props;
+  const t = useTranslate();
   const [value, setValue] = useState(range.name);
   const [error, setError] = useState<string | null>(null);
 
@@ -576,7 +661,7 @@ function GroupRangeNameField(props: {
 
   return (
     <label className="inspector-field">
-      Name
+      {t("inspector.name")}
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -601,6 +686,7 @@ function GroupRangeInspector(props: {
   onDeleted: (tree: ProjectTree) => void;
 }) {
   const { range, canEdit, onApplied, onDeleted } = props;
+  const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -622,11 +708,11 @@ function GroupRangeInspector(props: {
       {canEdit ? (
         <>
           <GroupRangeNameField range={range} onApplied={onApplied} />
-          <button onClick={remove}>Delete</button>
+          <button onClick={remove}>{t("inspector.delete")}</button>
         </>
       ) : (
         <p className="inspector-description">
-          Rename and Delete are only available for group ranges in the first installation.
+          {restrictedToFirstInstallationMessage(t, "renameAndDelete", "inspector.entity.groupRanges")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -646,6 +732,7 @@ function AreaInspector(props: {
   onDeleted: (tree: ProjectTree) => void;
 }) {
   const { area, canDelete, onDeleted } = props;
+  const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -660,17 +747,15 @@ function AreaInspector(props: {
 
   return (
     <div className="inspector">
-      <h2>
-        Area {area.address}: {area.name}
-      </h2>
+      <h2>{t("inspector.areaLabel", { address: area.address, name: area.name })}</h2>
       <p className="inspector-description">
-        {area.lines.length} line{area.lines.length === 1 ? "" : "s"}
+        {t("inspector.lineCount", { count: area.lines.length })}
       </p>
       {canDelete ? (
-        <button onClick={remove}>Delete</button>
+        <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
         <p className="inspector-description">
-          Delete is only available for areas in the first installation.
+          {restrictedToFirstInstallationMessage(t, "delete", "inspector.entity.areas")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -684,6 +769,7 @@ function LineInspector(props: {
   onDeleted: (tree: ProjectTree) => void;
 }) {
   const { line, canDelete, onDeleted } = props;
+  const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -698,17 +784,15 @@ function LineInspector(props: {
 
   return (
     <div className="inspector">
-      <h2>
-        Line {line.address}: {line.name}
-      </h2>
+      <h2>{t("inspector.lineLabel", { address: line.address, name: line.name })}</h2>
       <p className="inspector-description">
-        {line.devices.length} device{line.devices.length === 1 ? "" : "s"}
+        {t("inspector.deviceCount", { count: line.devices.length })}
       </p>
       {canDelete ? (
-        <button onClick={remove}>Delete</button>
+        <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
         <p className="inspector-description">
-          Delete is only available for lines in the first installation.
+          {restrictedToFirstInstallationMessage(t, "delete", "inspector.entity.lines")}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}
@@ -721,6 +805,7 @@ function BuildingPartNameField(props: {
   onApplied: (tree: ProjectTree) => void;
 }) {
   const { part, onApplied } = props;
+  const t = useTranslate();
   const [value, setValue] = useState(part.name);
   const [error, setError] = useState<string | null>(null);
 
@@ -746,7 +831,7 @@ function BuildingPartNameField(props: {
 
   return (
     <label className="inspector-field">
-      Name
+      {t("inspector.name")}
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
@@ -772,6 +857,7 @@ function BuildingPartInspector(props: {
   onDeleted: (tree: ProjectTree) => void;
 }) {
   const { node, path, canEdit, onApplied, onDeleted } = props;
+  const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -790,20 +876,27 @@ function BuildingPartInspector(props: {
   return (
     <div className="inspector">
       <h2>{node.name}</h2>
-      <p className="inspector-description">{node.kind}</p>
+      {/* `node.kind` is the raw `BuildingPartType` discriminant — see
+          `buildingPartKindLabel`'s own comment above for why only the
+          rendered word goes through translation. */}
+      <p className="inspector-description">{buildingPartKindLabel(t, node.kind)}</p>
       <p className="inspector-path">{path}</p>
       <p>
-        {node.devices.length} device{node.devices.length === 1 ? "" : "s"},{" "}
-        {node.children.length} child part{node.children.length === 1 ? "" : "s"}
+        {t("inspector.deviceCount", { count: node.devices.length })},{" "}
+        {t("inspector.childPartCount", { count: node.children.length })}
       </p>
       {canEdit ? (
         <>
           <BuildingPartNameField part={node} onApplied={onApplied} />
-          <button onClick={remove}>Delete</button>
+          <button onClick={remove}>{t("inspector.delete")}</button>
         </>
       ) : (
         <p className="inspector-description">
-          Rename and Delete are only available for building parts in the first installation.
+          {restrictedToFirstInstallationMessage(
+            t,
+            "renameAndDelete",
+            "inspector.entity.buildingParts",
+          )}
         </p>
       )}
       {error && <span className="field-error">{error}</span>}

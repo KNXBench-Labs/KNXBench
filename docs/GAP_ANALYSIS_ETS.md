@@ -798,6 +798,30 @@ one). T25 has no design spec yet; T26's first slice does —
   still names). Full accounting: [KNOWN_LIMITATIONS.md
   §37](KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12).
   Plan: `docs/superpowers/plans/2026-09-12-com-object-language.md`.
+- **T34. Open.** Non-blocking findings from T33's whole-branch review
+  (2026-09-12), none of them Critical. `com_object_view` loads the
+  *entire* program/language translation overlay on every call instead of
+  accepting a batch of ref ids, so one device fetch costs O(com objects ×
+  overlay rows) — measured at 3,876 rows / ~1.26ms of SQL for the
+  largest program actually attached to a device, times up to 66 com
+  objects per device in the reference project, repeated on every device
+  click, every edit-triggered refetch, and every language change. Fix: a
+  batched `com_object_views(conn, program_id, &[ref_id], language)`, or
+  an overlay-accepting variant, mirroring `parameter_views`'s own
+  bulk-query shape. Three smaller items ride along: `apps/knx-web/src/App.tsx`'s
+  language-change refetch effect guards against out-of-order replies with
+  a monotonic request id, but the two older `deviceDetail` call sites
+  (device selection, edit-triggered refetch) do not share that guard, so
+  an in-flight language reply can still land after — and overwrite — a
+  later edit-triggered refetch; the new `Query<ParameterLanguageQuery>`
+  extractor on `GET /api/device/{id}` turns a malformed query string into
+  a 400 where it was previously ignored outright (no `Query` extractor
+  existed on that route before T33); and on an overlay miss (no
+  translation row for the requested language) `com_object_view`'s `pick()`
+  still falls back to the product database's *current* untranslated
+  column, so `apps/knx-server` overwrites `ComObjectNode::name` with
+  whatever that column holds today rather than leaving the value already
+  resolved from the project.
 
 ### Tier 7 — motion and animation
 

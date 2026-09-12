@@ -1272,24 +1272,66 @@ the same `Option<&str>` overlay `parameter_views` already had, applied
 before `pick()`: a `ComObject`-scope translation is keyed by the
 `ComObject`'s own id, a `ComObjectRef`-scope one by the `ComObjectRef`'s
 id, and exactly `Text`, `FunctionText` and `VisibleDescription` are ever
-overlaid — the same three attributes, nothing new. `apps/knx-server`'s
-`GET /api/device/{id}?language=` calls it and overwrites
+overlaid on `ComObjectView` — the same three attributes, nothing new.
+Of those three, only `Text` and `VisibleDescription` go anywhere:
+`apps/knx-server`'s `GET /api/device/{id}?language=` reads `view.text`
+and `view.visible_description` and overwrites
 `ComObjectNode::name`/`description`, but **only** where the stored
 `Override<Text>`'s layer is `Layer::Program` or `Layer::ProgramRef` —
-values the product database itself supplied. `Layer::Instance`,
-`Layer::Inferred` and `Layer::UserEdit` are project-authored (the first
-and third are exported to `.knxproj`) and are shown back verbatim
-regardless of the selected language, never translated. `apps/knx-web`'s
-Inspector sends the persisted product-language setting on every
-device-detail fetch and refetches when it changes mid-selection, guarded
-against an older language's response landing after a newer one's.
+values the product database itself supplied. `view.function_text` is
+computed and then discarded at that call site: `ComObjectNode`
+(`crates/knx-projection/src/lib.rs`) has no field to hold it, `enrich()`'s
+`apply()` (`crates/knx-productdb/src/enrich.rs`) never stores it into a
+project either, and `knx-report`'s documentation exporter
+(`crates/knx-report/src/render.rs`) renders `ComObjectNode::name`/
+`description` straight through `build_device_detail`, which takes no
+language at all — the generated report is not language-aware in any
+respect, translated or not. `FunctionText` is therefore unread at every
+surface, the same honest status this section already gives `SuffixText`
+below. `Layer::Instance`, `Layer::Inferred` and `Layer::UserEdit` are
+project-authored (the first and third are exported to `.knxproj`) and
+are shown back verbatim regardless of the selected language, never
+translated. `apps/knx-web`'s Inspector sends the persisted
+product-language setting on every device-detail fetch and refetches when
+it changes mid-selection, guarded against an older language's response
+landing after a newer one's.
+
+The Inspector's own description editor
+(`apps/knx-web/src/Inspector.tsx`'s `ComObjectDescriptionField`, around
+lines 112-125) seeds its input from that same displayed value, which
+with a language selected is the translated `VisibleDescription`. Saving
+it issues `Command::SetComObjectDescription`, which writes
+`Layer::UserEdit` — and `UserEdit` values are among the layers exported
+to `.knxproj`. So a translated string can become project data, but only
+through an explicit save; this is not new behaviour (the same field
+pre-filled from untranslated text before T33) and not a bug, just the
+one place display and storage meet.
 
 Re-measured, not assumed, on the same package §64 uses:
 `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`'s application program
 `M-0083_A-0317-31-7DC6` carries 53 `ComObject`-scope `Text` and 50
 `ComObject`-scope `FunctionText` translations per language, across all
 five declared languages (`de-DE`, `en-US`, `fr-FR`, `es-ES`, `it-IT`) —
-already ingested since T26/T32, now finally read.
+already ingested since T26/T32, now finally read (`Text` and
+`VisibleDescription` only, per the `FunctionText` correction above). That
+same package carries zero `ComObjectRef`-scope `Text` and 39
+`ComObjectRef`-scope `FunctionText` translations per language — a
+per-package figure, not the whole corpus. Re-measured directly against
+the installed database for this pass
+(`~/.local/share/knx/products.sqlite`, `sqlite3`, joining `translation`
+against `com_object_ref` by `(scope_id, ref_id) = (program_id, id)`, of
+12 installed application programs total): 3,781 `ComObjectRef`-scope
+`Text` rows spanning 8 programs and 692 `ComObjectRef`-scope
+`VisibleDescription` rows spanning 6. A handful translate a
+`ComObjectRef` that declares no structural text of its own — e.g. program
+`M-006A_A-0001-22-26C0-O0079`, ref `_O-0_R-10001`, whose fr-FR `Text` row
+reads "sortie - Lumière" while that `ComObjectRef`'s own `Text` column is
+empty and only its parent `ComObject` supplies "Ausgang - Licht" —
+so the overlay resolves at the `ProgramRef` layer where the untranslated
+value would otherwise have come from `Program`. Whether ETS treats a
+`ComObjectRef`-scope translation of an attribute the `ComObjectRef`
+itself never declared the same way is unattested; nothing here claims it
+does.
 
 **Still open.** Device creation and `enrich()` still bake untranslated
 text into the project file — deliberately: translating there would make

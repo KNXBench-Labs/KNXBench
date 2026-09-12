@@ -881,9 +881,10 @@ slice has its own design spec —
   rows). Fix: `crates/knx-productdb/src/query.rs` gained
   `com_object_views(conn, program_id, com_object_ref_ids: &[&str],
   language) -> Result<HashMap<String, ComObjectView>, ProductDbError>`,
-  chunking the `IN` list at 900 (SQLite's `SQLITE_MAX_VARIABLE_NUMBER` is
-  999) with the overlay loaded exactly once per call; an empty slice never
-  touches the database. `apps/knx-server/src/domain.rs`'s `device_detail`
+  chunking the `IN` list at 900 — under `SQLITE_MAX_VARIABLE_NUMBER`,
+  which is 32766 in the bundled SQLite 3.53.2 this crate links and was 999
+  before SQLite 3.32 — with the overlay loaded exactly once per call; an
+  empty slice never touches the database. `apps/knx-server/src/domain.rs`'s `device_detail`
   now collects every lookup id first and calls it once per fetch instead
   of once per com object. Measured, not assumed, on `M-0083_A-0317-31-7DC6`
   (`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`, 104 declared

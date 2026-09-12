@@ -174,9 +174,13 @@ fn overlaid_pick(
 /// `com_object_view`'s own doc comment already describes, applied once per
 /// row instead of to one row.
 ///
-/// **Chunking.** SQLite's default `SQLITE_MAX_VARIABLE_NUMBER` is 999, and
-/// a program can declare more `ComObjectRef`s than that (the corpus has a
-/// program with 543 `ParameterRef`s, so the order of magnitude is real).
+/// **Chunking.** A program can declare more `ComObjectRef`s than a single
+/// statement may bind (the corpus has a program with 543 `ParameterRef`s,
+/// so the order of magnitude is real). `SQLITE_MAX_VARIABLE_NUMBER` is
+/// 32766 in the bundled SQLite this crate links (`rusqlite` with
+/// `features = ["bundled"]`, `libsqlite3-sys` 0.38.2, SQLite 3.53.2); it
+/// was 999 before SQLite 3.32, and a system SQLite may still be built
+/// that way.
 /// `com_object_ref_ids` is chunked at 900 ids per statement — comfortably
 /// under the limit alongside the `program_id` parameter — one prepared
 /// statement per chunk, never one per id. The overlay is loaded once,
@@ -1623,6 +1627,27 @@ mod tests {
 
         let views = com_object_views(&conn, "A-7", &[], Some("de-DE")).unwrap();
         assert!(views.is_empty());
+    }
+
+    #[test]
+    fn com_object_views_without_a_language_never_queries_the_translation_table() {
+        let (_dir, conn) = translated_com_object_db();
+        // The other half of the no-language constraint: an empty slice
+        // loads no overlay because it runs nothing at all, which says
+        // nothing about a slice that does run. Here the rows exist and
+        // the query happens; only `translation` is gone. Resolving
+        // anyway is the proof that `language: None` issues zero
+        // translation queries — a lazier implementation that loaded the
+        // overlay first and consulted it later would return `Err`.
+        conn.execute_batch("DROP TABLE translation").unwrap();
+
+        let view = com_object_views(&conn, "A-7", &["A-7_O-1_R-1"], None)
+            .unwrap()
+            .remove("A-7_O-1_R-1")
+            .expect("the ref resolves without the translation table");
+        assert!(!view.text_translated);
+        assert!(!view.function_text_translated);
+        assert!(!view.visible_description_translated);
     }
 
     /// `count` `ComObject`/`ComObjectRef` pairs, each ref taking its

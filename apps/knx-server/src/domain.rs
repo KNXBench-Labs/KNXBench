@@ -864,6 +864,12 @@ pub fn device_detail(
         else {
             continue;
         };
+        // Recomputed rather than carried: `com_object_lookup_id` is pure
+        // and both sites feed it the same three inputs, so this is the
+        // key the collection loop above queried with. If the two ever
+        // drift apart the symptom is silent — a `views` miss and
+        // untranslated text, with no test to notice — so keep them
+        // reading the same `overlay_input` entry.
         let lookup_id = knx_productdb::com_object_lookup_id(&program_id, ref_id, *module_based);
         let Some(view) = views.get(&lookup_id) else {
             continue;

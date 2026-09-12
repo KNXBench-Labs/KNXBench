@@ -341,6 +341,21 @@ export const messages = {
   // review: only the native file-dialog filter name is in scope here,
   // nothing else in that file.
   "groupAddressCsv.filterName": "Group-address CSV",
+
+  // `App.tsx` (task 5, controller correction): the addendum that sent
+  // `filePicker.ts`/`GroupAddressCsvButtons.tsx` into scope mislocated
+  // these two strings — they actually live here, as a module-level const
+  // (`pickProject`'s own inline filter) and as `EXPORT_FILTER`
+  // (`exportProject`). Both are resolved at call time now, same reasoning
+  // as `commandRegistry.ts`'s `COMMANDS` in task 3: a module-level
+  // `t()` call would freeze the first language forever.
+  "app.filterName.etsProject": "ETS project",
+  "app.filterName.knxDesktopProject": "knx-desktop project",
+
+  // `DocumentationExportButton.tsx` (task 5, controller correction) —
+  // same mislocated string, same fix: the filter name moves from a
+  // module-level const into the component, resolved via `t()`.
+  "documentationExport.filterName": "HTML document",
 } as const;
 
 export type Messages = typeof messages;

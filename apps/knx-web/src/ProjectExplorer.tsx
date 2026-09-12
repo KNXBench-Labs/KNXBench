@@ -1,3 +1,4 @@
+/** Navigation tree for the project's installations, buildings, devices, and group addresses. */
 import { useEffect, useMemo, useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";

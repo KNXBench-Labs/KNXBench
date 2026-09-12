@@ -1,3 +1,4 @@
+/** Tests for ParameterPanel's fetch/render/edit behaviour across product languages. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

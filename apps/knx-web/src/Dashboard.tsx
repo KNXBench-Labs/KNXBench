@@ -1,3 +1,4 @@
+/** Overview panel showing schema version and entity counts for the open project. */
 // apps/knx-desktop/src/Dashboard.tsx
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { computeStats } from "./dashboardStats";

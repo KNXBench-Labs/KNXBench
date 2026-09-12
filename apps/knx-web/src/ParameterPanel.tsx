@@ -1,3 +1,4 @@
+/** Panel rendering and editing a device's application-program parameters, fetched per selection. */
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import type {

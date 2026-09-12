@@ -1,3 +1,4 @@
+/** Tests for SettingsPanel's theme/motion/language controls and language-pack import/export UI. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

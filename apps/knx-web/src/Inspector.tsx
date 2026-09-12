@@ -1,3 +1,4 @@
+/** Properties inspector showing and editing details for whatever tree entity is selected. */
 import { useEffect, useState } from "react";
 import * as api from "./api";
 import type { DeviceDetail } from "./bindings/DeviceDetail";

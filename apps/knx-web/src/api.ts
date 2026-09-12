@@ -1,3 +1,4 @@
+/** fetch()-based HTTP client mirroring the Tauri invoke() surface the UI components call. */
 //! fetch()-based replacement for @tauri-apps/api/core's invoke() — same
 //! function names and argument shapes the components already called, so
 //! swapping the import at each call site is the only change there.

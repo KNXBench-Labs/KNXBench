@@ -1,3 +1,4 @@
+/** Button that exports the current project as a self-contained HTML documentation file. */
 import { pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";

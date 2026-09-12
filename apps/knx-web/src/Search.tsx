@@ -6,11 +6,13 @@ import { buildSearchIndex } from "./treeUtils";
 import type { SearchEntry } from "./treeUtils";
 import { matchEntries } from "./searchMatch";
 import Overlay from "./Overlay";
+import { useTranslate } from "./i18n";
+import type { MessageKey } from "./messages/en";
 
-const KIND_LABELS: Record<SearchEntry["kind"], string> = {
-  device: "Devices",
-  group_address: "Group addresses",
-  building_part: "Building parts",
+const KIND_LABEL_KEYS: Record<SearchEntry["kind"], MessageKey> = {
+  device: "search.kind.device",
+  group_address: "search.kind.groupAddress",
+  building_part: "search.kind.buildingPart",
 };
 
 const KIND_ORDER: SearchEntry["kind"][] = ["device", "group_address", "building_part"];
@@ -29,6 +31,7 @@ export default function Search(props: {
   onClose: () => void;
 }) {
   const { tree, onSelect, onClose } = props;
+  const t = useTranslate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
@@ -64,25 +67,25 @@ export default function Search(props: {
   }
 
   return (
-    <Overlay label="Search" onClose={onClose} initialFocusRef={inputRef}>
+    <Overlay label={t("search.overlayLabel")} onClose={onClose} initialFocusRef={inputRef}>
       <input
         ref={inputRef}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Search devices, group addresses, building parts…"
+        placeholder={t("search.placeholder")}
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={ordered.length > 0}
         aria-controls="search-results"
         aria-activedescendant={ordered[highlight] ? `search-option-${highlight}` : undefined}
       />
-      {query.trim() !== "" && results.length === 0 && <p className="search-empty">No matches.</p>}
+      {query.trim() !== "" && results.length === 0 && <p className="search-empty">{t("search.noMatches")}</p>}
       <ul className="search-results" id="search-results" role="listbox">
         {grouped.map(({ kind, entries }) => (
-          <li key={kind} className="search-group" role="group" aria-label={KIND_LABELS[kind]}>
+          <li key={kind} className="search-group" role="group" aria-label={t(KIND_LABEL_KEYS[kind])}>
             <div className="search-group-label" aria-hidden="true">
-              {KIND_LABELS[kind]}
+              {t(KIND_LABEL_KEYS[kind])}
             </div>
             <ul role="presentation">
               {entries.map((entry) => {

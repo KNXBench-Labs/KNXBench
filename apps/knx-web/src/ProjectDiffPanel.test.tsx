@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { ProjectDiffReport, EntityTable, DeviceTable } from "./api";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   diffProject: vi.fn(),
@@ -28,6 +29,8 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
+  window.localStorage.removeItem("knx-desktop:ui-language");
+  resetUiLanguageForTests();
 });
 
 const fakeTree = { installations: [] } as unknown as ProjectTree;
@@ -144,6 +147,50 @@ const ambiguousOnlyReport: ProjectDiffReport = {
         changed: [],
         ambiguous: [{ key: { etsId: "ga1", address: "1/1/1" }, leftCandidates: 2, rightCandidates: 1 }],
       },
+      buildings: emptyTable(),
+    },
+  ],
+};
+
+// Task 5: the "field(s) changed" sentences are genuinely pluralized
+// (`.one`/`.other`), unlike the grouped entity-table counts above — this
+// pair of reports exercises the singular and plural branch of both the
+// project-info and installation-info sentences at once.
+const singularFieldChangeReport: ProjectDiffReport = {
+  infoChanges: [{ field: "name", left: "Old", right: "New" }],
+  installations: [
+    {
+      id: 0,
+      status: "matched",
+      fieldChanges: [{ field: "address", left: "1", right: "2" }],
+      areas: emptyTable(),
+      lines: emptyTable(),
+      devices: emptyDeviceTable(),
+      groupRanges: emptyTable(),
+      groupAddresses: emptyTable(),
+      buildings: emptyTable(),
+    },
+  ],
+};
+
+const pluralFieldChangeReport: ProjectDiffReport = {
+  infoChanges: [
+    { field: "name", left: "Old", right: "New" },
+    { field: "comment", left: "A", right: "B" },
+  ],
+  installations: [
+    {
+      id: 0,
+      status: "matched",
+      fieldChanges: [
+        { field: "address", left: "1", right: "2" },
+        { field: "medium", left: "TP", right: "IP" },
+      ],
+      areas: emptyTable(),
+      lines: emptyTable(),
+      devices: emptyDeviceTable(),
+      groupRanges: emptyTable(),
+      groupAddresses: emptyTable(),
       buildings: emptyTable(),
     },
   ],
@@ -268,5 +315,34 @@ describe("ProjectDiffPanel", () => {
 
     expect(order).toEqual(["clear", "diff"]);
     root.unmount();
+  });
+
+  // Task 5: German plural agreement is not always shaped like English —
+  // this pins both the singular and plural branch of the "field(s)
+  // changed" sentences under the German catalogue, for both the
+  // project-info line and the per-installation info line.
+  it("renders both plural branches of the field-changed sentences correctly in German", async () => {
+    saveUiLanguage(window.localStorage, "de");
+    resetUiLanguageForTests();
+
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/compare.knxdb");
+    apiMock.diffProject.mockResolvedValueOnce(singularFieldChangeReport);
+    const singular = await renderPanel();
+    // The "Compare with…" label is itself translated in German
+    // ("Vergleichen mit…"), so this locates the (only) button by role
+    // rather than by an English-literal text match.
+    await click(host!.querySelector("button")!);
+    expect(host!.textContent).toContain("Projektinfo: 1 Feld geändert");
+    expect(host!.textContent).toContain("Installationsinfo: 1 Feld geändert");
+    singular.root.unmount();
+    host!.remove();
+
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/compare.knxdb");
+    apiMock.diffProject.mockResolvedValueOnce(pluralFieldChangeReport);
+    const plural = await renderPanel();
+    await click(host!.querySelector("button")!);
+    expect(host!.textContent).toContain("Projektinfo: 2 Felder geändert");
+    expect(host!.textContent).toContain("Installationsinfo: 2 Felder geändert");
+    plural.root.unmount();
   });
 });

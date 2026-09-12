@@ -3,6 +3,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   exportDocumentation: vi.fn(),
@@ -27,6 +28,8 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
+  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetUiLanguageForTests();
 });
 
 // Same precedent as GroupAddressCsvButtons.test.tsx: the component only
@@ -104,6 +107,13 @@ describe("DocumentationExportButton", () => {
     });
     const { root, onSummary, onError } = await renderButton();
     await click(exportButton());
+    // "HTML document" now comes from `t("documentationExport.filterName")`
+    // (`messages/en.ts`), not a module-level literal. There is no
+    // `LanguageProvider` in this codebase — `useTranslate()` reads the active
+    // language from `localStorage`/`navigator.language` via `uiLanguage.ts`,
+    // and this test never sets either, so it renders in whatever the test
+    // environment's default resolves to (English). The German counterpart,
+    // below, actually exercises the fix instead of relying on that default.
     expect(filePickerMock.pickSavePath).toHaveBeenCalledWith(
       [{ name: "HTML document", extensions: ["html"] }],
       expect.any(String),
@@ -132,6 +142,29 @@ describe("DocumentationExportButton", () => {
     await click(exportButton());
     expect(onError).toHaveBeenCalledTimes(1);
     expect(onSummary).not.toHaveBeenCalled();
+    root.unmount();
+  });
+
+  // Task 5 review (Important): the sibling test above only proves the
+  // catalogue key resolves to English by default — it never proves the
+  // filter name actually follows the UI language. This one does, matching
+  // the `saveUiLanguage`/`resetUiLanguageForTests` pattern already used in
+  // `CatalogBrowser.test.tsx`/`CommandPalette.test.tsx`/`ProjectDiffPanel.test.tsx`.
+  it("passes the German filter name when the UI language is German", async () => {
+    saveUiLanguage(window.localStorage, "de");
+    resetUiLanguageForTests();
+    filePickerMock.pickSavePath.mockResolvedValueOnce("/data/project.html");
+    apiMock.exportDocumentation.mockResolvedValueOnce({ warnings: [] });
+    const { root } = await renderButton();
+    // Not `exportButton()` here — that helper matches on the English
+    // "Export documentation" text, which is exactly what this test does not
+    // render; the component's only button is unambiguous either way.
+    const button = host!.querySelector("button") as HTMLButtonElement;
+    await click(button);
+    expect(filePickerMock.pickSavePath).toHaveBeenCalledWith(
+      [{ name: "HTML-Dokument", extensions: ["html"] }],
+      expect.any(String),
+    );
     root.unmount();
   });
 });

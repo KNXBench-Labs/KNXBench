@@ -4,6 +4,7 @@
 //! `await` it exactly like @tauri-apps/plugin-dialog's open()/save().
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { useTranslate } from "./i18n";
 
 interface Entry {
   name: string;
@@ -42,6 +43,7 @@ function Modal(props: {
   onResolve: (path: string | null) => void;
 }) {
   const { mode, filters, defaultName, onResolve } = props;
+  const t = useTranslate();
   const [dir, setDir] = useState("");
   const [entries, setEntries] = useState<Entry[]>([]);
   const [name, setName] = useState(defaultName ?? "");
@@ -57,7 +59,7 @@ function Modal(props: {
     <div className="fs-picker-overlay">
       <div className="fs-picker">
         <h3>
-          {mode === "open" ? "Open" : "Save as"} — /{dir}
+          {mode === "open" ? t("fsPicker.open") : t("fsPicker.saveAs")} — /{dir}
         </h3>
         {error && <p className="field-error">{error}</p>}
         <ul className="fs-picker-list">
@@ -78,12 +80,12 @@ function Modal(props: {
             ))}
         </ul>
         {mode === "save" && (
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="filename" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("fsPicker.filenamePlaceholder")} />
         )}
         <div className="fs-picker-actions">
           {mode === "open" && (
             <label className="fs-picker-upload">
-              Upload…
+              {t("fsPicker.upload")}
               <input
                 type="file"
                 style={{ display: "none" }}
@@ -104,10 +106,10 @@ function Modal(props: {
               onClick={() => onResolve(name ? (dir ? `${dir}/${name}` : name) : null)}
               disabled={!name}
             >
-              Save
+              {t("fsPicker.save")}
             </button>
           )}
-          <button onClick={() => onResolve(null)}>Cancel</button>
+          <button onClick={() => onResolve(null)}>{t("fsPicker.cancel")}</button>
         </div>
       </div>
     </div>

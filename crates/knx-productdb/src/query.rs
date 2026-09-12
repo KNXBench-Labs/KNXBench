@@ -1366,9 +1366,11 @@ mod tests {
     /// One `ComObject` (`A-7_O-1`) carrying `Text`, `FunctionText`,
     /// `VisibleDescription` and `ObjectSize`, and two `ComObjectRef`s:
     /// `R-1` takes every value from the `ComObject` (`Program` layer),
-    /// `R-2` overrides only `Text` (`ProgramRef` layer). `de-DE` translates
-    /// all three display attributes on the `ComObject` *and* an
-    /// (illegitimate) `ObjectSize`, plus `Text` on `R-2` itself.
+    /// `R-2` overrides only `Text` (`ProgramRef` layer), and `R-3`
+    /// overrides `Text` as well but is itself never translated. `de-DE`
+    /// translates all three display attributes on the `ComObject` *and* an
+    /// (illegitimate) `ObjectSize`, plus `Text` on `R-2` itself — `R-3`
+    /// deliberately gets no `TranslationElement` at all.
     const COM_OBJECT_PROGRAM_TRANSLATED: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
 <ApplicationPrograms><ApplicationProgram Id="A-7" Name="P" ApplicationNumber="7"
@@ -1381,6 +1383,7 @@ mod tests {
 <ComObjectRefs>
   <ComObjectRef Id="A-7_O-1_R-1" RefId="A-7_O-1" />
   <ComObjectRef Id="A-7_O-1_R-2" RefId="A-7_O-1" Text="Dimmen" />
+  <ComObjectRef Id="A-7_O-1_R-3" RefId="A-7_O-1" Text="Sperren" />
 </ComObjectRefs>
 </Static>
 <Languages>
@@ -1555,6 +1558,28 @@ mod tests {
         assert_eq!(v.text.as_deref(), Some("Dimmen DE"));
         assert_eq!(v.text_layer, ValueLayer::ProgramRef);
         assert!(v.text_translated);
+    }
+
+    #[test]
+    fn an_untranslated_com_object_ref_override_winning_over_a_translated_com_object_is_not_translated(
+    ) {
+        // The reverse polarity of the test above, and the one a naive
+        // `co_translated || cor_translated` would get wrong: `A-7_O-1`
+        // *is* translated to de-DE, but `R-3` overrides `Text` with its
+        // own untranslated "Sperren" and carries no translation of its
+        // own, so the winning value is the package's raw string and
+        // `text_translated` must say so. `function_text`, which `R-3`
+        // does not override, rides the translated `Program` layer in the
+        // same call — the flags are per field, not per view.
+        let (_dir, conn) = translated_com_object_db();
+        let v = com_object_view(&conn, "A-7", "A-7_O-1_R-3", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(v.text.as_deref(), Some("Sperren"));
+        assert_eq!(v.text_layer, ValueLayer::ProgramRef);
+        assert!(!v.text_translated);
+        assert_eq!(v.function_text.as_deref(), Some("Schaltfunktion DE"));
+        assert!(v.function_text_translated);
     }
 
     #[test]

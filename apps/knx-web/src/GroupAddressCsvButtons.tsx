@@ -1,6 +1,7 @@
 import { pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { useTranslate } from "./i18n";
 
 // T12 (GAP_ANALYSIS_ETS.md C2) — export/import of group addresses as
 // "KNXBench group-address CSV v1" (crates/knx-csv, design
@@ -22,7 +23,12 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 // already in the session log via `session_log::from_csv_import_report`,
 // which both routes populate server-side; the Log tab a previous task built
 // is where that detail lives, not here.
-const CSV_FILTER = [{ name: "Group-address CSV", extensions: ["csv"] }];
+//
+// The filter's `name` (task 5, controller ruling — this file is in scope
+// for that one field only, nothing else here) is built from `t()` inside
+// the component, not as a module-level constant, so it follows the active
+// UI language rather than freezing at whichever one was active on module
+// load.
 
 // A successful (200) import can still carry `problems` of severity
 // `"warning"` and non-empty `ignoredColumns` — a column the file had that
@@ -53,9 +59,11 @@ export default function GroupAddressCsvButtons(props: {
   onClearErrors: () => void;
 }) {
   const { tree, onTreeUpdate, onSummary, onError, onClearErrors } = props;
+  const t = useTranslate();
+  const csvFilter = [{ name: t("groupAddressCsv.filterName"), extensions: ["csv"] }];
 
   async function exportCsv() {
-    const path = await pickSavePath(CSV_FILTER, "group-addresses.csv");
+    const path = await pickSavePath(csvFilter, "group-addresses.csv");
     if (!path) return;
     // Sequenced exactly like `App.tsx`'s neighbouring `exportProject`
     // handler: clear any leftover error toast from an earlier, unrelated
@@ -76,7 +84,7 @@ export default function GroupAddressCsvButtons(props: {
   }
 
   async function importCsv() {
-    const path = await pickOpenPath(CSV_FILTER);
+    const path = await pickOpenPath(csvFilter);
     if (!path) return;
     onClearErrors();
     try {

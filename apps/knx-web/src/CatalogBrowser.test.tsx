@@ -7,6 +7,7 @@ import {
   resetProductLanguageForTests,
   useProductLanguage,
 } from "./productLanguage";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   catalogManufacturers: vi.fn().mockResolvedValue([]),
@@ -32,6 +33,8 @@ afterEach(() => {
   apiMock.catalogItems.mockResolvedValue([]);
   window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
   resetProductLanguageForTests();
+  window.localStorage.removeItem("knx-desktop:ui-language");
+  resetUiLanguageForTests();
 });
 
 const item = {
@@ -149,6 +152,90 @@ describe("CatalogBrowser", () => {
       );
     });
     expect(onClose).toHaveBeenCalledTimes(1);
+    root.unmount();
+  });
+
+  // Task 5, D4 exception: a known `CreationDiagnostic.kind` is composed
+  // client-side from its structured fields, in the active UI language —
+  // never the server's English `detail` prose.
+  it("composes a translated sentence for a known CreationDiagnostic kind, in German too", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    const create = deferred<{
+      tree: { installations: never[] };
+      diagnostics: [{ kind: "ambiguousDpt"; refId: string; alternatives: string[]; detail: string }];
+    }>();
+    apiMock.createDevice.mockReturnValue(create.promise);
+    saveUiLanguage(window.localStorage, "de");
+    resetUiLanguageForTests();
+    const { root } = await renderBrowser();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+    const result = host!.querySelector<HTMLElement>(".search-result")!;
+    await act(async () => result.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    const button = host!.querySelector<HTMLButtonElement>(".catalog-create-row button")!;
+    await act(async () => {
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      create.resolve({
+        tree: { installations: [] },
+        diagnostics: [
+          {
+            kind: "ambiguousDpt",
+            refId: "CO-7",
+            alternatives: ["9.001", "9.002"],
+            detail: "no DPT could be inferred for CO-7; alternatives: 9.001, 9.002",
+          },
+        ],
+      });
+      await create.promise;
+    });
+
+    const diagnosticText = host!.querySelector(".catalog-diagnostics li")!.textContent!;
+    expect(diagnosticText).toContain("CO-7");
+    expect(diagnosticText).toContain("9.001, 9.002");
+    expect(diagnosticText).not.toBe("no DPT could be inferred for CO-7; alternatives: 9.001, 9.002");
+    // German wording, not a copy of the server's English `detail`.
+    expect(diagnosticText).toContain("konnte kein DPT ermittelt werden");
+    root.unmount();
+  });
+
+  // Task 5, D4 exception: a `kind` this build has never heard of (a future
+  // server variant) must still show *something* — the server's own
+  // `detail` sentence, verbatim, rather than a blank diagnostic line.
+  it("falls back to the server's detail verbatim for an unknown CreationDiagnostic kind", async () => {
+    apiMock.catalogItems.mockResolvedValue([item]);
+    const create = deferred<{
+      tree: { installations: never[] };
+      diagnostics: [{ kind: string; detail: string }];
+    }>();
+    apiMock.createDevice.mockReturnValue(create.promise);
+    const { root } = await renderBrowser();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+    const result = host!.querySelector<HTMLElement>(".search-result")!;
+    await act(async () => result.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    const button = host!.querySelector<HTMLButtonElement>(".catalog-create-row button")!;
+    await act(async () => {
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      create.resolve({
+        tree: { installations: [] },
+        diagnostics: [
+          { kind: "somethingFutureAndUnknown", detail: "a brand new diagnostic kind this build cannot name" },
+        ],
+      });
+      await create.promise;
+    });
+
+    expect(host!.querySelector(".catalog-diagnostics li")!.textContent).toBe(
+      "a brand new diagnostic kind this build cannot name",
+    );
     root.unmount();
   });
 

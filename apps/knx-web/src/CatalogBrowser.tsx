@@ -10,6 +10,41 @@ import type {
 import type { ProjectTree } from "./bindings/ProjectTree";
 import Overlay from "./Overlay";
 import { useProductLanguage } from "./productLanguage";
+import { useTranslate } from "./i18n";
+import type { Translate } from "./i18n";
+
+// D4 exception (task-5 brief): `CreationDiagnostic.detail` is a ready-made
+// English sentence composed server-side (`domain.rs`'s `.detail()`), but
+// that means it can never be German. Instead of rendering it, this panel
+// re-composes the sentence itself in the active UI language from the
+// structured fields the server also sends — one catalogue key per `kind`.
+// A `kind` this switch has never heard of (a future server variant an old
+// frontend build doesn't know about yet) falls back to the server's raw
+// `detail` string verbatim rather than rendering nothing — better an
+// English sentence slips through once than a blank diagnostic line.
+function describeCreationDiagnostic(t: Translate, diagnostic: CreationDiagnostic): string {
+  switch (diagnostic.kind) {
+    case "programlessProduct":
+      return t("catalogDiagnostic.programlessProduct", {
+        catalogItemId: diagnostic.catalogItemId ?? "",
+      });
+    case "ambiguousDpt":
+      return t("catalogDiagnostic.ambiguousDpt", {
+        refId: diagnostic.refId ?? "",
+        alternatives: (diagnostic.alternatives ?? []).join(", "),
+      });
+    case "comObjectRefMissing":
+      return t("catalogDiagnostic.comObjectRefMissing", { refId: diagnostic.refId ?? "" });
+    case "programRefMissing":
+      return t("catalogDiagnostic.programRefMissing", { programRef: diagnostic.programRef ?? "" });
+    case "dynamicOrModuleNotEvaluated":
+      return t("catalogDiagnostic.dynamicOrModuleNotEvaluated", {
+        programId: diagnostic.programId ?? "",
+      });
+    default:
+      return diagnostic.detail;
+  }
+}
 
 // T2 (GAP_ANALYSIS_ETS.md) — the device-from-catalog browser. Feeds T1's
 // `Command::CreateDevice` (backend-only since 2026-09-08). Built on the
@@ -24,6 +59,7 @@ export default function CatalogBrowser(props: {
   onClose: () => void;
 }) {
   const { lineId, onCreated, onClose } = props;
+  const t = useTranslate();
   const [language] = useProductLanguage();
   const [manufacturers, setManufacturers] = useState<CatalogManufacturer[]>([]);
   const [manufacturer, setManufacturer] = useState("");
@@ -161,9 +197,9 @@ export default function CatalogBrowser(props: {
   }
 
   return (
-    <Overlay label="Device catalog" onClose={onClose} initialFocusRef={searchRef}>
+    <Overlay label={t("catalog.title")} onClose={onClose} initialFocusRef={searchRef}>
       <label className="catalog-install">
-        {installing ? "Installing product database…" : "Install product database"}
+        {installing ? t("catalog.installing") : t("catalog.installLabel")}
         <input
           type="file"
           accept=".knxprod,.vd2,application/zip"
@@ -177,11 +213,19 @@ export default function CatalogBrowser(props: {
       </label>
       {installReport && (
         <p className="catalog-report">
-          {installReport.skipped ? "Already installed" : "Installed"}: scheme {installReport.scheme}, {installReport.members.length} members, {installReport.unknown} unknown, {installReport.conflicts} conflicts.
+          {t("catalog.installReport.summary", {
+            status: installReport.skipped
+              ? t("catalog.installReport.status.already")
+              : t("catalog.installReport.status.new"),
+            scheme: installReport.scheme,
+            members: t("catalog.installReport.membersCount", { count: installReport.members.length }),
+            unknown: t("catalog.installReport.unknownCount", { count: installReport.unknown }),
+            conflicts: t("catalog.installReport.conflictsCount", { count: installReport.conflicts }),
+          })}
         </p>
       )}
       <select value={manufacturer} onChange={(e) => changeManufacturer(e.target.value)}>
-        <option value="">All manufacturers</option>
+        <option value="">{t("catalog.allManufacturers")}</option>
         {manufacturers.map((m) => (
           <option key={m.id} value={m.id}>
             {m.name ?? m.id}
@@ -193,14 +237,14 @@ export default function CatalogBrowser(props: {
         value={search}
         onChange={(e) => changeSearch(e.target.value)}
         onKeyDown={handleSearchKeyDown}
-        placeholder="Search catalog items…"
+        placeholder={t("catalog.searchPlaceholder")}
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={items.length > 0}
         aria-controls="catalog-results"
         aria-activedescendant={items[highlight] ? `catalog-option-${highlight}` : undefined}
       />
-      {itemsLoaded && items.length === 0 && <p className="search-empty">No matches.</p>}
+      {itemsLoaded && items.length === 0 && <p className="search-empty">{t("catalog.noMatches")}</p>}
       <ul className="search-results" id="catalog-results" role="listbox">
         {items.map((item, i) => (
           <li
@@ -225,27 +269,27 @@ export default function CatalogBrowser(props: {
             onKeyDown={(e) => {
               if (e.key === "Enter") void create();
             }}
-            placeholder="Device name"
+            placeholder={t("catalog.deviceNamePlaceholder")}
           />
           <button onClick={create} disabled={name.trim() === "" || creating}>
-            {creating ? "Creating…" : "Create"}
+            {creating ? t("catalog.creating") : t("catalog.create")}
           </button>
         </div>
       )}
       {diagnostics.length > 0 && (
         <section className="catalog-diagnostics" aria-live="polite">
-          <h3>Creation diagnostics</h3>
+          <h3>{t("catalog.diagnosticsHeading")}</h3>
           <ul>
             {diagnostics.map((diagnostic, index) => (
-              <li key={`${diagnostic.kind}-${index}`}>{diagnostic.detail}</li>
+              <li key={`${diagnostic.kind}-${index}`}>{describeCreationDiagnostic(t, diagnostic)}</li>
             ))}
           </ul>
         </section>
       )}
       {createdWithDiagnostics && (
         <div className="catalog-create-row">
-          <span>Device created with diagnostics.</span>
-          <button onClick={onClose}>Done</button>
+          <span>{t("catalog.createdWithDiagnostics")}</span>
+          <button onClick={onClose}>{t("catalog.done")}</button>
         </div>
       )}
       {error && <span className="field-error">{error}</span>}

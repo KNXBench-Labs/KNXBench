@@ -1,3 +1,4 @@
+/** Tests for DocumentationExportButton's export flow, warnings, and localized filter name. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

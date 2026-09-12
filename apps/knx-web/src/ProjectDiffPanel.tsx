@@ -1,3 +1,4 @@
+/** Panel comparing the open project against another file on disk and rendering the entity diff. */
 import { useState } from "react";
 import { pickOpenPath } from "./filePicker";
 import * as api from "./api";

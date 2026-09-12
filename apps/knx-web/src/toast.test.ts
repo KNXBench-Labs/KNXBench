@@ -1,3 +1,4 @@
+/** Tests for toast timing/holiday selection, error humorizing, and language-aware toast copy. */
 // @vitest-environment happy-dom
 //
 // happy-dom, not node: the "honors the active UI language" describe block

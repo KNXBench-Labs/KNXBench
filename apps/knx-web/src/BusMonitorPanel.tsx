@@ -1,3 +1,4 @@
+/** Bus monitor panel: starts or attaches a session, polls telegrams, and filters/renders them. */
 // apps/knx-web/src/BusMonitorPanel.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";

@@ -2770,3 +2770,45 @@ generic no-authority diagnostic.
 `.knxproj` is re-imported (not merely re-opened) — re-import re-parses
 `ModuleInstance/@Id` from the file and repopulates the column for every
 row.
+
+## 72. Line-scan (T17) is researched, not implemented, and an unthrottled scan is a live-bus hazard, not a theoretical one
+
+**Limitation.** T17, bus-side device discovery, has a documented procedure
+([RESEARCH.md §8.5](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12))
+but no code. There is no way today to ask KNXBench "which individual
+addresses on this line have a device behind them." Anyone wanting that
+answer still has to fall back to ETS or another tool.
+
+**Cause.** The procedure the Standard defines for this,
+`NM_IndividualAddress_Check` (`03_05_02 Management Procedures` §2.19), is
+connection-oriented: it needs `T_Connect`/`T_Disconnect` and numbered
+`T_Data_Connected` at the KNX bus-level Transport Layer. `crates/knx-net`
+does not have that layer yet — its TPCI encode/decode is hardcoded to
+connectionless, unnumbered mode, with no representation of `T_CONNECT`,
+`T_DISCONNECT`, or a per-target connection state machine. Building it is
+real, additive work inside `knx-net`, not a research gap.
+
+**Impact.** Twofold. First, the obvious one: no line scan exists to use.
+Second, and the reason this is its own entry rather than a line in the
+roadmap: **the moment a naive implementation does exist, running it
+unthrottled is dangerous on a live installation, not merely slow.** A
+controller measurement against nine occupied addresses on one real
+installation (2026-09-12, over a KNXnet/IP tunnelling connection) found
+round trips of 102.4-221.6 ms per occupied address — higher than this
+spike's own TP1-only arithmetic estimate of roughly 60-100 ms, because the
+measurement includes IP transport and gateway turnaround the arithmetic
+did not model. Scaled to a full 255-address line, that is roughly 26-57
+seconds of sustained connection-oriented bus traffic before any pacing is
+added — worse than the arithmetic's own ~18-second floor. For that whole
+window, a scan competes directly with whatever else needs that line's
+bandwidth, including genuinely safety-relevant devices that share it. The
+absent-address timing was not measured at all (every approved address on
+the test installation was occupied), so even the "vacant address" side of
+the budget remains an unconfirmed estimate.
+
+**Lifted when.** Implementation lands with, at minimum, deliberate
+inter-request pacing and an installation-specific exclusion list that is
+honoured by construction — addresses to skip enumerated out of the scan
+range itself, in the domain layer, never filtered out afterward in the UI
+— plus a live measurement of the absent-address case to confirm or correct
+the current estimate.

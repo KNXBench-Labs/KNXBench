@@ -1629,6 +1629,212 @@ anywhere.
 
 ---
 
+### 8.5 Line-scan / bus-side device discovery — T17 spike (2026-09-12)
+
+**This spike documents a procedure. Nothing described here is implemented,
+and the measurements in this section were taken by the controller against
+their own installation, not by this repository's code.**
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) row **T17** guessed that a line
+scan would be built on "individual-address serial-number read services".
+That guess was wrong, and this spike exists to correct it and to name the
+service the Standard actually defines for this purpose. It extends §8.4's
+Q1 finding rather than contradicting it: §8.4 already established that
+`NM_IndividualAddress_Write` verifies a freshly-written address by opening
+a connection and issuing `A_DeviceDescriptor_Read` — "the standard way to
+address-and-probe a specific IA." T17's procedure is the same technique
+turned around: instead of confirming an address you just wrote, you probe
+an address whose occupant is unknown.
+
+**The correct procedure.** **[D]** `03_05_02 Management Procedures
+v02.01.02 AS.md` §2.19 defines `NM_IndividualAddress_Check`, with a note
+naming its colloquial alias directly: *"NOTE This procedure has also been
+named NM_IndividualAddress_Scan."* Its purpose, quoted: *"This Network
+Management Procedure shall be used by a network Management Client to check
+whether a given Individual Address is occupied on the network or not."*
+The sequence per candidate address `IA_test`, all **[D]** to the same
+clause unless noted: (1) `T_Connect.req` (via `A_Connect`) addressed to
+`IA_test`; (2) if a connection is accepted, `A_DeviceDescriptor_Read.req`
+with `descriptor_type = 0` sent as `T_Data_Connected`
+(`03_03_07 Application Layer v02.01.01 AS.md` §3.4.2.1); (3) `A_Disconnect`
+to close the connection, best-effort, no confirmation required
+(`03_03_04 Transport Layer v01.02.03 AS.md` §3.8). Presence is decided at
+step (1)/(2), not by anything the application layer says — see below.
+
+**Why the two services the Gap Analysis and this spike both checked are the
+wrong tools.** Both were worth ruling out explicitly rather than assuming;
+both are wrong for this exact reason:
+
+* `A_IndividualAddress_Read`/`_Response` — **[D]**
+  `03_03_07 Application Layer v02.01.01 AS.md` §3.2.3. Sent as a system
+  broadcast, addressless, and answered only by a device currently in
+  *programming mode* (its programming button held/pressed). This is the
+  commissioning-time "which device is in programming mode" check behind
+  `NM_IndividualAddress_Read`/`_Write` (§8.4 Q1), not a way to ask "is
+  address X occupied" for an arbitrary, already-commissioned address.
+* `A_IndividualAddressSerialNumber_Read`/`_Response` — **[D]**
+  `03_03_07 Application Layer v02.01.01 AS.md` §3.2.4. This is the
+  Gap Analysis's guess, and it runs the wrong direction: it is addressed by
+  a 6-octet serial number you must already know, sent as a system
+  broadcast, and answered by whichever device holds that serial number
+  with its current individual address and domain address. It answers "what
+  address does this known device have," never "is this address occupied."
+  It cannot be repurposed for a line scan without already knowing the
+  serial number of every device you are trying to discover — which defeats
+  the point of scanning.
+
+**Absent vs. occupied: what the Standard resolves, and the one case it
+does not.** **[D]** Presence is signalled at the Data Link Layer, not the
+application layer: a device recognizing its own individual address as
+destination must acknowledge at Layer 2, independent of whether any higher
+layer does anything with the frame. `NM_IndividualAddress_Check` §2.19
+states the mechanism outright: *"If a device that occupies IA_test is
+present on the network, and does support Transport Layer connections, it
+shall have no other reaction on the bus than the Layer-2 acknowledge that
+initiates the above A_Connect.Lcon."* Three outcomes follow, all **[D]**:
+
+* **No device present**: no ACK, no NAK, no BUSY at all; the sender times
+  out the acknowledge window and retries per its own retry budget, then
+  concludes not occupied.
+* **Device present and busy with another connection**: it does not fall
+  silent. Per `03_03_04 Transport Layer v01.02.03 AS.md` §3.7, *"If the
+  remote Transport Layer receives … a T_CONNECT_REQ_PDU and does not allow
+  for building up a new connection, the frame shall not be passed to the
+  remote Transport Layer user. Instead, the remote Transport Layer shall
+  send a T_DISCONNECT_REQ_PDU."* `NM_IndividualAddress_Check`'s own
+  possible-reaction list treats "Disconnect received, no
+  DeviceDescriptor response" as **occupied**, never absent — the
+  present-but-busy safeguard the Standard requires is built into the named
+  procedure, not left to the implementer to get right.
+* **Device present but unable to manage even a BUSY response within its
+  own timing budget**: `03_02_02 Communication Medium TP1 v01.03.03 AS.md`
+  §2.4.2 requires a device to send BUSY only if it "will again be able to
+  process Frames that starts 100 ms after the reception," and explicitly
+  forbids sending BUSY otherwise. A device that cannot meet that 100 ms
+  budget is, by the Standard's own text, indistinguishable at Layer 2 from
+  an absent one. This is a documented limit of the mechanism itself, not a
+  gap in this spike's reading, and no scanner built on
+  `NM_IndividualAddress_Check` alone can resolve it.
+
+One further limitation is honest to carry forward rather than paper over:
+`03_03_04 Transport Layer v01.02.03 AS.md` §5.5.1.5 ("Connect from the
+local User to a non-existing Device") and §5.5.1.9 ("Connection timeout")
+are both figure-only in this corpus's Markdown extraction — the sequence
+diagrams did not survive extraction and no surrounding prose substitutes
+for them. Whether the Transport Layer state machine adds its own
+independent timeout/confirmation logic on top of the Data Link Layer's
+ACK/retry cycle described above, or is a pure pass-through of it, is
+therefore not fully pinned down from this corpus; §3.7's prose reads as the
+latter but that is **[A]**, inferred from adjacent text, not a direct
+reading of the two blank sections.
+
+**Bus-load budget.** Two layers of evidence here, kept apart deliberately —
+one is arithmetic on Standard-documented constants, the other is a live
+measurement on one installation, and neither is a Standard-normative
+timing figure:
+
+* **[A]**, built from **[D]** inputs (TP1 9600 bit/s per
+  `03_02_02 Communication Medium TP1 v01.03.03 AS.md:151`; minimum
+  `L_Data_Standard` frame 8 octets; 13-bit-time character slots; 50-bit-time
+  idle; 15-bit-time-plus-30µs acknowledge timeout; System 7/System B
+  Profile's optional `nak_retry = busy_retry = 3` per
+  `06 Profiles v02.01.01.md:775`; all same clauses as §8.4's style of
+  citation): one minimal message cycle is roughly 17.6 ms; an absent
+  address costs roughly 70 ms (retries exhausted, no ACK ever); an
+  occupied, responsive address costs a similar order of magnitude, roughly
+  60-100 ms, dominated by the round trip for the actual
+  `A_DeviceDescriptor_Response`. Scaled to a 255-address, mostly-vacant
+  line with no pacing: on the order of 18 seconds as a floor.
+* **[V]**, measured by the controller against nine of this installation's
+  approved individual addresses, 300 ms apart, on 2026-09-12, using
+  `xknx`'s `nm_individual_address_check` (an implementation of the same
+  §2.19 procedure) over a KNXnet/IP tunnelling connection. All nine
+  addresses were occupied; round trips ranged **102.4-221.6 ms**, with the
+  first probe (221.6 ms) plausibly a warm-up effect rather than
+  representative steady-state cost — it is reported as measured, not
+  explained away. This is **higher** than the **[A]** arithmetic estimate
+  above, not lower, and the difference is not a contradiction: the
+  measurement is an end-to-end round trip over KNXnet/IP tunnelling, which
+  adds IP transport and gateway turnaround on top of the TP1-only bus
+  timing the arithmetic modelled. One installation, one gateway, nine
+  addresses — this stays project-local **[V]**, never promoted to a
+  Standard-normative figure.
+
+  The absent-address case was **not measured**: all nine addresses
+  approved for active reads on this installation turned out to be
+  occupied, and no address outside that approved set may be probed. The
+  **[A]** ~70 ms absent-address estimate therefore stays unconfirmed; what
+  would close it is permission to probe one address confirmed vacant in
+  advance.
+
+  Scaling the measured 102.4-221.6 ms per occupied address to a
+  255-address line gives roughly **26-57 seconds** of bus occupancy before
+  any deliberate pacing — worse than the **[A]** arithmetic floor of ~18
+  seconds. This is **[A]**: arithmetic on a nine-sample measurement from
+  one installation, presented as the honest order of magnitude, not a
+  precise prediction.
+
+  Either way — **[A]** floor or **[V]**-scaled ceiling — an unthrottled
+  full-line scan is a multi-second-to-tens-of-seconds sustained burst of
+  connection-oriented traffic on a live line, competing directly with
+  whatever else needs that line's bandwidth, including devices where a
+  delayed response matters. Any real implementation needs an explicit
+  pacing/priority policy, and an installation-specific exclusion list that
+  is honoured **by construction** — addresses to skip must be enumerated
+  out of the scan range itself, never filtered out afterwards — belonging
+  in the domain layer, not the UI, consistent with this repository's
+  standing rule against UI workarounds for domain-layer problems.
+
+**What a scan does not learn.** **[D]** `A_DeviceDescriptor_Read` with
+`descriptor_type = 0` returns DD0, the Mask Version — *"Identification of
+an implementation, for operation like download, memory_write … In
+particular, the Mask Version is read through a dedicated Application Layer
+service by the S-Mode Management Client (ETS) to conclude on the
+Configuration Profile of the device and on possible further discovery and
+configuration steps."* (`03_01_02 Glossary v01.05.03 AS.md:236`). This
+identifies the implementation family/coupler-medium class a device
+belongs to, not which product it is, its manufacturer, its application
+program, or its serial number — **[D]**
+`06_02_01 Coupler Model 2.0 v01.01.01 AS.md` §1.5.2 makes the same point
+from the coupler side: many different coupler products deliberately share
+one Mask Version. Product/manufacturer identity needs a separate,
+additional connection-oriented read after the scan step — e.g.
+`A_PropertyValue_Read` on the Device Object (`object_index = 0`),
+`PID_SERIAL_NUMBER` (PID 11) — **[D]**
+`03_05_03 Configuration Procedures v02.01.01 AS.md:4797` and
+`03_06_03 EMI_IMI v01.04.02 AS.md:5074`. This is not part of
+`NM_IndividualAddress_Check` itself, and whether a given mask version even
+supports Property services (versus only Memory-based access, as some
+older masks do) is unverified by this spike — flagged, not resolved. In
+short: a scan as specified by §2.19 alone can mark an address
+occupied/absent and, where the device answers, its Mask Version. It cannot
+by itself populate a topology view with product identity; T16's
+device-catalog work would need the extra `A_PropertyValue_Read` step per
+occupied address, as a real, visible scope distinction.
+
+**What exists and what is missing for an implementation — documented, not
+built.** The KNXnet/IP tunnelling transport, cEMI `L_Data` encode/decode,
+point-to-point addressing, and a raw-APCI escape hatch already exist in
+`crates/knx-net` and are directly reusable
+(`crates/knx-core/src/address.rs:9-50`,
+`crates/knx-net/src/cemi.rs:28-32,183-243,450-463`,
+`crates/knx-net/src/client.rs:306-360,759`). What does not exist yet: the
+KNX **bus-level** Transport Layer. TPCI packet-type and sequence-number
+encoding is hardcoded to connectionless, unnumbered mode — `decode_l_data`
+derives `short_apci` from `tpci_apci_hi & 0x03` only
+(`crates/knx-net/src/cemi.rs:140`) and `encode_l_data` always emits a zero
+packet-type/control field (`crates/knx-net/src/cemi.rs:230-231`) — so
+there is no representation of `T_CONNECT`, `T_DISCONNECT`, `T_ACK`,
+`T_NAK`, or numbered `T_Data_Connected` anywhere in the crate today, no
+per-target connection state machine, and no correlation of a sent frame to
+its resulting bus-level `L_Data.con` distinct from the gateway's own
+`TUNNELLING_ACK`
+(`crates/knx-net/src/client.rs:195-201,624-637`). None of this requires a
+new crate or a change to `check-layering` — it is additive work inside
+`knx-net`'s existing cEMI and client modules — but it is real, unstarted
+work, and this section documents the gap; it does not close it.
+
+---
+
 ## 9. KNX Secure
 
 Not present in our sample installation (`data_secure=false` on all 514 group addresses, no keyring) — everything here is **[D]**.

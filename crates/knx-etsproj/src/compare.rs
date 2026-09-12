@@ -6,9 +6,15 @@
 //! `number` — the plan's own choice, not the `ets_id`/`RefId`, since a
 //! `RefId`'s format is schema-version-specific (RESEARCH §3.3) while the
 //! object number is not), and keeps every field that is an actual modelled
-//! attribute on the corresponding `knx_core` struct. What it deliberately
-//! drops: every synthetic `*Id` (an id allocated fresh on each import, so
-//! comparing two imports' ids would always "differ" for no real reason),
+//! attribute on the corresponding `knx_core` struct — with one declared
+//! exception: `SemanticModuleInstance` omits `ModuleInstance::instance_ets_id`
+//! (D38). That field is retained in the domain model and the store;
+//! widening the semantic-diff surface to cover it is a separate decision,
+//! deliberately not taken here.
+//!
+//! What it deliberately drops: every synthetic `*Id` (an id allocated
+//! fresh on each import, so comparing two imports' ids would always
+//! "differ" for no real reason),
 //! and any relationship that is not itself a field on the entity being
 //! described — a device's line/area placement, for instance, is
 //! `Topology`'s data, not `DeviceInstance`'s, so it is not part of

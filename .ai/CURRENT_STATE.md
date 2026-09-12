@@ -1,4 +1,54 @@
 - **Last Agent:** Claude
+- **Timestamp:** 2026-09-12 20:15
+- **Completed:** **T27 task 5 (docs-only): reconciled documentation with
+  the shipped in-app motion control.** Branch `t27-motion-control`,
+  worktree `.worktrees/t27-motion-control`, head `b2aac7d` before this
+  task. Rewrote `KNOWN_LIMITATIONS.md` §43 in full (two-axis control now
+  exists, structurally OS-wins, guarded by `motionGuard.test.ts`; five
+  specific remaining limits recorded honestly: no per-category control,
+  guard reads `styles.css` only, guard matches shorthands only, no test
+  observes actual motion, and the `node:fs`/`?raw` guard-disarming trap).
+  Updated `GAP_ANALYSIS_ETS.md`: D11 closed, D8 marked partially addressed
+  (a `SettingsPanel` exists but holds none of ETS's actual options), D9
+  corrected — not "two" overlay-CSS consumers but four
+  (`Search`/`CommandPalette`/`CatalogBrowser` already, `SettingsPanel` now
+  a fourth; row stays open, arguably worse), and the Tier 7 T27 backlog
+  entry marked done with its open question answered (two orthogonal axes,
+  not a duration multiplier or a per-category switch alone). Updated
+  `ROADMAP.md`'s "Cross-cutting — Motion and animation" section and its
+  2026-09-10 style memo (both directions shipped, memo's wording kept
+  verbatim as the question asked). Added a dated 2026-09-12 entry to
+  `IMPLEMENTATION_STATUS.md` and updated its `Last updated:` line. Swept
+  every `ThemeSwitcher.tsx` mention in current-state docs
+  (`GAP_ANALYSIS_ETS.md`, `IMPLEMENTATION_STATUS.md` ×2, `ROADMAP.md`) to
+  say it was deleted by T27; left every mention under
+  `docs/superpowers/` (including this slice's own spec/plan and the
+  bitcoin-defi theme spec) untouched as historical record. New
+  `.ai/logs/2026-09-12_claude_t27_motion_control.md`. Re-ran all seven
+  gates myself rather than trusting prior reports: `cargo fmt --all
+  --check` clean; `cargo clippy --workspace --all-targets -- -D warnings`
+  clean; `cargo test --workspace` **975 passed / 0 failed / 3 ignored**
+  across 72 `test result` lines; `cargo run -p xtask -- check-layering`
+  ok; `cargo deny check` ok; `npm run test` (`apps/knx-web`) **215 passed
+  across 21 files**; `npx tsc -p apps/knx-web/tsconfig.json --noEmit`
+  clean. No code under `apps/knx-web/src` touched, as required.
+- **Pending/Next Steps:** T27 is complete; this branch is ready to merge
+  to `main` (not done as part of this task — docs-only tasks in this
+  project's history get merged separately, see the entry below). Next
+  slice not yet chosen.
+- **Notes for Codex:** Nothing in this commit changes runtime behaviour —
+  verify with `git diff --stat` against `.ai/` and `docs/` paths only if
+  you want to double-check before building on this branch. One open
+  finding for whoever picks up `KNOWN_LIMITATIONS.md` §20 next: overlay
+  CSS (`.search-overlay`/`.search-panel`) now has four consumers
+  (`Search.tsx`, `CommandPalette.tsx`, `CatalogBrowser.tsx`,
+  `SettingsPanel.tsx`), not the two §20's own prose still names — that
+  section's own text is out of this task's scope (only `ThemeSwitcher`
+  mentions and the three named docs were in scope) but is worth a look.
+
+---
+
+- **Last Agent:** Claude
 - **Timestamp:** 2026-09-12 04:35
 - **Completed:** Merged the entry below to `main` (`b480805`, `--no-ff`)
   and re-ran all six gates **on the merged result**: fmt clean, clippy

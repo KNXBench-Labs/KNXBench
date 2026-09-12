@@ -25,3 +25,6 @@ memory/
 
 # Lokale Projekt-Exporte (Privatinstallation, nichts fuer die Nachwelt)
 devices.md
+devices.json
+group_addresses.json
+project_dump.json

@@ -58,8 +58,13 @@ export function exportProject(path: string): Promise<{ warnings: unknown[] }> {
   return request("/api/project/export", { method: "POST", body: JSON.stringify({ path }) });
 }
 
-export function deviceDetail(deviceId: number): Promise<DeviceDetail> {
-  return request(`/api/device/${deviceId}`);
+// `language` picks which stored translation row `com_objects[].name`/
+// `.description` come back as (T33) — same convention as
+// `deviceParameters` below, via the same `languageQuery` helper, so the
+// two device-detail-adjacent endpoints don't grow separate opinions about
+// how an optional language becomes a query string.
+export function deviceDetail(deviceId: number, language?: string | null): Promise<DeviceDetail> {
+  return request(`/api/device/${deviceId}${languageQuery(language)}`);
 }
 
 export function setIndividualAddress(deviceId: number, address: string | null): Promise<ProjectTree> {

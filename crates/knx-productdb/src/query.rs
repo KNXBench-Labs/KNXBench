@@ -70,6 +70,15 @@ pub fn resolve_program(
 }
 
 struct RawRow {
+    /// `com_object.id` — not exposed on `ComObjectView`, but needed as the
+    /// overlay lookup key for `co.text`/`co.function_text`/
+    /// `co.visible_description`, since the translation table is keyed by
+    /// `ref_id` and a `ComObject`-layer translation's `ref_id` is the
+    /// `ComObject`'s own id, not its `ComObjectRef`'s (measured against
+    /// shipped packages: a `ComObjectTable/ComObject`'s `TranslationElement
+    /// RefId` matches `ComObject/@Id`, never the referencing
+    /// `ComObjectRef/@Id`).
+    co_id: String,
     number: Option<i64>,
     co_text: Option<String>,
     co_function_text: Option<String>,
@@ -97,14 +106,30 @@ struct RawRow {
 
 /// Joins one `ComObjectRef` row to the `ComObject` it refers to, within the
 /// same program, and folds every attribute through `pick`.
+///
+/// `language` is the requested display language, `None` meaning the
+/// package's own untranslated text — today's behaviour, unchanged, issuing
+/// no `translation` query at all (Global Constraint 3). `Some` loads one
+/// overlay (`translation_overlay`, shared verbatim with `parameter_views`)
+/// and applies it **before** `pick()`, exactly as `parameter_views` does:
+/// a translated `ComObject/@Text` lands at the `Program` layer, a
+/// translated `ComObjectRef/@Text` at the `ProgramRef` layer, so
+/// `ValueLayer` keeps meaning only "which structural layer supplied the
+/// value", never also "which language did". Only `text`, `function_text`
+/// and `visible_description` are ever overlaid — `object_size`, `priority`,
+/// `dpt_list`, `number` and the four flags are values, not display text,
+/// and translating them would corrupt stored project data the moment
+/// someone switched languages, exactly as `Value` stays untranslated in
+/// `translation_overlay`'s own doc comment.
 pub fn com_object_view(
     conn: &Connection,
     program_id: &str,
     com_object_ref_id: &str,
+    language: Option<&str>,
 ) -> Result<Option<ComObjectView>, ProductDbError> {
     let raw: Option<RawRow> = conn
         .query_row(
-            "SELECT co.number,
+            "SELECT co.id, co.number,
                     co.text, co.function_text, co.visible_description, co.object_size,
                     co.priority, co.dpt_list, co.read_flag, co.write_flag,
                     co.transmit_flag, co.update_flag, co.communication_flag,
@@ -118,29 +143,30 @@ pub fn com_object_view(
             [program_id, com_object_ref_id],
             |r| {
                 Ok(RawRow {
-                    number: r.get(0)?,
-                    co_text: r.get(1)?,
-                    co_function_text: r.get(2)?,
-                    co_visible_description: r.get(3)?,
-                    co_object_size: r.get(4)?,
-                    co_priority: r.get(5)?,
-                    co_dpt_list: r.get(6)?,
-                    co_read: r.get(7)?,
-                    co_write: r.get(8)?,
-                    co_transmit: r.get(9)?,
-                    co_update: r.get(10)?,
-                    co_communication: r.get(11)?,
-                    cor_text: r.get(12)?,
-                    cor_function_text: r.get(13)?,
-                    cor_visible_description: r.get(14)?,
-                    cor_object_size: r.get(15)?,
-                    cor_priority: r.get(16)?,
-                    cor_dpt_list: r.get(17)?,
-                    cor_read: r.get(18)?,
-                    cor_write: r.get(19)?,
-                    cor_transmit: r.get(20)?,
-                    cor_update: r.get(21)?,
-                    cor_communication: r.get(22)?,
+                    co_id: r.get(0)?,
+                    number: r.get(1)?,
+                    co_text: r.get(2)?,
+                    co_function_text: r.get(3)?,
+                    co_visible_description: r.get(4)?,
+                    co_object_size: r.get(5)?,
+                    co_priority: r.get(6)?,
+                    co_dpt_list: r.get(7)?,
+                    co_read: r.get(8)?,
+                    co_write: r.get(9)?,
+                    co_transmit: r.get(10)?,
+                    co_update: r.get(11)?,
+                    co_communication: r.get(12)?,
+                    cor_text: r.get(13)?,
+                    cor_function_text: r.get(14)?,
+                    cor_visible_description: r.get(15)?,
+                    cor_object_size: r.get(16)?,
+                    cor_priority: r.get(17)?,
+                    cor_dpt_list: r.get(18)?,
+                    cor_read: r.get(19)?,
+                    cor_write: r.get(20)?,
+                    cor_transmit: r.get(21)?,
+                    cor_update: r.get(22)?,
+                    cor_communication: r.get(23)?,
                 })
             },
         )
@@ -150,10 +176,30 @@ pub fn com_object_view(
         return Ok(None);
     };
 
-    let (text, text_layer) = pick(raw.co_text, raw.cor_text);
-    let (function_text, function_text_layer) = pick(raw.co_function_text, raw.cor_function_text);
+    // Loaded once per call, `None` issuing no `translation` query at all —
+    // see this function's own doc comment and `translation_overlay`'s.
+    let overlay = language
+        .map(|lang| translation_overlay(conn, program_id, lang))
+        .transpose()?;
+
+    // Overlaid **before** `pick()`, per layer, so a translated string lands
+    // at the same structural layer its untranslated counterpart would have.
+    let co_text = overlay_text(overlay.as_ref(), &raw.co_id, "Text").or(raw.co_text);
+    let cor_text = overlay_text(overlay.as_ref(), com_object_ref_id, "Text").or(raw.cor_text);
+    let co_function_text =
+        overlay_text(overlay.as_ref(), &raw.co_id, "FunctionText").or(raw.co_function_text);
+    let cor_function_text =
+        overlay_text(overlay.as_ref(), com_object_ref_id, "FunctionText").or(raw.cor_function_text);
+    let co_visible_description = overlay_text(overlay.as_ref(), &raw.co_id, "VisibleDescription")
+        .or(raw.co_visible_description);
+    let cor_visible_description =
+        overlay_text(overlay.as_ref(), com_object_ref_id, "VisibleDescription")
+            .or(raw.cor_visible_description);
+
+    let (text, text_layer) = pick(co_text, cor_text);
+    let (function_text, function_text_layer) = pick(co_function_text, cor_function_text);
     let (visible_description, description_layer) =
-        pick(raw.co_visible_description, raw.cor_visible_description);
+        pick(co_visible_description, cor_visible_description);
     let (object_size, object_size_layer) = pick(raw.co_object_size, raw.cor_object_size);
     let (dpt_list, dpt_layer) = pick(raw.co_dpt_list, raw.cor_dpt_list);
     let (read, read_layer) = pick(raw.co_read, raw.cor_read);
@@ -1151,7 +1197,7 @@ mod tests {
     #[test]
     fn a_ref_without_overrides_shows_the_program_layer_values() {
         let (_dir, conn) = db();
-        let v = com_object_view(&conn, "A-1", "A-1_O-1_R-1")
+        let v = com_object_view(&conn, "A-1", "A-1_O-1_R-1", None)
             .unwrap()
             .unwrap();
         assert_eq!(v.text.as_deref(), Some("Schalten"));
@@ -1165,7 +1211,7 @@ mod tests {
     #[test]
     fn a_ref_with_overrides_shows_the_program_ref_layer_for_those_values_only() {
         let (_dir, conn) = db();
-        let v = com_object_view(&conn, "A-1", "A-1_O-1_R-2")
+        let v = com_object_view(&conn, "A-1", "A-1_O-1_R-2", None)
             .unwrap()
             .unwrap();
         assert_eq!(v.text.as_deref(), Some("Dimmen"));
@@ -1180,9 +1226,145 @@ mod tests {
     #[test]
     fn an_unknown_ref_id_is_none_not_an_error() {
         let (_dir, conn) = db();
-        assert!(com_object_view(&conn, "A-1", "A-1_O-9_R-9")
+        assert!(com_object_view(&conn, "A-1", "A-1_O-9_R-9", None)
             .unwrap()
             .is_none());
+    }
+
+    // -----------------------------------------------------------------
+    // com_object_view's translation overlay (T33 Task 1).
+    // -----------------------------------------------------------------
+
+    /// One `ComObject` (`A-7_O-1`) carrying `Text`, `FunctionText`,
+    /// `VisibleDescription` and `ObjectSize`, and two `ComObjectRef`s:
+    /// `R-1` takes every value from the `ComObject` (`Program` layer),
+    /// `R-2` overrides only `Text` (`ProgramRef` layer). `de-DE` translates
+    /// all three display attributes on the `ComObject` *and* an
+    /// (illegitimate) `ObjectSize`, plus `Text` on `R-2` itself.
+    const COM_OBJECT_PROGRAM_TRANSLATED: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
+<ApplicationPrograms><ApplicationProgram Id="A-7" Name="P" ApplicationNumber="7"
+  ApplicationVersion="22" MaskVersion="MV-0701"><Static>
+<ComObjectTable>
+  <ComObject Id="A-7_O-1" Number="1" Text="Schalten" FunctionText="Schaltfunktion"
+             VisibleDescription="Schaltbeschreibung" ObjectSize="1 Bit"
+             DatapointType="DPST-1-1" />
+</ComObjectTable>
+<ComObjectRefs>
+  <ComObjectRef Id="A-7_O-1_R-1" RefId="A-7_O-1" />
+  <ComObjectRef Id="A-7_O-1_R-2" RefId="A-7_O-1" Text="Dimmen" />
+</ComObjectRefs>
+</Static>
+<Languages>
+  <Language Identifier="de-DE">
+    <TranslationUnit RefId="A-7">
+      <TranslationElement RefId="A-7_O-1">
+        <Translation AttributeName="Text" Text="Schalten DE" />
+        <Translation AttributeName="FunctionText" Text="Schaltfunktion DE" />
+        <Translation AttributeName="VisibleDescription" Text="Schaltbeschreibung DE" />
+        <Translation AttributeName="ObjectSize" Text="1 Bit DE" />
+      </TranslationElement>
+      <TranslationElement RefId="A-7_O-1_R-2">
+        <Translation AttributeName="Text" Text="Dimmen DE" />
+      </TranslationElement>
+    </TranslationUnit>
+  </Language>
+</Languages>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    fn translated_com_object_db() -> (tempfile::TempDir, Connection) {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_program(
+            &conn,
+            "sha-p7",
+            "M-006A/A7.xml",
+            COM_OBJECT_PROGRAM_TRANSLATED.as_bytes(),
+        )
+        .unwrap();
+        (dir, conn)
+    }
+
+    #[test]
+    fn com_object_view_without_a_language_is_unchanged() {
+        let (_dir, conn) = translated_com_object_db();
+        let v = com_object_view(&conn, "A-7", "A-7_O-1_R-1", None)
+            .unwrap()
+            .unwrap();
+        assert_eq!(v.text.as_deref(), Some("Schalten"));
+        assert_eq!(v.function_text.as_deref(), Some("Schaltfunktion"));
+        assert_eq!(v.visible_description.as_deref(), Some("Schaltbeschreibung"));
+        assert_eq!(v.object_size.as_deref(), Some("1 Bit"));
+    }
+
+    #[test]
+    fn a_com_object_scope_text_translation_replaces_the_program_layer_text() {
+        let (_dir, conn) = translated_com_object_db();
+        let v = com_object_view(&conn, "A-7", "A-7_O-1_R-1", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(v.text.as_deref(), Some("Schalten DE"));
+        assert_eq!(
+            v.text_layer,
+            ValueLayer::Program,
+            "the translation overlaid ComObject/@Text, so it still reports the Program layer"
+        );
+    }
+
+    #[test]
+    fn a_com_object_ref_scope_text_translation_replaces_the_program_ref_layer_text() {
+        let (_dir, conn) = translated_com_object_db();
+        let v = com_object_view(&conn, "A-7", "A-7_O-1_R-2", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(v.text.as_deref(), Some("Dimmen DE"));
+        assert_eq!(
+            v.text_layer,
+            ValueLayer::ProgramRef,
+            "the translation overlaid ComObjectRef/@Text, so it still reports \
+             the ProgramRef layer — translation is a language dimension, not \
+             a layer dimension"
+        );
+    }
+
+    #[test]
+    fn function_text_and_visible_description_translations_land_in_their_own_fields() {
+        let (_dir, conn) = translated_com_object_db();
+        let v = com_object_view(&conn, "A-7", "A-7_O-1_R-1", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(v.function_text.as_deref(), Some("Schaltfunktion DE"));
+        assert_eq!(
+            v.visible_description.as_deref(),
+            Some("Schaltbeschreibung DE")
+        );
+    }
+
+    #[test]
+    fn a_language_with_no_rows_for_this_program_leaves_every_field_untranslated() {
+        // `db()`'s program `A-1` declares no `Languages` block at all, so
+        // `de-DE` has zero translation rows for it — no fallback to
+        // another language's rows either (Global Constraint 1).
+        let (_dir, conn) = db();
+        let v = com_object_view(&conn, "A-1", "A-1_O-1_R-1", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(v.text.as_deref(), Some("Schalten"));
+        assert_eq!(v.text_layer, ValueLayer::Program);
+    }
+
+    #[test]
+    fn a_non_display_attribute_translation_never_reaches_a_com_object_view_field() {
+        let (_dir, conn) = translated_com_object_db();
+        let v = com_object_view(&conn, "A-7", "A-7_O-1_R-1", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            v.object_size.as_deref(),
+            Some("1 Bit"),
+            "A-7_O-1 carries a de-DE ObjectSize translation row; object_size \
+             is a value, not display text, and must stay the package's own"
+        );
     }
 
     #[test]

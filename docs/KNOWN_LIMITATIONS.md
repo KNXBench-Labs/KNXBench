@@ -647,7 +647,7 @@ cycle's surface to keep search and tree-navigation state disjoint.
 for a selection that originates outside the tree itself (search today,
 potentially a future command palette too).
 
-## 20. Command palette and search share overlay CSS and an accessibility gap, unaddressed
+## 20. Command palette and search share overlay CSS and an accessibility gap — partially resolved
 
 **Resolved (2026-09-12, T31)** — for the shell and the keyboard defect;
 not for accessibility conformance in general, which is not a thing this

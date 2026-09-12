@@ -3,7 +3,7 @@
 - **Date:** 2026-09-12
 - **Status:** design, ready for implementation
 - **Closes:** **D9** in [GAP_ANALYSIS_ETS.md](../../GAP_ANALYSIS_ETS.md);
-  [KNOWN_LIMITATIONS.md §20](../../KNOWN_LIMITATIONS.md#20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap-unaddressed)
+  [KNOWN_LIMITATIONS.md §20](../../KNOWN_LIMITATIONS.md#20-command-palette-and-search-share-overlay-css-and-an-accessibility-gap--partially-resolved)
 - **Scope:** `apps/knx-web` only. No Rust file is touched.
 
 ## Why now

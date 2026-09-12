@@ -19,7 +19,6 @@ SOUL.md
 USER.md
 IDENTITY.md
 MEMORY.md
-data/uploads/Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj
 .claude/
 memory/
 
@@ -29,3 +28,7 @@ devices.json
 group_addresses.json
 project_dump.json
 monitor_bus.py
+
+# Server-Laufzeitverzeichnis: Uploads, erzeugte Reports, lokale DB.
+# Enthaelt echte Projektdateien. Nichts davon gehoert ins Repo.
+data/

@@ -373,10 +373,14 @@ Two tracks, tracked as **T25** and **T26** in
    `knx_core::string_table`'s own resolver is still unused everywhere,
    communication-object text is still never translated (it is baked into
    the project at device creation, so translating it there would make the
-   *stored project* depend on a display setting), and `Catalog.xml`/
-   `Hardware.xml`/`knx_master.xml`'s own `Languages` blocks are dropped on
-   import rather than merely unread (tracked as **T32**,
-   [KNOWN_LIMITATIONS.md §64](KNOWN_LIMITATIONS.md#64-languages-blocks-outside-an-application-program-are-discarded-on-import)).
+   *stored project* depend on a display setting). `Catalog.xml`/
+   `Hardware.xml`/`knx_master.xml`'s own `Languages` blocks were dropped
+   on import rather than merely unread until **T32** (2026-09-12) gave
+   them schema v4's `(scope, scope_id)` key, a shared ingest pass, a
+   backfill, and — for catalog-scope rows — a first reader in the catalog
+   browser; hardware- and master-scope rows are now ingested but still
+   read by nothing
+   ([KNOWN_LIMITATIONS.md §64](KNOWN_LIMITATIONS.md#64-languages-blocks-outside-an-application-program-are-discarded-on-import)).
    A later T26 slice is needed for a real active-language concept and for
    the project's own `Language` field, still a placeholder.
 

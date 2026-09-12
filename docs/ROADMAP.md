@@ -465,9 +465,11 @@ This closes gap **D11** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s
 Tier 7 and is design-recorded at
 `docs/superpowers/specs/2026-09-12-motion-control-design.md`. The
 constraint above still applies, unchanged, to work on this roadmap that
-has not been built yet: T17's line-scan UI, T21's graphical
-topology/building views, and the "who talks to whom" telegram animation
-deferred beyond Session 7 below.
+has not been built yet: T17's line-scan UI (the bus-side procedure itself
+is now researched and documented — [RESEARCH.md §8.5](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12)
+— what remains is domain/protocol and UI implementation, not research),
+T21's graphical topology/building views, and the "who talks to whom"
+telegram animation deferred beyond Session 7 below.
 
 **Memo (2026-09-10), style direction — answered.** Two candidate visual
 directions were named for whenever T27's motion work (and any theme it
@@ -681,8 +683,10 @@ built invalidates its own help every cycle. Writing hover text for a
 panel that cycle 13 will delete (as cycle 13 deleted `ThemePanel.tsx`) is
 work done twice and wrong once. So this waits until the surfaces have
 stopped moving — which, per the sessions above, means after Session 7's
-hardening and after the outstanding UI backlog (T17, T18, T21) has
-either shipped or been dropped.
+hardening and after the outstanding UI backlog (T17 — researched,
+[RESEARCH.md §8.5](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12),
+implementation still pending — T18, T21) has either shipped or been
+dropped.
 
 What exists today, measured rather than remembered: **one** `title`
 attribute in the entire frontend (`Inspector.tsx:218`, showing a

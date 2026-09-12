@@ -8,6 +8,7 @@ use quick_xml::Reader;
 use rusqlite::{params, Connection};
 
 use super::report_unknown_attrs;
+use super::translation::{ingest_translations, TranslationScope};
 use crate::report::{UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name};
 use crate::ProductDbError;
@@ -102,6 +103,11 @@ pub fn ingest_master_data(
             _ => {}
         }
     }
+    // A second pass over the same bytes, in the same spirit as `Catalog.xml`
+    // and `Hardware.xml`'s own `Languages` blocks (`ingest.rs`):
+    // `knx_master.xml` carries no owning element to key its translations to,
+    // so `TranslationScope::Master` uses the empty-string sentinel instead.
+    ingest_translations(conn, TranslationScope::Master, source_path, bytes)?;
     Ok(unknown.into_vec())
 }
 
@@ -166,6 +172,41 @@ mod tests {
             )
             .unwrap();
         assert_eq!(name, "MDT technologies");
+    }
+
+    const MASTER_WITH_LANGUAGES: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Siemens" />
+    </Manufacturers>
+  </MasterData>
+  <Languages>
+    <Language Identifier="de-DE">
+      <TranslationUnit RefId="LOC-1">
+        <TranslationElement RefId="LOC-1">
+          <Translation AttributeName="Text" Text="Übersetzt" />
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+
+    #[test]
+    fn master_translations_are_ingested_with_the_empty_scope_id() {
+        let (_dir, conn) = db();
+        ingest_master_data(&conn, MASTER_WITH_LANGUAGES.as_bytes()).unwrap();
+        let (scope, scope_id, text): (String, String, String) = conn
+            .query_row(
+                "SELECT scope, scope_id, text FROM translation
+                 WHERE ref_id = 'LOC-1' AND attribute_name = 'Text'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(scope, "Master");
+        assert_eq!(scope_id, "");
+        assert_eq!(text, "Übersetzt");
     }
 
     #[test]

@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use rusqlite::{params, Connection};
 
 use crate::ingest::{classify, FileKind};
+use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
@@ -314,6 +315,68 @@ fn migrate_v3_to_v4(conn: &Connection) -> Result<(), ProductDbError> {
         ALTER TABLE translation_v4 RENAME TO translation;
         CREATE INDEX translation_lookup ON translation (scope, scope_id, language, ref_id);",
     )?;
+    backfill_shared_translations(conn)?;
+    Ok(())
+}
+
+/// A product database that reached v3 before `Catalog`/`Hardware`/`Master`
+/// scoped translations existed has `source_file` blobs whose own
+/// `Languages` block was never read — `ingest_translations` is a second
+/// pass over bytes an entity parser already consumed (`ingest.rs`), and
+/// installation's content-hash idempotence (`source_parse_evidence`) means
+/// an already-installed blob is never revisited by the ordinary path.
+/// Modelled directly on `backfill_dynamic_nodes` above (read that one
+/// first): this replays every stored blob that classifies as `Catalog`,
+/// `Hardware` or `MasterData` through `ingest_translations`, after the
+/// table rebuild above, inside the same migration transaction
+/// `open_and_migrate` already holds.
+///
+/// Each blob gets its own `SAVEPOINT`, released on success and rolled back
+/// to on error before `record_backfill_failure` runs, for the identical
+/// reason `backfill_dynamic_nodes` does: a parse error partway through a
+/// blob must not leave partial rows behind, but must also not stop the loop
+/// from reaching the next blob or abort the migration outright — a database
+/// that refuses to open is worse than one with a gap.
+fn backfill_shared_translations(conn: &Connection) -> Result<(), ProductDbError> {
+    let mut stmt = conn.prepare("SELECT sha256, source_path, bytes FROM source_file")?;
+    let blobs: Vec<(String, String, Vec<u8>)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    drop(stmt);
+
+    for (sha256, source_path, bytes) in blobs {
+        // `Program`-scope translations are already covered by
+        // `application_program`'s own `Languages` parse; only the scopes
+        // that ride a second pass over bytes need replaying here. Anything
+        // else — baggage, unrecognized content — is skipped without being
+        // parsed at all, exactly as the ordinary ingest path dispatches.
+        let scope = match classify(&bytes) {
+            FileKind::Catalog => TranslationScope::Catalog,
+            FileKind::Hardware => TranslationScope::Hardware,
+            FileKind::MasterData => TranslationScope::Master,
+            _ => continue,
+        };
+        conn.execute_batch("SAVEPOINT translation_backfill_blob;")?;
+        match ingest_translations(conn, scope, &source_path, &bytes) {
+            Ok(_) => {
+                conn.execute_batch("RELEASE SAVEPOINT translation_backfill_blob;")?;
+            }
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT translation_backfill_blob;
+                     RELEASE SAVEPOINT translation_backfill_blob;",
+                )?;
+                record_backfill_failure(
+                    conn,
+                    &sha256,
+                    &source_path,
+                    "TranslationBackfillError",
+                    "ingest_translations",
+                    &error,
+                )?;
+            }
+        }
+    }
     Ok(())
 }
 
@@ -421,7 +484,14 @@ fn backfill_dynamic_nodes(conn: &Connection) -> Result<(), ProductDbError> {
                     "ROLLBACK TO SAVEPOINT dynamic_backfill_blob;
                      RELEASE SAVEPOINT dynamic_backfill_blob;",
                 )?;
-                record_backfill_failure(conn, &sha256, &source_path, &error)?;
+                record_backfill_failure(
+                    conn,
+                    &sha256,
+                    &source_path,
+                    "DynamicBackfillError",
+                    "parse_dynamic_trees",
+                    &error,
+                )?;
             }
         }
     }
@@ -431,17 +501,24 @@ fn backfill_dynamic_nodes(conn: &Connection) -> Result<(), ProductDbError> {
 /// Records a backfill parse failure through the same `ingest_unknown` table
 /// every other diagnostic in this crate lands in (`report::insert_unknown`,
 /// `report::insert_conflicts`'s `'IdConflict'` rows follow the identical
-/// pattern of a literal `kind` string with no table of its own).
+/// pattern of a literal `kind` string with no table of its own). Shared by
+/// every backfill in this file — `kind` and `name` are the only things that
+/// differ between, say, `backfill_dynamic_nodes`'s
+/// `('DynamicBackfillError', "parse_dynamic_trees")` and
+/// `backfill_shared_translations`'s
+/// `('TranslationBackfillError', "ingest_translations")`.
 fn record_backfill_failure(
     conn: &Connection,
     sha256: &str,
     source_path: &str,
+    kind: &str,
+    name: &str,
     error: &ProductDbError,
 ) -> Result<(), ProductDbError> {
     conn.execute(
         "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
-         VALUES (?1, NULL, ?2, 'DynamicBackfillError', ?3, 1, ?4)",
-        params![sha256, source_path, "parse_dynamic_trees", error.to_string()],
+         VALUES (?1, NULL, ?2, ?3, ?4, 1, ?5)",
+        params![sha256, source_path, kind, name, error.to_string()],
     )?;
     Ok(())
 }
@@ -671,5 +748,153 @@ mod tests {
             )
             .unwrap();
         assert_eq!(count, 2);
+    }
+
+    const CATALOG_WITH_LANGUAGES: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-0083">
+      <Catalog>
+        <CatalogSection Id="M-0083_CG-1" Name="Sensors" Number="1">
+          <CatalogItem Id="M-0083_CI-1" Name="Sensor" Number="1" />
+        </CatalogSection>
+      </Catalog>
+      <Languages>
+        <Language Identifier="en-US">
+          <TranslationUnit RefId="M-0083_CI-1">
+            <TranslationElement RefId="M-0083_CI-1">
+              <Translation AttributeName="Name" Text="Sensor" />
+            </TranslationElement>
+          </TranslationUnit>
+        </Language>
+      </Languages>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+
+    #[test]
+    fn a_v3_database_backfills_the_translations_its_blobs_already_held() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let bytes = CATALOG_WITH_LANGUAGES.as_bytes();
+        let sha = crate::sha256_hex(bytes);
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..3] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 3i64).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    sha,
+                    "M-0083/Catalog.xml",
+                    "M-0083",
+                    bytes.len() as i64,
+                    bytes
+                ],
+            )
+            .unwrap();
+            // Also present in `source_parse_evidence`, exactly like a blob
+            // whose catalog rows were already parsed under the ordinary
+            // (pre-shared-translations) path: the content-hash skip in
+            // `ingest.rs` would leave this blob alone forever without the
+            // backfill.
+            conn.execute(
+                "INSERT INTO source_parse_evidence (sha256) VALUES (?1)",
+                [&sha],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(version, 4);
+
+        let text: String = conn
+            .query_row(
+                "SELECT text FROM translation
+                 WHERE scope = 'Catalog' AND scope_id = 'M-0083'
+                   AND ref_id = 'M-0083_CI-1' AND attribute_name = 'Name'
+                   AND language = 'en-US'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(text, "Sensor");
+    }
+
+    #[test]
+    fn a_blob_that_fails_to_parse_records_itself_and_does_not_stop_the_migration() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let good = CATALOG_WITH_LANGUAGES.as_bytes();
+        let good_sha = crate::sha256_hex(good);
+        // Truncated 20 bytes before the end: empirically this lands inside
+        // `</ManufacturerData>`'s closing tag, which `quick-xml` rejects
+        // with "tag not closed" rather than treating as ordinary `Eof` —
+        // the same "genuine parse error, not silent truncation" shape
+        // `dynamic_tree.rs`'s equivalent backfill test documents.
+        let bad = &good[..good.len() - 20];
+        let bad_sha = crate::sha256_hex(bad);
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..3] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 3i64).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    good_sha,
+                    "M-0083/Catalog.xml",
+                    "M-0083",
+                    good.len() as i64,
+                    good
+                ],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![bad_sha, "M-BAD/Catalog.xml", "M-BAD", bad.len() as i64, bad],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(
+            version, 4,
+            "one blob's parse failure must not abort the migration"
+        );
+
+        let text: String = conn
+            .query_row(
+                "SELECT text FROM translation
+                 WHERE scope = 'Catalog' AND scope_id = 'M-0083'
+                   AND ref_id = 'M-0083_CI-1' AND attribute_name = 'Name'
+                   AND language = 'en-US'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(text, "Sensor", "the good blob must still be backfilled");
+
+        let recorded: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND kind = 'TranslationBackfillError'",
+                [&bad_sha],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(recorded, 1);
     }
 }

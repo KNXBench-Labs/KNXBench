@@ -649,39 +649,64 @@ potentially a future command palette too).
 
 ## 20. Command palette and search share overlay CSS and an accessibility gap, unaddressed
 
-**Limitation.** `apps/knx-web/src/Search.tsx` and `CommandPalette.tsx`
-are two near-identical modal-overlay implementations — an overlay div, a
-click-outside `stopPropagation` panel, an autofocused input, and
-`Escape`/arrow-key/`Enter` handling — kept as separate components rather
-than one shared shell. Neither overlay's result list has proper ARIA
-semantics either: `CommandPalette.tsx`'s disabled rows carry
-`aria-disabled="true"` but nothing backs it with `role="option"`/
-`role="listbox"` on the containing list, and neither overlay announces the
-highlighted row via `aria-activedescendant`.
+**Limitation.** Four components now share `styles.css`'s
+`.search-overlay`/`.search-panel` shape with no shared component behind
+it — counted, 2026-09-12, not remembered: `apps/knx-web/src/Search.tsx`,
+`CommandPalette.tsx`, `CatalogBrowser.tsx` (T2) and `SettingsPanel.tsx`
+(T27). Three of them — Search, Command Palette, Catalog Browser — go
+further and duplicate the whole modal shape by hand: an overlay div, a
+click-outside `stopPropagation` panel, an autofocused input, `Escape`
+handling, and a `.search-results` list of `.search-result` rows.
+`SettingsPanel.tsx` reuses the overlay and panel only; it has no result
+list, and it catches `Escape` on a `window` listener rather than on an
+input, because three `<select>`s give it no single field to hang it off.
 
-**Cause.** (a) The two overlays' keyboard-traversal semantics differ —
-`Search.tsx` navigates a grouped-by-kind list (both stop, rather than wrap,
-at the ends); `CommandPalette.tsx` navigates a flat list that additionally
-skips disabled rows — enough divergence that extracting a shared
-`<ModalOverlay>` shell was judged premature after only two consumers;
-`styles.css`'s `.search-overlay`/`.search-panel`/`.search-empty`/
-`.search-results`/`.search-result` classes are shared today, but the
-component logic is not. (b) Accessibility semantics for a custom
-listbox-like widget were out of scope for both the search and command
-palette design cycles, which focused on keyboard/mouse behavior, not
-screen-reader support.
+The accessibility gap is unchanged and now spans more surface. No
+result list anywhere carries `role="listbox"`/`role="option"`;
+`CommandPalette.tsx`'s disabled rows carry `aria-disabled="true"` with
+nothing backing it; no overlay announces the highlighted row via
+`aria-activedescendant`; and `CatalogBrowser.tsx`'s rows are
+`<li onClick>` with no `tabIndex`, no key handler and no role — that
+list cannot be reached by keyboard at all, which is worse than the
+palette's and search's incomplete semantics rather than merely equal
+to them.
 
-**Impact.** Two call sites to keep in sync by hand whenever overlay
-structure changes (e.g. a future scroll-into-view fix would need applying
-twice). A screen reader user gets no indication of which row is disabled
-or currently highlighted in either overlay.
+**Cause.** (a) The overlays' keyboard-traversal semantics genuinely
+differ — `Search.tsx` navigates a grouped-by-kind list (stopping, not
+wrapping, at the ends); `CommandPalette.tsx` navigates a flat list and
+skips disabled rows; `CatalogBrowser.tsx` navigates nothing;
+`SettingsPanel.tsx` has no list — so extracting a shared
+`<ModalOverlay>` shell was judged premature after two consumers, and
+each later consumer copied the CSS rather than reopening that judgement.
+The judgement was never revisited when the count rose, which is the
+actual defect here. (b) Accessibility semantics for a custom
+listbox-like widget were out of scope for the search and command palette
+design cycles, which focused on keyboard/mouse behavior, not
+screen-reader support, and each subsequent overlay inherited that scope
+decision without restating it.
 
-**Lifted when.** (a) A third overlay is added — the dark/light mode
-picker is next on [ROADMAP.md](ROADMAP.md) and would be that third case —
-at which point extracting a shared shell stops being speculative
-abstraction over two data points. (b) A joint accessibility pass covers
-both overlays together, not a palette-only or search-only fix, since the
-gap and its fix are identical in both.
+**Impact.** Four call sites to keep in sync by hand whenever overlay
+structure changes — a scroll-into-view fix, a focus trap, or a
+`role="dialog"` retrofit would need applying four times and would be
+applied inconsistently at least once. A screen reader user gets no
+indication of which row is disabled or highlighted in Search or the
+Command Palette, and no keyboard path into the Catalog Browser's result
+list whatsoever.
+
+**Lifted when.** (a) **This trigger has already fired and was missed.**
+The condition recorded here was "a third overlay is added", with the
+then-planned dark/light mode picker named as the likely third case.
+That picker never arrived in that form — cycle 13 replaced it with a
+toolbar theme `<select>`, which T27 folded into `SettingsPanel.tsx` —
+but `CatalogBrowser.tsx` became the third consumer independently, and
+`SettingsPanel.tsx` the fourth, so extracting a shared shell stopped
+being speculative abstraction some time ago. It is now overdue work
+with a concrete scope: one overlay shell owning the backdrop,
+click-outside, `Escape` and focus management, with list behaviour left
+to each caller. (b) Unchanged: a joint accessibility pass covering all
+list-bearing overlays together, not a palette-only or search-only fix,
+since the gap is the same shape in each and `CatalogBrowser.tsx`'s
+mouse-only list needs a keyboard path as part of it.
 
 ## 21. A UI-created group address without a range is still dropped on export — partially resolved
 
@@ -1431,45 +1456,107 @@ findable without re-deriving it from a grep.
 
 ## 43. Animations have no in-app switch; only the OS reduced-motion preference
 
-**Limitation.** The web UI's transitions and hover animations cannot be
-turned off, slowed, or otherwise controlled from inside the application.
-`apps/knx-web/src/styles.css` declares `--knx-transition-duration: 250ms`
-and wraps every transition in one of three `@media (prefers-reduced-motion:
-no-preference)` blocks, so the operating system's reduced-motion setting is
-the only switch a user has — and it is all-or-nothing. No `.ts` or `.tsx`
-file in `apps/knx-web/src` references motion, duration, or that token at
-all.
+**Limitation.** Resolved for the two axes T27 (2026-09-12) shipped,
+enforced structurally rather than by convention, and still limited in
+five specific, deliberate ways below.
 
-**Cause.** Regression, not an omission. Session 5 cycle 11 shipped a
-three-level `off`/`subtle`/`standard` motion setting that wrote the
-duration token, living in `ThemePanel.tsx` alongside four user-colorable
-theme tokens. Cycle 13 replaced the whole theming approach with a named
-`ThemeDef`/`THEMES` registry and deleted `palette.ts`, `palette.test.ts`
-and `ThemePanel.tsx` outright, because a four-token override does not map
-onto a 12+-token theme package. The motion setting was collateral: it had
-nothing to do with color overrides but happened to share their surface.
-Cycle 13's own [design spec](superpowers/specs/2026-09-08-bitcoin-defi-theme-design.md)
-records the outcome plainly — "Motion: no user-facing setting (that was
-`palette.ts`'s job, now gone)" — so this was noticed at the time and
-accepted, not overlooked.
+`apps/knx-web/src/motion.ts` exposes two independent, persisted settings —
+a **level** (`off`/`subtle`/`standard`, default `standard`, driving
+`--knx-transition-duration`: `0ms`/`120ms`/`250ms`) and a **style**
+(`apple`/`glitch`, displayed as "Smooth"/"Glitch", default `apple`,
+driving `--knx-motion-easing`: a cubic-bezier ease or `steps(4, end)`).
+Both live as two `<select>`s in the gear-button `SettingsPanel.tsx`
+alongside the theme picker, persist to `localStorage`
+(`knx-desktop:motion-level`, `knx-desktop:motion-style`), and are applied
+as `data-motion-level`/`data-motion-style` on `<html>` both by
+`useMotion()` after React mounts and by a pre-mount bootstrap script in
+`index.html` (so there is no flash of default motion before the first
+render — the script hard-codes the same id lists as `motion.ts`,
+cross-commented in both files as a duplication to keep in sync by hand).
 
-**Impact.** Small today and growing. The current animations are short
-CSS transitions on hover and theme change, and a user bothered by them
-can set the OS preference. It matters more as soon as motion-heavy
-features arrive — a live Group Monitor, a line-scan progress display,
-graphical topology views, and the deferred "who talks to whom" telegram
-animation are all on the backlog and all inherently animated. A user who
-wants a still UI without telling their whole desktop environment so has
-no way to ask for one, and an engineer working in front of a customer
-has a reasonable claim to that.
+The OS-wins rule is structural, not conventional: every
+`transition:`/`animation:` declaration in `styles.css` sits inside a
+`@media (prefers-reduced-motion: no-preference)` block, none uses
+`!important`, and no `.ts`/`.tsx` file calls `window.matchMedia` at all —
+so `prefers-reduced-motion: reduce` cannot be overridden from inside the
+application, even by mistake. `motionGuard.test.ts` turns that rule into a
+test: a brace-counting checker over `styles.css`'s text fails the suite if
+any `transition:`/`animation:` declaration sits outside a
+`no-preference` block, or uses a literal duration instead of
+`var(--knx-transition-duration)`.
 
-**Lifted when.** T27 (GAP_ANALYSIS_ETS.md Tier 7, gap D11) restores an
-in-app motion control and binds future animated features to it, with
-`prefers-reduced-motion: reduce` still overriding the in-app choice
-rather than the reverse. Requested explicitly on 2026-09-10
-("die Animationen sollen togglebar sein, wenn sie implementiert werden");
-not scheduled into a cycle yet, and deliberately written down before the
-animated features exist rather than after.
+What remains limited, on purpose:
+
+- **No per-category control.** One duration and one easing curve apply to
+  the whole application. A user who wants the Group Monitor's new-row
+  highlight still but the hover transitions live has no way to say so.
+- **The guard reads `styles.css` only.** An inline `style={{ transition:
+  ... }}` in a component, a second CSS file, or a stylesheet inside a
+  future dependency would all escape it entirely.
+- **The guard matches the `transition:`/`animation:` shorthands only.** A
+  longhand — `animation-duration: 300ms`, `transition-delay: 400ms` — is
+  not inspected and would pass. Widening the pattern to longhands would
+  false-positive on `transition-property`, which carries no duration at
+  all; closing the hole honestly needs a CSS value parser, and the slice
+  forbids the dependency. Recorded rather than fixed, on purpose.
+- **The test environment does not run CSS animations.** No test anywhere
+  asserts that anything actually moves; the tests assert that the right
+  class and the right attribute are applied (including
+  `BusMonitorPanel.test.tsx`'s new-row highlight tests), and the
+  stylesheet is trusted to do the rest. Nobody has verified the visual
+  result in a browser.
+- **The guard has to read the stylesheet from disk with `node:fs`, and the
+  tidier-looking alternative silently disarms it.** Replacing the read
+  with Vite's `import css from "./styles.css?raw"` type-checks, runs, and
+  passes — against the **empty string**, because Vitest does not process
+  CSS. This was tried on this branch and caught by injecting a literal
+  `200ms` into `styles.css` and watching the suite stay green regardless.
+  A future author tidying that import away would remove the guard without
+  removing the test. The `node:fs` import in turn needed
+  `apps/knx-web/src/node-builtins.d.ts` (added mid-slice, commit
+  `056b4a0`), because `npm run build` is `tsc && vite build` over
+  `include: ["src"]` and `@types/node` is deliberately not a dependency —
+  without it, `npm run test` (Vitest) was passing on a `node:fs` import
+  that broke the production build outright, caught once on this branch
+  before it shipped anywhere.
+
+**Cause.** The regression this section used to describe — cycle 11's
+`off`/`subtle`/`standard` setting in `ThemePanel.tsx`, deleted without
+replacement by cycle 13's theme rewrite — is fixed. What remains above is
+scope, decided rather than missed: T27's design chose two orthogonal axes
+(level, style) over a per-category switch because the 2026-09-10 style
+memo asked for two independent visual directions, not finer-grained
+animation targeting (see `ROADMAP.md`'s "Cross-cutting — Motion and
+animation"); and the guard was built as a text checker over one known
+file rather than a real CSS parser, because the slice's no-new-dependency
+rule rules out pulling one in just for this.
+
+**Impact.** Materially smaller than before T27. A user bothered by motion
+can turn the level to `off`; a user who finds the default merely too much
+can use `subtle`; a user with an opinion about *how* things move, not just
+how fast, can pick between the two shipped styles independently of
+intensity. What a user still cannot do is quiet one feature while keeping
+another animated, and what nobody can do is rely on the test suite alone
+to prove that nothing outside a `no-preference` block moves — the guard's
+blind spots above are real, just narrow today because `styles.css` is
+still the only stylesheet and every current declaration is a compliant
+shorthand.
+
+**Lifted when.** Partially lifted, 2026-09-12 (T27, closing
+`GAP_ANALYSIS_ETS.md` gap D11): the in-app switch exists, is two axes
+wide, persists across sessions, and is structurally bound to
+`prefers-reduced-motion: reduce` always winning. The rule this section
+used to ask for — every future animation switchable through it — is now
+enforced by `motionGuard.test.ts` rather than by prose, and T15's Group
+Monitor table (the first animated feature that shipped without the
+switch) has been retrofitted with a guarded new-row highlight
+(`BusMonitorPanel.tsx`). What is left open, and would need its own
+design work rather than a bugfix: (1) a per-category control, if a future
+feature ever needs quieter motion in one area while another stays
+animated — not requested yet; and (2) a guard with real CSS-parser-backed
+coverage (longhands, non-`styles.css` sources, inline `style=` motion) —
+deliberately deferred, since it needs a dependency this slice was not
+scoped to add.
 
 ## 44. Project documentation export (T13) has no ETS report parity, and none can currently be measured
 

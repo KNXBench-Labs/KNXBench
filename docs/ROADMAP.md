@@ -317,7 +317,10 @@ with `loadThemeId`/`saveThemeId`/`useThemeId`; `palette.ts`,
 migrated, since a 4-token override doesn't map onto a 12+-token theme
 package. `ThemeToggle.tsx`'s sun/moon/monitor cycle button is replaced by
 `ThemeSwitcher.tsx`, a `<select>` built against the `THEMES` registry so
-a second theme needs no UI change. `index.html`'s inline bootstrap script
+a second theme needs no UI change (`ThemeSwitcher.tsx` itself was later
+deleted by T27, 2026-09-12, its `<select>` moved into the new
+`SettingsPanel.tsx` — see "Cross-cutting — Motion and animation" above).
+`index.html`'s inline bootstrap script
 now always sets `data-theme` — Bitcoin DeFi is dark-only by design, so
 there is no more "system"/unthemed state — and silently falls back any
 of cycle 7's old stored values (`"system"`/`"light"`/`"dark"`) to the new
@@ -381,40 +384,44 @@ is not something an application setting may override; the in-app control
 exists for the people whose OS says nothing and who still want the UI to
 sit still.
 
-Where this stands today, which is worse than it was two cycles ago:
-cycle 11 shipped exactly such a control — a three-level
-`off`/`subtle`/`standard` motion setting driving
-`--knx-transition-duration` — and cycle 13's theme rewrite deleted
-`ThemePanel.tsx`, the surface it lived on, without replacing it (its own
-[design spec](superpowers/specs/2026-09-08-bitcoin-defi-theme-design.md)
-records the loss: "Motion: no user-facing setting (that was `palette.ts`'s
-job, now gone)"). What survives is the CSS token and three
-`prefers-reduced-motion: no-preference` blocks in `styles.css`. So the
-OS preference is currently the only control, and it is all-or-nothing.
+Where this stands today, restored and wider than cycle 11's own control
+ever was: **T27** (2026-09-12) shipped `motion.ts`'s two independent,
+persisted axes — level (`off`/`subtle`/`standard`, driving
+`--knx-transition-duration`) and style (`apple`/`glitch`, driving
+`--knx-motion-easing`) — surfaced in the gear-button `SettingsPanel.tsx`.
+The rule above is no longer prose alone: `motionGuard.test.ts` fails the
+suite if any `transition:`/`animation:` declaration in `styles.css` sits
+outside a `no-preference` block or uses a literal duration instead of
+`var(--knx-transition-duration)`. `prefers-reduced-motion: reduce` still
+always wins — no `.ts`/`.tsx` file calls `window.matchMedia`, so there is
+nothing in-app to override it with. **T15's Group Monitor table**, named
+below as the first item T27 would have to retrofit, has been: its new-row
+entry highlight (`BusMonitorPanel.tsx`'s `bus-monitor-row-new`) is a
+compliant `animation:` shorthand, gated the same as everything else. What
+the control still cannot do — no per-category switch, and a guard that
+only inspects `styles.css`'s `transition:`/`animation:` shorthands — is
+recorded in full at
+[KNOWN_LIMITATIONS.md §43](KNOWN_LIMITATIONS.md#43-animations-have-no-in-app-switch-only-the-os-reduced-motion-preference)
+rather than left implicit.
 
-Restoring the control, and binding every future animation to it, is
-tracked as **T27** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s
-Tier 7, closing gap **D11**. The constraint applies to work already on
-this roadmap that has not been built yet: T17's line-scan UI, T21's
-graphical topology/building views, and the "who talks to whom" telegram
-animation deferred beyond Session 7 below — plus T15's Group Monitor
-table, which shipped 2026-09-11 without ever being bound to a motion
-preference, making it the first item T27 has to retrofit rather than
-merely constrain.
-That animation is the reason this is written down now rather than at
-implementation time — it is the first genuinely motion-heavy feature on
-the list, and the cheapest moment to require a switch for it is before
-anyone starts writing it.
+This closes gap **D11** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s
+Tier 7 and is design-recorded at
+`docs/superpowers/specs/2026-09-12-motion-control-design.md`. The
+constraint above still applies, unchanged, to work on this roadmap that
+has not been built yet: T17's line-scan UI, T21's graphical
+topology/building views, and the "who talks to whom" telegram animation
+deferred beyond Session 7 below.
 
-**Memo (2026-09-10), style direction — not decided, not designed, no
-task opened.** Two candidate visual directions were named for whenever
-T27's motion work (and any theme it rides alongside) actually gets
-designed: (1) an Apple-like direction — sleek, subtle, clean, restrained
-motion; (2) a "techy glitch / cyberpunk OS" direction that is still, per
-the same request, clean and sleek rather than noisy or gimmicky. Neither
-is chosen. Recorded here only so it is not lost before T27 gets a design
-spec; whoever writes that spec should treat this as a starting prompt,
-not a constraint.
+**Memo (2026-09-10), style direction — answered.** Two candidate visual
+directions were named for whenever T27's motion work (and any theme it
+rides alongside) actually got designed: (1) an Apple-like direction —
+sleek, subtle, clean, restrained motion; (2) a "techy glitch / cyberpunk
+OS" direction that is still, per the same request, clean and sleek rather
+than noisy or gimmicky. The memo's own question — recorded here verbatim
+so it stays visible as what was actually asked — is now answered:
+**both shipped**, as the two selectable values of `motion.ts`'s style
+axis (`apple` displayed as "Smooth", `glitch` as "Glitch"), rather than
+one being chosen over the other. Neither direction lost; the user picks.
 
 ## Cross-cutting — Web/Docker deployment target
 

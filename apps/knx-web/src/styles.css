@@ -37,6 +37,35 @@
   --knx-radius-input: 8px;
 
   --knx-transition-duration: 250ms;
+  /* Fallback easing for a document with no data-motion-* attribute yet
+     (a stale cached index.html, a test rendering without the bootstrap). */
+  --knx-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* The motion control's two axes (see motion.ts). Level sets the duration,
+   style sets the easing curve; together they drive every transition below.
+
+   Level "off" sets the duration to 0ms rather than deleting it — an
+   element mid-transition when the user flips the level must snap to its
+   end state, not freeze halfway there. */
+:root[data-motion-level="off"] {
+  --knx-transition-duration: 0ms;
+}
+
+:root[data-motion-level="subtle"] {
+  --knx-transition-duration: 120ms;
+}
+
+:root[data-motion-level="standard"] {
+  --knx-transition-duration: 250ms;
+}
+
+:root[data-motion-style="apple"] {
+  --knx-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root[data-motion-style="glitch"] {
+  --knx-motion-easing: steps(4, end);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -45,9 +74,9 @@
   .fs-picker,
   .tree-label.selected,
   .search-result.selected {
-    transition: background-color var(--knx-transition-duration) ease,
-      color var(--knx-transition-duration) ease,
-      border-color var(--knx-transition-duration) ease;
+    transition: background-color var(--knx-transition-duration) var(--knx-motion-easing),
+      color var(--knx-transition-duration) var(--knx-motion-easing),
+      border-color var(--knx-transition-duration) var(--knx-motion-easing);
   }
 }
 
@@ -265,9 +294,9 @@ main {
 @media (prefers-reduced-motion: no-preference) {
   .dashboard-stats,
   .com-object-list li {
-    transition: transform var(--knx-transition-duration) ease,
-      border-color var(--knx-transition-duration) ease,
-      box-shadow var(--knx-transition-duration) ease;
+    transition: transform var(--knx-transition-duration) var(--knx-motion-easing),
+      border-color var(--knx-transition-duration) var(--knx-motion-easing),
+      box-shadow var(--knx-transition-duration) var(--knx-motion-easing);
   }
 }
 
@@ -420,6 +449,34 @@ main {
   font-size: 1rem;
   padding: 0.4rem;
   margin-bottom: 0.5rem;
+}
+
+.settings-panel {
+  width: min(22rem, 90vw);
+}
+
+.settings-panel-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.settings-field-label {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.settings-field select {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 1rem;
+  padding: 0.4rem;
 }
 
 .catalog-create-row {
@@ -697,6 +754,32 @@ main {
   opacity: 0.85;
 }
 
+/* Entry highlight for a telegram row that arrived in the most recently
+   completed poll (design D34 — see `BusMonitorPanel.tsx`'s
+   `newRowThreshold`). A `transition:` never runs on an element that
+   mounts with its class already applied — the row exists and has this
+   class from its very first render — so this has to be a `@keyframes`
+   animation instead. The `@keyframes` body itself is inert without an
+   `animation:` declaration pointing at it, which is why only the rule
+   below sits inside the reduced-motion guard, not this block.
+
+   Combines with `.bus-monitor-row-marker` rather than replacing it: a
+   `SessionClosed` row that just arrived carries both classes. */
+@keyframes bus-monitor-row-new-highlight {
+  from {
+    background-color: var(--knx-overlay-shadow);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bus-monitor-row-new {
+    animation: bus-monitor-row-new-highlight var(--knx-transition-duration) var(--knx-motion-easing);
+  }
+}
+
 .bus-monitor-decoded-conflict {
   color: var(--knx-warning-color);
 }
@@ -773,8 +856,8 @@ button {
 
 @media (prefers-reduced-motion: no-preference) {
   button {
-    transition: transform var(--knx-transition-duration) ease,
-      box-shadow var(--knx-transition-duration) ease;
+    transition: transform var(--knx-transition-duration) var(--knx-motion-easing),
+      box-shadow var(--knx-transition-duration) var(--knx-motion-easing);
   }
 }
 
@@ -826,13 +909,14 @@ h6 {
   color: transparent;
 }
 
-.theme-switcher select {
-  font-family: var(--knx-font-mono);
-  text-transform: none;
-  letter-spacing: normal;
-  min-width: 10rem;
-}
-
+/* `.theme-switcher select` lived here until T27 moved the theme dropdown
+   into SettingsPanel and deleted ThemeSwitcher.tsx; `.settings-field
+   select` above replaces it. `.sr-only` below is dead code as of T27 —
+   nothing in `apps/knx-web/src` references it any more, ThemeSwitcher.tsx
+   having been its only consumer — and is kept anyway, deliberately: it is
+   the standard visually-hidden-label utility, eight lines, and the
+   accessibility work KNOWN_LIMITATIONS.md §20 still owes will want it
+   rather than reinvent it. Delete it if that work never comes. */
 .sr-only {
   position: absolute;
   width: 1px;

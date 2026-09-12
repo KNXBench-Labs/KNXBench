@@ -511,6 +511,51 @@ main {
   font-size: 0.85rem;
 }
 
+.language-pack-manager {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--knx-border);
+}
+
+.language-pack-hint {
+  font-size: 0.8rem;
+  opacity: 0.75;
+  margin: 0.15rem 0 0.5rem;
+}
+
+.language-pack-report {
+  font-size: 0.85rem;
+  margin: 0 0 0.5rem;
+}
+
+.language-pack-report p {
+  margin: 0.15rem 0;
+}
+
+.language-pack-list-title {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.language-pack-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.language-pack-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0;
+}
+
+.language-pack-list-name {
+  flex: 1;
+  font-size: 0.9rem;
+}
+
 .catalog-diagnostics h3 {
   margin: 0 0 0.25rem;
   font-size: 0.8rem;

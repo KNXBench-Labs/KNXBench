@@ -9,6 +9,8 @@ import { resetProductLanguageForTests, useProductLanguage } from "./productLangu
 import { resetUiLanguageForTests } from "./uiLanguage";
 import { useTranslate } from "./i18n";
 import type { ProductLanguage } from "./api";
+import { exportEnglishTemplate, importLanguagePack, resetLanguagePacksForTests } from "./languagePack";
+import type { LanguagePack } from "./languagePack";
 
 let host: HTMLDivElement | undefined;
 
@@ -21,7 +23,29 @@ afterEach(() => {
   document.documentElement.removeAttribute("lang");
   resetProductLanguageForTests();
   resetUiLanguageForTests();
+  resetLanguagePacksForTests();
 });
+
+function dutchPack(overrides: Partial<LanguagePack> = {}): LanguagePack {
+  return {
+    formatVersion: 1,
+    tag: "nl-NL",
+    name: "Nederlands",
+    englishName: "Dutch",
+    messages: {
+      "toolbar.save": "Opslaan",
+    },
+    ...overrides,
+  };
+}
+
+/** Builds a `File` the way a browser file-input's `FileList` would, for
+ * driving `SettingsPanel`'s own import control the same way a user would:
+ * pick a file, let the component read it, not a direct call into
+ * `languagePack.ts` that bypasses the UI entirely. */
+function jsonFile(name: string, data: unknown): File {
+  return new File([JSON.stringify(data)], name, { type: "application/json" });
+}
 
 // A sibling that never remounts across the test, reading the same
 // `uiLanguage.ts` store as SettingsPanel's own select but through
@@ -240,6 +264,212 @@ describe("SettingsPanel", () => {
     expect(reader.textContent).toBe("Speichern");
     expect(document.documentElement.getAttribute("lang")).toBe("de");
     expect(window.localStorage.getItem("knx-desktop:ui-language")).toBe("de");
+
+    root.unmount();
+  });
+});
+
+describe("SettingsPanel — language packs (T25 task 7)", () => {
+  it("an imported pack appears in the UI-language select, named in itself", async () => {
+    importLanguagePack(dutchPack());
+    const { root } = await renderPanel();
+
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+    const options = Array.from(select.options).map((o) => ({ value: o.value, text: o.text }));
+
+    expect(options).toEqual([
+      { value: "en", text: "English" },
+      { value: "de", text: "Deutsch" },
+      { value: "nl-NL", text: "Nederlands" },
+    ]);
+
+    root.unmount();
+  });
+
+  it("activating an installed pack re-renders an already-mounted sibling with its strings", async () => {
+    importLanguagePack(dutchPack());
+    const { root } = await renderPanel();
+
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+    const reader = host!.querySelector('[data-testid="reader"]')!;
+
+    await act(async () => {
+      select.value = "nl-NL";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(reader.textContent).toBe("Opslaan");
+    root.unmount();
+  });
+
+  it("removing the active pack falls the UI back to English", async () => {
+    importLanguagePack(dutchPack());
+    const { root } = await renderPanel();
+
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+    const reader = host!.querySelector('[data-testid="reader"]')!;
+
+    await act(async () => {
+      select.value = "nl-NL";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(reader.textContent).toBe("Opslaan");
+
+    const removeButton = host!.querySelector<HTMLButtonElement>(
+      '[aria-label="Remove Nederlands"]',
+    )!;
+    await act(async () => {
+      removeButton.click();
+    });
+
+    expect(reader.textContent).toBe("Save");
+    root.unmount();
+  });
+
+  it("importing a partial pack shows the report: applied/missing counts, unknown keys, plural support", async () => {
+    const { root } = await renderPanel();
+
+    const input = host!.querySelector<HTMLInputElement>('.language-pack-manager input[type="file"]')!;
+    const file = jsonFile(
+      "partial.json",
+      dutchPack({ messages: { "toolbar.save": "Opslaan", "some.future.key": "???" } }),
+    );
+    await act(async () => {
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      // File.text() is async; let the microtask queue drain.
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const report = host!.querySelector(".language-pack-report")!;
+    expect(report.textContent).toContain('"Nederlands" imported.');
+    expect(report.textContent).toContain("1 string translated.");
+    expect(report.textContent).toContain("this build doesn't recognise");
+    expect(report.textContent).toContain("some.future.key");
+    expect(report.textContent).toContain("Plural forms are supported for this language.");
+
+    root.unmount();
+  });
+
+  it("a rejected pack shows its reason in words, and never appears in the select", async () => {
+    const { root } = await renderPanel();
+
+    const input = host!.querySelector<HTMLInputElement>('.language-pack-manager input[type="file"]')!;
+    const file = jsonFile("bad.json", { formatVersion: 1, name: "X", messages: {} });
+    await act(async () => {
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const report = host!.querySelector(".language-pack-report")!;
+    expect(report.textContent).toContain("Import rejected:");
+    expect(report.textContent).toMatch(/tag/i);
+
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(["en", "de"]);
+
+    root.unmount();
+  });
+
+  it("a hand-typed grandfathered tag gets a hint at its modern replacement", async () => {
+    const { root } = await renderPanel();
+
+    const input = host!.querySelector<HTMLInputElement>('.language-pack-manager input[type="file"]')!;
+    const file = jsonFile("klingon.json", {
+      formatVersion: 1,
+      tag: "i-klingon",
+      name: "tlhIngan Hol",
+      messages: {},
+    });
+    await act(async () => {
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const report = host!.querySelector(".language-pack-report")!;
+    expect(report.textContent).toContain('"i-klingon"');
+    expect(report.textContent).toContain('"tlh"');
+
+    root.unmount();
+  });
+
+  it("exporting the English template produces a document the loader accepts", async () => {
+    const { root } = await renderPanel();
+
+    let capturedBlob: Blob | undefined;
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    URL.createObjectURL = ((blob: Blob) => {
+      capturedBlob = blob;
+      return "blob:mock";
+    }) as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn();
+
+    const exportButton = Array.from(host!.querySelectorAll("button")).find(
+      (b) => b.textContent === "Export English template…",
+    )!;
+    await act(async () => {
+      exportButton.click();
+    });
+
+    try {
+      expect(capturedBlob).toBeDefined();
+      const text = await capturedBlob!.text();
+      const parsed = JSON.parse(text) as unknown;
+
+      const result = importLanguagePack(parsed);
+      expect(result.ok).toBe(true);
+      // Matches the exported template's own message content.
+      const template = exportEnglishTemplate();
+      expect((parsed as { messages: Record<string, string> }).messages).toEqual(template.messages);
+    } finally {
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    }
+
+    root.unmount();
+  });
+
+  it("exporting an installed pack round-trips it, unknown fields and all", async () => {
+    importLanguagePack(dutchPack({ futureField: "keep me" } as unknown as LanguagePack));
+    const { root } = await renderPanel();
+
+    let capturedBlob: Blob | undefined;
+    const originalCreateObjectURL = URL.createObjectURL;
+    const originalRevokeObjectURL = URL.revokeObjectURL;
+    URL.createObjectURL = ((blob: Blob) => {
+      capturedBlob = blob;
+      return "blob:mock";
+    }) as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn();
+
+    try {
+      const exportButton = host!.querySelector<HTMLButtonElement>('[aria-label="Export Nederlands"]')!;
+      await act(async () => {
+        exportButton.click();
+      });
+
+      const text = await capturedBlob!.text();
+      const parsed = JSON.parse(text) as { futureField?: string };
+      expect(parsed.futureField).toBe("keep me");
+    } finally {
+      URL.createObjectURL = originalCreateObjectURL;
+      URL.revokeObjectURL = originalRevokeObjectURL;
+    }
+
+    root.unmount();
+  });
+
+  it("shows no packs installed when none are, and a hint about the template's shadowed tag", async () => {
+    const { root } = await renderPanel();
+
+    expect(host!.textContent).toContain("No language packs installed.");
+    expect(host!.textContent).toContain("shadowed by the built-in English catalogue");
 
     root.unmount();
   });

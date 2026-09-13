@@ -2370,7 +2370,7 @@ apart). Verified concrete consequences:
 3. **No client is told the project changed underneath it.** There is no
    `WebSocket` or `EventSource` anywhere in `apps/knx-web`; the only
    `setInterval` polling loop in the whole frontend is
-   `apps/knx-web/src/BusMonitorPanel.tsx:311`, and it polls bus telegrams,
+   `apps/knx-web/src/BusMonitorPanel.tsx:386`, and it polls bus telegrams,
    not project state. A browser's view of the project tree only updates
    from the response to its own request — it never learns about another
    client's edit, undo, redo, or save except by the user manually
@@ -3059,7 +3059,7 @@ three such endpoints among 35 occupied addresses on one gateway.
 signal, is verified against more than one gateway/client combination —
 not scheduled as part of T17.
 
-## 79. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else
+## 82. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else
 
 **Limitation.** The second-window diagnostics companion (T-UI-06) locks
 itself when the project changes under a running bus session. That lock is

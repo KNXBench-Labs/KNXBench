@@ -315,13 +315,44 @@ async fn import_project(
 /// request. `discard_changes` is the caller's explicit "yes, throw away the
 /// edits I have not saved" — see [`domain::new_project_impl`] for why the
 /// default is to refuse instead.
+///
+/// `group_address_style` is a `String` rather than a derived enum so that
+/// an unrecognised value fails through [`parse_group_address_style`] with
+/// a message naming the three it could have been, instead of serde's own
+/// `422` on a body this handler would otherwise never see at all (`Option
+/// <Json<..>>` above).
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase", default)]
 struct NewProjectBody {
     name: Option<String>,
     installation_name: Option<String>,
     language: Option<String>,
+    group_address_style: Option<String>,
     discard_changes: bool,
+}
+
+/// The wire spelling of [`knx_core::GroupAddressStyle`]: the same three
+/// tokens ETS writes into `ProjectInformation/@GroupAddressStyle`
+/// (`knx-etsproj/src/map.rs`) and `knx-store` persists
+/// (`knx-store/src/project.rs`'s `style_to_str`), so a client never has to
+/// learn a fourth vocabulary for the same three choices.
+///
+/// Unknown values are refused, deliberately — unlike both of those
+/// mappers, which fall back to `ThreeLevel` (the importer at least records
+/// a `MapProblem` while doing so). Neither has a choice: they are reading
+/// a document that already exists. This route is creating one, where the
+/// style is effectively permanent once group addresses exist, and a
+/// silently wrong one is discovered far too late. Data integrity over
+/// convenience.
+fn parse_group_address_style(value: &str) -> Result<knx_core::GroupAddressStyle, ApiError> {
+    match value {
+        "Free" => Ok(knx_core::GroupAddressStyle::Free),
+        "TwoLevel" => Ok(knx_core::GroupAddressStyle::TwoLevel),
+        "ThreeLevel" => Ok(knx_core::GroupAddressStyle::ThreeLevel),
+        other => Err(ApiError::bad_request(format!(
+            "unknown groupAddressStyle {other:?}: expected Free, TwoLevel or ThreeLevel"
+        ))),
+    }
 }
 
 /// Creates an empty project without touching the filesystem — the only way
@@ -331,17 +362,25 @@ struct NewProjectBody {
 ///
 /// `409 Conflict`, not `400`: the open project's unsaved edits are a state
 /// conflict the caller can resolve (save first, or re-send with
-/// `discardChanges`), not a malformed request.
+/// `discardChanges`), not a malformed request. An unrecognised
+/// `groupAddressStyle` is the opposite case and does get the `400`: there
+/// is nothing about the server's state to resolve, only the request.
 async fn new_project(
     State(state): State<SharedState>,
     body: Option<Json<NewProjectBody>>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let Json(body) = body.unwrap_or_default();
+    let group_address_style = body
+        .group_address_style
+        .as_deref()
+        .map(parse_group_address_style)
+        .transpose()?;
     domain::new_project_impl(
         &state,
         body.name,
         body.installation_name,
         body.language,
+        group_address_style,
         body.discard_changes,
     )
     .map(Json)

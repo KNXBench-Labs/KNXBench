@@ -208,6 +208,38 @@ mod tests {
         assert_eq!(name, "MDT technologies");
     }
 
+    #[test]
+    fn a_later_ingested_master_file_updates_the_name_the_earlier_one_wrote() {
+        // Deliberately the mirror image of `first_winner`
+        // (KNOWN_LIMITATIONS.md § 88): real manufacturers get renamed across
+        // ETS editions (`M-0007` is either `"Busch-Jaeger Elektro"` or
+        // `"ABB AG - BUSCH-JAEGER"`, and 51 further ids are the same shape,
+        // both spellings quoted as the corpus writes them, per the
+        // 69-file corpus sweep behind that entry), and nothing in
+        // knx_master.xml says which spelling is newer except ingest order.
+        // First-writer-wins would leave a package's old spelling stuck
+        // forever; this asserts the current, chosen behaviour is the other
+        // way round.
+        let (_dir, conn) = db();
+        ingest_master_data(&conn, MASTER.as_bytes()).unwrap();
+        let renamed = MASTER.replace(
+            r#"Name="MDT technologies""#,
+            r#"Name="MDT Technologies GmbH""#,
+        );
+        ingest_master_data(&conn, renamed.as_bytes()).unwrap();
+        let name: String = conn
+            .query_row(
+                "SELECT name FROM manufacturer WHERE id = 'M-0083'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            name, "MDT Technologies GmbH",
+            "the later ingest's name wins"
+        );
+    }
+
     const MASTER_WITH_LANGUAGES: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11">
   <MasterData>

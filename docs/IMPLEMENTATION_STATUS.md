@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-12 (T35: every program is `0.1.0-alpha.1`, `--version` names the commit, and a first-line header convention with its `check-headers` lint; see the end of this document)
+Last updated: 2026-09-13 (T17: line-scan closes — `docs/` updated for what four prior tasks on this branch shipped, plus a corrected timeout-policy citation and the live-validation results; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -3379,3 +3379,99 @@ hand-written `knx-projection` unit tests, 3 `ts-rs` export tests
 `knx-productdb` tests, 5 `knx-server` tests. Web gates
 (`npm test -- --run`, `tsc --noEmit` under `apps/knx-web`) are **not
 applicable**: this branch's diff touches no path under `apps/knx-web`.
+
+**T17: line-scan (bus-side device discovery) closes, with paperwork
+(2026-09-13).** Four prior tasks on this branch shipped the code:
+`ScanPlan`/`ScanPlanBuilder` (`crates/knx-core/src/scan.rs`, an exclusion
+list honoured by construction, never filtered after the fact); `Tpci`
+encode/decode and the device-descriptor Application Layer services
+(`crates/knx-net/src/cemi.rs`); `ProbePolicy`/`ProbeOutcome`/
+`probe_address`/`scan_line`, implementing `NM_IndividualAddress_Check`
+(`crates/knx-net/src/scan.rs`); and the `knx bus scan` CLI
+(`apps/knx-cli/src/scan.rs`, `apps/knx-cli/src/main.rs`). This task is
+the fifth and last: documentation only, plus one permitted line of code.
+
+Docs updated: `docs/GAP_ANALYSIS_ETS.md` — **T17**'s backlog entry moves
+to Done (2026-09-13), recording what shipped against what
+[RESEARCH.md §8.5](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
+specified, plus the corrected timeout-policy citation and the
+2026-09-13 live-validation figures; **E2**'s row moves from an open gap
+to partially closed — the scan reports where the bus and a project
+disagree, nothing reconciles that disagreement into the project file
+yet, and that write-back is explicitly out of scope here.
+`docs/KNOWN_LIMITATIONS.md` — §72 rewritten from "researched, not
+implemented" to the shipped, still-true cost accounting, keeping the
+2026-09-12 pre-implementation full-line measurement (`xknx`, 254
+addresses, 23.1 minutes) distinct from the 2026-09-13 measurement taken
+against this repository's own binary; six new sections (§§73-78) give a
+durable home to findings that would otherwise have lived only in a
+research doc: what a scan cannot learn (product identity, manufacturer,
+serial number — T16's territory), the negative-Layer-2-confirm BUSY case
+indistinguishable from absence, why a shorter `--timeout-ms` is
+supported but not the default, why the negative-confirm fast path was
+deliberately not built and why `Indeterminate` does not retry, the
+one-line-at-a-time/no-coupler-crossing scope boundary, and — added by a
+later fix round on this branch — other KNXnet/IP tunnelling endpoints
+reported as occupied devices.
+`docs/RESEARCH.md` §8.5 — Finding 1's mis-attribution of the ~6 s
+vacant-probe cost to a client library's own policy constant
+(`xknx`'s `MANAGAMENT_CONNECTION_TIMEOUT`) is corrected to the actual
+source: **[D]** `03_03_04 Transport Layer v01.02.03 AS`, clause 4
+"Parameters of Transport Layer" (page 16 of 38, `:665-688`) fixes
+connection timeout at 6 s system-wide; clause 5's Local Variables table
+(page 17 of 38, `:696-705`, specifically `:702-703`) names the two local
+timers, `connection_timeout_timer` and `acknowledgment_timeout_timer`,
+that implement it — corrected from an imprecise `:760-779` citation this
+task's own brief carried, which is actually the clause's Actions table
+(corroborating, not naming, the two timers). The "not fully pinned down
+from this corpus" sentence about whether the Transport Layer keeps its
+own timeout logic is removed; clause 4 answers it. A new paragraph
+records why the fast preset is not the default (occupied round trips
+measured 13.6-6016.5 ms; a short timeout reports the slowest present
+device vacant). A new Finding 4 records the 2026-09-13 live-validation
+results against this repository's own binary (dry-run candidate counts,
+a nine-address all-occupied run, a five-address all-vacant run, and the
+30431 ms vs 30430 ms round-trip arithmetic check) without naming any
+address, per this repository's public-facing rule. The section's opening
+"nothing described here is implemented" disclaimer is left exactly as
+written — not edited into a retroactive lie — with a new paragraph
+directly under it noting that it stopped being true on 2026-09-13, and
+the stale "documented, not built" TPCI/connection-state-machine
+paragraph near the end of the section is replaced with what actually
+shipped and what remains out of scope (a general-purpose long-lived
+Transport Layer connection manager, cross-coupler scanning, and
+concurrent probing).
+
+One line of code outside `docs/`, the only change this task's brief
+permitted: `apps/knx-cli/src/main.rs`'s `USAGE` footer stated exit codes
+that only ever described `import`/`ga-import` (0/1/2), while `USAGE`
+itself lists many `bus` subcommands that never return 2 — confirmed by
+`grep -n "ExitCode::"`, every `ExitCode::from(EXIT_IMPORTED_WITH_ERRORS)`
+call sits inside `run_import` or `run_ga_import`, nowhere else. The
+footer now states the actual rule: 0 = success generally, 1 = failure
+for any command, 2 = `import`/`ga-import` only, when a report was
+produced but contains errors — no other subcommand, `bus scan` included,
+ever returns 2. `USAGE` itself was left untouched, as instructed.
+
+`ROADMAP.md` was not touched by this task: its brief named exactly four
+docs (`GAP_ANALYSIS_ETS.md`, `KNOWN_LIMITATIONS.md`, `RESEARCH.md`,
+`IMPLEMENTATION_STATUS.md`), and `ROADMAP.md` was not one of them, even
+though it linked to §8.5's anchor and that anchor's text changed (the
+heading now reads "...T17 spike (2026-09-12), shipped (2026-09-13)").
+`81e71db`, a later fix-round commit on this same branch, closed that gap:
+both `ROADMAP.md` links now point at the corrected anchor and both read
+as shipped.
+
+All six required gates green: `cargo fmt --all --check` clean; `cargo
+clippy --workspace --all-targets -- -D warnings` clean; `cargo test
+--workspace --no-fail-fast`: **1164 passed / 0 failed / 3 ignored**
+across 77 `test result:` lines, unchanged from this branch's pre-task
+baseline (a documentation task, plus one comment-only string literal
+change, was not expected to move this number, and it did not); `cargo
+run -p xtask -- check-layering` clean; `cargo run -p xtask --
+check-headers`: 77 well-formed / 169 without a header (ceiling 169), 22
+generated files skipped, unchanged; `cargo deny check` clean (only
+pre-existing `advisory-not-detected` informational warnings for
+advisories that do not match any dependency in this workspace, zero
+errors). Web gates: not applicable — this task touched no
+`apps/knx-web` path.

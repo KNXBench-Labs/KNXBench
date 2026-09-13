@@ -1,8 +1,11 @@
 //! cEMI `L_Data` frame decode (EMI_IMI v01.04.02 AS §4.1.4, §4.1.5.3).
-//! This cycle only interprets the group-communication trio
-//! (`A_GroupValue_Read/Response/Write`, Application Layer v02.01.01 AS
-//! §2.2 Table 1); every other APCI is preserved as raw bytes
-//! (`ApplicationService::Other`), never silently dropped.
+//! Interprets the group-communication trio (`A_GroupValue_Read/Response/
+//! Write`, Application Layer v02.01.01 AS §2.2 Table 1), the connection-
+//! oriented `A_DeviceDescriptor_Read/Response` pair (§3.4.2.1), and every
+//! `Tpci` a `T_Connect`/`T_Data_Connected`/`T_Disconnect` exchange needs
+//! (Transport Layer v01.02.03 AS §2, Figure 3 — see `Tpci` below); every
+//! other APCI is preserved as raw bytes (`ApplicationService::Other`),
+//! never silently dropped.
 
 use knx_core::{GroupAddress, IndividualAddress};
 // Re-exported (not just imported) so `crate::cemi::GroupValue` keeps
@@ -31,14 +34,108 @@ pub enum Destination {
     Group(GroupAddress),
 }
 
+/// Octet 6 of the `L_Data` frame (the TPDU's Transport Control Field).
+/// Bit layout `[D]`: `03_03_04 Transport Layer v01.02.03 AS`, clause 2
+/// "TPDU", Figure 3 — Transport Control Field, page 6 of 38 (the Markdown
+/// extraction destroys the figure; verified against the PDF on
+/// 2026-09-12). Bit 7 is the Data/Control flag, bit 6 is Numbered:
+///
+/// | PDU | Octet 6 | Value |
+/// | --- | --- | --- |
+/// | `T_Data_Broadcast`/`T_Data_Group`/`T_Data_Individual` | `0000 0000` | `0x00` |
+/// | `T_Data_Connected` | `01 SeqNo SeqNo SeqNo SeqNo 00` | `0x40 \| seq << 2` |
+/// | `T_Connect` | `1000 0000` | `0x80` |
+/// | `T_Disconnect` | `1000 0001` | `0x81` |
+/// | `T_ACK` | `11 SeqNo SeqNo SeqNo SeqNo 10` | `0xC2 \| seq << 2` |
+/// | `T_NAK` | `11 SeqNo SeqNo SeqNo SeqNo 11` | `0xC3 \| seq << 2` |
+///
+/// NOTE 1 under the figure reserves `0xBF`. `T_Data_Tag_Group` (`0x04`),
+/// `0xBF`, and every other pattern none of the named variants match decode
+/// as `Unknown(octet)` — the raw octet preserved, not folded into
+/// `UnnumberedData` or any other named variant just because some bits
+/// happen to match (Global Constraint 2; mirrors `ApplicationService::
+/// Other`'s treatment of an unrecognized APCI).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tpci {
+    /// TPCI 0b00xxxxxx — what every group service, and every unconnected
+    /// point-to-point service, uses.
+    UnnumberedData,
+    /// TPCI 0b01ssssxx, `seq` 0-15 — a connection-oriented, sequenced
+    /// data PDU (`T_Data_Connected`).
+    NumberedData { seq: u8 },
+    /// TPCI 0b10000000 (`T_Connect`).
+    Connect,
+    /// TPCI 0b10000001 (`T_Disconnect`).
+    Disconnect,
+    /// TPCI 0b11ssss10, `seq` 0-15 (`T_ACK`).
+    Ack { seq: u8 },
+    /// TPCI 0b11ssss11, `seq` 0-15 (`T_NAK`).
+    Nak { seq: u8 },
+    /// A Transport Control Field octet none of the above match —
+    /// `T_Data_Tag_Group` (`0x04`), NOTE 1's reserved `0xBF`, or any other
+    /// unrecognized bit pattern. Preserved raw rather than discarded.
+    /// Whether the TPDU that carries it also has an APCI octet is decided
+    /// the same way the Standard decides it for every named variant: bit 7
+    /// (Data/Control) — clear means data-shaped (an APCI follows, handled
+    /// like `UnnumberedData`), set means control-shaped (the TPDU is this
+    /// octet alone, handled like `Connect`/`Disconnect`/`Ack`/`Nak`). See
+    /// `is_control_pdu`.
+    ///
+    /// **Data-shaped values only ever carry bits 7-2.** Bits 1-0 of a
+    /// data-shaped TPCI octet are the short-APCI's top two bits (see
+    /// `decode_l_data`'s `short_apci` computation) — they belong to
+    /// `ApplicationService`, not to transport, and this variant's whole
+    /// purpose is to hold exactly the bits none of the named `Tpci`
+    /// variants claim. Both `decode_tpci` and `encode_tpci` mask them to 0
+    /// for a data-shaped octet rather than storing/replaying whatever a
+    /// caller (or the wire) put there: masking here is not discarding
+    /// information (Global Constraint 2's usual concern) because those two
+    /// bits are never transport's to begin with — the encoder already
+    /// writes them from `service`. A control-shaped octet (bit 7 set) has
+    /// no such foreign field sharing it, so it keeps all eight bits.
+    Unknown(u8),
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApplicationService {
     GroupValueRead,
     GroupValueResponse(GroupValue),
     GroupValueWrite(GroupValue),
-    /// Any APCI this cycle does not interpret — the raw TPCI/APCI-high
-    /// octet combined with the APCI-low octet, and every data octet that
-    /// followed, so nothing is lost (CLAUDE.md: never silently discard).
+    /// `A_DeviceDescriptor_Read-PDU` (`03_03_07 Application Layer v02.01.01
+    /// AS`, §3.4.2.1 "A_DeviceDescriptor_Read-service", Figure 36, page 48
+    /// of 191): APCI `0x300 | descriptor_type`, `[D]`.
+    DeviceDescriptorRead {
+        descriptor_type: u8,
+    },
+    /// `A_DeviceDescriptor_Response-PDU` (same clause/table): APCI
+    /// `0x340 | descriptor_type`, `[D]`. `data` is the descriptor value
+    /// octets that follow the APCI.
+    ///
+    /// `[D]` **Known collision, not a bug**: `A_DeviceDescriptor_InfoReport
+    /// -PDU` uses this exact same 4-bit APCI selector and the exact same
+    /// octet layout (Application Layer v02.01.01 AS §3.3.2 NOTE 5: "This
+    /// service uses the same 4 bit APCI as APCI_DeviceDescriptor_Response",
+    /// and Figure 19). The two PDUs are byte-identical at this layer; only
+    /// the transport service they travel on distinguishes them
+    /// (`T_Data_SystemBroadcast` for InfoReport, `T_Data_Individual` for
+    /// Response) — a distinction this decoder does not have the KNXnet/IP
+    /// framing to make. An `A_DeviceDescriptor_InfoReport` will therefore
+    /// decode as this variant.
+    DeviceDescriptorResponse {
+        descriptor_type: u8,
+        data: Vec<u8>,
+    },
+    /// The payload of a control PDU (`Tpci::Connect`/`Disconnect`/
+    /// `Ack`/`Nak`): the brief's term for it, not a general-purpose
+    /// "empty" state. These TPDUs carry no application layer at all
+    /// (Transport Layer v01.02.03 AS §2) — the frame's `service` field
+    /// still needs a value, and this is it.
+    NoApplicationPdu,
+    /// Any 10-bit APCI this cycle does not interpret — the two APCI-high
+    /// bits (from the TPCI octet's low two bits) combined with the
+    /// APCI-low octet, and every data octet that followed, so nothing is
+    /// lost (CLAUDE.md: never silently discard). The frame's `Tpci` is
+    /// carried separately in `LDataFrame::transport`, not folded in here.
     Other {
         apci: u16,
         data: Vec<u8>,
@@ -50,13 +147,56 @@ pub struct LDataFrame {
     pub kind: LDataMessageKind,
     pub source: IndividualAddress,
     pub destination: Destination,
+    pub transport: Tpci,
     pub service: ApplicationService,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CemiError {
-    TooShort { needed: usize, got: usize },
+    TooShort {
+        needed: usize,
+        got: usize,
+    },
     UnsupportedMessageCode(u8),
+    /// A `NumberedData`/`Ack`/`Nak` `seq` above 15 — the Transport Control
+    /// Field's SeqNo is a 4-bit field (Transport Layer v01.02.03 AS §2,
+    /// Figure 3, cited on `Tpci`). Rejected on encode rather than masked
+    /// with `& 0x0F`, which would silently turn it into a different, valid
+    /// sequence number a live connection would answer to the wrong state
+    /// for (the same bug class Task 1 fixed for area/line, `cb673e6`).
+    InvalidSequenceNumber(u8),
+    /// A device-descriptor `descriptor_type` above `0x3F` — the field is
+    /// six bits (Application Layer v02.01.01 AS §3.4.2.1, Figures 36/38,
+    /// octet 7 bits 5-0). Those six bits share their octet with the two
+    /// bits that select `Read` vs. `Response`, so an out-of-range value
+    /// would silently flip which service the frame decodes as. Rejected on
+    /// encode rather than masked, same reasoning as `InvalidSequenceNumber`.
+    InvalidDescriptorType(u8),
+    /// An `ApplicationService::Other { apci, .. }` above `0x3FF` — the APCI
+    /// is a 10-bit field (Application Layer v02.01.01 AS §2.2 Table 1's
+    /// APCI column). Rejected on encode rather than masked.
+    InvalidApci(u16),
+    /// A control PDU (`Tpci::Connect`/`Disconnect`/`Ack`/`Nak`, or an
+    /// `Unknown` octet with bit 7 set) carried octets after its TPCI octet.
+    /// These TPDUs have no field the Standard defines for them to live in
+    /// (Transport Layer v01.02.03 AS §2) — inventing one would misrepresent
+    /// the frame, so it is rejected instead of the octets being silently
+    /// dropped (Global Constraint 2). `extra_octets` is how many followed
+    /// the TPCI octet.
+    UnexpectedControlPduData {
+        tpci: u8,
+        extra_octets: usize,
+    },
+    /// `LDataFrame::transport`/`LDataFrame::service` disagree, at encode
+    /// time, about whether this is a control PDU: a control `Tpci` (see
+    /// `is_control_pdu`) requires `ApplicationService::NoApplicationPdu`
+    /// and nothing else, and `NoApplicationPdu` requires a control `Tpci`.
+    /// Naming both variant names rather than emitting a frame that would
+    /// not survive its own round trip.
+    MismatchedTransport {
+        transport: &'static str,
+        service: &'static str,
+    },
 }
 
 impl std::fmt::Display for CemiError {
@@ -70,6 +210,32 @@ impl std::fmt::Display for CemiError {
             }
             CemiError::UnsupportedMessageCode(code) => {
                 write!(f, "unsupported cEMI message code {code:#04x}")
+            }
+            CemiError::InvalidSequenceNumber(seq) => {
+                write!(f, "TPCI sequence number {seq} does not fit 4 bits (0-15)")
+            }
+            CemiError::InvalidDescriptorType(descriptor_type) => {
+                write!(
+                    f,
+                    "device descriptor type {descriptor_type:#04x} does not fit 6 bits (0-0x3F)"
+                )
+            }
+            CemiError::InvalidApci(apci) => {
+                write!(f, "APCI {apci:#06x} does not fit 10 bits (0-0x3FF)")
+            }
+            CemiError::UnexpectedControlPduData { tpci, extra_octets } => {
+                write!(
+                    f,
+                    "control PDU (TPCI {tpci:#04x}) carried {extra_octets} unexpected \
+                     trailing octet(s)"
+                )
+            }
+            CemiError::MismatchedTransport { transport, service } => {
+                write!(
+                    f,
+                    "transport {transport} cannot carry service {service} (a control TPCI \
+                     requires NoApplicationPdu, and NoApplicationPdu requires a control TPCI)"
+                )
             }
         }
     }
@@ -125,44 +291,159 @@ pub fn decode_l_data(buf: &[u8]) -> Result<LDataFrame, CemiError> {
     };
     let length = buf[fixed_part_start + 6] as usize;
     let tpci_apci_start = fixed_part_start + 7;
-    if buf.len() < tpci_apci_start + 2 {
+    // Every TPDU has at least a TPCI octet; a control PDU
+    // (`Connect`/`Disconnect`/`Ack`/`Nak`) has nothing else, so that much
+    // is the minimum this function can demand up front.
+    if buf.len() < tpci_apci_start + 1 {
         return Err(CemiError::TooShort {
-            needed: tpci_apci_start + 2,
+            needed: tpci_apci_start + 1,
             got: buf.len(),
         });
     }
-    let tpci_apci_hi = buf[tpci_apci_start];
-    let apci_lo_and_data = buf[tpci_apci_start + 1];
-    // The three `A_GroupValue_*` services use only a 4-bit APCI (Application
-    // Layer v02.01.01 AS §2.2, Table 1): its top 2 bits are TPCI-octet bits
-    // 1-0, its bottom 2 bits are APCI-octet bits 7-6. The APCI-octet's
-    // remaining 6 bits (bits 5-0) carry inline data when `length <= 1`.
-    let short_apci = ((tpci_apci_hi & 0x03) << 2) | (apci_lo_and_data >> 6);
-    let inline6 = apci_lo_and_data & 0x3F;
-    let extra_len = length.saturating_sub(1);
-    let extra_start = tpci_apci_start + 2;
-    if buf.len() < extra_start + extra_len {
-        return Err(CemiError::TooShort {
-            needed: extra_start + extra_len,
-            got: buf.len(),
-        });
-    }
-    let extra = &buf[extra_start..extra_start + extra_len];
-    let service = match short_apci {
-        0b0000 => ApplicationService::GroupValueRead,
-        0b0001 => ApplicationService::GroupValueResponse(group_value(length, inline6, extra)),
-        0b0010 => ApplicationService::GroupValueWrite(group_value(length, inline6, extra)),
-        _ => ApplicationService::Other {
-            apci: ((tpci_apci_hi as u16) << 8) | apci_lo_and_data as u16,
-            data: extra.to_vec(),
-        },
+    let tpci_octet = buf[tpci_apci_start];
+    let transport = decode_tpci(tpci_octet);
+    let service = if is_control_pdu(transport) {
+        // `Tpci::Connect`/`Disconnect`/`Ack`/`Nak` (and any `Unknown`
+        // octet with bit 7 set) carry no application layer at all
+        // (Transport Layer v01.02.03 AS §2) — decoding them must not
+        // demand the APCI octet the data-PDU path below needs. A
+        // well-formed one has `L = 0` (its TPDU is the TPCI octet alone);
+        // anything else means octets follow that this TPDU shape has no
+        // field for, so they are reported rather than silently dropped
+        // (Global Constraint 2) — see `CemiError::UnexpectedControlPduData`.
+        if length != 0 {
+            let extra_start = tpci_apci_start + 1;
+            if buf.len() < extra_start + length {
+                return Err(CemiError::TooShort {
+                    needed: extra_start + length,
+                    got: buf.len(),
+                });
+            }
+            return Err(CemiError::UnexpectedControlPduData {
+                tpci: tpci_octet,
+                extra_octets: length,
+            });
+        }
+        ApplicationService::NoApplicationPdu
+    } else {
+        if buf.len() < tpci_apci_start + 2 {
+            return Err(CemiError::TooShort {
+                needed: tpci_apci_start + 2,
+                got: buf.len(),
+            });
+        }
+        let apci_lo_and_data = buf[tpci_apci_start + 1];
+        // The three `A_GroupValue_*` services, and both
+        // `A_DeviceDescriptor_*` services, share a 4-bit APCI selector
+        // (Application Layer v02.01.01 AS §2.2 Table 1 / §3.4.2.1): its
+        // top 2 bits are TPCI-octet bits 1-0, its bottom 2 bits are
+        // APCI-octet bits 7-6. The APCI-octet's remaining 6 bits (bits
+        // 5-0) carry inline data (`GroupValue::Short`, `length <= 1`) or,
+        // for device descriptor services, `descriptor_type`.
+        let short_apci = ((tpci_octet & 0x03) << 2) | (apci_lo_and_data >> 6);
+        let inline6 = apci_lo_and_data & 0x3F;
+        let extra_len = length.saturating_sub(1);
+        let extra_start = tpci_apci_start + 2;
+        if buf.len() < extra_start + extra_len {
+            return Err(CemiError::TooShort {
+                needed: extra_start + extra_len,
+                got: buf.len(),
+            });
+        }
+        let extra = &buf[extra_start..extra_start + extra_len];
+        match short_apci {
+            0b0000 => ApplicationService::GroupValueRead,
+            0b0001 => ApplicationService::GroupValueResponse(group_value(length, inline6, extra)),
+            0b0010 => ApplicationService::GroupValueWrite(group_value(length, inline6, extra)),
+            // `A_DeviceDescriptor_Read-PDU` never carries data octets
+            // (Application Layer v02.01.01 AS §3.4.2.1); a frame that
+            // matches its APCI but carries trailing octets anyway does not
+            // fit that PDU shape, so it falls to `Other` below, which
+            // preserves them instead of quietly dropping them.
+            0b1100 if extra.is_empty() => ApplicationService::DeviceDescriptorRead {
+                descriptor_type: inline6,
+            },
+            0b1101 => ApplicationService::DeviceDescriptorResponse {
+                descriptor_type: inline6,
+                data: extra.to_vec(),
+            },
+            _ => ApplicationService::Other {
+                apci: (((tpci_octet & 0x03) as u16) << 8) | apci_lo_and_data as u16,
+                data: extra.to_vec(),
+            },
+        }
     };
     Ok(LDataFrame {
         kind,
         source,
         destination,
+        transport,
         service,
     })
+}
+
+/// True for every TPCI whose TPDU is the TPCI octet alone — no APCI, no
+/// application layer (Transport Layer v01.02.03 AS §2): the four named
+/// control PDUs, plus an `Unknown` octet with bit 7 (Data/Control) set,
+/// since every named control PDU lives in that half of the octet space and
+/// every named data PDU lives in the other half (see `Tpci::Unknown`'s doc
+/// comment). Takes `Tpci` by value — it is `Copy`, a two-field enum at
+/// most, so a reference buys nothing here.
+fn is_control_pdu(tpci: Tpci) -> bool {
+    match tpci {
+        Tpci::Connect | Tpci::Disconnect | Tpci::Ack { .. } | Tpci::Nak { .. } => true,
+        Tpci::UnnumberedData | Tpci::NumberedData { .. } => false,
+        Tpci::Unknown(octet) => octet & 0x80 != 0,
+    }
+}
+
+/// Decodes octet 6, the Transport Control Field — bit table and citation
+/// on `Tpci`'s doc comment. Infallible: every octet value maps to a
+/// `Tpci`, `Unknown` catching whatever the named variants do not
+/// (`T_Data_Tag_Group`, NOTE 1's reserved `0xBF`, or anything else) —
+/// reported via a distinct, inspectable value rather than an error the
+/// only two current callers (`client.rs`, both `if let Ok(...)`) would
+/// have swallowed, silently discarding the whole frame (Global
+/// Constraint 2).
+fn decode_tpci(octet: u8) -> Tpci {
+    match octet & 0xC0 {
+        0x00 => {
+            // Data/Control=0, Numbered=0: `T_Data_Broadcast`/`_Group`/
+            // `_Individual` all share this pattern with bits 5-2 zero.
+            // `T_Data_Tag_Group` (`0x04`) sets bit 2 and is not modeled —
+            // `Unknown`, not coerced into `UnnumberedData`. Masked to bits
+            // 7-2 (`& 0xFC`): bits 1-0 are the short-APCI's top two bits,
+            // not transport's (see `Tpci::Unknown`'s doc comment) — storing
+            // them here would let a later `A_GroupValue_*`/device-descriptor
+            // pairing on the same frame corrupt this field on re-encode, or
+            // corrupt `service` on a hand-built frame's re-decode.
+            if octet & 0x3C != 0 {
+                Tpci::Unknown(octet & 0xFC)
+            } else {
+                Tpci::UnnumberedData
+            }
+        }
+        0x40 => Tpci::NumberedData {
+            seq: (octet >> 2) & 0x0F,
+        },
+        0x80 => match octet {
+            0x80 => Tpci::Connect,
+            0x81 => Tpci::Disconnect,
+            _ => Tpci::Unknown(octet),
+        },
+        _ => {
+            // 0xC0: Data/Control=1, Numbered=1 — `T_ACK`/`T_NAK`,
+            // distinguished by bits 1-0 (`10`/`11`); bits 1-0 = `00`/`01`
+            // here are unrecognized (NOTE 1's reserved `0xBF` falls in the
+            // 0x80 branch above instead, since its bit 6 is 0).
+            let seq = (octet >> 2) & 0x0F;
+            match octet & 0x03 {
+                0b10 => Tpci::Ack { seq },
+                0b11 => Tpci::Nak { seq },
+                _ => Tpci::Unknown(octet),
+            }
+        }
+    }
 }
 
 fn group_value(length: usize, inline6: u8, extra: &[u8]) -> GroupValue {
@@ -180,7 +461,7 @@ fn group_value(length: usize, inline6: u8, extra: &[u8]) -> GroupValue {
 /// broadcast, low priority, no ack request) and Ctrl2's hop-count-6 are
 /// this crate's only outbound defaults — the same values already implied
 /// by every hand-built fixture `decode_l_data` is tested against above.
-pub fn encode_l_data(frame: &LDataFrame) -> Vec<u8> {
+pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
     let message_code = match frame.kind {
         LDataMessageKind::Request => L_DATA_REQ,
         LDataMessageKind::Indication => L_DATA_IND,
@@ -197,92 +478,234 @@ pub fn encode_l_data(frame: &LDataFrame) -> Vec<u8> {
     let ctrl2 = address_type_bit | 0x60; // hop count 6, standard EFF (0000)
     let source_raw = frame.source.raw();
 
-    let (short_apci, length, inline6, extra): (u8, usize, u8, &[u8]) = match &frame.service {
-        ApplicationService::GroupValueRead => (0b0000, 1, 0, &[]),
+    // The TPCI octet's own bits (Transport Layer v01.02.03 AS §2, Figure
+    // 3, cited on `Tpci`). For `UnnumberedData`/`NumberedData` its low two
+    // bits are 0 here — the data-PDU path below ORs the APCI-high bits in;
+    // control PDUs own the whole octet outright.
+    let tpci_octet = encode_tpci(&frame.transport)?;
+
+    // `transport`/`service` cross-field invariant (Transport Layer
+    // v01.02.03 AS §2): a control `Tpci` carries no application layer at
+    // all, so it pairs only with `NoApplicationPdu`, and vice versa.
+    // Enforced here rather than left implicit — an unenforced pairing lets
+    // a caller build a frame that does not survive its own round trip
+    // (e.g. `Connect` + `GroupValueWrite` would emit a stray APCI octet a
+    // `T_Connect`-shaped TPDU has no field for). This is a checked
+    // encode-time invariant, not a type-level restructure that makes the
+    // bad pairing unrepresentable — a deliberately smaller fix.
+    let transport_is_control = is_control_pdu(frame.transport);
+    let service_is_no_application_pdu =
+        matches!(frame.service, ApplicationService::NoApplicationPdu);
+    if transport_is_control != service_is_no_application_pdu {
+        return Err(CemiError::MismatchedTransport {
+            transport: tpci_variant_name(&frame.transport),
+            service: application_service_variant_name(&frame.service),
+        });
+    }
+
+    if service_is_no_application_pdu {
+        // `Tpci::Connect`/`Disconnect`/`Ack`/`Nak` (or an `Unknown`
+        // control-shaped octet): the TPDU is the TPCI octet alone — no
+        // APCI, no data (Transport Layer v01.02.03 AS §2).
+        return Ok(finish_l_data(
+            message_code,
+            ctrl1,
+            ctrl2,
+            source_raw,
+            dest_raw,
+            &[tpci_octet],
+        ));
+    }
+
+    let (short_apci, inline6, extra): (u8, u8, &[u8]) = match &frame.service {
+        ApplicationService::GroupValueRead => (0b0000, 0, &[]),
         ApplicationService::GroupValueResponse(v) => {
-            let (length, inline6, extra) = encode_group_value(v);
-            (0b0001, length, inline6, extra)
+            let (inline6, extra) = encode_group_value(v);
+            (0b0001, inline6, extra)
         }
         ApplicationService::GroupValueWrite(v) => {
-            let (length, inline6, extra) = encode_group_value(v);
-            (0b0010, length, inline6, extra)
+            let (inline6, extra) = encode_group_value(v);
+            (0b0010, inline6, extra)
+        }
+        ApplicationService::DeviceDescriptorRead { descriptor_type } => {
+            if *descriptor_type > 0x3F {
+                return Err(CemiError::InvalidDescriptorType(*descriptor_type));
+            }
+            (0b1100, *descriptor_type, &[])
+        }
+        ApplicationService::DeviceDescriptorResponse {
+            descriptor_type,
+            data,
+        } => {
+            if *descriptor_type > 0x3F {
+                return Err(CemiError::InvalidDescriptorType(*descriptor_type));
+            }
+            (0b1101, *descriptor_type, data)
         }
         ApplicationService::Other { apci, data } => {
-            // Round-trips exactly what `decode_l_data` reconstructs
-            // `apci` from: its own encoding below stores the same two
-            // octets in the same places, only ever reached when the
-            // 4-bit `short_apci` scheme above doesn't apply.
-            let tpci_apci_hi = (apci >> 8) as u8;
+            if *apci > 0x3FF {
+                return Err(CemiError::InvalidApci(*apci));
+            }
+            // Round-trips exactly what `decode_l_data` reconstructs `apci`
+            // from: bits 9-8 (the TPCI octet's low two bits) OR into
+            // `tpci_octet`, bits 7-0 are the whole APCI-low octet.
+            let tpci_octet = tpci_octet | (((apci >> 8) as u8) & 0x03);
             let apci_lo = *apci as u8;
-            return finish_l_data(
+            let npdu: Vec<u8> = [tpci_octet, apci_lo]
+                .into_iter()
+                .chain(data.iter().copied())
+                .collect();
+            return Ok(finish_l_data(
                 message_code,
                 ctrl1,
                 ctrl2,
                 source_raw,
                 dest_raw,
-                1 + data.len(),
-                tpci_apci_hi,
-                apci_lo,
-                data,
-            );
+                &npdu,
+            ));
+        }
+        // Genuinely unreachable: `service_is_no_application_pdu` was
+        // computed from this exact `matches!` above and, had it been
+        // `true`, already returned. The arm still has to exist because
+        // `ApplicationService` is matched exhaustively here — there is no
+        // way to remove it without the type-level restructure this fix
+        // deliberately does not do — but it returns an error rather than
+        // `unreachable!()`: if this ever became reachable (a future edit
+        // disturbing the invariant checked above), a caller on a live bus
+        // gets a `Result::Err` back instead of the whole process panicking
+        // mid-scan.
+        ApplicationService::NoApplicationPdu => {
+            return Err(CemiError::MismatchedTransport {
+                transport: tpci_variant_name(&frame.transport),
+                service: application_service_variant_name(&frame.service),
+            });
         }
     };
-    let tpci_apci_hi = (short_apci >> 2) & 0x03;
+    let tpci_octet = tpci_octet | ((short_apci >> 2) & 0x03);
     let apci_lo = ((short_apci & 0x03) << 6) | inline6;
-    finish_l_data(
+    let npdu: Vec<u8> = [tpci_octet, apci_lo]
+        .into_iter()
+        .chain(extra.iter().copied())
+        .collect();
+    Ok(finish_l_data(
         message_code,
         ctrl1,
         ctrl2,
         source_raw,
         dest_raw,
-        length,
-        tpci_apci_hi,
-        apci_lo,
-        extra,
-    )
+        &npdu,
+    ))
 }
 
-fn encode_group_value(value: &GroupValue) -> (usize, u8, &[u8]) {
+/// The `Tpci` variant name, for `CemiError::MismatchedTransport` — names
+/// the offending pairing without needing `CemiError` to own a `Tpci`.
+fn tpci_variant_name(tpci: &Tpci) -> &'static str {
+    match tpci {
+        Tpci::UnnumberedData => "UnnumberedData",
+        Tpci::NumberedData { .. } => "NumberedData",
+        Tpci::Connect => "Connect",
+        Tpci::Disconnect => "Disconnect",
+        Tpci::Ack { .. } => "Ack",
+        Tpci::Nak { .. } => "Nak",
+        Tpci::Unknown(_) => "Unknown",
+    }
+}
+
+/// The `ApplicationService` variant name, for `CemiError::
+/// MismatchedTransport` — names the offending pairing without needing
+/// `CemiError` to own a non-`Copy` `ApplicationService`.
+fn application_service_variant_name(service: &ApplicationService) -> &'static str {
+    match service {
+        ApplicationService::GroupValueRead => "GroupValueRead",
+        ApplicationService::GroupValueResponse(_) => "GroupValueResponse",
+        ApplicationService::GroupValueWrite(_) => "GroupValueWrite",
+        ApplicationService::DeviceDescriptorRead { .. } => "DeviceDescriptorRead",
+        ApplicationService::DeviceDescriptorResponse { .. } => "DeviceDescriptorResponse",
+        ApplicationService::NoApplicationPdu => "NoApplicationPdu",
+        ApplicationService::Other { .. } => "Other",
+    }
+}
+
+fn encode_group_value(value: &GroupValue) -> (u8, &[u8]) {
     match value {
         // A `Short` whose value needs more than six bits does not fit the
         // inline APCI-octet field: `short_apci`'s own two low bits share
         // that octet with the top two bits of `inline6` (see the encoding
-        // below), so a `Short(v)` with `v > 0x3F` would overwrite them and
+        // above), so a `Short(v)` with `v > 0x3F` would overwrite them and
         // change which `A_GroupValue_*` service the frame decodes as.
         // Application Layer v02.01.01 AS §3.1.3 already draws the line at
         // six bits ("Values that only consist of 6 bits or less have the
         // following optimized A_GroupValue_Write-PDU format"), so an
         // out-of-range `Short` is promoted to the one-octet `Bytes` form
         // instead — the value survives, and the APCI is not touched.
-        GroupValue::Short(v) if *v > 0x3F => (2, 0, std::slice::from_ref(v)),
-        GroupValue::Short(inline6) => (1, *inline6, &[]),
-        GroupValue::Bytes(bytes) => (1 + bytes.len(), 0, bytes),
+        GroupValue::Short(v) if *v > 0x3F => (0, std::slice::from_ref(v)),
+        GroupValue::Short(inline6) => (*inline6, &[]),
+        GroupValue::Bytes(bytes) => (0, bytes),
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+/// Encodes octet 6 — bit table and citation on `Tpci`'s doc comment.
+/// Rejects (rather than masking) a `seq` above 15: the Transport Control
+/// Field's SeqNo is 4 bits, and `& 0x0F` would silently turn an
+/// out-of-range value into a different, valid one — precisely the failure
+/// mode `CemiError::InvalidSequenceNumber` exists to name instead.
+fn encode_tpci(tpci: &Tpci) -> Result<u8, CemiError> {
+    match tpci {
+        Tpci::UnnumberedData => Ok(0x00),
+        Tpci::NumberedData { seq } => Ok(0x40 | (checked_seq(*seq)? << 2)),
+        Tpci::Connect => Ok(0x80),
+        Tpci::Disconnect => Ok(0x81),
+        Tpci::Ack { seq } => Ok(0xC2 | (checked_seq(*seq)? << 2)),
+        Tpci::Nak { seq } => Ok(0xC3 | (checked_seq(*seq)? << 2)),
+        // Data-shaped (bit 7 clear): mask bits 1-0 off before returning —
+        // `encode_l_data` ORs the short-APCI's/`Other`'s own top two bits
+        // into this octet next, and those two bits are the only field that
+        // is allowed to put anything there (see `Tpci::Unknown`'s doc
+        // comment). A caller-supplied `Unknown(0x06)` and `Unknown(0x04)`
+        // must produce the same encoded octet once the APCI bits are ORed
+        // in, or the service the frame decodes back as would depend on
+        // bits that were never transport's. Control-shaped (bit 7 set)
+        // octets have no such foreign field to protect and keep all eight
+        // bits, as before.
+        Tpci::Unknown(octet) => Ok(if *octet & 0x80 == 0 {
+            octet & 0xFC
+        } else {
+            *octet
+        }),
+    }
+}
+
+/// `seq` must fit the Transport Control Field's 4-bit SeqNo (0-15) — see
+/// `encode_tpci`'s doc comment for why this rejects rather than masks.
+fn checked_seq(seq: u8) -> Result<u8, CemiError> {
+    if seq > 0x0F {
+        Err(CemiError::InvalidSequenceNumber(seq))
+    } else {
+        Ok(seq)
+    }
+}
+
+/// Assembles the fixed cEMI header around an already-encoded NPDU (TPCI
+/// octet, then APCI octet and data if the TPDU carries one) and derives
+/// `L` from its length (EMI_IMI v01.04.02 AS §4.1.5.3.2: `L` is the NPDU
+/// length minus one; `npdu` is never empty, so this never underflows).
 fn finish_l_data(
     message_code: u8,
     ctrl1: u8,
     ctrl2: u8,
     source_raw: u16,
     dest_raw: u16,
-    length: usize,
-    tpci_apci_hi: u8,
-    apci_lo: u8,
-    extra: &[u8],
+    npdu: &[u8],
 ) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(11 + extra.len());
+    let mut buf = Vec::with_capacity(9 + npdu.len());
     buf.push(message_code);
     buf.push(0x00); // additional info length
     buf.push(ctrl1);
     buf.push(ctrl2);
     buf.extend_from_slice(&source_raw.to_be_bytes());
     buf.extend_from_slice(&dest_raw.to_be_bytes());
-    buf.push(length as u8);
-    buf.push(tpci_apci_hi);
-    buf.push(apci_lo);
-    buf.extend_from_slice(extra);
+    buf.push((npdu.len() - 1) as u8);
+    buf.extend_from_slice(npdu);
     buf
 }
 
@@ -406,9 +829,10 @@ mod tests {
             kind: LDataMessageKind::Request,
             source: IndividualAddress::from_raw(0x1101),
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Short(0x01)),
         };
-        assert_eq!(encode_l_data(&frame), write_on_request());
+        assert_eq!(encode_l_data(&frame).unwrap(), write_on_request());
     }
 
     #[test]
@@ -417,9 +841,10 @@ mod tests {
             kind: LDataMessageKind::Request,
             source: IndividualAddress::from_raw(0x1101),
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Bytes(vec![0x2A, 0x99])),
         };
-        let encoded = encode_l_data(&frame);
+        let encoded = encode_l_data(&frame).unwrap();
         assert_eq!(decode_l_data(&encoded).unwrap(), frame);
     }
 
@@ -429,9 +854,10 @@ mod tests {
             kind: LDataMessageKind::Request,
             source: IndividualAddress::from_raw(0x0000),
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueRead,
         };
-        let encoded = encode_l_data(&frame);
+        let encoded = encode_l_data(&frame).unwrap();
         assert_eq!(decode_l_data(&encoded).unwrap(), frame);
     }
 
@@ -441,9 +867,10 @@ mod tests {
             kind: LDataMessageKind::Request,
             source: IndividualAddress::from_raw(0x1101),
             destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
+            transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Short(0x00)),
         };
-        let encoded = encode_l_data(&frame);
+        let encoded = encode_l_data(&frame).unwrap();
         assert_eq!(decode_l_data(&encoded).unwrap(), frame);
     }
 
@@ -453,12 +880,13 @@ mod tests {
             kind: LDataMessageKind::Request,
             source: IndividualAddress::from_raw(0x1101),
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            transport: Tpci::UnnumberedData,
             service: ApplicationService::Other {
                 apci: 0x03C0,
                 data: vec![0xAB, 0xCD],
             },
         };
-        let encoded = encode_l_data(&frame);
+        let encoded = encode_l_data(&frame).unwrap();
         assert_eq!(decode_l_data(&encoded).unwrap(), frame);
     }
 
@@ -490,13 +918,509 @@ mod tests {
             kind: LDataMessageKind::Request,
             source: IndividualAddress::from_raw(0x1101),
             destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            transport: Tpci::UnnumberedData,
             service: ApplicationService::GroupValueWrite(GroupValue::Short(0x40)),
         };
-        let encoded = encode_l_data(&frame);
+        let encoded = encode_l_data(&frame).unwrap();
         let decoded = decode_l_data(&encoded).unwrap();
         assert_eq!(
             decoded.service,
             ApplicationService::GroupValueWrite(GroupValue::Bytes(vec![0x40]))
+        );
+    }
+
+    // -- Tpci (spec T17) -----------------------------------------------
+
+    /// Builds a minimal individually-addressed frame with the given
+    /// `transport`/`service`, encodes it, decodes the result, and checks
+    /// both that the decoded frame equals the original and that
+    /// re-encoding it produces byte-identical output — the round-trip
+    /// property the brief asks every `Tpci` variant to have.
+    fn assert_tpci_round_trips(transport: Tpci, service: ApplicationService) {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
+            transport,
+            service,
+        };
+        let encoded = encode_l_data(&frame).expect("a valid transport/service pairing encodes");
+        let decoded = decode_l_data(&encoded).expect("a frame this function built itself decodes");
+        assert_eq!(decoded, frame);
+        assert_eq!(encode_l_data(&decoded).unwrap(), encoded);
+    }
+
+    #[test]
+    fn every_tpci_variant_round_trips_byte_identical() {
+        assert_tpci_round_trips(Tpci::UnnumberedData, ApplicationService::GroupValueRead);
+        assert_tpci_round_trips(
+            Tpci::NumberedData { seq: 7 },
+            ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+        );
+        assert_tpci_round_trips(Tpci::Connect, ApplicationService::NoApplicationPdu);
+        assert_tpci_round_trips(Tpci::Disconnect, ApplicationService::NoApplicationPdu);
+        assert_tpci_round_trips(Tpci::Ack { seq: 3 }, ApplicationService::NoApplicationPdu);
+        assert_tpci_round_trips(Tpci::Nak { seq: 15 }, ApplicationService::NoApplicationPdu);
+    }
+
+    /// A hand-built `T_Connect` fixture (EMI_IMI v01.04.02 AS §4.1.5.3.2
+    /// fixed layout, TPCI octet 0x80 per `Tpci`'s bit table): the frame
+    /// ends at the TPCI octet, so decoding it must not demand the APCI
+    /// octet the data-PDU path requires — this is Global Constraint 1's
+    /// length-arithmetic change, exercised directly.
+    fn connect_frame() -> Vec<u8> {
+        vec![
+            0x29, // L_Data.ind
+            0x00, // no additional information
+            0xBC, // Ctrl1
+            0x60, // Ctrl2: AT=0 (individual), hop count 6
+            0x11, 0x01, // source, raw 0x1101
+            0x11, 0x02, // destination individual address, raw 0x1102
+            0x00, // L = 0 (TPDU is the TPCI octet alone)
+            0x80, // TPCI: T_Connect
+        ]
+    }
+
+    #[test]
+    fn t_connect_decodes_with_no_application_pdu_and_no_length_error() {
+        let frame =
+            decode_l_data(&connect_frame()).expect("a control PDU needs only its TPCI octet");
+        assert_eq!(frame.transport, Tpci::Connect);
+        assert_eq!(frame.service, ApplicationService::NoApplicationPdu);
+    }
+
+    #[test]
+    fn encode_l_data_matches_hand_built_t_connect_indication() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Indication,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
+            transport: Tpci::Connect,
+            service: ApplicationService::NoApplicationPdu,
+        };
+        assert_eq!(encode_l_data(&frame).unwrap(), connect_frame());
+    }
+
+    /// `T_Data_Tag_Group` (octet 6 = `0x04`) is not one of the six named
+    /// `Tpci` variants — it must decode as `Unknown(0x04)`, not silently
+    /// folded into `UnnumberedData` just because its top two bits match
+    /// (Global Constraint 2). Its low two bits are `00`, so it is
+    /// data-shaped (bit 7 clear) and the frame's real APCI (`GroupValueWrite`
+    /// here, from `write_on_frame`'s unchanged APCI-low octet) still
+    /// decodes underneath it — `T_Data_Tag_Group` genuinely shares
+    /// `T_Data_Group`'s PDU shape, it is only the *transport* semantics
+    /// (message tagging) this cycle does not model.
+    #[test]
+    fn tag_group_tpci_decodes_as_unknown_transport_not_unnumbered_data() {
+        let mut bytes = write_on_frame();
+        let len = bytes.len();
+        bytes[len - 2] = 0x04;
+        let frame = decode_l_data(&bytes).unwrap();
+        assert_eq!(frame.transport, Tpci::Unknown(0x04));
+        assert_ne!(frame.transport, Tpci::UnnumberedData);
+        assert_eq!(
+            frame.service,
+            ApplicationService::GroupValueWrite(GroupValue::Short(0x01))
+        );
+    }
+
+    /// A data-shaped `Unknown` whose raw octet already has bits 1-0 clear
+    /// (Fix round 2, finding 14b): `assert_tpci_round_trips` demands both
+    /// `decoded == frame` and byte-identical re-encoding, so this is the
+    /// direct regression test the re-review named — it would have failed
+    /// before this fix masked the short-APCI's stolen bits out of
+    /// `Unknown`'s stored value.
+    #[test]
+    fn data_shaped_unknown_tpci_round_trips_against_every_kind_of_service() {
+        assert_tpci_round_trips(
+            Tpci::Unknown(0x04),
+            ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+        );
+        assert_tpci_round_trips(
+            Tpci::Unknown(0x04),
+            ApplicationService::GroupValueWrite(GroupValue::Short(0x01)),
+        );
+        assert_tpci_round_trips(
+            Tpci::Unknown(0x04),
+            ApplicationService::Other {
+                apci: 0x00C0,
+                data: vec![],
+            },
+        );
+    }
+
+    /// Reproduces the re-review's three findings directly, using a
+    /// data-shaped `Unknown` whose own raw octet has bits 1-0 *set* —
+    /// exactly the shape that leaked into the APCI before this fix. Bits
+    /// 1-0 never belonged to transport (`Tpci::Unknown`'s doc comment), so
+    /// the encoder masks them off rather than reject: the frame decodes
+    /// with `Unknown(0x04)` (the masked, canonical form) and the caller's
+    /// actual service — not the different service the review's repro
+    /// (`Unknown(0x06)` + `GroupValueWrite` decoding as `Other { apci:
+    /// 0x0281 }`) demonstrated.
+    #[test]
+    fn data_shaped_unknown_tpci_with_nonzero_low_bits_does_not_corrupt_the_apci() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
+            transport: Tpci::Unknown(0x06),
+            service: ApplicationService::GroupValueWrite(GroupValue::Short(0x01)),
+        };
+        let decoded = decode_l_data(&encode_l_data(&frame).unwrap()).unwrap();
+        assert_eq!(decoded.transport, Tpci::Unknown(0x04));
+        assert_eq!(
+            decoded.service,
+            ApplicationService::GroupValueWrite(GroupValue::Short(0x01))
+        );
+
+        // The review's third repro (`Unknown(0x05)` + `Other { apci:
+        // 0x0040 }` decoding back as `0x0140`) used an `apci` whose 4-bit
+        // short-APCI selector (top 2 bits 00, bottom 2 bits 01) collides
+        // with `GroupValueResponse`'s reserved pattern independent of this
+        // bug — that collision is pre-existing, documented behavior of the
+        // 4-bit short-APCI space, not finding 14. `0x00C0`'s selector
+        // (0b0011) is not one of the five reserved patterns, so it
+        // isolates the `Unknown`-bit-leak this test exists to catch.
+        let frame = LDataFrame {
+            transport: Tpci::Unknown(0x05),
+            service: ApplicationService::Other {
+                apci: 0x00C0,
+                data: vec![],
+            },
+            ..frame
+        };
+        let decoded = decode_l_data(&encode_l_data(&frame).unwrap()).unwrap();
+        assert_eq!(decoded.transport, Tpci::Unknown(0x04));
+        assert_eq!(
+            decoded.service,
+            ApplicationService::Other {
+                apci: 0x00C0,
+                data: vec![],
+            }
+        );
+    }
+
+    /// NOTE 1 under the Transport Control Field figure reserves this
+    /// encoding. Its top bit is set, so `is_control_pdu` treats it as
+    /// control-shaped (a 1-octet TPDU, same family as `Connect`/
+    /// `Disconnect`/`Ack`/`Nak`) — the frame it is spliced into here still
+    /// carries `write_on_frame`'s trailing APCI/data octet, which a
+    /// control-shaped TPDU has no field for, so this is rejected as
+    /// `UnexpectedControlPduData`, not coerced into `Connect` or
+    /// `Disconnect`.
+    #[test]
+    fn reserved_tpci_bf_is_treated_as_unknown_control_pdu_not_coerced() {
+        let mut bytes = write_on_frame();
+        let len = bytes.len();
+        bytes[len - 2] = 0xBF;
+        let err = decode_l_data(&bytes).unwrap_err();
+        assert_eq!(
+            err,
+            CemiError::UnexpectedControlPduData {
+                tpci: 0xBF,
+                extra_octets: 1,
+            }
+        );
+    }
+
+    /// A minimal, well-formed `0xBF`-TPCI frame (no trailing octets, `L =
+    /// 0`, same shape as `connect_frame`): decodes as `Unknown(0xBF)` with
+    /// `NoApplicationPdu`, and round-trips byte-identical — the reserved
+    /// encoding is preserved raw, not treated as an error just because it
+    /// is reserved (Global Constraint 2).
+    #[test]
+    fn reserved_tpci_bf_round_trips_as_unknown_control_pdu_when_well_formed() {
+        assert_tpci_round_trips(Tpci::Unknown(0xBF), ApplicationService::NoApplicationPdu);
+    }
+
+    /// The exact reproduction from the task-2 review, finding 3: a
+    /// `T_Connect` (`L = 3`) with three octets following its TPCI octet.
+    /// `Tpci::Connect`'s TPDU has no field for them — rejected, naming how
+    /// many followed, not silently dropped (Global Constraint 2).
+    #[test]
+    fn control_pdu_with_trailing_octets_is_rejected_naming_the_count() {
+        let bytes = vec![
+            0x29, // L_Data.ind
+            0x00, // no additional information
+            0xBC, // Ctrl1
+            0x60, // Ctrl2: AT=0 (individual), hop count 6
+            0x11, 0x01, // source, raw 0x1101
+            0x11, 0x02, // destination individual address, raw 0x1102
+            0x03, // L = 3 (three unexpected trailing octets)
+            0x80, // TPCI: T_Connect
+            0xAA, 0xBB, 0xCC,
+        ];
+        let err = decode_l_data(&bytes).unwrap_err();
+        assert_eq!(
+            err,
+            CemiError::UnexpectedControlPduData {
+                tpci: 0x80,
+                extra_octets: 3,
+            }
+        );
+    }
+
+    /// Same finding, the `T_ACK` shape (`L = 1`, one trailing octet) —
+    /// confirms the check is not special-cased to `Connect`.
+    #[test]
+    fn t_ack_with_one_trailing_octet_is_rejected_naming_the_count() {
+        let bytes = vec![
+            0x29, 0x00, 0xBC, 0x60, 0x11, 0x01, 0x11, 0x02, 0x01, // L = 1
+            0xC2, // TPCI: T_ACK seq=0
+            0xDD, // unexpected trailing octet
+        ];
+        let err = decode_l_data(&bytes).unwrap_err();
+        assert_eq!(
+            err,
+            CemiError::UnexpectedControlPduData {
+                tpci: 0xC2,
+                extra_octets: 1,
+            }
+        );
+    }
+
+    /// Finding 3b/4: pairing a control `Tpci` with an application service
+    /// (or vice versa) does not encode a malformed frame — it is rejected,
+    /// naming both halves of the bad pair.
+    #[test]
+    fn control_transport_paired_with_application_service_is_rejected_at_encode() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            transport: Tpci::Connect,
+            service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+        };
+        assert_eq!(
+            encode_l_data(&frame).unwrap_err(),
+            CemiError::MismatchedTransport {
+                transport: "Connect",
+                service: "GroupValueWrite",
+            }
+        );
+    }
+
+    /// The other direction of the same invariant: a data-shaped `Tpci`
+    /// paired with `NoApplicationPdu` is just as unencodable (the review's
+    /// `UnnumberedData` + `NoApplicationPdu` example, which used to encode
+    /// `[.. 00 00]` — a frame this library could not decode back).
+    #[test]
+    fn data_transport_paired_with_no_application_pdu_is_rejected_at_encode() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
+            transport: Tpci::UnnumberedData,
+            service: ApplicationService::NoApplicationPdu,
+        };
+        assert_eq!(
+            encode_l_data(&frame).unwrap_err(),
+            CemiError::MismatchedTransport {
+                transport: "UnnumberedData",
+                service: "NoApplicationPdu",
+            }
+        );
+    }
+
+    /// Finding 1: a `seq` above 15 does not fit the Transport Control
+    /// Field's 4-bit SeqNo. Rejected, not masked into a different, valid
+    /// sequence number (`NumberedData { seq: 16 }` used to encode
+    /// byte-identical to `seq: 0`; `Ack { seq: 200 }` to `Ack { seq: 8 }`).
+    #[test]
+    fn sequence_number_above_15_is_rejected_not_masked() {
+        let mut frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
+            transport: Tpci::NumberedData { seq: 16 },
+            service: ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+        };
+        assert_eq!(
+            encode_l_data(&frame).unwrap_err(),
+            CemiError::InvalidSequenceNumber(16)
+        );
+
+        frame.transport = Tpci::Ack { seq: 200 };
+        frame.service = ApplicationService::NoApplicationPdu;
+        assert_eq!(
+            encode_l_data(&frame).unwrap_err(),
+            CemiError::InvalidSequenceNumber(200)
+        );
+
+        frame.transport = Tpci::Nak { seq: 16 };
+        assert_eq!(
+            encode_l_data(&frame).unwrap_err(),
+            CemiError::InvalidSequenceNumber(16)
+        );
+    }
+
+    /// Finding 5 (should-fix): the 4-bit SeqNo boundary, on every
+    /// seq-carrying `Tpci`, both ends.
+    #[test]
+    fn sequence_number_boundaries_round_trip_for_every_numbered_tpci() {
+        for seq in [0u8, 15] {
+            assert_tpci_round_trips(
+                Tpci::NumberedData { seq },
+                ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+            );
+            assert_tpci_round_trips(Tpci::Ack { seq }, ApplicationService::NoApplicationPdu);
+            assert_tpci_round_trips(Tpci::Nak { seq }, ApplicationService::NoApplicationPdu);
+        }
+    }
+
+    // -- A_DeviceDescriptor_Read/Response (spec T17) --------------------
+
+    #[test]
+    fn device_descriptor_read_round_trips_with_its_sequence_number_intact() {
+        assert_tpci_round_trips(
+            Tpci::NumberedData { seq: 5 },
+            ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+        );
+    }
+
+    /// A hand-built `A_DeviceDescriptor_Response` (Application Layer
+    /// v02.01.01 AS §3.4.2.1) on a connected, numbered link (`seq` 0):
+    /// TPCI `0x40 | seq<<2` OR'd with the APCI-high bits `11` (`0x43`),
+    /// APCI-low `0x40` (Response marker `01` in bits 7-6, descriptor_type
+    /// 0 in bits 5-0), followed by a two-octet Mask Version
+    /// (`07B0`, an arbitrary test value, not any real device's).
+    fn device_descriptor_response_frame() -> Vec<u8> {
+        vec![
+            0x29, // L_Data.ind
+            0x00, // no additional information
+            0xBC, // Ctrl1
+            0x60, // Ctrl2: AT=0 (individual), hop count 6
+            0x11, 0x01, // source, raw 0x1101
+            0x11, 0x02, // destination individual address, raw 0x1102
+            0x03, // L = 3 (TPCI/APCI-low octet + two data octets)
+            0x43, // TPCI: T_Data_Connected seq=0, APCI-high bits 11
+            0x40, // APCI-low: Response (01) | descriptor_type 0
+            0x07, 0xB0, // Mask Version data
+        ]
+    }
+
+    #[test]
+    fn device_descriptor_response_fixture_decodes_type_and_data() {
+        let frame = decode_l_data(&device_descriptor_response_frame()).unwrap();
+        assert_eq!(frame.transport, Tpci::NumberedData { seq: 0 });
+        assert_eq!(
+            frame.service,
+            ApplicationService::DeviceDescriptorResponse {
+                descriptor_type: 0,
+                data: vec![0x07, 0xB0],
+            }
+        );
+    }
+
+    /// An `A_DeviceDescriptor_Read`-shaped APCI with an unexpected
+    /// trailing data octet does not match the well-formed (always
+    /// dataless, Application Layer v02.01.01 AS §3.4.2.1) PDU shape, so it
+    /// must fall to `Other` and keep the octet, not silently drop it
+    /// (CLAUDE.md: never silently discard).
+    #[test]
+    fn device_descriptor_read_with_unexpected_data_falls_to_other_not_dropped() {
+        let bytes = vec![
+            0x29, // L_Data.ind
+            0x00, // no additional information
+            0xBC, // Ctrl1
+            0x60, // Ctrl2: AT=0 (individual), hop count 6
+            0x11, 0x01, // source, raw 0x1101
+            0x11, 0x02, // destination individual address, raw 0x1102
+            0x02, // L = 2 (TPCI/APCI-low octet + one unexpected data octet)
+            0x43, // TPCI: T_Data_Connected seq=0, APCI-high bits 11
+            0x00, // APCI-low: Read (00) | descriptor_type 0
+            0x07, // unexpected trailing octet
+        ];
+        let frame = decode_l_data(&bytes).unwrap();
+        match frame.service {
+            ApplicationService::Other { apci, ref data } => {
+                assert_eq!(apci, 0x0300);
+                assert_eq!(data, &[0x07]);
+            }
+            other => panic!("expected Other, got {other:?}"),
+        }
+    }
+
+    /// A 10-bit APCI this cycle does not interpret (`short_apci = 0b0101`,
+    /// not one of the group/device-descriptor services) still lands in
+    /// `Other` with its octets intact — same guarantee as the pre-T17
+    /// `unknown_apci_is_reported_as_other_not_dropped`, re-affirmed after
+    /// `Tpci` was split out of the stored `apci` value.
+    #[test]
+    fn unknown_ten_bit_apci_lands_in_other_with_octets_intact() {
+        let mut bytes = write_on_frame();
+        let len = bytes.len();
+        bytes[len - 2] = 0x01; // TPCI: UnnumberedData, APCI-high bits 01
+        bytes[len - 1] = 0x40; // APCI-low bits 01 -> short_apci = 0b0101
+        let frame = decode_l_data(&bytes).unwrap();
+        assert_eq!(
+            frame.service,
+            ApplicationService::Other {
+                apci: 0x0140,
+                data: vec![],
+            }
+        );
+    }
+
+    /// Finding 2: a `descriptor_type` above `0x3F` does not fit the six
+    /// bits `A_DeviceDescriptor_Read`/`Response` give it (Figures 36/38,
+    /// octet 7 bits 5-0) — those bits share their octet with the two bits
+    /// that select `Read` (`00`) vs. `Response` (`01`), so an unguarded
+    /// overflow would silently change which service the frame decodes as
+    /// (`DeviceDescriptorRead { descriptor_type: 0x40 }` used to encode and
+    /// decode back as `DeviceDescriptorResponse { descriptor_type: 0 }`).
+    /// Rejected, not silently reinterpreted, on both variants.
+    #[test]
+    fn descriptor_type_above_0x3f_is_rejected_not_flipped_into_a_different_service() {
+        let read_frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
+            transport: Tpci::UnnumberedData,
+            service: ApplicationService::DeviceDescriptorRead {
+                descriptor_type: 0x40,
+            },
+        };
+        assert_eq!(
+            encode_l_data(&read_frame).unwrap_err(),
+            CemiError::InvalidDescriptorType(0x40)
+        );
+
+        let response_frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
+            transport: Tpci::UnnumberedData,
+            service: ApplicationService::DeviceDescriptorResponse {
+                descriptor_type: 0xFF,
+                data: vec![1, 2],
+            },
+        };
+        assert_eq!(
+            encode_l_data(&response_frame).unwrap_err(),
+            CemiError::InvalidDescriptorType(0xFF)
+        );
+    }
+
+    /// Nit 10: `Other { apci, .. }` above `0x3FF` does not fit the APCI's
+    /// 10 bits — rejected on encode rather than masked (`apci: 0x07C0` used
+    /// to silently encode and round-trip as `0x03C0`).
+    #[test]
+    fn other_apci_above_10_bits_is_rejected_not_masked() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1102)),
+            transport: Tpci::UnnumberedData,
+            service: ApplicationService::Other {
+                apci: 0x07C0,
+                data: vec![],
+            },
+        };
+        assert_eq!(
+            encode_l_data(&frame).unwrap_err(),
+            CemiError::InvalidApci(0x07C0)
         );
     }
 }

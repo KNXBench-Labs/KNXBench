@@ -100,7 +100,7 @@ underlying model field exists.
 | # | Gap | Notes |
 |---|-----|-------|
 | E1 | **No commissioning at all.** No individual-address programming (via the device's programming button), no application-program download, no memory read/write. | **Not excluded — required, blocked (ruling 2026-09-11).** Asked whether this is permanently out, the user said no: commissioning must work too, but the work waits until the KNX specification database is finished. The R5 research spike (2026-09-11, [RESEARCH.md §8.4](RESEARCH.md)) has since queried that database and documented the generic download/unload/reset/memory procedures from the Standard — that closes the *research* question, not this row: no commissioning code exists, nothing has been verified on hardware, and the product-specific `Legacy*` matrix and vendor-DLL download involvement remain undocumented. [KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) has the full account; CLAUDE.md's "only implement protocol behavior that is technically verified" plus the bricking risk on real hardware are why it hasn't started, not why it never will. Tracked as backlog task **T30** (Tier 5); this row stays open. |
-| E2 | **No line-scan / device-discovery-on-the-bus.** `knx bus discover` (Session 6 cycle 3) finds *KNXnet/IP gateways* on the LAN, not KNX devices on a line (that needs an individual-address broadcast scan over the bus itself, a different operation). | Easy to conflate with "Device Discovery" in `ideas.md`, which is about the same gateway-discovery feature already shipped — this is a distinct, unaddressed capability. A T17 measurement (2026-09-12, [RESEARCH.md §8.5 Finding 3](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12)) confirmed why this gap is worth closing rather than cosmetic: the bus and the reference project's device list disagreed with each other, in both directions. A project file is a plan; only a bus scan shows the installation as it actually is. |
+| E2 | **Partially closed 2026-09-13 (T17).** `knx bus discover` (Session 6 cycle 3) still only finds *KNXnet/IP gateways* on the LAN, not KNX devices on a line — but `knx bus scan` now closes that distinct gap: a per-address `NM_IndividualAddress_Check` sweep of one line, sequential, with an exclusion list honoured by construction (`crates/knx-core/src/scan.rs`, `crates/knx-net/src/scan.rs`, `apps/knx-cli/src/scan.rs`). What is still open, and why this is "partially" rather than fully closed: the scan *reports* where the bus and a reference project's device list disagree (`--project`, three buckets — unexpected, missing, excluded-in-project) but does not reconcile that disagreement back into the project file; that write-back is its own task with its own destructive-edit questions and is explicitly out of scope for T17 (see [RESEARCH.md §8.5 Finding 3](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)). A scan also cannot learn product identity, manufacturer, or serial number by itself — see [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for the full list of what a scan does and does not learn. | Easy to conflate with "Device Discovery" in `ideas.md`, which is about the same gateway-discovery feature already shipped — this was a distinct capability, now partially addressed. The 2026-09-12 measurement that first justified closing this gap ([RESEARCH.md §8.5 Finding 3](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)) confirmed why it was worth closing rather than cosmetic: the bus and the reference project's device list disagreed with each other, in both directions. A project file is a plan; only a bus scan shows the installation as it actually is. |
 | E3 | **No KNX IP Secure.** | [KNOWN_LIMITATIONS.md §26](KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure); explicitly shelved once already (Session 6 cycle 4/5 planning). Folded into **T19**'s scope; deferred 2026-09-11 by user ruling, documented as a limitation, not rejected. |
 | E4 | **Partially closed 2026-09-11 (T29), display side finished for tunnelling 2026-09-11 (T15).** A Standard-cited codec lives in `knx-core` (`crates/knx-core/src/dpt/codec.rs`), covering main types 1, 2, 3, 5, 6 (except `6.020`), 7, 8, 9, 12, 13, 14, 16, 17, 18. `apps/knx-cli bus monitor --project <path>` decodes; `bus write --dpt <DPST-m-s>` (or resolved from `--project`) encodes; **T15** wires the same `decode`/`encode`/`resolve_project_group_address_dpts` calls into `apps/knx-server`'s bus session and `apps/knx-web`'s telegram table, so a web/desktop user gets the same decoding the CLI already had, without a terminal — for tunnelling only, one session at a time. What is still open: the main types this codec never implemented (4, 10, 11, 15, 19, 20, 21-30 and the rest of the 46 `knx_master.xml` main types beyond the fourteen listed); no `knx_master.xml` DPT catalogue is consulted, so there are no enumeration names and no units beyond what the scaled subtypes' own arithmetic already implies; and T15's own display-side gaps (routing, filtering depth, multi-session, individual-address frames — see **D5** above). See `docs/KNOWN_LIMITATIONS.md` §§61-62 for the full accounting. | A user still has to know the raw encoding for anything outside the implemented main types; for the main types that are implemented, both the CLI and now the web/desktop GUI decode/encode per DPT through the same `knx-core` codec — see [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-fourteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) for exactly what that codec's output does and does not match, including that it deliberately differs from a published ETS/AN188 reference figure by one step in a known case. |
 | E5 | **Docker discovery needs `--network host`.** | [ROADMAP.md](ROADMAP.md) "carried in from web/Docker deployment target"; unresolved, tracked but not fixed. |
@@ -582,27 +582,81 @@ Each task: **what**, **why**, **depends on**.
   — i.e. the same T2 screen doubling as a way to inspect an existing
   device's product/hardware identity without opening the full Inspector.
   Minor, bundle with T2 rather than schedule separately.
-- **T17. Line-scan (bus-side device discovery).** A genuinely new
-  `knx-net` capability — probing individual addresses on a connected
-  line to enumerate real devices present, distinct from gateway
-  discovery already shipped. Closes **E2**. **Corrected, 2026-09-12**:
-  the original guess above ("individual-address serial-number read
-  services") named the wrong service — `A_IndividualAddressSerialNumber_Read`
-  is a reverse lookup that needs a known serial number, not an
-  occupancy probe. The research spike ran; the Standard's own procedure
-  is `NM_IndividualAddress_Check` (`03_05_02 Management Procedures`
-  §2.19, also named `NM_IndividualAddress_Scan`). **Updated, 2026-09-12**:
-  a full-line measurement (254 addresses, one installation) replaced the
+- **T17. Line-scan (bus-side device discovery). Done (2026-09-13 — backend
+  and CLI; partially closes E2, see that row for what remains open).** A
+  genuinely new `knx-net` capability — probing individual addresses on a
+  connected line to enumerate real devices present, distinct from gateway
+  discovery already shipped. **Corrected, 2026-09-12**: the original guess
+  above ("individual-address serial-number read services") named the
+  wrong service — `A_IndividualAddressSerialNumber_Read` is a reverse
+  lookup that needs a known serial number, not an occupancy probe. The
+  research spike ran; the Standard's own procedure is
+  `NM_IndividualAddress_Check` (`03_05_02 Management Procedures` §2.19,
+  also named `NM_IndividualAddress_Scan`). **Updated, 2026-09-12**: a
+  full-line measurement (254 addresses, one installation, taken with
+  `xknx` ahead of this repository's own implementation) replaced the
   spike's nine-sample extrapolation — the real cost is 23.1 minutes
-  unthrottled, dominated by a client connection-timeout policy T17's
-  implementation still has to choose, not by the KNX bus. The same scan
-  found two more implementation requirements (a scanner must exclude its
-  own tunnelling connection, and tunnelling endpoints generally, from its
-  results) and confirmed the shape of the gap this task closes: the bus
-  and the project's device list disagreed with each other. See
-  [RESEARCH.md §8.5](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12)
-  for the full procedure, citations and measurements. Remaining work is
-  implementation, not research.
+  unthrottled. **Corrected, 2026-09-13**: that cost is dominated by the
+  KNX Standard's own Transport Layer connection timeout (`[D]`
+  `03_03_04 Transport Layer v01.02.03 AS`, clause 4, page 16 of 38 — 6 s
+  connection timeout, 3 s acknowledgement timeout), not by a client
+  policy choice made independently of it; see
+  [RESEARCH.md §8.5 Finding 1](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
+  for the correction and why the fast preset is `[A]`, not the default.
+  The same 2026-09-12 scan found two more implementation requirements (a
+  scanner must exclude its own tunnelling connection, and tunnelling
+  endpoints generally, from its results) and confirmed the shape of the
+  gap this task closes: the bus and the project's device list disagreed
+  with each other.
+
+  **Shipped, 2026-09-13:** `ScanPlan`/`ScanPlanBuilder`
+  (`crates/knx-core/src/scan.rs`) — an exclusion list honoured **by
+  construction**, dropped while the candidate address range is built,
+  never filtered afterward, with an assertion that refuses to start if an
+  excluded address survives into the plan; `Tpci` encode/decode and the
+  device-descriptor Application Layer services
+  (`crates/knx-net/src/cemi.rs`); `ProbePolicy`/`ProbeOutcome`/
+  `probe_address`/`scan_line` (`crates/knx-net/src/scan.rs`), implementing
+  `NM_IndividualAddress_Check`'s Connect → `A_DeviceDescriptor_Read` →
+  Disconnect sequence with six distinct, never-folded `ProbeOutcome`
+  variants (`Occupied{mask_version}`, `OccupiedBusy`, `OccupiedSilent`,
+  `Vacant`, `Indeterminate`, `SelfAddress`), plus `ScanError`'s two
+  plan/transport failure variants —
+  a lagged evidence channel or an ambiguous response is reported as its
+  own outcome, never silently promoted to `Vacant` or `Occupied`; and the
+  `knx bus scan` CLI (`--gateway --line --range --exclude --timeout-ms
+  --pause-ms --project --dry-run`, `apps/knx-cli/src/scan.rs`,
+  `apps/knx-cli/src/main.rs`), exit codes 0/1 only, never 2. Default
+  timeout policy is `[A]`, anchored to a `[D]` figure: `response_timeout`
+  6000 ms matches the Standard's own connection timeout exactly, rather
+  than an independently chosen number (see the Finding 1 citation above).
+
+  **Live-validated, 2026-09-13** (`[V]`, this repository's own binary
+  against real hardware, one installation, one gateway; no address is
+  named, consistent with this repository's public-facing rule): a
+  dry run found 254/255 candidates with/without one exclusion applied,
+  first candidate device 1 (never device 0, the coupler's own address); a
+  dry run against an unroutable gateway returned in 1 ms, exit 0 (a dry
+  run opens no connection); a nine-address run of consecutive occupied
+  addresses returned `Occupied` for all nine, round trips 84-202 ms,
+  elapsed 1810 ms; a five-address run of consecutive vacant addresses
+  returned `Vacant` for all five, each costing 6006 ms, elapsed 30431 ms
+  against a 30430 ms prediction, zero `OccupiedSilent` results (a
+  one-sample fact about this run, not evidence the outcome cannot occur).
+  Full detail, including the caveat against generalizing either run's
+  numbers, is in
+  [RESEARCH.md §8.5 Finding 4](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13).
+
+  What remains open, tracked in [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md):
+  no product identity, manufacturer, or serial number from a scan alone;
+  the TP1 100 ms BUSY case is indistinguishable from absence at Layer 2;
+  other tunnelling endpoints besides the scan's own connection are still
+  reported as occupied devices — the sub-20 ms heuristic that might
+  distinguish them was deliberately not built
+  ([KNOWN_LIMITATIONS.md §78](KNOWN_LIMITATIONS.md#78-a-line-scan-reports-other-knxnetip-tunnelling-endpoints-as-occupied-devices));
+  one line at a time, no scanning across couplers; and reconciling a
+  scan's findings back into a project file (**E2**'s remaining gap) is
+  out of scope for T17.
 
 ### Tier 5 — larger, multi-cycle efforts (own future "session")
 

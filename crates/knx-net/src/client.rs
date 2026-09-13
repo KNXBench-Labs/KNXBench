@@ -10,6 +10,7 @@
 //! honors `ROUTING_BUSY` (#32).
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -218,6 +219,14 @@ struct TunnelState {
     send_seq: Mutex<u8>,
     ack_reply: Mutex<Option<(u8, u8)>>,
     ack_notify: Notify,
+    /// Counts every `TUNNELLING_REQUEST` whose cEMI payload failed to
+    /// decode. Review finding (T17 fix round 1, #8): printing one
+    /// `eprintln!` per bad frame is unbounded — a single chronically
+    /// malformed device would flood stderr at bus rate for a whole scan's
+    /// duration. Only the first failure is printed; the rest are counted
+    /// here instead, the way `bus.rs`'s `record_lagged` accounts for a
+    /// loss rather than narrating each one.
+    decode_failures: AtomicU64,
 }
 
 /// `disconnect()` is the graceful path — it tells the gateway we're leaving
@@ -275,6 +284,7 @@ impl TunnelClient {
             send_seq: Mutex::new(0),
             ack_reply: Mutex::new(None),
             ack_notify: Notify::new(),
+            decode_failures: AtomicU64::new(0),
         });
 
         tokio::spawn(receive_loop(state.clone()));
@@ -291,10 +301,35 @@ impl TunnelClient {
         self.state.tx.subscribe()
     }
 
+    /// How many `TUNNELLING_REQUEST`s on this connection carried a cEMI
+    /// payload that failed to decode. Only the first one is ever printed
+    /// to stderr (see `receive_loop`); this is where the rest are seen.
+    pub fn decode_failure_count(&self) -> u64 {
+        self.state.decode_failures.load(Ordering::Relaxed)
+    }
+
+    /// Sends an `L_Data.req` carrying `Tpci::UnnumberedData` (Tunnelling
+    /// v01.07.01 AS §2.6) — what every group service, and every
+    /// unconnected point-to-point service, uses. Delegates to
+    /// [`Self::send_frame`]; kept as its own method because it is the
+    /// overwhelming majority of callers and they should not have to name
+    /// a TPCI they never vary.
+    pub async fn send(
+        &self,
+        destination: Destination,
+        service: ApplicationService,
+    ) -> Result<(), BusError> {
+        self.send_frame(destination, cemi::Tpci::UnnumberedData, service)
+            .await
+    }
+
     /// Sends an `L_Data.req` (Tunnelling v01.07.01 AS §2.6): source/kind
     /// are the client's concern, not the caller's — the gateway assigns
     /// the actual source address and message code, so only the
-    /// destination and application service are exposed here.
+    /// destination, transport (TPCI) and application service are exposed
+    /// here. The general path behind [`Self::send`]; a line scan
+    /// (T17) needs `T_Connect`/numbered `T_Data_Connected`/`T_Disconnect`,
+    /// which a fixed `Tpci::UnnumberedData` cannot express.
     ///
     /// Per §2.6.1/§2.6.2: waits up to `TUNNELLING_REQUEST_TIMEOUT` (1s)
     /// for a matching `TUNNELLING_ACK`; on timeout or an error status,
@@ -303,18 +338,21 @@ impl TunnelClient {
     /// (a `DISCONNECT_REQUEST` is sent, best-effort, and the background
     /// tasks are told to stop) and `BusError::Timeout` is returned — the
     /// same outcome `heartbeat_loop` already reaches on repeated failure.
-    pub async fn send(
+    pub async fn send_frame(
         &self,
         destination: Destination,
+        transport: cemi::Tpci,
         service: ApplicationService,
     ) -> Result<(), BusError> {
         let frame = LDataFrame {
             kind: cemi::LDataMessageKind::Request,
             source: IndividualAddress::from_raw(0),
             destination,
+            transport,
             service,
         };
-        let cemi_bytes = cemi::encode_l_data(&frame);
+        let cemi_bytes =
+            cemi::encode_l_data(&frame).map_err(|e| BusError::Protocol(e.to_string()))?;
 
         let mut seq_guard = self.state.send_seq.lock().await;
         let seq = *seq_guard;
@@ -399,6 +437,9 @@ struct RoutingState {
     /// transmitting. The spec's optional additional random back-off
     /// (`trandom`, a `MAY`) is not implemented — see KNOWN_LIMITATIONS.md.
     busy_until: Mutex<Option<tokio::time::Instant>>,
+    /// See `TunnelState::decode_failures` — same bound-the-eprintln fix,
+    /// same reasoning, applied to the routing receive loop.
+    decode_failures: AtomicU64,
 }
 
 /// A KNXnet/IP routing endpoint — joined to the standard routing
@@ -445,6 +486,7 @@ impl RoutingClient {
             tx,
             shutdown: Notify::new(),
             busy_until: Mutex::new(None),
+            decode_failures: AtomicU64::new(0),
         });
         tokio::spawn(routing_receive_loop(state.clone()));
 
@@ -453,6 +495,11 @@ impl RoutingClient {
 
     pub fn subscribe(&self) -> broadcast::Receiver<LDataFrame> {
         self.state.tx.subscribe()
+    }
+
+    /// See `TunnelClient::decode_failure_count`.
+    pub fn decode_failure_count(&self) -> u64 {
+        self.state.decode_failures.load(Ordering::Relaxed)
     }
 
     /// Sends one `ROUTING_INDICATION` (Routing v01.05.02 AS §5.1: an
@@ -470,10 +517,12 @@ impl RoutingClient {
             kind: cemi::LDataMessageKind::Indication,
             source: self.own_address,
             destination,
+            transport: cemi::Tpci::UnnumberedData,
             service,
         };
-        let datagram =
-            frame::encode_frame(services::ROUTING_INDICATION, &cemi::encode_l_data(&frame));
+        let cemi_bytes =
+            cemi::encode_l_data(&frame).map_err(|e| BusError::Protocol(e.to_string()))?;
+        let datagram = frame::encode_frame(services::ROUTING_INDICATION, &cemi_bytes);
         self.state
             .socket
             .send_to(&datagram, ROUTING_MULTICAST)
@@ -536,11 +585,20 @@ async fn routing_receive_loop(state: Arc<RoutingState>) {
             continue; // malformed datagram: ignore it, don't crash (§6.2/§6.3-style tolerance)
         };
         match header.service_type {
-            services::ROUTING_INDICATION => {
-                if let Ok(telegram) = cemi::decode_l_data(body) {
+            services::ROUTING_INDICATION => match cemi::decode_l_data(body) {
+                Ok(telegram) => {
                     let _ = state.tx.send(telegram);
                 }
-            }
+                Err(e) => {
+                    if state.decode_failures.fetch_add(1, Ordering::Relaxed) == 0 {
+                        eprintln!(
+                            "ROUTING_INDICATION: cEMI frame failed to decode: {e} \
+                             (further failures on this connection are counted, not printed; \
+                             see decode_failure_count)"
+                        );
+                    }
+                }
+            },
             services::ROUTING_LOST_MESSAGE => {
                 if let Ok(msg) = crate::routing::decode_routing_lost_message(body) {
                     eprintln!(
@@ -632,8 +690,19 @@ async fn receive_loop(state: Arc<TunnelState>) {
                 if req.sequence_counter == recv_seq {
                     send_ack(&state, req.sequence_counter, tunnelling::E_NO_ERROR).await;
                     recv_seq = recv_seq.wrapping_add(1);
-                    if let Ok(telegram) = cemi::decode_l_data(req.cemi) {
-                        let _ = state.tx.send(TunnelEvent::Telegram(telegram));
+                    match cemi::decode_l_data(req.cemi) {
+                        Ok(telegram) => {
+                            let _ = state.tx.send(TunnelEvent::Telegram(telegram));
+                        }
+                        Err(e) => {
+                            if state.decode_failures.fetch_add(1, Ordering::Relaxed) == 0 {
+                                eprintln!(
+                                    "TUNNELLING_REQUEST: cEMI frame failed to decode: {e} \
+                                     (further failures on this connection are counted, not \
+                                     printed; see decode_failure_count)"
+                                );
+                            }
+                        }
                     }
                 } else if req.sequence_counter == recv_seq.wrapping_sub(1) {
                     // Duplicate of the frame just processed (our own ACK
@@ -1000,6 +1069,96 @@ mod tests {
         assert!(
             started.elapsed() >= wait,
             "send() must wait out the ROUTING_BUSY deadline before transmitting"
+        );
+    }
+
+    /// Finding 6 (T17 fix round 2): `decode_failure_count()` is public,
+    /// has callers nowhere but the two `eprintln!` sites in `receive_loop`
+    /// above, and had zero tests. `TunnelState.socket` is a concrete
+    /// `tokio::net::UdpSocket` with no trait behind it and the
+    /// increment-and-print gate lives inline inside the socket-driven
+    /// read loop, so there is no way to drive it honestly without a real
+    /// socket — this one talks to itself on loopback only (`127.0.0.1`,
+    /// OS-assigned port): no gateway, no bus, no KNX individual/group
+    /// address is ever sent.
+    ///
+    /// Builds a `TunnelState` directly (same file, private fields
+    /// reachable) rather than going through `TunnelClient::connect`'s
+    /// real `CONNECT_REQUEST`/`CONNECT_RESPONSE` handshake, which needs
+    /// an actual gateway to answer it and is not this test's concern.
+    #[tokio::test]
+    async fn decode_failure_count_counts_undecodable_frames_once_each() {
+        let state_socket = UdpSocket::bind("127.0.0.1:0")
+            .await
+            .expect("bind loopback state socket");
+        let peer_socket = UdpSocket::bind("127.0.0.1:0")
+            .await
+            .expect("bind loopback peer socket");
+        let peer_addr = peer_socket.local_addr().expect("peer socket local addr");
+        state_socket
+            .connect(peer_addr)
+            .await
+            .expect("connect state socket to its loopback peer");
+        let state_addr = state_socket.local_addr().expect("state socket local addr");
+
+        let (tx, _rx) = broadcast::channel(64);
+        let channel_id = 7u8;
+        let state = Arc::new(TunnelState {
+            socket: state_socket,
+            channel_id,
+            assigned_address: IndividualAddress::new(1, 1, 1).unwrap(),
+            tx,
+            heartbeat_reply: Mutex::new(None),
+            heartbeat_notify: Notify::new(),
+            shutdown: Notify::new(),
+            send_seq: Mutex::new(0),
+            ack_reply: Mutex::new(None),
+            ack_notify: Notify::new(),
+            decode_failures: AtomicU64::new(0),
+        });
+        let client = TunnelClient {
+            state: state.clone(),
+        };
+        tokio::spawn(receive_loop(state));
+
+        assert_eq!(
+            client.decode_failure_count(),
+            0,
+            "must start at zero before any frame has arrived"
+        );
+
+        // An empty cEMI payload: `cemi::decode_l_data` rejects anything
+        // under 2 octets as `TooShort`, so this is undecodable by
+        // construction, not by accident.
+        let bad_cemi: &[u8] = &[];
+        for sequence_counter in 0..2u8 {
+            let body =
+                tunnelling::encode_tunnelling_request(channel_id, sequence_counter, bad_cemi);
+            let datagram = frame::encode_frame(tunnelling::TUNNELLING_REQUEST, &body);
+            peer_socket
+                .send_to(&datagram, state_addr)
+                .await
+                .expect("send undecodable frame to the loopback state socket");
+        }
+
+        // `fetch_add(...) == 0` (the print gate) can only be true once:
+        // the first undecodable frame takes the counter 0 -> 1 and
+        // prints; the second takes it 1 -> 2 and does not. Landing on
+        // exactly 2, not 1 (dropped) and not more (double-counted),
+        // proves both halves of that gate fired the way `receive_loop`
+        // intends.
+        let expected = 2u64;
+        let mut observed = 0u64;
+        for _ in 0..200 {
+            observed = client.decode_failure_count();
+            if observed >= expected {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        assert_eq!(
+            observed, expected,
+            "two undecodable frames must each increment the counter exactly once"
         );
     }
 }

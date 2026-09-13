@@ -48,6 +48,7 @@ fn telegram(destination: Destination, service: ApplicationService) -> knx_net::T
         kind: knx_net::LDataMessageKind::Indication,
         source: addr(9),
         destination,
+        transport: knx_net::Tpci::UnnumberedData,
         service,
     })
 }

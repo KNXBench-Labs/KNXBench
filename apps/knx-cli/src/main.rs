@@ -7,6 +7,8 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+mod scan;
+
 const USAGE: &str =
     "usage: knx import <file.knxproj> [--store <path.knxdb>] [--report-json <path.json>]\n\
      \x20                  [--product-db <path>] [--no-product-db]\n\
@@ -29,9 +31,21 @@ const USAGE: &str =
      \x20         0|1|hex; --dry-run encodes and prints without opening a connection)\n\
      \x20     knx bus route-monitor --source-address <area.line.device> [--project <path.knxdb>]\n\
      \x20     knx bus route-send --source-address <area.line.device> <main/middle/sub> <0|1|hex>\n\
+     \x20     knx bus scan --gateway <host:port> --line <area.line>\n\
+     \x20                  [--range <first>-<last>] [--exclude <addr>[,<addr>...]]...\n\
+     \x20                  [--timeout-ms <n>] [--pause-ms <n>] [--project <path.knxdb>] [--dry-run]\n\
+     \x20         (--range takes two full area.line.device addresses on the --line given, and\n\
+     \x20         its first device may not be 0, the line coupler's own address; --exclude may\n\
+     \x20         be given more than once and every occurrence accumulates, never probes the\n\
+     \x20         listed addresses, and a malformed one aborts before any frame is sent;\n\
+     \x20         --project prints a comparison, never writes it back; --dry-run prints the\n\
+     \x20         candidate count, first/last candidate and excluded list, then exits without\n\
+     \x20         opening a connection)\n\
      \x20     knx --version\n\
-     exit codes: 0 = imported cleanly (warnings allowed), 1 = could not import,\n\
-     2 = imported, but the report contains errors";
+     exit codes: 0 = success (for import/ga-import, warnings are still success),\n\
+     1 = failure (bad arguments, I/O, a transport problem, or no usable data);\n\
+     2 = import/ga-import only: a project was produced but the report contains\n\
+     errors. No other subcommand, including every `bus` one, ever returns 2.";
 
 /// Exit code for "the import produced a project, but the report contains
 /// `Severity::Error` entries" — data the mapper could not use, such as a
@@ -97,7 +111,7 @@ struct ImportArgs {
 /// otherwise silently swallow `--report-json` as `--store`'s path, leaving
 /// `--report-json` itself unrecognized) — a missing value is a usage
 /// error, not a value that happens to start with `--`.
-fn take_value(args: &[String], i: usize, flag: &str) -> Result<String, String> {
+pub(crate) fn take_value(args: &[String], i: usize, flag: &str) -> Result<String, String> {
     match args.get(i) {
         Some(v) if !v.starts_with("--") => Ok(v.clone()),
         _ => Err(format!("{flag} needs a value")),
@@ -1356,6 +1370,7 @@ fn run_bus(args: &[String]) -> ExitCode {
         Some("write") => run_bus_write(&args[1..]),
         Some("route-monitor") => run_bus_route_monitor(&args[1..]),
         Some("route-send") => run_bus_route_send(&args[1..]),
+        Some("scan") => run_bus_scan(&args[1..]),
         _ => {
             eprintln!("{USAGE}");
             ExitCode::FAILURE
@@ -1989,6 +2004,188 @@ async fn run_bus_route_send_async(
     }
 }
 
+fn run_bus_scan(args: &[String]) -> ExitCode {
+    let parsed = match scan::parse_scan_args(args) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{e}\n{USAGE}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let gateway: std::net::SocketAddrV4 = match parsed.gateway.parse() {
+        Ok(g) => g,
+        Err(_) => {
+            eprintln!("--gateway must be host:port, e.g. 192.0.2.1:3671");
+            return ExitCode::FAILURE;
+        }
+    };
+    // Plan and policy are fully built — including the malformed-`--exclude`
+    // and cross-line `--range` checks — before a socket is ever opened.
+    let (plan, range, excluded) =
+        match scan::build_scan_plan(&parsed.line, parsed.range.as_deref(), &parsed.exclude) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("{e}\n{USAGE}");
+                return ExitCode::FAILURE;
+            }
+        };
+    // `--dry-run` prints the plan's shape and stops here, before a probe
+    // policy, a project file or a tokio runtime — let alone a socket —
+    // ever exist. Modelled on `knx bus write --dry-run`.
+    if parsed.dry_run {
+        println!("{}", scan::format_dry_run(&plan, &excluded));
+        return ExitCode::SUCCESS;
+    }
+    let policy =
+        match scan::build_probe_policy(parsed.timeout_ms.as_deref(), parsed.pause_ms.as_deref()) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("{e}\n{USAGE}");
+                return ExitCode::FAILURE;
+            }
+        };
+    let project_addresses = match &parsed.project {
+        Some(path) => match load_project_individual_addresses(Path::new(path)) {
+            Ok(addrs) => Some(addrs),
+            Err(e) => {
+                eprintln!("could not load project {path}: {e}");
+                return ExitCode::FAILURE;
+            }
+        },
+        None => None,
+    };
+    let excluded_count = excluded.iter().filter(|a| range.contains(**a)).count();
+
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(rt) => rt,
+        Err(e) => {
+            eprintln!("could not start async runtime: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    runtime.block_on(run_bus_scan_async(
+        gateway,
+        plan,
+        policy,
+        range,
+        excluded,
+        excluded_count,
+        project_addresses,
+    ))
+}
+
+/// Opens a tunnel, runs [`knx_net::scan_line`], and prints results as they
+/// arrive, then a summary, then (with `--project`) a comparison. Per-address
+/// round trip is [`scan::round_trip`] applied to the wall-clock gap between
+/// successive `progress` calls — see that function's doc comment for
+/// exactly what it derives and the one precondition it assumes.
+#[allow(clippy::too_many_arguments)]
+async fn run_bus_scan_async(
+    gateway: std::net::SocketAddrV4,
+    plan: knx_core::scan::ScanPlan,
+    policy: knx_net::ProbePolicy,
+    range: scan::ScannedRange,
+    excluded: std::collections::HashSet<knx_core::IndividualAddress>,
+    excluded_count: usize,
+    project_addresses: Option<Vec<knx_core::IndividualAddress>>,
+) -> ExitCode {
+    use knx_net::BusConnection;
+    let client = knx_net::KnxNetIpClient::new();
+    let tunnel = match client.connect_tunnel(gateway).await {
+        Ok(t) => t,
+        Err(e) => {
+            eprintln!("could not connect to {gateway}: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+    eprintln!(
+        "connected to {gateway}, assigned individual address {}. scanning {} candidate address(es)...",
+        tunnel.assigned_address(),
+        plan.addresses().len()
+    );
+
+    let start = std::time::Instant::now();
+    let mut last_instant = start;
+    let mut last_outcome: Option<knx_net::ProbeOutcome> = None;
+    let pause = policy.inter_probe_pause();
+    let scan_result = knx_net::scan_line(&tunnel, &plan, &policy, |addr, outcome| {
+        let now = std::time::Instant::now();
+        let elapsed = now.duration_since(last_instant);
+        let round_trip = scan::round_trip(elapsed, pause, last_outcome);
+        println!("{}", scan::format_probe_line(addr, outcome, round_trip));
+        last_instant = now;
+        last_outcome = Some(outcome);
+    })
+    .await;
+    let elapsed_total = start.elapsed();
+
+    let (results, scan_ok) = match scan_result {
+        Ok(results) => (results, true),
+        Err(knx_net::ScanError::Transport { source, completed }) => {
+            eprintln!(
+                "scan transport failed after {} address(es): {source}",
+                completed.len()
+            );
+            (completed, false)
+        }
+        Err(knx_net::ScanError::Plan(e)) => {
+            eprintln!("scan plan is not safe to run: {e}");
+            if let Err(e) = tunnel.disconnect().await {
+                eprintln!("disconnect: {e}");
+            }
+            return ExitCode::FAILURE;
+        }
+    };
+
+    if let Err(e) = tunnel.disconnect().await {
+        eprintln!("disconnect: {e}");
+    }
+
+    let summary = scan::summarize(&results, excluded_count);
+    println!("{}", scan::format_summary(&summary, elapsed_total, &policy));
+
+    if let Some(project_addresses) = project_addresses {
+        let comparison =
+            scan::compare_with_project(&range, &results, &excluded, &project_addresses);
+        println!("{}", scan::format_project_comparison(&comparison));
+    }
+
+    if scan_ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
+}
+
+/// Loads every device's individual address from a stored project, for
+/// `bus scan --project`'s comparison only. Read-only: the comparison is
+/// printed, never written back into the project (this task discovers, it
+/// does not reconcile).
+///
+/// Checks the path exists before calling `open_and_migrate`, which does
+/// not: given a path that does not exist, it happily creates a fresh,
+/// empty, freshly-migrated database and hands back a connection to it —
+/// exactly the right behaviour for `import`/`ga-import`'s "just show me
+/// the store" case, and exactly the wrong one here, where a typo'd
+/// `--project` path would otherwise silently compare the scan against an
+/// empty project instead of failing loudly.
+fn load_project_individual_addresses(
+    path: &Path,
+) -> Result<Vec<knx_core::IndividualAddress>, String> {
+    if !path.exists() {
+        return Err(format!(
+            "{} does not exist (refusing to create an empty project to compare against)",
+            path.display()
+        ));
+    }
+    let conn = knx_store::migration::open_and_migrate(path).map_err(|e| e.to_string())?;
+    let project = knx_store::project::load_project(&conn).map_err(|e| e.to_string())?;
+    Ok(project.devices.iter().filter_map(|d| d.address).collect())
+}
+
 /// Loads `group_address -> name` for every installation in a stored
 /// project, so `format_telegram` can annotate a raw group address with the
 /// name the user gave it in ETS. Silently returns an empty map only when
@@ -2074,11 +2271,15 @@ fn format_telegram(
     format!(
         "{} -> {dest}: {}",
         telegram.source,
-        format_service(&telegram.service, dpt)
+        format_service(&telegram.service, &telegram.transport, dpt)
     )
 }
 
-fn format_service(service: &knx_net::ApplicationService, dpt: DptAnnotation) -> String {
+fn format_service(
+    service: &knx_net::ApplicationService,
+    transport: &knx_net::Tpci,
+    dpt: DptAnnotation,
+) -> String {
     use knx_net::ApplicationService;
     match service {
         ApplicationService::GroupValueRead => "GroupValueRead".to_string(),
@@ -2088,9 +2289,39 @@ fn format_service(service: &knx_net::ApplicationService, dpt: DptAnnotation) -> 
         ApplicationService::GroupValueWrite(v) => {
             format!("GroupValueWrite {}", format_decoded_value(v, dpt))
         }
+        ApplicationService::DeviceDescriptorRead { descriptor_type } => {
+            format!("DeviceDescriptorRead type={descriptor_type}")
+        }
+        ApplicationService::DeviceDescriptorResponse {
+            descriptor_type,
+            data,
+        } => {
+            format!("DeviceDescriptorResponse type={descriptor_type} data={data:02x?}")
+        }
+        // The four control PDUs all carry `NoApplicationPdu` — rendering
+        // the `Tpci` instead of the fixed string is the only way to tell
+        // a `T_Connect` apart from a `T_Disconnect`/`T_ACK`/`T_NAK` in the
+        // monitor (task-2 review finding 6).
+        ApplicationService::NoApplicationPdu => format_tpci(transport),
         ApplicationService::Other { apci, data } => {
             format!("APCI {apci:#06x} data {data:02x?}")
         }
+    }
+}
+
+/// Renders a `Tpci` for the monitor — only reached for `NoApplicationPdu`
+/// rows today, but total over the enum so a future data-shaped caller
+/// gets a sensible string too, not a compile error waiting to happen.
+fn format_tpci(transport: &knx_net::Tpci) -> String {
+    use knx_net::Tpci;
+    match transport {
+        Tpci::UnnumberedData => "UnnumberedData".to_string(),
+        Tpci::NumberedData { seq } => format!("NumberedData seq={seq}"),
+        Tpci::Connect => "T_Connect".to_string(),
+        Tpci::Disconnect => "T_Disconnect".to_string(),
+        Tpci::Ack { seq } => format!("T_ACK seq={seq}"),
+        Tpci::Nak { seq } => format!("T_NAK seq={seq}"),
+        Tpci::Unknown(octet) => format!("Unknown TPCI {octet:#04x}"),
     }
 }
 
@@ -2122,7 +2353,8 @@ fn format_decoded_value(v: &knx_net::GroupValue, dpt: DptAnnotation) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::format_version_line;
+    use super::{format_version_line, load_project_individual_addresses};
+    use std::path::Path;
 
     #[test]
     fn version_line_carries_the_commit_as_build_metadata_when_known() {
@@ -2137,6 +2369,94 @@ mod tests {
         assert_eq!(
             format_version_line("knx", "0.1.0-alpha.1", None),
             "knx 0.1.0-alpha.1"
+        );
+    }
+
+    /// A project with two devices — one at `1.1.5`, one with no
+    /// individual address at all — saved and reloaded through the real
+    /// `knx-store` schema, not a hand-built `Vec`. Backs both
+    /// `load_project_individual_addresses` tests below.
+    fn save_fixture_project(path: &Path) {
+        use knx_core::{
+            string_table::Language, CommissioningState, CompletionStatus, DeviceId, DeviceInstance,
+            IndividualAddress, Installation, InstallationId, Project, SourceRef, Topology,
+        };
+        let mut project = Project::new(Language("en".into()));
+        project.installations.push(Installation {
+            id: InstallationId(0),
+            name: "I".into(),
+            default_line: None,
+            multicast_address: None,
+            completion: CompletionStatus::FinishedDesign,
+            topology: Topology {
+                areas: vec![],
+                lines: vec![],
+                unassigned: vec![DeviceId(1), DeviceId(2)],
+            },
+            buildings: vec![],
+            group_ranges: vec![],
+            group_addresses: vec![],
+            parameters: vec![],
+        });
+        project.devices.insert(DeviceInstance {
+            id: DeviceId(1),
+            source: SourceRef {
+                path: "d1".into(),
+                ets_id: "d1".into(),
+            },
+            name: "Addressed Device".into(),
+            description: None,
+            address: Some(IndividualAddress::new(1, 1, 5).unwrap()),
+            product_ref: "P".into(),
+            program_ref: "H".into(),
+            commissioning: CommissioningState::default(),
+            visibility_calculated: true,
+            com_objects: vec![],
+            binary_data: vec![],
+        });
+        project.devices.insert(DeviceInstance {
+            id: DeviceId(2),
+            source: SourceRef {
+                path: "d2".into(),
+                ets_id: "d2".into(),
+            },
+            name: "Unaddressed Device".into(),
+            description: None,
+            address: None,
+            product_ref: "P".into(),
+            program_ref: "H".into(),
+            commissioning: CommissioningState::default(),
+            visibility_calculated: true,
+            com_objects: vec![],
+            binary_data: vec![],
+        });
+        let conn = knx_store::open_and_migrate(path).expect("open/migrate fixture store");
+        knx_store::save_project(&conn, &project).expect("save fixture project");
+    }
+
+    #[test]
+    fn load_project_individual_addresses_round_trips_through_a_saved_project() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("fixture.knxdb");
+        save_fixture_project(&path);
+
+        let addresses = load_project_individual_addresses(&path).unwrap();
+        assert_eq!(
+            addresses,
+            vec![knx_core::IndividualAddress::new(1, 1, 5).unwrap()]
+        );
+    }
+
+    #[test]
+    fn load_project_individual_addresses_refuses_a_path_that_does_not_exist() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("does-not-exist.knxdb");
+
+        let err = load_project_individual_addresses(&path).unwrap_err();
+        assert!(err.contains("does not exist"));
+        assert!(
+            !path.exists(),
+            "must refuse before open_and_migrate can create an empty database"
         );
     }
 }

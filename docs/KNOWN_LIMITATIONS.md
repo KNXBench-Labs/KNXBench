@@ -284,8 +284,9 @@ application does, on any platform.
 
 **Limitation.** The application does not program devices (RESEARCH §8.3).
 
-**Cause.** Bricking risk on real hardware, an undocumented `Legacy*`
-compatibility matrix, and vendor DLL involvement in download procedures.
+**Cause.** Bricking risk on real hardware, undocumented *semantics* for the
+product-specific `Legacy*` compatibility flags, and a product database that
+does not yet store the load procedures it already reads. **[V]**
 
 **Impact.** Planning and documentation happen here; downloading happens in
 ETS, for now.
@@ -312,14 +313,45 @@ two, plus the bricking risk on real hardware and KNX Secure key handling
 (§9), are why this limitation stands unchanged below. Documented is not
 verified: nothing in this update has been run against a device.
 
+**Updated, 2026-09-13 (T30 spike, RESEARCH §8.6).** The `Legacy*`/vendor-DLL
+research pass asked for below has been run against the product corpus, and it
+changes the shape of this limitation rather than lifting it. **No vendor DLL
+is required** to reconstruct a download sequence **[V]**: the 13 `Legacy*`
+flags are plain boolean attributes on `ApplicationProgram/Static/Options` in
+packages the importer already opens, project exports materialise the full set
+so every default is directly observable, and the ordered sequence is
+declarative `LdCtrl*` data — the mask-default procedure for System B in
+`knx_master.xml` reproduces the 34-row load-control table of `03_05_03
+Configuration Procedures` §3.9.3.4 row for row, including the two rows that
+table marks as mask-17B0h-only **[D]** **[V]**. Vendor DLLs appear only as an
+optional `EtsDownloadPlugin` hook on 5 of 35 corpus application programs, and
+in none of them do they supply the step list **[V]**. Three things genuinely
+remain. First, the *meaning* of each individual flag: all 13 names return zero
+hits across the entire extracted KNX Standard corpus, and the Standard
+acknowledges only the category — *"For the common tool ETS®, this can be
+controlled via a flag in the database entry for the product"* **[D]**
+(`03_05_03` §3.4.1.2.1, footnote 6). Second, `knx-productdb` stores
+`load_procedure_style` but drops `Options`, `LoadProcedures` and every
+`LdCtrl*` element without even reporting them as unknown constructs — the
+bytes survive in `source_file`, but nothing is queryable **[V]**; and
+`bool_flag` accepts only `"1"`/`"0"`, so schema-20/21 `true`/`false` values
+land as `NULL` (measured: `linkable` is `NULL` for all six ingested programs)
+**[V]**. Third, hardware. Nothing in this update has been run against a
+device, and no bus was contacted to produce it.
+
 **Lifted when.** The generic load/unload/reset/memory procedures no longer
-block this — they are documented (RESEARCH §8.4). What remains: a
-`Legacy*`/vendor-DLL research pass against product data (`.knxprod` samples,
-manufacturer documentation) to close the two gaps above, and hardware
-available to verify the documented procedures actually work before they run
-against a customer's device. Architecturally nothing blocks it today: load
-procedures, memory layout and mask data already live in the product
-database.
+block this — they are documented (RESEARCH §8.4) — and neither does the
+`Legacy*` matrix or the vendor DLL (RESEARCH §8.6). What remains, in the order
+it can be done: the parsing addition described (and deliberately not built) in
+RESEARCH §8.6.5, including the `bool_flag` fix; the offline "dry-run"
+procedure resolver of RESEARCH §8.6.6 Slice 0, which needs no hardware and is
+checkable against both the Standard's step table and all 35 corpus programs;
+then read-only device inspection (Slice 1); and only then hardware we can
+afford to destroy, on a line isolated from anything that matters. Per-flag
+semantics would be closed by the MT6 XSD `KNX-Project-Schema-v23.xsd`
+(KNX-member distribution, updates via `gitlab.knx.org`) or by differential
+testing against ETS. Architecturally nothing blocks it today: load procedures,
+memory layout and mask data already live in the product database.
 
 ## 8. KNX Secure is not implemented
 

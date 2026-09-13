@@ -188,7 +188,7 @@ the Settings panel:
   the normal, expected state of a partial translation, not a problem to
   fix immediately.
 
-A pack that translates 12 of this build's 294 keys is a completely valid,
+A pack that translates 12 of this build's 519 keys is a completely valid,
 useful pack. It is installed exactly like a complete one; warnings never
 block an import, only inform you about it.
 

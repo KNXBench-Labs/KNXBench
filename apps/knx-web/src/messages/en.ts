@@ -85,8 +85,8 @@ export const messages = {
   "toast.error.notToday": "Not today: {msg}",
   "toast.error.houston": "Houston, we have a problem: {msg}",
   "toast.error.hardPass": "That's a hard pass: {msg}",
-  // Task 2 (goal.md §7 item 1): 23 more error wrappers, same register,
-  // same `{msg}` contract as the original seven above.
+  // 23 more error wrappers, same register, same `{msg}` contract as the
+  // original seven above.
   "toast.error.marvinSigh": "Marvin would sigh, then say: {msg}",
   "toast.error.uncaringUniverse": "Another glorious diagnostic in an uncaring universe: {msg}",
   "toast.error.busSpoken": "The bus has spoken, and it is unimpressed: {msg}",
@@ -125,13 +125,13 @@ export const messages = {
   "toast.holiday.christmasDay.greetings": "Season's greetings from your KNX app.",
   "toast.holiday.newYearsEve.oneMoreSave": "One more save before midnight?",
   "toast.holiday.newYearsEve.seeYou": "See you next year, project file.",
-  // Task 2: 23 more holidays, fixed calendar dates only (`HolidayEntry` has
-  // no notion of movable feasts) — a mix of German-calendar and
+  // 23 more holidays, fixed calendar dates only (`HolidayEntry` has no
+  // notion of movable feasts) — a mix of German-calendar and
   // computing-culture dates, two jokes each, same pairing convention as
   // the original seven above.
   "toast.holiday.epiphany.starlight":
     "The three wise men found their way by starlight. Your group addresses could use a similar miracle.",
-  "toast.holiday.epiphany.noneArrived": "Epiphany, allegedly. None arrived about the wiring.",
+  "toast.holiday.epiphany.noneArrived": "Epiphany, allegedly. No revelation arrived about the wiring.",
   "toast.holiday.piDay.neverResolves":
     "Pi Day: an infinite, non-repeating reminder that some things never resolve cleanly. Much like your open bugs.",
   "toast.holiday.piDay.percentSolved": "3.14 percent of your problems are solved today. The rest continue as usual.",
@@ -143,7 +143,7 @@ export const messages = {
   "toast.holiday.earthDay.energyBill":
     "One day a year the planet gets a toast. Every day, your energy bill gets a group address.",
   "toast.holiday.germanBeerDay.reinheitsgebot":
-    "Tag des Deutschen Bieres. The Reinheitsgebot regulated beer since 1516; nobody regulated your group address naming.",
+    "Tag des Deutschen Bieres. The Reinheitsgebot regulated beer from 1516; nobody has ever regulated your group address naming.",
   "toast.holiday.germanBeerDay.rulesNeeded":
     "In 1516 Bavaria decided beer needed rules. Your project could use some too.",
   "toast.holiday.tagDerArbeit.busNoDayOff": "Tag der Arbeit. The bus, notably, does not get the day off.",
@@ -163,7 +163,7 @@ export const messages = {
   "toast.holiday.environmentDay.rarelySaysSo":
     "The environment thanks you for the automation. It rarely says so directly.",
   "toast.holiday.summerSolstice.longestDay":
-    "Sommersonnenwende. The longest day, for maximum exposure to unresolved diagnostics.",
+    "Sommersonnenwende. Roughly the longest day, give or take the calendar's own rounding errors, for maximum exposure to unresolved diagnostics.",
   "toast.holiday.summerSolstice.todoList": "The sun barely sets tonight. Neither, it seems, does your to-do list.",
   "toast.holiday.moonLanding.lessComputingPower":
     "On this day humanity landed on the Moon with less computing power than your average KNX gateway. Perspective.",
@@ -173,7 +173,7 @@ export const messages = {
   "toast.holiday.swissNationalDay.punctuality":
     "Switzerland's national day. Your project's punctuality remains a separate matter entirely.",
   "toast.holiday.programmerDay.day256":
-    "Tag des Programmierers, day 256 of the year. A number chosen by programmers, for programmers, understood by nobody else.",
+    "Tag des Programmierers, the 256th day of the year, give or take a leap. A number chosen by programmers, for programmers, understood by nobody else.",
   "toast.holiday.programmerDay.countedOwnDays":
     "A holiday that exists because programmers counted their own days. Fitting.",
   "toast.holiday.pirateDay.plunderedByNobody":
@@ -185,7 +185,7 @@ export const messages = {
   "toast.holiday.germanUnity.ownAffair":
     "A day celebrating unification. Your group address ranges remain stubbornly their own affair.",
   "toast.holiday.backToTheFuture.noFlyingCars":
-    "The future, as predicted, does not include flying cars. It does include KNX. Small victories.",
+    "The future, contrary to prediction, has no flying cars. It does have KNX. Small victories.",
   "toast.holiday.backToTheFuture.noHoverboards":
     "Back to the Future Day. No hoverboards arrived. The bus, at least, is on time.",
   "toast.holiday.allSaintsDay.devicesRemembered":
@@ -205,7 +205,7 @@ export const messages = {
   "toast.holiday.nikolaustag.warningsOnList":
     "St. Nicholas checks his list. Your unresolved warnings are, regrettably, still on it.",
   "toast.holiday.winterSolstice.longestNight":
-    "Wintersonnenwende, the longest night. Plenty of time for the lighting group addresses to earn their keep.",
+    "Wintersonnenwende, roughly the longest night, the calendar's usual rounding notwithstanding. Plenty of time for the lighting group addresses to earn their keep.",
   "toast.holiday.winterSolstice.backlogSameLength":
     "The shortest day of the year. Somehow, the backlog remains exactly as long.",
   "toast.holiday.boxingDay.importWarningsUnopened":
@@ -217,7 +217,7 @@ export const messages = {
   "toast.lateNight.busLineRest": "It's late. Even the bus line needs rest.",
   "toast.lateNight.stillAwake": "Still awake? The group addresses admire your dedication.",
   "toast.lateNight.nightOwl": "Night owl mode engaged.",
-  // Task 2: 26 more late-night lines, same register as the original four.
+  // 26 more late-night lines, same register as the original four.
   "toast.lateNight.busQuiet": "The bus is quiet. You, apparently, are not.",
   "toast.lateNight.relayAwake": "Somewhere, a relay is also awake and equally unimpressed.",
   "toast.lateNight.hourOfRegret": "This is the hour reserved for regret and configuration files.",
@@ -237,7 +237,7 @@ export const messages = {
   "toast.lateNight.busMonitorLogsSoul": "The bus monitor logs one more soul who should be resting.",
   "toast.lateNight.telegramDedicationOrDespair":
     "A telegram at this hour means dedication or despair. Possibly both.",
-  "toast.lateNight.lightsAreOff": "The lights are off. Yours, and everyone else's judgment.",
+  "toast.lateNight.lightsAreOff": "The lights are off. The universe's judgment, notably, is not looking any better lit.",
   "toast.lateNight.loadStateMachineClockedOut": "Even the load state machine has clocked out.",
   "toast.lateNight.hourBelongsToOwls": "This hour belongs to owls and unresolved diagnostics.",
   "toast.lateNight.projectWaits": "The project waits. It has nowhere else to be.",

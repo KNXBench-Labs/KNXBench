@@ -3658,9 +3658,9 @@ the projection rather than from the screen.
   the handler takes the caller's visible order rather than assuming the
   full tree order. The checkbox synthesises a ctrl-click through a
   structural event type, so no `MouseEvent` cast is needed to add one id.
-- **Six declared departures from `02-graphite.png`,** the approved concept
-  image for this view. None is an oversight; each is a ruling, and the
-  three that leave a capability absent name where it goes.
+- **Seven declared departures from `02-graphite.png`,** the approved concept
+  image for this view. None is an oversight; each is a ruling, and every
+  one that leaves a capability absent names where that capability goes.
   1. **DPTs render `DPST-1-1`, not the dotted `1.001`** the image shows.
      No dotted formatter exists anywhere in this repository, and
      `DptRef`'s `Display` text is the convention every other surface
@@ -3688,23 +3688,35 @@ the projection rather than from the screen.
   4. **A Range column was added** beyond the image's breadcrumb, because
      the brief asks for range context per row and a breadcrumb only
      describes the current scope. Additive, not a removal.
-  5. **The Verknüpfungen column reads "1 sending · 1 receiving" rather
+  5. **The CSV control is two plain buttons, not one "CSV ⌄" dropdown.**
+     The placement matches both the image and the tracked
+     `docs/design/2026-09-13-codex-ui-concept/README.md` ("CSV direkt bei
+     Gruppenadressen"): `StructureWorkspace`'s `addressActions` slot now
+     carries `GroupAddressCsvButtons`, whose export and import buttons are
+     rendered side by side rather than folded into a disclosure. The
+     File-menu copies are kept, so no entry point is lost. Collapsing them
+     is a component this repository does not have — there is no
+     menu-button primitive anywhere in `apps/knx-web` — and building the
+     first one for two buttons would prejudge how every other overflow
+     menu behaves.
+  6. **The Verknüpfungen column reads "1 sending · 1 receiving" rather
      than the image's bare count.** The direction is the fact an installer
      needs, the count alone hides which way a link points, and the
      projection now carries both.
-  6. **No column sorting and no sort caret.** The image shows a "▲" on the
+  7. **No column sorting and no sort caret.** The image shows a "▲" on the
      Adresse header; `GroupAddressTable.tsx` has no `sort` or `aria-sort`
      at all. Rows render in the order the project stores them
      (`Installation.group_addresses` is a `Vec`, so: insertion order, which
      for an imported project is the file's order and not a guaranteed
      sort). Clicking a header does nothing, nothing announces a sort
      state, and the caret would therefore be a promise the table does not
-     keep. **Deferred to UI stage 6**
-     (mouse/keyboard operation and real-screen review, `codex-goal.md`
-     line 130): sorting is a table-wide concern that must also cover the
-     device and topology tables, needs `aria-sort` plus an activatable
-     header for the keyboard path, and must state what it does to a
-     shift-click span — doing it for one table in isolation is how three
+     keep. **Deferred to the later verification stage** of this UI series —
+     the one that checks mouse and keyboard operation, theme and motion
+     switching, error states and real on-screen rendering — for three
+     reasons: sorting is a table-wide concern that must also cover the
+     device and topology tables, it needs `aria-sort` plus an activatable
+     header for the keyboard path, and it has to state what it does to a
+     shift-click span. Doing it for one table in isolation is how three
      tables end up sorting differently.
 - **`groupAddressView.ts`** holds the display helpers both the table and
   the Inspector need — `directionLabel` (moved out of `Inspector.tsx`,

@@ -7,7 +7,9 @@
 //! connection management: `wait_for_reply` fixes a heartbeat/ack retry
 //! race (KNOWN_LIMITATIONS.md #27), `TunnelEvent::Closed` signals
 //! subscribers when the tunnel dies (#28), and `RoutingClient::send`
-//! honors `ROUTING_BUSY` (#32).
+//! honors `ROUTING_BUSY` (#32). `connect_routing_to_group` (E6,
+//! KNOWN_LIMITATIONS.md #31) lets a caller join a non-default routing
+//! multicast group instead of `ROUTING_MULTICAST`.
 
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -37,6 +39,11 @@ pub enum BusError {
     /// precise error type; this cycle's client only ever needs to report
     /// them upward, not branch on which one it was.
     Protocol(String),
+    /// `connect_routing_to_group` was asked to join an address outside
+    /// 224.0.0.0/4 (KNOWN_LIMITATIONS.md §31) — most likely a unicast or
+    /// broadcast address passed where a multicast group belongs. Caught
+    /// before any socket call, so this never carries an OS error code.
+    NotMulticast(Ipv4Addr),
 }
 
 impl std::fmt::Display for BusError {
@@ -49,6 +56,11 @@ impl std::fmt::Display for BusError {
             }
             BusError::NotImplemented => write!(f, "not implemented in this cycle"),
             BusError::Protocol(msg) => write!(f, "protocol error: {msg}"),
+            BusError::NotMulticast(addr) => write!(
+                f,
+                "{addr} is not an IPv4 multicast address (224.0.0.0/4) — \
+                 a routing multicast group must be, per Core v01.06.02 AS §8.5.2.2"
+            ),
         }
     }
 }
@@ -99,6 +111,18 @@ pub trait BusConnection {
     async fn connect_routing(
         &self,
         own_address: IndividualAddress,
+    ) -> Result<RoutingClient, BusError>;
+    /// Same as `connect_routing`, but joins `group` instead of the standard
+    /// default (KNOWN_LIMITATIONS.md §31) — for an installation assigned a
+    /// custom Routing Multicast Address (Core v01.06.02 AS §8.5.2.2). The
+    /// port is not an independent choice: Routing v01.05.02 AS §2.3.1 fixes
+    /// it at 3671 for every installation, so only the address varies here.
+    /// Never verified against a real installation using a non-default
+    /// group.
+    async fn connect_routing_to_group(
+        &self,
+        own_address: IndividualAddress,
+        group: Ipv4Addr,
     ) -> Result<RoutingClient, BusError>;
 }
 
@@ -184,6 +208,14 @@ impl BusConnection for KnxNetIpClient {
         own_address: IndividualAddress,
     ) -> Result<RoutingClient, BusError> {
         RoutingClient::connect(own_address).await
+    }
+
+    async fn connect_routing_to_group(
+        &self,
+        own_address: IndividualAddress,
+        group: Ipv4Addr,
+    ) -> Result<RoutingClient, BusError> {
+        RoutingClient::connect_to_group(own_address, group).await
     }
 }
 
@@ -442,20 +474,42 @@ struct RoutingState {
     decode_failures: AtomicU64,
 }
 
-/// A KNXnet/IP routing endpoint — joined to the standard routing
-/// multicast group, sending and receiving `ROUTING_INDICATION` frames
-/// unconfirmed (Routing v01.05.02 AS §5.1). Unlike `TunnelClient`, there
-/// is no connection to a specific peer: `own_address` is this client's
-/// own claimed source address for outgoing frames, not something a
-/// gateway assigns, since routing has no `CONNECT_REQUEST`/`CRD`
-/// handshake to assign one through.
+/// A KNXnet/IP routing endpoint — joined to the routing multicast group
+/// (the standard one by default, or `group` from `connect_to_group`),
+/// sending and receiving `ROUTING_INDICATION` frames unconfirmed (Routing
+/// v01.05.02 AS §5.1). Unlike `TunnelClient`, there is no connection to a
+/// specific peer: `own_address` is this client's own claimed source
+/// address for outgoing frames, not something a gateway assigns, since
+/// routing has no `CONNECT_REQUEST`/`CRD` handshake to assign one through.
 pub struct RoutingClient {
     state: Arc<RoutingState>,
     own_address: IndividualAddress,
+    /// The joined group, port included — `ROUTING_MULTICAST` by default,
+    /// a caller's choice after `connect_to_group`. `send()` targets this,
+    /// never the bare constant, so the two connect paths cannot drift.
+    group: SocketAddrV4,
 }
 
 impl RoutingClient {
     async fn connect(own_address: IndividualAddress) -> Result<Self, BusError> {
+        Self::connect_to_group(own_address, *ROUTING_MULTICAST.ip()).await
+    }
+
+    /// `connect()`'s actual implementation, generalized over the group —
+    /// `connect()` is just this with `ROUTING_MULTICAST`'s own address, so
+    /// the default and the override can never join or send to different
+    /// places by accident. `group`'s port is always `ROUTING_MULTICAST`'s
+    /// (Routing v01.05.02 AS §2.3.1 fixes it at 3671 for every
+    /// installation); only the address is a caller's choice.
+    async fn connect_to_group(
+        own_address: IndividualAddress,
+        group: Ipv4Addr,
+    ) -> Result<Self, BusError> {
+        if !group.is_multicast() {
+            return Err(BusError::NotMulticast(group));
+        }
+        let group = SocketAddrV4::new(group, ROUTING_MULTICAST.port());
+
         use socket2::{Domain, Socket, Type};
 
         let socket2_socket = Socket::new(Domain::IPV4, Type::DGRAM, None).map_err(BusError::Io)?;
@@ -463,17 +517,14 @@ impl RoutingClient {
             .set_reuse_address(true)
             .map_err(BusError::Io)?;
         socket2_socket
-            .bind(
-                &std::net::SocketAddr::from((Ipv4Addr::UNSPECIFIED, ROUTING_MULTICAST.port()))
-                    .into(),
-            )
+            .bind(&std::net::SocketAddr::from((Ipv4Addr::UNSPECIFIED, group.port())).into())
             .map_err(BusError::Io)?;
         socket2_socket.set_nonblocking(true).map_err(BusError::Io)?;
         let std_socket: std::net::UdpSocket = socket2_socket.into();
         let socket = UdpSocket::from_std(std_socket).map_err(BusError::Io)?;
 
         socket
-            .join_multicast_v4(*ROUTING_MULTICAST.ip(), Ipv4Addr::UNSPECIFIED)
+            .join_multicast_v4(*group.ip(), Ipv4Addr::UNSPECIFIED)
             .map_err(BusError::Io)?;
         // Without this, our own sends would loop back through this same
         // socket and appear in `subscribe()` as if another device sent
@@ -490,7 +541,11 @@ impl RoutingClient {
         });
         tokio::spawn(routing_receive_loop(state.clone()));
 
-        Ok(RoutingClient { state, own_address })
+        Ok(RoutingClient {
+            state,
+            own_address,
+            group,
+        })
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<LDataFrame> {
@@ -525,7 +580,7 @@ impl RoutingClient {
         let datagram = frame::encode_frame(services::ROUTING_INDICATION, &cemi_bytes);
         self.state
             .socket
-            .send_to(&datagram, ROUTING_MULTICAST)
+            .send_to(&datagram, self.group)
             .await
             .map_err(BusError::Io)?;
         Ok(())
@@ -1070,6 +1125,112 @@ mod tests {
             started.elapsed() >= wait,
             "send() must wait out the ROUTING_BUSY deadline before transmitting"
         );
+    }
+
+    /// E6, R1: the Standard never narrows a routing multicast group below
+    /// "any IPv4 multicast address" (Core v01.06.02 AS §8.5.2.2 only speaks
+    /// of an offset from the default, with no stated bound), so the
+    /// permitted range is exactly `Ipv4Addr::is_multicast()`'s 224.0.0.0/4.
+    /// A unicast address must be rejected before any socket call — no
+    /// sandbox dependency, so this never skips. `192.0.2.1` is an RFC 5737
+    /// example address, not a real gateway.
+    #[tokio::test]
+    async fn connect_routing_to_group_rejects_a_unicast_address() {
+        let own_address = IndividualAddress::new(1, 1, 4).unwrap();
+        let unicast = Ipv4Addr::new(192, 0, 2, 1);
+        let result = RoutingClient::connect_to_group(own_address, unicast).await;
+        match result {
+            Err(BusError::NotMulticast(addr)) => assert_eq!(addr, unicast),
+            Err(other) => panic!("expected BusError::NotMulticast({unicast}), got {other:?}"),
+            Ok(_) => panic!("expected BusError::NotMulticast({unicast}), got Ok"),
+        }
+    }
+
+    /// Boundary just below the permitted range — one bit short of Class D
+    /// — must still be rejected, not rounded into it.
+    #[tokio::test]
+    async fn connect_routing_to_group_rejects_the_address_just_below_the_multicast_range() {
+        let own_address = IndividualAddress::new(1, 1, 4).unwrap();
+        let below_range = Ipv4Addr::new(223, 255, 255, 255);
+        let result = RoutingClient::connect_to_group(own_address, below_range).await;
+        assert!(matches!(result, Err(BusError::NotMulticast(a)) if a == below_range));
+    }
+
+    /// Boundary just above the permitted range — the first Class E address
+    /// — must also be rejected.
+    #[tokio::test]
+    async fn connect_routing_to_group_rejects_the_address_just_above_the_multicast_range() {
+        let own_address = IndividualAddress::new(1, 1, 4).unwrap();
+        let above_range = Ipv4Addr::new(240, 0, 0, 0);
+        let result = RoutingClient::connect_to_group(own_address, above_range).await;
+        assert!(matches!(result, Err(BusError::NotMulticast(a)) if a == above_range));
+    }
+
+    /// A genuine multicast address must clear validation regardless of
+    /// whether this sandbox can actually join it — `239.0.2.1` sits in the
+    /// administratively-scoped range (RFC 2365), chosen only as an example
+    /// never observed on a real installation. Unlike the round-trip tests
+    /// above, this does not skip: a validation bug would show up as
+    /// `Err(NotMulticast(_))` regardless of sandbox networking, so there is
+    /// nothing here for a sandbox limitation to hide.
+    #[tokio::test]
+    async fn connect_routing_to_group_accepts_an_administratively_scoped_address() {
+        let own_address = IndividualAddress::new(1, 1, 4).unwrap();
+        let group = Ipv4Addr::new(239, 0, 2, 1);
+        let result = RoutingClient::connect_to_group(own_address, group).await;
+        assert!(
+            !matches!(result, Err(BusError::NotMulticast(_))),
+            "a genuine multicast address must not fail validation"
+        );
+    }
+
+    /// `connect_routing()` with no override must still join exactly
+    /// `ROUTING_MULTICAST` — asserted against the named constant, not a
+    /// repeated `224.0.23.12:3671` literal, so this fails the moment the
+    /// default silently drifts from the constant the rest of the module
+    /// uses. Skips, rather than fails, if this sandbox has no multicast
+    /// route at all, same policy as the round-trip test above.
+    #[tokio::test]
+    async fn connect_routing_joins_the_standard_group_by_default() {
+        let own_address = IndividualAddress::new(1, 1, 4).unwrap();
+        let client = match KnxNetIpClient::new().connect_routing(own_address).await {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!(
+                    "skipping connect_routing_joins_the_standard_group_by_default: \
+                     could not join the routing multicast group in this sandbox: {e}"
+                );
+                return;
+            }
+        };
+        assert_eq!(
+            client.group, ROUTING_MULTICAST,
+            "connect_routing() without an override must still join the standard group"
+        );
+    }
+
+    /// The override path must join the *given* group, not silently fall
+    /// back to the default — the one way the two connect paths could
+    /// drift despite sharing `connect_to_group`'s body.
+    #[tokio::test]
+    async fn connect_routing_to_group_joins_the_given_group_not_the_default() {
+        let own_address = IndividualAddress::new(1, 1, 4).unwrap();
+        let group = Ipv4Addr::new(239, 0, 2, 1);
+        let client = match RoutingClient::connect_to_group(own_address, group).await {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!(
+                    "skipping connect_routing_to_group_joins_the_given_group_not_the_default: \
+                     could not join {group} in this sandbox: {e}"
+                );
+                return;
+            }
+        };
+        assert_eq!(
+            client.group,
+            SocketAddrV4::new(group, ROUTING_MULTICAST.port())
+        );
+        assert_ne!(client.group, ROUTING_MULTICAST);
     }
 
     /// Finding 6 (T17 fix round 2): `decode_failure_count()` is public,

@@ -7,9 +7,9 @@
 
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection};
 
-use super::report_unknown_attrs;
+use super::{first_winner, report_unknown_attrs};
 use crate::report::{IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name, Attrs};
 use crate::ProductDbError;
@@ -192,37 +192,6 @@ fn handle_element(
         _ => {}
     }
     Ok(())
-}
-
-fn first_winner(
-    conn: &Connection,
-    table: &str,
-    id: Option<&str>,
-    source_sha256: &str,
-    conflicts: &mut Vec<IdConflict>,
-) -> Result<bool, ProductDbError> {
-    let id = id.unwrap_or_default();
-    let existing: Option<String> = conn
-        .query_row(
-            &format!("SELECT source_sha256 FROM {table} WHERE id = ?1"),
-            [id],
-            |row| row.get(0),
-        )
-        .optional()?;
-    match existing {
-        None => Ok(true),
-        Some(kept) => {
-            if kept != source_sha256 {
-                conflicts.push(IdConflict {
-                    table: table.to_string(),
-                    id: id.to_string(),
-                    kept_sha256: kept,
-                    other_sha256: source_sha256.to_string(),
-                });
-            }
-            Ok(false)
-        }
-    }
 }
 
 #[cfg(test)]

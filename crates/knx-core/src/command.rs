@@ -3496,6 +3496,26 @@ mod tests {
     fn set_parameter_value_do_undo_redo_round_trips_through_the_command_stack() {
         let mut project = test_project_with_one_device(None);
         let mut stack = CommandStack::new();
+
+        // Load the redo stack before the `do_command` under test, so the
+        // `!stack.can_redo()` assertion below is load-bearing: on a fresh
+        // stack the redo list starts empty, and an assertion that a stack
+        // clears something already empty passes whether or not the clear
+        // actually happened.
+        stack
+            .do_command(
+                &mut project,
+                Command::SetParameterValue {
+                    id: ParameterInstanceId(1),
+                    device: DeviceId(1),
+                    ets_id: "M-1_P-1_R-1".into(),
+                    raw: "1".into(),
+                },
+            )
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+        assert!(stack.can_redo());
+
         stack
             .do_command(
                 &mut project,
@@ -3507,6 +3527,8 @@ mod tests {
                 },
             )
             .unwrap();
+        assert!(stack.can_undo());
+        assert!(!stack.can_redo());
         assert_eq!(project.installations[0].parameters.len(), 1);
         assert_eq!(project.installations[0].parameters[0].raw, "7");
         assert_eq!(

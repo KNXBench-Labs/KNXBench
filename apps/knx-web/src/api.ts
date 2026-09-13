@@ -983,6 +983,11 @@ export interface ParameterPanel {
   sections: ParameterSection[];
   stale: StaleParameter[];
   diagnostics: ParameterDiagnostic[];
+  // The server's own freshly rebuilt tree (T3 fix round 1, item 6) — `null`
+  // from the plain `GET`, which runs no command and has nothing fresher to
+  // offer; always present on a successful `POST`, since `apply()` on the
+  // server already built it from the genuine post-write `CommandStack`.
+  tree: ProjectTree | null;
 }
 
 // `language` selects which stored translation row the server substitutes

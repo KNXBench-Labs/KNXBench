@@ -190,6 +190,7 @@ export const messages: Record<MessageKey, string> = {
   "explorer.importWarningsCount.other": "{count} Importwarnungen",
 
   "logPanel.title": "Sitzungsprotokoll",
+  "logPanel.eyebrow": "Diagnose",
   "logPanel.severity.error": "Fehler",
   "logPanel.severity.warning": "Warnung",
   "logPanel.severity.info": "Info",
@@ -197,6 +198,7 @@ export const messages: Record<MessageKey, string> = {
   "logPanel.emptyFiltered": "Keine Protokolleinträge entsprechen den aktuellen Filtern.",
 
   "busMonitor.title": "Bus-Monitor",
+  "busMonitor.eyebrow": "KNXnet/IP · Tunneling",
   "busMonitor.connect": "Verbinden",
   "busMonitor.disconnect": "Trennen",
   "busMonitor.session": "Sitzung {id}",

@@ -313,23 +313,35 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
 
   return (
     <div className="bus-monitor-panel">
-      <h2>{t("busMonitor.title")}</h2>
-      <div className="bus-monitor-connect">
-        <input
-          type="text"
-          placeholder="192.168.1.10:3671"
-          value={gatewayInput}
-          onChange={(e) => setGatewayInput(e.target.value)}
-          disabled={!!session}
-        />
-        {session ? (
-          <button onClick={disconnect}>{t("busMonitor.disconnect")}</button>
-        ) : (
-          <button onClick={connect} disabled={!gatewayInput}>
-            {t("busMonitor.connect")}
-          </button>
-        )}
-      </div>
+      {/* `.workspace-heading` like every other centre-pane view; the
+          connect controls are this view's action cluster. The eyebrow
+          states the only transport this panel has: `knx-server`'s bus
+          layer is tunnelling-only, no discovery and no routing (see
+          `apps/knx-server/src/bus.rs`'s module comment, D7).
+          The placeholder is an RFC 5737 documentation address, not
+          anybody's gateway. */}
+      <header className="workspace-heading">
+        <div>
+          <p className="eyebrow">{t("busMonitor.eyebrow")}</p>
+          <h1>{t("busMonitor.title")}</h1>
+        </div>
+        <div className="bus-monitor-connect">
+          <input
+            type="text"
+            placeholder="192.0.2.1:3671"
+            value={gatewayInput}
+            onChange={(e) => setGatewayInput(e.target.value)}
+            disabled={!!session}
+          />
+          {session ? (
+            <button onClick={disconnect}>{t("busMonitor.disconnect")}</button>
+          ) : (
+            <button onClick={connect} disabled={!gatewayInput}>
+              {t("busMonitor.connect")}
+            </button>
+          )}
+        </div>
+      </header>
       {connectError && <span className="field-error">{connectError}</span>}
       {session && (
         <p className="bus-monitor-session">
@@ -443,7 +455,6 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                       }
                     }}
                     onClick={() => selectRow(row)}
-                    style={{ cursor: "pointer" }}
                     title={t("busMonitor.rowTitle")}
                   >
                     <td>{row.seq}</td>

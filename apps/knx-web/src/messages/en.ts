@@ -501,6 +501,36 @@ export const messages = {
   "workbench.selectTelegram": "Select a telegram to inspect its received data.",
   "workbench.noDevices": "No devices assigned to this building part.",
 
+  // The group-address table (stage 4). A group address has no DPT of its
+  // own in the KNX model — these labels name what the linked communication
+  // objects state, which is why an empty DPT reads "none stated" rather
+  // than "unknown", and why a disagreement is labelled a conflict instead
+  // of being silently resolved.
+  "addressTable.filterLabel": "Filter group addresses",
+  "addressTable.filterPlaceholder": "Filter addresses…",
+  "addressTable.selectColumn": "Select",
+  "addressTable.range": "Range",
+  "addressTable.dpt": "DPT",
+  "addressTable.links": "Links",
+  "addressTable.noDpt": "none stated",
+  "addressTable.dptConflict": "conflicting",
+  "addressTable.noRange": "(no range)",
+  "addressTable.noLinks": "none",
+  "addressTable.linkCounts": "{senders} sending · {receivers} receiving",
+  "addressTable.linkTotal.one": "{count} link",
+  "addressTable.linkTotal.other": "{count} links",
+  "addressTable.noMatches": "No group address matches this filter.",
+  "addressTable.linksFor": "Links · {address}",
+  "addressTable.noLinksYet": "No communication object is linked to this address.",
+  "addressTable.participant": "Participant",
+  "addressTable.function": "Function",
+  "addressTable.direction": "Direction",
+  "addressTable.unlinkFrom": "Unlink {object} from {address}",
+  // Only reachable if the project links an object whose device is missing —
+  // the link is still shown rather than dropped (see `GroupAddressLinkNode`).
+  "addressTable.unknownDevice": "Unknown device #{id}",
+  "addressTable.unnamedObject": "Unnamed object",
+
   // T16, the device product identity block in the workspace's third tab
   // (`DeviceIdentity` in `Inspector.tsx`). The four `resolution.*` words
   // and their four `explain.*` sentences are deliberately not

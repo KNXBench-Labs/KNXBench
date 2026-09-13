@@ -17,6 +17,12 @@ import type { Selection } from "./selection";
 import ParameterPanel from "./ParameterPanel";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import {
+  directionLabel,
+  dptText,
+  hasDptConflict,
+  linkDirectionCounts,
+} from "./groupAddressView";
+import {
   findArea,
   findBuildingPart,
   findDeviceBuildingPartInFirstInstallation,
@@ -49,20 +55,6 @@ const BUILDING_PART_KIND_KEYS: Record<string, MessageKey> = {
 function buildingPartKindLabel(t: Translate, kind: string): string {
   const key = BUILDING_PART_KIND_KEYS[kind];
   return key ? t(key) : kind;
-}
-
-// `GroupLinkNode.direction`/`NewGroupLinkRow`'s own `direction` state are
-// `"Send"`/`"Receive"` wire values (`Direction`'s `Debug` form, sent
-// straight into `unlinkComObject`/`linkComObject`) — never translated.
-// Only the rendered word is.
-const DIRECTION_KEYS: Record<string, MessageKey> = {
-  Send: "inspector.direction.send",
-  Receive: "inspector.direction.receive",
-};
-
-function directionLabel(t: Translate, direction: string): string {
-  const key = DIRECTION_KEYS[direction];
-  return key ? t(key) : direction;
 }
 
 // The six near-duplicate "Delete is only available for … in the first
@@ -826,10 +818,25 @@ function GroupAddressInspector(props: {
     }
   }
 
+  const counts = linkDirectionCounts(ga);
+
   return (
     <div className="inspector">
       <h2>{ga.name}</h2>
       <p className="inspector-address">{ga.address}</p>
+      <dl className="inspector-facts">
+        <dt>{t("addressTable.dpt")}</dt>
+        <dd className={hasDptConflict(ga) ? "mono dpt-conflict" : "mono"}>
+          {dptText(t, ga)}
+          {hasDptConflict(ga) && <small> {t("addressTable.dptConflict")}</small>}
+        </dd>
+        <dt>{t("addressTable.links")}</dt>
+        <dd>
+          {counts.total === 0
+            ? t("addressTable.noLinks")
+            : `${t("addressTable.linkTotal", { count: counts.total })} · ${t("addressTable.linkCounts", { senders: counts.senders, receivers: counts.receivers })}`}
+        </dd>
+      </dl>
       {canDelete ? (
         <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (

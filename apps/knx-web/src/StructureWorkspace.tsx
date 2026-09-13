@@ -1,22 +1,45 @@
 /** Graphical hierarchy over generated projections; no invented physical coordinates. */
+import type { ReactNode } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
-import type { Selection } from "./selection";
+import type { MultiSelection, Selection } from "./selection";
+import type { ItemClickHandler } from "./multiSelection";
 import { useTranslate } from "./i18n";
 import WorkbenchIcon from "./WorkbenchIcon";
+import GroupAddressTable from "./GroupAddressTable";
+import { rangePath } from "./groupAddressView";
 import { findBuildingPart, flattenBuildingParts } from "./treeUtils";
 export type StructureView = "buildings" | "topology" | "addresses";
 export default function StructureWorkspace(props: {
   tree: ProjectTree; view: StructureView; selection: Selection | null;
   buildingScope?: number | null;
   onBuildingScope?: (id: number | null) => void;
+  // The group-address view's equivalent of `buildingScope`: both are owned
+  // by `App`, so a range picked in the tree and the table's breadcrumb can
+  // never disagree about what the view is scoped to.
+  rangeScope?: number | null;
+  onRangeScope?: (id: number | null) => void;
+  // One shared multi-selection, owned by `App` (see `multiSelection.ts`) —
+  // the address table feeds the same `BulkActionToolbar` the tree does.
+  multiSelection: MultiSelection | null;
+  onItemClick: ItemClickHandler;
+  onTreeUpdate: (tree: ProjectTree) => void;
+  // Group-address CSV export/import, mounted by `App` so this view owns no
+  // toast or error plumbing of its own. The design inventory puts CSV
+  // "directly at the group addresses"; the File menu keeps its copy too,
+  // so neither entry point is lost.
+  addressActions?: ReactNode;
   onSelect: (selection: Selection) => void; onCatalog: (line: number | null) => void;
 }) {
-  const { tree, view, selection, onSelect, onCatalog } = props;
+  const { tree, view, selection, onSelect, onCatalog, multiSelection, onItemClick, onTreeUpdate } = props;
   const t = useTranslate();
   const focusedBuilding = view === "buildings" && props.buildingScope != null
     ? findBuildingPart(tree, props.buildingScope) : undefined;
+  const scopedRange = view === "addresses" && props.rangeScope != null
+    ? tree.installations.flatMap((i) => i.group_ranges).find((r) => r.id === props.rangeScope) : undefined;
+  const scopedRangePath = scopedRange
+    ? rangePath(tree.installations.flatMap((i) => i.group_ranges), scopedRange.id) : null;
   const selected = (kind: Selection["kind"], id: number) => selection?.kind === kind && selection.id === id;
   function devices(nodes: DeviceNode[]) {
     return <div className="diagram-devices">{nodes.map((device) => <button key={device.id} className="diagram-device" aria-pressed={selected("device", device.id)} onClick={() => onSelect({ kind: "device", id: device.id })}>
@@ -46,10 +69,11 @@ export default function StructureWorkspace(props: {
     e.preventDefault();
     buttons[e.key === "Home" ? 0 : e.key === "End" ? buttons.length - 1 : Math.max(0, Math.min(buttons.length - 1, index + (e.key === "ArrowDown" ? 1 : -1)))]?.focus();
   }}>
-    <header className="workspace-heading"><div><p className="eyebrow">{focusedBuilding?.path ?? tree.installations.map((i) => i.name).join(" / ")}</p><h1>{focusedBuilding?.node.name ?? t(`workbench.${view}`)}</h1></div>
-      {view !== "addresses" && <button onClick={() => onCatalog(selection?.kind === "line" ? selection.id : null)}>+ {t("workbench.device")}</button>}
+    <header className="workspace-heading"><div><p className="eyebrow">{focusedBuilding?.path ?? (scopedRangePath ? `${t("workbench.addresses")} / ${scopedRangePath}` : tree.installations.map((i) => i.name).join(" / "))}</p><h1>{focusedBuilding?.node.name ?? scopedRange?.name ?? t(`workbench.${view}`)}</h1></div>
+      {view === "addresses" ? props.addressActions : <button onClick={() => onCatalog(selection?.kind === "line" ? selection.id : null)}>+ {t("workbench.device")}</button>}
     </header>
     {focusedBuilding && <button className="building-overview-button" onClick={() => props.onBuildingScope?.(null)}>← {t("workbench.buildings")}</button>}
+    {scopedRange && <button className="address-overview-button" onClick={() => props.onRangeScope?.(null)}>← {t("workbench.addresses")}</button>}
     {tree.installations.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}
     {tree.installations.filter((installation) => !focusedBuilding || flattenBuildingParts(installation.buildings, []).some(({node}) => node.id === focusedBuilding.node.id)).map((installation) => <section key={installation.id} className="installation-diagram" aria-label={installation.name}>
       {view === "topology" && <>
@@ -71,9 +95,9 @@ export default function StructureWorkspace(props: {
           <div className="building-diagram scoped-building-children">{focusedBuilding.node.children.map(building)}</div>
         </> : <div className="building-diagram">{installation.buildings.map(building)}</div>}
       </>}
-      {view === "addresses" && <div className="workspace-table-wrap"><table className="workspace-table"><thead><tr><th>{t("workbench.address")}</th><th>{t("workbench.name")}</th></tr></thead><tbody>
-        {installation.group_addresses.map((address) => <tr key={address.id} aria-selected={selected("group_address", address.id)}><td className="mono"><button className="table-select" onClick={() => onSelect({ kind: "group_address", id: address.id })}>{address.address}</button></td><td>{address.name}</td></tr>)}
-      </tbody></table>{installation.group_addresses.length === 0 && <p role="status">{t("workbench.emptyStructure")}</p>}</div>}
+      {view === "addresses" && <GroupAddressTable installation={installation} selection={selection}
+        multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={onTreeUpdate}
+        rangeScope={props.rangeScope ?? null} />}
     </section>)}
   </section>;
 }

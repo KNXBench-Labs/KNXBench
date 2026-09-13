@@ -109,7 +109,21 @@ pub fn resolve_project_group_address_dpts(project: &Project) -> HashMap<u16, Gro
 /// `None`, one distinct entry is `Single`, more than one is `Conflict`. The
 /// sort order is `DptRef`'s own derived `Ord` (main type, then subtype), so
 /// two runs over the same input always produce the same `Conflict` vector.
-fn group_address_dpt_from(mut dpts: Vec<DptRef>) -> GroupAddressDpt {
+///
+/// `pub` so a caller that has already gathered the linked communication
+/// objects for its own reasons can classify them by the same rule instead
+/// of re-deriving it. `knx-projection` builds one reverse index over every
+/// communication object to project both a group address's links and its
+/// DPT; calling [`resolve_group_address_dpt`] per address instead would
+/// rescan every communication object once per group address, and
+/// open-coding the three-way classification there would be a second copy
+/// of this rule free to drift from this one.
+///
+/// Deduplication is what makes it safe to feed this one entry *per link*
+/// rather than per communication object: an object linked to the same
+/// address in both directions states its DPT once either way. It is not a
+/// licence to count links — see [`resolve_group_address_dpt`].
+pub fn group_address_dpt_from(mut dpts: Vec<DptRef>) -> GroupAddressDpt {
     dpts.sort();
     dpts.dedup();
     match dpts.len() {

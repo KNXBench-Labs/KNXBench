@@ -1113,6 +1113,27 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .building-overview-button { margin: 0 0 16px; background: transparent; color: var(--knx-accent) !important; box-shadow: none; border: 1px solid var(--knx-border); }
 .scoped-building-children { margin-top: 20px; }
 .empty-device-list { padding: 12px; color: var(--knx-muted); }
+/* Stage 4's group-address table. The scope-back button is the address
+   view's equivalent of `.building-overview-button` and deliberately shares
+   its look; the table itself adds only a filter row, a checkbox column and
+   the link panel below it to `.workspace-table`'s existing shape. */
+.address-overview-button { margin: 0 0 16px; background: transparent; color: var(--knx-accent) !important; box-shadow: none; border: 1px solid var(--knx-border); }
+.address-table-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.address-filter { flex: 1 1 220px; min-width: 180px; }
+.address-table-check { width: 36px; text-align: center; }
+/* A multi-selected row is distinguishable from the single selected row
+   (`tr[aria-selected="true"]` above), not a second shade of the same thing:
+   the accent sits on the row's left edge, so "one of several marked for a
+   bulk action" never reads as "the one the inspector is showing". */
+.address-table tr.row-multi-selected { background: color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface)); box-shadow: inset 3px 0 0 var(--knx-accent); }
+.dpt-conflict { color: var(--knx-warning-color); }
+.dpt-conflict-note { font-style: italic; }
+.address-links-panel { margin-top: 24px; }
+.address-links-panel h2 { font-size: 16px; margin: 0 0 8px; }
+.address-links-panel small { color: var(--knx-muted); }
+.inspector-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 16px; }
+.inspector-facts dt { color: var(--knx-muted); }
+.inspector-facts dd { margin: 0; }
 @media (max-width: 1100px) {
   .workbench { height: auto; min-height: 100dvh; overflow: visible; }
   .workbench-body { flex-wrap: wrap; }

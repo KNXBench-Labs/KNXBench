@@ -111,7 +111,7 @@ describe("buildSearchIndex", () => {
   it("flattens group addresses from every installation", () => {
     const t = tree([
       installation({
-        group_addresses: [{ id: 1, name: "Light on/off", address: "1/1/1" }],
+        group_addresses: [{ id: 1, name: "Light on/off", address: "1/1/1", range: null, dpts: [], links: [] }],
       }),
     ]);
 
@@ -128,9 +128,9 @@ describe("buildSearchIndex", () => {
 describe("findGroupAddress", () => {
   it("finds a group address by id across installations", () => {
     const t = tree([
-      installation({ group_addresses: [{ id: 5, name: "Blinds up", address: "2/1/1" }] }),
+      installation({ group_addresses: [{ id: 5, name: "Blinds up", address: "2/1/1", range: null, dpts: [], links: [] }] }),
     ]);
-    expect(findGroupAddress(t, 5)).toEqual({ id: 5, name: "Blinds up", address: "2/1/1" });
+    expect(findGroupAddress(t, 5)).toEqual({ id: 5, name: "Blinds up", address: "2/1/1", range: null, dpts: [], links: [] });
   });
 
   it("returns undefined for an unknown id", () => {

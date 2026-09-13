@@ -173,7 +173,8 @@ Cycle 5 (`docs/superpowers/specs/2026-09-04-search-design.md`) adds
 `GroupAddressNode` and a `group_addresses: Vec<GroupAddressNode>` field on
 `InstallationNode`, projected from `Installation.group_addresses` and
 formatted through `GroupAddress::format` per `project.info.
-group_address_style` — the reference project's 514 group addresses are
+group_address_style` (the node grew `range`, `dpts` and `links` on
+2026-09-13; see the UI-workbench section at the end of this document) — the reference project's 514 group addresses are
 cheap enough to embed eagerly, unlike `DeviceDetail`'s lazy communication
 objects. 18 tests.
 
@@ -703,7 +704,9 @@ this cycle: `apps/knx-server` gains one route each (`/api/areas`,
 [the design spec](superpowers/specs/2026-09-06-topology-group-range-commands-design.md)
 for the deliberate scope cut (`knx-projection`'s `GroupAddressNode` has no
 real main/middle/address nesting yet; that redesign is its own future
-cycle). `knx-projection` gains a small, additive `GroupRangeNode`
+cycle — as of 2026-09-13 it carries `range: Option<u32>`, the id of the
+range that contains it, which is enough for a UI to show range context but
+is still a flat list rather than a nested one). `knx-projection` gains a small, additive `GroupRangeNode`
 (id/name/start/end/parent) on `InstallationNode` — not the fuller nesting
 redesign, just enough for an HTTP caller to discover a newly-created
 range's id. `sync_after_command` gains no new incremental-sync paths for
@@ -3604,3 +3607,105 @@ What T16 still does not do: the catalogue browser is still insertion-only,
 there is no link from a device to its catalogue entry, and a device's serial
 number remains unreadable from the bus
 ([KNOWN_LIMITATIONS.md §73](KNOWN_LIMITATIONS.md#73-a-line-scan-cannot-learn-product-identity-manufacturer-or-serial-number)).
+
+**The group-address table, multi-select moved, and the file menu's keyboard
+path (2026-09-13), branch `codex-ui-workbench`.** The workbench's central
+group-address view was a two-column address/name list — fewer facts than the
+navigation tree beside it already showed, and no test at all. It is now a
+table with range context, the resolved DPT and the linked communication
+objects with their directions, and the fact that made that possible came from
+the projection rather than from the screen.
+
+- **`knx-projection` extends `GroupAddressNode`** with `range:
+  Option<u32>` (the id of the containing `GroupRangeNode`), `dpts:
+  Vec<String>` and `links: Vec<GroupAddressLinkNode>` (device id, device
+  name and address, communication-object id, number and name, and the
+  `Direction`). Which objects reference an address is a question about the
+  project, not about the view, so it is answered where the project lives.
+  One reverse pass over `project.devices.com_objects()` builds the index
+  (O(communication objects), not O(addresses × communication objects)), and
+  the three-way DPT classification reuses `knx_core`'s own
+  `group_address_dpt_from`, newly `pub` with a doc comment explaining why a
+  caller that has already gathered the links should not re-derive the rule.
+  A group address still has no DPT of its own: `dpts` is empty when nothing
+  linked states one, and holds more than one entry when linked objects
+  disagree — a conflict the projection reports and never settles. Six new
+  tests cover the range/DPT/link projection, the conflict, an object linked
+  in both directions (one DPT, two rows), an unlinked address, a link whose
+  device is missing from `project.devices`, and links staying attached to
+  their own address rather than smeared across all of them.
+  `cargo test -p knx-projection`: 36 passed.
+- **Bindings regenerated, never hand-edited.**
+  `TS_RS_EXPORT_DIR=../../apps/knx-web/src/bindings cargo test -p
+  knx-projection` updated `GroupAddressNode.ts` and added
+  `GroupAddressLinkNode.ts`; nothing else in the directory moved.
+- **`GroupAddressTable.tsx` is the new view**: checkbox, address, name,
+  range path, DPT and link counts, with a `type="search"` filter over
+  address/name/DPT, a below-table links panel (participant, function,
+  direction, Unlink) for the selected address, and distinct empty states
+  for "this project has no group addresses" and "this filter matches
+  none". Selecting a row drives the Inspector through the existing
+  `onSelect` contract. DPTs render in `DptRef`'s `Display` form
+  (`DPST-1-1`), not the dotted `1.001` the concept image shows: no dotted
+  formatter exists anywhere in this repository, and inventing one in a
+  table component is how two spellings of the same DPT start appearing on
+  one screen.
+- **The multi-select state machine moved, it was not copied.**
+  `multiSelection.ts` now owns `useMultiSelection`, the render-order
+  helpers and the ctrl/shift/plain click rules that used to live inside
+  `ProjectExplorer.tsx`; the explorer and the new table both receive the
+  one handler from `App`, which renders the one `BulkActionToolbar`. There
+  is exactly one definition of the rules and exactly one live instance of
+  the state. A shift-click spans only the rows currently visible, because
+  the handler takes the caller's visible order rather than assuming the
+  full tree order. The checkbox synthesises a ctrl-click through a
+  structural event type, so no `MouseEvent` cast is needed to add one id.
+- **`groupAddressView.ts`** holds the display helpers both the table and
+  the Inspector need — `directionLabel` (moved out of `Inspector.tsx`,
+  still one definition), `linkDirectionCounts`, `dptText`,
+  `hasDptConflict`, `rangePath` and `rangeWithDescendants`. The
+  group-address Inspector gained the same DPT and link-direction facts, so
+  the table and the properties pane cannot disagree about one address.
+- **`ProjectDiffPanel.tsx` had a real keyboard defect**: the comparison
+  report appeared without focus moving into it, and Escape inside it
+  closed the surrounding File menu instead of the report. The panel now
+  takes focus when it opens, stops Escape from propagating and returns
+  focus to the Compare button — so the first Escape closes the report and
+  the second closes the menu, innermost first.
+- **Two `CatalogBrowser` overlays cannot stack.** `App.tsx` and
+  `ProjectExplorer.tsx` own separate `catalogTarget` state, and the
+  question was whether both overlays are reachable at once. They are not,
+  and the guard is the shared `Overlay` shell: `.search-overlay` is
+  `position: fixed; inset: 0; z-index: 10` over the whole viewport, above
+  every catalogue trigger (`.workbench-pane` creates no competing stacking
+  context, `.workbench-toolbar` sits at `z-index: 5`), so it absorbs the
+  pointer events that would open the second; `Overlay` also moves focus
+  into the panel and traps `Tab`, and marks it `aria-modal="true"`. No
+  global shortcut and no `CommandContext` entry opens the catalogue. Both
+  states were therefore left exactly as they are: merging two unreachable
+  state machines is tidiness, not a fix, and it would have meant editing
+  code no test can reach.
+- **No context menus exist anywhere in `apps/knx-web`** — `onContextMenu`
+  and `contextmenu` appear nowhere in the tree — so "context menus
+  consistent where they exist" is satisfied vacuously, not by work. The
+  CLAUDE.md UX wish list still asks for them; that remains open.
+
+Tests: `GroupAddressTable.test.tsx` is new (9 tests) and covers range path
+plus DPT plus "1 sending · 1 receiving", the conflict rendering both DPTs,
+selection driving the links panel, a link whose device is missing, Unlink
+calling `unlinkComObject`, the checkboxes driving the real
+`BulkActionToolbar` through to `batchDeleteGroupAddresses`, a shift-click
+spanning only filtered rows, both empty states, and the range scope.
+`App.test.tsx` gains the keyboard walk through the File menu: the summary is
+focusable, activating it lists all eight entries (open, open `.knxdb`, save
+as, export `.knxproj`, CSV export, CSV import, documentation export, compare)
+with no negative tab index and only the legitimately unavailable
+`.knxproj` export disabled, Escape closes the menu and restores focus to the
+summary, and the layered Escape on the comparison report is asserted step by
+step. `ProjectExplorer.test.tsx` and `StructureWorkspace.test.tsx` wrap the
+shared hook in a small harness rather than restating its rules.
+
+Web gates: `npm test -- --run` **376 passed across 37 files** (up from 363
+across 36), `tsc --noEmit` clean. Fixtures are fictional throughout — made-up
+`1/0/x` group addresses and `1.1.11`/`1.1.13` device addresses, no real
+product, device name or occupied address anywhere.

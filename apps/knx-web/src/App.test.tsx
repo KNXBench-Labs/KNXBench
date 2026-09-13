@@ -28,6 +28,8 @@ const apiMock = vi.hoisted(() => ({
   // fire from a real command, and `undo` is the cheapest one on the
   // toolbar.
   undo: vi.fn(),
+  // The File menu's Compare entry (stage 4, item 4's keyboard walk).
+  diffProject: vi.fn(),
   // `Inspector` renders `ParameterPanel` unconditionally once a device's
   // detail has loaded (see `Inspector.tsx`'s own comment on why), and
   // `ParameterPanel` fetches on mount — every test in the T33 describe
@@ -553,4 +555,97 @@ it("leaves native text undo to the focused input", async () => {
   expect(event.defaultPrevented).toBe(false);
   expect(apiMock.undo).not.toHaveBeenCalled();
   await act(async () => root.unmount());
+});
+
+// Stage 4, items 4 and 5: the File menu and everything inside it — export,
+// CSV, documentation, compare — reachable and operable by keyboard alone.
+// `<summary>` is keyboard-activated by Enter/Space, which the platform
+// delivers as a click on the focused summary, so that is what these tests
+// dispatch.
+describe("App — the File menu by keyboard alone", () => {
+  async function openFileMenu() {
+    const summary = host!.querySelector<HTMLElement>(".file-menu summary")!;
+    summary.focus();
+    expect(document.activeElement).toBe(summary);
+    await act(async () => summary.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    return summary;
+  }
+
+  it("opens from the keyboard, exposes every file/export entry in the tab order, and Escape returns focus", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(baseTree());
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const summary = await openFileMenu();
+    const menu = host!.querySelector<HTMLElement>(".file-menu")!;
+    expect(menu.hasAttribute("open")).toBe(true);
+
+    // Every entry is a real button with no negative tabindex, so a Tab walk
+    // from the summary reaches all of them in the order they are read.
+    const entries = [...menu.querySelectorAll<HTMLButtonElement>(".file-menu-content button")];
+    expect(entries.map((b) => b.textContent)).toEqual([
+      "Open project…",
+      "Open (.knxdb)…",
+      "Save As…",
+      "Export to .knxproj…",
+      "Export group addresses (CSV)…",
+      "Import group addresses (CSV)…",
+      "Export documentation…",
+      "Compare with…",
+    ]);
+    expect(entries.every((b) => b.tabIndex >= 0)).toBe(true);
+    // An ETS import has no `.knxdb` path yet, so only the .knxproj export is
+    // legitimately disabled — nothing else is keyboard-dead.
+    expect(entries.filter((b) => b.disabled).map((b) => b.textContent)).toEqual([
+      "Export to .knxproj…",
+    ]);
+
+    await act(async () => {
+      entries[0].dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(menu.hasAttribute("open")).toBe(false);
+    expect(document.activeElement).toBe(summary);
+
+    await act(async () => root.unmount());
+  });
+
+  it("closes the comparison report on Escape before the menu, and restores focus at each step", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(baseTree());
+    apiMock.diffProject.mockResolvedValue({ infoChanges: [], installations: [] });
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const summary = await openFileMenu();
+    const menu = host!.querySelector<HTMLElement>(".file-menu")!;
+    const compare = findButton("Compare with…");
+    await act(async () => compare.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+
+    const panel = host!.querySelector<HTMLElement>(".project-diff-panel")!;
+    expect(panel.textContent).toContain("No differences found.");
+    // Focus moves into the report, so the next Escape has somewhere to land.
+    expect(document.activeElement).toBe(panel);
+
+    await act(async () => {
+      panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    // Innermost first: the report is gone, the menu is still open, and focus
+    // sits back on the entry that opened the report.
+    expect(host!.querySelector(".project-diff-panel")).toBeNull();
+    expect(menu.hasAttribute("open")).toBe(true);
+    expect(document.activeElement).toBe(compare);
+
+    await act(async () => {
+      compare.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(menu.hasAttribute("open")).toBe(false);
+    expect(document.activeElement).toBe(summary);
+
+    await act(async () => root.unmount());
+  });
 });

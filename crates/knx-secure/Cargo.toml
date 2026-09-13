@@ -6,3 +6,10 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 publish = false
+
+[dependencies]
+# pbkdf2's default feature set is just "hmac", which is exactly the
+# `pbkdf2_hmac` generic function this crate uses — nothing more to trim.
+pbkdf2.workspace = true
+sha2.workspace = true
+base64.workspace = true

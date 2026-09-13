@@ -64,11 +64,15 @@ impl ApiError {
         }
     }
 
-    /// Escape hatch for the one case where the status is not ours to
-    /// choose: an axum extractor that already classified its own failure
-    /// (`MultipartError` distinguishes 413 "too large" from 400
-    /// "malformed"). Everything else goes through the two constructors
-    /// above and the split documented on this type.
+    /// Escape hatch for the cases the two constructors above cannot
+    /// express. Two exist: an axum extractor that already classified its
+    /// own failure (`MultipartError` distinguishes 413 "too large" from
+    /// 400 "malformed"), and a session-state conflict the caller could
+    /// have avoided — `bus_routes.rs`'s 409s, and `/api/project/new`
+    /// refusing to discard an open project's unsaved edits (a state
+    /// conflict the caller can resolve by saving first, not a malformed
+    /// request). Everything else goes through the two constructors above
+    /// and the split documented on this type.
     pub fn with_status(status: StatusCode, message: impl Into<String>) -> Self {
         Self {
             status,

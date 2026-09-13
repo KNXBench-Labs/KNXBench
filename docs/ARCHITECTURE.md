@@ -87,7 +87,9 @@ crates/
   knx-projection/  Pure Project -> ProjectTree projection, ts-rs TypeScript
                    bindings for knx-web. No IO; depends on knx-core only.
   knx-net/         KNXnet/IP: discovery, tunnelling, routing, cEMI, telegrams
-  knx-secure/      Isolated key material subsystem (empty for now, but present)
+  knx-secure/      Isolated key material subsystem (holds the .knxproj
+                   ZIP-password derivation as of A6; no KNX Secure
+                   runtime-key handling yet)
   knx-diff/        Pure `Project`-to-`Project` comparison ("KNXBench project
                    diff", never an ETS-comparison claim): `diff_projects`
                    matches entities by `ets_id`/natural key and reports
@@ -295,14 +297,22 @@ layout and mask data all live in the product database.
 ## 9. Key material
 
 `knx-secure` exists from the first commit of the workspace, with its own
-storage, while still empty.
+storage. It was empty until A6 (2026-09-13), which gave it the `.knxproj`
+ZIP-password derivation; it still holds no KNX Secure runtime-key handling
+(Data Secure, IP Secure, keyring) — that part of the crate's purpose remains
+unimplemented (`KNOWN_LIMITATIONS.md §8`).
 
 The rules are in force from now on. Key material never enters the `Project`
 model, never enters an `ImportReport`, never enters an export, never enters a
-log, and is omitted by default from diagnostic dumps (RESEARCH §9). The crate
-does not depend on `knx-core`, so there is no type path along which a key can
-reach the project model. A test asserts that `knx-secure` types do not
-implement `Serialize` toward report or export paths.
+log, and is omitted by default from diagnostic dumps (RESEARCH §9). Both
+halves of that are enforced mechanically rather than by convention: `cargo
+run -p xtask -- check-layering` fails the build if `knx-secure` ever gains a
+dependency path to `knx-core` (so no type path can carry a key into the
+project model) or to `serde` (so no `knx-secure` type can gain a
+`Serialize`/`Deserialize` impl); and `ZipPassword`, the one key-material type
+`knx-secure` currently exports, ships a hand-written `Debug` impl that always
+prints a fixed placeholder instead of the value, with no `Display` impl and
+no `serde` derive.
 
 Retrofitting isolation is how secrets leak, which is why the boundary exists
 before the feature does (ADR-0008).

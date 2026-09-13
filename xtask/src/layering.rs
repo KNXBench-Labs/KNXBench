@@ -69,6 +69,16 @@ pub const CORE_FORBIDDEN: &[&str] = &[
     "tower",
 ];
 
+/// Packages `knx-secure` must never reach (ADR-0008, `ARCHITECTURE.md` §9).
+/// `knx-core` is forbidden so no type path can carry key material into the
+/// project model; `serde` is forbidden so no `knx-secure` type can gain a
+/// `Serialize`/`Deserialize` impl by way of a dependency that brings the
+/// derive macros along, whether `knx-secure` depends on it directly or a
+/// future dependency of `knx-secure`'s pulls it in transitively — the
+/// resolved graph this check walks does not distinguish the two, which is
+/// the point.
+pub const SECURE_FORBIDDEN: &[&str] = &["knx-core", "serde"];
+
 /// Build the resolved dependency graph of the whole workspace, including
 /// transitive third-party dependencies.
 pub fn workspace_graph() -> Result<DepGraph, String> {

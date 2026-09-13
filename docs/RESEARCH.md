@@ -86,30 +86,36 @@ Official XSDs are **not** published on the public KNX website; they ship with th
 When protected, the archive contains a nested `<P-xxxx>.zip`.
 
 * Schema < 21 (ETS4/ETS5): standard ZipCrypto, password used as UTF-8
-  bytes. **[A]**, unchanged — this is still read from `xknxproject`
-  source, not from a KNX Standard clause, and unverified against a real
-  protected project.
+  bytes. **Demoted from [V] to [A] on 2026-09-13.** This section's heading
+  used to read "[V — read from `xknxproject` source]" as a single
+  section-level marker covering both bullets; splitting the ETS6 bullet
+  out to `[D]/[V]` below leaves this one where it always actually stood —
+  read from `xknxproject`'s source, never independently verified, and
+  never checked against a real protected project. Nothing about the
+  ZipCrypto claim itself changed; only its marker got honest.
 * Schema >= 21 (ETS6): AES ZIP, password derived as
 
-```text
-base64( PBKDF2-HMAC-SHA256(
-    password = utf-16-le(user_password),
-    salt     = b"21.project.ets.knx.org",
-    iterations = 65536,
-    dklen    = 32 ) )
-```
+  ```text
+  base64( PBKDF2-HMAC-SHA256(
+      password = utf-16-le(user_password),
+      salt     = b"21.project.ets.knx.org",
+      iterations = 65536,
+      dklen    = 32 ) )
+  ```
 
   **[D]/[V], corrected 2026-09-13.** This formula is not an `xknxproject`
   implementation detail — it is the KNX Standard's own specification:
   *The KNX Standard v3.0.0*, *Project Schema23 v01.00.00*, clause 4.2.4
   "Password protection", p.64/64, which also publishes three test
   vectors. `crates/knx-secure::derive_knxproj_zip_password` implements
-  this derivation and its tests assert byte-exact agreement with two of
-  the three vectors — `xknxproject`'s matching implementation is now
-  corroborating evidence, not the primary source. The formula above was
-  already correct when this section was first written from
-  `xknxproject`'s source; what was missing was knowing that an
-  independent, citable specification existed to verify it against.
+  this derivation and its tests assert byte-exact agreement with all
+  three vectors, the third recovered from a broken PDF text layer by
+  rendering and reading the glyphs directly (see the module's own
+  comments for the recovery method) — `xknxproject`'s matching
+  implementation is now corroborating evidence, not the primary source.
+  The formula above was already correct when this section was first
+  written from `xknxproject`'s source; what was missing was knowing that
+  an independent, citable specification existed to verify it against.
 
   This closes the *key derivation* only. Our sample is still unprotected,
   so *container decryption* — actually opening the nested, AES-encrypted

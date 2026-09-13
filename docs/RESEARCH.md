@@ -1629,7 +1629,7 @@ anywhere.
 
 ---
 
-### 8.5 Line-scan / bus-side device discovery — T17 spike (2026-09-12)
+### 8.5 Line-scan / bus-side device discovery — T17 spike (2026-09-12), shipped (2026-09-13)
 
 **This spike documents a procedure. Nothing described here is implemented,
 and the measurements in this section were taken by the controller against
@@ -1644,6 +1644,30 @@ a connection and issuing `A_DeviceDescriptor_Read` — "the standard way to
 address-and-probe a specific IA." T17's procedure is the same technique
 turned around: instead of confirming an address you just wrote, you probe
 an address whose occupant is unknown.
+
+**Status (2026-09-13): implemented.** The disclaimer directly above was
+accurate when it was written and is kept as written, not edited into a
+retroactive lie — but it stopped being true on 2026-09-13. T17 shipped:
+`ScanPlan` (`crates/knx-core/src/scan.rs`, exclusions dropped while the
+candidate range is built, with an assertion); `Tpci` encode/decode and
+the device-descriptor APCIs (`crates/knx-net/src/cemi.rs`); `ProbePolicy`,
+`ProbeOutcome`, `probe_address`, `scan_line`
+(`crates/knx-net/src/scan.rs`); and `knx bus scan`
+(`apps/knx-cli/src/scan.rs`, `apps/knx-cli/src/main.rs`). See
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md)'s **T17** entry for what
+shipped measured against what this section specified. Finding 4, appended
+at the end of this subsection, adds what a live run of the shipped binary
+against real hardware confirmed and narrowed; everything else below this
+point is the spike's own pre-implementation procedure and reasoning,
+corrected in place where it was wrong (see Finding 1) rather than
+silently left to mislead a future reader.
+
+The disclaimer's second clause — that the measurements in this section
+were taken by the controller against their own installation, not by this
+repository's code — is likewise only half true from here on: it still
+describes every pre-implementation measurement below (the 2026-09-12
+`xknx` run and Findings 1-3), but not Finding 4, whose measurements are
+this repository's own shipped binary against real hardware.
 
 **The correct procedure.** **[D]** `03_05_02 Management Procedures
 v02.01.02 AS.md` §2.19 defines `NM_IndividualAddress_Check`, with a note
@@ -1715,17 +1739,26 @@ initiates the above A_Connect.Lcon."* Three outcomes follow, all **[D]**:
   gap in this spike's reading, and no scanner built on
   `NM_IndividualAddress_Check` alone can resolve it.
 
-One further limitation is honest to carry forward rather than paper over:
-`03_03_04 Transport Layer v01.02.03 AS.md` §5.5.1.5 ("Connect from the
-local User to a non-existing Device") and §5.5.1.9 ("Connection timeout")
-are both figure-only in this corpus's Markdown extraction — the sequence
-diagrams did not survive extraction and no surrounding prose substitutes
-for them. Whether the Transport Layer state machine adds its own
-independent timeout/confirmation logic on top of the Data Link Layer's
-ACK/retry cycle described above, or is a pure pass-through of it, is
-therefore not fully pinned down from this corpus; §3.7's prose reads as the
-latter but that is **[A]**, inferred from adjacent text, not a direct
-reading of the two blank sections.
+One further limitation this subsection used to carry is resolved here
+rather than left hanging: `03_03_04 Transport Layer v01.02.03 AS.md`
+§5.5.1.5 ("Connect from the local User to a non-existing Device") and
+§5.5.1.9 ("Connection timeout") are both figure-only in this corpus's
+Markdown extraction — the sequence diagrams did not survive extraction
+and no surrounding prose substitutes for them. But whether the Transport
+Layer adds its own independent timeout logic on top of the Data Link
+Layer's ACK/retry cycle does not actually hinge on those two blank
+figures: clause 4, "Parameters of Transport Layer"
+(`03_03_04 Transport Layer v01.02.03 AS.md:665-688`, PDF page 16 of 38)
+answers it directly, **[D]**. It fixes connection timeout at 6 s,
+acknowledgement timeout at 3 s and max_rep_count at 3 as Transport Layer
+parameters, not Data Link Layer ones, and clause 5's "Local variables of
+Transport Layer" table (`03_03_04 Transport Layer v01.02.03 AS.md:696-705`,
+PDF page 17 of 38, specifically lines 702-703) names two independent
+local timers, `connection_timeout_timer` and `acknowledgment_timeout_timer`,
+started and stopped by separate actions in the clause's Actions table
+(page 19 of 38 onward). The Transport Layer keeps its own clock; it is
+not a pure pass-through of Layer 2's ACK/retry cycle. §3.7's prose had it
+right; it just did not need the hedge.
 
 **Bus-load budget.** This subsection originally carried an **[A]**
 extrapolation for the absent-address case and the whole-line duration,
@@ -1766,37 +1799,72 @@ error:
   **[V]**, never promoted to a Standard-normative figure, and none of
   these numbers may be written as one either.
 
-  **Finding 1 — the absent-address cost is set by the client, not the
-  bus.** The vacant-probe figures above are the tell: **~6.28 s** median,
-  with under 50 ms of spread across 219 samples, is far too tight to be
-  bus retry behaviour and far too slow to be a KNX medium timing at all —
-  it is a client timeout expiring on schedule. `xknx`'s own constants say
-  so directly: `MANAGAMENT_ACK_TIMEOUT = 3` seconds with one resend, and
-  `MANAGAMENT_CONNECTION_TIMEOUT = 6` seconds
+  **Finding 1 — the absent-address cost is set by the Standard, not
+  invented by a client.** The vacant-probe figures above are the tell:
+  **~6.28 s** median, with under 50 ms of spread across 219 samples, is
+  far too tight to be bus retry behaviour and far too slow to be a KNX
+  medium timing at all. It is a Transport Layer timeout expiring on
+  schedule, and the Standard names that schedule directly: **[D]**
+  `03_03_04 Transport Layer v01.02.03 AS`, clause 4 "Parameters of
+  Transport Layer" (`03_03_04 Transport Layer v01.02.03 AS.md:665-688`,
+  PDF page 16 of 38) fixes connection timeout at 6 s, acknowledgement
+  timeout at 3 s and max_rep_count at 3; clause 5's Local Variables table
+  (`:696-705`, PDF page 17 of 38, specifically lines 702-703) names the
+  two local timers — `connection_timeout_timer` and
+  `acknowledgment_timeout_timer` — that implement them. The measured
+  ~6.28 s tracks the 6 s connection timeout plus transport/IP overhead
+  almost exactly, not the ~70 ms the **[A]** bus arithmetic above
+  predicted, because the two figures measure different layers: the
+  arithmetic modelled TP1's own retry budget; the measurement is the
+  Transport Layer's connection-teardown clock running out.
+
+  An earlier draft of this finding attributed the ~6 s figure to a
+  client library's own policy constant — `xknx`'s
+  `MANAGAMENT_CONNECTION_TIMEOUT`
   (`xknx/management/management.py:35-36`, the copy installed in this
-  project's `.venv`) — the measured ~6.28 s tracks the 6 s connection
-  timeout plus transport overhead, not the ~70 ms the **[A]** bus
-  arithmetic above predicted.
+  project's `.venv`) — as if KNXBench were free to pick something
+  different for no particular reason. That was wrong and is corrected
+  here: `xknx` did not invent 6 s, it implemented the Standard's own
+  clause-4 parameter. Any conforming implementation of
+  `NM_IndividualAddress_Check`, KNXBench's own included, pays ~6 s
+  wherever it waits out a conforming Transport Layer connection timeout.
 
   The consequence is the design conclusion this whole subsection was
-  building toward: **the scan's duration is dominated by a policy
-  constant KNXBench will choose for itself**, roughly two orders of
-  magnitude away from the Standard-derived arithmetic. That arithmetic
-  was not wrong about the bus — it modelled the bus faithfully. It
-  modelled the wrong thing: the KNX medium's own retry budget, not a
-  KNXnet/IP client's connection-timeout policy, and the policy is what
-  actually governs how long "nobody answered" takes to conclude. Whoever
-  implements T17 picks that timeout value, and that choice — not the KNX
-  medium — decides whether a full-line scan takes twenty minutes or one.
-  Too short, and a slow-but-present device is reported absent; too long,
-  and the scan is unusable on any real line, which is mostly vacant
-  addresses, not mostly occupied ones. The Standard does not hand over a
-  number to copy here: the closest it comes is All TP1 Profiles'
-  `nak_retry`/`busy_retry`, documented **[D]** as only
-  *optionally* 3 (`06 Profiles v02.01.01.md:775`, already cited above) —
-  a bus-level retry count, not a client connection timeout, and optional
-  even as that. This is a genuine design decision for T17's
-  implementation, not a lookup.
+  building toward, corrected: **the scan's duration is dominated by the
+  Standard's own Transport Layer connection timeout**, not a policy
+  constant invented independently of it. That figure is documented, not
+  chosen freely — clause 4 fixes it at 6 s for every conforming
+  Transport Layer implementation. The TP1 arithmetic above was not wrong
+  about the bus; it modelled a different layer, the medium's own retry
+  budget, which is why it landed roughly two orders of magnitude below
+  the measured figure. Implementing T17 still meant picking a
+  `response_timeout` value for `ProbePolicy`
+  (`crates/knx-net/src/scan.rs`), and that choice still governs whether a
+  full-line scan finishes in minutes or drags on needlessly — too short,
+  and a slow-but-present device is reported vacant (see the fast-preset
+  paragraph below); too long, and a mostly-vacant line takes longer than
+  it needs to clear. But the choice was made against a documented
+  anchor, not blind: `ProbePolicy::default()` sets `response_timeout` to
+  6000 ms, matching clause 4's connection timeout exactly, because there
+  is no principled reason to wait past the point the Standard itself
+  says the far end has given up. A shorter timeout remains a supported,
+  explicit option (`bus scan --timeout-ms`) for lines known to run
+  entirely fast, present devices — a bet on the installation, not a
+  correction to the Standard's own number.
+
+  **Why the fast preset is not the default.** The **[V]** measurement
+  above is the reason a short `--timeout-ms` is not shipped as the
+  default: occupied-address round trips in the very same run ranged
+  **13.6-6016.5 ms**. A 1000 ms timeout — plausible-looking, since most
+  occupied addresses answered in tens of milliseconds — would have
+  reported the slowest observed present device, at 6016.5 ms, as vacant.
+  Repeating a too-short question does not make it a better question:
+  shortening the timeout does not distinguish a slow device from an
+  absent one, it only moves the point at which the scan starts lying
+  about which is which. `bus scan`'s default stays anchored to the
+  Standard's own connection timeout for this reason; a faster preset is
+  a deliberate, explicit trade a specific installation's operator can
+  choose to make (`--timeout-ms`), not KNXBench's default guess.
 
   The earlier **[A]** 26-57 second full-line extrapolation this
   subsection carried is corrected here rather than silently replaced: it
@@ -1909,27 +1977,93 @@ possibilities a bus scan alone cannot distinguish between, and which
 would need a second signal (serial number, product identity read after
 the scan — see above) to tell apart.
 
-**What exists and what is missing for an implementation — documented, not
-built.** The KNXnet/IP tunnelling transport, cEMI `L_Data` encode/decode,
-point-to-point addressing, and a raw-APCI escape hatch already exist in
-`crates/knx-net` and are directly reusable
-(`crates/knx-core/src/address.rs:9-50`,
-`crates/knx-net/src/cemi.rs:28-32,183-243,450-463`,
-`crates/knx-net/src/client.rs:306-360,759`). What does not exist yet: the
-KNX **bus-level** Transport Layer. TPCI packet-type and sequence-number
-encoding is hardcoded to connectionless, unnumbered mode — `decode_l_data`
-derives `short_apci` from `tpci_apci_hi & 0x03` only
-(`crates/knx-net/src/cemi.rs:140`) and `encode_l_data` always emits a zero
-packet-type/control field (`crates/knx-net/src/cemi.rs:230-231`) — so
-there is no representation of `T_CONNECT`, `T_DISCONNECT`, `T_ACK`,
-`T_NAK`, or numbered `T_Data_Connected` anywhere in the crate today, no
-per-target connection state machine, and no correlation of a sent frame to
-its resulting bus-level `L_Data.con` distinct from the gateway's own
-`TUNNELLING_ACK`
-(`crates/knx-net/src/client.rs:195-201,624-637`). None of this requires a
-new crate or a change to `check-layering` — it is additive work inside
-`knx-net`'s existing cEMI and client modules — but it is real, unstarted
-work, and this section documents the gap; it does not close it.
+**Finding 4 — the shipped `bus scan` against real hardware, 2026-09-13.**
+**[V]** The controller ran the finished binary against the same
+installation's line, distinct from and later than the 2026-09-12
+measurement Finding 1 corrects above (that earlier run predates this
+implementation and was produced with `xknx`, not KNXBench). No address is
+named here for the same reason as Finding 3: this repository is
+public-facing.
+
+A dry run (`bus scan --dry-run`) against the full line produced 254
+scannable candidates, and 255 when one existing exclusion was lifted —
+consistent with `ScanPlan`'s exclusion-by-construction guarantee
+(`crates/knx-core/src/scan.rs`) dropping exactly one address, not zero
+and not more than one. The candidate list's first entry was device 1, not
+device 0 — consistent with device 0 never being a valid candidate (the
+line coupler's own address, `crates/knx-core/src/scan.rs`). A dry run
+against an unroutable gateway address returned in 1 ms with exit code 0:
+a dry run never opens a connection, so an unreachable gateway cannot fail
+it.
+
+Two live runs followed, both with `ProbePolicy::default()`
+(`response_timeout` 6000 ms, `vacant_confirmations` 1,
+`inter_probe_pause` 100 ms):
+
+* **Run 1**, nine consecutive occupied addresses: every probe returned
+  `Occupied`, round trips 84-202 ms, elapsed 1810 ms for the nine, and
+  every one of the nine reported the same Mask Version, `0x0701`. That
+  last fact is recorded and not generalized: nine addresses on one
+  installation sharing a Mask Version says nothing about any other
+  installation's device mix, and is not evidence that `0x0701` is common
+  or typical.
+* **Run 2**, five consecutive vacant addresses: every probe returned
+  `Vacant`, each one costing 6006 ms, for an elapsed total of 30431 ms
+  against a predicted 30430 ms (five × 6006 ms) — the arithmetic and the
+  measurement agree to within 1 ms, which is the expected shape for a
+  policy-timeout-dominated cost, not bus jitter. Zero probes in this run
+  returned `OccupiedBusy` or `OccupiedSilent`. That absence is a fact
+  about these five addresses on this one gateway and this one sample,
+  nothing more — it does not show that `OccupiedSilent` cannot occur, or
+  that it is rare; the evidence-honesty rule against promoting one
+  outcome into another binds this null result exactly as it binds every
+  other measurement in this section.
+
+Both runs are consistent with the 2026-09-12 measurement's per-address
+costs (occupied fast, vacant ~6 s) and with Finding 1's corrected
+explanation of where the ~6 s comes from. Neither run is a substitute for
+a full-line measurement repeated on this implementation; none has been
+done, and this section does not claim one.
+
+**What exists and what shipped, 2026-09-13.** The KNXnet/IP tunnelling
+transport, cEMI `L_Data` encode/decode, point-to-point addressing, and a
+raw-APCI escape hatch already existed in `crates/knx-net` before T17 and
+are directly reused: `TunnelClient` (`crates/knx-net/src/client.rs`) for
+the transport; `decode_l_data`/`encode_l_data`
+(`crates/knx-net/src/cemi.rs`) for the frame codec; `IndividualAddress`
+(`crates/knx-core/src/address.rs:9-50`) and `Destination::Individual`
+(`crates/knx-net/src/cemi.rs`) for point-to-point addressing; and
+`ApplicationService::Other` (`crates/knx-net/src/cemi.rs`) for the
+raw-APCI escape hatch. `client.rs` and `cemi.rs` are cited by name, not
+by line: T17 added code to both files, so any single line range picked
+now would drift again as soon as either file changes further. What did
+not exist as of
+this section's original writing, and now does: `Tpci` encode/decode
+(`Connect`, `Disconnect`, numbered `Data_Connected`, `Ack`, `Nak`) and the
+device-descriptor Application Layer services
+(`crates/knx-net/src/cemi.rs`); a `ProbePolicy`/`ProbeOutcome` probe of
+one address implementing `NM_IndividualAddress_Check`'s
+Connect → `A_DeviceDescriptor_Read` → Disconnect sequence over exactly
+that Tpci support, plus `scan_line` for a range
+(`crates/knx-net/src/scan.rs`); `ScanPlan`'s exclusion-by-construction
+range builder (`crates/knx-core/src/scan.rs`); and the `knx bus scan` CLI
+surface, dry-run and live (`apps/knx-cli/src/scan.rs`,
+`apps/knx-cli/src/main.rs`). What this closes: the KNX **bus-level**
+Transport Layer connection lifecycle needed to run one
+`NM_IndividualAddress_Check` probe now exists and is exercised by tests
+and by the live runs above. What it does not close, and was never in
+scope for T17: a general-purpose, long-lived Transport Layer connection
+manager for other connection-oriented services (memory writes, program
+downloads); those would reuse the same `Tpci` variants but need their
+own sequencing and lifetime, not this scan's single-probe-then-disconnect
+shape. Also unbuilt, and explicitly out of scope: scanning across
+couplers or more than one line per invocation, and any concurrency
+between probes — see `KNOWN_LIMITATIONS.md` for the durable record of
+what a scan still cannot do. Connectionless, unnumbered `T_Data_Group`
+traffic — the ordinary group-communication path this crate already
+supported before T17 — is untouched by any of this and keeps working the
+same way it always did; what changed is additive, a second, connected
+mode used only by the scan.
 
 ---
 

@@ -479,7 +479,8 @@ fn handle_start_or_empty(
         // `AssociationTable` and the rest of the load-procedure grammar
         // chief among them (docs/KNOWN_LIMITATIONS.md §7) — and is recorded
         // through `unknown` instead of vanishing, same as an unrecognised
-        // attribute already was, at the path it was actually found at.
+        // attribute already was, at the path it was actually found at, with
+        // its attributes reported alongside it rather than left behind.
         other => {
             // The document's own spine: the root and the containers on the
             // way down to the elements that do have arms. Reporting these
@@ -504,14 +505,16 @@ fn handle_start_or_empty(
                 "Languages",
                 "TranslationUnit",
             ];
-            // Structural wrappers with nothing of their own to store:
-            // carrying no attribute at all in any of those 336 files, with
-            // their children matched by their own arms above. Also here:
-            // `ComObject`, `ComObjectRef` and `ParameterRef`, whose own
-            // arms above are guarded on `!*already_present` and so fall
-            // through on a duplicate program — a known element that was
-            // deliberately not reprocessed, not an unrecognised one.
-            const KNOWN_BUT_UNSTORED: &[&str] = &[
+            // Candidate test for this list: the element carries no
+            // attribute at all in any of those 336 files, and every child
+            // it wraps is matched by that child's own arm above. Structural
+            // punctuation, with nothing of its own to store — so only the
+            // *element* is suppressed. Its attributes are still reported
+            // below, which is what keeps that corpus claim falsifiable: put
+            // an attribute on one of these and the report says so, rather
+            // than swallowing it because the name was on a list
+            // (docs/KNOWN_LIMITATIONS.md §7).
+            const ATTRIBUTE_FREE_WRAPPERS: &[&str] = &[
                 "Static",
                 "Parameters",
                 "ParameterTypes",
@@ -519,12 +522,30 @@ fn handle_start_or_empty(
                 "ComObjectRefs",
                 "ComObjects",
                 "ModuleDefs",
-                "ComObject",
-                "ComObjectRef",
-                "ParameterRef",
             ];
-            if !DOCUMENT_SPINE.contains(&other) && !KNOWN_BUT_UNSTORED.contains(&other) {
-                unknown.element(&xpath_of(open_path), other);
+            // Candidate test for this list: the element has a fully
+            // modelled arm above, guarded on `!*already_present`, and
+            // reaches this fallthrough only when the program was already
+            // ingested from another file and was deliberately not
+            // reprocessed. Nothing about it is unknown and nothing is lost
+            // — the first ingest stored element and attributes both — so
+            // reporting either here would describe this parser's own
+            // deduplication as a compatibility gap.
+            const HANDLED_ELSEWHERE_ON_DUPLICATE: &[&str] =
+                &["ComObject", "ComObjectRef", "ParameterRef"];
+            if !DOCUMENT_SPINE.contains(&other) && !HANDLED_ELSEWHERE_ON_DUPLICATE.contains(&other)
+            {
+                if !ATTRIBUTE_FREE_WRAPPERS.contains(&other) {
+                    unknown.element(&xpath_of(open_path), other);
+                }
+                // No known-attribute list, because nothing reaching here
+                // has a column: `AbsoluteSegment/@Size`/`@MemoryType`/
+                // `@Address`, `LdCtrlCompareProp/@InlineData`/`@ObjIdx`/
+                // `@PropId` and every `Options` `Legacy*` flag are the
+                // substance of the load procedures, and used to be invisible
+                // while their elements were merely named
+                // (docs/KNOWN_LIMITATIONS.md §7).
+                report_unknown_attrs(unknown, &xpath_of_child(open_path, other), a, &[]);
             }
         }
     }
@@ -981,5 +1002,161 @@ mod tests {
         assert!(out.unknown.iter().any(|u| {
             u.kind == crate::report::UnknownKind::Element && u.name == "AddressTable"
         }));
+    }
+
+    /// `ATTRIBUTE_FREE_WRAPPERS` suppresses the *element* on the strength of
+    /// a corpus claim — no attribute on any of those names in the files
+    /// swept. This is what makes that claim falsifiable instead of a comment
+    /// nobody can check: a wrapper the list calls attribute-free, carrying an
+    /// attribute, must still reach the report as an `Attribute` row.
+    #[test]
+    fn an_attribute_on_a_supposedly_attribute_free_wrapper_is_still_reported() {
+        let (_dir, conn) = db();
+        let xml = PROGRAM.replacen("<Static>", r#"<Static Surprise="1993">"#, 1);
+        let out = ingest_program(&conn, "sha-1", "M-006A/A.xml", xml.as_bytes()).unwrap();
+        let found = out
+            .unknown
+            .iter()
+            .find(|u| u.kind == crate::report::UnknownKind::Attribute && u.name == "Surprise")
+            .expect("an attribute on an allowlisted wrapper is reported");
+        assert_eq!(
+            found.xpath,
+            "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static"
+        );
+        assert_eq!(found.sample.as_deref(), Some("1993"));
+        // The wrapper itself is still inert as an element: the allowlist
+        // suppresses the element row and nothing else.
+        assert!(!out
+            .unknown
+            .iter()
+            .any(|u| u.kind == crate::report::UnknownKind::Element && u.name == "Static"));
+    }
+
+    /// The load-procedure grammar's substance lives in its attributes:
+    /// sizes, memory types, addresses and inline data. Naming the elements
+    /// and dropping those is a report that says a procedure exists without
+    /// saying anything about it (docs/KNOWN_LIMITATIONS.md §7).
+    #[test]
+    fn a_load_procedure_steps_attributes_are_reported_not_just_its_name() {
+        let (_dir, conn) = db();
+        let xml = PROGRAM.replacen(
+            "<Static>",
+            concat!(
+                "<Static>",
+                r#"<AbsoluteSegment Id="AS-4000" Size="513" MemoryType="EEPROM" Address="16384" />"#,
+                r#"<LoadProcedures><LdCtrlCompareProp InlineData="00000000033500000000" ObjIdx="0" PropId="78" /></LoadProcedures>"#,
+            ),
+            1,
+        );
+        let out = ingest_program(&conn, "sha-1", "M-006A/A.xml", xml.as_bytes()).unwrap();
+        let attr = |element: &str, name: &str| {
+            out.unknown
+                .iter()
+                .find(|u| {
+                    u.kind == crate::report::UnknownKind::Attribute
+                        && u.name == name
+                        && u.xpath.ends_with(element)
+                })
+                .unwrap_or_else(|| panic!("{element}/@{name} is reported"))
+                .clone()
+        };
+        let size = attr("/Static/AbsoluteSegment", "Size");
+        assert_eq!(size.sample.as_deref(), Some("513"));
+        assert_eq!(
+            size.xpath,
+            "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/AbsoluteSegment"
+        );
+        assert_eq!(
+            attr("/Static/AbsoluteSegment", "MemoryType")
+                .sample
+                .as_deref(),
+            Some("EEPROM")
+        );
+        assert_eq!(
+            attr("/Static/AbsoluteSegment", "Address").sample.as_deref(),
+            Some("16384")
+        );
+        let inline = attr("/LoadProcedures/LdCtrlCompareProp", "InlineData");
+        assert_eq!(inline.sample.as_deref(), Some("00000000033500000000"));
+        assert_eq!(
+            attr("/LoadProcedures/LdCtrlCompareProp", "PropId")
+                .sample
+                .as_deref(),
+            Some("78")
+        );
+        // Both element rows are still there — this added attributes, it did
+        // not trade the element report away for them.
+        for element in ["AbsoluteSegment", "LoadProcedures", "LdCtrlCompareProp"] {
+            assert!(
+                out.unknown
+                    .iter()
+                    .any(|u| u.kind == crate::report::UnknownKind::Element && u.name == element),
+                "{element} is still reported as an element"
+            );
+        }
+    }
+
+    /// The spine exemption covers attributes as well as elements, and must
+    /// not widen by accident: `KNX/@ToolVersion`, `KNX/@CreatedBy` and
+    /// `TranslationUnit/@RefId` are named as a gap in
+    /// docs/KNOWN_LIMITATIONS.md §7 instead of being reported, so if they
+    /// ever start showing up the doc entry is the thing that went stale.
+    #[test]
+    fn the_document_spines_own_attributes_stay_out_of_the_report() {
+        let (_dir, conn) = db();
+        let xml = PROGRAM
+            .replacen(
+                r#"<KNX xmlns="http://knx.org/xml/project/11">"#,
+                r#"<KNX xmlns="http://knx.org/xml/project/11" ToolVersion="5.7.1428.39084" CreatedBy="MT">"#,
+                1,
+            )
+            .replacen(
+                "</ApplicationPrograms>",
+                r#"</ApplicationPrograms><Languages><Language Identifier="de-DE"><TranslationUnit RefId="M-006A_A-0001-22-26C0-O0079" Version="2" /></Language></Languages>"#,
+                1,
+            );
+        let out = ingest_program(&conn, "sha-1", "M-006A/A.xml", xml.as_bytes()).unwrap();
+        for (element, attribute) in [
+            ("/KNX", "ToolVersion"),
+            ("/KNX", "CreatedBy"),
+            ("/KNX", "xmlns"),
+            ("/TranslationUnit", "RefId"),
+            ("/TranslationUnit", "Version"),
+        ] {
+            assert!(
+                !out.unknown.iter().any(|u| {
+                    u.kind == crate::report::UnknownKind::Attribute
+                        && u.name == attribute
+                        && u.xpath.ends_with(element)
+                }),
+                "{element}/@{attribute} is spine, exempt on purpose"
+            );
+        }
+    }
+
+    /// `HANDLED_ELSEWHERE_ON_DUPLICATE`: on a second ingest of the same
+    /// program id the modelled arms are skipped, so their elements fall
+    /// through to the catch-all. Nothing there is unknown — the first
+    /// ingest stored element and attributes both — and reporting it would
+    /// describe this parser's own deduplication as a compatibility gap.
+    #[test]
+    fn a_duplicate_programs_modelled_elements_are_not_reported_as_unknown() {
+        let (_dir, conn) = db();
+        ingest_program(&conn, "sha-1", "M-006A/A.xml", PROGRAM.as_bytes()).unwrap();
+        let out = ingest_program(&conn, "sha-1", "M-006A/A.xml", PROGRAM.as_bytes()).unwrap();
+        for element in ["ComObject", "ComObjectRef", "ParameterRef"] {
+            assert!(
+                !out.unknown.iter().any(|u| {
+                    u.kind == crate::report::UnknownKind::Element && u.name == element
+                }),
+                "{element} is modelled, not unknown"
+            );
+            assert!(
+                !out.unknown
+                    .iter()
+                    .any(|u| u.xpath.ends_with(&format!("/{element}"))),
+                "{element}'s attributes are handled by its own arm on the first ingest"
+            );
+        }
     }
 }

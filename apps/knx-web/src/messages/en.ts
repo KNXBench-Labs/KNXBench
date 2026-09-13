@@ -500,6 +500,53 @@ export const messages = {
   "workbench.telegram": "Telegram",
   "workbench.selectTelegram": "Select a telegram to inspect its received data.",
   "workbench.noDevices": "No devices assigned to this building part.",
+
+  // T16, the device product identity block above the workspace tabs
+  // (`DeviceIdentity` in `Inspector.tsx`). The four `resolution.*` words
+  // and their four `explain.*` sentences are deliberately not
+  // interchangeable: "no database is loaded" and "the database does not
+  // have it" are different facts about the installation, and collapsing
+  // them into one "unknown" is precisely the dishonesty this block exists
+  // to avoid. `explain.resolved` has no entry — the catalogue speaks for
+  // itself — but `explain.resolvedWithoutCatalog` does, for the shape the
+  // generated type permits and the server never sends.
+  "deviceIdentity.title": "Product identity",
+  "deviceIdentity.productRef": "Product reference",
+  "deviceIdentity.programRef": "Application program reference",
+  "deviceIdentity.refNotStated": "not stated in the project",
+  "deviceIdentity.resolution.resolved": "From the product database",
+  "deviceIdentity.resolution.noDatabase": "No product database",
+  "deviceIdentity.resolution.notInDatabase": "Not in the product database",
+  "deviceIdentity.resolution.noReference": "No product reference",
+  "deviceIdentity.explain.noDatabase":
+    "No product database is loaded here, so what the project states above cannot be matched to a product. Install the manufacturer's product package to see product, hardware and application program details.",
+  "deviceIdentity.explain.notInDatabase":
+    "A product database is loaded and does not contain what the project states above. The manufacturer's catalogue for this product is not installed here.",
+  "deviceIdentity.explain.noReference":
+    "This device states neither a product reference nor an application program reference — it was created without one, or came from an import that carried none.",
+  "deviceIdentity.explain.resolvedWithoutCatalog":
+    "The product database reported a match but returned no details for it.",
+  "deviceIdentity.more": "More product data",
+  "deviceIdentity.group.product": "Product",
+  "deviceIdentity.group.hardware": "Hardware",
+  "deviceIdentity.group.application": "Application program",
+  "deviceIdentity.manufacturer": "Manufacturer",
+  "deviceIdentity.manufacturerId": "Manufacturer ID",
+  "deviceIdentity.productText": "Product name",
+  "deviceIdentity.orderNumber": "Order number",
+  "deviceIdentity.catalogItemName": "Catalogue item",
+  "deviceIdentity.catalogItemNumber": "Catalogue item number",
+  "deviceIdentity.hardwareName": "Hardware name",
+  "deviceIdentity.hardwareVersion": "Hardware version",
+  "deviceIdentity.hardwareSerial": "Serial number",
+  "deviceIdentity.applicationName": "Program name",
+  "deviceIdentity.applicationNumber": "Program number",
+  "deviceIdentity.applicationVersion": "Program version",
+  "deviceIdentity.applicationProgramId": "Program ID",
+  "deviceIdentity.maskVersion": "Mask version",
+  "deviceIdentity.groupEmpty": "The product database holds no values here.",
+  "deviceIdentity.omitted.one": "{count} further field is omitted: the product database has no value for it.",
+  "deviceIdentity.omitted.other": "{count} further fields are omitted: the product database has no value for them.",
 } as const;
 
 export type Messages = typeof messages;

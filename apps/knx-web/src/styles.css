@@ -1132,6 +1132,36 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .device-workspace { background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; padding: 20px; margin-top: 24px; }
 .device-workspace .workspace-heading { margin-bottom: 15px; }
 .device-workspace h2 { margin: 0 0 4px; }
+/* T16: the product identity block, above the tab strip so it stays readable
+   while the user works in either tab. Quiet by design — a recessed panel,
+   not a card competing with the communication object table below it. The
+   headline pairs stay stacked (label over value) rather than side by side:
+   in a multi-column grid a label and its value drift apart horizontally and
+   stop reading as one fact. */
+.device-identity { background: color-mix(in srgb, var(--knx-bg) 55%, var(--knx-surface)); border: 1px solid var(--knx-border); border-radius: 8px; padding: 13px 16px 15px; margin-bottom: 18px; }
+.device-identity-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.device-identity h3 { margin: 0; font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--knx-muted); font-weight: 600; }
+.device-identity h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--knx-muted); font-weight: 600; }
+/* The four verdicts read differently at a glance without relying on colour
+   alone: each keeps its own word (see `deviceIdentity.resolution.*`), and
+   the border/fill tint only reinforces it. The word itself stays in the
+   foreground colour rather than the accent or warning colour — at 11px both
+   of those fall under 4:1 against Porcelain's near-white surface, and a
+   status the user cannot read is worse than one that is merely undecorated.
+   `NoReference` and `NoDatabase` are states of the installation, not faults,
+   so neither gets an error colour. */
+.resolution-badge { font-size: 11px; border-radius: 999px; padding: 2px 10px; white-space: nowrap; color: var(--knx-foreground); border: 1px solid var(--knx-border); }
+.resolution-badge[data-resolution="Resolved"] { border-color: color-mix(in srgb, var(--knx-accent) 55%, transparent); background: color-mix(in srgb, var(--knx-accent) 12%, transparent); }
+.resolution-badge[data-resolution="NotInDatabase"] { border-color: color-mix(in srgb, var(--knx-warning-color) 60%, transparent); background: color-mix(in srgb, var(--knx-warning-color) 14%, transparent); }
+.identity-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 11px 22px; margin: 12px 0 0; }
+.identity-row { display: grid; gap: 1px; align-content: start; min-width: 0; }
+.identity-row dt { color: var(--knx-muted); font-size: 11px; }
+.identity-row dd { margin: 0; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+.identity-note { margin: 11px 0 0; color: var(--knx-muted); font-size: 12px; line-height: 1.45; max-width: 78ch; }
+.identity-more { margin-top: 13px; border-top: 1px solid var(--knx-border); padding-top: 10px; }
+.identity-more > summary { cursor: pointer; color: var(--knx-muted); font-size: 12px; width: fit-content; }
+.identity-more > summary:hover, .identity-more > summary:focus-visible { color: var(--knx-accent); }
+.identity-group { margin-top: 14px; }
 .device-tabs { display: flex; gap: 12px; border-bottom: 1px solid var(--knx-border); margin-bottom: 14px; }
 .device-tabs button { background: transparent; color: var(--knx-muted) !important; border: 0; box-shadow: none; border-radius: 0; padding: 10px 8px; }
 .device-tabs button[aria-selected="true"] { color: var(--knx-accent) !important; border-bottom: 2px solid var(--knx-accent); }

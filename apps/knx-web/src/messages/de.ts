@@ -199,6 +199,10 @@ export const messages: Record<MessageKey, string> = {
 
   "busMonitor.title": "Bus-Monitor",
   "busMonitor.eyebrow": "KNXnet/IP · Tunneling",
+  "busMonitor.gatewayLabel": "Gateway-Adresse",
+  "busMonitor.gatewayLocked":
+    "Trennen Sie die laufende Sitzung, bevor Sie die Gateway-Adresse ändern.",
+  "busMonitor.connectNeedsGateway": "Geben Sie zuerst eine Gateway-Adresse ein.",
   "busMonitor.connect": "Verbinden",
   "busMonitor.disconnect": "Trennen",
   "busMonitor.session": "Sitzung {id}",

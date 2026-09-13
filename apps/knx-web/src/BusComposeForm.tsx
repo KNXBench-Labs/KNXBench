@@ -181,18 +181,37 @@ export default function BusComposeForm({
     }
   }
 
+  /// The four controls below go `disabled` for reasons that are only
+  /// rendered as prose a few lines above them. A disabled control is not in
+  /// the tab order, so a screen reader only meets it while browsing the
+  /// document, and then it needs to carry its own reason: hence
+  /// `aria-describedby` pointing at whichever hint is currently mounted.
+  /// Both can be mounted at once (a closed session whose project also moved),
+  /// so this is a list, and it must never name an id that is not in the DOM.
+  const disabledReason =
+    [
+      sessionClosed ? "bus-compose-closed-hint" : null,
+      contextStale ? "bus-compose-stale-hint" : null,
+    ]
+      .filter((id): id is string => id !== null)
+      .join(" ") || undefined;
+
   return (
     <div className="bus-compose-form">
       <h3>{t("busCompose.heading")}</h3>
       <p className="bus-compose-live-action">{t("busCompose.liveAction")}</p>
       {!projectOpen && <p className="bus-compose-hint">{t("busCompose.noProjectHint")}</p>}
       {sessionClosed && (
-        <p className="bus-compose-hint bus-compose-closed-hint">
+        <p id="bus-compose-closed-hint" className="bus-compose-hint bus-compose-closed-hint">
           {t("busCompose.sessionClosedMessage")}
         </p>
       )}
       {contextStale && (
-        <p className="bus-compose-hint bus-compose-stale-hint" role="alert">
+        <p
+          id="bus-compose-stale-hint"
+          className="bus-compose-hint bus-compose-stale-hint"
+          role="alert"
+        >
           {t("busCompose.contextStaleMessage")}
         </p>
       )}
@@ -205,6 +224,7 @@ export default function BusComposeForm({
             value={destination}
             onChange={(e) => onDestinationChange(e.target.value)}
             disabled={sessionClosed || contextStale}
+            aria-describedby={disabledReason}
           />
         </label>
         <label>
@@ -216,6 +236,7 @@ export default function BusComposeForm({
             value={dpt}
             onChange={(e) => setDpt(e.target.value)}
             disabled={sessionClosed || contextStale}
+            aria-describedby={disabledReason}
           />
         </label>
         <label>
@@ -226,9 +247,14 @@ export default function BusComposeForm({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             disabled={sessionClosed || contextStale}
+            aria-describedby={disabledReason}
           />
         </label>
-        <button onClick={() => void send()} disabled={sending || !destination || !value || sessionClosed || contextStale}>
+        <button
+          onClick={() => void send()}
+          disabled={sending || !destination || !value || sessionClosed || contextStale}
+          aria-describedby={disabledReason}
+        >
           {t("busCompose.send")}
         </button>
       </div>

@@ -476,17 +476,29 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           <h1>{t("busMonitor.title")}</h1>
         </div>
         <div className="bus-monitor-connect">
+          {/* The placeholder is the only visible hint at what this field is,
+              and a placeholder is not a label; `aria-label` gives it a name
+              that survives being filled in. The `title` on the disabled
+              states is the reason, not decoration: a disabled control is out
+              of the tab order, so the prose elsewhere on the page never
+              reaches anyone arriving at it. */}
           <input
             type="text"
             placeholder="192.0.2.1:3671"
+            aria-label={t("busMonitor.gatewayLabel")}
             value={gatewayInput}
             onChange={(e) => setGatewayInput(e.target.value)}
             disabled={!!session}
+            title={session ? t("busMonitor.gatewayLocked") : undefined}
           />
           {session ? (
             <button onClick={disconnect}>{t("busMonitor.disconnect")}</button>
           ) : (
-            <button onClick={connect} disabled={!gatewayInput}>
+            <button
+              onClick={connect}
+              disabled={!gatewayInput}
+              title={gatewayInput ? undefined : t("busMonitor.connectNeedsGateway")}
+            >
               {t("busMonitor.connect")}
             </button>
           )}

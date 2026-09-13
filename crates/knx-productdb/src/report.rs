@@ -26,6 +26,25 @@ impl UnknownKind {
     }
 }
 
+/// One construct an ingest met and does not model, counted by how often it
+/// was met.
+///
+/// `xpath` is always **the path of the container of `name`**, never the path
+/// of `name` itself — one rule, but it lands on a different node for each
+/// `kind`, so spelling both out here saves the first renderer of these rows
+/// from getting it wrong once:
+///
+/// * `Element` — `xpath` is the *parent* element's path, `name` is the
+///   unmodelled element. `/KNX/…/ApplicationProgram/Static` + `AddressTable`
+///   means `…/Static/AddressTable` was found.
+/// * `Attribute` — `xpath` is the *owning* element's path, `name` is the
+///   unmodelled attribute, and `sample` is one value it was seen with.
+///   `/KNX/…/Static/AbsoluteSegment` + `Size` means
+///   `…/Static/AbsoluteSegment/@Size` was found.
+///
+/// So an unmodelled element with unmodelled attributes produces rows at two
+/// different `xpath`s, one segment apart, and joining them means appending
+/// the `Element` row's `name` to its `xpath`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnknownConstruct {
     pub xpath: String,

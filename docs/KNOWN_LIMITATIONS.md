@@ -333,13 +333,65 @@ acknowledges only the category — *"For the common tool ETS®, this can be
 controlled via a flag in the database entry for the product"* **[D]**
 (`03_05_03` §3.4.1.2.1, footnote 6). Second, `knx-productdb` stores
 `load_procedure_style` but drops `Options`, `LoadProcedures` and every
-`LdCtrl*` element without even reporting them as unknown constructs — the
-bytes survive in `source_file`, but nothing is queryable **[V]**. (The
-companion `bool_flag` defect this spike found — only `"1"`/`"0"` were accepted,
-so schema-20/21 `true`/`false` landed as `NULL`, measured across all six
-ingested programs — was fixed on 2026-09-13 and is no longer outstanding
-**[V]**.) Third, hardware. Nothing in this update has been run against a
-device, and no bus was contacted to produce it.
+`LdCtrl*` element without storing them — the bytes survive in `source_file`,
+but nothing is queryable **[V]**. As of 2026-09-13 they are at least no
+longer invisible. `program.rs`'s catch-all reports every one of them through
+the same `UnknownCollector` an unrecognised attribute already used, instead
+of the bare `_ => {}` it fell into before, so an ingest report shows
+`Options`, `LoadProcedures`, each `LdCtrl*` variant, `AddressTable`,
+`AssociationTable` and the rest of the load-procedure grammar as `Element`
+rows — name, parent path and occurrence count **[V]**. The same date's
+second pass added their *attributes*: the catch-all now also calls
+`report_unknown_attrs` for every element it reaches, with no known-attribute
+list at all, so `AbsoluteSegment/@Size`/`@MemoryType`/`@Address`,
+`LdCtrlCompareProp/@InlineData`/`@ObjIdx`/`@PropId` and the `Legacy*` flags
+on `Options` land as `Attribute` rows carrying name, owning-element path,
+count and one sample value — the substance of the load procedures, not just
+the shape (pinned by
+`a_load_procedure_steps_attributes_are_reported_not_just_its_name`) **[V]**.
+Two wrapper elements in the same tree joined that report on the same date,
+after the first attempt at the fix allowlisted them into silence instead:
+`ComObjectTable` carries the com-object table's memory placement
+(`@CodeSegment` and `@Offset`, on 279 of the 336 application-program files
+swept on this machine) and `ModuleDef` carries `@Id`/`@Name` (91 files)
+**[V]**. `@CodeSegment` is read for `Parameter`'s `Memory` and nowhere else,
+and `ModuleDef/@Name` is stored by nothing at all — `@Id` is at least
+recovered by the separate `Dynamic` pass as `dynamic_node.module_def_id` —
+so all four are now `ingest_unknown` attribute rows: parsed, reported, and
+not stored. So for this file kind the *reporting* half of the gap is closed for
+elements and for attributes both, and the *storage* half is not: an ingest
+report can tell a reader that `<AbsoluteSegment Size="513"
+MemoryType="EEPROM" Address="16384">` was present and where — the report even
+carries `"513"` as its sample — but no *modelled* table or column holds it,
+and no query resolves a download sequence from it **[V]**. Exactly two reporting exemptions remain, both deliberate, both
+narrow, and neither of them attribute-shaped rot. First, the document's own
+spine (`KNX`, `ManufacturerData`, `ApplicationPrograms`, `Languages`,
+`TranslationUnit`): neither those elements nor their attributes are
+reported, so an ingest does not describe the parser walking past its own
+ancestors. The attributes that exemption swallows are named here instead,
+so they are recorded somewhere: `KNX/@ToolVersion`, `KNX/@CreatedBy`,
+`KNX/@xmlns:xsd` and `KNX/@xmlns:xsi` (their sibling `@xmlns` *is* read, by
+`package.rs`, for the schema version), and `TranslationUnit/@RefId` (all 336
+files) plus `TranslationUnit/@Version` (39) **[V]** — that is the whole list, and
+`the_document_spines_own_attributes_stay_out_of_the_report` fails if the
+exemption ever widens past it. Second, `ComObject`, `ComObjectRef` and
+`ParameterRef` reach the catch-all only on a *duplicate* program, whose
+first ingest already stored element and attributes both; suppressing them
+there reports deduplication as nothing rather than as a compatibility gap
+(`a_duplicate_programs_modelled_elements_are_not_reported_as_unknown`)
+**[V]**. The seven structural wrappers the catch-all still keeps off the
+*element* report (`Static`, `Parameters`, `ParameterTypes`, `ParameterRefs`,
+`ComObjectRefs`, `ComObjects`, `ModuleDefs`) are no longer an exemption for
+their attributes: if a manufacturer ever puts one there, it is reported, and
+`an_attribute_on_a_supposedly_attribute_free_wrapper_is_still_reported`
+proves it rather than leaving the corpus claim unfalsifiable **[V]**.
+Everything unstored survives whole as bytes in `source_file` regardless
+(ADR-0011). (The companion `bool_flag` defect this
+spike found — only
+`"1"`/`"0"` were accepted, so schema-20/21 `true`/`false` landed as `NULL`,
+measured across all six ingested programs — was fixed on 2026-09-13 and is no
+longer outstanding **[V]**.) Third, hardware. Nothing in this update has been
+run against a device, and no bus was contacted to produce it.
 
 **Lifted when.** The generic load/unload/reset/memory procedures no longer
 block this — they are documented (RESEARCH §8.4) — and neither does the
@@ -3694,12 +3746,15 @@ happens first does not happen by accident.
 
 ## 86. Duplicate identifiers inside one file are dropped with no record at all
 
-**Limitation.** `first_winner` (`crates/knx-productdb/src/parse/hardware.rs`
-and its near-identical twin in `crates/knx-productdb/src/parse/catalog.rs`,
-plus the inline equivalent for `application_program` in
-`crates/knx-productdb/src/parse/program.rs`) records an `IdConflict` only
-when an id it has already seen belongs to a *different* file — it compares
-the existing row's `source_sha256` to the id, so within one call. Because
+**Limitation.** `first_winner` — one copy, in
+`crates/knx-productdb/src/parse/mod.rs`, called by `parse/hardware.rs` and
+`parse/catalog.rs` since the two byte-identical copies were merged on
+2026-09-13, plus the inline equivalent for `application_program` in
+`crates/knx-productdb/src/parse/program.rs` — records an `IdConflict` only
+when an id it has already seen belongs to a *different* file — its only test
+is `kept != source_sha256`, comparing the existing row's stored
+`source_sha256` against the `source_sha256` the current parse call was handed
+(`crates/knx-productdb/src/parse/mod.rs`, `first_winner`) **[V]**. Because
 one `ingest_hardware`/`ingest_catalog` call always passes the same
 `source_sha256` for every element in that file, two `Hardware` (or
 `Product`, `Hardware2Program`, `CatalogSection`, `CatalogItem`,
@@ -3814,3 +3869,91 @@ the one honest fix, and it is deliberately not done here: it would be the
 first migration in the chain to call the parser, which is an architectural
 commitment (migrations would gain a dependency on parse-layer behaviour that
 can itself change) worth making on purpose rather than in passing.
+
+## 88. A manufacturer's display name is last-writer-wins, and that is on purpose
+
+**Limitation.** `ingest_master_data`'s `"Manufacturer"` arm
+(`crates/knx-productdb/src/parse/master.rs`) writes `name` with `INSERT ...
+ON CONFLICT(id) DO UPDATE SET name = excluded.name` — whichever
+`knx_master.xml` is ingested last overwrites the name every earlier one
+wrote. Every other id-collision path this crate has is first-writer-wins
+instead, plus a recorded `IdConflict` when the losing row's file differs:
+`first_winner` in `parse/mod.rs`, shared by `hardware.rs` and `catalog.rs`
+since 2026-09-13, and an equivalent that `program.rs` still inlines for
+`application_program` rather than calling — editing the shared helper does
+not reach it. Manufacturer names update silently and take the
+opposite side.
+
+**Cause.** `hardware.rs` and `catalog.rs` can each create a manufacturer row
+stub (`id`, `name = NULL`) before any `knx_master.xml` naming it has been
+ingested — order between the two is not guaranteed. `first_winner` semantics
+applied literally would make the first arrival "win", `NULL`-name stub
+included, and the name would then never get filled in by a later,
+better-informed `knx_master.xml`. The existing test
+`a_manufacturer_seen_during_ingest_first_gets_its_name_later` pins the
+required outcome: a `NULL` stub inserted first still ends up with a real name
+after `ingest_master_data` runs, in either arrival order. That stub is a
+constraint on any rule chosen here, not an argument for this one — a
+first-writer-wins variant can satisfy it, and the Ruling below names the one
+that does and says why it lost anyway.
+
+**Measured against the real corpus.** Swept 69 real `knx_master.xml` files
+(pattern search across the filesystem, not one remembered path) for
+manufacturer ids whose declared `Name` differs between files. Of 832 distinct
+manufacturer ids seen, 52 have more than one `Name` on record — real ETS
+rebrandings, not typos. Quoted exactly as the corpus spells them, in no
+particular order, because the corpus offers no way to order them: `M-0007`
+is either `"Busch-Jaeger Elektro"` or `"ABB AG - BUSCH-JAEGER"`, `M-003D`
+either `"WAGO Kontakttechnik"` or `"WAGO GmbH & Co.KG"`, `M-0085` either
+`"Video-Star"` or `"GVS"`, and 49 further ids are the same shape **[V]**.
+Which spelling is the newer one is not stated anywhere this ingest can read:
+no file carries a timestamp or version marker inside the `Manufacturer`
+element itself that would let it tell "the newer file" from "the one that
+merely happened to be read second" — file mtimes and ingest order are the
+only signal available, and mtimes are not part of the KNX master-data
+grammar, so they are not read at all. Every id above has exactly two
+spellings on record; no id in this corpus has three.
+
+**Consequence.** Ingesting an old package after a new one silently reverts a
+manufacturer's display name to its old spelling. There is no `IdConflict` and
+no `ingest_unknown` row, because this was never a data-loss path in the sense
+those exist for (`kept_sha256`/`other_sha256`) — no id-scoped row is ever
+dropped, only overwritten, and every overwrite has the exact same
+justification: some later file's opinion of the correct spelling.
+
+**Ruling, 2026-09-13, with its reasoning corrected 2026-09-13.** Aligning
+this with `first_winner` was considered and rejected, and the conclusion
+stands — but not on the argument first written down here, which claimed
+first-writer-wins *must* strand the `NULL` stub. It need not.
+`ON CONFLICT(id) DO UPDATE SET name = COALESCE(name, excluded.name)`
+satisfies both `a_manufacturer_seen_during_ingest_first_gets_its_name_later`
+and first-writer-wins for real names, in one statement, and was the option
+this entry should have named and did not.
+
+What actually decides it is that `COALESCE` does not buy what it looks like
+it buys. It does not remove the order-dependence, it relocates it: the
+*first real* spelling wins forever instead of the last one, and which
+spelling that is still depends on which file the ingest opened first — with
+52 ids in this corpus carrying two spellings apiece, that is the same coin,
+flipped earlier. It then removes the only repair the user has: once a real
+name is in the row, no later `knx_master.xml` can correct it, so shipping a
+package that renames a manufacturer would have no effect on an existing
+database and no report to say so. A manufacturer's display name is not a
+fact fixed at first sight the way a hardware id or a catalog item is — ABB
+really did rename Busch-Jaeger's `knx_master.xml` entry, and the two
+spellings sit side by side in this corpus with nothing to rank them. Given
+two order-dependent rules and no recency signal, the one that lets newly
+ingested master data have an opinion is the more useful, and it is one
+statement rather than one statement with a hidden third state. That is the
+whole of the case; it is a preference with a reason, not a proof.
+`manufacturer_names_are_filled_in` and
+`a_manufacturer_seen_during_ingest_first_gets_its_name_later` lock the stub
+behaviour in; the characterization test
+`a_later_ingested_master_file_updates_the_name_the_earlier_one_wrote` pins
+the last-writer-wins case explicitly, order-dependence named in the test's
+own name so nobody mistakes it for an invariant.
+
+**Lifted when.** Never, unless `knx_master.xml` grows a field this crate can
+use to actually rank two spellings by recency (a schema/edition attribute
+would do it) — at which point "last ingested" could become "provably newer",
+and this section would describe that instead.

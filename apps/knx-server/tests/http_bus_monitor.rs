@@ -13,7 +13,7 @@
 //! paragraph names this exact precedent). No gateway, no socket, anywhere
 //! in this file.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::body::Body;
@@ -619,16 +619,8 @@ async fn telegrams_with_no_session_is_not_found_not_conflict() {
 // ETS project does not panic and does produce *some* decode outcome.
 // ---------------------------------------------------------------------------
 
-fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .expect("crate lives at <root>/apps/knx-server")
-        .to_path_buf()
-}
-
 fn reference_ets4_path() -> PathBuf {
-    workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
+    knx_testsupport::reference_ets4_path()
 }
 
 #[tokio::test]

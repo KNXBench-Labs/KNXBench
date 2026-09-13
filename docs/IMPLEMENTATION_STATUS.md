@@ -3747,3 +3747,83 @@ deleted scratch examples used only to measure the real corpus, never
 committed); `cargo deny check` clean (same pre-existing
 `advisory-not-detected` informational warnings, nothing new). Web gates:
 not applicable — this slice touched no `apps/knx-web` path.
+
+**E6: routing multicast override (2026-09-13), branch
+`e6-routing-multicast`.** Closes `docs/GAP_ANALYSIS_ETS.md`'s E6 row —
+`route-monitor`/`route-send` can now reach an installation that does not
+use the standard `224.0.23.12` group.
+
+R1 first: Core v01.06.02 AS §8.5.2.2 derives the Routing Multicast
+Address from the System Setup Multicast Address by an unbounded offset
+(default zero); Routing v01.05.02 AS §2.3.1 fixes the *port* at 3671 for
+every installation, not the address; §2.3.2's 180-Subnetwork figure is
+guidance for when an installation should deviate, not a range the code
+can enforce. Neither document narrows the address below "any IPv4
+multicast address", and both citations were re-checked against the
+original PDF with `pdftotext` (word for word, no discrepancy) before any
+validation code was written — see `docs/KNOWN_LIMITATIONS.md` §31 for
+the full citations and evidence markers.
+
+`crates/knx-net/src/client.rs`: `BusConnection::connect_routing_to_group`
+is new, alongside the unchanged `connect_routing`; both now funnel
+through one `RoutingClient::connect_to_group`, so `connect_routing` is
+exactly that function called with `ROUTING_MULTICAST`'s own address —
+the default and the override cannot silently diverge. `group` is
+rejected before any socket call if `!Ipv4Addr::is_multicast()`, via a
+new `BusError::NotMulticast(Ipv4Addr)` that names the address, rather
+than whatever OS error `join_multicast_v4` would have produced further
+in. `RoutingClient` gained a `group: SocketAddrV4` field so `send()`
+targets the joined group, not the bare constant. `DISCOVERY_MULTICAST`
+is untouched — out of scope, its own design question.
+
+`apps/knx-cli/src/main.rs`: `route-monitor` and `route-send` both gained
+`--multicast-group <addr>` — a bare IPv4 address, never `address:port`,
+because §2.3.1 makes the port an installation-wide constant, not a
+per-connection choice. Omitted, both subcommands call `connect_routing`
+exactly as before — verified byte-for-byte by the new
+`route_{monitor,send}_args_without_multicast_group_parses_to_none`
+tests. `USAGE` documents the flag and its citation; there is no separate
+CLI reference doc to update.
+
+Six new tests in `crates/knx-net/src/client.rs`: the validation path
+(a unicast address rejected with a named reason, no socket touched, so
+it never skips); the two boundary cases of the 224.0.0.0/4 range (one
+step below, one step above); a genuine multicast address clearing
+validation; the default path asserted against the `ROUTING_MULTICAST`
+constant itself, not a repeated literal; and the override path asserted
+to join the *given* group, not silently fall back to the default — the
+last two skip, not fail, without a multicast route, same policy as the
+pre-existing round-trip test. Four new tests in `apps/knx-cli/src/
+main.rs` cover `--multicast-group` parsing for both subcommands,
+present and omitted.
+
+Stated plainly, in both the code's doc comments and
+`docs/KNOWN_LIMITATIONS.md` §31: this override has never been run
+against a real installation using a non-default group. A flag that
+compiles and a validation that rejects garbage are not proof that a
+second KNXnet/IP router on the wire receives anything sent to a custom
+group — no hardware exists for this to be tested against, and none was
+touched running this task (CLAUDE.md's "only implement protocol
+behavior that is technically verified" — the wire behavior here is
+verified only for the standard group, which this task did not change).
+
+Docs: `docs/KNOWN_LIMITATIONS.md` §31 rewritten — resolved for routing,
+with discovery's still-hardcoded group named explicitly as the
+remaining residue, and `[D]`/`[A]` evidence markers on every claim that
+needs one. `docs/GAP_ANALYSIS_ETS.md`'s E6 row closed with a dated note.
+
+All eight gates green: `cargo fmt --all --check` clean; `cargo clippy
+--workspace --all-targets -- -D warnings` clean; `cargo test --workspace
+--no-fail-fast`: **1251 passed / 0 failed / 3 ignored** across **78**
+`test result:` lines from one untruncated run (up from this branch's
+`f093023` baseline of 1241/0/3 across 78 lines — the **+10** increase is
+exactly the ten tests this task added, none removed, none ignored; the
+two socket-dependent ones did not take their skip path either, this
+sandbox having a multicast route, so both actually asserted); `cargo run -p xtask -- check-layering` clean (`knx-net`'s and
+`knx-cli`'s existing dependency edges are unchanged — no new crate
+dependency); `cargo run -p xtask -- check-headers`: ceiling unchanged at
+169 files without a header (no new file; both touched files already
+carried one); `cargo deny check` clean (same pre-existing
+`advisory-not-detected` informational warnings, nothing new). Web gates:
+`npm test -- --run` and `./node_modules/.bin/tsc --noEmit` both green,
+unaffected — this task touched no `apps/knx-web` path.

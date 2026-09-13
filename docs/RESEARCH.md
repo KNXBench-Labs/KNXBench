@@ -1178,6 +1178,22 @@ extracted Markdown corpus at
 is where `sourceMarkdown` points, and is the right place to read a normative
 section in full context once the database has located it.
 
+**The extraction is lossy, and tables are where it loses most.** Read a
+normative *table* from the source PDF under the sibling `sources/…` subtree,
+not from the Markdown, and record which of the two you read. Two measured
+examples, both paid for in this repository's own work. `03_07_02 Datapoint
+Types` §3.11's Day column truncates mid-enumeration at `7 =`, which is how an
+earlier draft of `KNOWN_LIMITATIONS.md` §61 came to call a documented day
+code undocumented. `03_03_07 Application Layer`'s Table 1 — the APCI code
+table, the one thing anyone opens that file for — survives extraction three
+separate times (Markdown lines 272, 451 and 453), each time mangled
+differently: the ten bit columns collapse into single cells, rows merge into
+their neighbours, the row for `1 0 1 1 0 0 1 0 0 1` has lost its service name
+altogether, and `A_FunctionPropertyState_Response-PDU` floats in a cell of its
+own with no bits beside it. No APCI value can be read out of that safely.
+Prose sections fare far better — the caveat is about tables and figures, not
+about the corpus as a whole. **[V]** 2026-09-13, two files inspected.
+
 Confidence markers, as elsewhere in this document: **[D]** the Standard
 states it (quoted `evidenceText` + named PDF); **[D, corpus]** the same, but
 quoted directly from the extracted Markdown/PDF because no database fact row

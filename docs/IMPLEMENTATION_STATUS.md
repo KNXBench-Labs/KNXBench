@@ -4885,3 +4885,7 @@ Docs updated to match: `DATA_MODEL.md` §5 and §11, `ROADMAP.md` (T21's
 motion-constraint and help-gating mentions, plus a new answered row in "Open
 questions"), `GAP_ANALYSIS_ETS.md` (D1, D2, the T21 backlog bullet and the
 two lists that gated on it), `goal.md` §3, `KNOWN_LIMITATIONS.md` §89.
+
+What this entry does not claim: nothing here rules out a floor-plan feature
+inside ETS's own database or a paid ETS App, and schemas 12-14, 20 and 22 were
+never sampled — see ADR-0019's "What this evidence does not say".

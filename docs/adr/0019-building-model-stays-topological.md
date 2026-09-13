@@ -21,7 +21,7 @@ store coordinates, does the KNX Standard model space at all, in what units
 and from what origin would we store them, and is a floor plan an imported
 asset or something KNXBench draws.
 
-### E1 — the `.knxproj` schema has no geometry, at any version we hold
+### E1 — schema 23's published *project-data* schema has nowhere to put geometry
 
 The authoritative document is *Project Schema23 v01.00.00* (KNX Standard
 v3.0.0, 64 pages). Its §1.2.6.4 `complexType Space_t` — "An element of the
@@ -36,7 +36,8 @@ its ~30 attributes: addresses, load flags, checksums, APDU lengths, a
 A `grep -niE "coordinate|geometr|floor.?plan"` over the whole document's
 `pdftotext -layout` output returns zero hits, as does `grep -ciE "\bplan\b"`.
 The only length quantity anywhere in the format's vicinity is
-`Product/@WidthInMillimeter` in each manufacturer's `Hardware.xml` (e.g.
+`Product/@WidthInMillimeter`, on rail-mounted products in some manufacturers'
+`Hardware.xml` — two of the five sampled carry it at all (e.g.
 `WidthInMillimeter="1.4230000e+002"` next to `IsRailMounted="1"`), which is
 a product's DIN-rail width — a catalogue property of the hardware, not a
 placement of an instance.
@@ -60,7 +61,9 @@ Where ETS *does* say more about a space, it says it as taxonomy rather than
 as geometry: schema 23's `simpleType SpaceType_t` (§1.1.2.3) enumerates ten
 values — `Building`, `BuildingPart`, `Floor`, `Stairway`, `Room`,
 `Corridor`, `DistributionBoard`, `Area`, `Ground`, `Segment` — and §1.2.6.4's
-own prose for `Space_t/@Type` adds an eleventh, `RoomPart`. Even `Ground`,
+own prose for `Space_t/@Type` adds a contradictory eleventh, `RoomPart`,
+which §1.1.2.3's own facet list does not contain — the document disagrees
+with itself about that one value, and this ADR resolves nothing about it. Even `Ground`,
 the one value that is unmistakably about a site rather than a structure,
 carries no extent. (Five of those eleven have no `BuildingPartType` variant
 here and are coarsened on import; that is a separate defect, recorded on the
@@ -113,7 +116,15 @@ Interface Modules (9/4/2), not Building Information Modelling.
 
 It does not say ETS 5/6 has no floor-plan feature in its own database or in
 a paid ETS App; it says no such data appears in an exported `.knxproj` at
-schema 11, 21 or 23, and that the published schema has nowhere to put it.
+schema 11, 21 or 23, and that schema 23's published schema has nowhere to put it. E1 rests on one
+document, covering project data only: *Project Schema23 v01.00.00* types the
+Project, General, Topology, Device Data, Building Structure, Group Address
+and SplitInfo sections and does **not** type `ManufacturerData` — there is no
+`Hardware_t` or `Product_t` section in it, which is why
+`Product/@WidthInMillimeter` below had to be read out of the project files
+rather than the schema. No `.xsd` exists anywhere in this repository or in
+`knx-spec-kb`, so this PDF is the only published-schema source there is, and
+E2's archive inventory stands in for the manufacturer side.
 It also does not cover schema 12-14, 20 or 22, for which no sample exists
 ([KNOWN_LIMITATIONS.md §1](../KNOWN_LIMITATIONS.md)). If a coordinate
 attribute exists in one of those, this ADR's *evidence* changes but its
@@ -131,7 +142,8 @@ layout is a projection ([ADR-0009](0009-ui-boundary.md)), and a computed
 layout is not a domain fact.
 
 Spatial coordinates are therefore **not a gap against ETS** — there is
-nothing to be compatible with — but a **feature KNXBench does not have**,
+nothing in an exported `.knxproj` at schema 11, 21 or 23 to be compatible
+with — but a **feature KNXBench does not have**,
 which is a materially different claim and is recorded as such.
 
 **If and when geometry is wanted, it arrives as its own additive layer,
@@ -178,10 +190,10 @@ not "we have decided to have it".
 Rejected on three counts. It has no consumer: no view reads them, so the
 first version would be a schema migration in support of nothing, which is
 the speculative abstraction `CLAUDE.md` forbids. It puts the value on the
-wrong object: a device belongs to a building part *and* to a line
-independently ([DATA_MODEL.md §5](../DATA_MODEL.md)), so "where is the
-device" is only answerable relative to a plan, and a field on the entity
-would silently pick one. And it costs a store migration plus a frozen
+wrong object: a coordinate without a plan reference names no space, so
+"where is the device" is only answerable relative to a plan, and a bare
+`x`/`y` on the entity silently assumes one
+([DATA_MODEL.md §5](../DATA_MODEL.md)). And it costs a store migration plus a frozen
 fixture ([DATA_MODEL.md §11](../DATA_MODEL.md)) for a field every imported
 project leaves empty.
 

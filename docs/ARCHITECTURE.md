@@ -95,15 +95,19 @@ crates/
                    matches entities by `ets_id`/natural key and reports
                    added/removed/changed per entity type. Depends on
                    knx-core only (T14).
+  knx-csv/         Reader/writer for "KNXBench group-address CSV v1", a
+                   format this project defines and owns (T12)
+  knx-report/      Renders a project into one self-contained HTML document —
+                   a KNXBench report, never an ETS-compatible one (T13)
+  knx-testsupport/ Test-fixture paths and nothing else. Zero dependencies,
+                   used only as a `[dev-dependencies]` entry, so it appears
+                   in neither graph below: it exists so that no crate has to
+                   hard-code the maintainer's corpus export filenames, and
+                   each path it hands out is overridable by an environment
+                   variable for anyone whose corpus lives elsewhere.
 
 xtask/             Repository verification tasks, including the layering gate
 ```
-
-Two other pure crates, `knx-csv` (T12) and `knx-report` (T13), are missing
-from the `crates/` listing above and from both dependency graphs below —
-a pre-existing omission from those tasks, not something this edit
-retroactively fixes. Flagged here rather than silently adding a third
-undocumented crate to the pile.
 
 ```text
 knx-desktop ─> knx-server ─┬─> knx-app ─> knx-core

@@ -3974,7 +3974,10 @@ recommented as the tripwire it always was. (2) Across the whole transitive
 value-import graph, every `api` call is a bus or diagnostics call and the
 only non-`GET` raw `fetch`es sit in functions this window never calls; the
 test walks the graph from source and pins three exact lists — **15 modules,
-7 `api` exports called, 2 mutating fetch targets**, re-measured by
+7 `api` exports called, 2 mutating fetch targets**. Fifteen, not the thirty
+the review counted: the difference is exactly the fifteen `bindings/*.ts`
+files, reached only by `import type` and erased before anything runs. All
+three lists are re-measured by
 `./node_modules/.bin/vitest run src/DiagnosticsCompanion.test.tsx`, which
 fails with the three lists printed whenever any of them moves. (3) Mounted
 and left alone the companion calls exactly one `api` export, the telegram

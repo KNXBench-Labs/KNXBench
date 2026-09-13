@@ -13,6 +13,15 @@ const devices = ['Lichtaktor', 'Jalousieaktor', 'Tastsensor', 'Raumregler', 'Pr�
 const addresses = Array.from({length:8}, (_,i) => ({id:i+1,address:`1/0/${i+1}`,name:`Beispiel Licht ${i+1}`}));
 const tree = { schema_version:11, errors:0, warnings:2, can_undo:false, can_redo:false, installations:[{id:1,name:'Beispielprojekt · Villa Linden',topology:[{id:1,name:'Haus',address:1,lines:[{id:1,name:'Erdgeschoss',address:1,devices}]}],buildings:[{id:1,name:'Villa Linden',kind:'Building',devices:[],children:[{id:2,name:'Erdgeschoss',kind:'Floor',devices:[],children:[{id:3,name:'Wohnzimmer',kind:'Room',devices,children:[]}]}]}],unassigned:[],group_addresses:addresses,group_ranges:[]}] };
 const coms = ['Licht schalten','Status','Zentral schalten','Sperren'].map((name,i) => ({id:i+1,number:i,name,dpt:'DPST-1-1',dpt_layer:'Program',description:null,description_layer:null,is_active:true,read:true,write:true,transmit:false,update:false,communication:true,links:[{ga_id:i+1,address:`1/0/${i+1}`,name:addresses[i].name,direction:'Receive'}]}));
+// T16: one `DeviceProductNode` per `ProductResolution` variant, cycled across
+// the six example devices so a screenshot run exercises all four states. Every
+// ref and catalogue value below is invented — no real product is named here.
+const products = [
+  {product_ref:'M-00FA_H-EX42-1_P-1',program_ref:'M-00FA_H-EX42-1_HP-1',resolution:'Resolved',catalog:{manufacturer_id:'M-00FA',manufacturer_name:'Beispiel Gerätebau',product_text:'Beispiel-Schaltaktor 4-fach',order_number:'EX-4210',hardware_name:'EX-HW-42',hardware_version:'1',hardware_serial_number:null,catalog_item_name:'Beispiel-Schaltaktor, 4-fach, REG',catalog_item_number:'EX-4210-4',application_program_id:'M-00FA_A-1234-2-0000',application_name:'Schalten 4f',application_number:'4660',application_version:'2',mask_version:'MV-0701'}},
+  {product_ref:'M-00FA_H-EX43-1_P-1',program_ref:'M-00FA_H-EX43-1_HP-1',resolution:'NotInDatabase',catalog:null},
+  {product_ref:'M-00FB_H-EX07-1_P-1',program_ref:'M-00FB_H-EX07-1_HP-1',resolution:'NoDatabase',catalog:null},
+  {product_ref:null,program_ref:null,resolution:'NoReference',catalog:null},
+];
 const longTree = structuredClone(tree);
 longTree.installations[0].name = 'Beispielprojekt · großer Datenbestand';
 longTree.installations[0].group_addresses = Array.from({length:2000}, (_,i) => ({id:i+1,address:`1/${Math.floor(i/256)}/${i%256}`,name:`Beispiel ${i+1} · ${'Langer beschreibender Gruppenadressenname '.repeat(8)}`}));
@@ -28,7 +37,7 @@ try {
     let data;
     if (path === '/api/fs/list') data = [{name:'Beispiel.knxproj',is_dir:false},{name:'Grosses-Beispiel.knxproj',is_dir:false}];
     else if (path === '/api/project/import') data = route.request().postDataJSON().path === 'Grosses-Beispiel.knxproj' ? longTree : tree;
-    else if (/^\/api\/device\/\d+$/.test(path)) data = {...devices[Number(path.split('/').at(-1))-1],com_objects:coms};
+    else if (/^\/api\/device\/\d+$/.test(path)) { const n = Number(path.split('/').at(-1)); data = {...devices[n-1],com_objects:coms,product:products[(n-1)%products.length]}; }
     else if (path.endsWith('/parameters')) data = {programId:null,sections:[],stale:[],diagnostics:[]};
     else if (path === '/api/bus/monitor/telegrams') data = {sessionId:1,status:'active',nextSince:13,droppedBefore:0,telegrams:Number(url.searchParams.get('since'))?[]:telegrams};
     else if (path === '/api/product-languages' || path === '/api/log') data = [];

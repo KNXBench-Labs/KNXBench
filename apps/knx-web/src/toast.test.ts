@@ -116,16 +116,14 @@ describe("toast copy honors the active UI language", () => {
   });
 });
 
-// Task 2 (humour copy), fix round 1: every entry in all three arrays is a
-// real `messages/en.ts`/`messages/de.ts` catalogue key — the coordinator's
-// ruling against the first draft's literal-string shortcut, which left
-// 77% of the new copy untranslatable. `resolveIn` below is the same
+// Every entry in all three arrays is a real `messages/en.ts`/
+// `messages/de.ts` catalogue key. `resolveIn` below is the same
 // `translateFor` the production code path uses (`toast.ts`'s
-// `resolveTemplate`), so these tests catch exactly the class of bug the
-// shortcut produced: a key with no matching catalogue row silently
-// "resolving" to itself. This file's own synthetic non-key fixtures above
-// (`holidays`, `["Nope: {msg}"]`, etc.) are untouched — they test the
-// fallback mechanism on purpose, not a mistake this suite should flag.
+// `resolveTemplate`), so these tests catch a key with no matching
+// catalogue row silently "resolving" to itself. This file's own synthetic
+// non-key fixtures above (`holidays`, `["Nope: {msg}"]`, etc.) are
+// untouched — they test the fallback mechanism on purpose, not a mistake
+// this suite should flag.
 describe("toastCopy has enough material to stop repeating itself", () => {
   function resolveIn(language: "en" | "de", key: string): string {
     return translateFor(language, key as TranslatableKey);

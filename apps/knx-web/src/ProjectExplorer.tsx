@@ -1,5 +1,5 @@
 /** Navigation tree for the project's installations, buildings, devices, and group addresses. */
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { InstallationNode } from "./bindings/InstallationNode";
@@ -9,10 +9,10 @@ import type { BuildingNode } from "./bindings/BuildingNode";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
-import type { MultiSelection, MultiSelectionKind, Selection } from "./selection";
+import type { MultiSelection, Selection } from "./selection";
+import type { ItemClickHandler } from "./multiSelection";
 import { nestGroupRanges, type GroupRangeTreeNode } from "./treeUtils";
 import CatalogBrowser from "./CatalogBrowser";
-import BulkActionToolbar from "./BulkActionToolbar";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 
 // The same discriminant-vs-label lookup `Inspector.tsx`'s
@@ -54,23 +54,24 @@ function TreeNode(props: {
     <li>
       <span className="tree-row">
         {hasChildren && (
-          <span className="tree-toggle" onClick={() => setOpen(!open)}>
+          <button type="button" className="tree-toggle" aria-label={props.label} aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? "▾" : "▸"}
-          </span>
+          </button>
         )}
-        <span className={labelClasses.join(" ")} onClick={labelClick}>
+        <button type="button" className={labelClasses.join(" ")} onClick={labelClick} aria-pressed={props.onSelect ? !!props.selected : undefined} aria-expanded={!props.onSelect && hasChildren ? open : undefined}>
           {props.label}
-        </span>
+        </button>
       </span>
       {hasChildren && open && <ul>{props.children}</ul>}
     </li>
   );
 }
 
-// `multiSelection`/`onItemClick` are additive, threaded alongside
+// `multiSelection`/`onItemClick` are threaded alongside
 // `selection`/`onSelect` through every intermediate tree component exactly
 // the way that pair already is — `onSelect`'s existing plain-click contract
-// is untouched (see `onItemClick` in `ProjectExplorer`, below). Only
+// is untouched (see `useMultiSelection` in `multiSelection.ts`, which owns
+// the state machine this tree and the group-address table share). Only
 // `DeviceItem`/`GroupAddressItem` actually call `onItemClick`; every other
 // item type ignores it, the same way most item types already ignore
 // `onSelect`'s sibling fields they don't need.
@@ -78,7 +79,7 @@ type SelectionProps = {
   selection: Selection | null;
   onSelect: (sel: Selection) => void;
   multiSelection: MultiSelection | null;
-  onItemClick: (e: React.MouseEvent, kind: MultiSelectionKind, id: number, sel: Selection) => void;
+  onItemClick: ItemClickHandler;
 };
 
 function DeviceItem(props: { device: DeviceNode } & SelectionProps) {
@@ -684,52 +685,13 @@ function InstallationItem(
   );
 }
 
-// Render order of every device/group-address id across the tree, matching
-// `InstallationItem`'s own JSX order (topology, then buildings, then
-// unassigned; group addresses are already a flat per-installation list) —
-// the anchor/target pair a shift-click range is computed over. A device
-// reachable from both topology and a building keeps only its first
-// occurrence (a `Set` can't select "the same id twice" anyway).
-function deviceRenderOrder(tree: ProjectTree): number[] {
-  const seen = new Set<number>();
-  const order: number[] = [];
-  const addAll = (devices: DeviceNode[]) => {
-    for (const d of devices) {
-      if (!seen.has(d.id)) {
-        seen.add(d.id);
-        order.push(d.id);
-      }
-    }
-  };
-  function addBuildings(nodes: BuildingNode[]) {
-    for (const node of nodes) {
-      addAll(node.devices);
-      addBuildings(node.children);
-    }
-  }
-  for (const inst of tree.installations) {
-    for (const area of inst.topology) {
-      for (const line of area.lines) addAll(line.devices);
-    }
-    addBuildings(inst.buildings);
-    addAll(inst.unassigned);
-  }
-  return order;
-}
-
-function groupAddressRenderOrder(tree: ProjectTree): number[] {
-  return tree.installations.flatMap((inst) => inst.group_addresses.map((ga) => ga.id));
-}
-
 export default function ProjectExplorer(
   props: {
     tree: ProjectTree;
     onTreeUpdate: (tree: ProjectTree) => void;
-    selection: Selection | null;
-    onSelect: (sel: Selection) => void;
-  },
+  } & SelectionProps,
 ) {
-  const { tree, onTreeUpdate, selection, onSelect } = props;
+  const { tree, onTreeUpdate, selection, onSelect, multiSelection, onItemClick } = props;
   const t = useTranslate();
   // `undefined` = closed; `number | null` = open, targeting that line
   // (or `null` for unassigned) — CatalogBrowser (T2) is only ever opened
@@ -737,80 +699,21 @@ export default function ProjectExplorer(
   // affordance here already carries.
   const [catalogTarget, setCatalogTarget] = useState<number | null | undefined>(undefined);
 
-  // Ctrl/shift-click multi-select (T9, GAP_ANALYSIS_ETS.md B9) — additive
-  // state, kept local to `ProjectExplorer` rather than lifted to `App.tsx`:
-  // nothing outside the tree/toolbar needs to know about it, unlike
-  // `selection`, which the `Inspector` also reads.
-  const [multiSelection, setMultiSelection] = useState<MultiSelection | null>(null);
-  // The anchor a shift-click range is computed from — updated on every
-  // click (plain, ctrl, or shift) so a shift-click after a plain click
-  // extends from that plain selection too, the usual file-explorer rule.
-  const [lastClicked, setLastClicked] = useState<{ kind: MultiSelectionKind; id: number } | null>(
-    null,
-  );
-
-  const deviceOrder = useMemo(() => deviceRenderOrder(tree), [tree]);
-  const gaOrder = useMemo(() => groupAddressRenderOrder(tree), [tree]);
-
-  useEffect(() => {
-    if (!multiSelection) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setMultiSelection(null);
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [multiSelection]);
-
-  function onItemClick(
-    e: React.MouseEvent,
-    kind: MultiSelectionKind,
-    id: number,
-    sel: Selection,
-  ) {
-    const order = kind === "device" ? deviceOrder : gaOrder;
-    if (e.shiftKey) {
-      e.preventDefault();
-      const anchorId = lastClicked && lastClicked.kind === kind ? lastClicked.id : null;
-      const from = anchorId !== null ? order.indexOf(anchorId) : -1;
-      const to = order.indexOf(id);
-      if (from !== -1 && to !== -1) {
-        const [lo, hi] = from <= to ? [from, to] : [to, from];
-        setMultiSelection({ kind, ids: new Set(order.slice(lo, hi + 1)) });
-      } else {
-        setMultiSelection({ kind, ids: new Set([id]) });
-      }
-      setLastClicked({ kind, id });
-      return;
-    }
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      setMultiSelection((prev) => {
-        if (!prev || prev.kind !== kind) return { kind, ids: new Set([id]) };
-        const ids = new Set(prev.ids);
-        if (ids.has(id)) ids.delete(id);
-        else ids.add(id);
-        return { kind, ids };
-      });
-      setLastClicked({ kind, id });
-      return;
-    }
-    // Plain click — untouched contract: clears any multi-selection, sets
-    // the single `Selection` exactly as before this feature existed.
-    setMultiSelection(null);
-    setLastClicked({ kind, id });
-    onSelect(sel);
-  }
-
   return (
-    <div className="project-explorer">
-      {multiSelection && multiSelection.ids.size > 0 && (
-        <BulkActionToolbar
-          multiSelection={multiSelection}
-          tree={tree}
-          onTreeUpdate={onTreeUpdate}
-          onDone={() => setMultiSelection(null)}
-        />
-      )}
+    <div className="project-explorer" onKeyDown={(e) => {
+      if (!(e.target instanceof HTMLButtonElement) || !e.target.matches(".tree-label, .tree-toggle")) return;
+      const current = e.target;
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        const toggle = current.closest(".tree-row")?.querySelector<HTMLButtonElement>(".tree-toggle");
+        if (toggle && toggle.getAttribute("aria-expanded") !== String(e.key === "ArrowRight")) toggle.click();
+        e.preventDefault(); return;
+      }
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+      e.preventDefault();
+      const labels = [...e.currentTarget.querySelectorAll<HTMLButtonElement>(".tree-label")];
+      const index = labels.indexOf(current);
+      labels[e.key === "Home" ? 0 : e.key === "End" ? labels.length - 1 : Math.max(0, Math.min(labels.length - 1, index + (e.key === "ArrowDown" ? 1 : -1)))]?.focus();
+    }}>
       <ul className="tree-root">
         {tree.installations.map((inst, idx) => (
           <InstallationItem

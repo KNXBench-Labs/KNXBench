@@ -28,12 +28,19 @@ const apiMock = vi.hoisted(() => ({
   // fire from a real command, and `undo` is the cheapest one on the
   // toolbar.
   undo: vi.fn(),
+  // The File menu's Compare entry (stage 4, item 4's keyboard walk).
+  diffProject: vi.fn(),
   // `Inspector` renders `ParameterPanel` unconditionally once a device's
   // detail has loaded (see `Inspector.tsx`'s own comment on why), and
   // `ParameterPanel` fetches on mount — every test in the T33 describe
   // block below selects a device, so this needs a resolvable default the
   // same way `getSessionLog`/`productLanguages` already get one.
   deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }),
+  // `BusMonitorPanel` asks for the current session on mount (see its
+  // reattach effect); the palette-reachability tests below render it, and
+  // a 404 is the "no session yet" answer that leaves the connect form up.
+  pollBusTelegrams: vi.fn().mockRejectedValue(new Error("no session")),
+  errorStatus: vi.fn().mockReturnValue(404),
 }));
 
 const filePickerMock = vi.hoisted(() => ({
@@ -103,7 +110,8 @@ function treeWithDevice(): ProjectTree {
 }
 
 function deviceDetailFixture(): DeviceDetail {
-  return { id: 42, name: "Device D", description: null, address: null, com_objects: [] };
+  return { id: 42, name: "Device D", description: null, address: null, com_objects: [],
+    product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" } };
 }
 
 function entry(overrides: Partial<LogEntry>): LogEntry {
@@ -190,6 +198,59 @@ describe("App — Log tab reachability (KNOWN_LIMITATIONS.md #36, part A)", () =
     });
     expect(host!.querySelector(".log-panel")).toBeNull();
 
+    root.unmount();
+  });
+});
+
+// Stage 5 audit: the workbench shell moved the Log and Bus monitor
+// buttons into the left `ResizablePane`, which the Navigation toggle can
+// collapse — at which point the panels had no entry point at all, since
+// neither had a command. These tests drive the palette with the pane
+// collapsed, which is the state the toolbar-button tests above cannot
+// reach.
+describe("App — diagnostic panels survive a collapsed navigation pane", () => {
+  function clickButton(button: HTMLButtonElement) {
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  }
+
+  function paletteOption(label: string): HTMLElement {
+    const option = Array.from(host!.querySelectorAll<HTMLElement>("li[role=option]")).find(
+      (li) => li.textContent === label,
+    );
+    if (!option) throw new Error(`palette option "${label}" not found`);
+    return option;
+  }
+
+  async function collapseNavigationAndOpen(label: string) {
+    await act(async () => clickButton(findButton("Navigation")));
+    expect(host!.querySelector(".diagnostic-navigation")).toBeNull();
+    await act(async () => clickButton(findButton("Commands… (Ctrl+Shift+P)")));
+    await act(async () => {
+      paletteOption(label).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+  }
+
+  it("reaches the Log from the command palette", async () => {
+    apiMock.getSessionLog.mockResolvedValue([entry({ message: "still reachable" })]);
+    const root = await renderApp();
+    await collapseNavigationAndOpen("Log");
+    expect(host!.querySelector(".log-panel")).not.toBeNull();
+    expect(host!.textContent).toContain("still reachable");
+    root.unmount();
+  });
+
+  it("reaches the Bus monitor from the command palette", async () => {
+    const root = await renderApp();
+    await collapseNavigationAndOpen("Bus monitor");
+    expect(host!.querySelector(".bus-monitor-panel")).not.toBeNull();
+    root.unmount();
+  });
+
+  it("reaches Settings from the command palette", async () => {
+    const root = await renderApp();
+    await collapseNavigationAndOpen("Settings");
+    expect(host!.querySelector(".settings-panel")).not.toBeNull();
     root.unmount();
   });
 });
@@ -540,5 +601,109 @@ describe("App — <html lang> reflects the UI language without opening Settings"
     expect(host!.querySelector(".settings-panel")).toBeNull();
 
     root.unmount();
+  });
+});
+
+it("leaves native text undo to the focused input", async () => {
+  host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  await act(async () => root.render(<App />));
+  const input = document.createElement("input"); host.append(input); input.focus();
+  const event = new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true, cancelable: true });
+  await act(async () => input.dispatchEvent(event));
+  expect(event.defaultPrevented).toBe(false);
+  expect(apiMock.undo).not.toHaveBeenCalled();
+  await act(async () => root.unmount());
+});
+
+// Stage 4, items 4 and 5: the File menu and everything inside it — export,
+// CSV, documentation, compare — reachable and operable by keyboard alone.
+// `<summary>` is keyboard-activated by Enter/Space, which the platform
+// delivers as a click on the focused summary, so that is what these tests
+// dispatch.
+describe("App — the File menu by keyboard alone", () => {
+  async function openFileMenu() {
+    const summary = host!.querySelector<HTMLElement>(".file-menu summary")!;
+    summary.focus();
+    expect(document.activeElement).toBe(summary);
+    await act(async () => summary.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    return summary;
+  }
+
+  it("opens from the keyboard, exposes every file/export entry in the tab order, and Escape returns focus", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(baseTree());
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const summary = await openFileMenu();
+    const menu = host!.querySelector<HTMLElement>(".file-menu")!;
+    expect(menu.hasAttribute("open")).toBe(true);
+
+    // Every entry is a real button with no negative tabindex, so a Tab walk
+    // from the summary reaches all of them in the order they are read.
+    const entries = [...menu.querySelectorAll<HTMLButtonElement>(".file-menu-content button")];
+    expect(entries.map((b) => b.textContent)).toEqual([
+      "Open project…",
+      "Open (.knxdb)…",
+      "Save As…",
+      "Export to .knxproj…",
+      "Export group addresses (CSV)…",
+      "Import group addresses (CSV)…",
+      "Export documentation…",
+      "Compare with…",
+    ]);
+    expect(entries.every((b) => b.tabIndex >= 0)).toBe(true);
+    // An ETS import has no `.knxdb` path yet, so only the .knxproj export is
+    // legitimately disabled — nothing else is keyboard-dead.
+    expect(entries.filter((b) => b.disabled).map((b) => b.textContent)).toEqual([
+      "Export to .knxproj…",
+    ]);
+
+    await act(async () => {
+      entries[0].dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(menu.hasAttribute("open")).toBe(false);
+    expect(document.activeElement).toBe(summary);
+
+    await act(async () => root.unmount());
+  });
+
+  it("closes the comparison report on Escape before the menu, and restores focus at each step", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(baseTree());
+    apiMock.diffProject.mockResolvedValue({ infoChanges: [], installations: [] });
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const summary = await openFileMenu();
+    const menu = host!.querySelector<HTMLElement>(".file-menu")!;
+    const compare = findButton("Compare with…");
+    await act(async () => compare.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+
+    const panel = host!.querySelector<HTMLElement>(".project-diff-panel")!;
+    expect(panel.textContent).toContain("No differences found.");
+    // Focus moves into the report, so the next Escape has somewhere to land.
+    expect(document.activeElement).toBe(panel);
+
+    await act(async () => {
+      panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    // Innermost first: the report is gone, the menu is still open, and focus
+    // sits back on the entry that opened the report.
+    expect(host!.querySelector(".project-diff-panel")).toBeNull();
+    expect(menu.hasAttribute("open")).toBe(true);
+    expect(document.activeElement).toBe(compare);
+
+    await act(async () => {
+      compare.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(menu.hasAttribute("open")).toBe(false);
+    expect(document.activeElement).toBe(summary);
+
+    await act(async () => root.unmount());
   });
 });

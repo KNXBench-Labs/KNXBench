@@ -1,4 +1,5 @@
 /** Settings overlay for theme, motion, UI/product language, and language-pack management. */
+import { ACCENTS, DENSITIES, type useAppearance } from "./appearance";
 import { useState } from "react";
 import type { ThemeDef } from "./theme";
 import type { MotionLevelDef, MotionStyleDef } from "./motion";
@@ -130,6 +131,7 @@ function ImportReport(props: { t: Translate; outcome: ImportOutcome }) {
  * every mounted reader, itself included.
  */
 export default function SettingsPanel(props: {
+  appearance?: ReturnType<typeof useAppearance>;
   themes: readonly ThemeDef[];
   activeThemeId: string;
   onSelectTheme: (id: string) => void;
@@ -241,6 +243,22 @@ export default function SettingsPanel(props: {
           ))}
         </select>
       </label>
+      {props.appearance && <>
+        <label className="settings-field">
+          <span className="settings-field-label">{t("appearance.accent")}</span>
+          <select aria-label={t("appearance.accent")} value={props.appearance.accent}
+            onChange={(e) => props.appearance!.setAccent(e.target.value as typeof ACCENTS[number])}>
+            {ACCENTS.map((accent) => <option key={accent} value={accent}>{t(`appearance.${accent}`)}</option>)}
+          </select>
+        </label>
+        <label className="settings-field">
+          <span className="settings-field-label">{t("appearance.density")}</span>
+          <select aria-label={t("appearance.density")} value={props.appearance.density}
+            onChange={(e) => props.appearance!.setDensity(e.target.value as typeof DENSITIES[number])}>
+            {DENSITIES.map((density) => <option key={density} value={density}>{t(`appearance.${density}`)}</option>)}
+          </select>
+        </label>
+      </>}
       <label className="settings-field">
         <span className="settings-field-label">{t("settings.motionStyle")}</span>
         <select

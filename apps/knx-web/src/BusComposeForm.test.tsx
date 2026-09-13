@@ -24,6 +24,24 @@ import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// A disabled control is out of the tab order, so the prose that explains
+// why it is disabled is reachable only if the control points at it. This
+// resolves `aria-describedby` the way an assistive technology would —
+// through the ids, into the live document — rather than asserting that
+// the attribute merely exists.
+function describedTextOf(selector: string): string {
+  const control = host!.querySelector(selector)!;
+  const ids = (control.getAttribute("aria-describedby") ?? "").split(" ").filter(Boolean);
+  expect(ids.length).toBeGreaterThan(0);
+  return ids
+    .map((id) => {
+      const target = host!.querySelector(`#${id}`);
+      expect(target).not.toBeNull();
+      return target!.textContent ?? "";
+    })
+    .join(" ");
+}
+
 let host: HTMLDivElement | undefined;
 
 async function renderForm(
@@ -31,6 +49,7 @@ async function renderForm(
   resolution: ComposeResolution,
   projectOpen = true,
   sessionClosed = false,
+  contextStale = false,
 ) {
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -42,6 +61,7 @@ async function renderForm(
         resolution={resolution}
         projectOpen={projectOpen}
         sessionClosed={sessionClosed}
+        contextStale={contextStale}
       />,
     );
   });
@@ -216,6 +236,37 @@ describe("BusComposeForm", () => {
     expect(host!.querySelector(".bus-compose-closed-hint")!.textContent).toBe(
       "This session is closed — sending is disabled.",
     );
+    for (const selector of [".bus-compose-destination", ".bus-compose-dpt", ".bus-compose-value"]) {
+      expect(describedTextOf(selector)).toContain("This session is closed");
+    }
+
+    await clickSend();
+
+    expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+  });
+
+  // Task 4's stale lock, from this component's side. The severity that
+  // justifies a second test right next to the closed-session one: a closed
+  // session's send bounces off a `409` and nothing happens on the bus,
+  // whereas a stale context's send *succeeds* — with the previous project's
+  // DPT, on real hardware, and Project Undo cannot reach it.
+  it("disables every field and explains why when the project context is stale, and Send issues no request", async () => {
+    await renderForm("1/2/3", { kind: "single", dpt: "DPST-1-1" }, true, false, true);
+    await act(async () => {
+      setInputValue(".bus-compose-value", "on");
+    });
+
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-destination")!.disabled).toBe(true);
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-dpt")!.disabled).toBe(true);
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
+    const sendButton = Array.from(host!.querySelectorAll("button")).find((b) => b.textContent === "Send")!;
+    expect(sendButton.disabled).toBe(true);
+    const hint = host!.querySelector(".bus-compose-stale-hint")!;
+    expect(hint.getAttribute("role")).toBe("alert");
+    expect(hint.textContent).toContain("sending is locked");
+    for (const selector of [".bus-compose-destination", ".bus-compose-dpt", ".bus-compose-value"]) {
+      expect(describedTextOf(selector)).toContain("sending is locked");
+    }
 
     await clickSend();
 

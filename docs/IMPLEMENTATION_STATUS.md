@@ -173,7 +173,8 @@ Cycle 5 (`docs/superpowers/specs/2026-09-04-search-design.md`) adds
 `GroupAddressNode` and a `group_addresses: Vec<GroupAddressNode>` field on
 `InstallationNode`, projected from `Installation.group_addresses` and
 formatted through `GroupAddress::format` per `project.info.
-group_address_style` — the reference project's 514 group addresses are
+group_address_style` (the node grew `range`, `dpts` and `links` on
+2026-09-13; see the UI-workbench section at the end of this document) — the reference project's 514 group addresses are
 cheap enough to embed eagerly, unlike `DeviceDetail`'s lazy communication
 objects. 18 tests.
 
@@ -706,7 +707,9 @@ this cycle: `apps/knx-server` gains one route each (`/api/areas`,
 [the design spec](superpowers/specs/2026-09-06-topology-group-range-commands-design.md)
 for the deliberate scope cut (`knx-projection`'s `GroupAddressNode` has no
 real main/middle/address nesting yet; that redesign is its own future
-cycle). `knx-projection` gains a small, additive `GroupRangeNode`
+cycle — as of 2026-09-13 it carries `range: Option<u32>`, the id of the
+range that contains it, which is enough for a UI to show range context but
+is still a flat list rather than a nested one). `knx-projection` gains a small, additive `GroupRangeNode`
 (id/name/start/end/parent) on `InstallationNode` — not the fuller nesting
 redesign, just enough for an HTTP caller to discover a newly-created
 range's id. `sync_after_command` gains no new incremental-sync paths for
@@ -3458,7 +3461,10 @@ what the *product database* says on top.
   `apps/knx-web`** — a parallel session owns every file under it, and its
   checked-in `apps/knx-web/src/bindings/DeviceDetail.ts` is now stale
   relative to this branch; that copy is deliberately left untouched here,
-  for the other session to regenerate on its own schedule.
+  for the other session to regenerate on its own schedule. *Update
+  (2026-09-13, branch `codex-ui-workbench`):* it did, and built the UI on
+  top — see the Codex UI workbench section at the end of this file. The
+  checked-in `apps/knx-web/src/bindings/` is no longer stale.
 - **Tests.** `knx-projection`: a device with both refs (verbatim refs,
   `NoDatabase` placeholder), a device with neither (`NoReference`), plus
   the three new `ts-rs` export tests. `knx-productdb`: full chain
@@ -4026,3 +4032,612 @@ from `apps/knx-web` after `npm ci`: `npm test -- --run` **340 passed
 across 31 files**, `./node_modules/.bin/tsc --noEmit` exit 0 — this
 slice changed no file under `apps/knx-web`, and the green pair is the
 proof of that rather than a claim about it.
+
+## 2026-09-13 — Codex UI workbench (T21)
+
+The web UI now has a shared three pane workbench with resizable navigation and
+properties panes, keyboard accessible tree navigation, a file menu, appearance
+preferences (Porcelain, Graphite, System, accent and density), and central
+workspaces for buildings, topology and group addresses. Existing commands,
+HTTP routes, Inspector editing, parameters, catalogue insertion, log and bus
+monitor remain wired through their existing owners. The graphical views use
+the generated `ProjectTree` projection and show hierarchy; they do not invent
+floor-plan coordinates. Browser evidence is recorded under `/tmp/knx-ui-proof/`.
+
+**T16's product identity, on screen (2026-09-13), branch
+`codex-ui-workbench`.** The earlier note here said T16 stayed partially open
+because `DeviceDetail` carried no product identity and exposing it needed a
+server-side change outside the frontend slice. That change landed meanwhile
+(branch `t16-device-product`, merge `036503f`), so this task spent nothing on
+plumbing and everything on making the identity readable.
+
+- **Bindings, regenerated, never hand-written.**
+  `TS_RS_EXPORT_DIR=../../apps/knx-web/src/bindings cargo test -p
+  knx-projection` brought `apps/knx-web/src/bindings/` up to date:
+  `DeviceProductNode.ts`, `DeviceProductCatalog.ts` and `ProductResolution.ts`
+  are new, `DeviceDetail.ts` gained `product: DeviceProductNode`, and nothing
+  else in the directory moved.
+- **`Inspector.tsx` gains `DeviceIdentity`**, rendered by `DeviceWorkspace`
+  as the content of a third tab, "Produktdaten", beside communication objects
+  and parameters — the three-tab strip the approved concept image
+  `docs/design/2026-09-13-codex-ui-concept/01-porcelain.png` shows. (The first
+  implementation put it in a section above the tab strip, per the controller's
+  ruling at the time; the task report flagged the conflict with the mockup and
+  the review reversed the ruling in the mockup's favour.) Adding the third tab
+  meant replacing `DeviceWorkspace`'s keyboard handler, whose
+  `e.key === "End" ? 1 : 1 - tab` encoded "there are exactly two tabs" three
+  times over: it hardcoded the last index, it toggled, and it treated
+  ArrowLeft and ArrowRight as the same key — which a left-arrow-only test
+  could never catch. It is now index arithmetic over the tab array's length,
+  with a test that walks both directions, wraps at both ends and checks
+  `Home`/`End`. The new panel is a hidden sibling in the same
+  `hidden={tab !== n}` shape as the other two, not conditional rendering:
+  `ParameterPanel`'s fetch is keyed to its mount and must not restart on every
+  tab switch. `product_ref` and `program_ref` print
+  verbatim in the monospace face, because an engineer comparing one against a
+  manufacturer package needs the exact string. A ref the project never stated
+  reads "not stated in the project" in the body face — deliberately not in
+  mono, so an absence never looks like a value.
+- **Four resolutions, four distinct verdicts.** `RESOLUTION_KEYS` maps
+  `ProductResolution` through a `Record`, not a ternary chain, so a fifth
+  variant arriving in the generated union is a compile error rather than a
+  silent fallthrough. `Resolved` needs no sentence (the catalogue says it);
+  `NoDatabase`, `NotInDatabase` and `NoReference` each get their own, and the
+  first two are worded so they cannot be mistaken for each other — no product
+  database loaded at all is a different problem from a loaded database that
+  does not contain this product. There is no bare "unknown" anywhere in the
+  section.
+- **A partly installed catalogue reads as partly installed.** Of the fourteen
+  catalogue fields, three (manufacturer, product text, order number) stay
+  above the disclosure; the other eleven live behind a `<details>` grouped as
+  product entry / hardware / application program. Fields the database left
+  `null` are omitted rather than dashed, a group whose every field is `null`
+  says the database holds no values there, and the count of omitted fields is
+  stated at the foot of the disclosure — so "the database is silent here" is
+  distinguishable from "this view only shows six fields". A `Resolved` verdict
+  with no catalogue behind it (which the server never emits, but the generated
+  type permits) admits it in words instead of rendering as a resolved device
+  with a suspiciously empty field list.
+- **Strings and styling.** 36 new `deviceIdentity.*` keys in
+  `messages/en.ts`/`messages/de.ts`, including the `omitted.one`/`omitted.other`
+  plural pair; German parity is enforced by the existing `Record<MessageKey,
+  string>` typing. `styles.css` gains `.device-identity` and friends, built
+  from the existing custom properties, so all three themes and five accents
+  follow automatically. Density does not: `--knx-control-height` and
+  `--knx-cell-padding` are the only density-aware tokens and this block uses
+  neither — exactly like `.device-workspace`'s own fixed `padding: 20px`
+  around it. Not a regression, but not automatic either. The verdict badge carries its colour in
+  border and background tint and its text in `--knx-foreground`. Measured in
+  headless Chromium over the background the panel actually renders on — the
+  badge's translucent fill composited onto `.device-workspace`'s opaque
+  `--knx-surface`, since `.device-identity` contributes no surface of its own
+  — the badge word sits at 12.66:1 to 15.32:1 in Porcelain, 9.82:1 to 13.47:1
+  in Graphite and 13.94:1 to 18.90:1 in Bitcoin DeFi, across all four
+  variants and all five accents (60 combinations; the worst case everywhere is
+  `NotInDatabase`, whose fill is the densest). The alternative of tinting the
+  word itself was rejected for a reason these numbers state plainly: accent-
+  coloured text over the same background spans 4.37:1 to 6.04:1 in Porcelain
+  depending on which accent is active, so the verdict's legibility would
+  become a side effect of a theme preference. (An earlier revision of this
+  entry quoted 10.55:1–14.69:1, measured over a recessed
+  `color-mix(--knx-bg 55%, --knx-surface)` panel the block no longer has, and
+  3.46:1/3.91:1 for a draft since deleted and not reproducible against this
+  tree. Both withdrawn.)
+- **Layout, measured rather than assumed.** The first draft put label and
+  value side by side and inlined all fourteen fields; screenshotted at 1920px
+  the pairs drifted apart and the block grew to roughly 400px, pushing the
+  communication-object table off screen on a device that happened to be fully
+  resolved. Hence stacked label-over-value pairs in an `auto-fill` grid and
+  the disclosure.
+
+Tests: `DeviceWorkspace.test.tsx` grows from 1 case to 13 — one per resolution
+variant, the third tab's own panel (the identity is inside it, hidden until
+selected, and leaving the tab does not remount `ParameterPanel`), arrow-key
+navigation in both directions with wrapping plus `Home`/`End`, the resolved
+catalogue's disclosure split and omission count, the partly-installed
+catalogue's empty group, a resolution string this build does not recognise,
+the omission count under `NoReference` with a catalogue attached, a tab stop
+on every panel (so a panel whose content has nothing focusable is still
+reachable from the tablist), and the German badge's refusal to call the state
+unknown. Every fixture is fictional
+(`M-00FA`, "Example Manufacturing", `EX-4210`); no real product or
+installation appears. `App.test.tsx`'s device fixture and
+`scripts/workbench-browser-proof.mjs`'s mock gained a `product` field — the
+proof script's mock would otherwise have served a `DeviceDetail` without one
+and crashed the page it was meant to photograph.
+
+Web gates: `npm test -- --run` **363 passed across 36 files** (up from 351,
++12 in `DeviceWorkspace.test.tsx`), `tsc --noEmit` clean.
+`scripts/workbench-browser-proof.mjs` now reaches the new tab with two right
+arrows, opens the disclosure and photographs it
+(`01b-porcelain-product-data.png`). Rust gates re-run
+because binding generation touches `crates/knx-projection`: `cargo fmt --all
+--check` and `cargo clippy --workspace --all-targets -- -D warnings` both
+clean; no Rust source was modified.
+
+What T16 still does not do: the catalogue browser is still insertion-only,
+there is no link from a device to its catalogue entry, and a device's serial
+number remains unreadable from the bus
+([KNOWN_LIMITATIONS.md §73](KNOWN_LIMITATIONS.md#73-a-line-scan-cannot-learn-product-identity-manufacturer-or-serial-number)).
+
+**The group-address table, multi-select moved, and the file menu's keyboard
+path (2026-09-13), branch `codex-ui-workbench`.** The workbench's central
+group-address view was a two-column address/name list — fewer facts than the
+navigation tree beside it already showed, and no test at all. It is now a
+table with range context, the resolved DPT and the linked communication
+objects with their directions, and the fact that made that possible came from
+the projection rather than from the screen.
+
+- **`knx-projection` extends `GroupAddressNode`** with `range:
+  Option<u32>` (the id of the containing `GroupRangeNode`), `dpts:
+  Vec<String>` and `links: Vec<GroupAddressLinkNode>` (device id, device
+  name and address, communication-object id, number and name, and the
+  `Direction`). Which objects reference an address is a question about the
+  project, not about the view, so it is answered where the project lives.
+  One reverse pass over `project.devices.com_objects()` builds the index
+  (O(communication objects), not O(addresses × communication objects)), and
+  the three-way DPT classification reuses `knx_core`'s own
+  `group_address_dpt_from`, newly `pub` with a doc comment explaining why a
+  caller that has already gathered the links should not re-derive the rule.
+  A group address still has no DPT of its own: `dpts` is empty when nothing
+  linked states one, and holds more than one entry when linked objects
+  disagree — a conflict the projection reports and never settles. Six new
+  tests cover the range/DPT/link projection, the conflict, an object linked
+  in both directions (one DPT, two rows), an unlinked address, a link whose
+  device is missing from `project.devices`, and links staying attached to
+  their own address rather than smeared across all of them.
+  `cargo test -p knx-projection`: 36 passed.
+- **Bindings regenerated, never hand-edited.**
+  `TS_RS_EXPORT_DIR=../../apps/knx-web/src/bindings cargo test -p
+  knx-projection` updated `GroupAddressNode.ts` and added
+  `GroupAddressLinkNode.ts`; nothing else in the directory moved.
+- **`GroupAddressTable.tsx` is the new view**: checkbox, address, name,
+  range path, DPT and link counts, with a `type="search"` filter over
+  address/name/DPT, a below-table links panel (participant, function,
+  direction, Unlink) for the selected address, and distinct empty states
+  for "this project has no group addresses" and "this filter matches
+  none". Selecting a row drives the Inspector through the existing
+  `onSelect` contract. Where it departs from the approved concept image
+  `docs/design/2026-09-13-codex-ui-concept/02-graphite.png`, it does so on
+  purpose and says so below.
+- **The multi-select state machine moved, it was not copied.**
+  `multiSelection.ts` now owns `useMultiSelection`, the render-order
+  helpers and the ctrl/shift/plain click rules that used to live inside
+  `ProjectExplorer.tsx`; the explorer and the new table both receive the
+  one handler from `App`, which renders the one `BulkActionToolbar`. There
+  is exactly one definition of the rules and exactly one live instance of
+  the state. A shift-click spans only the rows currently visible, because
+  the handler takes the caller's visible order rather than assuming the
+  full tree order. The checkbox synthesises a ctrl-click through a
+  structural event type, so no `MouseEvent` cast is needed to add one id.
+- **Seven declared departures from `02-graphite.png`,** the approved concept
+  image for this view. None is an oversight; each is a ruling, and every
+  one that leaves a capability absent names where that capability goes.
+  1. **DPTs render `DPST-1-1`, not the dotted `1.001`** the image shows.
+     No dotted formatter exists anywhere in this repository, and
+     `DptRef`'s `Display` text is the convention every other surface
+     already uses. Inventing a second spelling inside a table component is
+     how one screen ends up showing two names for one DPT. Changing it
+     means one formatter beside `DptRef` and a sweep of every call site,
+     which is a change to the domain crate's presentation contract, not to
+     a table.
+  2. **No "+ Gruppenadresse" primary button** in the address toolbar. The
+     create affordance exists as `ProjectExplorer.tsx`'s
+     `NewGroupAddressRow`, which renders `<li className="tree-new-row">` —
+     tree markup that cannot be lifted into a toolbar without extracting
+     the form from the list item first. Creating an address stays
+     reachable in the tree; the toolbar button belongs with whichever
+     stage does that extraction (it is the same extraction "+ Device"
+     needs, so both should move together rather than one at a time).
+  3. **The links panel's per-row "…" menu is an explicit Unlink button,
+     and there is no "+ Verknüpfen" in its header.** There are no context
+     or overflow menus anywhere in `apps/knx-web` (see below), so a "…"
+     here would have been the first one, with nothing to be consistent
+     with. Linking from the address side additionally needs a
+     device/communication-object picker that does not exist; the
+     Inspector's `NewGroupLinkRow` remains the one create path, and the
+     picker belongs to whatever stage builds that shared component.
+  4. **A Range column was added** beyond the image's breadcrumb, because
+     the brief asks for range context per row and a breadcrumb only
+     describes the current scope. Additive, not a removal.
+  5. **The CSV control is two plain buttons, not one "CSV ⌄" dropdown.**
+     The region matches the tracked
+     `docs/design/2026-09-13-codex-ui-concept/README.md` ("CSV direkt bei
+     Gruppenadressen"): `StructureWorkspace`'s `addressActions` slot
+     carries `GroupAddressCsvButtons`, whose export and import buttons are
+     rendered side by side rather than folded into a disclosure. The row
+     differs from the image, which puts "CSV ⌄" in the filter/action row
+     beside "+ Gruppenadresse"; here the buttons sit on the title line
+     (`StructureWorkspace.tsx:72-74`'s `.workspace-heading`) with the
+     filter one row below in `.address-table-toolbar`. The File-menu copies
+     are kept, so no entry point is lost. A disclosure of this shape does
+     exist — `App.tsx:459-461`'s `<details className="file-menu">` already
+     wraps these same buttons behind a label and a `⌄` — but there is no
+     reusable menu-button primitive in `apps/knx-web`, and promoting the
+     File menu's one-off into the first one, for two buttons, would
+     prejudge how every later overflow menu behaves.
+  6. **The Verknüpfungen column reads "1 sending · 1 receiving" rather
+     than the image's bare count.** The direction is the fact an installer
+     needs, the count alone hides which way a link points, and the
+     projection now carries both.
+  7. **No column sorting and no sort caret.** The image shows a "▲" on the
+     Adresse header; `GroupAddressTable.tsx` has no `sort` or `aria-sort`
+     at all. Rows render in the order the project stores them
+     (`Installation.group_addresses` is a `Vec`, so: insertion order, which
+     for an imported project is the file's order and not a guaranteed
+     sort). Clicking a header does nothing, nothing announces a sort
+     state, and the caret would therefore be a promise the table does not
+     keep. **Deferred to the later verification stage** of this UI series —
+     the one that checks mouse and keyboard operation, theme and motion
+     switching, error states and real on-screen rendering — for three
+     reasons: sorting is a table-wide concern that must also cover the
+     device and topology tables, it needs `aria-sort` plus an activatable
+     header for the keyboard path, and it has to state what it does to a
+     shift-click span. Doing it for one table in isolation is how three
+     tables end up sorting differently.
+- **`groupAddressView.ts`** holds the display helpers both the table and
+  the Inspector need — `directionLabel` (moved out of `Inspector.tsx`,
+  still one definition), `linkDirectionCounts`, `dptText`,
+  `hasDptConflict`, `rangePath` and `rangeWithDescendants`. The
+  group-address Inspector gained the same DPT and link-direction facts, so
+  the table and the properties pane cannot disagree about one address.
+- **`ProjectDiffPanel.tsx` had a real keyboard defect**: the comparison
+  report appeared without focus moving into it, and Escape inside it
+  closed the surrounding File menu instead of the report. The panel now
+  takes focus when it opens, stops Escape from propagating and returns
+  focus to the Compare button — so the first Escape closes the report and
+  the second closes the menu, innermost first.
+- **Two `CatalogBrowser` overlays cannot stack — but both state machines
+  are live.** `App.tsx` and `ProjectExplorer.tsx` own separate
+  `catalogTarget` state, and **both** have a working UI trigger: the
+  workspace's catalogue button for the first, and `AddDeviceRow`'s "+ Add
+  device" button in the tree (`ProjectExplorer.tsx`, rendered under the
+  first installation's lines and its Unassigned bucket, calling
+  `setCatalogTarget`) for the second. Neither is dead code; an earlier
+  revision of this entry claimed the second was unreachable, which was
+  wrong and is withdrawn.
+  What prevents stacking is the shared `Overlay` shell, covering that
+  trigger along with every other one. `.search-overlay` is
+  `position: fixed; inset: 0; z-index: 10` over the whole viewport, and no
+  ancestor of either trigger creates a competing stacking context
+  (`.workbench-pane` is `position: relative` with auto z-index,
+  `.workbench-toolbar` sits at `z-index: 5`), so the backdrop receives the
+  pointer events that would open the second overlay. `Overlay` also moves
+  focus into the panel and traps `Tab` — and the panel's search input is
+  never unmounted, so the trap always has somewhere to hold focus — which
+  closes the keyboard path to the same triggers. The panel is
+  `aria-modal="true"`, and no global shortcut and no `CommandContext` entry
+  opens the catalogue. Both states were therefore left exactly as they are:
+  the duplication is real, it is a tidiness question rather than a defect,
+  and unifying it belongs with whoever next has a reason to touch the
+  catalogue flow itself.
+- **No context menus exist anywhere in `apps/knx-web`** — `onContextMenu`
+  and `contextmenu` appear nowhere in the tree — so "context menus
+  consistent where they exist" is satisfied vacuously, not by work. The
+  CLAUDE.md UX wish list still asks for them; that remains open.
+
+Tests: `GroupAddressTable.test.tsx` is new (10 tests) and covers range path
+plus DPT plus "1 sending · 1 receiving", the conflict rendering both DPTs,
+selection driving the links panel, a link whose device is missing, Unlink
+calling `unlinkComObject`, the checkboxes driving the real
+`BulkActionToolbar` through to `batchDeleteGroupAddresses`, filtering by
+address/name/DPT, both empty states, and the range scope. The shift-click
+test spans a *non-contiguous* visible set — scoped to one range, ids 30, 31
+and 33 are on screen with 32 hidden between them — and asserts the batch
+delete is called with exactly those three ids. A span over a contiguous
+visible set proves nothing, because the full-order fallback produces the
+same answer; removing the `visibleOrder` argument from the call site now
+makes this test fail with four selected instead of three (verified by
+doing it).
+`App.test.tsx` gains the keyboard walk through the File menu: the summary is
+focusable, activating it lists all eight entries (open, open `.knxdb`, save
+as, export `.knxproj`, CSV export, CSV import, documentation export, compare)
+with no negative tab index and only the legitimately unavailable
+`.knxproj` export disabled, Escape closes the menu and restores focus to the
+summary, and the layered Escape on the comparison report is asserted step by
+step. `ProjectExplorer.test.tsx` and `StructureWorkspace.test.tsx` wrap the
+shared hook in a small harness rather than restating its rules.
+
+Web gates: `npm test -- --run` **377 passed across 37 files** (up from 363
+across 36), `tsc --noEmit` clean. Fixtures are fictional throughout — made-up
+`1/0/x` group addresses and `1.1.11`/`1.1.13` device addresses, no real
+product, device name or occupied address anywhere.
+
+**The workbench coverage matrix, verified against the code (2026-09-13),
+branch `codex-ui-workbench`.** The twelve-row matrix that steered this UI
+rebuild was written before the shell existed and lives in a gitignored
+working log, so it could neither be trusted nor cited. It is re-checked
+here against the tree as it stands, one file and line per row, and kept in
+`docs/` where a merge can carry it. "Reachable" below means reachable by
+some device-independent path, not merely present in the DOM.
+
+| # | Capability | Verdict | Evidence |
+| --- | --- | --- | --- |
+| 1 | Native/ETS open, save, save as, export | Holds | `apps/knx-web/src/App.tsx:462-468` (File menu), `:493` (Save), `commandRegistry.ts:56-79` (same four as commands) |
+| 2 | CSV, documentation export, project diff | Holds | `App.tsx:470` (CSV), `:477` (documentation), `:483` (compare), `:528` (CSV again as the address workspace's actions) |
+| 3 | Import errors and warnings | Holds | `Dashboard.tsx:35-46` (counts), `App.tsx:506` (persistent notice), `:524` (log), `:539` (toasts) |
+| 4 | Buildings, topology, CRUD | Holds | `App.tsx:512` (navigation), `:525` (`StructureWorkspace`), `:535` (inspector), `StructureWorkspace.tsx:73` (create) |
+| 5 | Catalogue, install, device creation | Holds | `App.tsx:513` (navigation entry), `:540` (`CatalogBrowser`), `StructureWorkspace.tsx:73` (contextual create) |
+| 6 | Addresses, ranges, DPT, links, flags | Holds | `App.tsx:512` (navigation), `StructureWorkspace.tsx:98` (`GroupAddressTable`), `App.tsx:535` (inspector) |
+| 7 | Parameters, diagnostics, module writes | Holds | `App.tsx:531` (`DeviceWorkspace`), `Inspector.tsx:680` (tabs), `:735` (`ParameterPanel`) |
+| 8 | Multi-select, bulk, undo, search, palette | Holds | `App.tsx:488-489` (undo/redo), `:491` (search), `:492` (palette), `:499` (`BulkActionToolbar`) |
+| 9 | Log, bus monitor, compose | **Was false** — both halves | see below |
+| 10 | UI language, product language, packs | Holds | `SettingsPanel.tsx:291` (product data), `:312` (UI), `App.tsx:494`/`:520` (two ways in), `commandRegistry.ts:121` (a third) |
+| 11 | Appearance | Holds | `SettingsPanel.tsx:233-256` (theme, accent, density), `theme.ts:5` (`system` is a real entry), `styles.css:1082-1083` (the two density tokens) |
+| 12 | Additional diagnostic window | Holds — browser and Tauri desktop, both run 2026-09-13 | `main.tsx:23-26` (one view switch, companion or editor), `DiagnosticsCompanion.tsx` (monitor and log only), `diagnosticsWindow.ts:110` (`openCompanionWindow`), `App.tsx:519` (the button), `busContext.ts:184` (`contextLock`), `capabilities/diagnostics.json` (desktop grants), [KNOWN_LIMITATIONS §82](KNOWN_LIMITATIONS.md#82-the-diagnostics-companions-stale-lock-sees-one-browser-profiles-own-windows-and-nothing-else) (what the lock cannot see) |
+
+Row 9 was true when it was written and false when it was checked, in both
+halves.
+
+*Reachability.* Before the shell, Log and Bus monitor were always-visible
+toolbar buttons. Afterwards their only entry points were
+`App.tsx:517-518`, inside the `diagnostic-navigation` nav at `:516`,
+inside the `{navigationOpen && …}` guard at `:510` — so the navigation
+toggle at `:497` could remove the only way to reach either panel, and
+`commandRegistry.ts` had no entry for them. Settings survived by accident,
+via the toolbar gear at `App.tsx:494`. Per the standing rule that new
+actions stay reachable through the same validated commands regardless of
+input device, `open-log`, `open-bus-monitor` and `open-settings` now exist
+(`commandRegistry.ts:109-126`), all three enabled without an open project
+because both panels work without one. Three `App.test.tsx` tests collapse
+the pane first and then drive the palette. T-UI-06 added a fourth for the
+same reason (`commandRegistry.ts:130-135`, `open-diagnostics-window`): the
+companion window's only button sits in that same collapsible pane.
+
+*"Diagnostic workspaces".* Neither panel was one: both opened with a bare
+`<h2>` while every other centre-pane view uses `.workspace-heading` with
+an eyebrow and an `<h1>`. Both now match (`LogPanel.tsx:77`,
+`BusMonitorPanel.tsx:473`), with the severity filters and the connect
+controls as their action clusters, and the monitor's eyebrow naming its
+only transport — `knx-server`'s bus layer is tunnelling-only, no discovery
+and no routing (`apps/knx-server/src/bus.rs:5-13`).
+
+Four token escapes inside those three panels were fixed in passing, each a
+capability that existed and did not reach the screen:
+
+- `.bus-monitor-table th, td` declared its own cell padding at a
+  specificity that beat the shell's `th, td { padding:
+  var(--knx-cell-padding); }`, so Compact/Comfortable moved every table in
+  the application except the telegram one.
+- Eight rules covering ten secondary-text classes dimmed themselves with
+  `opacity` instead of `var(--knx-muted)`, which no theme can retune.
+  Contrast *falls* with the token (Porcelain 7.98:1 to 5.51:1 against
+  `--knx-surface`) and still clears WCAG AA; this is token participation,
+  not a contrast improvement.
+- `bus-monitor-row-new` — design D34's "arrived in the latest poll"
+  emphasis — was set on rows and asserted by nine test expectations, while
+  the rule that drew it had been deleted with the rest of the per-telegram
+  animation. It is drawn again as a static accent rail, because telegrams
+  still must not animate.
+- The bus compose form's "Project Undo cannot reverse this action" notice
+  had no rule at all and rendered as body text. It is a warning again.
+
+The settings overlay's selects carried `font-size: 1rem` and `padding:
+0.4rem` — a 16px control in a 13px shell, the one place the type scale did
+not reach. Both are gone; the shared `input, select, textarea` rule, whose
+`min-height` the density setting drives, applies instead. Catalogue and
+Search selects share that rule and come along.
+
+A new guard, `apps/knx-web/src/diagnosticShell.test.ts`, fails the suite on
+either defect shape: a panel class name with no rule in `styles.css` (with
+an explicit allowlist for the query hooks that draw nothing on purpose),
+and a cell-padding declaration that outranks the density tokens. Its
+ADR-0018 header is `/** One sentence. */`: `check-headers`
+(`xtask/src/headers.rs:107-116`) recognises no line-comment form for
+TypeScript, so a `// …` first line counts as no header at all and trips
+the ratchet.
+
+One thing was deliberately left alone. `DeviceWorkspace`'s heading
+(`Inspector.tsx:679`) uses `.workspace-heading` with an `<h2>` and no
+eyebrow rather than the eyebrow/`<h1>` shape — cosmetic, and it belongs to
+the device slice, not this one. Row 12's companion diagnostic window was
+left to its own task, which is the section below.
+
+Gates, all eight green from one run each: `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace --no-fail-fast` (**1187 passed, 0 failed, 3
+ignored across 78 `test result:` lines** — unchanged; nothing here touches
+`crates/`), `xtask check-layering`, `xtask check-headers` (**92 files with
+a well-formed header, 169 without, ceiling 169** — the one new file brings
+its own), `cargo deny check`, and in `apps/knx-web` `npm test -- --run`
+(**383 passed across 38 files**, up from 377 across 37: three
+palette-reachability tests, one registry test and two guard tests in the
+new file) plus `tsc --noEmit`.
+
+**T-UI-06 — the diagnostics companion window (2026-09-13, branch
+`codex-ui-workbench`).** Row 12 of the matrix above now holds. A second
+window hosts the bus monitor and the session log and nothing else; the
+project is edited in exactly one window, as before.
+
+*One editing workspace.* `main.tsx:23-26` picks between `<App />` and
+`<DiagnosticsCompanion />` from one query parameter (`?view=diagnostics`),
+so the companion is the same bundle at a different entry point rather than
+a second application. `DiagnosticsCompanion.tsx` imports only
+`BusMonitorPanel`, `LogPanel`, `busContext`, `diagnosticsWindow`, `i18n`
+and `react` — `DiagnosticsCompanion.test.tsx` asserts that import list
+against the module's own source, because an absence that nothing checks
+stops being true the first time someone adds "just one small button".
+
+*No project mutation, no project undo.* The Ctrl+Z/Ctrl+Shift+Z handler
+lives on `App.tsx`'s `window` listener, which the companion never mounts;
+a test presses both combinations against the live companion and asserts
+`api.undo`/`api.redo` are never called. The only write it can reach is the
+bus compose form's, which was already a bus write and already says project
+Undo cannot reverse it.
+
+*One shared bus session.* The companion starts nothing: `BusMonitorPanel`
+asks `GET /api/bus/monitor/telegrams` on mount and attaches to whatever
+session exists (`apps/knx-server/src/bus_routes.rs:272-311` answers `404`
+when there is none), and closing the window runs no teardown, so the
+session outlives it. Both are tested. The server's one-session rule is
+unchanged: a second `POST /start` still gets a `409` naming the existing
+session (`bus_routes.rs:95-109`).
+
+*The stale lock.* `apps/knx-server/src/bus.rs:601-618` freezes a
+`GroupAddressContext` — group-address style, names, DPTs — when a session
+starts, and never re-resolves it; that snapshot decodes every telegram and
+resolves every write's DPT (`bus.rs:1135-1141`). `busContext.ts`
+fingerprints exactly those three facts, records the fingerprint when a
+session starts, and compares on every poll tick. The verdict is
+three-valued: `synced`, `stale` (the project moved — the decoded columns
+are struck through, and the compose form is disabled with an explanation)
+and `unverified` (this profile did not record this session's start, so
+nothing can be confirmed either way — said out loud, sending left
+enabled). What it cannot see is [KNOWN_LIMITATIONS §82](KNOWN_LIMITATIONS.md#82-the-diagnostics-companions-stale-lock-sees-one-browser-profiles-own-windows-and-nothing-else).
+
+*Platforms.* Verified in both. Headless Chromium against the Vite dev
+server renders the companion shell at `?view=diagnostics` and the editor
+at `/`. On the Tauri desktop shell the command opens a real second native
+window titled "KNXBench — Diagnostics", a second invocation focuses it
+instead of creating a third, and its "Back to main window" button returns
+focus to `main`. That needed two capability changes:
+`core:webview:allow-create-webview-window` and `core:window:allow-set-focus`
+on the main window, plus a new least-privilege
+`capabilities/diagnostics.json` scoped to the `diagnostics` window with
+`core:window:allow-get-all-windows` and `core:window:allow-set-focus` only.
+No KNX bus was touched: no gateway was connected in either run.
+
+Gates, all eight green from one run each: `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace --no-fail-fast` (**1187 passed, 0 failed, 3
+ignored across 78 `test result:` lines** — unchanged; this stage adds no
+Rust), `xtask check-layering`, `xtask check-headers` (**98 files with a
+well-formed header, 169 without, ceiling 169** — six new files, six new
+headers), `cargo deny check`, and in `apps/knx-web` `npm test -- --run`
+(**434 passed across 41 files**, up from 383 across 38: three new test
+files worth 45 tests, five stale-lock tests in `BusMonitorPanel.test.tsx`
+and one in `BusComposeForm.test.tsx`) plus `tsc --noEmit`.
+
+**T-UI-07 — the series closes: three comments that claimed more than they
+could prove (2026-09-13, branch `codex-ui-workbench`).** No feature landed
+here. This stage answered five findings from the T-UI-06 review, and the
+most useful result was that one of them was wrong.
+
+*A depth-1 import list proves nothing about depth 3.*
+`DiagnosticsCompanion.tsx`'s header claimed its own import list guaranteed
+the companion cannot reach editing code, and that "anything reachable from
+this module is reachable from the companion window". The implication runs
+backwards, and the premise is false as well: this module imports
+`./diagnosticsWindow`, which imports `isTauri` from `./filePicker`, which
+imports `./FsPicker`, which `POST`s to `/api/fs/upload`. The comment now
+states three properties that are each true and each asserted. (1) This file
+names no editing surface directly — the old depth-1 assertion survives,
+recommented as the tripwire it always was. (2) Across the whole transitive
+value-import graph, every `api` call is a bus or diagnostics call and the
+only non-`GET` raw `fetch`es sit in functions this window never calls; the
+test walks the graph from source and pins three exact lists — **15 modules,
+7 `api` exports called, 2 mutating fetch targets**. Fifteen, not the thirty
+the review counted: the difference is exactly the fifteen `bindings/*.ts`
+files, reached only by `import type` and erased before anything runs. All
+three lists are re-measured by
+`./node_modules/.bin/vitest run src/DiagnosticsCompanion.test.tsx`, which
+fails with the three lists printed whenever any of them moves. (3) Mounted
+and left alone the companion calls exactly one `api` export, the telegram
+poll; opening the Log tab adds the session-log read and nothing else. That
+last one is asserted as the *set* of exports called, not as three named
+absences, so a new mutator fails the test instead of being forgotten. The
+review's warning that an honest transitive test must fail today was too
+pessimistic: it fails only if it
+demands the graph contain no mutating code, which is not the property worth
+having. What the window never *calls* is.
+
+*The fingerprint separator that was already there.* The review reported that
+`fingerprintProjectContext` concatenates address, name and DPTs without a
+separator, so address `1/1/1` name `0Foo` collides with address `1/1/10`
+name `Foo`. It does not. `busContext.ts` has used U+0001 between fields and
+U+0002 between records since the feature landed, written as literal
+non-printing bytes that every display layer — editor, `git diff`, code
+review, two successive reviewers — silently swallowed. Reproduce with
+`LC_ALL=C grep -n $'[\x01\x02]' apps/knx-web/src/busContext.ts | cat -v`,
+which prints `^A` and `^B`. The bytes are now written as `\u0001` and
+`\u0002` escapes: byte-identical output, no stored fingerprint invalidated,
+and the source finally says what it does. Two tests pin the property rather
+than the spelling, one per separator, the record-separator one holding the
+address count fixed so the `${count}-` prefix cannot pass it by accident.
+The hashing scheme was left alone deliberately — a length-prefixed encoding
+would fix a collision that does not exist and would make every stored
+fingerprint read `unverified` once, which trades Data Integrity for nothing.
+
+*Two blind spots the lock really has.* Both are now in
+[KNOWN_LIMITATIONS §82](KNOWN_LIMITATIONS.md#82-the-diagnostics-companions-stale-lock-sees-one-browser-profiles-own-windows-and-nothing-else),
+with the residual that survives the escapes. The digest is 32-bit FNV-1a:
+`"synced"` means "almost certainly unchanged", never "provably unchanged",
+and a crafted project could collide on purpose. Neither is defended against,
+because the lock is a decoding-staleness hint and the blast radius of a miss
+is one mislabelled telegram, not a bad write. The residual is a group
+address whose *name* contains U+0001 or U+0002 — impossible from a
+`.knxproj`, because XML 1.0 §2.2's `Char` production admits no C0 control
+character except tab, LF and CR, and no keyboard produces one.
+
+*One edit path really does skip the publish.* `App.tsx` claimed no edit path
+can forget to publish the project context. `api.setParameterValue` forgets:
+`domain.rs` runs `apply(state, cmd)` for `Command::SetParameterValue`, so
+the project moves server-side, but the response is a `ParameterPanelDto`, so
+`App.tsx` never calls `setTree`, the `useEffect` on `tree` never fires, and
+the fingerprint stays where it was. Verified here rather than taken from the
+report: `Command::SetParameterValue` writes only `installation.parameters`
+through `upsert_parameter_value`, while `resolve_group_address_dpt`
+(`crates/knx-core/src/dpt/resolve.rs`) reads only com-object links and
+resolved DPT values, and `GroupAddressNode.dpts` — the third fingerprint
+input — comes from the same rule over the same com objects. The two sets do
+not intersect, so the hole is harmless *today*, which is exactly the kind of
+fact that stops being true quietly. The comment now says "no edit path that
+lands in `tree`", records that the old one was false when it was written,
+and `resolve_group_address_dpt` gained a "Before you widen the inputs"
+section: whoever makes a parameter value influence a com object's DPT, links
+or activity will read it before they can finish, and will find out that they
+have just made the bus monitor report `"synced"` over a decode that changed.
+
+*Nine images, read rather than assumed.* Every `.png` under
+`docs/design/2026-09-13-codex-ui-concept/` and
+`docs/design/2026-09-13-codex-ui-proof/` was opened and examined. The
+concept directory holds three: a Porcelain building/device workspace, a
+Graphite group-address workspace and a companion-window bus monitor. The
+proof directory holds six produced by `workbench-browser-proof.mjs`, whose
+fixtures are invented in the script's own source and labelled
+`Beispieldaten · kein reales Gerät` on screen. No real device name, no
+manufacturer inventory and no occupied-address list appears in any of them.
+The gateway strings in the monitor images are fictitious input placeholders;
+the controller has ruled they stay, and new material uses the RFC 5737
+placeholder `192.0.2.1`, which is what `BusMonitorPanel.tsx` renders today.
+What the audit did find is staleness nobody had written down: the committed
+PNGs come from one run at the branch's base commit, the script has gained
+two commits since, it now writes `01b-porcelain-product-data.png` which was
+never committed, and `01-porcelain.png` shows a two-tab device inspector
+where the application now has three. That is recorded in the proof
+directory's README, together with the fact that the dev server binds
+`[::1]:1420` and *only* that — `vite.config.ts` sets `strictPort: true` and
+no `host`, `ss -ltn | grep 1420` reports one IPv6 listener, and a
+`127.0.0.1` URL is refused with `curl` exit 7 and an empty body, which one
+verification pass mistook for a server answering with nothing. The run block
+there previously named `http://127.0.0.1:1427`, a port matching neither the
+dev server (1420) nor `vite preview`'s default (4173).
+
+*Numbers carry their commands now.* `GAP_ANALYSIS_ETS.md` D12 proposed that
+any number written into prose be written beside the command that measured
+it. Adopted here, and applied retroactively to exactly one place: D12's own
+row, which now carries `for p in 'title=' 'aria-label=' 'aria-describedby='; do grep -rho "$p" apps/knx-web/src --include='*.tsx' --exclude='*.test.tsx' | wc -l; done`
+beside its 8 / 33 / 4, and notes that dropping the `--exclude` doubles
+`aria-label` to 64. It was not applied to the historical entries above:
+their counts are per-entry records of what was true on the day, not claims
+about the tree today, and rewriting them would turn a log into a report. The
+convention binds new prose.
+
+Gates, all eight green from one run each: `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace --no-fail-fast` (**1187 passed, 0 failed, 3 ignored
+across 78 `test result:` lines**, summed with `awk '/test result:/{p+=$4;f+=$6;i+=$8;n++} END{print p,f,i,n}'`
+over one untruncated log — unchanged; the only Rust change is a doc
+comment), `xtask check-layering`, `xtask check-headers` (**99 files with a
+well-formed header, 168 without, ceiling 169** — unchanged; no file was
+added, and the ceiling stays at 169 because ratcheting it is a decision for
+whoever merges this), `cargo deny check`, and in `apps/knx-web`
+`npm test -- --run` (**438 passed across 41 files**, up from 434: two
+separator tests in `busContext.test.ts` and two in
+`DiagnosticsCompanion.test.tsx`, being the import-graph test and the split
+of one runtime test into an untouched-lifecycle case and a log-tab case)
+plus `./node_modules/.bin/tsc --noEmit`, which needed `existsSync` added to
+the hand-written `src/node-builtins.d.ts` shim — the package deliberately
+carries no `@types/node`, because `tsc && vite build` type-checks the tests
+alongside the application and the full Node surface would let a component
+import `node:fs` unnoticed.

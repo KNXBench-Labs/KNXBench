@@ -1,48 +1,37 @@
 import { useEffect, useState } from "react";
 
-export interface ThemeDef {
-  id: string;
-  name: string;
-}
-
-export const THEMES: readonly ThemeDef[] = [{ id: "bitcoin-defi", name: "Bitcoin DeFi" }];
-
-const DEFAULT_THEME_ID = "bitcoin-defi";
+export interface ThemeDef { id: string; name: string; }
+export const THEMES: readonly ThemeDef[] = [
+  { id: "system", name: "System" },
+  { id: "porcelain", name: "Porcelain" },
+  { id: "graphite", name: "Graphite" },
+  { id: "bitcoin-defi", name: "Bitcoin DeFi" },
+];
 const STORAGE_KEY = "knx-desktop:theme";
 
-function isThemeId(id: string): boolean {
-  return THEMES.some((t) => t.id === id);
-}
-
-/**
- * Reads the persisted theme id. Anything that isn't a known theme id —
- * missing key, a value from a future/incompatible version, cycle 7's old
- * "system"/"light"/"dark" values, or a theme that's since been removed —
- * resolves to the default, the same always-safe-default philosophy as the
- * old `loadTheme`.
- */
+/** Preserve explicit old preferences; unknown preferences follow the OS. */
 export function loadThemeId(storage: Pick<Storage, "getItem">): string {
-  const raw = storage.getItem(STORAGE_KEY);
-  return raw && isThemeId(raw) ? raw : DEFAULT_THEME_ID;
+  let raw: string | null = null;
+  try { raw = storage.getItem(STORAGE_KEY); } catch { /* Storage can be unavailable. */ }
+  if (raw === "light") return "porcelain";
+  if (raw === "dark") return "graphite";
+  return THEMES.some((theme) => theme.id === raw) ? raw! : "system";
 }
-
+export function resolveThemeId(id: string, dark: boolean): string {
+  return id === "system" ? (dark ? "graphite" : "porcelain") : id;
+}
 export function saveThemeId(storage: Pick<Storage, "setItem">, id: string): void {
-  storage.setItem(STORAGE_KEY, id);
+  try { storage.setItem(STORAGE_KEY, id); } catch { /* Session preference still works. */ }
 }
-
-/**
- * Reads the persisted theme id on mount, applies it to `<html
- * data-theme>`, and persists on every change. Unlike the old `useTheme`,
- * the attribute is always set — there is no "system"/unthemed state
- * anymore.
- */
 export function useThemeId(): [string, (id: string) => void] {
-  const [id, setId] = useState<string>(() => loadThemeId(window.localStorage));
-
+  const [id, setId] = useState(() => loadThemeId(window.localStorage));
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", id);
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => { document.documentElement.dataset.theme = resolveThemeId(id, query.matches); };
+    apply();
     saveThemeId(window.localStorage, id);
+    query.addEventListener("change", apply);
+    return () => query.removeEventListener("change", apply);
   }, [id]);
-
   return [id, setId];
 }

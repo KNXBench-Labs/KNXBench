@@ -190,6 +190,7 @@ export const messages: Record<MessageKey, string> = {
   "explorer.importWarningsCount.other": "{count} Importwarnungen",
 
   "logPanel.title": "Sitzungsprotokoll",
+  "logPanel.eyebrow": "Diagnose",
   "logPanel.severity.error": "Fehler",
   "logPanel.severity.warning": "Warnung",
   "logPanel.severity.info": "Info",
@@ -197,6 +198,11 @@ export const messages: Record<MessageKey, string> = {
   "logPanel.emptyFiltered": "Keine Protokolleinträge entsprechen den aktuellen Filtern.",
 
   "busMonitor.title": "Bus-Monitor",
+  "busMonitor.eyebrow": "KNXnet/IP · Tunneling",
+  "busMonitor.gatewayLabel": "Gateway-Adresse",
+  "busMonitor.gatewayLocked":
+    "Trennen Sie die laufende Sitzung, bevor Sie die Gateway-Adresse ändern.",
+  "busMonitor.connectNeedsGateway": "Geben Sie zuerst eine Gateway-Adresse ein.",
   "busMonitor.connect": "Verbinden",
   "busMonitor.disconnect": "Trennen",
   "busMonitor.session": "Sitzung {id}",
@@ -219,6 +225,13 @@ export const messages: Record<MessageKey, string> = {
   "busMonitor.column.service": "Dienst",
   "busMonitor.column.payload": "Nutzdaten",
   "busMonitor.column.decoded": "Dekodiert",
+  "busMonitor.contextStale":
+    "Das Projekt hat sich nach dem Start dieser Sitzung geändert. Die Dekodierung unten stammt aus dem Stand vom Verbindungsaufbau, Senden ist gesperrt. Für die Dekodierung gegen das aktuelle Projekt neu verbinden.",
+  "busMonitor.contextUnverified":
+    "Dieses Fenster hat die Sitzung nicht gestartet und kann daher nicht bestätigen, dass die Dekodierung zum aktuell geöffneten Projekt passt.",
+  "busMonitor.sessionReplaced":
+    "Die Bus-Sitzung wurde ersetzt — angezeigt wird jetzt Sitzung {id}. Zeilen der vorherigen Sitzung wurden entfernt.",
+  "busMonitor.endedElsewhere": "Die Bus-Sitzung wurde an anderer Stelle beendet.",
 
   "catalog.title": "Gerätekatalog",
   "catalog.installing": "Produktdatenbank wird installiert…",
@@ -358,7 +371,23 @@ export const messages: Record<MessageKey, string> = {
   "busCompose.dptLabel": "DPT",
   "busCompose.valueLabel": "Wert",
   "busCompose.send": "Senden",
+  "busCompose.liveAction": "Sendet auf den verbundenen Bus. Projekt-Rückgängig kann diese Aktion nicht zurücknehmen.",
   "busCompose.sent": "Gesendet {service}: {payload}",
+  "busCompose.contextStaleMessage":
+    "Das Projekt hat sich nach dem Start dieser Bus-Sitzung geändert — der DPT würde gegen den alten Stand aufgelöst, deshalb ist Senden gesperrt. Zuerst neu verbinden.",
+
+  // `DiagnosticsCompanion.tsx` und der Knopf in `App.tsx`, der es öffnet.
+  "companion.open": "Diagnosefenster",
+  "companion.title": "Diagnose",
+  "companion.eyebrow": "Begleitfenster · nur lesend",
+  "companion.readOnly":
+    "Nur lesendes Begleitfenster. Das Projekt wird ausschließlich im Hauptfenster bearbeitet; hier gibt es kein Rückgängig, und dieses Fenster teilt sich die Bus-Sitzung des Hauptfensters, statt eine eigene zu öffnen.",
+  "companion.backToMain": "Zurück zum Hauptfenster",
+  "companion.noMainWindow": "Kein Hauptfenster vorhanden — dieses Fenster wurde eigenständig geöffnet.",
+  "companion.blocked":
+    "Das Diagnosefenster wurde blockiert. Pop-ups für diese Seite erlauben — oder den Monitor weiter hier benutzen.",
+  "companion.failed":
+    "Das Diagnosefenster konnte nicht geöffnet werden. Monitor und Protokoll bleiben hier verfügbar.",
 
   "fsPicker.open": "Öffnen",
   "fsPicker.saveAs": "Speichern unter",
@@ -381,4 +410,111 @@ export const messages: Record<MessageKey, string> = {
   "groupAddressCsv.importSummaryIgnoredColumns.one": "{count} Spalte ignoriert",
   "groupAddressCsv.importSummaryIgnoredColumns.other": "{count} Spalten ignoriert",
   "groupAddressCsv.importSummarySeeLog": "— siehe Log.",
+  "appearance.accent": "Akzentfarbe",
+  "appearance.density": "Dichte",
+  "appearance.violet": "Violett",
+  "appearance.mint": "Mint",
+  "appearance.blue": "Blau",
+  "appearance.amber": "Bernstein",
+  "appearance.rose": "Rosa",
+  "appearance.compact": "Kompakt",
+  "appearance.comfortable": "Komfortabel",
+  "workbench.overview": "Übersicht",
+  "workbench.buildings": "Gebäude",
+  "workbench.topology": "Topologie",
+  "workbench.addresses": "Gruppenadressen",
+  "workbench.catalog": "Produktkatalog",
+  "workbench.device": "Gerät",
+  "workbench.unassigned": "Nicht zugeordnet",
+  "workbench.emptyStructure": "Noch keine Einträge. Struktur über den Projektbaum anlegen.",
+  "workbench.address": "Adresse",
+  "workbench.name": "Name",
+  "workbench.file": "Datei",
+  "workbench.navigation": "Navigation",
+  "workbench.properties": "Eigenschaften",
+  "workbench.welcome": "Dein KNX-Arbeitsbereich",
+  "workbench.openHint": "Projekt öffnen, um Gebäude, Topologie und Gruppenadressen zu bearbeiten.",
+  "workbench.noSelection": "Eintrag auswählen, um Eigenschaften zu prüfen oder zu bearbeiten.",
+  "workbench.importNotices": "Import: {errors} Fehler · {warnings} Warnungen",
+  "workbench.parameters": "Parameter",
+  "workbench.telegram": "Telegramm",
+  "workbench.selectTelegram": "Telegramm auswählen, um die empfangenen Daten zu prüfen.",
+  "workbench.noDevices": "Diesem Gebäudeteil sind keine Geräte zugeordnet.",
+
+  // Die Gruppenadresstabelle (Etappe 4). Eine Gruppenadresse hat im
+  // KNX-Modell keinen eigenen DPT — diese Beschriftungen benennen, was die
+  // verknüpften Kommunikationsobjekte angeben. Deshalb "nicht angegeben"
+  // statt "unbekannt", und deshalb wird eine Abweichung als Konflikt
+  // benannt statt stillschweigend aufgelöst.
+  "addressTable.filterLabel": "Gruppenadressen filtern",
+  "addressTable.filterPlaceholder": "Adressen filtern…",
+  "addressTable.selectColumn": "Auswählen",
+  "addressTable.range": "Bereich",
+  "addressTable.dpt": "DPT",
+  "addressTable.links": "Verknüpfungen",
+  "addressTable.noDpt": "nicht angegeben",
+  "addressTable.dptConflict": "widersprüchlich",
+  "addressTable.noRange": "(kein Bereich)",
+  "addressTable.noLinks": "keine",
+  "addressTable.linkCounts": "{senders} Senden · {receivers} Empfangen",
+  "addressTable.linkTotal.one": "{count} Verknüpfung",
+  "addressTable.linkTotal.other": "{count} Verknüpfungen",
+  "addressTable.noMatches": "Keine Gruppenadresse passt zu diesem Filter.",
+  "addressTable.linksFor": "Verknüpfungen · {address}",
+  "addressTable.noLinksYet": "Mit dieser Adresse ist kein Kommunikationsobjekt verknüpft.",
+  "addressTable.participant": "Teilnehmer",
+  "addressTable.function": "Funktion",
+  "addressTable.direction": "Richtung",
+  "addressTable.unlinkFrom": "{object} von {address} trennen",
+  // Nur erreichbar, wenn das Projekt ein Objekt verknüpft, dessen Gerät
+  // fehlt — die Verknüpfung wird trotzdem gezeigt, nicht verworfen (siehe
+  // `GroupAddressLinkNode`).
+  "addressTable.unknownDevice": "Unbekanntes Gerät #{id}",
+  "addressTable.unnamedObject": "Unbenanntes Objekt",
+
+  "deviceIdentity.title": "Produktidentität",
+  "deviceIdentity.tab": "Produktdaten",
+  "deviceIdentity.productRef": "Produktreferenz",
+  "deviceIdentity.programRef": "Applikationsprogramm-Referenz",
+  "deviceIdentity.refNotStated": "im Projekt nicht angegeben",
+  "deviceIdentity.resolution.resolved": "Aus der Produktdatenbank",
+  "deviceIdentity.resolution.noDatabase": "Keine Produktdatenbank",
+  "deviceIdentity.resolution.notInDatabase": "Nicht in der Produktdatenbank",
+  "deviceIdentity.resolution.noReference": "Keine Produktreferenz",
+  // Bewusst nicht "Zustand unbekannt": die englische Fassung vermeidet das
+  // Wort "unknown", weil der Zustand dem Server sehr wohl bekannt ist —
+  // nur dieser Build kennt ihn nicht. `DeviceWorkspace.test.tsx` prüft
+  // beide Kataloge darauf, damit die Formulierung nicht zurückwandert.
+  "deviceIdentity.resolution.unrecognised": "Zustand nicht erkannt",
+  "deviceIdentity.explain.unrecognised":
+    "Der Server meldet einen Auflösungszustand, den dieser Build nicht kennt; dieses Feld kann deshalb nicht sagen, ob die Angaben oben einem Produkt zugeordnet wurden. Die Referenzen stehen genau so, wie das Projekt sie angibt.",
+  "deviceIdentity.explain.noDatabase":
+    "Hier ist keine Produktdatenbank geladen; die Angaben oben lassen sich deshalb keinem Produkt zuordnen. Produktpaket des Herstellers installieren, um Produkt-, Hardware- und Applikationsprogrammdaten zu sehen.",
+  "deviceIdentity.explain.notInDatabase":
+    "Eine Produktdatenbank ist geladen und enthält die Angaben oben nicht. Der Herstellerkatalog für dieses Produkt ist hier nicht installiert.",
+  "deviceIdentity.explain.noReference":
+    "Dieses Gerät gibt weder eine Produktreferenz noch eine Applikationsprogramm-Referenz an — es wurde ohne eine solche angelegt oder stammt aus einem Import, der keine mitbrachte.",
+  "deviceIdentity.explain.resolvedWithoutCatalog":
+    "Die Produktdatenbank meldet einen Treffer, lieferte dazu aber keine Daten.",
+  "deviceIdentity.more": "Weitere Produktdaten",
+  "deviceIdentity.group.product": "Produkt",
+  "deviceIdentity.group.hardware": "Hardware",
+  "deviceIdentity.group.application": "Applikationsprogramm",
+  "deviceIdentity.manufacturer": "Hersteller",
+  "deviceIdentity.manufacturerId": "Hersteller-ID",
+  "deviceIdentity.productText": "Produktname",
+  "deviceIdentity.orderNumber": "Bestellnummer",
+  "deviceIdentity.catalogItemName": "Katalogeintrag",
+  "deviceIdentity.catalogItemNumber": "Katalogeintragsnummer",
+  "deviceIdentity.hardwareName": "Hardwarename",
+  "deviceIdentity.hardwareVersion": "Hardwareversion",
+  "deviceIdentity.hardwareSerial": "Hardware-Seriennummer",
+  "deviceIdentity.applicationName": "Programmname",
+  "deviceIdentity.applicationNumber": "Programmnummer",
+  "deviceIdentity.applicationVersion": "Programmversion",
+  "deviceIdentity.applicationProgramId": "Programm-ID",
+  "deviceIdentity.maskVersion": "Maskenversion",
+  "deviceIdentity.groupEmpty": "Die Produktdatenbank enthält hier keine Werte.",
+  "deviceIdentity.omitted.one": "{count} weiteres Feld ist ausgeblendet: Die Produktdatenbank hat dafür keinen Wert.",
+  "deviceIdentity.omitted.other": "{count} weitere Felder sind ausgeblendet: Die Produktdatenbank hat dafür keine Werte.",
 };

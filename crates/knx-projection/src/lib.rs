@@ -8,8 +8,8 @@
 use std::collections::HashMap;
 
 use knx_core::{
-    BuildingPart, BuildingPartId, BuildingPartType, Devices, GroupAddressEntry, GroupAddressStyle,
-    GroupRange, Project, Topology,
+    BuildingPart, BuildingPartId, BuildingPartType, Devices, DptRef, GroupAddressDpt,
+    GroupAddressEntry, GroupAddressId, GroupAddressStyle, GroupRange, Project, Text, Topology,
 };
 use serde::Serialize;
 use ts_rs::TS;
@@ -112,6 +112,59 @@ pub struct GroupAddressNode {
     /// Formatted per the project's own `GroupAddressStyle`
     /// (`GroupAddress::format`), e.g. `"4/2/100"`.
     pub address: String,
+    /// The id of the `GroupRange` this address was imported under, `None`
+    /// if it sits under none. Projected as an id, not a resolved path: the
+    /// containing [`GroupRangeNode`] is already in the same installation's
+    /// `group_ranges`, carrying its own name and `parent`, so resolving
+    /// the path here would duplicate data the caller already holds.
+    pub range: Option<u32>,
+    /// Every datapoint type the communication objects linked to this
+    /// address state, classified by `knx_core::group_address_dpt_from` —
+    /// the same rule `resolve_group_address_dpt` applies, over the same
+    /// set of communication objects.
+    ///
+    /// Empty means `GroupAddressDpt::None` (nothing linked states one, the
+    /// ordinary case for 38% of the reference project's addresses); one
+    /// entry means every linked object that states a DPT states that one;
+    /// two or more is `GroupAddressDpt::Conflict` — the disagreement
+    /// reported, never settled by picking a winner. Entries are `DptRef`'s
+    /// `Display` text (`"DPST-1-1"`, `"DPT-1"`), never the dotted
+    /// `"1.001"` form, which nothing in this repository produces.
+    pub dpts: Vec<String>,
+    /// Every communication object linked to this address, in
+    /// `ComObjectInstanceId` order — the reverse of `ComObjectNode::links`.
+    pub links: Vec<GroupAddressLinkNode>,
+}
+
+/// One communication object's link to a group address, seen from the
+/// address's side: the mirror image of [`GroupLinkNode`], which sees the
+/// same link from the communication object's side. An object linked to the
+/// same address in both directions produces two of these, one per
+/// `direction`, exactly as it holds two `GroupLink`s.
+///
+/// `device_name`/`device_address` are `None` only if `device_id` names no
+/// device in the project — the same defensive stance [`GroupLinkNode`]
+/// takes towards a dangling `ga_id`. The row is still projected rather
+/// than dropped: a link the project states is not information to lose on
+/// the way to the screen.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct GroupAddressLinkNode {
+    pub device_id: u32,
+    pub device_name: Option<String>,
+    /// Formatted individual address — `None` if the device has none
+    /// assigned (valid project state), same as `DeviceNode::address`.
+    pub device_address: Option<String>,
+    pub com_object_id: u32,
+    /// `ComObjectInstance::number` — `_O-<n>` from the source `RefId`,
+    /// same field `ComObjectNode::number` projects.
+    pub com_object_number: u16,
+    /// Resolved through the project's string table, same as
+    /// `ComObjectNode::name`.
+    pub com_object_name: Option<String>,
+    /// `"Send"` or `"Receive"` (`Direction`'s `Debug` form, same
+    /// convention as `GroupLinkNode::direction`).
+    pub direction: String,
 }
 
 /// A flat (not nested) view of one `GroupRange` — `parent` names the
@@ -137,6 +190,7 @@ pub struct GroupRangeNode {
 /// one with dangling `BuildingPart` device references (knx-etsproj's
 /// `validate.rs` does not check those — see the doc comment there).
 pub fn build_project_tree(project: &Project) -> ProjectTree {
+    let links = build_group_address_link_index(project);
     ProjectTree {
         schema_version: project.schema_version,
         errors: 0,
@@ -147,16 +201,111 @@ pub fn build_project_tree(project: &Project) -> ProjectTree {
             .installations
             .iter()
             .map(|inst| {
-                build_installation(inst, &project.devices, project.info.group_address_style)
+                build_installation(
+                    inst,
+                    &project.devices,
+                    project.info.group_address_style,
+                    &links,
+                )
             })
             .collect(),
     }
+}
+
+/// What every group address in the project is linked to, and which DPTs
+/// those links state, built in **one** pass over every communication
+/// object.
+///
+/// One pass, not one `resolve_group_address_dpt` call per address: that
+/// function rescans every communication object in the project each time it
+/// is called, and [`build_project_tree`] runs after every command, undo and
+/// redo. A project with a few thousand addresses and a few tens of
+/// thousands of communication objects would pay that product on every
+/// keystroke-sized edit. The classification of the gathered DPTs is still
+/// the domain's own — `knx_core::group_address_dpt_from`, the same function
+/// `resolve_group_address_dpt` ends in — so the answer here and the answer
+/// there cannot drift apart.
+///
+/// Iterates `Devices::com_objects`, which is `ComObjectInstanceId`-ordered
+/// and includes objects no device's own list currently names (see its doc
+/// comment): the same set `resolve_group_address_dpt` resolves over, so a
+/// projected address's DPT and its projected links always describe the same
+/// objects. That ordering is what makes each address's `links` vector
+/// deterministic across runs, with no sort of its own.
+fn build_group_address_link_index(project: &Project) -> GroupAddressLinkIndex {
+    let mut links: HashMap<GroupAddressId, Vec<GroupAddressLinkNode>> = HashMap::new();
+    let mut dpts: HashMap<GroupAddressId, Vec<DptRef>> = HashMap::new();
+    for com in project.devices.com_objects() {
+        if com.links.is_empty() {
+            continue;
+        }
+        let device = project.devices.get(com.device);
+        let com_object_name = resolved_text(project, &com.text);
+        let dpt = com.dpt.value().map(|resolved| resolved.value);
+        for link in &com.links {
+            links
+                .entry(link.ga)
+                .or_default()
+                .push(GroupAddressLinkNode {
+                    device_id: com.device.0,
+                    device_name: device.map(|d| d.name.clone()),
+                    device_address: device.and_then(|d| d.address).map(|a| a.to_string()),
+                    com_object_id: com.id.0,
+                    com_object_number: com.number,
+                    com_object_name: com_object_name.clone(),
+                    direction: format!("{:?}", link.direction),
+                });
+            // Pushed per link, not per object: harmless, because
+            // `group_address_dpt_from` deduplicates, so an object linked in
+            // both directions still contributes its DPT once.
+            if let Some(dpt) = dpt {
+                dpts.entry(link.ga).or_default().push(dpt);
+            }
+        }
+    }
+    GroupAddressLinkIndex {
+        links,
+        dpts: dpts
+            .into_iter()
+            .map(|(ga, stated)| {
+                let formatted = match knx_core::group_address_dpt_from(stated) {
+                    GroupAddressDpt::None => Vec::new(),
+                    GroupAddressDpt::Single(dpt) => vec![dpt.to_string()],
+                    GroupAddressDpt::Conflict(dpts) => {
+                        dpts.iter().map(|dpt| dpt.to_string()).collect()
+                    }
+                };
+                (ga, formatted)
+            })
+            .collect(),
+    }
+}
+
+/// The output of [`build_group_address_link_index`]. An address absent from
+/// either map has no links, and therefore no stated DPT — the maps hold no
+/// empty entries.
+struct GroupAddressLinkIndex {
+    links: HashMap<GroupAddressId, Vec<GroupAddressLinkNode>>,
+    dpts: HashMap<GroupAddressId, Vec<String>>,
+}
+
+/// Resolves one `Override<Text>` through the project's string table in its
+/// default language — the single rule `ComObjectNode`'s `name` and
+/// `description` and `GroupAddressLinkNode`'s `com_object_name` all follow.
+fn resolved_text(project: &Project, value: &knx_core::Override<Text>) -> Option<String> {
+    value.value().and_then(|resolved| {
+        project
+            .strings
+            .text(&resolved.value, project.strings.default_language())
+            .map(|s| s.to_string())
+    })
 }
 
 fn build_installation(
     inst: &knx_core::Installation,
     devices: &Devices,
     ga_style: GroupAddressStyle,
+    links: &GroupAddressLinkIndex,
 ) -> InstallationNode {
     InstallationNode {
         id: inst.id.0,
@@ -173,7 +322,7 @@ fn build_installation(
         group_addresses: inst
             .group_addresses
             .iter()
-            .map(|entry| build_group_address_node(entry, ga_style))
+            .map(|entry| build_group_address_node(entry, ga_style, links))
             .collect(),
         group_ranges: inst
             .group_ranges
@@ -186,11 +335,15 @@ fn build_installation(
 fn build_group_address_node(
     entry: &GroupAddressEntry,
     style: GroupAddressStyle,
+    index: &GroupAddressLinkIndex,
 ) -> GroupAddressNode {
     GroupAddressNode {
         id: entry.id.0,
         name: entry.name.clone(),
         address: entry.address.format(style),
+        range: entry.range.map(|r| r.0),
+        dpts: index.dpts.get(&entry.id).cloned().unwrap_or_default(),
+        links: index.links.get(&entry.id).cloned().unwrap_or_default(),
     }
 }
 
@@ -457,20 +610,10 @@ fn build_device_product_node(device: &knx_core::DeviceInstance) -> DeviceProduct
 }
 
 fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -> ComObjectNode {
-    let name = com.text.value().and_then(|resolved| {
-        project
-            .strings
-            .text(&resolved.value, project.strings.default_language())
-            .map(|s| s.to_string())
-    });
+    let name = resolved_text(project, &com.text);
     let dpt = com.dpt.value().map(|resolved| resolved.value.to_string());
     let dpt_layer = com.dpt.layer().map(|layer| format!("{layer:?}"));
-    let description = com.description.value().and_then(|resolved| {
-        project
-            .strings
-            .text(&resolved.value, project.strings.default_language())
-            .map(|s| s.to_string())
-    });
+    let description = resolved_text(project, &com.description);
     let description_layer = com.description.layer().map(|layer| format!("{layer:?}"));
     let flag = |o: &knx_core::Override<bool>| o.value().map(|r| r.value).unwrap_or(false);
     ComObjectNode {
@@ -1034,5 +1177,233 @@ mod tests {
         assert_eq!(ranges[0].id, 1);
         assert_eq!(ranges[0].parent, None);
         assert_eq!(ranges[1].parent, Some(1));
+    }
+
+    /// One communication object on `device`, linked to each `(ga, direction)`
+    /// pair, stating `dpt` when `dpt` is `Some`.
+    fn linked_com_object(
+        com_id: u32,
+        device_id: u32,
+        number: u16,
+        name: &str,
+        dpt: Option<(u16, u16)>,
+        links: &[(u32, knx_core::Direction)],
+    ) -> knx_core::ComObjectInstance {
+        knx_core::ComObjectInstance {
+            id: knx_core::ComObjectInstanceId(com_id),
+            source: source(),
+            device: DeviceId(device_id),
+            number,
+            text: knx_core::Override::Value(knx_core::Resolved {
+                value: knx_core::Text::Literal(name.into()),
+                layer: knx_core::Layer::Program,
+            }),
+            description: knx_core::Override::Absent,
+            dpt: match dpt {
+                Some((main, sub)) => knx_core::Override::Value(knx_core::Resolved {
+                    value: DptRef {
+                        main,
+                        sub: Some(sub),
+                    },
+                    layer: knx_core::Layer::Program,
+                }),
+                None => knx_core::Override::Absent,
+            },
+            flags: knx_core::ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: links
+                .iter()
+                .map(|(ga, direction)| knx_core::GroupLink {
+                    ga: knx_core::GroupAddressId(*ga),
+                    direction: *direction,
+                })
+                .collect(),
+            module_instance: None,
+        }
+    }
+
+    fn group_address(id: u32, name: &str, address: &str, range: Option<u32>) -> GroupAddressEntry {
+        GroupAddressEntry {
+            id: knx_core::GroupAddressId(id),
+            source: source(),
+            name: name.into(),
+            address: knx_core::GroupAddress::parse(address, GroupAddressStyle::ThreeLevel).unwrap(),
+            central: false,
+            unfiltered: false,
+            range: range.map(knx_core::GroupRangeId),
+        }
+    }
+
+    #[test]
+    fn a_group_address_projects_its_range_its_resolved_dpt_and_every_link_that_reaches_it() {
+        let mut project = Project::new(Language("en".into()));
+        project
+            .devices
+            .insert(device(1, "Push button", Some((1, 1, 13))));
+        project
+            .devices
+            .insert(device(2, "Actuator", Some((1, 1, 11))));
+        project.devices.insert_com_object(linked_com_object(
+            10,
+            1,
+            0,
+            "Switch light",
+            Some((1, 1)),
+            &[(7, knx_core::Direction::Send)],
+        ));
+        project.devices.insert_com_object(linked_com_object(
+            11,
+            2,
+            3,
+            "Switch light",
+            Some((1, 1)),
+            &[(7, knx_core::Direction::Receive)],
+        ));
+        let mut inst = empty_installation();
+        inst.group_addresses
+            .push(group_address(7, "Living room light", "1/0/1", Some(4)));
+        project.installations.push(inst);
+
+        let ga = &build_project_tree(&project).installations[0].group_addresses[0];
+        assert_eq!(ga.range, Some(4));
+        assert_eq!(ga.dpts, vec!["DPST-1-1".to_string()]);
+        assert_eq!(ga.links.len(), 2);
+        // `Devices::com_objects` is id-ordered, so the two rows arrive in a
+        // fixed order rather than a hash-map one.
+        assert_eq!(ga.links[0].device_name.as_deref(), Some("Push button"));
+        assert_eq!(ga.links[0].device_address.as_deref(), Some("1.1.13"));
+        assert_eq!(ga.links[0].com_object_number, 0);
+        assert_eq!(ga.links[0].com_object_name.as_deref(), Some("Switch light"));
+        assert_eq!(ga.links[0].direction, "Send");
+        assert_eq!(ga.links[1].device_name.as_deref(), Some("Actuator"));
+        assert_eq!(ga.links[1].com_object_id, 11);
+        assert_eq!(ga.links[1].direction, "Receive");
+    }
+
+    #[test]
+    fn linked_objects_that_disagree_on_the_dpt_report_the_conflict_instead_of_picking_one() {
+        let mut project = Project::new(Language("en".into()));
+        project.devices.insert(device(1, "A", None));
+        project.devices.insert(device(2, "B", None));
+        project.devices.insert_com_object(linked_com_object(
+            10,
+            1,
+            0,
+            "Value",
+            Some((5, 1)),
+            &[(7, knx_core::Direction::Send)],
+        ));
+        project.devices.insert_com_object(linked_com_object(
+            11,
+            2,
+            0,
+            "Value",
+            Some((1, 1)),
+            &[(7, knx_core::Direction::Receive)],
+        ));
+        let mut inst = empty_installation();
+        inst.group_addresses
+            .push(group_address(7, "Disputed", "1/0/1", None));
+        project.installations.push(inst);
+
+        let ga = &build_project_tree(&project).installations[0].group_addresses[0];
+        // Sorted by `DptRef`'s own `Ord`, so the pair is reported in the same
+        // order on every run.
+        assert_eq!(
+            ga.dpts,
+            vec!["DPST-1-1".to_string(), "DPST-5-1".to_string()]
+        );
+    }
+
+    #[test]
+    fn one_object_linked_in_both_directions_states_its_dpt_once_but_shows_two_rows() {
+        let mut project = Project::new(Language("en".into()));
+        project.devices.insert(device(1, "Dimmer", None));
+        project.devices.insert_com_object(linked_com_object(
+            10,
+            1,
+            2,
+            "Dim value",
+            Some((5, 1)),
+            &[
+                (7, knx_core::Direction::Send),
+                (7, knx_core::Direction::Receive),
+            ],
+        ));
+        let mut inst = empty_installation();
+        inst.group_addresses
+            .push(group_address(7, "Dim", "1/0/1", None));
+        project.installations.push(inst);
+
+        let ga = &build_project_tree(&project).installations[0].group_addresses[0];
+        assert_eq!(ga.dpts, vec!["DPST-5-1".to_string()]);
+        assert_eq!(ga.links.len(), 2);
+    }
+
+    #[test]
+    fn an_unlinked_group_address_states_no_dpt_and_no_links() {
+        let mut project = Project::new(Language("en".into()));
+        let mut inst = empty_installation();
+        inst.group_addresses
+            .push(group_address(7, "Nothing links here", "1/0/1", None));
+        project.installations.push(inst);
+
+        let ga = &build_project_tree(&project).installations[0].group_addresses[0];
+        assert!(ga.dpts.is_empty());
+        assert!(ga.links.is_empty());
+    }
+
+    #[test]
+    fn a_link_from_an_object_whose_device_is_missing_still_reaches_the_projection() {
+        // Same defensive stance `GroupLinkNode` takes towards a dangling
+        // `ga_id`: the link is stated by the project, so it is shown, with
+        // the parts that cannot be resolved left honestly empty rather than
+        // the whole row dropped.
+        let mut project = Project::new(Language("en".into()));
+        project.devices.insert_com_object(linked_com_object(
+            10,
+            404,
+            0,
+            "Orphan object",
+            None,
+            &[(7, knx_core::Direction::Send)],
+        ));
+        let mut inst = empty_installation();
+        inst.group_addresses
+            .push(group_address(7, "Linked by a ghost", "1/0/1", None));
+        project.installations.push(inst);
+
+        let ga = &build_project_tree(&project).installations[0].group_addresses[0];
+        assert_eq!(ga.links.len(), 1);
+        assert_eq!(ga.links[0].device_id, 404);
+        assert_eq!(ga.links[0].device_name, None);
+        assert_eq!(ga.links[0].device_address, None);
+        assert!(ga.dpts.is_empty());
+    }
+
+    #[test]
+    fn links_are_projected_per_address_not_smeared_across_all_of_them() {
+        let mut project = Project::new(Language("en".into()));
+        project.devices.insert(device(1, "Sensor", None));
+        project.devices.insert_com_object(linked_com_object(
+            10,
+            1,
+            0,
+            "Temperature",
+            Some((9, 1)),
+            &[(7, knx_core::Direction::Send)],
+        ));
+        let mut inst = empty_installation();
+        inst.group_addresses
+            .push(group_address(7, "Temperature", "3/0/1", None));
+        inst.group_addresses
+            .push(group_address(8, "Setpoint", "3/0/2", None));
+        project.installations.push(inst);
+
+        let addresses = &build_project_tree(&project).installations[0].group_addresses;
+        assert_eq!(addresses[0].links.len(), 1);
+        assert!(addresses[1].links.is_empty());
+        assert!(addresses[1].dpts.is_empty());
     }
 }

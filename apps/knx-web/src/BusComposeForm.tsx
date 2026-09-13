@@ -66,6 +66,18 @@ interface BusComposeFormProps {
   /// than silently disabling itself" rule as `projectOpen` above — the form
   /// disables and explains, it does not just grey out.
   sessionClosed: boolean;
+  /// Whether the project state the session froze at `/start` no longer
+  /// matches the project as it is now (`busContext.ts`). Same shape as
+  /// `sessionClosed` above and for the same reason: the send path must be
+  /// shut before the request, not after a puzzling reply. The difference is
+  /// what would go wrong — a closed session bounces off a `409`, whereas a
+  /// stale context succeeds, on the bus, with the previous project's DPT.
+  /// `BusSession::resolve_write_dpt` reads the snapshot taken when the
+  /// session started (`bus.rs:1015-1020`, `bus.rs:1135-1141`); nothing
+  /// re-resolves it, and nothing tells the server the project moved. A
+  /// telegram sent with the wrong DPT is not an error message, it is an
+  /// actuator doing the wrong thing, and Undo does not reach the bus.
+  contextStale: boolean;
 }
 
 // Task 5 review round 2: `SESSION_CLOSED_MESSAGE`/`NO_DPT_RESOLVED_MESSAGE`/
@@ -80,6 +92,7 @@ export default function BusComposeForm({
   resolution: initialResolution,
   projectOpen,
   sessionClosed,
+  contextStale,
 }: BusComposeFormProps) {
   const t = useTranslate();
   const [destination, setDestination] = useState(initialDestination);
@@ -115,6 +128,16 @@ export default function BusComposeForm({
       // gateway drops it, the next poll notices — can never reach
       // `api.writeBusValue` through a click that raced the re-render.
       setSendError(t("busCompose.sessionClosedMessage"));
+      return; // Rejected client-side — `fetch` is never called.
+    }
+
+    if (contextStale) {
+      // Same belt-and-braces reasoning as `sessionClosed` above, with more
+      // at stake: the project can move between the render that disabled
+      // this button and the click that raced it, and the request that
+      // slipped through would be a real telegram on a real bus, resolved
+      // against a project that no longer exists.
+      setSendError(t("busCompose.contextStaleMessage"));
       return; // Rejected client-side — `fetch` is never called.
     }
 
@@ -158,13 +181,38 @@ export default function BusComposeForm({
     }
   }
 
+  /// The four controls below go `disabled` for reasons that are only
+  /// rendered as prose a few lines above them. A disabled control is not in
+  /// the tab order, so a screen reader only meets it while browsing the
+  /// document, and then it needs to carry its own reason: hence
+  /// `aria-describedby` pointing at whichever hint is currently mounted.
+  /// Both can be mounted at once (a closed session whose project also moved),
+  /// so this is a list, and it must never name an id that is not in the DOM.
+  const disabledReason =
+    [
+      sessionClosed ? "bus-compose-closed-hint" : null,
+      contextStale ? "bus-compose-stale-hint" : null,
+    ]
+      .filter((id): id is string => id !== null)
+      .join(" ") || undefined;
+
   return (
     <div className="bus-compose-form">
       <h3>{t("busCompose.heading")}</h3>
+      <p className="bus-compose-live-action">{t("busCompose.liveAction")}</p>
       {!projectOpen && <p className="bus-compose-hint">{t("busCompose.noProjectHint")}</p>}
       {sessionClosed && (
-        <p className="bus-compose-hint bus-compose-closed-hint">
+        <p id="bus-compose-closed-hint" className="bus-compose-hint bus-compose-closed-hint">
           {t("busCompose.sessionClosedMessage")}
+        </p>
+      )}
+      {contextStale && (
+        <p
+          id="bus-compose-stale-hint"
+          className="bus-compose-hint bus-compose-stale-hint"
+          role="alert"
+        >
+          {t("busCompose.contextStaleMessage")}
         </p>
       )}
       <div className="bus-compose-fields">
@@ -175,7 +223,8 @@ export default function BusComposeForm({
             className="bus-compose-destination"
             value={destination}
             onChange={(e) => onDestinationChange(e.target.value)}
-            disabled={sessionClosed}
+            disabled={sessionClosed || contextStale}
+            aria-describedby={disabledReason}
           />
         </label>
         <label>
@@ -186,7 +235,8 @@ export default function BusComposeForm({
             placeholder="DPST-1-1"
             value={dpt}
             onChange={(e) => setDpt(e.target.value)}
-            disabled={sessionClosed}
+            disabled={sessionClosed || contextStale}
+            aria-describedby={disabledReason}
           />
         </label>
         <label>
@@ -196,10 +246,15 @@ export default function BusComposeForm({
             className="bus-compose-value"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            disabled={sessionClosed}
+            disabled={sessionClosed || contextStale}
+            aria-describedby={disabledReason}
           />
         </label>
-        <button onClick={() => void send()} disabled={sending || !destination || !value || sessionClosed}>
+        <button
+          onClick={() => void send()}
+          disabled={sending || !destination || !value || sessionClosed || contextStale}
+          aria-describedby={disabledReason}
+        >
           {t("busCompose.send")}
         </button>
       </div>

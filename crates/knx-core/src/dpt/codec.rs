@@ -1,7 +1,7 @@
 //! Encode/decode between engineering values (text) and `GroupValue` wire
 //! payloads, for every main type the design doc's §4.1 "yes" column lists:
-//! 1, 2, 3, 5, 6, 7, 8, 9, 12, 13, 14, 16, 17, 18 (03_07_02 Datapoint Types
-//! v02.02.01 AS, hereafter "DPT-AS").
+//! 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+//! (03_07_02 Datapoint Types v02.02.01 AS, hereafter "DPT-AS").
 //!
 //! Pure: no I/O, no logging, no clock. Every fact this module states about
 //! bit layout, range or rounding is cited to a DPT-AS section or, for the
@@ -49,8 +49,80 @@ pub enum DptValue {
     /// codec's job is the number, not its storage width, so one variant
     /// serves all of them.
     Float(f64),
-    /// A[14] fixed-length character strings — main type 16.
+    /// A single character (A8, main type 4, DPT-AS §3.4) or an A[14]
+    /// fixed-length character string (main type 16, DPT-AS §3.17) — both
+    /// share the same two character sets (7-bit ASCII / ISO 8859-1) and
+    /// this one variant, since a `String` holds one character exactly as
+    /// well as fourteen.
     Text(String),
+    /// N3U5r2U6r2U6 — main type 10, time of day plus optional weekday
+    /// (DPT-AS §3.11). `day` is `None` for wire code `0` ("no day",
+    /// §3.11's own table row for the Day field) and `Some(1..=7)` for
+    /// Monday(1)..Sunday(7); see `decode_time_of_day`'s doc comment for
+    /// why this codec chose `Option<u8>` rather than the raw 0-7 code.
+    TimeOfDay {
+        day: Option<u8>,
+        hour: u8,
+        minute: u8,
+        second: u8,
+    },
+    /// r3U5r4U4r1U7 — main type 11, date (DPT-AS §3.12). `year` is
+    /// already century-resolved to `1990..=2089` per §3.12's "Century
+    /// Encoding" rule (EXAMPLE 5), not the raw 7-bit octet — see
+    /// `decode_date`'s doc comment.
+    Date { day: u8, month: u8, year: u16 },
+    /// U4U4U4U4U4U4B4N4 — main type 15, access data (DPT-AS §3.16).
+    /// `code` holds the six BCD digits D6..D1 (most significant first,
+    /// each `0..=9`), matching EXAMPLE 6/7's digit numbering. `accepted`
+    /// is field `P`, `right_to_left` is field `D` (`false` = left to
+    /// right, the Standard's own `0` encoding), `error` is field `E`,
+    /// `encrypted` is field `C`, `index` is the 4-bit `Index` field
+    /// (`0..=15`).
+    AccessData {
+        code: [u8; 6],
+        error: bool,
+        accepted: bool,
+        right_to_left: bool,
+        encrypted: bool,
+        index: u8,
+    },
+    /// U8[r4U4][r3U5][U3U5][r2U6][r2U6]B16 — main type 19, date and time
+    /// (DPT-AS §3.20/§3.20.1). Every field the Standard defines a bit for
+    /// is carried here — see `decode_datetime`'s doc comment for the one
+    /// bit (`SRC`) the Standard's own field table *names* but never
+    /// assigns a wire position to, which this codec therefore cannot lose
+    /// because it was never there to begin with.
+    ///
+    /// `year` is already offset-resolved (`1900 + raw`, §3.20's own
+    /// table). `month`/`day_of_month`/`hour`/`minute`/`second` are the
+    /// raw field values, stored even when their matching `_invalid` flag
+    /// is set (a "field not valid" flag is a *meaning* the Standard
+    /// attaches to the octet, not a licence for this codec to discard the
+    /// octet's bits — see the brief's "never silently discard
+    /// information"). `day_of_week` is the raw 3-bit code (`0..=7`);
+    /// `0` together with `day_of_week_invalid == false` is DPT-AS §3.20.1
+    /// NOTE 14's "any day" wildcard, deliberately kept distinct from
+    /// `day_of_week_invalid == true` ("the field is not valid, ignore
+    /// it") by using two separate fields rather than collapsing both into
+    /// one `Option`.
+    DateTime {
+        year: u16,
+        year_invalid: bool,
+        month: u8,
+        day_of_month: u8,
+        date_invalid: bool,
+        day_of_week: u8,
+        day_of_week_invalid: bool,
+        hour: u8,
+        minute: u8,
+        second: u8,
+        time_invalid: bool,
+        fault: bool,
+        working_day: bool,
+        working_day_unknown: bool,
+        summer_time: bool,
+        externally_synchronized: bool,
+    },
     /// Scene number — main type 17. Holds the wire value 0-63 exactly;
     /// see `decode_scene`'s doc comment for the off-by-one ruling this
     /// deliberately does not apply.
@@ -132,6 +204,72 @@ impl fmt::Display for DptValue {
                     if *learn { "learn" } else { "activate" }
                 )
             }
+            DptValue::TimeOfDay {
+                day,
+                hour,
+                minute,
+                second,
+            } => {
+                let day_word = match day {
+                    Some(d) => weekday_name(*d),
+                    None => "none",
+                };
+                write!(f, "{day_word} {hour:02}:{minute:02}:{second:02}")
+            }
+            DptValue::Date { day, month, year } => write!(f, "{year:04}-{month:02}-{day:02}"),
+            DptValue::AccessData {
+                code,
+                error,
+                accepted,
+                right_to_left,
+                encrypted,
+                index,
+            } => {
+                let code_str: String = code.iter().map(u8::to_string).collect();
+                write!(
+                    f,
+                    "{code_str} {} {} {} {} {index}",
+                    bool_word(*error),
+                    bool_word(*accepted),
+                    if *right_to_left { "right" } else { "left" },
+                    bool_word(*encrypted)
+                )
+            }
+            DptValue::DateTime {
+                year,
+                year_invalid,
+                month,
+                day_of_month,
+                date_invalid,
+                day_of_week,
+                day_of_week_invalid,
+                hour,
+                minute,
+                second,
+                time_invalid,
+                fault,
+                working_day,
+                working_day_unknown,
+                summer_time,
+                externally_synchronized,
+            } => {
+                write!(
+                    f,
+                    "year={year} month={month} day={day_of_month} dow={day_of_week} \
+                     hour={hour} minute={minute} second={second} fault={} workday={} \
+                     no-workday={} no-year={} no-date={} no-dow={} no-time={} \
+                     summer-time={} synced={}",
+                    bool_word(*fault),
+                    bool_word(*working_day),
+                    bool_word(*working_day_unknown),
+                    bool_word(*year_invalid),
+                    bool_word(*date_invalid),
+                    bool_word(*day_of_week_invalid),
+                    bool_word(*time_invalid),
+                    bool_word(*summer_time),
+                    bool_word(*externally_synchronized)
+                )
+            }
         }
     }
 }
@@ -208,17 +346,22 @@ pub fn decode(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecErr
         1 => decode_b1(dpt, payload),
         2 => decode_b2(dpt, payload),
         3 => decode_b1u3(dpt, payload),
+        4 => decode_a8(dpt, payload),
         5 => decode_u8(dpt, payload),
         6 => decode_v8(dpt, payload),
         7 => decode_u16(dpt, payload),
         8 => decode_v16(dpt, payload),
         9 => decode_f16(dpt, payload),
+        10 => decode_time_of_day(dpt, payload),
+        11 => decode_date(dpt, payload),
         12 => decode_u32(dpt, payload),
         13 => decode_v32(dpt, payload),
         14 => decode_f32(dpt, payload),
+        15 => decode_access_data(dpt, payload),
         16 => decode_a14(dpt, payload),
         17 => decode_scene(dpt, payload),
         18 => decode_scene_control(dpt, payload),
+        19 => decode_datetime(dpt, payload),
         _ => Err(DptCodecError::UnsupportedDpt(dpt)),
     }
 }
@@ -232,17 +375,22 @@ pub fn encode(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
         1 => encode_b1(dpt, input),
         2 => encode_b2(dpt, input),
         3 => encode_b1u3(dpt, input),
+        4 => encode_a8(dpt, input),
         5 => encode_u8(dpt, input),
         6 => encode_v8(dpt, input),
         7 => encode_u16(dpt, input),
         8 => encode_v16(dpt, input),
         9 => encode_f16(dpt, input),
+        10 => encode_time_of_day(dpt, input),
+        11 => encode_date(dpt, input),
         12 => encode_u32(dpt, input),
         13 => encode_v32(dpt, input),
         14 => encode_f32(dpt, input),
+        15 => encode_access_data(dpt, input),
         16 => encode_a14(dpt, input),
         17 => encode_scene(dpt, input),
         18 => encode_scene_control(dpt, input),
+        19 => encode_datetime(dpt, input),
         _ => Err(DptCodecError::UnsupportedDpt(dpt)),
     }
 }
@@ -311,6 +459,46 @@ fn parse_bool_word(word: &str) -> Option<bool> {
     match word.to_ascii_lowercase().as_str() {
         "on" | "true" | "1" => Some(true),
         "off" | "false" | "0" => Some(false),
+        _ => None,
+    }
+}
+
+/// Renders a boolean flag field as `on`/`off`, for `Display` impls that
+/// need the same word `parse_bool_word` accepts back (main types 15, 19).
+fn bool_word(v: bool) -> &'static str {
+    if v {
+        "on"
+    } else {
+        "off"
+    }
+}
+
+/// Weekday name for main type 10's `Day` field (DPT-AS §3.11's table:
+/// `1 = Monday ... 7 = Sunday`). Only ever called with `1..=7`, which
+/// `decode_time_of_day`/`encode_time_of_day` both guarantee.
+fn weekday_name(day: u8) -> &'static str {
+    match day {
+        1 => "monday",
+        2 => "tuesday",
+        3 => "wednesday",
+        4 => "thursday",
+        5 => "friday",
+        6 => "saturday",
+        7 => "sunday",
+        _ => unreachable!("weekday_name is only called with a validated 1..=7 day code"),
+    }
+}
+
+/// The inverse of `weekday_name`, case-insensitive.
+fn weekday_from_name(word: &str) -> Option<u8> {
+    match word.to_ascii_lowercase().as_str() {
+        "monday" => Some(1),
+        "tuesday" => Some(2),
+        "wednesday" => Some(3),
+        "thursday" => Some(4),
+        "friday" => Some(5),
+        "saturday" => Some(6),
+        "sunday" => Some(7),
         _ => None,
     }
 }
@@ -433,6 +621,64 @@ fn encode_b1u3(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
         _ => return Err(unparsable()),
     };
     Ok(GroupValue::Short((u8::from(increase) << 3) | step_code))
+}
+
+// ---------------------------------------------------------------------
+// Main type 4 — A8, single 8-bit character (DPT-AS §3.4)
+// ---------------------------------------------------------------------
+//
+// One octet holding exactly one character, from either 4.001's 7-bit
+// ASCII table (`[0...127]`, "the most significant bit shall always be
+// 0") or 4.002's ISO 8859-1 table (`[0...255]`) — the same two character
+// sets main type 16's A[14] string uses, reused verbatim through
+// `char_set_is_ascii` (see that function's comment for the main-type-4
+// arm and the deliberate non-extension of main type 16's bare-subtype
+// default). Both subtypes occupy a full octet — 4.001's 7 significant
+// bits already exceed AL-AS's ≤6-bit inline threshold — so, like main
+// type 5's U8, this is always `GroupValue::Bytes([_])`, never `Short`.
+//
+// `DptValue::Text` (a `String`) is reused rather than adding a dedicated
+// one-character variant — see that variant's doc comment. Control
+// characters `00h`-`1Fh` decode unconditionally: DPT-AS §3.4's "Decoding
+// of 00h to 1Fh" note ("The support of the control characters... is not
+// mandatory. The receiver shall not react...") is a rule for a *receiving
+// bus device* deciding whether to act on the character, not for this
+// codec's decoding — it is not the "receiver" the Standard means there,
+// so it reports every code point, control or not.
+//
+// Reserved-bit policy: a 4.001 byte with its top bit set violates that
+// subtype's own "most significant bit shall always be 0" rule, so it is
+// `InvalidData`, the same policy `require_short`/main type 16 apply to
+// an equivalent violation elsewhere in this module.
+
+fn decode_a8(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let ascii_only = char_set_is_ascii(dpt)?;
+    let [raw] = require_bytes::<1>(payload, dpt, 8)?;
+    if ascii_only && raw & 0x80 != 0 {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    Ok(DptValue::Text(char::from(raw).to_string()))
+}
+
+fn encode_a8(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let unparsable = || DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    };
+    let ascii_only = char_set_is_ascii(dpt)?;
+    let mut chars = input.chars();
+    let ch = chars.next().ok_or_else(unparsable)?;
+    if chars.next().is_some() {
+        // More than one character — not a value of this single-character
+        // DPT (use main type 16's A[14] for strings).
+        return Err(unparsable());
+    }
+    let code = ch as u32;
+    let limit: u32 = if ascii_only { 0x7F } else { 0xFF };
+    if code > limit {
+        return Err(unparsable());
+    }
+    Ok(GroupValue::Bytes(vec![code as u8]))
 }
 
 // ---------------------------------------------------------------------
@@ -797,6 +1043,213 @@ fn encode_f16(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 }
 
 // ---------------------------------------------------------------------
+// Main type 10 — N3U5r2U6r2U6, time of day (DPT-AS §3.11)
+// ---------------------------------------------------------------------
+//
+// 3 octets. Octet 3 (MSB): `Day` (3 bits, `N`) then `Hour` (5 bits, `U`,
+// `[0...23]`). Octet 2: 2 reserved bits then `Minutes` (6 bits, `U`,
+// `[0...59]`). Octet 1: 2 reserved bits then `Seconds` (6 bits, `U`,
+// `[0...59]`) — DPT-AS §3.11's own diagram and 10.001 DPT_TimeOfDay's
+// field table.
+//
+// `Day`'s own table: `1 = Monday ... 7 = Sunday`, `0 = no day`. Judgment
+// call (not stated by the Standard, which only names the code, not a
+// storage shape): this codec represents that as `Option<u8>` —
+// `Some(1..=7)` for a named weekday, `None` for wire code `0` — rather
+// than keeping the raw `0..=7` code, so a caller cannot mistake "no day"
+// for an eighth weekday by forgetting to special-case `0`. Round trip is
+// exact: `None` always encodes back to `0`, and `0` always decodes to
+// `None`; no other code maps to `None`, so no information is lost either
+// direction.
+//
+// Reserved-bit policy: the 2 top bits of octets 2 and 1 are `r` in the
+// diagram; nonzero is `InvalidData`, the same policy this module applies
+// everywhere else a diagram marks a bit `r`.
+//
+// Text grammar for `encode` (the Standard specifies wire encoding only,
+// not human text — this module's own choice): `"<weekday|none>
+// HH:MM:SS"`, e.g. `"monday 07:30:00"`, `"none 00:00:00"`; weekday names
+// are lower-case, matching `Display`'s own rendering, so `Display`'s
+// output always re-parses.
+
+fn decode_time_of_day(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let [b2, b1, b0] = require_bytes::<3>(payload, dpt, 24)?;
+    let day_code = b2 >> 5;
+    let hour = b2 & 0b0001_1111;
+    if hour > 23 {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    if b1 & 0b1100_0000 != 0 || b0 & 0b1100_0000 != 0 {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    let minute = b1 & 0b0011_1111;
+    if minute > 59 {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    let second = b0 & 0b0011_1111;
+    if second > 59 {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    let day = if day_code == 0 { None } else { Some(day_code) };
+    Ok(DptValue::TimeOfDay {
+        day,
+        hour,
+        minute,
+        second,
+    })
+}
+
+fn encode_time_of_day(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let unparsable = || DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    };
+    let tokens: Vec<&str> = input.split_whitespace().collect();
+    let (day_tok, time_tok) = match tokens.as_slice() {
+        [d, t] => (*d, *t),
+        _ => return Err(unparsable()),
+    };
+    let day_code: u8 = if day_tok.eq_ignore_ascii_case("none") {
+        0
+    } else {
+        weekday_from_name(day_tok).ok_or_else(unparsable)?
+    };
+    let parts: Vec<&str> = time_tok.split(':').collect();
+    let (h, m, s) = match parts.as_slice() {
+        [h, m, s] => (*h, *m, *s),
+        _ => return Err(unparsable()),
+    };
+    let hour: u8 = h.parse().map_err(|_| unparsable())?;
+    let minute: u8 = m.parse().map_err(|_| unparsable())?;
+    let second: u8 = s.parse().map_err(|_| unparsable())?;
+    if hour > 23 {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: hour.to_string(),
+        });
+    }
+    if minute > 59 {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: minute.to_string(),
+        });
+    }
+    if second > 59 {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: second.to_string(),
+        });
+    }
+    let b2 = (day_code << 5) | hour;
+    Ok(GroupValue::Bytes(vec![b2, minute, second]))
+}
+
+// ---------------------------------------------------------------------
+// Main type 11 — r3U5r4U4r1U7, date (DPT-AS §3.12)
+// ---------------------------------------------------------------------
+//
+// 3 octets. Octet 3 (MSB): 3 reserved bits then `Day` (5 bits, `U`,
+// `[1...31]`). Octet 2: 4 reserved bits then `Month` (4 bits, `U`,
+// `[1...12]`). Octet 1: 1 reserved bit then `Year` (7 bits, `U`,
+// `[0...99]`) — DPT-AS §3.12's diagram and 11.001 DPT_Date's field table.
+//
+// Century Encoding (DPT-AS §3.12, quoted in full because getting the
+// boundary wrong by one is exactly the kind of bug this comment exists
+// to prevent): "if Octet 3 [this codec's Year octet] contains value ≥ 90:
+// interpret as 20th century[;] if Octet 3 contains value < 90: interpret
+// as 21st century. This format covers the range 1990 to 2089." EXAMPLE 5
+// gives the worked values this codec's test suite checks against: `99d
+// equals 1999`, `0d equals 2000`, `4d equals 2004`. `DptValue::Date.year`
+// stores the resolved 4-digit year (`1990..=2089`), not the raw 7-bit
+// octet, since the resolution is a fact about the wire value, not a
+// display choice — same reasoning as main type 5.001's percent, main
+// type 11's own consumer should never have to redo century arithmetic.
+//
+// Reserved-bit policy: the `r` bits above `Day`, above `Month`, and above
+// `Year` are all checked to be 0, `InvalidData` otherwise — same policy
+// as the rest of this module. A `Year` octet's raw value `100..=127` is
+// numerically representable in 7 bits but outside `[0...99]`'s
+// documented range and outside the century rule's own domain, so it too
+// is `InvalidData`, not silently resolved to some invented 22nd year.
+//
+// Text grammar for `encode` (this module's own choice, the Standard only
+// defines the wire form): `"YYYY-MM-DD"`, matching `Display`'s own
+// rendering.
+
+fn decode_date(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let [b2, b1, b0] = require_bytes::<3>(payload, dpt, 24)?;
+    if b2 & 0b1110_0000 != 0 {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    let day = b2 & 0b0001_1111;
+    if !(1..=31).contains(&day) {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    if b1 & 0b1111_0000 != 0 {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    let month = b1 & 0b0000_1111;
+    if !(1..=12).contains(&month) {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    if b0 & 0b1000_0000 != 0 {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    let year_raw = b0 & 0b0111_1111;
+    if year_raw > 99 {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    // DPT-AS §3.12 "Century Encoding" — see the section comment above.
+    let year: u16 = if year_raw >= 90 {
+        1900 + u16::from(year_raw)
+    } else {
+        2000 + u16::from(year_raw)
+    };
+    Ok(DptValue::Date { day, month, year })
+}
+
+fn encode_date(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let unparsable = || DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    };
+    let parts: Vec<&str> = input.trim().split('-').collect();
+    let (y, m, d) = match parts.as_slice() {
+        [y, m, d] => (*y, *m, *d),
+        _ => return Err(unparsable()),
+    };
+    let year: u16 = y.parse().map_err(|_| unparsable())?;
+    let month: u8 = m.parse().map_err(|_| unparsable())?;
+    let day: u8 = d.parse().map_err(|_| unparsable())?;
+    if !(1990..=2089).contains(&year) {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: year.to_string(),
+        });
+    }
+    if !(1..=12).contains(&month) {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: month.to_string(),
+        });
+    }
+    if !(1..=31).contains(&day) {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: day.to_string(),
+        });
+    }
+    // Inverse of decode_date's century rule: 1990-1999 -> 90-99,
+    // 2000-2089 -> 0-89.
+    let year_raw: u8 = if year >= 2000 {
+        (year - 2000) as u8
+    } else {
+        (year - 1900) as u8
+    };
+    Ok(GroupValue::Bytes(vec![day, month, year_raw]))
+}
+
+// ---------------------------------------------------------------------
 // Main type 12 — U32 (DPT-AS §3.13)
 // ---------------------------------------------------------------------
 //
@@ -943,6 +1396,127 @@ fn encode_f32(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 }
 
 // ---------------------------------------------------------------------
+// Main type 15 — U4U4U4U4U4U4B4N4, access data (DPT-AS §3.16)
+// ---------------------------------------------------------------------
+//
+// 4 octets, 6 BCD-style digits packed 2 per octet, then a flags-and-index
+// octet: octet 4 (MSB) = `D6`(hi nibble)/`D5`(lo nibble), octet 3 =
+// `D4`/`D3`, octet 2 = `D2`/`D1`, octet 1 = `E`(bit 7) `P`(bit 6)
+// `D`(bit 5) `C`(bit 4) `Index`(bits 3-0) — DPT-AS §3.16's format line
+// (`4 octets: U4U4U4U4U4U4B4N4`) plus its field table, cross-checked
+// against EXAMPLE 6/7's byte-level worked encodings below.
+//
+// Field meanings, per §3.16's table (not inferred from the letters
+// alone, which are easy to mis-guess): `D6..D1` are "digit x (1...6) of
+// access identification code" — `D6` is the *first* transmitted digit,
+// `D1` the *last*, each a BCD nibble `[0...9]` ("If 24 bits are not
+// necessary, the most significant positions shall be set to zero", so a
+// short code is left-padded with zero digits into `D6`/`D5`/...). `E` is
+// "Detection error" (`1` = reading not successful). `P` is "Permission"
+// (`1` = accepted). `D` is "Read direction" (`0` = left to right, `1` =
+// right to left — *not* a reserved bit, despite the letter overlap with
+// "Day" elsewhere in this module; there is no reserved bit in this
+// type's B4N4 octet, all 8 bits are assigned). `C` is "Encryption"
+// (`1` = yes). `Index` is a 4-bit `[0...15]` "future use" field.
+//
+// EXAMPLE 6 (§3.16): code "123456", no error, permission accepted, badge
+// read left to right, no encryption, index 13 — worked byte-for-byte
+// from the Standard's octet/bit diagram: `D6=1 D5=2 D4=3 D3=4 D2=5 D1=6`,
+// `E=0 P=1 D=0 C=0`, `Index=13(0xD)`, giving octets
+// `[0x12, 0x34, 0x56, 0x4D]`. EXAMPLE 7: code "6789" zero-padded to
+// `D6=0 D5=0 D4=6 D3=7 D2=8 D1=9`, no error, *not* accepted, left to
+// right, no encryption, index 14, giving `[0x00, 0x67, 0x89, 0x0E]`.
+// Both byte strings are this codec's own arithmetic from the Standard's
+// stated field values, not lifted from a byte-level example in the text
+// (§3.16 prints the bit diagram, not a hex string) — the test suite
+// cites this derivation, not a printed hex value, as its evidence.
+//
+// A BCD nibble decoding to `10..=15` has no digit meaning and is
+// `InvalidData` — same "documented range violation" policy as this
+// module applies to main type 11's year octet. There is no reserved bit
+// in this format to police (all 32 bits are assigned per the field
+// table above), so no such check applies here.
+//
+// Text grammar for `encode` (this module's own choice): six whitespace-
+// separated tokens, `"<6 digits> <error:on|off> <accepted:on|off>
+// <left|right> <encrypted:on|off> <index>"`, e.g.
+// `"123456 off on left off 13"` — matching `Display`'s own rendering, so
+// `Display`'s output always re-parses. Boolean tokens reuse
+// `parse_bool_word`, same as every other boolean field in this module.
+
+fn decode_access_data(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let [o4, o3, o2, o1] = require_bytes::<4>(payload, dpt, 32)?;
+    let d6 = o4 >> 4;
+    let d5 = o4 & 0x0F;
+    let d4 = o3 >> 4;
+    let d3 = o3 & 0x0F;
+    let d2 = o2 >> 4;
+    let d1 = o2 & 0x0F;
+    for d in [d6, d5, d4, d3, d2, d1] {
+        if d > 9 {
+            return Err(DptCodecError::InvalidData { dpt });
+        }
+    }
+    let error = o1 & 0b1000_0000 != 0;
+    let accepted = o1 & 0b0100_0000 != 0;
+    let right_to_left = o1 & 0b0010_0000 != 0;
+    let encrypted = o1 & 0b0001_0000 != 0;
+    let index = o1 & 0b0000_1111;
+    Ok(DptValue::AccessData {
+        code: [d6, d5, d4, d3, d2, d1],
+        error,
+        accepted,
+        right_to_left,
+        encrypted,
+        index,
+    })
+}
+
+fn encode_access_data(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let unparsable = || DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    };
+    let tokens: Vec<&str> = input.split_whitespace().collect();
+    let (code_tok, error_tok, accepted_tok, direction_tok, encrypted_tok, index_tok) =
+        match tokens.as_slice() {
+            [a, b, c, d, e, f] => (*a, *b, *c, *d, *e, *f),
+            _ => return Err(unparsable()),
+        };
+    if code_tok.len() != 6 || !code_tok.bytes().all(|b| b.is_ascii_digit()) {
+        return Err(unparsable());
+    }
+    let mut code = [0u8; 6];
+    for (i, b) in code_tok.bytes().enumerate() {
+        code[i] = b - b'0';
+    }
+    let error = parse_bool_word(error_tok).ok_or_else(unparsable)?;
+    let accepted = parse_bool_word(accepted_tok).ok_or_else(unparsable)?;
+    let right_to_left = match direction_tok.to_ascii_lowercase().as_str() {
+        "left" => false,
+        "right" => true,
+        _ => return Err(unparsable()),
+    };
+    let encrypted = parse_bool_word(encrypted_tok).ok_or_else(unparsable)?;
+    let index: u8 = index_tok.parse().map_err(|_| unparsable())?;
+    if index > 15 {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: index.to_string(),
+        });
+    }
+    let o4 = (code[0] << 4) | code[1];
+    let o3 = (code[2] << 4) | code[3];
+    let o2 = (code[4] << 4) | code[5];
+    let o1 = (u8::from(error) << 7)
+        | (u8::from(accepted) << 6)
+        | (u8::from(right_to_left) << 5)
+        | (u8::from(encrypted) << 4)
+        | index;
+    Ok(GroupValue::Bytes(vec![o4, o3, o2, o1]))
+}
+
+// ---------------------------------------------------------------------
 // Main type 16 — A[14], fixed 14-octet character string (DPT-AS §3.17)
 // ---------------------------------------------------------------------
 //
@@ -965,18 +1539,33 @@ fn encode_f32(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 // type 5's `sub: None`. Any other subnumber has no documented character
 // set in this corpus, so it is `UnsupportedDpt` rather than a guess.
 //
+// `char_set_is_ascii` below also serves main type 4's single-character
+// A8 (DPT-AS §3.4, 4.001/4.002 — the same two character sets, just one
+// character wide instead of fourteen); see that section's own comment
+// for why the "bare main type" default this function applies to a bare
+// `DPT-16` is deliberately *not* extended to a bare `DPT-4` — §3.4 states
+// no such default, and none is invented here.
+//
 // ISO 8859-1's code points 0-255 map 1:1 onto Unicode's first 256 code
 // points by construction, which is exactly what `char::from(u8)` and
 // `char as u32` do in Rust — no separate table is needed for that
-// subtype's conversion in either direction. A 16.000 byte with its top
-// bit set violates 4.001's own "most significant bit shall always be 0"
-// rule, the same "preceding bits shall be 0" violation `require_short`
+// subtype's conversion in either direction. A 16.000/4.001 byte with its
+// top bit set violates 4.001's own "most significant bit shall always be
+// 0" rule, the same "preceding bits shall be 0" violation `require_short`
 // checks elsewhere in this module, so it is `InvalidData` here too.
 
 fn char_set_is_ascii(dpt: DptRef) -> Result<bool, DptCodecError> {
-    match dpt.sub {
-        Some(0) => Ok(true),
-        None | Some(1) => Ok(false),
+    match (dpt.main, dpt.sub) {
+        // Main type 4 — DPT-AS §3.4: 4.001 DPT_Char_ASCII, 4.002
+        // DPT_Char_8859_1. No bare-`DPT-4` default is documented; a
+        // `sub: None` here is `UnsupportedDpt`, not a guessed default.
+        (4, Some(1)) => Ok(true),
+        (4, Some(2)) => Ok(false),
+        // Main type 16 — DPT-AS §3.17: 16.000 DPT_String_ASCII, and
+        // 16.001/bare `DPT-16` both DPT_String_8859_1 (see the "bare
+        // main type" ruling above).
+        (16, Some(0)) => Ok(true),
+        (16, None) | (16, Some(1)) => Ok(false),
         _ => Err(DptCodecError::UnsupportedDpt(dpt)),
     }
 }
@@ -1140,6 +1729,279 @@ fn encode_scene_control(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodec
         });
     }
     Ok(GroupValue::Bytes(vec![(u8::from(learn) << 7) | number]))
+}
+
+// ---------------------------------------------------------------------
+// Main type 19 — U8[r4U4][r3U5][U3U5][r2U6][r2U6]B16, date and time
+// (DPT-AS §3.20, notes in §3.20.1)
+// ---------------------------------------------------------------------
+//
+// 8 octets. Octet 8 (MSB): `Year`, full byte, `U`, offset 1900
+// (`0 = 1900`, `255 = 2155` — Note 10: "encoded on 8 bits instead as on 7
+// bits as in DPT_Date"). Octet 7: 4 reserved bits then `Month` (4 bits,
+// `[1...12]`). Octet 6: 3 reserved bits then `DayOfMonth` (5 bits,
+// `[1...31]`). Octet 5: `DayOfWeek` (3 bits, `[0...7]`) then `HourOfDay`
+// (5 bits, `[0...24]` — Note 11's widened range, see below). Octet 4: 2
+// reserved bits then `Minutes` (6 bits, `[0...59]`). Octet 3: 2 reserved
+// bits then `Seconds` (6 bits, `[0...59]`). Octet 2: 8 flag bits, MSB to
+// LSB `F`(Fault) `WD`(Working Day) `NWD`(No WD) `NY`(No Year)
+// `ND`(No Date) `NDoW`(No Day of Week) `NT`(No Time) `SUTI`(Standard/
+// summer time). Octet 1: `CLQ`(Quality of Clock, bit 7) then 7 bits the
+// diagram and Note 15 both mark `r` (reserved).
+//
+// Standard inconsistency, confirmed by rendering DPT-AS page 50 as an
+// image and inspecting it directly (the Markdown/plain-text table
+// extraction for this octet is column-misaligned and cannot settle it on
+// its own): octet 1's field-description table also lists an `SRC`
+// ("Synchronisation source reliability") bit, but neither the bit-level
+// encoding row nor Note 15 ever assigns `SRC` a wire position — Note 15
+// states plainly "Bit 7 of the octet 1 is used for 'Quality of Clock' bit
+// (CLQ). The other bits of this octet are reserved for future
+// extensions. Their values shall be 0. ... Receivers shall check these
+// bits to be 0." `SRC` is therefore a named-but-unassigned field in the
+// Standard's own text — this codec does not decode it (there is no bit
+// to read it from) and does not invent one; `DptValue::DateTime`
+// accordingly has no `src`/`synchronisation_source_reliability` field.
+// A reader diffing this codec's field list against §3.20's field-
+// description table and finding `SRC` "missing" should read this
+// paragraph, not assume a bit was dropped.
+//
+// No-data-loss statement (the brief requires this explicitly for this
+// type): every bit this section's diagram assigns a name to has a
+// `DptValue::DateTime` field — `year`, `month`, `day_of_month`,
+// `day_of_week`, `hour`, `minute`, `second`, `fault`, `working_day`,
+// `working_day_unknown` (`NWD`), `year_invalid` (`NY`), `date_invalid`
+// (`ND`), `day_of_week_invalid` (`NDoW`), `time_invalid` (`NT`),
+// `summer_time` (`SUTI`), `externally_synchronized` (`CLQ`) — sixteen
+// fields for sixteen assigned bits (`SRC` excepted, as above, because it
+// has no bit). None of `month`/`day_of_month`/`hour`/`minute`/`second`'s
+// raw values are discarded when their matching `_invalid` flag is set —
+// see `DptValue::DateTime`'s doc comment for why holding the octet's
+// bits and holding the Standard's "ignore this" instruction are two
+// different things, both kept.
+//
+// NOTE 14's wildcard/invalid distinction (the brief also calls this out
+// specifically): "`NDoW = 1`... the ddd information shall be ignored...
+// `NDoW = 0` and `ddd = 0`... ddd is a wildcard." This codec keeps
+// `day_of_week` (the raw `ddd`) and `day_of_week_invalid` (`NDoW`) as two
+// separate fields rather than one `Option`, so "any day, valid"
+// (`day_of_week == 0, day_of_week_invalid == false`) and "field not
+// valid, ignore `ddd`" (`day_of_week_invalid == true`, `ddd` whatever it
+// was) never collapse into the same representation.
+//
+// Range-enforcement policy (a judgment call, spelled out because the
+// Standard does not state it for these specific fields): `Month`/
+// `DayOfMonth`'s documented ranges (`[1...12]`/`[1...31]`) are enforced —
+// `InvalidData` on violation — only when `ND` says the date fields ARE
+// valid; when `ND` says they are not, this codec accepts any value the
+// field's own bit width can hold (`Month` up to 15, `DayOfMonth` up to
+// 31) without further range-checking, on the reasoning that a "no date"
+// clock plausibly zero-fills or garbage-fills a field nobody is meant to
+// read, and rejecting such a telegram outright would invent a stricter
+// rule than §3.20 states for the not-valid case. The same reasoning
+// applies to `Hour`/`Minute`/`Second` under `NT`. `DayOfWeek` needs no
+// such conditional — its full 3-bit range `[0...7]` is already exactly
+// its documented range, valid or not. `Year` needs none either — its
+// full byte range `[0...255]` (`NY` or not) is already its documented
+// range (Note 10).
+//
+// Note 11's Hour=24 cross-rule is the one exception this codec enforces
+// unconditionally *whenever the time fields are otherwise being
+// range-checked* (i.e. when `NT` says they are valid — see above): "the
+// values of octet 3 (Minutes) and 2 (Seconds) have to be set to zero
+// [when Hour=24]. Messages with invalid values (\"Hour = 24\", Minutes
+// and Seconds not zero) have to be ignored by the receiver" — explicit
+// "invalid...ignored" language, unlike the plain range statements this
+// codec treats as valid-only.
+//
+// Reserved-bit policy: the `r` bits above `Month`, above `DayOfMonth`,
+// above `Minutes`, above `Seconds`, and the low 7 bits of octet 1, are
+// all checked to be 0 unconditionally (not gated on any validity flag) —
+// `InvalidData` otherwise, the same policy as the rest of this module,
+// and Note 15's own explicit "Receivers shall check these bits to be 0"
+// for octet 1 specifically.
+//
+// Text grammar for `encode` (this module's own choice — the Standard
+// specifies wire encoding only): space-separated `key=value` tokens, all
+// required, in any order: `year month day dow hour minute second fault
+// workday no-workday no-year no-date no-dow no-time summer-time synced`.
+// Boolean values reuse `parse_bool_word`. This matches `Display`'s own
+// rendering (which always emits every key in this order), so `Display`'s
+// output always re-parses.
+
+fn decode_datetime(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let [o8, o7, o6, o5, o4, o3, o2, o1] = require_bytes::<8>(payload, dpt, 64)?;
+
+    if o7 & 0b1111_0000 != 0
+        || o6 & 0b1110_0000 != 0
+        || o4 & 0b1100_0000 != 0
+        || o3 & 0b1100_0000 != 0
+        || o1 & 0b0111_1111 != 0
+    {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+
+    let year = 1900u16 + u16::from(o8);
+    let month = o7 & 0b0000_1111;
+    let day_of_month = o6 & 0b0001_1111;
+    let day_of_week = o5 >> 5;
+    let hour = o5 & 0b0001_1111;
+    let minute = o4 & 0b0011_1111;
+    let second = o3 & 0b0011_1111;
+
+    let fault = o2 & 0b1000_0000 != 0;
+    let working_day = o2 & 0b0100_0000 != 0;
+    let working_day_unknown = o2 & 0b0010_0000 != 0;
+    let year_invalid = o2 & 0b0001_0000 != 0;
+    let date_invalid = o2 & 0b0000_1000 != 0;
+    let day_of_week_invalid = o2 & 0b0000_0100 != 0;
+    let time_invalid = o2 & 0b0000_0010 != 0;
+    let summer_time = o2 & 0b0000_0001 != 0;
+    let externally_synchronized = o1 & 0b1000_0000 != 0;
+
+    if !date_invalid && (!(1..=12).contains(&month) || !(1..=31).contains(&day_of_month)) {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    if !time_invalid {
+        if hour > 24 || minute > 59 || second > 59 {
+            return Err(DptCodecError::InvalidData { dpt });
+        }
+        // Note 11: Hour=24 is only legal with Minutes=Seconds=0.
+        if hour == 24 && (minute != 0 || second != 0) {
+            return Err(DptCodecError::InvalidData { dpt });
+        }
+    }
+
+    Ok(DptValue::DateTime {
+        year,
+        year_invalid,
+        month,
+        day_of_month,
+        date_invalid,
+        day_of_week,
+        day_of_week_invalid,
+        hour,
+        minute,
+        second,
+        time_invalid,
+        fault,
+        working_day,
+        working_day_unknown,
+        summer_time,
+        externally_synchronized,
+    })
+}
+
+fn encode_datetime(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let unparsable = || DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    };
+
+    let mut year: Option<u16> = None;
+    let mut month: Option<u8> = None;
+    let mut day: Option<u8> = None;
+    let mut dow: Option<u8> = None;
+    let mut hour: Option<u8> = None;
+    let mut minute: Option<u8> = None;
+    let mut second: Option<u8> = None;
+    let mut fault = false;
+    let mut workday = false;
+    let mut no_workday = false;
+    let mut no_year = false;
+    let mut no_date = false;
+    let mut no_dow = false;
+    let mut no_time = false;
+    let mut summer_time = false;
+    let mut synced = false;
+
+    for token in input.split_whitespace() {
+        let (key, value) = token.split_once('=').ok_or_else(unparsable)?;
+        match key {
+            "year" => year = Some(value.parse().map_err(|_| unparsable())?),
+            "month" => month = Some(value.parse().map_err(|_| unparsable())?),
+            "day" => day = Some(value.parse().map_err(|_| unparsable())?),
+            "dow" => dow = Some(value.parse().map_err(|_| unparsable())?),
+            "hour" => hour = Some(value.parse().map_err(|_| unparsable())?),
+            "minute" => minute = Some(value.parse().map_err(|_| unparsable())?),
+            "second" => second = Some(value.parse().map_err(|_| unparsable())?),
+            "fault" => fault = parse_bool_word(value).ok_or_else(unparsable)?,
+            "workday" => workday = parse_bool_word(value).ok_or_else(unparsable)?,
+            "no-workday" => no_workday = parse_bool_word(value).ok_or_else(unparsable)?,
+            "no-year" => no_year = parse_bool_word(value).ok_or_else(unparsable)?,
+            "no-date" => no_date = parse_bool_word(value).ok_or_else(unparsable)?,
+            "no-dow" => no_dow = parse_bool_word(value).ok_or_else(unparsable)?,
+            "no-time" => no_time = parse_bool_word(value).ok_or_else(unparsable)?,
+            "summer-time" => summer_time = parse_bool_word(value).ok_or_else(unparsable)?,
+            "synced" => synced = parse_bool_word(value).ok_or_else(unparsable)?,
+            _ => return Err(unparsable()),
+        }
+    }
+
+    let year = year.ok_or_else(unparsable)?;
+    let month = month.ok_or_else(unparsable)?;
+    let day = day.ok_or_else(unparsable)?;
+    let dow = dow.ok_or_else(unparsable)?;
+    let hour = hour.ok_or_else(unparsable)?;
+    let minute = minute.ok_or_else(unparsable)?;
+    let second = second.ok_or_else(unparsable)?;
+
+    if !(1900..=2155).contains(&year) {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: year.to_string(),
+        });
+    }
+    if dow > 7 {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: dow.to_string(),
+        });
+    }
+    if !no_date {
+        if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+            return Err(DptCodecError::OutOfRange {
+                dpt,
+                value: format!("{month}-{day}"),
+            });
+        }
+    } else if month > 15 || day > 31 {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: format!("{month}-{day}"),
+        });
+    }
+    if !no_time {
+        if hour > 24 || minute > 59 || second > 59 || (hour == 24 && (minute != 0 || second != 0)) {
+            return Err(DptCodecError::OutOfRange {
+                dpt,
+                value: format!("{hour}:{minute}:{second}"),
+            });
+        }
+    } else if hour > 31 || minute > 63 || second > 63 {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: format!("{hour}:{minute}:{second}"),
+        });
+    }
+
+    let o8 = (year - 1900) as u8;
+    let o7 = month & 0x0F;
+    let o6 = day & 0x1F;
+    let o5 = (dow << 5) | (hour & 0x1F);
+    let o4 = minute & 0x3F;
+    let o3 = second & 0x3F;
+    let o2 = (u8::from(fault) << 7)
+        | (u8::from(workday) << 6)
+        | (u8::from(no_workday) << 5)
+        | (u8::from(no_year) << 4)
+        | (u8::from(no_date) << 3)
+        | (u8::from(no_dow) << 2)
+        | (u8::from(no_time) << 1)
+        | u8::from(summer_time);
+    let o1 = u8::from(synced) << 7;
+
+    Ok(GroupValue::Bytes(vec![o8, o7, o6, o5, o4, o3, o2, o1]))
 }
 
 #[cfg(test)]
@@ -1332,6 +2194,91 @@ mod tests {
         let d = dpt(3, Some(7));
         let err = decode(d, &GroupValue::Short(0b10000)).unwrap_err();
         assert_eq!(err, DptCodecError::InvalidData { dpt: d });
+    }
+
+    // -- Main type 4 ------------------------------------------------------
+
+    #[test]
+    fn a8_ascii_round_trips_a_printable_character() {
+        // [V]: 'A' = 0x41, DPT-AS §3.4's own character table (page 31),
+        // row LSN=1, column MSN=4.
+        let d = dpt(4, Some(1));
+        let payload = encode(d, "A").unwrap();
+        assert_eq!(payload, GroupValue::Bytes(vec![0x41]));
+        assert_eq!(
+            decode(d, &payload).unwrap(),
+            DptValue::Text("A".to_string())
+        );
+    }
+
+    #[test]
+    fn a8_8859_1_round_trips_a_character_outside_ascii() {
+        // [D]+[V]: DPT-AS §3.4's character table (page 31), row LSN=0,
+        // column MSN=B: 0xB0 = '°', outside 4.001's 7-bit ASCII set but
+        // valid for 4.002.
+        let d = dpt(4, Some(2));
+        let payload = encode(d, "\u{b0}").unwrap();
+        assert_eq!(payload, GroupValue::Bytes(vec![0xB0]));
+        assert_eq!(
+            decode(d, &payload).unwrap(),
+            DptValue::Text("\u{b0}".to_string())
+        );
+    }
+
+    #[test]
+    fn a8_ascii_rejects_the_top_bit_in_both_directions() {
+        let d = dpt(4, Some(1));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0xB0])).unwrap_err(),
+            DptCodecError::InvalidData { dpt: d }
+        );
+        assert!(matches!(
+            encode(d, "\u{b0}"),
+            Err(DptCodecError::Unparsable { .. })
+        ));
+    }
+
+    #[test]
+    fn a8_decode_rejects_wrong_length_payload() {
+        let d = dpt(4, Some(1));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x41, 0x42])).unwrap_err(),
+            DptCodecError::WrongLength {
+                dpt: d,
+                expected_bits: 8,
+                got: 16
+            }
+        );
+    }
+
+    #[test]
+    fn a8_encode_rejects_more_than_one_character() {
+        let d = dpt(4, Some(1));
+        assert!(matches!(
+            encode(d, "AB"),
+            Err(DptCodecError::Unparsable { .. })
+        ));
+    }
+
+    #[test]
+    fn a8_encode_rejects_empty_input() {
+        let d = dpt(4, Some(1));
+        assert!(matches!(
+            encode(d, ""),
+            Err(DptCodecError::Unparsable { .. })
+        ));
+    }
+
+    #[test]
+    fn a8_bare_main_type_has_no_documented_default_and_is_unsupported() {
+        // Unlike main type 16, §3.4 states no bare-`DPT-4` default — this
+        // is a deliberate non-extrapolation, not an oversight.
+        let d = dpt(4, None);
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x41])),
+            Err(DptCodecError::UnsupportedDpt(d))
+        );
+        assert_eq!(encode(d, "A"), Err(DptCodecError::UnsupportedDpt(d)));
     }
 
     // -- Main type 5 -------------------------------------------------------
@@ -1735,6 +2682,212 @@ mod tests {
         );
     }
 
+    // -- Main type 10 -------------------------------------------------------
+
+    #[test]
+    fn time_of_day_round_trips_a_named_weekday() {
+        // [own reading]: DPT-AS §3.11's table (`1 = Monday`), no worked
+        // byte example is printed for this type.
+        let d = dpt(10, Some(1));
+        let payload = encode(d, "monday 07:30:15").unwrap();
+        assert_eq!(payload, GroupValue::Bytes(vec![(1 << 5) | 7, 30, 15]));
+        assert_eq!(
+            decode(d, &payload).unwrap(),
+            DptValue::TimeOfDay {
+                day: Some(1),
+                hour: 7,
+                minute: 30,
+                second: 15
+            }
+        );
+    }
+
+    #[test]
+    fn time_of_day_no_day_round_trips_exactly() {
+        // The "day=0 means no day" judgment call: `None` must encode back
+        // to wire code 0, and wire code 0 must decode back to `None`.
+        let d = dpt(10, Some(1));
+        let payload = encode(d, "none 00:00:00").unwrap();
+        assert_eq!(payload, GroupValue::Bytes(vec![0, 0, 0]));
+        assert_eq!(
+            decode(d, &payload).unwrap(),
+            DptValue::TimeOfDay {
+                day: None,
+                hour: 0,
+                minute: 0,
+                second: 0
+            }
+        );
+    }
+
+    #[test]
+    fn time_of_day_round_trips_the_boundary_values() {
+        let d = dpt(10, Some(1));
+        for (text, day, hour, minute, second) in [
+            ("sunday 23:59:59", 7u8, 23u8, 59u8, 59u8),
+            ("wednesday 00:00:00", 3, 0, 0, 0),
+        ] {
+            let payload = encode(d, text).unwrap();
+            assert_eq!(
+                decode(d, &payload).unwrap(),
+                DptValue::TimeOfDay {
+                    day: Some(day),
+                    hour,
+                    minute,
+                    second
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn time_of_day_display_re_parses() {
+        let d = dpt(10, Some(1));
+        let v = DptValue::TimeOfDay {
+            day: Some(5),
+            hour: 9,
+            minute: 5,
+            second: 0,
+        };
+        let text = v.to_string();
+        assert_eq!(encode(d, &text).and_then(|p| decode(d, &p)), Ok(v));
+    }
+
+    #[test]
+    fn time_of_day_decode_rejects_reserved_bits() {
+        let d = dpt(10, Some(1));
+        // Reserved bits set above Minutes.
+        let err = decode(d, &GroupValue::Bytes(vec![0, 0b1000_0000, 0])).unwrap_err();
+        assert_eq!(err, DptCodecError::InvalidData { dpt: d });
+    }
+
+    #[test]
+    fn time_of_day_decode_rejects_out_of_range_hour_minute_second() {
+        let d = dpt(10, Some(1));
+        for bytes in [
+            vec![24u8, 0, 0], // hour 24 (only 0-23 legal)
+            vec![0u8, 60, 0], // minute 60
+            vec![0u8, 0, 60], // second 60
+        ] {
+            let err = decode(d, &GroupValue::Bytes(bytes)).unwrap_err();
+            assert_eq!(err, DptCodecError::InvalidData { dpt: d });
+        }
+    }
+
+    #[test]
+    fn time_of_day_decode_rejects_wrong_length_payload() {
+        let d = dpt(10, Some(1));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0, 0])).unwrap_err(),
+            DptCodecError::WrongLength {
+                dpt: d,
+                expected_bits: 24,
+                got: 16
+            }
+        );
+    }
+
+    #[test]
+    fn time_of_day_encode_rejects_unparsable_text() {
+        let d = dpt(10, Some(1));
+        for text in ["", "monday", "someday 00:00:00", "monday 25:00:00"] {
+            assert!(
+                matches!(
+                    encode(d, text),
+                    Err(DptCodecError::Unparsable { .. }) | Err(DptCodecError::OutOfRange { .. })
+                ),
+                "expected an error for {text:?}"
+            );
+        }
+    }
+
+    // -- Main type 11 -------------------------------------------------------
+
+    #[test]
+    fn date_century_encoding_matches_example_5() {
+        // [D]: DPT-AS §3.12 EXAMPLE 5 — `99d equals 1999`, `0d equals
+        // 2000`, `4d equals 2004`.
+        let d = dpt(11, Some(1));
+        for (year_raw, year) in [(99u8, 1999u16), (0, 2000), (4, 2004)] {
+            let payload = GroupValue::Bytes(vec![15, 6, year_raw]);
+            assert_eq!(
+                decode(d, &payload).unwrap(),
+                DptValue::Date {
+                    day: 15,
+                    month: 6,
+                    year
+                }
+            );
+            assert_eq!(encode(d, &format!("{year}-06-15")).unwrap(), payload);
+        }
+    }
+
+    #[test]
+    fn date_round_trips_the_boundary_values() {
+        let d = dpt(11, Some(1));
+        for text in ["1990-01-01", "2089-12-31"] {
+            let payload = encode(d, text).unwrap();
+            let decoded = decode(d, &payload).unwrap();
+            assert_eq!(format!("{decoded}"), text);
+        }
+    }
+
+    #[test]
+    fn date_decode_rejects_reserved_bits() {
+        let d = dpt(11, Some(1));
+        // Reserved bits set above Day.
+        let err = decode(d, &GroupValue::Bytes(vec![0b1000_0000 | 15, 6, 4])).unwrap_err();
+        assert_eq!(err, DptCodecError::InvalidData { dpt: d });
+    }
+
+    #[test]
+    fn date_decode_rejects_out_of_range_day_month_year() {
+        let d = dpt(11, Some(1));
+        for bytes in [vec![0u8, 6, 4], vec![15u8, 0, 4], vec![15u8, 13, 4]] {
+            let err = decode(d, &GroupValue::Bytes(bytes)).unwrap_err();
+            assert_eq!(err, DptCodecError::InvalidData { dpt: d });
+        }
+        // Year octet 100-127 is in range for 7 bits but out of §3.12's
+        // documented [0...99].
+        let err = decode(d, &GroupValue::Bytes(vec![15, 6, 100])).unwrap_err();
+        assert_eq!(err, DptCodecError::InvalidData { dpt: d });
+    }
+
+    #[test]
+    fn date_decode_rejects_wrong_length_payload() {
+        let d = dpt(11, Some(1));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![15, 6])).unwrap_err(),
+            DptCodecError::WrongLength {
+                dpt: d,
+                expected_bits: 24,
+                got: 16
+            }
+        );
+    }
+
+    #[test]
+    fn date_encode_rejects_year_outside_the_century_window() {
+        let d = dpt(11, Some(1));
+        for text in ["1989-01-01", "2090-01-01"] {
+            assert!(matches!(
+                encode(d, text),
+                Err(DptCodecError::OutOfRange { .. })
+            ));
+        }
+    }
+
+    #[test]
+    fn date_encode_rejects_unparsable_text() {
+        let d = dpt(11, Some(1));
+        for text in ["", "not-a-date", "2024/06/15"] {
+            assert!(matches!(
+                encode(d, text),
+                Err(DptCodecError::Unparsable { .. })
+            ));
+        }
+    }
+
     // -- Main type 12 ------------------------------------------------------
 
     #[test]
@@ -1961,6 +3114,127 @@ mod tests {
                 got: 24
             }
         );
+    }
+
+    // -- Main type 15 -------------------------------------------------------
+
+    #[test]
+    fn access_data_matches_example_6() {
+        // [D]+[V]: DPT-AS §3.16 EXAMPLE 6 — code "123456", no error,
+        // permission accepted, read left to right, no encryption, index
+        // 13. The byte string `[0x12, 0x34, 0x56, 0x4D]` is this codec's
+        // own arithmetic from the Standard's stated field values (see the
+        // section comment above `decode_access_data`), not a printed hex
+        // value in §3.16 itself.
+        let d = dpt(15, Some(0));
+        let payload = GroupValue::Bytes(vec![0x12, 0x34, 0x56, 0x4D]);
+        assert_eq!(
+            decode(d, &payload).unwrap(),
+            DptValue::AccessData {
+                code: [1, 2, 3, 4, 5, 6],
+                error: false,
+                accepted: true,
+                right_to_left: false,
+                encrypted: false,
+                index: 13,
+            }
+        );
+        assert_eq!(encode(d, "123456 off on left off 13").unwrap(), payload);
+    }
+
+    #[test]
+    fn access_data_matches_example_7() {
+        // [D]+[V]: DPT-AS §3.16 EXAMPLE 7 — code "6789" (zero-padded to
+        // six digits), no error, permission *not* accepted, read left to
+        // right, no encryption, index 14. Byte string
+        // `[0x00, 0x67, 0x89, 0x0E]`, derived the same way as EXAMPLE 6.
+        let d = dpt(15, Some(0));
+        let payload = GroupValue::Bytes(vec![0x00, 0x67, 0x89, 0x0E]);
+        assert_eq!(
+            decode(d, &payload).unwrap(),
+            DptValue::AccessData {
+                code: [0, 0, 6, 7, 8, 9],
+                error: false,
+                accepted: false,
+                right_to_left: false,
+                encrypted: false,
+                index: 14,
+            }
+        );
+        assert_eq!(encode(d, "006789 off off left off 14").unwrap(), payload);
+    }
+
+    #[test]
+    fn access_data_round_trips_error_and_encryption_and_direction() {
+        let d = dpt(15, Some(0));
+        let payload = encode(d, "999999 on off right on 0").unwrap();
+        assert_eq!(
+            decode(d, &payload).unwrap(),
+            DptValue::AccessData {
+                code: [9, 9, 9, 9, 9, 9],
+                error: true,
+                accepted: false,
+                right_to_left: true,
+                encrypted: true,
+                index: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn access_data_display_re_parses() {
+        let d = dpt(15, Some(0));
+        let v = DptValue::AccessData {
+            code: [1, 2, 3, 4, 5, 6],
+            error: false,
+            accepted: true,
+            right_to_left: false,
+            encrypted: false,
+            index: 13,
+        };
+        let text = v.to_string();
+        assert_eq!(encode(d, &text).and_then(|p| decode(d, &p)), Ok(v));
+    }
+
+    #[test]
+    fn access_data_decode_rejects_a_bcd_digit_above_nine() {
+        let d = dpt(15, Some(0));
+        // D6 nibble = 0xA (10), not a decimal digit.
+        let err = decode(d, &GroupValue::Bytes(vec![0xA0, 0x00, 0x00, 0x00])).unwrap_err();
+        assert_eq!(err, DptCodecError::InvalidData { dpt: d });
+    }
+
+    #[test]
+    fn access_data_decode_rejects_wrong_length_payload() {
+        let d = dpt(15, Some(0));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0, 0, 0])).unwrap_err(),
+            DptCodecError::WrongLength {
+                dpt: d,
+                expected_bits: 32,
+                got: 24
+            }
+        );
+    }
+
+    #[test]
+    fn access_data_encode_rejects_index_above_fifteen() {
+        let d = dpt(15, Some(0));
+        assert!(matches!(
+            encode(d, "123456 off on left off 16"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+    }
+
+    #[test]
+    fn access_data_encode_rejects_unparsable_text() {
+        let d = dpt(15, Some(0));
+        for text in ["", "12345 off on left off 13", "abcdef off on left off 13"] {
+            assert!(
+                matches!(encode(d, text), Err(DptCodecError::Unparsable { .. })),
+                "expected Unparsable for {text:?}"
+            );
+        }
     }
 
     // -- Main type 16 ------------------------------------------------------
@@ -2212,6 +3486,258 @@ mod tests {
                 got: 16
             }
         );
+    }
+
+    // -- Main type 19 -------------------------------------------------------
+
+    // Plain (non-enum) mirror of `DptValue::DateTime`'s fields, so tests
+    // can use ordinary struct-update syntax (`..Dt::valid()`) to vary one
+    // or two fields at a time — Rust's functional record update does not
+    // apply to enum struct variants directly.
+    #[derive(Clone)]
+    struct Dt {
+        year: u16,
+        year_invalid: bool,
+        month: u8,
+        day_of_month: u8,
+        date_invalid: bool,
+        day_of_week: u8,
+        day_of_week_invalid: bool,
+        hour: u8,
+        minute: u8,
+        second: u8,
+        time_invalid: bool,
+        fault: bool,
+        working_day: bool,
+        working_day_unknown: bool,
+        summer_time: bool,
+        externally_synchronized: bool,
+    }
+
+    impl Dt {
+        fn valid() -> Self {
+            Dt {
+                year: 2024,
+                year_invalid: false,
+                month: 6,
+                day_of_month: 15,
+                date_invalid: false,
+                day_of_week: 6,
+                day_of_week_invalid: false,
+                hour: 12,
+                minute: 30,
+                second: 45,
+                time_invalid: false,
+                fault: false,
+                working_day: true,
+                working_day_unknown: false,
+                summer_time: true,
+                externally_synchronized: true,
+            }
+        }
+    }
+
+    impl From<Dt> for DptValue {
+        fn from(d: Dt) -> DptValue {
+            DptValue::DateTime {
+                year: d.year,
+                year_invalid: d.year_invalid,
+                month: d.month,
+                day_of_month: d.day_of_month,
+                date_invalid: d.date_invalid,
+                day_of_week: d.day_of_week,
+                day_of_week_invalid: d.day_of_week_invalid,
+                hour: d.hour,
+                minute: d.minute,
+                second: d.second,
+                time_invalid: d.time_invalid,
+                fault: d.fault,
+                working_day: d.working_day,
+                working_day_unknown: d.working_day_unknown,
+                summer_time: d.summer_time,
+                externally_synchronized: d.externally_synchronized,
+            }
+        }
+    }
+
+    #[test]
+    fn datetime_round_trips_a_fully_valid_value() {
+        // [own reading]: no worked byte example is printed for §3.20;
+        // this codec's own arithmetic from the field diagram.
+        let d = dpt(19, Some(1));
+        let value: DptValue = Dt::valid().into();
+        let text = value.to_string();
+        let payload = encode(d, &text).unwrap();
+        assert_eq!(
+            payload,
+            GroupValue::Bytes(vec![
+                124,
+                6,
+                15,
+                (6 << 5) | 12,
+                30,
+                45,
+                0b0100_0001,
+                0b1000_0000
+            ])
+        );
+        assert_eq!(decode(d, &payload).unwrap(), value);
+    }
+
+    #[test]
+    fn datetime_day_of_week_wildcard_and_invalid_are_distinct() {
+        // Note 14: `NDoW=0, ddd=0` is the "any day" wildcard (valid);
+        // `NDoW=1` means the ddd field itself is not valid. Both must
+        // decode to different `DptValue`s, not collapse into one.
+        let d = dpt(19, Some(1));
+        let wildcard: DptValue = Dt {
+            day_of_week: 0,
+            day_of_week_invalid: false,
+            ..Dt::valid()
+        }
+        .into();
+        let invalid: DptValue = Dt {
+            day_of_week: 0,
+            day_of_week_invalid: true,
+            ..Dt::valid()
+        }
+        .into();
+        assert_ne!(wildcard, invalid);
+
+        let wildcard_payload = encode(d, &wildcard.to_string()).unwrap();
+        let invalid_payload = encode(d, &invalid.to_string()).unwrap();
+        assert_ne!(wildcard_payload, invalid_payload);
+        assert_eq!(decode(d, &wildcard_payload).unwrap(), wildcard);
+        assert_eq!(decode(d, &invalid_payload).unwrap(), invalid);
+    }
+
+    #[test]
+    fn datetime_hour_24_is_legal_only_with_zero_minutes_and_seconds() {
+        // Note 11.
+        let d = dpt(19, Some(1));
+        let ok: DptValue = Dt {
+            hour: 24,
+            minute: 0,
+            second: 0,
+            ..Dt::valid()
+        }
+        .into();
+        let payload = encode(d, &ok.to_string()).unwrap();
+        assert_eq!(decode(d, &payload).unwrap(), ok);
+
+        let bad: DptValue = Dt {
+            hour: 24,
+            minute: 1,
+            ..Dt::valid()
+        }
+        .into();
+        assert!(matches!(
+            encode(d, &bad.to_string()),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+        // Build the illegal wire form directly, bypassing encode's own
+        // validation, to check decode rejects it too.
+        let bytes = vec![124, 6, 15, (6 << 5) | 24, 1, 0, 0b0100_0001, 0b1000_0000];
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(bytes)).unwrap_err(),
+            DptCodecError::InvalidData { dpt: d }
+        );
+    }
+
+    #[test]
+    fn datetime_no_date_skips_month_and_day_range_enforcement() {
+        // ND=1: this codec accepts an otherwise out-of-range Month/Day
+        // rather than rejecting a "no date" clock's zero/garbage fill —
+        // see the section comment's range-enforcement policy.
+        let d = dpt(19, Some(1));
+        let bytes = vec![124, 0, 0, (6 << 5) | 12, 30, 45, 0b0100_1001, 0b1000_0000];
+        let decoded = decode(d, &GroupValue::Bytes(bytes)).unwrap();
+        let expected: DptValue = Dt {
+            date_invalid: true,
+            month: 0,
+            day_of_month: 0,
+            ..Dt::valid()
+        }
+        .into();
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn datetime_date_valid_still_enforces_month_and_day_range() {
+        let d = dpt(19, Some(1));
+        // Month 13 is out of [1...12] and ND=0 (date fields valid).
+        let bytes = vec![124, 13, 15, (6 << 5) | 12, 30, 45, 0b0100_0001, 0b1000_0000];
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(bytes)).unwrap_err(),
+            DptCodecError::InvalidData { dpt: d }
+        );
+    }
+
+    #[test]
+    fn datetime_no_time_skips_hour_minute_second_range_enforcement() {
+        let d = dpt(19, Some(1));
+        // Hour field raw 31 (max for 5 bits), Minute/Second raw 63 (max
+        // for 6 bits) — all out of the documented ranges, but NT=1.
+        let bytes = vec![124, 6, 15, (6 << 5) | 31, 63, 63, 0b0100_0011, 0b1000_0000];
+        let decoded = decode(d, &GroupValue::Bytes(bytes)).unwrap();
+        let expected: DptValue = Dt {
+            time_invalid: true,
+            hour: 31,
+            minute: 63,
+            second: 63,
+            ..Dt::valid()
+        }
+        .into();
+        assert_eq!(decoded, expected);
+    }
+
+    #[test]
+    fn datetime_decode_rejects_reserved_bits() {
+        let d = dpt(19, Some(1));
+        let base = |o1: u8, o2: u8, o3: u8, o4: u8, o6: u8, o7: u8| {
+            GroupValue::Bytes(vec![124, o7, o6, (6 << 5) | 12, o4, o3, o2, o1])
+        };
+        // Reserved bits above Month (o7), above Day (o6), above Minutes
+        // (o4), above Seconds (o3), and the low 7 bits of octet 1 (o1),
+        // each checked independently.
+        let cases = [
+            base(0b1000_0000, 0b0100_0001, 45, 30, 15, 0b1001_0110), // above Month
+            base(0b1000_0000, 0b0100_0001, 45, 30, 0b0010_0000, 6),  // above Day
+            base(0b1000_0000, 0b0100_0001, 45, 0b1100_0000, 15, 6),  // above Minutes
+            base(0b1000_0000, 0b0100_0001, 0b1100_0000, 30, 15, 6),  // above Seconds
+            base(0b0000_0001, 0b0100_0001, 45, 30, 15, 6),           // low bits of octet 1
+        ];
+        for payload in cases {
+            assert_eq!(
+                decode(d, &payload).unwrap_err(),
+                DptCodecError::InvalidData { dpt: d },
+                "expected InvalidData for {payload:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn datetime_decode_rejects_wrong_length_payload() {
+        let d = dpt(19, Some(1));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0; 7])).unwrap_err(),
+            DptCodecError::WrongLength {
+                dpt: d,
+                expected_bits: 64,
+                got: 56
+            }
+        );
+    }
+
+    #[test]
+    fn datetime_encode_rejects_unparsable_text() {
+        let d = dpt(19, Some(1));
+        for text in ["", "year=2024", "year=abcd month=6 day=15 dow=6 hour=12 minute=30 second=45 fault=off workday=on no-workday=off no-year=off no-date=off no-dow=off no-time=off summer-time=on synced=on"] {
+            assert!(
+                matches!(encode(d, text), Err(DptCodecError::Unparsable { .. })),
+                "expected Unparsable for {text:?}"
+            );
+        }
     }
 
     // -- Unsupported main types -------------------------------------------

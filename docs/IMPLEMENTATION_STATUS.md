@@ -2249,7 +2249,11 @@ existing call site changed.
 - **`decode`/`encode` (`dpt/codec.rs`)** cover main types 1, 2, 3, 5, 6
   (except `6.020 DPT_Status_Mode3`, whose `B5N3` layout has no matching
   `DptValue` shape), 7, 8, 9, 12, 13, 14, 16, 17, 18 — fourteen of the 46
-  main types `knx_master.xml` defines. Two sentinel collisions the
+  main types `knx_master.xml` defines, **as this branch stood on
+  2026-09-11.** (The E4 entry below adds five more two days later, on
+  2026-09-13, bringing the codec to nineteen — see
+  `KNOWN_LIMITATIONS.md` §61, whose heading count is the current total,
+  not this one.) Two sentinel collisions the
   Standard itself does not resolve were settled here rather than left
   ambiguous: `8.010`'s printed 327.67% maximum collides with its own
   invalid-data code (practical maximum 327.66%), and main type 9's
@@ -2291,7 +2295,8 @@ bus monitor
 --project <path>` and see `On`/`Off`/a percentage/a temperature instead of
 a raw hex payload, and `knx bus write --dpt DPST-9-1 23.5` instead of
 having to hand-encode an F16 payload themselves — for the fourteen main
-types this slice covers. Closes `GAP_ANALYSIS_ETS.md` row **E4**
+types this slice (T29) covered before E4 added five more two days
+later. Closes `GAP_ANALYSIS_ETS.md` row **E4**
 partially; **D5** (the GUI itself) is still open.
 
 **E4, DPT codec main types 4/10/11/15/19 (2026-09-13), branch
@@ -4149,8 +4154,12 @@ and crashed the page it was meant to photograph.
 Web gates: `npm test -- --run` **363 passed across 36 files** (up from 351,
 +12 in `DeviceWorkspace.test.tsx`), `tsc --noEmit` clean.
 `scripts/workbench-browser-proof.mjs` now reaches the new tab with two right
-arrows, opens the disclosure and photographs it
-(`01b-porcelain-product-data.png`). Rust gates re-run
+arrows, opens the disclosure and photographs it, writing
+`01b-porcelain-product-data.png` to the script's local output directory —
+**not committed to this repository** (confirmed later, in this
+document's design-image audit below); the committed proof images under
+`docs/design/2026-09-13-codex-ui-proof/` still predate this filename.
+Rust gates re-run
 because binding generation touches `crates/knx-projection`: `cargo fmt --all
 --check` and `cargo clippy --workspace --all-targets -- -D warnings` both
 clean; no Rust source was modified.

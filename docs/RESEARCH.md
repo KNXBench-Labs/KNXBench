@@ -1007,7 +1007,17 @@ not resolved by guessing which repeat-counter value is "right".
 
 Content of the ETS4 master data file shipped inside our project [V]:
 
-* `DatapointTypes`: 46 main types, 289 subtypes.
+* `DatapointTypes`: 46 main types, 289 subtypes — re-verified
+  (`unzip -p "OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj"
+  knx_master.xml | grep -o '<DatapointType ' | wc -l`, same command with
+  `DatapointSubtype` for the second figure). This is a property of
+  *this one* master-data file, not a fixed constant: the repository
+  carries seven other `knx_master.xml` copies (one per `.knxprod`/
+  `.knxproj` under `OriginalData/`), and their main-type counts spread
+  from 29 to 63 depending on ETS/master-data vintage — the two other
+  demo projects alone give 57 and 63. "46 main types, 289 subtypes"
+  describes the ETS4 vintage bundled in our primary reference project,
+  not KNX main types in general.
 * `MediumTypes`: `MT-0` = TP, `MT-1` = PL, `MT-5` = IP. (RF absent in this ETS4 master file.)
 * `Manufacturers`: 447 entries, `M-0001` Siemens, `M-0002` ABB, …
 * `MaskVersions`: 29 entries, e.g. `MV-0010` mask `16` "1.0" `ManagementModel=Bcu1`, `MV-0020` mask `32` "2.0" `Bcu2`.

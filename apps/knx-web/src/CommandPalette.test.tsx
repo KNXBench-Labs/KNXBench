@@ -45,6 +45,9 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     undo: () => {},
     redo: () => {},
     openSearch: () => {},
+    openLog: () => {},
+    openBusMonitor: () => {},
+    openSettings: () => {},
     ...overrides,
   };
 }

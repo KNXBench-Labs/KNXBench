@@ -36,6 +36,9 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     undo: () => {},
     redo: () => {},
     openSearch: () => {},
+    openLog: () => {},
+    openBusMonitor: () => {},
+    openSettings: () => {},
     ...overrides,
   };
 }
@@ -96,10 +99,30 @@ describe("command enablement", () => {
     expect(called).toBe(true);
   });
 
-  it("lists all seven commands in palette order, with an unconditionally enabled first entry", () => {
+  it("lists all ten commands in palette order, with an unconditionally enabled first entry", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
       "open-project", "open-native", "save", "save-as", "undo", "redo", "search",
+      "open-log", "open-bus-monitor", "open-settings",
     ]);
     expect(COMMANDS[0].isEnabled(noopCtx({ tree: null }))).toBe(true);
+  });
+
+  // The diagnostic entries exist because the buttons that used to reach
+  // these panels now sit inside a collapsible navigation pane; a command
+  // that went dark without a project would reintroduce the same gap.
+  it("keeps log, bus monitor and settings runnable with no project open", () => {
+    const opened: string[] = [];
+    const ctx = noopCtx({
+      tree: null,
+      openLog: () => opened.push("log"),
+      openBusMonitor: () => opened.push("monitor"),
+      openSettings: () => opened.push("settings"),
+    });
+    for (const id of ["open-log", "open-bus-monitor", "open-settings"]) {
+      const cmd = COMMANDS.find((c) => c.id === id)!;
+      expect(cmd.isEnabled(ctx)).toBe(true);
+      cmd.run(ctx);
+    }
+    expect(opened).toEqual(["log", "monitor", "settings"]);
   });
 });

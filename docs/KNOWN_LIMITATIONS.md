@@ -3820,3 +3820,66 @@ the one honest fix, and it is deliberately not done here: it would be the
 first migration in the chain to call the parser, which is an architectural
 commitment (migrations would gain a dependency on parse-layer behaviour that
 can itself change) worth making on purpose rather than in passing.
+
+## 88. A manufacturer's display name is last-writer-wins, and that is on purpose
+
+**Limitation.** `ingest_master_data`'s `"Manufacturer"` arm
+(`crates/knx-productdb/src/parse/master.rs`) writes `name` with `INSERT ...
+ON CONFLICT(id) DO UPDATE SET name = excluded.name` — whichever
+`knx_master.xml` is ingested last overwrites the name every earlier one
+wrote. Every other id-collision path this crate has (`first_winner`, shared
+by `hardware.rs`/`catalog.rs`/`program.rs` since 2026-09-13) is
+first-writer-wins instead, plus a recorded `IdConflict` when the losing
+row's file differs. Manufacturer names update silently and take the
+opposite side.
+
+**Cause.** `hardware.rs` and `catalog.rs` can each create a manufacturer row
+stub (`id`, `name = NULL`) before any `knx_master.xml` naming it has been
+ingested — order between the two is not guaranteed. `first_winner` semantics
+would make the first arrival "win", including a `NULL`-name stub, and the
+name would then never get filled in by a later, better-informed
+`knx_master.xml`. The existing test
+`a_manufacturer_seen_during_ingest_first_gets_its_name_later` already pins
+exactly this: a `NULL` stub inserted first still ends up with a real name
+after `ingest_master_data` runs, in either arrival order.
+
+**Measured against the real corpus.** Swept 69 real `knx_master.xml` files
+(pattern search across the filesystem, not one remembered path) for
+manufacturer ids whose declared `Name` differs between files. Of 832 distinct
+manufacturer ids seen, 52 have more than one `Name` on record — real ETS
+rebrandings, not typos: `M-0007` ("Busch-Jaeger" in older files, "ABB-Busch-
+Jaeger" in newer ones), `M-003D` ("WAGO Kontakttechnik" →
+"WAGO GmbH & Co.KG"), `M-0085` ("Video-Star" → "GVS"), and 49 more of the
+same shape **[V]**. None of the files carry a timestamp or version marker
+inside the `Manufacturer` element itself that would let an ingest tell "the
+newer file" from "the one that merely happened to be read second" — file
+mtimes and ingest order are the only signal available, and mtimes are not
+part of the KNX master-data grammar, so they are not read at all.
+
+**Consequence.** Ingesting an old package after a new one silently reverts a
+manufacturer's display name to its old spelling. There is no `IdConflict` and
+no `ingest_unknown` row, because this was never a data-loss path in the sense
+those exist for (`kept_sha256`/`other_sha256`) — no id-scoped row is ever
+dropped, only overwritten, and every overwrite has the exact same
+justification: some later file's opinion of the correct spelling.
+
+**Ruling, 2026-09-13.** Aligning this with `first_winner` was considered and
+rejected. A manufacturer's display name is not a fixed fact fixed at first
+sight the way a hardware id or catalog item is — ABB really did rename Busch-
+Jaeger's `knx_master.xml` entry, more than once in this corpus, and
+first-writer-wins would need an actual timestamp to prefer the newer spelling
+over the older one, which the format does not carry. Last-writer-wins is not
+a defect being left in place; it is the specific choice made deliberately so
+that the `NULL`-stub-gets-filled-in behaviour a hardware-first ingest already
+relies on keeps working, and so that ingesting a newer package's master data
+updates a name instead of being refused by a name that arrived first and
+happened to be a placeholder or an older spelling. `manufacturer_names_are_
+filled_in` and `a_manufacturer_seen_during_ingest_first_gets_its_name_later`
+already lock this behaviour in; a new characterization test,
+`a_later_ingested_master_file_updates_the_name_the_earlier_one_wrote`, pins
+the last-writer-wins case explicitly by name.
+
+**Lifted when.** Never, unless `knx_master.xml` grows a field this crate can
+use to actually rank two spellings by recency (a schema/edition attribute
+would do it) — at which point "last ingested" could become "provably newer",
+and this section would describe that instead.

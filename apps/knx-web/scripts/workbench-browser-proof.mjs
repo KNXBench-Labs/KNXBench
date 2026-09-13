@@ -58,6 +58,17 @@ try {
   assert.equal(await page.getByRole('tab',{name:'Kommunikationsobjekte',exact:true}).getAttribute('aria-selected'),'true');
   checks.push('File open, device selection, parameter/com-object tab switching through real keyboard events');
   await page.screenshot({path:`${output}/01-porcelain.png`});
+  // T16: the third tab, reached with the right arrow twice from the first —
+  // which the old two-tab `1 - tab` arithmetic could never have done.
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await page.getByRole('tab',{name:'Produktdaten',exact:true}).getAttribute('aria-selected'),'true');
+  assert.ok(await page.locator('.device-identity .resolution-badge').isVisible());
+  await page.locator('.device-identity details.identity-more > summary').first().click();
+  assert.ok(await page.locator('.device-identity details.identity-more[open]').first().isVisible());
+  await page.screenshot({path:`${output}/01b-porcelain-product-data.png`});
+  checks.push('Product data tab reached with ArrowRight twice; identity verdict visible, disclosure opens');
+  await page.keyboard.press('Home');
   const settings = page.locator('.workbench-toolbar').getByRole('button',{name:'Einstellungen',exact:true});
   async function appearance(theme, accent, density) {
     await settings.click();

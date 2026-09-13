@@ -501,7 +501,7 @@ export const messages = {
   "workbench.selectTelegram": "Select a telegram to inspect its received data.",
   "workbench.noDevices": "No devices assigned to this building part.",
 
-  // T16, the device product identity block above the workspace tabs
+  // T16, the device product identity block in the workspace's third tab
   // (`DeviceIdentity` in `Inspector.tsx`). The four `resolution.*` words
   // and their four `explain.*` sentences are deliberately not
   // interchangeable: "no database is loaded" and "the database does not
@@ -511,6 +511,10 @@ export const messages = {
   // itself — but `explain.resolvedWithoutCatalog` does, for the shape the
   // generated type permits and the server never sends.
   "deviceIdentity.title": "Product identity",
+  // The workspace tab. Deliberately its own key: the tab is a short noun in
+  // a strip of three, while `deviceIdentity.title` labels the section itself
+  // and `deviceIdentity.more` labels the disclosure inside it.
+  "deviceIdentity.tab": "Product data",
   "deviceIdentity.productRef": "Product reference",
   "deviceIdentity.programRef": "Application program reference",
   "deviceIdentity.refNotStated": "not stated in the project",
@@ -518,6 +522,12 @@ export const messages = {
   "deviceIdentity.resolution.noDatabase": "No product database",
   "deviceIdentity.resolution.notInDatabase": "Not in the product database",
   "deviceIdentity.resolution.noReference": "No product reference",
+  // For a resolution string this build has never heard of — a frontend
+  // talking to a newer server. Saying so is the only honest option: borrowing
+  // another variant's wording would deny references the user can see.
+  "deviceIdentity.resolution.unrecognised": "State not recognised",
+  "deviceIdentity.explain.unrecognised":
+    "The server reported a product-resolution state this build does not recognise, so this panel cannot say whether the references above were matched to a product. The references are shown exactly as the project states them.",
   "deviceIdentity.explain.noDatabase":
     "No product database is loaded here, so what the project states above cannot be matched to a product. Install the manufacturer's product package to see product, hardware and application program details.",
   "deviceIdentity.explain.notInDatabase":
@@ -538,7 +548,10 @@ export const messages = {
   "deviceIdentity.catalogItemNumber": "Catalogue item number",
   "deviceIdentity.hardwareName": "Hardware name",
   "deviceIdentity.hardwareVersion": "Hardware version",
-  "deviceIdentity.hardwareSerial": "Serial number",
+  // The serial number the manufacturer package states for this *hardware
+  // type*, not the serial of the unit on the wall — that one cannot be read
+  // at all (KNOWN_LIMITATIONS.md §73), so the label must not promise it.
+  "deviceIdentity.hardwareSerial": "Hardware serial number",
   "deviceIdentity.applicationName": "Program name",
   "deviceIdentity.applicationNumber": "Program number",
   "deviceIdentity.applicationVersion": "Program version",

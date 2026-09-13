@@ -3503,10 +3503,22 @@ plumbing and everything on making the identity readable.
   are new, `DeviceDetail.ts` gained `product: DeviceProductNode`, and nothing
   else in the directory moved.
 - **`Inspector.tsx` gains `DeviceIdentity`**, rendered by `DeviceWorkspace`
-  between the device heading and the tab strip — not as a third tab. A
-  device's identity answers "what am I even editing", which stays true in the
-  communication-object tab and in the parameter tab, so it sits above both
-  rather than competing with them. `product_ref` and `program_ref` print
+  as the content of a third tab, "Produktdaten", beside communication objects
+  and parameters — the three-tab strip the approved concept image
+  `docs/design/2026-09-13-codex-ui-concept/01-porcelain.png` shows. (The first
+  implementation put it in a section above the tab strip, per the controller's
+  ruling at the time; the task report flagged the conflict with the mockup and
+  the review reversed the ruling in the mockup's favour.) Adding the third tab
+  meant replacing `DeviceWorkspace`'s keyboard handler, whose
+  `e.key === "End" ? 1 : 1 - tab` encoded "there are exactly two tabs" three
+  times over: it hardcoded the last index, it toggled, and it treated
+  ArrowLeft and ArrowRight as the same key — which a left-arrow-only test
+  could never catch. It is now index arithmetic over the tab array's length,
+  with a test that walks both directions, wraps at both ends and checks
+  `Home`/`End`. The new panel is a hidden sibling in the same
+  `hidden={tab !== n}` shape as the other two, not conditional rendering:
+  `ParameterPanel`'s fetch is keyed to its mount and must not restart on every
+  tab switch. `product_ref` and `program_ref` print
   verbatim in the monospace face, because an engineer comparing one against a
   manufacturer package needs the exact string. A ref the project never stated
   reads "not stated in the project" in the body face — deliberately not in
@@ -3535,8 +3547,11 @@ plumbing and everything on making the identity readable.
   `messages/en.ts`/`messages/de.ts`, including the `omitted.one`/`omitted.other`
   plural pair; German parity is enforced by the existing `Record<MessageKey,
   string>` typing. `styles.css` gains `.device-identity` and friends, built
-  from the existing custom properties so all three themes, five accents and
-  both densities follow automatically. The verdict badge carries its colour in
+  from the existing custom properties, so all three themes and five accents
+  follow automatically. Density does not: `--knx-control-height` and
+  `--knx-cell-padding` are the only density-aware tokens and this block uses
+  neither — exactly like `.device-workspace`'s own fixed `padding: 20px`
+  around it. Not a regression, but not automatic either. The verdict badge carries its colour in
   border and background tint and its text in `--knx-foreground`: measured in a
   real browser, the badge word sits at 10.55:1 to 14.69:1 across both themes
   and all four variants, against 3.46:1 and 3.91:1 for the first attempt that
@@ -3548,18 +3563,24 @@ plumbing and everything on making the identity readable.
   resolved. Hence stacked label-over-value pairs in an `auto-fill` grid and
   the disclosure.
 
-Tests: `DeviceWorkspace.test.tsx` grows from 1 case to 7 — one per resolution
-variant plus position (identity precedes the tablist and is inside no
-tabpanel), the resolved catalogue's disclosure split and omission count, and
-the partly-installed catalogue's empty group. Every fixture is fictional
+Tests: `DeviceWorkspace.test.tsx` grows from 1 case to 11 — one per resolution
+variant, the third tab's own panel (the identity is inside it, hidden until
+selected, and leaving the tab does not remount `ParameterPanel`), arrow-key
+navigation in both directions with wrapping plus `Home`/`End`, the resolved
+catalogue's disclosure split and omission count, the partly-installed
+catalogue's empty group, a resolution string this build does not recognise,
+and the omission count under `NoReference` with a catalogue attached. Every fixture is fictional
 (`M-00FA`, "Example Manufacturing", `EX-4210`); no real product or
 installation appears. `App.test.tsx`'s device fixture and
 `scripts/workbench-browser-proof.mjs`'s mock gained a `product` field — the
 proof script's mock would otherwise have served a `DeviceDetail` without one
 and crashed the page it was meant to photograph.
 
-Web gates: `npm test -- --run` **357 passed across 36 files** (up from 351,
-+6 in `DeviceWorkspace.test.tsx`), `tsc --noEmit` clean. Rust gates re-run
+Web gates: `npm test -- --run` **361 passed across 36 files** (up from 351,
++10 in `DeviceWorkspace.test.tsx`), `tsc --noEmit` clean.
+`scripts/workbench-browser-proof.mjs` now reaches the new tab with two right
+arrows, opens the disclosure and photographs it
+(`01b-porcelain-product-data.png`). Rust gates re-run
 because binding generation touches `crates/knx-projection`: `cargo fmt --all
 --check` and `cargo clippy --workspace --all-targets -- -D warnings` both
 clean; no Rust source was modified.

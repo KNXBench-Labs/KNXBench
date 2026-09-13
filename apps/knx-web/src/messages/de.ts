@@ -413,6 +413,37 @@ export const messages: Record<MessageKey, string> = {
   "workbench.selectTelegram": "Telegramm auswählen, um die empfangenen Daten zu prüfen.",
   "workbench.noDevices": "Diesem Gebäudeteil sind keine Geräte zugeordnet.",
 
+  // Die Gruppenadresstabelle (Etappe 4). Eine Gruppenadresse hat im
+  // KNX-Modell keinen eigenen DPT — diese Beschriftungen benennen, was die
+  // verknüpften Kommunikationsobjekte angeben. Deshalb "nicht angegeben"
+  // statt "unbekannt", und deshalb wird eine Abweichung als Konflikt
+  // benannt statt stillschweigend aufgelöst.
+  "addressTable.filterLabel": "Gruppenadressen filtern",
+  "addressTable.filterPlaceholder": "Adressen filtern…",
+  "addressTable.selectColumn": "Auswählen",
+  "addressTable.range": "Bereich",
+  "addressTable.dpt": "DPT",
+  "addressTable.links": "Verknüpfungen",
+  "addressTable.noDpt": "nicht angegeben",
+  "addressTable.dptConflict": "widersprüchlich",
+  "addressTable.noRange": "(kein Bereich)",
+  "addressTable.noLinks": "keine",
+  "addressTable.linkCounts": "{senders} Senden · {receivers} Empfangen",
+  "addressTable.linkTotal.one": "{count} Verknüpfung",
+  "addressTable.linkTotal.other": "{count} Verknüpfungen",
+  "addressTable.noMatches": "Keine Gruppenadresse passt zu diesem Filter.",
+  "addressTable.linksFor": "Verknüpfungen · {address}",
+  "addressTable.noLinksYet": "Mit dieser Adresse ist kein Kommunikationsobjekt verknüpft.",
+  "addressTable.participant": "Teilnehmer",
+  "addressTable.function": "Funktion",
+  "addressTable.direction": "Richtung",
+  "addressTable.unlinkFrom": "{object} von {address} trennen",
+  // Nur erreichbar, wenn das Projekt ein Objekt verknüpft, dessen Gerät
+  // fehlt — die Verknüpfung wird trotzdem gezeigt, nicht verworfen (siehe
+  // `GroupAddressLinkNode`).
+  "addressTable.unknownDevice": "Unbekanntes Gerät #{id}",
+  "addressTable.unnamedObject": "Unbenanntes Objekt",
+
   "deviceIdentity.title": "Produktidentität",
   "deviceIdentity.tab": "Produktdaten",
   "deviceIdentity.productRef": "Produktreferenz",

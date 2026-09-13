@@ -1,4 +1,4 @@
-/** Tests for ProjectExplorer's multi-select behaviour and building-part label translation. */
+/** Tests for the tree's shared multi-select behaviour and building-part label translation. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -24,6 +24,8 @@ vi.mock("./api", () => ({
 }));
 
 import ProjectExplorer from "./ProjectExplorer";
+import BulkActionToolbar from "./BulkActionToolbar";
+import { useMultiSelection } from "./multiSelection";
 
 let host: HTMLDivElement | undefined;
 
@@ -40,7 +42,7 @@ function device(id: number, name: string): DeviceNode {
 }
 
 function ga(id: number, name: string, address: string): GroupAddressNode {
-  return { id, name, address };
+  return { id, name, address, range: null, dpts: [], links: [] };
 }
 
 function building(id: number, name: string, kind: string): BuildingNode {
@@ -81,19 +83,46 @@ function baseTree(): ProjectTree {
   };
 }
 
+// The multi-selection state machine lives in `multiSelection.ts` and the
+// single `BulkActionToolbar` is rendered by `App` (stage 4: one owner, so
+// the tree and the group-address table cannot disagree about what is
+// selected). This harness is the smallest stand-in for that wiring, so
+// these tests keep asserting the tree's click behaviour and the toolbar it
+// drives rather than where either now happens to be declared.
+function ExplorerHarness(props: {
+  tree: ProjectTree;
+  onSelect: (sel: Selection) => void;
+  onTreeUpdate: (tree: ProjectTree) => void;
+}) {
+  const { multiSelection, onItemClick, clear } = useMultiSelection(props.tree, props.onSelect);
+  return (
+    <>
+      {multiSelection && multiSelection.ids.size > 0 && (
+        <BulkActionToolbar
+          multiSelection={multiSelection}
+          tree={props.tree}
+          onTreeUpdate={props.onTreeUpdate}
+          onDone={clear}
+        />
+      )}
+      <ProjectExplorer
+        tree={props.tree}
+        selection={null}
+        onSelect={props.onSelect}
+        onTreeUpdate={props.onTreeUpdate}
+        multiSelection={multiSelection}
+        onItemClick={onItemClick}
+      />
+    </>
+  );
+}
+
 async function renderExplorer(tree: ProjectTree, onSelect = vi.fn(), onTreeUpdate = vi.fn()) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(
-      <ProjectExplorer
-        tree={tree}
-        selection={null}
-        onSelect={onSelect}
-        onTreeUpdate={onTreeUpdate}
-      />,
-    );
+    root.render(<ExplorerHarness tree={tree} onSelect={onSelect} onTreeUpdate={onTreeUpdate} />);
   });
   return { root, onSelect, onTreeUpdate };
 }

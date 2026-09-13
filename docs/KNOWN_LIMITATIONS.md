@@ -3815,7 +3815,7 @@ first migration in the chain to call the parser, which is an architectural
 commitment (migrations would gain a dependency on parse-layer behaviour that
 can itself change) worth making on purpose rather than in passing.
 
-## 88. Five documented `Space/@Type` values are coarsened to `BuildingPart` on import
+## 89. Five documented `Space/@Type` values are coarsened to `BuildingPart` on import
 
 **Limitation.** `knx_core::BuildingPartType` has six variants — `Building`,
 `Floor`, `Room`, `Corridor`, `DistributionBoard`, `BuildingPart` — which are

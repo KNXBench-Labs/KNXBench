@@ -15,6 +15,7 @@
 import type { MessageKey } from "./en";
 
 export const messages: Record<MessageKey, string> = {
+  "toolbar.newProject": "Neues Projekt…",
   "toolbar.openProject": "Projekt öffnen…",
   "toolbar.openNativeProject": "Öffnen (.knxdb)…",
   "toolbar.save": "Speichern",
@@ -517,4 +518,29 @@ export const messages: Record<MessageKey, string> = {
   "deviceIdentity.groupEmpty": "Die Produktdatenbank enthält hier keine Werte.",
   "deviceIdentity.omitted.one": "{count} weiteres Feld ist ausgeblendet: Die Produktdatenbank hat dafür keinen Wert.",
   "deviceIdentity.omitted.other": "{count} weitere Felder sind ausgeblendet: Die Produktdatenbank hat dafür keine Werte.",
+
+  // Siehe en.ts: der Projektassistent für Projekte, die nie aus einer
+  // Datei kamen.
+  "newProject.title": "Neues Projekt",
+  "newProject.intro": "Ein leeres Projekt mit einer Anlage. Bis zum Speichern wird nichts auf die Festplatte geschrieben.",
+  "newProject.name": "Projektname",
+  "newProject.defaultName": "Unbenanntes Projekt",
+  "newProject.installation": "Anlagenname",
+  "newProject.defaultInstallation": "Anlage 1",
+  "newProject.language": "Projektsprache",
+  "newProject.languageHint": "Das Sprachkennzeichen, unter dem die Projekttexte gespeichert werden, z. B. de oder de-DE. Nicht die Sprache dieser Oberfläche.",
+  "newProject.style": "Gruppenadressstil",
+  "newProject.styleHint": "Jetzt wählen: Sobald Gruppenadressen existieren, ändert nichts den Stil zurück.",
+  "newProject.style.Free": "Frei (0–65535)",
+  "newProject.style.TwoLevel": "Zweistufig (Haupt/Unter)",
+  "newProject.style.ThreeLevel": "Dreistufig (Haupt/Mittel/Unter)",
+  "newProject.nameRequired": "Ein Projekt braucht einen Namen.",
+  "newProject.languageInvalid": "Kein wohlgeformtes Sprachkennzeichen. Versuchen Sie en, de oder de-DE.",
+  "newProject.create": "Projekt anlegen",
+  "newProject.creating": "Wird angelegt…",
+  "newProject.cancel": "Abbrechen",
+  "newProject.conflictTitle": "Das geöffnete Projekt hat ungespeicherte Änderungen",
+  "newProject.conflictBody": "Ein neues Projekt verwirft diese Änderungen, und kein Rückgängig holt sie zurück. Weiter bearbeiten, um sie zuerst zu speichern, oder bewusst verwerfen.",
+  "newProject.conflictDiscard": "Änderungen verwerfen und anlegen",
+  "newProject.conflictKeep": "Weiter bearbeiten",
 };

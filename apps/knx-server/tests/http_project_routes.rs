@@ -209,6 +209,114 @@ async fn a_new_project_is_seeded_with_exactly_one_empty_installation() {
 }
 
 #[tokio::test]
+async fn a_new_project_keeps_the_group_address_style_it_was_created_with() {
+    let app = knx_server::app(Arc::new(knx_server::AppState::default()), None);
+
+    let response = app
+        .clone()
+        .oneshot(post(
+            "/api/project/new",
+            json!({ "name": "Two level", "groupAddressStyle": "TwoLevel" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    // A new project has no group addresses, so the tree cannot show its
+    // style directly — the only honest way to ask is to make the project
+    // parse one. `4/612` is a valid two-level address and an invalid
+    // three-level one (middle 612 > 7), so this round trip fails outright
+    // if the style silently fell back.
+    let created = app
+        .clone()
+        .oneshot(post(
+            "/api/group-addresses",
+            json!({ "name": "Kitchen light", "address": "4/612" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(created.status(), StatusCode::OK);
+    let tree = body_json(created).await;
+    assert_eq!(
+        tree["installations"][0]["group_addresses"][0]["address"],
+        "4/612"
+    );
+}
+
+#[tokio::test]
+async fn a_new_project_without_a_stated_style_stays_three_level() {
+    let app = knx_server::app(Arc::new(knx_server::AppState::default()), None);
+
+    assert_eq!(
+        app.clone()
+            .oneshot(post("/api/project/new", json!({})))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::OK
+    );
+
+    // The mirror image of the test above: two-level input is rejected and
+    // three-level input is accepted, which no other style does.
+    assert_eq!(
+        app.clone()
+            .oneshot(post(
+                "/api/group-addresses",
+                json!({ "name": "Nope", "address": "4/612" }),
+            ))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::BAD_REQUEST
+    );
+    let created = app
+        .oneshot(post(
+            "/api/group-addresses",
+            json!({ "name": "Kitchen light", "address": "4/2/100" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(created.status(), StatusCode::OK);
+    let tree = body_json(created).await;
+    assert_eq!(
+        tree["installations"][0]["group_addresses"][0]["address"],
+        "4/2/100"
+    );
+}
+
+#[tokio::test]
+async fn a_new_project_refuses_an_unknown_group_address_style_instead_of_guessing() {
+    let app = knx_server::app(Arc::new(knx_server::AppState::default()), None);
+
+    let refused = app
+        .clone()
+        .oneshot(post(
+            "/api/project/new",
+            json!({ "groupAddressStyle": "FourLevel" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(refused.status(), StatusCode::BAD_REQUEST);
+    let message = body_json(refused).await["error"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(message.contains("FourLevel"), "{message}");
+    assert!(message.contains("TwoLevel"), "{message}");
+
+    // And no half-made project was left behind: nothing was created, so
+    // there is nothing to add a group address to.
+    let orphan = app
+        .oneshot(post(
+            "/api/group-addresses",
+            json!({ "name": "Kitchen light", "address": "4/2/100" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(orphan.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
 async fn a_new_project_refuses_to_discard_unsaved_edits_unless_told_to() {
     let app = knx_server::app(Arc::new(knx_server::AppState::default()), None);
 

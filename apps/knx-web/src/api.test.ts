@@ -29,6 +29,57 @@ describe("api", () => {
     expect(JSON.parse(init.body as string)).toEqual({ path: "/x.knxproj" });
   });
 
+  it("newProject posts the camelCase creation body, discardChanges spelled out", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.newProject({
+      name: "Scratch",
+      installationName: "Ground floor",
+      language: "de-DE",
+      groupAddressStyle: "TwoLevel",
+    });
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/project/new");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({
+      name: "Scratch",
+      installationName: "Ground floor",
+      language: "de-DE",
+      groupAddressStyle: "TwoLevel",
+      discardChanges: false,
+    });
+  });
+
+  it("newProject sends discardChanges only when it was asked for", async () => {
+    mockFetchOnce({ installations: [] });
+    await api.newProject({
+      name: "Scratch",
+      installationName: "",
+      language: "en",
+      groupAddressStyle: "ThreeLevel",
+      discardChanges: true,
+    });
+    const [, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(JSON.parse(init.body as string).discardChanges).toBe(true);
+  });
+
+  it("newProject's 409 is recognisable as the unsaved-changes refusal, and nothing else is", async () => {
+    mockFetchOnce({ error: "the open project has unsaved changes" }, false, 409);
+    const conflict = await api
+      .newProject({ name: "x", installationName: "", language: "en", groupAddressStyle: "Free" })
+      .then(() => null)
+      .catch((e: unknown) => e);
+    expect(api.errorMessage(conflict)).toContain("unsaved changes");
+    expect(api.isUnsavedChangesConflict(conflict)).toBe(true);
+
+    mockFetchOnce({ error: "no project open" }, false, 400);
+    const other = await api
+      .newProject({ name: "x", installationName: "", language: "en", groupAddressStyle: "Free" })
+      .then(() => null)
+      .catch((e: unknown) => e);
+    expect(api.isUnsavedChangesConflict(other)).toBe(false);
+    expect(api.isUnsavedChangesConflict(new Error("not from request() at all"))).toBe(false);
+  });
+
   it("deviceDetail issues a GET to /api/device/:id", async () => {
     mockFetchOnce({ id: 1, name: "D1" });
     await api.deviceDetail(1);

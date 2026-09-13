@@ -2811,8 +2811,8 @@ flip the parity against an unchanged `prog_mode`, whose reaction is **[D]**
 §4.26.3.3 *"manufacturer specific"* (footnote 96: *"Typically the system is
 restarted if p_parity is invalid."*).
 
-**Second correction, 2026-09-14 (fix round 3): none of the above applies to
-System B.** `03_05_01` §4.26.3 carries a scoping header between its title and
+**Second correction, 2026-09-14 (fix round 3, narrowed in round 4): none of the
+above is *established* for System B, and it is not excluded either.** `03_05_01` §4.26.3 carries a scoping header between its title and
 §4.26.3.1, and the previous revision used the clause without reading it:
 **[D]** *"Used by: − Ctrl-Mode fixed DMA − Ctrl-Mode reloc DMA − masks 0012h
 0020h, 0021h, 0701h in E-Mode"*. System B is absent — and so is every mask in the
@@ -2828,17 +2828,30 @@ into two lettered alternatives each naming its profiles: **[D]**
 • BCU 2 • BIM M112"*. Both columns covering the target — `System B` and
 `Mask 57B0h` — are Realisation Type 1, i.e. `PID_PROGMODE` (`03_05_01` §4.3.5).
 
+That assignment reaches exactly as far as §4.4.1.1's own title, *"connection
+oriented"*, which round 4 added after a review caught the over-correction. The
+clause next door goes the other way: **[D]** `06 Profiles` §4.4.1.2 *"Programming
+Mode – connectionless"* lists, under *"Programming Mode Control • via bus"*, both
+*"§3.13.2 “DMP_ProgModeSwitch_RCo”"* and *"§4.26.3 “Programming Mode – Realisation
+Type 2”"*, and §4.4's feature table gives row *"1.b Connectionless"* the value `O`
+in the `System B` and `Mask 57B0h` columns **[D]** (`-` in the System 1, System 2,
+BCU 1, BCU 2, BIM M112 and Mask 5705h columns; `O` for System 300 and `M` for RF
+Bidirectional). So a System B device may optionally implement the connectionless
+path, and that path is profiled onto the very clause that describes `0060h`.
+
 Consequences, recorded so no later pass re-derives them: the `60h` read-modify-write
-above is correct *for the profiles its source clauses name*, and for a System B
-device the octet at `0060h` is not sourced as `curr_prog_mode` at all — what lives
-there is **[A]** unknown. The design spec's phase-3 permission for
+above is correct *for the profiles its source clauses name*; for a System B device
+it is **unestablished** — not assigned on the mandatory connection-oriented path,
+optionally assigned on the connectionless one — so what the octet at `0060h` holds
+on such a device is **[A]** unknown, which is a gap in *interpretation*, not a
+proof of absence. The design spec's phase-3 permission for
 `A_Memory_Read(60h, 1)` inside `1.1.24`–`1.1.32` is unchanged, because a one-octet
 read is harmless; what changed is that the result must be recorded as a raw octet
 of unknown meaning rather than as programming-mode state (spec §3.4, §4.4, §15).
-This is not a new gap — `06 Profiles` answers the question — and the gap count
-stays at six. Source: `pdftotext -layout` of
-`03_05_01 Resources v01.10.01 AS.pdf` §4.26.3 and of `06 Profiles v02.01.01.pdf`
-§4.4.1.1 and §5.5.1.1.
+This is not a new gap — the phase-3 read establishes the device's own Profile
+before anything interprets the octet — and the gap count stays at six. Source:
+`pdftotext -layout` of `03_05_01 Resources v01.10.01 AS.pdf` §4.26.3 and of
+`06 Profiles v02.01.01.pdf` §4.4 (feature table), §4.4.1.1, §4.4.1.2 and §5.5.1.1.
 
 The design spec still forbids writing to `60h` on real hardware — but now as an
 explicit project risk decision (spec §13 **R11**, restated as "writing to `60h`

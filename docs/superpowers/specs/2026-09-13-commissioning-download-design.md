@@ -311,9 +311,29 @@ Run State Machine itself stays out of phase 2.
 
   Both of the columns that cover this document's target — `System B` and
   `Mask 57B0h` — land under **Realisation Type 1**, i.e. `PID_PROGMODE` per
-  RES §4.3.5. So `0060h` is not where a System B device's Programming Mode is
-  specified to live, and what such a device does keep there is **[A]** unknown to
-  this document. §4.4 states the derivation for the profiles its own source
+  RES §4.3.5.
+
+  That settles the *connection-oriented* path and only that path, because
+  §4.4.1.1's own title is "connection oriented". The clause next door answers
+  the other half in the opposite direction:
+
+  > **[D]** PROF §4.4.1.2 "Programming Mode – connectionless", under
+  > *"Programming Mode Control • via bus"*: *"§3.13.2
+  > “DMP_ProgModeSwitch_RCo”"* and *"§4.26.3 “Programming Mode – Realisation
+  > Type 2”"*
+
+  and PROF §4.4's feature table gives row *"1.b Connectionless"* the value `O`
+  in both the `System B` and the `Mask 57B0h` column **[D]** (the same row is
+  `-` for System 1, System 2, BCU 1, BCU 2, BIM M112 and Mask 5705h). So a
+  System B device may optionally implement connectionless Programming Mode, and
+  that path is profiled onto RES §4.26.3 — the very clause that describes
+  `0060h`.
+
+  The sourced conclusion is therefore narrower than an exclusion: `0060h` is
+  **not** assigned to System B on the mandatory connection-oriented path, and
+  **optionally** assigned on the connectionless path, so what a given System B
+  device keeps at `0060h` is **[A]** unestablished for this document either way —
+  not proven absent. §4.4 states the derivation for the profiles its own source
   clauses name and carries this caveat to the one place phase 3 may act on it;
   §15 repeats it where the read is permitted.
 - **Mask-version-specific LSM access** — MP §3.31.2's `_RCo_Mem` variant is
@@ -412,12 +432,18 @@ full: RES §4.26.3's own "Used by" header lists Ctrl-Mode fixed DMA, Ctrl-Mode
 reloc DMA and masks `0012h`/`0020h`/`0021h`/`0701h` in E-Mode, and PROF §4.4.1.1
 positively assigns *"Realisation Type 1 - Property based"* to *"• System B
 • Mask 57B0h"* while assigning *"Realisation Type 2 – Memory mapped"* to
-*"• System 1 • System 2 • BCU 1 • BCU 2 • BIM M112"* **[D]**. Applicability to
-the System B target mask is therefore **not** established; it is assigned
-elsewhere. Everything below is the memory-mapped procedure exactly as specified
-**for the profiles its own source clauses cover**, and for a System B device it
-is **[A]** — the programming-mode Resource there is `PID_PROGMODE` (RES §4.3.5),
-and the meaning of the octet at `0060h` on such a device is unsourced. The
+*"• System 1 • System 2 • BCU 1 • BCU 2 • BIM M112"* **[D]**. That assignment is
+scoped to §4.4.1.1's own title, *"connection oriented"*: PROF §4.4.1.2
+(connectionless) profiles Programming Mode Control onto *"§3.13.2
+“DMP_ProgModeSwitch_RCo”"* and *"§4.26.3 “Programming Mode – Realisation Type
+2”"*, and PROF §4.4's feature table marks *"1.b Connectionless"* as `O` for
+`System B` and `Mask 57B0h` **[D]**. Applicability to the System B target mask is
+therefore **not established** — not assigned on the mandatory connection-oriented
+path, optionally assigned on the connectionless one. Everything below is the
+memory-mapped procedure exactly as specified **for the profiles its own source
+clauses cover**, and for a System B device it is **[A]** — the programming-mode
+Resource named for the mandatory path is `PID_PROGMODE` (RES §4.3.5), and the
+meaning of the octet at `0060h` on such a device is unsourced either way. The
 consequence for phase 3 is spelled out at the end of this subsection rather than
 left to be inferred.
 
@@ -456,6 +482,7 @@ So the derivation is:
 
 ```text
 old = A_Memory_Read(0060h, 1)               # one octet, curr_prog_mode
+                                            # (for the profiles above; [A] on System B)
 if bit0(old) == desired_mode: done          # RES §4.26.3.4.2/§4.26.3.4.3 guard
 new = old XOR 0b1000_0001                   # invert bit 0 and invert bit 7
 A_Memory_Write(0060h, 1, new)               # bits 1..6 carried through unchanged
@@ -499,13 +526,16 @@ invalid may restart it. So:
   (`A_Memory_Read(60h, 1)`) is the only part phase 3 may exercise, and only
   inside `1.1.24`–`1.1.32`. **That permission is unchanged. Its interpretation is
   caveated.** Per the applicability note opening this subsection, on a System B
-  device the octet at `0060h` is not sourced as `curr_prog_mode` — PROF §4.4.1.1
-  profiles System B onto Realisation Type 1 — so phase 3 records the result as a
-  **raw octet read from `0060h` whose meaning is unknown for this mask** **[A]**.
+  device the octet at `0060h` is not *established* as `curr_prog_mode`: PROF
+  §4.4.1.1 profiles System B onto Realisation Type 1 for the connection-oriented
+  path, while §4.4.1.2 profiles the optional connectionless path onto RES §4.26.3,
+  so the octet may or may not be `curr_prog_mode` on any given device — so phase 3
+  records the result as a **raw octet read from `0060h` whose meaning is unknown
+  for this mask** **[A]**.
   It must not be reported as programming-mode state, bit 0 must not be rendered
   as "programming mode on/off", and bit 7 must not be rendered as a parity state.
   Programming-mode state for a System B device is read from `PID_PROGMODE`
-  (RES §4.3.5) instead. What would establish a meaning for the octet is the
+  (RES §4.3.5) instead, that being the Resource its mandatory path names. What would establish a meaning for the octet is the
   device's own Profile for its actual mask version, read at the time — a phase-3
   finding, not something available to assume now.
 - Phase 2 implements the toggle **against the simulator only**, so that the
@@ -1330,7 +1360,9 @@ Application Program objects as well, which is consistent with the RSM depending
 on the LSM (§9.3).
 
 Cross-object agreement therefore has to be checked per PID and not assumed. What
-the five objects read for this document **do** agree on:
+the five objects with LSM rows **do** agree on — five, not the six this document
+read, because the Device Object (§2.3.2.2) tabulates neither
+`PID_LOAD_STATE_CONTROL` nor `PID_TABLE_REFERENCE`:
 
 - `PID_LOAD_STATE_CONTROL` (PID 5): *"implementation default"* for `-`/`02h`/`07h`
   and *"not influenced"* for Confirmed Restart, Basic Restart and Power Cycle, in
@@ -2066,11 +2098,15 @@ once so that older references resolve:
    inverse of the failure §1 is written to prevent: not a guess dressed as a fact,
    but an admitted gap that the cited clause closes, which is worse in one specific
    way — a later task copies it forward as settled.
-   **Scope of that derivation, added fix round 3:** it is the derivation for the
-   profiles RES §4.26.3 and PROF §4.4.1.1 put under Realisation Type 2, which are
-   not System B. §3.4 and §4.4 carry the evidence and the `[A]` marking; this item
-   stays reclassified, because the parity *rule* is documented either way and
-   "which profiles use Realisation Type 2" is answered by PROF rather than open.
+   **Scope of that derivation, added fix round 3 and corrected in round 4:** it is
+   the derivation for the profiles RES §4.26.3 and PROF §4.4.1.1 put under
+   Realisation Type 2, and System B is not among them *for the mandatory
+   connection-oriented path*. It is not excluded either: PROF §4.4.1.2 profiles the
+   optional connectionless path onto the same RES §4.26.3, and §4.4's feature table
+   marks *"1.b Connectionless"* `O` for `System B` and `Mask 57B0h`. §3.4 and §4.4
+   carry that evidence and the `[A]` marking; this item stays reclassified, because
+   the parity *rule* is documented either way and "which profiles use Realisation
+   Type 2" is answered by PROF rather than open.
    The gap count is unaffected.
    The residual unknown is narrow and is **not** counted as a gap: whether a given
    device's stack checks odd or even parity is manufacturer-specific by design —
@@ -2223,7 +2259,7 @@ means recoverable using only what this application could implement.
 | R8 | Beginning a download without the full payload resolved | `Start Loading` from `Loaded` immediately invalidates a working configuration (§5.4). If the data is then unavailable, the device stays invalid indefinitely — and the state is non-volatile, so power-cycling does not help. | Full re-download once the data exists |
 | R9 | Interrupting a download (network, crash, operator) | Part left in `Loading` or `Error` after restart (**[D]** RES Table 94 `Device Restart` row: from `Loading`, `R: Loading` / `O: Error`), invalid per Table 92, persistent per §4.23.1. | §9.1 recovery |
 | R10 | Treating `LoadCompleting` silence as failure and retrying | Writing load events at a device that is *"offline during state LoadCompleting"* (**[D]** RES Table 94 footnote). Per Table 94, `Start Loading` or `Load Completed` from `LoadCompleting` is `R: Error`. A correct device mid-checksum is driven into `Error` by the client's impatience. | Unload + re-download |
-| R11 | Writing to `60h` **at all** on a real device (§4.4) | Not a parity risk any more — §4.4 derives `p_parity` from RES §4.26.3.1 and §4.26.3.4.1 and computes it by inversion, so the octet this project would write is correct by construction — for the profiles RES §4.26.3 covers, which per PROF §4.4.1.1 do not include System B (§3.4, §4.4), making the byte's meaning on the intended target unsourced as well. The risk is the write itself. `0060h` is a **device-control** address in the `curr_prog_mode` region whose bits 1 to 6 are **[D]** RES §4.26.3.1 *"the shared bits"* of a Resource that *"may share its storage location with other data on the same memory location inside the device"*, where *"These other data may be different depending of the mask version of the device"* — therefore manufacturer- and mask-specific: a one-octet write there is a read-modify-write of somebody else's state, racing whatever the device's own firmware does to those bits, and a wrong or stale octet is **[D]** RES §4.26.3.3 *"manufacturer specific"* in its reaction — footnote 96: *"Typically the system is restarted if p_parity is invalid."* Knowing how to build the byte removed the accidental protection that ignorance provided, so the prohibition is now an explicit decision rather than a side effect of a gap. | Unknown, which is why the write half of `DM_ProgMode_Switch` stays inside §2.3's mutation API, out of phase 3 entirely, and simulator-only in phase 2 |
+| R11 | Writing to `60h` **at all** on a real device (§4.4) | Not a parity risk any more — §4.4 derives `p_parity` from RES §4.26.3.1 and §4.26.3.4.1 and computes it by inversion, so the octet this project would write is correct by construction — for the profiles RES §4.26.3 covers, which per PROF §4.4.1.1 do not include System B on its mandatory connection-oriented path and per §4.4.1.2 include it only optionally (§3.4, §4.4), making the byte's meaning on the intended target unsourced as well. The risk is the write itself. `0060h` is a **device-control** address in the `curr_prog_mode` region whose bits 1 to 6 are **[D]** RES §4.26.3.1 *"the shared bits"* of a Resource that *"may share its storage location with other data on the same memory location inside the device"*, where *"These other data may be different depending of the mask version of the device"* — therefore manufacturer- and mask-specific: a one-octet write there is a read-modify-write of somebody else's state, racing whatever the device's own firmware does to those bits, and a wrong or stale octet is **[D]** RES §4.26.3.3 *"manufacturer specific"* in its reaction — footnote 96: *"Typically the system is restarted if p_parity is invalid."* Knowing how to build the byte removed the accidental protection that ignorance provided, so the prohibition is now an explicit decision rather than a side effect of a gap. | Unknown, which is why the write half of `DM_ProgMode_Switch` stays inside §2.3's mutation API, out of phase 3 entirely, and simulator-only in phase 2 |
 | R12 | Polling the load state faster than the spec allows, or not reconnecting | **[D]** RES §4.23.2.4.1 caps the read period at 3 s and requires periodic reconnection. Too-fast polling loads the bus during a download; failing to reconnect makes a legitimate long transition look like a failure, which leads to R10. | Fix the client |
 | R13 | Skipping the Manufacturer ID check (CP §3.5.2 step 04) | One manufacturer's application downloaded into another's device. The Standard puts this check before any write for exactly this reason. Outcome is undefined and device-specific. | Unload + correct download, if the device still communicates |
 | R14 | Assuming programming mode is still on (§4.3) | The write is ignored (AL §3.2.2, no negative response), the operator believes the address was programmed, and the project's model of the installation diverges from the installation. Silent, and discovered later at the worst moment. | Re-run §4.2 |
@@ -2359,8 +2395,11 @@ the expected outcome is that there will be some.
   is **out of scope for phase 3**. The toggle's *read* half — one octet from
   `0060h` — is read-only and therefore allowed in phase 3, but only inside
   §2.2's approved range, and only as a **raw octet whose meaning is unsourced for
-  a System B mask** **[A]**: RES §4.26.3's "Used by" list does not name System B
-  and PROF §4.4.1.1 assigns System B to Realisation Type 1 instead (§3.4, §4.4).
+  a System B mask** **[A]**: RES §4.26.3's "Used by" list does not name System B,
+  PROF §4.4.1.1 assigns System B to Realisation Type 1 for the connection-oriented
+  path, and PROF §4.4.1.2 makes the connectionless path — which *is* profiled onto
+  RES §4.26.3 — optional for System B, so the octet's meaning is unestablished
+  rather than excluded (§3.4, §4.4).
   §13 R11 carries the risk; §12 records why it is no longer a documentation gap.
 - **No product-database schema change** is specified here. RESEARCH §8.6.5's
   parsing addition (storing `Options`, `LoadProcedures` and `LdCtrl*`) remains

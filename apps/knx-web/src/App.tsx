@@ -6,7 +6,11 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { Selection } from "./selection";
 import ProjectExplorer from "./ProjectExplorer";
-import Inspector from "./Inspector";
+import ResizablePane from "./ResizablePane";
+import WorkbenchIcon from "./WorkbenchIcon";
+import StructureWorkspace, { type StructureView } from "./StructureWorkspace";
+import CatalogBrowser from "./CatalogBrowser";
+import Inspector, { DeviceWorkspace } from "./Inspector";
 import Search from "./Search";
 import CommandPalette from "./CommandPalette";
 import type { CommandContext } from "./commandRegistry";
@@ -14,6 +18,7 @@ import SettingsPanel from "./SettingsPanel";
 import Dashboard from "./Dashboard";
 import LogPanel from "./LogPanel";
 import BusMonitorPanel from "./BusMonitorPanel";
+import { useAppearance } from "./appearance";
 import { THEMES, useThemeId } from "./theme";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
 import { useProductLanguage } from "./productLanguage";
@@ -87,7 +92,13 @@ function App() {
   const [logOpen, setLogOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [view, setView] = useState<"overview" | StructureView>("overview");
+  const [buildingScope, setBuildingScope] = useState<number | null>(null);
+  const [navigationOpen, setNavigationOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [catalogTarget, setCatalogTarget] = useState<{ lineId: number | null } | null>(null);
   const [themeId, setThemeId] = useThemeId();
+  const appearance = useAppearance();
   const { level: motionLevel, setLevel: setMotionLevel, style: motionStyle, setStyle: setMotionStyle } = useMotion();
   const [productLanguage, setProductLanguage] = useProductLanguage();
   // `[]` both before the fetch resolves and if it fails — SettingsPanel
@@ -136,6 +147,7 @@ function App() {
         return;
       }
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return;
+      if (e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
       e.preventDefault();
       if (e.shiftKey) {
         if (tree?.can_redo) void redo();
@@ -157,6 +169,7 @@ function App() {
 
   function resetTree(newTree: ProjectTree) {
     setTree(newTree);
+    setBuildingScope(null);
     selectionRef.current = null;
     setSelection(null);
     setDeviceDetail(null);
@@ -165,6 +178,14 @@ function App() {
   async function selectEntity(sel: Selection) {
     selectionRef.current = sel;
     setSelection(sel);
+    if (sel.kind === "building_part") {
+      setBuildingScope(sel.id);
+      setView("buildings");
+    } else if (sel.kind === "area" || sel.kind === "line") {
+      setView("topology");
+    } else if (sel.kind === "group_address" || sel.kind === "group_range") {
+      setView("addresses");
+    }
     setLogOpen(false);
     setMonitorOpen(false);
     clearErrors();
@@ -375,12 +396,14 @@ function App() {
   };
 
   return (
-    <main>
+    <main className="workbench">
+      <header className="workbench-toolbar">
+        <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><span className="brand-mark">K</span><strong>KNXBench</strong></a>
+        <details className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
+          <summary>{t("workbench.file")} <span aria-hidden="true">⌄</span></summary>
+          <div className="file-menu-content">
       <button onClick={pickProject}>{t("toolbar.openProject")}</button>
       <button onClick={openNativeProject}>{t("toolbar.openNativeProject")}</button>
-      <button onClick={saveProject} disabled={!tree}>
-        {t("toolbar.save")}
-      </button>
       <button onClick={saveProjectAs} disabled={!tree}>
         {t("toolbar.saveAs")}
       </button>
@@ -401,102 +424,57 @@ function App() {
         onClearErrors={clearErrors}
       />
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
-      <button onClick={undo} disabled={!tree?.can_undo}>
-        {t("toolbar.undo")}
-      </button>
-      <button onClick={redo} disabled={!tree?.can_redo}>
-        {t("toolbar.redo")}
-      </button>
-      <button onClick={() => tree && setSearchOpen(true)} disabled={!tree}>
-        {t("toolbar.search")}
-      </button>
-      {/* Enabled with no project open: `GET /api/log` deliberately works
-          then too (routes.rs), specifically so a failed import with
-          nothing loaded still leaves an inspectable trail
-          (KNOWN_LIMITATIONS.md #36, part A). */}
-      <button
-        onClick={() => {
-          setMonitorOpen(false);
-          setLogOpen((open) => !open);
-        }}
-      >
-        {t("toolbar.log")}
-      </button>
-      {/* Also enabled with no project open, same reasoning as the Log
-          button above: the bus monitor talks straight to a KNXnet/IP
-          gateway (`apps/knx-server/src/bus_routes.rs`), not to the open
-          project — a project only supplies group-address names and DPTs
-          for decoding, so with none open the table still works, it just
-          shows raw addresses and undecoded/`unresolved` rows
-          (KNOWN_LIMITATIONS.md #36, part A, same slot the Log panel
-          uses). */}
-      <button
-        onClick={() => {
-          setLogOpen(false);
-          setMonitorOpen((open) => !open);
-        }}
-      >
-        {t("toolbar.busMonitor")}
-      </button>
-      <button
-        onClick={() => {
-          setSearchOpen(false);
-          setPaletteOpen(true);
-        }}
-      >
-        {t("toolbar.commands")}
-      </button>
-      {/* Theme, motion style and motion level all live behind this one
-          gear button (design D32) instead of a toolbar that grows a new
-          bare `<select>` per setting — see SettingsPanel.tsx. */}
-      <button onClick={() => setSettingsOpen(true)} title={t("toolbar.settings")} aria-label={t("toolbar.settings")}>
-        <GearIcon />
-      </button>
-      <ToastStack toasts={toasts} onDismiss={dismiss} />
-      {/* `ProjectExplorer` genuinely needs a project; `Inspector`/`Dashboard`
-          likewise. `LogPanel`/`BusMonitorPanel` alone do not
-          (KNOWN_LIMITATIONS.md #36, part A) — with no project open and
-          neither tab open, there is nothing for this slot to show, so it
-          stays unrendered same as before; with either tab open, that panel
-          is the only thing in here (they are mutually exclusive — opening
-          one closes the other, same slot). */}
-      {(tree || logOpen || monitorOpen) && (
-        <div className="workspace">
-          {tree && (
-            <ProjectExplorer
-              tree={tree}
-              selection={selection}
-              onSelect={selectEntity}
-              onTreeUpdate={handleTreeUpdate}
-            />
-          )}
-          {logOpen ? (
-            <LogPanel tree={tree} refreshKey={logVersion} />
-          ) : monitorOpen ? (
-            <BusMonitorPanel projectOpen={tree !== null} />
-          ) : (
-            tree &&
-            (selection ? (
-              <Inspector
-                key={`${selection.kind}-${selection.id}`}
-                selection={selection}
-                tree={tree}
-                deviceDetail={deviceDetail}
-                onApplied={handleTreeUpdate}
-                onDeleted={resetTree}
-              />
-            ) : (
-              <Dashboard tree={tree} />
-            ))
-          )}
+
+          </div>
+        </details>
+        <div className="history-actions">
+          <button onClick={undo} disabled={!tree?.can_undo} title={t("toolbar.undo")} aria-label={t("toolbar.undo")}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M8 4L3 9l5 5 M3 9h10a6 6 0 010 12" /></svg><span className="sr-only">{t("toolbar.undo")}</span></button>
+          <button onClick={redo} disabled={!tree?.can_redo} title={t("toolbar.redo")} aria-label={t("toolbar.redo")}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M16 4l5 5-5 5 M21 9h-10a6 6 0 000 12" /></svg><span className="sr-only">{t("toolbar.redo")}</span></button>
         </div>
-      )}
+        <button className="workbench-search" onClick={() => tree && setSearchOpen(true)} disabled={!tree}>{t("toolbar.search")}<kbd>Ctrl K</kbd></button>
+        <button className="command-entry" onClick={() => setPaletteOpen(true)}>{t("toolbar.commands")}</button>
+        <button className="primary-action" onClick={saveProject} disabled={!tree}>{t("toolbar.save")}</button>
+        <button onClick={() => setSettingsOpen(true)} title={t("toolbar.settings")} aria-label={t("toolbar.settings")}><GearIcon /></button>
+      </header>
+      <div className="workbench-panel-controls">
+        <button aria-expanded={navigationOpen} onClick={() => setNavigationOpen(!navigationOpen)}><WorkbenchIcon name="panel" />{t("workbench.navigation")}</button>
+        {tree && (tree.errors > 0 || tree.warnings > 0) && <button className="import-notice" onClick={() => { setView("overview"); setLogOpen(false); setMonitorOpen(false); }}>{t("workbench.importNotices", { errors: tree.errors, warnings: tree.warnings })}</button>}
+        <button aria-expanded={inspectorOpen} onClick={() => setInspectorOpen(!inspectorOpen)}>{t("workbench.properties")}<WorkbenchIcon name="panel" /></button>
+      </div>
+      <div className="workspace workbench-body">
+        {navigationOpen && <ResizablePane label={t("workbench.navigation")} side="left" initialWidth={250} min={200} max={480}>
+          <nav className="workbench-navigation" aria-label={t("workbench.navigation")}>
+            {(["overview", "buildings", "topology", "addresses"] as const).map((item) => <button key={item} aria-current={!logOpen && !monitorOpen && view === item ? "page" : undefined} onClick={() => { setView(item); setLogOpen(false); setMonitorOpen(false); }}><WorkbenchIcon name={item} />{t(`workbench.${item}`)}</button>)}
+            <button onClick={() => setCatalogTarget({ lineId: selection?.kind === "line" ? selection.id : null })}><WorkbenchIcon name="catalog" />{t("workbench.catalog")}</button>
+          </nav>
+          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onTreeUpdate={handleTreeUpdate} />}
+          <nav className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")}>
+            <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen((open) => !open); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
+            <button aria-current={logOpen ? "page" : undefined} onClick={() => { setMonitorOpen(false); setLogOpen((open) => !open); }}><WorkbenchIcon name="log" />{t("toolbar.log")}</button>
+            <button onClick={() => setSettingsOpen(true)}><GearIcon />{t("toolbar.settings")}</button>
+          </nav>
+        </ResizablePane>}
+        <div className="workbench-center">
+          {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusMonitorPanel projectOpen={tree !== null} /> : tree ? (
+            view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope} onSelect={selectEntity} onCatalog={(lineId) => setCatalogTarget({ lineId })} />
+          ) : <section className="welcome-workspace"><span className="eyebrow">KNX-compatible · Linux-first</span><h1>{t("workbench.welcome")}</h1><p>{t("workbench.openHint")}</p><div><button onClick={pickProject}>{t("toolbar.openProject")}</button><button onClick={openNativeProject}>{t("toolbar.openNativeProject")}</button></div></section>}
+          {tree && selection?.kind === "device" && deviceDetail && !logOpen && !monitorOpen && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
+        </div>
+        {inspectorOpen && !logOpen && !monitorOpen && <ResizablePane label={t("workbench.properties")} side="right" initialWidth={360} min={280} max={700}>
+          <header className="inspector-heading">{t("workbench.properties")}</header>
+          {tree && selection ? <Inspector propertiesOnly key={`${selection.kind}-${selection.id}`} selection={selection} tree={tree} deviceDetail={deviceDetail} onApplied={handleTreeUpdate} onDeleted={resetTree} /> : <p className="inspector-empty">{t("workbench.noSelection")}</p>}
+        </ResizablePane>}
+      </div>
+      <footer className="workbench-status"><span>{tree ? tree.installations.map((i) => i.name).join(" / ") : "KNXBench"}</span><span>KNX-compatible</span></footer>
+      <ToastStack toasts={toasts} onDismiss={dismiss} />
+      {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} onCreated={handleTreeUpdate} onClose={() => setCatalogTarget(null)} />}
       {tree && searchOpen && (
         <Search tree={tree} onSelect={selectEntity} onClose={() => setSearchOpen(false)} />
       )}
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
       {settingsOpen && (
         <SettingsPanel
+          appearance={appearance}
           themes={THEMES}
           activeThemeId={themeId}
           onSelectTheme={setThemeId}

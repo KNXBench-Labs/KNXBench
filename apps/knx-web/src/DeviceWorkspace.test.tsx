@@ -10,7 +10,7 @@ import type { ProductResolution } from "./bindings/ProductResolution";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { messages as germanMessages } from "./messages/de";
 import { messages as englishMessages } from "./messages/en";
-const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }), setComObjectDpt: vi.fn() }));
+const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }), setComObjectDpt: vi.fn(), setParameterValue: vi.fn() }));
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
 import { DeviceWorkspace } from "./Inspector";
 
@@ -59,6 +59,68 @@ it("keeps communication editing and parameters reachable in the central device t
   await act(async () => tabs[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
   expect(tabs[0].getAttribute("aria-selected")).toBe("true");
   await cleanup();
+});
+
+// T3: closes the goal.md §6 item 6 parked finding. Before the fix,
+// `ParameterPanel` had no way to tell its caller a write had landed at
+// all, so `onApplied` was never called for this edit path — asserting
+// merely that `api.setParameterValue` was called would have passed on the
+// broken code too, since that call was never the missing half.
+function committableField() {
+  return {
+    etsId: "P1", name: "Field A", text: null, kind: "Number", value: "5",
+    valueSource: "Stored", editable: true, min: null, max: null, enumOptions: [],
+    displayOrder: null, access: null, writeEtsId: "P1",
+  };
+}
+
+function setNumberInputValue(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+  setter.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+it("publishes a committed parameter edit to onApplied, not just to api.setParameterValue (T3)", async () => {
+  api.deviceParameters.mockResolvedValueOnce({
+    programId: "PROG-1",
+    sections: [{ scope: null, fields: [committableField()] }],
+    stale: [],
+    diagnostics: [],
+  });
+  api.setParameterValue.mockResolvedValueOnce({
+    programId: "PROG-1",
+    sections: [{ scope: null, fields: [{ ...committableField(), value: "6" }] }],
+    stale: [],
+    diagnostics: [],
+  });
+  const onApplied = vi.fn();
+  const host2 = document.createElement("div");
+  document.body.append(host2);
+  const root2 = createRoot(host2);
+  await act(async () => {
+    root2.render(<DeviceWorkspace detail={detail(NO_REFERENCE)} tree={tree} onApplied={onApplied} />);
+  });
+  const tabs2 = [...host2.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+  await act(async () => tabs2[1].click());
+
+  const input = host2.querySelector<HTMLInputElement>('input[type="number"]')!;
+  await act(async () => {
+    setNumberInputValue(input, "6");
+    input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    await Promise.resolve();
+  });
+
+  // The call alone is not the fix — the hole was that `onApplied` never
+  // ran, so `App.tsx`'s tree-publish effect never fired either.
+  expect(api.setParameterValue).toHaveBeenCalledWith(9, "P1", "6", null);
+  expect(onApplied).toHaveBeenCalledTimes(1);
+  // `CommandStack::do_command` (`command.rs`) always pushes onto `undo`
+  // and clears `redo`, so this is what actually happened server-side, not
+  // an invented value; `tree`'s other fields survive untouched.
+  expect(onApplied).toHaveBeenCalledWith({ ...tree, can_undo: true, can_redo: false });
+
+  await act(async () => root2.unmount());
+  host2.remove();
 });
 
 it("moves both ways with the arrow keys and reaches the last tab with End", async () => {

@@ -103,7 +103,8 @@ function treeWithDevice(): ProjectTree {
 }
 
 function deviceDetailFixture(): DeviceDetail {
-  return { id: 42, name: "Device D", description: null, address: null, com_objects: [] };
+  return { id: 42, name: "Device D", description: null, address: null, com_objects: [],
+    product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" } };
 }
 
 function entry(overrides: Partial<LogEntry>): LogEntry {

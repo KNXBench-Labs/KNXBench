@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import * as api from "./api";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
+import type { DeviceProductNode } from "./bindings/DeviceProductNode";
+import type { DeviceProductCatalog } from "./bindings/DeviceProductCatalog";
+import type { ProductResolution } from "./bindings/ProductResolution";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { AreaNode } from "./bindings/AreaNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
@@ -510,6 +513,153 @@ function BuildingPartMoveField(props: {
   );
 }
 
+// T16's four `ProductResolution` variants, each with its own badge word and
+// its own sentence. Kept as a map rather than a chain of ternaries so the
+// compiler catches a fifth variant arriving in `bindings/ProductResolution.ts`
+// instead of it quietly falling through to whatever the last `else` said —
+// which is exactly the "bare unknown" the brief forbids. `Resolved` is the
+// one variant with no sentence: the catalogue below says everything.
+const RESOLUTION_KEYS: Record<ProductResolution, { badge: MessageKey; explain: MessageKey | null }> = {
+  Resolved: { badge: "deviceIdentity.resolution.resolved", explain: null },
+  NoDatabase: { badge: "deviceIdentity.resolution.noDatabase", explain: "deviceIdentity.explain.noDatabase" },
+  NotInDatabase: { badge: "deviceIdentity.resolution.notInDatabase", explain: "deviceIdentity.explain.notInDatabase" },
+  NoReference: { badge: "deviceIdentity.resolution.noReference", explain: "deviceIdentity.explain.noReference" },
+};
+
+// The three fields that answer "which product is this" on sight. They stay
+// above the fold next to the refs; everything else lives behind the
+// disclosure below, so a fully resolved device does not push the
+// communication object table off the screen to say so.
+const HEADLINE_FIELDS: CatalogField[] = [
+  { label: "deviceIdentity.manufacturer", of: (c) => c.manufacturer_name },
+  { label: "deviceIdentity.productText", of: (c) => c.product_text },
+  { label: "deviceIdentity.orderNumber", of: (c) => c.order_number, mono: true },
+];
+
+// The remaining catalogue fields, grouped the way an engineer asks for them:
+// which product entry, which physical hardware, which application program.
+// `mono: true` marks the identifier-shaped fields (order numbers, program
+// ids, versions) — prose names stay in the body face so they don't read
+// like codes.
+type CatalogField = { label: MessageKey; of: (c: DeviceProductCatalog) => string | null; mono?: boolean };
+
+const CATALOG_GROUPS: { title: MessageKey; fields: CatalogField[] }[] = [
+  { title: "deviceIdentity.group.product", fields: [
+    { label: "deviceIdentity.manufacturerId", of: (c) => c.manufacturer_id, mono: true },
+    { label: "deviceIdentity.catalogItemName", of: (c) => c.catalog_item_name },
+    { label: "deviceIdentity.catalogItemNumber", of: (c) => c.catalog_item_number, mono: true },
+  ] },
+  { title: "deviceIdentity.group.hardware", fields: [
+    { label: "deviceIdentity.hardwareName", of: (c) => c.hardware_name },
+    { label: "deviceIdentity.hardwareVersion", of: (c) => c.hardware_version, mono: true },
+    { label: "deviceIdentity.hardwareSerial", of: (c) => c.hardware_serial_number, mono: true },
+  ] },
+  { title: "deviceIdentity.group.application", fields: [
+    { label: "deviceIdentity.applicationName", of: (c) => c.application_name },
+    { label: "deviceIdentity.applicationNumber", of: (c) => c.application_number, mono: true },
+    { label: "deviceIdentity.applicationVersion", of: (c) => c.application_version, mono: true },
+    { label: "deviceIdentity.applicationProgramId", of: (c) => c.application_program_id, mono: true },
+    { label: "deviceIdentity.maskVersion", of: (c) => c.mask_version, mono: true },
+  ] },
+];
+
+type IdentityRowData = { label: MessageKey; value: string; mono?: boolean };
+
+/** The fields of `group` that the database actually filled, in declared order. */
+function presentRows(fields: CatalogField[], catalog: DeviceProductCatalog): IdentityRowData[] {
+  return fields.flatMap((f) => {
+    const value = f.of(catalog);
+    return value === null ? [] : [{ label: f.label, value, mono: f.mono }];
+  });
+}
+
+function IdentityFields(props: { rows: IdentityRowData[]; t: Translate }) {
+  return <dl className="identity-fields">
+    {props.rows.map((row) => (
+      <div className="identity-row" key={row.label}>
+        <dt>{props.t(row.label)}</dt>
+        <dd className={row.mono ? "mono" : undefined}>{row.value}</dd>
+      </div>
+    ))}
+  </dl>;
+}
+
+/**
+ * The device's product identity (T16), shown above the workspace tabs so it
+ * stays legible while the user works in communication objects or parameters.
+ *
+ * `product_ref`/`program_ref` are printed verbatim in monospace — they are
+ * ETS identifiers, and an engineer comparing one against a manufacturer
+ * package needs the exact string, not a prettified one. The catalogue half
+ * is only ever rendered from a real `catalog`: a `Resolved` verdict with no
+ * catalogue behind it (which the server never produces, but the generated
+ * type permits) says so in words rather than rendering as a resolved device
+ * with a suspiciously empty field list.
+ *
+ * Fields the product database has no value for are omitted rather than
+ * printed as dashes, and the count of omissions is stated at the bottom of
+ * the disclosure — a partially-installed manufacturer catalogue is valid
+ * database state, and the user should be able to tell "the database is
+ * silent here" from "this view only shows six fields".
+ */
+function DeviceIdentity(props: { product: DeviceProductNode }) {
+  const { product_ref, program_ref, catalog, resolution } = props.product;
+  const t = useTranslate();
+  // Unknown variants cannot arise from the generated union, but a stale
+  // build talking to an older/newer server shouldn't render a blank badge.
+  const copy = RESOLUTION_KEYS[resolution] ?? RESOLUTION_KEYS.NoReference;
+
+  // `NoReference` means both refs are empty at the source, so there is
+  // nothing to print verbatim — the sentence says that once instead of two
+  // rows each saying it again.
+  // The monospace face is for the ref itself; the "not stated" placeholder is
+  // prose, and setting it in mono would make an absence look like a value.
+  const ref = (label: MessageKey, value: string | null): IdentityRowData =>
+    value === null
+      ? { label, value: t("deviceIdentity.refNotStated") }
+      : { label, value, mono: true };
+  const headline: IdentityRowData[] = resolution === "NoReference" ? [] : [
+    ref("deviceIdentity.productRef", product_ref),
+    ref("deviceIdentity.programRef", program_ref),
+    ...(catalog ? presentRows(HEADLINE_FIELDS, catalog) : []),
+  ];
+  const groups = catalog
+    ? CATALOG_GROUPS.map((group) => ({ title: group.title, rows: presentRows(group.fields, catalog), total: group.fields.length }))
+    : [];
+  // Every catalogue field the database left null, counted across the headline
+  // and the groups alike. The two ref rows are not catalogue fields, so they
+  // are excluded from both sides of the subtraction.
+  const catalogFields = HEADLINE_FIELDS.length + CATALOG_GROUPS.reduce((n, g) => n + g.fields.length, 0);
+  const shownFields = (headline.length - 2) + groups.reduce((n, g) => n + g.rows.length, 0);
+  const omitted = catalog ? catalogFields - shownFields : 0;
+
+  return <section className="device-identity" aria-label={t("deviceIdentity.title")}>
+    <div className="device-identity-head">
+      <h3>{t("deviceIdentity.title")}</h3>
+      <span className="resolution-badge" data-resolution={resolution}>{t(copy.badge)}</span>
+    </div>
+    {headline.length > 0 && <IdentityFields rows={headline} t={t} />}
+    {copy.explain && <p className="identity-note">{t(copy.explain)}</p>}
+    {resolution === "Resolved" && !catalog && (
+      <p className="identity-note">{t("deviceIdentity.explain.resolvedWithoutCatalog")}</p>
+    )}
+    {catalog && (
+      <details className="identity-more">
+        <summary>{t("deviceIdentity.more")}</summary>
+        {groups.map((group) => (
+          <div className="identity-group" key={group.title}>
+            <h4>{t(group.title)}</h4>
+            {group.rows.length === 0
+              ? <p className="identity-note">{t("deviceIdentity.groupEmpty")}</p>
+              : <IdentityFields rows={group.rows} t={t} />}
+          </div>
+        ))}
+        {omitted > 0 && <p className="identity-note">{t("deviceIdentity.omitted", { count: omitted })}</p>}
+      </details>
+    )}
+  </section>;
+}
+
 export function DeviceWorkspace(props: {
   detail: DeviceDetail; tree: ProjectTree; onApplied: (tree: ProjectTree) => void;
 }) {
@@ -519,6 +669,7 @@ export function DeviceWorkspace(props: {
   const [tab, setTab] = useState(0);
   return <section className="device-workspace">
     <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div></header>
+    <DeviceIdentity product={detail.product} />
     <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
       e.preventDefault(); const next = e.key === "Home" ? 0 : e.key === "End" ? 1 : 1 - tab;

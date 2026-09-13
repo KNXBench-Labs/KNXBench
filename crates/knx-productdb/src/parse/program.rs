@@ -578,6 +578,28 @@ mod tests {
         );
     }
 
+    /// The defect this task fixes, at the level it was measured: schema
+    /// 20/21 write `Linkable="false"`, and `bool_flag` used to fall through
+    /// its `_ => None` arm on that spelling, storing `NULL` even though the
+    /// attribute was present. It must land as `0`.
+    #[test]
+    fn linkable_false_is_stored_as_zero_not_null() {
+        let (_dir, conn) = db();
+        let xml = PROGRAM.replace(
+            "Hash=\"Dyd1CfXJEmqKsHKWZeApTA==\"",
+            "Hash=\"Dyd1CfXJEmqKsHKWZeApTA==\" Linkable=\"false\"",
+        );
+        ingest_program(&conn, "sha-1", "M-006A/A.xml", xml.as_bytes()).unwrap();
+        let linkable: Option<i64> = conn
+            .query_row(
+                "SELECT linkable FROM application_program WHERE id = ?1",
+                ["M-006A_A-0001-22-26C0-O0079"],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(linkable, Some(0));
+    }
+
     #[test]
     fn a_restriction_type_stores_its_enumeration_values() {
         let (_dir, conn) = db();

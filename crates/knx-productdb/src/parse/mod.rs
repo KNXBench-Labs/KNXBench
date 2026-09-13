@@ -29,12 +29,48 @@ pub(crate) fn report_unknown_attrs(
     }
 }
 
-/// `"1"`/`"0"` as SQLite integers; anything else stays `None` rather than
-/// being guessed into a boolean.
+/// `"1"`/`"0"` and `xs:boolean`'s other canonical spelling, `"true"`/`"false"`,
+/// as SQLite integers; anything else stays `None` rather than being guessed
+/// into a boolean. `"false"` earned its place here because schema 20/21
+/// write `Linkable="false"`, and that is not unknown text, it is the
+/// datatype's own lexical form — so `"True"`, `"yes"` and `"-1"` still stay
+/// `None`, uppercase and synonyms included.
 pub(crate) fn bool_flag(a: &Attrs, name: &str) -> Option<i64> {
     match a.get(name) {
-        Some("1") => Some(1),
-        Some("0") => Some(0),
+        Some("1") | Some("true") => Some(1),
+        Some("0") | Some("false") => Some(0),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quick_xml::events::Event;
+    use quick_xml::Reader;
+
+    fn attrs_from(xml: &str) -> Attrs {
+        let mut r = Reader::from_reader(xml.as_bytes());
+        let mut buf = Vec::new();
+        let start = match r.read_event_into(&mut buf).unwrap() {
+            Event::Empty(e) => e,
+            other => panic!("expected an empty element, got {other:?}"),
+        };
+        crate::xml::attrs(&start, "t.xml").unwrap()
+    }
+
+    #[test]
+    fn all_four_xs_boolean_spellings_are_recognised() {
+        assert_eq!(bool_flag(&attrs_from(r#"<E F="1"/>"#), "F"), Some(1));
+        assert_eq!(bool_flag(&attrs_from(r#"<E F="0"/>"#), "F"), Some(0));
+        assert_eq!(bool_flag(&attrs_from(r#"<E F="true"/>"#), "F"), Some(1));
+        assert_eq!(bool_flag(&attrs_from(r#"<E F="false"/>"#), "F"), Some(0));
+    }
+
+    #[test]
+    fn capitalised_or_absent_spellings_stay_none() {
+        assert_eq!(bool_flag(&attrs_from(r#"<E F="True"/>"#), "F"), None);
+        assert_eq!(bool_flag(&attrs_from(r#"<E F=""/>"#), "F"), None);
+        assert_eq!(bool_flag(&attrs_from(r#"<E/>"#), "F"), None);
     }
 }

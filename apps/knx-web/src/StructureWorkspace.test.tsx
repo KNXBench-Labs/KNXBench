@@ -1,3 +1,4 @@
+/** Tests for the structure workspace's topology selection, nesting, and room device table. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

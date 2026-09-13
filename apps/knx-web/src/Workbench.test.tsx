@@ -1,3 +1,4 @@
+/** Tests for the workbench's keyboard pane resizing and its width clamping. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

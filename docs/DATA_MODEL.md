@@ -274,7 +274,8 @@ also the six `BuildingPartType` variants, which is fewer than the schema
 documents: *Project Schema23 v01.00.00* §1.1.2.3 enumerates ten and §1.2.6.4
 names eleven, so `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` are
 coarsened to `BuildingPart` on import, with a reported `MapProblem` rather
-than silently ([KNOWN_LIMITATIONS.md §89](KNOWN_LIMITATIONS.md)).
+than silently
+([KNOWN_LIMITATIONS.md §89](KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import)).
 
 **A device without a line is valid** and lives in `Topology::unassigned`. The
 reference project contains exactly one, and it is precisely the device
@@ -292,8 +293,8 @@ inventory of all three reference projects — schema 11's
 none either, and the KNX Standard's own spatial model (3/10/3 *KNX IoT
 Information Model*) keeps geometry out of its location classes on purpose,
 referencing IFC instead. Graphical topology and building views therefore
-compute their layout at render time and persist nothing, which is the
-projection rule of [ADR-0009](adr/0009-ui-boundary.md). ADR-0019 also
+compute their layout at render time and persist nothing, consistent with
+[ADR-0009](adr/0009-ui-boundary.md). ADR-0019 also
 pre-commits the shape of a later spatial layer — separate `FloorPlan` and
 `Placement` entities in their own tables, integer millimetres, origin at the
 plan's own top-left, no `z` — so that it cannot be bolted onto these

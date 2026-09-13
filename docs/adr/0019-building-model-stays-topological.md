@@ -36,8 +36,8 @@ its ~30 attributes: addresses, load flags, checksums, APDU lengths, a
 A `grep -niE "coordinate|geometr|floor.?plan"` over the whole document's
 `pdftotext -layout` output returns zero hits, as does `grep -ciE "\bplan\b"`.
 The only length quantity anywhere in the format's vicinity is
-`Product/@WidthInMillimeter`, on rail-mounted products in some manufacturers'
-`Hardware.xml` — two of the five sampled carry it at all (e.g.
+`Product/@WidthInMillimeter`, on rail-mounted products — two of the five
+manufacturer `Hardware.xml` files sampled carry it at all (e.g.
 `WidthInMillimeter="1.4230000e+002"` next to `IsRailMounted="1"`), which is
 a product's DIN-rail width — a catalogue property of the hardware, not a
 placement of an instance.
@@ -63,12 +63,13 @@ values — `Building`, `BuildingPart`, `Floor`, `Stairway`, `Room`,
 `Corridor`, `DistributionBoard`, `Area`, `Ground`, `Segment` — and §1.2.6.4's
 own prose for `Space_t/@Type` adds a contradictory eleventh, `RoomPart`,
 which §1.1.2.3's own facet list does not contain — the document disagrees
-with itself about that one value, and this ADR resolves nothing about it. Even `Ground`,
-the one value that is unmistakably about a site rather than a structure,
-carries no extent. (Five of those eleven have no `BuildingPartType` variant
+with itself about that one value, and this ADR resolves nothing about it.
+Even `Ground`, the one value that is unmistakably about a site rather than
+a structure, carries no extent. (Five of those eleven have no
+`BuildingPartType` variant
 here and are coarsened on import; that is a separate defect, recorded on the
-way past as [KNOWN_LIMITATIONS.md §89](../KNOWN_LIMITATIONS.md), not a
-coordinate question.)
+way past as [KNOWN_LIMITATIONS.md §89](../KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import),
+not a coordinate question.)
 
 ### E3 — the only places a third party could hide a plan are declared out of scope
 
@@ -108,23 +109,26 @@ the model that owns its shape.
 
 Across the whole 179-document extraction of the KNX Standard, "floor plan",
 "floorplan", "site plan", "DXF" and "gbXML" appear in zero documents, and
-the only "coordinate" in the Standard is a colour coordinate (`DPT_Colour_xyY`'s
-x-axis/y-axis, 3/7/2 *Datapoint Types* v02.02.01). Most "BIM" hits are Bus
-Interface Modules (9/4/2), not Building Information Modelling.
+the only "coordinate" in the Standard is a colour coordinate
+(`DPT_Colour_xyY`'s x-axis/y-axis, 3/7/2 *Datapoint Types* v02.02.01). 142
+of the corpus's 146 "BIM" hits (`pdftotext -layout`, whole-word) are Bus
+Interface Modules (9/4/2), not Building Information Modelling — the other 4
+are 3/10/3's own "Bridging to BIM" clause, cited above.
 
 ### What this evidence does not say
 
 It does not say ETS 5/6 has no floor-plan feature in its own database or in
 a paid ETS App; it says no such data appears in an exported `.knxproj` at
-schema 11, 21 or 23, and that schema 23's published schema has nowhere to put it. E1 rests on one
-document, covering project data only: *Project Schema23 v01.00.00* types the
-Project, General, Topology, Device Data, Building Structure, Group Address
-and SplitInfo sections and does **not** type `ManufacturerData` — there is no
-`Hardware_t` or `Product_t` section in it, which is why
-`Product/@WidthInMillimeter` below had to be read out of the project files
-rather than the schema. No `.xsd` exists anywhere in this repository or in
-`knx-spec-kb`, so this PDF is the only published-schema source there is, and
-E2's archive inventory stands in for the manufacturer side.
+schema 11, 21 or 23, and that schema 23's published schema has nowhere to
+put it. E1 rests on one document, covering project data only: *Project
+Schema23 v01.00.00* types the Project, General, Topology, Device Data,
+Building Structure, Group Address and SplitInfo sections and does **not**
+type `ManufacturerData` — there is no `Hardware_t` or `Product_t` section
+in it, which is why `Product/@WidthInMillimeter` in E1 had to be read out
+of the project files rather than the schema. No KNX project-schema `.xsd`
+exists anywhere in this repository or in `knx-spec-kb`, so this PDF is the
+only published-schema source there is, and E2's archive inventory stands in
+for the manufacturer side.
 It also does not cover schema 12-14, 20 or 22, for which no sample exists
 ([KNOWN_LIMITATIONS.md §1](../KNOWN_LIMITATIONS.md)). If a coordinate
 attribute exists in one of those, this ADR's *evidence* changes but its
@@ -155,19 +159,27 @@ to build it open:
   asset (raster, or a single-page vector) held as a blob with its declared
   real-world extent in millimetres — and a `Placement` binding a
   `BuildingPartId` or a `DeviceId` to a `(FloorPlanId, x_mm, y_mm,
-  rotation_mdeg)`. Nothing is added to `BuildingPart` or `Device`.
-- **Units: integer millimetres, and millidegrees for rotation.** Integers
-  because equality, diff and round-trip must stay deterministic
-  ([ADR-0007](0007-roundtrip-fidelity.md)); millimetres because it is the
-  only length unit the format itself uses anywhere
-  (`Product/@WidthInMillimeter`, E1).
+  rotation_mdeg)`. Nothing is added to `BuildingPart` or `Device`. A
+  `FloorPlan` does not itself record which `BuildingPart` it depicts; that
+  association is deferred to the follow-up ADR along with the decision to
+  build the layer at all. This pre-commitment also covers point placement
+  only — pinning a device or a building part's label to a location on a
+  plan — and defers a building part's extent or outline to that same
+  follow-up ADR; a `Placement` names where a point sits, not the shape of
+  a room.
+- **Units: integer millimetres, and millidegrees for rotation, clockwise
+  positive in the y-down frame.** Integers because equality, diff and
+  round-trip must stay deterministic ([ADR-0007](0007-roundtrip-fidelity.md));
+  millimetres because it is the only length unit the format itself uses
+  anywhere (`Product/@WidthInMillimeter`, E1).
 - **Origin: per plan, at the plan asset's own top-left corner, x right, y
   down.** Not a site datum and not geographic. Nothing in a `.knxproj`
   supplies either, and a surveyed origin KNXBench cannot obtain is a fact
   we would be inventing.
-- **No z coordinate.** Floors are already a level of the hierarchy;
-  an elevation field would be a second, disagreeing representation of the
-  same thing.
+- **No z coordinate.** A `Placement` carries a `FloorPlanId`, so elevation
+  is implied by which plan a point sits on; floors are also already a
+  level of the hierarchy, and an elevation field would be a second,
+  disagreeing representation of the same thing.
 - **A floor plan is imported, never drawn.** KNXBench is not becoming a
   CAD tool; the plan is someone else's artefact, positioned and scaled, and
   the KNX Standard's own bridging model (E4) points the same way.
@@ -193,9 +205,9 @@ the speculative abstraction `CLAUDE.md` forbids. It puts the value on the
 wrong object: a coordinate without a plan reference names no space, so
 "where is the device" is only answerable relative to a plan, and a bare
 `x`/`y` on the entity silently assumes one
-([DATA_MODEL.md §5](../DATA_MODEL.md)). And it costs a store migration plus a frozen
-fixture ([DATA_MODEL.md §11](../DATA_MODEL.md)) for a field every imported
-project leaves empty.
+([DATA_MODEL.md §5](../DATA_MODEL.md)). And it costs a store migration plus
+a frozen fixture ([DATA_MODEL.md §11](../DATA_MODEL.md)) for a field every
+imported project leaves empty.
 
 Note what this argument is *not*: it is not "ETS does not store
 coordinates, so we do not". Import formats must not dictate the internal
@@ -236,7 +248,7 @@ data belongs in the projection, recomputed ([ADR-0009](0009-ui-boundary.md)).
 fixture is frozen. This ADR is a recorded decision with no code change,
 which is the outcome it was allowed to have.
 
-**The future migration is additive and cannot fail open.** A `FloorPlan`
+**The future migration is constrained to be additive.** A `FloorPlan`
 plus `Placement` layer becomes store schema 7, two new tables and no
 altered column; existing projects migrate with zero rows, and zero rows is
 a valid project rather than a project missing something — unlike

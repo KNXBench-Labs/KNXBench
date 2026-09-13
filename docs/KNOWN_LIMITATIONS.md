@@ -2799,55 +2799,262 @@ generic no-authority diagnostic.
 `ModuleInstance/@Id` from the file and repopulates the column for every
 row.
 
-## 72. Line-scan (T17) is researched, not implemented, and an unthrottled scan is a live-bus hazard, not a theoretical one
+## 72. Line-scan (T17): an unthrottled scan is a live-bus cost, not a theoretical one — shipped 2026-09-13, still true
 
-**Limitation.** T17, bus-side device discovery, has a documented procedure
-([RESEARCH.md §8.5](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12))
-but no code. There is no way today to ask KNXBench "which individual
-addresses on this line have a device behind them." Anyone wanting that
-answer still has to fall back to ETS or another tool.
+**Limitation.** An unthrottled `knx bus scan` of a full line takes tens
+of minutes and holds a tunnelling connection open, connecting and
+disconnecting, for the whole run. This is not a bug to fix; it is the
+documented, measured cost of the KNX Standard's own
+`NM_IndividualAddress_Check` procedure, and it is why `bus scan` ships
+with pacing (`--pause-ms`, default 100 ms) and an exclusion list
+(`--exclude`) rather than a single "scan everything, fast" button.
 
-**Cause.** The procedure the Standard defines for this,
-`NM_IndividualAddress_Check` (`03_05_02 Management Procedures` §2.19), is
-connection-oriented: it needs `T_Connect`/`T_Disconnect` and numbered
-`T_Data_Connected` at the KNX bus-level Transport Layer. `crates/knx-net`
-does not have that layer yet — its TPCI encode/decode is hardcoded to
-connectionless, unnumbered mode, with no representation of `T_CONNECT`,
-`T_DISCONNECT`, or a per-target connection state machine. Building it is
-real, additive work inside `knx-net`, not a research gap.
+**Cause.** Two independent, additive costs, both **[D]**/**[V]**, not
+implementation slack: (1) each vacant address costs one Transport Layer
+connection timeout, fixed by the Standard at 6 s
+(`03_03_04 Transport Layer v01.02.03 AS`, clause 4, page 16 of 38 — see
+[RESEARCH.md §8.5, Finding 1](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
+for the correction of an earlier, wrong attribution of this cost to a
+client library's own policy choice); and (2) a real line is mostly
+vacant addresses, not mostly occupied ones, so the expensive case
+dominates the total, not the cheap one.
 
-**Impact.** Twofold. First, the obvious one: no line scan exists to use.
-Second, and the reason this is its own entry rather than a line in the
-roadmap: **an unthrottled implementation is dangerous on a live
-installation, not merely slow — and now measured, not merely
-estimated.** A controller full-line scan (2026-09-12, 254 addresses,
-one installation, one gateway, over a KNXnet/IP tunnelling connection,
-200 ms between probes, zero probe errors) found 35 addresses occupied
-and 219 vacant, and timed both: occupied probes 13.6-6016.5 ms (median
-121.1 ms), vacant probes 6275.9-6323.8 ms (median 6279.9 ms). Summed:
-**1 385.75 s ≈ 23.1 minutes** for the whole line. That figure replaces
-this entry's earlier 26-57 second extrapolation, which scaled from nine
-addresses that all happened to be occupied — a real line is mostly
-vacant, and vacant is the expensive case (~6.28 s per address, a client
-connection-timeout policy, not bus retry cost — see
-[RESEARCH.md §8.5, Finding 1](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12)),
-so the earlier number understated the hazard by roughly two orders of
-magnitude, not a rounding error. For the full 23 minutes, a scan
-competes with whatever else needs that line's bandwidth, including
-genuinely safety-relevant devices that share it.
+**Impact.** Two measurements exist, from two different points in time and
+two different implementations, and this entry keeps both distinguished
+rather than merging them into one number:
 
-The same scan surfaced two further findings an implementation must
-account for, both documented in RESEARCH.md §8.5 rather than repeated in
-full here: a scan can mistake KNXnet/IP tunnelling endpoints — including
-its own connection — for bus devices, distinguishable by their timing but
-reliably excluded only by the client knowing its own assigned address
-(Finding 2); and the scan's results disagreed with the reference
-project's device list in both directions, which is not a defect but the
-reason this capability is worth building at all (Finding 3).
+* **2026-09-12, pre-implementation, `xknx`** (full line, one
+  installation, one gateway, 200 ms pause, zero probe errors): 254
+  addresses probed, 35 occupied, 219 vacant. Occupied probes 13.6-6016.5
+  ms (median 121.1 ms); vacant probes 6275.9-6323.8 ms (median 6279.9
+  ms). Summed: **1 385.75 s ≈ 23.1 minutes** for the whole line.
+* **2026-09-13, this repository's own shipped binary**, on real
+  hardware: a five-address run of consecutive vacant addresses cost
+  6006 ms each, 30431 ms measured against a 30430 ms prediction — the
+  per-address cost from the 2026-09-12 measurement reproduces almost
+  exactly under this implementation's own `ProbePolicy::default()`. No
+  full-line run has been repeated against this implementation; the
+  23.1-minute figure above is the best full-line estimate available and
+  is carried forward, not re-derived.
 
-**Lifted when.** Implementation lands with, at minimum, a deliberately
-chosen timeout/pacing policy — the controller's measurement shows this
-is a real design decision, not a constant to copy from the Standard — and
-an installation-specific exclusion list that is honoured by construction:
-addresses to skip enumerated out of the scan range itself, in the domain
-layer, never filtered out afterward in the UI.
+For the duration of a full-line scan, it competes with whatever else
+needs that line's bandwidth, including genuinely safety-relevant devices
+that share it. This is why `bus scan`'s default timeout is anchored to
+the Standard's own 6 s connection timeout rather than shortened for
+speed — see [KNOWN_LIMITATIONS.md §75](#75-a-shorter---timeout-ms-is-a-real-option-but-not-the-default--a-slow-but-present-device-can-look-vacant) —
+and why an exclusion list is honoured by construction in the domain
+layer (`crates/knx-core/src/scan.rs`), not as a UI checkbox someone can
+forget to tick.
+
+**Lifted when.** It is not fully liftable — the Standard sets the 6 s
+figure, not this implementation — but the exposure shrinks as scans move
+from "whole line" to "known range plus known exclusions" in normal use,
+and if a future task adds concurrent probing across independent
+tunnelling connections (explicitly out of scope for T17, see the brief
+for this section) the wall-clock cost, though not the per-address bus
+cost, would fall.
+
+## 73. A line scan cannot learn product identity, manufacturer, or serial number
+
+**Limitation.** `knx bus scan` reports an address occupied or vacant and,
+when occupied, the responding device's Mask Version — nothing more. It
+cannot say which product is installed, who made it, or its serial
+number.
+
+**Cause.** `NM_IndividualAddress_Check`'s only application-layer step is
+`A_DeviceDescriptor_Read` with `descriptor_type = 0`, which returns DD0,
+the Mask Version — **[D]** *"Identification of an implementation, for
+operation like download, memory_write … In particular, the Mask Version
+is read through a dedicated Application Layer service by the S-Mode
+Management Client (ETS) to conclude on the Configuration Profile of the
+device and on possible further discovery and configuration steps"*
+(`03_01_02 Glossary v01.05.03 AS.md:236`). A Mask Version identifies an
+implementation family/coupler-medium class, not a product: **[D]**
+`06_02_01 Coupler Model 2.0 v01.01.01 AS` §1.5.2 notes many different
+coupler products deliberately share one Mask Version. Product identity,
+manufacturer, and serial number need a separate, additional
+connection-oriented read after the scan step — e.g. `A_PropertyValue_Read`
+on the Device Object (`object_index = 0`), `PID_SERIAL_NUMBER` (PID 11) —
+**[D]** `03_05_03 Configuration Procedures v02.01.01 AS.md:4797` and
+`03_06_03 EMI_IMI v01.04.02 AS.md:5074`. That step is not part of
+`NM_IndividualAddress_Check` and was explicitly out of scope for T17; it
+is T16's territory (device-catalog/product identity work).
+
+**Impact.** A scan's occupied/vacant list, and its Mask Version per
+occupied address, cannot by itself populate a topology view with product
+identity or resolve which manufacturer's device answered. A user
+reconciling a scan against a project still needs a second signal, or a
+manual lookup, to identify an undocumented device.
+
+**Lifted when.** T16 or a successor adds a `A_PropertyValue_Read` follow-up
+step per occupied address; whether every Mask Version a scan might
+encounter even supports Property services, versus only Memory-based
+access as some older masks do, is unverified and would need checking
+before that step could be relied on unconditionally.
+
+## 74. A line scan cannot distinguish a busy-but-present device from an absent one
+
+**Limitation.** If a device's Layer 2 acknowledge for the scan's
+`T_Connect` comes back negative — which includes a Standard-compliant
+BUSY response — the scan treats it exactly like no acknowledge arriving
+at all: both exhaust `vacant_confirmations` and are reported `Vacant`. A
+busy-but-present device and an address nobody occupies produce the same
+report.
+
+**Cause.** `deadline_verdict` (`crates/knx-net/src/scan.rs`) only resolves
+a *positive* connect confirm to a distinct outcome, `OccupiedSilent` — a
+device that acknowledged at Layer 2 but never produced an Application
+Layer answer (test `a_positive_l2_confirm_with_no_application_answer_
+is_occupied_but_silent`, `crates/knx-net/src/scan.rs`). A *negative*
+connect confirm, or no confirm at all, both fall through unresolved and,
+after the last confirmation pass, become `Vacant` (test
+`a_negative_l2_confirm_is_vacant_like_total_silence`). **[D]**
+`03_02_02 Communication Medium TP1 v01.03.03 AS` §2.4.2: a device *may*
+send BUSY if it expects to be able to process frames again starting
+100 ms after the frame that triggered it, and *shall not* send BUSY
+otherwise — so a negative confirm can be a real, Standard-compliant
+answer from a present device, and this scan has no way to tell that
+answer apart from nothing arriving. This spike's own 2026-09-13
+five-address live run observed neither a negative confirm nor an
+`OccupiedSilent` result among its five vacant addresses (a one-sample
+fact about that run, not evidence either case is rare or cannot occur;
+see
+[RESEARCH.md §8.5 Finding 4](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)).
+
+`OccupiedSilent`'s own citation rests on a hedge in the Standard's own
+text, not a certainty: **[D]** `03_06_03 EMI_IMI v01.04.02 AS` §4.1.5.3.4
+says the confirmation "is **normally** generated after receiving this
+immediate acknowledge" — normally, not always, is the word the whole
+distinction between `Occupied` and `OccupiedSilent` rests on.
+
+**Impact.** This is a documented limit of the mechanism itself, not a gap
+in this implementation's reading of it, and no scanner built on
+`NM_IndividualAddress_Check` alone can resolve it. A user reading a scan
+report needs to know that `Vacant` means "no positive evidence of
+occupancy", never "certainly no device here" — a legitimately busy device
+is one concrete way that gap gets filled.
+
+**Lifted when.** Never, by this mechanism alone — §76's negative-confirm
+fast path is a separate question (scan speed, not disambiguation) and
+would not resolve this either. A second, independent signal (a different
+management procedure, or a manual check) would be needed to fully
+disambiguate a negative confirm from true absence.
+
+## 75. A shorter `--timeout-ms` is a real option, but not the default — a slow-but-present device can look vacant
+
+**Limitation.** `bus scan --timeout-ms` accepts values below the 6000 ms
+default, but doing so trades correctness for speed: a device that would
+have answered slowly is reported vacant instead.
+
+**Cause.** **[V]** the 2026-09-12 pre-implementation `xknx` full-line
+measurement's occupied-probe round trips ranged 13.6-6016.5 ms (35
+occupied addresses of 254 probed, median 121.1 ms). A 1000 ms timeout,
+plausible-looking because most occupied addresses in that run answered
+well under a second, would have reported the slowest observed present
+device as vacant. Shortening the timeout does
+not distinguish a slow device from an absent one; it only moves the
+threshold at which the scan starts misreporting one as the other.
+
+**Impact.** An operator who shortens `--timeout-ms` to speed up a scan on
+an installation with any slow-but-present devices will see false
+`Vacant` results, silently, with no separate signal to flag them as
+suspect.
+
+**Lifted when.** Not by more code — this is a real trade-off inherent to
+the mechanism, not a bug. It stays a documented, explicit, opt-in choice
+via `--timeout-ms`, and the shipped default stays anchored to the
+Standard's own connection timeout for exactly this reason.
+
+## 76. A negative Layer 2 confirm's fast path was deliberately not built; `Indeterminate` does not retry
+
+**Limitation.** Two related shortcuts a faster or more thorough scan
+implementation might take were considered and deliberately not taken.
+First, a scan does not fast-path on a negative `L_Data.con`
+(acknowledgement/confirmation failure) to conclude "vacant" sooner than
+waiting out the full connection timeout. Second, when a probe's evidence
+is ambiguous because the tunnel's broadcast event channel lagged and
+dropped one or more frames during the probe window — possibly including
+the very descriptor response, disconnect, or connection confirm that
+would have settled the verdict — the scan reports `Indeterminate` for
+that address and moves on — it does not retry the probe.
+
+**Cause.** Both are documented, in-code decisions
+(`crates/knx-net/src/scan.rs`), not oversights. The negative-confirm fast
+path rests on an assumption this spike could not verify against the
+corpus: that a negative `L_Data.con` for this specific exchange reliably
+means "nobody there" rather than some other transient Layer 2 condition;
+building a fast path on an unverified assumption risks quietly turning a
+present-but-momentarily-noisy device into a false `Vacant`, which is the
+one failure direction this whole feature exists to avoid. `Indeterminate`
+not retrying is a matching decision on the evidence-honesty side: a
+lagged channel is reported as exactly what it is, an inconclusive read,
+rather than silently retried and folded into whatever the retry happens
+to produce — retrying would make `Indeterminate` disappear from a report
+without actually resolving the ambiguity that produced it.
+
+**Impact.** A scan is measurably slower than a maximally aggressive
+implementation would be, and an installation whose channel lags often
+will see more `Indeterminate` results than a retry-based scanner would
+report as something more decisive-looking (and less trustworthy).
+
+**Lifted when.** The negative-confirm fast path could be added once the
+underlying assumption is verified — directly against hardware behaviour
+across more than one gateway/device combination, or against corpus text
+this spike did not find. Retrying `Indeterminate` is a considered
+trade-off, not a gap, and would need a positive reason (a demonstrated,
+common cause of transient lag worth papering over) before revisiting it.
+
+## 77. A line scan covers one line at a time; it does not cross couplers
+
+**Limitation.** `bus scan` scans one line, reached through one
+tunnelling gateway, per invocation. It does not discover or traverse line
+or backbone couplers to scan other lines in the same installation
+automatically.
+
+**Cause.** Explicitly out of scope for T17 (see the task brief for this
+work): scanning across couplers, or scanning more than one line per
+invocation, was never attempted, and no concurrency between probes was
+built either — probing stays sequential, one outstanding request per
+tunnelling connection, for the same evidence-honesty reasons as
+§76.
+
+**Impact.** An installation with more than one line needs one `bus scan`
+invocation per line, with the operator supplying each line's own
+gateway/area/line addressing by hand; there is no "scan the whole
+installation" command.
+
+**Lifted when.** A future task adds coupler-aware, multi-line scanning —
+not scheduled as part of T17 or its immediate successors.
+
+## 78. A line scan reports other KNXnet/IP tunnelling endpoints as occupied devices
+
+**Limitation.** `bus scan` excludes exactly one non-bus address: the
+tunnelling connection assigned to the scan itself. Any other KNXnet/IP
+tunnelling endpoint sharing the same gateway — another client's tunnel,
+or an endpoint answering from the gateway's IP side generally — is
+reported `Occupied`, indistinguishable from a real twisted-pair device.
+
+**Cause.** `probe_address` short-circuits to `SelfAddress` only when
+`addr == transport.assigned_address()` (`crates/knx-net/src/scan.rs:298-300`);
+no other exclusion exists. **[V]**
+[RESEARCH.md §8.5 Finding 2](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
+found a candidate signal in three samples on one gateway: two tunnelling
+endpoints answered in 13.6 ms and 14.0 ms, roughly an order of magnitude
+faster than the 100-150 ms a real bus device typically needs. That
+sub-20 ms heuristic was deliberately not built: three samples on one
+gateway with one client implementation is **[A]**, not evidence it
+generalises, and a genuinely fast device or a slower IP path on a
+different gateway could break it. Building an exclusion on an unverified
+timing gap risks the opposite of this feature's purpose: quietly
+mislabeling a real device as not-a-device.
+
+**Impact.** A scan report can include phantom "devices" that are actually
+other tunnelling clients or the gateway's own IP-side presence, at
+whatever individual address the gateway happened to assign them. An
+operator reconciling a scan against a project needs to recognise and
+manually exclude these; the same measurement that established this saw
+three such endpoints among 35 occupied addresses on one gateway.
+
+**Lifted when.** Only after the sub-20 ms heuristic, or a more reliable
+signal, is verified against more than one gateway/client combination —
+not scheduled as part of T17.

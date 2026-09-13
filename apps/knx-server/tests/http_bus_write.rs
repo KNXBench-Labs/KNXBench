@@ -433,6 +433,7 @@ async fn a_non_three_level_projects_telegram_destination_round_trips_through_wri
                 kind: knx_net::LDataMessageKind::Indication,
                 source: addr(9),
                 destination: Destination::Group(GroupAddress::from_raw(1)),
+                transport: knx_net::Tpci::UnnumberedData,
                 service: ApplicationService::GroupValueWrite(GroupValue::Short(1)),
             }))
             .unwrap();

@@ -9,3 +9,10 @@ publish = false
 
 [dependencies]
 chrono.workspace = true
+
+[features]
+# Exposes ScanPlan::unchecked_for_tests — a bypass of the exclude-while-
+# building guarantee, for downstream crates that need to prove their own
+# code defends against a corrupted plan. Never enabled outside
+# [dev-dependencies]; see scan.rs's doc comment on the function itself.
+test-support = []

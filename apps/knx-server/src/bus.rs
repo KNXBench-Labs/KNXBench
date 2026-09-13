@@ -528,17 +528,27 @@ pub struct TelegramRow {
     /// project's group-address names mid-session does not change this for
     /// rows already pushed, nor for rows pushed later in the same session.
     pub destination_name: Option<String>,
-    /// One of `"GroupValueRead"`, `"GroupValueResponse"`, `"GroupValueWrite"`,
-    /// `"Other"` — mirrors `format_service`'s variant naming — or the
-    /// synthetic marker's own `"SessionClosed"`, which is not one of
+    /// `ApplicationService`'s own variant name — `"GroupValueRead"`,
+    /// `"GroupValueResponse"`, `"GroupValueWrite"`, `"DeviceDescriptorRead"`,
+    /// `"DeviceDescriptorResponse"`, `"NoApplicationPdu"` or `"Other"` — or
+    /// the synthetic marker's own `"SessionClosed"`, which is not one of
     /// `ApplicationService`'s variants and must not be treated as one by
-    /// whatever renders this row.
+    /// whatever renders this row. In practice only the group-addressed
+    /// three (`GroupValueRead`/`Response`/`Write`) and `"Other"` ever reach
+    /// a row here: [`TelegramBuffer::push_telegram`] drops every
+    /// individually-addressed frame before this match runs, and the other
+    /// four variants (spec T17) are only ever individually addressed
+    /// (`A_DeviceDescriptor_*` and every `Tpci` control PDU). Those arms
+    /// exist for exhaustiveness, not because this buffer expects to use
+    /// them.
     pub service: String,
     /// `GroupValueWrite`/`GroupValueResponse`: the payload, rendered exactly
     /// as `format_group_value_payload` renders it. `GroupValueRead`: `None`
     /// (it carries no payload). `Other{apci, data}`: the APCI/data hex form
-    /// `format_service` already uses for that variant. The closed-session
-    /// marker: a short human sentence explaining why telegrams stopped.
+    /// `push_telegram`'s own match arm renders. The closed-session marker: a
+    /// short human sentence explaining why telegrams stopped. (The
+    /// `DeviceDescriptorRead`/`Response`/`NoApplicationPdu` arms below are
+    /// unreachable in practice — see `service`'s doc comment.)
     pub raw_payload: Option<String>,
     /// The four-way decode outcome (design spec §4.3/§4.4, D4) for
     /// `GroupValueWrite`/`GroupValueResponse` rows only — `None` for
@@ -858,6 +868,20 @@ impl TelegramBuffer {
                 Some(format_group_value_payload(&value)),
                 Some(ctx.decode(ga, &value)),
             ),
+            ApplicationService::DeviceDescriptorRead { descriptor_type } => (
+                "DeviceDescriptorRead".to_string(),
+                Some(format!("type={descriptor_type}")),
+                None,
+            ),
+            ApplicationService::DeviceDescriptorResponse {
+                descriptor_type,
+                data,
+            } => (
+                "DeviceDescriptorResponse".to_string(),
+                Some(format!("type={descriptor_type} data={data:02x?}")),
+                None,
+            ),
+            ApplicationService::NoApplicationPdu => ("NoApplicationPdu".to_string(), None, None),
             ApplicationService::Other { apci, data } => (
                 "Other".to_string(),
                 Some(format!("APCI {apci:#06x} data {data:02x?}")),
@@ -1313,6 +1337,7 @@ mod tests {
             kind: knx_net::LDataMessageKind::Indication,
             source: addr(9),
             destination,
+            transport: knx_net::Tpci::UnnumberedData,
             service,
         })
     }
@@ -1380,6 +1405,7 @@ mod tests {
             kind: knx_net::LDataMessageKind::Indication,
             source: addr(9),
             destination: Destination::Individual(addr(1)),
+            transport: knx_net::Tpci::UnnumberedData,
             service: ApplicationService::GroupValueRead,
         };
         buffer.push_telegram(frame, &ctx);
@@ -1449,6 +1475,7 @@ mod tests {
                     kind: knx_net::LDataMessageKind::Indication,
                     source: addr(9),
                     destination: Destination::Group(GroupAddress::from_raw(raw)),
+                    transport: knx_net::Tpci::UnnumberedData,
                     service: ApplicationService::GroupValueWrite(GroupValue::Short(0)),
                 },
                 &ctx,

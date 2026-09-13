@@ -11,3 +11,18 @@ publish = false
 knx-core.workspace = true
 tokio = { workspace = true, features = ["net", "sync", "time", "macros", "rt"] }
 socket2 = { workspace = true, features = ["all"] }
+
+[dev-dependencies]
+# It is the workspace root's `resolver = "2"` (Cargo.toml:2) that keeps this
+# out of a normal build — resolver 2 stops a dev-dependency's features from
+# unifying into non-dev/non-test builds of the same crate. Feature
+# unification is what *would* leak it: verified that flipping the root to
+# `resolver = "1"` and changing nothing else makes `cargo check --workspace`
+# pick up test-support. If that root line ever moves or changes, re-check
+# this guarantee before trusting it again.
+#
+# One exception either way: `cargo build/check --workspace --all-targets`
+# (this repository's own clippy gate uses it) enables test-support
+# workspace-wide, including for the knx-cli/knx-server bin artifacts it
+# also builds — see knx-core/src/scan.rs's ScanPlan::unchecked_for_tests.
+knx-core = { workspace = true, features = ["test-support"] }

@@ -459,21 +459,26 @@ parity"*, §15 keeps `DM_ProgMode_Switch`'s write half a non-goal in **every**
 phase including phase 3, and phase 2 exercises it against the simulator only,
 behind the mutation API's per-operation authorisation value.
 
-**Scope of that derivation, corrected 2026-09-14 (fix round 3).** `03_05_01`
-§4.26.3 scopes itself in a header the previous revision did not read:
-*"Used by: − Ctrl-Mode fixed DMA − Ctrl-Mode reloc DMA − masks 0012h 0020h,
+**Scope of that derivation, corrected 2026-09-14 (fix round 3, narrowed in round
+4).** `03_05_01` §4.26.3 scopes itself in a header the previous revision did not
+read: *"Used by: − Ctrl-Mode fixed DMA − Ctrl-Mode reloc DMA − masks 0012h 0020h,
 0021h, 0701h in E-Mode"*, which names neither System B nor any of the
 `07B0h`/`17B0h`/`57B0h` masks the download spec targets — and `06 Profiles`
-§4.4.1.1 settles it positively by assigning *"Realisation Type 1 - Property
-based"* to *"• System B • Mask 57B0h"* and *"Realisation Type 2 – Memory mapped"*
-to *"• System 1 • System 2 • BCU 1 • BCU 2 • BIM M112"*. So on a System B device
-programming mode lives in `PID_PROGMODE` (§4.3.5), not at `0060h`, and the
-meaning of whatever a System B device keeps at `0060h` is unknown to this project
-**[A]**. The phase-3 permission for a one-octet `A_Memory_Read(60h, 1)` inside
-`1.1.24`–`1.1.32` is unchanged; its *interpretation* is not, and the design spec
-§4.4 and §15 now require the result to be recorded as a raw octet of unknown
-meaning rather than as programming-mode state. This is a scoping limitation, not
-a new gap — the Profiles document answers the question — so the count stays at
+§4.4.1.1 assigns *"Realisation Type 1 - Property based"* to *"• System B • Mask
+57B0h"* and *"Realisation Type 2 – Memory mapped"* to *"• System 1 • System 2
+• BCU 1 • BCU 2 • BIM M112"*. That assignment is scoped to §4.4.1.1's own title,
+*"connection oriented"*: §4.4.1.2 profiles the **connectionless** path onto
+*"§4.26.3 “Programming Mode – Realisation Type 2”"* as well, and §4.4's feature
+table marks *"1.b Connectionless"* as `O` for `System B` and `Mask 57B0h`. So
+programming mode on a System B device is specified at `PID_PROGMODE` (§4.3.5) for
+its mandatory path, `0060h` is neither its mandatory location nor excluded, and
+the meaning of whatever a System B device keeps at `0060h` is unestablished for
+this project **[A]**. The phase-3 permission for a one-octet
+`A_Memory_Read(60h, 1)` inside `1.1.24`–`1.1.32` is unchanged; its
+*interpretation* is not, and the design spec §4.4 and §15 now require the result
+to be recorded as a raw octet of unknown meaning rather than as programming-mode
+state. This is a scoping limitation, not a new gap — the read establishes the
+device's own Profile before anything interprets the octet — so the count stays at
 six.
 
 The list lost an item to a **correction**, not to a discovery: how a client

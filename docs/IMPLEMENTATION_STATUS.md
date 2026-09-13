@@ -2218,7 +2218,7 @@ existing call site changed.
   reading for schema ≥ 21 projects (preserved, not modelled); no hardware
   verification — every test checks the codec against the Standard's own
   stated encodings, not a real device's actual telegrams. Full accounting:
-  [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-fourteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard).
+  [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-nineteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard).
 
 `cargo test --workspace`: **920 passed, 0 failed, 3 ignored** (baseline
 before this cycle was 817/0/3, per the branch's Task 1 starting point; the
@@ -2231,6 +2231,52 @@ a raw hex payload, and `knx bus write --dpt DPST-9-1 23.5` instead of
 having to hand-encode an F16 payload themselves — for the fourteen main
 types this slice covers. Closes `GAP_ANALYSIS_ETS.md` row **E4**
 partially; **D5** (the GUI itself) is still open.
+
+**E4, DPT codec main types 4/10/11/15/19 (2026-09-13), branch
+`e4-dpt-main-types`.** Extends T29's codec with five more main types, each
+read from DPT-AS directly rather than from a summary table:
+
+- **Main type 4** (`A8`, character, DPT-AS §3.4) reuses main type 16's
+  `char_set_is_ascii` charset switch instead of a second implementation;
+  `4.001` (ASCII) and `4.002` (ISO-8859-1) both occupy a full octet —
+  `require_bytes::<1>`, not `require_short` (its 6-bit inline threshold
+  cannot hold an 8-bit field).
+- **Main type 10** (`10.001`, time of day + day of week, DPT-AS §3.11)
+  represents day-of-week `0` as "no day" (`Option::None`) — this codec's
+  own reading of a field the Standard leaves the eighth value of
+  undocumented, with an exact round trip.
+- **Main type 11** (`11.001`, date, DPT-AS §3.12) resolves the two-digit
+  year by the century window DPT-AS §3.12 EXAMPLE 5 states directly
+  (raw `>= 90` → `1900 +` raw, else `2000 +` raw).
+- **Main type 15** (`15.*`, access data, DPT-AS §3.16) packs six BCD
+  digits plus error/accepted/direction/encrypted flags and a 4-bit index
+  across four octets with no reserved bits in this format at all; a BCD
+  nibble above 9 is rejected.
+- **Main type 19** (`19.001`, date and time, DPT-AS §3.20) decodes all
+  sixteen bits this codec can give meaning to (year, month, day, weekday,
+  hour, minute, second, and eight status flags) into
+  `DptValue::DateTime` — nothing is silently dropped. One genuine Standard
+  inconsistency surfaced and is documented rather than guessed around:
+  octet 1's field table names a bit called `SRC`, but no bit position is
+  ever assigned to it, and Note 15 says the other seven bits of that octet
+  are reserved-must-be-zero; confirmed against the source PDF page
+  directly. `DptValue` has no `src` field because the Standard assigns it
+  no wire bit. Month/Day and Hour/Minute/Second range checks are enforced
+  only when the matching invalid-flag says the field is valid, per
+  Note 11's Hour=24 rule and the section comment in `codec.rs`.
+
+All five follow the existing reserved-bit policy (nonzero reserved bit →
+`InvalidData`) and the existing module's `decode_*`/`encode_*`/test
+structure and naming. `cargo test -p knx-core --lib dpt::codec`: **121
+passed, 0 failed** (up from the pre-E4 baseline on this branch). Full
+per-type judgment-call accounting:
+[KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-nineteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard).
+Closes `GAP_ANALYSIS_ETS.md` row **E4** further (still open: main type 20
+and 21-30 onward, plus `knx_master.xml` catalogue consultation for units
+and enumeration wording). Out of scope by design: `apps/knx-web` and
+`apps/knx-server` need no change, since neither pattern-matches on
+`DptValue`'s variants directly — confirmed by grep before closing this
+task, not assumed.
 
 **T15, Group Monitor GUI (2026-09-11), branch `t15-group-monitor`.** Builds
 on T29's codec ([design spec](superpowers/specs/2026-09-11-group-monitor-design.md);

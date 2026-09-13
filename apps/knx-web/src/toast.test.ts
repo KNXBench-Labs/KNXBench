@@ -116,30 +116,56 @@ describe("toast copy honors the active UI language", () => {
   });
 });
 
-// Task 2 (humour copy): ships 30 distinct entries per array instead of the
-// 7/4/7 the toast mechanism launched with. `ERROR_WRAPPERS` is checked
-// through `translateFor("en", ...)` rather than as raw array strings,
-// because most of its entries are `messages/en.ts` keys, not the template
-// text itself — checking the raw string would fail on exactly the seven
-// entries this catalogue shipped with. `translateFor` falls back to
-// returning an unresolved key unchanged (see `i18n.ts`), which is also
-// what lets this task's new entries be plain literal template text
-// without adding a single `messages/en.ts`/`de.ts` row for them.
+// Task 2 (humour copy), fix round 1: every entry in all three arrays is a
+// real `messages/en.ts`/`messages/de.ts` catalogue key — the coordinator's
+// ruling against the first draft's literal-string shortcut, which left
+// 77% of the new copy untranslatable. `resolveIn` below is the same
+// `translateFor` the production code path uses (`toast.ts`'s
+// `resolveTemplate`), so these tests catch exactly the class of bug the
+// shortcut produced: a key with no matching catalogue row silently
+// "resolving" to itself. This file's own synthetic non-key fixtures above
+// (`holidays`, `["Nope: {msg}"]`, etc.) are untouched — they test the
+// fallback mechanism on purpose, not a mistake this suite should flag.
 describe("toastCopy has enough material to stop repeating itself", () => {
-  it("ERROR_WRAPPERS has at least 30 distinct entries", () => {
-    expect(ERROR_WRAPPERS.length).toBeGreaterThanOrEqual(30);
-    expect(new Set(ERROR_WRAPPERS).size).toBe(ERROR_WRAPPERS.length);
-  });
+  function resolveIn(language: "en" | "de", key: string): string {
+    return translateFor(language, key as TranslatableKey);
+  }
 
-  it("every ERROR_WRAPPERS entry resolves to a template containing the {msg} placeholder", () => {
-    for (const wrapper of ERROR_WRAPPERS) {
-      expect(translateFor("en", wrapper as TranslatableKey)).toContain("{msg}");
+  it("ERROR_WRAPPERS has at least 30 entries, each a real catalogue key in both languages", () => {
+    expect(ERROR_WRAPPERS.length).toBeGreaterThanOrEqual(30);
+    for (const key of ERROR_WRAPPERS) {
+      expect(resolveIn("en", key)).not.toBe(key);
+      expect(resolveIn("de", key)).not.toBe(key);
     }
   });
 
-  it("LATE_NIGHT_MESSAGES has at least 30 distinct entries", () => {
+  it("ERROR_WRAPPERS resolves to distinct text within each language", () => {
+    const en = ERROR_WRAPPERS.map((key) => resolveIn("en", key));
+    const de = ERROR_WRAPPERS.map((key) => resolveIn("de", key));
+    expect(new Set(en).size).toBe(en.length);
+    expect(new Set(de).size).toBe(de.length);
+  });
+
+  it("every ERROR_WRAPPERS entry contains the {msg} placeholder in both languages", () => {
+    for (const key of ERROR_WRAPPERS) {
+      expect(resolveIn("en", key)).toContain("{msg}");
+      expect(resolveIn("de", key)).toContain("{msg}");
+    }
+  });
+
+  it("LATE_NIGHT_MESSAGES has at least 30 entries, each a real catalogue key in both languages", () => {
     expect(LATE_NIGHT_MESSAGES.length).toBeGreaterThanOrEqual(30);
-    expect(new Set(LATE_NIGHT_MESSAGES).size).toBe(LATE_NIGHT_MESSAGES.length);
+    for (const key of LATE_NIGHT_MESSAGES) {
+      expect(resolveIn("en", key)).not.toBe(key);
+      expect(resolveIn("de", key)).not.toBe(key);
+    }
+  });
+
+  it("LATE_NIGHT_MESSAGES resolves to distinct text within each language", () => {
+    const en = LATE_NIGHT_MESSAGES.map((key) => resolveIn("en", key));
+    const de = LATE_NIGHT_MESSAGES.map((key) => resolveIn("de", key));
+    expect(new Set(en).size).toBe(en.length);
+    expect(new Set(de).size).toBe(de.length);
   });
 
   it("HOLIDAYS has at least 30 entries, each on a distinct calendar date", () => {
@@ -148,11 +174,21 @@ describe("toastCopy has enough material to stop repeating itself", () => {
     expect(new Set(dates).size).toBe(dates.length);
   });
 
-  it("every HOLIDAYS entry has at least one message, and no two holidays share a message", () => {
-    const allMessages = HOLIDAYS.flatMap((h) => h.messages);
+  it("every HOLIDAYS message key is a real catalogue key resolving in both languages", () => {
     for (const holiday of HOLIDAYS) {
       expect(holiday.messages.length).toBeGreaterThan(0);
+      for (const key of holiday.messages) {
+        expect(resolveIn("en", key)).not.toBe(key);
+        expect(resolveIn("de", key)).not.toBe(key);
+      }
     }
-    expect(new Set(allMessages).size).toBe(allMessages.length);
+  });
+
+  it("HOLIDAYS messages resolve to distinct text within each language (no repeated joke)", () => {
+    const allKeys = HOLIDAYS.flatMap((h) => h.messages);
+    const en = allKeys.map((key) => resolveIn("en", key));
+    const de = allKeys.map((key) => resolveIn("de", key));
+    expect(new Set(en).size).toBe(en.length);
+    expect(new Set(de).size).toBe(de.length);
   });
 });

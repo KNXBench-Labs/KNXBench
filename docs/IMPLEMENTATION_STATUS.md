@@ -4823,3 +4823,41 @@ Five literal mentions survive on purpose: they assert a parsed project
 built. `corpus_available` checks all three projects rather than only the
 ETS4 one, so an override of a single variable cannot walk a guarded test
 into a panic.
+
+### 2026-09-13 — closes the `setParameterValue` publish hole (T3, goal.md §6 item 6)
+
+`api.setParameterValue` mutated the project server-side — `domain.rs`'s
+`set_parameter_value_impl` ends in `apply(state, cmd)`, a real undoable
+`Command::SetParameterValue` — but answered with a `ParameterPanelDto`,
+never a `ProjectTree`, so `App.tsx`'s tree-publish effect never fired and
+nothing republished. Both places that carried a comment saying so —
+`App.tsx` and `ParameterPanel.tsx` — are corrected in place rather than
+deleted, since most of what each said (the fingerprint's own indifference
+to parameters, and the residual DPT-influence risk) is still true.
+
+`ParameterPanel` gained an optional `onValueApplied` callback, threaded
+through `ParameterSectionView`/`ParameterFieldRow` and fired once per
+successfully committed field. `DeviceWorkspace` (`Inspector.tsx`) wires it
+to overlay `can_undo: true, can_redo: false` onto the `tree` prop it
+already holds and hand the result to `onApplied` — exact, not invented,
+because `CommandStack::do_command` (`crates/knx-core/src/command.rs`)
+always pushes onto `undo` and clears `redo` on a successful command. That
+makes `App.tsx`'s tree-publish effect fire on every parameter edit, the
+same as any other command. The *fingerprint* itself still does not move,
+because `fingerprintProjectContext` deliberately excludes parameters —
+KNOWN_LIMITATIONS.md §82 item 5 is rewritten to say exactly that, rather
+than "never republishes anything", which stopped being true.
+
+New test, `DeviceWorkspace.test.tsx`'s "publishes a committed parameter
+edit to onApplied, not just to api.setParameterValue": asserts `onApplied`
+is called with the overlaid tree, not merely that `api.setParameterValue`
+was called — the latter passed on the unfixed code too, since the call
+was never the missing half. Verified failing before the fix (`onApplied`
+called 0 times) by stashing the three source changes and rerunning it
+alone, then verified passing once they were restored.
+
+Gates: `npx tsc --noEmit` (`apps/knx-web`) exit 0; `npx vitest run`
+(`apps/knx-web`) exit 0, 465 tests across 42 files (up from 464/42 — one
+test added, none removed). No Rust file was touched, so the Rust gates do
+not apply. The other five parked findings in goal.md §6 and item 7's
+screenshot regeneration are untouched — separate tasks, separate owners.

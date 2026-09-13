@@ -67,6 +67,12 @@ Applied to a document rather than to code, that means:
    source PDFs, never copied out of piped shell output, because piped output in
    this environment is silently reworded and a reworded citation is not a
    citation.
+   One deliberate exception, and only one: a quotation drawn from a two-column
+   parameter or remark table is joined across the column gap, with a comma or an
+   em dash standing in for the whitespace the columns supplied (MP §3.13.1's
+   `mode`/`flags` rows, MP §3.13.2's remark cell, MP §3.6's `level` row). No word
+   is changed, added or dropped; the punctuation is editorial and nothing else
+   is.
 2. **Where there is no citation, the text says so, and says where it looked.**
    The phrase used is *"undocumented in \<base\>"*, naming which of the two KNX
    specification knowledge bases (`knx_spec_kb_programming`, 27 programming
@@ -222,9 +228,9 @@ Objects. The relevant ones for download:
 | 5 | `PID_LOAD_STATE_CONTROL` | `PDT_CONTROL` | The Load State Machine: read = state, write = event (§5) |
 | 6 | `PID_RUN_STATE_CONTROL` | — | Run State Machine (§3.3) |
 | 14 | `PID_DEVICE_CONTROL` | `PDT_BITSET8`, DPT 21.002 | Bit 2 = Verify Mode (§6.3) |
+| 27 | `PID_MCB_TABLE` / `PID_MCB` | — | Memory Control Block, carries the CRC used for partial download (§7.4) |
 | 28 | `PID_ERROR_CODE` | `PDT_ENUM8`, `DPT_ErrorClass_System` 20.011 | Last error before load state Error (§5.5) |
 | 29 | `PID_OBJECT_INDEX` | read-only | The Interface Object's **own** index (§3.2) |
-| 51 | `PID_MCB_TABLE` / `PID_MCB` | — | Memory Control Block, carries the CRC used for partial download (§7.4) |
 
 **[D]** RES §4.23.1: *"The Load State Machine shall be able to manage all kinds
 of downloadable configuration data including executable code. More than one
@@ -318,9 +324,16 @@ Run State Machine itself stays out of phase 2.
   the other half in the opposite direction:
 
   > **[D]** PROF §4.4.1.2 "Programming Mode – connectionless", under
-  > *"Programming Mode Control • via bus"*: *"§3.13.2
-  > “DMP_ProgModeSwitch_RCo”"* and *"§4.26.3 “Programming Mode – Realisation
-  > Type 2”"*
+  > *"Programming Mode Control"* — where, unlike §4.4.1.1 a) and b), no
+  > *"• via bus:"* sub-bullet appears; the only bullet is *"• via HMI: device
+  > selection and indication of Programming Mode"*, and the two service
+  > references follow it directly: *"§3.13.2 “DMP_ProgModeSwitch_RCo”"* and
+  > *"§4.26.3 “Programming Mode – Realisation Type 2”"*
+
+  and the second reference is reached twice over, because **[D]** MP §3.13.2
+  itself says *"The Programming Mode shall be realised as “Programming Mode –
+  Realisation Type 2” as specified in [05]."* — no layout interpretation needed
+  for that one.
 
   and PROF §4.4's feature table gives row *"1.b Connectionless"* the value `O`
   in both the `System B` and the `Mask 57B0h` column **[D]** (the same row is
@@ -1116,7 +1129,13 @@ Which of those subtypes a given device supports is **profiled**, not universal.
 **[D, corpus]** PROF Annex A.2.4.1, *"Table 7 – Required Load Controls"*, is
 indexed by Load Sub-Control type down the side and by mask version across the
 top, with `M` mandatory, `O` optional, `n/a` not applicable. This is the one
-per-mask table in PROF whose columns survive extraction, so it is citable.
+per-mask table in PROF whose columns survive extraction, so it is citable — but
+only under the band-count method, because row `00h`'s `M 66)` cells drift up to
+26 character-columns left of their headings: count the values inside each of the
+`System 2` / `Syystem 300` / `System B` bands (header offsets 54, 110, 195) and
+match that count to the columns the band declares, rather than aligning any
+single cell to any single heading. Every attribution below was derived that way
+and is reproducible that way.
 The rows relevant here, with the mask groupings the table's own column bands
 give (`System 2`, `System 300`, `System B`):
 
@@ -1701,7 +1720,9 @@ this document specifies is CP §3.5.2, **System B**. Those are not the same
 profile, and this document may not quietly treat a System 2 / BIM M112 procedure
 as the System B default.
 
-**Ruling, and the reason.** `DM_Authorize_RCo` (MP §3.5.1) is the **default**.
+**Ruling, and the reason.** `DMP_Authorize_RCo` (MP §3.5.1 — the Standard's own
+prose in §3.5.2 calls it `DM_Authorize_RCo`, quoted below as it stands) is the
+**default**.
 It carries no `Use • Profiles` restriction at all — MP §3.5's `Use` block is prose
 about when authorisation applies, and §3.5.1 adds only *"This Management Procedure
 shall use the connection oriented communication mode."* — so it is the procedure
@@ -1720,7 +1741,7 @@ Three reasons for that direction rather than the other:
 2. **The algorithm is not what protects the client; §10.2 is.** The failure this
    whole section exists to prevent is sending a key that was not supplied by the
    user, because a wrong key yields *less* access than no key (§10.2, R17).
-   `DM_Authorize_RCo`'s `key != FFFFFFFFh` guard already refuses to run without a
+   `DMP_Authorize_RCo`'s `key != FFFFFFFFh` guard already refuses to run without a
    real key. The extra exchange in `DM_Authorize2_RCo` buys recovery from one
    specific situation — a key configured in the project, a device that is not
    actually locked with it — which is a convenience, not a safety property.
@@ -2221,8 +2242,10 @@ once so that older references resolve:
     §3.4, §5.4, §6.3, §7.3 and §10.5. The item is kept as a marker because the
     distinction it recorded is the one worth preserving: **"not in the Standard"
     and "not yet read" require completely different responses**, and a document
-    that blurs them is the failure mode §1 exists to prevent. Items 1–4 and 6–8
-    are the first kind. There are now none of the second kind.
+    that blurs them is the failure mode §1 exists to prevent. Items 1–4, 7 and 8
+    are the first kind; `-09` is the first kind with a delegation attached;
+    `-05`, `-06` and `-10` are no longer of either kind. There are now none of
+    the second kind.
 
 **Six genuine gaps remain:** `GAP-T30-01`, `-02`, `-03`, `-04`, `-07`, `-08`, plus
 `GAP-T30-09` as a gap that has been *narrowed to a delegation* — the general

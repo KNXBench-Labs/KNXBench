@@ -14,6 +14,7 @@ export interface CommandContext {
   openLog: () => void;
   openBusMonitor: () => void;
   openSettings: () => void;
+  openCompanion: () => void;
 }
 
 /**
@@ -122,6 +123,15 @@ export const COMMANDS: PaletteCommand[] = [
     labelKey: "toolbar.settings",
     isEnabled: () => true,
     run: (ctx) => ctx.openSettings(),
+  },
+  // Same reason as the three above, one step further: the companion
+  // window's only button is in that same collapsible pane, and a window
+  // that can only be opened with a mouse is not reachable.
+  {
+    id: "open-diagnostics-window",
+    labelKey: "companion.open",
+    isEnabled: () => true,
+    run: (ctx) => ctx.openCompanion(),
   },
 ];
 

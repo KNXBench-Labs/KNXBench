@@ -61,6 +61,14 @@ pub fn reference_kv_schema21_path() -> PathBuf {
 /// manufacturer files — never committed, so CI (and any contributor
 /// without a copy) has none of it. Every test that needs the corpus must
 /// check this first and skip, not panic, or CI is permanently red.
+///
+/// All three projects, not just the ETS4 one: the three paths are
+/// independently overridable, so checking one and handing out another is
+/// how a guarded test still panics — override `KNXBENCH_REFERENCE_PROJECT`
+/// alone and the ETS6 and schema-21 tests sail past the guard into an
+/// `expect` on a file that was never there.
 pub fn corpus_available() -> bool {
     reference_ets4_path().exists()
+        && reference_ets6_path().exists()
+        && reference_kv_schema21_path().exists()
 }

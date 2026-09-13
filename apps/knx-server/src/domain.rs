@@ -2870,18 +2870,9 @@ pub(crate) fn set_parameter_value_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
-
-    fn workspace_root() -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .and_then(Path::parent)
-            .expect("crate lives at <root>/apps/knx-server")
-            .to_path_buf()
-    }
 
     fn reference_project_path() -> PathBuf {
-        workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
+        knx_testsupport::reference_ets4_path()
     }
 
     // Fix round 1, item 3: an id containing two syntactically valid

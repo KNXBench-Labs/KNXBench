@@ -20,3 +20,4 @@ rusqlite.workspace = true
 # reverse, and a dev-dependency never enters the production graph.
 knx-etsproj.workspace = true
 tempfile.workspace = true
+knx-testsupport.workspace = true

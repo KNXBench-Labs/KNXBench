@@ -2,15 +2,11 @@
 //! Tests read a `.knxdb` file (via import) and round-trip it back out
 //! to a `.knxproj` file.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::{Command, Output};
 
 fn reference_ets4_path() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .unwrap()
-        .join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
+    knx_testsupport::reference_ets4_path()
 }
 
 fn run_cli(args: &[&str]) -> Output {

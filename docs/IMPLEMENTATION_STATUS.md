@@ -4922,5 +4922,8 @@ rather than trusted outright. Six items:
    exact server tree, not `{...tree, can_undo: true, can_redo: false}` —
    proving the publish is server-sourced, not caller-reconstructed.
 
-Gates for fix round 1 are recorded in
-`.superpowers/sdd/2026-09-13-goal-completion/task-3-fixround-1-report.md`.
+Gates for fix round 1, all judged by exit status and all 0: `cargo fmt --all
+--check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test
+--workspace --no-fail-fast` (1272 passed, 0 failed, 3 ignored; 1275 declared,
+identical to `main`), `xtask check-layering`, `xtask check-headers`, `cargo deny
+check`, `npx tsc --noEmit`, and `npx vitest run` (465 tests in 42 files).

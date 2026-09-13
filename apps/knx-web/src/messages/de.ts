@@ -422,7 +422,11 @@ export const messages: Record<MessageKey, string> = {
   "deviceIdentity.resolution.noDatabase": "Keine Produktdatenbank",
   "deviceIdentity.resolution.notInDatabase": "Nicht in der Produktdatenbank",
   "deviceIdentity.resolution.noReference": "Keine Produktreferenz",
-  "deviceIdentity.resolution.unrecognised": "Zustand unbekannt",
+  // Bewusst nicht "Zustand unbekannt": die englische Fassung vermeidet das
+  // Wort "unknown", weil der Zustand dem Server sehr wohl bekannt ist —
+  // nur dieser Build kennt ihn nicht. `DeviceWorkspace.test.tsx` prüft
+  // beide Kataloge darauf, damit die Formulierung nicht zurückwandert.
+  "deviceIdentity.resolution.unrecognised": "Zustand nicht erkannt",
   "deviceIdentity.explain.unrecognised":
     "Der Server meldet einen Auflösungszustand, den dieser Build nicht kennt; dieses Feld kann deshalb nicht sagen, ob die Angaben oben einem Produkt zugeordnet wurden. Die Referenzen stehen genau so, wie das Projekt sie angibt.",
   "deviceIdentity.explain.noDatabase":

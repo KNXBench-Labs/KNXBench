@@ -636,7 +636,7 @@ function DeviceIdentity(props: { product: DeviceProductNode }) {
   const headlineCatalogRows = catalog ? presentRows(HEADLINE_FIELDS, catalog) : [];
   const headline = [...refRows, ...headlineCatalogRows];
   const groups = catalog
-    ? CATALOG_GROUPS.map((group) => ({ title: group.title, rows: presentRows(group.fields, catalog), total: group.fields.length }))
+    ? CATALOG_GROUPS.map((group) => ({ title: group.title, rows: presentRows(group.fields, catalog) }))
     : [];
   // Every catalogue field the database left null, counted across the headline
   // and the groups alike.
@@ -696,7 +696,17 @@ export function DeviceWorkspace(props: {
     }}>
       {tabs.map((label, index) => <button key={label} id={`device-tab-${detail.id}-${index}`} role="tab" aria-selected={tab === index} aria-controls={`device-panel-${detail.id}-${index}`} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)}>{label}</button>)}
     </div>
-    <div role="tabpanel" id={`device-panel-${detail.id}-0`} aria-labelledby={`device-tab-${detail.id}-0`} hidden={tab !== 0}>
+    {/* `tabIndex={0}` on all three panels, not only the ones that can end up
+        with nothing focusable inside them: a panel's content is data-driven
+        (a device with no communication objects, an application with no
+        parameters, an identity that is one sentence of prose under
+        `NoReference`) so "does this panel contain a tab stop?" cannot be
+        answered here at all. WAI-ARIA APG asks for the tab stop exactly when
+        the content is unfocusable; applying it unconditionally costs one
+        extra stop on a populated panel and never strands the content of an
+        empty one. A hidden panel is not focusable, so only the selected one
+        is ever in the tab order. */}
+    <div role="tabpanel" id={`device-panel-${detail.id}-0`} aria-labelledby={`device-tab-${detail.id}-0`} hidden={tab !== 0} tabIndex={0}>
       <h3>{t("inspector.communicationObjects")}</h3>
       <ul className="com-object-list">
         {detail.com_objects.map((com) => (
@@ -729,13 +739,13 @@ export function DeviceWorkspace(props: {
       </ul>
 
     </div>
-    <div role="tabpanel" id={`device-panel-${detail.id}-1`} aria-labelledby={`device-tab-${detail.id}-1`} hidden={tab !== 1}>
+    <div role="tabpanel" id={`device-panel-${detail.id}-1`} aria-labelledby={`device-tab-${detail.id}-1`} hidden={tab !== 1} tabIndex={0}>
       <ParameterPanel deviceId={detail.id} />
     </div>
     {/* Hidden, not unmounted — the same shape as the parameter panel above,
         whose fetch is keyed to its mount and must not restart on every tab
         switch. */}
-    <div role="tabpanel" id={`device-panel-${detail.id}-2`} aria-labelledby={`device-tab-${detail.id}-2`} hidden={tab !== 2}>
+    <div role="tabpanel" id={`device-panel-${detail.id}-2`} aria-labelledby={`device-tab-${detail.id}-2`} hidden={tab !== 2} tabIndex={0}>
       <DeviceIdentity product={detail.product} />
     </div>
   </section>;

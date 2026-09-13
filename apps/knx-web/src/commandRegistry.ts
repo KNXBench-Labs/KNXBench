@@ -4,6 +4,7 @@ import type { MessageKey } from "./messages/en";
 
 export interface CommandContext {
   tree: ProjectTree | null;
+  newProject: () => void;
   pickProject: () => void;
   openNativeProject: () => void;
   saveProject: () => void;
@@ -54,6 +55,14 @@ export interface ResolvedPaletteCommand extends Omit<PaletteCommand, "labelKey">
 // button's `toolbar.search` carries a "(Ctrl+K)" suffix this palette row
 // already renders separately via `shortcutHint`.
 export const COMMANDS: PaletteCommand[] = [
+  // First, and enabled with nothing loaded: it is the only File action
+  // that does not require the user to already own a file.
+  {
+    id: "new-project",
+    labelKey: "toolbar.newProject",
+    isEnabled: () => true,
+    run: (ctx) => ctx.newProject(),
+  },
   {
     id: "open-project",
     labelKey: "toolbar.openProject",

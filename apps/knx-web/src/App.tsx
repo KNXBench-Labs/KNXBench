@@ -12,6 +12,7 @@ import ResizablePane from "./ResizablePane";
 import WorkbenchIcon from "./WorkbenchIcon";
 import StructureWorkspace, { type StructureView } from "./StructureWorkspace";
 import CatalogBrowser from "./CatalogBrowser";
+import NewProjectDialog from "./NewProjectDialog";
 import Inspector, { DeviceWorkspace } from "./Inspector";
 import Search from "./Search";
 import CommandPalette from "./CommandPalette";
@@ -107,6 +108,10 @@ function App() {
   const [navigationOpen, setNavigationOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [catalogTarget, setCatalogTarget] = useState<{ lineId: number | null } | null>(null);
+  // The from-scratch project launcher. Owned here rather than inside the
+  // welcome screen because the File menu and the command palette open the
+  // same dialog, and a project can be started with one already open.
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
   // Exactly one multi-selection for the whole shell, shared by the project
   // tree and the group-address table, feeding exactly one
   // `BulkActionToolbar` (stage 4 brief, item 2 — reuse the validated
@@ -372,6 +377,27 @@ function App() {
     })();
   }, [productLanguage]);
 
+  // Opening the dialog itself does nothing to the open project — the
+  // request only leaves `NewProjectDialog` when the user submits, and the
+  // server refuses it outright if that would discard unsaved edits.
+  function startNewProject() {
+    clearErrors();
+    setNewProjectOpen(true);
+  }
+
+  // A brand-new project has no `.knxdb` behind it, so `hasStorePath` must
+  // go false: otherwise the next plain Save would write this empty project
+  // over whatever file the previous one came from. The backend clears its
+  // own `store_path` for exactly the same reason (`new_project_impl`).
+  function newProjectCreated(newTree: ProjectTree) {
+    resetTree(newTree);
+    setHasStorePath(false);
+    setNewProjectOpen(false);
+    setView("overview");
+    setLogOpen(false);
+    setMonitorOpen(false);
+  }
+
   async function pickProject() {
     const path = await pickOpenPath(etsProjectFilter);
     if (!path) return;
@@ -458,6 +484,7 @@ function App() {
 
   const ctx: CommandContext = {
     tree,
+    newProject: startNewProject,
     pickProject,
     openNativeProject,
     saveProject,
@@ -478,6 +505,7 @@ function App() {
         <details className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
           <summary>{t("workbench.file")} <span aria-hidden="true">⌄</span></summary>
           <div className="file-menu-content">
+      <button onClick={startNewProject}>{t("toolbar.newProject")}</button>
       <button onClick={pickProject}>{t("toolbar.openProject")}</button>
       <button onClick={openNativeProject}>{t("toolbar.openNativeProject")}</button>
       <button onClick={saveProjectAs} disabled={!tree}>
@@ -546,7 +574,7 @@ function App() {
               multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate}
               addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}
               onSelect={selectEntity} onCatalog={(lineId) => setCatalogTarget({ lineId })} />
-          ) : <section className="welcome-workspace"><span className="eyebrow">KNX-compatible · Linux-first</span><h1>{t("workbench.welcome")}</h1><p>{t("workbench.openHint")}</p><div><button onClick={pickProject}>{t("toolbar.openProject")}</button><button onClick={openNativeProject}>{t("toolbar.openNativeProject")}</button></div></section>}
+          ) : <section className="welcome-workspace"><span className="eyebrow">KNX-compatible · Linux-first</span><h1>{t("workbench.welcome")}</h1><p>{t("workbench.openHint")}</p><div><button className="primary-action" onClick={startNewProject}>{t("toolbar.newProject")}</button><button onClick={pickProject}>{t("toolbar.openProject")}</button><button onClick={openNativeProject}>{t("toolbar.openNativeProject")}</button></div></section>}
           {tree && selection?.kind === "device" && deviceDetail && !logOpen && !monitorOpen && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
         </div>
         {inspectorOpen && !logOpen && !monitorOpen && <ResizablePane label={t("workbench.properties")} side="right" initialWidth={360} min={280} max={700}>
@@ -557,6 +585,7 @@ function App() {
       <footer className="workbench-status"><span>{tree ? tree.installations.map((i) => i.name).join(" / ") : "KNXBench"}</span><span>KNX-compatible</span></footer>
       <ToastStack toasts={toasts} onDismiss={dismiss} />
       {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} onCreated={handleTreeUpdate} onClose={() => setCatalogTarget(null)} />}
+      {newProjectOpen && <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} />}
       {tree && searchOpen && (
         <Search tree={tree} onSelect={selectEntity} onClose={() => setSearchOpen(false)} />
       )}

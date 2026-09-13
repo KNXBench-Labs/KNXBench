@@ -41,6 +41,70 @@ export function openProject(path: string): Promise<ProjectTree> {
   return request("/api/project/open", { method: "POST", body: JSON.stringify({ path }) });
 }
 
+/**
+ * The three spellings `POST /api/project/new` accepts for
+ * `groupAddressStyle` — the same tokens ETS writes into a `.knxproj` and
+ * `knx-store` persists, so nothing here needs translating on the way to
+ * the server (see `routes.rs`'s `parse_group_address_style`). What the
+ * *user* reads is a catalogue entry per member; these are wire values,
+ * never labels.
+ */
+export type GroupAddressStyle = "Free" | "TwoLevel" | "ThreeLevel";
+
+export interface NewProjectOptions {
+  name: string;
+  installationName: string;
+  /** BCP-47 tag the project's own texts are stored under
+   * (`knx_core::Language`), unrelated to the UI chrome language. */
+  language: string;
+  /** Effectively permanent once group addresses exist — nothing in the
+   * domain restyles a project afterwards — which is why it is asked for
+   * at creation rather than left to a default. */
+  groupAddressStyle: GroupAddressStyle;
+  /**
+   * Throws away the open project's unsaved edits. Only ever `true`
+   * because a human read what was at stake and said so: the server
+   * refuses with `409` by default precisely so this cannot happen by
+   * omission, and re-sending with this flag is the one way past it.
+   */
+  discardChanges?: boolean;
+}
+
+/**
+ * Creates an empty project server-side, replacing whatever is open. The
+ * only path to a project that never came from a file — an ETS import or
+ * a `.knxdb` open are the other two — and therefore the entry point for
+ * installing a device from the product catalogue with no `.knxproj` in
+ * sight.
+ *
+ * Rejects with a `409`-carrying error when the open project has unsaved
+ * edits and `discardChanges` was not set; `isUnsavedChangesConflict`
+ * below is how a caller tells that apart from a real failure.
+ */
+export function newProject(options: NewProjectOptions): Promise<ProjectTree> {
+  return request("/api/project/new", {
+    method: "POST",
+    body: JSON.stringify({
+      name: options.name,
+      installationName: options.installationName,
+      language: options.language,
+      groupAddressStyle: options.groupAddressStyle,
+      // Always explicit, never omitted: `false` on the wire says the same
+      // thing as an absent field to the server, and saying it out loud
+      // makes "did this request ask to discard anything?" answerable by
+      // looking at the body alone.
+      discardChanges: options.discardChanges === true,
+    }),
+  });
+}
+
+/** Whether a `newProject` rejection is the server's "the open project has
+ * unsaved changes" refusal (`409`) rather than a failure — the one error
+ * a caller must turn into a question for the user instead of a toast. */
+export function isUnsavedChangesConflict(e: unknown): boolean {
+  return errorStatus(e) === 409;
+}
+
 export function saveProject(): Promise<void> {
   return request("/api/project/save", { method: "POST" });
 }

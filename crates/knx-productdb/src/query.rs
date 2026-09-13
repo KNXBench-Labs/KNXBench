@@ -26,6 +26,49 @@ fn pick(program: Option<String>, program_ref: Option<String>) -> (Option<String>
     }
 }
 
+/// Resolves a requested display language (e.g. `de`) against the set of
+/// language identifiers a translation actually has rows for (e.g.
+/// `["de-DE", "en-US"]`), per R2. This is the **one place** the rule lives
+/// — every overlay in this file (`translation_overlay`, `catalog_overlay`,
+/// `overlay_one`, `master_text_overlay`) resolves its candidates through
+/// this function rather than repeating the comparison.
+///
+/// Rule, in order:
+/// 1. An exact match always wins, even when a prefix match also exists
+///    (a requested `de-DE` must not be redirected to `de-AT` just because
+///    prefix-matching exists as a fallback).
+/// 2. Otherwise, a stored identifier matches by locale prefix when it
+///    equals `requested` followed by a `-` and at least one more byte —
+///    `de` matches `de-DE`, but not `de` itself (already handled by the
+///    exact case above) and not `deX` (no separator). One-directional, as
+///    specified: a longer requested identifier is never shortened to match
+///    a shorter stored one.
+/// 3. Two or more stored identifiers can legally prefix-match the same
+///    request (`de-DE` and `de-AT` both match `de`) and the KNX App XML
+///    schema gives no rule for preferring one over the other, so the
+///    tiebreak is simply the lexicographically smallest identifier
+///    (`Ord` on `&str`, i.e. plain byte order) — deterministic and
+///    documented, per R2's "pick one, implement it, document which and
+///    why", not a claim that `de-AT` is somehow the "right" default.
+/// 4. An empty or otherwise non-matching requested string resolves to
+///    `None`, exactly like a `language` with zero candidates — a miss
+///    here is never an error, only the call site decides what the
+///    untranslated fallback is.
+fn best_matching_language<'a>(requested: &str, available: &[&'a str]) -> Option<&'a str> {
+    if requested.is_empty() {
+        return None;
+    }
+    if let Some(&exact) = available.iter().find(|&&candidate| candidate == requested) {
+        return Some(exact);
+    }
+    let prefix = format!("{requested}-");
+    available
+        .iter()
+        .copied()
+        .filter(|candidate| candidate.starts_with(&prefix))
+        .min()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ComObjectView {
     pub number: Option<i64>,
@@ -552,6 +595,49 @@ pub fn parameter_views(
     Ok(views)
 }
 
+/// Single-row, single-attribute translation lookup, locale-prefix-matched
+/// via `best_matching_language` the same as every batch overlay in this
+/// file. For a caller with only a handful of independent scoped lookups
+/// (`device_product`'s three, `datapoint_type`'s one) rather than many rows
+/// sharing one `scope_id` — the shape `translation_overlay`/
+/// `catalog_overlay` batch for — a few small point queries are simpler than
+/// hand-written SQL that fakes prefix matching inside a `JOIN ... ON`
+/// clause, which cannot express it: the winning language is resolved per
+/// candidate group, not by a literal equality SQLite's planner can use.
+/// Returns `None` on no match of any kind (no rows at all, or no stored
+/// language resolves against `language`) — never an error, and the call
+/// site decides what "no match" falls back to, same convention as
+/// `overlay_text`.
+fn overlay_one(
+    conn: &Connection,
+    scope: &str,
+    scope_id: &str,
+    ref_id: &str,
+    attribute_name: &str,
+    language: &str,
+) -> Result<Option<String>, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT language, text FROM translation
+         WHERE scope = ?1 AND scope_id = ?2 AND ref_id = ?3 AND attribute_name = ?4
+           AND text IS NOT NULL",
+    )?;
+    let candidates: Vec<(String, String)> = stmt
+        .query_map(
+            rusqlite::params![scope, scope_id, ref_id, attribute_name],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )?
+        .collect::<Result<Vec<_>, _>>()?;
+    let languages: Vec<&str> = candidates.iter().map(|(l, _)| l.as_str()).collect();
+    Ok(
+        best_matching_language(language, &languages).and_then(|matched| {
+            candidates
+                .iter()
+                .find(|(l, _)| l == matched)
+                .map(|(_, text)| text.clone())
+        }),
+    )
+}
+
 /// `(ref_id, attribute_name) -> text` for one program and language, loaded
 /// once per `parameter_views` call: a single `ModuleDef` can own hundreds of
 /// parameters, so a per-row lookup would be the wrong shape — the same
@@ -567,21 +653,41 @@ fn translation_overlay(
     program_id: &str,
     language: &str,
 ) -> Result<HashMap<(String, String), String>, ProductDbError> {
+    // Every stored language is loaded, not just `language` itself (R2):
+    // resolving `de` against `de-DE` requires knowing `de-DE` exists for
+    // this `(ref_id, attribute_name)` pair in the first place, and that
+    // set can differ per pair (one element may only have been translated
+    // into `de-AT`, another only `de-DE`), so the resolution in
+    // `best_matching_language` happens per group below, not once for the
+    // whole call.
     let mut stmt = conn.prepare(
-        "SELECT ref_id, attribute_name, text FROM translation
-         WHERE scope = 'Program' AND scope_id = ?1 AND language = ?2
+        "SELECT ref_id, attribute_name, language, text FROM translation
+         WHERE scope = 'Program' AND scope_id = ?1
            AND attribute_name IN ('Text','FunctionText','SuffixText','VisibleDescription','Name')
            AND text IS NOT NULL",
     )?;
-    let rows = stmt
-        .query_map([program_id, language], |r| {
-            let ref_id: String = r.get(0)?;
-            let attribute_name: String = r.get(1)?;
-            let text: String = r.get(2)?;
-            Ok(((ref_id, attribute_name), text))
-        })?
-        .collect::<Result<HashMap<_, _>, _>>()?;
-    Ok(rows)
+    let mut grouped: HashMap<(String, String), Vec<(String, String)>> = HashMap::new();
+    let mut rows = stmt.query([program_id])?;
+    while let Some(row) = rows.next()? {
+        let ref_id: String = row.get(0)?;
+        let attribute_name: String = row.get(1)?;
+        let stored_language: String = row.get(2)?;
+        let text: String = row.get(3)?;
+        grouped
+            .entry((ref_id, attribute_name))
+            .or_default()
+            .push((stored_language, text));
+    }
+    let mut resolved = HashMap::with_capacity(grouped.len());
+    for (key, candidates) in grouped {
+        let languages: Vec<&str> = candidates.iter().map(|(l, _)| l.as_str()).collect();
+        if let Some(matched) = best_matching_language(language, &languages) {
+            if let Some((_, text)) = candidates.iter().find(|(l, _)| l == matched) {
+                resolved.insert(key, text.clone());
+            }
+        }
+    }
+    Ok(resolved)
 }
 
 /// One language identifier's row count, as returned by
@@ -770,16 +876,20 @@ const CATALOG_ITEM_COLUMNS: &str = "id, manufacturer_id, name, number, visible_d
 ///
 /// `language` is `None` for today's untranslated behaviour, in which case
 /// this issues the exact same statement it always has — no `translation`
-/// join, no `COALESCE`, nothing that could make SQLite pick a different
-/// plan or a different tie-break for two rows sorting equal. `Some(lang)`
-/// `LEFT JOIN`s `translation` twice, once for `Name` and once for
-/// `VisibleDescription`, scoped to `scope = 'Catalog' AND scope_id =
-/// catalog_item.manufacturer_id` (Catalog-scope rows are keyed by the
-/// *manufacturer's* RefId, not the item's own id — T32 Task 1/2) and `ref_id
-/// = catalog_item.id`. Both the search filter and the `ORDER BY` follow the
-/// overlaid name, so a translated-only match is findable and the list still
-/// sorts the way it displays; `number` is never translated and keeps
-/// matching/sorting on its own untranslated column exactly as before.
+/// query at all, nothing that could make SQLite pick a different plan or a
+/// different tie-break for two rows sorting equal. `Some(lang)` batch-loads
+/// `Name`/`VisibleDescription` rows scoped to `scope = 'Catalog' AND
+/// scope_id = catalog_item.manufacturer_id` (Catalog-scope rows are keyed
+/// by the *manufacturer's* RefId, not the item's own id — T32 Task 1/2)
+/// and `ref_id = catalog_item.id` via `catalog_overlay`, then resolves and
+/// applies the overlay in Rust before filtering/sorting — not a `JOIN ...
+/// ON language = ?`, because R2's locale-prefix matching picks a different
+/// winning stored language per `(manufacturer_id, item_id)` pair, which a
+/// literal `ON` equality cannot express. Both the search filter and the
+/// `ORDER BY` follow the overlaid name, so a translated-only match is
+/// findable and the list still sorts the way it displays; `number` is
+/// never translated and keeps matching/sorting on its own untranslated
+/// value exactly as before.
 pub fn catalog_items(
     conn: &Connection,
     manufacturer: Option<&str>,
@@ -803,33 +913,128 @@ pub fn catalog_items(
         return Ok(rows);
     };
 
-    let sql = "SELECT ci.id, ci.manufacturer_id,
-                      COALESCE(tn.text, ci.name),
-                      ci.number,
-                      COALESCE(td.text, ci.visible_description),
-                      ci.product_ref_id, ci.hardware2program_ref_id
-               FROM catalog_item ci
-               LEFT JOIN translation tn
-                 ON tn.scope = 'Catalog' AND tn.scope_id = ci.manufacturer_id
-                    AND tn.ref_id = ci.id AND tn.attribute_name = 'Name'
-                    AND tn.language = ?3
-               LEFT JOIN translation td
-                 ON td.scope = 'Catalog' AND td.scope_id = ci.manufacturer_id
-                    AND td.ref_id = ci.id AND td.attribute_name = 'VisibleDescription'
-                    AND td.language = ?3
-               WHERE (?1 IS NULL OR ci.manufacturer_id = ?1)
-                 AND (?2 IS NULL
-                      OR LOWER(COALESCE(tn.text, ci.name)) LIKE '%' || LOWER(?2) || '%'
-                      OR LOWER(ci.number) LIKE '%' || LOWER(?2) || '%')
-               ORDER BY ci.manufacturer_id, COALESCE(tn.text, ci.name)";
-    let mut stmt = conn.prepare(sql)?;
-    let rows = stmt
-        .query_map(
-            rusqlite::params![manufacturer, search, lang],
-            row_to_catalog_item,
-        )?
+    // Every catalog item matching `manufacturer` is loaded untranslated
+    // first — no search filter yet, since the search must run against the
+    // *overlaid* name below, not the stored one. A plain `JOIN ... ON
+    // language = ?` (this function's previous shape) cannot express R2's
+    // prefix matching: which stored language wins can differ per
+    // `catalog_item`, each keyed by its own manufacturer's `scope_id`, so
+    // the resolution has to happen in Rust after batch-loading every
+    // candidate, exactly as `translation_overlay` does for one program —
+    // except a `catalog_items` call can span more than one manufacturer at
+    // once (catalog browsing is rarely narrowed to one), so the overlay
+    // below groups by `(manufacturer_id, item_id)`, not just `item_id`.
+    let sql = format!(
+        "SELECT {CATALOG_ITEM_COLUMNS}
+         FROM catalog_item
+         WHERE (?1 IS NULL OR manufacturer_id = ?1)"
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let mut rows: Vec<CatalogItemRow> = stmt
+        .query_map([manufacturer], row_to_catalog_item)?
         .collect::<Result<Vec<_>, _>>()?;
+
+    let manufacturer_ids: Vec<String> = {
+        let mut ids: Vec<String> = rows.iter().map(|r| r.manufacturer_id.clone()).collect();
+        ids.sort();
+        ids.dedup();
+        ids
+    };
+    let overlay = catalog_overlay(conn, &manufacturer_ids, lang)?;
+    for row in &mut rows {
+        if let Some(name) = overlay.get(&(row.manufacturer_id.clone(), row.id.clone(), "Name")) {
+            row.name = Some(name.clone());
+        }
+        if let Some(desc) = overlay.get(&(
+            row.manufacturer_id.clone(),
+            row.id.clone(),
+            "VisibleDescription",
+        )) {
+            row.visible_description = Some(desc.clone());
+        }
+    }
+
+    if let Some(needle) = search {
+        let needle = needle.to_lowercase();
+        rows.retain(|r| {
+            r.name
+                .as_deref()
+                .is_some_and(|n| n.to_lowercase().contains(&needle))
+                || r.number
+                    .as_deref()
+                    .is_some_and(|n| n.to_lowercase().contains(&needle))
+        });
+    }
+    // Mirrors the untranslated branch's `ORDER BY manufacturer_id, name`,
+    // on the overlaid name — SQL's NULLs-first ascending order is matched
+    // by `Option`'s own `Ord` (`None < Some(_)`).
+    rows.sort_by(|a, b| {
+        (a.manufacturer_id.as_str(), a.name.as_deref())
+            .cmp(&(b.manufacturer_id.as_str(), b.name.as_deref()))
+    });
     Ok(rows)
+}
+
+/// Batch-loads every stored language variant of a `Catalog`-scope `Name`/
+/// `VisibleDescription` row across `manufacturer_ids`, then resolves each
+/// `(manufacturer_id, item_id, attribute_name)` group down to one text via
+/// `best_matching_language` — the `catalog_items` analogue of
+/// `translation_overlay`, widened to more than one `scope_id` per call
+/// because a catalog listing is not scoped to one manufacturer the way a
+/// program's parameter/com-object views are scoped to one program.
+/// `(scope_id, ref_id, attribute)` key for `catalog_overlay`'s grouping and
+/// result maps — named so clippy's `type_complexity` lint stops flagging
+/// the nested tuple type at every one of its three use sites.
+type CatalogOverlayKey = (String, String, &'static str);
+
+fn catalog_overlay(
+    conn: &Connection,
+    manufacturer_ids: &[String],
+    language: &str,
+) -> Result<HashMap<CatalogOverlayKey, String>, ProductDbError> {
+    if manufacturer_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let placeholders = std::iter::repeat_n("?", manufacturer_ids.len())
+        .collect::<Vec<_>>()
+        .join(",");
+    let sql = format!(
+        "SELECT scope_id, ref_id, attribute_name, language, text FROM translation
+         WHERE scope = 'Catalog' AND scope_id IN ({placeholders})
+           AND attribute_name IN ('Name','VisibleDescription') AND text IS NOT NULL"
+    );
+    let mut stmt = conn.prepare(&sql)?;
+    let params = rusqlite::params_from_iter(manufacturer_ids.iter());
+    let mut grouped: HashMap<CatalogOverlayKey, Vec<(String, String)>> = HashMap::new();
+    let mut rows = stmt.query(params)?;
+    while let Some(row) = rows.next()? {
+        let scope_id: String = row.get(0)?;
+        let ref_id: String = row.get(1)?;
+        let attribute_name: String = row.get(2)?;
+        let stored_language: String = row.get(3)?;
+        let text: String = row.get(4)?;
+        let attribute: &'static str = match attribute_name.as_str() {
+            "Name" => "Name",
+            "VisibleDescription" => "VisibleDescription",
+            // The `IN` filter above admits only these two; anything else
+            // would be a logic error in this function, not real data.
+            other => unreachable!("unexpected attribute_name from filtered query: {other}"),
+        };
+        grouped
+            .entry((scope_id, ref_id, attribute))
+            .or_default()
+            .push((stored_language, text));
+    }
+    let mut resolved = HashMap::with_capacity(grouped.len());
+    for (key, candidates) in grouped {
+        let languages: Vec<&str> = candidates.iter().map(|(l, _)| l.as_str()).collect();
+        if let Some(matched) = best_matching_language(language, &languages) {
+            if let Some((_, text)) = candidates.iter().find(|(l, _)| l == matched) {
+                resolved.insert(key, text.clone());
+            }
+        }
+    }
+    Ok(resolved)
 }
 
 /// The single-row lookup `apps/knx-server`'s device creation uses.
@@ -1062,22 +1267,42 @@ pub struct DeviceProductRow {
     pub mask_version: Option<String>,
 }
 
-fn row_to_device_product(r: &rusqlite::Row) -> rusqlite::Result<DeviceProductRow> {
-    Ok(DeviceProductRow {
-        manufacturer_id: r.get(0)?,
-        manufacturer_name: r.get(1)?,
-        product_text: r.get(2)?,
-        order_number: r.get(3)?,
-        hardware_name: r.get(4)?,
-        hardware_version: r.get(5)?,
-        hardware_serial_number: r.get(6)?,
-        catalog_item_name: r.get(7)?,
-        catalog_item_number: r.get(8)?,
-        application_program_id: r.get(9)?,
-        application_name: r.get(10)?,
-        application_number: r.get(11)?,
-        application_version: r.get(12)?,
-        mask_version: r.get(13)?,
+/// The untranslated row, plus the two extra ids `device_product`'s
+/// `Some(lang)` branch needs to resolve a translation's `scope_id` but that
+/// `DeviceProductRow` itself has no reason to expose: `catalog_item.id`
+/// (the overlay `ref_id` for `catalog_item.name` — `device_product`'s own
+/// `product_ref_id`/`hardware2program_ref_id` arguments name the *product*
+/// and its *program link*, not the catalog entry) and
+/// `catalog_item.manufacturer_id` (the overlay `scope_id` — Catalog-scope
+/// rows are keyed by the manufacturer's RefId, same as `catalog_items`' own
+/// join, and a catalog item's manufacturer is not assumed equal to the
+/// product's merely because they usually are).
+struct DeviceProductRawRow {
+    row: DeviceProductRow,
+    catalog_item_id: Option<String>,
+    catalog_item_manufacturer_id: Option<String>,
+}
+
+fn row_to_device_product_raw(r: &rusqlite::Row) -> rusqlite::Result<DeviceProductRawRow> {
+    Ok(DeviceProductRawRow {
+        row: DeviceProductRow {
+            manufacturer_id: r.get(0)?,
+            manufacturer_name: r.get(1)?,
+            product_text: r.get(2)?,
+            order_number: r.get(3)?,
+            hardware_name: r.get(4)?,
+            hardware_version: r.get(5)?,
+            hardware_serial_number: r.get(6)?,
+            catalog_item_name: r.get(7)?,
+            catalog_item_number: r.get(8)?,
+            application_program_id: r.get(9)?,
+            application_name: r.get(10)?,
+            application_number: r.get(11)?,
+            application_version: r.get(12)?,
+            mask_version: r.get(13)?,
+        },
+        catalog_item_id: r.get(14)?,
+        catalog_item_manufacturer_id: r.get(15)?,
     })
 }
 
@@ -1092,18 +1317,27 @@ fn row_to_device_product(r: &rusqlite::Row) -> rusqlite::Result<DeviceProductRow
 /// row in this schema, so it behaves exactly like an id that doesn't
 /// resolve.
 ///
-/// `language: None` issues the plain, untranslated statement, unchanged in
-/// shape from the `Some` case minus its three overlay joins — same
-/// convention as `catalog_items`. `Some(lang)` overlays three attributes
-/// through the shared `translation` table, each scoped exactly the way its
-/// owning file's `Languages` block keys it (`parse/translation.rs`):
-/// `product.text` (`scope = 'Hardware'`, `scope_id = product.manufacturer_id`,
-/// `ref_id = product.id`, `attribute_name = 'Text'`), `catalog_item.name`
-/// (`scope = 'Catalog'`, `scope_id = catalog_item.manufacturer_id`,
-/// `ref_id = catalog_item.id`, `attribute_name = 'Name'` — identical to
-/// `catalog_items`' own join), and `application_program.name`
-/// (`scope = 'Program'`, `scope_id = application_program.id`,
-/// `ref_id = application_program.id`, `attribute_name = 'Name'`).
+/// `language: None` issues the plain, untranslated statement and returns —
+/// one query, no overlay lookups at all (Global Constraint 3). `Some(lang)`
+/// runs the same base statement (it always does, now — the two used to be
+/// separate near-duplicate `SELECT`s, one of them `COALESCE`d against three
+/// `LEFT JOIN translation ... AND language = ?3`s; that shape could not
+/// express R2's locale-prefix matching, since a `JOIN ... ON` equality
+/// cannot pick a different winning stored language per row, so each of the
+/// three attributes is now resolved separately, in Rust, through the one
+/// shared `overlay_one` point-query helper instead) and then overlays three
+/// attributes through the shared `translation` table, each scoped exactly
+/// the way its owning file's `Languages` block keys it
+/// (`parse/translation.rs`): `product.text` (`scope = 'Hardware'`,
+/// `scope_id = product.manufacturer_id`, `ref_id = product.id`,
+/// `attribute_name = 'Text'`), `catalog_item.name` (`scope = 'Catalog'`,
+/// `scope_id = catalog_item.manufacturer_id`, `ref_id = catalog_item.id`,
+/// `attribute_name = 'Name'` — identical to `catalog_items`' own join, and
+/// only attempted when a catalog item actually resolved), and
+/// `application_program.name` (`scope = 'Program'`,
+/// `scope_id = application_program.id`, `ref_id = application_program.id`,
+/// `attribute_name = 'Name'`, only attempted when a program actually
+/// resolved).
 ///
 /// `hardware.name` is deliberately never overlaid, on an observation rather
 /// than a rule: across every `Hardware.xml` this project has ingested — nine
@@ -1135,36 +1369,12 @@ pub fn device_product(
     hardware2program_ref_id: &str,
     language: Option<&str>,
 ) -> Result<Option<DeviceProductRow>, ProductDbError> {
-    let Some(lang) = language else {
-        const SQL: &str = "SELECT p.manufacturer_id, m.name, p.text, p.order_number,
-                    h.name, h.version_number, h.serial_number,
-                    ci.name, ci.number,
-                    apg.id, apg.name, apg.application_number,
-                    apg.application_version, apg.mask_version
-             FROM product p
-             LEFT JOIN hardware h ON h.id = p.hardware_id
-             LEFT JOIN manufacturer m ON m.id = p.manufacturer_id
-             LEFT JOIN hardware2program h2p ON h2p.id = ?2
-             LEFT JOIN application_program apg ON apg.id = h2p.application_program_ref
-             LEFT JOIN catalog_item ci ON ci.product_ref_id = ?1
-                  AND ci.hardware2program_ref_id = ?2
-             WHERE p.id = ?1";
-        return conn
-            .query_row(
-                SQL,
-                rusqlite::params![product_ref_id, hardware2program_ref_id],
-                row_to_device_product,
-            )
-            .optional()
-            .map_err(Into::into);
-    };
-
-    const SQL_TRANSLATED: &str =
-        "SELECT p.manufacturer_id, m.name, COALESCE(tp.text, p.text), p.order_number,
+    const SQL: &str = "SELECT p.manufacturer_id, m.name, p.text, p.order_number,
                 h.name, h.version_number, h.serial_number,
-                COALESCE(tc.text, ci.name), ci.number,
-                apg.id, COALESCE(ta.text, apg.name), apg.application_number,
-                apg.application_version, apg.mask_version
+                ci.name, ci.number,
+                apg.id, apg.name, apg.application_number,
+                apg.application_version, apg.mask_version,
+                ci.id, ci.manufacturer_id
          FROM product p
          LEFT JOIN hardware h ON h.id = p.hardware_id
          LEFT JOIN manufacturer m ON m.id = p.manufacturer_id
@@ -1172,20 +1382,47 @@ pub fn device_product(
          LEFT JOIN application_program apg ON apg.id = h2p.application_program_ref
          LEFT JOIN catalog_item ci ON ci.product_ref_id = ?1
               AND ci.hardware2program_ref_id = ?2
-         LEFT JOIN translation tp ON tp.scope = 'Hardware' AND tp.scope_id = p.manufacturer_id
-              AND tp.ref_id = p.id AND tp.attribute_name = 'Text' AND tp.language = ?3
-         LEFT JOIN translation tc ON tc.scope = 'Catalog' AND tc.scope_id = ci.manufacturer_id
-              AND tc.ref_id = ci.id AND tc.attribute_name = 'Name' AND tc.language = ?3
-         LEFT JOIN translation ta ON ta.scope = 'Program' AND ta.scope_id = apg.id
-              AND ta.ref_id = apg.id AND ta.attribute_name = 'Name' AND ta.language = ?3
          WHERE p.id = ?1";
-    conn.query_row(
-        SQL_TRANSLATED,
-        rusqlite::params![product_ref_id, hardware2program_ref_id, lang],
-        row_to_device_product,
-    )
-    .optional()
-    .map_err(Into::into)
+    let raw = conn
+        .query_row(
+            SQL,
+            rusqlite::params![product_ref_id, hardware2program_ref_id],
+            row_to_device_product_raw,
+        )
+        .optional()?;
+    let Some(raw) = raw else {
+        return Ok(None);
+    };
+    let Some(lang) = language else {
+        return Ok(Some(raw.row));
+    };
+
+    let mut row = raw.row;
+    if let Some(text) = overlay_one(
+        conn,
+        "Hardware",
+        &row.manufacturer_id,
+        product_ref_id,
+        "Text",
+        lang,
+    )? {
+        row.product_text = Some(text);
+    }
+    if let (Some(item_id), Some(item_manufacturer_id)) =
+        (&raw.catalog_item_id, &raw.catalog_item_manufacturer_id)
+    {
+        if let Some(name) =
+            overlay_one(conn, "Catalog", item_manufacturer_id, item_id, "Name", lang)?
+        {
+            row.catalog_item_name = Some(name);
+        }
+    }
+    if let Some(program_id) = &row.application_program_id {
+        if let Some(name) = overlay_one(conn, "Program", program_id, program_id, "Name", lang)? {
+            row.application_name = Some(name);
+        }
+    }
+    Ok(Some(row))
 }
 
 /// Every `com_object_ref.id` for `program_id`, in document/ingest order.
@@ -1203,6 +1440,158 @@ pub fn com_object_ref_ids(
         .query_map([program_id], |r| r.get(0))?
         .collect::<Result<Vec<_>, _>>()?;
     Ok(rows)
+}
+
+/// One `datapoint_type` row (R1, design D10 slice 1): `parse/master.rs`'s
+/// `ingest_master_data` already fills this table from `knx_master.xml`'s
+/// `DatapointTypes`/`DatapointSubtypes`, `INSERT OR IGNORE`d, untranslated.
+/// Nothing read it before this — `grep`ping for `datapoint_type` outside
+/// `migration.rs` and this module turned up only two unrelated test names
+/// in `enrich.rs`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DatapointTypeRow {
+    /// `DPT-<main>` or `DPST-<main>-<sub>`, verbatim as `master.rs` stores
+    /// it.
+    pub id: String,
+    pub main: i64,
+    pub sub: Option<i64>,
+    /// `DatapointType`/`DatapointSubtype`'s own `@Name`. Never overlaid: no
+    /// package in this project's corpus carries a `Master`-scope
+    /// translation for it (this function's own doc comment states the
+    /// evidence), only for `text`.
+    pub name: Option<String>,
+    /// `DatapointType`/`DatapointSubtype`'s own `@Text`, overlaid from a
+    /// `Master`-scope translation in `language` when one resolves — the
+    /// stored, untranslated value otherwise. A missing translation is never
+    /// an error and never turns this into `Some("")`.
+    pub text: Option<String>,
+}
+
+fn row_to_datapoint_type(r: &rusqlite::Row) -> rusqlite::Result<DatapointTypeRow> {
+    Ok(DatapointTypeRow {
+        id: r.get(0)?,
+        main: r.get(1)?,
+        sub: r.get(2)?,
+        name: r.get(3)?,
+        text: r.get(4)?,
+    })
+}
+
+const DATAPOINT_TYPE_COLUMNS: &str = "id, main, sub, name, text";
+
+/// `(ref_id -> text)` for every `Master`-scope, `Text`-attribute
+/// translation in `language`, resolved through `best_matching_language`
+/// exactly as `translation_overlay` resolves `Program`-scope rows — except
+/// there is only ever one `scope_id` to consider here (`''`, the sentinel
+/// `migrate_v3_to_v4` and `parse/master.rs` both use for "no scope"), so
+/// this groups by `ref_id` alone rather than `(scope_id, ref_id)`.
+/// Restricted to `attribute_name = 'Text'` on measured evidence, not
+/// convenience: every `TranslationElement` under every sampled package's
+/// `knx_master.xml` `<Languages>` block carries `AttributeName="Text"`
+/// ([V], n=5 packages under `OriginalData/ProductDatabases/` —
+/// `646704-04_ETS4_2012_47_DE_EN`, both `Weinzierl_730_KNX_IP_Interface_ETS4`
+/// variants, `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a`,
+/// `Dummy_Applikation_Secure`; no other `AttributeName` value was seen).
+///
+/// This function's `ref_id -> text` map only ever has rows for `RefId`
+/// families `datapoint_type` itself holds data for (`DPST-*`, `DPT-*`): the
+/// master-data `RefId` families `FT-*`, `SU-*`, `FP-*_DR-*` (function
+/// types, space usages, functional-profile/datapoint pairs) also carry
+/// `Master`-scope translations in the two sampled packages whose
+/// `knx_master.xml` uses the newer scheme
+/// (`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a`, `Dummy_Applikation_Secure` —
+/// [V], n=2 independent master-data sets; the other 3 sampled packages'
+/// `knx_master.xml` predates that scheme and has no such families at all),
+/// but `master.rs` parses none of `FunctionType`/`FunctionPoint`/
+/// `SpaceUsage` — there is no table for those `RefId`s to join against, so
+/// no query here can surface them. A translated name for a function type
+/// or space usage stays unavailable until a later slice gives those
+/// constructs their own tables; see `docs/KNOWN_LIMITATIONS.md` §64 for the
+/// tracked gap, not a silent narrowing of this function's contract.
+fn master_text_overlay(
+    conn: &Connection,
+    language: &str,
+) -> Result<HashMap<String, String>, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT ref_id, language, text FROM translation
+         WHERE scope = 'Master' AND scope_id = '' AND attribute_name = 'Text'
+           AND text IS NOT NULL",
+    )?;
+    let mut grouped: HashMap<String, Vec<(String, String)>> = HashMap::new();
+    let mut rows = stmt.query([])?;
+    while let Some(row) = rows.next()? {
+        let ref_id: String = row.get(0)?;
+        let stored_language: String = row.get(1)?;
+        let text: String = row.get(2)?;
+        grouped
+            .entry(ref_id)
+            .or_default()
+            .push((stored_language, text));
+    }
+    let mut resolved = HashMap::with_capacity(grouped.len());
+    for (ref_id, candidates) in grouped {
+        let languages: Vec<&str> = candidates.iter().map(|(l, _)| l.as_str()).collect();
+        if let Some(matched) = best_matching_language(language, &languages) {
+            if let Some((_, text)) = candidates.iter().find(|(l, _)| l == matched) {
+                resolved.insert(ref_id, text.clone());
+            }
+        }
+    }
+    Ok(resolved)
+}
+
+/// Every `datapoint_type` row, `main` then `sub` ascending (`sub: None`,
+/// the main type's own row, sorts before its subtypes), with `text`
+/// overlaid from a `Master`-scope translation in `language` when one
+/// resolves. `language: None` is the untranslated behaviour and issues no
+/// `translation` query at all, same convention as every other overlay in
+/// this file (Global Constraint 3).
+pub fn datapoint_types(
+    conn: &Connection,
+    language: Option<&str>,
+) -> Result<Vec<DatapointTypeRow>, ProductDbError> {
+    let sql = format!("SELECT {DATAPOINT_TYPE_COLUMNS} FROM datapoint_type ORDER BY main, sub");
+    let mut stmt = conn.prepare(&sql)?;
+    let rows: Vec<DatapointTypeRow> = stmt
+        .query_map([], row_to_datapoint_type)?
+        .collect::<Result<Vec<_>, _>>()?;
+    let Some(lang) = language else {
+        return Ok(rows);
+    };
+    let overlay = master_text_overlay(conn, lang)?;
+    Ok(rows
+        .into_iter()
+        .map(|mut row| {
+            if let Some(text) = overlay.get(&row.id) {
+                row.text = Some(text.clone());
+            }
+            row
+        })
+        .collect())
+}
+
+/// The single-row lookup — `datapoint_types` narrowed to one `id`, for a
+/// caller that already has one (a communication object's `DatapointType`)
+/// rather than wanting the whole catalogue.
+pub fn datapoint_type(
+    conn: &Connection,
+    id: &str,
+    language: Option<&str>,
+) -> Result<Option<DatapointTypeRow>, ProductDbError> {
+    let sql = format!("SELECT {DATAPOINT_TYPE_COLUMNS} FROM datapoint_type WHERE id = ?1");
+    let row: Option<DatapointTypeRow> = conn
+        .query_row(&sql, [id], row_to_datapoint_type)
+        .optional()?;
+    let Some(mut row) = row else {
+        return Ok(None);
+    };
+    let Some(lang) = language else {
+        return Ok(Some(row));
+    };
+    if let Some(text) = overlay_one(conn, "Master", "", &row.id, "Text", lang)? {
+        row.text = Some(text);
+    }
+    Ok(Some(row))
 }
 
 #[cfg(test)]
@@ -1408,6 +1797,18 @@ mod tests {
     }
 
     #[test]
+    fn catalog_items_matches_a_short_locale_request_by_prefix() {
+        // R2, applied to `catalog_overlay`: the fixture only stores
+        // `de-DE`, and a bare `de` request must still find it.
+        let (_dir, conn) = db();
+        ingest_catalog_with_translation(&conn);
+
+        let items = catalog_items(&conn, None, None, Some("de")).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].name.as_deref(), Some("Umschaltaktor"));
+    }
+
+    #[test]
     fn catalog_item_looks_up_a_single_row_by_id() {
         let (_dir, conn) = db();
         ingest_catalog(&conn, "sha-c", "M-006A/Catalog.xml", CATALOG.as_bytes()).unwrap();
@@ -1572,6 +1973,57 @@ mod tests {
         // `hardware.name` is never a translation target in this schema
         // (see `device_product`'s own doc comment) — untouched either way.
         assert_eq!(translated.hardware_name.as_deref(), Some("X"));
+    }
+
+    #[test]
+    fn device_product_matches_a_short_locale_request_by_prefix() {
+        // R2, applied to `overlay_one`'s three call sites inside
+        // `device_product`: every fixture row below only stores `de-DE`.
+        let (_dir, conn) = db();
+        ingest_catalog(&conn, "sha-c", "M-006A/Catalog.xml", CATALOG.as_bytes()).unwrap();
+        insert_translations(
+            &conn,
+            TranslationScope::Hardware,
+            "M-006A",
+            "de-DE",
+            "M-006A_H-1_P-1",
+            "Text",
+            "Schaltaktor 12-fach",
+        )
+        .unwrap();
+        insert_translations(
+            &conn,
+            TranslationScope::Catalog,
+            "M-006A",
+            "de-DE",
+            "M-006A_CI-1",
+            "Name",
+            "Umschaltaktor",
+        )
+        .unwrap();
+        insert_translations(
+            &conn,
+            TranslationScope::Program,
+            "A-1",
+            "de-DE",
+            "A-1",
+            "Name",
+            "Programm P",
+        )
+        .unwrap();
+
+        let translated = device_product(&conn, "M-006A_H-1_P-1", "H-1_HP-1", Some("de"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            translated.product_text.as_deref(),
+            Some("Schaltaktor 12-fach")
+        );
+        assert_eq!(
+            translated.catalog_item_name.as_deref(),
+            Some("Umschaltaktor")
+        );
+        assert_eq!(translated.application_name.as_deref(), Some("Programm P"));
     }
 
     #[test]
@@ -2289,6 +2741,17 @@ mod tests {
     }
 
     #[test]
+    fn parameter_views_matches_a_short_locale_request_by_prefix() {
+        // R2, applied to `translation_overlay` (shared by `parameter_views`
+        // and `com_object_views`): the fixture only stores `de-DE`, and a
+        // caller requesting the bare `de` must still get it.
+        let (_dir, conn) = translated_parameter_db();
+        let views = parameter_views(&conn, "A-5", Some("de")).unwrap();
+        let pr1 = views.iter().find(|v| v.id == "PR-1").unwrap();
+        assert_eq!(pr1.text.as_deref(), Some("Verzoegerung"));
+    }
+
+    #[test]
     fn a_parameter_without_a_row_in_that_language_keeps_its_own_text() {
         let (_dir, conn) = translated_parameter_db();
         let views = parameter_views(&conn, "A-5", Some("de-DE")).unwrap();
@@ -2491,5 +2954,153 @@ mod tests {
             "A-8 declares only it-IT; a database-wide answer would wrongly \
              include A-6's languages too"
         );
+    }
+
+    // --- R2: best_matching_language, the one place locale-prefix matching
+    // lives, with its own dedicated unit tests per the brief's requirement.
+
+    #[test]
+    fn best_matching_language_prefers_an_exact_hit_over_a_prefix_hit() {
+        assert_eq!(
+            best_matching_language("de-DE", &["de-DE", "de-AT", "en-US"]),
+            Some("de-DE"),
+            "an exact match must win even though de-AT also prefix-matches \
+             a hypothetically shorter request"
+        );
+    }
+
+    #[test]
+    fn best_matching_language_matches_a_short_request_against_a_longer_stored_one() {
+        assert_eq!(
+            best_matching_language("de", &["de-DE", "en-US"]),
+            Some("de-DE")
+        );
+    }
+
+    #[test]
+    fn best_matching_language_breaks_a_two_variant_tie_by_the_lowest_identifier() {
+        // `de-AT` < `de-DE` in plain byte order — the documented,
+        // deterministic (if arbitrary) tiebreak.
+        assert_eq!(
+            best_matching_language("de", &["de-DE", "de-AT"]),
+            Some("de-AT")
+        );
+        assert_eq!(
+            best_matching_language("de", &["de-AT", "de-DE"]),
+            Some("de-AT"),
+            "the tiebreak must not depend on the candidates' input order"
+        );
+    }
+
+    #[test]
+    fn best_matching_language_returns_none_on_no_hit() {
+        assert_eq!(best_matching_language("fr", &["de-DE", "en-US"]), None);
+        assert_eq!(best_matching_language("de", &[]), None);
+    }
+
+    #[test]
+    fn best_matching_language_returns_none_on_an_empty_or_garbage_request() {
+        assert_eq!(best_matching_language("", &["de-DE", "en-US"]), None);
+        assert_eq!(
+            best_matching_language("!!!not-a-language!!!", &["de-DE", "en-US"]),
+            None
+        );
+    }
+
+    #[test]
+    fn best_matching_language_does_not_match_a_request_with_no_separator() {
+        // `de` must not match a hypothetical `deX` — R2 requires the
+        // separating `-`, not a bare string-prefix test.
+        assert_eq!(
+            best_matching_language("de", &["deX", "de-DE"]),
+            Some("de-DE")
+        );
+        assert_eq!(best_matching_language("de", &["deX"]), None);
+    }
+
+    // --- R1: datapoint_types/datapoint_type, the new Master-scope reader.
+
+    const MASTER_WITH_DATAPOINT_TYPES: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+<MasterData>
+<DatapointTypes>
+  <DatapointType Id="DPT-1" Number="1" Name="1-bit">
+    <DatapointSubtypes>
+      <DatapointSubtype Id="DPST-1-1" Number="1" Name="switch" Text="Switch" />
+    </DatapointSubtypes>
+  </DatapointType>
+</DatapointTypes>
+</MasterData>
+<Languages>
+  <Language Identifier="de-DE">
+    <TranslationUnit RefId="DPST-1-1">
+      <TranslationElement RefId="DPST-1-1">
+        <Translation AttributeName="Text" Text="Schalten" />
+      </TranslationElement>
+    </TranslationUnit>
+  </Language>
+</Languages>
+</KNX>"#;
+
+    fn master_db() -> (tempfile::TempDir, Connection) {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        crate::ingest_master_data(&conn, MASTER_WITH_DATAPOINT_TYPES.as_bytes()).unwrap();
+        (dir, conn)
+    }
+
+    #[test]
+    fn datapoint_types_without_a_language_returns_the_stored_text_unchanged() {
+        let (_dir, conn) = master_db();
+        let rows = datapoint_types(&conn, None).unwrap();
+        let dpst = rows.iter().find(|r| r.id == "DPST-1-1").unwrap();
+        assert_eq!(dpst.main, 1);
+        assert_eq!(dpst.sub, Some(1));
+        assert_eq!(dpst.name.as_deref(), Some("switch"));
+        assert_eq!(dpst.text.as_deref(), Some("Switch"));
+    }
+
+    #[test]
+    fn datapoint_types_with_a_language_overlays_the_translated_text() {
+        let (_dir, conn) = master_db();
+        let rows = datapoint_types(&conn, Some("de-DE")).unwrap();
+        let dpst = rows.iter().find(|r| r.id == "DPST-1-1").unwrap();
+        assert_eq!(dpst.text.as_deref(), Some("Schalten"));
+        // The untranslated `name` is never touched by the overlay.
+        assert_eq!(dpst.name.as_deref(), Some("switch"));
+    }
+
+    #[test]
+    fn datapoint_types_matches_a_short_locale_request_by_prefix() {
+        let (_dir, conn) = master_db();
+        let rows = datapoint_types(&conn, Some("de")).unwrap();
+        let dpst = rows.iter().find(|r| r.id == "DPST-1-1").unwrap();
+        assert_eq!(dpst.text.as_deref(), Some("Schalten"));
+    }
+
+    #[test]
+    fn datapoint_types_with_an_unmatched_language_keeps_the_stored_text() {
+        let (_dir, conn) = master_db();
+        let rows = datapoint_types(&conn, Some("fr-FR")).unwrap();
+        let dpst = rows.iter().find(|r| r.id == "DPST-1-1").unwrap();
+        assert_eq!(
+            dpst.text.as_deref(),
+            Some("Switch"),
+            "a missing translation is never an error and never an empty string"
+        );
+    }
+
+    #[test]
+    fn datapoint_type_looks_up_a_single_row_by_id() {
+        let (_dir, conn) = master_db();
+        assert_eq!(
+            datapoint_type(&conn, "DPST-1-1", Some("de-DE"))
+                .unwrap()
+                .unwrap()
+                .text
+                .as_deref(),
+            Some("Schalten")
+        );
+        assert!(datapoint_type(&conn, "nope", None).unwrap().is_none());
     }
 }

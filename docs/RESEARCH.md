@@ -2795,8 +2795,14 @@ figure: **[D]** §4.26.3.2 *"The location of curr_prog_mode shall be the memory
 address 0060h."*
 
 So the whole octet is `old XOR 0b1000_0001` — invert bit 0, invert bit 7, carry
-bits 1 to 6 through untouched, which matters because §4.26.3.1 says those bits
-*"can be shared with other functionality"*. Inverting rather than recomputing
+bits 1 to 6 through untouched, which matters because §4.26.3.1 calls them
+*"the shared bits"* of a Resource that *"may share its storage location with
+other data on the same memory location inside the device"*, and adds that
+*"These other data may be different depending of the mask version of the
+device."* (The earlier revision of this paragraph rendered that as
+*"can be shared with other functionality"*, which is not a sentence RES
+§4.26.3.1 contains; corrected in fix round 3 against `pdftotext -layout` of the
+PDF.) Inverting rather than recomputing
 means the odd-versus-even convention never has to be known, so the one residual
 unknown is not on the critical path. The write must be skipped entirely when
 bit 0 already matches the requested mode — §4.26.3.4.2 and §4.26.3.4.3 guard the
@@ -2804,6 +2810,35 @@ procedure with `if prog_mode = 0` / `if prog_mode = 1`, and a no-op toggle would
 flip the parity against an unchanged `prog_mode`, whose reaction is **[D]**
 §4.26.3.3 *"manufacturer specific"* (footnote 96: *"Typically the system is
 restarted if p_parity is invalid."*).
+
+**Second correction, 2026-09-14 (fix round 3): none of the above applies to
+System B.** `03_05_01` §4.26.3 carries a scoping header between its title and
+§4.26.3.1, and the previous revision used the clause without reading it:
+**[D]** *"Used by: − Ctrl-Mode fixed DMA − Ctrl-Mode reloc DMA − masks 0012h
+0020h, 0021h, 0701h in E-Mode"*. System B is absent — and so is every mask in the
+`07B0h`/`17B0h`/`57B0h` family the download spec targets. Absence from that list
+is weak evidence on its own, because the list is not exhaustive: `06 Profiles`
+§5.5.1.1 profiles S-Mode **couplers** onto *"§4.26.3 “Programming Mode –
+Realisation Type 2”"* and couplers are not in the list either. The decisive
+evidence is positive and points the other way, in `06 Profiles` §4.4.1.1
+(Device Individualisation → Programming Mode → connection oriented), which splits
+into two lettered alternatives each naming its profiles: **[D]**
+*"a) Realisation Type 1 - Property based • System B • Mask 57B0h"* and
+**[D]** *"b) Realisation Type 2 – Memory mapped • System 1 • System 2 • BCU 1
+• BCU 2 • BIM M112"*. Both columns covering the target — `System B` and
+`Mask 57B0h` — are Realisation Type 1, i.e. `PID_PROGMODE` (`03_05_01` §4.3.5).
+
+Consequences, recorded so no later pass re-derives them: the `60h` read-modify-write
+above is correct *for the profiles its source clauses name*, and for a System B
+device the octet at `0060h` is not sourced as `curr_prog_mode` at all — what lives
+there is **[A]** unknown. The design spec's phase-3 permission for
+`A_Memory_Read(60h, 1)` inside `1.1.24`–`1.1.32` is unchanged, because a one-octet
+read is harmless; what changed is that the result must be recorded as a raw octet
+of unknown meaning rather than as programming-mode state (spec §3.4, §4.4, §15).
+This is not a new gap — `06 Profiles` answers the question — and the gap count
+stays at six. Source: `pdftotext -layout` of
+`03_05_01 Resources v01.10.01 AS.pdf` §4.26.3 and of `06 Profiles v02.01.01.pdf`
+§4.4.1.1 and §5.5.1.1.
 
 The design spec still forbids writing to `60h` on real hardware — but now as an
 explicit project risk decision (spec §13 **R11**, restated as "writing to `60h`
@@ -2997,19 +3032,25 @@ Table Object):
   one row (correction, 2026-09-14; the earlier single bullet flattened five
   objects into one claim):
   - §2.3.2.3 Address Table Object and §2.3.2.10 Object Type 9 Group Object Table:
-    *"recalculate"* after a Local Reset, and *"not influenced"* by all three
-    Erase Codes.
+    *"recalculate"* in the `-`, `02h` and `07h` columns — and that set is one
+    reset kind plus two Erase Codes, not three Erase Codes, because `-` is
+    AN194's *"Local Reset to default state"* and carries no Erase Code — and
+    *"not influenced"* in the `01h` (Confirmed Restart), Basic Restart and Power
+    Cycle columns.
   - §2.3.2.4 Association Table Object, §2.3.2.5 Application Program Object and
-    §2.3.2.6 Application Program 2 Object: *"recalculate"* after a Local Reset
-    **and** *"recalculate"* for all three Erase Codes.
+    §2.3.2.6 Application Program 2 Object: *"recalculate"* in **all six**
+    columns, Local Reset, Erase Codes and restarts alike.
 
   The design rule that survives both shapes is the stronger one: re-read
   `PID_TABLE_REFERENCE` after **any** restart, not merely after a reset, because
   the Local Reset column is *"recalculate"* in every one of the five objects. A
   cached base address is invalid in all cases; only the *reason* differs.
-- `PID_RUN_STATE_CONTROL` is *"recalculate"* in §2.3.2.5 and §2.3.2.6 for the
-  Local Reset column and for all three Erase Codes — the run state of an
-  application program is never inferable after a reset.
+- `PID_RUN_STATE_CONTROL` is *"recalculate"* in §2.3.2.5 and §2.3.2.6 in **all
+  six** columns — Local Reset, `02h`, `07h`, `01h` Confirmed Restart, Basic
+  Restart and Power Cycle. (Statement *extended* in fix round 3: the rows read say
+  all six, and the earlier wording named only Local Reset plus the Erase Codes,
+  which was true but narrower than the evidence.) So the run state of an
+  application program is never inferable after a reset **or after any restart**.
 - `PID_MAX_APDU_LENGTH` is marked CONSTANT and *"not influenced"* everywhere —
   the one value in this area that may legitimately be cached per device.
 - `PID_DOWNLOAD_COUNTER` is *"recalculate"*, so it is not a "has this device been
@@ -3025,13 +3066,19 @@ that reports `Loaded` after a factory reset may be conformant, so device state
 must always be read and never inferred from an operation performed.
 
 **What was not read**, stated so a later reader can tell "AN194 says nothing"
-apart from "nobody looked": only five of AN194's Interface Object sections were
+apart from "nobody looked": six of AN194's twelve Interface Object sections were
 transcribed (§2.3.2.2 Device, §2.3.2.3 Address Table, §2.3.2.4 Association Table,
 §2.3.2.5 Application Program, §2.3.2.6 Application Program 2, plus the
-§2.3.2.10 Group Object Table rows named above). The remaining Interface Object
-types in the document — among them the Router, cEMI Server, Group Object Table's
-siblings, Polling Master, KNXnet/IP Parameter, Security and File Server objects —
-were not transcribed, because the download procedure this pass specifies does not
+§2.3.2.10 Group Object Table rows named above). The remaining six Interface
+Object types in the document — §2.3.2.7 Router, §2.3.2.8 LTE Address Routing
+Table, §2.3.2.9 cEMI Server, §2.3.2.11 KNXnet/IP Parameter, §2.3.2.13 Security
+Interface and §2.3.2.14 RF Medium — were not transcribed, and neither was
+§2.3.2.12 *"Data Security"*, which is a three-Resource table rather than an
+object type. (Counts and the object list corrected in fix round 3: the prose said
+five while the list named six, "fourteen" was a miscount of a thirteen-clause
+range, and the earlier "among them" list invented a Polling Master and a File
+Server object that AN194 does not tabulate.) They were skipped
+because the download procedure this pass specifies does not
 touch them. Three PIDs were checked across every object that was read and agree
 everywhere: 5 `PID_LOAD_STATE_CONTROL`, 28 `PID_ERROR_CODE` and 27
 `PID_MCB_TABLE`.

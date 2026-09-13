@@ -467,9 +467,12 @@ Tier 7 and is design-recorded at
 constraint above still applies, unchanged, to work on this roadmap that
 has not been built yet: T17's line-scan UI (the bus-side procedure itself
 shipped 2026-09-13 — [RESEARCH.md §8.5](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13)
-— what remains is the UI, not the domain/protocol implementation),
-T21's graphical topology/building views, and the "who talks to whom"
-telegram animation deferred beyond Session 7 below.
+— what remains is the UI, not the domain/protocol implementation) and the
+"who talks to whom" telegram animation deferred beyond Session 7 below. It
+no longer binds T21's spatial canvas, which
+[ADR-0019](adr/0019-building-model-stays-topological.md) closed out of
+v1.0.0 on 2026-09-13; it does still bind that canvas if a later version
+builds it.
 
 **Memo (2026-09-10), style direction — answered.** Two candidate visual
 directions were named for whenever T27's motion work (and any theme it
@@ -693,8 +696,11 @@ stopped moving — which, per the sessions above, means after Session 7's
 hardening and after the outstanding UI backlog (T17's UI — the bus-side
 procedure shipped 2026-09-13,
 [RESEARCH.md §8.5](RESEARCH.md#85-line-scan--bus-side-device-discovery--t17-spike-2026-09-12-shipped-2026-09-13),
-UI implementation still pending — T18, T21) has either shipped or been
-dropped.
+UI implementation still pending — and T18) has either shipped or been
+dropped. T21 left this list on 2026-09-13: its hierarchy views shipped and
+its spatial canvas is out of v1.0.0 by
+[ADR-0019](adr/0019-building-model-stays-topological.md), so it no longer
+holds help text hostage.
 
 What exists today, measured rather than remembered: **one** `title`
 attribute in the entire frontend (`Inspector.tsx:218`, showing a
@@ -736,3 +742,4 @@ architecture; each has a defined landing place.
 | Whether Data Secure runtime keys are readable from `.knxproj` | Session 7 or later — `knx-secure` |
 | `.knxprod` encryption for master data scheme ≥ 12 | Session 4 delivered `.knxproj`-sourced product database ingest; 2026-09-10's standalone package installer (`knx_productdb::install_package`) showed the "encryption" premise was wrong for schemes 11 and 20 specifically — those 5 real-world files parse with no encryption at all, direct `.knxprod` ingest now works for both (see [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly)). Schemes 12-19/21/22 remain untested (no standalone sample acquired yet) and, as of 2026-09-11, **accepted out of scope by user decision** rather than merely unscheduled — no further sample-hunting is planned, though whether they are genuinely encrypted was never established either way. `.vd2` is a distinct legacy format, also **accepted out of scope, user decision 2026-09-11** (not an encryption question at all). See [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly) for both dated notes. |
 | The project licence | Session 7 — currently a placeholder, see [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) |
+| Whether building parts and devices carry spatial coordinates (T21's second half) | **Answered 2026-09-13** by [ADR-0019](adr/0019-building-model-stays-topological.md): no, not in v1.0.0. The building model stays topological, graphical views keep computing layout at render time, and no entity gains a position — evidence being that `Space_t`/`DeviceInstance_t` carry no spatial attribute in schema 23's published schema, none of the three reference projects (schema 11/21/23) has one, and the KNX Standard's own location model (3/10/3 *KNX IoT Information Model*) keeps geometry out of its location classes and references IFC instead. The ADR pre-commits the shape of a later `FloorPlan`/`Placement` layer (own tables, integer millimetres, per-plan origin, no `z`, imported plan assets rather than drawing) so it cannot be improvised; **building it needs its own ADR and a store schema 7, and neither exists** — post-v1.0.0, no fixed session. Side finding: five documented `Space/@Type` values are coarsened on import ([KNOWN_LIMITATIONS.md §89](KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import)). |

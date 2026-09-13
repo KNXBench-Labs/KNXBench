@@ -448,11 +448,14 @@ main {
   margin: 0;
 }
 
+/* Overlay selects (Settings, Catalog, Search): no `font-size`/`padding`
+   of their own. Both used to be set here — 1rem against the shell's 13px
+   body text, and a flat 0.4rem against the shell's `input, select,
+   textarea` rule — which made every overlay control a size the rest of
+   the application never uses. */
 .search-panel select {
   width: 100%;
   box-sizing: border-box;
-  font-size: 1rem;
-  padding: 0.4rem;
   margin-bottom: 0.5rem;
 }
 
@@ -474,14 +477,12 @@ main {
 
 .settings-field-label {
   font-size: 0.8rem;
-  opacity: 0.8;
+  color: var(--knx-muted);
 }
 
 .settings-field select {
   width: 100%;
   box-sizing: border-box;
-  font-size: 1rem;
-  padding: 0.4rem;
 }
 
 .catalog-create-row {
@@ -495,13 +496,15 @@ main {
   flex: 1;
 }
 
+/* Shared by `CatalogBrowser` and the settings overlay's language-pack
+   importer; the radius is the shell's input radius, not a hard-coded 4px. */
 .catalog-install {
   display: block;
   font-size: 0.9rem;
   padding: 0.4rem;
   margin-bottom: 0.5rem;
   border: 1px dashed var(--knx-border);
-  border-radius: 4px;
+  border-radius: var(--knx-radius-input);
   cursor: pointer;
 }
 
@@ -524,7 +527,7 @@ main {
 
 .language-pack-hint {
   font-size: 0.8rem;
-  opacity: 0.75;
+  color: var(--knx-muted);
   margin: 0.15rem 0 0.5rem;
 }
 
@@ -539,7 +542,7 @@ main {
 
 .language-pack-list-title {
   font-size: 0.8rem;
-  opacity: 0.8;
+  color: var(--knx-muted);
   margin: 0.5rem 0 0.25rem;
 }
 

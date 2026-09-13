@@ -301,6 +301,12 @@ changes no bits at all.
 - **10 (time), 11 (date), 19 (DateTime).** Zero corpus occurrences.
   Fully specified in the Standard, so this is a scope decision and not a
   knowledge gap; they are cheap to add later.
+  **Superseded by E4 (2026-09-13):** main types 4, 10, 11, 15, and 19 are
+  now implemented (`crates/knx-core/src/dpt/codec.rs`); see
+  `docs/KNOWN_LIMITATIONS.md` §61 for their citations and judgment calls.
+  This bullet is left in place as the historical record of why they were
+  out of scope *here* — it is no longer a true statement of the codec's
+  current coverage.
 - **20 (1-octet enumeration), 275, and every other main type.** The wire
   value is a bare octet; the *meaning* of each value lives in the
   Standard's enumeration tables and in `knx_master.xml`, neither of which

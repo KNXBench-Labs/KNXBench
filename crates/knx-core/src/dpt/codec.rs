@@ -1,7 +1,10 @@
 //! Encode/decode between engineering values (text) and `GroupValue` wire
-//! payloads, for every main type the design doc's §4.1 "yes" column lists:
-//! 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
-//! (03_07_02 Datapoint Types v02.02.01 AS, hereafter "DPT-AS").
+//! payloads, for main types 1-19: the fourteen the original design doc's
+//! §4.1 "yes" column lists (`docs/superpowers/specs/2026-09-11-dpt-codec-design.md`),
+//! plus 4, 10, 11, 15, and 19, added by task E4 (2026-09-13) — see
+//! `docs/KNOWN_LIMITATIONS.md` §61 for that extension's per-type citations
+//! and judgment calls (03_07_02 Datapoint Types v02.02.01 AS, hereafter
+//! "DPT-AS").
 //!
 //! Pure: no I/O, no logging, no clock. Every fact this module states about
 //! bit layout, range or rounding is cited to a DPT-AS section or, for the
@@ -87,11 +90,13 @@ pub enum DptValue {
         index: u8,
     },
     /// U8[r4U4][r3U5][U3U5][r2U6][r2U6]B16 — main type 19, date and time
-    /// (DPT-AS §3.20/§3.20.1). Every field the Standard defines a bit for
-    /// is carried here — see `decode_datetime`'s doc comment for the one
-    /// bit (`SRC`) the Standard's own field table *names* but never
-    /// assigns a wire position to, which this codec therefore cannot lose
-    /// because it was never there to begin with.
+    /// (DPT-AS §3.20/§3.20.1). Every field the Standard's encoding row
+    /// and Note 15 assign a wire position to is carried here — see
+    /// `decode_datetime`'s doc comment for `SRC`, the one bit the
+    /// Standard's own diagram is internally inconsistent about (named in
+    /// the field-names row, reserved in the encoding row and Note 15);
+    /// this codec follows the encoding row, a stated ruling, not a
+    /// missing-bit default.
     ///
     /// `year` is already offset-resolved (`1900 + raw`, §3.20's own
     /// table). `month`/`day_of_month`/`hour`/`minute`/`second` are the
@@ -1052,9 +1057,10 @@ fn encode_f16(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 // `[0...59]`) — DPT-AS §3.11's own diagram and 10.001 DPT_TimeOfDay's
 // field table.
 //
-// `Day`'s own table: `1 = Monday ... 7 = Sunday`, `0 = no day`. Judgment
-// call (not stated by the Standard, which only names the code, not a
-// storage shape): this codec represents that as `Option<u8>` —
+// `Day`'s own table ([D], DPT-AS §3.11, page 41, 10.001's Day column):
+// `1 = Monday ... 7 = Sunday`, `0 = no day`. Only the storage shape is
+// this codec's own choice ([A]) — the Standard names the code, not a
+// representation: this codec represents that as `Option<u8>` —
 // `Some(1..=7)` for a named weekday, `None` for wire code `0` — rather
 // than keeping the raw `0..=7` code, so a caller cannot mistake "no day"
 // for an eighth weekday by forgetting to special-case `0`. Round trip is
@@ -1419,17 +1425,19 @@ fn encode_f32(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 // type's B4N4 octet, all 8 bits are assigned). `C` is "Encryption"
 // (`1` = yes). `Index` is a 4-bit `[0...15]` "future use" field.
 //
-// EXAMPLE 6 (§3.16): code "123456", no error, permission accepted, badge
-// read left to right, no encryption, index 13 — worked byte-for-byte
-// from the Standard's octet/bit diagram: `D6=1 D5=2 D4=3 D3=4 D2=5 D1=6`,
-// `E=0 P=1 D=0 C=0`, `Index=13(0xD)`, giving octets
+// EXAMPLE 6 and EXAMPLE 7 ([D], §3.16, PDF page 47 — re-verified directly
+// against the source PDF for this fix, both examples sit on that one
+// page): both are printed bit by bit with a per-field decimal value row
+// beneath, not as a single stated hex string, but every bit is there in
+// the text — this is a worked derivation from printed evidence, not this
+// codec's own arithmetic from an unstated field value.
+// EXAMPLE 6: code "123456", no error, permission accepted, badge read
+// left to right, no encryption, index 13 — `D6=1 D5=2 D4=3 D3=4 D2=5
+// D1=6`, `E=0 P=1 D=0 C=0`, `Index=13(0xD)`, giving octets
 // `[0x12, 0x34, 0x56, 0x4D]`. EXAMPLE 7: code "6789" zero-padded to
 // `D6=0 D5=0 D4=6 D3=7 D2=8 D1=9`, no error, *not* accepted, left to
 // right, no encryption, index 14, giving `[0x00, 0x67, 0x89, 0x0E]`.
-// Both byte strings are this codec's own arithmetic from the Standard's
-// stated field values, not lifted from a byte-level example in the text
-// (§3.16 prints the bit diagram, not a hex string) — the test suite
-// cites this derivation, not a printed hex value, as its evidence.
+// The test suite cites these two page-printed bit values directly.
 //
 // A BCD nibble decoding to `10..=15` has no digit meaning and is
 // `InvalidData` — same "documented range violation" policy as this
@@ -1749,22 +1757,30 @@ fn encode_scene_control(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodec
 // summer time). Octet 1: `CLQ`(Quality of Clock, bit 7) then 7 bits the
 // diagram and Note 15 both mark `r` (reserved).
 //
-// Standard inconsistency, confirmed by rendering DPT-AS page 50 as an
-// image and inspecting it directly (the Markdown/plain-text table
+// Standard inconsistency — [D], confirmed by rendering DPT-AS page 50 as
+// an image and inspecting it directly (the Markdown/plain-text table
 // extraction for this octet is column-misaligned and cannot settle it on
-// its own): octet 1's field-description table also lists an `SRC`
-// ("Synchronisation source reliability") bit, but neither the bit-level
-// encoding row nor Note 15 ever assigns `SRC` a wire position — Note 15
-// states plainly "Bit 7 of the octet 1 is used for 'Quality of Clock' bit
-// (CLQ). The other bits of this octet are reserved for future
-// extensions. Their values shall be 0. ... Receivers shall check these
-// bits to be 0." `SRC` is therefore a named-but-unassigned field in the
-// Standard's own text — this codec does not decode it (there is no bit
-// to read it from) and does not invent one; `DptValue::DateTime`
-// accordingly has no `src`/`synchronisation_source_reliability` field.
-// A reader diffing this codec's field list against §3.20's field-
-// description table and finding `SRC` "missing" should read this
-// paragraph, not assume a bit was dropped.
+// its own): octet 1's own diagram contradicts itself between its two
+// rows. The field-*names* row gives eight cells — `CLQ | SRC | 0 | 0 |
+// 0 | 0 | 0 | 0` — placing `SRC` ("Synchronisation source reliability")
+// at bit 6. The bit-*encoding* row directly beneath it reads `B | r | r |
+// r | r | r | r | r`: bit 6 is `r` (reserved), not `SRC`. Note 15 sides
+// with the encoding row, stating plainly "Bit 7 of the octet 1 is used
+// for 'Quality of Clock' bit (CLQ). The other bits of this octet are
+// reserved for future extensions. Their values shall be 0. ... Receivers
+// shall check these bits to be 0." — naming no `SRC` bit at all.
+//
+// [A]: this codec follows the encoding row and Note 15, not the
+// field-names row — a ruling on which half of the Standard's own
+// contradictory diagram to trust, not a case of "no bit exists" to read
+// from. Accordingly bit 6 of octet 1 is policed exactly like the other
+// six reserved bits in that octet (nonzero is `InvalidData`), `SRC` is
+// never decoded, and `DptValue::DateTime` has no `src`/
+// `synchronisation_source_reliability` field. A reader diffing this
+// codec's field list against §3.20's field-*names* row and finding `SRC`
+// "missing" should read this paragraph: the Standard disagrees with
+// itself here, and this codec picked a side rather than silently
+// dropping the bit.
 //
 // No-data-loss statement (the brief requires this explicitly for this
 // type): every bit this section's diagram assigns a name to has a
@@ -1773,8 +1789,10 @@ fn encode_scene_control(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodec
 // `working_day_unknown` (`NWD`), `year_invalid` (`NY`), `date_invalid`
 // (`ND`), `day_of_week_invalid` (`NDoW`), `time_invalid` (`NT`),
 // `summer_time` (`SUTI`), `externally_synchronized` (`CLQ`) — sixteen
-// fields for sixteen assigned bits (`SRC` excepted, as above, because it
-// has no bit). None of `month`/`day_of_month`/`hour`/`minute`/`second`'s
+// fields for sixteen assigned bits (`SRC` excepted, as above, because
+// this codec follows the encoding row and Note 15 over the field-names
+// row for octet 1 bit 6 — a ruling, not an absence). None of
+// `month`/`day_of_month`/`hour`/`minute`/`second`'s
 // raw values are discarded when their matching `_invalid` flag is set —
 // see `DptValue::DateTime`'s doc comment for why holding the octet's
 // bits and holding the Standard's "ignore this" instruction are two
@@ -3120,12 +3138,13 @@ mod tests {
 
     #[test]
     fn access_data_matches_example_6() {
-        // [D]+[V]: DPT-AS §3.16 EXAMPLE 6 — code "123456", no error,
-        // permission accepted, read left to right, no encryption, index
-        // 13. The byte string `[0x12, 0x34, 0x56, 0x4D]` is this codec's
-        // own arithmetic from the Standard's stated field values (see the
-        // section comment above `decode_access_data`), not a printed hex
-        // value in §3.16 itself.
+        // [D]+[V]: DPT-AS §3.16 EXAMPLE 6, PDF page 47 — code "123456", no
+        // error, permission accepted, read left to right, no encryption,
+        // index 13. §3.16 prints this example bit by bit with a decimal
+        // value row beneath (not as a single hex string); the byte string
+        // `[0x12, 0x34, 0x56, 0x4D]` is this codec's own grouping of those
+        // printed bits into octets (see the section comment above
+        // `decode_access_data`), re-verified against the source PDF.
         let d = dpt(15, Some(0));
         let payload = GroupValue::Bytes(vec![0x12, 0x34, 0x56, 0x4D]);
         assert_eq!(
@@ -3144,10 +3163,11 @@ mod tests {
 
     #[test]
     fn access_data_matches_example_7() {
-        // [D]+[V]: DPT-AS §3.16 EXAMPLE 7 — code "6789" (zero-padded to
-        // six digits), no error, permission *not* accepted, read left to
-        // right, no encryption, index 14. Byte string
-        // `[0x00, 0x67, 0x89, 0x0E]`, derived the same way as EXAMPLE 6.
+        // [D]+[V]: DPT-AS §3.16 EXAMPLE 7, PDF page 47 — code "6789"
+        // (zero-padded to six digits), no error, permission *not*
+        // accepted, read left to right, no encryption, index 14. Byte
+        // string `[0x00, 0x67, 0x89, 0x0E]`, grouped from the printed
+        // bits the same way as EXAMPLE 6, re-verified against the PDF.
         let d = dpt(15, Some(0));
         let payload = GroupValue::Bytes(vec![0x00, 0x67, 0x89, 0x0E]);
         assert_eq!(
@@ -3699,7 +3719,10 @@ mod tests {
         };
         // Reserved bits above Month (o7), above Day (o6), above Minutes
         // (o4), above Seconds (o3), and the low 7 bits of octet 1 (o1),
-        // each checked independently.
+        // each checked independently. Octet 1 bit 6 specifically —
+        // the disputed "SRC" bit — has its own dedicated test below
+        // (`datetime_decode_rejects_the_disputed_src_bit_position`)
+        // rather than being folded into this generic sweep.
         let cases = [
             base(0b1000_0000, 0b0100_0001, 45, 30, 15, 0b1001_0110), // above Month
             base(0b1000_0000, 0b0100_0001, 45, 30, 0b0010_0000, 6),  // above Day
@@ -3714,6 +3737,48 @@ mod tests {
                 "expected InvalidData for {payload:?}"
             );
         }
+    }
+
+    #[test]
+    fn datetime_decode_rejects_the_disputed_src_bit_position() {
+        // Octet 1 bit 6: the field-*names* row of DPT-AS §3.20's octet 1
+        // diagram calls this bit `SRC`, but the bit-*encoding* row
+        // directly beneath it, and Note 15, both mark it `r` (reserved).
+        // This codec follows the encoding row and Note 15 — a stated
+        // ruling ([A]), not a missing-bit default — so bit 6 is policed
+        // exactly like the octet's other six reserved bits. See the
+        // section comment above `decode_datetime` for the full account
+        // of the contradiction this pins.
+        let d = dpt(19, Some(1));
+        let bytes = vec![124, 6, 15, (6 << 5) | 12, 30, 45, 0b0100_0001, 0b0100_0000];
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(bytes)).unwrap_err(),
+            DptCodecError::InvalidData { dpt: d }
+        );
+    }
+
+    #[test]
+    fn datetime_not_valid_branches_encode_back_to_the_same_bytes() {
+        // Findings 5: decode-only tests for the "no date"/"no time"
+        // range-enforcement exemptions never exercised `encode`'s
+        // matching branch. Both round trips, byte for byte.
+        let d = dpt(19, Some(1));
+
+        let no_date_bytes = vec![124, 0, 0, (6 << 5) | 12, 30, 45, 0b0100_1001, 0b1000_0000];
+        let no_date_payload = GroupValue::Bytes(no_date_bytes);
+        let no_date_decoded = decode(d, &no_date_payload).unwrap();
+        assert_eq!(
+            encode(d, &no_date_decoded.to_string()).unwrap(),
+            no_date_payload
+        );
+
+        let no_time_bytes = vec![124, 6, 15, (6 << 5) | 31, 63, 63, 0b0100_0011, 0b1000_0000];
+        let no_time_payload = GroupValue::Bytes(no_time_bytes);
+        let no_time_decoded = decode(d, &no_time_payload).unwrap();
+        assert_eq!(
+            encode(d, &no_time_decoded.to_string()).unwrap(),
+            no_time_payload
+        );
     }
 
     #[test]

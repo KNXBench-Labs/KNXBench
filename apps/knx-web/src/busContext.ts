@@ -76,6 +76,15 @@ export type ContextLock = "synced" | "stale" | "unverified";
 /// FNV-1a, 32-bit. Chosen because it is four lines, has no dependency and
 /// needs no cryptographic property: this only ever answers "is this the
 /// same string as last time", never "what was the original".
+///
+/// The width is the honest limit of this lock. Two unequal inputs collide
+/// with probability 2^-32 per comparison, so `"synced"` is "almost
+/// certainly unchanged", never "provably unchanged"; and FNV-1a is not
+/// collision-resistant, so a *crafted* project could be made to collide
+/// deliberately. Neither is defended against, because nothing here is a
+/// security boundary — the lock is a decoding-staleness hint, and the
+/// blast radius of a miss is one mislabelled telegram, not a bad write.
+/// Documented in `KNOWN_LIMITATIONS.md` §82.
 function fnv1a(text: string): string {
   let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i += 1) {
@@ -98,6 +107,24 @@ function fnv1a(text: string): string {
 /// `null` — no project open in this window — fingerprints as `"none"` so
 /// the value is always a string; whether that string is ever *published* is
 /// `publishProjectContext`'s decision, not this function's.
+///
+/// The two separators below are written as `` and `` escapes,
+/// never as the literal bytes. They were literals once, and because
+/// neither character renders, two successive reviewers read this line as a
+/// bare concatenation and filed a collision — address `1/1/1` named
+/// `0Foo` against address `1/1/10` named `Foo` — that the separators had
+/// already prevented. Escapes cost nothing at runtime (identical strings,
+/// identical fingerprints) and make the field boundaries visible to the
+/// next reader. Do not "simplify" them back; `busContext.test.ts` pins
+/// that exact pair.
+///
+/// What the separators do *not* survive is a name that itself contains
+/// U+0001 or U+0002. No supported import can produce one — XML 1.0 forbids
+/// both characters outright, so no `.knxproj` name can carry them — and no
+/// keyboard types them, which is why the residual is documented
+/// (`KNOWN_LIMITATIONS.md` §82) rather than defended against with a
+/// length-prefixed encoding that would invalidate every stored
+/// fingerprint.
 export function fingerprintProjectContext(tree: ProjectTree | null): string {
   if (tree === null) return "none";
   const parts: string[] = [`v${tree.schema_version}`];
@@ -105,10 +132,10 @@ export function fingerprintProjectContext(tree: ProjectTree | null): string {
   for (const installation of tree.installations) {
     for (const address of installation.group_addresses) {
       count += 1;
-      parts.push(`${address.address}${address.name}${address.dpts.join(",")}`);
+      parts.push(`${address.address}\u0001${address.name}\u0001${address.dpts.join(",")}`);
     }
   }
-  return `${count}-${fnv1a(parts.join(""))}`;
+  return `${count}-${fnv1a(parts.join("\u0002"))}`;
 }
 
 function readRecord<T>(storage: Pick<Storage, "getItem">, key: string): T | null {

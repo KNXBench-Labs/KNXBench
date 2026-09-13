@@ -103,6 +103,37 @@ describe("fingerprintProjectContext", () => {
     expect(fingerprintProjectContext(after)).toBe(fingerprintProjectContext(before));
   });
 
+  // The field separators earn their keep here. Without them these two
+  // projects flatten to the identical string `1/1/10FooDPST-1-1`, one
+  // address each, and the lock reports `"synced"` across a rename that
+  // moved a group address — a false negative reachable by ordinary
+  // editing, not by 2^-32 luck. This pair was twice reported as a live
+  // defect by reviewers who could not see the non-printing separators in
+  // the source; it is pinned so that reading the test settles it.
+  it("separates address from name, so a shifted boundary is not a collision", () => {
+    expect(fingerprintProjectContext(tree([address({ address: "1/1/1", name: "0Foo" })]))).not.toBe(
+      fingerprintProjectContext(tree([address({ address: "1/1/10", name: "Foo" })])),
+    );
+  });
+
+  // The same hazard one level up: the record separator between addresses.
+  // Both projects hold two addresses, so the `count-` prefix is identical
+  // and cannot be what distinguishes them. The only difference is where a
+  // single `1` sits — at the end of the first address's DPT list, or at
+  // the start of the second address's address — and without the record
+  // separator both flatten to the same bytes.
+  it("separates one group address from the next", () => {
+    const before = tree([
+      address({ dpts: ["D1"] }),
+      address({ id: 2, address: "/1/2", name: "Y", dpts: [] }),
+    ]);
+    const after = tree([
+      address({ dpts: ["D"] }),
+      address({ id: 2, address: "1/1/2", name: "Y", dpts: [] }),
+    ]);
+    expect(fingerprintProjectContext(before)).not.toBe(fingerprintProjectContext(after));
+  });
+
   it("fingerprints an absent project as a value rather than throwing", () => {
     expect(fingerprintProjectContext(null)).toBe("none");
   });

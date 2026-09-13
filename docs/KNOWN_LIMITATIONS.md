@@ -3825,10 +3825,13 @@ exactly the six values *observed* in the reference projects
 enumeration contains the different types of available spaces in the ETS6",
 lists ten: `Building`, `BuildingPart`, `Floor`, `Stairway`, `Room`,
 `Corridor`, `DistributionBoard`, `Area`, `Ground`, `Segment` **[D]**.
-§1.2.6.4's own prose for `Space_t/@Type` names the same set plus `RoomPart`
-**[D]** — the document is internally inconsistent about that one value, and
-neither list is implemented in full. So `Stairway`, `RoomPart`, `Area`,
-`Ground` and `Segment` have no variant here **[V]**.
+§1.2.6.4, `complexType Space_t`, gives the same attribute a different ten:
+**[D]** *"One of: "Building", "BuildingPart", "Floor", "Room", "RoomPart",
+"DistributionBoard", “Stairway”, “Corridor”, “Area”, “Ground”"* — `RoomPart`
+where the enumeration has `Segment`. So the document is internally inconsistent
+about **two** values, their union is eleven, and neither list is implemented in
+full: `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` have no variant
+here **[V]**.
 
 **Cause.** `parse_building_part_type` (`crates/knx-etsproj/src/values.rs`)
 matches the six known strings and returns `ValueError::UnknownEnumValue` for

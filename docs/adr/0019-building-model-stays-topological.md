@@ -110,10 +110,16 @@ the model that owns its shape.
 Across the whole 179-document extraction of the KNX Standard, "floor plan",
 "floorplan", "site plan", "DXF" and "gbXML" appear in zero documents, and
 the only "coordinate" in the Standard is a colour coordinate
-(`DPT_Colour_xyY`'s x-axis/y-axis, 3/7/2 *Datapoint Types* v02.02.01). 142
-of the corpus's 146 "BIM" hits (`pdftotext -layout`, whole-word) are Bus
-Interface Modules (9/4/2), not Building Information Modelling — the other 4
-are 3/10/3's own "Bridging to BIM" clause, cited above.
+(`DPT_Colour_xyY`'s x-axis/y-axis, 3/7/2 *Datapoint Types* v02.02.01). 140
+of the corpus's 146 "BIM" hits (`pdftotext -layout`, whole-word, 17 files) are
+Bus Interface Modules (9/4/2 alone holds 28), not Building Information
+Modelling. The other **six** are the only Building-Information-Modelling
+mentions in 179 documents: four in 3/10/3's *"Bridging to BIM"* clause, cited
+above, and two in 3/10/2's constant list — its glossary entry *"BIM  Building
+Information Model, a digital process to describe and document a building in
+all its life cycle phases, from its planning, construction, operation up to
+its demolition."* and an IFC cross-reference **[D]**. Six mentions, no
+schema, no property, no datapoint type.
 
 ### What this evidence does not say
 

@@ -931,12 +931,14 @@ h6 {
 
 /* `.theme-switcher select` lived here until T27 moved the theme dropdown
    into SettingsPanel and deleted ThemeSwitcher.tsx; `.settings-field
-   select` above replaces it. `.sr-only` below was dead code from T27, when
-   ThemeSwitcher.tsx took its only consumer with it, until the stage-4
-   group-address table gave it two: the select-column and unlink-column
-   headers, which need a name for a screen reader and no visible text.
-   Kept for the same reason it survived the drought — it is the standard
-   visually-hidden-label utility, and the accessibility work
+   select` above replaces it. `.sr-only` below has four consumers today:
+   the toolbar's undo and redo buttons (`App.tsx`), whose icons need a name
+   a screen reader can read, and the group-address table's select-column
+   and unlink-column `<th>`s, which need a name and no visible text at all.
+   (An earlier version of this comment called it dead code left over from
+   T27's deletion of ThemeSwitcher.tsx, and a later one said the table
+   revived it. Both were wrong: the toolbar buttons already used it.) It is
+   the standard visually-hidden-label utility, and the accessibility work
    KNOWN_LIMITATIONS.md §20 still owes will want it rather than reinvent
    it. */
 .sr-only {

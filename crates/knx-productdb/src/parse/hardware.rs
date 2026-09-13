@@ -390,4 +390,84 @@ mod tests {
         let err = ingest_hardware(&conn, "sha-3", "M-006A/Hardware.xml", truncated).unwrap_err();
         assert!(format!("{err}").contains("M-006A/Hardware.xml"));
     }
+
+    /// KNOWN_LIMITATIONS.md §86. `first_winner`'s conflict detection compares
+    /// the *existing* row's `source_sha256` to the *current file's*
+    /// `source_sha256` — one hash per whole file. Two `Hardware` elements
+    /// sharing an `@Id` inside that same file therefore always compare
+    /// equal (both carry this call's one `source_sha256`), so the branch
+    /// that pushes an `IdConflict` never runs: the second `Hardware`
+    /// element is dropped with no record anywhere, unlike a collision that
+    /// crosses two different files (`hardware_2plus2_program_ids_conflict_
+    /// across_files`, `catalog.rs`'s equivalent). This test pins that gap
+    /// rather than closing it — closing it needs `hardware` to track a
+    /// per-row source finer than "the file this call was given", which is
+    /// a schema change out of this task's scope.
+    #[test]
+    fn two_hardware_elements_sharing_an_id_in_one_file_conflict_silently() {
+        let (_dir, conn) = db();
+        let xml = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-0001">
+      <Hardware>
+        <Hardware Id="H-DUP" Name="First" SerialNumber="AAA" VersionNumber="1"
+                  HasIndividualAddress="1" HasApplicationProgram="1" IsPowerSupply="0"
+                  IsCoupler="0" IsIPEnabled="0">
+          <Products>
+            <Product Id="P-1" Text="First product" />
+          </Products>
+        </Hardware>
+        <Hardware Id="H-DUP" Name="Second" SerialNumber="BBB" VersionNumber="1"
+                  HasIndividualAddress="1" HasApplicationProgram="1" IsPowerSupply="0"
+                  IsCoupler="0" IsIPEnabled="0">
+          <Products>
+            <Product Id="P-2" Text="Second product" />
+          </Products>
+        </Hardware>
+      </Hardware>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+        let ingest =
+            ingest_hardware(&conn, "one-file-sha", "M-0001/Hardware.xml", xml.as_bytes()).unwrap();
+
+        // The gap: no conflict is recorded even though two different
+        // `Hardware` rows genuinely competed for one id.
+        assert!(
+            ingest.conflicts.is_empty(),
+            "first_winner cannot see a same-file collision — this is the documented gap, \
+             not a passing check"
+        );
+
+        let rows: i64 = conn
+            .query_row("SELECT count(*) FROM hardware", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(rows, 1, "the second Hardware row never lands at all");
+
+        // First-writer-wins: "First"'s data survives, "Second"'s is gone
+        // without a trace — not merged, not reported, not recoverable from
+        // this database.
+        let name: String = conn
+            .query_row("SELECT name FROM hardware WHERE id = 'H-DUP'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(name, "First");
+
+        // A second, worse consequence of the same blind spot: `Product`'s own
+        // `first_winner` check compares `P-1`/`P-2` (which never collide)
+        // and never asks whether the parent `Hardware` row it is about to
+        // reference was actually the one just inserted. Both products land,
+        // and "Second product" silently reparents onto "First"'s surviving
+        // `H-DUP` row — data for a hardware entry that, from this database's
+        // point of view, never existed.
+        let products: i64 = conn
+            .query_row("SELECT count(*) FROM product", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(
+            products, 2,
+            "both products are inserted; P-2 silently reparents onto the surviving H-DUP row"
+        );
+    }
 }

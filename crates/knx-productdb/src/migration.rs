@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 5;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 6;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -278,7 +278,25 @@ fn migrations() -> Vec<Migration> {
         migrate_v2_to_v3,
         migrate_v3_to_v4,
         migrate_v4_to_v5,
+        migrate_v5_to_v6,
     ]
+}
+
+/// v5 -> v6. One more `package` counter, same shape and same reasoning as
+/// `migrate_v4_to_v5`'s four: `dropped_datapoint_type_count` records how
+/// many `datapoint_type` rows this package's own `knx_master.xml` declared
+/// that `INSERT OR IGNORE` dropped because the id already belonged to an
+/// earlier package (KNOWN_LIMITATIONS.md §86). Defaults to `0` for a
+/// package installed before this column existed, for the same honesty
+/// reason `migrate_v4_to_v5` gives: re-deriving the true count would mean
+/// re-parsing bytes this migration does not have.
+fn migrate_v5_to_v6(conn: &Connection) -> Result<(), ProductDbError> {
+    if !column_exists(conn, "package", "dropped_datapoint_type_count")? {
+        conn.execute_batch(
+            "ALTER TABLE package ADD COLUMN dropped_datapoint_type_count INTEGER NOT NULL DEFAULT 0;",
+        )?;
+    }
+    Ok(())
 }
 
 /// v4 -> v5. Gives `package` four new per-scope counters so a re-opened

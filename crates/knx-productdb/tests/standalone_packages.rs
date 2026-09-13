@@ -717,3 +717,64 @@ fn a_package_reports_how_many_translations_it_actually_wrote_by_scope() {
     assert!(retry.skipped);
     assert_eq!(retry.translations, report.translations);
 }
+
+/// KNOWN_LIMITATIONS.md §85. A `.signature` member is recognised, given the
+/// role `"Signature"`, and its bytes are kept verbatim in `source_file` —
+/// exactly like `notes.txt` gets `"Unrecognized"` two tests up. Nothing
+/// about that role is a cryptographic claim: no code path in this crate
+/// reads a `"Signature"`-role member back out to check it against
+/// anything. This test pins that absence, not a feature — if it ever
+/// starts failing because verification was added, update §85 before
+/// touching this assertion.
+#[test]
+fn signature_members_are_stored_verbatim_and_never_verified() {
+    let (_dir, conn) = db();
+    let bytes = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001.signature", b"not a real signature, just bytes"),
+    ]);
+    let report = install_package(&conn, "signed.knxprod", &bytes).unwrap();
+
+    let member = report
+        .members
+        .iter()
+        .find(|m| m.path == "M-0001.signature")
+        .unwrap();
+    assert_eq!(member.role, "Signature");
+
+    // Stored byte-for-byte, retrievable only as an opaque blob.
+    let stored: Vec<u8> = conn
+        .query_row(
+            "SELECT bytes FROM source_file WHERE sha256 = ?1",
+            [&member.sha256],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(stored, b"not a real signature, just bytes");
+
+    // There is no table, column or flag anywhere that a verification step
+    // could have written a verdict into: a `"Signature"`-role member
+    // affects `unknown`/`conflicts`/`translations` in no way at all,
+    // exactly like any other retained-but-unparsed member.
+    assert_eq!(report.unknown, 0);
+    assert!(report.conflicts.is_empty());
+    assert_eq!(report.translations.total(), 0);
+
+    // A corrupted, truncated or outright wrong "signature" installs
+    // exactly as cleanly as a genuine one would — because nothing ever
+    // looks at the bytes beyond storing them.
+    let corrupted = archive(&[
+        ("knx_master.xml", MASTER),
+        ("M-0001/Hardware.xml", HARDWARE),
+        ("M-0001.signature", b""),
+    ]);
+    let (_dir2, conn2) = db();
+    let report2 = install_package(&conn2, "signed.knxprod", &corrupted).unwrap();
+    let member2 = report2
+        .members
+        .iter()
+        .find(|m| m.path == "M-0001.signature")
+        .unwrap();
+    assert_eq!(member2.role, "Signature");
+}

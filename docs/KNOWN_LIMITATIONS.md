@@ -3133,3 +3133,60 @@ focus to the main window. What was *not* exercised anywhere is a live bus
 session — no KNX hardware was touched, so the lock's behaviour is proven
 by tests (`busContext.test.ts`, `BusMonitorPanel.test.tsx`), not by a
 running gateway.
+
+**What the fingerprint cannot distinguish, even for edits it does see.**
+The four cases above are all "the lock never hears about the edit". These
+three are the other axis: the edit happens in this very window, and the
+fingerprint still does not move.
+
+5. **A parameter edit never republishes anything.** `publishProjectContext`
+   runs from an effect on `App.tsx`'s `tree` state, so it fires only when
+   something hands the client a fresh `ProjectTree`. `api.setParameterValue`
+   does not: it answers with a `ParameterPanelDto`, and `ParameterPanel` is
+   mounted as `<ParameterPanel deviceId={...} />` with no channel back to
+   `tree`. Server-side the edit is entirely real —
+   `set_parameter_value_impl` ends in `apply(state, cmd)`, an undoable
+   `Command::SetParameterValue`. So the project changes and the fingerprint
+   does not. This is harmless **only** because no parameter value reaches a
+   decode today: `Command::SetParameterValue` writes `installation.parameters`
+   and nothing else, while `resolve_group_address_dpt` reads com-object links
+   and resolved DPTs and nothing else, and `GroupAddressNode.dpts` — the
+   third fingerprint input — is produced by the same `group_address_dpt_from`
+   rule over the same com objects. The two sets do not intersect. The day a
+   parameter can influence a com object's DPT, links or activity, this turns
+   into a silent false `synced`; `resolve_group_address_dpt`'s doc comment
+   carries that warning at the place that would have to change. **[V]**
+6. **The digest is 32 bits.** `fnv1a` in `busContext.ts` returns a 32-bit
+   FNV-1a value, so two genuinely different projects collide by accident with
+   probability about 2^-32 per comparison, and `synced` means "almost
+   certainly unchanged", never "provably unchanged" **[D]**. FNV-1a is also
+   not collision-resistant, so a *deliberately* crafted project could be made
+   to collide **[D]**. Neither is defended against: the lock is a
+   decoding-staleness hint, not a security boundary, and the cost of a miss
+   is a mislabelled telegram rather than a bad write.
+7. **The field separators are non-printing, and not impossible in a name.**
+   The pre-hash string separates the three per-address fields with U+0001 and
+   successive addresses with U+0002 **[V]**. That is what stops the obvious
+   ambiguity — address `1/1/1` named `0Foo` against address `1/1/10` named
+   `Foo`, which without a separator flatten to the same bytes; both that pair
+   and the record-boundary equivalent are pinned in `busContext.test.ts`.
+   What survives is a group address *name* that itself contains U+0001 or
+   U+0002. No supported import can produce one: `.knxproj` is XML, and XML 1.0
+   section 2.2's `Char` production admits no C0 control except tab, LF and
+   CR **[D]**. Nothing else in the product writes such a name today, and no
+   keyboard types one **[A]**. It is recorded rather than encoded away
+   because a length-prefixed alternative would invalidate every stored
+   fingerprint — every live session would read `unverified` once — to close
+   a case nothing can currently reach.
+
+   *Historical note, because it cost two reviews.* Items 5 and 6 were found
+   by review; a third finding from the same round — "the fingerprint
+   concatenates without a separator, so an ordinary rename produces a
+   constructible false `synced`" — was **wrong**. The separators were
+   already there and had been since the feature landed, but they were
+   written as literal U+0001/U+0002 bytes, which no terminal and no diff
+   renders, so two successive readers saw a bare concatenation. They are now
+   written as escape sequences instead: same bytes, same fingerprints,
+   visible to the next reader. The check that settles it is a search of
+   `apps/knx-web/src/busContext.ts` for literal C0 bytes, which should find
+   none. **[V]**

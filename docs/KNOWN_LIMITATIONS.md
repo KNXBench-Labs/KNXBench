@@ -3857,25 +3857,32 @@ opposite side.
 **Cause.** `hardware.rs` and `catalog.rs` can each create a manufacturer row
 stub (`id`, `name = NULL`) before any `knx_master.xml` naming it has been
 ingested — order between the two is not guaranteed. `first_winner` semantics
-would make the first arrival "win", including a `NULL`-name stub, and the
-name would then never get filled in by a later, better-informed
-`knx_master.xml`. The existing test
-`a_manufacturer_seen_during_ingest_first_gets_its_name_later` already pins
-exactly this: a `NULL` stub inserted first still ends up with a real name
-after `ingest_master_data` runs, in either arrival order.
+applied literally would make the first arrival "win", `NULL`-name stub
+included, and the name would then never get filled in by a later,
+better-informed `knx_master.xml`. The existing test
+`a_manufacturer_seen_during_ingest_first_gets_its_name_later` pins the
+required outcome: a `NULL` stub inserted first still ends up with a real name
+after `ingest_master_data` runs, in either arrival order. That stub is a
+constraint on any rule chosen here, not an argument for this one — a
+first-writer-wins variant can satisfy it, and the Ruling below names the one
+that does and says why it lost anyway.
 
 **Measured against the real corpus.** Swept 69 real `knx_master.xml` files
 (pattern search across the filesystem, not one remembered path) for
 manufacturer ids whose declared `Name` differs between files. Of 832 distinct
 manufacturer ids seen, 52 have more than one `Name` on record — real ETS
-rebrandings, not typos: `M-0007` ("Busch-Jaeger" in older files, "ABB-Busch-
-Jaeger" in newer ones), `M-003D` ("WAGO Kontakttechnik" →
-"WAGO GmbH & Co.KG"), `M-0085` ("Video-Star" → "GVS"), and 49 more of the
-same shape **[V]**. None of the files carry a timestamp or version marker
-inside the `Manufacturer` element itself that would let an ingest tell "the
-newer file" from "the one that merely happened to be read second" — file
-mtimes and ingest order are the only signal available, and mtimes are not
-part of the KNX master-data grammar, so they are not read at all.
+rebrandings, not typos. Quoted exactly as the corpus spells them, in no
+particular order, because the corpus offers no way to order them: `M-0007`
+is either `"Busch-Jaeger Elektro"` or `"ABB AG - BUSCH-JAEGER"`, `M-003D`
+either `"WAGO Kontakttechnik"` or `"WAGO GmbH & Co.KG"`, `M-0085` either
+`"Video-Star"` or `"GVS"`, and 49 further ids are the same shape **[V]**.
+Which spelling is the newer one is not stated anywhere this ingest can read:
+no file carries a timestamp or version marker inside the `Manufacturer`
+element itself that would let it tell "the newer file" from "the one that
+merely happened to be read second" — file mtimes and ingest order are the
+only signal available, and mtimes are not part of the KNX master-data
+grammar, so they are not read at all. Every id above has exactly two
+spellings on record; no id in this corpus has three.
 
 **Consequence.** Ingesting an old package after a new one silently reverts a
 manufacturer's display name to its old spelling. There is no `IdConflict` and
@@ -3884,21 +3891,37 @@ those exist for (`kept_sha256`/`other_sha256`) — no id-scoped row is ever
 dropped, only overwritten, and every overwrite has the exact same
 justification: some later file's opinion of the correct spelling.
 
-**Ruling, 2026-09-13.** Aligning this with `first_winner` was considered and
-rejected. A manufacturer's display name is not a fixed fact fixed at first
-sight the way a hardware id or catalog item is — ABB really did rename Busch-
-Jaeger's `knx_master.xml` entry, more than once in this corpus, and
-first-writer-wins would need an actual timestamp to prefer the newer spelling
-over the older one, which the format does not carry. Last-writer-wins is not
-a defect being left in place; it is the specific choice made deliberately so
-that the `NULL`-stub-gets-filled-in behaviour a hardware-first ingest already
-relies on keeps working, and so that ingesting a newer package's master data
-updates a name instead of being refused by a name that arrived first and
-happened to be a placeholder or an older spelling. `manufacturer_names_are_
-filled_in` and `a_manufacturer_seen_during_ingest_first_gets_its_name_later`
-already lock this behaviour in; a new characterization test,
-`a_later_ingested_master_file_updates_the_name_the_earlier_one_wrote`, pins
-the last-writer-wins case explicitly by name.
+**Ruling, 2026-09-13, with its reasoning corrected 2026-09-13.** Aligning
+this with `first_winner` was considered and rejected, and the conclusion
+stands — but not on the argument first written down here, which claimed
+first-writer-wins *must* strand the `NULL` stub. It need not.
+`ON CONFLICT(id) DO UPDATE SET name = COALESCE(name, excluded.name)`
+satisfies both `a_manufacturer_seen_during_ingest_first_gets_its_name_later`
+and first-writer-wins for real names, in one statement, and was the option
+this entry should have named and did not.
+
+What actually decides it is that `COALESCE` does not buy what it looks like
+it buys. It does not remove the order-dependence, it relocates it: the
+*first real* spelling wins forever instead of the last one, and which
+spelling that is still depends on which file the ingest opened first — with
+52 ids in this corpus carrying two spellings apiece, that is the same coin,
+flipped earlier. It then removes the only repair the user has: once a real
+name is in the row, no later `knx_master.xml` can correct it, so shipping a
+package that renames a manufacturer would have no effect on an existing
+database and no report to say so. A manufacturer's display name is not a
+fact fixed at first sight the way a hardware id or a catalog item is — ABB
+really did rename Busch-Jaeger's `knx_master.xml` entry, and the two
+spellings sit side by side in this corpus with nothing to rank them. Given
+two order-dependent rules and no recency signal, the one that lets newly
+ingested master data have an opinion is the more useful, and it is one
+statement rather than one statement with a hidden third state. That is the
+whole of the case; it is a preference with a reason, not a proof.
+`manufacturer_names_are_filled_in` and
+`a_manufacturer_seen_during_ingest_first_gets_its_name_later` lock the stub
+behaviour in; the characterization test
+`a_later_ingested_master_file_updates_the_name_the_earlier_one_wrote` pins
+the last-writer-wins case explicitly, order-dependence named in the test's
+own name so nobody mistakes it for an invariant.
 
 **Lifted when.** Never, unless `knx_master.xml` grows a field this crate can
 use to actually rank two spellings by recency (a schema/edition attribute

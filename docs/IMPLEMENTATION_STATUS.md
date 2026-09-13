@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-13 (A6: `.knxproj` ZIP-password derivation implemented in `crates/knx-secure` and verified against the KNX Standard's own test vectors; see the end of this document)
+Last updated: 2026-09-13 (T36: D10 master-translations slice 1 — a measured `Master`-scope `datapoint_type` reader, one-place locale-prefix matching, and ingest-time translation counts; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -3628,3 +3628,122 @@ already carried one; `cargo deny check` clean (only the same
 pre-existing `advisory-not-detected` informational warnings for
 advisories matching no dependency in this workspace). Web gates: not
 applicable — this task touched no `apps/knx-web` path.
+
+**T36: D10 master-translations, slice 1 — a measured `Master`-scope
+reader, locale-prefix matching in one place, and ingest-time translation
+counts (2026-09-13), branch `d10-master-translations`.** Backend only,
+three requirements of a four-requirement brief (the fourth is this
+paragraph); `apps/knx-web` untouched.
+
+`crates/knx-productdb/src/query.rs` gains `query::datapoint_types`/
+`query::datapoint_type` (the single-row form), the first `Master`-scope
+reader `datapoint_type` has ever had: every row, `main` then `sub`
+ascending, with `text` overlaid from a `Master`-scope,
+`attribute_name = 'Text'` translation in the requested language when one
+resolves, falling back to the package's own untranslated `text`
+otherwise — never an error, never an empty string on a miss. Checked
+against a real blocker before writing a line of the reader: installing
+all five sampled `.knxprod` packages under
+`OriginalData/ProductDatabases/` and counting `datapoint_type` gives 383,
+354, 234, 234 and 234 rows respectively — never zero, so there was
+nothing to report as a blocker.
+
+`best_matching_language` — requested `de` now resolves a stored `de-DE`
+— is implemented exactly once, in `query.rs`, and every overlay this
+file has, old and new, resolves its language through it: the four
+pre-existing overlays plus the new `master_text_overlay` behind
+`datapoint_types`. Three dedicated unit tests: an exact match is
+preferred over a prefix match; `de` matches `de-DE`; a hypothetical
+`deX` does not, which is what proves the match requires the `-`
+separator rather than a bare string prefix. No frontend caller sends a
+bare primary-language tag yet (`apps/knx-web`'s language pickers
+populate their options from the exact tags a package stored), so this
+is backend plumbing ahead of any UI exercising it — recorded as such,
+not oversold.
+
+The import path now measures, rather than predicts, how many
+`translation` rows it wrote. `crates/knx-productdb/src/parse/
+translation.rs`'s `insert_translations` returns `bool` (did this
+`INSERT OR IGNORE` actually change a row, not merely get parsed and
+ignored as a duplicate key) and `ingest_translations` sums that instead
+of counting every `Translation` element it walked past — proven by a
+new test that ingests the same `knx_master.xml` twice and asserts the
+second pass's count is `0`. This threads through
+`parse/master.rs`'s new `MasterIngest { unknown, translations }`
+(replacing a bare `Vec<UnknownConstruct>` return), `parse/program.rs`'s
+`ProgramIngest::translations`, a new `report::TranslationCounts
+{ program, catalog, hardware, master }` with `total()`/`add()`, into
+`IngestOutcome::Ingested::translations` and
+`InstallReport::translations`. Schema bumped to v5
+(`CURRENT_PRODUCTDB_VERSION`): `migrate_v4_to_v5` gives `package` four
+new `translation_*_count` columns, each guarded by its own
+`PRAGMA table_info` check before the `ALTER TABLE` runs — not
+decoration; a test fixture that rolls `dynamic_node`/`translation` back
+to an earlier shape without touching `package` (see `dynamic_tree.rs`)
+replays this migration against a `package` table that already has the
+columns, and an unguarded `ALTER TABLE ADD COLUMN` would fail with
+SQLite's own "duplicate column name" in exactly that case. A package
+installed before this slice reports `0` for all four counters on a
+retried install, by design: re-deriving the true count would mean
+re-parsing bytes the migration has no access to, so it names the gap
+rather than inventing a number. `apps/knx-cli`'s `install` output now
+prints the total and the per-scope breakdown. A new integration test
+(`standalone_packages.rs`) builds a synthetic package with one
+`Translation` in each of the four scopes and asserts
+`InstallReport::translations` attributes each to the right scope, that
+the total matches `SELECT count(*) FROM translation`, and that a
+retried (skipped) install reports the counts recorded at the original
+install rather than zero.
+
+**Dispatcher-resolved ambiguity, checked against two corpora rather than
+assumed from one.** Every `TranslationElement` under every sampled
+package's `knx_master.xml` `<Languages>` block carries
+`AttributeName="Text"` — confirmed across all five sampled packages, not
+just the three+one this limitation's doc comment previously cited — no
+other `AttributeName` value was seen. The `RefId` families a
+`Master`-scope translation can carry (`DPST-*`, `DPT-*`, `FP-*_DR-*`,
+`FT-*`, `SU-*`) are identical across the two sampled packages whose
+`knx_master.xml` uses the newer scheme
+(`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a`: 328/47/738/180/342 of 1635;
+`Dummy_Applikation_Secure`: 314/45/697/170/323 of 1549) — no surprise
+family in either. The other three sampled packages share an older
+`knx_master.xml` scheme with only `DPST-*`/`DPT-*`, no `FP-*_DR-*`/
+`FT-*`/`SU-*` at all. Neither check widened the implementation: `FT-*`/
+`SU-*`/`FP-*_DR-*` still have no table (`parse/master.rs` parses only
+`Manufacturer`/`DatapointType`/`DatapointSubtype`), so `datapoint_types`
+stays exactly as narrow as its doc comment says, and the gap is reported
+rather than quietly worked around.
+
+Docs: `docs/KNOWN_LIMITATIONS.md` §64 gains a dated paragraph covering
+all three pieces above and a corrected "Lifted when"; §37 gains a dated
+correction narrowing its own "no locale-prefix matching" claim to
+"backend only, no caller exploits it yet". `docs/GAP_ANALYSIS_ETS.md`'s
+D10 row gains a dated note — the row stays open, both because the
+frontend half of locale-prefix matching is untouched and because
+`FT-*`/`SU-*`/`FP-*_DR-*` still have no table.
+
+All eight gates green on this branch: `cargo fmt --all --check` clean;
+`cargo clippy --workspace --all-targets -- -D warnings` clean (two
+pre-existing lint violations surfaced and fixed along the way — a
+collapsible `if` in `parse/translation.rs` and an unnamed-complex-type
+warning on a pre-existing `query.rs` helper, `catalog_overlay`, neither
+introduced by this slice but newly caught by this slice's `-D warnings`
+run); `cargo test --workspace --no-fail-fast`: **1241 passed / 0 failed
+/ 3 ignored** across 78 `test result:` lines from one untruncated run
+(up from this branch's `dd33536` baseline of 1225/0/3 across 78 lines —
+the 16-test increase is every test this slice and its immediate
+predecessor on this branch added; none removed, none skipped). Fixing
+that run surfaced two more latent issues, both fixed here rather than
+deferred: `migrate_v4_to_v5`'s `ALTER TABLE` needed the idempotency
+guard described above, and two pre-existing integration tests in
+`dynamic_tree.rs` asserted a hardcoded `user_version == 4` that the v5
+bump would otherwise have broken, alongside three such assertions in
+`migration.rs` and two in `standalone_packages.rs` found and fixed
+earlier in this same slice — eight hardcoded version literals in total,
+all now read `CURRENT_PRODUCTDB_VERSION`. `cargo run -p xtask --
+check-layering` clean; `cargo run -p xtask -- check-headers`: ceiling
+unchanged at 169 files without a header (no new file added outside two
+deleted scratch examples used only to measure the real corpus, never
+committed); `cargo deny check` clean (same pre-existing
+`advisory-not-detected` informational warnings, nothing new). Web gates:
+not applicable — this slice touched no `apps/knx-web` path.

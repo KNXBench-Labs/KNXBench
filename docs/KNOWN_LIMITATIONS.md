@@ -333,13 +333,19 @@ acknowledges only the category — *"For the common tool ETS®, this can be
 controlled via a flag in the database entry for the product"* **[D]**
 (`03_05_03` §3.4.1.2.1, footnote 6). Second, `knx-productdb` stores
 `load_procedure_style` but drops `Options`, `LoadProcedures` and every
-`LdCtrl*` element without even reporting them as unknown constructs — the
-bytes survive in `source_file`, but nothing is queryable **[V]**. (The
-companion `bool_flag` defect this spike found — only `"1"`/`"0"` were accepted,
-so schema-20/21 `true`/`false` landed as `NULL`, measured across all six
-ingested programs — was fixed on 2026-09-13 and is no longer outstanding
-**[V]**.) Third, hardware. Nothing in this update has been run against a
-device, and no bus was contacted to produce it.
+`LdCtrl*` element without storing them — the bytes survive in `source_file`,
+but nothing is queryable **[V]**. As of 2026-09-13 they are at least no
+longer invisible: `program.rs`'s catch-all now reports every one of them
+through the same `UnknownCollector` an unrecognised attribute already used,
+instead of the bare `_ => {}` it fell into before, so an ingest report shows
+`Options`, `LoadProcedures`, each `LdCtrl*` variant, `AddressTable`,
+`AssociationTable` and the rest of the load-procedure grammar by name and
+count — the *reporting* half of this gap is closed, the *storage* half is
+not **[V]**. (The companion `bool_flag` defect this spike found — only
+`"1"`/`"0"` were accepted, so schema-20/21 `true`/`false` landed as `NULL`,
+measured across all six ingested programs — was fixed on 2026-09-13 and is no
+longer outstanding **[V]**.) Third, hardware. Nothing in this update has been
+run against a device, and no bus was contacted to produce it.
 
 **Lifted when.** The generic load/unload/reset/memory procedures no longer
 block this — they are documented (RESEARCH §8.4) — and neither does the

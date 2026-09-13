@@ -427,7 +427,44 @@ fn handle_start_or_empty(
                 ],
             )?;
         }
-        _ => {}
+        // Structural wrappers with nothing of their own to store (their
+        // children are what matters, and those children are matched by
+        // their own arms above, name-only, regardless of nesting) — see
+        // this module's top doc comment for `ModuleDef`'s case in
+        // particular. Also here: `ComObject`, `ComObjectRef` and
+        // `ParameterRef`, whose own arms above are guarded on
+        // `!*already_present` and so fall through to this arm on a
+        // duplicate program — a known element that was deliberately not
+        // reprocessed, not an unrecognised one.
+        //
+        // Everything else reaching here is a real, unmodelled construct —
+        // `Options`, every `LdCtrl*` load-control step, `AddressTable`,
+        // `AssociationTable` and the rest of the load-procedure grammar
+        // chief among them (docs/KNOWN_LIMITATIONS.md §7) — and is recorded
+        // through `unknown` instead of vanishing, same as an unrecognised
+        // attribute already was.
+        other => {
+            const KNOWN_BUT_UNSTORED: &[&str] = &[
+                "Static",
+                "Parameters",
+                "ParameterTypes",
+                "ParameterRefs",
+                "ComObjectTable",
+                "ComObjectRefs",
+                "ComObjects",
+                "ModuleDefs",
+                "ModuleDef",
+                "ComObject",
+                "ComObjectRef",
+                "ParameterRef",
+            ];
+            if !KNOWN_BUT_UNSTORED.contains(&other) {
+                unknown.element(
+                    "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static",
+                    other,
+                );
+            }
+        }
     }
     Ok(())
 }
@@ -758,5 +795,19 @@ mod tests {
         .unwrap();
         assert!(view.is_some());
         assert_eq!(view.unwrap().text.as_deref(), Some("OnOff"));
+    }
+
+    #[test]
+    fn an_unmodelled_static_element_is_recorded_not_dropped_silently() {
+        // `AddressTable` is real ComObjectTable-sibling data (a
+        // `MaxEntries` attribute) that this parser does not store. Before
+        // this test's fix, it vanished into the bare `_ => {}` arm with no
+        // trace; now it lands in the ingest's `unknown` list instead.
+        let (_dir, conn) = db();
+        let xml = PROGRAM.replacen("<Static>", "<Static><AddressTable MaxEntries=\"256\" />", 1);
+        let out = ingest_program(&conn, "sha-1", "M-006A/A.xml", xml.as_bytes()).unwrap();
+        assert!(out.unknown.iter().any(|u| {
+            u.kind == crate::report::UnknownKind::Element && u.name == "AddressTable"
+        }));
     }
 }

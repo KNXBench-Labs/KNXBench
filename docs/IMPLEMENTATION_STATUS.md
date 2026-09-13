@@ -3279,3 +3279,103 @@ were not re-run after each Rust-only task; the branch's diff is
 `apps/knx-web/src/App.tsx`/`App.test.tsx` (Tasks 1-3, already merged
 before this entry's task) and `docs/`; Task 4 itself, which wrote this
 entry, touched no `apps/knx-web` file.
+
+**T16: a device's product and hardware, on `DeviceDetail` itself
+(2026-09-13), branch `t16-device-product`.** A parallel session building
+the topology view's device-catalog browser reported the gap: `knx_core::
+DeviceInstance` has carried `product_ref` (`ProductRefId`) and
+`program_ref` (`Hardware2ProgramRefId`) since import, and
+`knx-diff`/`knx-etsproj::compare` already read them, but neither ever
+reached the projection — a device-catalog browser had no catalog entry
+to point back at. Follows T33 Task 2's two-layer shape: the pure
+projection states what the *project* says, `apps/knx-server` overlays
+what the *product database* says on top.
+
+- **Layer 1, `crates/knx-projection/src/lib.rs`.** `DeviceDetail` gains
+  `product: DeviceProductNode`. `DeviceProductNode` carries
+  `product_ref`/`program_ref` (verbatim from `DeviceInstance`, empty
+  string mapped to `None` — the same convention
+  `knx_etsproj::compare.rs:301-302` already uses for these two fields),
+  `catalog: Option<DeviceProductCatalog>` and `resolution:
+  ProductResolution`. `build_device_detail` sets `resolution:
+  NoReference` when both refs are empty; otherwise it cannot yet know
+  whether a product database is even loaded, so — per the brief's own
+  explicit instruction not to invent a fifth "not yet resolved" variant —
+  it emits `ProductResolution::NoDatabase` as an honest placeholder ("no
+  database was consulted, as far as this pure function can tell") that
+  `apps/knx-server::domain::device_detail` is documented, in three
+  places, to always overwrite. `DeviceProductCatalog` mirrors
+  `knx_productdb::query::DeviceProductRow` field-for-field, duplicated
+  rather than shared because `knx-projection` must not depend on
+  `knx-productdb` (`xtask check-layering`, non-negotiable per the brief).
+- **Layer 2, `crates/knx-productdb/src/query.rs`.** New `device_product(conn,
+  product_ref_id, hardware2program_ref_id, language) -> Result<Option<
+  DeviceProductRow>, ProductDbError>` resolves the whole chain in one
+  place: `product` → `hardware` (for name/version/serial), `hardware2program`
+  → `application_program`, an optional `catalog_item` match, and
+  `manufacturer` for the display name. `Ok(None)` only when `product.id`
+  does not exist; a product that resolves while its `hardware2program`
+  does not is a partial row, not an absent one — the application fields
+  come back `None` rather than losing the product name too, per
+  CLAUDE.md's "never silently discard information." `language: Some(_)`
+  overlays `product.text`, `catalog_item.name` and
+  `application_program.name` via the `translation` table, following
+  `catalog_items`' own two-full-literal-SQL-statement shape (translated
+  and untranslated, not a spliced hybrid). `hardware.name` is
+  deliberately **not** overlaid: inspecting four real manufacturer
+  packages' `Hardware.xml` directly found zero `TranslationElement`s
+  whose `@RefId` is a `Hardware/@Id` — only `Product/@Id`s are ever
+  translation targets in `Hardware` scope in this schema. Documented in
+  the function's own doc comment and in
+  [KNOWN_LIMITATIONS.md §64](KNOWN_LIMITATIONS.md#64-languages-blocks-outside-an-application-program-are-discarded-on-import),
+  not silently assumed.
+- **Layer 3, `apps/knx-server/src/domain.rs`.** Extends `device_detail`'s
+  existing overlay step (T33 Task 2) rather than adding a second lock
+  acquisition: still locks only `project` first, drops it, then locks
+  `product_db` once — now shared by both the new product-resolution
+  lookup and the existing com-object translation overlay. The two are
+  gated independently: product resolution runs whenever a ref is stated,
+  **regardless of `language`**, since database membership is a fact, not
+  a translation, while the com-object text overlay stays gated on
+  `language.is_some()` exactly as before. No product database configured
+  overwrites the placeholder with the confirmed `NoDatabase`; a database
+  that does not contain the refs yields `NotInDatabase`; a hit yields
+  `Resolved` plus a populated `catalog`.
+- **Generated TypeScript.** `crates/knx-projection/bindings/` (gitignored,
+  materializes via `cargo test -p knx-projection`) gained
+  `DeviceProductNode.ts`, `DeviceProductCatalog.ts` and
+  `ProductResolution.ts`; `DeviceDetail.ts` now imports `DeviceProductNode`
+  and carries `product: DeviceProductNode`. `ProductResolution` is `"Resolved"
+  | "NoReference" | "NoDatabase" | "NotInDatabase"`. **Not applied to
+  `apps/knx-web`** — a parallel session owns every file under it, and its
+  checked-in `apps/knx-web/src/bindings/DeviceDetail.ts` is now stale
+  relative to this branch; that copy is deliberately left untouched here,
+  for the other session to regenerate on its own schedule.
+- **Tests.** `knx-projection`: a device with both refs (verbatim refs,
+  `NoDatabase` placeholder), a device with neither (`NoReference`), plus
+  the three new `ts-rs` export tests. `knx-productdb`: full chain
+  resolves; a missing `hardware2program` yields a partial row, not
+  `None`; an unknown product id yields `None`; the translated path
+  returns overlaid text while the untranslated path and `hardware_name`
+  do not, in the same test. `apps/knx-server`
+  (`tests/http_device_product.rs`, new file): the overlay replacing the
+  placeholder end to end
+  (`device_product_resolution_always_overwrites_the_projections_placeholder`),
+  no database loaded (`NoDatabase`), a loaded database missing the refs
+  (`NotInDatabase`), a device with no stated ref staying `NoReference`
+  even with a database loaded, and resolution working with no `language`
+  query parameter at all.
+
+`cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D
+warnings`, `cargo run -p xtask -- check-layering` and `cargo run -p
+xtask -- check-headers` (75 well-formed / 169 without, ceiling 169 / 25
+generated skipped) and `cargo deny check` all clean. `cargo test
+--workspace --no-fail-fast`: **1106 passed / 0 failed / 3 ignored**
+across 78 `test result` lines (one more line than the T34 baseline's 77:
+a new test binary, `http_device_product.rs`), up from the freshly
+re-measured pre-branch baseline of 1092/0/3 across 77 — 14 new: 2
+hand-written `knx-projection` unit tests, 3 `ts-rs` export tests
+(`DeviceProductNode`, `DeviceProductCatalog`, `ProductResolution`), 4
+`knx-productdb` tests, 5 `knx-server` tests. Web gates
+(`npm test -- --run`, `tsc --noEmit` under `apps/knx-web`) are **not
+applicable**: this branch's diff touches no path under `apps/knx-web`.

@@ -60,7 +60,7 @@ pub(crate) fn minimal_source_document() -> SourceDocument {
 
 pub(crate) fn reference_ets4_bytes() -> Vec<u8> {
     std::fs::read(reference_ets4_path())
-        .expect("reference ETS4 project is committed at the workspace root")
+        .expect("reference ETS4 project lives under OriginalData/ (gitignored); see knx_testsupport::corpus_available")
 }
 
 pub(crate) fn reference_ets4_path() -> PathBuf {

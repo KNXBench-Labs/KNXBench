@@ -316,7 +316,7 @@ verified: nothing in this update has been run against a device.
 **Updated, 2026-09-13 (T30 spike, RESEARCH §8.6).** The `Legacy*`/vendor-DLL
 research pass asked for below has been run against the product corpus, and it
 changes the shape of this limitation rather than lifting it. **No vendor DLL
-is required** to reconstruct a download sequence **[V]**: the 13 `Legacy*`
+is required** to reconstruct a download sequence **[V]**: the 12 `Legacy*`
 flags are plain boolean attributes on `ApplicationProgram/Static/Options` in
 packages the importer already opens, project exports materialise the full set
 so every default is directly observable, and the ordered sequence is
@@ -326,7 +326,8 @@ Configuration Procedures` §3.9.3.4 row for row, including the two rows that
 table marks as mask-17B0h-only **[D]** **[V]**. Vendor DLLs appear only as an
 optional `EtsDownloadPlugin` hook on 5 of 35 corpus application programs, and
 in none of them do they supply the step list **[V]**. Three things genuinely
-remain. First, the *meaning* of each individual flag: all 13 names return zero
+remain. First, the *meaning* of each individual flag: all 13 program-level
+names (the 12 on `Options` plus `Parameter/@LegacyPatchAlways`) return zero
 hits across the entire extracted KNX Standard corpus, and the Standard
 acknowledges only the category — *"For the common tool ETS®, this can be
 controlled via a flag in the database entry for the product"* **[D]**
@@ -3335,7 +3336,8 @@ container captured nothing on that interface, while `tcpdump` on
 datagram reaches the bridge and goes no further. The identical container
 started with `--network host` instead put the same request straight onto
 the LAN interface, source-addressed as the host itself
-(`192.0.2.10.47827 > 224.0.23.12.3671`), matching a bare-host (no
+(`192.0.2.10.47827 > 224.0.23.12.3671`, the host's own LAN address rewritten
+to an RFC 5737 literal), matching a bare-host (no
 container at all) run byte-for-byte. No real KNXnet/IP gateway answered
 in any of the three runs (bridge, host, bare-host) on this network
 segment, so this confirms the request half of discovery, not a full
@@ -3748,8 +3750,8 @@ counter at all, so one was added: `MasterIngest::dropped_datapoint_types`
 counts every `INSERT OR IGNORE` that changed zero rows, `InstallReport`
 carries the sum as `dropped_datapoint_types` (persisted in a new
 `package.dropped_datapoint_type_count` column, schema v6,
-`migrate_v5_to_v6`), and `knx bus`'s `install`/import path in
-`apps/knx-cli` prints it alongside the existing conflict count. This is a
+`migrate_v5_to_v6`), and `knx products ingest` in `apps/knx-cli` prints it
+alongside the existing conflict count. This is a
 count of drops, not a full `IdConflict` — `datapoint_type` still has no
 `source_sha256` to build one from, so it cannot say *which* file's id won,
 only that one lost. The `first_winner` same-file blind spot above was
@@ -3776,3 +3778,39 @@ declaration survives a collision, not just that one happened. Neither is
 warranted by anything seen in the real corpus so far; this section exists
 so the next manufacturer package that actually trips either case is a
 documented gap, not a surprise.
+
+---
+
+## 87. A product database installed before 2026-09-13 keeps `linkable` NULL forever
+
+**Limitation.** `bool_flag` (`crates/knx-productdb/src/parse/mod.rs`) accepted
+only `"1"` and `"0"` until 2026-09-13, so every `Linkable="true"` and
+`Linkable="false"` in a schema-20 or schema-21 package was read as "absent"
+and stored as `NULL`. The helper now accepts all four of `xs:boolean`'s
+canonical spellings, which fixes every *future* ingest and no past one **[V]**.
+
+Two mechanisms keep the old value in place. `install_package`
+(`crates/knx-productdb/src/package.rs`) short-circuits on a package whose
+sha256 is already installed and returns `skipped: true` without re-reading a
+byte, so re-running `knx products ingest` against the same file changes
+nothing. And `migrate_v5_to_v6` (`crates/knx-productdb/src/migration.rs`)
+added the column without re-deriving it, following the same convention as
+`migrate_v4_to_v5`'s translation counts: a migration adds structure, never
+re-parses. The bytes are not lost — every member's XML is still in
+`source_file` — but nothing queries them a second time.
+
+**Consequence.** `select count(*) from application_program where linkable is
+null` returns the program count, not zero, on any database built before that
+date, and a reader who checks whether the fix worked by querying an existing
+database will conclude that it did not.
+
+**Workaround.** Ingest into a fresh database. The packages are the source of
+truth and re-ingesting them is cheap; nothing in a product database is
+authored by a user, so discarding one costs only the time to rebuild it.
+
+**Lifted when.** A v7 migration re-parses `Linkable` out of the
+`role='ApplicationProgram'` rows of `source_file` and writes it back. That is
+the one honest fix, and it is deliberately not done here: it would be the
+first migration in the chain to call the parser, which is an architectural
+commitment (migrations would gain a dependency on parse-layer behaviour that
+can itself change) worth making on purpose rather than in passing.

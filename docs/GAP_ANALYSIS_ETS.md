@@ -803,7 +803,7 @@ Each task: **what**, **why**, **depends on**.
   second spike ([RESEARCH.md §8.6](RESEARCH.md), 2026-09-13) then asked
   the one question the R5 spike left open — whether the `Legacy*` matrix
   needs a vendor DLL — and answered **no**, measured against the product
-  corpus: the 13 `Legacy*` flags are plain boolean attributes on
+  corpus: the 12 `Legacy*` flags are plain boolean attributes on
   `ApplicationProgram/Static/Options` in files the importer already
   opens, project exports materialise the full set so the defaults are
   directly observable, and the download sequence is declarative

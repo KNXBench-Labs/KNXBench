@@ -176,12 +176,12 @@ mod tests {
 
     fn reference_ets4_bytes() -> Vec<u8> {
         std::fs::read(knx_testsupport::reference_ets4_path())
-            .expect("reference ETS4 project is committed at the workspace root")
+            .expect("reference ETS4 project lives under OriginalData/ (gitignored); see knx_testsupport::corpus_available")
     }
 
     fn reference_ets6_bytes() -> Vec<u8> {
         std::fs::read(knx_testsupport::reference_ets6_path())
-            .expect("reference ETS6 project is committed at the workspace root")
+            .expect("reference ETS6 project lives under OriginalData/ (gitignored); see knx_testsupport::corpus_available")
     }
 
     #[test]

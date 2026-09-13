@@ -113,6 +113,15 @@ struct CatalogInstallMemberDto {
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+struct CatalogTranslationCountsDto {
+    program: usize,
+    catalog: usize,
+    hardware: usize,
+    master: usize,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct CatalogInstallReportDto {
     sha256: String,
     scheme: u32,
@@ -120,6 +129,12 @@ struct CatalogInstallReportDto {
     members: Vec<CatalogInstallMemberDto>,
     unknown: usize,
     conflicts: usize,
+    /// Both of these used to stop at the CLI: `InstallReport` has carried
+    /// them since R3 and §86 respectively, and this DTO simply never
+    /// forwarded them, so a web or desktop user saw an install report that
+    /// was silently narrower than the one `knx products ingest` prints.
+    translations: CatalogTranslationCountsDto,
+    dropped_datapoint_types: usize,
 }
 
 impl From<knx_productdb::InstallReport> for CatalogInstallReportDto {
@@ -140,6 +155,13 @@ impl From<knx_productdb::InstallReport> for CatalogInstallReportDto {
                 .collect(),
             unknown: report.unknown,
             conflicts: report.conflicts.len(),
+            translations: CatalogTranslationCountsDto {
+                program: report.translations.program,
+                catalog: report.translations.catalog,
+                hardware: report.translations.hardware,
+                master: report.translations.master,
+            },
+            dropped_datapoint_types: report.dropped_datapoint_types,
         }
     }
 }

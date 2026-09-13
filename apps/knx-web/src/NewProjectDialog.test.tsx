@@ -242,6 +242,27 @@ describe("NewProjectDialog", () => {
     root.unmount();
   });
 
+  it("disables the discard button when the form behind the 409 prompt goes invalid", async () => {
+    apiMock.newProject.mockRejectedValue(httpError(409, "the open project has unsaved changes"));
+    const { root } = await renderDialog();
+
+    await submitForm();
+    expect(button("Discard changes and create").disabled).toBe(false);
+
+    // The fields stay editable while the prompt is up. A blanked name makes
+    // `submit()` return at its own guard, so a button that still looked
+    // enabled would simply do nothing when pressed.
+    await act(async () => setInputValue(field("Project name"), "   "));
+    expect(button("Discard changes and create").disabled).toBe(true);
+
+    await act(async () => {
+      button("Discard changes and create").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(apiMock.newProject).toHaveBeenCalledTimes(1);
+
+    root.unmount();
+  });
+
   it("shows any other failure as an error and leaves the form usable", async () => {
     apiMock.newProject.mockRejectedValueOnce(httpError(400, "unknown groupAddressStyle"));
     const { root, onCreated } = await renderDialog();

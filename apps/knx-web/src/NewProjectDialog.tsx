@@ -186,7 +186,10 @@ export default function NewProjectDialog(props: {
             <button type="button" onClick={onClose}>
               {t("newProject.conflictKeep")}
             </button>
-            <button type="button" disabled={busy} onClick={() => void submit(true)}>
+            {/* `!canSubmit`, not `busy`: the fields stay editable while the
+                prompt is up, so a name blanked here would make `submit()`
+                return silently and the button would do nothing at all. */}
+            <button type="button" disabled={!canSubmit} onClick={() => void submit(true)}>
               {busy ? t("newProject.creating") : t("newProject.conflictDiscard")}
             </button>
           </div>

@@ -764,7 +764,7 @@ mod tests {
 
     fn reference_ets4_bytes() -> Vec<u8> {
         std::fs::read(knx_testsupport::reference_ets4_path())
-            .expect("reference ETS4 project is committed at the workspace root")
+            .expect("reference ETS4 project lives under OriginalData/ (gitignored); see knx_testsupport::corpus_available")
     }
 
     const MINIMAL: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>

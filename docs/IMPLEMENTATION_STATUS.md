@@ -21,7 +21,8 @@ in scope.
 | 6 | KNXnet/IP | Cycles 1-5 shipped (tunnelling, sending, discovery, routing, connection management/diagnostics). KNX IP Secure scoped, then shelved indefinitely (2026-09-06) — see [ROADMAP.md](ROADMAP.md), [KNOWN_LIMITATIONS.md §26](KNOWN_LIMITATIONS.md) |
 | 7 | Integration & hardening | In progress (cycles 1-2) — see below |
 
-**The repository is a buildable Cargo workspace with eight crates.**
+**The repository is a buildable Cargo workspace with twelve crates** (eleven
+library crates plus the dev-only `knx-testsupport`).
 `knx-core` holds the full domain model of [DATA_MODEL.md](DATA_MODEL.md):
 identity (`ids.rs`), the provenance types `Layer`/`Resolved<T>`/`Override<T>`
 (`provenance.rs` — `Override<T>` added in Session 3, [ADR-0010](adr/0010-per-attribute-override-representation.md)),
@@ -4683,7 +4684,8 @@ reachable only with `curl`. It is now reachable with a mouse.
   pre-filled with something valid so the whole dialog is one Enter away from
   a project. The two defaults the backend deliberately refuses to invent
   (`new_project_impl`'s own doc comment says the localized label belongs to
-  the catalogue) live in `messages/en.ts` and `de.ts`, 28 new keys in each.
+  the catalogue) live in `messages/en.ts` and `de.ts`, 23 new keys in each
+  (`toolbar.newProject` plus 22 under `newProject.`).
   The language field is validated for BCP-47 well-formedness with
   `languagePack.ts`'s existing `isWellFormedBcp47Tag` — well-formedness only,
   never a registry, since `knx_core::Language` does not validate at all.
@@ -4785,3 +4787,39 @@ Out of scope, left as-is: the `first_winner` helper's duplication between
 `hardware.rs` and `catalog.rs` (copy-pasted, not shared); `master.rs`'s
 `manufacturer` table using `ON CONFLICT(id) DO UPDATE` (last-writer-wins,
 a different mechanism from `first_winner`, not touched).
+
+### 2026-09-13 — two closing fixes, finished by hand
+
+Both of these were dispatched as subagent tasks and both subagents were
+killed by an API rate limit before they could commit. Their work was
+complete on disk, so it was gated and committed from the coordinating
+session rather than re-dispatched.
+
+**`bool_flag` accepts all four `xs:boolean` spellings**
+(`crates/knx-productdb/src/parse/mod.rs`). It accepted `"1"` and `"0"` and
+mapped everything else to `None`, which meant `Linkable="false"` — the
+spelling schema 20 and 21 use — was read as "attribute absent" and stored
+as `NULL`. Measured before the fix: `linkable` was `NULL` for all six
+ingested programs. The same helper would have swallowed six of the 30
+`LegacyAllowPartialDownloadIfAp2Mismatch` values once T30 wires those up.
+`"true"` and `"false"` now join `"1"` and `"0"`, and nothing else does:
+`"True"`, `"yes"` and `"-1"` still return `None`, because a spelling
+`xs:boolean` does not define is not a boolean this parser is entitled to
+guess at. Three new tests, two in `parse/mod.rs` covering the four
+accepted and three rejected spellings, one in `parse/program.rs` pinning
+the behaviour at ingest level. Existing databases keep their `NULL`s —
+KNOWN_LIMITATIONS.md §87 says so and says why.
+
+**`knx-testsupport`, a dev-only crate that owns the fixture paths**
+(`crates/knx-testsupport`). The maintainer's corpus export filenames were
+hard-coded in 27 places across six crates and apps, so a contributor with a
+differently-named corpus had 27 files to edit. The new crate exposes
+`reference_ets4_path`, `reference_ets6_path`, `reference_kv_schema21_path`
+and `corpus_available`, each path overridable by an environment variable,
+and has zero dependencies, so the layering gate has no opinion to form
+about it. It appears only under `[dev-dependencies]`, in eight manifests.
+Five literal mentions survive on purpose: they assert a parsed project
+*name* or a filename a report prints — values under test, not paths being
+built. `corpus_available` checks all three projects rather than only the
+ETS4 one, so an override of a single variable cannot walk a guarded test
+into a panic.

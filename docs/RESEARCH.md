@@ -2207,7 +2207,7 @@ Single-corpus caveat, same as §1: five manufacturers is not the market. Value
 
 #### 8.6.3 Q1 — What `Legacy*` attributes actually occur
 
-Fourteen distinct `Legacy*`-prefixed attribute names occur, 13 of them on
+Fourteen distinct `Legacy*`-prefixed attribute names occur, 12 of them on
 `Options` **[V]**:
 
 ```
@@ -2265,9 +2265,9 @@ Measured by grouping each `Options` element by its file's
 cosmetic; see §8.6.5.
 
 Every `Legacy*` value seen is boolean. No enumerations, no numeric ranges, no
-free text. The matrix is 13 booleans wide per application program, plus one
-boolean per parameter (`LegacyPatchAlways`) and one per mask
-(`HawkConfigurationData/@LegacyVersion`).
+free text. The matrix is 12 booleans wide on `Options`, plus one boolean per
+parameter (`LegacyPatchAlways`) — 13 per application program in total — and
+one per mask (`HawkConfigurationData/@LegacyVersion`).
 
 #### 8.6.4 Q3 and Q4 — What the Standard specifies, and where it stops
 
@@ -2599,9 +2599,9 @@ not relaxed by any of this, and neither slice has a reason to go near it.
 the `Legacy*` matrix and vendor-DLL-driven sequences — are no longer research
 gaps of the kind that stop work. The matrix is enumerable from data we hold,
 the sequence is documented and cross-checkable, and the DLL is not on the
-critical path. What remains is engineering (a parsing addition, §8.6.5, and
-`bool_flag`), one bounded unknown (per-flag semantics, which Slice 0 does not
-need), and hardware. See
+critical path. What remains is engineering (a parsing addition, §8.6.5 — its
+`bool_flag` prerequisite was done on 2026-09-13), one bounded unknown (per-flag
+semantics, which Slice 0 does not need), and hardware. See
 [KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked).
 
 ---

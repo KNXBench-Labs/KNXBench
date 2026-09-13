@@ -217,8 +217,9 @@ async fn a_new_project_keeps_the_group_address_style_it_was_created_with() {
     // A new project has no group addresses, so the tree cannot show its
     // style directly — the only honest way to ask is to make the project
     // parse one. `4/612` is a valid two-level address and an invalid
-    // three-level one (middle 612 > 7), so this round trip fails outright
-    // if the style silently fell back.
+    // three-level one — three-level wants three components and this has two,
+    // so it is rejected on shape before any range is looked at — which means
+    // this round trip fails outright if the style silently fell back.
     let created = app
         .clone()
         .oneshot(post(

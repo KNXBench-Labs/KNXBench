@@ -732,21 +732,14 @@ export function DeviceWorkspace(props: {
 
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-1`} aria-labelledby={`device-tab-${detail.id}-1`} hidden={tab !== 1} tabIndex={0}>
-      {/* `ParameterPanel` has no `ProjectTree` to hand `onApplied` — its
-          endpoint answers with a `ParameterPanelDto`, never a tree — so it
-          cannot join the `onApplied={onApplied}` calls every field above
-          it makes. What it can do, honestly, is what `onValueApplied`
-          promises: a real `Command::SetParameterValue` just landed on the
-          server's undo stack. `CommandStack::do_command` (`command.rs`)
-          always pushes onto `undo` and clears `redo`, so overlaying that
-          onto the `tree` we already hold — rather than inventing a whole
-          fresh one — is exact, not a guess, and is enough to make
-          `App.tsx`'s tree-publish effect fire (closes the publish hole
-          its own comment used to describe as permanent). */}
-      <ParameterPanel
-        deviceId={detail.id}
-        onValueApplied={() => onApplied({ ...tree, can_undo: true, can_redo: false })}
-      />
+      {/* `ParameterPanel`'s `onValueApplied` now hands back the server's
+          own freshly rebuilt `ProjectTree` (T3 fix round 1, item 6) — the one
+          `apply(state, cmd)` already built from the genuine post-write
+          `CommandStack`, not a hand-built `{ ...tree, can_undo: true,
+          can_redo: false }` overlay assembled from a tree this component
+          happened to be holding. `onApplied` takes exactly that shape, so
+          it wires straight through, the same as every field above it. */}
+      <ParameterPanel deviceId={detail.id} onValueApplied={onApplied} />
     </div>
     {/* Hidden, not unmounted — the same shape as the parameter panel above,
         whose fetch is keyed to its mount and must not restart on every tab

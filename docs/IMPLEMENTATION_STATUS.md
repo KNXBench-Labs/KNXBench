@@ -4579,7 +4579,7 @@ address whose *name* contains U+0001 or U+0002 — impossible from a
 `.knxproj`, because XML 1.0 §2.2's `Char` production admits no C0 control
 character except tab, LF and CR, and no keyboard produces one.
 
-*One edit path really does skip the publish.* `App.tsx` claimed no edit path
+*One edit path really does skip the publish (closed by T3, below).* `App.tsx` claimed no edit path
 can forget to publish the project context. `api.setParameterValue` forgets:
 `domain.rs` runs `apply(state, cmd)` for `Command::SetParameterValue`, so
 the project moves server-side, but the response is a `ParameterPanelDto`, so
@@ -4827,26 +4827,32 @@ into a panic.
 ### 2026-09-13 — closes the `setParameterValue` publish hole (T3, goal.md §6 item 6)
 
 `api.setParameterValue` mutated the project server-side — `domain.rs`'s
-`set_parameter_value_impl` ends in `apply(state, cmd)`, a real undoable
-`Command::SetParameterValue` — but answered with a `ParameterPanelDto`,
-never a `ProjectTree`, so `App.tsx`'s tree-publish effect never fired and
-nothing republished. Both places that carried a comment saying so —
-`App.tsx` and `ParameterPanel.tsx` — are corrected in place rather than
-deleted, since most of what each said (the fingerprint's own indifference
-to parameters, and the residual DPT-influence risk) is still true.
+`set_parameter_value_impl` runs `apply(state, cmd)`, a real undoable
+`Command::SetParameterValue`, before it returns — but answered with a
+`ParameterPanelDto`, never a `ProjectTree`, so `App.tsx`'s tree-publish
+effect never fired and nothing republished. Both places that carried a
+comment saying so — `App.tsx` and `ParameterPanel.tsx` — are corrected in
+place rather than deleted, since most of what each said (the fingerprint's
+own indifference to parameters, and the residual DPT-influence risk) is
+still true.
 
-`ParameterPanel` gained an optional `onValueApplied` callback, threaded
+`ParameterPanel` gained a required `onValueApplied` callback, threaded
 through `ParameterSectionView`/`ParameterFieldRow` and fired once per
-successfully committed field. `DeviceWorkspace` (`Inspector.tsx`) wires it
-to overlay `can_undo: true, can_redo: false` onto the `tree` prop it
-already holds and hand the result to `onApplied` — exact, not invented,
-because `CommandStack::do_command` (`crates/knx-core/src/command.rs`)
-always pushes onto `undo` and clears `redo` on a successful command. That
-makes `App.tsx`'s tree-publish effect fire on every parameter edit, the
-same as any other command. The *fingerprint* itself still does not move,
-because `fingerprintProjectContext` deliberately excludes parameters —
-KNOWN_LIMITATIONS.md §82 item 5 is rewritten to say exactly that, rather
-than "never republishes anything", which stopped being true.
+successfully committed field. Required rather than optional: an optional
+prop lets a future third mount site forget it and silently reopen the
+hole this callback closes; `tsc` now refuses that for its own mount.
+`DeviceWorkspace` (`Inspector.tsx`) originally wired it to overlay
+`can_undo: true, can_redo: false` onto the `tree` prop it already held
+and handed the result to `onApplied` — exact, not invented, because
+`CommandStack::do_command` (`crates/knx-core/src/command.rs`) always
+pushes onto `undo` and clears `redo` on a successful command. That made
+`App.tsx`'s tree-publish effect fire on every parameter edit, the same
+as any other command. T3 fix round 1 below replaces this overlay with
+the server's own tree; the *fingerprint* limitation described next was
+and remains unaffected by that change. The *fingerprint* itself still
+does not move, because `fingerprintProjectContext` deliberately excludes
+parameters — KNOWN_LIMITATIONS.md §82 item 5 is rewritten to say exactly
+that, rather than "never republishes anything", which stopped being true.
 
 New test, `DeviceWorkspace.test.tsx`'s "publishes a committed parameter
 edit to onApplied, not just to api.setParameterValue": asserts `onApplied`
@@ -4854,10 +4860,67 @@ is called with the overlaid tree, not merely that `api.setParameterValue`
 was called — the latter passed on the unfixed code too, since the call
 was never the missing half. Verified failing before the fix (`onApplied`
 called 0 times) by stashing the three source changes and rerunning it
-alone, then verified passing once they were restored.
+alone, then verified passing once they were restored. T3 fix round 1
+below changes what this test asserts, without weakening it.
 
 Gates: `npx tsc --noEmit` (`apps/knx-web`) exit 0; `npx vitest run`
 (`apps/knx-web`) exit 0, 465 tests across 42 files (up from 464/42 — one
 test added, none removed). No Rust file was touched, so the Rust gates do
 not apply. The other five parked findings in goal.md §6 and item 7's
 screenshot regeneration are untouched — separate tasks, separate owners.
+
+#### T3 fix round 1 (2026-09-14)
+
+A prior agent died mid-fix leaving three files with uncommitted, unreviewed
+changes; those were reviewed hunk-by-hunk against the fix-round-1 findings
+rather than trusted outright. Six items:
+
+1. This file's own doc-comment counterpart in
+   `crates/knx-core/src/dpt/resolve.rs` claimed the publish hole above was
+   still open. Rewritten to say it is closed and to rescope the surviving
+   warning to the fingerprint's own limited inputs (see above).
+2. `command.rs`'s round-trip test gained
+   `assert!(stack.can_undo()); assert!(!stack.can_redo());` — but placed
+   exactly where the draft/findings text suggested, on a stack whose redo
+   list starts empty, they pass whether or not `do_command`'s
+   `self.redo.clear()` runs at all. Falsified by commenting out that line
+   and rerunning the test: it still passed. Fixed by having the test push
+   and undo a scratch command first, so the redo stack is provably
+   non-empty before the real `do_command` under test clears it — confirmed
+   this version fails without `redo.clear()` and passes with it restored.
+3. `ParameterPanel`'s `onValueApplied` — optional at the time the paragraphs
+   above were written — is now a required prop (see above); its two mount
+   sites (`Inspector.tsx`, `ParameterPanel.test.tsx`) were updated to match.
+4. The `T26, first slice, fix round 1` entry earlier in this file gained a
+   "(closed by T3, below)" cross-reference to this section.
+5. Three occurrences of the false claim
+   "`set_parameter_value_impl` ends in `apply(state, cmd)`" — in
+   `App.tsx`, `ParameterPanel.tsx`, and this file's own paragraphs above —
+   corrected to say it *runs* `apply(state, cmd)` and then returns a
+   `ParameterPanelDto`, not that `apply` is the last thing it does.
+6. The overlay described above is gone. `ParameterPanelDto`
+   (`apps/knx-server/src/routes.rs`) gained a `tree: Option<ProjectTree>`
+   field, `None` on every `GET` and on `assemble_parameter_panel`'s other
+   construction site, `Some(apply(state, cmd)?)` on a successful
+   `setParameterValue` — the same genuine, freshly rebuilt `ProjectTree`
+   `apply` already produces for every other command, not a second build.
+   `ParameterPanel.tsx`'s `onValueApplied` signature grew a `tree:
+   ProjectTree` parameter carrying that value straight through; a missing
+   `tree` on an otherwise-successful write throws rather than silently
+   falling back to nothing, since a DTO contract violation is a bug, not a
+   degraded case to paper over. `Inspector.tsx`'s hand-built
+   `{...tree, can_undo: true, can_redo: false}` overlay is deleted; the
+   mount site now hands the server's tree straight to `onApplied`.
+   `ParameterPanelDto` dropped its `PartialEq` derive (nothing in the
+   crate compared whole DTOs for equality; `knx_projection::ProjectTree`
+   does not implement it) — the only change outside the DTO/bindings/
+   `ParameterPanel`/`Inspector` boundary the findings doc allowed, and it
+   stayed inside `knx-server`, never touching `knx-projection` itself.
+   `DeviceWorkspace.test.tsx`'s test above now mocks a `setParameterValue`
+   response carrying a `tree` that visibly differs from the local `tree`
+   prop (`errors`/`warnings` counts) and asserts `onApplied` receives that
+   exact server tree, not `{...tree, can_undo: true, can_redo: false}` —
+   proving the publish is server-sourced, not caller-reconstructed.
+
+Gates for fix round 1 are recorded in
+`.superpowers/sdd/2026-09-13-goal-completion/task-3-fixround-1-report.md`.

@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import * as api from "./api";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
+import type { DeviceProductNode } from "./bindings/DeviceProductNode";
+import type { DeviceProductCatalog } from "./bindings/DeviceProductCatalog";
+import type { ProductResolution } from "./bindings/ProductResolution";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { AreaNode } from "./bindings/AreaNode";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
@@ -13,6 +16,12 @@ import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
 import ParameterPanel from "./ParameterPanel";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
+import {
+  directionLabel,
+  dptText,
+  hasDptConflict,
+  linkDirectionCounts,
+} from "./groupAddressView";
 import {
   findArea,
   findBuildingPart,
@@ -46,20 +55,6 @@ const BUILDING_PART_KIND_KEYS: Record<string, MessageKey> = {
 function buildingPartKindLabel(t: Translate, kind: string): string {
   const key = BUILDING_PART_KIND_KEYS[kind];
   return key ? t(key) : kind;
-}
-
-// `GroupLinkNode.direction`/`NewGroupLinkRow`'s own `direction` state are
-// `"Send"`/`"Receive"` wire values (`Direction`'s `Debug` form, sent
-// straight into `unlinkComObject`/`linkComObject`) — never translated.
-// Only the rendered word is.
-const DIRECTION_KEYS: Record<string, MessageKey> = {
-  Send: "inspector.direction.send",
-  Receive: "inspector.direction.receive",
-};
-
-function directionLabel(t: Translate, direction: string): string {
-  const key = DIRECTION_KEYS[direction];
-  return key ? t(key) : direction;
 }
 
 // The six near-duplicate "Delete is only available for … in the first
@@ -510,7 +505,246 @@ function BuildingPartMoveField(props: {
   );
 }
 
+// T16's four `ProductResolution` variants, each with its own badge word and
+// its own sentence. Kept as a map rather than a chain of ternaries so the
+// compiler catches a fifth variant arriving in `bindings/ProductResolution.ts`
+// instead of it quietly falling through to whatever the last `else` said —
+// which is exactly the "bare unknown" the brief forbids. `Resolved` is the
+// one variant with no sentence: the catalogue below says everything.
+const RESOLUTION_KEYS: Record<ProductResolution, { badge: MessageKey; explain: MessageKey | null }> = {
+  Resolved: { badge: "deviceIdentity.resolution.resolved", explain: null },
+  NoDatabase: { badge: "deviceIdentity.resolution.noDatabase", explain: "deviceIdentity.explain.noDatabase" },
+  NotInDatabase: { badge: "deviceIdentity.resolution.notInDatabase", explain: "deviceIdentity.explain.notInDatabase" },
+  NoReference: { badge: "deviceIdentity.resolution.noReference", explain: "deviceIdentity.explain.noReference" },
+};
+
+// The three fields that answer "which product is this" on sight. They stay
+// above the fold next to the refs; everything else lives behind the
+// disclosure below, so a fully resolved device does not push the
+// communication object table off the screen to say so.
+const HEADLINE_FIELDS: CatalogField[] = [
+  { label: "deviceIdentity.manufacturer", of: (c) => c.manufacturer_name },
+  { label: "deviceIdentity.productText", of: (c) => c.product_text },
+  { label: "deviceIdentity.orderNumber", of: (c) => c.order_number, mono: true },
+];
+
+// The remaining catalogue fields, grouped the way an engineer asks for them:
+// which product entry, which physical hardware, which application program.
+// `mono: true` marks the identifier-shaped fields (order numbers, program
+// ids, versions) — prose names stay in the body face so they don't read
+// like codes.
+type CatalogField = { label: MessageKey; of: (c: DeviceProductCatalog) => string | null; mono?: boolean };
+
+const CATALOG_GROUPS: { title: MessageKey; fields: CatalogField[] }[] = [
+  { title: "deviceIdentity.group.product", fields: [
+    { label: "deviceIdentity.manufacturerId", of: (c) => c.manufacturer_id, mono: true },
+    { label: "deviceIdentity.catalogItemName", of: (c) => c.catalog_item_name },
+    { label: "deviceIdentity.catalogItemNumber", of: (c) => c.catalog_item_number, mono: true },
+  ] },
+  { title: "deviceIdentity.group.hardware", fields: [
+    { label: "deviceIdentity.hardwareName", of: (c) => c.hardware_name },
+    { label: "deviceIdentity.hardwareVersion", of: (c) => c.hardware_version, mono: true },
+    { label: "deviceIdentity.hardwareSerial", of: (c) => c.hardware_serial_number, mono: true },
+  ] },
+  { title: "deviceIdentity.group.application", fields: [
+    { label: "deviceIdentity.applicationName", of: (c) => c.application_name },
+    { label: "deviceIdentity.applicationNumber", of: (c) => c.application_number, mono: true },
+    { label: "deviceIdentity.applicationVersion", of: (c) => c.application_version, mono: true },
+    { label: "deviceIdentity.applicationProgramId", of: (c) => c.application_program_id, mono: true },
+    { label: "deviceIdentity.maskVersion", of: (c) => c.mask_version, mono: true },
+  ] },
+];
+
+type IdentityRowData = { label: MessageKey; value: string; mono?: boolean };
+
+/** The fields of `group` that the database actually filled, in declared order. */
+function presentRows(fields: CatalogField[], catalog: DeviceProductCatalog): IdentityRowData[] {
+  return fields.flatMap((f) => {
+    const value = f.of(catalog);
+    return value === null ? [] : [{ label: f.label, value, mono: f.mono }];
+  });
+}
+
+function IdentityFields(props: { rows: IdentityRowData[]; t: Translate }) {
+  return <dl className="identity-fields">
+    {props.rows.map((row) => (
+      <div className="identity-row" key={row.label}>
+        <dt>{props.t(row.label)}</dt>
+        <dd className={row.mono ? "mono" : undefined}>{row.value}</dd>
+      </div>
+    ))}
+  </dl>;
+}
+
+/**
+ * The device's product identity (T16), shown in the workspace's third tab
+ * ("Product data"), beside communication objects and parameters.
+ *
+ * `product_ref`/`program_ref` are printed verbatim in monospace — they are
+ * ETS identifiers, and an engineer comparing one against a manufacturer
+ * package needs the exact string, not a prettified one. The catalogue half
+ * is only ever rendered from a real `catalog`: a `Resolved` verdict with no
+ * catalogue behind it (which the server never produces, but the generated
+ * type permits) says so in words rather than rendering as a resolved device
+ * with a suspiciously empty field list.
+ *
+ * Fields the product database has no value for are omitted rather than
+ * printed as dashes, and the count of omissions is stated at the bottom of
+ * the disclosure — a partially-installed manufacturer catalogue is valid
+ * database state, and the user should be able to tell "the database is
+ * silent here" from "this view only shows six fields".
+ */
+function DeviceIdentity(props: { product: DeviceProductNode }) {
+  const { product_ref, program_ref, catalog, resolution } = props.product;
+  const t = useTranslate();
+  // A variant outside the generated union cannot arise from a matching
+  // server, only from a frontend older than the one it talks to. It gets its
+  // own wording rather than borrowing another variant's: reusing
+  // `NoReference`'s would print "No product reference" directly above two
+  // references the user can read, which is the exact dishonesty this panel
+  // exists to avoid.
+  const copy: { badge: MessageKey; explain: MessageKey | null } = RESOLUTION_KEYS[resolution] ?? {
+    badge: "deviceIdentity.resolution.unrecognised",
+    explain: "deviceIdentity.explain.unrecognised",
+  };
+
+  // `NoReference` means both refs are empty at the source, so there is
+  // nothing to print verbatim — the sentence says that once instead of two
+  // rows each saying it again.
+  // The monospace face is for the ref itself; the "not stated" placeholder is
+  // prose, and setting it in mono would make an absence look like a value.
+  const ref = (label: MessageKey, value: string | null): IdentityRowData =>
+    value === null
+      ? { label, value: t("deviceIdentity.refNotStated") }
+      : { label, value, mono: true };
+  const refRows: IdentityRowData[] = resolution === "NoReference" ? [] : [
+    ref("deviceIdentity.productRef", product_ref),
+    ref("deviceIdentity.programRef", program_ref),
+  ];
+  // Kept separate from `refRows` rather than subtracted back out of a merged
+  // list: the ref rows are not catalogue fields, and "however many rows are
+  // in the headline, minus two" stops being true the moment `refRows` is
+  // empty — which `NoReference` makes it.
+  const headlineCatalogRows = catalog ? presentRows(HEADLINE_FIELDS, catalog) : [];
+  const headline = [...refRows, ...headlineCatalogRows];
+  const groups = catalog
+    ? CATALOG_GROUPS.map((group) => ({ title: group.title, rows: presentRows(group.fields, catalog) }))
+    : [];
+  // Every catalogue field the database left null, counted across the headline
+  // and the groups alike.
+  const catalogFields = HEADLINE_FIELDS.length + CATALOG_GROUPS.reduce((n, g) => n + g.fields.length, 0);
+  const shownFields = headlineCatalogRows.length + groups.reduce((n, g) => n + g.rows.length, 0);
+  const omitted = catalog ? catalogFields - shownFields : 0;
+
+  return <section className="device-identity" aria-label={t("deviceIdentity.title")}>
+    <div className="device-identity-head">
+      <h3>{t("deviceIdentity.title")}</h3>
+      <span className="resolution-badge" data-resolution={resolution}>{t(copy.badge)}</span>
+    </div>
+    {headline.length > 0 && <IdentityFields rows={headline} t={t} />}
+    {copy.explain && <p className="identity-note">{t(copy.explain)}</p>}
+    {resolution === "Resolved" && !catalog && (
+      <p className="identity-note">{t("deviceIdentity.explain.resolvedWithoutCatalog")}</p>
+    )}
+    {catalog && (
+      <details className="identity-more">
+        <summary>{t("deviceIdentity.more")}</summary>
+        {groups.map((group) => (
+          <div className="identity-group" key={group.title}>
+            <h4>{t(group.title)}</h4>
+            {group.rows.length === 0
+              ? <p className="identity-note">{t("deviceIdentity.groupEmpty")}</p>
+              : <IdentityFields rows={group.rows} t={t} />}
+          </div>
+        ))}
+        {omitted > 0 && <p className="identity-note">{t("deviceIdentity.omitted", { count: omitted })}</p>}
+      </details>
+    )}
+  </section>;
+}
+
+export function DeviceWorkspace(props: {
+  detail: DeviceDetail; tree: ProjectTree; onApplied: (tree: ProjectTree) => void;
+}) {
+  const { detail, tree, onApplied } = props;
+  const groupAddresses = tree.installations[0]?.group_addresses ?? [];
+  const t = useTranslate();
+  const [tab, setTab] = useState(0);
+  // One array, three panels, and index arithmetic derived from its length:
+  // the previous `1 - tab` toggle silently encoded "there are exactly two
+  // tabs" three times over (it also hardcoded `End` and treated both arrow
+  // keys as the same key, which a left-arrow-only test could never catch).
+  const tabs = [t("inspector.communicationObjects"), t("workbench.parameters"), t("deviceIdentity.tab")];
+  return <section className="device-workspace">
+    <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div></header>
+    <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+      e.preventDefault();
+      const step = e.key === "ArrowRight" ? 1 : -1;
+      const next = e.key === "Home" ? 0
+        : e.key === "End" ? tabs.length - 1
+        : (tab + step + tabs.length) % tabs.length;
+      setTab(next); e.currentTarget.querySelectorAll<HTMLButtonElement>("button")[next].focus();
+    }}>
+      {tabs.map((label, index) => <button key={label} id={`device-tab-${detail.id}-${index}`} role="tab" aria-selected={tab === index} aria-controls={`device-panel-${detail.id}-${index}`} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)}>{label}</button>)}
+    </div>
+    {/* `tabIndex={0}` on all three panels, not only the ones that can end up
+        with nothing focusable inside them: a panel's content is data-driven
+        (a device with no communication objects, an application with no
+        parameters, an identity that is one sentence of prose under
+        `NoReference`) so "does this panel contain a tab stop?" cannot be
+        answered here at all. WAI-ARIA APG asks for the tab stop exactly when
+        the content is unfocusable; applying it unconditionally costs one
+        extra stop on a populated panel and never strands the content of an
+        empty one. A hidden panel is not focusable, so only the selected one
+        is ever in the tab order. */}
+    <div role="tabpanel" id={`device-panel-${detail.id}-0`} aria-labelledby={`device-tab-${detail.id}-0`} hidden={tab !== 0} tabIndex={0}>
+      <h3>{t("inspector.communicationObjects")}</h3>
+      <ul className="com-object-list">
+        {detail.com_objects.map((com) => (
+          <li key={com.id}>
+            <details className="com-object-detail">
+            <summary className="com-object-summary"><span className="mono">{com.number}</span><strong>{com.name ?? t("inspector.unnamed")}</strong><span className="mono">{com.dpt ?? "—"}</span><span className="mono">{com.links.map((link) => link.address ?? "—").join(", ") || "—"}</span></summary>
+            <div className="com-object-edit-fields">
+            <DptField com={com} onApplied={onApplied} />
+            {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
+            <ComObjectDescriptionField com={com} onApplied={onApplied} />
+            {com.description_layer && (
+              <span className="provenance-badge">{com.description_layer}</span>
+            )}
+            <ComObjectFlagsRow com={com} onApplied={onApplied} />
+            <ul className="group-link-list">
+              {com.links.map((link) => (
+                <GroupLinkRow
+                  key={`${link.ga_id}-${link.direction}`}
+                  com={com}
+                  link={link}
+                  onApplied={onApplied}
+                />
+              ))}
+              <NewGroupLinkRow com={com} groupAddresses={groupAddresses} onApplied={onApplied} />
+            </ul>
+            </div>
+            </details>
+          </li>
+        ))}
+      </ul>
+
+    </div>
+    <div role="tabpanel" id={`device-panel-${detail.id}-1`} aria-labelledby={`device-tab-${detail.id}-1`} hidden={tab !== 1} tabIndex={0}>
+      <ParameterPanel deviceId={detail.id} />
+    </div>
+    {/* Hidden, not unmounted — the same shape as the parameter panel above,
+        whose fetch is keyed to its mount and must not restart on every tab
+        switch. */}
+    <div role="tabpanel" id={`device-panel-${detail.id}-2`} aria-labelledby={`device-tab-${detail.id}-2`} hidden={tab !== 2} tabIndex={0}>
+      <DeviceIdentity product={detail.product} />
+    </div>
+  </section>;
+}
+
 function DeviceInspector(props: {
+  propertiesOnly?: boolean;
   detail: DeviceDetail;
   tree: ProjectTree;
   // Same `installations[0]`-only gate as every other Delete button in this
@@ -524,7 +758,6 @@ function DeviceInspector(props: {
 }) {
   const { detail, tree, canDelete, onApplied, onDeleted } = props;
   const t = useTranslate();
-  const groupAddresses = tree.installations[0]?.group_addresses ?? [];
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -555,37 +788,7 @@ function DeviceInspector(props: {
       <LineMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <BuildingPartMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <DeviceDescriptionField detail={detail} onApplied={onApplied} />
-      <h3>{t("inspector.communicationObjects")}</h3>
-      <ul className="com-object-list">
-        {detail.com_objects.map((com) => (
-          <li key={com.id}>
-            <span className="com-object-label">
-              {com.number}: {com.name ?? t("inspector.unnamed")}
-            </span>
-            <DptField com={com} onApplied={onApplied} />
-            {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
-            <ComObjectDescriptionField com={com} onApplied={onApplied} />
-            {com.description_layer && (
-              <span className="provenance-badge">{com.description_layer}</span>
-            )}
-            <ComObjectFlagsRow com={com} onApplied={onApplied} />
-            <ul className="group-link-list">
-              {com.links.map((link) => (
-                <GroupLinkRow
-                  key={`${link.ga_id}-${link.direction}`}
-                  com={com}
-                  link={link}
-                  onApplied={onApplied}
-                />
-              ))}
-              <NewGroupLinkRow com={com} groupAddresses={groupAddresses} onApplied={onApplied} />
-            </ul>
-          </li>
-        ))}
-      </ul>
-      {/* T18 slice 3 task 4: fetches its own panel keyed on `detail.id`,
-          unconditionally (see ParameterPanel.tsx's own comment on why). */}
-      <ParameterPanel deviceId={detail.id} />
+      {!props.propertiesOnly && <DeviceWorkspace detail={detail} tree={tree} onApplied={onApplied} />}
     </div>
   );
 }
@@ -615,10 +818,25 @@ function GroupAddressInspector(props: {
     }
   }
 
+  const counts = linkDirectionCounts(ga);
+
   return (
     <div className="inspector">
       <h2>{ga.name}</h2>
       <p className="inspector-address">{ga.address}</p>
+      <dl className="inspector-facts">
+        <dt>{t("addressTable.dpt")}</dt>
+        <dd className={hasDptConflict(ga) ? "mono dpt-conflict" : "mono"}>
+          {dptText(t, ga)}
+          {hasDptConflict(ga) && <small> {t("addressTable.dptConflict")}</small>}
+        </dd>
+        <dt>{t("addressTable.links")}</dt>
+        <dd>
+          {counts.total === 0
+            ? t("addressTable.noLinks")
+            : `${t("addressTable.linkTotal", { count: counts.total })} · ${t("addressTable.linkCounts", { senders: counts.senders, receivers: counts.receivers })}`}
+        </dd>
+      </dl>
       {canDelete ? (
         <button onClick={remove}>{t("inspector.delete")}</button>
       ) : (
@@ -912,6 +1130,7 @@ function BuildingPartInspector(props: {
 // no such gap: both resolve synchronously from `tree`, which is always
 // already loaded by the time Inspector can render at all.
 export default function Inspector(props: {
+  propertiesOnly?: boolean;
   selection: Selection;
   tree: ProjectTree;
   deviceDetail: DeviceDetail | null;
@@ -925,6 +1144,7 @@ export default function Inspector(props: {
     const canDelete = findDeviceLineInFirstInstallation(tree, deviceDetail.id) !== undefined;
     return (
       <DeviceInspector
+        propertiesOnly={props.propertiesOnly}
         detail={deviceDetail}
         tree={tree}
         canDelete={canDelete}

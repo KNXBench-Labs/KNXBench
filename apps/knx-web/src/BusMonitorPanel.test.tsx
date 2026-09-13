@@ -29,6 +29,12 @@ vi.mock("./api", () => ({
 }));
 
 import BusMonitorPanel from "./BusMonitorPanel";
+// Not mocked: `busContext` is the unit under test here as much as the
+// panel is. Its whole job is a pair of `localStorage` records, which
+// happy-dom implements for real, so a mock would only prove that the mock
+// agrees with itself.
+import { publishProjectContext, recordSessionContext } from "./busContext";
+import type { ProjectTree } from "./bindings/ProjectTree";
 
 // `act()` only flushes reliably when this is set (React 19's own check,
 // `isConcurrentActEnvironment`) — `LogPanel.test.tsx` never needs it
@@ -58,6 +64,22 @@ function row(overrides: Partial<BusTelegramRow>): BusTelegramRow {
     ...overrides,
   };
 }
+
+it("opens full telegram details from the keyboard without sending a value", async () => {
+  apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ telegrams: [row({ seq: 7, destinationName: "Example light" })] }));
+  const root = await renderPanel();
+  await flushReattach();
+  const telegram = host!.querySelector<HTMLElement>("tbody tr")!;
+  expect(telegram.tabIndex).toBe(0);
+  await act(async () => telegram.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+  const details = host!.querySelector<HTMLElement>(".telegram-details")!;
+  expect(details).not.toBeNull();
+  expect(details.textContent).toContain("Example light");
+  expect(details.textContent).toContain("0x01 (6-bit)");
+  expect(details.textContent).toContain("DPST-1-1");
+  expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+  await act(async () => root.unmount());
+});
 
 function telegramsResponse(overrides: Partial<BusMonitorTelegramsResponse>): BusMonitorTelegramsResponse {
   return {
@@ -129,7 +151,7 @@ function setInputValue(selector: string, value: string) {
 // microtasks while fake timers are active, needed because plain awaits
 // inside `act()` are not enough to observe the initial, immediate poll
 // `BusMonitorPanel`'s effect fires as soon as `session` is set.
-async function connect(gateway = "192.168.1.10:3671") {
+async function connect(gateway = "192.0.2.1:3671") {
   await act(async () => {
     setInputValue(".bus-monitor-connect input", gateway);
   });
@@ -141,6 +163,9 @@ async function connect(gateway = "192.168.1.10:3671") {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  // Cross-window context records outlive a component; without this a
+  // session record written by one test would decide the next one's lock.
+  window.localStorage.clear();
   apiMock.startBusMonitor.mockResolvedValue({
     sessionId: 1,
     assignedAddress: "1.1.5",
@@ -471,6 +496,15 @@ describe("BusMonitorPanel", () => {
       warning: "drain task panicked during teardown",
     } satisfies BusMonitorStopResponse);
 
+    // The default poll mock rejects with a `404`, which Task 4 turned from
+    // an inert poll error into "the session ended elsewhere" — it now
+    // detaches and shows the Connect form, so there would be no Disconnect
+    // button left to click. This test is about the stop response, not
+    // about the poll, so it gets a session that is still alive: a `404`
+    // for the mount reattach, telegrams afterwards.
+    apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 1 }));
+
     await renderPanel();
     await flushReattach();
     await connect();
@@ -481,5 +515,133 @@ describe("BusMonitorPanel", () => {
 
     expect(host!.textContent).toContain("drain task panicked during teardown");
     expect(host!.querySelector(".bus-monitor-warning")).not.toBeNull();
+  });
+});
+
+// Task 4's stale lock, from the panel's side. `busContext.test.ts` proves
+// the rules in isolation; these prove the panel actually asks, and acts on
+// the answer, at the three moments that matter — a project edited under a
+// running session, a session it did not start, and a session replaced or
+// ended by somebody else.
+describe("BusMonitorPanel and the shared session's context", () => {
+  function projectTree(name: string): ProjectTree {
+    return {
+      schema_version: 3,
+      errors: 0,
+      warnings: 0,
+      can_undo: false,
+      can_redo: false,
+      installations: [
+        {
+          id: 1,
+          name: "Installation",
+          topology: [],
+          buildings: [],
+          unassigned: [],
+          group_addresses: [
+            { id: 1, name, address: "1/2/3", range: null, dpts: ["DPST-1-1"], links: [] },
+          ],
+          group_ranges: [],
+        },
+      ],
+    };
+  }
+
+  // Advance one poll interval and drain the reply. The lock is re-read on
+  // every tick precisely so it does not depend on a cross-window `storage`
+  // event arriving, which is what this waits for.
+  async function tick() {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
+    });
+  }
+
+  it("locks the table and the compose form when the project changes under a running session", async () => {
+    publishProjectContext(projectTree("Kitchen ceiling"));
+    apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+    apiMock.pollBusTelegrams.mockResolvedValue(
+      telegramsResponse({ telegrams: [row({ seq: 0 })], nextSince: 1 }),
+    );
+    await renderPanel();
+    await flushReattach();
+    await connect();
+
+    expect(host!.querySelector(".bus-monitor-stale-lock")).toBeNull();
+
+    publishProjectContext(projectTree("Kitchen ceiling, renamed mid-session"));
+    await tick();
+
+    const notice = host!.querySelector(".bus-monitor-stale-lock")!;
+    expect(notice.getAttribute("role")).toBe("alert");
+    expect(notice.textContent).toContain("sending is locked");
+    // The rows are kept — they were decoded correctly when they arrived —
+    // but marked as belonging to a snapshot the project has moved past.
+    expect(host!.querySelector(".bus-monitor-table")!.className).toContain("bus-monitor-stale-table");
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
+  });
+
+  it("says so, without claiming staleness, when it did not start the session it attached to", async () => {
+    publishProjectContext(projectTree("Kitchen ceiling"));
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ sessionId: 5, nextSince: 1 }));
+    await renderPanel();
+    await flushReattach();
+
+    const notice = host!.querySelector(".bus-monitor-unverified-lock")!;
+    expect(notice.getAttribute("role")).toBe("note");
+    expect(notice.textContent).toContain("did not start this session");
+    // Unverified is not stale: sending stays possible, because nothing
+    // observed says the snapshot is wrong — only that it is unconfirmed.
+    expect(host!.querySelector(".bus-monitor-stale-lock")).toBeNull();
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(false);
+  });
+
+  it("stays quiet when another window recorded the very session it attached to", async () => {
+    publishProjectContext(projectTree("Kitchen ceiling"));
+    recordSessionContext(5); // what the other window wrote when it connected
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ sessionId: 5, nextSince: 1 }));
+    await renderPanel();
+    await flushReattach();
+
+    expect(host!.querySelector(".bus-monitor-unverified-lock")).toBeNull();
+    expect(host!.querySelector(".bus-monitor-stale-lock")).toBeNull();
+  });
+
+  it("drops the old rows and announces the new identity when the session is replaced", async () => {
+    apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+    apiMock.pollBusTelegrams.mockResolvedValue(
+      telegramsResponse({ sessionId: 1, telegrams: [row({ seq: 0 })], nextSince: 1 }),
+    );
+    await renderPanel();
+    await flushReattach();
+    await connect();
+    expect(host!.querySelectorAll("tbody tr")).toHaveLength(1);
+
+    apiMock.pollBusTelegrams.mockResolvedValue(
+      telegramsResponse({ sessionId: 2, telegrams: [], nextSince: 0 }),
+    );
+    await tick();
+
+    const notice = host!.querySelector(".bus-monitor-replaced-notice")!;
+    expect(notice.getAttribute("role")).toBe("alert");
+    expect(notice.textContent).toContain("session 2");
+    expect(host!.querySelectorAll("tbody tr")).toHaveLength(0);
+  });
+
+  it("returns to the Connect form and says the session ended elsewhere on a mid-session 404", async () => {
+    apiMock.pollBusTelegrams.mockRejectedValueOnce(notFoundError());
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 1 }));
+    await renderPanel();
+    await flushReattach();
+    await connect();
+
+    apiMock.pollBusTelegrams.mockRejectedValue(notFoundError());
+    await tick();
+
+    const notice = host!.querySelector(".bus-monitor-ended-elsewhere")!;
+    expect(notice.getAttribute("role")).toBe("alert");
+    expect(notice.textContent).toContain("ended elsewhere");
+    expect(host!.querySelector(".bus-monitor-connect")).not.toBeNull();
+    // And it did not try to clean up a session that is already gone.
+    expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
   });
 });

@@ -212,6 +212,7 @@ export const messages = {
   // of translating its ready-made `detail` prose (which stays English by
   // design — see that field's own comment in `api.ts`).
   "logPanel.title": "Session log",
+  "logPanel.eyebrow": "Diagnostics",
   "logPanel.severity.error": "Error",
   "logPanel.severity.warning": "Warning",
   "logPanel.severity.info": "Info",
@@ -219,6 +220,11 @@ export const messages = {
   "logPanel.emptyFiltered": "No log entries match the current filters.",
 
   "busMonitor.title": "Bus monitor",
+  "busMonitor.eyebrow": "KNXnet/IP · Tunnelling",
+  "busMonitor.gatewayLabel": "Gateway address",
+  "busMonitor.gatewayLocked":
+    "Disconnect the running session before changing the gateway address.",
+  "busMonitor.connectNeedsGateway": "Enter a gateway address first.",
   "busMonitor.connect": "Connect",
   "busMonitor.disconnect": "Disconnect",
   "busMonitor.session": "Session {id}",
@@ -241,6 +247,17 @@ export const messages = {
   "busMonitor.column.service": "Service",
   "busMonitor.column.payload": "Payload",
   "busMonitor.column.decoded": "Decoded",
+  // Task 4 (the diagnostic companion). The bus session freezes the
+  // project's group-address names and DPTs when it starts and never
+  // re-resolves them; these three say so out loud rather than letting a
+  // decoded column quietly describe a project that has since changed.
+  "busMonitor.contextStale":
+    "The project changed after this session started. Decoded values below come from the snapshot taken at connect time, and sending is locked. Reconnect to decode against the current project.",
+  "busMonitor.contextUnverified":
+    "This window did not start this session, so it cannot confirm that the decoded values match the project open now.",
+  "busMonitor.sessionReplaced":
+    "The bus session was replaced — now showing session {id}. Rows from the previous session were cleared.",
+  "busMonitor.endedElsewhere": "The bus session was ended elsewhere.",
 
   // `CatalogBrowser.tsx`.
   "catalog.title": "Device catalog",
@@ -433,7 +450,23 @@ export const messages = {
   "busCompose.dptLabel": "DPT",
   "busCompose.valueLabel": "Value",
   "busCompose.send": "Send",
+  "busCompose.liveAction": "Sends to the connected bus. Project Undo cannot reverse this action.",
   "busCompose.sent": "Sent {service}: {payload}",
+  "busCompose.contextStaleMessage":
+    "The project changed after this bus session started — the DPT would be resolved against the old snapshot, so sending is locked. Reconnect first.",
+
+  // `DiagnosticsCompanion.tsx` and the button in `App.tsx` that opens it.
+  "companion.open": "Diagnostics window",
+  "companion.title": "Diagnostics",
+  "companion.eyebrow": "Companion window · read-only",
+  "companion.readOnly":
+    "Read-only companion. The project is edited in the main window only; there is no Undo here, and this window shares the main window's bus session rather than opening its own.",
+  "companion.backToMain": "Back to main window",
+  "companion.noMainWindow": "No main window to return to — this one was opened on its own.",
+  "companion.blocked":
+    "The diagnostics window was blocked. Allow pop-ups for this page, or keep using the monitor here.",
+  "companion.failed":
+    "The diagnostics window could not be opened. The monitor and the log stay available here.",
 
   // `FsPicker.tsx` — the plain-web-build fallback dialog `filePicker.ts`
   // routes to when not running under Tauri. Had no `useTranslate()` call
@@ -469,6 +502,126 @@ export const messages = {
   "groupAddressCsv.importSummaryIgnoredColumns.one": "{count} column ignored",
   "groupAddressCsv.importSummaryIgnoredColumns.other": "{count} columns ignored",
   "groupAddressCsv.importSummarySeeLog": "— see Log.",
+  "appearance.accent": "Accent color",
+  "appearance.density": "Density",
+  "appearance.violet": "Violet",
+  "appearance.mint": "Mint",
+  "appearance.blue": "Blue",
+  "appearance.amber": "Amber",
+  "appearance.rose": "Rose",
+  "appearance.compact": "Compact",
+  "appearance.comfortable": "Comfortable",
+  "workbench.overview": "Overview",
+  "workbench.buildings": "Buildings",
+  "workbench.topology": "Topology",
+  "workbench.addresses": "Group addresses",
+  "workbench.catalog": "Product catalog",
+  "workbench.device": "Device",
+  "workbench.unassigned": "Unassigned",
+  "workbench.emptyStructure": "No entries yet. Use the project tree to create structure.",
+  "workbench.address": "Address",
+  "workbench.name": "Name",
+  "workbench.file": "File",
+  "workbench.navigation": "Navigation",
+  "workbench.properties": "Properties",
+  "workbench.welcome": "Your KNX workspace",
+  "workbench.openHint": "Open a project to explore buildings, topology and group addresses.",
+  "workbench.noSelection": "Select an item to inspect or edit its properties.",
+  "workbench.importNotices": "Import: {errors} errors · {warnings} warnings",
+  "workbench.parameters": "Parameters",
+  "workbench.telegram": "Telegram",
+  "workbench.selectTelegram": "Select a telegram to inspect its received data.",
+  "workbench.noDevices": "No devices assigned to this building part.",
+
+  // The group-address table (stage 4). A group address has no DPT of its
+  // own in the KNX model — these labels name what the linked communication
+  // objects state, which is why an empty DPT reads "none stated" rather
+  // than "unknown", and why a disagreement is labelled a conflict instead
+  // of being silently resolved.
+  "addressTable.filterLabel": "Filter group addresses",
+  "addressTable.filterPlaceholder": "Filter addresses…",
+  "addressTable.selectColumn": "Select",
+  "addressTable.range": "Range",
+  "addressTable.dpt": "DPT",
+  "addressTable.links": "Links",
+  "addressTable.noDpt": "none stated",
+  "addressTable.dptConflict": "conflicting",
+  "addressTable.noRange": "(no range)",
+  "addressTable.noLinks": "none",
+  "addressTable.linkCounts": "{senders} sending · {receivers} receiving",
+  "addressTable.linkTotal.one": "{count} link",
+  "addressTable.linkTotal.other": "{count} links",
+  "addressTable.noMatches": "No group address matches this filter.",
+  "addressTable.linksFor": "Links · {address}",
+  "addressTable.noLinksYet": "No communication object is linked to this address.",
+  "addressTable.participant": "Participant",
+  "addressTable.function": "Function",
+  "addressTable.direction": "Direction",
+  "addressTable.unlinkFrom": "Unlink {object} from {address}",
+  // Only reachable if the project links an object whose device is missing —
+  // the link is still shown rather than dropped (see `GroupAddressLinkNode`).
+  "addressTable.unknownDevice": "Unknown device #{id}",
+  "addressTable.unnamedObject": "Unnamed object",
+
+  // T16, the device product identity block in the workspace's third tab
+  // (`DeviceIdentity` in `Inspector.tsx`). The four `resolution.*` words
+  // and their four `explain.*` sentences are deliberately not
+  // interchangeable: "no database is loaded" and "the database does not
+  // have it" are different facts about the installation, and collapsing
+  // them into one "unknown" is precisely the dishonesty this block exists
+  // to avoid. `explain.resolved` has no entry — the catalogue speaks for
+  // itself — but `explain.resolvedWithoutCatalog` does, for the shape the
+  // generated type permits and the server never sends.
+  "deviceIdentity.title": "Product identity",
+  // The workspace tab. Deliberately its own key: the tab is a short noun in
+  // a strip of three, while `deviceIdentity.title` labels the section itself
+  // and `deviceIdentity.more` labels the disclosure inside it.
+  "deviceIdentity.tab": "Product data",
+  "deviceIdentity.productRef": "Product reference",
+  "deviceIdentity.programRef": "Application program reference",
+  "deviceIdentity.refNotStated": "not stated in the project",
+  "deviceIdentity.resolution.resolved": "From the product database",
+  "deviceIdentity.resolution.noDatabase": "No product database",
+  "deviceIdentity.resolution.notInDatabase": "Not in the product database",
+  "deviceIdentity.resolution.noReference": "No product reference",
+  // For a resolution string this build has never heard of — a frontend
+  // talking to a newer server. Saying so is the only honest option: borrowing
+  // another variant's wording would deny references the user can see.
+  "deviceIdentity.resolution.unrecognised": "State not recognised",
+  "deviceIdentity.explain.unrecognised":
+    "The server reported a product-resolution state this build does not recognise, so this panel cannot say whether the references above were matched to a product. The references are shown exactly as the project states them.",
+  "deviceIdentity.explain.noDatabase":
+    "No product database is loaded here, so what the project states above cannot be matched to a product. Install the manufacturer's product package to see product, hardware and application program details.",
+  "deviceIdentity.explain.notInDatabase":
+    "A product database is loaded and does not contain what the project states above. The manufacturer's catalogue for this product is not installed here.",
+  "deviceIdentity.explain.noReference":
+    "This device states neither a product reference nor an application program reference — it was created without one, or came from an import that carried none.",
+  "deviceIdentity.explain.resolvedWithoutCatalog":
+    "The product database reported a match but returned no details for it.",
+  "deviceIdentity.more": "More product data",
+  "deviceIdentity.group.product": "Product",
+  "deviceIdentity.group.hardware": "Hardware",
+  "deviceIdentity.group.application": "Application program",
+  "deviceIdentity.manufacturer": "Manufacturer",
+  "deviceIdentity.manufacturerId": "Manufacturer ID",
+  "deviceIdentity.productText": "Product name",
+  "deviceIdentity.orderNumber": "Order number",
+  "deviceIdentity.catalogItemName": "Catalogue item",
+  "deviceIdentity.catalogItemNumber": "Catalogue item number",
+  "deviceIdentity.hardwareName": "Hardware name",
+  "deviceIdentity.hardwareVersion": "Hardware version",
+  // The serial number the manufacturer package states for this *hardware
+  // type*, not the serial of the unit on the wall — that one cannot be read
+  // at all (KNOWN_LIMITATIONS.md §73), so the label must not promise it.
+  "deviceIdentity.hardwareSerial": "Hardware serial number",
+  "deviceIdentity.applicationName": "Program name",
+  "deviceIdentity.applicationNumber": "Program number",
+  "deviceIdentity.applicationVersion": "Program version",
+  "deviceIdentity.applicationProgramId": "Program ID",
+  "deviceIdentity.maskVersion": "Mask version",
+  "deviceIdentity.groupEmpty": "The product database holds no values here.",
+  "deviceIdentity.omitted.one": "{count} further field is omitted: the product database has no value for it.",
+  "deviceIdentity.omitted.other": "{count} further fields are omitted: the product database has no value for them.",
 } as const;
 
 export type Messages = typeof messages;

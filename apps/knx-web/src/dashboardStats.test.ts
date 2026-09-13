@@ -49,7 +49,7 @@ describe("computeStats", () => {
         topology: [],
         buildings: [],
         unassigned: [device(1, 2)],
-        group_addresses: [{ id: 1, name: "ga1", address: "1/1/1" }],
+        group_addresses: [{ id: 1, name: "ga1", address: "1/1/1", range: null, dpts: [], links: [] }],
         group_ranges: [],
       },
       {
@@ -58,7 +58,7 @@ describe("computeStats", () => {
         topology: [],
         buildings: [],
         unassigned: [device(2, 3)],
-        group_addresses: [{ id: 2, name: "ga2", address: "1/1/2" }],
+        group_addresses: [{ id: 2, name: "ga2", address: "1/1/2", range: null, dpts: [], links: [] }],
         group_ranges: [],
       },
     ];

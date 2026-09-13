@@ -1,5 +1,5 @@
 /** Panel comparing the open project against another file on disk and rendering the entity diff. */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { pickOpenPath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectDiffReport } from "./api";
@@ -128,6 +128,26 @@ export default function ProjectDiffPanel(props: {
   const t = useTranslate();
   const [report, setReport] = useState<ProjectDiffReport | null>(null);
   const [open, setOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const compareRef = useRef<HTMLButtonElement | null>(null);
+
+  // This panel renders inside the File menu's `<details>`, whose own
+  // Escape handler closes the menu and returns focus to its summary. Before
+  // stage 4 that left this report `open` but hidden, so reopening the menu
+  // showed a stale comparison. Escape now closes the report first and stops
+  // there: a second Escape closes the menu, the usual innermost-first rule.
+  // Focus moves into the panel when it opens so that first Escape has
+  // somewhere to land, and back to the Compare button when it closes, so a
+  // keyboard walk of the menu resumes where it left off instead of at the
+  // top of the document.
+  useEffect(() => {
+    if (open) panelRef.current?.focus();
+  }, [open]);
+
+  function close() {
+    setOpen(false);
+    compareRef.current?.focus();
+  }
 
   async function compare() {
     // Not module-level (see the removed `COMPARE_FILTER` constant): the
@@ -152,11 +172,22 @@ export default function ProjectDiffPanel(props: {
 
   return (
     <>
-      <button onClick={compare} disabled={!tree}>
+      <button ref={compareRef} onClick={compare} disabled={!tree}>
         {t("projectDiff.compareButton")}
       </button>
       {open && report && (
-        <div className="project-diff-panel">
+        <div
+          className="project-diff-panel"
+          ref={panelRef}
+          tabIndex={-1}
+          role="group"
+          aria-label={t("projectDiff.title")}
+          onKeyDown={(e) => {
+            if (e.key !== "Escape") return;
+            e.stopPropagation();
+            close();
+          }}
+        >
           <h2>{t("projectDiff.title")}</h2>
           {lines.length === 0 ? (
             <p className="project-diff-panel-empty">{t("projectDiff.noDifferences")}</p>
@@ -167,7 +198,7 @@ export default function ProjectDiffPanel(props: {
               ))}
             </ul>
           )}
-          <button onClick={() => setOpen(false)}>{t("projectDiff.close")}</button>
+          <button onClick={close}>{t("projectDiff.close")}</button>
         </div>
       )}
     </>

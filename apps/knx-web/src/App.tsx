@@ -6,6 +6,8 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { Selection } from "./selection";
 import ProjectExplorer from "./ProjectExplorer";
+import BulkActionToolbar from "./BulkActionToolbar";
+import { useMultiSelection } from "./multiSelection";
 import ResizablePane from "./ResizablePane";
 import WorkbenchIcon from "./WorkbenchIcon";
 import StructureWorkspace, { type StructureView } from "./StructureWorkspace";
@@ -94,9 +96,23 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [view, setView] = useState<"overview" | StructureView>("overview");
   const [buildingScope, setBuildingScope] = useState<number | null>(null);
+  // The group-address view's counterpart of `buildingScope`: which range
+  // the address table is scoped to. Owned here, not inside the table, for
+  // the same reason `buildingScope` is: selecting a range in the tree has
+  // to move the workspace, and two copies of "the current scope" would be
+  // two things that agree only by luck.
+  const [addressScope, setAddressScope] = useState<number | null>(null);
   const [navigationOpen, setNavigationOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [catalogTarget, setCatalogTarget] = useState<{ lineId: number | null } | null>(null);
+  // Exactly one multi-selection for the whole shell, shared by the project
+  // tree and the group-address table, feeding exactly one
+  // `BulkActionToolbar` (stage 4 brief, item 2 — reuse the validated
+  // commands, do not duplicate the state machine).
+  const { multiSelection, onItemClick, clear: clearMultiSelection } = useMultiSelection(
+    tree,
+    (sel) => void selectEntity(sel),
+  );
   const [themeId, setThemeId] = useThemeId();
   const appearance = useAppearance();
   const { level: motionLevel, setLevel: setMotionLevel, style: motionStyle, setStyle: setMotionStyle } = useMotion();
@@ -170,6 +186,11 @@ function App() {
   function resetTree(newTree: ProjectTree) {
     setTree(newTree);
     setBuildingScope(null);
+    setAddressScope(null);
+    // Ids from the previous project mean nothing in this one, and a stale
+    // bulk selection would offer to delete whatever happens to share those
+    // ids now.
+    clearMultiSelection();
     selectionRef.current = null;
     setSelection(null);
     setDeviceDetail(null);
@@ -184,6 +205,7 @@ function App() {
     } else if (sel.kind === "area" || sel.kind === "line") {
       setView("topology");
     } else if (sel.kind === "group_address" || sel.kind === "group_range") {
+      if (sel.kind === "group_range") setAddressScope(sel.id);
       setView("addresses");
     }
     setLogOpen(false);
@@ -438,6 +460,14 @@ function App() {
       </header>
       <div className="workbench-panel-controls">
         <button aria-expanded={navigationOpen} onClick={() => setNavigationOpen(!navigationOpen)}><WorkbenchIcon name="panel" />{t("workbench.navigation")}</button>
+        {tree && multiSelection && multiSelection.ids.size > 0 && (
+          <BulkActionToolbar
+            multiSelection={multiSelection}
+            tree={tree}
+            onTreeUpdate={handleTreeUpdate}
+            onDone={clearMultiSelection}
+          />
+        )}
         {tree && (tree.errors > 0 || tree.warnings > 0) && <button className="import-notice" onClick={() => { setView("overview"); setLogOpen(false); setMonitorOpen(false); }}>{t("workbench.importNotices", { errors: tree.errors, warnings: tree.warnings })}</button>}
         <button aria-expanded={inspectorOpen} onClick={() => setInspectorOpen(!inspectorOpen)}>{t("workbench.properties")}<WorkbenchIcon name="panel" /></button>
       </div>
@@ -447,7 +477,7 @@ function App() {
             {(["overview", "buildings", "topology", "addresses"] as const).map((item) => <button key={item} aria-current={!logOpen && !monitorOpen && view === item ? "page" : undefined} onClick={() => { setView(item); setLogOpen(false); setMonitorOpen(false); }}><WorkbenchIcon name={item} />{t(`workbench.${item}`)}</button>)}
             <button onClick={() => setCatalogTarget({ lineId: selection?.kind === "line" ? selection.id : null })}><WorkbenchIcon name="catalog" />{t("workbench.catalog")}</button>
           </nav>
-          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onTreeUpdate={handleTreeUpdate} />}
+          {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} />}
           <nav className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")}>
             <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen((open) => !open); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
             <button aria-current={logOpen ? "page" : undefined} onClick={() => { setMonitorOpen(false); setLogOpen((open) => !open); }}><WorkbenchIcon name="log" />{t("toolbar.log")}</button>
@@ -456,7 +486,11 @@ function App() {
         </ResizablePane>}
         <div className="workbench-center">
           {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusMonitorPanel projectOpen={tree !== null} /> : tree ? (
-            view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope} onSelect={selectEntity} onCatalog={(lineId) => setCatalogTarget({ lineId })} />
+            view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
+              rangeScope={addressScope} onRangeScope={setAddressScope}
+              multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate}
+              addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}
+              onSelect={selectEntity} onCatalog={(lineId) => setCatalogTarget({ lineId })} />
           ) : <section className="welcome-workspace"><span className="eyebrow">KNX-compatible · Linux-first</span><h1>{t("workbench.welcome")}</h1><p>{t("workbench.openHint")}</p><div><button onClick={pickProject}>{t("toolbar.openProject")}</button><button onClick={openNativeProject}>{t("toolbar.openNativeProject")}</button></div></section>}
           {tree && selection?.kind === "device" && deviceDetail && !logOpen && !monitorOpen && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
         </div>

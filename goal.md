@@ -154,13 +154,36 @@ Main types 20, 21-30 and 46 are not implemented. See
 and which encoding questions rest on a stated ruling rather than the
 standard — extend that section honestly as the coverage grows.
 
-### T21 — Graphical topology and building views, remaining half
+### T21 — Graphical topology and building views, decided
 
-Partially implemented 2026-09-13: the workbench renders projected
-areas/lines/devices and nested building parts alongside the tree, with
-keyboard selection. A spatial canvas / floor-plan editor remains outside the
-current model — it needs a domain decision about coordinates before it needs
-a UI.
+Both halves are now settled. The hierarchy views shipped 2026-09-13: the
+workbench renders projected areas/lines/devices and nested building parts
+alongside the tree, with keyboard selection. The coordinate question the
+spatial canvas was waiting on was answered the same day by
+`docs/adr/0019-building-model-stays-topological.md`: **the building model
+stays topological and no entity carries a position in v1.0.0.** `Space_t`
+and `DeviceInstance_t` have no spatial attribute in the published schema 23
+document, none of the three reference projects (schema 11/21/23) has one,
+and the KNX Standard's own location model (3/10/3 *KNX IoT Information
+Model*) keeps geometry out of its location classes and references IFC
+instead. So there is no ETS data being lost here — only a feature KNXBench
+does not have.
+
+What actually remains, after the decision:
+
+- Nothing for v1.0.0. No code, no migration; `CURRENT_SCHEMA_VERSION` stays
+  at 6.
+- A post-v1.0.0 canvas, gated on its own ADR. ADR-0019 pre-commits its shape
+  (separate `FloorPlan`/`Placement` entities in their own tables, integer
+  millimetres, origin at the imported plan's top-left, no `z`, plans
+  imported rather than drawn, and a `.knxproj` export loss warning) so that
+  nobody has to improvise it, but deciding to *build* it is a separate
+  decision that has not been made.
+- One side finding from the evidence sweep, now recorded rather than lost:
+  five documented `Space/@Type` values (`Stairway`, `RoomPart`, `Area`,
+  `Ground`, `Segment`) have no `BuildingPartType` variant and are coarsened
+  to `BuildingPart` on import, with a reported `MapProblem` —
+  `docs/KNOWN_LIMITATIONS.md` §88. Deliberately not fixed in passing.
 
 ### D10 — the data half of language-aware display
 

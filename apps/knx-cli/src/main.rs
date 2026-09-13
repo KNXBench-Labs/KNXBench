@@ -30,7 +30,12 @@ const USAGE: &str =
      \x20         linked communication objects; neither given falls back to raw\n\
      \x20         0|1|hex; --dry-run encodes and prints without opening a connection)\n\
      \x20     knx bus route-monitor --source-address <area.line.device> [--project <path.knxdb>]\n\
-     \x20     knx bus route-send --source-address <area.line.device> <main/middle/sub> <0|1|hex>\n\
+     \x20                  [--multicast-group <addr>]\n\
+     \x20     knx bus route-send --source-address <area.line.device> [--multicast-group <addr>]\n\
+     \x20                  <main/middle/sub> <0|1|hex>\n\
+     \x20         (--multicast-group joins that IPv4 multicast address instead of the\n\
+     \x20         standard 224.0.23.12, port fixed at 3671 either way — Routing v01.05.02 AS\n\
+     \x20         §2.3.1; omitted, both route-monitor and route-send join the standard group)\n\
      \x20     knx bus scan --gateway <host:port> --line <area.line>\n\
      \x20                  [--range <first>-<last>] [--exclude <addr>[,<addr>...]]...\n\
      \x20                  [--timeout-ms <n>] [--pause-ms <n>] [--project <path.knxdb>] [--dry-run]\n\
@@ -1795,11 +1800,13 @@ async fn run_bus_write_async(
 struct BusRouteMonitorArgs {
     source_address: String,
     project: Option<String>,
+    multicast_group: Option<String>,
 }
 
 fn parse_bus_route_monitor_args(args: &[String]) -> Result<BusRouteMonitorArgs, String> {
     let mut source_address = None;
     let mut project = None;
+    let mut multicast_group = None;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -1811,12 +1818,17 @@ fn parse_bus_route_monitor_args(args: &[String]) -> Result<BusRouteMonitorArgs, 
                 project = Some(take_value(args, i + 1, "--project")?);
                 i += 2;
             }
+            "--multicast-group" => {
+                multicast_group = Some(take_value(args, i + 1, "--multicast-group")?);
+                i += 2;
+            }
             other => return Err(format!("unrecognized argument: {other}")),
         }
     }
     Ok(BusRouteMonitorArgs {
         source_address: source_address.ok_or_else(|| "--source-address is required".to_string())?,
         project,
+        multicast_group,
     })
 }
 
@@ -1845,6 +1857,16 @@ fn run_bus_route_monitor(args: &[String]) -> ExitCode {
         },
         None => std::collections::HashMap::new(),
     };
+    let multicast_group: Option<std::net::Ipv4Addr> = match &parsed.multicast_group {
+        Some(addr) => match addr.parse() {
+            Ok(a) => Some(a),
+            Err(_) => {
+                eprintln!("--multicast-group must be an IPv4 address, e.g. 239.0.2.1");
+                return ExitCode::FAILURE;
+            }
+        },
+        None => None,
+    };
 
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -1856,16 +1878,25 @@ fn run_bus_route_monitor(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    runtime.block_on(run_bus_route_monitor_async(own_address, ga_names))
+    runtime.block_on(run_bus_route_monitor_async(
+        own_address,
+        ga_names,
+        multicast_group,
+    ))
 }
 
 async fn run_bus_route_monitor_async(
     own_address: knx_core::IndividualAddress,
     ga_names: std::collections::HashMap<u16, String>,
+    multicast_group: Option<std::net::Ipv4Addr>,
 ) -> ExitCode {
     use knx_net::BusConnection;
     let client = knx_net::KnxNetIpClient::new();
-    let routing = match client.connect_routing(own_address).await {
+    let routing = match multicast_group {
+        Some(group) => client.connect_routing_to_group(own_address, group).await,
+        None => client.connect_routing(own_address).await,
+    };
+    let routing = match routing {
         Ok(r) => r,
         Err(e) => {
             eprintln!("could not join the routing multicast group: {e}");
@@ -1896,16 +1927,22 @@ struct BusRouteSendArgs {
     source_address: String,
     group_address: String,
     value: String,
+    multicast_group: Option<String>,
 }
 
 fn parse_bus_route_send_args(args: &[String]) -> Result<BusRouteSendArgs, String> {
     let mut source_address = None;
+    let mut multicast_group = None;
     let mut positional = Vec::new();
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "--source-address" => {
                 source_address = Some(take_value(args, i + 1, "--source-address")?);
+                i += 2;
+            }
+            "--multicast-group" => {
+                multicast_group = Some(take_value(args, i + 1, "--multicast-group")?);
                 i += 2;
             }
             other => {
@@ -1924,6 +1961,7 @@ fn parse_bus_route_send_args(args: &[String]) -> Result<BusRouteSendArgs, String
         source_address,
         group_address: group_address.clone(),
         value: value.clone(),
+        multicast_group,
     })
 }
 
@@ -1959,6 +1997,16 @@ fn run_bus_route_send(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    let multicast_group: Option<std::net::Ipv4Addr> = match &parsed.multicast_group {
+        Some(addr) => match addr.parse() {
+            Ok(a) => Some(a),
+            Err(_) => {
+                eprintln!("--multicast-group must be an IPv4 address, e.g. 239.0.2.1");
+                return ExitCode::FAILURE;
+            }
+        },
+        None => None,
+    };
 
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -1970,17 +2018,27 @@ fn run_bus_route_send(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    runtime.block_on(run_bus_route_send_async(own_address, group_address, value))
+    runtime.block_on(run_bus_route_send_async(
+        own_address,
+        group_address,
+        value,
+        multicast_group,
+    ))
 }
 
 async fn run_bus_route_send_async(
     own_address: knx_core::IndividualAddress,
     group_address: knx_core::GroupAddress,
     value: knx_net::GroupValue,
+    multicast_group: Option<std::net::Ipv4Addr>,
 ) -> ExitCode {
     use knx_net::{ApplicationService, BusConnection, Destination};
     let client = knx_net::KnxNetIpClient::new();
-    let routing = match client.connect_routing(own_address).await {
+    let routing = match multicast_group {
+        Some(group) => client.connect_routing_to_group(own_address, group).await,
+        None => client.connect_routing(own_address).await,
+    };
+    let routing = match routing {
         Ok(r) => r,
         Err(e) => {
             eprintln!("could not join the routing multicast group: {e}");
@@ -2359,7 +2417,10 @@ fn format_decoded_value(v: &knx_net::GroupValue, dpt: DptAnnotation) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{format_version_line, load_project_individual_addresses};
+    use super::{
+        format_version_line, load_project_individual_addresses, parse_bus_route_monitor_args,
+        parse_bus_route_send_args,
+    };
     use std::path::Path;
 
     #[test]
@@ -2464,5 +2525,56 @@ mod tests {
             !path.exists(),
             "must refuse before open_and_migrate can create an empty database"
         );
+    }
+
+    /// E6: omitting `--multicast-group` from `route-monitor` must parse to
+    /// `None` — the caller's cue to keep joining the standard group, today's
+    /// behaviour byte for byte.
+    #[test]
+    fn route_monitor_args_without_multicast_group_parses_to_none() {
+        let args = ["--source-address".to_string(), "1.1.1".to_string()];
+        let parsed = parse_bus_route_monitor_args(&args).unwrap();
+        assert_eq!(parsed.multicast_group, None);
+    }
+
+    #[test]
+    fn route_monitor_args_parses_a_given_multicast_group() {
+        let args = [
+            "--source-address".to_string(),
+            "1.1.1".to_string(),
+            "--multicast-group".to_string(),
+            "239.0.2.1".to_string(),
+        ];
+        let parsed = parse_bus_route_monitor_args(&args).unwrap();
+        assert_eq!(parsed.multicast_group, Some("239.0.2.1".to_string()));
+    }
+
+    /// Same cue, same default, for `route-send`.
+    #[test]
+    fn route_send_args_without_multicast_group_parses_to_none() {
+        let args = [
+            "--source-address".to_string(),
+            "1.1.1".to_string(),
+            "1/2/3".to_string(),
+            "1".to_string(),
+        ];
+        let parsed = parse_bus_route_send_args(&args).unwrap();
+        assert_eq!(parsed.multicast_group, None);
+    }
+
+    #[test]
+    fn route_send_args_parses_a_given_multicast_group() {
+        let args = [
+            "--source-address".to_string(),
+            "1.1.1".to_string(),
+            "--multicast-group".to_string(),
+            "239.0.2.1".to_string(),
+            "1/2/3".to_string(),
+            "1".to_string(),
+        ];
+        let parsed = parse_bus_route_send_args(&args).unwrap();
+        assert_eq!(parsed.multicast_group, Some("239.0.2.1".to_string()));
+        assert_eq!(parsed.group_address, "1/2/3");
+        assert_eq!(parsed.value, "1");
     }
 }

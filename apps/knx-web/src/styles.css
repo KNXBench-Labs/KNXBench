@@ -932,12 +932,15 @@ h6 {
 /* `.theme-switcher select` lived here until T27 moved the theme dropdown
    into SettingsPanel and deleted ThemeSwitcher.tsx; `.settings-field
    select` above replaces it. `.sr-only` below has four consumers today:
-   the toolbar's undo and redo buttons (`App.tsx`), whose icons need a name
-   a screen reader can read, and the group-address table's select-column
-   and unlink-column `<th>`s, which need a name and no visible text at all.
-   (An earlier version of this comment called it dead code left over from
-   T27's deletion of ThemeSwitcher.tsx, and a later one said the table
-   revived it. Both were wrong: the toolbar buttons already used it.) It is
+   the toolbar's undo and redo buttons (`App.tsx`), which also carry an
+   `aria-label`, so the span is redundancy rather than their only
+   accessible name; the group-address table's select-column `<th>`; and the
+   links sub-table's unlink-column `<th>`, neither of which has any visible
+   text. (This comment once called the utility dead code left over from
+   T27's deletion of ThemeSwitcher.tsx. That was true when written and went
+   stale at `90da7da`, where the toolbar spans arrived; a later version
+   then claimed the stage-4 table revived it, and that one was wrong when
+   written — the toolbar already used it.) It is
    the standard visually-hidden-label utility, and the accessibility work
    KNOWN_LIMITATIONS.md §20 still owes will want it rather than reinvent
    it. */

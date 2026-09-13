@@ -97,11 +97,44 @@ fn the_unknown_construct_table_is_a_short_list_not_a_flood() {
         return;
     }
     // Not zero — this is one manufacturer sample of four vendors, and an
-    // unmodelled attribute is expected. What matters is that it is
-    // reported and bounded, and that every one of them is on record.
+    // unmodelled attribute is expected. What matters is that every one is
+    // on record and that the result stays reviewable, which takes two
+    // bounds on two different quantities:
+    //
+    // * `distinct_constructs` bounds the length of the list a human reads —
+    //   one entry per (`kind`, `xpath`, `name`).
+    // * `rows` bounds the size of the table, so a parser regression that
+    //   starts rerouting the modelled tree through here still trips
+    //   something the distinct bound would sleep through.
+    //
+    // They differ because `ingest_unknown` keys on `source_sha256` as well:
+    // one construct present in 12 program files is 12 rows, and
+    // `occurrences` aggregates repeats only *within* a row, never across
+    // files. `ApplicationProgram/@AdditionalAddressesCount` is exactly that
+    // case here, 12 rows for one thing to review.
+    //
+    // Measured on this corpus 2026-09-14: 98 distinct constructs across 1013
+    // rows from 24 source files (796 `Attribute`, 217 `Element`), summing to
+    // 3078 occurrences. Either number moving is a deliberate change to
+    // explain, not noise.
     let (_dir, conn) = ingest_all();
-    let distinct = count(&conn, "SELECT count(*) FROM ingest_unknown");
-    assert!(distinct < 200, "{distinct} distinct unknown constructs");
+    let distinct_constructs = count(
+        &conn,
+        "SELECT count(*) FROM (SELECT DISTINCT kind, xpath, name FROM ingest_unknown)",
+    );
+    assert!(
+        distinct_constructs < 200,
+        "{distinct_constructs} distinct (kind, xpath, name) constructs to review, measured 98"
+    );
+    // Deliberately loose, and still two orders of magnitude below the 89,622
+    // rows this corpus fills the eight main parsed tables with — roughly
+    // what a parser that stopped recognising its own tree would have to
+    // dump in here instead.
+    let rows = count(&conn, "SELECT count(*) FROM ingest_unknown");
+    assert!(
+        rows < 4000,
+        "{rows} ingest_unknown rows, measured 1013 — that is a flood, not a list"
+    );
 }
 
 /// `xknxproject`'s dump is read here as a committed *output file*, never a

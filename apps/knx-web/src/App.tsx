@@ -20,6 +20,8 @@ import SettingsPanel from "./SettingsPanel";
 import Dashboard from "./Dashboard";
 import LogPanel from "./LogPanel";
 import BusMonitorPanel from "./BusMonitorPanel";
+import { publishProjectContext } from "./busContext";
+import { openCompanionWindow } from "./diagnosticsWindow";
 import { useAppearance } from "./appearance";
 import { THEMES, useThemeId } from "./theme";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
@@ -175,6 +177,23 @@ function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
 
+  // The editing window is the only place that ever sees a `ProjectTree`
+  // (there is no `GET` route that returns one — a tree only ever arrives as
+  // the response to a mutation, import or open), so it is the only place
+  // that can tell a companion window what the project looks like now.
+  // Publishing on the `tree` state itself, rather than at each of the
+  // half-dozen call sites that set it, means no future edit path can forget
+  // to — and a stale fingerprint is exactly the failure the diagnostic
+  // companion's stale lock exists to prevent (`busContext.ts`).
+  //
+  // Never published for `tree === null`: a freshly reloaded window has no
+  // tree while the server may still hold the same project open, and
+  // publishing "no project" there would invent a change that never
+  // happened and lock a valid session.
+  useEffect(() => {
+    if (tree) publishProjectContext(tree);
+  }, [tree]);
+
   const startupToastShown = useRef(false);
   useEffect(() => {
     if (startupToastShown.current) return; // StrictMode double-invoke guard
@@ -182,6 +201,18 @@ function App() {
     const message = pickStartupToast(new Date());
     if (message) pushFun(message);
   }, []);
+
+  // Opens (or focuses) the read-only diagnostic companion. Every outcome is
+  // reported: a blocked popup and a refused webview are ordinary results on
+  // the platforms this ships to, and codex-goal.md is explicit that the
+  // monitor must stay fully usable in this window when no second one is
+  // available — which it does, because this button adds a window and moves
+  // nothing out of here.
+  async function openCompanion() {
+    const result = await openCompanionWindow(window.location.href);
+    if (result === "blocked") pushError(t("companion.blocked"));
+    else if (result === "failed") pushError(t("companion.failed"));
+  }
 
   function resetTree(newTree: ProjectTree) {
     setTree(newTree);
@@ -418,6 +449,7 @@ function App() {
     openLog: () => { setMonitorOpen(false); setLogOpen(true); },
     openBusMonitor: () => { setLogOpen(false); setMonitorOpen(true); },
     openSettings: () => setSettingsOpen(true),
+    openCompanion: () => void openCompanion(),
   };
 
   return (
@@ -484,6 +516,7 @@ function App() {
           <nav className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")}>
             <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen((open) => !open); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
             <button aria-current={logOpen ? "page" : undefined} onClick={() => { setMonitorOpen(false); setLogOpen((open) => !open); }}><WorkbenchIcon name="log" />{t("toolbar.log")}</button>
+            <button className="companion-open" onClick={() => void openCompanion()}><WorkbenchIcon name="panel" />{t("companion.open")}</button>
             <button onClick={() => setSettingsOpen(true)}><GearIcon />{t("toolbar.settings")}</button>
           </nav>
         </ResizablePane>}

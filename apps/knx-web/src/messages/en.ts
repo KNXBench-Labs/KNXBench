@@ -243,6 +243,17 @@ export const messages = {
   "busMonitor.column.service": "Service",
   "busMonitor.column.payload": "Payload",
   "busMonitor.column.decoded": "Decoded",
+  // Task 4 (the diagnostic companion). The bus session freezes the
+  // project's group-address names and DPTs when it starts and never
+  // re-resolves them; these three say so out loud rather than letting a
+  // decoded column quietly describe a project that has since changed.
+  "busMonitor.contextStale":
+    "The project changed after this session started. Decoded values below come from the snapshot taken at connect time, and sending is locked. Reconnect to decode against the current project.",
+  "busMonitor.contextUnverified":
+    "This window did not start this session, so it cannot confirm that the decoded values match the project open now.",
+  "busMonitor.sessionReplaced":
+    "The bus session was replaced — now showing session {id}. Rows from the previous session were cleared.",
+  "busMonitor.endedElsewhere": "The bus session was ended elsewhere.",
 
   // `CatalogBrowser.tsx`.
   "catalog.title": "Device catalog",
@@ -437,6 +448,21 @@ export const messages = {
   "busCompose.send": "Send",
   "busCompose.liveAction": "Sends to the connected bus. Project Undo cannot reverse this action.",
   "busCompose.sent": "Sent {service}: {payload}",
+  "busCompose.contextStaleMessage":
+    "The project changed after this bus session started — the DPT would be resolved against the old snapshot, so sending is locked. Reconnect first.",
+
+  // `DiagnosticsCompanion.tsx` and the button in `App.tsx` that opens it.
+  "companion.open": "Diagnostics window",
+  "companion.title": "Diagnostics",
+  "companion.eyebrow": "Companion window · read-only",
+  "companion.readOnly":
+    "Read-only companion. The project is edited in the main window only; there is no Undo here, and this window shares the main window's bus session rather than opening its own.",
+  "companion.backToMain": "Back to main window",
+  "companion.noMainWindow": "No main window to return to — this one was opened on its own.",
+  "companion.blocked":
+    "The diagnostics window was blocked. Allow pop-ups for this page, or keep using the monitor here.",
+  "companion.failed":
+    "The diagnostics window could not be opened. The monitor and the log stay available here.",
 
   // `FsPicker.tsx` — the plain-web-build fallback dialog `filePicker.ts`
   // routes to when not running under Tauri. Had no `useTranslate()` call

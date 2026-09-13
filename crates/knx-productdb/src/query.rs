@@ -1105,14 +1105,30 @@ fn row_to_device_product(r: &rusqlite::Row) -> rusqlite::Result<DeviceProductRow
 /// (`scope = 'Program'`, `scope_id = application_program.id`,
 /// `ref_id = application_program.id`, `attribute_name = 'Name'`).
 ///
-/// `hardware.name` is deliberately never overlaid: every `Hardware.xml` this
-/// project has ingested places only `Product/@Id`s inside its `Languages`
-/// block, never the owning `Hardware/@Id` itself (checked against both
-/// reference ETS projects' extracted manufacturer packages — zero
-/// counter-examples in either). Adding a join for an attribute this schema
-/// has never actually populated would silently match nothing forever; this
-/// is stated here rather than guessed at in SQL. If a future package turns
-/// out to carry one, this is the doc comment to correct.
+/// `hardware.name` is deliberately never overlaid, on an observation rather
+/// than a rule: across every `Hardware.xml` this project has ingested — nine
+/// files from seven manufacturers, drawn from the five packages under
+/// `OriginalData/ProductDatabases/` plus the manufacturer packages extracted
+/// from the two reference ETS exports (which are the *same* installation
+/// exported from ETS 4 and ETS 6, not two independent ones) — every
+/// `TranslationElement/@RefId` inside a `Languages` block is a `Product/@Id`,
+/// and none is the owning `Hardware/@Id`. Zero counter-examples, but the KNX
+/// App XML schema does not itself forbid one, so this is a statement about
+/// the corpus and not about the format. Adding a join for an attribute no
+/// observed package populates would silently match nothing; that is stated
+/// here rather than guessed at in SQL. If a future package turns out to carry
+/// one, this is the doc comment to correct.
+///
+/// Every join below is a `LEFT JOIN` on purpose: a product whose hardware,
+/// hardware-to-program link or catalogue entry was never ingested still
+/// returns its own row with the missing half `None`, rather than collapsing
+/// to `Ok(None)` and losing the product name too. The `hardware2program`
+/// half of that is covered by
+/// `device_product_with_no_matching_hardware2program_is_a_partial_row_not_none`;
+/// the `hardware` half is not, because a product ingested without its own
+/// `Hardware` element has not been observed. Flipping that one join to an
+/// `INNER JOIN` would therefore pass the suite — worth knowing before anyone
+/// touches this query.
 pub fn device_product(
     conn: &Connection,
     product_ref_id: &str,

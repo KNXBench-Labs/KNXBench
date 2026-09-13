@@ -1,3 +1,4 @@
+/** Mounts the single React root as either the editing workspace or the diagnostics companion. */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";

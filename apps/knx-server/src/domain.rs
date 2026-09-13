@@ -394,6 +394,14 @@ pub struct UnsavedChanges;
 /// default label belongs to the frontend's message catalogue, not to a
 /// hardcoded string down here.
 ///
+/// `group_address_style` is the one field here that is close to
+/// irreversible: nothing in `knx-core` can restyle a project after the
+/// fact, and the raw 16-bit value a `TwoLevel` address holds is read back
+/// as a different-looking `ThreeLevel` one. An absent style keeps
+/// `Project::new`'s own `ThreeLevel` default, so every existing caller
+/// behaves exactly as before; the route above refuses an unrecognised one
+/// rather than guessing.
+///
 /// Refuses with [`UnsavedChanges`] when a project is open and its command
 /// stack has anything to undo, unless `discard_changes` is set. There is no
 /// dirty flag anywhere in `AppState` — `can_undo()` is the only signal that
@@ -404,6 +412,7 @@ pub fn new_project_impl(
     name: Option<String>,
     installation_name: Option<String>,
     language: Option<String>,
+    group_address_style: Option<knx_core::GroupAddressStyle>,
     discard_changes: bool,
 ) -> Result<ProjectTree, UnsavedChanges> {
     if !discard_changes {
@@ -439,6 +448,9 @@ pub fn new_project_impl(
     let mut project = knx_core::Project::new(knx_core::Language(language));
     project.info.project_id = NEW_PROJECT_ID.to_string();
     project.info.name = name.unwrap_or_default();
+    if let Some(style) = group_address_style {
+        project.info.group_address_style = style;
+    }
     project.installations.push(knx_core::Installation {
         id: knx_core::InstallationId(0),
         name: installation_name.unwrap_or_default(),

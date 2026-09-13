@@ -20,6 +20,10 @@ import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   importProject: vi.fn(),
+  // The welcome screen's third button (the from-scratch launcher) calls
+  // this through `NewProjectDialog`; every other test here renders that
+  // dialog not at all, so an unconfigured `vi.fn()` is enough for them.
+  newProject: vi.fn(),
   getSessionLog: vi.fn().mockResolvedValue([]),
   productLanguages: vi.fn().mockResolvedValue([]),
   deviceDetail: vi.fn(),
@@ -51,6 +55,8 @@ const filePickerMock = vi.hoisted(() => ({
 vi.mock("./api", () => ({
   ...apiMock,
   errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
+  isUnsavedChangesConflict: (error: unknown) =>
+    error instanceof Error && (error as Error & { status?: number }).status === 409,
 }));
 
 vi.mock("./filePicker", () => ({ ...filePickerMock }));
@@ -645,6 +651,7 @@ describe("App — the File menu by keyboard alone", () => {
     // from the summary reaches all of them in the order they are read.
     const entries = [...menu.querySelectorAll<HTMLButtonElement>(".file-menu-content button")];
     expect(entries.map((b) => b.textContent)).toEqual([
+      "New project…",
       "Open project…",
       "Open (.knxdb)…",
       "Save As…",
@@ -703,6 +710,106 @@ describe("App — the File menu by keyboard alone", () => {
     });
     expect(menu.hasAttribute("open")).toBe(false);
     expect(document.activeElement).toBe(summary);
+
+    await act(async () => root.unmount());
+  });
+});
+
+// The gap this closes: `POST /api/project/new` has worked since
+// 2026-09-08, and until now the UI had no caller for it at all — both
+// welcome-screen buttons required the user to already own a file. These
+// tests pin the third one, which is the only route to a project for
+// someone whose first act is installing a device from the product
+// catalogue.
+describe("App — starting a project from scratch", () => {
+  it("offers the from-scratch launcher first on the welcome screen, as the primary action", async () => {
+    const root = await renderApp();
+
+    const actions = [...host!.querySelectorAll<HTMLButtonElement>(".welcome-workspace button")];
+    expect(actions.map((b) => b.textContent)).toEqual([
+      "New project…",
+      "Open project…",
+      "Open (.knxdb)…",
+    ]);
+    // It is the one action that does not presuppose a file, so it is the
+    // one that reads as primary.
+    expect(actions[0].className).toBe("primary-action");
+
+    await act(async () => root.unmount());
+  });
+
+  it("opens the creation dialog from the welcome screen and swaps in the workbench once it returns a tree", async () => {
+    apiMock.newProject.mockResolvedValue(baseTree());
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("New project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelector('[role="dialog"]')).not.toBeNull();
+    // Opening the dialog alone asks the server for nothing.
+    expect(apiMock.newProject).not.toHaveBeenCalled();
+
+    await act(async () => {
+      host!.querySelector("form")!.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
+    });
+
+    expect(apiMock.newProject).toHaveBeenCalledTimes(1);
+    expect(apiMock.newProject.mock.calls[0][0].discardChanges).toBe(false);
+    // The dialog is gone, and so is the welcome screen it was opened from.
+    expect(host!.querySelector('[role="dialog"]')).toBeNull();
+    expect(host!.querySelector(".welcome-workspace")).toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  it("leaves a fresh project with no file behind it, so Save has to ask where", async () => {
+    apiMock.importProject.mockResolvedValue(baseTree());
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    filePickerMock.pickSavePath.mockResolvedValue(null);
+    apiMock.newProject.mockResolvedValue(baseTree());
+    const root = await renderApp();
+
+    // Open something first, so a `store_path` could plausibly be lingering
+    // — an ETS import does not set one, which is why the new project has
+    // to clear the flag rather than merely not set it.
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    await act(async () => {
+      findButton("New project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      host!.querySelector("form")!.dispatchEvent(
+        new Event("submit", { bubbles: true, cancelable: true }),
+      );
+    });
+
+    await act(async () => {
+      findButton("Save").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    // Save As, not a silent overwrite of whatever was open before. The
+    // mock has no `saveProject` at all, so the plain-save path would have
+    // thrown before ever reaching the picker.
+    expect(filePickerMock.pickSavePath).toHaveBeenCalledTimes(1);
+
+    await act(async () => root.unmount());
+  });
+
+  it("reaches the same dialog from the command palette with no project open", async () => {
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("Commands… (Ctrl+Shift+P)").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      findButton("New project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(host!.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(host!.querySelector("input[aria-label=\"Project name\"]")).not.toBeNull();
 
     await act(async () => root.unmount());
   });

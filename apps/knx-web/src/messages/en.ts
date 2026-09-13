@@ -39,6 +39,7 @@
 // two different ways in two files is a bug waiting to happen, not a
 // feature of the namespacing convention.
 export const messages = {
+  "toolbar.newProject": "New project…",
   "toolbar.openProject": "Open project…",
   "toolbar.openNativeProject": "Open (.knxdb)…",
   "toolbar.save": "Save",
@@ -622,6 +623,35 @@ export const messages = {
   "deviceIdentity.groupEmpty": "The product database holds no values here.",
   "deviceIdentity.omitted.one": "{count} further field is omitted: the product database has no value for it.",
   "deviceIdentity.omitted.other": "{count} further fields are omitted: the product database has no value for them.",
+
+  // The from-scratch project launcher (the only way to a project that
+  // never came from a file). `defaultName`/`defaultInstallation` are
+  // seeded into the dialog's fields rather than sent as an empty request:
+  // `domain.rs`'s `new_project_impl` deliberately refuses to invent a
+  // name, on the grounds that a localized default belongs to this
+  // catalogue — so here it is.
+  "newProject.title": "New project",
+  "newProject.intro": "An empty project with one installation. Nothing is written to disk until you save it.",
+  "newProject.name": "Project name",
+  "newProject.defaultName": "Untitled project",
+  "newProject.installation": "Installation name",
+  "newProject.defaultInstallation": "Installation 1",
+  "newProject.language": "Project language",
+  "newProject.languageHint": "The language tag your project texts are stored under, e.g. en or de-DE. Not the language of this interface.",
+  "newProject.style": "Group address style",
+  "newProject.styleHint": "Choose now: once group addresses exist, nothing changes the style back.",
+  "newProject.style.Free": "Free (0–65535)",
+  "newProject.style.TwoLevel": "Two level (main/sub)",
+  "newProject.style.ThreeLevel": "Three level (main/middle/sub)",
+  "newProject.nameRequired": "A project needs a name.",
+  "newProject.languageInvalid": "Not a well-formed language tag. Try en, de, or de-DE.",
+  "newProject.create": "Create project",
+  "newProject.creating": "Creating…",
+  "newProject.cancel": "Cancel",
+  "newProject.conflictTitle": "The open project has unsaved changes",
+  "newProject.conflictBody": "Creating a new project throws those changes away, and no undo brings them back. Keep editing to save them first, or discard them deliberately.",
+  "newProject.conflictDiscard": "Discard changes and create",
+  "newProject.conflictKeep": "Keep editing",
 } as const;
 
 export type Messages = typeof messages;

@@ -1132,13 +1132,15 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .device-workspace { background: var(--knx-surface); border: 1px solid var(--knx-border); border-radius: 8px; padding: 20px; margin-top: 24px; }
 .device-workspace .workspace-heading { margin-bottom: 15px; }
 .device-workspace h2 { margin: 0 0 4px; }
-/* T16: the product identity block, above the tab strip so it stays readable
-   while the user works in either tab. Quiet by design — a recessed panel,
-   not a card competing with the communication object table below it. The
-   headline pairs stay stacked (label over value) rather than side by side:
-   in a multi-column grid a label and its value drift apart horizontally and
-   stop reading as one fact. */
-.device-identity { background: color-mix(in srgb, var(--knx-bg) 55%, var(--knx-surface)); border: 1px solid var(--knx-border); border-radius: 8px; padding: 13px 16px 15px; margin-bottom: 18px; }
+/* T16: the product identity block, the content of the workspace's third tab
+   ("Produktdaten", per the approved concept images). It no longer needs a
+   recessed panel or a bottom margin to separate itself from the tab strip —
+   it *is* the panel, so it sits flush like the other two panels' content and
+   lets `.device-workspace`'s own padding do the spacing. The headline pairs
+   stay stacked (label over value) rather than side by side: in a multi-column
+   grid a label and its value drift apart horizontally and stop reading as one
+   fact. */
+.device-identity { margin: 0; }
 .device-identity-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .device-identity h3 { margin: 0; font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--knx-muted); font-weight: 600; }
 .device-identity h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--knx-muted); font-weight: 600; }
@@ -1161,6 +1163,13 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .identity-more { margin-top: 13px; border-top: 1px solid var(--knx-border); padding-top: 10px; }
 .identity-more > summary { cursor: pointer; color: var(--knx-muted); font-size: 12px; width: fit-content; }
 .identity-more > summary:hover, .identity-more > summary:focus-visible { color: var(--knx-accent); }
+/* `summary` is not a `button` and is not in the global transition block, so
+   the colour change above would otherwise snap. Same feedback duration as
+   every other hover in this file, and still suppressed under
+   `prefers-reduced-motion: reduce` because the whole rule is gated. */
+@media (prefers-reduced-motion: no-preference) {
+  .identity-more > summary { transition: color min(var(--knx-feedback-duration), var(--knx-transition-duration)) var(--knx-motion-easing); }
+}
 .identity-group { margin-top: 14px; }
 .device-tabs { display: flex; gap: 12px; border-bottom: 1px solid var(--knx-border); margin-bottom: 14px; }
 .device-tabs button { background: transparent; color: var(--knx-muted) !important; border: 0; box-shadow: none; border-radius: 0; padding: 10px 8px; }

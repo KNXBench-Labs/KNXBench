@@ -588,8 +588,9 @@ Each task: **what**, **why**, **depends on**.
   `DeviceProductCatalog` and the four-variant `ProductResolution`;
   see IMPLEMENTATION_STATUS.md's T16 entry), and the UI half on branch
   `codex-ui-workbench` — a `DeviceIdentity` section in `Inspector.tsx`'s
-  `DeviceWorkspace`, above the tab strip, so the identity stays readable
-  while the user works in communication objects or parameters. Both refs
+  `DeviceWorkspace`, as the content of a third "Produktdaten" tab beside
+  communication objects and parameters, the way the approved concept image
+  `docs/design/2026-09-13-codex-ui-concept/01-porcelain.png` draws it. Both refs
   print verbatim in the monospace face; the three catalogue fields that
   answer "which product is this" (manufacturer, product text, order
   number) sit beside them, the remaining eleven live behind a "More

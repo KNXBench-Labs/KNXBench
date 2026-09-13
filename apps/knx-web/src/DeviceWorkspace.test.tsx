@@ -5,6 +5,7 @@ import { expect, it, vi } from "vitest";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { DeviceProductCatalog } from "./bindings/DeviceProductCatalog";
 import type { DeviceProductNode } from "./bindings/DeviceProductNode";
+import type { ProductResolution } from "./bindings/ProductResolution";
 import type { ProjectTree } from "./bindings/ProjectTree";
 const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }), setComObjectDpt: vi.fn() }));
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
@@ -32,18 +33,23 @@ function catalog(overrides: Partial<DeviceProductCatalog> = {}): DeviceProductCa
   };
 }
 
-async function render(product: DeviceProductNode) {
+// Every identity test below works from the selected "Product data" tab, i.e.
+// from what a user actually has on screen — a `hidden` panel still has
+// `textContent`, so asserting against it would pass even if the tab were
+// unreachable.
+async function render(product: DeviceProductNode, selectProductTab = true) {
   const host = document.createElement("div"); document.body.append(host);
   const root = createRoot(host);
   await act(async () => root.render(<DeviceWorkspace detail={detail(product)} tree={tree} onApplied={() => {}} />));
-  return { host, cleanup: async () => { await act(async () => root.unmount()); host.remove(); } };
+  const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+  if (selectProductTab) await act(async () => tabs[2].click());
+  return { host, tabs, cleanup: async () => { await act(async () => root.unmount()); host.remove(); } };
 }
 
 it("keeps communication editing and parameters reachable in the central device tabs", async () => {
-  const { host, cleanup } = await render(NO_REFERENCE);
+  const { host, tabs, cleanup } = await render(NO_REFERENCE, false);
   expect(host.textContent).toContain("Example");
-  const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
-  expect(tabs).toHaveLength(2);
+  expect(tabs.map((b) => b.textContent)).toEqual(["Communication objects", "Parameters", "Product data"]);
   await act(async () => tabs[1].click());
   expect(tabs[1].getAttribute("aria-selected")).toBe("true");
   expect(api.deviceParameters).toHaveBeenCalled();
@@ -52,17 +58,47 @@ it("keeps communication editing and parameters reachable in the central device t
   await cleanup();
 });
 
-it("keeps the product identity readable from both tabs, above the tab strip", async () => {
-  const { host, cleanup } = await render({ product_ref: "M-00FA_H-EX42-1_P-1", program_ref: "M-00FA_H-EX42-1_HP-1", catalog: catalog(), resolution: "Resolved" });
+it("moves both ways with the arrow keys and reaches the last tab with End", async () => {
+  // The two-tab version toggled with `1 - tab`, which moved on any arrow key
+  // in the only direction it knew. With three tabs that is visible: these
+  // assertions fail unless left and right are genuinely opposite.
+  const { tabs, cleanup } = await render(NO_REFERENCE, false);
+  const press = async (from: number, key: string) =>
+    act(async () => tabs[from].dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true })));
+  const selected = () => tabs.findIndex((b) => b.getAttribute("aria-selected") === "true");
+
+  await press(0, "ArrowRight"); expect(selected()).toBe(1);
+  await press(1, "ArrowRight"); expect(selected()).toBe(2);
+  await press(2, "ArrowLeft"); expect(selected()).toBe(1);
+  await press(1, "ArrowLeft"); expect(selected()).toBe(0);
+  // Wrapping, in both directions, over three tabs rather than two.
+  await press(0, "ArrowLeft"); expect(selected()).toBe(2);
+  await press(2, "ArrowRight"); expect(selected()).toBe(0);
+  await press(0, "End"); expect(selected()).toBe(2);
+  await press(2, "Home"); expect(selected()).toBe(0);
+  await cleanup();
+});
+
+it("puts the product identity in its own tab panel, alongside the other two", async () => {
+  const { host, tabs, cleanup } = await render({ product_ref: "M-00FA_H-EX42-1_P-1", program_ref: "M-00FA_H-EX42-1_HP-1", catalog: catalog(), resolution: "Resolved" }, false);
   const identity = host.querySelector<HTMLElement>(".device-identity")!;
-  const tablist = host.querySelector('[role="tablist"]')!;
-  // Position matters: the identity answers "what device is this", so it must
-  // precede the tabs rather than hide inside one of them.
-  expect(identity.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+  const panels = [...host.querySelectorAll<HTMLElement>('[role="tabpanel"]')];
+  expect(panels).toHaveLength(3);
+  expect(panels[2].contains(identity)).toBe(true);
+  expect(panels[2].hidden).toBe(true);
+  expect(tabs[2].getAttribute("aria-controls")).toBe(panels[2].id);
+
+  await act(async () => tabs[2].click());
+  expect(panels[2].hidden).toBe(false);
+  expect(host.querySelector('[role="tabpanel"]:not([hidden])')).toBe(panels[2]);
+  expect(identity.textContent).toContain("Example switch actuator");
+
+  // Leaving the tab hides the identity but keeps the parameter panel mounted:
+  // its fetch is keyed to the mount, so a tab switch must not refetch.
+  const calls = api.deviceParameters.mock.calls.length;
   await act(async () => tabs[1].click());
-  expect(host.querySelector(".device-identity")!.textContent).toContain("Example switch actuator");
-  expect(host.querySelector('[role="tabpanel"]:not([hidden])')!.contains(identity)).toBe(false);
+  expect(panels[2].hidden).toBe(true);
+  expect(api.deviceParameters.mock.calls.length).toBe(calls);
   await cleanup();
 });
 
@@ -90,7 +126,7 @@ it("shows a resolved device's catalogue entry, with refs verbatim in monospace",
   // One null field (the serial number) is omitted, and the omission is stated
   // rather than left for the user to notice.
   expect(more.textContent).toContain("1 further field is omitted");
-  expect(identity.textContent).not.toContain("Serial number");
+  expect(identity.textContent).not.toContain("Hardware serial number");
   await cleanup();
 });
 
@@ -146,5 +182,47 @@ it("admits a match that carried no details rather than rendering a blank resolve
   const { host, cleanup } = await render({ product_ref: "M-00FA_H-EX42-1_P-1", program_ref: null, catalog: null, resolution: "Resolved" });
   expect(host.textContent).toContain("reported a match but returned no details");
   expect(host.querySelector("details.identity-more")).toBeNull();
+  await cleanup();
+});
+
+it("names the hardware serial as the hardware's, never as this unit's", async () => {
+  // `hardware_serial_number` comes from the manufacturer package and describes
+  // the hardware type. The serial of the unit on the wall cannot be read at
+  // all (KNOWN_LIMITATIONS.md §73), so the label must not claim to be it.
+  const { host, cleanup } = await render({ product_ref: "M-00FA_H-EX42-1_P-1", program_ref: "M-00FA_H-EX42-1_HP-1", catalog: catalog({ hardware_serial_number: "EXHW-SER-1" }), resolution: "Resolved" });
+  const labels = [...host.querySelectorAll(".device-identity dt")].map((n) => n.textContent);
+  expect(labels).toContain("Hardware serial number");
+  expect(labels).not.toContain("Serial number");
+  await cleanup();
+});
+
+it("says so instead of guessing when the server reports a state this build does not know", async () => {
+  // A frontend older than its server. Borrowing `NoReference`'s wording here
+  // would print "No product reference" directly above two references the user
+  // can read — the one failure mode this panel exists to prevent.
+  const unknown = { product_ref: "M-00FA_H-EX42-1_P-1", program_ref: "M-00FA_H-EX42-1_HP-1", catalog: null, resolution: "SomethingNewerThanThisBuild" as unknown as ProductResolution };
+  const { host, cleanup } = await render(unknown);
+  const identity = host.querySelector<HTMLElement>(".device-identity")!;
+  expect(identity.textContent).toContain("State not recognised");
+  expect(identity.textContent).toContain("does not recognise");
+  expect(identity.textContent).not.toContain("No product reference");
+  // The refs are still printed, because they are still facts.
+  expect([...identity.querySelectorAll(".mono")].map((n) => n.textContent))
+    .toEqual(["M-00FA_H-EX42-1_P-1", "M-00FA_H-EX42-1_HP-1"]);
+  expect(identity.querySelector(".resolution-badge")!.getAttribute("data-resolution")).toBe("SomethingNewerThanThisBuild");
+  await cleanup();
+});
+
+it("counts omitted catalogue fields without assuming two ref rows are present", async () => {
+  // `NoReference` empties the ref rows; a catalogue arriving anyway (the
+  // server does not pair them, but the type allows it) used to make the
+  // omission count two too high and drop three fields from the headline.
+  const { host, cleanup } = await render({ product_ref: null, program_ref: null, catalog: catalog({ hardware_serial_number: "EXHW-SER-1" }), resolution: "NoReference" });
+  const identity = host.querySelector<HTMLElement>(".device-identity")!;
+  expect(identity.textContent).toContain("Example Manufacturing");
+  expect(identity.textContent).toContain("EX-4210");
+  // All fourteen catalogue fields have values, so nothing is omitted and no
+  // count is printed at all.
+  expect(identity.textContent).not.toContain("further field");
   await cleanup();
 });

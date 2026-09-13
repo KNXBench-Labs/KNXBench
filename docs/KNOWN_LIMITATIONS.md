@@ -402,8 +402,10 @@ in **all six columns** of AN194's tables — six columns of which only three are
 Erase Codes (`02h`, `07h`, `01h`), the others being Local Reset, Basic Restart and
 Power Cycle, so "all six Erase Codes" was the wrong paraphrase and is corrected
 here — that `PID_TABLE_REFERENCE` must be re-read after **any restart, not merely
-after a reset** (it is *"recalculate"* in the Local Reset column of all five
-Interface Objects read, while the three Erase Code columns differ per object:
+after a reset** (it is *"recalculate"* in the `-` Local Reset column of all five
+Interface Objects read — `-` being a reset kind and not an Erase Code — and in
+the `02h` and `07h` Erase Code columns as well; what differs per object is the
+remaining three columns, `01h` Confirmed Restart, Basic Restart and Power Cycle:
 *"not influenced"* for the Address Table and Group Object Table, *"recalculate"*
 for the Association Table and both Application Program objects), that
 *"ex-factory"* means
@@ -456,6 +458,23 @@ prohibition is therefore explicit and deliberate — design spec §13 **R11** is
 parity"*, §15 keeps `DM_ProgMode_Switch`'s write half a non-goal in **every**
 phase including phase 3, and phase 2 exercises it against the simulator only,
 behind the mutation API's per-operation authorisation value.
+
+**Scope of that derivation, corrected 2026-09-14 (fix round 3).** `03_05_01`
+§4.26.3 scopes itself in a header the previous revision did not read:
+*"Used by: − Ctrl-Mode fixed DMA − Ctrl-Mode reloc DMA − masks 0012h 0020h,
+0021h, 0701h in E-Mode"*, which names neither System B nor any of the
+`07B0h`/`17B0h`/`57B0h` masks the download spec targets — and `06 Profiles`
+§4.4.1.1 settles it positively by assigning *"Realisation Type 1 - Property
+based"* to *"• System B • Mask 57B0h"* and *"Realisation Type 2 – Memory mapped"*
+to *"• System 1 • System 2 • BCU 1 • BCU 2 • BIM M112"*. So on a System B device
+programming mode lives in `PID_PROGMODE` (§4.3.5), not at `0060h`, and the
+meaning of whatever a System B device keeps at `0060h` is unknown to this project
+**[A]**. The phase-3 permission for a one-octet `A_Memory_Read(60h, 1)` inside
+`1.1.24`–`1.1.32` is unchanged; its *interpretation* is not, and the design spec
+§4.4 and §15 now require the result to be recorded as a raw octet of unknown
+meaning rather than as programming-mode state. This is a scoping limitation, not
+a new gap — the Profiles document answers the question — so the count stays at
+six.
 
 The list lost an item to a **correction**, not to a discovery: how a client
 discovers `L_Data_Extended` support **is** documented — `03_05_01` §4.3.7

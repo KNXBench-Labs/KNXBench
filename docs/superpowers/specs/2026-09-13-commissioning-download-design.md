@@ -42,6 +42,19 @@
   MP §3.5.1, §8.2's AN194 rows are split per Interface Object, and §12's gaps
   carry stable `GAP-T30-nn` identifiers. **Six genuine gaps remain (§12)**,
   plus one narrowed to a delegation.
+- **Revision, 2026-09-14 (fix round 3):** five defects that fix round 2
+  introduced in its own new text. The load-bearing one is the same failure class
+  round 2 was convened to fix, one clause family over: §4.4 applied RES §4.26.3
+  wider than that clause's own "Used by" header allows. The header is now quoted
+  verbatim in §3.4, PROF §4.4.1.1 is shown to assign **System B to Programming
+  Mode Realisation Type 1** rather than to the memory-mapped Type 2, and the
+  phase-3 read of `0060h` keeps its permission while its *interpretation* is
+  marked **[A]** at §4.4 and §15. Also: "the three Erase Codes" corrected to the
+  `-`/`02h`/`07h` column set in three files (`-` is a Local Reset, not an Erase
+  Code), AN194's object-type count corrected to twelve read six,
+  `PID_RUN_STATE_CONTROL` extended to all six columns, and an invented
+  Polling-Master/File-Server object pair removed from `RESEARCH.md`. **The gap
+  count is unchanged at six**, and no phase-3 permission was widened or narrowed.
 
 ## 1. The rules this document obeys
 
@@ -273,7 +286,36 @@ Run State Machine itself stays out of phase 2.
   address 0060h."* The layout is Figure 66, but the layout is also stated in the
   prose of RES §4.26.3.1, which is what §4.4 quotes — the figure is corroboration
   and not the source. This Realisation Type **is** specified, including the
-  client-side parity operation, and §4.4 uses it read-only.
+  client-side parity operation.
+
+  **It is not, however, the Realisation Type this document's target uses.** RES
+  §4.26.3 scopes itself in a header that sits between the clause title and
+  §4.26.3.1, and because §4.4 is built on that clause the scope is quoted here
+  verbatim rather than summarised:
+
+  > **[D]** RES §4.26.3: *"Used by: − Ctrl-Mode fixed DMA − Ctrl-Mode reloc DMA
+  > − masks 0012h 0020h, 0021h, 0701h in E-Mode"*
+
+  System B is not in that list, and neither are the System B masks §7.3 targets
+  (`07B0h`, `17B0h`, `57B0h`). Absence alone would be weak evidence, because the
+  list is demonstrably **not** exhaustive: PROF §5.5.1.1 profiles S-Mode
+  **couplers** onto *"§4.26.3 “Programming Mode – Realisation Type 2”"* and
+  couplers appear in the "Used by" list no more than System B does. What settles
+  it is a positive assignment in the opposite direction, in PROF §4.4.1.1
+  (Device Individualisation → Programming Mode → connection oriented), whose two
+  alternatives each name the profiles they belong to:
+
+  > **[D]** PROF §4.4.1.1: *"a) Realisation Type 1 - Property based • System B
+  > • Mask 57B0h"* … *"b) Realisation Type 2 – Memory mapped • System 1
+  > • System 2 • BCU 1 • BCU 2 • BIM M112"*
+
+  Both of the columns that cover this document's target — `System B` and
+  `Mask 57B0h` — land under **Realisation Type 1**, i.e. `PID_PROGMODE` per
+  RES §4.3.5. So `0060h` is not where a System B device's Programming Mode is
+  specified to live, and what such a device does keep there is **[A]** unknown to
+  this document. §4.4 states the derivation for the profiles its own source
+  clauses name and carries this caveat to the one place phase 3 may act on it;
+  §15 repeats it where the read is permitted.
 - **Mask-version-specific LSM access** — MP §3.31.2's `_RCo_Mem` variant is
   restricted to mask `070nh` and uses fixed memory addresses (load control at
   `0104h`, load states at `B6EAh`/`B6EBh`/`B6ECh`/`B6EDh`). Out of scope for
@@ -364,6 +406,21 @@ on some devices it is no bound at all.
 
 ### 4.4 Switching programming mode remotely
 
+**Applicability, before the procedure, because the procedure rests on a clause
+that does not name this document's target.** The ruling of §3.4 applies here in
+full: RES §4.26.3's own "Used by" header lists Ctrl-Mode fixed DMA, Ctrl-Mode
+reloc DMA and masks `0012h`/`0020h`/`0021h`/`0701h` in E-Mode, and PROF §4.4.1.1
+positively assigns *"Realisation Type 1 - Property based"* to *"• System B
+• Mask 57B0h"* while assigning *"Realisation Type 2 – Memory mapped"* to
+*"• System 1 • System 2 • BCU 1 • BCU 2 • BIM M112"* **[D]**. Applicability to
+the System B target mask is therefore **not** established; it is assigned
+elsewhere. Everything below is the memory-mapped procedure exactly as specified
+**for the profiles its own source clauses cover**, and for a System B device it
+is **[A]** — the programming-mode Resource there is `PID_PROGMODE` (RES §4.3.5),
+and the meaning of the octet at `0060h` on such a device is unsourced. The
+consequence for phase 3 is spelled out at the end of this subsection rather than
+left to be inferred.
+
 MP §3.13 `DM_ProgMode_Switch` exists: `DM_ProgMode_Switch(flags, mode)` with
 **[D]** *"mode 0: switch Programming Mode off, 1: switch Programming Mode on"*
 and *"flags — All bits are reserved. These shall be set to 0. This shall be
@@ -440,7 +497,17 @@ invalid may restart it. So:
   concrete target. It is listed as a non-goal in §15 and stays there.
 - It is **out of scope for phase 3** entirely. The read half
   (`A_Memory_Read(60h, 1)`) is the only part phase 3 may exercise, and only
-  inside `1.1.24`–`1.1.32`.
+  inside `1.1.24`–`1.1.32`. **That permission is unchanged. Its interpretation is
+  caveated.** Per the applicability note opening this subsection, on a System B
+  device the octet at `0060h` is not sourced as `curr_prog_mode` — PROF §4.4.1.1
+  profiles System B onto Realisation Type 1 — so phase 3 records the result as a
+  **raw octet read from `0060h` whose meaning is unknown for this mask** **[A]**.
+  It must not be reported as programming-mode state, bit 0 must not be rendered
+  as "programming mode on/off", and bit 7 must not be rendered as a parity state.
+  Programming-mode state for a System B device is read from `PID_PROGMODE`
+  (RES §4.3.5) instead. What would establish a meaning for the octet is the
+  device's own Profile for its actual mask version, read at the time — a phase-3
+  finding, not something available to assume now.
 - Phase 2 implements the toggle **against the simulator only**, so that the
   derivation above is exercised and the bit-preservation property is tested.
 
@@ -1273,12 +1340,15 @@ the five objects read for this document **do** agree on:
 - `PID_ERROR_CODE` (PID 28): the same pattern in the same five objects.
 - `PID_MCB_TABLE` (PID 27): the same pattern in all five.
 
-**What was still not read.** AN194 tabulates fourteen Interface Object types
-(§2.3.2.2 through §2.3.2.14). This document read five of them — Device Object,
-Addresstable, Associationtable, Applicationprogram, Application Program 2 and
-Group Object Table — chosen because they are the objects the download procedures
-of §7 touch. The Router, LTE Address Routing Table, cEMI Server, KNXnet/IP
-Parameter, Security Interface and RF Medium Objects were not read. No claim in
+**What was still not read.** AN194 tabulates **twelve** Interface Object types
+across §2.3.2.2 to §2.3.2.14 — thirteen clauses, of which §2.3.2.12
+*"Data Security"* tabulates three Resources (Sequence Numbers and the management
+key) rather than an Interface Object type. This document read **six** of the
+twelve — Device Object, Addresstable, Associationtable, Applicationprogram,
+Application Program 2 and Group Object Table — chosen because they are the
+objects the download procedures of §7 touch. The other six — the Router, LTE
+Address Routing Table, cEMI Server, KNXnet/IP Parameter, Security Interface and
+RF Medium Objects — were not read. No claim in
 this document rests on them, and no claim in this document generalises across
 objects any more: where phase 2 needs a reset semantic for a PID in an object not
 listed above, it reads that object's own AN194 row, because the
@@ -1304,8 +1374,11 @@ Read as design rules:
    off after any restart. §4.3's "programming mode may switch itself off
    underneath you" has a second cause: anything that restarts the device.
 5. **`PID_TABLE_REFERENCE` must be re-read after any restart, not merely after a
-   reset.** In the Addresstable and Group Object Table it is `recalculate` for
-   the three Erase Codes and `not influenced` for the three restarts; in the
+   reset.** In the Addresstable and Group Object Table it is `recalculate` in the
+   `-`, `02h` and `07h` columns — and only two of those three are Erase Codes,
+   because `-` is AN194's *"Local Reset to default state"*, a reset kind with no
+   Erase Code at all — and `not influenced` in the `01h` (Confirmed Restart),
+   Basic Restart and Power Cycle columns; in the
    Associationtable and both Application Program objects it is `recalculate` in
    **all six** columns. The rule that holds for every object is therefore the
    stricter one: **re-read after any restart.** A base address cached across a
@@ -1993,6 +2066,12 @@ once so that older references resolve:
    inverse of the failure §1 is written to prevent: not a guess dressed as a fact,
    but an admitted gap that the cited clause closes, which is worse in one specific
    way — a later task copies it forward as settled.
+   **Scope of that derivation, added fix round 3:** it is the derivation for the
+   profiles RES §4.26.3 and PROF §4.4.1.1 put under Realisation Type 2, which are
+   not System B. §3.4 and §4.4 carry the evidence and the `[A]` marking; this item
+   stays reclassified, because the parity *rule* is documented either way and
+   "which profiles use Realisation Type 2" is answered by PROF rather than open.
+   The gap count is unaffected.
    The residual unknown is narrow and is **not** counted as a gap: whether a given
    device's stack checks odd or even parity is manufacturer-specific by design —
    **[D]** RES §4.26.3.3: *"The reaction of an invalid parity value is manufacturer
@@ -2144,7 +2223,7 @@ means recoverable using only what this application could implement.
 | R8 | Beginning a download without the full payload resolved | `Start Loading` from `Loaded` immediately invalidates a working configuration (§5.4). If the data is then unavailable, the device stays invalid indefinitely — and the state is non-volatile, so power-cycling does not help. | Full re-download once the data exists |
 | R9 | Interrupting a download (network, crash, operator) | Part left in `Loading` or `Error` after restart (**[D]** RES Table 94 `Device Restart` row: from `Loading`, `R: Loading` / `O: Error`), invalid per Table 92, persistent per §4.23.1. | §9.1 recovery |
 | R10 | Treating `LoadCompleting` silence as failure and retrying | Writing load events at a device that is *"offline during state LoadCompleting"* (**[D]** RES Table 94 footnote). Per Table 94, `Start Loading` or `Load Completed` from `LoadCompleting` is `R: Error`. A correct device mid-checksum is driven into `Error` by the client's impatience. | Unload + re-download |
-| R11 | Writing to `60h` **at all** on a real device (§4.4) | Not a parity risk any more — §4.4 derives `p_parity` from RES §4.26.3.1 and §4.26.3.4.1 and computes it by inversion, so the octet this project would write is correct by construction. The risk is the write itself. `0060h` is a **device-control** address in the `curr_prog_mode` region whose bits 1 to 6 are **[D]** RES §4.26.3.1 *"shared with other functionality"* and therefore manufacturer-specific: a one-octet write there is a read-modify-write of somebody else's state, racing whatever the device's own firmware does to those bits, and a wrong or stale octet is **[D]** RES §4.26.3.3 *"manufacturer specific"* in its reaction — footnote 96: *"Typically the system is restarted if p_parity is invalid."* Knowing how to build the byte removed the accidental protection that ignorance provided, so the prohibition is now an explicit decision rather than a side effect of a gap. | Unknown, which is why the write half of `DM_ProgMode_Switch` stays inside §2.3's mutation API, out of phase 3 entirely, and simulator-only in phase 2 |
+| R11 | Writing to `60h` **at all** on a real device (§4.4) | Not a parity risk any more — §4.4 derives `p_parity` from RES §4.26.3.1 and §4.26.3.4.1 and computes it by inversion, so the octet this project would write is correct by construction — for the profiles RES §4.26.3 covers, which per PROF §4.4.1.1 do not include System B (§3.4, §4.4), making the byte's meaning on the intended target unsourced as well. The risk is the write itself. `0060h` is a **device-control** address in the `curr_prog_mode` region whose bits 1 to 6 are **[D]** RES §4.26.3.1 *"the shared bits"* of a Resource that *"may share its storage location with other data on the same memory location inside the device"*, where *"These other data may be different depending of the mask version of the device"* — therefore manufacturer- and mask-specific: a one-octet write there is a read-modify-write of somebody else's state, racing whatever the device's own firmware does to those bits, and a wrong or stale octet is **[D]** RES §4.26.3.3 *"manufacturer specific"* in its reaction — footnote 96: *"Typically the system is restarted if p_parity is invalid."* Knowing how to build the byte removed the accidental protection that ignorance provided, so the prohibition is now an explicit decision rather than a side effect of a gap. | Unknown, which is why the write half of `DM_ProgMode_Switch` stays inside §2.3's mutation API, out of phase 3 entirely, and simulator-only in phase 2 |
 | R12 | Polling the load state faster than the spec allows, or not reconnecting | **[D]** RES §4.23.2.4.1 caps the read period at 3 s and requires periodic reconnection. Too-fast polling loads the bus during a download; failing to reconnect makes a legitimate long transition look like a failure, which leads to R10. | Fix the client |
 | R13 | Skipping the Manufacturer ID check (CP §3.5.2 step 04) | One manufacturer's application downloaded into another's device. The Standard puts this check before any write for exactly this reason. Outcome is undefined and device-specific. | Unload + correct download, if the device still communicates |
 | R14 | Assuming programming mode is still on (§4.3) | The write is ignored (AL §3.2.2, no negative response), the operator believes the address was programmed, and the project's model of the installation diverges from the installation. Silent, and discovered later at the worst moment. | Re-run §4.2 |
@@ -2279,8 +2358,10 @@ the expected outcome is that there will be some.
   behind §2.3's mutation API, is exercised only against phase 2's simulator, and
   is **out of scope for phase 3**. The toggle's *read* half — one octet from
   `0060h` — is read-only and therefore allowed in phase 3, but only inside
-  §2.2's approved range. §13 R11 carries the risk; §12 records why it is no
-  longer a documentation gap.
+  §2.2's approved range, and only as a **raw octet whose meaning is unsourced for
+  a System B mask** **[A]**: RES §4.26.3's "Used by" list does not name System B
+  and PROF §4.4.1.1 assigns System B to Realisation Type 1 instead (§3.4, §4.4).
+  §13 R11 carries the risk; §12 records why it is no longer a documentation gap.
 - **No product-database schema change** is specified here. RESEARCH §8.6.5's
   parsing addition (storing `Options`, `LoadProcedures` and `LdCtrl*`) remains
   the separate prerequisite it was, and phase 2 depends on it for real product

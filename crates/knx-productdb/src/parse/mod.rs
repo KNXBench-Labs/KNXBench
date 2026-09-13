@@ -10,8 +10,11 @@ pub mod master;
 pub mod program;
 pub mod translation;
 
-use crate::report::UnknownCollector;
+use rusqlite::{Connection, OptionalExtension};
+
+use crate::report::{IdConflict, UnknownCollector};
 use crate::xml::Attrs;
+use crate::ProductDbError;
 
 /// Reports every attribute on `a` that is not in `known`, so an unmodelled
 /// manufacturer attribute is visible rather than lost.
@@ -55,6 +58,52 @@ pub(crate) fn bool_flag(
             None
         }
         None => None,
+    }
+}
+
+/// First writer wins: if `id` is not already in `table`, this is the row
+/// that gets to exist. If it is, and the existing row came from a
+/// different file (`source_sha256` differs), that is recorded as an
+/// `IdConflict` — but the existing row is kept regardless, so the answer
+/// is always "did the caller's row win", never "is this now the winner".
+///
+/// Extracted from two byte-identical copies (`hardware.rs` and
+/// `catalog.rs`; `program.rs` inlines the same idea for
+/// `application_program` alone, differently enough — it also gates several
+/// later match arms on the result — that folding it in here was not
+/// attempted). Behaviour is unchanged on purpose: it still compares
+/// `source_sha256` at the whole-file granularity it always has, same-file
+/// duplicate ids included (KNOWN_LIMITATIONS.md §86). Making that
+/// finer-grained is a separate, deliberate piece of work, not a side effect
+/// of tidying up the copies.
+pub(crate) fn first_winner(
+    conn: &Connection,
+    table: &str,
+    id: Option<&str>,
+    source_sha256: &str,
+    conflicts: &mut Vec<IdConflict>,
+) -> Result<bool, ProductDbError> {
+    let id = id.unwrap_or_default();
+    let existing: Option<String> = conn
+        .query_row(
+            &format!("SELECT source_sha256 FROM {table} WHERE id = ?1"),
+            [id],
+            |row| row.get(0),
+        )
+        .optional()?;
+    match existing {
+        None => Ok(true),
+        Some(kept) => {
+            if kept != source_sha256 {
+                conflicts.push(IdConflict {
+                    table: table.to_string(),
+                    id: id.to_string(),
+                    kept_sha256: kept,
+                    other_sha256: source_sha256.to_string(),
+                });
+            }
+            Ok(false)
+        }
     }
 }
 
@@ -131,5 +180,41 @@ mod tests {
         let value = bool_flag(&mut unknown, "/E", &attrs_from(r#"<E/>"#), "F");
         assert_eq!(value, None);
         assert!(unknown.into_vec().is_empty());
+    }
+
+    fn db() -> (tempfile::TempDir, rusqlite::Connection) {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = crate::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        (dir, conn)
+    }
+
+    #[test]
+    fn first_winner_is_shared_by_every_caller_not_copy_pasted() {
+        // hardware.rs and catalog.rs each carried a byte-identical private
+        // `first_winner`; this is the one they both now call.
+        let (_dir, conn) = db();
+        let mut conflicts = Vec::new();
+        conn.execute(
+            "INSERT INTO hardware (id, manufacturer_id, source_sha256) VALUES ('H-1', 'M-1', 'sha-a')",
+            [],
+        )
+        .unwrap();
+
+        // A fresh id always wins, no conflict recorded.
+        assert!(first_winner(&conn, "hardware", Some("H-2"), "sha-a", &mut conflicts).unwrap());
+        assert!(conflicts.is_empty());
+
+        // The same id from the same file is not a conflict, just a loss.
+        assert!(!first_winner(&conn, "hardware", Some("H-1"), "sha-a", &mut conflicts).unwrap());
+        assert!(conflicts.is_empty());
+
+        // The same id from a different file's hash is a recorded conflict,
+        // and the first writer still keeps the row.
+        assert!(!first_winner(&conn, "hardware", Some("H-1"), "sha-b", &mut conflicts).unwrap());
+        assert_eq!(conflicts.len(), 1);
+        assert_eq!(conflicts[0].table, "hardware");
+        assert_eq!(conflicts[0].id, "H-1");
+        assert_eq!(conflicts[0].kept_sha256, "sha-a");
+        assert_eq!(conflicts[0].other_sha256, "sha-b");
     }
 }

@@ -284,9 +284,12 @@ application does, on any platform.
 
 **Limitation.** The application does not program devices (RESEARCH §8.3).
 
-**Cause.** Bricking risk on real hardware, undocumented *semantics* for the
-product-specific `Legacy*` compatibility flags, and a product database that
-does not yet store the load procedures it already reads. **[V]**
+**Cause.** As of 2026-09-13 the cause is **implementation and hardware, not
+research**: there is no commissioning code, nothing has been run against a
+device, bricking a real device is a real outcome of getting it wrong, and a
+short, named list of things genuinely remains undocumented (see the 2026-09-13
+phase-1 update below). The product database still does not store the load
+procedures it already reads. **[V]**
 
 **Impact.** Planning and documentation happen here; downloading happens in
 ETS, for now.
@@ -341,19 +344,83 @@ ingested programs — was fixed on 2026-09-13 and is no longer outstanding
 **[V]**.) Third, hardware. Nothing in this update has been run against a
 device, and no bus was contacted to produce it.
 
-**Lifted when.** The generic load/unload/reset/memory procedures no longer
-block this — they are documented (RESEARCH §8.4) — and neither does the
-`Legacy*` matrix or the vendor DLL (RESEARCH §8.6). What remains, in the order
-it can be done: the parsing addition described (and deliberately not built) in
-RESEARCH §8.6.5 (its `bool_flag` prerequisite is done); the offline "dry-run"
-procedure resolver of RESEARCH §8.6.6 Slice 0, which needs no hardware and is
-checkable against both the Standard's step table and all 35 corpus programs;
-then read-only device inspection (Slice 1); and only then hardware we can
-afford to destroy, on a line isolated from anything that matters. Per-flag
-semantics would be closed by the MT6 XSD `KNX-Project-Schema-v23.xsd`
-(KNX-member distribution, updates via `gitlab.knx.org`) or by differential
-testing against ETS. Architecturally nothing blocks it today: load procedures,
-memory layout and mask data already live in the product database.
+**Updated, 2026-09-13 (T30 phase 1 — the specification pass, RESEARCH §8.7).**
+An implementable written specification now exists:
+[`docs/superpowers/specs/2026-09-13-commissioning-download-design.md`](superpowers/specs/2026-09-13-commissioning-download-design.md),
+16 sections, every protocol claim quoted from one of five source PDFs
+(`03_03_07 Application Layer`, `03_05_01 Resources`, `03_05_02 Management
+Procedures`, `03_05_03 Configuration Procedures`, `03_03_04 Transport Layer`).
+No code was written and no bus was contacted to produce it. This narrows the
+limitation to its two real causes and shortens the unknown list to eight named
+items.
+
+*Documented, cited and specified* **[D]**: individual-address programming by
+programming button, including the four-step `NM_IndividualAddress_Write`
+sequence, the responder-counting rules, and the fact that the response PDU
+carries no data (the address arrives as the frame's source); the Load State
+Machine's six states, five events **and the complete transition table**
+(`03_05_01` Table 94 — §8.4 previously had states and events but not
+transitions); memory read/write with its 1–63-octet service limit, its
+**normative** read-back, the `DM_MemWrite` 12-octet cap for devices without
+`L_Data_Extended`, and the `base + length > FFFFh` rule that selects
+`A_UserMemory_Write`; Verify Mode via `PID_DEVICE_CONTROL` bit 2 and the fact
+that it is auto-disabled when the Transport Layer connection closes; the
+complete-download, partial-download and unload step lists; the 10-octet
+`Additional Load Control` payloads including the allocation subtypes; the full
+Master Reset Erase Code table; and — the question that mattered most — what an
+interrupted download leaves behind: load state is non-volatile, only `Loaded` is
+valid, a restart during `Loading` yields `Loading` or `Error`, and `Error` is
+escapable only by `Unload`, which makes the data explicitly undefined.
+
+*Genuinely undocumented*, each searched for in both KNX specification knowledge
+bases and, where relevant, the extracted Standard corpus: (1) per-`Legacy*`-flag
+semantics; (2) the `LdCtrl*`-name → load-control-subtype mapping for 13 of the 25
+`knx_master.xml` kinds — note the payload *layouts* **are** documented, which
+narrows the earlier claim, and that a wrong subtype drives the Load State
+Machine to `Error` rather than returning an error; (3) what an
+`EtsDownloadPlugin` DLL does (compiled code; not documentable from either base);
+(4) the "differential download algorithm" named by `03_05_03` §3.5.3; (5) how a
+client discovers `L_Data_Extended` support; (6) the parity computation for the
+programming-mode octet at memory address `60h`; (7) the unquantified "delay for
+programming the memory in the device" of `03_05_02` §3.16; (8) LSM Realisation
+Type 2, which `03_05_01` §4.23.3 states outright is *"not specified in this
+version of this document"*.
+
+Two things the specification also settled that are corrections rather than
+findings: RESEARCH §8.4's claim that no APCI value can be read out of
+`03_03_07` Table 1 applies to the Markdown extraction only — `pdftotext
+-layout` on the PDF renders it legibly, cross-checked against this project's
+own `cemi.rs` **[V]**; and §8.4's description of `PID_OBJECT_INDEX` (PID 29) as
+the mechanism addressing which LSM an access targets is wrong — it is a
+read-only property reporting an Interface Object's *own* index, while the
+selector is the `object_index` field of the property services **[D]**.
+
+The specification also fixes the hardware-safety rules as **design
+requirements** rather than operating advice: `1.1.220` (an alarm panel) is
+structurally unreachable via exclusion-by-construction shared with
+`knx_core::scan::ScanPlan`; `1.1.24`–`1.1.32` are the only addresses approved
+for active reads; read and write entry points are separated in the type system;
+and because `A_IndividualAddress_Write` is a *broadcast* that no address filter
+can constrain, the programming-mode responder count must be exactly one before
+it may be issued.
+
+**Lifted when.** Research no longer blocks this. What remains, in the order it
+can be done: the parsing addition described (and deliberately not built) in
+RESEARCH §8.6.5 (its `bool_flag` prerequisite is done); T30 phase 2 — implement
+the specification above against a device simulator, with no hardware attached,
+including the exhaustive transition-table tests the specification lists; T30
+phase 3 — verify **read-only** against real hardware inside `1.1.24`–`1.1.32`,
+expecting deviations and recording them as findings; and only then any write at
+all, on a device we can afford to destroy, on a line isolated from anything that
+matters, and only with a fresh explicit go-ahead naming the device and the
+operation. Per-flag semantics would be closed by the MT6 XSD
+`KNX-Project-Schema-v23.xsd` (KNX-member distribution, updates via
+`gitlab.knx.org`) or by differential testing against ETS. Products setting flags
+the implementation cannot interpret, and products carrying an
+`EtsDownloadPlugin`, must be **refused** rather than guessed at — refusing is
+safe. Architecturally nothing blocks it today: load procedures, memory layout
+and mask data already live in the product database, and `knx-net` already
+carries every frame the specification needs.
 
 ## 8. KNX Secure is not implemented
 

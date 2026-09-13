@@ -34,7 +34,7 @@ afterEach(async () => {
 });
 
 function ga(id: number, name: string, address: string): GroupAddressNode {
-  return { id, name, address };
+  return { id, name, address, range: null, dpts: [], links: [] };
 }
 
 function groupRange(id: number, name: string, start: string, end: string): GroupRangeNode {

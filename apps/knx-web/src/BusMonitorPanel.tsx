@@ -4,6 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import type { BusMonitorStopResponse, BusTelegramRow } from "./api";
 import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
+import {
+  type ContextLock,
+  forgetSessionContext,
+  readContextLock,
+  recordSessionContext,
+  subscribeContextChanges,
+} from "./busContext";
 import { useTranslate } from "./i18n";
 
 // The identity of the one session this panel can ever be attached to
@@ -118,6 +125,23 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   const [status, setStatus] = useState<"active" | "closed" | null>(null);
   const [droppedBefore, setDroppedBefore] = useState(0);
 
+  // Whether the project state behind the attached session still matches the
+  // project as it is now — see `busContext.ts` for why this cannot be
+  // answered by asking the server. Re-read on every poll tick, on every
+  // cross-window signal and whenever this window regains focus, so a stale
+  // verdict never waits for a remount.
+  const [contextLock, setContextLock] = useState<ContextLock>("synced");
+  // The id of a session that replaced the one this panel was attached to
+  // (someone disconnected and reconnected, in this window or another).
+  // Connection state moving under the panel is one of the four things the
+  // lock must be explicit about, so it gets its own notice rather than
+  // being folded quietly into the session line.
+  const [replacedBy, setReplacedBy] = useState<number | null>(null);
+  // Set when a poll comes back `404`: the session this panel was attached
+  // to was stopped somewhere else. Without this the panel would show a
+  // permanent poll error for a session that ended perfectly normally.
+  const [endedElsewhere, setEndedElsewhere] = useState(false);
+
   // The lowest `seq` that counts as "arrived in the most recent incremental
   // poll" (design D34: an entry highlight the stylesheet renders, driven by
   // this threshold rather than by any per-row state — see `styles.css`'s
@@ -151,7 +175,11 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
     resolution: ComposeResolution;
   }>({ key: 0, destination: "", resolution: { kind: "unknown" } });
 
+  const [selectedSequence, setSelectedSequence] = useState<number | null>(null);
+  const selectedTelegram = rows.find((row) => row.seq === selectedSequence);
+
   function selectRow(row: BusTelegramRow) {
+    setSelectedSequence(row.seq);
     setComposeSeed({
       key: nextComposeSeedKey++,
       destination: row.destination,
@@ -173,6 +201,50 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   // a beat before the interval would have fired anyway.
   const skipNextImmediatePollRef = useRef(false);
 
+  // Mirrors `session` for the listeners registered once on mount below,
+  // which fire long after the render that created their closure and must
+  // see the current value rather than the one captured at mount.
+  // Mirrors `session` for the listeners registered once on mount below,
+  // which fire long after the render that created their closure and must
+  // see the current value rather than the one captured at mount. Updated
+  // synchronously by `attachTo` rather than by an effect: `connect()`
+  // publishes a session record in the same tick it adopts the session, and
+  // that publication notifies this window's own listener immediately — an
+  // effect-updated mirror would still read `null` there and fire a
+  // redundant reattach request against the session just started.
+  const sessionRef = useRef<AttachedSession | null>(null);
+
+  function attachTo(next: AttachedSession | null) {
+    sessionRef.current = next;
+    setSession(next);
+  }
+
+  /// Attach to whatever session the server already has, if any. Shared by
+  /// the mount effect and the signal effect below; `isCancelled` lets the
+  /// mount effect discard a reply that lands after unmount.
+  async function reattach(isCancelled: () => boolean): Promise<void> {
+    try {
+      const response = await api.pollBusTelegrams(0);
+      if (isCancelled()) return;
+      sinceRef.current = response.nextSince;
+      setRows(response.telegrams);
+      setDroppedBefore(response.droppedBefore);
+      setStatus(response.status);
+      setEndedElsewhere(false);
+      setReplacedBy(null);
+      setContextLock(readContextLock(response.sessionId));
+      skipNextImmediatePollRef.current = true;
+      attachTo({ sessionId: response.sessionId, assignedAddress: null });
+    } catch (e) {
+      if (isCancelled()) return;
+      if (api.errorStatus(e) === 404) return; // no session — Connect form, as before.
+      // Anything else (network error, 500, …) is not silently
+      // swallowed either, even though it leaves the same Connect-form
+      // state a 404 would: the user can still see what went wrong.
+      setConnectError(api.errorMessage(e));
+    }
+  }
+
   // Task 5's second inherited fix: on mount, ask whether a session already
   // exists instead of assuming there is none. Before this, navigating away
   // from the panel (Log button, selecting an entity) left the server-side
@@ -193,26 +265,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   // gate anything in the render below, so this falls out for free.
   useEffect(() => {
     let cancelled = false;
-    async function reattach() {
-      try {
-        const response = await api.pollBusTelegrams(0);
-        if (cancelled) return;
-        sinceRef.current = response.nextSince;
-        setRows(response.telegrams);
-        setDroppedBefore(response.droppedBefore);
-        setStatus(response.status);
-        skipNextImmediatePollRef.current = true;
-        setSession({ sessionId: response.sessionId, assignedAddress: null });
-      } catch (e) {
-        if (cancelled) return;
-        if (api.errorStatus(e) === 404) return; // no session — Connect form, as before.
-        // Anything else (network error, 500, …) is not silently
-        // swallowed either, even though it leaves the same Connect-form
-        // state a 404 would: the user can still see what went wrong.
-        setConnectError(api.errorMessage(e));
-      }
-    }
-    void reattach();
+    void reattach(() => cancelled);
     return () => {
       cancelled = true;
     };
@@ -221,14 +274,75 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
     // `connect()`/`disconnect()` manage `session` themselves afterwards).
   }, []);
 
+  // The same question, asked again when something suggests the answer may
+  // have changed: another window published a session record, or this window
+  // regained focus after time spent elsewhere. Only ever asked when this
+  // panel holds no session — a panel that already has one learns about
+  // changes from its own poll loop, and must not fire a second request per
+  // signal.
+  //
+  // Why this exists at all: a companion window showing the Connect form
+  // while the main window is already connected would invite exactly the
+  // second session the one-session model forbids. The server would refuse
+  // it with a `409` (`bus_routes.rs:95-109`), so nothing breaks — but an
+  // error message is a worse answer than the running session's telegrams.
+  //
+  // Cross-window `storage` delivery is a platform courtesy, not a
+  // guarantee, which is why the `focus` listener is here too: a user who
+  // clicks into the companion has already given it the one signal no
+  // platform withholds.
+  useEffect(() => {
+    function onSignal() {
+      const current = sessionRef.current;
+      if (current === null) {
+        void reattach(() => false);
+        return;
+      }
+      setContextLock(readContextLock(current.sessionId));
+    }
+    const unsubscribe = subscribeContextChanges(onSignal);
+    window.addEventListener("focus", onSignal);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("focus", onSignal);
+    };
+  }, []);
+
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
+
+    const attached = session;
 
     async function poll() {
       try {
         const response = await api.pollBusTelegrams(sinceRef.current);
         if (cancelled) return;
+        // Connection state moved under this panel: `/telegrams` is
+        // answering for a *different* session than the one these rows and
+        // this cursor belong to (`bus_routes.rs:272-311` returns the live
+        // session's `sessionId` on every poll, and `AppState` holds at most
+        // one). Somebody disconnected and reconnected — in this window's
+        // sibling, or in another client entirely. Keeping the old rows
+        // would mix two sessions' traffic in one table under one sequence
+        // column, and keeping the old cursor would index the new session's
+        // buffer with the old one's position. Both are dropped, the change
+        // is announced, and the effect re-runs against the new identity —
+        // which re-reads the lock, because the new session froze its own
+        // `GroupAddressContext` at its own moment.
+        if (response.sessionId !== attached.sessionId) {
+          sinceRef.current = 0;
+          setRows([]);
+          setSelectedSequence(null);
+          setNewRowThreshold(null);
+          setDroppedBefore(0);
+          setPollError(null);
+          setReplacedBy(response.sessionId);
+          setContextLock(readContextLock(response.sessionId));
+          setStatus(response.status);
+          attachTo({ sessionId: response.sessionId, assignedAddress: null });
+          return;
+        }
         sinceRef.current = response.nextSince;
         setRows((previous) => [...previous, ...response.telegrams]);
         // This tick's own batch only — never a running minimum kept across
@@ -241,8 +355,26 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
         setDroppedBefore(response.droppedBefore);
         setStatus(response.status);
         setPollError(null);
+        // Cheap (one synchronous `localStorage` read) and unconditional, so
+        // the verdict never depends on a cross-window event this platform
+        // may or may not deliver.
+        setContextLock(readContextLock(response.sessionId));
       } catch (e) {
-        if (!cancelled) setPollError(api.errorMessage(e));
+        if (cancelled) return;
+        if (api.errorStatus(e) === 404) {
+          // The session was stopped somewhere else — the other window's
+          // Disconnect, or another client's. That is an ordinary end, not
+          // a failure, so this returns to the Connect form and says what
+          // happened instead of showing a poll error forever.
+          attachTo(null);
+          setStatus(null);
+          setEndedElsewhere(true);
+          setPollError(null);
+          setContextLock("synced");
+          forgetSessionContext();
+          return;
+        }
+        setPollError(api.errorMessage(e));
       }
     }
 
@@ -264,12 +396,28 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       const started = await api.startBusMonitor(gatewayInput);
       sinceRef.current = 0;
       setRows([]);
+      setSelectedSequence(null);
       setNewRowThreshold(null);
       setDroppedBefore(0);
       setStatus("active");
       setStopSummary(null);
       setPollError(null);
-      setSession({ sessionId: started.sessionId, assignedAddress: started.assignedAddress });
+      setEndedElsewhere(false);
+      setReplacedBy(null);
+      // Recorded *before* the session is adopted, so the first poll tick
+      // already has something to compare against. This is the only moment
+      // at which the project fingerprint the server froze can be captured
+      // — `bus_routes.rs:120-123` takes its snapshot inside this very
+      // request, and never mentions it again.
+      const attached = { sessionId: started.sessionId, assignedAddress: started.assignedAddress };
+      // The ref first, and before the record is published. Publishing
+      // notifies this window's own listener synchronously; a listener that
+      // still read `null` here would conclude this panel holds no session
+      // and fire a reattach request against the session just started.
+      sessionRef.current = attached;
+      recordSessionContext(started.sessionId);
+      setContextLock(readContextLock(started.sessionId));
+      attachTo(attached);
     } catch (e) {
       setConnectError(api.errorMessage(e));
     }
@@ -278,9 +426,16 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   async function disconnect() {
     try {
       const summary = await api.stopBusMonitor();
-      setSession(null);
+      attachTo(null);
       setStatus(null);
       setStopSummary(summary);
+      setReplacedBy(null);
+      setEndedElsewhere(false);
+      setContextLock("synced");
+      // The session is gone; the record describing it must go too, or the
+      // next session would briefly look verified against its predecessor's
+      // fingerprint.
+      forgetSessionContext();
     } catch (e) {
       setConnectError(api.errorMessage(e));
     }
@@ -308,23 +463,47 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
 
   return (
     <div className="bus-monitor-panel">
-      <h2>{t("busMonitor.title")}</h2>
-      <div className="bus-monitor-connect">
-        <input
-          type="text"
-          placeholder="192.168.1.10:3671"
-          value={gatewayInput}
-          onChange={(e) => setGatewayInput(e.target.value)}
-          disabled={!!session}
-        />
-        {session ? (
-          <button onClick={disconnect}>{t("busMonitor.disconnect")}</button>
-        ) : (
-          <button onClick={connect} disabled={!gatewayInput}>
-            {t("busMonitor.connect")}
-          </button>
-        )}
-      </div>
+      {/* `.workspace-heading` like every other centre-pane view; the
+          connect controls are this view's action cluster. The eyebrow
+          states the only transport this panel has: `knx-server`'s bus
+          layer is tunnelling-only, no discovery and no routing (see
+          `apps/knx-server/src/bus.rs`'s module comment, D7).
+          The placeholder is an RFC 5737 documentation address, not
+          anybody's gateway. */}
+      <header className="workspace-heading">
+        <div>
+          <p className="eyebrow">{t("busMonitor.eyebrow")}</p>
+          <h1>{t("busMonitor.title")}</h1>
+        </div>
+        <div className="bus-monitor-connect">
+          {/* The placeholder is the only visible hint at what this field is,
+              and a placeholder is not a label; `aria-label` gives it a name
+              that survives being filled in. The `title` on the disabled
+              states is the reason, not decoration: a disabled control is out
+              of the tab order, so the prose elsewhere on the page never
+              reaches anyone arriving at it. */}
+          <input
+            type="text"
+            placeholder="192.0.2.1:3671"
+            aria-label={t("busMonitor.gatewayLabel")}
+            value={gatewayInput}
+            onChange={(e) => setGatewayInput(e.target.value)}
+            disabled={!!session}
+            title={session ? t("busMonitor.gatewayLocked") : undefined}
+          />
+          {session ? (
+            <button onClick={disconnect}>{t("busMonitor.disconnect")}</button>
+          ) : (
+            <button
+              onClick={connect}
+              disabled={!gatewayInput}
+              title={gatewayInput ? undefined : t("busMonitor.connectNeedsGateway")}
+            >
+              {t("busMonitor.connect")}
+            </button>
+          )}
+        </div>
+      </header>
       {connectError && <span className="field-error">{connectError}</span>}
       {session && (
         <p className="bus-monitor-session">
@@ -343,6 +522,30 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
             dropped: stopSummary.droppedCount,
           })}
           {stopSummary.warning && <span className="bus-monitor-warning"> {stopSummary.warning}</span>}
+        </p>
+      )}
+      {endedElsewhere && (
+        <p className="bus-monitor-ended-elsewhere" role="alert">
+          {t("busMonitor.endedElsewhere")}
+        </p>
+      )}
+      {session && replacedBy !== null && (
+        <p className="bus-monitor-replaced-notice" role="alert">
+          {t("busMonitor.sessionReplaced", { id: replacedBy })}
+        </p>
+      )}
+      {/* The explicit stale lock. Not a hint, not a tooltip: a banner that
+          names what moved and says plainly that the decoded column below is
+          the old snapshot's answer. `role="alert"` because a user reading
+          telegrams is looking at the table, not at the chrome. */}
+      {session && contextLock === "stale" && (
+        <p className="bus-monitor-stale-lock" role="alert">
+          {t("busMonitor.contextStale")}
+        </p>
+      )}
+      {session && contextLock === "unverified" && (
+        <p className="bus-monitor-unverified-lock" role="note">
+          {t("busMonitor.contextUnverified")}
         </p>
       )}
       {pollError && <span className="field-error">{pollError}</span>}
@@ -369,6 +572,12 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           // adopting one that was already closed — so no separate tracking
           // is needed here.
           sessionClosed={status === "closed"}
+          // Task 4: a write resolves its DPT from the same frozen snapshot
+          // the decoded column is read through (`bus.rs:1135-1141`). If
+          // that snapshot no longer describes the project, the DPT the
+          // server would pick is the old project's answer — so the send
+          // path locks on exactly the same condition the table does.
+          contextStale={contextLock === "stale"}
         />
       )}
       {session && (
@@ -397,7 +606,14 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
         ) : visibleRows.length === 0 ? (
           <p className="bus-monitor-empty">{t("busMonitor.emptyFiltered")}</p>
         ) : (
-          <table className="bus-monitor-table">
+          <div className="monitor-data">
+          <div className="monitor-table-scroll">
+          {/* The second half of the stale lock: the banner says it, and the
+              table carries it, so a decoded value read out of context on a
+              screenshot still shows it was not current. */}
+          <table
+            className={contextLock === "stale" ? "bus-monitor-table bus-monitor-stale-table" : "bus-monitor-table"}
+          >
             <thead>
               <tr>
                 <th>{t("busMonitor.column.seq")}</th>
@@ -423,8 +639,19 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                   <tr
                     key={row.seq}
                     className={rowClasses || undefined}
+                    tabIndex={0}
+                    aria-selected={selectedSequence === row.seq}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        selectRow(row);
+                      } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                        e.preventDefault();
+                        const sibling = e.key === "ArrowDown" ? e.currentTarget.nextElementSibling : e.currentTarget.previousElementSibling;
+                        if (sibling instanceof HTMLElement) sibling.focus();
+                      }
+                    }}
                     onClick={() => selectRow(row)}
-                    style={{ cursor: "pointer" }}
                     title={t("busMonitor.rowTitle")}
                   >
                     <td>{row.seq}</td>
@@ -446,6 +673,19 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
               })}
             </tbody>
           </table>
+          </div>
+          <aside className="telegram-details" aria-label={t("workbench.telegram")}>
+            <h3>{t("workbench.telegram")}</h3>
+            {selectedTelegram ? <dl>
+              <dt>{t("busMonitor.column.time")}</dt><dd>{selectedTelegram.timestamp}</dd>
+              <dt>{t("busMonitor.column.source")}</dt><dd className="mono">{selectedTelegram.source}</dd>
+              <dt>{t("busMonitor.column.destination")}</dt><dd><span className="mono">{selectedTelegram.destination}</span>{selectedTelegram.destinationName && <p>{selectedTelegram.destinationName}</p>}</dd>
+              <dt>{t("busMonitor.column.service")}</dt><dd>{selectedTelegram.service}</dd>
+              <dt>{t("busMonitor.column.decoded")}</dt><dd>{decodedSummary(selectedTelegram)}{selectedTelegram.decoded?.error && <p className="field-error">{selectedTelegram.decoded.error}</p>}</dd>
+              <dt>{t("busMonitor.column.payload")}</dt><dd className="mono">{selectedTelegram.rawPayload ?? "—"}</dd>
+            </dl> : <p>{t("workbench.selectTelegram")}</p>}
+          </aside>
+          </div>
         ))}
     </div>
   );

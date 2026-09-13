@@ -18,22 +18,22 @@ describe("THEMES", () => {
 });
 
 describe("loadThemeId", () => {
-  it("defaults to bitcoin-defi when nothing is stored", () => {
-    expect(loadThemeId(fakeStorage())).toBe("bitcoin-defi");
+  it("defaults to system when nothing is stored", () => {
+    expect(loadThemeId(fakeStorage())).toBe("system");
   });
 
   it("returns a known stored id unchanged", () => {
     expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "bitcoin-defi" }))).toBe("bitcoin-defi");
   });
 
-  it("falls back to bitcoin-defi for an unknown id", () => {
-    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "solarized" }))).toBe("bitcoin-defi");
+  it("falls back to system for an unknown id", () => {
+    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "solarized" }))).toBe("system");
   });
 
-  it("falls back to bitcoin-defi for cycle 7's old System/Light/Dark values", () => {
-    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "system" }))).toBe("bitcoin-defi");
-    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "light" }))).toBe("bitcoin-defi");
-    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "dark" }))).toBe("bitcoin-defi");
+  it("preserves the intent of old System/Light/Dark values", () => {
+    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "system" }))).toBe("system");
+    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "light" }))).toBe("porcelain");
+    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "dark" }))).toBe("graphite");
   });
 });
 

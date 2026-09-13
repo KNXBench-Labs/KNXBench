@@ -57,6 +57,27 @@ pub enum GroupAddressDpt {
 ///   `None`, the same as one nothing links to. This function never panics
 ///   on an unknown id; it has no way to tell "unknown" from "known but
 ///   unlinked" apart, and no caller listed in the spec needs it to.
+///
+/// # Before you widen the inputs
+///
+/// This function reads communication-object links and their resolved DPTs,
+/// and nothing else. One thing downstream depends on that narrowness in a
+/// way no compiler will notice.
+///
+/// The web client's bus monitor shows a "stale project" lock, driven by a
+/// fingerprint over exactly the facts this function consumes
+/// (`apps/knx-web/src/busContext.ts`, `fingerprintProjectContext`). That
+/// fingerprint is republished from `App.tsx` whenever a `ProjectTree`
+/// arrives — but a parameter edit never produces one:
+/// `api.setParameterValue` answers with a `ParameterPanelDto`, so the
+/// fingerprint does not move even though `Command::SetParameterValue` did
+/// mutate the project. It is safe only because a parameter value cannot
+/// currently reach this function's inputs.
+///
+/// So: if you make a parameter value influence a com object's DPT, its
+/// links or its activity, you have made the bus monitor report
+/// `"synced"` over a decode that has silently changed. Fix the publish
+/// path first (`docs/KNOWN_LIMITATIONS.md` §82).
 pub fn resolve_group_address_dpt(project: &Project, ga: GroupAddressId) -> GroupAddressDpt {
     let dpts: Vec<DptRef> = project
         .devices
@@ -109,7 +130,21 @@ pub fn resolve_project_group_address_dpts(project: &Project) -> HashMap<u16, Gro
 /// `None`, one distinct entry is `Single`, more than one is `Conflict`. The
 /// sort order is `DptRef`'s own derived `Ord` (main type, then subtype), so
 /// two runs over the same input always produce the same `Conflict` vector.
-fn group_address_dpt_from(mut dpts: Vec<DptRef>) -> GroupAddressDpt {
+///
+/// `pub` so a caller that has already gathered the linked communication
+/// objects for its own reasons can classify them by the same rule instead
+/// of re-deriving it. `knx-projection` builds one reverse index over every
+/// communication object to project both a group address's links and its
+/// DPT; calling [`resolve_group_address_dpt`] per address instead would
+/// rescan every communication object once per group address, and
+/// open-coding the three-way classification there would be a second copy
+/// of this rule free to drift from this one.
+///
+/// Deduplication is what makes it safe to feed this one entry *per link*
+/// rather than per communication object: an object linked to the same
+/// address in both directions states its DPT once either way. It is not a
+/// licence to count links — see [`resolve_group_address_dpt`].
+pub fn group_address_dpt_from(mut dpts: Vec<DptRef>) -> GroupAddressDpt {
     dpts.sort();
     dpts.dedup();
     match dpts.len() {

@@ -4927,3 +4927,69 @@ Gates for fix round 1, all judged by exit status and all 0: `cargo fmt --all
 --workspace --no-fail-fast` (1272 passed, 0 failed, 3 ignored; 1275 declared,
 identical to `main`), `xtask check-layering`, `xtask check-headers`, `cargo deny
 check`, `npx tsc --noEmit`, and `npx vitest run` (465 tests in 42 files).
+
+## 2026-09-13 — Spatial coordinates decided, not built (ADR-0019, branch `t21-coordinates-adr`)
+
+T21's remaining half was never a UI task. The workbench already renders
+areas, lines, devices and nested building parts; what the spatial
+canvas/floor-plan editor lacked was a coordinate model underneath, and the
+decision is recorded rather than the canvas built:
+[ADR-0019](adr/0019-building-model-stays-topological.md), **the building
+model stays topological — no spatial coordinates in v1.0.0**. No code
+changed, `CURRENT_SCHEMA_VERSION` stays 6, and no table was added.
+
+**The evidence, since a negative is only worth what its search is.** Three
+things were checked, in this order:
+
+- *The published schema.* *Project Schema23 v01.00.00* §1.2.6.4
+  `complexType Space_t` carries `Id`, `Name`, `Type`, `Usage`, `Number`,
+  `Comment`, `CompletionStatus`, `DefaultLine`, `Description`, `Puid` — and
+  nothing spatial. §1.2.5.1 `complexType DeviceInstance_t` is the same
+  across its ~30 attributes. `coordinate|geometr|floor.?plan` over the
+  whole 64-page document: zero hits. The only length quantity in the
+  format's vicinity is `Product/@WidthInMillimeter` in `Hardware.xml`, a
+  DIN-rail width belonging to the catalogue, not a placement.
+- *The three reference projects.* A full element/attribute inventory of
+  each project part: schema 11 (`ETS 4.1.8`, `<Buildings><BuildingPart>`),
+  schema 21 (KV demo, `6.0.5030.0`, `<Locations><Space>`) and schema 23
+  (`6.3.7959.0`, `<Locations><Space>`). No `X`/`Y`/`Z`/position/angle
+  attribute on any space, device, area or line in any of them. The only
+  non-schema carriers — device `BinaryData` (all three entries named
+  `244_Info`) and an `ExtraData/` directory the schema document never
+  mentions — hold vendor plugin state, and schema 23 §4.2.1 puts that data
+  outside the interoperable content anyway.
+- *The Standard itself.* 3/10/3 *KNX IoT Information Model* v2.0.0 is the
+  one place that formally models "the actual spatial building structure of
+  an Installation", and its location classes carry only relational
+  properties plus a postal `vcard:Address`; clause 1.2.2 delegates geometry
+  to IFC by reference (`IfcBuilding`, `IfcBuildingStorey`, `IfcSite`,
+  `IfcSpace`). Across the 179-document extraction, "floor plan", "site
+  plan", "DXF" and "gbXML" appear in zero documents, and the only
+  "coordinate" in the Standard is `DPT_Colour_xyY`'s colour coordinate.
+
+**What the ADR pre-commits without building.** A later spatial layer arrives
+as separate `FloorPlan` and `Placement` entities in their own tables, integer
+millimetres (the unit the format itself uses) and millidegrees, origin at the
+imported plan's own top-left rather than a site datum nothing supplies, no
+`z` because floors are already a hierarchy level, plans imported rather than
+drawn, and an explicit `.knxproj` export loss warning since no schema can
+carry any of it. That migration would be store schema 7, additive only, and
+every existing project migrates with zero rows — a complete project, not a
+deficient one.
+
+**One side finding, recorded rather than swept up.** `BuildingPartType` has
+the six variants the reference projects exhibit; schema 23 documents eleven
+values, so `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` are
+coarsened to `BuildingPart` on import (with a reported `MapProblem`, not
+silently) and re-exported as `BuildingPart`. Now
+[KNOWN_LIMITATIONS.md §89](KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import);
+deliberately not fixed inside a coordinate ADR.
+
+Docs updated to match: `DATA_MODEL.md` §5 and §11, `ROADMAP.md` (T21's
+motion-constraint and help-gating mentions, plus a new answered row in "Open
+questions"), `GAP_ANALYSIS_ETS.md` (D1, D2, the T21 backlog bullet and the
+two lists that gated on it), `goal.md` §3, `KNOWN_LIMITATIONS.md` §89.
+
+What this entry does not claim: nothing here rules out a floor-plan feature
+inside ETS's own database or a paid ETS App, and schemas 12-14, 20 and 22 were
+never sampled — see ADR-0019's "What this evidence does not say".

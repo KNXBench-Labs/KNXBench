@@ -82,8 +82,8 @@ underlying model field exists.
 
 | # | Gap | Notes |
 |---|-----|-------|
-| D1 | **No graphical topology view.** ETS's Topology tab shows areas/lines/couplers/devices as a diagram. | **Partially resolved (T21, 2026-09-13):** the web workbench renders projected areas, lines and devices as a keyboard-accessible hierarchy alongside the tree. It deliberately has no invented physical/canvas coordinates. |
-| D2 | **No building/floor-plan graphical view.** ETS's Building view can show rooms spatially (and, with the right edition, overlay them on a floor plan image). | **Partially resolved (T21, 2026-09-13):** the web workbench renders nested building parts and assigned devices as a visual hierarchy. No floor-plan image or spatial authoring is claimed. |
+| D1 | **No graphical topology view.** ETS's Topology tab shows areas/lines/couplers/devices as a diagram. | **Partially resolved (T21, 2026-09-13):** the web workbench renders projected areas, lines and devices as a keyboard-accessible hierarchy alongside the tree. It deliberately has no invented physical/canvas coordinates, and as of [ADR-0019](adr/0019-building-model-stays-topological.md) (2026-09-13) it never will in v1.0.0 — a diagram with arbitrary coordinates is a projection, not a domain fact. |
+| D2 | **No building/floor-plan graphical view.** ETS's Building view can show rooms spatially (and, with the right edition, overlay them on a floor plan image). | **Partially resolved (T21, 2026-09-13):** the web workbench renders nested building parts and assigned devices as a visual hierarchy. No floor-plan image or spatial authoring is claimed. **Recorded non-goal for v1.0.0 ([ADR-0019](adr/0019-building-model-stays-topological.md), 2026-09-13):** schema 23's published schema has nowhere to put coordinates, and no sample at schema 11, 21 or 23 carries any, so the half of this row about showing rooms *spatially* is a KNXBench feature gap, not an import gap — an exported `.knxproj` at schema 11, 21 or 23 contains nothing spatial to lose; whether ETS keeps plan data in its own database or behind a paid App is untested (ADR-0019, "What this evidence does not say"). The ADR writes down the shape a later `FloorPlan`/`Placement` layer would take. |
 | D3 | **Closed (2026-09-08, T2; extended 2026-09-10 with package install).** There was no UI screen listing manufacturers/products/hardware variants from `knx-productdb` at all. | `CatalogBrowser.tsx` (opened from a `+ Add device` row) lists catalog items via `GET /api/catalog/manufacturers`/`GET /api/catalog/items`, with a manufacturer filter and search; it also gained an install file-picker for standalone `.knxprod` packages (`installProductPackage`, install-report/error display, post-install catalog refresh, in-modal creation-diagnostics rendering) on 2026-09-10. |
 | D4 | **Closed for HTML only (2026-09-10, T13).** A new `crates/knx-report` crate (`render_html`) renders topology, buildings, group addresses, and devices into one self-contained HTML document — reachable via `POST /api/project/documentation-export` (`apps/knx-server`), `knx doc-export <store.knxdb> <out.html>` (`apps/knx-cli`), and an "Export documentation…" button (`DocumentationExportButton.tsx`, `apps/knx-web`). | Printing from inside the application and PDF generation without a browser both remain open — the document ships `@media print` rules and relies on the browser's own print-to-PDF dialog, which is not the same thing as native PDF generation or an in-app print preview. No claim of ETS report parity is made anywhere: no ETS-produced report sample exists in this repository to compare against, the same evidence gap [KNOWN_LIMITATIONS.md §38](KNOWN_LIMITATIONS.md#38-group-address-csv-exportimport-t12-has-no-verified-ets-interoperability) records for T12's CSV format. See `IMPORT_EXPORT.md §12` and the new `KNOWN_LIMITATIONS.md` entries this task adds. |
 | D5 | **Closed for tunnelling, 2026-09-11 (T15).** `apps/knx-server` gains a `knx-net` dependency (ADR-0017) and a bus-monitor session (`apps/knx-server/src/bus.rs`); four routes (`POST /api/bus/monitor/start`, `POST /api/bus/monitor/stop`, `GET /api/bus/monitor/telegrams`, `POST /api/bus/write`); and `apps/knx-web` gets a live telegram table (`BusMonitorPanel.tsx`) with a client-side text/service-type filter and a compose/send form (`BusComposeForm.tsx`), DPT-decoded against the open project exactly as `bus monitor --project`/`bus write` already were. What did **not** close: routing (tunnelling only, D7 in the design spec); ETS-depth filtering (client-side text/service-type only, nothing like ETS's multi-criteria/saved filter sets); more than one session at a time (`409` on a second `start`); individual-addressed frames (not rendered as rows at all); and — the one that matters most — **none of it has been run against a physical KNX installation**. Full accounting: [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway). Design spec: `docs/superpowers/specs/2026-09-11-group-monitor-design.md`. | A user with an open project and a reachable gateway can now watch decoded group telegrams and send one, from the web/desktop UI, without a terminal — for one tunnelled gateway at a time. `knx bus monitor`/`bus write` remain the CLI-only path to routing and to a second concurrent connection. |
@@ -784,8 +784,18 @@ Each task: **what**, **why**, **depends on**.
   is available** — not rejected, stays on the roadmap. Closes **A1**.
 - **T21. Graphical topology and building views.** **Partially implemented
   2026-09-13:** the workbench renders projected areas/lines/devices and
-  nested building parts alongside the tree, with keyboard selection. A
-  spatial canvas/floor-plan editor remains outside the current model.
+  nested building parts alongside the tree, with keyboard selection.
+  **Closed for v1.0.0 the same day** by
+  [ADR-0019](adr/0019-building-model-stays-topological.md): the spatial
+  canvas/floor-plan editor needed a coordinate decision first, and the
+  decision is that the building model stays topological — no entity gains a
+  position and the views keep computing layout at render time. Neither the
+  exported `.knxproj` schema (11/21/23) nor the KNX Standard's own location
+  model stores geometry, so what remains is a feature KNXBench does not
+  have, not an ETS compatibility gap — whether ETS itself keeps plan data
+  outside the exported file is untested
+  ([ADR-0019](adr/0019-building-model-stays-topological.md), "What this
+  evidence does not say"). A canvas is post-v1.0.0 and gated on its own ADR.
 - **T22. Multi-user/concurrent-edit support for `knx-server`.** Only
   matters once the web deployment is used by more than one person at
   once; needs its own design (locking vs. merge vs. last-writer-wins,
@@ -1086,9 +1096,11 @@ constraint that binds every *other* task in this backlog.
      fails the suite if a `transition:`/`animation:` declaration in
      `styles.css` sits outside a `@media (prefers-reduced-motion:
      no-preference)` block or uses a literal duration. It still binds
-     **T17**'s line-scan progress UI, **T21**'s graphical topology and
-     building views (**D1**/**D2**), and the deferred "who talks to whom"
-     telegram animation under Session 7 in [ROADMAP.md](ROADMAP.md). And
+     **T17**'s line-scan progress UI and the deferred "who talks to whom"
+     telegram animation under Session 7 in [ROADMAP.md](ROADMAP.md) —
+     **T21**'s spatial canvas (**D1**/**D2**) left that list on 2026-09-13
+     with [ADR-0019](adr/0019-building-model-stays-topological.md), being
+     out of v1.0.0 rather than merely unbuilt. And
      the retrofit the constraint's own text warned about was actually
      performed: **T15**'s Group Monitor table, which had shipped
      2026-09-11 ahead of this control, now has a guarded new-row
@@ -1109,8 +1121,10 @@ constraint that binds every *other* task in this backlog.
 Added 2026-09-10 by explicit request, and placed last on purpose: help
 text describes a specific UI, so writing it before the UI stops changing
 means writing it twice. This tier is entered after Session 7's hardening
-and after the UI backlog above (T15, T17, T18, T21) has shipped or been
-dropped.
+and after the UI backlog above (T15, T17, T18) has shipped or been
+dropped. T21 left that backlog on 2026-09-13 — hierarchy views shipped,
+spatial canvas out of v1.0.0 by
+[ADR-0019](adr/0019-building-model-stays-topological.md).
 
 - **T28. In-application help: hover explanations, contextual help, and a
   user manual.** Today the application explains nothing about itself:

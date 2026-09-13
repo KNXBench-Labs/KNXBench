@@ -52,6 +52,11 @@ pub struct ProgramIngest {
     pub program_id: String,
     pub unknown: Vec<UnknownConstruct>,
     pub conflicts: Vec<IdConflict>,
+    /// `Translation` rows this pass actually wrote (R3) — counted the same
+    /// way `translation::ingest_translations` counts its own, since
+    /// `Program` scope never goes through that function (see its doc
+    /// comment for why).
+    pub translations: usize,
 }
 
 /// The currently open `<Union>`: its sequence number, its `@SizeInBit`, and
@@ -101,6 +106,7 @@ pub fn ingest_program(
     let mut expecting_type_child = false;
     let mut current_parameter: Option<String> = None;
     let mut translation_state = TranslationState::default();
+    let mut translations_written = 0usize;
 
     loop {
         buf.clear();
@@ -143,6 +149,7 @@ pub fn ingest_program(
                     &mut expecting_type_child,
                     &mut current_parameter,
                     &mut translation_state,
+                    &mut translations_written,
                 )?;
             }
             Event::Start(e) => {
@@ -165,6 +172,7 @@ pub fn ingest_program(
                     &mut expecting_type_child,
                     &mut current_parameter,
                     &mut translation_state,
+                    &mut translations_written,
                 )?;
             }
             _ => {}
@@ -175,6 +183,7 @@ pub fn ingest_program(
         program_id,
         unknown: unknown.into_vec(),
         conflicts,
+        translations: translations_written,
     })
 }
 
@@ -196,6 +205,7 @@ fn handle_start_or_empty(
     expecting_type_child: &mut bool,
     current_parameter: &mut Option<String>,
     translation_state: &mut TranslationState,
+    translations_written: &mut usize,
 ) -> Result<(), ProductDbError> {
     if *expecting_type_child {
         *expecting_type_child = false;
@@ -365,7 +375,7 @@ fn handle_start_or_empty(
             if let (Some(language), Some(ref_id)) =
                 (&translation_state.language, &translation_state.ref_id)
             {
-                insert_translations(
+                if insert_translations(
                     conn,
                     TranslationScope::Program,
                     program_id,
@@ -373,7 +383,9 @@ fn handle_start_or_empty(
                     ref_id,
                     a.get("AttributeName").unwrap_or_default(),
                     a.get("Text").unwrap_or_default(),
-                )?;
+                )? {
+                    *translations_written += 1;
+                }
             }
         }
         "ComObject" if !*already_present => {

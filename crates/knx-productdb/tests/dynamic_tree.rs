@@ -1694,7 +1694,7 @@ fn migrating_from_v2_backfills_dynamic_node_from_stored_blobs_without_a_reinstal
     assert_eq!(
         conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        4
+        knx_productdb::CURRENT_PRODUCTDB_VERSION
     );
 
     let after: i64 = conn
@@ -1780,7 +1780,7 @@ fn a_parse_failure_during_the_v2_to_v3_backfill_does_not_abort_the_migration() {
     assert_eq!(
         conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        4,
+        knx_productdb::CURRENT_PRODUCTDB_VERSION,
         "a single blob's parse failure must not abort the migration"
     );
 

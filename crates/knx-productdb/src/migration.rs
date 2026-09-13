@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 4;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 5;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -277,7 +277,58 @@ fn migrations() -> Vec<Migration> {
         migrate_v1_to_v2,
         migrate_v2_to_v3,
         migrate_v3_to_v4,
+        migrate_v4_to_v5,
     ]
+}
+
+/// v4 -> v5. Gives `package` four new per-scope counters so a re-opened
+/// (already-installed) package can still report how many `translation` rows
+/// it contributed (R3), without re-parsing the archive just to answer that.
+/// Each defaults to `0`: a package already installed under schema v4 has no
+/// record of what it wrote at install time (that install pre-dates the
+/// columns), and re-deriving the true count would mean re-parsing bytes this
+/// migration has no access to — so a pre-existing package reports zero
+/// rather than a guess, honestly naming the gap instead of inventing a
+/// number. A package installed from here on always gets its real count.
+///
+/// Guarded column-by-column rather than as one `execute_batch`: a database
+/// whose `user_version` says v4 but whose `package` table already carries
+/// one or more of these columns (a hand-rolled test fixture rolling other
+/// tables back to an earlier shape without touching `package`, for
+/// instance — see `dynamic_tree.rs`'s backfill tests) must not fail this
+/// migration with SQLite's "duplicate column name" just because the schema
+/// is ahead of the version pragma for this one table. Each `ALTER TABLE` is
+/// skipped if its column is already there, applied if not — so running
+/// this migration twice against the same `package` table is always safe.
+fn migrate_v4_to_v5(conn: &Connection) -> Result<(), ProductDbError> {
+    for column in [
+        "translation_program_count",
+        "translation_catalog_count",
+        "translation_hardware_count",
+        "translation_master_count",
+    ] {
+        if !column_exists(conn, "package", column)? {
+            conn.execute_batch(&format!(
+                "ALTER TABLE package ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0;"
+            ))?;
+        }
+    }
+    Ok(())
+}
+
+/// True if `table` already has a column named `column`. Used where an
+/// `ALTER TABLE ... ADD COLUMN` migration must tolerate being replayed
+/// against a table that already has it (see `migrate_v4_to_v5`).
+fn column_exists(conn: &Connection, table: &str, column: &str) -> Result<bool, ProductDbError> {
+    let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
+    let mut rows = stmt.query([])?;
+    while let Some(row) = rows.next()? {
+        let name: String = row.get("name")?;
+        if name == column {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 /// v3 -> v4. Widens `translation` from a program-only table to one that can
@@ -700,7 +751,7 @@ mod tests {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 4);
+        assert_eq!(version, CURRENT_PRODUCTDB_VERSION);
 
         let count: i64 = conn
             .query_row("SELECT count(*) FROM translation", [], |r| r.get(0))
@@ -812,7 +863,7 @@ mod tests {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 4);
+        assert_eq!(version, CURRENT_PRODUCTDB_VERSION);
 
         let text: String = conn
             .query_row(
@@ -871,7 +922,7 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         assert_eq!(
-            version, 4,
+            version, CURRENT_PRODUCTDB_VERSION,
             "one blob's parse failure must not abort the migration"
         );
 

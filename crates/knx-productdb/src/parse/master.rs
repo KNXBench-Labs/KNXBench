@@ -21,10 +21,17 @@ fn parse_i64(v: Option<&str>) -> Option<i64> {
     v.and_then(|v| v.parse::<i64>().ok())
 }
 
-pub fn ingest_master_data(
-    conn: &Connection,
-    bytes: &[u8],
-) -> Result<Vec<UnknownConstruct>, ProductDbError> {
+/// What one `knx_master.xml` pass found: the unrecognized constructs
+/// `ingest_master_data`'s doc comment already reported before this slice,
+/// plus (R3) how many `Master`-scope `translation` rows it actually wrote —
+/// measured the same way `ingest_translations` measures its own, never
+/// predicted from the XML.
+pub struct MasterIngest {
+    pub unknown: Vec<UnknownConstruct>,
+    pub translations: usize,
+}
+
+pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterIngest, ProductDbError> {
     let source_path = "knx_master.xml";
     let mut reader = Reader::from_reader(bytes);
     let mut buf = Vec::new();
@@ -107,8 +114,11 @@ pub fn ingest_master_data(
     // and `Hardware.xml`'s own `Languages` blocks (`ingest.rs`):
     // `knx_master.xml` carries no owning element to key its translations to,
     // so `TranslationScope::Master` uses the empty-string sentinel instead.
-    ingest_translations(conn, TranslationScope::Master, source_path, bytes)?;
-    Ok(unknown.into_vec())
+    let translations = ingest_translations(conn, TranslationScope::Master, source_path, bytes)?;
+    Ok(MasterIngest {
+        unknown: unknown.into_vec(),
+        translations,
+    })
 }
 
 #[cfg(test)]
@@ -195,7 +205,7 @@ mod tests {
     #[test]
     fn master_translations_are_ingested_with_the_empty_scope_id() {
         let (_dir, conn) = db();
-        ingest_master_data(&conn, MASTER_WITH_LANGUAGES.as_bytes()).unwrap();
+        let report = ingest_master_data(&conn, MASTER_WITH_LANGUAGES.as_bytes()).unwrap();
         let (scope, scope_id, text): (String, String, String) = conn
             .query_row(
                 "SELECT scope, scope_id, text FROM translation
@@ -207,6 +217,18 @@ mod tests {
         assert_eq!(scope, "Master");
         assert_eq!(scope_id, "");
         assert_eq!(text, "Übersetzt");
+        assert_eq!(report.translations, 1);
+    }
+
+    #[test]
+    fn a_repeated_master_translation_is_parsed_but_not_counted_twice() {
+        // The second ingest sees the same `Translation` element again but
+        // `INSERT OR IGNORE` writes nothing new — R3 counts writes, not
+        // sightings.
+        let (_dir, conn) = db();
+        ingest_master_data(&conn, MASTER_WITH_LANGUAGES.as_bytes()).unwrap();
+        let report = ingest_master_data(&conn, MASTER_WITH_LANGUAGES.as_bytes()).unwrap();
+        assert_eq!(report.translations, 0);
     }
 
     #[test]

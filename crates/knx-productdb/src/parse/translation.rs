@@ -36,6 +36,11 @@ impl TranslationScope {
     }
 }
 
+/// Returns `true` when the row was actually written. `INSERT OR IGNORE`
+/// silently drops a row whose key already exists, so the caller cannot tell
+/// a fresh row from a repeat without asking SQLite how many rows it
+/// changed — which is exactly what this reports (R3: the import report
+/// counts what was captured, not what was merely parsed).
 pub fn insert_translations(
     conn: &Connection,
     scope: TranslationScope,
@@ -44,13 +49,13 @@ pub fn insert_translations(
     ref_id: &str,
     attribute_name: &str,
     text: &str,
-) -> Result<(), ProductDbError> {
-    conn.execute(
+) -> Result<bool, ProductDbError> {
+    let changed = conn.execute(
         "INSERT OR IGNORE INTO translation (scope, scope_id, language, ref_id, attribute_name, text)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         rusqlite::params![scope.as_str(), scope_id, language, ref_id, attribute_name, text],
     )?;
-    Ok(())
+    Ok(changed > 0)
 }
 
 /// A standalone pass over `Languages`/`Language`/`TranslationUnit`/
@@ -64,7 +69,10 @@ pub fn insert_translations(
 /// The scope id is `Manufacturer/@RefId` for `Catalog`/`Hardware`,
 /// `ApplicationProgram/@Id` for `Program`, and `""` for `Master` (which has
 /// no owning element at all — see `TranslationScope::Master`'s doc comment).
-/// Returns the number of `Translation` elements seen, inserted or ignored.
+/// Returns the number of `Translation` elements actually written — rows
+/// where `INSERT OR IGNORE` took effect, not the number merely walked past
+/// (R3: a repeat key contributes nothing to this count even though the
+/// parser still visits it).
 pub fn ingest_translations(
     conn: &Connection,
     scope: TranslationScope,
@@ -114,8 +122,8 @@ pub fn ingest_translations(
                     "TranslationElement" => {
                         ref_id = a.get("RefId").map(str::to_string);
                     }
-                    "Translation" => {
-                        insert_translations(
+                    "Translation"
+                        if insert_translations(
                             conn,
                             scope,
                             &scope_id,
@@ -123,7 +131,8 @@ pub fn ingest_translations(
                             ref_id.as_deref().unwrap_or_default(),
                             a.get("AttributeName").unwrap_or_default(),
                             a.get("Text").unwrap_or_default(),
-                        )?;
+                        )? =>
+                    {
                         count += 1;
                     }
                     _ => {}

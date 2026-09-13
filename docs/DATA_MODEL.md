@@ -274,7 +274,7 @@ also the six `BuildingPartType` variants, which is fewer than the schema
 documents: *Project Schema23 v01.00.00* §1.1.2.3 enumerates ten and §1.2.6.4
 names eleven, so `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` are
 coarsened to `BuildingPart` on import, with a reported `MapProblem` rather
-than silently ([KNOWN_LIMITATIONS.md §88](KNOWN_LIMITATIONS.md)).
+than silently ([KNOWN_LIMITATIONS.md §89](KNOWN_LIMITATIONS.md)).
 
 **A device without a line is valid** and lives in `Topology::unassigned`. The
 reference project contains exactly one, and it is precisely the device

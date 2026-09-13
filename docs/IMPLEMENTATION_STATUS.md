@@ -4878,10 +4878,10 @@ the six variants the reference projects exhibit; schema 23 documents eleven
 values, so `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` are
 coarsened to `BuildingPart` on import (with a reported `MapProblem`, not
 silently) and re-exported as `BuildingPart`. Now
-[KNOWN_LIMITATIONS.md §88](KNOWN_LIMITATIONS.md); deliberately not fixed
+[KNOWN_LIMITATIONS.md §89](KNOWN_LIMITATIONS.md); deliberately not fixed
 inside a coordinate ADR.
 
 Docs updated to match: `DATA_MODEL.md` §5 and §11, `ROADMAP.md` (T21's
 motion-constraint and help-gating mentions, plus a new answered row in "Open
 questions"), `GAP_ANALYSIS_ETS.md` (D1, D2, the T21 backlog bullet and the
-two lists that gated on it), `goal.md` §3, `KNOWN_LIMITATIONS.md` §88.
+two lists that gated on it), `goal.md` §3, `KNOWN_LIMITATIONS.md` §89.

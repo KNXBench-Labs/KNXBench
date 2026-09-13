@@ -183,7 +183,7 @@ What actually remains, after the decision:
   five documented `Space/@Type` values (`Stairway`, `RoomPart`, `Area`,
   `Ground`, `Segment`) have no `BuildingPartType` variant and are coarsened
   to `BuildingPart` on import, with a reported `MapProblem` —
-  `docs/KNOWN_LIMITATIONS.md` §88. Deliberately not fixed in passing.
+  `docs/KNOWN_LIMITATIONS.md` §89. Deliberately not fixed in passing.
 
 ### D10 — the data half of language-aware display
 

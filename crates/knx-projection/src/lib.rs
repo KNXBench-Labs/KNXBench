@@ -251,6 +251,114 @@ pub struct DeviceDetail {
     /// Formatted individual address (e.g. `"1.1.1"`), `None` if unassigned.
     pub address: Option<String>,
     pub com_objects: Vec<ComObjectNode>,
+    /// The device's product/hardware identity (T16): what the project
+    /// itself states, plus whatever `apps/knx-server` can add from a
+    /// product database. See [`DeviceProductNode`].
+    pub product: DeviceProductNode,
+}
+
+/// A device's product identity, in two halves: `product_ref`/`program_ref`
+/// are what `knx_core::DeviceInstance` states verbatim (this crate can
+/// always fill those in); `catalog`/`resolution` are what a product
+/// database says about them, which this crate has no way to check — it
+/// depends on nothing but `knx-core` (`xtask check-layering`), and knowing
+/// whether a database is even loaded is `apps/knx-server`'s business, not
+/// this one's. [`build_device_detail`] fills the first half and leaves an
+/// honest placeholder in the second; `apps/knx-server::domain::device_detail`
+/// always overwrites that placeholder before a response leaves the process.
+/// See [`ProductResolution`] for exactly what the placeholder is and why it
+/// never leaks.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct DeviceProductNode {
+    /// `DeviceInstance::product_ref` (ETS `ProductRefId`), verbatim. `None`
+    /// when the project states an empty string — an empty ref names no
+    /// product, same convention `knx_etsproj::compare` already uses for
+    /// this field.
+    pub product_ref: Option<String>,
+    /// `DeviceInstance::program_ref` (ETS `Hardware2ProgramRefId`),
+    /// verbatim, under the same empty-string-means-`None` rule as
+    /// `product_ref`.
+    pub program_ref: Option<String>,
+    /// Filled by `apps/knx-server` from the product database. `None`
+    /// unless `resolution` is `Resolved`.
+    pub catalog: Option<DeviceProductCatalog>,
+    /// Why `catalog` is what it is — always present, never a bare "unknown".
+    ///
+    /// [`build_device_detail`] (pure, no database access) can only tell
+    /// `NoReference` (both refs empty) from "a ref is stated" — it cannot
+    /// tell `NoDatabase` from `NotInDatabase`, since that distinction needs
+    /// to know whether a product database is even loaded, which is
+    /// `apps/knx-server`'s state, not this crate's. So when a ref is
+    /// present it emits `NoDatabase` as a placeholder — a true statement at
+    /// the moment this crate produces it ("as far as I can tell, no
+    /// database was consulted") — and `apps/knx-server::domain::device_detail`
+    /// **always** overwrites it with `Resolved`, `NoDatabase` (confirmed)
+    /// or `NotInDatabase` before the response reaches the UI. A
+    /// server-side test
+    /// (`device_product_resolution_always_overwrites_the_projections_placeholder`)
+    /// pins that replacement. No fifth "not yet resolved" variant exists;
+    /// the UI never sees this field before the server has spoken.
+    pub resolution: ProductResolution,
+}
+
+/// What a product database knows about a device's product, hardware and
+/// application program, mirroring `knx_productdb::query::DeviceProductRow`
+/// field-for-field (this crate cannot depend on `knx-productdb` —
+/// `xtask check-layering` — so the shape is duplicated rather than shared).
+/// Every field beyond `manufacturer_id` is `Option` because a
+/// partially-installed manufacturer catalogue (a product installed without
+/// its application program, for instance) is real, valid database state,
+/// not an error — CLAUDE.md: never silently discard information.
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
+pub struct DeviceProductCatalog {
+    pub manufacturer_id: String,
+    /// `manufacturer.name` from the KNX master data (`knx_master.xml`).
+    pub manufacturer_name: Option<String>,
+    /// `product.text` — the product's display name.
+    pub product_text: Option<String>,
+    pub order_number: Option<String>,
+    /// `hardware.name`. Never translated: unlike `product.text`, no
+    /// manufacturer package this project has ingested has ever placed a
+    /// `Hardware` element's own id inside a `Languages` block (see
+    /// `knx-productdb`'s `device_product` doc comment for the measurement).
+    pub hardware_name: Option<String>,
+    pub hardware_version: Option<String>,
+    pub hardware_serial_number: Option<String>,
+    /// `catalog_item.name` — `None` when this product/hardware pair is not
+    /// listed in any catalog section, which is valid: not every installed
+    /// product needs a catalog entry.
+    pub catalog_item_name: Option<String>,
+    pub catalog_item_number: Option<String>,
+    /// `application_program.id`, so the UI can cross-reference devices
+    /// sharing the same program without a second round trip.
+    pub application_program_id: Option<String>,
+    pub application_name: Option<String>,
+    pub application_number: Option<String>,
+    pub application_version: Option<String>,
+    pub mask_version: Option<String>,
+}
+
+/// Why [`DeviceProductNode::catalog`] is what it is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+pub enum ProductResolution {
+    /// Both refs resolved against an installed product database.
+    Resolved,
+    /// The project states no product ref at all — both `product_ref` and
+    /// `program_ref` are empty strings in the source, a device created
+    /// without one or an import that carried none.
+    NoReference,
+    /// No product database is loaded to resolve the stated refs against.
+    /// Also [`build_device_detail`]'s placeholder for "the server has not
+    /// looked yet" when a ref is present — see
+    /// [`DeviceProductNode::resolution`]'s doc comment for why that overload
+    /// is safe and never reaches the UI unconfirmed.
+    NoDatabase,
+    /// The refs exist and a database is loaded, but it does not contain
+    /// them — the manufacturer's catalogue is simply not installed here.
+    NotInDatabase,
 }
 
 #[derive(Debug, Clone, Serialize, TS)]
@@ -324,7 +432,28 @@ pub fn build_device_detail(project: &Project, id: knx_core::DeviceId) -> Option<
             .filter_map(|com_id| project.devices.com_object(*com_id))
             .map(|com| build_com_object_node(com, project))
             .collect(),
+        product: build_device_product_node(device),
     })
+}
+
+/// Fills the project-stated half of [`DeviceProductNode`] and leaves the
+/// database half at the honest placeholder described on
+/// [`DeviceProductNode::resolution`].
+fn build_device_product_node(device: &knx_core::DeviceInstance) -> DeviceProductNode {
+    let non_empty = |s: &str| Some(s.to_string()).filter(|s| !s.is_empty());
+    let product_ref = non_empty(&device.product_ref);
+    let program_ref = non_empty(&device.program_ref);
+    let resolution = if product_ref.is_none() && program_ref.is_none() {
+        ProductResolution::NoReference
+    } else {
+        ProductResolution::NoDatabase
+    };
+    DeviceProductNode {
+        product_ref,
+        program_ref,
+        catalog: None,
+        resolution,
+    }
 }
 
 fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -> ComObjectNode {
@@ -739,6 +868,36 @@ mod tests {
     fn build_device_detail_returns_none_for_an_unknown_device() {
         let project = project_with_one_device();
         assert!(build_device_detail(&project, knx_core::DeviceId(99)).is_none());
+    }
+
+    #[test]
+    fn a_device_with_both_refs_gets_them_verbatim_and_an_unresolved_placeholder() {
+        // `project_with_one_device` already sets `product_ref: "P"` and
+        // `program_ref: "H"` — this crate has no database to check them
+        // against, so `resolution` must sit at the `NoDatabase` placeholder
+        // `apps/knx-server` is obliged to overwrite (see
+        // `DeviceProductNode::resolution`'s doc comment), not `NoReference`.
+        let project = project_with_one_device();
+        let detail = build_device_detail(&project, knx_core::DeviceId(1)).unwrap();
+        assert_eq!(detail.product.product_ref.as_deref(), Some("P"));
+        assert_eq!(detail.product.program_ref.as_deref(), Some("H"));
+        assert!(detail.product.catalog.is_none());
+        assert_eq!(detail.product.resolution, ProductResolution::NoDatabase);
+    }
+
+    #[test]
+    fn a_device_with_neither_ref_reports_no_reference() {
+        // `device()` sets both `product_ref`/`program_ref` to `""` — an
+        // empty ref is not a usable ref, so this must resolve to
+        // `NoReference`, not the `NoDatabase` placeholder, and needs no
+        // server-side overwrite at all.
+        let mut project = Project::new(Language("en".into()));
+        project.devices.insert(device(1, "Orphan", None));
+        let detail = build_device_detail(&project, knx_core::DeviceId(1)).unwrap();
+        assert_eq!(detail.product.product_ref, None);
+        assert_eq!(detail.product.program_ref, None);
+        assert!(detail.product.catalog.is_none());
+        assert_eq!(detail.product.resolution, ProductResolution::NoReference);
     }
 
     #[test]

@@ -777,15 +777,27 @@ struct ComObjectOverlayInput {
     >,
 }
 
-/// Builds one device's detail panel, optionally overlaying communication
-/// object `name`/`description` with a product-database translation
-/// (T33 Task 2; Global Constraint 2 is the invariant this guards: only a
-/// `Program`/`ProgramRef`-layer value is product-supplied text, so only
-/// those may be overlaid — `Instance`/`Inferred`/`UserEdit` are the
-/// project's own words and are never translated). `language: None`, or no
-/// product database open, issues no product-database query at all and
-/// returns byte-identical to `device_detail_impl` alone (Global
-/// Constraint 3).
+/// Builds one device's detail panel, overlaying two independent things from
+/// the product database on top of what `device_detail_impl` alone can know:
+///
+/// 1. **`DeviceProductNode` resolution (T16).** Whether the device's stated
+///    `product_ref`/`program_ref` resolve against an installed product
+///    database is a database fact, not a translation — it is resolved
+///    whenever a ref is present, `language` or not, overwriting
+///    `build_device_detail`'s `NoDatabase` placeholder with `Resolved`,
+///    `NoDatabase` (confirmed) or `NotInDatabase`. See
+///    `knx_projection::DeviceProductNode::resolution`'s doc comment for why
+///    that placeholder is safe to overwrite unconditionally.
+/// 2. **Communication object `name`/`description` translation (T33 Task 2;
+///    Global Constraint 2 is the invariant this guards: only a
+///    `Program`/`ProgramRef`-layer value is product-supplied text, so only
+///    those may be overlaid — `Instance`/`Inferred`/`UserEdit` are the
+///    project's own words and are never translated).** This part alone
+///    needs `language: Some(_)`.
+///
+/// `language: None` with no product ref stated, or no product database
+/// open, issues no product-database query at all and returns
+/// byte-identical to `device_detail_impl` alone (Global Constraint 3).
 pub fn device_detail(
     state: &AppState,
     device_id: u32,
@@ -821,17 +833,65 @@ pub fn device_detail(
         (detail, overlay_input)
     };
 
-    let (Some(lang), Some(overlay_input)) = (language, overlay_input) else {
+    // T16: a product/program ref is present, so `resolution` needs a real
+    // answer regardless of `language` — see this function's own doc comment.
+    let needs_product_lookup = !matches!(
+        detail.product.resolution,
+        knx_projection::ProductResolution::NoReference
+    );
+
+    if !needs_product_lookup && (language.is_none() || overlay_input.is_none()) {
         return Ok(detail);
-    };
+    }
 
     let Some(products_mutex) = state.product_db.as_ref() else {
+        if needs_product_lookup {
+            detail.product.resolution = knx_projection::ProductResolution::NoDatabase;
+        }
         return Ok(detail);
     };
 
     // Step 2: lock only `product_db` (`project`'s lock above is already
-    // dropped — the two mutexes are never held at once).
+    // dropped — the two mutexes are never held at once). Shared by both
+    // overlays below rather than locked twice.
     let products = products_mutex.lock().expect("state mutex poisoned");
+
+    if needs_product_lookup {
+        let product_ref = detail.product.product_ref.as_deref().unwrap_or_default();
+        let program_ref = detail.product.program_ref.as_deref().unwrap_or_default();
+        match knx_productdb::query::device_product(&products, product_ref, program_ref, language)
+            .map_err(|e| e.to_string())?
+        {
+            Some(row) => {
+                detail.product.resolution = knx_projection::ProductResolution::Resolved;
+                detail.product.catalog = Some(knx_projection::DeviceProductCatalog {
+                    manufacturer_id: row.manufacturer_id,
+                    manufacturer_name: row.manufacturer_name,
+                    product_text: row.product_text,
+                    order_number: row.order_number,
+                    hardware_name: row.hardware_name,
+                    hardware_version: row.hardware_version,
+                    hardware_serial_number: row.hardware_serial_number,
+                    catalog_item_name: row.catalog_item_name,
+                    catalog_item_number: row.catalog_item_number,
+                    application_program_id: row.application_program_id,
+                    application_name: row.application_name,
+                    application_number: row.application_number,
+                    application_version: row.application_version,
+                    mask_version: row.mask_version,
+                });
+            }
+            None => {
+                detail.product.resolution = knx_projection::ProductResolution::NotInDatabase;
+                detail.product.catalog = None;
+            }
+        }
+    }
+
+    let (Some(lang), Some(overlay_input)) = (language, overlay_input) else {
+        return Ok(detail);
+    };
+
     let program_id = knx_productdb::query::resolve_program(&products, &overlay_input.program_ref)
         .map_err(|e| e.to_string())?;
     // A device whose program is not installed is ordinary project state,

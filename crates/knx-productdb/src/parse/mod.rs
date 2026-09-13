@@ -35,11 +35,26 @@ pub(crate) fn report_unknown_attrs(
 /// write `Linkable="false"`, and that is not unknown text, it is the
 /// datatype's own lexical form — so `"True"`, `"yes"` and `"-1"` still stay
 /// `None`, uppercase and synonyms included.
-pub(crate) fn bool_flag(a: &Attrs, name: &str) -> Option<i64> {
+///
+/// An attribute that is simply absent is not reported — there is nothing to
+/// discard. One present under a spelling `xs:boolean` does not recognize is
+/// reported through `collector` at `xpath` instead of vanishing into `None`
+/// unremarked, so the next corpus's surprise ends up in an ingest report
+/// rather than nowhere.
+pub(crate) fn bool_flag(
+    collector: &mut UnknownCollector,
+    xpath: &str,
+    a: &Attrs,
+    name: &str,
+) -> Option<i64> {
     match a.get(name) {
         Some("1") | Some("true") => Some(1),
         Some("0") | Some("false") => Some(0),
-        _ => None,
+        Some(other) => {
+            collector.attribute(xpath, name, other);
+            None
+        }
+        None => None,
     }
 }
 
@@ -61,16 +76,60 @@ mod tests {
 
     #[test]
     fn all_four_xs_boolean_spellings_are_recognised() {
-        assert_eq!(bool_flag(&attrs_from(r#"<E F="1"/>"#), "F"), Some(1));
-        assert_eq!(bool_flag(&attrs_from(r#"<E F="0"/>"#), "F"), Some(0));
-        assert_eq!(bool_flag(&attrs_from(r#"<E F="true"/>"#), "F"), Some(1));
-        assert_eq!(bool_flag(&attrs_from(r#"<E F="false"/>"#), "F"), Some(0));
+        let mut unknown = UnknownCollector::default();
+        assert_eq!(
+            bool_flag(&mut unknown, "/E", &attrs_from(r#"<E F="1"/>"#), "F"),
+            Some(1)
+        );
+        assert_eq!(
+            bool_flag(&mut unknown, "/E", &attrs_from(r#"<E F="0"/>"#), "F"),
+            Some(0)
+        );
+        assert_eq!(
+            bool_flag(&mut unknown, "/E", &attrs_from(r#"<E F="true"/>"#), "F"),
+            Some(1)
+        );
+        assert_eq!(
+            bool_flag(&mut unknown, "/E", &attrs_from(r#"<E F="false"/>"#), "F"),
+            Some(0)
+        );
+        assert!(unknown.into_vec().is_empty());
     }
 
     #[test]
     fn capitalised_or_absent_spellings_stay_none() {
-        assert_eq!(bool_flag(&attrs_from(r#"<E F="True"/>"#), "F"), None);
-        assert_eq!(bool_flag(&attrs_from(r#"<E F=""/>"#), "F"), None);
-        assert_eq!(bool_flag(&attrs_from(r#"<E/>"#), "F"), None);
+        let mut unknown = UnknownCollector::default();
+        assert_eq!(
+            bool_flag(&mut unknown, "/E", &attrs_from(r#"<E F="True"/>"#), "F"),
+            None
+        );
+        assert_eq!(
+            bool_flag(&mut unknown, "/E", &attrs_from(r#"<E F=""/>"#), "F"),
+            None
+        );
+        assert_eq!(
+            bool_flag(&mut unknown, "/E", &attrs_from(r#"<E/>"#), "F"),
+            None
+        );
+    }
+
+    #[test]
+    fn an_unrecognised_spelling_is_recorded_through_the_collector() {
+        let mut unknown = UnknownCollector::default();
+        let value = bool_flag(&mut unknown, "/E", &attrs_from(r#"<E F="True"/>"#), "F");
+        assert_eq!(value, None);
+        let recorded = unknown.into_vec();
+        assert_eq!(recorded.len(), 1);
+        assert_eq!(recorded[0].xpath, "/E");
+        assert_eq!(recorded[0].name, "F");
+        assert_eq!(recorded[0].sample.as_deref(), Some("True"));
+    }
+
+    #[test]
+    fn an_absent_attribute_is_not_reported_as_unrecognised() {
+        let mut unknown = UnknownCollector::default();
+        let value = bool_flag(&mut unknown, "/E", &attrs_from(r#"<E/>"#), "F");
+        assert_eq!(value, None);
+        assert!(unknown.into_vec().is_empty());
     }
 }

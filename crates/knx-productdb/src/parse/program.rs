@@ -270,7 +270,12 @@ fn handle_start_or_empty(
                         a.get("LoadProcedureStyle"),
                         a.get("DefaultLanguage"),
                         a.get("Hash"),
-                        bool_flag(a, "Linkable"),
+                        bool_flag(
+                            unknown,
+                            "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram",
+                            a,
+                            "Linkable",
+                        ),
                         a.get("OriginalManufacturer"),
                         source_sha256,
                     ],

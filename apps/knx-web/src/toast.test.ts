@@ -10,10 +10,12 @@
 // DOM at all, so the switch from `node` is otherwise a no-op for it.
 import { afterEach, describe, expect, it } from "vitest";
 import { findHoliday, humorizeError, isLateNight, pickStartupToast } from "./toast";
-import { LATE_NIGHT_MESSAGES } from "./toastCopy";
+import { ERROR_WRAPPERS, HOLIDAYS, LATE_NIGHT_MESSAGES } from "./toastCopy";
 import type { HolidayEntry } from "./toastCopy";
 import { messages as enMessages } from "./messages/en";
 import { messages as deMessages } from "./messages/de";
+import { translateFor } from "./i18n";
+import type { TranslatableKey } from "./i18n";
 import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 afterEach(() => {
@@ -111,5 +113,80 @@ describe("toast copy honors the active UI language", () => {
     expect(humorizeError("Duplicate group address", () => 0)).toBe(
       deMessages["toast.error.notAsPlanned"].replace("{msg}", "Duplicate group address"),
     );
+  });
+});
+
+// Every entry in all three arrays is a real `messages/en.ts`/
+// `messages/de.ts` catalogue key. `resolveIn` below is the same
+// `translateFor` the production code path uses (`toast.ts`'s
+// `resolveTemplate`), so these tests catch a key with no matching
+// catalogue row silently "resolving" to itself. This file's own synthetic
+// non-key fixtures above (`holidays`, `["Nope: {msg}"]`, etc.) are
+// untouched — they test the fallback mechanism on purpose, not a mistake
+// this suite should flag.
+describe("toastCopy has enough material to stop repeating itself", () => {
+  function resolveIn(language: "en" | "de", key: string): string {
+    return translateFor(language, key as TranslatableKey);
+  }
+
+  it("ERROR_WRAPPERS has at least 30 entries, each a real catalogue key in both languages", () => {
+    expect(ERROR_WRAPPERS.length).toBeGreaterThanOrEqual(30);
+    for (const key of ERROR_WRAPPERS) {
+      expect(resolveIn("en", key)).not.toBe(key);
+      expect(resolveIn("de", key)).not.toBe(key);
+    }
+  });
+
+  it("ERROR_WRAPPERS resolves to distinct text within each language", () => {
+    const en = ERROR_WRAPPERS.map((key) => resolveIn("en", key));
+    const de = ERROR_WRAPPERS.map((key) => resolveIn("de", key));
+    expect(new Set(en).size).toBe(en.length);
+    expect(new Set(de).size).toBe(de.length);
+  });
+
+  it("every ERROR_WRAPPERS entry contains the {msg} placeholder in both languages", () => {
+    for (const key of ERROR_WRAPPERS) {
+      expect(resolveIn("en", key)).toContain("{msg}");
+      expect(resolveIn("de", key)).toContain("{msg}");
+    }
+  });
+
+  it("LATE_NIGHT_MESSAGES has at least 30 entries, each a real catalogue key in both languages", () => {
+    expect(LATE_NIGHT_MESSAGES.length).toBeGreaterThanOrEqual(30);
+    for (const key of LATE_NIGHT_MESSAGES) {
+      expect(resolveIn("en", key)).not.toBe(key);
+      expect(resolveIn("de", key)).not.toBe(key);
+    }
+  });
+
+  it("LATE_NIGHT_MESSAGES resolves to distinct text within each language", () => {
+    const en = LATE_NIGHT_MESSAGES.map((key) => resolveIn("en", key));
+    const de = LATE_NIGHT_MESSAGES.map((key) => resolveIn("de", key));
+    expect(new Set(en).size).toBe(en.length);
+    expect(new Set(de).size).toBe(de.length);
+  });
+
+  it("HOLIDAYS has at least 30 entries, each on a distinct calendar date", () => {
+    expect(HOLIDAYS.length).toBeGreaterThanOrEqual(30);
+    const dates = HOLIDAYS.map((h) => `${h.month}-${h.day}`);
+    expect(new Set(dates).size).toBe(dates.length);
+  });
+
+  it("every HOLIDAYS message key is a real catalogue key resolving in both languages", () => {
+    for (const holiday of HOLIDAYS) {
+      expect(holiday.messages.length).toBeGreaterThan(0);
+      for (const key of holiday.messages) {
+        expect(resolveIn("en", key)).not.toBe(key);
+        expect(resolveIn("de", key)).not.toBe(key);
+      }
+    }
+  });
+
+  it("HOLIDAYS messages resolve to distinct text within each language (no repeated joke)", () => {
+    const allKeys = HOLIDAYS.flatMap((h) => h.messages);
+    const en = allKeys.map((key) => resolveIn("en", key));
+    const de = allKeys.map((key) => resolveIn("de", key));
+    expect(new Set(en).size).toBe(en.length);
+    expect(new Set(de).size).toBe(de.length);
   });
 });

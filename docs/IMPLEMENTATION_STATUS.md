@@ -2241,10 +2241,11 @@ read from DPT-AS directly rather than from a summary table:
   `4.001` (ASCII) and `4.002` (ISO-8859-1) both occupy a full octet —
   `require_bytes::<1>`, not `require_short` (its 6-bit inline threshold
   cannot hold an 8-bit field).
-- **Main type 10** (`10.001`, time of day + day of week, DPT-AS §3.11)
-  represents day-of-week `0` as "no day" (`Option::None`) — this codec's
-  own reading of a field the Standard leaves the eighth value of
-  undocumented, with an exact round trip.
+- **Main type 10** (`10.001`, time of day + day of week, DPT-AS §3.11,
+  page 41) represents day-of-week `0` as "no day" (`Option::None`) — §3.11's
+  own Day column prints `0 = no day` directly (range `[0...7]`); only the
+  `Option<u8>` storage shape, not the `0 = no day` fact, is this codec's own
+  choice, with an exact round trip.
 - **Main type 11** (`11.001`, date, DPT-AS §3.12) resolves the two-digit
   year by the century window DPT-AS §3.12 EXAMPLE 5 states directly
   (raw `>= 90` → `1900 +` raw, else `2000 +` raw).
@@ -2257,11 +2258,13 @@ read from DPT-AS directly rather than from a summary table:
   hour, minute, second, and eight status flags) into
   `DptValue::DateTime` — nothing is silently dropped. One genuine Standard
   inconsistency surfaced and is documented rather than guessed around:
-  octet 1's field table names a bit called `SRC`, but no bit position is
-  ever assigned to it, and Note 15 says the other seven bits of that octet
-  are reserved-must-be-zero; confirmed against the source PDF page
-  directly. `DptValue` has no `src` field because the Standard assigns it
-  no wire bit. Month/Day and Hour/Minute/Second range checks are enforced
+  octet 1's own diagram contradicts itself — the field-*names* row gives a
+  bit called `SRC` position 6, but the bit-*encoding* row directly beneath
+  it marks that same bit `r` (reserved), and Note 15 sides with the
+  encoding row; confirmed against the source PDF page directly. This codec
+  follows the encoding row and Note 15 (a ruling between two contradictory
+  rows, not an absent bit), so `DptValue` has no `src` field. Month/Day and
+  Hour/Minute/Second range checks are enforced
   only when the matching invalid-flag says the field is valid, per
   Note 11's Hour=24 rule and the section comment in `codec.rs`.
 

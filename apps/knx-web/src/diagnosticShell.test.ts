@@ -1,4 +1,4 @@
-// Guards that the diagnostic panels stay inside the shell's class, theme and density system.
+/** Guards that the diagnostic panels stay inside the shell's theme, density and class system. */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";

@@ -3814,3 +3814,39 @@ the one honest fix, and it is deliberately not done here: it would be the
 first migration in the chain to call the parser, which is an architectural
 commitment (migrations would gain a dependency on parse-layer behaviour that
 can itself change) worth making on purpose rather than in passing.
+
+## 88. Five documented `Space/@Type` values are coarsened to `BuildingPart` on import
+
+**Limitation.** `knx_core::BuildingPartType` has six variants — `Building`,
+`Floor`, `Room`, `Corridor`, `DistributionBoard`, `BuildingPart` — which are
+exactly the six values *observed* in the reference projects
+([DATA_MODEL.md §5](DATA_MODEL.md)). The published schema documents eleven.
+*Project Schema23 v01.00.00* §1.1.2.3, `simpleType SpaceType_t`, "This
+enumeration contains the different types of available spaces in the ETS6",
+lists ten: `Building`, `BuildingPart`, `Floor`, `Stairway`, `Room`,
+`Corridor`, `DistributionBoard`, `Area`, `Ground`, `Segment`. §1.2.6.4's own
+prose for `Space_t/@Type` names the same set plus `RoomPart` — the document
+is internally inconsistent about that one value, and neither list is
+implemented in full. So `Stairway`, `RoomPart`, `Area`, `Ground` and
+`Segment` have no variant here **[V]**.
+
+**Cause.** `parse_building_part_type` (`crates/knx-etsproj/src/values.rs`)
+matches the six known strings and returns `ValueError::UnknownEnumValue` for
+anything else; `map.rs`'s caller (line ~1428) records that as a `MapProblem`
+and substitutes `BuildingPartType::BuildingPart`. Nothing is silently
+dropped — the problem reaches the import report — but the substitution is
+lossy, and re-export writes `Type="BuildingPart"` (`export/schema11.rs`), so
+a round trip of such a project changes the attribute.
+
+**Impact.** None on the three reference projects: no sample contains any of
+the five. A real schema-21 or schema-23 project with a stairway, an outdoor
+`Ground` space or a `RoomPart` imports with one reported problem per space
+and a flattened type, which costs the user the distinction in the building
+tree and costs an ETS-bound export the original value.
+
+**Lifted when.** `BuildingPartType` gains the five variants, with import,
+export and the store's type mapping extended together. Deliberately not done
+while discovering it, on 2026-09-13, during
+[ADR-0019](adr/0019-building-model-stays-topological.md)'s evidence sweep:
+that ADR decided the *coordinate* question and adding domain variants is a
+separate change with its own migration surface, not a drive-by.

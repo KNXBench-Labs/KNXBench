@@ -2493,14 +2493,18 @@ join `catalog_items` already uses) and `application_program.name`
 rows therefore have a reader now, but the claim only narrows, it does
 not close: `Master`-scope translations — the entire shared KNX
 vocabulary of `knx_master.xml` — are still stored, queryable, and read
-by nothing. A second, orthogonal fact, empirically checked rather than
-assumed while building T16 (four manufacturer packages inspected
-directly): `hardware.name` itself is never a translation target in this
-schema at all — no `Hardware.xml` this project has seen places a
-`Hardware/@Id` inside a `TranslationElement/@RefId`, only `Product/@Id`s
-are. That is not a missing reader; there is nothing there to read,
-`Hardware`-scope rows in this schema are always keyed to a `Product`,
-never to the `Hardware` element that owns it. The import report still
+by nothing. A second, orthogonal observation, empirically
+checked rather than assumed while building T16 and re-checked in review:
+across nine `Hardware.xml` files from seven manufacturers — the five
+packages under `OriginalData/ProductDatabases/` plus the manufacturer
+packages inside the two reference ETS exports, which are one installation
+exported from ETS 4 and ETS 6 rather than two independent ones — no
+`Hardware.xml` places a `Hardware/@Id` inside a
+`TranslationElement/@RefId`; every one of them is a `Product/@Id`. So
+`hardware.name` has nothing to read rather than a missing reader, in
+every package seen so far. This is a statement about the corpus, not
+about the format: the schema does not forbid a `Hardware`-keyed
+translation row, and one package carrying one would overturn it. The import report still
 does not state how many translations a package contributed, so a user
 is told about unknown constructs but not about captured text.
 Locale-prefix matching is still absent, as recorded in §37: a stored

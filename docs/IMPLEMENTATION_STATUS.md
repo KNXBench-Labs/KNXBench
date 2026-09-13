@@ -3790,3 +3790,103 @@ Web gates: `npm test -- --run` **377 passed across 37 files** (up from 363
 across 36), `tsc --noEmit` clean. Fixtures are fictional throughout — made-up
 `1/0/x` group addresses and `1.1.11`/`1.1.13` device addresses, no real
 product, device name or occupied address anywhere.
+
+**The workbench coverage matrix, verified against the code (2026-09-13),
+branch `codex-ui-workbench`.** The twelve-row matrix that steered this UI
+rebuild was written before the shell existed and lives in a gitignored
+working log, so it could neither be trusted nor cited. It is re-checked
+here against the tree as it stands, one file and line per row, and kept in
+`docs/` where a merge can carry it. "Reachable" below means reachable by
+some device-independent path, not merely present in the DOM.
+
+| # | Capability | Verdict | Evidence |
+| --- | --- | --- | --- |
+| 1 | Native/ETS open, save, save as, export | Holds | `apps/knx-web/src/App.tsx:430-436` (File menu), `:461` (Save), `commandRegistry.ts:56-79` (same four as commands) |
+| 2 | CSV, documentation export, project diff | Holds | `App.tsx:438` (CSV), `:445` (documentation), `:451` (compare), `:495` (CSV again as the address workspace's actions) |
+| 3 | Import errors and warnings | Holds | `Dashboard.tsx:35-46` (counts), `App.tsx:474` (persistent notice), `:491` (log), `:506` (toasts) |
+| 4 | Buildings, topology, CRUD | Holds | `App.tsx:480` (navigation), `:492` (`StructureWorkspace`), `:502` (inspector), `StructureWorkspace.tsx:73` (create) |
+| 5 | Catalogue, install, device creation | Holds | `App.tsx:481` (navigation entry), `:507` (`CatalogBrowser`), `StructureWorkspace.tsx:73` (contextual create) |
+| 6 | Addresses, ranges, DPT, links, flags | Holds | `App.tsx:480` (navigation), `StructureWorkspace.tsx:98` (`GroupAddressTable`), `App.tsx:502` (inspector) |
+| 7 | Parameters, diagnostics, module writes | Holds | `App.tsx:498` (`DeviceWorkspace`), `Inspector.tsx:680` (tabs), `:735` (`ParameterPanel`) |
+| 8 | Multi-select, bulk, undo, search, palette | Holds | `App.tsx:456-457` (undo/redo), `:459` (search), `:460` (palette), `:467` (`BulkActionToolbar`) |
+| 9 | Log, bus monitor, compose | **Was false** — both halves | see below |
+| 10 | UI language, product language, packs | Holds | `SettingsPanel.tsx:291` (product data), `:312` (UI), `App.tsx:462`/`:487` (two ways in), `commandRegistry.ts:121` (a third) |
+| 11 | Appearance | Holds | `SettingsPanel.tsx:233-256` (theme, accent, density), `theme.ts:5` (`system` is a real entry), `styles.css:1045-1046` (the two density tokens) |
+| 12 | Additional diagnostic window | Still open, as written | no `window.open`, no `BroadcastChannel` anywhere under `apps/knx-web/src`; the row's "New entry" was always a proposal |
+
+Row 9 was true when it was written and false when it was checked, in both
+halves.
+
+*Reachability.* Before the shell, Log and Bus monitor were always-visible
+toolbar buttons. Afterwards their only entry points were
+`App.tsx:485-486`, inside the `diagnostic-navigation` nav at `:484`,
+inside the `{navigationOpen && …}` guard at `:478` — so the navigation
+toggle at `:465` could remove the only way to reach either panel, and
+`commandRegistry.ts` had no entry for them. Settings survived by accident,
+via the toolbar gear at `App.tsx:462`. Per the standing rule that new
+actions stay reachable through the same validated commands regardless of
+input device, `open-log`, `open-bus-monitor` and `open-settings` now exist
+(`commandRegistry.ts:108-125`), all three enabled without an open project
+because both panels work without one. Three `App.test.tsx` tests collapse
+the pane first and then drive the palette.
+
+*"Diagnostic workspaces".* Neither panel was one: both opened with a bare
+`<h2>` while every other centre-pane view uses `.workspace-heading` with
+an eyebrow and an `<h1>`. Both now match (`LogPanel.tsx:77`,
+`BusMonitorPanel.tsx:323`), with the severity filters and the connect
+controls as their action clusters, and the monitor's eyebrow naming its
+only transport — `knx-server`'s bus layer is tunnelling-only, no discovery
+and no routing (`apps/knx-server/src/bus.rs:5-13`).
+
+Four token escapes inside those three panels were fixed in passing, each a
+capability that existed and did not reach the screen:
+
+- `.bus-monitor-table th, td` declared its own cell padding at a
+  specificity that beat the shell's `th, td { padding:
+  var(--knx-cell-padding); }`, so Compact/Comfortable moved every table in
+  the application except the telegram one.
+- Eight rules covering ten secondary-text classes dimmed themselves with
+  `opacity` instead of `var(--knx-muted)`, which no theme can retune.
+  Contrast *falls* with the token (Porcelain 7.98:1 to 5.51:1 against
+  `--knx-surface`) and still clears WCAG AA; this is token participation,
+  not a contrast improvement.
+- `bus-monitor-row-new` — design D34's "arrived in the latest poll"
+  emphasis — was set on rows and asserted by nine test expectations, while
+  the rule that drew it had been deleted with the rest of the per-telegram
+  animation. It is drawn again as a static accent rail, because telegrams
+  still must not animate.
+- The bus compose form's "Project Undo cannot reverse this action" notice
+  had no rule at all and rendered as body text. It is a warning again.
+
+The settings overlay's selects carried `font-size: 1rem` and `padding:
+0.4rem` — a 16px control in a 13px shell, the one place the type scale did
+not reach. Both are gone; the shared `input, select, textarea` rule, whose
+`min-height` the density setting drives, applies instead. Catalogue and
+Search selects share that rule and come along.
+
+A new guard, `apps/knx-web/src/diagnosticShell.test.ts`, fails the suite on
+either defect shape: a panel class name with no rule in `styles.css` (with
+an explicit allowlist for the query hooks that draw nothing on purpose),
+and a cell-padding declaration that outranks the density tokens. Its
+ADR-0018 header is `/** One sentence. */`: `check-headers`
+(`xtask/src/headers.rs:69`) recognises no line-comment form for
+TypeScript, so a `// …` first line counts as no header at all and trips
+the ratchet.
+
+Two things were deliberately left alone. `DeviceWorkspace`'s heading
+(`Inspector.tsx:679`) uses `.workspace-heading` with an `<h2>` and no
+eyebrow rather than the eyebrow/`<h1>` shape — cosmetic, and it belongs to
+the device slice, not this one. Row 12's companion diagnostic window is
+untouched: nothing in the tree opens a second window, and deciding whether
+it should is the row's own task.
+
+Gates, all eight green from one run each: `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace --no-fail-fast` (**1187 passed, 0 failed, 3
+ignored across 78 `test result:` lines** — unchanged; nothing here touches
+`crates/`), `xtask check-layering`, `xtask check-headers` (**92 files with
+a well-formed header, 169 without, ceiling 169** — the one new file brings
+its own), `cargo deny check`, and in `apps/knx-web` `npm test -- --run`
+(**383 passed across 38 files**, up from 377 across 37: three
+palette-reachability tests, one registry test and two guard tests in the
+new file) plus `tsc --noEmit`.

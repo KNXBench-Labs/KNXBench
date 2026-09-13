@@ -54,13 +54,13 @@ function TreeNode(props: {
     <li>
       <span className="tree-row">
         {hasChildren && (
-          <span className="tree-toggle" onClick={() => setOpen(!open)}>
+          <button type="button" className="tree-toggle" aria-label={props.label} aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? "▾" : "▸"}
-          </span>
+          </button>
         )}
-        <span className={labelClasses.join(" ")} onClick={labelClick}>
+        <button type="button" className={labelClasses.join(" ")} onClick={labelClick} aria-pressed={props.onSelect ? !!props.selected : undefined} aria-expanded={!props.onSelect && hasChildren ? open : undefined}>
           {props.label}
-        </span>
+        </button>
       </span>
       {hasChildren && open && <ul>{props.children}</ul>}
     </li>
@@ -802,7 +802,20 @@ export default function ProjectExplorer(
   }
 
   return (
-    <div className="project-explorer">
+    <div className="project-explorer" onKeyDown={(e) => {
+      if (!(e.target instanceof HTMLButtonElement) || !e.target.matches(".tree-label, .tree-toggle")) return;
+      const current = e.target;
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        const toggle = current.closest(".tree-row")?.querySelector<HTMLButtonElement>(".tree-toggle");
+        if (toggle && toggle.getAttribute("aria-expanded") !== String(e.key === "ArrowRight")) toggle.click();
+        e.preventDefault(); return;
+      }
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+      e.preventDefault();
+      const labels = [...e.currentTarget.querySelectorAll<HTMLButtonElement>(".tree-label")];
+      const index = labels.indexOf(current);
+      labels[e.key === "Home" ? 0 : e.key === "End" ? labels.length - 1 : Math.max(0, Math.min(labels.length - 1, index + (e.key === "ArrowDown" ? 1 : -1)))]?.focus();
+    }}>
       {multiSelection && multiSelection.ids.size > 0 && (
         <BulkActionToolbar
           multiSelection={multiSelection}

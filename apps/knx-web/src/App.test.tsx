@@ -542,3 +542,14 @@ describe("App — <html lang> reflects the UI language without opening Settings"
     root.unmount();
   });
 });
+
+it("leaves native text undo to the focused input", async () => {
+  host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  await act(async () => root.render(<App />));
+  const input = document.createElement("input"); host.append(input); input.focus();
+  const event = new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true, cancelable: true });
+  await act(async () => input.dispatchEvent(event));
+  expect(event.defaultPrevented).toBe(false);
+  expect(apiMock.undo).not.toHaveBeenCalled();
+  await act(async () => root.unmount());
+});

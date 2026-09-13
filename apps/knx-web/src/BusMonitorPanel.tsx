@@ -151,7 +151,11 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
     resolution: ComposeResolution;
   }>({ key: 0, destination: "", resolution: { kind: "unknown" } });
 
+  const [selectedSequence, setSelectedSequence] = useState<number | null>(null);
+  const selectedTelegram = rows.find((row) => row.seq === selectedSequence);
+
   function selectRow(row: BusTelegramRow) {
+    setSelectedSequence(row.seq);
     setComposeSeed({
       key: nextComposeSeedKey++,
       destination: row.destination,
@@ -264,6 +268,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
       const started = await api.startBusMonitor(gatewayInput);
       sinceRef.current = 0;
       setRows([]);
+      setSelectedSequence(null);
       setNewRowThreshold(null);
       setDroppedBefore(0);
       setStatus("active");
@@ -397,6 +402,8 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
         ) : visibleRows.length === 0 ? (
           <p className="bus-monitor-empty">{t("busMonitor.emptyFiltered")}</p>
         ) : (
+          <div className="monitor-data">
+          <div className="monitor-table-scroll">
           <table className="bus-monitor-table">
             <thead>
               <tr>
@@ -423,6 +430,18 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                   <tr
                     key={row.seq}
                     className={rowClasses || undefined}
+                    tabIndex={0}
+                    aria-selected={selectedSequence === row.seq}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        selectRow(row);
+                      } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                        e.preventDefault();
+                        const sibling = e.key === "ArrowDown" ? e.currentTarget.nextElementSibling : e.currentTarget.previousElementSibling;
+                        if (sibling instanceof HTMLElement) sibling.focus();
+                      }
+                    }}
                     onClick={() => selectRow(row)}
                     style={{ cursor: "pointer" }}
                     title={t("busMonitor.rowTitle")}
@@ -446,6 +465,19 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
               })}
             </tbody>
           </table>
+          </div>
+          <aside className="telegram-details" aria-label={t("workbench.telegram")}>
+            <h3>{t("workbench.telegram")}</h3>
+            {selectedTelegram ? <dl>
+              <dt>{t("busMonitor.column.time")}</dt><dd>{selectedTelegram.timestamp}</dd>
+              <dt>{t("busMonitor.column.source")}</dt><dd className="mono">{selectedTelegram.source}</dd>
+              <dt>{t("busMonitor.column.destination")}</dt><dd><span className="mono">{selectedTelegram.destination}</span>{selectedTelegram.destinationName && <p>{selectedTelegram.destinationName}</p>}</dd>
+              <dt>{t("busMonitor.column.service")}</dt><dd>{selectedTelegram.service}</dd>
+              <dt>{t("busMonitor.column.decoded")}</dt><dd>{decodedSummary(selectedTelegram)}{selectedTelegram.decoded?.error && <p className="field-error">{selectedTelegram.decoded.error}</p>}</dd>
+              <dt>{t("busMonitor.column.payload")}</dt><dd className="mono">{selectedTelegram.rawPayload ?? "—"}</dd>
+            </dl> : <p>{t("workbench.selectTelegram")}</p>}
+          </aside>
+          </div>
         ))}
     </div>
   );

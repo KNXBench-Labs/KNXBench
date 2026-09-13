@@ -3475,3 +3475,18 @@ pre-existing `advisory-not-detected` informational warnings for
 advisories that do not match any dependency in this workspace, zero
 errors). Web gates: not applicable — this task touched no
 `apps/knx-web` path.
+## 2026-09-13 — Codex UI workbench (T21)
+
+The web UI now has a shared three pane workbench with resizable navigation and
+properties panes, keyboard accessible tree navigation, a file menu, appearance
+preferences (Porcelain, Graphite, System, accent and density), and central
+workspaces for buildings, topology and group addresses. Existing commands,
+HTTP routes, Inspector editing, parameters, catalogue insertion, log and bus
+monitor remain wired through their existing owners. The graphical views use
+the generated `ProjectTree` projection and show hierarchy; they do not invent
+floor-plan coordinates. Browser evidence is recorded under `/tmp/knx-ui-proof/`.
+
+T16 remains partially open: the catalogue browser is available from topology
+and supports insertion, but the current `DeviceDetail` projection does not
+contain product/hardware/program identity for an existing device. Exposing that
+identity requires a server/projection change outside this frontend slice.

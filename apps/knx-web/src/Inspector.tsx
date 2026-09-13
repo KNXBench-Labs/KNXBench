@@ -510,7 +510,63 @@ function BuildingPartMoveField(props: {
   );
 }
 
+export function DeviceWorkspace(props: {
+  detail: DeviceDetail; tree: ProjectTree; onApplied: (tree: ProjectTree) => void;
+}) {
+  const { detail, tree, onApplied } = props;
+  const groupAddresses = tree.installations[0]?.group_addresses ?? [];
+  const t = useTranslate();
+  const [tab, setTab] = useState(0);
+  return <section className="device-workspace">
+    <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div></header>
+    <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+      e.preventDefault(); const next = e.key === "Home" ? 0 : e.key === "End" ? 1 : 1 - tab;
+      setTab(next); e.currentTarget.querySelectorAll<HTMLButtonElement>("button")[next].focus();
+    }}>
+      {[t("inspector.communicationObjects"), t("workbench.parameters")].map((label, index) => <button key={label} id={`device-tab-${detail.id}-${index}`} role="tab" aria-selected={tab === index} aria-controls={`device-panel-${detail.id}-${index}`} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)}>{label}</button>)}
+    </div>
+    <div role="tabpanel" id={`device-panel-${detail.id}-0`} aria-labelledby={`device-tab-${detail.id}-0`} hidden={tab !== 0}>
+      <h3>{t("inspector.communicationObjects")}</h3>
+      <ul className="com-object-list">
+        {detail.com_objects.map((com) => (
+          <li key={com.id}>
+            <details className="com-object-detail">
+            <summary className="com-object-summary"><span className="mono">{com.number}</span><strong>{com.name ?? t("inspector.unnamed")}</strong><span className="mono">{com.dpt ?? "—"}</span><span className="mono">{com.links.map((link) => link.address ?? "—").join(", ") || "—"}</span></summary>
+            <div className="com-object-edit-fields">
+            <DptField com={com} onApplied={onApplied} />
+            {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
+            <ComObjectDescriptionField com={com} onApplied={onApplied} />
+            {com.description_layer && (
+              <span className="provenance-badge">{com.description_layer}</span>
+            )}
+            <ComObjectFlagsRow com={com} onApplied={onApplied} />
+            <ul className="group-link-list">
+              {com.links.map((link) => (
+                <GroupLinkRow
+                  key={`${link.ga_id}-${link.direction}`}
+                  com={com}
+                  link={link}
+                  onApplied={onApplied}
+                />
+              ))}
+              <NewGroupLinkRow com={com} groupAddresses={groupAddresses} onApplied={onApplied} />
+            </ul>
+            </div>
+            </details>
+          </li>
+        ))}
+      </ul>
+
+    </div>
+    <div role="tabpanel" id={`device-panel-${detail.id}-1`} aria-labelledby={`device-tab-${detail.id}-1`} hidden={tab !== 1}>
+      <ParameterPanel deviceId={detail.id} />
+    </div>
+  </section>;
+}
+
 function DeviceInspector(props: {
+  propertiesOnly?: boolean;
   detail: DeviceDetail;
   tree: ProjectTree;
   // Same `installations[0]`-only gate as every other Delete button in this
@@ -524,7 +580,6 @@ function DeviceInspector(props: {
 }) {
   const { detail, tree, canDelete, onApplied, onDeleted } = props;
   const t = useTranslate();
-  const groupAddresses = tree.installations[0]?.group_addresses ?? [];
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -555,37 +610,7 @@ function DeviceInspector(props: {
       <LineMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <BuildingPartMoveField detail={detail} tree={tree} onApplied={onApplied} />
       <DeviceDescriptionField detail={detail} onApplied={onApplied} />
-      <h3>{t("inspector.communicationObjects")}</h3>
-      <ul className="com-object-list">
-        {detail.com_objects.map((com) => (
-          <li key={com.id}>
-            <span className="com-object-label">
-              {com.number}: {com.name ?? t("inspector.unnamed")}
-            </span>
-            <DptField com={com} onApplied={onApplied} />
-            {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
-            <ComObjectDescriptionField com={com} onApplied={onApplied} />
-            {com.description_layer && (
-              <span className="provenance-badge">{com.description_layer}</span>
-            )}
-            <ComObjectFlagsRow com={com} onApplied={onApplied} />
-            <ul className="group-link-list">
-              {com.links.map((link) => (
-                <GroupLinkRow
-                  key={`${link.ga_id}-${link.direction}`}
-                  com={com}
-                  link={link}
-                  onApplied={onApplied}
-                />
-              ))}
-              <NewGroupLinkRow com={com} groupAddresses={groupAddresses} onApplied={onApplied} />
-            </ul>
-          </li>
-        ))}
-      </ul>
-      {/* T18 slice 3 task 4: fetches its own panel keyed on `detail.id`,
-          unconditionally (see ParameterPanel.tsx's own comment on why). */}
-      <ParameterPanel deviceId={detail.id} />
+      {!props.propertiesOnly && <DeviceWorkspace detail={detail} tree={tree} onApplied={onApplied} />}
     </div>
   );
 }
@@ -912,6 +937,7 @@ function BuildingPartInspector(props: {
 // no such gap: both resolve synchronously from `tree`, which is always
 // already loaded by the time Inspector can render at all.
 export default function Inspector(props: {
+  propertiesOnly?: boolean;
   selection: Selection;
   tree: ProjectTree;
   deviceDetail: DeviceDetail | null;
@@ -925,6 +951,7 @@ export default function Inspector(props: {
     const canDelete = findDeviceLineInFirstInstallation(tree, deviceDetail.id) !== undefined;
     return (
       <DeviceInspector
+        propertiesOnly={props.propertiesOnly}
         detail={deviceDetail}
         tree={tree}
         canDelete={canDelete}

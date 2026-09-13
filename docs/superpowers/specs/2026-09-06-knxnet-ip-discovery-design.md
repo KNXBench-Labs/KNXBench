@@ -122,7 +122,7 @@ New `knx bus discover` subcommand in `apps/knx-cli/src/main.rs`, alongside
 line per gateway:
 
 ```
-1.1.0  Example IP Gateway  192.0.2.1:3671  [tunnelling]
+1.1.0  Example IP Gateway   192.0.2.1:3671  [tunnelling]
 ```
 
 (individual address, friendly name, control endpoint, a `[tunnelling]` tag

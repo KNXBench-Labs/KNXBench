@@ -270,7 +270,7 @@ resolves telegrams against the open project (`apps/knx-cli`'s `bus monitor`
 subcommand, resolving group address names and — since T29, 2026-09-11,
 `crates/knx-core/src/dpt/` — decoding each telegram's value against the
 DPT inferred from the project's linked communication objects, given
-`--project`; [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-fourteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) has the full
+`--project`; [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-nineteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) has the full
 accounting of what that codec does and does not cover); the connection
 itself knows nothing about projects, as this section originally specified.
 Since T15 (2026-09-11), `apps/knx-server` runs the same kind of session

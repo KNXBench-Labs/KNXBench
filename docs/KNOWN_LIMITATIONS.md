@@ -2076,14 +2076,14 @@ alone — only counts per table, per installation.
 **Lifted when.** Open. A richer visual diff view is a real, larger
 feature a future task could propose; not built speculatively now.
 
-## 61. The DPT codec covers fourteen main types, infers rather than reads its input, and leaves several encoding questions to a stated ruling rather than the Standard
+## 61. The DPT codec covers nineteen main types, infers rather than reads its input, and leaves several encoding questions to a stated ruling rather than the Standard
 
-**Limitation.** `crates/knx-core/src/dpt/codec.rs` (2026-09-11, T29) can
-decode and encode main types **1, 2, 3, 5, 6, 7, 8, 9, 12, 13, 14, 16, 17,
-18** — fourteen of the 46 main types `knx_master.xml` defines
-(`docs/RESEARCH.md` §5). Everything else (4, 10, 11, 15, 19, 20, and 21
-upward) returns `DptCodecError::UnsupportedDpt` unconditionally; nothing
-about them is guessed.
+**Limitation.** `crates/knx-core/src/dpt/codec.rs` (2026-09-11, T29;
+extended 2026-09-13, E4) can decode and encode main types **1, 2, 3, 4, 5,
+6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19** — nineteen of the 46
+main types `knx_master.xml` defines (`docs/RESEARCH.md` §5). Everything
+else (20, and 21 upward) returns `DptCodecError::UnsupportedDpt`
+unconditionally; nothing about them is guessed.
 
 **Excluded inside an otherwise-implemented main type.** `6.020
 DPT_Status_Mode3` is the one confirmed case: its wire layout (`B5N3` — five
@@ -2093,6 +2093,47 @@ misread as a plain signed 8-bit integer the way the rest of main type 6
 is. The rest of main type 6's implemented subtypes are plain `V8`. No
 other subtype-level exclusion inside an implemented main type is known;
 this entry names the one that is.
+
+**2026-09-13 (E4): main types 4, 10, 11, 15, and 19 added, each with one
+Standard-reading judgment call recorded here rather than silently
+decided.** `4.*` (`A8`, DPT-AS §3.4) reuses the ASCII/ISO-8859-1
+charset-selection logic main type 16 already had (`char_set_is_ascii`),
+rather than a second implementation of the same rule; unlike `16`, `4`
+gets no bare-main-type default, because the Standard does not print one.
+`10.001` (time of day + day of week, DPT-AS §3.11) represents day-of-week
+`0` as "no day" (`Option::None`) rather than as Monday, because the field
+itself is three bits wide with no documented eighth value and nothing in
+§3.11 states `0` means Monday specifically — this codec's own reading, not
+a printed rule, and the round trip is exact (`None` only ever decodes from
+and encodes back to raw `0`). `11.001` (date, DPT-AS §3.12) resolves the
+two-digit year octet by the century-window rule DPT-AS §3.12 EXAMPLE 5
+states directly: a raw value `>= 90` means `1900 +` raw (covering
+1990-1999), otherwise `2000 +` raw (covering 2000-2089) — printed in the
+Standard, not inferred. `15.*` (access data, DPT-AS §3.16) packs six BCD
+digits plus four flag/index bits across four octets with no reserved bits
+at all in this format (all 32 bits carry meaning); a BCD nibble above 9 is
+rejected as `InvalidData` rather than accepted as a non-decimal digit,
+since §3.16 defines the code as decimal. `19.001` (date and time, DPT-AS
+§3.20) surfaces a genuine inconsistency in the Standard itself: octet 1's
+field-description table names a bit called `SRC` (synchronisation source
+reliability), but no bit position is ever assigned to it in the actual
+encoding row, and Note 15 states the seven non-`CLQ` bits of that octet
+are reserved and must be zero — confirmed by rendering the source PDF page
+directly (page 50) rather than trusting the Markdown extraction, which
+reproduces the same ambiguity. `DptValue::DateTime` therefore has no `src`
+field; every other named flag in the octet-2/octet-1 tables (fault,
+working day, working-day-unknown, year/date/day-of-week/time-invalid,
+summer time, externally-synchronized, `CLQ`) has one, so no bit this codec
+*can* assign meaning to is silently dropped. Range checks on Month/Day
+(octets 7-6) and Hour/Minute/Second (octets 5-3) are enforced only when
+the corresponding invalid-flag says the field is valid; when a flag marks
+a field "not valid," only its bit width is checked, not its documented
+range, on the reasoning that a clock with no date or no time reading may
+legitimately zero- or garbage-fill that octet and rejecting such a
+telegram would invent a stricter rule than §3.20 states for exactly that
+case. All five new types follow the same reserved-bit policy already used
+by main types 1-18: a reserved bit set to anything but zero is
+`DptCodecError::InvalidData`, not silently ignored or masked off.
 
 **Resolution is inference, not a stated fact.** `resolve_group_address_dpt`
 and `resolve_project_group_address_dpts`
@@ -2195,7 +2236,7 @@ unambiguously and the reference corpus needs, leave the rest
 itself is ambiguous or self-contradictory rather than resolve it silently.
 
 **Impact.** A user working with a group address whose DPT falls outside
-the fourteen implemented main types, or whose linked communication objects
+the nineteen implemented main types, or whose linked communication objects
 disagree, or who has none at all, sees `bus monitor` fall back to the
 pre-T29 raw output for that address. A user relying on `8.010`'s printed
 327.67% maximum, or AN188's 670760.96 figure for main type 9, will see this
@@ -2255,7 +2296,7 @@ ways, all deliberate and all recorded here per that design's own §7:
    becoming a row — not counted against `droppedBefore`, since this is a
    declared scope exclusion, not a loss (`bus::tests::individual_addressed_frames_are_not_rendered_as_rows`).
 8. **DPT/enumeration coverage.** Inherited unchanged from
-   [§61](#61-the-dpt-codec-covers-fourteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) —
+   [§61](#61-the-dpt-codec-covers-nineteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) —
    this slice does not touch the codec. §61 is not edited, reworded, or
    superseded by this entry; it still fully applies to every decoded
    value the GUI shows.

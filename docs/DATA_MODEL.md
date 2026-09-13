@@ -377,7 +377,7 @@ resolver ([KNOWN_LIMITATIONS.md §37](KNOWN_LIMITATIONS.md#37-imported-translati
 directory since T29, 2026-09-11: `mod.rs` for `DptRef` itself, `codec.rs`
 for decoding/encoding a value against one, `resolve.rs` for inferring a
 group address's DPT from its linked communication objects — see
-[KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-fourteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) for exactly what the
+[KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-nineteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) for exactly what the
 codec covers).*
 
 Addresses are dedicated types, not integers. `IndividualAddress(u16)` exposes

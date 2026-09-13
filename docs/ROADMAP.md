@@ -640,7 +640,7 @@ touched — already complete, 14/14 tests green. **Cycle 2, T29
 (2026-09-11, branch `t29-dpt-codec`):** KNXBench's first DPT codec, in
 `knx-core` (fourteen main types — see
 [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and
-[KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-fourteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) for exactly which ones
+[KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-nineteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) for exactly which ones
 and why not the rest), with `bus monitor`/`bus write` in `apps/knx-cli`
 wired to decode/encode against it. `cargo test --workspace`: 920 passed, 0
 failed, 3 ignored. A user can now read `knx bus monitor --project <path>`

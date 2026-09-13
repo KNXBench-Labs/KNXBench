@@ -1,3 +1,4 @@
+/** Tests for appearance preference defaults, migration, OS following, accent, and density. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

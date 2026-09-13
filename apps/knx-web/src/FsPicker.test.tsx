@@ -1,3 +1,4 @@
+/** Tests for the filesystem picker's keyboard file choice and focus return on Escape. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";

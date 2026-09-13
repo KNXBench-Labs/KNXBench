@@ -112,6 +112,18 @@ fn check_layering() -> ExitCode {
         "knx-diff",
         layering::CORE_FORBIDDEN,
     ));
+    // knx-secure (ADR-0008, ARCHITECTURE.md §9) must never reach knx-core, so
+    // no type path exists along which key material could reach the project
+    // model, and must never reach serde, so no knx-secure type can gain a
+    // Serialize/Deserialize impl. This used to hold by construction because
+    // the crate had no [dependencies] section at all; it grew one (A6, the
+    // .knxproj ZIP-password derivation), so the invariant is checked here
+    // from now on instead of assumed from the manifest's shape.
+    violations.extend(layering::forbidden_reachable(
+        &graph,
+        "knx-secure",
+        layering::SECURE_FORBIDDEN,
+    ));
 
     if violations.is_empty() {
         println!(
@@ -119,11 +131,13 @@ fn check_layering() -> ExitCode {
              knx-productdb reaches neither knx-etsproj nor knx-store; knx-projection reaches \
              none of {:?}; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; \
              knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \
-             knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}",
+             knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \
+             knx-secure reaches none of {:?}",
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
             layering::CORE_FORBIDDEN,
-            layering::CORE_FORBIDDEN
+            layering::CORE_FORBIDDEN,
+            layering::SECURE_FORBIDDEN
         );
         return ExitCode::SUCCESS;
     }

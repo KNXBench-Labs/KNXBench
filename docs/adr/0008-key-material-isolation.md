@@ -34,5 +34,16 @@ material would already be flowing through convenient shared types.
 An almost empty crate is carried for several sessions. That is the price of the
 boundary and it is small.
 
-A test must assert that `knx-secure` types cannot be serialised toward report
-or export paths, so the isolation is checked rather than assumed.
+**Update, 2026-09-13 (A6).** `knx-secure` gained its first real dependencies
+(`pbkdf2`, `sha2`, `base64`, for the `.knxproj` ZIP-password derivation), so
+the invariant above stopped holding by construction — a manifest with a
+`[dependencies]` section can grow an edge to `knx-core` or to `serde` as
+easily as any other crate's can. The isolation is now checked, not assumed:
+`cargo run -p xtask -- check-layering` treats `knx-secure` as a root and
+fails the gate if it ever reaches `knx-core` (so no type path can carry key
+material into the project model) or `serde` (so no `knx-secure` type can
+gain a `Serialize`/`Deserialize` impl), direct or transitive either way. A
+manifest-level check was chosen over a Rust trait-absence test: it needs no
+new dependency and no compile-fail harness, and it fails at the same gate
+everything else in this repository's layering rules fails at, rather than in
+a test nobody runs in isolation.

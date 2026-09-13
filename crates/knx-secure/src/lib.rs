@@ -66,16 +66,31 @@ impl std::fmt::Debug for ZipPassword {
 /// ```
 ///
 /// The project password is encoded little-endian UTF-16 without a BOM
-/// before hashing; the salt is encoded ASCII. Verified against the two of
-/// the clause's own three published test vectors this repository can
-/// recover intact — see this module's tests.
+/// before hashing; the salt is encoded ASCII. Verified against all three
+/// of the clause's own published test vectors — see this module's tests,
+/// including the third, whose password characters had to be recovered
+/// from a broken PDF text layer rather than read off directly.
 ///
 /// This function only derives the password. It does not open, decrypt, or
 /// even touch the encrypted ZIP entry itself — container decryption stays
 /// refused (`ContainerError::PasswordProtected` in `knx-etsproj`) until a
 /// real password-protected project exists to verify that half against.
+///
+/// `#[must_use]`: dropping the result silently discards the 65,536 PBKDF2
+/// iterations that produced it. Note the asymmetry this leaves: `project_password`
+/// is an ordinary `&str`, un-zeroed and free to be copied by whatever called
+/// this function, while only the *output* gets the documented handling above
+/// — the input's hygiene is the caller's problem, not this function's.
+#[must_use]
 pub fn derive_knxproj_zip_password(project_password: &str) -> ZipPassword {
-    let mut utf16le: Vec<u8> = Vec::with_capacity(project_password.len() * 2);
+    // `project_password.len()` is a UTF-8 byte count, not a UTF-16 code-unit
+    // count, so `len() * 2` is not the right capacity: a 4-byte non-BMP
+    // character needs 4 UTF-16LE bytes (one surrogate pair), not 8. Counting
+    // the actual UTF-16 units first costs a second pass over a
+    // password-length string, which is cheap, and gives an exact capacity
+    // instead of a guess.
+    let unit_count = project_password.encode_utf16().count();
+    let mut utf16le: Vec<u8> = Vec::with_capacity(unit_count * 2);
     for unit in project_password.encode_utf16() {
         utf16le.extend_from_slice(&unit.to_le_bytes());
     }
@@ -134,13 +149,17 @@ mod tests {
     // extraction, shows it unambiguously as the "Clown Face" emoji
     // (U+1F921 🤡) — red hair tufts, blue-ringed eyes, red nose, pink
     // smile, matching that emoji's standard glyph in every font that
-    // ships it. `pdftotext`'s per-glyph output (via `gs -sDEVICE=txtwrite`)
-    // additionally shows the visible password is bounded by ordinary
-    // word-spacing on both sides, same as the "a" and "test" vectors
-    // above — except for one residual ambiguity glyph rendering does not
-    // resolve: whether a space sits between "w1se" and the emoji itself
-    // (typesetting can insert space before a wide inline glyph purely for
-    // layout, without it being a real character).
+    // ships it. The corpus's own Markdown extraction already shows a
+    // literal space between "w1se" and the unmappable glyph (raw bytes:
+    // w-1-s-e, then 0x20, then the U+FFFD replacement character), and
+    // `pdftotext`'s per-glyph output (via `gs -sDEVICE=txtwrite`) is
+    // consistent with that: the visible password is bounded by ordinary
+    // word-spacing on both sides, same as the "a" and "test" vectors above.
+    // That is not, by itself, proof the space is a real character rather
+    // than a layout artifact — typesetting can insert space before a
+    // wide inline glyph purely for layout — so it was still worth
+    // resolving independently rather than taking the extracted space on
+    // faith.
     //
     // That residual ambiguity was resolved, not guessed: both candidates
     // ("Penn\u{a5}w1se\u{1f921}" and "Penn\u{a5}w1se \u{1f921}") were run

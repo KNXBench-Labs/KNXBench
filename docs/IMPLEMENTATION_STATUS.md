@@ -3699,7 +3699,7 @@ the projection rather than from the screen.
      (`StructureWorkspace.tsx:72-74`'s `.workspace-heading`) with the
      filter one row below in `.address-table-toolbar`. The File-menu copies
      are kept, so no entry point is lost. A disclosure of this shape does
-     exist — `App.tsx:424-426`'s `<details className="file-menu">` already
+     exist — `App.tsx:459-461`'s `<details className="file-menu">` already
      wraps these same buttons behind a label and a `⌄` — but there is no
      reusable menu-button primitive in `apps/knx-web`, and promoting the
      File menu's one-off into the first one, for two buttons, would
@@ -3801,29 +3801,29 @@ some device-independent path, not merely present in the DOM.
 
 | # | Capability | Verdict | Evidence |
 | --- | --- | --- | --- |
-| 1 | Native/ETS open, save, save as, export | Holds | `apps/knx-web/src/App.tsx:430-436` (File menu), `:461` (Save), `commandRegistry.ts:56-79` (same four as commands) |
-| 2 | CSV, documentation export, project diff | Holds | `App.tsx:438` (CSV), `:445` (documentation), `:451` (compare), `:495` (CSV again as the address workspace's actions) |
-| 3 | Import errors and warnings | Holds | `Dashboard.tsx:35-46` (counts), `App.tsx:474` (persistent notice), `:491` (log), `:506` (toasts) |
-| 4 | Buildings, topology, CRUD | Holds | `App.tsx:480` (navigation), `:492` (`StructureWorkspace`), `:502` (inspector), `StructureWorkspace.tsx:73` (create) |
-| 5 | Catalogue, install, device creation | Holds | `App.tsx:481` (navigation entry), `:507` (`CatalogBrowser`), `StructureWorkspace.tsx:73` (contextual create) |
-| 6 | Addresses, ranges, DPT, links, flags | Holds | `App.tsx:480` (navigation), `StructureWorkspace.tsx:98` (`GroupAddressTable`), `App.tsx:502` (inspector) |
-| 7 | Parameters, diagnostics, module writes | Holds | `App.tsx:498` (`DeviceWorkspace`), `Inspector.tsx:680` (tabs), `:735` (`ParameterPanel`) |
-| 8 | Multi-select, bulk, undo, search, palette | Holds | `App.tsx:456-457` (undo/redo), `:459` (search), `:460` (palette), `:467` (`BulkActionToolbar`) |
+| 1 | Native/ETS open, save, save as, export | Holds | `apps/knx-web/src/App.tsx:462-468` (File menu), `:493` (Save), `commandRegistry.ts:56-79` (same four as commands) |
+| 2 | CSV, documentation export, project diff | Holds | `App.tsx:470` (CSV), `:477` (documentation), `:483` (compare), `:528` (CSV again as the address workspace's actions) |
+| 3 | Import errors and warnings | Holds | `Dashboard.tsx:35-46` (counts), `App.tsx:506` (persistent notice), `:524` (log), `:539` (toasts) |
+| 4 | Buildings, topology, CRUD | Holds | `App.tsx:512` (navigation), `:525` (`StructureWorkspace`), `:535` (inspector), `StructureWorkspace.tsx:73` (create) |
+| 5 | Catalogue, install, device creation | Holds | `App.tsx:513` (navigation entry), `:540` (`CatalogBrowser`), `StructureWorkspace.tsx:73` (contextual create) |
+| 6 | Addresses, ranges, DPT, links, flags | Holds | `App.tsx:512` (navigation), `StructureWorkspace.tsx:98` (`GroupAddressTable`), `App.tsx:535` (inspector) |
+| 7 | Parameters, diagnostics, module writes | Holds | `App.tsx:531` (`DeviceWorkspace`), `Inspector.tsx:680` (tabs), `:735` (`ParameterPanel`) |
+| 8 | Multi-select, bulk, undo, search, palette | Holds | `App.tsx:488-489` (undo/redo), `:491` (search), `:492` (palette), `:499` (`BulkActionToolbar`) |
 | 9 | Log, bus monitor, compose | **Was false** — both halves | see below |
-| 10 | UI language, product language, packs | Holds | `SettingsPanel.tsx:291` (product data), `:312` (UI), `App.tsx:462`/`:487` (two ways in), `commandRegistry.ts:121` (a third) |
-| 11 | Appearance | Holds | `SettingsPanel.tsx:233-256` (theme, accent, density), `theme.ts:5` (`system` is a real entry), `styles.css:1045-1046` (the two density tokens) |
-| 12 | Additional diagnostic window | Holds — browser and Tauri desktop, both run 2026-09-13 | `main.tsx:22-25` (one view switch, companion or editor), `DiagnosticsCompanion.tsx` (monitor and log only), `diagnosticsWindow.ts:110` (`openCompanionWindow`), `App.tsx:518` (the button), `busContext.ts:184` (`contextLock`), `capabilities/diagnostics.json` (desktop grants), [KNOWN_LIMITATIONS §79](KNOWN_LIMITATIONS.md) (what the lock cannot see) |
+| 10 | UI language, product language, packs | Holds | `SettingsPanel.tsx:291` (product data), `:312` (UI), `App.tsx:494`/`:520` (two ways in), `commandRegistry.ts:121` (a third) |
+| 11 | Appearance | Holds | `SettingsPanel.tsx:233-256` (theme, accent, density), `theme.ts:5` (`system` is a real entry), `styles.css:1082-1083` (the two density tokens) |
+| 12 | Additional diagnostic window | Holds — browser and Tauri desktop, both run 2026-09-13 | `main.tsx:23-26` (one view switch, companion or editor), `DiagnosticsCompanion.tsx` (monitor and log only), `diagnosticsWindow.ts:110` (`openCompanionWindow`), `App.tsx:519` (the button), `busContext.ts:184` (`contextLock`), `capabilities/diagnostics.json` (desktop grants), [KNOWN_LIMITATIONS §82](KNOWN_LIMITATIONS.md#82-the-diagnostics-companions-stale-lock-sees-one-browser-profiles-own-windows-and-nothing-else) (what the lock cannot see) |
 
 Row 9 was true when it was written and false when it was checked, in both
 halves.
 
 *Reachability.* Before the shell, Log and Bus monitor were always-visible
 toolbar buttons. Afterwards their only entry points were
-`App.tsx:485-486`, inside the `diagnostic-navigation` nav at `:484`,
-inside the `{navigationOpen && …}` guard at `:478` — so the navigation
-toggle at `:465` could remove the only way to reach either panel, and
+`App.tsx:517-518`, inside the `diagnostic-navigation` nav at `:516`,
+inside the `{navigationOpen && …}` guard at `:510` — so the navigation
+toggle at `:497` could remove the only way to reach either panel, and
 `commandRegistry.ts` had no entry for them. Settings survived by accident,
-via the toolbar gear at `App.tsx:462`. Per the standing rule that new
+via the toolbar gear at `App.tsx:494`. Per the standing rule that new
 actions stay reachable through the same validated commands regardless of
 input device, `open-log`, `open-bus-monitor` and `open-settings` now exist
 (`commandRegistry.ts:109-126`), all three enabled without an open project
@@ -3835,7 +3835,7 @@ companion window's only button sits in that same collapsible pane.
 *"Diagnostic workspaces".* Neither panel was one: both opened with a bare
 `<h2>` while every other centre-pane view uses `.workspace-heading` with
 an eyebrow and an `<h1>`. Both now match (`LogPanel.tsx:77`,
-`BusMonitorPanel.tsx:323`), with the severity filters and the connect
+`BusMonitorPanel.tsx:473`), with the severity filters and the connect
 controls as their action clusters, and the monitor's eyebrow naming its
 only transport — `knx-server`'s bus layer is tunnelling-only, no discovery
 and no routing (`apps/knx-server/src/bus.rs:5-13`).
@@ -3871,7 +3871,7 @@ either defect shape: a panel class name with no rule in `styles.css` (with
 an explicit allowlist for the query hooks that draw nothing on purpose),
 and a cell-padding declaration that outranks the density tokens. Its
 ADR-0018 header is `/** One sentence. */`: `check-headers`
-(`xtask/src/headers.rs:69`) recognises no line-comment form for
+(`xtask/src/headers.rs:107-116`) recognises no line-comment form for
 TypeScript, so a `// …` first line counts as no header at all and trips
 the ratchet.
 
@@ -3897,7 +3897,7 @@ new file) plus `tsc --noEmit`.
 window hosts the bus monitor and the session log and nothing else; the
 project is edited in exactly one window, as before.
 
-*One editing workspace.* `main.tsx:22-25` picks between `<App />` and
+*One editing workspace.* `main.tsx:23-26` picks between `<App />` and
 `<DiagnosticsCompanion />` from one query parameter (`?view=diagnostics`),
 so the companion is the same bundle at a different entry point rather than
 a second application. `DiagnosticsCompanion.tsx` imports only
@@ -3931,7 +3931,7 @@ three-valued: `synced`, `stale` (the project moved — the decoded columns
 are struck through, and the compose form is disabled with an explanation)
 and `unverified` (this profile did not record this session's start, so
 nothing can be confirmed either way — said out loud, sending left
-enabled). What it cannot see is [KNOWN_LIMITATIONS §79](KNOWN_LIMITATIONS.md).
+enabled). What it cannot see is [KNOWN_LIMITATIONS §82](KNOWN_LIMITATIONS.md#82-the-diagnostics-companions-stale-lock-sees-one-browser-profiles-own-windows-and-nothing-else).
 
 *Platforms.* Verified in both. Headless Chromium against the Vite dev
 server renders the companion shell at `?view=diagnostics` and the editor

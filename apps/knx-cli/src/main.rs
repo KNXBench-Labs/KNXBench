@@ -1410,12 +1410,27 @@ fn run_bus_discover(args: &[String]) -> ExitCode {
     runtime.block_on(run_bus_discover_async())
 }
 
+/// Printed on stderr whenever `discover()` comes back empty. An empty
+/// result and a broken deployment look identical otherwise (GAP_ANALYSIS_ETS.md
+/// row E5): discovery only works if `SEARCH_REQUEST`'s multicast datagram
+/// actually leaves the machine, which it does not on Docker's default
+/// bridge network (see the Dockerfile and README for `--network host`).
+/// Written unconditionally, not gated on a "looks like a container" check
+/// — there is no such check that would not also misfire on an ordinary
+/// host with a firewalled or wrong-interface multicast route, and an empty
+/// result there deserves the same hint.
+const DISCOVER_EMPTY_HINT: &str = "hint: KNXnet/IP discovery depends on IP multicast \
+reaching this network segment; an empty result can mean no gateway answered, or that \
+the SEARCH_REQUEST never got out — a common cause is running inside a container \
+(e.g. Docker's default bridge network) without host networking";
+
 async fn run_bus_discover_async() -> ExitCode {
     use knx_net::BusConnection;
     let client = knx_net::KnxNetIpClient::new();
     match client.discover().await {
         Ok(gateways) if gateways.is_empty() => {
             println!("no gateways responded");
+            eprintln!("{DISCOVER_EMPTY_HINT}");
             ExitCode::SUCCESS
         }
         Ok(gateways) => {
@@ -2419,9 +2434,19 @@ fn format_decoded_value(v: &knx_net::GroupValue, dpt: DptAnnotation) -> String {
 mod tests {
     use super::{
         format_version_line, load_project_individual_addresses, parse_bus_route_monitor_args,
-        parse_bus_route_send_args,
+        parse_bus_route_send_args, DISCOVER_EMPTY_HINT,
     };
     use std::path::Path;
+
+    /// No socket involved — this only checks the static hint text, so it
+    /// runs the same in a sandbox as on a real machine (unlike `discover()`
+    /// itself, which needs a multicast-capable network).
+    #[test]
+    fn discover_empty_hint_names_multicast_and_container_networking() {
+        assert!(DISCOVER_EMPTY_HINT.contains("multicast"));
+        assert!(DISCOVER_EMPTY_HINT.contains("container"));
+        assert!(DISCOVER_EMPTY_HINT.contains("host networking"));
+    }
 
     #[test]
     fn version_line_carries_the_commit_as_build_metadata_when_known() {

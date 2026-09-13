@@ -607,7 +607,14 @@ Docker container — it needs `--network host` — a constraint noted, not
 solved, when that target was built, since no bus feature existed yet to
 need it. This session has to account for it: either document that the
 container deployment path requires `--network host` for discovery to
-work, or design around it.
+work, or design around it. **Resolved by documentation, 2026-09-13
+(backlog task E5, outside this session's own cycles):** no design-around
+exists that isn't dishonest or unverifiable (KNOWN_LIMITATIONS.md §79
+explains why), so this took the "document" branch — README.md, the
+Dockerfile, `docs/GAP_ANALYSIS_ETS.md` row E5, and
+[KNOWN_LIMITATIONS.md §79](KNOWN_LIMITATIONS.md#79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry)
+all say so now; `apps/knx-cli`'s `bus discover` also names the cause on
+an empty result instead of looking like a quiet network.
 
 **Entry condition.** A project can be opened and its group addresses resolved,
 so that captured telegrams have something to resolve against.

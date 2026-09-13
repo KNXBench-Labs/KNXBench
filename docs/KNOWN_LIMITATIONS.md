@@ -2189,7 +2189,12 @@ extended 2026-09-13, E4) can decode and encode main types **1, 2, 3, 4, 5,
 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19** — nineteen of the 46
 main types `knx_master.xml` defines (`docs/RESEARCH.md` §5). Everything
 else (20, and 21 upward) returns `DptCodecError::UnsupportedDpt`
-unconditionally; nothing about them is guessed.
+unconditionally; nothing about them is guessed. (`docs/IMPLEMENTATION_STATUS.md`'s
+T29 entry says "fourteen" — that is the true count as of T29's date,
+2026-09-11, before E4 added the remaining five two days later; this
+heading states the current total, verified directly against
+`codec.rs`'s `decode`/`encode` match arms, not the count at any one
+task's snapshot in time.)
 
 **Excluded inside an otherwise-implemented main type.** `6.020
 DPT_Status_Mode3` is the one confirmed case: its wire layout (`B5N3` — five
@@ -2497,9 +2502,9 @@ installation and records the result.
 exactly one project in one process-wide `AppState`, constructed once and
 shared by every connected browser for the life of the process:
 `Arc::new(knx_server::AppState::new(data_dir))`
-(`apps/knx-server/src/main.rs:23`), `pub type SharedState = Arc<AppState>`
-(`apps/knx-server/src/lib.rs:21`), handed to the router with
-`.with_state(state)` (`apps/knx-server/src/lib.rs:41`). There is no
+(`apps/knx-server/src/main.rs:29`), `pub type SharedState = Arc<AppState>`
+(`apps/knx-server/src/lib.rs:23`), handed to the router with
+`.with_state(state)` (`apps/knx-server/src/lib.rs:63`). There is no
 per-session or per-connection state, and no route or middleware reads any
 cookie, token, or other identity out of a request to tell one caller from
 another (consistent with [§22](#22-the-webdocker-deployment-target-has-no-authentication):
@@ -2509,7 +2514,7 @@ apart). Verified concrete consequences:
 1. **A second client's undo can undo the first client's command.**
    `command_stack: Mutex<knx_core::CommandStack>`
    (`apps/knx-server/src/domain.rs:48`) is one stack for the whole
-   process; `undo_impl`/`redo_impl` (`apps/knx-server/src/domain.rs:1638-1658`)
+   process; `undo_impl`/`redo_impl` (`apps/knx-server/src/domain.rs:2008-2027`)
    pop/replay whatever is on top of it without regard to which client
    pushed it there. Nothing associates a stack entry with the client that
    created it.
@@ -2517,20 +2522,25 @@ apart). Verified concrete consequences:
    `If-Match`, version/revision counter, or "expected current value"
    field exists on any route in `apps/knx-server/src/routes.rs`,
    `domain.rs`, or `fs_routes.rs` — every command-applying function
-   (`apply`, `apps/knx-server/src/domain.rs:781-796`; `undo_impl`/
-   `redo_impl`, `:1638-1658`; `save_project`/`save_project_as`, `:413-462`)
+   (`apply`, `apps/knx-server/src/domain.rs:1126-1142`; `undo_impl`/
+   `redo_impl`, `:2008-2027`; `save_project`/`save_project_as`, `:546-588`)
    reads and mutates the shared state unconditionally, with no way for a
    client to say "only if nothing changed since I last looked."
 3. **No client is told the project changed underneath it.** There is no
    `WebSocket` or `EventSource` anywhere in `apps/knx-web`; the only
-   `setInterval` polling loop in the whole frontend is
-   `apps/knx-web/src/BusMonitorPanel.tsx:386`, and it polls bus telegrams,
-   not project state. A browser's view of the project tree only updates
+   `setInterval` call in the whole frontend (verified with `grep -rn
+   setInterval apps/knx-web/src`, one hit, no test-file matches) is
+   inside `BusMonitorPanel.tsx`'s telegram-polling `useEffect`, calling
+   `poll()` on `POLL_INTERVAL_MS` — line 386 as of this writing, but the
+   line number is not the citation to trust: this exact line has drifted
+   twice before while the fact underneath it held, so re-run the grep
+   above rather than trust either number. It polls bus telegrams, not
+   project state. A browser's view of the project tree only updates
    from the response to its own request — it never learns about another
    client's edit, undo, redo, or save except by the user manually
    reopening the project.
 4. **File-level save is plain last-writer-wins, silently.**
-   `save_project`/`save_project_as` (`apps/knx-server/src/domain.rs:413-462`)
+   `save_project`/`save_project_as` (`apps/knx-server/src/domain.rs:546-588`)
    both funnel into `knx_store::save_project`
    (`crates/knx-store/src/project.rs:72`), which unconditionally
    `DELETE`s every row of every project table and reinserts the current
@@ -2543,7 +2553,8 @@ apart). Verified concrete consequences:
 
 **What is protected.** `apply`, `undo_impl`, and `redo_impl` each take the
 same `state.project`/`state.command_stack` locks for the full duration of
-one command (`apps/knx-server/src/domain.rs:787-790`, `:1638-1658`), so
+one command (`apps/knx-server/src/domain.rs:1132-1134` for `apply`,
+`:2008-2027` for `undo_impl`/`redo_impl`), so
 two simultaneous requests cannot interleave into a torn or corrupted
 in-memory `Project` — one command always finishes before the next one
 starts. That is a real, verified guarantee of memory-level consistency

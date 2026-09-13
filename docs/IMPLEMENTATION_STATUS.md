@@ -3543,7 +3543,7 @@ plumbing and everything on making the identity readable.
   with no catalogue behind it (which the server never emits, but the generated
   type permits) admits it in words instead of rendering as a resolved device
   with a suspiciously empty field list.
-- **Strings and styling.** 33 new `deviceIdentity.*` keys in
+- **Strings and styling.** 36 new `deviceIdentity.*` keys in
   `messages/en.ts`/`messages/de.ts`, including the `omitted.one`/`omitted.other`
   plural pair; German parity is enforced by the existing `Record<MessageKey,
   string>` typing. `styles.css` gains `.device-identity` and friends, built
@@ -3552,10 +3552,22 @@ plumbing and everything on making the identity readable.
   `--knx-cell-padding` are the only density-aware tokens and this block uses
   neither — exactly like `.device-workspace`'s own fixed `padding: 20px`
   around it. Not a regression, but not automatic either. The verdict badge carries its colour in
-  border and background tint and its text in `--knx-foreground`: measured in a
-  real browser, the badge word sits at 10.55:1 to 14.69:1 across both themes
-  and all four variants, against 3.46:1 and 3.91:1 for the first attempt that
-  tinted the text itself.
+  border and background tint and its text in `--knx-foreground`. Measured in
+  headless Chromium over the background the panel actually renders on — the
+  badge's translucent fill composited onto `.device-workspace`'s opaque
+  `--knx-surface`, since `.device-identity` contributes no surface of its own
+  — the badge word sits at 12.66:1 to 15.32:1 in Porcelain, 9.82:1 to 13.47:1
+  in Graphite and 13.94:1 to 18.90:1 in Bitcoin DeFi, across all four
+  variants and all five accents (60 combinations; the worst case everywhere is
+  `NotInDatabase`, whose fill is the densest). The alternative of tinting the
+  word itself was rejected for a reason these numbers state plainly: accent-
+  coloured text over the same background spans 4.37:1 to 6.04:1 in Porcelain
+  depending on which accent is active, so the verdict's legibility would
+  become a side effect of a theme preference. (An earlier revision of this
+  entry quoted 10.55:1–14.69:1, measured over a recessed
+  `color-mix(--knx-bg 55%, --knx-surface)` panel the block no longer has, and
+  3.46:1/3.91:1 for a draft since deleted and not reproducible against this
+  tree. Both withdrawn.)
 - **Layout, measured rather than assumed.** The first draft put label and
   value side by side and inlined all fourteen fields; screenshotted at 1920px
   the pairs drifted apart and the block grew to roughly 400px, pushing the
@@ -3563,21 +3575,24 @@ plumbing and everything on making the identity readable.
   resolved. Hence stacked label-over-value pairs in an `auto-fill` grid and
   the disclosure.
 
-Tests: `DeviceWorkspace.test.tsx` grows from 1 case to 11 — one per resolution
+Tests: `DeviceWorkspace.test.tsx` grows from 1 case to 13 — one per resolution
 variant, the third tab's own panel (the identity is inside it, hidden until
 selected, and leaving the tab does not remount `ParameterPanel`), arrow-key
 navigation in both directions with wrapping plus `Home`/`End`, the resolved
 catalogue's disclosure split and omission count, the partly-installed
 catalogue's empty group, a resolution string this build does not recognise,
-and the omission count under `NoReference` with a catalogue attached. Every fixture is fictional
+the omission count under `NoReference` with a catalogue attached, a tab stop
+on every panel (so a panel whose content has nothing focusable is still
+reachable from the tablist), and the German badge's refusal to call the state
+unknown. Every fixture is fictional
 (`M-00FA`, "Example Manufacturing", `EX-4210`); no real product or
 installation appears. `App.test.tsx`'s device fixture and
 `scripts/workbench-browser-proof.mjs`'s mock gained a `product` field — the
 proof script's mock would otherwise have served a `DeviceDetail` without one
 and crashed the page it was meant to photograph.
 
-Web gates: `npm test -- --run` **361 passed across 36 files** (up from 351,
-+10 in `DeviceWorkspace.test.tsx`), `tsc --noEmit` clean.
+Web gates: `npm test -- --run` **363 passed across 36 files** (up from 351,
++12 in `DeviceWorkspace.test.tsx`), `tsc --noEmit` clean.
 `scripts/workbench-browser-proof.mjs` now reaches the new tab with two right
 arrows, opens the disclosure and photographs it
 (`01b-porcelain-product-data.png`). Rust gates re-run

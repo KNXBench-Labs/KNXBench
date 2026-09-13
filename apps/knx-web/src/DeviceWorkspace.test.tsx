@@ -8,6 +8,7 @@ import type { DeviceProductCatalog } from "./bindings/DeviceProductCatalog";
 import type { DeviceProductNode } from "./bindings/DeviceProductNode";
 import type { ProductResolution } from "./bindings/ProductResolution";
 import type { ProjectTree } from "./bindings/ProjectTree";
+import { messages as germanMessages } from "./messages/de";
 const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }), setComObjectDpt: vi.fn() }));
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
 import { DeviceWorkspace } from "./Inspector";
@@ -226,4 +227,38 @@ it("counts omitted catalogue fields without assuming two ref rows are present", 
   // count is printed at all.
   expect(identity.textContent).not.toContain("further field");
   await cleanup();
+});
+
+it("gives every tab panel its own tab stop, so a panel with nothing focusable stays reachable", async () => {
+  // Under `NoReference` the product panel is a heading, a badge and one
+  // sentence — no link, no control, nothing focusable. Without a tab stop of
+  // its own, a keyboard user leaving the tablist would land past the whole
+  // panel and never reach what the tab was for. Applied to all three panels
+  // because which of them ends up empty is a property of the project, not of
+  // this component.
+  const { host, tabs, cleanup } = await render(NO_REFERENCE);
+  const panels = [...host.querySelectorAll<HTMLElement>('[role="tabpanel"]')];
+  expect(panels.map((p) => p.tabIndex)).toEqual([0, 0, 0]);
+  expect(panels[2].querySelectorAll('a[href], button, input, select, textarea, summary, [tabindex]')).toHaveLength(0);
+  panels[2].focus();
+  expect(document.activeElement).toBe(panels[2]);
+  // The tablist itself still has exactly one stop, the selected tab.
+  expect(tabs.map((b) => b.tabIndex)).toEqual([-1, -1, 0]);
+  await cleanup();
+});
+
+it("never tells a German reader the state is simply unknown, which the English also avoids", () => {
+  // The English guard lives in the rendered assertions above; its German twin
+  // has to be a catalogue assertion, because `DeviceWorkspace` renders English
+  // in these tests and seeding the UI language would test the language store
+  // rather than the wording. Scope is the whole `deviceIdentity.*` namespace,
+  // not the one key that once read "Zustand unbekannt", so the claim cannot
+  // creep back in through a neighbour. The server knows the state perfectly
+  // well; only this build does not.
+  const identityKeys = Object.entries(germanMessages).filter(([key]) => key.startsWith("deviceIdentity."));
+  expect(identityKeys.length).toBe(36);
+  for (const [key, value] of identityKeys) {
+    expect(value.toLowerCase(), key).not.toContain("unbekannt");
+  }
+  expect(germanMessages["deviceIdentity.resolution.unrecognised"]).toBe("Zustand nicht erkannt");
 });

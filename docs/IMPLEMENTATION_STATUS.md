@@ -588,7 +588,9 @@ Known gaps added this cycle (not bugs, scope decisions):
   container (needs `--network host`) — a known, not-yet-solved
   constraint (ROADMAP.md, Session 6 entry); `knx-server` does not call
   `discover` yet, so nothing regresses, but the gap is now reachable from
-  a CLI a container user might reasonably try.
+  a CLI a container user might reasonably try. **Documented, 2026-09-13
+  (backlog E5):** this stays a deployment constraint, not a fix — see the
+  E5 entry below and [KNOWN_LIMITATIONS.md §79](KNOWN_LIMITATIONS.md#79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry).
 
 **Session 6, Cycle 4 (2026-09-06) — KNXnet/IP routing.** Own design spec
 (`docs/superpowers/specs/2026-09-06-knxnet-ip-routing-design.md`), per the
@@ -713,6 +715,62 @@ hasn't gotten one yet, correct via a full `save_project`/`load_project`
 round trip until a later cycle's incremental-sync pass covers all of
 them together. 49 Rust tests added across
 `crates/knx-core`/`crates/knx-projection`/`apps/knx-server`.
+
+**Backlog E5 (2026-09-13) — Docker discovery documented, not coded
+around.** `discover()` (`crates/knx-net/src/client.rs:146`) needs IP
+multicast, which Docker's default bridge network does not carry — a
+constraint carried since the web/Docker deployment target and Session 6
+Cycle 3, never fixed because there is no honest fix: no multicast relay,
+no unicast subnet sweep, was added, since neither would actually make
+bridge-network discovery work, only look like it does. What this task
+did establish, and verify against actual sources rather than assume:
+`apps/knx-server`'s Dockerfile builds and ships only the `knx-server`
+binary — `grep -rn discover apps/knx-server/src/` finds no discovery
+route — so the documented `docker run` deployment path in README.md
+cannot reach `discover()` at all today; the gap is reachable only by
+running `knx-cli` inside some other container a developer builds. Docker's
+own docs ([bridge](https://docs.docker.com/engine/network/drivers/bridge/),
+[host](https://docs.docker.com/engine/network/drivers/host/)) confirm the
+NAT/publish model that explains the failure and confirm `--network host`
+is Linux-only and removes network-namespace isolation, but neither page
+states in so many words that bridge networking blocks multicast — that
+inference is recorded as an assumption, not asserted as documented fact
+(KNOWN_LIMITATIONS.md §79 carries the `[D]`/`[A]` split). `discover()`
+itself binds `0.0.0.0:0` and lets the OS routing table pick the outgoing
+interface (`local_discovery_hpai`, `client.rs:706`), so `--network host`
+is necessary and, on an ordinary single-NIC host, sufficient — a
+multi-homed host with no default route to the KNX LAN would need that
+fixed regardless of Docker, unverified either way. `apps/knx-cli`'s
+`run_bus_discover_async` (`main.rs:1413`) now prints a fixed, unconditional
+stderr hint alongside "no gateways responded" naming multicast and
+container networking, so an empty result no longer looks identical to a
+quiet network; one new test (`discover_empty_hint_names_multicast_and_container_networking`)
+checks the hint text without a socket. `docker` was available in this
+sandbox and was used, but not to build/run the shipped
+`apps/knx-server` image — the compiled `knx` binary was run inside a
+plain `debian:bookworm-slim` container (bridge) and again with
+`--network host`, with `tcpdump` on the host's real LAN interface and on
+`docker0` (KNOWN_LIMITATIONS.md §79 has the packet-level result: the
+`SEARCH_REQUEST` reaches `docker0` and stops there in bridge mode, and
+reaches the LAN interface in host mode, matching a bare-host run). No
+real KNXnet/IP gateway answered on this network segment, so the
+gateway-round-trip half of discovery remains unverified against
+hardware. Docs touched: `README.md` (CLI section), `apps/knx-server/Dockerfile`
+(comment at `ENTRYPOINT`), `docs/GAP_ANALYSIS_ETS.md` row E5,
+`docs/ROADMAP.md`'s Session 6 "carried in" paragraph (forward-pointer,
+not rewritten), and the two known-gaps bullets above.
+
+All eight gates green: `cargo fmt --all --check` clean; `cargo clippy
+--workspace --all-targets -- -D warnings` clean; `cargo run -p xtask --
+check-layering` clean (no new crate dependency — the change is one
+`const` and a stderr line in `apps/knx-cli`, already the layer that owns
+CLI-facing prose); `cargo run -p xtask -- check-headers`: ceiling
+unchanged (no new file); `cargo deny check` clean. Web gates
+(`npm test -- --run`, `./node_modules/.bin/tsc --noEmit`) both run and
+green though untouched, per the task brief's own requirement to prove
+the pair stays green. Rust test counts and their delta against this
+branch's `60e4027` baseline are in the branch's own commit message and
+dispatch report rather than repeated here a third time.
 
 ## Next session
 

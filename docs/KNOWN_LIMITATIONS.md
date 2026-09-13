@@ -3255,3 +3255,79 @@ three such endpoints among 35 occupied addresses on one gateway.
 **Lifted when.** Only after the sub-20 ms heuristic, or a more reliable
 signal, is verified against more than one gateway/client combination —
 not scheduled as part of T17.
+
+## 79. Discovery needs IP multicast, which Docker's default bridge network does not carry
+
+**Limitation.** `KnxNetIpClient::discover()` (`crates/knx-net/src/client.rs:146`)
+sends `SEARCH_REQUEST` to the standard discovery/routing multicast group
+`224.0.23.12:3671` and waits for unicast `SEARCH_RESPONSE`s. A container
+started on Docker's default bridge network gets an empty result, not an
+error — indistinguishable from "no gateways on this network" unless the
+operator already knows to suspect the network layer.
+
+**Cause.** Docker's bridge driver source-NATs (masquerades) a container's
+outbound traffic and requires an explicit `-p`/`--publish` for anything to
+be reachable from outside — a unicast, port-oriented model with no
+provision for multicast group membership or for routing an unsolicited
+unicast reply back to a masqueraded container address. **[D]**
+[docs.docker.com, bridge network driver](https://docs.docker.com/engine/network/drivers/bridge/):
+"containers connected to different bridge networks can only communicate
+with each other using published ports" and outbound traffic uses
+"masquerading to give containers external network access." The host
+network driver's own docs describe the alternative in contrasting terms —
+**[D]** [docs.docker.com, host network driver](https://docs.docker.com/engine/network/drivers/host/):
+with `--network host` a "container's network stack isn't isolated from
+the Docker host," it "doesn't get its own IP-address allocated," and the
+driver "only works on Linux hosts" (excluded for Windows containers;
+Docker Desktop's host networking, from 4.34, is a separate, more limited
+feature gated behind a settings toggle). Neither page states in so many
+words that bridge networking blocks multicast; that inference is now
+**[V]**, locally verified (2026-09-13, this task, n=1 per condition, one
+Linux Docker host): `tcpdump` on the host's real LAN interface during
+`knx bus discover` run inside a plain (bridge) `debian:bookworm-slim`
+container captured nothing on that interface, while `tcpdump` on
+`docker0` captured the `SEARCH_REQUEST` leaving the container
+(`DOCKER_HOST_ADDR.57836 > 224.0.23.12.3671`, 14-byte UDP payload) — the
+datagram reaches the bridge and goes no further. The identical container
+started with `--network host` instead put the same request straight onto
+the LAN interface, source-addressed as the host itself
+(`192.0.2.10.47827 > 224.0.23.12.3671`), matching a bare-host (no
+container at all) run byte-for-byte. No real KNXnet/IP gateway answered
+in any of the three runs (bridge, host, bare-host) on this network
+segment, so this confirms the request half of discovery, not a full
+round trip against hardware — corroborating, non-authoritative community
+reports (Docker Community Forums, GitHub issues) describe the same
+failure mode with other multicast-dependent software, consistent with
+what was measured here. `discover()` itself does no interface selection: it binds `0.0.0.0:0` and
+lets the OS routing table pick both the send path and the local address
+reported inside `SEARCH_REQUEST` (`local_discovery_hpai`,
+`crates/knx-net/src/client.rs:706`) — so `--network host` is necessary,
+and, on a host whose default route already reaches the KNX LAN (the
+common single-NIC case), also sufficient; a multi-homed host with no
+default route to that LAN would still need its own routing fixed
+regardless of Docker. **[A]**, not verified against a real multi-homed
+host.
+
+**Impact.** `apps/knx-server`'s HTTP API has no discovery route today —
+`grep -rn discover apps/knx-server/src/` finds none — so the shipped
+`apps/knx-server/Dockerfile` image (which does not build or ship the
+`knx` CLI either, only `knx-server`) cannot reach this code path at all
+via the documented `docker run` deployment in `README.md`. The gap is
+reachable only by running `apps/knx-cli`'s `bus discover` directly inside
+some container — a development container, CI image, or any future image
+that bundles the CLI or gains an HTTP discovery route (ROADMAP.md,
+Session 6, already anticipates the latter). `run_bus_discover_async`
+(`apps/knx-cli/src/main.rs:1413`) now prints a fixed stderr hint
+alongside "no gateways responded" naming multicast and container
+networking as a common cause, so the failure at least explains itself
+where it is reachable; the hint is unconditional, not gated on any
+"am I in a container" check, since no such check is both reliable and
+free of false negatives on an ordinary host with its own multicast
+routing/firewall problem.
+
+**Lifted when.** Not something to "lift" — this is a property of Docker's
+default network driver, not a bug in this project. Stays true unless the
+image starts shipping discovery and a deployer chooses `--network host`
+(or an equivalent Docker documents) at `docker run` time; documented, not
+solved, per the 2026-09-05/06 deployment-target and Session 6 planning
+calls (ROADMAP.md).

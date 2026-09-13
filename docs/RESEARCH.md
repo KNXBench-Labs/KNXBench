@@ -81,22 +81,47 @@ The schema version is the trailing integer of the default XML namespace, e.g. `h
 
 Official XSDs are **not** published on the public KNX website; they ship with the Manufacturer Tool (MT5/MT6) or via the KNX GitLab account [D]. We therefore cannot validate against an authoritative schema without KNX membership. Consequence: our importer must be **tolerant and inventorying** rather than schema-validating — see §9.
 
-### 2.3 Password protection [V — read from `xknxproject` source]
+### 2.3 Password protection [D/V for the ETS6 key derivation, A for ZipCrypto — see below]
 
 When protected, the archive contains a nested `<P-xxxx>.zip`.
 
-* Schema < 21 (ETS4/ETS5): standard ZipCrypto, password used as UTF-8 bytes.
-* Schema >= 21 (ETS6): AES ZIP (`pyzipper`), password derived as
+* Schema < 21 (ETS4/ETS5): standard ZipCrypto, password used as UTF-8
+  bytes. **Demoted from [V] to [A] on 2026-09-13.** This section's heading
+  used to read "[V — read from `xknxproject` source]" as a single
+  section-level marker covering both bullets; splitting the ETS6 bullet
+  out to `[D]/[V]` below leaves this one where it always actually stood —
+  read from `xknxproject`'s source, never independently verified, and
+  never checked against a real protected project. Nothing about the
+  ZipCrypto claim itself changed; only its marker got honest.
+* Schema >= 21 (ETS6): AES ZIP, password derived as
 
-```text
-base64( PBKDF2-HMAC-SHA256(
-    password = utf-16-le(user_password),
-    salt     = b"21.project.ets.knx.org",
-    iterations = 65536,
-    dklen    = 32 ) )
-```
+  ```text
+  base64( PBKDF2-HMAC-SHA256(
+      password = utf-16-le(user_password),
+      salt     = b"21.project.ets.knx.org",
+      iterations = 65536,
+      dklen    = 32 ) )
+  ```
 
-Our sample is unprotected, so this path is **unverified in practice** here. Must be tested against a real ETS6 protected project before we claim support.
+  **[D]/[V], corrected 2026-09-13.** This formula is not an `xknxproject`
+  implementation detail — it is the KNX Standard's own specification:
+  *The KNX Standard v3.0.0*, *Project Schema23 v01.00.00*, clause 4.2.4
+  "Password protection", p.64/64, which also publishes three test
+  vectors. `crates/knx-secure::derive_knxproj_zip_password` implements
+  this derivation and its tests assert byte-exact agreement with all
+  three vectors, the third recovered from a broken PDF text layer by
+  rendering and reading the glyphs directly (see the module's own
+  comments for the recovery method) — `xknxproject`'s matching
+  implementation is now corroborating evidence, not the primary source.
+  The formula above was already correct when this section was first
+  written from `xknxproject`'s source; what was missing was knowing that
+  an independent, citable specification existed to verify it against.
+
+  This closes the *key derivation* only. Our sample is still unprotected,
+  so *container decryption* — actually opening the nested, AES-encrypted
+  `<P-xxxx>.zip` with the derived password — remains **unverified in
+  practice**. Must be tested against a real ETS6 protected project before
+  we claim support for opening one.
 
 ### 2.4 Container differences, ETS4 (schema 11) vs. ETS6 (schema 23) [V]
 

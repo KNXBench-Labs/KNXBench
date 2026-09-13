@@ -200,7 +200,10 @@ describe("one editing workspace", () => {
   it("reaches no project mutation anywhere in its transitive import graph", () => {
     const graph = valueImportGraph("DiagnosticsCompanion.tsx");
 
-    // Fifteen modules. `filePicker` and `FsPicker` are the uncomfortable
+    // Fifteen modules, not the thirty an earlier review counted: the
+    // difference is exactly the fifteen `bindings/*.ts` files, which are
+    // reached only by `import type` and are erased before anything runs.
+    // `filePicker` and `FsPicker` are the uncomfortable
     // two: they are here because `diagnosticsWindow` imports `isTauri`,
     // which is `typeof window !== "undefined" && "__TAURI__" in window`
     // and nothing else. The picker entry points that reach `FsPicker`'s

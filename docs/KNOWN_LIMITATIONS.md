@@ -335,30 +335,58 @@ controlled via a flag in the database entry for the product"* **[D]**
 `load_procedure_style` but drops `Options`, `LoadProcedures` and every
 `LdCtrl*` element without storing them — the bytes survive in `source_file`,
 but nothing is queryable **[V]**. As of 2026-09-13 they are at least no
-longer invisible: `program.rs`'s catch-all now reports every one of them
-through the same `UnknownCollector` an unrecognised attribute already used,
-instead of the bare `_ => {}` it fell into before, so an ingest report shows
+longer invisible. `program.rs`'s catch-all reports every one of them through
+the same `UnknownCollector` an unrecognised attribute already used, instead
+of the bare `_ => {}` it fell into before, so an ingest report shows
 `Options`, `LoadProcedures`, each `LdCtrl*` variant, `AddressTable`,
-`AssociationTable` and the rest of the load-procedure grammar by name and
-count — the *reporting* half of this gap is closed, the *storage* half is
-not **[V]**. Two wrapper elements in the same tree joined that report on the
-same date, after the first attempt at the fix allowlisted them into silence
-instead: `ComObjectTable` carries the com-object table's memory placement
+`AssociationTable` and the rest of the load-procedure grammar as `Element`
+rows — name, parent path and occurrence count **[V]**. The same date's
+second pass added their *attributes*: the catch-all now also calls
+`report_unknown_attrs` for every element it reaches, with no known-attribute
+list at all, so `AbsoluteSegment/@Size`/`@MemoryType`/`@Address`,
+`LdCtrlCompareProp/@InlineData`/`@ObjIdx`/`@PropId` and the `Legacy*` flags
+on `Options` land as `Attribute` rows carrying name, owning-element path,
+count and one sample value — the substance of the load procedures, not just
+the shape (pinned by
+`a_load_procedure_steps_attributes_are_reported_not_just_its_name`) **[V]**.
+Two wrapper elements in the same tree joined that report on the same date,
+after the first attempt at the fix allowlisted them into silence instead:
+`ComObjectTable` carries the com-object table's memory placement
 (`@CodeSegment` and `@Offset`, on 279 of the 336 application-program files
 swept on this machine) and `ModuleDef` carries `@Id`/`@Name` (91 files)
 **[V]**. `@CodeSegment` is read for `Parameter`'s `Memory` and nowhere else,
 and `ModuleDef/@Name` is stored by nothing at all — `@Id` is at least
 recovered by the separate `Dynamic` pass as `dynamic_node.module_def_id` —
 so all four are now `ingest_unknown` attribute rows: parsed, reported, and
-not stored. Two more attributes stay out of that report on purpose and are
-named here instead, so they are recorded somewhere: `KNX/@ToolVersion` and
-`KNX/@CreatedBy` (their sibling `@xmlns` *is* read, by `package.rs`, for the
-schema version), and `TranslationUnit/@RefId` (all 336 files) plus
-`TranslationUnit/@Version` (39) **[V]**. Those elements are the document's
-own spine, deliberately kept out of the unknown report so an ingest does not
-describe the parser walking past its own ancestors, and their attributes ride
-along in that exemption. Everything unstored survives whole as bytes in
-`source_file` regardless (ADR-0011). (The companion `bool_flag` defect this
+not stored. So for this file kind the *reporting* half of the gap is closed for
+elements and for attributes both, and the *storage* half is not: an ingest
+report can tell a reader that `<AbsoluteSegment Size="513"
+MemoryType="EEPROM" Address="16384">` was present and where, but no table,
+column or query holds it, and no code resolves a download sequence from it
+**[V]**. Exactly two reporting exemptions remain, both deliberate, both
+narrow, and neither of them attribute-shaped rot. First, the document's own
+spine (`KNX`, `ManufacturerData`, `ApplicationPrograms`, `Languages`,
+`TranslationUnit`): neither those elements nor their attributes are
+reported, so an ingest does not describe the parser walking past its own
+ancestors. The attributes that exemption swallows are named here instead,
+so they are recorded somewhere: `KNX/@ToolVersion` and `KNX/@CreatedBy`
+(their sibling `@xmlns` *is* read, by `package.rs`, for the schema version),
+and `TranslationUnit/@RefId` (all 336 files) plus `TranslationUnit/@Version`
+(39) **[V]** — that is the whole list, and
+`the_document_spines_own_attributes_stay_out_of_the_report` fails if the
+exemption ever widens past it. Second, `ComObject`, `ComObjectRef` and
+`ParameterRef` reach the catch-all only on a *duplicate* program, whose
+first ingest already stored element and attributes both; suppressing them
+there reports deduplication as nothing rather than as a compatibility gap
+(`a_duplicate_programs_modelled_elements_are_not_reported_as_unknown`)
+**[V]**. The seven structural wrappers the catch-all still keeps off the
+*element* report (`Static`, `Parameters`, `ParameterTypes`, `ParameterRefs`,
+`ComObjectRefs`, `ComObjects`, `ModuleDefs`) are no longer an exemption for
+their attributes: if a manufacturer ever puts one there, it is reported, and
+`an_attribute_on_a_supposedly_attribute_free_wrapper_is_still_reported`
+proves it rather than leaving the corpus claim unfalsifiable **[V]**.
+Everything unstored survives whole as bytes in `source_file` regardless
+(ADR-0011). (The companion `bool_flag` defect this
 spike found — only
 `"1"`/`"0"` were accepted, so schema-20/21 `true`/`false` landed as `NULL`,
 measured across all six ingested programs — was fixed on 2026-09-13 and is no

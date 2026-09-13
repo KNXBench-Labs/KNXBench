@@ -269,12 +269,36 @@ neither placement owns it.
 
 Observed `BuildingPart/@Type` values: `Building` (1), `Floor` (3), `Room` (14),
 `Corridor` (2), `DistributionBoard` (1), `BuildingPart` (1). `BuildingPart`
-nests recursively and carries `DefaultLine`.
+nests recursively and carries `DefaultLine`. Those six observed values are
+also the six `BuildingPartType` variants, which is fewer than the schema
+documents: *Project Schema23 v01.00.00* §1.1.2.3 enumerates ten and §1.2.6.4
+names eleven, so `Stairway`, `RoomPart`, `Area`, `Ground` and `Segment` are
+coarsened to `BuildingPart` on import, with a reported `MapProblem` rather
+than silently ([KNOWN_LIMITATIONS.md §88](KNOWN_LIMITATIONS.md)).
 
 **A device without a line is valid** and lives in `Topology::unassigned`. The
 reference project contains exactly one, and it is precisely the device
 `xknxproject` loses (RESEARCH §7.1). Any model that makes line membership
 mandatory reproduces that bug.
+
+**Both hierarchies are topological, and neither carries coordinates**
+([ADR-0019](adr/0019-building-model-stays-topological.md), 2026-09-13). No
+entity in this model has a position, an extent, a rotation or a floor-plan
+reference, and none is planned for v1.0.0. The decision rests on evidence
+rather than on omission: `Space_t` (schema 23 §1.2.6.4) and
+`DeviceInstance_t` (§1.2.5.1) have no spatial attribute, an attribute
+inventory of all three reference projects — schema 11's
+`<Buildings><BuildingPart>` and schema 21/23's `<Locations><Space>` — finds
+none either, and the KNX Standard's own spatial model (3/10/3 *KNX IoT
+Information Model*) keeps geometry out of its location classes on purpose,
+referencing IFC instead. Graphical topology and building views therefore
+compute their layout at render time and persist nothing, which is the
+projection rule of [ADR-0009](adr/0009-ui-boundary.md). ADR-0019 also
+pre-commits the shape of a later spatial layer — separate `FloorPlan` and
+`Placement` entities in their own tables, integer millimetres, origin at the
+plan's own top-left, no `z` — so that it cannot be bolted onto these
+entities as fields; building it needs its own ADR and its own store schema
+version, and neither exists.
 
 ## 6. Directional links
 
@@ -511,6 +535,16 @@ The server reads `instance_ets_id` to reconstruct the exact id a write
 must target, never a guessed `MI-1` (design D38/D39). See the design doc
 at `docs/superpowers/specs/2026-09-12-module-scoped-editing-design.md`
 (Evidence E1/E5, Decisions D35-D43).
+
+**Note (spatial coordinates, 2026-09-13):**
+[ADR-0019](adr/0019-building-model-stays-topological.md) adds **no**
+migration and no version — `CURRENT_SCHEMA_VERSION` stays 6 — because it
+decides *not* to model coordinates in v1.0.0 (section 5). It does constrain
+the migration a later spatial layer would need: two new tables (`floor_plan`,
+`placement`) and no altered column, so every existing project migrates with
+zero rows. Zero rows is a complete project rather than a project missing
+something, which is what makes that migration safe in a way §71's invented
+module ids were not.
 
 ```rust
 pub struct Project {

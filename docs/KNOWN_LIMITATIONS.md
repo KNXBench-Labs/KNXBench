@@ -2216,28 +2216,48 @@ alone — only counts per table, per installation.
 **Lifted when.** Open. A richer visual diff view is a real, larger
 feature a future task could propose; not built speculatively now.
 
-## 61. The DPT codec covers nineteen main types, infers rather than reads its input, and leaves several encoding questions to a stated ruling rather than the Standard
+## 61. The DPT codec covers thirty main types, infers rather than reads its input, and leaves several encoding questions to a stated ruling rather than the Standard
 
 **Limitation.** `crates/knx-core/src/dpt/codec.rs` (2026-09-11, T29;
-extended 2026-09-13, E4) can decode and encode main types **1, 2, 3, 4, 5,
-6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19** — nineteen of the 46
-main types `knx_master.xml` defines (`docs/RESEARCH.md` §5). Everything
-else (20, and 21 upward) returns `DptCodecError::UnsupportedDpt`
-unconditionally; nothing about them is guessed. (`docs/IMPLEMENTATION_STATUS.md`'s
-T29 entry says "fourteen" — that is the true count as of T29's date,
-2026-09-11, before E4 added the remaining five two days later; this
-heading states the current total, verified directly against
-`codec.rs`'s `decode`/`encode` match arms, not the count at any one
-task's snapshot in time.)
+extended 2026-09-13 and 2026-09-14, E4, twice) can decode and encode main types **1
+through 30 inclusive, with no gaps** — thirty main types, counted from
+`codec.rs`'s own `decode`/`encode` match arms
+(`grep -cE '^        [0-9]+ => decode_' crates/knx-core/src/dpt/codec.rs`
+→ `30`). Main type 31 and everything above it returns
+`DptCodecError::UnsupportedDpt` unconditionally; nothing about those is
+guessed.
 
-**Excluded inside an otherwise-implemented main type.** `6.020
-DPT_Status_Mode3` is the one confirmed case: its wire layout (`B5N3` — five
-status bits plus a one-hot three-bit mode field, DPT-AS §3.7) does not fit
-`DptValue`'s existing shapes, so it is `UnsupportedDpt` rather than
-misread as a plain signed 8-bit integer the way the rest of main type 6
-is. The rest of main type 6's implemented subtypes are plain `V8`. No
-other subtype-level exclusion inside an implemented main type is known;
-this entry names the one that is.
+Against the ETS master data that number reads differently, and the
+difference is worth stating plainly because it has been misread before.
+`knx_master.xml` defines 46 *main types* (`docs/RESEARCH.md` §5) — 46 is a
+count, not an identifier, and there is no "main type 46": its 46 ids are
+`DPT-1` through `DPT-23`, then `DPT-25`, `DPT-26`, `DPT-27`, `DPT-29`,
+`DPT-30`, then eighteen LTE/system types in the 200-series (`DPT-206`,
+`DPT-217`, `DPT-219`, `DPT-222`, `DPT-229`, `DPT-230`, `DPT-232`,
+`DPT-234`, `DPT-235`, `DPT-237`, `DPT-238`, `DPT-240`, `DPT-241`,
+`DPT-244`, `DPT-245`, `DPT-249`, `DPT-250`, `DPT-251`). So of those 46 the
+codec now covers **28** — every one below 200 — and the eighteen
+200-series types remain unsupported. The other two main types the codec
+implements, **24** and **28**, are defined in DPT-AS (§3.24, §3.27) but are
+absent from that master-data file, which is exactly the asymmetry
+`docs/RESEARCH.md` §5 warns about: the master file's catalogue is a
+property of *that file*, not of the Standard.
+(`docs/IMPLEMENTATION_STATUS.md`'s T29 entry says "fourteen" — the true
+count as of T29's date, 2026-09-11; the E4 rounds of 2026-09-13 and
+2026-09-14 added
+the rest. This heading states the current total, re-measured, not the
+count at any one task's snapshot in time.)
+
+**No subtype-level exclusion remains inside an implemented main type.**
+`6.020 DPT_Status_Mode3` used to be one: its wire layout (`B5N3` — five
+status bits plus a one-hot three-bit mode field, DPT-AS §3.7) fits none of
+`DptValue`'s pre-existing shapes, so it returned `UnsupportedDpt` rather
+than being misread as the plain signed 8-bit integer the rest of main type
+6 is. The second E4 round (2026-09-14) gave it its own
+`DptValue::StatusMode3` variant, so every subtype of every implemented
+main type now decodes. No subtype-level exclusion inside an implemented
+main type is known any more; if one is found, it belongs in this
+paragraph.
 
 **2026-09-13 (E4): main types 4, 10, 11, 15, and 19 added, each with one
 Standard-reading judgment call recorded here rather than silently
@@ -2287,6 +2307,91 @@ case. All five new types follow the same reserved-bit policy already used
 by main types 1-18: a reserved bit set to anything but zero is
 `DptCodecError::InvalidData`, not silently ignored or masked off.
 
+**2026-09-14 (E4, second round): main types 20-30 and `6.020` added, with
+one ruling that spans seven of them and four that are local.** The
+spanning ruling first, because it is the one most likely to surprise:
+**for a main type whose format is a bare enumeration or a bare bit set,
+this codec validates the format and not the subtype's own table.** That
+covers main type 20 (`N8`, DPT-AS §3.21), 21 (`Z8`/`B8`, §3.22), 22
+(`B16`, §4.5/§8.3), 23 (`N2`, §3.23/§4.6), 25 (`U4U4`, §8.4), 27 (`B32`,
+§3.26) and 30 (`B24`, §8.5). Concretely: an enumeration code a subtype
+calls "reserved" still decodes to its raw code, a bit a subtype's table
+calls "reserved, set 0" still survives into the decoded value, and a field
+a subtype narrows (25.1000's `[0 … 3]` inside the format's `[0 … 15]`) is
+not re-narrowed. Three reasons, in order of weight: (1) Main type 20 alone
+has **sixty-eight** subtypes whose tables are scattered over six clauses
+of DPT-AS — §3.21 (20.001-20.022, sixteen), §4.3 (20.100-20.122,
+nineteen), §6.3 (20.600-20.613, fourteen), §7.1 (20.801-20.804, four),
+§8.1 (20.1000-20.1005, six) and §9.5 (20.1200-20.1209, nine) — keyed by
+application domain; transcribing them into a codec means every
+transcription slip silently *rejects* a legal bus value, the worst failure
+direction available here. (Counted, not estimated:
+`pdftotext -layout "03_07_02 Datapoint Types v02.02.01 AS.pdf" - | grep -oE
+'\b20\.[0-9]{3,4}\b' | sort -u | wc -l` → 68. An earlier draft of this
+paragraph said "of the order of eighty" and named chapter 10 as a seventh
+location; chapter 10 is "Datapoint types for weather encoding" and holds
+main types 273 and 274 only, no main type 20 subtype at all.)
+(2) Their wording is not uniform: 20.001 and
+20.003 say "not used; reserved", 20.002 says "reserved, shall not be
+used", 22.100 says "reserved" with "default 0", 21.001 says "reserved, set
+0" — three different strengths of prohibition that cannot be collapsed
+into one check honestly. (3) In one case the Standard contradicts itself
+outright: 22.100 `DPT_StatusDHWC`'s encoding row (§4.5.1) reads
+`0 0 0 0 0 0 0 B BBBBBBBB`, defining bit 8 as a `B`, while the data-field
+table printed directly beneath the same diagram lists bits "8 to 15" as
+"reserved", "default 0" — read verbatim off page 126 of the source PDF
+(`pdftotext -layout "03_07_02 Datapoint Types v02.02.01 AS.pdf"`, which
+preserves both the encoding row and the table beneath it), not from a
+Markdown extraction. §4.5.2's own Encoding paragraph
+points the same way without settling the bit: "depending on the usage of
+this DPT in a given Datapoint, some bit-fields may be unused and set to
+'0' by the sender and will be ignored by the receiver." Nothing is
+discarded by this ruling — every bit and every code reaches the caller in
+`DptValue::Enum` / `DptValue::BitSet` / `DptValue::DoubleNibble` — so a
+caller that *does* know its subtype can apply the table itself. The
+commissioning design's `DPT_ErrorClass_System` (20.011) enumeration
+(`docs/superpowers/specs/2026-09-13-commissioning-download-design.md`
+§5.6, `[0 to 18]`) is exactly such a caller and remains correct at that
+layer; it was checked against §3.21 during this slice and matches.
+
+The four local rulings. (a) **`6.020`'s mode field is enforced, unlike a
+subtype table**, because §3.7's Range row states `f = {001b,010b,100b}`
+for the *format* itself — so a mode field of `000b`, `011b`, `101b`,
+`110b` or `111b` is `InvalidData`. Its five status bits keep the
+Standard's own inverted polarity ("0 = set, 1 = clear") rather than being
+normalised, and print as binary digits for that reason. (b) **Main types
+24 and 28 (`A[n]`, NUL-terminated, DPT-AS §3.24 and §3.27) reject a
+payload without a terminating `00h`, and a payload with an interior
+`00h`.** Neither section says what a receiver should do with such a
+payload; every tolerant reading is a guess about a non-conforming sender's
+intent (cutting at the first `00h` assumes the remainder is padding;
+appending a terminator assumes one was lost), so the codec refuses rather
+than invents. The same rule makes an embedded `U+0000` unencodable, which
+is a real gap for main type 28: §3.27's Range row includes `U+000000`, but
+the format cannot transmit it unambiguously. (c) **Main type 29's printed
+range is a typo, and this codec follows the datapoint-type rows instead of
+the format block.** §3.28.1's Range row reads "SignedValue = [9 223 372
+036 854 775 808 to 9 223 372 036 854 775 807]" — the lower bound has lost
+its minus sign, and as printed the range is empty and cannot fit 64 bits
+anyway. The 29.010/29.011/29.012 rows in the same clause print
+"-9 223 372 036 854 775 808 Wh to 9 223 372 036 854 775 807 Wh", exactly
+`i64`'s domain, and that is what is implemented. (d) **Main type 26
+carries the wire scene number undecorated**, like main types 17 and 18 —
+see the scene-number paragraph below; §3.25 NOTE 16 is this type's own
+note rather than a borrowed one, and the answer does not change.
+
+Payload shapes for the new types follow the AL-AS §3.1.2/§3.1.3 six-bit
+inline threshold with no exceptions: main type 23 (2 significant bits) is
+the only one of the eleven that travels inline as `GroupValue::Short`;
+main type 26 has 7 significant bits and therefore always occupies its own
+octet, the same reasoning main type 18 already used. Reserved bits that
+*are* format-level — main type 26's bit 7 — are checked and a set bit is
+`InvalidData`, consistent with main types 1-19.
+
+There is no DPT main type 46, and this slice was briefed to implement one
+— see [§90](#90-there-is-no-dpt-main-type-46-46-is-a-count-of-main-types-in-one-ets-master-data-file) for the search that established that and why the
+number was plausible enough to survive into a brief.
+
 **Resolution is inference, not a stated fact.** `resolve_group_address_dpt`
 and `resolve_project_group_address_dpts`
 (`crates/knx-core/src/dpt/resolve.rs`) derive a group address's DPT by
@@ -2331,9 +2436,9 @@ ships and why.
 **Scene numbers are carried at wire value; no display offset is applied.**
 DPT-AS §3.19 NOTE 9, attached to `18.001 DPT_SceneControl`, recommends
 *displaying* a scene number with an offset of +1 (§3.25 NOTE 16 makes the
-same recommendation for `26.001 DPT_SceneInfo`, a main type this codec does
-not implement). No equivalent note exists for `17.001 DPT_SceneNumber` in
-§3.18. The codec applies no +1 to either main type 17 or main type 18: a
+same recommendation for `26.001 DPT_SceneInfo`, implemented since the
+second E4 round). No equivalent note exists for `17.001 DPT_SceneNumber`
+in §3.18. The codec applies no +1 to main type 17, 18 or 26: a
 decoded value means the octet it came from, not a display convention layered
 on top of it. Any UI presenting a scene number to a human owns that +1
 itself — applying it a second time here would make the wire value and the
@@ -2388,7 +2493,7 @@ unambiguously and the reference corpus needs, leave the rest
 itself is ambiguous or self-contradictory rather than resolve it silently.
 
 **Impact.** A user working with a group address whose DPT falls outside
-the nineteen implemented main types, or whose linked communication objects
+the thirty implemented main types, or whose linked communication objects
 disagree, or who has none at all, sees `bus monitor` fall back to the
 pre-T29 raw output for that address. A user relying on `8.010`'s printed
 327.67% maximum, or AN188's 670760.96 figure for main type 9, will see this
@@ -2448,7 +2553,7 @@ ways, all deliberate and all recorded here per that design's own §7:
    becoming a row — not counted against `droppedBefore`, since this is a
    declared scope exclusion, not a loss (`bus::tests::individual_addressed_frames_are_not_rendered_as_rows`).
 8. **DPT/enumeration coverage.** Inherited unchanged from
-   [§61](#61-the-dpt-codec-covers-nineteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) —
+   [§61](#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) —
    this slice does not touch the codec. §61 is not edited, reworded, or
    superseded by this entry; it still fully applies to every decoded
    value the GUI shows.
@@ -3814,3 +3919,73 @@ the one honest fix, and it is deliberately not done here: it would be the
 first migration in the chain to call the parser, which is an architectural
 commitment (migrations would gain a dependency on parse-layer behaviour that
 can itself change) worth making on purpose rather than in passing.
+
+## 90. There is no DPT main type 46; 46 is a *count* of main types in one ETS master-data file
+
+**Limitation.** Not a limitation of the code — a limitation of a number that
+has been circulating through this repository's own planning documents, and
+that reached a task brief as a requirement. `goal.md` §3 row **E4** briefed
+the DPT-codec work as "main types 20, 21-30 and the rest of the 46
+`knx_master.xml` main types", and task 5's brief shortened that to "main
+types 20-30 and 46". There is nothing numbered 46 to implement. Numbers 88
+and 89 are claimed by two other branches in flight alongside this one; this
+entry is 90 for that reason and no other.
+
+**Where 46 actually comes from.** `docs/RESEARCH.md` §5 measured the DPT
+catalogue of one specific master-data file — the one inside
+`OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj` — and
+found 46 `DatapointType` elements. That file's 46 main-type ids are `DPT-1`
+through `DPT-23`, then `DPT-25`, `DPT-26`, `DPT-27`, `DPT-29`, `DPT-30`,
+then eighteen LTE/system types in the 200-series (`DPT-206`, `DPT-217`,
+`DPT-219`, `DPT-222`, `DPT-229`, `DPT-230`, `DPT-232`, `DPT-234`,
+`DPT-235`, `DPT-237`, `DPT-238`, `DPT-240`, `DPT-241`, `DPT-244`,
+`DPT-245`, `DPT-249`, `DPT-250`, `DPT-251`) — re-measured on 2026-09-14
+with
+
+```sh
+unzip -p "OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj" \
+  knx_master.xml | grep -oE 'DatapointType Id="DPT-[0-9]+"' \
+  | sed 's/.*DPT-//;s/"//' | sort -n
+```
+
+RESEARCH.md §5 already warns, in so many words, that this is "a property of
+*this one* master-data file, not a fixed constant". The warning was right
+and was read past anyway: the other `knx_master.xml` copies under
+`OriginalData/` carry 29, 49 and 55 main types, and the two other demo
+projects carry 57 and 63. A count that changes with the ETS vintage cannot
+be an identifier.
+
+**What the Standard says.** DPT-AS (`03_07_02 Datapoint Types v02.02.01
+AS`) §2's overview table enumerates main types 1 to 31 and then jumps
+straight to the 200-series; nothing between 32 and 199 exists. The nearest
+thing to a "46" in that document is *clause* §3.46 "Datatypes A8A8A8A8",
+whose datapoint type is `231.001 DPT_Locale_ASCII` — a clause number, not a
+main type. Searched explicitly so the next reader does not have to:
+`46.001` against `knowledge_base/knx_spec_kb_full179_clean.sqlite` (177
+PDFs) returns exactly one hit, and it is a Connection Code table row from
+`03_07_03 Standardized Identifier Tables v01.04.01 AS` —
+`46 | 2Eh CC_FanSpeed | 5.001` — where 46 is a connection-code number and
+the datapoint type is 5.001. `DPST-46` returns `[]`.
+
+```sh
+cd /mnt/daten-i/Sourcecode/knx-spec-kb && .venv/bin/python \
+  scripts/05_knowledge_base_v1.py -o knowledge_base/knx_spec_kb_full179_clean.sqlite \
+  --query "46.001" --limit 3
+```
+
+**Consequence.** No semantics were invented to fill the gap, and
+`codec.rs`'s `a_main_type_above_the_implemented_range_is_unsupported_not_a_panic`
+test pins main type 46 among the numbers that must return
+`DptCodecError::UnsupportedDpt` rather than anything cleverer. Main type
+**31** *does* exist (31.101 `DPT_PB_Action_HVAC_Extended`, DPT-AS §4.7.1)
+and is deliberately not implemented: its own entry reads "This DPT shall
+not be used for runtime communication. This DPT shall only be used for
+encoding Parameter values in CH_PB_HVAC_Mode_1", so a group-value codec has
+no honest use for it. It is also absent from every `knx_master.xml` in the
+repository.
+
+**Lifted when.** Never, as stated — there is nothing to lift. This entry
+exists so the number stops being re-derived. If a future brief asks for
+"main type 46" again, it means "the remaining main types in some
+`knx_master.xml`", and the right first step is to measure the file in front
+of you.

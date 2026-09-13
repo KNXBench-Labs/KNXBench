@@ -82,6 +82,32 @@ fn parse_i64(v: Option<&str>) -> Option<i64> {
     v.and_then(|v| v.parse::<i64>().ok())
 }
 
+/// The `/`-joined path of the elements currently open, outermost first.
+/// An empty stack is the document itself and becomes `/`, which is where a
+/// stray element outside the root would be reported.
+fn xpath_of(open_path: &[String]) -> String {
+    if open_path.is_empty() {
+        return "/".to_string();
+    }
+    let mut path = String::new();
+    for segment in open_path {
+        path.push('/');
+        path.push_str(segment);
+    }
+    path
+}
+
+/// `xpath_of` plus one more segment: the path of the element being handled,
+/// whose ancestors are `open_path` but which is not on it yet.
+fn xpath_of_child(open_path: &[String], name: &str) -> String {
+    let parent = xpath_of(open_path);
+    if parent == "/" {
+        format!("/{name}")
+    } else {
+        format!("{parent}/{name}")
+    }
+}
+
 pub fn ingest_program(
     conn: &Connection,
     source_sha256: &str,
@@ -107,6 +133,10 @@ pub fn ingest_program(
     let mut current_parameter: Option<String> = None;
     let mut translation_state = TranslationState::default();
     let mut translations_written = 0usize;
+    // The elements currently open, outermost first, so an unknown construct
+    // can be reported at the path it was actually found at instead of one
+    // guessed at compile time.
+    let mut open_path: Vec<String> = Vec::new();
 
     loop {
         buf.clear();
@@ -121,14 +151,17 @@ pub fn ingest_program(
             Event::Start(e) if local_name(&e) == "Dynamic" => {
                 skip_subtree(&mut reader, e.name().as_ref(), source_path)?;
             }
-            Event::End(e) => match e.local_name().as_ref() {
-                "Union" => current_union = None,
-                "ParameterType" => current_parameter_type = None,
-                "Parameter" => current_parameter = None,
-                "Language" => translation_state.language = None,
-                "TranslationElement" => translation_state.ref_id = None,
-                _ => {}
-            },
+            Event::End(e) => {
+                open_path.pop();
+                match e.local_name().as_ref() {
+                    "Union" => current_union = None,
+                    "ParameterType" => current_parameter_type = None,
+                    "Parameter" => current_parameter = None,
+                    "Language" => translation_state.language = None,
+                    "TranslationElement" => translation_state.ref_id = None,
+                    _ => {}
+                }
+            }
             Event::Empty(e) => {
                 let name = local_name(&e);
                 let a = attrs(&e, source_path)?;
@@ -136,6 +169,7 @@ pub fn ingest_program(
                     conn,
                     &name,
                     &a,
+                    &open_path,
                     false,
                     source_sha256,
                     &mut unknown,
@@ -159,6 +193,7 @@ pub fn ingest_program(
                     conn,
                     &name,
                     &a,
+                    &open_path,
                     true,
                     source_sha256,
                     &mut unknown,
@@ -174,6 +209,7 @@ pub fn ingest_program(
                     &mut translation_state,
                     &mut translations_written,
                 )?;
+                open_path.push(name);
             }
             _ => {}
         }
@@ -192,6 +228,7 @@ fn handle_start_or_empty(
     conn: &Connection,
     name: &str,
     a: &Attrs,
+    open_path: &[String],
     is_start: bool,
     source_sha256: &str,
     unknown: &mut UnknownCollector,
@@ -211,7 +248,9 @@ fn handle_start_or_empty(
         *expecting_type_child = false;
         if !*already_present {
             if let Some((pt_id, pt_name)) = current_parameter_type.clone() {
-                insert_parameter_type(conn, program_id, &pt_id, &pt_name, name, a, unknown)?;
+                insert_parameter_type(
+                    conn, program_id, &pt_id, &pt_name, name, a, open_path, unknown,
+                )?;
             }
         }
         return Ok(());
@@ -245,12 +284,9 @@ fn handle_start_or_empty(
                     });
                 }
             } else {
-                report_unknown_attrs(
-                    unknown,
-                    "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram",
-                    a,
-                    PROGRAM_ATTRS,
-                );
+                let xpath = xpath_of_child(open_path, name);
+                report_unknown_attrs(unknown, &xpath, a, PROGRAM_ATTRS);
+                let linkable = bool_flag(unknown, &xpath, a, "Linkable");
                 conn.execute(
                     "INSERT INTO application_program
                      (id, manufacturer_id, name, application_number,
@@ -270,12 +306,7 @@ fn handle_start_or_empty(
                         a.get("LoadProcedureStyle"),
                         a.get("DefaultLanguage"),
                         a.get("Hash"),
-                        bool_flag(
-                            unknown,
-                            "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram",
-                            a,
-                            "Linkable",
-                        ),
+                        linkable,
                         a.get("OriginalManufacturer"),
                         source_sha256,
                     ],
@@ -396,7 +427,7 @@ fn handle_start_or_empty(
         "ComObject" if !*already_present => {
             report_unknown_attrs(
                 unknown,
-                "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ComObjectTable/ComObject",
+                &xpath_of_child(open_path, name),
                 a,
                 COM_OBJECT_ATTRS,
             );
@@ -405,7 +436,7 @@ fn handle_start_or_empty(
         "ComObjectRef" if !*already_present => {
             report_unknown_attrs(
                 unknown,
-                "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ComObjectRefs/ComObjectRef",
+                &xpath_of_child(open_path, name),
                 a,
                 COM_OBJECT_REF_ATTRS,
             );
@@ -427,42 +458,73 @@ fn handle_start_or_empty(
                 ],
             )?;
         }
-        // Structural wrappers with nothing of their own to store (their
-        // children are what matters, and those children are matched by
-        // their own arms above, name-only, regardless of nesting) — see
-        // this module's top doc comment for `ModuleDef`'s case in
-        // particular. Also here: `ComObject`, `ComObjectRef` and
-        // `ParameterRef`, whose own arms above are guarded on
-        // `!*already_present` and so fall through to this arm on a
-        // duplicate program — a known element that was deliberately not
-        // reprocessed, not an unrecognised one.
-        //
+        // Two wrappers this parser has no table for, but which are not
+        // empty: `ComObjectTable` carries the com-object table's memory
+        // placement (`CodeSegment` and `Offset`, on 279 of the 336
+        // application-program files swept on this machine) and `ModuleDef`
+        // carries `Id`/`Name` (91 files). None of those four values reaches
+        // a column here — `Id` is recovered by the separate `Dynamic` pass
+        // as `dynamic_node.module_def_id`, `Name` by nobody — so every
+        // attribute is reported rather than allowlisted into silence
+        // alongside the attribute-free wrappers below
+        // (docs/KNOWN_LIMITATIONS.md §7). The elements themselves stay out
+        // of the report: as elements they really are inert, their children
+        // are matched by their own name-only arms above regardless of
+        // nesting (see this module's top doc comment for `ModuleDef`).
+        "ComObjectTable" | "ModuleDef" => {
+            report_unknown_attrs(unknown, &xpath_of_child(open_path, name), a, &[]);
+        }
         // Everything else reaching here is a real, unmodelled construct —
         // `Options`, every `LdCtrl*` load-control step, `AddressTable`,
         // `AssociationTable` and the rest of the load-procedure grammar
         // chief among them (docs/KNOWN_LIMITATIONS.md §7) — and is recorded
         // through `unknown` instead of vanishing, same as an unrecognised
-        // attribute already was.
+        // attribute already was, at the path it was actually found at.
         other => {
+            // The document's own spine: the root and the containers on the
+            // way down to the elements that do have arms. Reporting these
+            // would claim the parser met an unmodelled construct when all
+            // it did was walk past its own ancestors — which is exactly
+            // what it used to claim, at a hardcoded `.../Static` xpath five
+            // levels below the root it was describing.
+            //
+            // Inert as elements, not uniformly attribute-free: across the
+            // same 336 files `KNX` carries `xmlns`/`xmlns:xsd`/`xmlns:xsi`/
+            // `ToolVersion`/`CreatedBy` (the namespace is read by
+            // `package.rs` for the schema version, the other two by
+            // nobody) and `TranslationUnit` carries `RefId` everywhere plus
+            // `Version` on 39 files, none of which this crate stores. Those
+            // stay unreported here on purpose and are named as a gap in
+            // docs/KNOWN_LIMITATIONS.md §7 instead; the bytes survive whole
+            // in `source_file` either way (ADR-0011).
+            const DOCUMENT_SPINE: &[&str] = &[
+                "KNX",
+                "ManufacturerData",
+                "ApplicationPrograms",
+                "Languages",
+                "TranslationUnit",
+            ];
+            // Structural wrappers with nothing of their own to store:
+            // carrying no attribute at all in any of those 336 files, with
+            // their children matched by their own arms above. Also here:
+            // `ComObject`, `ComObjectRef` and `ParameterRef`, whose own
+            // arms above are guarded on `!*already_present` and so fall
+            // through on a duplicate program — a known element that was
+            // deliberately not reprocessed, not an unrecognised one.
             const KNOWN_BUT_UNSTORED: &[&str] = &[
                 "Static",
                 "Parameters",
                 "ParameterTypes",
                 "ParameterRefs",
-                "ComObjectTable",
                 "ComObjectRefs",
                 "ComObjects",
                 "ModuleDefs",
-                "ModuleDef",
                 "ComObject",
                 "ComObjectRef",
                 "ParameterRef",
             ];
-            if !KNOWN_BUT_UNSTORED.contains(&other) {
-                unknown.element(
-                    "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static",
-                    other,
-                );
+            if !DOCUMENT_SPINE.contains(&other) && !KNOWN_BUT_UNSTORED.contains(&other) {
+                unknown.element(&xpath_of(open_path), other);
             }
         }
     }
@@ -488,6 +550,7 @@ fn insert_parameter_type(
     pt_name: &Option<String>,
     child_name: &str,
     a: &Attrs,
+    open_path: &[String],
     unknown: &mut UnknownCollector,
 ) -> Result<(), ProductDbError> {
     let (kind, size_in_bit, base, min_inclusive, max_inclusive, number_type): TypeFields =
@@ -515,10 +578,7 @@ fn insert_parameter_type(
             "TypePicture" => ("Picture", None, None, None, None, None),
             "TypeRawData" => ("Raw", None, None, None, None, None),
             other => {
-                unknown.element(
-                "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ParameterTypes/ParameterType",
-                other,
-            );
+                unknown.element(&xpath_of(open_path), other);
                 ("Other", None, None, None, None, None)
             }
         };
@@ -795,6 +855,118 @@ mod tests {
         .unwrap();
         assert!(view.is_some());
         assert_eq!(view.unwrap().text.as_deref(), Some("OnOff"));
+    }
+
+    #[test]
+    fn a_com_object_tables_memory_placement_is_reported_not_allowlisted_away() {
+        // `ComObjectTable/@CodeSegment` and `@Offset` are the com-object
+        // table's memory placement. No column in this crate holds them, so
+        // the element staying off the *element* report must not take its
+        // attributes down with it (docs/KNOWN_LIMITATIONS.md §7).
+        let (_dir, conn) = db();
+        let xml = MODULE_PROGRAM.replacen(
+            "<ComObjectTable/>",
+            r#"<ComObjectTable CodeSegment="M-00FA_A-2504-10-C071_AS-4400" Offset="0"/>"#,
+            1,
+        );
+        let out = ingest_program(&conn, "sha-mod", "M-00FA/A.xml", xml.as_bytes()).unwrap();
+        let seg = out
+            .unknown
+            .iter()
+            .find(|u| u.kind == crate::report::UnknownKind::Attribute && u.name == "CodeSegment")
+            .expect("CodeSegment is reported");
+        assert_eq!(
+            seg.xpath,
+            "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ComObjectTable"
+        );
+        assert_eq!(seg.sample.as_deref(), Some("M-00FA_A-2504-10-C071_AS-4400"));
+        assert!(out
+            .unknown
+            .iter()
+            .any(|u| u.kind == crate::report::UnknownKind::Attribute && u.name == "Offset"));
+        // The element itself is inert and stays out of the element report.
+        assert!(!out
+            .unknown
+            .iter()
+            .any(|u| u.kind == crate::report::UnknownKind::Element && u.name == "ComObjectTable"));
+    }
+
+    #[test]
+    fn a_module_defs_name_is_reported_rather_than_stored_nowhere() {
+        // `ModuleDef/@Id` is recovered by the `Dynamic` pass as
+        // `dynamic_node.module_def_id`; `@Name` is stored by nothing. Both
+        // are reported here, at the path the module definition really sits
+        // at — a sibling of `Static`, not a child of it.
+        let (_dir, conn) = db();
+        let out =
+            ingest_program(&conn, "sha-mod", "M-00FA/A.xml", MODULE_PROGRAM.as_bytes()).unwrap();
+        let name = out
+            .unknown
+            .iter()
+            .find(|u| {
+                u.kind == crate::report::UnknownKind::Attribute
+                    && u.name == "Name"
+                    && u.xpath.ends_with("/ModuleDefs/ModuleDef")
+            })
+            .expect("ModuleDef/@Name is reported");
+        assert_eq!(
+            name.xpath,
+            "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/ModuleDefs/ModuleDef"
+        );
+        assert_eq!(name.sample.as_deref(), Some("module"));
+        assert!(out
+            .unknown
+            .iter()
+            .any(|u| u.kind == crate::report::UnknownKind::Attribute
+                && u.name == "Id"
+                && u.xpath.ends_with("/ModuleDefs/ModuleDef")));
+    }
+
+    #[test]
+    fn the_documents_own_ancestors_are_not_reported_as_unknown_constructs() {
+        // `KNX`, `ManufacturerData`, `ApplicationPrograms`, `Languages` and
+        // `TranslationUnit` used to arrive in the report as unknown
+        // elements, each stamped with a hardcoded `.../Static` xpath —
+        // the root element described as a construct five levels below
+        // itself.
+        let (_dir, conn) = db();
+        let out = ingest_program(&conn, "sha-1", "M-006A/A.xml", PROGRAM.as_bytes()).unwrap();
+        for ancestor in [
+            "KNX",
+            "ManufacturerData",
+            "ApplicationPrograms",
+            "Languages",
+            "TranslationUnit",
+        ] {
+            assert!(
+                !out.unknown
+                    .iter()
+                    .any(|u| u.kind == crate::report::UnknownKind::Element && u.name == ancestor),
+                "{ancestor} is the document's own spine, not an unknown construct"
+            );
+        }
+    }
+
+    #[test]
+    fn an_unmodelled_element_is_reported_at_the_path_it_was_actually_found_at() {
+        // One level deeper than `Static`, so a hardcoded `.../Static`
+        // string cannot pass this test by accident.
+        let (_dir, conn) = db();
+        let xml = PROGRAM.replacen(
+            "<ParameterTypes>",
+            "<ParameterTypes><Whatsit Surprise=\"yes\" />",
+            1,
+        );
+        let out = ingest_program(&conn, "sha-1", "M-006A/A.xml", xml.as_bytes()).unwrap();
+        let found = out
+            .unknown
+            .iter()
+            .find(|u| u.kind == crate::report::UnknownKind::Element && u.name == "Whatsit")
+            .expect("an unmodelled element is reported");
+        assert_eq!(
+            found.xpath,
+            "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ParameterTypes"
+        );
     }
 
     #[test]

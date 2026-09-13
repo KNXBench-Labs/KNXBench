@@ -331,4 +331,56 @@ mod tests {
         let err = ingest_catalog(&conn, "sha-3", "M-006A/Catalog.xml", truncated).unwrap_err();
         assert!(format!("{err}").contains("M-006A/Catalog.xml"));
     }
+
+    /// KNOWN_LIMITATIONS.md §84, `catalog.rs`'s half of the same gap
+    /// `hardware.rs::two_hardware_elements_sharing_an_id_in_one_file_
+    /// conflict_silently` pins: `first_winner` compares the existing row's
+    /// `source_sha256` to *this call's* `source_sha256`, one hash per
+    /// whole file, so two `CatalogItem` elements sharing an `@Id` inside
+    /// one `Catalog.xml` always compare equal and never reach the
+    /// `IdConflict` branch. Pinned, not fixed — see the sibling test's
+    /// doc comment for why a real fix is a schema change out of scope.
+    #[test]
+    fn two_catalog_items_sharing_an_id_in_one_file_conflict_silently() {
+        let (_dir, conn) = db();
+        let xml = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-006A">
+      <Catalog>
+        <CatalogSection Id="M-006A_CG-1" Name="Sensors" Number="1" DefaultLanguage="de-DE">
+          <CatalogItem Id="CI-DUP" Name="First" Number="1"
+                       DefaultLanguage="de-DE" ProductRefId="P-1"
+                       Hardware2ProgramRefId="HP-1" />
+          <CatalogItem Id="CI-DUP" Name="Second" Number="2"
+                       DefaultLanguage="de-DE" ProductRefId="P-2"
+                       Hardware2ProgramRefId="HP-2" />
+        </CatalogSection>
+      </Catalog>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+        let ingest =
+            ingest_catalog(&conn, "one-file-sha", "M-006A/Catalog.xml", xml.as_bytes()).unwrap();
+
+        assert!(
+            ingest.conflicts.is_empty(),
+            "first_winner cannot see a same-file collision — this is the documented gap"
+        );
+
+        let rows: i64 = conn
+            .query_row("SELECT count(*) FROM catalog_item", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(rows, 1, "the second CatalogItem row never lands at all");
+
+        let (name, product_ref): (String, String) = conn
+            .query_row(
+                "SELECT name, product_ref_id FROM catalog_item WHERE id = 'CI-DUP'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(name, "First");
+        assert_eq!(product_ref, "P-1");
+    }
 }

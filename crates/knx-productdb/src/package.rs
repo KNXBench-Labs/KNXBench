@@ -103,6 +103,13 @@ pub struct InstallReport {
     /// package installed before the columns existed (see
     /// `migrate_v4_to_v5`'s doc comment).
     pub translations: TranslationCounts,
+    /// `datapoint_type` rows this package's `knx_master.xml` declared but
+    /// that an id already in the table (installed by an earlier package —
+    /// see `MasterIngest::dropped_datapoint_types`) caused `INSERT OR
+    /// IGNORE` to drop. `0` for a package installed before this column
+    /// existed, same convention as `translations` above
+    /// (KNOWN_LIMITATIONS.md §84).
+    pub dropped_datapoint_types: usize,
 }
 
 fn zip_error(error: impl fmt::Display) -> PackageError {
@@ -365,10 +372,11 @@ pub fn install_package(
     }
     let sha256 = sha256_hex(bytes);
     let tx = conn.unchecked_transaction().map_err(ProductDbError::from)?;
-    let prior: Option<(u32, usize, TranslationCounts)> = tx
+    let prior: Option<(u32, usize, TranslationCounts, usize)> = tx
         .query_row(
             "SELECT scheme, unknown_count, translation_program_count, translation_catalog_count,
-                    translation_hardware_count, translation_master_count
+                    translation_hardware_count, translation_master_count,
+                    dropped_datapoint_type_count
              FROM package WHERE sha256 = ?1",
             [&sha256],
             |r| {
@@ -381,11 +389,12 @@ pub fn install_package(
                         hardware: r.get::<_, i64>(4)? as usize,
                         master: r.get::<_, i64>(5)? as usize,
                     },
+                    r.get::<_, i64>(6)? as usize,
                 ))
             },
         )
         .optional()?;
-    if let Some((scheme, unknown, translations)) = prior {
+    if let Some((scheme, unknown, translations, dropped_datapoint_types)) = prior {
         let members = tx.prepare("SELECT path, role, source_sha256, size FROM package_member WHERE package_sha256 = ?1 ORDER BY ordinal")?.query_map([&sha256], |r| Ok(PackageMember { path: r.get(0)?, role: r.get(1)?, sha256: r.get(2)?, size: r.get::<_, i64>(3)? as u64 }))?.collect::<Result<Vec<_>, _>>()?;
         let conflicts = package_conflicts(&tx, &sha256)?;
         tx.commit().map_err(ProductDbError::from)?;
@@ -397,6 +406,7 @@ pub fn install_package(
             unknown,
             conflicts,
             translations,
+            dropped_datapoint_types,
         });
     }
     preflight_zip(bytes)?;
@@ -486,6 +496,7 @@ pub fn install_package(
         sha256,
         scheme,
         skipped: false,
+        dropped_datapoint_types: 0,
         members: Vec::new(),
         unknown: 0,
         conflicts: Vec::new(),
@@ -499,6 +510,12 @@ pub fn install_package(
         let role = if path == "knx_master.xml" {
             "Master".into()
         } else if path.ends_with(".signature") {
+            // Recognised and retained verbatim in `source_file` below, like
+            // any other unparsed member — nothing here or anywhere else in
+            // this crate verifies the signature. The role name says what
+            // the member *is*, not that it was checked; see
+            // KNOWN_LIMITATIONS.md §83 before treating this role as proof
+            // of anything.
             "Signature".into()
         } else if path.contains("/Baggages/") {
             "Baggage".into()
@@ -551,6 +568,7 @@ pub fn install_package(
             insert_unknown(&tx, &member_sha, &master.unknown)?;
             report.unknown += master.unknown.len();
             report.translations.master += master.translations;
+            report.dropped_datapoint_types += master.dropped_datapoint_types;
         } else if role == "Unrecognized" || role == "Baggages" {
             let mut unknown = UnknownCollector::default();
             unknown.element("/Package", &path);
@@ -569,7 +587,7 @@ pub fn install_package(
     tx.execute(
         "UPDATE package SET unknown_count = ?2, translation_program_count = ?3,
                 translation_catalog_count = ?4, translation_hardware_count = ?5,
-                translation_master_count = ?6
+                translation_master_count = ?6, dropped_datapoint_type_count = ?7
          WHERE sha256 = ?1",
         params![
             report.sha256,
@@ -578,6 +596,7 @@ pub fn install_package(
             report.translations.catalog as i64,
             report.translations.hardware as i64,
             report.translations.master as i64,
+            report.dropped_datapoint_types as i64,
         ],
     )?;
     for (ordinal, conflict) in report.conflicts.iter().enumerate() {

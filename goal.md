@@ -166,8 +166,9 @@ and `DeviceInstance_t` have no spatial attribute in the published schema 23
 document, none of the three reference projects (schema 11/21/23) has one,
 and the KNX Standard's own location model (3/10/3 *KNX IoT Information
 Model*) keeps geometry out of its location classes and references IFC
-instead. So there is no ETS data being lost here — only a feature KNXBench
-does not have.
+instead. So there is no ETS data being lost through an exported `.knxproj`
+here — only a feature KNXBench does not have; whether ETS itself keeps plan
+data elsewhere is untested.
 
 What actually remains, after the decision:
 

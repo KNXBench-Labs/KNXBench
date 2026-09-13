@@ -415,6 +415,9 @@ function App() {
     undo,
     redo,
     openSearch: () => setSearchOpen(true),
+    openLog: () => { setMonitorOpen(false); setLogOpen(true); },
+    openBusMonitor: () => { setLogOpen(false); setMonitorOpen(true); },
+    openSettings: () => setSettingsOpen(true),
   };
 
   return (

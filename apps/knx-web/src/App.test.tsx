@@ -36,6 +36,11 @@ const apiMock = vi.hoisted(() => ({
   // block below selects a device, so this needs a resolvable default the
   // same way `getSessionLog`/`productLanguages` already get one.
   deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }),
+  // `BusMonitorPanel` asks for the current session on mount (see its
+  // reattach effect); the palette-reachability tests below render it, and
+  // a 404 is the "no session yet" answer that leaves the connect form up.
+  pollBusTelegrams: vi.fn().mockRejectedValue(new Error("no session")),
+  errorStatus: vi.fn().mockReturnValue(404),
 }));
 
 const filePickerMock = vi.hoisted(() => ({
@@ -193,6 +198,59 @@ describe("App — Log tab reachability (KNOWN_LIMITATIONS.md #36, part A)", () =
     });
     expect(host!.querySelector(".log-panel")).toBeNull();
 
+    root.unmount();
+  });
+});
+
+// Stage 5 audit: the workbench shell moved the Log and Bus monitor
+// buttons into the left `ResizablePane`, which the Navigation toggle can
+// collapse — at which point the panels had no entry point at all, since
+// neither had a command. These tests drive the palette with the pane
+// collapsed, which is the state the toolbar-button tests above cannot
+// reach.
+describe("App — diagnostic panels survive a collapsed navigation pane", () => {
+  function clickButton(button: HTMLButtonElement) {
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  }
+
+  function paletteOption(label: string): HTMLElement {
+    const option = Array.from(host!.querySelectorAll<HTMLElement>("li[role=option]")).find(
+      (li) => li.textContent === label,
+    );
+    if (!option) throw new Error(`palette option "${label}" not found`);
+    return option;
+  }
+
+  async function collapseNavigationAndOpen(label: string) {
+    await act(async () => clickButton(findButton("Navigation")));
+    expect(host!.querySelector(".diagnostic-navigation")).toBeNull();
+    await act(async () => clickButton(findButton("Commands… (Ctrl+Shift+P)")));
+    await act(async () => {
+      paletteOption(label).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+  }
+
+  it("reaches the Log from the command palette", async () => {
+    apiMock.getSessionLog.mockResolvedValue([entry({ message: "still reachable" })]);
+    const root = await renderApp();
+    await collapseNavigationAndOpen("Log");
+    expect(host!.querySelector(".log-panel")).not.toBeNull();
+    expect(host!.textContent).toContain("still reachable");
+    root.unmount();
+  });
+
+  it("reaches the Bus monitor from the command palette", async () => {
+    const root = await renderApp();
+    await collapseNavigationAndOpen("Bus monitor");
+    expect(host!.querySelector(".bus-monitor-panel")).not.toBeNull();
+    root.unmount();
+  });
+
+  it("reaches Settings from the command palette", async () => {
+    const root = await renderApp();
+    await collapseNavigationAndOpen("Settings");
+    expect(host!.querySelector(".settings-panel")).not.toBeNull();
     root.unmount();
   });
 });

@@ -66,18 +66,17 @@ pub enum GroupAddressDpt {
 ///
 /// The web client's bus monitor shows a "stale project" lock, driven by a
 /// fingerprint over exactly the facts this function consumes
-/// (`apps/knx-web/src/busContext.ts`, `fingerprintProjectContext`). That
-/// fingerprint is republished from `App.tsx` whenever a `ProjectTree`
-/// arrives — but a parameter edit never produces one:
-/// `api.setParameterValue` answers with a `ParameterPanelDto`, so the
-/// fingerprint does not move even though `Command::SetParameterValue` did
-/// mutate the project. It is safe only because a parameter value cannot
-/// currently reach this function's inputs.
+/// (`apps/knx-web/src/busContext.ts`, `fingerprintProjectContext`). A
+/// parameter edit now republishes a `ProjectTree` too, so the publish
+/// channel this comment used to warn about is closed. What remains is the
+/// fingerprint's own input set: `fingerprintProjectContext` hashes
+/// `schema_version` plus, per group address, `address`/`name`/`dpts` —
+/// parameters are not among them.
 ///
 /// So: if you make a parameter value influence a com object's DPT, its
 /// links or its activity, you have made the bus monitor report
-/// `"synced"` over a decode that has silently changed. Fix the publish
-/// path first (`docs/KNOWN_LIMITATIONS.md` §82).
+/// `"synced"` over a decode that has silently changed. Widening this
+/// function's inputs requires widening the fingerprint too.
 pub fn resolve_group_address_dpt(project: &Project, ga: GroupAddressId) -> GroupAddressDpt {
     let dpts: Vec<DptRef> = project
         .devices

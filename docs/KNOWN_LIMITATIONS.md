@@ -3570,17 +3570,27 @@ The four cases above are all "the lock never hears about the edit". These
 three are the other axis: the edit happens in this very window, and the
 fingerprint still does not move.
 
-5. **A parameter edit never republishes anything.** `publishProjectContext`
-   runs from an effect on `App.tsx`'s `tree` state, so it fires only when
-   something hands the client a fresh `ProjectTree`. `api.setParameterValue`
-   does not: it answers with a `ParameterPanelDto`, and `ParameterPanel` is
-   mounted as `<ParameterPanel deviceId={...} />` with no channel back to
-   `tree`. Server-side the edit is entirely real —
-   `set_parameter_value_impl` ends in `apply(state, cmd)`, an undoable
-   `Command::SetParameterValue`. So the project changes and the fingerprint
-   does not. This is harmless **only** because no parameter value reaches a
-   decode today: `Command::SetParameterValue` writes `installation.parameters`
-   and nothing else, while `resolve_group_address_dpt` reads com-object links
+5. **A parameter edit's fingerprint never moves — by design, not by gap.**
+   `publishProjectContext` runs from an effect on `App.tsx`'s `tree` state,
+   so it fires only when something hands the client a fresh `ProjectTree`.
+   Until T3 (2026-09-13), `api.setParameterValue` never did: it answers
+   with a `ParameterPanelDto`, and `ParameterPanel` was mounted with no
+   channel back to `tree` at all, so the effect never fired and nothing
+   republished — a real publish hole, not just a fingerprint quirk.
+   `DeviceWorkspace` (`Inspector.tsx`) now closes that channel: once a
+   field commits, it overlays `can_undo: true, can_redo: false` onto the
+   `tree` it already holds — exact, not a guess, since
+   `CommandStack::do_command` always pushes onto `undo` and clears `redo`
+   — and hands that to `onApplied`, so `setTree` runs and the effect fires
+   on every parameter edit, same as any other command.
+   What still does not move, and never will without a further change, is
+   the *fingerprint value itself*: `fingerprintProjectContext`
+   (`busContext.ts`) deliberately excludes parameters, so the republish
+   above writes the same fingerprint under a fresh `at` — indistinguishable
+   from renaming a device, which has always behaved exactly this way. This
+   is harmless **only** because no parameter value reaches a decode today:
+   `Command::SetParameterValue` writes `installation.parameters` and
+   nothing else, while `resolve_group_address_dpt` reads com-object links
    and resolved DPTs and nothing else, and `GroupAddressNode.dpts` — the
    third fingerprint input — is produced by the same `group_address_dpt_from`
    rule over the same com objects. The two sets do not intersect. The day a

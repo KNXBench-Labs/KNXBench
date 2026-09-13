@@ -732,7 +732,14 @@ export function DeviceWorkspace(props: {
 
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-1`} aria-labelledby={`device-tab-${detail.id}-1`} hidden={tab !== 1} tabIndex={0}>
-      <ParameterPanel deviceId={detail.id} />
+      {/* `ParameterPanel`'s `onValueApplied` now hands back the server's
+          own freshly rebuilt `ProjectTree` (T3 fix round 1, item 6) — the one
+          `apply(state, cmd)` already built from the genuine post-write
+          `CommandStack`, not a hand-built `{ ...tree, can_undo: true,
+          can_redo: false }` overlay assembled from a tree this component
+          happened to be holding. `onApplied` takes exactly that shape, so
+          it wires straight through, the same as every field above it. */}
+      <ParameterPanel deviceId={detail.id} onValueApplied={onApplied} />
     </div>
     {/* Hidden, not unmounted — the same shape as the parameter panel above,
         whose fetch is keyed to its mount and must not restart on every tab

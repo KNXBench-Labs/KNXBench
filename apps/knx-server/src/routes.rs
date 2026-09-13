@@ -15,6 +15,7 @@ use crate::SharedState;
 pub fn project_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/project/import", post(import_project))
+        .route("/api/project/new", post(new_project))
         .route("/api/project/open", post(open_native_project))
         .route("/api/project/save", post(save_project))
         .route("/api/project/save-as", post(save_project_as))
@@ -308,6 +309,49 @@ async fn import_project(
     domain::open_project(&state, &path)
         .map(Json)
         .map_err(ApiError::internal)
+}
+
+/// Every field optional, so `POST /api/project/new` with `{}` is a valid
+/// request. `discard_changes` is the caller's explicit "yes, throw away the
+/// edits I have not saved" — see [`domain::new_project_impl`] for why the
+/// default is to refuse instead.
+#[derive(Deserialize, Default)]
+#[serde(rename_all = "camelCase", default)]
+struct NewProjectBody {
+    name: Option<String>,
+    installation_name: Option<String>,
+    language: Option<String>,
+    discard_changes: bool,
+}
+
+/// Creates an empty project without touching the filesystem — the only way
+/// a project comes into existence that is not an ETS import or a `.knxdb`
+/// load, and therefore the entry point for adding a device from the product
+/// catalogue with no `.knxproj` anywhere in sight.
+///
+/// `409 Conflict`, not `400`: the open project's unsaved edits are a state
+/// conflict the caller can resolve (save first, or re-send with
+/// `discardChanges`), not a malformed request.
+async fn new_project(
+    State(state): State<SharedState>,
+    body: Option<Json<NewProjectBody>>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let Json(body) = body.unwrap_or_default();
+    domain::new_project_impl(
+        &state,
+        body.name,
+        body.installation_name,
+        body.language,
+        body.discard_changes,
+    )
+    .map(Json)
+    .map_err(|domain::UnsavedChanges| {
+        ApiError::with_status(
+            axum::http::StatusCode::CONFLICT,
+            "the open project has unsaved changes; save it first or resend with \
+             discardChanges: true",
+        )
+    })
 }
 
 async fn open_native_project(

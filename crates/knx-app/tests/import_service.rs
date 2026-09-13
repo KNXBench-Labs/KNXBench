@@ -1,7 +1,8 @@
 //! `knx-app`'s tests cannot reach `knx-etsproj`'s `tests/support` module —
-//! a crate's integration tests are private to it — so this repeats the
-//! four-line path helper rather than a public test-only API being added
-//! to `knx-etsproj` for their benefit.
+//! a crate's integration tests are private to it — so this uses
+//! `knx-testsupport`, the shared dev-dependency every crate's tests can
+//! reach, instead of a public test-only API being added to `knx-etsproj`
+//! for their benefit.
 
 use std::path::{Path, PathBuf};
 
@@ -10,11 +11,7 @@ use knx_etsproj::opaque::sha256_hex;
 use knx_store::{load_opaque, open_and_migrate, Connection};
 
 fn reference_ets4_path() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .unwrap()
-        .join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
+    knx_testsupport::reference_ets4_path()
 }
 
 fn migrated_store() -> (tempfile::TempDir, Connection) {

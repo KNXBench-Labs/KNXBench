@@ -9,6 +9,7 @@ import type { DeviceProductNode } from "./bindings/DeviceProductNode";
 import type { ProductResolution } from "./bindings/ProductResolution";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { messages as germanMessages } from "./messages/de";
+import { messages as englishMessages } from "./messages/en";
 const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }), setComObjectDpt: vi.fn() }));
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
 import { DeviceWorkspace } from "./Inspector";
@@ -256,7 +257,14 @@ it("never tells a German reader the state is simply unknown, which the English a
   // creep back in through a neighbour. The server knows the state perfectly
   // well; only this build does not.
   const identityKeys = Object.entries(germanMessages).filter(([key]) => key.startsWith("deviceIdentity."));
-  expect(identityKeys.length).toBe(36);
+  // Parity with English rather than a hardcoded count: a new key should not
+  // fail this test for a reason that has nothing to do with the wording.
+  expect(identityKeys.map(([key]) => key).sort()).toEqual(
+    Object.keys(englishMessages)
+      .filter((key) => key.startsWith("deviceIdentity."))
+      .sort(),
+  );
+  expect(identityKeys.length).toBeGreaterThan(0);
   for (const [key, value] of identityKeys) {
     expect(value.toLowerCase(), key).not.toContain("unbekannt");
   }

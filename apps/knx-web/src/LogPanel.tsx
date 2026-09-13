@@ -70,19 +70,28 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
 
   return (
     <div className="log-panel">
-      <h2>{t("logPanel.title")}</h2>
-      <div className="log-panel-filters">
-        {SEVERITIES.map((severity) => (
-          <label key={severity} className="log-panel-filter">
-            <input
-              type="checkbox"
-              checked={filters[severity]}
-              onChange={() => toggleFilter(severity)}
-            />
-            {t(SEVERITY_LABEL_KEYS[severity])}
-          </label>
-        ))}
-      </div>
+      {/* Same `.workspace-heading` shape as `StructureWorkspace`/
+          `DeviceWorkspace`: eyebrow, `h1`, actions on the right. The
+          severity checkboxes are this view's actions, so they sit where
+          every other workspace puts its action cluster. */}
+      <header className="workspace-heading">
+        <div>
+          <p className="eyebrow">{t("logPanel.eyebrow")}</p>
+          <h1>{t("logPanel.title")}</h1>
+        </div>
+        <div className="log-panel-filters">
+          {SEVERITIES.map((severity) => (
+            <label key={severity} className="log-panel-filter">
+              <input
+                type="checkbox"
+                checked={filters[severity]}
+                onChange={() => toggleFilter(severity)}
+              />
+              {t(SEVERITY_LABEL_KEYS[severity])}
+            </label>
+          ))}
+        </div>
+      </header>
       {error && <span className="field-error">{error}</span>}
       {entries.length === 0 ? (
         <p className="log-panel-empty">{t("logPanel.emptyNoEntries")}</p>

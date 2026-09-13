@@ -145,7 +145,7 @@ function setInputValue(selector: string, value: string) {
 // microtasks while fake timers are active, needed because plain awaits
 // inside `act()` are not enough to observe the initial, immediate poll
 // `BusMonitorPanel`'s effect fires as soon as `session` is set.
-async function connect(gateway = "192.168.1.10:3671") {
+async function connect(gateway = "192.0.2.1:3671") {
   await act(async () => {
     setInputValue(".bus-monitor-connect input", gateway);
   });

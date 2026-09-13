@@ -371,7 +371,7 @@ violation:
 314 Rust tests passed across the workspace as of cycle 10, plus 46
 `vitest` tests in `apps/knx-desktop` (run separately, `npm test`, not part
 of `cargo test --workspace`) — up from 32 with cycle 10's new
-`toast.test.ts` (14 tests: `isLateNight`, `findHoliday`,
+`toast.test.ts` (24 tests: `isLateNight`, `findHoliday`,
 `pickStartupToast`, `humorizeError`).
 
 **Web/Docker deployment target** (cross-cutting, added alongside Session 5

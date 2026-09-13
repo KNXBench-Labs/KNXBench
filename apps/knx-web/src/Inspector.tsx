@@ -585,8 +585,8 @@ function IdentityFields(props: { rows: IdentityRowData[]; t: Translate }) {
 }
 
 /**
- * The device's product identity (T16), shown above the workspace tabs so it
- * stays legible while the user works in communication objects or parameters.
+ * The device's product identity (T16), shown in the workspace's third tab
+ * ("Product data"), beside communication objects and parameters.
  *
  * `product_ref`/`program_ref` are printed verbatim in monospace — they are
  * ETS identifiers, and an engineer comparing one against a manufacturer
@@ -605,9 +605,16 @@ function IdentityFields(props: { rows: IdentityRowData[]; t: Translate }) {
 function DeviceIdentity(props: { product: DeviceProductNode }) {
   const { product_ref, program_ref, catalog, resolution } = props.product;
   const t = useTranslate();
-  // Unknown variants cannot arise from the generated union, but a stale
-  // build talking to an older/newer server shouldn't render a blank badge.
-  const copy = RESOLUTION_KEYS[resolution] ?? RESOLUTION_KEYS.NoReference;
+  // A variant outside the generated union cannot arise from a matching
+  // server, only from a frontend older than the one it talks to. It gets its
+  // own wording rather than borrowing another variant's: reusing
+  // `NoReference`'s would print "No product reference" directly above two
+  // references the user can read, which is the exact dishonesty this panel
+  // exists to avoid.
+  const copy: { badge: MessageKey; explain: MessageKey | null } = RESOLUTION_KEYS[resolution] ?? {
+    badge: "deviceIdentity.resolution.unrecognised",
+    explain: "deviceIdentity.explain.unrecognised",
+  };
 
   // `NoReference` means both refs are empty at the source, so there is
   // nothing to print verbatim — the sentence says that once instead of two
@@ -618,19 +625,23 @@ function DeviceIdentity(props: { product: DeviceProductNode }) {
     value === null
       ? { label, value: t("deviceIdentity.refNotStated") }
       : { label, value, mono: true };
-  const headline: IdentityRowData[] = resolution === "NoReference" ? [] : [
+  const refRows: IdentityRowData[] = resolution === "NoReference" ? [] : [
     ref("deviceIdentity.productRef", product_ref),
     ref("deviceIdentity.programRef", program_ref),
-    ...(catalog ? presentRows(HEADLINE_FIELDS, catalog) : []),
   ];
+  // Kept separate from `refRows` rather than subtracted back out of a merged
+  // list: the ref rows are not catalogue fields, and "however many rows are
+  // in the headline, minus two" stops being true the moment `refRows` is
+  // empty — which `NoReference` makes it.
+  const headlineCatalogRows = catalog ? presentRows(HEADLINE_FIELDS, catalog) : [];
+  const headline = [...refRows, ...headlineCatalogRows];
   const groups = catalog
     ? CATALOG_GROUPS.map((group) => ({ title: group.title, rows: presentRows(group.fields, catalog), total: group.fields.length }))
     : [];
   // Every catalogue field the database left null, counted across the headline
-  // and the groups alike. The two ref rows are not catalogue fields, so they
-  // are excluded from both sides of the subtraction.
+  // and the groups alike.
   const catalogFields = HEADLINE_FIELDS.length + CATALOG_GROUPS.reduce((n, g) => n + g.fields.length, 0);
-  const shownFields = (headline.length - 2) + groups.reduce((n, g) => n + g.rows.length, 0);
+  const shownFields = headlineCatalogRows.length + groups.reduce((n, g) => n + g.rows.length, 0);
   const omitted = catalog ? catalogFields - shownFields : 0;
 
   return <section className="device-identity" aria-label={t("deviceIdentity.title")}>
@@ -667,15 +678,23 @@ export function DeviceWorkspace(props: {
   const groupAddresses = tree.installations[0]?.group_addresses ?? [];
   const t = useTranslate();
   const [tab, setTab] = useState(0);
+  // One array, three panels, and index arithmetic derived from its length:
+  // the previous `1 - tab` toggle silently encoded "there are exactly two
+  // tabs" three times over (it also hardcoded `End` and treated both arrow
+  // keys as the same key, which a left-arrow-only test could never catch).
+  const tabs = [t("inspector.communicationObjects"), t("workbench.parameters"), t("deviceIdentity.tab")];
   return <section className="device-workspace">
     <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div></header>
-    <DeviceIdentity product={detail.product} />
     <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
-      e.preventDefault(); const next = e.key === "Home" ? 0 : e.key === "End" ? 1 : 1 - tab;
+      e.preventDefault();
+      const step = e.key === "ArrowRight" ? 1 : -1;
+      const next = e.key === "Home" ? 0
+        : e.key === "End" ? tabs.length - 1
+        : (tab + step + tabs.length) % tabs.length;
       setTab(next); e.currentTarget.querySelectorAll<HTMLButtonElement>("button")[next].focus();
     }}>
-      {[t("inspector.communicationObjects"), t("workbench.parameters")].map((label, index) => <button key={label} id={`device-tab-${detail.id}-${index}`} role="tab" aria-selected={tab === index} aria-controls={`device-panel-${detail.id}-${index}`} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)}>{label}</button>)}
+      {tabs.map((label, index) => <button key={label} id={`device-tab-${detail.id}-${index}`} role="tab" aria-selected={tab === index} aria-controls={`device-panel-${detail.id}-${index}`} tabIndex={tab === index ? 0 : -1} onClick={() => setTab(index)}>{label}</button>)}
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-0`} aria-labelledby={`device-tab-${detail.id}-0`} hidden={tab !== 0}>
       <h3>{t("inspector.communicationObjects")}</h3>
@@ -712,6 +731,12 @@ export function DeviceWorkspace(props: {
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-1`} aria-labelledby={`device-tab-${detail.id}-1`} hidden={tab !== 1}>
       <ParameterPanel deviceId={detail.id} />
+    </div>
+    {/* Hidden, not unmounted — the same shape as the parameter panel above,
+        whose fetch is keyed to its mount and must not restart on every tab
+        switch. */}
+    <div role="tabpanel" id={`device-panel-${detail.id}-2`} aria-labelledby={`device-tab-${detail.id}-2`} hidden={tab !== 2}>
+      <DeviceIdentity product={detail.product} />
     </div>
   </section>;
 }

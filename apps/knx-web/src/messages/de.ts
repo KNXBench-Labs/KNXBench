@@ -414,6 +414,7 @@ export const messages: Record<MessageKey, string> = {
   "workbench.noDevices": "Diesem Gebäudeteil sind keine Geräte zugeordnet.",
 
   "deviceIdentity.title": "Produktidentität",
+  "deviceIdentity.tab": "Produktdaten",
   "deviceIdentity.productRef": "Produktreferenz",
   "deviceIdentity.programRef": "Applikationsprogramm-Referenz",
   "deviceIdentity.refNotStated": "im Projekt nicht angegeben",
@@ -421,6 +422,9 @@ export const messages: Record<MessageKey, string> = {
   "deviceIdentity.resolution.noDatabase": "Keine Produktdatenbank",
   "deviceIdentity.resolution.notInDatabase": "Nicht in der Produktdatenbank",
   "deviceIdentity.resolution.noReference": "Keine Produktreferenz",
+  "deviceIdentity.resolution.unrecognised": "Zustand unbekannt",
+  "deviceIdentity.explain.unrecognised":
+    "Der Server meldet einen Auflösungszustand, den dieser Build nicht kennt; dieses Feld kann deshalb nicht sagen, ob die Angaben oben einem Produkt zugeordnet wurden. Die Referenzen stehen genau so, wie das Projekt sie angibt.",
   "deviceIdentity.explain.noDatabase":
     "Hier ist keine Produktdatenbank geladen; die Angaben oben lassen sich deshalb keinem Produkt zuordnen. Produktpaket des Herstellers installieren, um Produkt-, Hardware- und Applikationsprogrammdaten zu sehen.",
   "deviceIdentity.explain.notInDatabase":
@@ -441,7 +445,7 @@ export const messages: Record<MessageKey, string> = {
   "deviceIdentity.catalogItemNumber": "Katalogeintragsnummer",
   "deviceIdentity.hardwareName": "Hardwarename",
   "deviceIdentity.hardwareVersion": "Hardwareversion",
-  "deviceIdentity.hardwareSerial": "Seriennummer",
+  "deviceIdentity.hardwareSerial": "Hardware-Seriennummer",
   "deviceIdentity.applicationName": "Programmname",
   "deviceIdentity.applicationNumber": "Programmnummer",
   "deviceIdentity.applicationVersion": "Programmversion",

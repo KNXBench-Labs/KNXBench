@@ -360,6 +360,139 @@ pub fn open_native_project(state: &AppState, path: &Path) -> Result<ProjectTree,
     Ok(tree)
 }
 
+/// The only way [`new_project_impl`] can refuse: the project already open
+/// has applied edits that creating a new one would throw away. Typed rather
+/// than stringly so the route can answer `409 Conflict` — "you could have
+/// avoided this" — instead of the blanket `400` every other in-memory
+/// failure gets (see `errors.rs`'s own doc comment on that split).
+#[derive(Debug, PartialEq, Eq)]
+pub struct UnsavedChanges;
+
+/// Creates an empty project in `state`, replacing whatever was open, and
+/// resets every piece of per-project state `open_native_project` resets —
+/// plus `store_path`, which that function *sets* and this one must clear:
+/// a new project has never been saved anywhere, and leaving the previous
+/// file's path behind would let the next plain Save overwrite that file
+/// with this empty project.
+///
+/// The seed is one [`knx_core::Installation`] and nothing else.
+/// `Command::CreateDevice` (`knx-core/src/command.rs:892-895`) needs
+/// `installations.first_mut()` to exist, but takes `line: Option<LineId>`
+/// and parks a device with no line in `topology.unassigned`
+/// (`command.rs:906-916`), which `topology.rs:44-45` calls "valid project
+/// state, not an error". So no area and no line are required to place a
+/// device, and none is invented here. `info.project_id` is seeded because
+/// `knx-etsproj`'s exporter rejects an empty one
+/// (`export/schema11.rs:329`, `export/schema21.rs:100`) and no command in
+/// `knx-core` can set it afterwards — an unseeded from-scratch project
+/// could never be exported at all.
+///
+/// Names are the caller's, never this layer's invention: an absent name
+/// leaves the installation unnamed, exactly what the ETS mapper produces
+/// for an `Installation` with no `Name` attribute
+/// (`knx-etsproj/src/map.rs:564`, `unwrap_or_default()`). The localized
+/// default label belongs to the frontend's message catalogue, not to a
+/// hardcoded string down here.
+///
+/// Refuses with [`UnsavedChanges`] when a project is open and its command
+/// stack has anything to undo, unless `discard_changes` is set. There is no
+/// dirty flag anywhere in `AppState` — `can_undo()` is the only signal that
+/// the user changed something — so this over-refuses after a save, which is
+/// the direction CLAUDE.md's "data integrity over convenience" points.
+pub fn new_project_impl(
+    state: &AppState,
+    name: Option<String>,
+    installation_name: Option<String>,
+    language: Option<String>,
+    discard_changes: bool,
+) -> Result<ProjectTree, UnsavedChanges> {
+    if !discard_changes {
+        let occupied = state
+            .project
+            .lock()
+            .expect("state mutex poisoned")
+            .is_some();
+        let edited = state
+            .command_stack
+            .lock()
+            .expect("state mutex poisoned")
+            .can_undo();
+        if occupied && edited {
+            state
+                .session_log
+                .lock()
+                .expect("state mutex poisoned")
+                .push(LogEntry {
+                    timestamp: session_log::now(),
+                    severity: Severity::Warning,
+                    source: "new".to_string(),
+                    message: "refused to create a new project: the open one has unsaved edits"
+                        .to_string(),
+                    location: None,
+                    detail: None,
+                });
+            return Err(UnsavedChanges);
+        }
+    }
+
+    let language = language.unwrap_or_else(|| DEFAULT_NEW_PROJECT_LANGUAGE.to_string());
+    let mut project = knx_core::Project::new(knx_core::Language(language));
+    project.info.project_id = NEW_PROJECT_ID.to_string();
+    project.info.name = name.unwrap_or_default();
+    project.installations.push(knx_core::Installation {
+        id: knx_core::InstallationId(0),
+        name: installation_name.unwrap_or_default(),
+        default_line: None,
+        multicast_address: None,
+        completion: knx_core::CompletionStatus::default(),
+        topology: knx_core::Topology {
+            areas: Vec::new(),
+            lines: Vec::new(),
+            unassigned: Vec::new(),
+        },
+        buildings: Vec::new(),
+        group_ranges: Vec::new(),
+        group_addresses: Vec::new(),
+        parameters: Vec::new(),
+    });
+
+    let tree = knx_projection::build_project_tree(&project);
+    *state.project.lock().expect("state mutex poisoned") = Some(project);
+    *state.store_path.lock().expect("state mutex poisoned") = None;
+    *state.command_stack.lock().expect("state mutex poisoned") = knx_core::CommandStack::new();
+    *state.import_counts.lock().expect("state mutex poisoned") = (0, 0);
+    *state.opaque.lock().expect("state mutex poisoned") = Vec::new();
+    *state
+        .manufacturer_refs
+        .lock()
+        .expect("state mutex poisoned") = Vec::new();
+
+    let mut log = state.session_log.lock().expect("state mutex poisoned");
+    log.reset();
+    log.push(LogEntry {
+        timestamp: session_log::now(),
+        severity: Severity::Info,
+        source: "new".to_string(),
+        message: "created a new project with one empty installation".to_string(),
+        location: None,
+        detail: None,
+    });
+    drop(log);
+
+    Ok(tree)
+}
+
+/// `StringTable`'s default language for a project nobody stated one for.
+/// Matches every other `Project::new` call site in this repository; the
+/// caller can say otherwise.
+const DEFAULT_NEW_PROJECT_LANGUAGE: &str = "en";
+
+/// Shaped like the project ids observed in the reference exports
+/// (`P-0512`, `P-03DE`), which the exporter also uses as the ZIP directory
+/// name (`knx-etsproj/src/export/mod.rs:73-74`). Only has to be unique
+/// inside one project file, so a constant is enough.
+const NEW_PROJECT_ID: &str = "P-0001";
+
 /// Pushes one info entry on `Ok`, one error entry on `Err` — shared by
 /// every operation that reports outcomes to the session log
 /// (`save_project`/`save_project_as`/`export_project`/`undo_impl`/

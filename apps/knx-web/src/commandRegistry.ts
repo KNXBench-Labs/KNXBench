@@ -11,6 +11,9 @@ export interface CommandContext {
   undo: () => void;
   redo: () => void;
   openSearch: () => void;
+  openLog: () => void;
+  openBusMonitor: () => void;
+  openSettings: () => void;
 }
 
 /**
@@ -95,6 +98,31 @@ export const COMMANDS: PaletteCommand[] = [
     isEnabled: (ctx) => ctx.tree !== null,
     run: (ctx) => ctx.openSearch(),
   },
+  // The three entries below are the *only* device-independent way to reach
+  // the log, the bus monitor and the settings dialog: their navigation
+  // buttons live inside `App.tsx`'s left `ResizablePane`, which the
+  // navigation toggle can collapse. `LogPanel` renders with `tree === null`
+  // (it reports import diagnostics, which exist before a project opens) and
+  // `BusMonitorPanel` takes `projectOpen` rather than requiring a project,
+  // so neither is gated on `ctx.tree`.
+  {
+    id: "open-log",
+    labelKey: "toolbar.log",
+    isEnabled: () => true,
+    run: (ctx) => ctx.openLog(),
+  },
+  {
+    id: "open-bus-monitor",
+    labelKey: "toolbar.busMonitor",
+    isEnabled: () => true,
+    run: (ctx) => ctx.openBusMonitor(),
+  },
+  {
+    id: "open-settings",
+    labelKey: "toolbar.settings",
+    isEnabled: () => true,
+    run: (ctx) => ctx.openSettings(),
+  },
 ];
 
 /**
@@ -104,7 +132,7 @@ export const COMMANDS: PaletteCommand[] = [
  * into this shape before calling here; see its `resolvedCommands`). Unlike
  * `matchEntries` (search overlay), an empty query returns every command —
  * the palette is a browsable list on open, not a search-only box — and
- * there is no ranking: seven static entries need no scoring algorithm.
+ * there is no ranking: ten static entries need no scoring algorithm.
  */
 export function filterCommands(
   commands: ResolvedPaletteCommand[],

@@ -58,21 +58,13 @@ pub(crate) fn minimal_source_document() -> SourceDocument {
         .document
 }
 
-fn workspace_root() -> PathBuf {
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(std::path::Path::parent)
-        .expect("crate lives at <root>/crates/<name>")
-        .to_path_buf()
-}
-
 pub(crate) fn reference_ets4_bytes() -> Vec<u8> {
     std::fs::read(reference_ets4_path())
         .expect("reference ETS4 project is committed at the workspace root")
 }
 
 pub(crate) fn reference_ets4_path() -> PathBuf {
-    workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
+    knx_testsupport::reference_ets4_path()
 }
 
 /// True when the gitignored `OriginalData/` fixture corpus is present
@@ -81,11 +73,11 @@ pub(crate) fn reference_ets4_path() -> PathBuf {
 /// without a copy) has none of it. Every test that needs the corpus must
 /// check this first and skip, not panic, or CI is permanently red.
 pub(crate) fn corpus_available() -> bool {
-    reference_ets4_path().exists()
+    knx_testsupport::corpus_available()
 }
 
 pub(crate) fn reference_ets6_path() -> PathBuf {
-    workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj")
+    knx_testsupport::reference_ets6_path()
 }
 
 /// A second, genuinely independent installation (KNX Association demo
@@ -94,7 +86,7 @@ pub(crate) fn reference_ets6_path() -> PathBuf {
 /// `Segment`/`GroupObjectTree`/`ModuleInstances`/`Locations` deltas
 /// previously attributed to schema 23 alone (RESEARCH §2.5/§3.4).
 pub(crate) fn reference_kv_schema21_path() -> PathBuf {
-    workspace_root().join("OriginalData/DemoProjects/KV v2.5 - demo.knxproj")
+    knx_testsupport::reference_kv_schema21_path()
 }
 
 pub(crate) fn reference_source_document() -> SourceDocument {

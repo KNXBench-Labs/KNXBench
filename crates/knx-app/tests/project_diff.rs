@@ -18,23 +18,19 @@
 //! where a test that needs both `knx-etsproj` and `knx-diff` belongs.
 //!
 //! `knx-app`'s tests cannot reach `knx-etsproj`'s `tests/support` module —
-//! a crate's integration tests are private to it — so this repeats the
-//! four-line path helper the same way `csv_roundtrip.rs` and
-//! `documentation_export.rs` each do.
+//! a crate's integration tests are private to it — so this uses
+//! `knx-testsupport`, the shared dev-dependency every crate's tests can
+//! reach, instead.
 //!
 //! Gated by the standard `corpus_available()` pattern: `OriginalData/` is
 //! the maintainer's own real KNX installation, gitignored and local-only,
 //! so CI (and any contributor without a copy) skips this test rather than
 //! failing it.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 fn reference_ets4_path() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .unwrap()
-        .join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
+    knx_testsupport::reference_ets4_path()
 }
 
 #[test]

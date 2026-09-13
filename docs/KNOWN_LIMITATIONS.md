@@ -477,9 +477,9 @@ this project **[A]**. The phase-3 permission for a one-octet
 `A_Memory_Read(60h, 1)` inside `1.1.24`–`1.1.32` is unchanged; its
 *interpretation* is not, and the design spec §4.4 and §15 now require the result
 to be recorded as a raw octet of unknown meaning rather than as programming-mode
-state. This is a scoping limitation, not a new gap — the read establishes the
-device's own Profile before anything interprets the octet — so the count stays at
-six.
+state. This is a scoping limitation, not a new gap: which Realisation Type a given
+device uses is a per-device property, and per-device properties are not counted
+as documentation gaps — so the count stays at six.
 
 The list lost an item to a **correction**, not to a discovery: how a client
 discovers `L_Data_Extended` support **is** documented — `03_05_01` §4.3.7

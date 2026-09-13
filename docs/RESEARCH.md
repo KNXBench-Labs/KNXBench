@@ -2831,9 +2831,14 @@ into two lettered alternatives each naming its profiles: **[D]**
 That assignment reaches exactly as far as §4.4.1.1's own title, *"connection
 oriented"*, which round 4 added after a review caught the over-correction. The
 clause next door goes the other way: **[D]** `06 Profiles` §4.4.1.2 *"Programming
-Mode – connectionless"* lists, under *"Programming Mode Control • via bus"*, both
-*"§3.13.2 “DMP_ProgModeSwitch_RCo”"* and *"§4.26.3 “Programming Mode – Realisation
-Type 2”"*, and §4.4's feature table gives row *"1.b Connectionless"* the value `O`
+Mode – connectionless"* lists, under *"Programming Mode Control"* — where, unlike §4.4.1.1 a) and b), no
+*"• via bus:"* sub-bullet appears; the only bullet is *"• via HMI: device selection
+and indication of Programming Mode"*, and the two service references follow it
+directly — both *"§3.13.2 “DMP_ProgModeSwitch_RCo”"* and *"§4.26.3 “Programming
+Mode – Realisation Type 2”"*. The second is reached twice over: **[D]** MP §3.13.2
+itself says *"The Programming Mode shall be realised as “Programming Mode –
+Realisation Type 2” as specified in [05]."*, which needs no layout interpretation
+at all. And §4.4's feature table gives row *"1.b Connectionless"* the value `O`
 in the `System B` and `Mask 57B0h` columns **[D]** (`-` in the System 1, System 2,
 BCU 1, BCU 2, BIM M112 and Mask 5705h columns; `O` for System 300 and `M` for RF
 Bidirectional). So a System B device may optionally implement the connectionless

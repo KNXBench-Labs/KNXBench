@@ -221,6 +221,10 @@ export const messages = {
 
   "busMonitor.title": "Bus monitor",
   "busMonitor.eyebrow": "KNXnet/IP · Tunnelling",
+  "busMonitor.gatewayLabel": "Gateway address",
+  "busMonitor.gatewayLocked":
+    "Disconnect the running session before changing the gateway address.",
+  "busMonitor.connectNeedsGateway": "Enter a gateway address first.",
   "busMonitor.connect": "Connect",
   "busMonitor.disconnect": "Disconnect",
   "busMonitor.session": "Session {id}",

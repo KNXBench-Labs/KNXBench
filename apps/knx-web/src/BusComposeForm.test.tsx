@@ -24,6 +24,24 @@ import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// A disabled control is out of the tab order, so the prose that explains
+// why it is disabled is reachable only if the control points at it. This
+// resolves `aria-describedby` the way an assistive technology would —
+// through the ids, into the live document — rather than asserting that
+// the attribute merely exists.
+function describedTextOf(selector: string): string {
+  const control = host!.querySelector(selector)!;
+  const ids = (control.getAttribute("aria-describedby") ?? "").split(" ").filter(Boolean);
+  expect(ids.length).toBeGreaterThan(0);
+  return ids
+    .map((id) => {
+      const target = host!.querySelector(`#${id}`);
+      expect(target).not.toBeNull();
+      return target!.textContent ?? "";
+    })
+    .join(" ");
+}
+
 let host: HTMLDivElement | undefined;
 
 async function renderForm(
@@ -218,6 +236,9 @@ describe("BusComposeForm", () => {
     expect(host!.querySelector(".bus-compose-closed-hint")!.textContent).toBe(
       "This session is closed — sending is disabled.",
     );
+    for (const selector of [".bus-compose-destination", ".bus-compose-dpt", ".bus-compose-value"]) {
+      expect(describedTextOf(selector)).toContain("This session is closed");
+    }
 
     await clickSend();
 
@@ -243,6 +264,9 @@ describe("BusComposeForm", () => {
     const hint = host!.querySelector(".bus-compose-stale-hint")!;
     expect(hint.getAttribute("role")).toBe("alert");
     expect(hint.textContent).toContain("sending is locked");
+    for (const selector of [".bus-compose-destination", ".bus-compose-dpt", ".bus-compose-value"]) {
+      expect(describedTextOf(selector)).toContain("sending is locked");
+    }
 
     await clickSend();
 

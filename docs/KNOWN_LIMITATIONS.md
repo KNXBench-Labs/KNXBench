@@ -2479,24 +2479,42 @@ catalogue of language identifiers with no translations attached to them
 at all. The earlier number came from grepping the whole file instead of
 the block. Measured wrongly here first, corrected here now.
 
-**Still open.** Ingestion is no longer the gap; reading is. Exactly one
-surface reads any of these rows: the catalog browser, whose item `Name`
-and `VisibleDescription` are overlaid by `query::catalog_items(conn, …,
-language)` behind `GET /api/catalog/items?language=` (T32 Task 4).
-`Hardware`-scope and `Master`-scope translations are stored, queryable,
-and read by nothing — the entire shared KNX vocabulary of
-`knx_master.xml` included. The import report still does not state how
-many translations a package contributed, so a user is told about
-unknown constructs but not about captured text. Locale-prefix matching
-is still absent, as recorded in §37: a stored `de` does not match a
-package's `de-DE` rows. And no translated string is ever allowed to
-become a stored identifier — `query::catalog_item`, the single-row
-lookup device creation uses, is deliberately untranslated.
+**Still open, narrowed once (2026-09-13, T16).** Ingestion is no longer
+the gap; reading is. Two surfaces now read these rows: the catalog
+browser, whose item `Name` and `VisibleDescription` are overlaid by
+`query::catalog_items(conn, …, language)` behind `GET
+/api/catalog/items?language=` (T32 Task 4), and — new — the device
+detail panel's product/hardware block, whose `product.text` (`Product`
+scope `Hardware`) is overlaid by the new `query::device_product(conn, …,
+language)` behind `GET /api/device/{id}?language=` (T16, branch
+`t16-device-product`), which also overlays `catalog_item.name` (same
+join `catalog_items` already uses) and `application_program.name`
+(`Program` scope) for the same response. `Hardware`-scope translation
+rows therefore have a reader now, but the claim only narrows, it does
+not close: `Master`-scope translations — the entire shared KNX
+vocabulary of `knx_master.xml` — are still stored, queryable, and read
+by nothing. A second, orthogonal fact, empirically checked rather than
+assumed while building T16 (four manufacturer packages inspected
+directly): `hardware.name` itself is never a translation target in this
+schema at all — no `Hardware.xml` this project has seen places a
+`Hardware/@Id` inside a `TranslationElement/@RefId`, only `Product/@Id`s
+are. That is not a missing reader; there is nothing there to read,
+`Hardware`-scope rows in this schema are always keyed to a `Product`,
+never to the `Hardware` element that owns it. The import report still
+does not state how many translations a package contributed, so a user
+is told about unknown constructs but not about captured text.
+Locale-prefix matching is still absent, as recorded in §37: a stored
+`de` does not match a package's `de-DE` rows. And no translated string
+is ever allowed to become a stored identifier — `query::catalog_item`,
+the single-row lookup device creation uses, is deliberately
+untranslated.
 
 **Lifted when.** Ingestion: lifted 2026-09-12 (T32, branch
-`t32-shared-translations`). The reading residue above stays open under
-**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and under §37's own
-"still open" list. Not scheduled.
+`t32-shared-translations`). The `Hardware`-scope half of the reading
+residue: lifted 2026-09-13 (T16, branch `t16-device-product`). The
+`Master`-scope residue stays open under **D10** in
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and under §37's own "still
+open" list. Not scheduled.
 
 ## 65. `--version` names a commit, never a working tree
 

@@ -182,9 +182,28 @@ function App() {
   // the response to a mutation, import or open), so it is the only place
   // that can tell a companion window what the project looks like now.
   // Publishing on the `tree` state itself, rather than at each of the
-  // half-dozen call sites that set it, means no future edit path can forget
-  // to — and a stale fingerprint is exactly the failure the diagnostic
-  // companion's stale lock exists to prevent (`busContext.ts`).
+  // half-dozen call sites that set it, means no edit path that *lands in
+  // `tree`* can forget to — and a stale fingerprint is exactly the failure
+  // the diagnostic companion's stale lock exists to prevent
+  // (`busContext.ts`).
+  //
+  // This comment used to say "no future edit path can forget to", full
+  // stop. That was false when it was written. `api.setParameterValue`
+  // mutates the project server-side — `domain.rs`'s
+  // `set_parameter_value_impl` ends in `apply(state, cmd)`, a real
+  // undoable `Command::SetParameterValue` — but answers with a
+  // `ParameterPanelDto`, and `ParameterPanel` is mounted as
+  // `<ParameterPanel deviceId={…} />` with no channel back to `tree`. So
+  // `setTree` never runs, this effect never fires, and the fingerprint
+  // does not move across a parameter edit.
+  //
+  // It is harmless *today*, and only today, because no parameter value
+  // feeds a decode: `resolve_group_address_dpt` reads com-object links and
+  // resolved DPTs, `Command::SetParameterValue` writes only
+  // `installation.parameters`, and the two sets do not touch. The day a
+  // parameter can influence a com object's DPT, this becomes a silent
+  // false `"synced"`. `resolve.rs` carries the warning at the place that
+  // would have to change; `KNOWN_LIMITATIONS.md` §82 carries the entry.
   //
   // Never published for `tree === null`: a freshly reloaded window has no
   // tree while the server may still hold the same project open, and

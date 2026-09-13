@@ -57,6 +57,27 @@ pub enum GroupAddressDpt {
 ///   `None`, the same as one nothing links to. This function never panics
 ///   on an unknown id; it has no way to tell "unknown" from "known but
 ///   unlinked" apart, and no caller listed in the spec needs it to.
+///
+/// # Before you widen the inputs
+///
+/// This function reads communication-object links and their resolved DPTs,
+/// and nothing else. One thing downstream depends on that narrowness in a
+/// way no compiler will notice.
+///
+/// The web client's bus monitor shows a "stale project" lock, driven by a
+/// fingerprint over exactly the facts this function consumes
+/// (`apps/knx-web/src/busContext.ts`, `fingerprintProjectContext`). That
+/// fingerprint is republished from `App.tsx` whenever a `ProjectTree`
+/// arrives — but a parameter edit never produces one:
+/// `api.setParameterValue` answers with a `ParameterPanelDto`, so the
+/// fingerprint does not move even though `Command::SetParameterValue` did
+/// mutate the project. It is safe only because a parameter value cannot
+/// currently reach this function's inputs.
+///
+/// So: if you make a parameter value influence a com object's DPT, its
+/// links or its activity, you have made the bus monitor report
+/// `"synced"` over a decode that has silently changed. Fix the publish
+/// path first (`docs/KNOWN_LIMITATIONS.md` §82).
 pub fn resolve_group_address_dpt(project: &Project, ga: GroupAddressId) -> GroupAddressDpt {
     let dpts: Vec<DptRef> = project
         .devices

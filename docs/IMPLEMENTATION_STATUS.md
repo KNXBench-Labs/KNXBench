@@ -3812,7 +3812,7 @@ some device-independent path, not merely present in the DOM.
 | 9 | Log, bus monitor, compose | **Was false** — both halves | see below |
 | 10 | UI language, product language, packs | Holds | `SettingsPanel.tsx:291` (product data), `:312` (UI), `App.tsx:462`/`:487` (two ways in), `commandRegistry.ts:121` (a third) |
 | 11 | Appearance | Holds | `SettingsPanel.tsx:233-256` (theme, accent, density), `theme.ts:5` (`system` is a real entry), `styles.css:1045-1046` (the two density tokens) |
-| 12 | Additional diagnostic window | Still open, as written | no `window.open`, no `BroadcastChannel` anywhere under `apps/knx-web/src`; the row's "New entry" was always a proposal |
+| 12 | Additional diagnostic window | Holds — browser and Tauri desktop, both run 2026-09-13 | `main.tsx:22-25` (one view switch, companion or editor), `DiagnosticsCompanion.tsx` (monitor and log only), `diagnosticsWindow.ts:110` (`openCompanionWindow`), `App.tsx:518` (the button), `busContext.ts:184` (`contextLock`), `capabilities/diagnostics.json` (desktop grants), [KNOWN_LIMITATIONS §79](KNOWN_LIMITATIONS.md) (what the lock cannot see) |
 
 Row 9 was true when it was written and false when it was checked, in both
 halves.
@@ -3826,9 +3826,11 @@ toggle at `:465` could remove the only way to reach either panel, and
 via the toolbar gear at `App.tsx:462`. Per the standing rule that new
 actions stay reachable through the same validated commands regardless of
 input device, `open-log`, `open-bus-monitor` and `open-settings` now exist
-(`commandRegistry.ts:108-125`), all three enabled without an open project
+(`commandRegistry.ts:109-126`), all three enabled without an open project
 because both panels work without one. Three `App.test.tsx` tests collapse
-the pane first and then drive the palette.
+the pane first and then drive the palette. T-UI-06 added a fourth for the
+same reason (`commandRegistry.ts:130-135`, `open-diagnostics-window`): the
+companion window's only button sits in that same collapsible pane.
 
 *"Diagnostic workspaces".* Neither panel was one: both opened with a bare
 `<h2>` while every other centre-pane view uses `.workspace-heading` with
@@ -3873,12 +3875,11 @@ ADR-0018 header is `/** One sentence. */`: `check-headers`
 TypeScript, so a `// …` first line counts as no header at all and trips
 the ratchet.
 
-Two things were deliberately left alone. `DeviceWorkspace`'s heading
+One thing was deliberately left alone. `DeviceWorkspace`'s heading
 (`Inspector.tsx:679`) uses `.workspace-heading` with an `<h2>` and no
 eyebrow rather than the eyebrow/`<h1>` shape — cosmetic, and it belongs to
-the device slice, not this one. Row 12's companion diagnostic window is
-untouched: nothing in the tree opens a second window, and deciding whether
-it should is the row's own task.
+the device slice, not this one. Row 12's companion diagnostic window was
+left to its own task, which is the section below.
 
 Gates, all eight green from one run each: `cargo fmt --all --check`,
 `cargo clippy --workspace --all-targets -- -D warnings`,
@@ -3890,3 +3891,67 @@ its own), `cargo deny check`, and in `apps/knx-web` `npm test -- --run`
 (**383 passed across 38 files**, up from 377 across 37: three
 palette-reachability tests, one registry test and two guard tests in the
 new file) plus `tsc --noEmit`.
+
+**T-UI-06 — the diagnostics companion window (2026-09-13, branch
+`codex-ui-workbench`).** Row 12 of the matrix above now holds. A second
+window hosts the bus monitor and the session log and nothing else; the
+project is edited in exactly one window, as before.
+
+*One editing workspace.* `main.tsx:22-25` picks between `<App />` and
+`<DiagnosticsCompanion />` from one query parameter (`?view=diagnostics`),
+so the companion is the same bundle at a different entry point rather than
+a second application. `DiagnosticsCompanion.tsx` imports only
+`BusMonitorPanel`, `LogPanel`, `busContext`, `diagnosticsWindow`, `i18n`
+and `react` — `DiagnosticsCompanion.test.tsx` asserts that import list
+against the module's own source, because an absence that nothing checks
+stops being true the first time someone adds "just one small button".
+
+*No project mutation, no project undo.* The Ctrl+Z/Ctrl+Shift+Z handler
+lives on `App.tsx`'s `window` listener, which the companion never mounts;
+a test presses both combinations against the live companion and asserts
+`api.undo`/`api.redo` are never called. The only write it can reach is the
+bus compose form's, which was already a bus write and already says project
+Undo cannot reverse it.
+
+*One shared bus session.* The companion starts nothing: `BusMonitorPanel`
+asks `GET /api/bus/monitor/telegrams` on mount and attaches to whatever
+session exists (`apps/knx-server/src/bus_routes.rs:272-311` answers `404`
+when there is none), and closing the window runs no teardown, so the
+session outlives it. Both are tested. The server's one-session rule is
+unchanged: a second `POST /start` still gets a `409` naming the existing
+session (`bus_routes.rs:95-109`).
+
+*The stale lock.* `apps/knx-server/src/bus.rs:601-618` freezes a
+`GroupAddressContext` — group-address style, names, DPTs — when a session
+starts, and never re-resolves it; that snapshot decodes every telegram and
+resolves every write's DPT (`bus.rs:1135-1141`). `busContext.ts`
+fingerprints exactly those three facts, records the fingerprint when a
+session starts, and compares on every poll tick. The verdict is
+three-valued: `synced`, `stale` (the project moved — the decoded columns
+are struck through, and the compose form is disabled with an explanation)
+and `unverified` (this profile did not record this session's start, so
+nothing can be confirmed either way — said out loud, sending left
+enabled). What it cannot see is [KNOWN_LIMITATIONS §79](KNOWN_LIMITATIONS.md).
+
+*Platforms.* Verified in both. Headless Chromium against the Vite dev
+server renders the companion shell at `?view=diagnostics` and the editor
+at `/`. On the Tauri desktop shell the command opens a real second native
+window titled "KNXBench — Diagnostics", a second invocation focuses it
+instead of creating a third, and its "Back to main window" button returns
+focus to `main`. That needed two capability changes:
+`core:webview:allow-create-webview-window` and `core:window:allow-set-focus`
+on the main window, plus a new least-privilege
+`capabilities/diagnostics.json` scoped to the `diagnostics` window with
+`core:window:allow-get-all-windows` and `core:window:allow-set-focus` only.
+No KNX bus was touched: no gateway was connected in either run.
+
+Gates, all eight green from one run each: `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace --no-fail-fast` (**1187 passed, 0 failed, 3
+ignored across 78 `test result:` lines** — unchanged; this stage adds no
+Rust), `xtask check-layering`, `xtask check-headers` (**98 files with a
+well-formed header, 169 without, ceiling 169** — six new files, six new
+headers), `cargo deny check`, and in `apps/knx-web` `npm test -- --run`
+(**434 passed across 41 files**, up from 383 across 38: three new test
+files worth 45 tests, five stale-lock tests in `BusMonitorPanel.test.tsx`
+and one in `BusComposeForm.test.tsx`) plus `tsc --noEmit`.

@@ -2370,7 +2370,7 @@ apart). Verified concrete consequences:
 3. **No client is told the project changed underneath it.** There is no
    `WebSocket` or `EventSource` anywhere in `apps/knx-web`; the only
    `setInterval` polling loop in the whole frontend is
-   `apps/knx-web/src/BusMonitorPanel.tsx:228`, and it polls bus telegrams,
+   `apps/knx-web/src/BusMonitorPanel.tsx:311`, and it polls bus telegrams,
    not project state. A browser's view of the project tree only updates
    from the response to its own request — it never learns about another
    client's edit, undo, redo, or save except by the user manually
@@ -3058,3 +3058,78 @@ three such endpoints among 35 occupied addresses on one gateway.
 **Lifted when.** Only after the sub-20 ms heuristic, or a more reliable
 signal, is verified against more than one gateway/client combination —
 not scheduled as part of T17.
+
+## 79. The diagnostics companion's stale lock sees one browser profile's own windows, and nothing else
+
+**Limitation.** The second-window diagnostics companion (T-UI-06) locks
+itself when the project changes under a running bus session. That lock is
+decided entirely from two `localStorage` records written by the windows of
+one browser profile (`apps/knx-web/src/busContext.ts`). It therefore
+detects only edits made in a window that shares that storage. Four cases
+it cannot see, and what each one costs:
+
+1. **Another client edits the project.** A second browser, a private
+   window, another machine, or `curl` against the same server changes a
+   group address's name, DPT or style. No record in this profile's
+   `localStorage` moves, so the companion keeps reporting `synced` while
+   the running session's frozen `GroupAddressContext`
+   (`apps/knx-server/src/bus.rs:601-618`) — and therefore every decoded
+   value and every write DPT resolution — describes a project that no
+   longer exists.
+2. **The project record outlives the server.** `localStorage` survives a
+   server restart; the server's in-memory project does not. The companion
+   can therefore believe a project is open (`projectContextKnown()`) when
+   the server holds none. The only cost is a suppressed hint on the
+   compose form: it stops explaining that no DPT will resolve
+   automatically. The session half of this self-corrects — the first poll
+   after the restart gets a `404` and the panel detaches, clears the
+   session record and says the session ended elsewhere.
+3. **A project opened in a window that later reloads.** The project record
+   is published from the live tree in `App.tsx`; a reloaded window has no
+   tree until the user opens a project again, so it publishes nothing and
+   the previous record stands until it does. A stale-but-identical
+   fingerprint is the harmless case; a project *closed* and a different
+   one opened elsewhere is case 1 again.
+4. **Two sessions in one profile, one of them unrecorded.** If a session
+   is started by something that does not write the record — another
+   client, or a direct `POST /api/bus/monitor/start` — the companion
+   reports `unverified` rather than `synced` or `stale`: it says it cannot
+   confirm the decoded values, and leaves sending enabled. That is
+   deliberate (nothing observed says the snapshot is wrong), but it is
+   weaker than a real answer.
+
+**Cause.** There is no channel through which a client can be told the
+project changed, and no route that returns the project tree without
+mutating it. [§63 point 3](#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all)
+establishes the first: no `WebSocket`, no `EventSource`, and the only
+polling loop in the frontend polls bus telegrams. The second is visible in
+`apps/knx-server/src/routes.rs`, whose only `GET` routes are
+`/api/device/{id}`, `/api/catalog/manufacturers`, `/api/catalog/items`,
+`/api/product-languages` and `/api/log` — every route that returns a
+`ProjectTree` is a `POST` that changes something first. A companion window
+therefore has no way to *ask* what the project looks like; it can only be
+told by a sibling window that already knows. **[V]**
+
+**Impact.** The lock is a guard against the common case — one user, one
+browser, editing in one window while watching in another — not a
+guarantee. In the multi-client situations of §63 it is silent, and a
+silent lock looks the same as a verified-fresh one. The consequence is the
+one the feature exists to prevent: a decoded column, and a write's
+resolved DPT, describing a project the server has since changed. Writes
+land on real hardware and project Undo cannot reverse them (`busCompose.liveAction`).
+
+**Lifted when.** The server can tell a client that the project changed —
+the same push channel §63 needs for concurrent editing. A cheaper partial
+step would be a read-only `GET` returning the current tree's fingerprint,
+which would turn cases 1-3 into ordinary poll-detected staleness without
+requiring any push infrastructure; it was not built here because it is a
+server-side API addition and this stage's scope was the UI.
+
+**Platform note.** Both platforms were exercised on 2026-09-13: the
+companion route renders in headless Chromium against the Vite dev server,
+and the Tauri desktop shell opens it as a real second native window,
+focuses rather than duplicates it on a second invocation, and returns
+focus to the main window. What was *not* exercised anywhere is a live bus
+session — no KNX hardware was touched, so the lock's behaviour is proven
+by tests (`busContext.test.ts`, `BusMonitorPanel.test.tsx`), not by a
+running gateway.

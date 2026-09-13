@@ -1029,6 +1029,149 @@ pub fn resolve_catalog_item_program(
     })
 }
 
+/// The evidence `apps/knx-server` overlays onto `DeviceProductNode::catalog`
+/// (T16) — everything a device's stated `product_ref`/`hardware2program_ref`
+/// pair resolves to, in one row rather than one query per table, joined the
+/// same permissive way `resolve_catalog_item_program`'s own chain is
+/// modelled: `product.id` → `product.hardware_id` → `hardware`,
+/// `hardware2program.id` → `hardware2program.application_program_ref` →
+/// `application_program`, plus `catalog_item` (optional — a product need
+/// not be listed in any catalog section) and `manufacturer` (for the
+/// display name).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeviceProductRow {
+    pub manufacturer_id: String,
+    pub manufacturer_name: Option<String>,
+    /// `product.text`.
+    pub product_text: Option<String>,
+    /// `product.order_number`.
+    pub order_number: Option<String>,
+    /// `hardware.name`.
+    pub hardware_name: Option<String>,
+    /// `hardware.version_number`.
+    pub hardware_version: Option<String>,
+    pub hardware_serial_number: Option<String>,
+    /// `catalog_item.name`.
+    pub catalog_item_name: Option<String>,
+    pub catalog_item_number: Option<String>,
+    pub application_program_id: Option<String>,
+    /// `application_program.name`.
+    pub application_name: Option<String>,
+    pub application_number: Option<String>,
+    pub application_version: Option<String>,
+    pub mask_version: Option<String>,
+}
+
+fn row_to_device_product(r: &rusqlite::Row) -> rusqlite::Result<DeviceProductRow> {
+    Ok(DeviceProductRow {
+        manufacturer_id: r.get(0)?,
+        manufacturer_name: r.get(1)?,
+        product_text: r.get(2)?,
+        order_number: r.get(3)?,
+        hardware_name: r.get(4)?,
+        hardware_version: r.get(5)?,
+        hardware_serial_number: r.get(6)?,
+        catalog_item_name: r.get(7)?,
+        catalog_item_number: r.get(8)?,
+        application_program_id: r.get(9)?,
+        application_name: r.get(10)?,
+        application_number: r.get(11)?,
+        application_version: r.get(12)?,
+        mask_version: r.get(13)?,
+    })
+}
+
+/// Resolves a device's `product_ref`/`hardware2program_ref` pair against
+/// the product database. `Ok(None)` only when `product_ref_id` itself does
+/// not name a `product` row — a broken or unresolvable `hardware2program`
+/// reference does not empty the result, it just leaves the `application_*`
+/// fields `None` (a *partial* result, not an absent one — losing the
+/// product's own name because its program link happens to be broken would
+/// be exactly the silent discard CLAUDE.md forbids). Callers pass an empty
+/// string for either id to mean "not stated"; an empty string never names a
+/// row in this schema, so it behaves exactly like an id that doesn't
+/// resolve.
+///
+/// `language: None` issues the plain, untranslated statement, unchanged in
+/// shape from the `Some` case minus its three overlay joins — same
+/// convention as `catalog_items`. `Some(lang)` overlays three attributes
+/// through the shared `translation` table, each scoped exactly the way its
+/// owning file's `Languages` block keys it (`parse/translation.rs`):
+/// `product.text` (`scope = 'Hardware'`, `scope_id = product.manufacturer_id`,
+/// `ref_id = product.id`, `attribute_name = 'Text'`), `catalog_item.name`
+/// (`scope = 'Catalog'`, `scope_id = catalog_item.manufacturer_id`,
+/// `ref_id = catalog_item.id`, `attribute_name = 'Name'` — identical to
+/// `catalog_items`' own join), and `application_program.name`
+/// (`scope = 'Program'`, `scope_id = application_program.id`,
+/// `ref_id = application_program.id`, `attribute_name = 'Name'`).
+///
+/// `hardware.name` is deliberately never overlaid: every `Hardware.xml` this
+/// project has ingested places only `Product/@Id`s inside its `Languages`
+/// block, never the owning `Hardware/@Id` itself (checked against both
+/// reference ETS projects' extracted manufacturer packages — zero
+/// counter-examples in either). Adding a join for an attribute this schema
+/// has never actually populated would silently match nothing forever; this
+/// is stated here rather than guessed at in SQL. If a future package turns
+/// out to carry one, this is the doc comment to correct.
+pub fn device_product(
+    conn: &Connection,
+    product_ref_id: &str,
+    hardware2program_ref_id: &str,
+    language: Option<&str>,
+) -> Result<Option<DeviceProductRow>, ProductDbError> {
+    let Some(lang) = language else {
+        const SQL: &str = "SELECT p.manufacturer_id, m.name, p.text, p.order_number,
+                    h.name, h.version_number, h.serial_number,
+                    ci.name, ci.number,
+                    apg.id, apg.name, apg.application_number,
+                    apg.application_version, apg.mask_version
+             FROM product p
+             LEFT JOIN hardware h ON h.id = p.hardware_id
+             LEFT JOIN manufacturer m ON m.id = p.manufacturer_id
+             LEFT JOIN hardware2program h2p ON h2p.id = ?2
+             LEFT JOIN application_program apg ON apg.id = h2p.application_program_ref
+             LEFT JOIN catalog_item ci ON ci.product_ref_id = ?1
+                  AND ci.hardware2program_ref_id = ?2
+             WHERE p.id = ?1";
+        return conn
+            .query_row(
+                SQL,
+                rusqlite::params![product_ref_id, hardware2program_ref_id],
+                row_to_device_product,
+            )
+            .optional()
+            .map_err(Into::into);
+    };
+
+    const SQL_TRANSLATED: &str =
+        "SELECT p.manufacturer_id, m.name, COALESCE(tp.text, p.text), p.order_number,
+                h.name, h.version_number, h.serial_number,
+                COALESCE(tc.text, ci.name), ci.number,
+                apg.id, COALESCE(ta.text, apg.name), apg.application_number,
+                apg.application_version, apg.mask_version
+         FROM product p
+         LEFT JOIN hardware h ON h.id = p.hardware_id
+         LEFT JOIN manufacturer m ON m.id = p.manufacturer_id
+         LEFT JOIN hardware2program h2p ON h2p.id = ?2
+         LEFT JOIN application_program apg ON apg.id = h2p.application_program_ref
+         LEFT JOIN catalog_item ci ON ci.product_ref_id = ?1
+              AND ci.hardware2program_ref_id = ?2
+         LEFT JOIN translation tp ON tp.scope = 'Hardware' AND tp.scope_id = p.manufacturer_id
+              AND tp.ref_id = p.id AND tp.attribute_name = 'Text' AND tp.language = ?3
+         LEFT JOIN translation tc ON tc.scope = 'Catalog' AND tc.scope_id = ci.manufacturer_id
+              AND tc.ref_id = ci.id AND tc.attribute_name = 'Name' AND tc.language = ?3
+         LEFT JOIN translation ta ON ta.scope = 'Program' AND ta.scope_id = apg.id
+              AND ta.ref_id = apg.id AND ta.attribute_name = 'Name' AND ta.language = ?3
+         WHERE p.id = ?1";
+    conn.query_row(
+        SQL_TRANSLATED,
+        rusqlite::params![product_ref_id, hardware2program_ref_id, lang],
+        row_to_device_product,
+    )
+    .optional()
+    .map_err(Into::into)
+}
+
 /// Every `com_object_ref.id` for `program_id`, in document/ingest order.
 /// `ORDER BY rowid` rather than `ORDER BY id`: `com_object_ref` is not
 /// declared `WITHOUT ROWID`, so `rowid` preserves insertion order, and the
@@ -1054,7 +1197,7 @@ mod tests {
         catalog::ingest_catalog,
         hardware::ingest_hardware,
         program::ingest_program,
-        translation::{ingest_translations, TranslationScope},
+        translation::{ingest_translations, insert_translations, TranslationScope},
     };
 
     const HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
@@ -1304,6 +1447,115 @@ mod tests {
                 _
             )))
         ));
+    }
+
+    #[test]
+    fn device_product_resolves_the_full_chain() {
+        let (_dir, conn) = db();
+        ingest_catalog(&conn, "sha-c", "M-006A/Catalog.xml", CATALOG.as_bytes()).unwrap();
+
+        let row = device_product(&conn, "M-006A_H-1_P-1", "H-1_HP-1", None)
+            .unwrap()
+            .unwrap();
+        assert_eq!(row.manufacturer_id, "M-006A");
+        assert_eq!(row.manufacturer_name, None, "no master data ingested");
+        assert_eq!(row.hardware_name.as_deref(), Some("X"));
+        assert_eq!(row.hardware_version.as_deref(), Some("1"));
+        assert_eq!(row.hardware_serial_number.as_deref(), Some("S"));
+        assert_eq!(row.catalog_item_name.as_deref(), Some("Schaltaktor"));
+        assert_eq!(row.catalog_item_number.as_deref(), Some("EM12102"));
+        assert_eq!(row.application_program_id.as_deref(), Some("A-1"));
+        assert_eq!(row.application_name.as_deref(), Some("P"));
+        assert_eq!(row.application_number.as_deref(), Some("1"));
+        assert_eq!(row.application_version.as_deref(), Some("22"));
+        assert_eq!(row.mask_version.as_deref(), Some("MV-0701"));
+    }
+
+    #[test]
+    fn device_product_with_no_matching_hardware2program_is_a_partial_row_not_none() {
+        // An empty `hardware2program_ref_id` (the "not stated" convention
+        // `DeviceProductNode` uses) must not swallow the product/hardware
+        // half of the row it can still resolve.
+        let (_dir, conn) = db();
+        let row = device_product(&conn, "M-006A_H-1_P-1", "", None)
+            .unwrap()
+            .unwrap();
+        assert_eq!(row.manufacturer_id, "M-006A");
+        assert_eq!(row.hardware_name.as_deref(), Some("X"));
+        assert_eq!(row.application_program_id, None);
+        assert_eq!(row.application_name, None);
+        assert_eq!(row.catalog_item_name, None);
+    }
+
+    #[test]
+    fn device_product_with_an_unknown_product_id_is_none() {
+        let (_dir, conn) = db();
+        assert_eq!(
+            device_product(&conn, "nope", "H-1_HP-1", None).unwrap(),
+            None
+        );
+    }
+
+    #[test]
+    fn device_product_overlays_translated_text_only_when_a_language_is_given() {
+        let (_dir, conn) = db();
+        ingest_catalog(&conn, "sha-c", "M-006A/Catalog.xml", CATALOG.as_bytes()).unwrap();
+        insert_translations(
+            &conn,
+            TranslationScope::Hardware,
+            "M-006A",
+            "de-DE",
+            "M-006A_H-1_P-1",
+            "Text",
+            "Schaltaktor 12-fach",
+        )
+        .unwrap();
+        insert_translations(
+            &conn,
+            TranslationScope::Catalog,
+            "M-006A",
+            "de-DE",
+            "M-006A_CI-1",
+            "Name",
+            "Umschaltaktor",
+        )
+        .unwrap();
+        insert_translations(
+            &conn,
+            TranslationScope::Program,
+            "A-1",
+            "de-DE",
+            "A-1",
+            "Name",
+            "Programm P",
+        )
+        .unwrap();
+
+        let untranslated = device_product(&conn, "M-006A_H-1_P-1", "H-1_HP-1", None)
+            .unwrap()
+            .unwrap();
+        assert_eq!(untranslated.product_text, None, "Product carries no @Text");
+        assert_eq!(
+            untranslated.catalog_item_name.as_deref(),
+            Some("Schaltaktor")
+        );
+        assert_eq!(untranslated.application_name.as_deref(), Some("P"));
+
+        let translated = device_product(&conn, "M-006A_H-1_P-1", "H-1_HP-1", Some("de-DE"))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            translated.product_text.as_deref(),
+            Some("Schaltaktor 12-fach")
+        );
+        assert_eq!(
+            translated.catalog_item_name.as_deref(),
+            Some("Umschaltaktor")
+        );
+        assert_eq!(translated.application_name.as_deref(), Some("Programm P"));
+        // `hardware.name` is never a translation target in this schema
+        // (see `device_product`'s own doc comment) — untouched either way.
+        assert_eq!(translated.hardware_name.as_deref(), Some("X"));
     }
 
     #[test]

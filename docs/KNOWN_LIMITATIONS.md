@@ -361,18 +361,18 @@ so all four are now `ingest_unknown` attribute rows: parsed, reported, and
 not stored. So for this file kind the *reporting* half of the gap is closed for
 elements and for attributes both, and the *storage* half is not: an ingest
 report can tell a reader that `<AbsoluteSegment Size="513"
-MemoryType="EEPROM" Address="16384">` was present and where, but no table,
-column or query holds it, and no code resolves a download sequence from it
-**[V]**. Exactly two reporting exemptions remain, both deliberate, both
+MemoryType="EEPROM" Address="16384">` was present and where — the report even
+carries `"513"` as its sample — but no *modelled* table or column holds it,
+and no query resolves a download sequence from it **[V]**. Exactly two reporting exemptions remain, both deliberate, both
 narrow, and neither of them attribute-shaped rot. First, the document's own
 spine (`KNX`, `ManufacturerData`, `ApplicationPrograms`, `Languages`,
 `TranslationUnit`): neither those elements nor their attributes are
 reported, so an ingest does not describe the parser walking past its own
 ancestors. The attributes that exemption swallows are named here instead,
-so they are recorded somewhere: `KNX/@ToolVersion` and `KNX/@CreatedBy`
-(their sibling `@xmlns` *is* read, by `package.rs`, for the schema version),
-and `TranslationUnit/@RefId` (all 336 files) plus `TranslationUnit/@Version`
-(39) **[V]** — that is the whole list, and
+so they are recorded somewhere: `KNX/@ToolVersion`, `KNX/@CreatedBy`,
+`KNX/@xmlns:xsd` and `KNX/@xmlns:xsi` (their sibling `@xmlns` *is* read, by
+`package.rs`, for the schema version), and `TranslationUnit/@RefId` (all 336
+files) plus `TranslationUnit/@Version` (39) **[V]** — that is the whole list, and
 `the_document_spines_own_attributes_stay_out_of_the_report` fails if the
 exemption ever widens past it. Second, `ComObject`, `ComObjectRef` and
 `ParameterRef` reach the catch-all only on a *duplicate* program, whose

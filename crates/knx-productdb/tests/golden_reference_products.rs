@@ -98,14 +98,21 @@ fn the_unknown_construct_table_is_a_short_list_not_a_flood() {
     }
     // Not zero — this is one manufacturer sample of four vendors, and an
     // unmodelled attribute is expected. What matters is that every one is
-    // on record and that the result stays reviewable, which takes two
-    // bounds on two different quantities:
+    // on record and that the result stays reviewable, which takes three
+    // bounds on three different quantities, each guarding a different thing:
     //
     // * `distinct_constructs` bounds the length of the list a human reads —
     //   one entry per (`kind`, `xpath`, `name`).
-    // * `rows` bounds the size of the table, so a parser regression that
-    //   starts rerouting the modelled tree through here still trips
-    //   something the distinct bound would sleep through.
+    // * `rows` bounds the size of the table as the corpus grows. It is a
+    //   corpus-size guard and nothing more: rows scale with
+    //   files × programs × distinct xpaths, never with element instances,
+    //   so de-modelling barely moves it. Measured: de-modelling the whole
+    //   program body tops out at 1975 rows, under half of this bound.
+    // * `occurrences` is the one that catches a parser regression rerouting
+    //   the modelled tree through here, because that is the quantity such a
+    //   regression inflates. Measured: dropping the `Parameter` arm alone
+    //   takes it from 3078 to 91,468, and de-modelling the whole program
+    //   body reaches 520,304.
     //
     // They differ because `ingest_unknown` keys on `source_sha256` as well:
     // one construct present in 12 program files is 12 rows, and
@@ -126,14 +133,24 @@ fn the_unknown_construct_table_is_a_short_list_not_a_flood() {
         distinct_constructs < 200,
         "{distinct_constructs} distinct (kind, xpath, name) constructs to review, measured 98"
     );
-    // Deliberately loose, and still two orders of magnitude below the 89,622
-    // rows this corpus fills the eight main parsed tables with — roughly
-    // what a parser that stopped recognising its own tree would have to
-    // dump in here instead.
+    // Deliberately loose — ~4x headroom for a growing corpus, which at
+    // today's construct profile is about 95 source files. For scale, this
+    // corpus fills the eight main parsed tables with 89,622 rows, ~22x
+    // this bound; rerouting them here would not arrive one-for-one, which
+    // is why this bound is not the regression guard.
     let rows = count(&conn, "SELECT count(*) FROM ingest_unknown");
     assert!(
         rows < 4000,
         "{rows} ingest_unknown rows, measured 1013 — that is a flood, not a list"
+    );
+    // The regression guard. `occurrences` counts things seen, not rows about
+    // things, so it is the number that moves when the parser stops
+    // recognising its own tree: 6.5x headroom over today, and every
+    // de-modelling case measured above trips it by 5x or more.
+    let occurrences = count(&conn, "SELECT sum(occurrences) FROM ingest_unknown");
+    assert!(
+        occurrences < 20_000,
+        "{occurrences} unknown-construct occurrences, measured 3078 — the parser stopped recognising something large"
     );
 }
 

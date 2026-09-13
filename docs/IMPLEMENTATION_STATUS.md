@@ -3689,16 +3689,21 @@ the projection rather than from the screen.
      the brief asks for range context per row and a breadcrumb only
      describes the current scope. Additive, not a removal.
   5. **The CSV control is two plain buttons, not one "CSV ⌄" dropdown.**
-     The placement matches both the image and the tracked
+     The region matches the tracked
      `docs/design/2026-09-13-codex-ui-concept/README.md` ("CSV direkt bei
-     Gruppenadressen"): `StructureWorkspace`'s `addressActions` slot now
+     Gruppenadressen"): `StructureWorkspace`'s `addressActions` slot
      carries `GroupAddressCsvButtons`, whose export and import buttons are
-     rendered side by side rather than folded into a disclosure. The
-     File-menu copies are kept, so no entry point is lost. Collapsing them
-     is a component this repository does not have — there is no
-     menu-button primitive anywhere in `apps/knx-web` — and building the
-     first one for two buttons would prejudge how every other overflow
-     menu behaves.
+     rendered side by side rather than folded into a disclosure. The row
+     differs from the image, which puts "CSV ⌄" in the filter/action row
+     beside "+ Gruppenadresse"; here the buttons sit on the title line
+     (`StructureWorkspace.tsx:72-74`'s `.workspace-heading`) with the
+     filter one row below in `.address-table-toolbar`. The File-menu copies
+     are kept, so no entry point is lost. A disclosure of this shape does
+     exist — `App.tsx:424-426`'s `<details className="file-menu">` already
+     wraps these same buttons behind a label and a `⌄` — but there is no
+     reusable menu-button primitive in `apps/knx-web`, and promoting the
+     File menu's one-off into the first one, for two buttons, would
+     prejudge how every later overflow menu behaves.
   6. **The Verknüpfungen column reads "1 sending · 1 receiving" rather
      than the image's bare count.** The direction is the fact an installer
      needs, the count alone hides which way a link points, and the

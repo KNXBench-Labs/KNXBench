@@ -4650,3 +4650,73 @@ the hand-written `src/node-builtins.d.ts` shim — the package deliberately
 carries no `@types/node`, because `tsc && vite build` type-checks the tests
 alongside the application and the full Node surface would let a component
 import `node:fs` unnoticed.
+
+## 2026-09-13 — The from-scratch project launcher (branch `launcher-new-project`)
+
+`POST /api/project/new` landed on 2026-09-08 with tests and no caller. The
+frontend had two welcome-screen buttons, both meaning "open a file you
+already have", so the one capability this cycle exists for — install a device
+from a manufacturer product database with no ETS project anywhere — was
+reachable only with `curl`. It is now reachable with a mouse.
+
+- **`groupAddressStyle` on the creation route.** `NewProjectBody` gained an
+  optional field, threaded through `new_project_impl` into `ProjectInfo`. An
+  absent style keeps `Project::new`'s `ThreeLevel`, so every existing caller
+  is unchanged; an *unrecognised* one is a `400` naming the three it could
+  have been, not a fall back to three-level. Both ETS import
+  (`knx-etsproj/src/map.rs`) and the store (`knx-store/src/project.rs`) do
+  fall back, correctly — they are reading documents that already exist. This
+  route creates one, and the style is effectively permanent once addresses
+  exist, so guessing here would be discovered a hundred group addresses
+  later. Three tests in `apps/knx-server/tests/http_project_routes.rs`: a
+  two-level project accepts `4/612` and returns it formatted that way, a
+  default project rejects `4/612` and accepts `4/2/100`, and `"FourLevel"` is
+  refused with the value and the alternatives in the message, leaving no
+  half-made project behind.
+- **`api.ts` gained `newProject` and `isUnsavedChangesConflict`.**
+  `discardChanges` is always written to the wire explicitly, `false` when
+  nobody asked, so "did this request offer to destroy anything?" is
+  answerable from the body alone. The 409 is a named predicate rather than a
+  bare status comparison scattered across call sites.
+- **`NewProjectDialog.tsx`**, on the shared `Overlay` shell: project name,
+  installation name, project language and group address style, every field
+  pre-filled with something valid so the whole dialog is one Enter away from
+  a project. The two defaults the backend deliberately refuses to invent
+  (`new_project_impl`'s own doc comment says the localized label belongs to
+  the catalogue) live in `messages/en.ts` and `de.ts`, 28 new keys in each.
+  The language field is validated for BCP-47 well-formedness with
+  `languagePack.ts`'s existing `isWellFormedBcp47Tag` — well-formedness only,
+  never a registry, since `knx_core::Language` does not validate at all.
+- **The 409 is a question, not a toast.** A refusal turns the dialog into a
+  prompt naming what is at stake, with the server's own sentence kept
+  underneath the translated explanation. `discardChanges: true` leaves the
+  frontend from exactly one place: the button a human pressed after reading
+  it. "Keep editing" closes the dialog and leaves the open project's edits
+  where they were. A second Enter while the prompt is up is swallowed rather
+  than re-earning the same 409.
+- **Three welcome-screen buttons now**, the new one first and styled as the
+  primary action — it is the only one that does not require the user to
+  already own a file. Same action in the File menu and as `COMMANDS[0]` in
+  the command palette, which shifted every palette index by one and moved
+  `CommandPalette.test.tsx`'s ArrowDown walk from four presses to five; the
+  walk still starts before the disabled rows and still lands on Search.
+
+Gates, all eight green from one run each: `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace --no-fail-fast` (**1266 passed, 0 failed, 3 ignored
+across 79 `test result:` lines**, summed with `awk '/test result:/{p+=$4;f+=$6;i+=$8;n++} END{print p,f,i,n}'`
+over one untruncated log — up 3 from 1263, the three new route tests),
+`xtask check-layering`, `xtask check-headers` (**102 files with a well-formed
+header, 168 without, ceiling 168** — both new files carry one, so the count
+without moved not at all), `cargo deny check`, and in `apps/knx-web`
+`npm test -- --run` (**455 passed across 42 files**, up from 438 across 41:
+nine dialog tests in the new `NewProjectDialog.test.tsx`, four welcome-screen
+wiring tests in `App.test.tsx`, three wire-contract tests in `api.test.ts`,
+one palette-enablement test in `commandRegistry.test.ts`) plus
+`./node_modules/.bin/tsc --noEmit`.
+
+What is still not true: nobody has clicked any of this in a browser. Every
+frontend test here renders against a mocked `./api`. KNOWN_LIMITATIONS.md §83
+records that, and §84 records the residue the style field leaves behind — a
+project's group address style is now chosen at creation and thereafter
+invisible, because `ProjectTree` has no field for it.

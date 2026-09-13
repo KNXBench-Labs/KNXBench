@@ -29,6 +29,7 @@ function fakeTree(can_undo: boolean, can_redo: boolean): ProjectTree {
 function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
   return {
     tree: null,
+    newProject: () => {},
     pickProject: () => {},
     openNativeProject: () => {},
     saveProject: () => {},
@@ -100,12 +101,25 @@ describe("command enablement", () => {
     expect(called).toBe(true);
   });
 
-  it("lists all eleven commands in palette order, with an unconditionally enabled first entry", () => {
+  it("lists all twelve commands in palette order, with an unconditionally enabled first entry", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
-      "open-project", "open-native", "save", "save-as", "undo", "redo", "search",
+      "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "search",
       "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window",
     ]);
     expect(COMMANDS[0].isEnabled(noopCtx({ tree: null }))).toBe(true);
+  });
+
+  // The whole point of the from-scratch launcher: it is the one File
+  // action that works when the user owns no project file at all, so a
+  // `tree === null` that disabled it would put the feature behind the
+  // very thing it exists to avoid needing.
+  it("keeps New project runnable with no project open", () => {
+    let started = false;
+    const ctx = noopCtx({ tree: null, newProject: () => (started = true) });
+    const cmd = COMMANDS.find((c) => c.id === "new-project")!;
+    expect(cmd.isEnabled(ctx)).toBe(true);
+    cmd.run(ctx);
+    expect(started).toBe(true);
   });
 
   // The diagnostic entries exist because the buttons that used to reach

@@ -66,6 +66,15 @@ it("keeps communication editing and parameters reachable in the central device t
 // all, so `onApplied` was never called for this edit path — asserting
 // merely that `api.setParameterValue` was called would have passed on the
 // broken code too, since that call was never the missing half.
+//
+// T3 fix round 1, item 6: `onApplied` used to receive a hand-built
+// `{...tree, can_undo: true, can_redo: false}` overlay of the local
+// `tree` prop, because the write response carried no tree of its own.
+// `serverTree` below differs from `tree` in fields an overlay could never
+// touch (`errors`/`warnings`), so a passing assertion against it proves
+// the server's own tree is what gets published, not a caller-side guess.
+const serverTree: ProjectTree = { ...tree, errors: 5, warnings: 2, can_undo: true, can_redo: false };
+
 function committableField() {
   return {
     etsId: "P1", name: "Field A", text: null, kind: "Number", value: "5",
@@ -92,6 +101,7 @@ it("publishes a committed parameter edit to onApplied, not just to api.setParame
     sections: [{ scope: null, fields: [{ ...committableField(), value: "6" }] }],
     stale: [],
     diagnostics: [],
+    tree: serverTree,
   });
   const onApplied = vi.fn();
   const host2 = document.createElement("div");
@@ -114,10 +124,11 @@ it("publishes a committed parameter edit to onApplied, not just to api.setParame
   // ran, so `App.tsx`'s tree-publish effect never fired either.
   expect(api.setParameterValue).toHaveBeenCalledWith(9, "P1", "6", null);
   expect(onApplied).toHaveBeenCalledTimes(1);
-  // `CommandStack::do_command` (`command.rs`) always pushes onto `undo`
-  // and clears `redo`, so this is what actually happened server-side, not
-  // an invented value; `tree`'s other fields survive untouched.
-  expect(onApplied).toHaveBeenCalledWith({ ...tree, can_undo: true, can_redo: false });
+  // `serverTree` differs from the local `tree` prop in fields no overlay
+  // of `tree` could ever produce (`errors`/`warnings`) — this passes only
+  // because `ParameterPanel` now forwards the write response's own `tree`
+  // verbatim, not a `{...tree, can_undo, can_redo}` reconstruction of it.
+  expect(onApplied).toHaveBeenCalledWith(serverTree);
 
   await act(async () => root2.unmount());
   host2.remove();

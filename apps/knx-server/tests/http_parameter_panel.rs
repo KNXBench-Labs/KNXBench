@@ -477,6 +477,14 @@ async fn get_returns_stored_and_defaulted_top_level_fields() {
         "expected null, got {:?}",
         p3["displayOrder"]
     );
+
+    // T3 fix round 1, item 6: a `GET` never mutates anything, so it
+    // attaches no tree — `tree` is only ever `Some` on a successful write.
+    assert!(
+        dto["tree"].is_null(),
+        "expected null, got {:?}",
+        dto["tree"]
+    );
 }
 
 // AC2: an undecomposable id and a regex-match-but-undeclared id both land
@@ -618,6 +626,14 @@ async fn post_a_valid_top_level_value_is_reflected_in_the_same_response() {
     let p1 = field(&dto, "P-1_R-1").unwrap();
     assert_eq!(p1["value"], "42");
     assert_eq!(p1["valueSource"], "Stored");
+
+    // T3 fix round 1, item 6: a successful write carries the server's own
+    // freshly rebuilt `ProjectTree` — the same one `apply(state, cmd)`
+    // already built from the genuine post-write `CommandStack` — not a
+    // `null` a caller would otherwise have to reconstruct by hand.
+    assert!(!dto["tree"].is_null(), "expected a tree, got null");
+    assert_eq!(dto["tree"]["can_undo"], true);
+    assert_eq!(dto["tree"]["can_redo"], false);
 }
 
 // AC6: out-of-range Number and non-member Restriction both 400, and

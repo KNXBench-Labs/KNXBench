@@ -9,6 +9,7 @@ import type {
   ParameterSection,
   StaleParameter,
 } from "./api";
+import type { ProjectTree } from "./bindings/ProjectTree";
 import { useProductLanguage } from "./productLanguage";
 import { useTranslate, type Translate } from "./i18n";
 
@@ -34,22 +35,22 @@ function sectionLabel(t: Translate, scope: ModuleScope | null): string {
 // `ComObjectDescriptionField`/`DptField`: local draft state, commit on
 // blur, revert and surface the error inline on a rejected write — applied
 // here to `api.setParameterValue` instead of one of the ProjectTree
-// commands. That endpoint answers with a `ParameterPanelDto`, never a
-// `ProjectTree`, so a successful write cannot hand `onUpdated` anything
-// `App.tsx` could pass straight to `setTree` — `onValueApplied` (threaded
-// from `ParameterPanel`, see its own doc comment) is the fix's other half,
-// telling the caller a real, undoable command landed without pretending a
-// tree came back. A module-scoped field is writable exactly when the
-// server names a `writeEtsId` for it (design D43, superseding D25's
-// blanket read-only rule) — that happens when exactly one imported module
-// instance is its authority; every other case stays disabled with a
-// caption naming the read-only reason.
+// commands. That endpoint's response rides the same DTO as the `GET`, but
+// a successful write also carries the server's own freshly rebuilt `tree`
+// (T3 fix round 1, item 6) — `onValueApplied` (threaded from `ParameterPanel`,
+// see its own doc comment) hands that tree straight to the caller, so
+// `App.tsx` can `setTree` it without reconstructing anything by hand. A
+// module-scoped field is writable exactly when the server names a
+// `writeEtsId` for it (design D43, superseding D25's blanket read-only
+// rule) — that happens when exactly one imported module instance is its
+// authority; every other case stays disabled with a caption naming the
+// read-only reason.
 function ParameterFieldRow(props: {
   field: ParameterField;
   deviceId: number;
   language: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
-  onValueApplied: () => void;
+  onValueApplied: (tree: ProjectTree) => void;
 }) {
   const { field, deviceId, language, onUpdated, onValueApplied } = props;
   const t = useTranslate();
@@ -74,7 +75,15 @@ function ParameterFieldRow(props: {
     try {
       const panel = await api.setParameterValue(deviceId, field.writeEtsId, value, language);
       onUpdated(panel);
-      onValueApplied();
+      // `set_parameter_value_impl` always attaches its own freshly rebuilt
+      // tree to a successful write (T3 fix round 1, item 6) — a `null` here
+      // would mean the server broke that contract, not that there is
+      // nothing to publish, so this fails loudly rather than swallowing a
+      // parameter edit's republish the way the pre-fix code silently did.
+      if (!panel.tree) {
+        throw new Error("setParameterValue response carried no tree");
+      }
+      onValueApplied(panel.tree);
     } catch (e) {
       setError(api.errorMessage(e));
       setValue(current);
@@ -165,7 +174,7 @@ function ParameterSectionView(props: {
   deviceId: number;
   language: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
-  onValueApplied: () => void;
+  onValueApplied: (tree: ProjectTree) => void;
 }) {
   const { section, diagnostics, deviceId, language, onUpdated, onValueApplied } = props;
   const t = useTranslate();
@@ -244,16 +253,15 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
 export default function ParameterPanel(props: {
   deviceId: number;
   // Called after every successful `api.setParameterValue`, once per field
-  // committed — never with the new `ParameterPanelDto`, because a caller
-  // that wanted to overlay parameter data onto something else would be
-  // building the very DPT-influence hazard `App.tsx`'s publish comment
-  // warns about. What it *can* promise, honestly, from the server's own
-  // contract (`domain.rs`'s `set_parameter_value_impl` ends in
-  // `apply(state, cmd)`, and `CommandStack::do_command` always pushes onto
-  // `undo` and clears `redo`): a real, undoable command just landed.
-  // Optional so `ParameterPanel.test.tsx`'s existing renders, which have
-  // no tree to update, need no prop they cannot supply.
-  onValueApplied?: () => void;
+  // committed, with the server's own freshly rebuilt `ProjectTree` (fix
+  // round 1, item 6) — the same tree `apply(state, cmd)` already built
+  // from the genuine post-write `CommandStack` server-side, not a caller-
+  // side guess reconstructed from a tree this component never even holds.
+  // Required, not optional: every mount site has a `tree` to republish
+  // through, and a future mount site that forgot this prop would silently
+  // reopen the publish hole this callback exists to close — `tsc` catches
+  // that instead.
+  onValueApplied: (tree: ProjectTree) => void;
 }) {
   const { deviceId, onValueApplied } = props;
   const t = useTranslate();
@@ -316,7 +324,7 @@ export default function ParameterPanel(props: {
             deviceId={deviceId}
             language={language}
             onUpdated={setPanel}
-            onValueApplied={() => onValueApplied?.()}
+            onValueApplied={onValueApplied}
           />
         ))
       )}

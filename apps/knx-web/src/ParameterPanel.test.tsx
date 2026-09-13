@@ -4,7 +4,17 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ParameterPanel as ParameterPanelDto } from "./api";
+import type { ProjectTree } from "./bindings/ProjectTree";
 import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests } from "./productLanguage";
+
+// T3 fix round 1, item 6: every `ParameterPanelDto` fixture now needs a
+// `tree` field. `null` is correct for a GET-only fixture (the server only
+// attaches a tree to a successful write); a fixture also mocked as a
+// `setParameterValue` response needs a concrete one, since `apply()`'s
+// runtime guard throws on a write response with no tree.
+const panelTree: ProjectTree = {
+  schema_version: 11, errors: 0, warnings: 0, can_undo: true, can_redo: false, installations: [],
+};
 
 const apiMock = vi.hoisted(() => ({
   deviceParameters: vi.fn(),
@@ -88,6 +98,7 @@ const fixture: ParameterPanelDto = {
       detail: "NoBranchMatched { choose_node: 4821 }",
     },
   ],
+  tree: panelTree,
 };
 
 async function renderPanel(deviceId = 1) {
@@ -95,7 +106,7 @@ async function renderPanel(deviceId = 1) {
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<ParameterPanel deviceId={deviceId} />);
+    root.render(<ParameterPanel deviceId={deviceId} onValueApplied={() => {}} />);
   });
   return root;
 }
@@ -192,6 +203,7 @@ describe("ParameterPanel", () => {
       sections: [],
       stale: [{ etsId: "P9", raw: "legacy-raw" }],
       diagnostics: [],
+      tree: null,
     };
     apiMock.deviceParameters.mockResolvedValue(noProgram);
     const root = await renderPanel();
@@ -306,6 +318,7 @@ describe("ParameterPanel", () => {
       ],
       stale: [],
       diagnostics: [],
+      tree: panelTree,
     };
     apiMock.deviceParameters.mockResolvedValue(scopedPanel);
     apiMock.setParameterValue.mockResolvedValue(scopedPanel);
@@ -359,6 +372,7 @@ describe("ParameterPanel", () => {
       ],
       stale: [],
       diagnostics: [],
+      tree: null,
     };
     apiMock.deviceParameters.mockResolvedValue(contractBrokenPanel);
     const root = await renderPanel();

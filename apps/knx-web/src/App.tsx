@@ -194,17 +194,21 @@ function App() {
   //
   // This comment used to say "no future edit path can forget to", full
   // stop. That was false for a while: `api.setParameterValue` mutates the
-  // project server-side — `domain.rs`'s `set_parameter_value_impl` ends in
-  // `apply(state, cmd)`, a real undoable `Command::SetParameterValue` —
-  // but answers with a `ParameterPanelDto`, never a `ProjectTree`, and
-  // `ParameterPanel` had no channel back to `tree` at all.
+  // project server-side — `domain.rs`'s `set_parameter_value_impl` runs
+  // `apply(state, cmd)`, a real undoable `Command::SetParameterValue`,
+  // before it returns — but answers with a `ParameterPanelDto`, never a
+  // `ProjectTree`, and `ParameterPanel` had no channel back to `tree` at
+  // all.
   //
-  // Closed (T3, 2026-09-13): `DeviceWorkspace` (`Inspector.tsx`) overlays
-  // `can_undo: true, can_redo: false` onto the `tree` it already holds and
-  // hands that to `onApplied` once a field commits — exact, not a guess,
-  // because `CommandStack::do_command` (`command.rs`) always pushes onto
-  // `undo` and clears `redo`. So `setTree` does run, and this effect does
-  // fire, on every parameter edit.
+  // Closed (T3, 2026-09-13; tree-sourcing corrected in T3 fix round 1,
+  // 2026-09-14): `set_parameter_value_impl` now attaches its own freshly
+  // rebuilt `ProjectTree` — the same one `apply(state, cmd)` already
+  // produced — to a successful write's `ParameterPanelDto`.
+  // `ParameterPanel` hands that tree straight to `onValueApplied`, and
+  // `DeviceWorkspace` (`Inspector.tsx`) forwards it to `onApplied`
+  // unchanged; no caller builds a `{...tree, can_undo, can_redo}` guess
+  // anymore. So `setTree` does run, and this effect does fire, on every
+  // parameter edit, with the server's own genuine `can_undo`/`can_redo`.
   //
   // What still does not move is the *fingerprint* itself:
   // `fingerprintProjectContext` (`busContext.ts`) deliberately excludes

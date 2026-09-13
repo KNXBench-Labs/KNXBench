@@ -3955,3 +3955,134 @@ headers), `cargo deny check`, and in `apps/knx-web` `npm test -- --run`
 (**434 passed across 41 files**, up from 383 across 38: three new test
 files worth 45 tests, five stale-lock tests in `BusMonitorPanel.test.tsx`
 and one in `BusComposeForm.test.tsx`) plus `tsc --noEmit`.
+
+**T-UI-07 — the series closes: three comments that claimed more than they
+could prove (2026-09-13, branch `codex-ui-workbench`).** No feature landed
+here. This stage answered five findings from the T-UI-06 review, and the
+most useful result was that one of them was wrong.
+
+*A depth-1 import list proves nothing about depth 3.*
+`DiagnosticsCompanion.tsx`'s header claimed its own import list guaranteed
+the companion cannot reach editing code, and that "anything reachable from
+this module is reachable from the companion window". The implication runs
+backwards, and the premise is false as well: this module imports
+`./diagnosticsWindow`, which imports `isTauri` from `./filePicker`, which
+imports `./FsPicker`, which `POST`s to `/api/fs/upload`. The comment now
+states three properties that are each true and each asserted. (1) This file
+names no editing surface directly — the old depth-1 assertion survives,
+recommented as the tripwire it always was. (2) Across the whole transitive
+value-import graph, every `api` call is a bus or diagnostics call and the
+only non-`GET` raw `fetch`es sit in functions this window never calls; the
+test walks the graph from source and pins three exact lists — **15 modules,
+7 `api` exports called, 2 mutating fetch targets**, re-measured by
+`./node_modules/.bin/vitest run src/DiagnosticsCompanion.test.tsx`, which
+fails with the three lists printed whenever any of them moves. (3) Mounted
+and left alone the companion calls exactly one `api` export, the telegram
+poll; opening the Log tab adds the session-log read and nothing else. That
+last one is asserted as the *set* of exports called, not as three named
+absences, so a new mutator fails the test instead of being forgotten. The
+review's warning that an honest transitive test must fail today was too
+pessimistic: it fails only if it
+demands the graph contain no mutating code, which is not the property worth
+having. What the window never *calls* is.
+
+*The fingerprint separator that was already there.* The review reported that
+`fingerprintProjectContext` concatenates address, name and DPTs without a
+separator, so address `1/1/1` name `0Foo` collides with address `1/1/10`
+name `Foo`. It does not. `busContext.ts` has used U+0001 between fields and
+U+0002 between records since the feature landed, written as literal
+non-printing bytes that every display layer — editor, `git diff`, code
+review, two successive reviewers — silently swallowed. Reproduce with
+`LC_ALL=C grep -n $'[\x01\x02]' apps/knx-web/src/busContext.ts | cat -v`,
+which prints `^A` and `^B`. The bytes are now written as `\u0001` and
+`\u0002` escapes: byte-identical output, no stored fingerprint invalidated,
+and the source finally says what it does. Two tests pin the property rather
+than the spelling, one per separator, the record-separator one holding the
+address count fixed so the `${count}-` prefix cannot pass it by accident.
+The hashing scheme was left alone deliberately — a length-prefixed encoding
+would fix a collision that does not exist and would make every stored
+fingerprint read `unverified` once, which trades Data Integrity for nothing.
+
+*Two blind spots the lock really has.* Both are now in
+[KNOWN_LIMITATIONS §82](KNOWN_LIMITATIONS.md#82-the-diagnostics-companions-stale-lock-sees-one-browser-profiles-own-windows-and-nothing-else),
+with the residual that survives the escapes. The digest is 32-bit FNV-1a:
+`"synced"` means "almost certainly unchanged", never "provably unchanged",
+and a crafted project could collide on purpose. Neither is defended against,
+because the lock is a decoding-staleness hint and the blast radius of a miss
+is one mislabelled telegram, not a bad write. The residual is a group
+address whose *name* contains U+0001 or U+0002 — impossible from a
+`.knxproj`, because XML 1.0 §2.2's `Char` production admits no C0 control
+character except tab, LF and CR, and no keyboard produces one.
+
+*One edit path really does skip the publish.* `App.tsx` claimed no edit path
+can forget to publish the project context. `api.setParameterValue` forgets:
+`domain.rs` runs `apply(state, cmd)` for `Command::SetParameterValue`, so
+the project moves server-side, but the response is a `ParameterPanelDto`, so
+`App.tsx` never calls `setTree`, the `useEffect` on `tree` never fires, and
+the fingerprint stays where it was. Verified here rather than taken from the
+report: `Command::SetParameterValue` writes only `installation.parameters`
+through `upsert_parameter_value`, while `resolve_group_address_dpt`
+(`crates/knx-core/src/dpt/resolve.rs`) reads only com-object links and
+resolved DPT values, and `GroupAddressNode.dpts` — the third fingerprint
+input — comes from the same rule over the same com objects. The two sets do
+not intersect, so the hole is harmless *today*, which is exactly the kind of
+fact that stops being true quietly. The comment now says "no edit path that
+lands in `tree`", records that the old one was false when it was written,
+and `resolve_group_address_dpt` gained a "Before you widen the inputs"
+section: whoever makes a parameter value influence a com object's DPT, links
+or activity will read it before they can finish, and will find out that they
+have just made the bus monitor report `"synced"` over a decode that changed.
+
+*Nine images, read rather than assumed.* Every `.png` under
+`docs/design/2026-09-13-codex-ui-concept/` and
+`docs/design/2026-09-13-codex-ui-proof/` was opened and examined. The
+concept directory holds three: a Porcelain building/device workspace, a
+Graphite group-address workspace and a companion-window bus monitor. The
+proof directory holds six produced by `workbench-browser-proof.mjs`, whose
+fixtures are invented in the script's own source and labelled
+`Beispieldaten · kein reales Gerät` on screen. No real device name, no
+manufacturer inventory and no occupied-address list appears in any of them.
+The gateway strings in the monitor images are fictitious input placeholders;
+the controller has ruled they stay, and new material uses the RFC 5737
+placeholder `192.0.2.1`, which is what `BusMonitorPanel.tsx` renders today.
+What the audit did find is staleness nobody had written down: the committed
+PNGs come from one run at the branch's base commit, the script has gained
+two commits since, it now writes `01b-porcelain-product-data.png` which was
+never committed, and `01-porcelain.png` shows a two-tab device inspector
+where the application now has three. That is recorded in the proof
+directory's README, together with the fact that the dev server binds
+`[::1]:1420` and *only* that — `vite.config.ts` sets `strictPort: true` and
+no `host`, `ss -ltn | grep 1420` reports one IPv6 listener, and a
+`127.0.0.1` URL is refused with `curl` exit 7 and an empty body, which one
+verification pass mistook for a server answering with nothing. The run block
+there previously named `http://127.0.0.1:1427`, a port matching neither the
+dev server (1420) nor `vite preview`'s default (4173).
+
+*Numbers carry their commands now.* `GAP_ANALYSIS_ETS.md` D12 proposed that
+any number written into prose be written beside the command that measured
+it. Adopted here, and applied retroactively to exactly one place: D12's own
+row, which now carries `for p in 'title=' 'aria-label=' 'aria-describedby='; do grep -rho "$p" apps/knx-web/src --include='*.tsx' --exclude='*.test.tsx' | wc -l; done`
+beside its 8 / 33 / 4, and notes that dropping the `--exclude` doubles
+`aria-label` to 64. It was not applied to the historical entries above:
+their counts are per-entry records of what was true on the day, not claims
+about the tree today, and rewriting them would turn a log into a report. The
+convention binds new prose.
+
+Gates, all eight green from one run each: `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace --no-fail-fast` (**1187 passed, 0 failed, 3 ignored
+across 78 `test result:` lines**, summed with `awk '/test result:/{p+=$4;f+=$6;i+=$8;n++} END{print p,f,i,n}'`
+over one untruncated log — unchanged; the only Rust change is a doc
+comment), `xtask check-layering`, `xtask check-headers` (**99 files with a
+well-formed header, 168 without, ceiling 169** — unchanged; no file was
+added, and the ceiling stays at 169 because ratcheting it is a decision for
+whoever merges this), `cargo deny check`, and in `apps/knx-web`
+`npm test -- --run` (**438 passed across 41 files**, up from 434: two
+separator tests in `busContext.test.ts` and two in
+`DiagnosticsCompanion.test.tsx`, being the import-graph test and the split
+of one runtime test into an untouched-lifecycle case and a log-tab case)
+plus `./node_modules/.bin/tsc --noEmit`, which needed `existsSync` added to
+the hand-written `src/node-builtins.d.ts` shim — the package deliberately
+carries no `@types/node`, because `tsc && vite build` type-checks the tests
+alongside the application and the full Node surface would let a component
+import `node:fs` unnoticed.

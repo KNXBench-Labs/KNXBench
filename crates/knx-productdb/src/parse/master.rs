@@ -26,9 +26,25 @@ fn parse_i64(v: Option<&str>) -> Option<i64> {
 /// plus (R3) how many `Master`-scope `translation` rows it actually wrote —
 /// measured the same way `ingest_translations` measures its own, never
 /// predicted from the XML.
+///
+/// `dropped_datapoint_types` is KNOWN_LIMITATIONS.md §84's counter: `id` is
+/// `datapoint_type`'s whole primary key (`migration.rs`), no
+/// `source_sha256` column exists on it at all, and every manufacturer's
+/// `knx_master.xml` restates the entire KNX-standard DPT catalogue rather
+/// than only the DPTs its own products use. So every package after the
+/// first one installed collides on nearly every id it declares, `INSERT OR
+/// IGNORE` drops the second copy, and — unlike `hardware`/`product`/
+/// `catalog_item`/`application_program`, which at least get an `IdConflict`
+/// when the collision crosses a file — nothing recorded that a collision
+/// happened at all before this field existed. It counts drops, not
+/// mismatches: two files declaring the identical id with different
+/// `Name`/`Text` would drop just as silently and this field cannot tell
+/// that case from an exact repeat, because the table never kept either
+/// candidate's source to compare.
 pub struct MasterIngest {
     pub unknown: Vec<UnknownConstruct>,
     pub translations: usize,
+    pub dropped_datapoint_types: usize,
 }
 
 pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterIngest, ProductDbError> {
@@ -37,6 +53,7 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
     let mut current_main: Option<i64> = None;
+    let mut dropped_datapoint_types = 0usize;
 
     loop {
         buf.clear();
@@ -77,11 +94,14 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                         );
                         let main = parse_i64(a.get("Number")).unwrap_or_default();
                         current_main = Some(main);
-                        conn.execute(
+                        let written = conn.execute(
                             "INSERT OR IGNORE INTO datapoint_type (id, main, sub, name, text)
                              VALUES (?1, ?2, NULL, ?3, ?4)",
                             params![a.get("Id"), main, a.get("Name"), a.get("Text")],
                         )?;
+                        if written == 0 {
+                            dropped_datapoint_types += 1;
+                        }
                     }
                     "DatapointSubtype" => {
                         report_unknown_attrs(
@@ -91,7 +111,7 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                             DATAPOINT_SUBTYPE_ATTRS,
                         );
                         if let Some(main) = current_main {
-                            conn.execute(
+                            let written = conn.execute(
                                 "INSERT OR IGNORE INTO datapoint_type (id, main, sub, name, text)
                                  VALUES (?1, ?2, ?3, ?4, ?5)",
                                 params![
@@ -102,6 +122,9 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                                     a.get("Text"),
                                 ],
                             )?;
+                            if written == 0 {
+                                dropped_datapoint_types += 1;
+                            }
                         }
                     }
                     _ => {}
@@ -118,6 +141,7 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
     Ok(MasterIngest {
         unknown: unknown.into_vec(),
         translations,
+        dropped_datapoint_types,
     })
 }
 

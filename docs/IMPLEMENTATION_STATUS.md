@@ -4641,3 +4641,68 @@ the hand-written `src/node-builtins.d.ts` shim — the package deliberately
 carries no `@types/node`, because `tsc && vite build` type-checks the tests
 alongside the application and the full Node surface would let a component
 import `node:fs` unnoticed.
+
+## 2026-09-13 — Two parked findings closed: unverified `.signature`, same-file id collisions (productdb-parked)
+
+Two review findings parked against `crates/knx-productdb` were investigated
+and closed, neither by implementing what they might at first look like they
+ask for.
+
+**`.signature` members.** Confirmed nothing in this crate, `apps/knx-server`
+or `apps/knx-web` ever reads a `role = 'Signature'` package member back to
+verify it — it is stored verbatim in `source_file`, same as an unrecognised
+file. The accessible KNX Standard corpus documents a different "signature"
+(a registration change-detection hash, itself also stored unverified) but
+nothing about a detached `.signature` file's format or key. No verification
+was implemented — there is nothing to verify *against*. Added an
+explanatory comment at the role assignment, a pinning test
+(`signature_members_are_stored_verbatim_and_never_verified` in
+`crates/knx-productdb/tests/standalone_packages.rs`), and
+KNOWN_LIMITATIONS.md §83.
+
+**First-writer-wins id collisions.** Two distinct gaps, not one:
+
+1. `datapoint_type` had *zero* conflict tracking — no `source_sha256`
+   column to compare against at all. Measured against the real corpus
+   (`OriginalData/ProductDatabases/`, copied to a scratch directory and
+   deleted afterward, never modified in place): installing the corpus's 4
+   distinct packages in sequence drops 0, 234, 354 and 234
+   `DatapointType`/`DatapointSubtype` rows respectively — **822 silent
+   drops total**, because every package restates the full KNX-standard DPT
+   catalogue. Fixed with a small, contained counter:
+   `MasterIngest::dropped_datapoint_types` → `InstallReport
+   .dropped_datapoint_types` → a new `package.dropped_datapoint_type_count`
+   column (schema v6, `migrate_v5_to_v6`) → printed by `knx-cli`'s
+   `install` command.
+2. The existing `first_winner` helper (duplicated in `hardware.rs` and
+   `catalog.rs`) compares a colliding id's `source_sha256`, which is
+   constant across one file, so two elements sharing an `@Id` **within the
+   same file** never trigger the existing `IdConflict` reporting — the
+   second element is dropped with nothing recorded. Not observed in the
+   small real corpus (no file there declares a duplicate id), so pinned
+   with synthetic fixtures instead:
+   `two_hardware_elements_sharing_an_id_in_one_file_conflict_silently`
+   (`crates/knx-productdb/src/parse/hardware.rs`, which also demonstrates a
+   second consequence — the surviving `Hardware` row's `Product` children
+   silently reparent, since `Product`'s own `first_winner` check doesn't
+   verify its parent row was freshly inserted) and
+   `two_catalog_items_sharing_an_id_in_one_file_conflict_silently`
+   (`crates/knx-productdb/src/parse/catalog.rs`). Not fixed: closing this
+   needs `first_winner` to hash something finer than "the whole file",
+   which is a real behavioural change, not a counter — documented as
+   KNOWN_LIMITATIONS.md §84 instead.
+
+Gates run from the worktree root (`.worktrees/productdb-parked`, branch
+`productdb-parked`): `cargo fmt --all --check`, `cargo clippy --workspace
+--all-targets -- -D warnings`, `cargo test --workspace --no-fail-fast`,
+`cargo run -p xtask -- check-layering`, `cargo run -p xtask --
+check-headers`, `cargo deny check` — exit codes and test totals recorded in
+this session's dispatch report, not reproduced here since they belong to a
+single point in time on a branch, not a durable project fact. The two
+`apps/knx-web` gates (`tsc`, `vitest`) do not apply: no file under
+`apps/knx-web` was touched.
+
+Out of scope, left as-is: the `first_winner` helper's duplication between
+`hardware.rs` and `catalog.rs` (copy-pasted, not shared); `master.rs`'s
+`manufacturer` table using `ON CONFLICT(id) DO UPDATE` (last-writer-wins,
+a different mechanism from `first_winner`, not touched).

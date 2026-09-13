@@ -3523,3 +3523,154 @@ fingerprint still does not move.
    visible to the next reader. The check that settles it is a search of
    `apps/knx-web/src/busContext.ts` for literal C0 bytes, which should find
    none. **[V]**
+
+## 83. A `.signature` package member is stored with role `Signature`, never verified
+
+**Limitation.** `install_package` (`crates/knx-productdb/src/package.rs`)
+recognises any ZIP member whose path ends in `.signature`, records it in
+`package_member` with `role = 'Signature'`, and stores its bytes verbatim
+in `source_file` — the same treatment `notes.txt` gets under
+`role = 'Unrecognized'`. No code path anywhere in this crate, in
+`apps/knx-server` or in `apps/knx-web` reads a `'Signature'`-role member
+back out to check it against a key, a hash, or anything else **[V]**
+(`grep -rn '"Signature"' crates/knx-productdb apps` finds exactly one
+writer — `package.rs` — and two verbatim pass-throughs that only forward
+the string for display: `apps/knx-server/src/routes.rs`'s
+`CatalogInstallMemberDto` and `apps/knx-web/src/api.ts`'s matching
+TypeScript type). A row that says `Signature` looks, to anyone reading the
+install report, like something was signed and checked. Nothing was.
+
+Every `.knxprod` file in the local corpus (`OriginalData/ProductDatabases/`,
+copied to a scratch directory for inspection, never modified in place)
+carries exactly one such member, and every one observed is 175 bytes: a
+UTF-8 byte-order mark followed by about 172 base64 characters with no line
+terminator — decoding to roughly 129 raw bytes, the size of a single
+RSA-1024 signature **[V]** (`file` and a byte count against the extracted
+member). That last interpretation — that it *is* an RSA-1024 signature —
+is this report's own inference from the byte count, not a confirmed
+algorithm **[A]**.
+
+**Cause.** The accessible KNX Standard corpus
+(`/mnt/daten-i/Sourcecode/knx-spec-kb/extracted/The KNX Standard v3.0.0/`)
+was searched for `.signature`, `knxprod`, and `signature` generally. It
+documents a *different* concept under the same word: a "registration
+signature" is a value ETS/the Manufacturer Tool computes over
+registration-relevant XML data so that a later change to that data can be
+detected on an XML→DB→XML round trip — Project Schema23 §1.1.3.18/.19
+**[D]** and the Certification Manual's import-checks section, which warns
+that changing registration-relevant data invalidates "the signature in the
+registration data" **[D]** (`05 KNX Certification of Products - Procedure
+v01.07.09 AS.md:1542`). That is a content-integrity checksum stored as an
+XML attribute (`hardware.rs`'s own `RegistrationSignature`, also only
+stored, never checked — same gap, different member), not a detached
+cryptographic signature file, and nothing in the searched corpus describes
+a `.signature` *file's* format, algorithm, canonicalization, or
+verification key. Building real verification without that specification —
+or the manufacturer's public key, which this project does not have either
+way — would be guessing at a proprietary scheme, which is explicitly out
+of this task's scope and worse than doing nothing.
+
+**Impact.** A `'Signature'`-role member is cosmetic. Installing a package
+with a corrupted, empty, or entirely fabricated `.signature` member
+succeeds identically to installing one with a genuine one — pinned by
+`signature_members_are_stored_verbatim_and_never_verified`
+(`crates/knx-productdb/tests/standalone_packages.rs`). Nothing downstream
+currently treats the role as a trust signal, so today's blast radius is a
+misleading label rather than a bypassed check — but that is exactly the
+kind of guarantee a future feature could be built on by mistake, reading
+`role == "Signature"` and concluding a package was authenticated.
+
+**Lifted when.** Either the `.signature` format is obtained from KNX
+Association documentation this project does not currently have access to
+and verification is implemented against it deliberately (a separate task,
+not a drive-by addition to ingestion), or — more cheaply — the role and
+its consumers carry an explicit "unverified" qualifier so nobody can read
+`Signature` as a pass/fail result. This entry exists so that whichever
+happens first does not happen by accident.
+
+## 84. Duplicate identifiers inside one file are dropped with no record at all
+
+**Limitation.** `first_winner` (`crates/knx-productdb/src/parse/hardware.rs`
+and its near-identical twin in `crates/knx-productdb/src/parse/catalog.rs`,
+plus the inline equivalent for `application_program` in
+`crates/knx-productdb/src/parse/program.rs`) records an `IdConflict` only
+when an id it has already seen belongs to a *different* file — it compares
+the existing row's `source_sha256` to the id, so within one call. Because
+one `ingest_hardware`/`ingest_catalog` call always passes the same
+`source_sha256` for every element in that file, two `Hardware` (or
+`Product`, `Hardware2Program`, `CatalogSection`, `CatalogItem`,
+`ApplicationProgram`) elements sharing an `@Id` **inside the same file**
+always compare equal and never reach the `IdConflict` branch: the second
+element is dropped, first-writer-wins, with nothing recorded anywhere.
+Pinned by `two_hardware_elements_sharing_an_id_in_one_file_conflict_silently`
+and `two_catalog_items_sharing_an_id_in_one_file_conflict_silently`.
+
+A second, unrelated gap in the same family has no conflict tracking *at
+all*, not even the cross-file kind: `knx_master.xml`'s `DatapointType`/
+`DatapointSubtype` elements are written with a bare `INSERT OR IGNORE`
+(`crates/knx-productdb/src/parse/master.rs`) into `datapoint_type`, whose
+primary key is `id` alone with no `source_sha256` column to compare
+against in the first place.
+
+**Measured against the real corpus.** Every `.knxprod` file under
+`OriginalData/ProductDatabases/` was copied to a scratch directory outside
+the repository (never modified in place) and installed with
+`knx_productdb::install_package` into one shared database, in the order
+`ls` returns them, via a throwaway test gated on `KNXBENCH_PRODUCT_CORPUS`
+— command: `KNXBENCH_PRODUCT_CORPUS=<scratch dir> cargo test -p
+knx-productdb --test tmp_collision_probe -- --nocapture`, deleted after
+this measurement, not part of this commit **[V]**.
+
+- `first_winner`-tracked tables (`hardware`, `product`, `hardware2program`,
+  `catalog_item`, `application_program`): **0** cross-file `IdConflict`s
+  across the corpus's 4 distinct packages. The corpus is small — one real
+  vendor package, one test-fixture package and two near-duplicate
+  fixtures — and no two files declare overlapping manufacturer/hardware
+  ids, so this measures "never observed here", not "cannot happen"; the
+  same-file case above is demonstrated by a synthetic test instead because
+  no real file in this corpus happens to contain one.
+- `datapoint_type` (the untracked path): **routine, not rare.** Every
+  package's `knx_master.xml` restates the *entire* KNX-standard DPT
+  catalogue rather than only the DPTs its own products use. Installing the
+  4 distinct packages in sequence: package 1 declares 234 `DatapointType`/
+  `DatapointSubtype` elements and the table grows by 234 (nothing to
+  collide with yet); package 2 declares 354 and the table grows by only
+  120 (234 silently dropped); package 3 declares 383 and the table grows
+  by 29 (354 dropped); package 4 declares 234 and the table grows by 0
+  (all 234 dropped). Total: **822 silent, uncounted drops across 4
+  packages**, every one of them after the first hitting the collision on
+  effectively its whole DPT declaration.
+
+**Fixed, in a small and contained way.** The `datapoint_type` path had no
+counter at all, so one was added: `MasterIngest::dropped_datapoint_types`
+counts every `INSERT OR IGNORE` that changed zero rows, `InstallReport`
+carries the sum as `dropped_datapoint_types` (persisted in a new
+`package.dropped_datapoint_type_count` column, schema v6,
+`migrate_v5_to_v6`), and `knx bus`'s `install`/import path in
+`apps/knx-cli` prints it alongside the existing conflict count. This is a
+count of drops, not a full `IdConflict` — `datapoint_type` still has no
+`source_sha256` to build one from, so it cannot say *which* file's id won,
+only that one lost. The `first_winner` same-file blind spot above was
+**not** fixed: closing it needs a per-row source finer than "the file this
+parse call was given" (e.g. a synthetic per-element hash, or restructuring
+`first_winner`'s existing-row check), which is a real schema and behaviour
+change, not a counter, and is out of this task's scope.
+
+**Cause.** `first_winner`'s existing-row check answers "has this id been
+seen from a *different* file", which is the question package-retry
+deduplication needs, and conflates it with "has this id been seen more
+than once", which is the question data-integrity reporting needs. Those
+happen to be the same question only when every file declares each of its
+own ids exactly once — true for every file this corpus contains, untested
+for the case CLAUDE.md's "never silently discard information" rule
+actually worries about.
+
+**Lifted when.** Closing the same-file blind spot needs `first_winner` (or
+whatever replaces it) to compare against a hash finer than "the whole
+file", which likely means hashing each element's own attribute set rather
+than reading `source_sha256` off the call. `datapoint_type` additionally
+needs a `source_sha256` column before it could report *which* file's
+declaration survives a collision, not just that one happened. Neither is
+warranted by anything seen in the real corpus so far; this section exists
+so the next manufacturer package that actually trips either case is a
+documented gap, not a surprise.

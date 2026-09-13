@@ -1220,7 +1220,8 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
             Ok(report) => {
                 println!(
                     "package installed: scheme {}, {} member(s), {} unknown construct(s), {} conflict(s), \
-                     {} translation(s) captured (program {}, catalog {}, hardware {}, master {}){}",
+                     {} translation(s) captured (program {}, catalog {}, hardware {}, master {}), \
+                     {} datapoint type(s) dropped as duplicates{}",
                     report.scheme,
                     report.members.len(),
                     report.unknown,
@@ -1230,6 +1231,7 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
                     report.translations.catalog,
                     report.translations.hardware,
                     report.translations.master,
+                    report.dropped_datapoint_types,
                     if report.skipped { " (already known)" } else { "" },
                 );
                 ExitCode::SUCCESS

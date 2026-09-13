@@ -1097,8 +1097,9 @@ mod tests {
     }
 
     /// The spine exemption covers attributes as well as elements, and must
-    /// not widen by accident: `KNX/@ToolVersion`, `KNX/@CreatedBy` and
-    /// `TranslationUnit/@RefId` are named as a gap in
+    /// not widen by accident: `KNX/@ToolVersion`, `KNX/@CreatedBy`,
+    /// `KNX/@xmlns:xsd`, `KNX/@xmlns:xsi` and `TranslationUnit/@RefId` are
+    /// named as a gap in
     /// docs/KNOWN_LIMITATIONS.md §7 instead of being reported, so if they
     /// ever start showing up the doc entry is the thing that went stale.
     #[test]
@@ -1107,7 +1108,7 @@ mod tests {
         let xml = PROGRAM
             .replacen(
                 r#"<KNX xmlns="http://knx.org/xml/project/11">"#,
-                r#"<KNX xmlns="http://knx.org/xml/project/11" ToolVersion="5.7.1428.39084" CreatedBy="MT">"#,
+                r#"<KNX xmlns="http://knx.org/xml/project/11" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ToolVersion="5.7.1428.39084" CreatedBy="MT">"#,
                 1,
             )
             .replacen(
@@ -1120,6 +1121,8 @@ mod tests {
             ("/KNX", "ToolVersion"),
             ("/KNX", "CreatedBy"),
             ("/KNX", "xmlns"),
+            ("/KNX", "xmlns:xsd"),
+            ("/KNX", "xmlns:xsi"),
             ("/TranslationUnit", "RefId"),
             ("/TranslationUnit", "Version"),
         ] {

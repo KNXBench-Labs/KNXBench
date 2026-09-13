@@ -511,21 +511,64 @@ a single condition.
 
 **Limitation.** A `.knxproj` whose project part is nested as `<P-xxxx>.zip`
 (IMPORT_EXPORT §2) is detected and named
-(`ContainerError::PasswordProtected`), but the file is never opened.
+(`ContainerError::PasswordProtected`), but the file is never opened. This
+limitation is unchanged by the rest of this entry: nothing below makes
+KNXBench able to open a protected project.
 
-**Cause.** Both decryption schemes (ZipCrypto for schema < 21, AES/PBKDF2
-for schema ≥ 21) are documented from `xknxproject` source but unverified
-against a real protected project — the reference project is unprotected.
-Shipping an untested decryption path would claim support this repository
-cannot demonstrate.
+**Cause.** This used to be one undifferentiated cause ("both schemes are
+documented but unverified"). It is really two, and they resolve on
+different evidence:
+
+* **The AES/PBKDF2 key derivation (schema ≥ 21, ETS6+)** is not an
+  ETS implementation detail read out of `xknxproject`'s source — it is
+  specified in the KNX Standard itself, with the Standard's own test
+  vectors: *The KNX Standard v3.0.0*, *Project Schema23 v01.00.00*,
+  clause 4.2.4 "Password protection", p.64/64. `crates/knx-secure`
+  implements exactly that derivation
+  (`derive_knxproj_zip_password`) and its tests assert the exact
+  Base64 output of two of the clause's three published vectors
+  (`"a"`, `"test"`) — `[D]` (cited clause and page) and `[V]` (two
+  vectors, byte-exact). The clause's third vector, a password
+  containing non-ASCII characters, renders as `Penn¥w1se` plus an
+  unmappable glyph in every text-extraction path this repository's
+  spec corpus offers (both the Markdown extraction and a direct
+  `pdftotext` run fail the same way); this repository's test module
+  documents a further attempt at recovering it by rendering the PDF
+  page directly and reading the glyph, which is a different evidence
+  path than the two `[D]`+`[V]` vectors and is presented in that test's
+  comment for a human to judge rather than promoted to the same
+  footing.
+* **The container decryption itself** — actually opening the nested,
+  encrypted `<P-xxxx>.zip` and reading a real project out of it, for
+  either scheme — is not attempted by this change and remains
+  unverified. `ContainerError::PasswordProtected` still refuses before
+  ever touching the encrypted entry. For schema ≥ 21 the key material
+  is now known-correct (see above); what is still missing is a real
+  password-protected ETS6 project to decrypt with it. For schema < 21
+  (ETS4/ETS5), the scheme is standard ZipCrypto with the password used
+  as UTF-8 bytes — that description remains sourced only from
+  `xknxproject`'s implementation, not from a KNX Standard clause, and
+  this change does not touch it at all.
 
 **Impact.** A protected project cannot be imported at all today, by design
 rather than by omission: refusing cleanly is preferred over a decryption
-path nobody has run against a real encrypted file.
+path nobody has run against a real encrypted file. What changed is
+narrower than it might sound: KNXBench can now compute, and has verified,
+the *password* an ETS6-protected project's container would be encrypted
+with — it still cannot decrypt the container itself, for either schema,
+because doing that untested would claim support this repository cannot
+demonstrate.
 
-**Lifted when.** A real password-protected ETS4/5 project (ZipCrypto) and a
-real password-protected ETS6 project (AES) are available to verify each
-scheme against.
+**Lifted when.** Two independent conditions, no longer one:
+
+* The AES/PBKDF2 key derivation is lifted as of this change, for schema
+  ≥ 21 — specified, implemented, and verified against the Standard's own
+  vectors.
+* Container decryption — for *both* schemes — is lifted when a real
+  password-protected ETS4/5 project (ZipCrypto) and a real
+  password-protected ETS6 project (AES) are available to decrypt and
+  verify against. Nothing in this repository can open either kind of
+  protected project today.
 
 ## 14. The project's default language is a placeholder
 

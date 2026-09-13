@@ -149,6 +149,18 @@ fn com_object_texts_and_datapoint_types_agree_with_the_oracle_at_a_high_rate() {
         eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
         return;
     }
+    // The oracle is a second local-only artefact, and it does not live under
+    // `OriginalData/`, so the guard above says nothing about it. Checking the
+    // corpus and then unwrapping the dump panics on exactly one setup: a
+    // worktree with the corpus linked in and the dump left behind at the
+    // workspace root it was generated in.
+    if !oracle_dump_path().exists() {
+        eprintln!(
+            "skip: project_dump.json not present at the workspace root \
+             (gitignored, local-only; regenerate it with the xknxproject dump)"
+        );
+        return;
+    }
     let (_dir, conn) = ingest_all();
     let raw = std::fs::read_to_string(oracle_dump_path()).unwrap();
     let oracle: serde_json::Value = serde_json::from_str(&raw).unwrap();

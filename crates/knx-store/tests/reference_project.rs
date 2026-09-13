@@ -13,16 +13,12 @@
 //! which `knx-etsproj` deliberately refuses by name rather than misreading
 //! (KNOWN_LIMITATIONS §1).
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use knx_store::{load_project, open_and_migrate, save_project};
 
 fn reference_ets4_path() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .expect("crate lives at <root>/crates/<name>")
-        .join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
+    knx_testsupport::reference_ets4_path()
 }
 
 #[test]

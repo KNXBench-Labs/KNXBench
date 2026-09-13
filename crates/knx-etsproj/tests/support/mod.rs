@@ -32,19 +32,15 @@ pub fn all_entries(opaque: &[OpaqueEntry], manufacturer: &[ManufacturerFile]) ->
 }
 
 pub fn workspace_root() -> PathBuf {
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(std::path::Path::parent)
-        .expect("crate lives at <root>/crates/<name>")
-        .to_path_buf()
+    knx_testsupport::workspace_root()
 }
 
 pub fn reference_ets4_path() -> PathBuf {
-    workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
+    knx_testsupport::reference_ets4_path()
 }
 
 pub fn reference_ets6_path() -> PathBuf {
-    workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets 6.3.0 - 2026-09-02.knxproj")
+    knx_testsupport::reference_ets6_path()
 }
 
 /// The `xknxproject` reference dump used by the oracle comparison (Task 17).

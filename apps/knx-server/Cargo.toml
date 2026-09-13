@@ -37,3 +37,4 @@ tempfile.workspace = true
 
 [dev-dependencies]
 zip.workspace = true
+knx-testsupport.workspace = true

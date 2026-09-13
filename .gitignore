@@ -6,7 +6,11 @@ bus_traffic.jsonl
 crates/knx-projection/bindings/
 apps/knx-desktop/src-tauri/gen/
 ideas.md
+# Both spellings on purpose: the trailing slash matches only a real
+# directory, so a *symlink* named OriginalData — which is how a worktree
+# borrows the corpus — sails straight past it and into `git add -A`.
 OriginalData/
+OriginalData
 node_modules/
 AGENTS.md
 .claude/.headroom_wrap_settings.lock

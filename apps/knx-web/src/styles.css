@@ -1133,25 +1133,27 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .device-workspace .workspace-heading { margin-bottom: 15px; }
 .device-workspace h2 { margin: 0 0 4px; }
 /* T16: the product identity block, the content of the workspace's third tab
-   ("Produktdaten", per the approved concept images). It no longer needs a
-   recessed panel or a bottom margin to separate itself from the tab strip —
-   it *is* the panel, so it sits flush like the other two panels' content and
-   lets `.device-workspace`'s own padding do the spacing. The headline pairs
-   stay stacked (label over value) rather than side by side: in a multi-column
-   grid a label and its value drift apart horizontally and stop reading as one
-   fact. */
-.device-identity { margin: 0; }
+   ("Produktdaten", per the approved concept images). It has no surface and no
+   margin of its own — it *is* the panel, so it sits flush like the other two
+   panels' content and lets `.device-workspace`'s own padding do the spacing.
+   (A `margin: 0` reset used to stand here; `section` has no UA margin to
+   reset, so it did nothing and is gone.) The headline pairs stay stacked
+   (label over value) rather than side by side: in a multi-column grid a label
+   and its value drift apart horizontally and stop reading as one fact. */
 .device-identity-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .device-identity h3 { margin: 0; font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--knx-muted); font-weight: 600; }
 .device-identity h4 { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--knx-muted); font-weight: 600; }
 /* The four verdicts read differently at a glance without relying on colour
    alone: each keeps its own word (see `deviceIdentity.resolution.*`), and
-   the border/fill tint only reinforces it. The word itself stays in the
-   foreground colour rather than the accent or warning colour — at 11px both
-   of those fall under 4:1 against Porcelain's near-white surface, and a
-   status the user cannot read is worse than one that is merely undecorated.
-   `NoReference` and `NoDatabase` are states of the installation, not faults,
-   so neither gets an error colour. */
+   the border/fill tint only reinforces it. The word itself stays in
+   `--knx-foreground` rather than the accent or warning colour, because those
+   two are user-chosen: measured over the badge's own composited background,
+   accent-coloured text ranges from 4.37:1 to 6.04:1 in Porcelain depending
+   on which of the five accents is active, where the foreground colour holds
+   12.66:1 to 15.32:1 whatever the user picked. A verdict's legibility should
+   not be a side effect of a theme preference. `NoReference` and `NoDatabase`
+   are states of the installation, not faults, so neither gets an error
+   colour. */
 .resolution-badge { font-size: 11px; border-radius: 999px; padding: 2px 10px; white-space: nowrap; color: var(--knx-foreground); border: 1px solid var(--knx-border); }
 .resolution-badge[data-resolution="Resolved"] { border-color: color-mix(in srgb, var(--knx-accent) 55%, transparent); background: color-mix(in srgb, var(--knx-accent) 12%, transparent); }
 .resolution-badge[data-resolution="NotInDatabase"] { border-color: color-mix(in srgb, var(--knx-warning-color) 60%, transparent); background: color-mix(in srgb, var(--knx-warning-color) 14%, transparent); }

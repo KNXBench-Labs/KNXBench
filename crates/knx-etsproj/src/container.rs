@@ -171,22 +171,10 @@ mod tests {
     use super::*;
 
     use std::io::Write;
-    use std::path::PathBuf;
-
-    fn workspace_root() -> PathBuf {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .and_then(std::path::Path::parent)
-            .expect("crate lives at <root>/crates/<name>")
-            .to_path_buf()
-    }
 
     fn reference_ets4_bytes() -> Vec<u8> {
-        std::fs::read(
-            workspace_root()
-                .join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj"),
-        )
-        .expect("reference ETS4 project is committed at the workspace root")
+        std::fs::read(knx_testsupport::reference_ets4_path())
+            .expect("reference ETS4 project is committed at the workspace root")
     }
 
     fn zip_with_entries(entries: &[(&str, &[u8])]) -> Vec<u8> {

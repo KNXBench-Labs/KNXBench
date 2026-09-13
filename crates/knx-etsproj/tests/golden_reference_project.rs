@@ -11,16 +11,8 @@ use std::path::PathBuf;
 use knx_core::{BuildingPartType, Direction, Override};
 use knx_etsproj::import_knxproj;
 
-fn workspace_root() -> PathBuf {
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(std::path::Path::parent)
-        .expect("crate lives at <root>/crates/<name>")
-        .to_path_buf()
-}
-
 fn reference_ets4_path() -> PathBuf {
-    workspace_root().join("OriginalData/DemoProjects/Unser Zuhause ets4 - 2025-12-15.knxproj")
+    knx_testsupport::reference_ets4_path()
 }
 
 #[test]

@@ -212,6 +212,7 @@ export const messages = {
   // of translating its ready-made `detail` prose (which stays English by
   // design — see that field's own comment in `api.ts`).
   "logPanel.title": "Session log",
+  "logPanel.eyebrow": "Diagnostics",
   "logPanel.severity.error": "Error",
   "logPanel.severity.warning": "Warning",
   "logPanel.severity.info": "Info",
@@ -219,6 +220,7 @@ export const messages = {
   "logPanel.emptyFiltered": "No log entries match the current filters.",
 
   "busMonitor.title": "Bus monitor",
+  "busMonitor.eyebrow": "KNXnet/IP · Tunnelling",
   "busMonitor.connect": "Connect",
   "busMonitor.disconnect": "Disconnect",
   "busMonitor.session": "Session {id}",

@@ -20,6 +20,11 @@
   /* Feedback (colored, never pure black) */
   --knx-error-color: #ff6b6b;
   --knx-warning-color: #ffd600;
+  /* Porcelain and Graphite gained a success colour in 90da7da, the commit
+     that brought the workbench shell over; this theme never got one,
+     because nothing used the token until the bus compose form's "sent"
+     line did. */
+  --knx-success-color: #3ddc97;
   --knx-overlay-backdrop: rgba(3, 3, 4, 0.7);
   --knx-overlay-shadow: rgba(234, 88, 12, 0.25);
   --knx-glow-orange: 0 0 20px -5px rgba(234, 88, 12, 0.5);
@@ -627,8 +632,10 @@ main {
   color: var(--knx-error-color);
 }
 
+/* `LogPanel` is a centre-pane view in the workbench shell: `App.tsx`
+   swaps it into `.workbench-center`, which is a block box, so the
+   `flex: 1 1 60%` this rule carried until stage 5 did nothing at all. */
 .log-panel {
-  flex: 1 1 60%;
   min-width: 0;
 }
 
@@ -644,8 +651,12 @@ main {
   gap: 0.35rem;
 }
 
+/* `var(--knx-muted)`, not `opacity` — the themes retune the muted role
+   (Graphite lifts it well above a dimmed foreground), and an opacity
+   escape ignores that. Contrast drops in exchange (Porcelain 7.98:1 to
+   5.51:1 against `--knx-surface`), still clear of WCAG AA's 4.5:1. */
 .log-panel-empty {
-  opacity: 0.8;
+  color: var(--knx-muted);
   font-style: italic;
 }
 
@@ -661,7 +672,7 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  padding: var(--knx-cell-padding);
   background: var(--knx-surface);
   border: 1px solid var(--knx-border);
   border-radius: var(--knx-radius-card);
@@ -681,13 +692,13 @@ main {
 }
 
 .log-entry-source {
-  opacity: 0.8;
+  color: var(--knx-muted);
   font-family: var(--knx-font-mono);
 }
 
 .log-entry-location,
 .log-entry-detail {
-  opacity: 0.8;
+  color: var(--knx-muted);
   font-style: italic;
   width: 100%;
 }
@@ -718,11 +729,10 @@ main {
   gap: 0.5rem;
 }
 
-/* `BusMonitorPanel` — docked in `.workspace` the same way `.log-panel` is
-   (a toolbar toggle, not a modal), so it shares that `flex: 1 1 60%`
-   sizing rather than `.project-diff-panel`'s own card frame. */
+/* `BusMonitorPanel` — a centre-pane view like `.log-panel`, reached from
+   the navigation pane or the command palette rather than a toolbar
+   toggle, and laid out by `.workbench-center` rather than by flex. */
 .bus-monitor-panel {
-  flex: 1 1 60%;
   min-width: 0;
 }
 
@@ -735,7 +745,7 @@ main {
 
 .bus-monitor-session,
 .bus-monitor-stop-summary {
-  opacity: 0.85;
+  color: var(--knx-muted);
 }
 
 .bus-monitor-warning {
@@ -769,7 +779,7 @@ main {
 }
 
 .bus-monitor-empty {
-  opacity: 0.8;
+  color: var(--knx-muted);
   font-style: italic;
 }
 
@@ -779,15 +789,17 @@ main {
   font-size: 0.9em;
 }
 
+/* No `padding` here on purpose: this selector's specificity (0,1,1) beat
+   the shell's `th, td { padding: var(--knx-cell-padding); }` (0,0,1), so
+   the density setting moved every table except the telegram one. */
 .bus-monitor-table th,
 .bus-monitor-table td {
-  padding: 0.3rem 0.5rem;
   border-bottom: 1px solid var(--knx-border);
   text-align: left;
 }
 
 .bus-monitor-dest-name {
-  opacity: 0.75;
+  color: var(--knx-muted);
   font-style: italic;
 }
 
@@ -796,7 +808,24 @@ main {
    notice, not another telegram. */
 .bus-monitor-row-marker {
   font-style: italic;
-  opacity: 0.85;
+  color: var(--knx-muted);
+}
+
+/* Design D34's "arrived in the latest poll" emphasis. `BusMonitorPanel`
+   has set this class on fresh rows since b2aac7d, but the rule that drew
+   it was a `@keyframes` highlight and 90da7da deleted it along with the
+   rest of the per-telegram animation — leaving nine test expectations
+   pinning a class that painted nothing. It is back as a static accent
+   rail (the inset shadow `.address-table tr.row-multi-selected` uses), so
+   a live table marks new rows without a single moving pixel. */
+.bus-monitor-row-new td {
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--knx-accent) 45%, transparent);
+}
+
+.bus-monitor-row-new td:first-child {
+  box-shadow:
+    inset 3px 0 0 var(--knx-accent),
+    inset 0 1px 0 color-mix(in srgb, var(--knx-accent) 45%, transparent);
 }
 
 /* Incoming telegrams do not animate: steady tables during live traffic. */
@@ -809,7 +838,7 @@ main {
 }
 
 .bus-monitor-decoded-unresolved {
-  opacity: 0.75;
+  color: var(--knx-muted);
 }
 
 .fs-picker-overlay {
@@ -1229,12 +1258,18 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .bus-monitor-table { margin: 0; }
 .bus-monitor-table td { font-family: var(--knx-font-mono); font-size: 12px; }
 .bus-monitor-table tr[aria-selected="true"] { background: color-mix(in srgb, var(--knx-accent) 16%, var(--knx-surface)); }
+.bus-monitor-table tbody tr { cursor: pointer; }
 .telegram-details, .bus-compose-form { border: 1px solid var(--knx-border); border-radius: 8px; padding: 18px; background: var(--knx-surface); }
 .telegram-details h3, .bus-compose-form h3 { margin-top: 0; }
 .telegram-details dt { color: var(--knx-muted); margin-top: 18px; }
 .telegram-details dd { margin: 5px 0 0; overflow-wrap: anywhere; }
 .telegram-details dd p { margin: 4px 0; }
 .bus-compose-form { margin: 18px 0; }
+/* The three notices this card renders had no rules at all, so a warning
+   that a telegram cannot be undone read as ordinary body text. */
+.bus-compose-live-action { color: var(--knx-warning-color); font-weight: 600; }
+.bus-compose-hint { color: var(--knx-muted); }
+.bus-compose-sent { color: var(--knx-success-color); font-family: var(--knx-font-mono); }
 .bus-compose-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
 .bus-compose-fields label { display: flex; flex-direction: column; gap: 5px; }
 .bus-monitor-filters { margin: 18px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }

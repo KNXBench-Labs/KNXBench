@@ -64,7 +64,7 @@ own prose for `Space_t/@Type` adds an eleventh, `RoomPart`. Even `Ground`,
 the one value that is unmistakably about a site rather than a structure,
 carries no extent. (Five of those eleven have no `BuildingPartType` variant
 here and are coarsened on import; that is a separate defect, recorded on the
-way past as [KNOWN_LIMITATIONS.md §88](../KNOWN_LIMITATIONS.md), not a
+way past as [KNOWN_LIMITATIONS.md §89](../KNOWN_LIMITATIONS.md), not a
 coordinate question.)
 
 ### E3 — the only places a third party could hide a plan are declared out of scope

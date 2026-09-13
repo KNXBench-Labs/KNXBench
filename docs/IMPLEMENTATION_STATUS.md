@@ -3645,11 +3645,9 @@ the projection rather than from the screen.
   direction, Unlink) for the selected address, and distinct empty states
   for "this project has no group addresses" and "this filter matches
   none". Selecting a row drives the Inspector through the existing
-  `onSelect` contract. DPTs render in `DptRef`'s `Display` form
-  (`DPST-1-1`), not the dotted `1.001` the concept image shows: no dotted
-  formatter exists anywhere in this repository, and inventing one in a
-  table component is how two spellings of the same DPT start appearing on
-  one screen.
+  `onSelect` contract. Where it departs from the approved concept image
+  `docs/design/2026-09-13-codex-ui-concept/02-graphite.png`, it does so on
+  purpose and says so below.
 - **The multi-select state machine moved, it was not copied.**
   `multiSelection.ts` now owns `useMultiSelection`, the render-order
   helpers and the ctrl/shift/plain click rules that used to live inside
@@ -3660,6 +3658,54 @@ the projection rather than from the screen.
   the handler takes the caller's visible order rather than assuming the
   full tree order. The checkbox synthesises a ctrl-click through a
   structural event type, so no `MouseEvent` cast is needed to add one id.
+- **Six declared departures from `02-graphite.png`,** the approved concept
+  image for this view. None is an oversight; each is a ruling, and the
+  three that leave a capability absent name where it goes.
+  1. **DPTs render `DPST-1-1`, not the dotted `1.001`** the image shows.
+     No dotted formatter exists anywhere in this repository, and
+     `DptRef`'s `Display` text is the convention every other surface
+     already uses. Inventing a second spelling inside a table component is
+     how one screen ends up showing two names for one DPT. Changing it
+     means one formatter beside `DptRef` and a sweep of every call site,
+     which is a change to the domain crate's presentation contract, not to
+     a table.
+  2. **No "+ Gruppenadresse" primary button** in the address toolbar. The
+     create affordance exists as `ProjectExplorer.tsx`'s
+     `NewGroupAddressRow`, which renders `<li className="tree-new-row">` —
+     tree markup that cannot be lifted into a toolbar without extracting
+     the form from the list item first. Creating an address stays
+     reachable in the tree; the toolbar button belongs with whichever
+     stage does that extraction (it is the same extraction "+ Device"
+     needs, so both should move together rather than one at a time).
+  3. **The links panel's per-row "…" menu is an explicit Unlink button,
+     and there is no "+ Verknüpfen" in its header.** There are no context
+     or overflow menus anywhere in `apps/knx-web` (see below), so a "…"
+     here would have been the first one, with nothing to be consistent
+     with. Linking from the address side additionally needs a
+     device/communication-object picker that does not exist; the
+     Inspector's `NewGroupLinkRow` remains the one create path, and the
+     picker belongs to whatever stage builds that shared component.
+  4. **A Range column was added** beyond the image's breadcrumb, because
+     the brief asks for range context per row and a breadcrumb only
+     describes the current scope. Additive, not a removal.
+  5. **The Verknüpfungen column reads "1 sending · 1 receiving" rather
+     than the image's bare count.** The direction is the fact an installer
+     needs, the count alone hides which way a link points, and the
+     projection now carries both.
+  6. **No column sorting and no sort caret.** The image shows a "▲" on the
+     Adresse header; `GroupAddressTable.tsx` has no `sort` or `aria-sort`
+     at all. Rows render in the order the project stores them
+     (`Installation.group_addresses` is a `Vec`, so: insertion order, which
+     for an imported project is the file's order and not a guaranteed
+     sort). Clicking a header does nothing, nothing announces a sort
+     state, and the caret would therefore be a promise the table does not
+     keep. **Deferred to UI stage 6**
+     (mouse/keyboard operation and real-screen review, `codex-goal.md`
+     line 130): sorting is a table-wide concern that must also cover the
+     device and topology tables, needs `aria-sort` plus an activatable
+     header for the keyboard path, and must state what it does to a
+     shift-click span — doing it for one table in isolation is how three
+     tables end up sorting differently.
 - **`groupAddressView.ts`** holds the display helpers both the table and
   the Inspector need — `directionLabel` (moved out of `Inspector.tsx`,
   still one definition), `linkDirectionCounts`, `dptText`,
@@ -3672,30 +3718,48 @@ the projection rather than from the screen.
   takes focus when it opens, stops Escape from propagating and returns
   focus to the Compare button — so the first Escape closes the report and
   the second closes the menu, innermost first.
-- **Two `CatalogBrowser` overlays cannot stack.** `App.tsx` and
-  `ProjectExplorer.tsx` own separate `catalogTarget` state, and the
-  question was whether both overlays are reachable at once. They are not,
-  and the guard is the shared `Overlay` shell: `.search-overlay` is
-  `position: fixed; inset: 0; z-index: 10` over the whole viewport, above
-  every catalogue trigger (`.workbench-pane` creates no competing stacking
-  context, `.workbench-toolbar` sits at `z-index: 5`), so it absorbs the
-  pointer events that would open the second; `Overlay` also moves focus
-  into the panel and traps `Tab`, and marks it `aria-modal="true"`. No
-  global shortcut and no `CommandContext` entry opens the catalogue. Both
-  states were therefore left exactly as they are: merging two unreachable
-  state machines is tidiness, not a fix, and it would have meant editing
-  code no test can reach.
+- **Two `CatalogBrowser` overlays cannot stack — but both state machines
+  are live.** `App.tsx` and `ProjectExplorer.tsx` own separate
+  `catalogTarget` state, and **both** have a working UI trigger: the
+  workspace's catalogue button for the first, and `AddDeviceRow`'s "+ Add
+  device" button in the tree (`ProjectExplorer.tsx`, rendered under the
+  first installation's lines and its Unassigned bucket, calling
+  `setCatalogTarget`) for the second. Neither is dead code; an earlier
+  revision of this entry claimed the second was unreachable, which was
+  wrong and is withdrawn.
+  What prevents stacking is the shared `Overlay` shell, covering that
+  trigger along with every other one. `.search-overlay` is
+  `position: fixed; inset: 0; z-index: 10` over the whole viewport, and no
+  ancestor of either trigger creates a competing stacking context
+  (`.workbench-pane` is `position: relative` with auto z-index,
+  `.workbench-toolbar` sits at `z-index: 5`), so the backdrop receives the
+  pointer events that would open the second overlay. `Overlay` also moves
+  focus into the panel and traps `Tab` — and the panel's search input is
+  never unmounted, so the trap always has somewhere to hold focus — which
+  closes the keyboard path to the same triggers. The panel is
+  `aria-modal="true"`, and no global shortcut and no `CommandContext` entry
+  opens the catalogue. Both states were therefore left exactly as they are:
+  the duplication is real, it is a tidiness question rather than a defect,
+  and unifying it belongs with whoever next has a reason to touch the
+  catalogue flow itself.
 - **No context menus exist anywhere in `apps/knx-web`** — `onContextMenu`
   and `contextmenu` appear nowhere in the tree — so "context menus
   consistent where they exist" is satisfied vacuously, not by work. The
   CLAUDE.md UX wish list still asks for them; that remains open.
 
-Tests: `GroupAddressTable.test.tsx` is new (9 tests) and covers range path
+Tests: `GroupAddressTable.test.tsx` is new (10 tests) and covers range path
 plus DPT plus "1 sending · 1 receiving", the conflict rendering both DPTs,
 selection driving the links panel, a link whose device is missing, Unlink
 calling `unlinkComObject`, the checkboxes driving the real
-`BulkActionToolbar` through to `batchDeleteGroupAddresses`, a shift-click
-spanning only filtered rows, both empty states, and the range scope.
+`BulkActionToolbar` through to `batchDeleteGroupAddresses`, filtering by
+address/name/DPT, both empty states, and the range scope. The shift-click
+test spans a *non-contiguous* visible set — scoped to one range, ids 30, 31
+and 33 are on screen with 32 hidden between them — and asserts the batch
+delete is called with exactly those three ids. A span over a contiguous
+visible set proves nothing, because the full-order fallback produces the
+same answer; removing the `visibleOrder` argument from the call site now
+makes this test fail with four selected instead of three (verified by
+doing it).
 `App.test.tsx` gains the keyboard walk through the File menu: the summary is
 focusable, activating it lists all eight entries (open, open `.knxdb`, save
 as, export `.knxproj`, CSV export, CSV import, documentation export, compare)
@@ -3705,7 +3769,7 @@ summary, and the layered Escape on the comparison report is asserted step by
 step. `ProjectExplorer.test.tsx` and `StructureWorkspace.test.tsx` wrap the
 shared hook in a small harness rather than restating its rules.
 
-Web gates: `npm test -- --run` **376 passed across 37 files** (up from 363
+Web gates: `npm test -- --run` **377 passed across 37 files** (up from 363
 across 36), `tsc --noEmit` clean. Fixtures are fictional throughout — made-up
 `1/0/x` group addresses and `1.1.11`/`1.1.13` device addresses, no real
 product, device name or occupied address anywhere.

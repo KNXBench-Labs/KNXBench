@@ -273,17 +273,37 @@ it("feeds the shared BulkActionToolbar from the row checkboxes", async () => {
   await act(async () => root.unmount());
 });
 
-it("filters rows, and a shift-click spans only the rows still visible", async () => {
+it("filters rows by address, name and DPT", async () => {
   const root = await render();
   const filter = host!.querySelector<HTMLInputElement>(".address-filter")!;
   await act(async () => type(filter, "1/0/"));
   expect(host!.querySelectorAll("tbody tr").length).toBe(4);
+  await act(async () => type(filter, "ghost"));
+  expect([...host!.querySelectorAll("tbody tr")].map((tr) => tr.querySelector(".mono")?.textContent))
+    .toEqual(["1/0/4"]);
   await act(async () => type(filter, "DPST-1-1"));
   // Only the two addresses whose linked objects state DPST-1-1 remain.
-  expect([...host!.querySelectorAll("tbody tr")].length).toBe(2);
+  expect([...host!.querySelectorAll("tbody tr")].map((tr) => tr.querySelector(".mono")?.textContent))
+    .toEqual(["1/0/1", "1/0/2"]);
+  await act(async () => root.unmount());
+});
+
+it("spans a shift-click over the visible rows only, skipping one the view has hidden", async () => {
+  // The point of passing the table's own row order into the shared handler:
+  // scoped to range 20 the visible ids are 30, 31, 33 with 32 hidden between
+  // them, so a span from the first row to the last must select three. The
+  // full render order the handler falls back to would have swept up 32 as
+  // well — which is how this test fails if the `visibleOrder` argument ever
+  // goes missing from the call site.
+  const root = await render({ rangeScope: 20 });
   await click(row("1/0/1").querySelector<HTMLButtonElement>(".table-select")!);
-  await click(row("1/0/2").querySelector<HTMLButtonElement>(".table-select")!, { shiftKey: true });
-  expect(host!.textContent).toContain("2 group addresses selected");
+  await click(row("1/0/4").querySelector<HTMLButtonElement>(".table-select")!, { shiftKey: true });
+  expect(host!.textContent).toContain("3 group addresses selected");
+  const deleteButton = [...host!.querySelectorAll<HTMLButtonElement>(".bulk-action-toolbar button")]
+    .find((b) => b.textContent === "Delete")!;
+  await act(async () => deleteButton.click());
+  // By id, not merely by count: the hidden 1/0/3 (id 32) is absent.
+  expect(apiMock.batchDeleteGroupAddresses).toHaveBeenCalledWith([30, 31, 33]);
   await act(async () => root.unmount());
 });
 

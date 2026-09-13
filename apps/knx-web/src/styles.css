@@ -931,12 +931,14 @@ h6 {
 
 /* `.theme-switcher select` lived here until T27 moved the theme dropdown
    into SettingsPanel and deleted ThemeSwitcher.tsx; `.settings-field
-   select` above replaces it. `.sr-only` below is dead code as of T27 —
-   nothing in `apps/knx-web/src` references it any more, ThemeSwitcher.tsx
-   having been its only consumer — and is kept anyway, deliberately: it is
-   the standard visually-hidden-label utility, eight lines, and the
-   accessibility work KNOWN_LIMITATIONS.md §20 still owes will want it
-   rather than reinvent it. Delete it if that work never comes. */
+   select` above replaces it. `.sr-only` below was dead code from T27, when
+   ThemeSwitcher.tsx took its only consumer with it, until the stage-4
+   group-address table gave it two: the select-column and unlink-column
+   headers, which need a name for a screen reader and no visible text.
+   Kept for the same reason it survived the drought — it is the standard
+   visually-hidden-label utility, and the accessibility work
+   KNOWN_LIMITATIONS.md §20 still owes will want it rather than reinvent
+   it. */
 .sr-only {
   position: absolute;
   width: 1px;

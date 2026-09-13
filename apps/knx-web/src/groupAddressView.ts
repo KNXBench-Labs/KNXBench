@@ -31,8 +31,11 @@ export interface LinkDirectionCounts {
 // sender and once as a receiver, and twice in `total` — it holds two
 // `GroupLink`s and the projection states both (see
 // `GroupAddressNode.links`). Anything that is neither `"Send"` nor
-// `"Receive"` still raises `total`, so an unexpected wire value is visible
-// as a link rather than quietly absent.
+// `"Receive"` raises `total` alone: callers that render `total` (the
+// Inspector) show it, and callers that render only the two counts (the
+// table's Links column) do not — such a link reads "0 sending · 0
+// receiving" there. The links panel lists it either way, with
+// `directionLabel` falling back to the raw wire value.
 export function linkDirectionCounts(ga: GroupAddressNode): LinkDirectionCounts {
   let senders = 0;
   let receivers = 0;

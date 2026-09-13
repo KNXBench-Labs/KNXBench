@@ -2100,12 +2100,15 @@ decided.** `4.*` (`A8`, DPT-AS §3.4) reuses the ASCII/ISO-8859-1
 charset-selection logic main type 16 already had (`char_set_is_ascii`),
 rather than a second implementation of the same rule; unlike `16`, `4`
 gets no bare-main-type default, because the Standard does not print one.
-`10.001` (time of day + day of week, DPT-AS §3.11) represents day-of-week
-`0` as "no day" (`Option::None`) rather than as Monday, because the field
-itself is three bits wide with no documented eighth value and nothing in
-§3.11 states `0` means Monday specifically — this codec's own reading, not
-a printed rule, and the round trip is exact (`None` only ever decodes from
-and encodes back to raw `0`). `11.001` (date, DPT-AS §3.12) resolves the
+`10.001` (time of day + day of week, DPT-AS §3.11, page 41) represents
+day-of-week `0` as "no day" (`Option::None`) rather than as Monday — DPT-AS
+§3.11's own Day column prints this directly: `1 = Monday ... 7 = Sunday`,
+`0 = no day`, range `[0...7]` ([D], not inferred; the Markdown extraction of
+that table truncates at "7 =", which is how an earlier draft of this note
+mis-called it undocumented). Only the storage shape is this codec's own
+choice ([A]) — the Standard names the code, not a Rust type — and the round
+trip is exact (`None` only ever decodes from and encodes back to raw `0`).
+`11.001` (date, DPT-AS §3.12) resolves the
 two-digit year octet by the century-window rule DPT-AS §3.12 EXAMPLE 5
 states directly: a raw value `>= 90` means `1900 +` raw (covering
 1990-1999), otherwise `2000 +` raw (covering 2000-2089) — printed in the
@@ -2114,14 +2117,18 @@ digits plus four flag/index bits across four octets with no reserved bits
 at all in this format (all 32 bits carry meaning); a BCD nibble above 9 is
 rejected as `InvalidData` rather than accepted as a non-decimal digit,
 since §3.16 defines the code as decimal. `19.001` (date and time, DPT-AS
-§3.20) surfaces a genuine inconsistency in the Standard itself: octet 1's
-field-description table names a bit called `SRC` (synchronisation source
-reliability), but no bit position is ever assigned to it in the actual
-encoding row, and Note 15 states the seven non-`CLQ` bits of that octet
-are reserved and must be zero — confirmed by rendering the source PDF page
-directly (page 50) rather than trusting the Markdown extraction, which
-reproduces the same ambiguity. `DptValue::DateTime` therefore has no `src`
-field; every other named flag in the octet-2/octet-1 tables (fault,
+§3.20) surfaces a genuine contradiction inside the Standard's own octet 1
+diagram: the field-*names* row gives `SRC` (synchronisation source
+reliability) bit 6, but the bit-*encoding* row directly beneath it marks
+that same bit `r` (reserved), and Note 15 sides with the encoding row,
+stating plainly that the seven non-`CLQ` bits of that octet are reserved
+and must be zero — confirmed by rendering the source PDF page directly
+(page 50) rather than trusting the Markdown extraction, which is
+column-misaligned and cannot settle the question on its own. This codec
+follows the encoding row and Note 15 ([A], a ruling between the diagram's
+two contradictory rows, not a case of "no bit exists"), so
+`DptValue::DateTime` has no `src` field; every other named flag in the
+octet-2/octet-1 tables (fault,
 working day, working-day-unknown, year/date/day-of-week/time-invalid,
 summer time, externally-synchronized, `CLQ`) has one, so no bit this codec
 *can* assign meaning to is silently dropped. Range checks on Month/Day

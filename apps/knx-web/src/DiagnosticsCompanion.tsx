@@ -3,13 +3,35 @@
 //
 // codex-goal.md §"Zweiter Bildschirm" asks for exactly one editing
 // workspace. This component is how that is enforced rather than merely
-// intended: it renders `BusMonitorPanel` and `LogPanel` and nothing else,
-// and it imports nothing that could mutate a project. `App.tsx`, the
-// explorer, the inspector, the catalogue, the command palette and every
-// `api` mutation are absent from this module's import graph — a fact
-// `DiagnosticsCompanion.test.tsx` asserts against the file's own source,
-// because a future edit adding "just one small button" would otherwise
-// break the guarantee silently.
+// intended: it renders `BusMonitorPanel` and `LogPanel` and nothing else.
+//
+// Be precise about *why*, because the earlier version of this comment was
+// not. It claimed that this file's import list was the guarantee, and that
+// "anything reachable from this module is reachable from the companion
+// window". Both halves were wrong. The implication runs the other way, and
+// the transitive graph is not clean: this module imports
+// `./diagnosticsWindow`, which imports `isTauri` from `./filePicker`,
+// which imports `./FsPicker`, which `POST`s to `/api/fs/upload`. A
+// depth-1 list proves nothing about depth 3.
+//
+// What is actually true, and what `DiagnosticsCompanion.test.tsx` asserts:
+//
+//  1. This file names no editing surface directly, so "just one small
+//     button" cannot be added here without failing a test.
+//  2. Across the whole transitive value-import graph — fifteen modules,
+//     pinned by name — every `api` call is a bus or diagnostics call, and
+//     the only two project-mutating raw `fetch`es (`/api/catalog/install`,
+//     `/api/fs/upload`) sit inside functions this window never calls.
+//     `filePicker` is in the graph for `isTauri`, a two-line `window`
+//     predicate; its picker paths are what reach `FsPicker`.
+//  3. Mounted and left alone, the companion calls exactly one `api`
+//     export — the telegram poll. Opening the Log tab adds the log read,
+//     and nothing else, ever. Asserted as the *set* of exports called, so
+//     a new mutator fails the test rather than being forgotten.
+//
+// Not claimed: that a deliberate click cannot reach the bus. It can —
+// Connect starts a session and the compose form writes a telegram. Neither
+// touches the project, which is the property this window exists to keep.
 //
 // No undo, either. The Ctrl+Z / Ctrl+Shift+Z handler lives in `App.tsx`'s
 // global `keydown` listener, which never mounts here; this window has no

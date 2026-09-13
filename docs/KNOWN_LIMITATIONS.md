@@ -1412,6 +1412,27 @@ value would otherwise have come from `Program`. Whether ETS treats a
 itself never declared the same way is unattested; nothing here claims it
 does.
 
+**Narrowed again, backend only (2026-09-13, D10 slice 1, branch
+`d10-master-translations`).** The locale-prefix gap named a few
+paragraphs below — a stored `de` not matching a package's `de-DE` rows
+— is closed at the query layer: `crates/knx-productdb/src/query.rs`'s
+`best_matching_language` now lives in exactly one place and is the
+resolution step behind every overlay in the file, old and new alike
+(`translation_overlay`, `catalog_overlay`, `master_text_overlay`, and
+anything built on top of them), with its own dedicated unit tests —
+exact match preferred over a prefix match, `de` matches `de-DE`, and a
+hypothetical `deX` does not, proving the match requires the `-`
+separator rather than a bare string prefix. No caller sends a bare
+primary-language tag yet: `apps/knx-web`'s language pickers populate
+their options from the exact tags a package actually stored, so nothing
+today exercises the new prefix path end to end. This closes the backend
+half of the gap, not the full round trip — a frontend that let a user
+type or detect a bare `de` would light the rest of it up for free. See
+[§64](#64-languages-blocks-outside-an-application-program-are-discarded-on-import)
+for this same slice's other two pieces: a reader for `Master`-scope
+`DPST-*`/`DPT-*` translations, and per-scope translation counts in the
+import report.
+
 **Still open.** Device creation and `enrich()` still bake untranslated
 text into the project file — deliberately: translating there would make
 the *stored project* depend on a display setting, the same integrity
@@ -1433,8 +1454,9 @@ translations are deliberately never applied, for the identical
 stored-data-integrity reason: a parameter's value is a key written into
 the project file, not display text. `parameter.suffix` is stored but
 displayed nowhere, so all 879 `SuffixText` rows measured for this
-slice's design spec remain unread. There is no locale-prefix matching (a
-stored `de` selection does not match a package's `de-DE` rows) and no
+slice's design spec remain unread. The backend query layer now matches a
+stored `de` selection against a package's `de-DE` rows (D10 slice 1,
+above), but no caller exploits it and there is still no
 `navigator.language` detection — the setting defaults to "package
 default" and stays there until a user picks explicitly.
 
@@ -2595,21 +2617,64 @@ exported from ETS 4 and ETS 6 rather than two independent ones — no
 `hardware.name` has nothing to read rather than a missing reader, in
 every package seen so far. This is a statement about the corpus, not
 about the format: the schema does not forbid a `Hardware`-keyed
-translation row, and one package carrying one would overturn it. The import report still
-does not state how many translations a package contributed, so a user
-is told about unknown constructs but not about captured text.
-Locale-prefix matching is still absent, as recorded in §37: a stored
-`de` does not match a package's `de-DE` rows. And no translated string
-is ever allowed to become a stored identifier — `query::catalog_item`,
-the single-row lookup device creation uses, is deliberately
-untranslated.
+translation row, and one package carrying one would overturn it. And no
+translated string is ever allowed to become a stored identifier —
+`query::catalog_item`, the single-row lookup device creation uses, is
+deliberately untranslated.
+
+**Narrowed further, still not closed (2026-09-13, D10 slice 1, branch
+`d10-master-translations`).** Three of this section's own open items
+move. First, the import report now does state how many translations a
+package contributed: `InstallReport`/`IngestOutcome` gained a
+`TranslationCounts { program, catalog, hardware, master }`, counted from
+`INSERT OR IGNORE`'s own affected-row count — a repeated `Translation`
+element that the parser walks past but SQLite ignores as a duplicate key
+contributes nothing to the count, exactly as `unknown_count` already
+counted writes rather than sightings. `knx-cli`'s `install` output
+prints the total and the per-scope breakdown. A package already
+installed under the previous schema (v4) reports zero for all four
+counters on a retried install rather than a guess — re-deriving the true
+figure would mean re-parsing bytes this migration has no access to, so
+it names the gap instead of inventing a number; a package installed
+from this slice onward always gets its real count. Second,
+locale-prefix matching is no longer absent — see the correction to §37
+cross-referenced there; it is implemented once, in `query.rs`'s
+`best_matching_language`, and reused by every overlay this function has
+ever had plus the new one described next, but nothing in `apps/knx-web`
+sends a bare primary-language tag yet, so the backend half closes and
+the round trip does not. Third, `query::datapoint_types`/
+`query::datapoint_type` is a new `Master`-scope reader — the first one —
+for `datapoint_type` rows (measured non-empty on installation across all
+five sampled packages: 383, 354, 234, 234 and 234 rows), overlaying a
+`Master`-scope, `Text`-attribute translation onto each row's `text` when
+one resolves for the requested language. It is deliberately narrow: it
+only ever has rows for the `RefId` families `datapoint_type` itself
+holds data for (`DPST-*`, `DPT-*`). Two of the five sampled packages'
+`knx_master.xml` also carry `Master`-scope translations for `FT-*`
+(function types), `SU-*` (space usages) and `FP-*_DR-*`
+(functional-profile/datapoint pairs) — confirmed independently in both
+(`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a`: DPST-\*=328, DPT-\*=47,
+FP-\*\_DR-\*=738, FT-\*=180, SU-\*=342 of 1635 master rows;
+`Dummy_Applikation_Secure`: DPST-\*=314, DPT-\*=45, FP-\*\_DR-\*=697,
+FT-\*=170, SU-\*=323 of 1549) — but `parse/master.rs` parses none of
+`FunctionType`/`FunctionPoint`/`SpaceUsage`: there is no table for those
+`RefId`s to join against, so no reader, this one included, can surface
+them. The other three sampled packages' `knx_master.xml` predates that
+scheme and carries only `DPST-*`/`DPT-*` master translations, nothing
+this gap touches. A translated function-type or space-usage name stays
+unavailable until a later slice gives those constructs their own
+tables — tracked here, not silently narrowed out of this section's
+claim.
 
 **Lifted when.** Ingestion: lifted 2026-09-12 (T32, branch
 `t32-shared-translations`). The `Hardware`-scope half of the reading
 residue: lifted 2026-09-13 (T16, branch `t16-device-product`). The
-`Master`-scope residue stays open under **D10** in
-[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and under §37's own "still
-open" list. Not scheduled.
+`Master`-scope residue for `datapoint_type`, translation-count
+reporting, and backend locale-prefix matching: lifted 2026-09-13 (D10
+slice 1, branch `d10-master-translations`). `FunctionType`/
+`FunctionPoint`/`SpaceUsage` have no table at all and stay open under
+**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and under §37's
+own "still open" list. Not scheduled.
 
 ## 65. `--version` names a commit, never a working tree
 

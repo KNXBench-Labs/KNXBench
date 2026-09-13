@@ -2484,18 +2484,20 @@ data is not lost. It is merely not queryable, which is the difference between
 an archive and a database.
 
 *One measured defect, described and deliberately not fixed here* (this task
-may not edit `crates/knx-productdb/**`). `bool_flag` at
+may not edit `crates/knx-productdb/**`) — **fixed on 2026-09-13, after this
+spike, in the commit that cites this paragraph.** `bool_flag` at
 [`crates/knx-productdb/src/parse/mod.rs:34`](../crates/knx-productdb/src/parse/mod.rs)
-accepts only `"1"` and `"0"` and maps anything else to `None`. Schema 20 and
+accepted only `"1"` and `"0"` and mapped anything else to `None`. Schema 20 and
 21 spell booleans `true`/`false`, and schema 11 is mixed. Consequence:
-`linkable` is `NULL` for all six ingested programs, not because the attribute
-is missing but because its spelling was not anticipated **[V]**
+`linkable` was `NULL` for all six ingested programs, not because the attribute
+was missing but because its spelling was not anticipated **[V]**
 (`sqlite3 "$S/probe.db" "select count(*) from application_program where
-linkable is null;"` → 6). The same helper would swallow six of the 30
+linkable is null;"` → 6). The same helper would have swallowed six of the 30
 `LegacyAllowPartialDownloadIfAp2Mismatch` values for exactly the same reason
-if the flags were wired up naively. **Whoever implements T30's parsing slice
-must fix `bool_flag` first** — accept `true`/`false` alongside `1`/`0`, and
-report anything else as an unknown value rather than `None`.
+if the flags were wired up naively. It now accepts all four of `xs:boolean`'s
+canonical spellings — `"1"`, `"0"`, `"true"`, `"false"` — and still returns
+`None` for anything else, `"True"` and `"yes"` included, because a lexical
+form the datatype does not define is not a boolean this parser may guess at.
 
 *The minimal parsing addition, described and stopped at, as the task
 requires.* Three tables would make the matrix queryable without touching the

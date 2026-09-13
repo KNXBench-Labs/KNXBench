@@ -333,17 +333,18 @@ controlled via a flag in the database entry for the product"* **[D]**
 (`03_05_03` §3.4.1.2.1, footnote 6). Second, `knx-productdb` stores
 `load_procedure_style` but drops `Options`, `LoadProcedures` and every
 `LdCtrl*` element without even reporting them as unknown constructs — the
-bytes survive in `source_file`, but nothing is queryable **[V]**; and
-`bool_flag` accepts only `"1"`/`"0"`, so schema-20/21 `true`/`false` values
-land as `NULL` (measured: `linkable` is `NULL` for all six ingested programs)
-**[V]**. Third, hardware. Nothing in this update has been run against a
+bytes survive in `source_file`, but nothing is queryable **[V]**. (The
+companion `bool_flag` defect this spike found — only `"1"`/`"0"` were accepted,
+so schema-20/21 `true`/`false` landed as `NULL`, measured across all six
+ingested programs — was fixed on 2026-09-13 and is no longer outstanding
+**[V]**.) Third, hardware. Nothing in this update has been run against a
 device, and no bus was contacted to produce it.
 
 **Lifted when.** The generic load/unload/reset/memory procedures no longer
 block this — they are documented (RESEARCH §8.4) — and neither does the
 `Legacy*` matrix or the vendor DLL (RESEARCH §8.6). What remains, in the order
 it can be done: the parsing addition described (and deliberately not built) in
-RESEARCH §8.6.5, including the `bool_flag` fix; the offline "dry-run"
+RESEARCH §8.6.5 (its `bool_flag` prerequisite is done); the offline "dry-run"
 procedure resolver of RESEARCH §8.6.6 Slice 0, which needs no hardware and is
 checkable against both the Standard's step table and all 35 corpus programs;
 then read-only device inspection (Slice 1); and only then hardware we can

@@ -2139,7 +2139,7 @@ database — the product database stays at **v3**, `knx-store`'s
 
 - **The read model (`crates/knx-productdb/src/query.rs`).**
   `ParameterView` (`display_order: Option<i64>` — `ParameterRef/@DisplayOrder`
-  is genuinely optional in shipped packages; **[V]** all 543 `parameter_ref`
+  is genuinely optional in shipped packages: all 543 `parameter_ref`
   rows for `prod3`'s program `M-0083_A-0317-31-7DC6` omit it, so `None` is
   the common case, not an edge case) and `parameter_ref_ids()`, following
   `com_object_view`'s own bulk-query idiom rather than one query per field
@@ -3535,7 +3535,7 @@ reported as occupied devices.
 `docs/RESEARCH.md` §8.5 — Finding 1's mis-attribution of the ~6 s
 vacant-probe cost to a client library's own policy constant
 (`xknx`'s `MANAGAMENT_CONNECTION_TIMEOUT`) is corrected to the actual
-source: **[D]** `03_03_04 Transport Layer v01.02.03 AS`, clause 4
+source: `03_03_04 Transport Layer v01.02.03 AS`, clause 4
 "Parameters of Transport Layer" (page 16 of 38, `:665-688`) fixes
 connection timeout at 6 s system-wide; clause 5's Local Variables table
 (page 17 of 38, `:696-705`, specifically `:702-703`) names the two local

@@ -903,7 +903,27 @@ mod tests {
         let xml =
             String::from_utf8(write_installation_xml(&out.project, &out.opaque).unwrap()).unwrap();
         assert!(xml.contains(r#"BCUKey="4294967295""#));
-        assert!(xml.contains(r#"Name='GATEWAY-NAME';IpAddr='192.0.2.1'"#));
+
+        // The interesting retained attribute here is a packed
+        // `Name=...;IpAddr=...` string, and the interesting thing about it
+        // is that it survives the round trip byte for byte. Which string
+        // it is belongs to whoever's project is in the corpus, so it is
+        // taken from the import rather than written down: a literal here
+        // would commit one installation's device name and gateway address
+        // to the repository in exchange for no extra coverage at all.
+        let packed = retained_attrs(&out.opaque)
+            .into_values()
+            .chain(
+                retained_elements(&out.opaque)
+                    .into_values()
+                    .map(|b| String::from_utf8_lossy(&b).into_owned()),
+            )
+            .find(|v| v.contains("IpAddr="))
+            .expect("the reference project retains a packed IpAddr somewhere");
+        assert!(
+            xml.contains(&packed),
+            "a retained attribute did not come back verbatim"
+        );
     }
 
     #[test]

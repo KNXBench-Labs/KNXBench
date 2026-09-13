@@ -7,9 +7,12 @@ use std::time::Duration;
 
 use knx_net::{ApplicationService, BusConnection, Destination, GroupValue};
 
+// No default gateway address. A hard-coded one would be somebody's real
+// installation written into a public repository, and a placeholder one
+// would only buy a 60-second timeout before failing anyway.
 fn gateway_addr() -> SocketAddrV4 {
     std::env::var("KNX_GATEWAY")
-        .unwrap_or_else(|_| "192.0.2.1:3671".to_string())
+        .expect("set KNX_GATEWAY to your gateway as host:port, e.g. 192.0.2.1:3671")
         .parse()
         .expect("KNX_GATEWAY must be host:port, e.g. 192.0.2.1:3671")
 }

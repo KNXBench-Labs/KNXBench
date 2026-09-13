@@ -11,7 +11,7 @@ use crate::blob::{sha256_hex, store_source_file, SourceFile};
 use crate::dynamic;
 use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::parse::{catalog, hardware, program};
-use crate::report::{insert_conflicts, insert_unknown, IdConflict};
+use crate::report::{insert_conflicts, insert_unknown, IdConflict, TranslationCounts};
 use crate::ProductDbError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -32,6 +32,8 @@ pub enum IngestOutcome {
         kind: FileKind,
         unknown: usize,
         conflicts: Vec<IdConflict>,
+        /// Translation rows this file's ingest pass actually wrote (R3).
+        translations: TranslationCounts,
     },
     Skipped {
         sha256: String,
@@ -97,31 +99,55 @@ pub(crate) fn ingest_file_in_transaction(
     )?;
 
     let kind = classify(bytes);
-    let (unknown, conflicts) = match kind {
+    let (unknown, conflicts, translations) = match kind {
         FileKind::Catalog => {
             let out = catalog::ingest_catalog(conn, &sha256, source_path, bytes)?;
             // A second pass over the same bytes, in the same transaction:
             // `Catalog.xml`'s own `Languages` block is not read by
             // `ingest_catalog` at all.
-            ingest_translations(conn, TranslationScope::Catalog, source_path, bytes)?;
-            (out.unknown, out.conflicts)
+            let catalog = ingest_translations(conn, TranslationScope::Catalog, source_path, bytes)?;
+            (
+                out.unknown,
+                out.conflicts,
+                TranslationCounts {
+                    catalog,
+                    ..Default::default()
+                },
+            )
         }
         FileKind::Hardware => {
             let out = hardware::ingest_hardware(conn, &sha256, source_path, bytes)?;
             // Same second pass as `Catalog` above, for `Hardware.xml`'s own
             // `Languages` block.
-            ingest_translations(conn, TranslationScope::Hardware, source_path, bytes)?;
-            (out.unknown, out.conflicts)
+            let hardware =
+                ingest_translations(conn, TranslationScope::Hardware, source_path, bytes)?;
+            (
+                out.unknown,
+                out.conflicts,
+                TranslationCounts {
+                    hardware,
+                    ..Default::default()
+                },
+            )
         }
         FileKind::ApplicationProgram => {
             let out = program::ingest_program(conn, &sha256, source_path, bytes)?;
             // A second pass over the same bytes, in the same transaction:
             // the `Static` pass above still skips `Dynamic` outright (its
             // own doc comment says so); this is what actually reads it.
+            // Neither `Dynamic` nor `Languages` block live there, so it
+            // contributes no translations of its own.
             let dyn_out = dynamic::parse::parse_dynamic_trees(conn, &sha256, source_path, bytes)?;
             let mut unknown = out.unknown;
             unknown.extend(dyn_out.unknown);
-            (unknown, out.conflicts)
+            (
+                unknown,
+                out.conflicts,
+                TranslationCounts {
+                    program: out.translations,
+                    ..Default::default()
+                },
+            )
         }
         // Baggages.xml lists the blobs; the blobs themselves and anything
         // unrecognized are stored and not parsed. `knx_master.xml` is
@@ -130,7 +156,7 @@ pub(crate) fn ingest_file_in_transaction(
         // unchanged), so a `MasterData` blob reaching this generic path is
         // stored, not parsed, exactly like `Unrecognized`.
         FileKind::Baggages | FileKind::Baggage | FileKind::MasterData | FileKind::Unrecognized => {
-            (Vec::new(), Vec::new())
+            (Vec::new(), Vec::new(), TranslationCounts::default())
         }
     };
 
@@ -146,6 +172,7 @@ pub(crate) fn ingest_file_in_transaction(
         kind,
         unknown: unknown.len(),
         conflicts,
+        translations,
     })
 }
 

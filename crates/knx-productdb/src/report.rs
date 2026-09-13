@@ -45,6 +45,33 @@ pub struct IdConflict {
     pub other_sha256: String,
 }
 
+/// How many `translation` rows an ingest pass actually wrote, by scope.
+/// Counted the same way `UnknownConstruct::occurrences` is: from what an
+/// `INSERT OR IGNORE` actually changed, never from how many `Translation`
+/// elements the parser merely walked past — a row already present under the
+/// same `(scope, scope_id, language, ref_id, attribute_name)` key is ignored
+/// by SQLite and contributes nothing here, even though it was seen.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TranslationCounts {
+    pub program: usize,
+    pub catalog: usize,
+    pub hardware: usize,
+    pub master: usize,
+}
+
+impl TranslationCounts {
+    pub fn total(&self) -> usize {
+        self.program + self.catalog + self.hardware + self.master
+    }
+
+    pub fn add(&mut self, other: TranslationCounts) {
+        self.program += other.program;
+        self.catalog += other.catalog;
+        self.hardware += other.hardware;
+        self.master += other.master;
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct UnknownCollector {
     seen: BTreeMap<(String, &'static str, String), UnknownConstruct>,

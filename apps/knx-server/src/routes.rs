@@ -171,14 +171,28 @@ impl From<knx_productdb::InstallReport> for CatalogInstallReportDto {
 /// (D24's "same response, no second GET"). Plain `#[derive(Serialize)]`,
 /// following `CatalogInstallReportDto`'s own precedent above — not
 /// `ts-rs`, not `knx-projection`, per the coordinator's ruling on DTO
-/// placement (design doc D20: "no new crate").
-#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+/// placement (design doc D20: "no new crate"). `PartialEq` dropped (fix
+/// round 1, item 6) the moment `tree` below made it unavailable for free:
+/// `knx_projection::ProjectTree` does not derive it, nothing in this crate
+/// compared two whole `ParameterPanelDto`s for equality, and adding it to
+/// `ProjectTree` for this alone would ripple into every type it contains.
+#[derive(serde::Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParameterPanelDto {
     pub(crate) program_id: Option<String>,
     pub(crate) sections: Vec<ParameterSectionDto>,
     pub(crate) stale: Vec<StaleParameterDto>,
     pub(crate) diagnostics: Vec<ParameterDiagnosticDto>,
+    /// The authoritative tree `apply()` already built from the genuine
+    /// post-write `CommandStack` (T3 fix round 1, item 6) — `Some` only from
+    /// `set_parameter_value_impl`, always `None` from the plain `GET`,
+    /// which runs no command and has no fresher tree to offer. Replaces
+    /// the hand-built `{ ...tree, can_undo: true, can_redo: false }`
+    /// overlay `Inspector.tsx` used to construct client-side: that overlay
+    /// was exact for `can_undo`/`can_redo` (both come from the same
+    /// `CommandStack` this field does) but stale for every other field a
+    /// future command could change, since it never asked the server.
+    pub(crate) tree: Option<knx_projection::ProjectTree>,
 }
 
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]

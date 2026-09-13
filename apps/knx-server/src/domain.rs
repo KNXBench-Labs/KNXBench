@@ -2247,6 +2247,7 @@ fn empty_assembly(stale: Vec<(String, String)>) -> PanelAssembly {
                 .map(|(ets_id, raw)| crate::routes::StaleParameterDto { ets_id, raw })
                 .collect(),
             diagnostics: vec![],
+            tree: None,
         },
         program_id: None,
         views_by_id: HashMap::new(),
@@ -2680,6 +2681,7 @@ fn assemble_parameter_panel(
             sections,
             stale,
             diagnostics,
+            tree: None,
         },
         program_id: Some(program_id),
         views_by_id,
@@ -2764,7 +2766,11 @@ fn validate_kind_and_bounds(
 /// one `Command::SetParameterValue` (undo/redo-able via the same
 /// `command_stack` every other edit uses), then re-assembles and returns
 /// the fresh `ParameterPanelDto` — no second request needed to see the
-/// effect (D24's own rejected alternative names why).
+/// effect (D24's own rejected alternative names why) — with `apply`'s own
+/// freshly rebuilt `ProjectTree` riding along in `tree` (T3 fix round 1, item
+/// 6), so a caller that also needs to republish the project context has
+/// the server's own answer instead of one it would otherwise have to
+/// reconstruct by hand.
 pub(crate) fn set_parameter_value_impl(
     state: &AppState,
     device_id: u32,
@@ -2862,9 +2868,16 @@ pub(crate) fn set_parameter_value_impl(
             raw: raw.clone(),
         }
     };
-    apply(state, cmd)?;
+    // `apply` already rebuilds the authoritative tree from the genuine
+    // post-write `CommandStack` (`tree_with_state`, called after
+    // `do_command`) -- surface it rather than let the caller reconstruct
+    // `can_undo`/`can_redo` by hand from a staler tree it happened to be
+    // holding (T3 fix round 1, item 6).
+    let tree = apply(state, cmd)?;
 
-    parameter_panel_impl(state, device_id, language)
+    let mut panel = parameter_panel_impl(state, device_id, language)?;
+    panel.tree = Some(tree);
+    Ok(panel)
 }
 
 #[cfg(test)]

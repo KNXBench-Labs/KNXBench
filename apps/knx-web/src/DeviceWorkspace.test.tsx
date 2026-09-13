@@ -10,7 +10,7 @@ import type { ProductResolution } from "./bindings/ProductResolution";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { messages as germanMessages } from "./messages/de";
 import { messages as englishMessages } from "./messages/en";
-const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }), setComObjectDpt: vi.fn() }));
+const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] }), setComObjectDpt: vi.fn(), setParameterValue: vi.fn() }));
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
 import { DeviceWorkspace } from "./Inspector";
 
@@ -59,6 +59,79 @@ it("keeps communication editing and parameters reachable in the central device t
   await act(async () => tabs[1].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
   expect(tabs[0].getAttribute("aria-selected")).toBe("true");
   await cleanup();
+});
+
+// T3: closes the goal.md §6 item 6 parked finding. Before the fix,
+// `ParameterPanel` had no way to tell its caller a write had landed at
+// all, so `onApplied` was never called for this edit path — asserting
+// merely that `api.setParameterValue` was called would have passed on the
+// broken code too, since that call was never the missing half.
+//
+// T3 fix round 1, item 6: `onApplied` used to receive a hand-built
+// `{...tree, can_undo: true, can_redo: false}` overlay of the local
+// `tree` prop, because the write response carried no tree of its own.
+// `serverTree` below differs from `tree` in fields an overlay could never
+// touch (`errors`/`warnings`), so a passing assertion against it proves
+// the server's own tree is what gets published, not a caller-side guess.
+const serverTree: ProjectTree = { ...tree, errors: 5, warnings: 2, can_undo: true, can_redo: false };
+
+function committableField() {
+  return {
+    etsId: "P1", name: "Field A", text: null, kind: "Number", value: "5",
+    valueSource: "Stored", editable: true, min: null, max: null, enumOptions: [],
+    displayOrder: null, access: null, writeEtsId: "P1",
+  };
+}
+
+function setNumberInputValue(input: HTMLInputElement, value: string) {
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+  setter.call(input, value);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+it("publishes a committed parameter edit to onApplied, not just to api.setParameterValue (T3)", async () => {
+  api.deviceParameters.mockResolvedValueOnce({
+    programId: "PROG-1",
+    sections: [{ scope: null, fields: [committableField()] }],
+    stale: [],
+    diagnostics: [],
+  });
+  api.setParameterValue.mockResolvedValueOnce({
+    programId: "PROG-1",
+    sections: [{ scope: null, fields: [{ ...committableField(), value: "6" }] }],
+    stale: [],
+    diagnostics: [],
+    tree: serverTree,
+  });
+  const onApplied = vi.fn();
+  const host2 = document.createElement("div");
+  document.body.append(host2);
+  const root2 = createRoot(host2);
+  await act(async () => {
+    root2.render(<DeviceWorkspace detail={detail(NO_REFERENCE)} tree={tree} onApplied={onApplied} />);
+  });
+  const tabs2 = [...host2.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+  await act(async () => tabs2[1].click());
+
+  const input = host2.querySelector<HTMLInputElement>('input[type="number"]')!;
+  await act(async () => {
+    setNumberInputValue(input, "6");
+    input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    await Promise.resolve();
+  });
+
+  // The call alone is not the fix — the hole was that `onApplied` never
+  // ran, so `App.tsx`'s tree-publish effect never fired either.
+  expect(api.setParameterValue).toHaveBeenCalledWith(9, "P1", "6", null);
+  expect(onApplied).toHaveBeenCalledTimes(1);
+  // `serverTree` differs from the local `tree` prop in fields no overlay
+  // of `tree` could ever produce (`errors`/`warnings`) — this passes only
+  // because `ParameterPanel` now forwards the write response's own `tree`
+  // verbatim, not a `{...tree, can_undo, can_redo}` reconstruction of it.
+  expect(onApplied).toHaveBeenCalledWith(serverTree);
+
+  await act(async () => root2.unmount());
+  host2.remove();
 });
 
 it("moves both ways with the arrow keys and reaches the last tab with End", async () => {

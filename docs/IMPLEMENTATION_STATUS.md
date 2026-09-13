@@ -3885,3 +3885,144 @@ carried one); `cargo deny check` clean (same pre-existing
 `advisory-not-detected` informational warnings, nothing new). Web gates:
 `npm test -- --run` and `./node_modules/.bin/tsc --noEmit` both green,
 unaffected — this task touched no `apps/knx-web` path.
+
+**PDB-2: a project can now be created from scratch (2026-09-13), branch
+`pdb-new-project`.** Closes the backend half of the priority sentence in
+`goal.md` — "a user can install a device using its manufacturer-supplied
+product database, without requiring that the product data first appeared
+in an imported ETS project". It did not work before this slice, and the
+reason was structural rather than a bug in the catalog code:
+`apps/knx-server/src/domain.rs` had exactly two production sites that
+set `*state.project = Some(..)` — the ETS import at line 237 and
+`open_native_project` at 338 — so a project could only come into
+existence from a `.knxproj` or from a previously saved `.knxdb`.
+`create_device_impl` reads no import-supplied field and its product-data
+half already worked; it died one line into its second half, at
+`project.as_mut().ok_or("no project open")?`. Opening a fresh file was
+not a way in either: `knx_store::load_project` answers `NotSaved` for a
+database nothing was ever written to.
+
+R1, what a new project actually contains, decided from the domain model
+rather than from what made the test pass. The seed is **one
+`Installation` and nothing else** — no area, no line, no building part,
+no group range. `Command::CreateDevice` needs `installations.first_mut()`
+to exist (`crates/knx-core/src/command.rs`, the `CreateDevice` arm) but
+takes `line: Option<LineId>`, and a device created with `None` is pushed
+onto `topology.unassigned`, which `crates/knx-core/src/topology.rs`
+documents in so many words as "valid project state, not an error". So a
+device can be placed with no topology at all, and none was invented. The
+repository does **not** say what ETS itself puts in a new project — no
+document in `docs/` records it and no sample of an ETS-created empty
+project exists in `OriginalData/` — so the choice rests on the domain
+model alone and is stated that way rather than guessed from memory.
+
+Two fields are seeded beyond the bare `Installation`, each for a named
+reason. `info.project_id` gets `P-0001`, shaped like the ids observed in
+the reference exports (`P-0512`, `P-03DE`): `knx-etsproj`'s exporter
+rejects an empty project id outright (`export/schema11.rs`,
+`export/schema21.rs`) and uses it as the ZIP directory name, and no
+`Command` in `knx-core` can set it afterwards — an unseeded from-scratch
+project could therefore never be exported at all, which is a dead end,
+not a minimal seed. The installation's `name` is **not** seeded: it comes
+from the request, and an absent one leaves the installation unnamed,
+exactly what the ETS mapper produces for an `Installation` with no `Name`
+attribute (`crates/knx-etsproj/src/map.rs`, `unwrap_or_default()`).
+`Installation::name` is a plain `String`, not a `LocalizedString`, so any
+default would be user-visible text; it belongs in the frontend's message
+catalogue (`apps/knx-web/src/messages/{de,en}.ts`), not hardcoded in a
+layer that must not know about the UI. `Project::new`'s
+`default_language` comes from the request too, defaulting to `"en"` —
+the same value every other `Project::new` call site in this repository
+uses.
+
+R2, the route. `domain::new_project_impl` sits beside
+`open_native_project` and reuses its state-reset block — project,
+command stack, import counts, opaque passthrough, manufacturer refs —
+plus one thing that function *sets* and this one must **clear**:
+`store_path`. Leaving the previous file's path behind would let the next
+plain `POST /api/project/save` overwrite that file with the new empty
+project, which is data loss rather than a cosmetic slip;
+`a_new_project_clears_the_path_the_previous_one_was_loaded_from` asserts
+the file's size is unchanged after the save is refused. The session log
+is reset and gets one `new` entry, matching the two other paths that
+replace the whole project, so a new project silently displacing an open
+one is not possible.
+
+The unsaved-project ruling: `POST /api/project/new` **refuses** with
+`409 Conflict` when a project is open and its command stack has anything
+to undo, unless the caller sends `discardChanges: true`. `409`, not
+`400`, because this is a state conflict the caller can resolve, not a
+malformed request (`errors.rs` documents that split). Nothing in
+`AppState` tracks dirtiness and `CommandStack` exposes no save-point, so
+`can_undo()` is the only available signal — which means this over-refuses
+after a successful save. That direction is deliberate: CLAUDE.md ranks
+data integrity above convenience, and the opposite error is
+unrecoverable. The refusal itself is logged as a warning rather than
+swallowed, and is recorded honestly in
+[KNOWN_LIMITATIONS.md §81](KNOWN_LIMITATIONS.md).
+
+R3, the regression test. `apps/knx-server/tests/http_catalog_to_device.rs`
+runs `POST /api/project/new` → `POST /api/catalog/install` with a real
+corpus `.knxprod` → `GET /api/catalog/items` → `POST /api/devices` →
+`GET /api/device/{id}`, and asserts the created device carries **104**
+communication objects — measured by running this test against the corpus
+for this slice, not carried over from any earlier measurement. No
+`.knxproj` path appears anywhere in the file. The catalog item is pinned
+by id (the lexicographically first the package yields) so that a
+different package silently substituting a different device is a failure
+rather than a quiet pass. Without the corpus the test prints a skip
+message and returns — the same loud-skip idiom
+`crates/knx-productdb/tests/standalone_packages.rs` uses, including the
+`KNXBENCH_PRODUCT_CORPUS` override. Three further tests in
+`apps/knx-server/tests/http_project_routes.rs` cover the seed's exact
+shape, the refuse/`discardChanges` pair (including that the refused edit
+survives and is logged), and the cleared `store_path`.
+
+Not closed, and stated as a limitation rather than as done: **no
+frontend calls this route**. `App.tsx` renders `ProjectExplorer` only
+when a tree already exists, and `ProjectExplorer.tsx` opens
+`CatalogBrowser` only against a `catalogTarget` that an empty project
+cannot supply. So the capability is real at the HTTP API and covered by
+a test, and a *user* still cannot reach it — see
+[KNOWN_LIMITATIONS.md §80](KNOWN_LIMITATIONS.md). `docs/GAP_ANALYSIS_ETS.md`'s
+B1 row, which claimed closure on 2026-09-08 while its own parenthetical
+("could not start a project from scratch") stayed literally true, is
+corrected in place rather than quietly rewritten: it now says what T1/T2
+actually delivered, what stayed open, and what this slice closes.
+
+One correction to that limitation, found while writing it: the *only*
+missing UI piece is the "New project" action itself. Nothing sets
+`App.tsx`'s `tree` except `importProject`/`openProject`, and `api.ts` has
+no `newProject` at all. The rest already works — the first
+installation's "Unassigned" branch always carries an `AddDeviceRow` that
+passes a `null` line, so an empty project with no areas and no lines can
+already open the catalog browser. One button and one `api.ts` function,
+not a screen.
+
+All eight gates green, from the worktree root unless stated.
+`cargo fmt --all --check` clean. `cargo clippy --workspace --all-targets
+-- -D warnings` clean. `cargo test --workspace --no-fail-fast`: **1256
+passed / 0 failed / 3 ignored** across **79** `test result:` lines from
+one untruncated run (exit 0), against this branch's `adce9b2` baseline of
+**1252 / 0 / 3 across 78** lines. The **+4** is exactly the four tests
+this slice adds — one in the new
+`apps/knx-server/tests/http_catalog_to_device.rs`, three appended to
+`apps/knx-server/tests/http_project_routes.rs` — and the **+1**
+`test result:` line is that new test *file*, not an anomaly; none
+removed, none newly ignored. The run was made with `OriginalData/` and
+`project_dump.json` symlinked into the worktree (both are local-only and
+absent from a fresh worktree), so the corpus-dependent tests actually
+executed instead of taking their skip path; the symlinks were removed
+before committing and `OriginalData/` itself was never written to.
+`cargo run -p xtask -- check-layering` clean — no new crate dependency,
+the route lives in `apps/knx-server` and reaches only `knx-core`/
+`knx-projection`, both of which it already depended on. `cargo run -p
+xtask -- check-headers`: 79 files with a well-formed header, **169**
+without one, ceiling **169**, unchanged — the one new file carries an
+ADR-0018 header, so it joined the "with" column rather than pushing the
+ceiling. `cargo deny check` clean (the same pre-existing
+`advisory-not-detected` informational warnings, nothing new). Web gates
+from `apps/knx-web` after `npm ci`: `npm test -- --run` **340 passed
+across 31 files**, `./node_modules/.bin/tsc --noEmit` exit 0 — this
+slice changed no file under `apps/knx-web`, and the green pair is the
+proof of that rather than a claim about it.

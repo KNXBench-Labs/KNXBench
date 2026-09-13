@@ -3331,3 +3331,63 @@ image starts shipping discovery and a deployer chooses `--network host`
 (or an equivalent Docker documents) at `docker run` time; documented, not
 solved, per the 2026-09-05/06 deployment-target and Session 6 planning
 calls (ROADMAP.md).
+
+## 80. A project can be created from scratch over HTTP, but not from the UI
+
+**Limitation.** `POST /api/project/new` (2026-09-13) creates an empty project
+with one seeded `Installation`, which is all `Command::CreateDevice` needs to
+place a device. No screen in `apps/knx-web` calls it. A user driving the
+shipped frontend still cannot start a project without importing a `.knxproj`
+or opening a previously saved `.knxdb`; only an HTTP client can **[V]**
+(`apps/knx-server/tests/http_catalog_to_device.rs` does exactly this and
+asserts the device's 104 communication objects).
+
+**Cause.** Exactly one thing is missing, and it is the first one: nothing sets
+`App.tsx`'s `tree`. Only `importProject` and `openProject` call `resetTree`
+(`apps/knx-web/src/App.tsx:287,299`), there is no `newProject` in
+`apps/knx-web/src/api.ts`, and the toolbar offers only "Open project"
+(`App.tsx:379`). The whole editing surface is then gated on `tree` being
+non-null (`App.tsx:465`) **[D]**.
+
+The rest of the path already works and needs nothing new. Once a tree exists
+with one installation, `ProjectExplorer.tsx` renders that installation's
+"Unassigned" branch unconditionally for the first installation and puts an
+`AddDeviceRow` in it that calls `onAddDevice(null)` — a `null` line, not a
+line id (`ProjectExplorer.tsx:640,652`) — which sets `catalogTarget` and opens
+`CatalogBrowser` (`ProjectExplorer.tsx:829-831`). So an empty project with no
+areas and no lines can already be pointed at the catalog; a device created
+that way lands in `topology.unassigned`, which is the same placement the new
+backend test asserts **[D]**, not verified by clicking it **[A]** — no
+frontend slice has been run against this route.
+
+**Impact.** The headline capability — install a device from a manufacturer's
+product database with no ETS project anywhere — is real at the API and
+regression-covered, but is not yet reachable by a user. Nothing about it may
+be described as done in COMPATIBILITY.md until a frontend slice lands.
+
+**Lifted when.** A "New project" action exists in `apps/knx-web` and the
+catalog browser can be opened against an installation with no lines. That is
+a separate, UI-owned slice.
+
+## 81. `new_project_impl` refuses on "can undo", not on "is dirty"
+
+**Limitation.** `POST /api/project/new` refuses with `409 Conflict` when a
+project is open and its command stack has anything to undo, unless the caller
+sends `discardChanges: true`. It will refuse even when every one of those
+edits was already written to disk by `POST /api/project/save` **[D]**
+(`apps/knx-server/src/domain.rs`, `new_project_impl`).
+
+**Cause.** `AppState` has no dirty flag and `knx_core::CommandStack` exposes
+no saved-at marker — `can_undo()` is the only signal available that the user
+changed anything. Adding a real dirty flag means threading a save-point
+through the command stack, which is a change to `knx-core`'s public surface
+and belongs to its own slice.
+
+**Impact.** A caller who saved and then asks for a new project gets a refusal
+it did not deserve, and has to repeat the request with `discardChanges`. The
+error message says exactly that. The failure direction is deliberate:
+CLAUDE.md ranks data integrity above convenience, and the opposite mistake —
+silently discarding unsaved work — is unrecoverable.
+
+**Lifted when.** `CommandStack` records the position last saved, and
+`new_project_impl` compares against it instead of calling `can_undo()`.

@@ -161,6 +161,7 @@ export default function BusComposeForm({
   return (
     <div className="bus-compose-form">
       <h3>{t("busCompose.heading")}</h3>
+      <p className="bus-compose-live-action">{t("busCompose.liveAction")}</p>
       {!projectOpen && <p className="bus-compose-hint">{t("busCompose.noProjectHint")}</p>}
       {sessionClosed && (
         <p className="bus-compose-hint bus-compose-closed-hint">

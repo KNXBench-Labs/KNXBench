@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { useTranslate } from "./i18n";
+import Overlay from "./Overlay";
 
 interface Entry {
   name: string;
@@ -57,26 +58,26 @@ function Modal(props: {
   }, [dir]);
 
   return (
-    <div className="fs-picker-overlay">
-      <div className="fs-picker">
+    <Overlay className="fs-picker" label={mode === "open" ? t("fsPicker.open") : t("fsPicker.saveAs")} onClose={() => onResolve(null)}>
         <h3>
           {mode === "open" ? t("fsPicker.open") : t("fsPicker.saveAs")} — /{dir}
         </h3>
         {error && <p className="field-error">{error}</p>}
         <ul className="fs-picker-list">
-          {dir && <li onClick={() => setDir(dir.split("/").slice(0, -1).join("/"))}>..</li>}
+          {dir && <li><button onClick={() => setDir(dir.split("/").slice(0, -1).join("/"))}>..</button></li>}
           {entries
             .filter((e) => e.is_dir || mode === "save" || matchesFilter(e.name, filters))
             .map((e) => (
               <li
-                key={e.name}
-                onClick={() => {
+                key={e.name}>
+                <button onClick={() => {
                   if (e.is_dir) setDir(dir ? `${dir}/${e.name}` : e.name);
                   else if (mode === "open") onResolve(dir ? `${dir}/${e.name}` : e.name);
                   else setName(e.name);
                 }}
               >
-                {e.is_dir ? "\u{1F4C1}" : "\u{1F4C4}"} {e.name}
+                {e.name}{e.is_dir ? "/" : ""}
+                </button>
               </li>
             ))}
         </ul>
@@ -89,7 +90,7 @@ function Modal(props: {
               {t("fsPicker.upload")}
               <input
                 type="file"
-                style={{ display: "none" }}
+                className="fs-picker-upload-input"
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
@@ -112,8 +113,7 @@ function Modal(props: {
           )}
           <button onClick={() => onResolve(null)}>{t("fsPicker.cancel")}</button>
         </div>
-      </div>
-    </div>
+    </Overlay>
   );
 }
 

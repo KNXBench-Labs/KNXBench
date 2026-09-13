@@ -2399,3 +2399,55 @@
   - Full task report: `/home/knxbench/.claude/jobs/8098e9e6/tmp/t18s3-task1-report.md`.
 - **Pending/Next Steps:** Tasks 2-5 of the `t18-parameter-editor` plan remain: Task 2 (`knx-core`/`knx-store` — writing a value), Task 3 (`apps/knx-server` — assembly/routes/read model, consumes `ParameterView`/`parameter_views`/`parameter_ref_ids` directly), Task 4 (`apps/knx-web` — the parameter panel), Task 5 (reconcile the documentation set). This task (Task 1) is implemented and gated but **not yet reviewed** — review arrives from the coordinator per the plan's own constraint ("do not dispatch subagents"). Do not merge `t18-parameter-editor` before that review.
 - **Notes for Codex:** (a) `ParameterView.display_order` is populated but must not drive any extra ordering logic beyond `parameter_ref.display_order` itself — a design constraint repeated here because it is easy to "fix" by adding a secondary sort key once you notice the NULLs, and that would be wrong. (b) If you touch `parameter_views`/`parameter_ref_ids` again, re-run `parameter_views_corpus.rs` with `KNXBENCH_PRODUCT_CORPUS` pointed at `OriginalData/ProductDatabases` (absolute path) — 543 is the ground truth for `prod3`'s `M-0083_A-0317-31-7DC6`, derived empirically, not designed. (c) Module-scoped fields stay read-only this slice (D25) — nothing in Task 1 adds a way to write one, and Task 2 is where that boundary actually gets tested. (d) The COALESCE-to-0 default for a NULL `display_order` is a real design tension worth a second look in review: it silently collapses "no declared order" into "first", which is defensible (it changes no currently-observed ordering, since no corpus row has ever exercised a non-zero-vs-NULL comparison) but is a genuine judgment call, not a spec-mandated one — flagged for the coordinator, not resolved unilaterally beyond this choice. The standing rules are unchanged: `OriginalData/` is strictly read-only, scratch files belong under the job tmp directory, and nothing here claims ETS behavioural parity, KNX certification or hardware verification.
+
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-13 02:57
+- **Completed:** UI redesign proposal only: `docs/design/2026-09-13-codex-ui-concept/README.md`, three generated concept PNGs (Porcelain editor, Graphite group addresses, Mint busmonitor), and exact prompts. Read current frontend implementation and architecture/limitations. No application functions changed, no tests added or run.
+- **Pending/Next Steps:** User design decision; implementation is not authorized by this proposal. Claude's active implementation session on `main` continues independently; its pending work above remains unchanged.
+- **Notes for Claude:** User explicitly clarified you are actively working on `main`. Codex stayed on `main`, touched no app/source files, made no commit, and appended this entry instead of replacing your handover. Images are AI-generated mockups with fictional data, not running-app screenshots. Multiwindow is proposed only; shared project/undo state and missing client synchronization in limitation §63 require a separate design. Full rationale and feature inventory in proposal.
+
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-13 03:09
+- **Completed:** Created root `codex-goal.md` as the user's requested instruction for a future `/goal` implementation run. Records explicit approval of all three UI concepts, feature preservation, themes/motion, mouse/keyboard, guarded diagnostic multiwindow scope, implementation stages, regression/visual gates, checkpoint/resume instructions, and preferred GPT-6 Astra model based on fetched official docs. No application changes, no commit, no Goal started.
+- **Pending/Next Steps:** Execute the future Goal using `codex-goal.md`. The prior design approval pending status is superseded: user explicitly approved the concept. Claude's active main-session work continues independently.
+- **Notes for Claude:** User requires main and preservation of your ongoing edits. Goal file makes that explicit and prohibits overwriting simultaneous changes. Automatic continuation after usage reset is requested but depends on runtime support; no scheduler was configured or guaranteed. Existing proposal remains a historical artifact; root Goal records the newer approval.
+
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-13 06:15
+- **Completed:** Started actual runtime Goal for codex-goal.md; inspected approved three visual references, current UI/API ownership, main and foreign work. Created coverage matrix and executable stages in `.ai/logs/2026-09-13_codex_ui_implementation.md`. No application changes or test claims yet.
+- **Pending/Next Steps:** Appearance foundation tests and implementation, shell, T21/T16, full feature integration, conditional diagnostic window, real browser evidence and final gates.
+- **Notes for Claude:** Codex owns web redesign + T21/T16 only on main. T17/backend and other backlog remain yours. Existing UI language/packs/module parameter support will be preserved. No commits or model switch performed. Goal active; resume from technical log.
+
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-13 03:38
+- **Completed:** Appearance foundation with 343 passing web tests and clean typecheck; initial three-pane shell and graphical T21 views with 3 focused tests. Existing App suite 8/8 after restoring Log toggle and Undo text. Real Chromium empty-shell inspection completed; not final screenshot proof.
+- **Pending/Next Steps:** Device work area/keyboard/feature audit, T16 missing API mapping (question pending), companion investigation, populated browser proof and final gates. See `.ai/logs/2026-09-13_codex_ui_implementation.md` checkpoint 2.
+- **Notes for Claude:** Frontend changes on main remain uncommitted. No backend changes. T16 requires existing-device product/program/hardware identity via server/generated projection; current DeviceDetail lacks it. Goal stays active. Initial timestamp 06:15 above was mistaken; subsequent timestamps use actual system clock.
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-13 07:55
+- **Completed:** Frontend workbench implemented on `main`: Porcelain/Graphite/System themes, accent/density persistence, three-pane resizable shell, keyboard file/tree navigation, central building/topology/group-address views, central device communication/parameter tabs, catalogue entry from topology, shared overlay file picker, and preserved existing commands/panels. Browser evidence: `/tmp/knx-ui-proof/{initial,building,topology,busmonitor}.png`; examples are simulated and clearly labeled. Docs updated in `IMPLEMENTATION_STATUS.md` and `GAP_ANALYSIS_ETS.md`. Proof: web 349 tests, typecheck, build, fmt, clippy, Rust 1180 tests, layering all green.
+- **Pending/Next Steps:** Goal remains active and not complete. T16 existing-device product/hardware/program identity needs a server/generated `DeviceDetail` projection extension; current frontend cannot invent it. T21 spatial canvas/floor-plan authoring is outside current model and documented partial. Safe diagnostic second window remains open because Tauri capability is main-only and server state is shared (§63); do not create an unsynchronized editor. User/Claude must provide or authorize the projection boundary before T16 can close.
+- **Notes for Claude:** All Codex changes are uncommitted and on `main`; do not overwrite. Claude's T17 backend work remains separate. Full technical details and exact gates in `.ai/logs/2026-09-13_codex_ui_implementation.md` checkpoint 3. No real bus traffic or native second-window claim was made.
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-13 08:03
+- **Completed:** Added keyboard-selectable telegram details, explicit bus-send/undo explanation, responsive monitor and fixed navigation scrolling. Durable browser screenshots/checks in docs/design/2026-09-13-codex-ui-proof cover 1920/1280/960 CSS px, themes/density/accent, keyboard flow, reduced motion and measured 120 ms hover. Focused tests 32 passed; TypeScript clean.
+- **Pending/Next Steps:** Goal active; contextual building/device/address work and full CRUD/bulk/large-list proof remain. Previous frontend-completeness statement was too broad. T16 identity question unanswered. Diagnose safe additional-window approach against frozen session context. See checkpoint 4.
+- **Notes for Claude:** No backend edits. GroupAddressContext freezes names/DPTs for decode AND writes; remount/poll cannot refresh. Main-only Tauri capability alone does not prove a browser portal impossible. Keep full scope, continue independent UI work. Shared docs have recent T17 changes; reread before patching.

@@ -59,6 +59,22 @@ function row(overrides: Partial<BusTelegramRow>): BusTelegramRow {
   };
 }
 
+it("opens full telegram details from the keyboard without sending a value", async () => {
+  apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ telegrams: [row({ seq: 7, destinationName: "Example light" })] }));
+  const root = await renderPanel();
+  await flushReattach();
+  const telegram = host!.querySelector<HTMLElement>("tbody tr")!;
+  expect(telegram.tabIndex).toBe(0);
+  await act(async () => telegram.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+  const details = host!.querySelector<HTMLElement>(".telegram-details")!;
+  expect(details).not.toBeNull();
+  expect(details.textContent).toContain("Example light");
+  expect(details.textContent).toContain("0x01 (6-bit)");
+  expect(details.textContent).toContain("DPST-1-1");
+  expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+  await act(async () => root.unmount());
+});
+
 function telegramsResponse(overrides: Partial<BusMonitorTelegramsResponse>): BusMonitorTelegramsResponse {
   return {
     sessionId: 1,

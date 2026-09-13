@@ -341,7 +341,25 @@ instead of the bare `_ => {}` it fell into before, so an ingest report shows
 `Options`, `LoadProcedures`, each `LdCtrl*` variant, `AddressTable`,
 `AssociationTable` and the rest of the load-procedure grammar by name and
 count — the *reporting* half of this gap is closed, the *storage* half is
-not **[V]**. (The companion `bool_flag` defect this spike found — only
+not **[V]**. Two wrapper elements in the same tree joined that report on the
+same date, after the first attempt at the fix allowlisted them into silence
+instead: `ComObjectTable` carries the com-object table's memory placement
+(`@CodeSegment` and `@Offset`, on 279 of the 336 application-program files
+swept on this machine) and `ModuleDef` carries `@Id`/`@Name` (91 files)
+**[V]**. `@CodeSegment` is read for `Parameter`'s `Memory` and nowhere else,
+and `ModuleDef/@Name` is stored by nothing at all — `@Id` is at least
+recovered by the separate `Dynamic` pass as `dynamic_node.module_def_id` —
+so all four are now `ingest_unknown` attribute rows: parsed, reported, and
+not stored. Two more attributes stay out of that report on purpose and are
+named here instead, so they are recorded somewhere: `KNX/@ToolVersion` and
+`KNX/@CreatedBy` (their sibling `@xmlns` *is* read, by `package.rs`, for the
+schema version), and `TranslationUnit/@RefId` (all 336 files) plus
+`TranslationUnit/@Version` (39) **[V]**. Those elements are the document's
+own spine, deliberately kept out of the unknown report so an ingest does not
+describe the parser walking past its own ancestors, and their attributes ride
+along in that exemption. Everything unstored survives whole as bytes in
+`source_file` regardless (ADR-0011). (The companion `bool_flag` defect this
+spike found — only
 `"1"`/`"0"` were accepted, so schema-20/21 `true`/`false` landed as `NULL`,
 measured across all six ingested programs — was fixed on 2026-09-13 and is no
 longer outstanding **[V]**.) Third, hardware. Nothing in this update has been

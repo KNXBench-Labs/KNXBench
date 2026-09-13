@@ -7,7 +7,7 @@
 // import, a button or a start call, it just stops being true. So two of
 // the three are asserted against the module's own source text, and the
 // rest against its behaviour at runtime.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { act } from "react";
@@ -41,7 +41,70 @@ import DiagnosticsCompanion from "./DiagnosticsCompanion";
 // replaces the global `URL`, and `readFileSync` rejects the result of that
 // constructor with "The URL must be of scheme file". Same idiom as
 // `diagnosticShell.test.ts`, for the same reason.
-const SOURCE = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "DiagnosticsCompanion.tsx"), "utf8");
+const SRC_DIR = dirname(fileURLToPath(import.meta.url));
+const SOURCE = readFileSync(join(SRC_DIR, "DiagnosticsCompanion.tsx"), "utf8");
+
+/// Resolves a relative import specifier the way Vite does for this source
+/// tree — extensionless, `.ts`/`.tsx`, or a directory index. Returns a
+/// path relative to `src/`, so the pinned list above reads as module names
+/// rather than as this machine's directory layout. Linux-first, like the
+/// rest of the product: the separator in the pinned names is `/`.
+function resolveModule(fromRelative: string, specifier: string): string | null {
+  const base = join(dirname(fromRelative), specifier);
+  for (const extension of [".ts", ".tsx", "/index.ts", "/index.tsx"]) {
+    if (existsSync(join(SRC_DIR, base + extension))) return base + extension;
+  }
+  return null; // A package import, or a `.json`/asset — neither carries our code.
+}
+
+/// Breadth-first over relative imports, skipping `import type` because a
+/// type import is erased before anything can run and so cannot reach an
+/// endpoint. Returns module name → source text.
+function valueImportGraph(entry: string): Map<string, string> {
+  const graph = new Map<string, string>();
+  const queue = [entry];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (graph.has(current)) continue;
+    const source = readFileSync(join(SRC_DIR, current), "utf8");
+    graph.set(current, source);
+    for (const match of source.matchAll(/^import\s+(type\s+)?[^;]*?from\s+"(\.[^"]+)";$/gm)) {
+      if (match[1] !== undefined) continue;
+      const resolved = resolveModule(current, match[2]);
+      if (resolved !== null && !graph.has(resolved)) queue.push(resolved);
+    }
+  }
+  return graph;
+}
+
+/// Every `api.x(` call site in the graph. `api.ts` itself is excluded —
+/// inside it, `api.` is prose in comments, not a call into the module.
+/// Matched across a line break too: `LogPanel` writes `api` and
+/// `.getSessionLog()` on separate lines, and a single-line regex silently
+/// misses it.
+function apiCallsIn(graph: Map<string, string>): string[] {
+  const calls = new Set<string>();
+  for (const [module, source] of graph) {
+    if (module === "api.ts") continue;
+    for (const match of source.matchAll(/\bapi\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)) {
+      calls.add(match[1]);
+    }
+  }
+  return [...calls];
+}
+
+/// Every literal `fetch` target in the graph given a method other than the
+/// default `GET`. Deliberately not restricted to `/api/` — a mutation
+/// posted anywhere should show up here.
+function mutatingFetchesIn(graph: Map<string, string>): string[] {
+  const targets = new Set<string>();
+  for (const source of graph.values()) {
+    for (const match of source.matchAll(/fetch\(\s*["`]([^"`]+)["`]\s*,\s*\{([^}]*)\}/g)) {
+      if (/method\s*:\s*["'](?!GET)/.test(match[2])) targets.add(match[1]);
+    }
+  }
+  return [...targets];
+}
 
 let host: HTMLDivElement | undefined;
 
@@ -49,6 +112,22 @@ function notFoundError(): Error & { status: number } {
   const error = new Error("no bus session") as Error & { status: number };
   error.status = 404;
   return error;
+}
+
+/// The `api` exports the mock recorded at least one call to. Reading the
+/// mock rather than naming suspects is the point: the question is "what
+/// did it touch", not "did it touch the things we thought of".
+function calledApiExports(): string[] {
+  return Object.entries(apiMock)
+    .filter(([, fn]) => fn.mock.calls.length > 0)
+    .map(([name]) => name)
+    .sort();
+}
+
+function logTab(): Element {
+  return Array.from(host!.querySelectorAll(".companion-tabs button")).find(
+    (b) => b.textContent === "Log",
+  )!;
 }
 
 async function renderCompanion() {
@@ -74,10 +153,15 @@ afterEach(() => {
 });
 
 describe("one editing workspace", () => {
-  // The import list is the guarantee. Anything reachable from this module
-  // is reachable from the companion window, so the check is on what the
-  // module is allowed to import, not on what today's render happens to
-  // show.
+  // This file's import list is a tripwire, not a guarantee — the
+  // distinction the previous version of this comment got wrong. A depth-1
+  // list says what *this* module names; it says nothing about what those
+  // modules in turn reach, and in fact `./diagnosticsWindow` reaches
+  // `./filePicker` reaches `./FsPicker`, which `POST`s to
+  // `/api/fs/upload`. What the tripwire is good for is catching an editing
+  // import added *here*, which is the likely future edit.
+  // "the companion reaches no project mutation" is asserted separately,
+  // over the whole graph, further down.
   it("imports only the monitor, the log and their own support modules", () => {
     const imports = Array.from(SOURCE.matchAll(/^import[^;]*?from "([^"]+)";$/gm)).map((m) => m[1]);
     expect(imports.sort()).toEqual([
@@ -105,6 +189,68 @@ describe("one editing workspace", () => {
     }
   });
 
+  // The honest version of the property the depth-1 list only gestured at.
+  // Walks the transitive *value* import graph (`import type` carries no
+  // runtime code, so it is skipped) and pins three facts about it: which
+  // modules are in it, which `api` exports it calls, and which raw
+  // `fetch`es in it are not reads. Pinned rather than pattern-matched,
+  // because every entry below is a decision someone made, and a new one
+  // should fail here and be argued about rather than slip in under a
+  // regex that happened to allow it.
+  it("reaches no project mutation anywhere in its transitive import graph", () => {
+    const graph = valueImportGraph("DiagnosticsCompanion.tsx");
+
+    // Fifteen modules. `filePicker` and `FsPicker` are the uncomfortable
+    // two: they are here because `diagnosticsWindow` imports `isTauri`,
+    // which is `typeof window !== "undefined" && "__TAURI__" in window`
+    // and nothing else. The picker entry points that reach `FsPicker`'s
+    // upload are `pickOpenPath`/`pickSavePath`, which this window never
+    // calls.
+    expect([...graph.keys()].sort()).toEqual([
+      "BusComposeForm.tsx",
+      "BusMonitorPanel.tsx",
+      "DiagnosticsCompanion.tsx",
+      "FsPicker.tsx",
+      "LogPanel.tsx",
+      "Overlay.tsx",
+      "api.ts",
+      "busContext.ts",
+      "diagnosticsWindow.ts",
+      "filePicker.ts",
+      "i18n.ts",
+      "languagePack.ts",
+      "messages/de.ts",
+      "messages/en.ts",
+      "uiLanguage.ts",
+    ]);
+
+    // Every `api.x(...)` the graph performs. Three of these write, and all
+    // three write to the *bus*, never to the project, and each needs a
+    // deliberate click. No undo, no redo, no save, no import, no rename,
+    // no parameter or flag write appears — out of 52 exported functions,
+    // 43 of which issue a mutating request:
+    //   grep -cE '^export (async )?function ' api.ts
+    //   grep -cE 'method: "(POST|PUT|DELETE|PATCH)"' api.ts
+    expect(apiCallsIn(graph).sort()).toEqual([
+      "errorMessage",
+      "errorStatus",
+      "getSessionLog",
+      "pollBusTelegrams",
+      "startBusMonitor",
+      "stopBusMonitor",
+      "writeBusValue",
+    ]);
+
+    // `api.ts`'s own uploader and `FsPicker`'s. Both are project-mutating
+    // and both are unreachable from this window: the first is the body of
+    // `installCatalog`, absent from the list above; the second is reached
+    // only through the picker paths named earlier.
+    expect(mutatingFetchesIn(graph).sort()).toEqual([
+      "/api/catalog/install",
+      "/api/fs/upload",
+    ]);
+  });
+
   it("renders the monitor, the log tab and the read-only notice, and no editor chrome", async () => {
     await renderCompanion();
 
@@ -117,11 +263,8 @@ describe("one editing workspace", () => {
 
   it("switches to the session log without ever offering a save or an import", async () => {
     await renderCompanion();
-    const logTab = Array.from(host!.querySelectorAll(".companion-tabs button")).find(
-      (b) => b.textContent === "Log",
-    )!;
     await act(async () => {
-      logTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      logTab().dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(host!.querySelector(".log-panel")).not.toBeNull();
@@ -150,15 +293,33 @@ describe("no project mutation and no project undo", () => {
     expect(apiMock.redo).not.toHaveBeenCalled();
   });
 
-  it("calls no mutating endpoint while it lives, only the two read paths", async () => {
+  // Stated as a complement, not as named absences: the assertion is on the
+  // set of `api` exports actually called, so a fourth mutator added to the
+  // module and to the mock fails here instead of slipping past a list of
+  // three `not.toHaveBeenCalled()`s that nobody extended.
+  //
+  // Left alone, the set is one entry. `LogPanel` — and so the log read —
+  // mounts only once the user picks the Log tab, which the second case
+  // below does; the monitor is the tab the window opens on.
+  it("calls only the telegram read over an untouched lifecycle", async () => {
     const root = await renderCompanion();
     await act(async () => {
       root.unmount();
     });
 
-    expect(apiMock.undo).not.toHaveBeenCalled();
-    expect(apiMock.redo).not.toHaveBeenCalled();
-    expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+    expect(calledApiExports()).toEqual(["pollBusTelegrams"]);
+  });
+
+  it("adds the log read and still nothing else once the log tab is opened", async () => {
+    const root = await renderCompanion();
+    await act(async () => {
+      logTab().dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      root.unmount();
+    });
+
+    expect(calledApiExports()).toEqual(["getSessionLog", "pollBusTelegrams"]);
   });
 });
 

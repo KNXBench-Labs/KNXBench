@@ -1214,11 +1214,17 @@ fn run_products_ingest(args: &[String]) -> ExitCode {
         return match knx_productdb::install_package(&conn, file, &bytes) {
             Ok(report) => {
                 println!(
-                    "package installed: scheme {}, {} member(s), {} unknown construct(s), {} conflict(s){}",
+                    "package installed: scheme {}, {} member(s), {} unknown construct(s), {} conflict(s), \
+                     {} translation(s) captured (program {}, catalog {}, hardware {}, master {}){}",
                     report.scheme,
                     report.members.len(),
                     report.unknown,
                     report.conflicts.len(),
+                    report.translations.total(),
+                    report.translations.program,
+                    report.translations.catalog,
+                    report.translations.hardware,
+                    report.translations.master,
                     if report.skipped { " (already known)" } else { "" },
                 );
                 ExitCode::SUCCESS

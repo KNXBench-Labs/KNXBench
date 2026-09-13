@@ -9,7 +9,7 @@ use quick_xml::name::ResolveResult;
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::ingest::{classify, ingest_file_in_transaction};
-use crate::report::{insert_unknown, IdConflict, UnknownCollector};
+use crate::report::{insert_unknown, IdConflict, TranslationCounts, UnknownCollector};
 use crate::{sha256_hex, FileKind, IngestOutcome, ProductDbError};
 
 const MAX_MEMBER_SIZE: u64 = 64 * 1024 * 1024;
@@ -96,6 +96,13 @@ pub struct InstallReport {
     pub members: Vec<PackageMember>,
     pub unknown: usize,
     pub conflicts: Vec<IdConflict>,
+    /// Translation rows this package actually contributed, by scope (R3).
+    /// Measured from what every member's ingest pass wrote, never predicted
+    /// from the XML. A package retried from the `skipped` branch reports the
+    /// counts recorded at its original install — `0` in every field for a
+    /// package installed before the columns existed (see
+    /// `migrate_v4_to_v5`'s doc comment).
+    pub translations: TranslationCounts,
 }
 
 fn zip_error(error: impl fmt::Display) -> PackageError {
@@ -358,14 +365,27 @@ pub fn install_package(
     }
     let sha256 = sha256_hex(bytes);
     let tx = conn.unchecked_transaction().map_err(ProductDbError::from)?;
-    let prior: Option<(u32, usize)> = tx
+    let prior: Option<(u32, usize, TranslationCounts)> = tx
         .query_row(
-            "SELECT scheme, unknown_count FROM package WHERE sha256 = ?1",
+            "SELECT scheme, unknown_count, translation_program_count, translation_catalog_count,
+                    translation_hardware_count, translation_master_count
+             FROM package WHERE sha256 = ?1",
             [&sha256],
-            |r| Ok((r.get(0)?, r.get::<_, i64>(1)? as usize)),
+            |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get::<_, i64>(1)? as usize,
+                    TranslationCounts {
+                        program: r.get::<_, i64>(2)? as usize,
+                        catalog: r.get::<_, i64>(3)? as usize,
+                        hardware: r.get::<_, i64>(4)? as usize,
+                        master: r.get::<_, i64>(5)? as usize,
+                    },
+                ))
+            },
         )
         .optional()?;
-    if let Some((scheme, unknown)) = prior {
+    if let Some((scheme, unknown, translations)) = prior {
         let members = tx.prepare("SELECT path, role, source_sha256, size FROM package_member WHERE package_sha256 = ?1 ORDER BY ordinal")?.query_map([&sha256], |r| Ok(PackageMember { path: r.get(0)?, role: r.get(1)?, sha256: r.get(2)?, size: r.get::<_, i64>(3)? as u64 }))?.collect::<Result<Vec<_>, _>>()?;
         let conflicts = package_conflicts(&tx, &sha256)?;
         tx.commit().map_err(ProductDbError::from)?;
@@ -376,6 +396,7 @@ pub fn install_package(
             members,
             unknown,
             conflicts,
+            translations,
         });
     }
     preflight_zip(bytes)?;
@@ -468,6 +489,7 @@ pub fn install_package(
         members: Vec::new(),
         unknown: 0,
         conflicts: Vec::new(),
+        translations: TranslationCounts::default(),
     };
     for (ordinal, (path, data)) in extracted.into_iter().enumerate() {
         if path.ends_with(".xml") {
@@ -514,16 +536,21 @@ pub fn install_package(
             }
         };
         if let IngestOutcome::Ingested {
-            unknown, conflicts, ..
+            unknown,
+            conflicts,
+            translations,
+            ..
         } = outcome
         {
             report.unknown += unknown;
             report.conflicts.extend(conflicts);
+            report.translations.add(translations);
         }
         if role == "Master" {
-            let unknown = crate::ingest_master_data(&tx, &data)?;
-            insert_unknown(&tx, &member_sha, &unknown)?;
-            report.unknown += unknown.len();
+            let master = crate::ingest_master_data(&tx, &data)?;
+            insert_unknown(&tx, &member_sha, &master.unknown)?;
+            report.unknown += master.unknown.len();
+            report.translations.master += master.translations;
         } else if role == "Unrecognized" || role == "Baggages" {
             let mut unknown = UnknownCollector::default();
             unknown.element("/Package", &path);
@@ -540,8 +567,18 @@ pub fn install_package(
         });
     }
     tx.execute(
-        "UPDATE package SET unknown_count = ?2 WHERE sha256 = ?1",
-        params![report.sha256, report.unknown as i64],
+        "UPDATE package SET unknown_count = ?2, translation_program_count = ?3,
+                translation_catalog_count = ?4, translation_hardware_count = ?5,
+                translation_master_count = ?6
+         WHERE sha256 = ?1",
+        params![
+            report.sha256,
+            report.unknown as i64,
+            report.translations.program as i64,
+            report.translations.catalog as i64,
+            report.translations.hardware as i64,
+            report.translations.master as i64,
+        ],
     )?;
     for (ordinal, conflict) in report.conflicts.iter().enumerate() {
         tx.execute(

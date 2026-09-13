@@ -538,7 +538,7 @@ fn migrating_v1_preserves_existing_rows_and_blobs() {
     assert_eq!(
         conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        4
+        knx_productdb::CURRENT_PRODUCTDB_VERSION
     );
     assert_eq!(
         knx_productdb::load_source_file(&conn, &knx_productdb::sha256_hex(HARDWARE))
@@ -602,6 +602,118 @@ fn a_failed_v1_to_v2_migration_rolls_back_its_ddl_and_version() {
             .unwrap()
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        4
+        knx_productdb::CURRENT_PRODUCTDB_VERSION
     );
+}
+
+#[test]
+fn a_package_reports_how_many_translations_it_actually_wrote_by_scope() {
+    // R3: one `Translation` planted in each of the four scopes a package can
+    // carry one in, then the report is checked against what `translation`
+    // actually holds afterwards — not against what the parser merely walked.
+    let master = br#"<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Example"/>
+    </Manufacturers>
+  </MasterData>
+  <Languages>
+    <Language Identifier="de-DE">
+      <TranslationUnit RefId="LOC-1">
+        <TranslationElement RefId="LOC-1">
+          <Translation AttributeName="Text" Text="Uebersetzt"/>
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+    let hardware = br#"<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-0001">
+      <Hardware>
+        <Hardware Id="H-1" Name="Example">
+          <Products><Product Id="P-1" Text="Example"/></Products>
+        </Hardware>
+      </Hardware>
+      <Languages>
+        <Language Identifier="de-DE">
+          <TranslationUnit RefId="H-1">
+            <TranslationElement RefId="H-1">
+              <Translation AttributeName="Text" Text="Beispiel"/>
+            </TranslationElement>
+          </TranslationUnit>
+        </Language>
+      </Languages>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+    let catalog = br#"<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-0001">
+      <Catalog>
+        <CatalogSection Id="M-0001_CG-1" Name="Sensors" Number="1">
+          <CatalogItem Id="M-0001_CI-1" Name="Sensor" Number="1"/>
+        </CatalogSection>
+      </Catalog>
+      <Languages>
+        <Language Identifier="de-DE">
+          <TranslationUnit RefId="M-0001_CI-1">
+            <TranslationElement RefId="M-0001_CI-1">
+              <Translation AttributeName="Name" Text="Sensor DE"/>
+            </TranslationElement>
+          </TranslationUnit>
+        </Language>
+      </Languages>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+    let program = br#"<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-0001">
+      <ApplicationPrograms>
+        <ApplicationProgram Id="A-1" Name="P" ApplicationVersion="22" MaskVersion="MV-0701">
+          <Static>
+            <ComObjectTable>
+              <ComObject Id="A-1_O-0" Number="0" Text="Output" ObjectSize="1 Bit"/>
+            </ComObjectTable>
+          </Static>
+          <Languages>
+            <Language Identifier="de-DE">
+              <TranslationUnit RefId="A-1">
+                <TranslationElement RefId="A-1_O-0">
+                  <Translation AttributeName="Text" Text="Ausgang"/>
+                </TranslationElement>
+              </TranslationUnit>
+            </Language>
+          </Languages>
+        </ApplicationProgram>
+      </ApplicationPrograms>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+    let (_dir, conn) = db();
+    let bytes = archive(&[
+        ("knx_master.xml", master),
+        ("M-0001/Hardware.xml", hardware),
+        ("M-0001/Catalog.xml", catalog),
+        ("M-0001/Program.xml", program),
+    ]);
+    let report = install_package(&conn, "four-scopes.knxprod", &bytes).unwrap();
+
+    assert_eq!(report.translations.master, 1);
+    assert_eq!(report.translations.hardware, 1);
+    assert_eq!(report.translations.catalog, 1);
+    assert_eq!(report.translations.program, 1);
+    assert_eq!(report.translations.total(), 4);
+
+    let actual: i64 = conn
+        .query_row("SELECT count(*) FROM translation", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(actual, 4, "the report must match what was actually written");
+
+    // A retried install reports the counts recorded at the original
+    // install, not zero and not a re-parse.
+    let retry = install_package(&conn, "four-scopes.knxprod", &bytes).unwrap();
+    assert!(retry.skipped);
+    assert_eq!(retry.translations, report.translations);
 }

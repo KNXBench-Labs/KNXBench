@@ -29,6 +29,19 @@
   previously listed as undocumented turned out to be documented and is corrected
   in place: §6.4/§12 item 5, `L_Data_Extended` discovery via
   `PID_MAX_APDU_LENGTH`. Seven genuine gaps remain (§12).
+- **Revision, 2026-09-14 (fix round 2):** ten review findings corrected. The
+  largest is §4.4: the `60h` parity computation **is** documented (RES
+  §4.26.3.1 and §4.26.3.4.1) and is written down here as a toggle, which
+  removes it from the gap list — and removes an accidental protection with it,
+  so the safety carry-through is explicit: `DM_ProgMode_Switch`'s write half
+  stays inside §2.3's mutation API, stays out of phase 3, and **R11 in §13 is
+  now "writing to `60h` at all on a real device"**, not "writing with a guessed
+  parity". Also: §6.2's read-back is this project's requirement and not the
+  Standard's obligation on the client (§13 R6 restated to match), §10.4's
+  `DM_Authorize2_RCo` is profile-scoped and therefore an opt-in extension over
+  MP §3.5.1, §8.2's AN194 rows are split per Interface Object, and §12's gaps
+  carry stable `GAP-T30-nn` identifiers. **Six genuine gaps remain (§12)**,
+  plus one narrowed to a delegation.
 
 ## 1. The rules this document obeys
 
@@ -134,13 +147,23 @@ instruction. Concretely:
 - Broadcast operations are the sharp edge. `A_IndividualAddress_Write` is
   **sent by broadcast** and is accepted by whichever device is in programming
   mode (§4). There is therefore **no address filter that can protect `1.1.220`
-  from a broadcast**. The only protection is procedural, so it is a hard
-  precondition in the code: a broadcast commissioning operation may only be
-  issued after the count of devices in programming mode has been established
-  as exactly one (§4.2), and the individual-address programming flow refuses to
-  run when that count is anything other than one. This is exactly what MP §2.3
-  requires anyway; §2.1 is the reason it is non-negotiable rather than
-  recommended.
+  from a broadcast**. A broadcast commissioning operation may only be issued
+  after the count of devices in programming mode has been established as exactly
+  one (§4.2). This is exactly what MP §2.3 requires anyway; §2.1 is the reason it
+  is non-negotiable rather than recommended.
+- **And that precondition is structural too, by the same trick as the mutation
+  API.** A precondition checked with an `if` is a precondition somebody deletes
+  during a refactor. So the broadcast entry point does not take a device count
+  and does not check one: it takes a **witness value** that is constructible only
+  by the completion of §4.2's counting step, and only when that step completed
+  with a result of exactly one. Zero responders and two-or-more responders both
+  produce a report and no witness. There is consequently no argument the caller
+  can synthesise that means "I checked, it was one" — the witness *is* the check,
+  carrying the count it observed and the moment it observed it, and the broadcast
+  path cannot be typed without one. This is the same construction §2.3 uses for
+  the mutation API's authorisation value, applied to the one hazard an address
+  filter cannot reach, and it is what §14 item 11's last clause tests. Doing it
+  now costs one type; retrofitting it in phase 2 costs every call site.
 
 ### 2.2 R-SAFE-2 — the approved address range
 
@@ -223,9 +246,17 @@ how you say which object you mean. RESEARCH §8.7 records the correction.
 `PID_RUN_STATE_CONTROL` (PID 6) carries the application's run state
 (Halted / Running / Ready / Terminated / Starting / Shutting down) with events
 NOP / Restart / Stop. It is **not** part of the download sequence in CP §3.5.2
-and this specification does not use it. It is named here only so an implementer
-does not mistake it for the LSM: `PID_LOAD_STATE_CONTROL` says whether the data
-is valid, `PID_RUN_STATE_CONTROL` says whether the program is running.
+and this specification neither reads nor writes it. It is named here so an
+implementer does not mistake it for the LSM: `PID_LOAD_STATE_CONTROL` says
+whether the data is valid, `PID_RUN_STATE_CONTROL` says whether the program is
+running.
+
+Out of scope is not the same as irrelevant. One clause about the RSM is load-
+bearing for §9.3, and is cited there: **[D]** RES §4.24.2.3.4 *"The executable
+part can only start if the Load State is Loaded."* That is what turns "this part
+is not `Loaded`" into "this device's application is not running", which is the
+severity behind §9.3 and behind R8. The clause is cited for its consequence; the
+Run State Machine itself stays out of phase 2.
 
 ### 3.4 Realisation Types, and which ones are specified
 
@@ -236,9 +267,13 @@ is valid, `PID_RUN_STATE_CONTROL` says whether the program is running.
   claim to support it. If a device turns out to need it, that is a finding for
   phase 3, not something to infer.
 - **Programming Mode Realisation Type 2** — the memory-mapped form at address
-  `60h`, bit 0, with a parity bit 7 (RES §4.26, Figure 66). **[D]** MP §3.13.2
-  NOTE: *"This means that the state of the Programming Mode is located at
-  memory address 60h."* This one **is** specified and §4.4 uses it.
+  `60h`, bit 0, with a parity bit 7. **[D]** MP §3.13.2 NOTE: *"This means that
+  the state of the Programming Mode is located at memory address 60h."*, and
+  **[D]** RES §4.26.3.2: *"The location of curr_prog_mode shall be the memory
+  address 0060h."* The layout is Figure 66, but the layout is also stated in the
+  prose of RES §4.26.3.1, which is what §4.4 quotes — the figure is corroboration
+  and not the source. This Realisation Type **is** specified, including the
+  client-side parity operation, and §4.4 uses it read-only.
 - **Mask-version-specific LSM access** — MP §3.31.2's `_RCo_Mem` variant is
   restricted to mask `070nh` and uses fixed memory addresses (load control at
   `0104h`, load states at `B6EAh`/`B6EBh`/`B6ECh`/`B6EDh`). Out of scope for
@@ -338,18 +373,83 @@ octet at memory address `60h`: `A_Memory_Read(60h, 1)`, then
 `A_Memory_Write(60h, 1, DD)` where **[D]** *"In the data (DD) bit 0 has to be
 set according to the mode. The parity (bit 7) has to be calculated."*
 
+MP §3.13.2's *"has to be calculated"* is not the whole story, and an earlier
+version of this document wrongly recorded the parity rule as undocumented. RES
+§4.26.3.1 specifies the client-side operation completely, and it is a toggle
+rather than a computation:
+
+> **[D]** *"The variable p_parity shall be the parity bit of the complete octet.
+> The don't care bits 1 to 6 may have some essential importance for the system
+> stack and so the complete range bit 0 to bit 6 may be parity controlled. With
+> this also the variable prog_mode shall be covered by the parity check of this
+> systems. Even if the value of the don't care bits 1 to 6 is not evaluated, the
+> state of the variable p_parity shall always be changed if the variable
+> prog_mode is changed. This means that if the value of prog_mode is changed
+> from "0" to "1" or from "1" to "0" then the variable p_parity shall be
+> inverted."*
+
+And RES §4.26.3.4.1, which states the client's obligation in one sentence:
+**[D]** *"The Management Client shall set the Programming Mode via read – modify
+– write of the variable curr_prog_mode. The variable prog_mode shall be set to
+the value "1" if Programming Mode shall be activated. The variable prog_mode
+shall be set to the value "0" if Programming Mode shall be deactivated. The
+variable p_parity shall be inverted, if the value of prog_mode is changed."*
+
+So the derivation is:
+
+```text
+old = A_Memory_Read(0060h, 1)               # one octet, curr_prog_mode
+if bit0(old) == desired_mode: done          # RES §4.26.3.4.2/§4.26.3.4.3 guard
+new = old XOR 0b1000_0001                   # invert bit 0 and invert bit 7
+A_Memory_Write(0060h, 1, new)               # bits 1..6 carried through unchanged
+```
+
+Three properties of that derivation, each of which is the reason it is safe to
+write down:
+
+- **Bits 1–6 are preserved, not cleared.** **[D]** RES §4.26.3.1: *"Bit 1 to bit
+  6 are the shared bits. They shall be don't care in context of Programming
+  Mode. Even if the whole octet is read and written back they shall not be
+  changed when activating and deactivating the Programming Mode."* They belong
+  to whatever else the mask puts at `0060h`, so a read-modify-write that masks
+  them off is a corruption, not a simplification.
+- **Odd versus even never has to be decided.** The rule is *invert*, not
+  *recompute*, and it is stated as a client obligation. Whether the device's
+  stack checks for odd or for even parity is therefore a residual note rather
+  than a blocker: starting from a valid octet — **[D]** RES §4.26.3.3 footnote
+  95: *"It is assumed, that a proper running system has always a valid setting
+  of the variable p_parity."* — a single inversion of bit 0 and bit 7 preserves
+  whichever convention the device started in. The convention itself is still not
+  stated anywhere this document searched, and does not need to be.
+- **The write is skipped when the mode already matches.** RES §4.26.3.4.2 and
+  §4.26.3.4.3 both wrap `DMP_ProgModeSwitch_RCo` in `if prog_mode = 0` /
+  `if prog_mode = 1`. A no-op toggle would invert the parity bit against an
+  unchanged `prog_mode`, which is precisely the invalid octet §4.26.3.3 warns
+  about: **[D]** *"The reaction of an invalid parity value is manufacturer
+  specific"*, footnote 96 *"Typically the system is restarted if p_parity is
+  invalid."*
+
+**None of that makes the write safe to perform, and the policy does not change.**
 This is a **write to a live device at a fixed memory address**, addressed by
-individual address rather than by button press. It is therefore in the mutation
-API (§2.3), it is out of scope for phase 3's read-only verification, and the
-read half (`A_Memory_Read(60h, 1)`) is the only part phase 3 may exercise — and
-only inside `1.1.24`–`1.1.32`. The parity computation is specified as a
-requirement but the parity **rule** (which bits it covers, odd or even) is
-**undocumented in the two knowledge bases as searched for this document**; RES
-§4.26's Figure 66 shows the layout (`prog_mode` bit 0, `p_parity` bit 7) but a
-figure is not an algorithm, and figures are the part of the corpus that extracts
-worst. Phase 2 must not guess it: read the octet, and if the intended write
-cannot be derived without inventing the parity rule, the operation fails with
-"undocumented" rather than writing a byte that might be wrong.
+individual address rather than by button press, at an address that on some masks
+shares an octet with system-stack state, where an octet the device considers
+invalid may restart it. So:
+
+- `DM_ProgMode_Switch`'s write half stays **inside the mutation API** (§2.3) and
+  is therefore unreachable without an explicit authorisation value naming the
+  concrete target. It is listed as a non-goal in §15 and stays there.
+- It is **out of scope for phase 3** entirely. The read half
+  (`A_Memory_Read(60h, 1)`) is the only part phase 3 may exercise, and only
+  inside `1.1.24`–`1.1.32`.
+- Phase 2 implements the toggle **against the simulator only**, so that the
+  derivation above is exercised and the bit-preservation property is tested.
+
+The distinction that matters for §12: "do not write `60h`" is now a **project
+risk decision**, not a documentation gap. The Standard tells us how; this project
+declines, because §13's R11 outcome is undocumented and the recovery is a site
+visit. That is a defensible engineering choice and it is recorded as one — a
+refusal we chose is a different object from a refusal the Standard forced on us,
+and §12 no longer counts it among the gaps.
 
 ## 5. The Load State Machine
 
@@ -563,9 +663,34 @@ this specification and one for somebody else:
 ### 6.1 `A_Memory_Read`
 
 **[D]** AL §3.5.3: the service is used *"to read between 1 and 63 octets"* and
-*"memory_address shall specify the 16 bit start address"*. Error handling in
-the same clause: a `number` field of 0 is the failure indication, and the device
-shall ignore the request if `number > Maximum APDU Length – 3`.
+*"memory_address shall specify the 16 bit start address"*.
+
+Error handling, quoted from the same clause, because the read rule and the write
+rule of §6.2 are **not the same rule** and an earlier version of this document
+had the write rule here:
+
+> **[D]** *"If data are to be read from a protected area or from any logical
+> address that is not associated to physical memory then in the
+> A_Memory_Response-PDU the field number shall be zero and there shall be no
+> field data to indicate an error. The same shall apply if only part of the
+> memory to be read is protected or physically existing. In addition, the same
+> shall apply if the value of the parameter number is greater than Maximum APDU
+> Length – 3."*
+
+A failing read therefore **answers**. It answers with `number = 0` and no data
+field, and it answers that way for all four causes: protected, unmapped,
+partially protected, and over-length. That has a direct consequence for the code:
+an over-long `A_Memory_Read` must be handled on the **response** path as a
+parsable negative answer, not on the timeout path. Coding a timeout here — which
+is what the write rule would suggest — turns a 30-millisecond refusal into a
+several-second stall, and worse, reports "device not responding" about a device
+that responded correctly.
+
+The service's own footnote qualifies how much any of this can be relied on:
+**[D]** AL §3.5.3 footnote 16: *"Existing devices may have a different error
+handling."* So `number = 0` is the specified answer, a timeout is a possible real
+one, and the implementation treats both as failure while distinguishing them in
+the report.
 
 16-bit address means this service alone reaches 64 kB. §7.2 covers what happens
 above that.
@@ -575,22 +700,74 @@ above that.
 **[D]** AL §3.5.4: the service is used *"to write between 1 octet and 63
 octets"*. Its confirmation behaviour depends on Verify Mode: *"The service
 shall be a confirmed service if Verify Mode is active, otherwise it shall be an
-acknowledged service."* And, independently of Verify Mode: *"The value of the
-associated memory area shall be explicitly read back after writing to it."*
+acknowledged service."*
 
-The read-back is **required by the Standard**, not a nicety this project is
-adding. Phase 2 implements no write path that lacks it.
+#### The read-back sentence, scoped correctly
 
-Error handling, quoted from the same clause, because each case needs different
-handling in code:
+An earlier version of this document quoted AL §3.5.4's read-back sentence as
+applying *"independently of Verify Mode"* and as a requirement on the client. It
+is neither. The sentence sits inside the active-Verify-Mode paragraph and
+constrains the **device**. Quoted with its surrounding sentences, which is the
+only way the scope is visible:
+
+> **[D]** *"With inactive Verify Mode the remote application process shall not
+> respond. …*
+>
+> *With active Verify Mode the remote application process shall respond to the
+> A_Memory_Write.ind primitive with an A_Memory_Write.res primitive containing
+> the requested number of octets of the associated memory area. **The value of
+> the associated memory area shall be explicitly read back after writing to
+> it.** If the remote application process has a problem, e.g., memory area
+> unreachable or protected or an illegal number of octets are requested, then
+> the parameter number shall be zero and shall contain no data."*
+
+So what the Standard requires is: **with Verify Mode active, the device must read
+its own memory back and return what it read** — which is why `A_Memory_Write.res`
+carries *"data: the octet(s) read back or no data"* rather than an echo of what
+was sent. With Verify Mode inactive the device does not respond at all, and
+nothing in AL §3.5.4 obliges anybody to read anything back.
+
+**[A] Project requirement, and it is this project's and not the Standard's.**
+Phase 2 implements **no write path without a client-side verification read**:
+
+- with Verify Mode active, the `A_Memory_Write.res` payload is compared against
+  the written octets, and a mismatch is an error (which is also what MP §3.16.3's
+  sequence does: *"different or no data received ⇒ error"*);
+- with Verify Mode inactive, an explicit `A_Memory_Read` of the same region
+  follows the write and is compared — this is MP §3.16.2's own shape, whose
+  sequence issues `A_Memory_Read` when `verify = enabled` and otherwise only
+  waits out a *"delay for programming the memory in the device"* (§12's remaining
+  gap).
+
+The conclusion the earlier text reached is right and R6 stands. Its authority is
+different: this is a design rule chosen because R5 and R6 are the worst outcomes
+in §13 and because a device that silently drops a write is indistinguishable from
+one that took it. It is **not** a Standard obligation on the client, and this
+document may not claim it is.
+
+#### Error handling
+
+Quoted from the same clause, because each case needs different handling in code —
+and note that every one of these is *ignore*, which is the opposite of §6.1's
+read rule:
 
 - Target protected or nonexistent: *"the service indication shall be ignored"* —
   so a write to a protected region looks exactly like a lost frame.
-- Partially protected target: *"the complete write operation shall fail"* — no
-  partial writes; there is no "how far did it get" to recover from.
-- The request is ignored if `number > Maximum APDU Length – 3`, or if `number`
-  does not match the count of octets actually received.
-- A failed write under Verify Mode is reported as `number = 0` with no data.
+- Partially protected target: *"If only a part of the addressed memory is
+  protected or does not exist, then the complete write operation shall fail."* —
+  no partial writes; there is no "how far did it get" to recover from.
+- **[D]** *"the remote Application Layer shall ignore the A_Memory_Write.ind if
+  the value of the parameter "number" is greater than Maximum APDU Length – 3"*,
+  and likewise *"if the parameter number is not equal to the number of received
+  data octets."*
+- A failed write under Verify Mode is reported as `number = 0` with no data:
+  **[D]** *"If Verify Mode is active, then in case of a failed write operation
+  the field number of the A_Memory_Response-PDU shall be zero and there shall be
+  no field data to indicate an error."* With Verify Mode inactive there is no
+  response at all, so there is no failure indication either — which is the whole
+  argument for §6.3.
+- Same qualifier as the read: **[D]** AL §3.5.4 footnote 21: *"Existing devices
+  may have a different error-handling."*
 
 ### 6.3 Verify Mode, and its two traps
 
@@ -1029,10 +1206,13 @@ quoted from §1: *"That document contains some initial requirements on the
 contained Resources for Master Reset. These are reviewed in this Application
 Note, and extended to all Resources, so that – if there are any requirements –
 these are clear and the MaC (ETS) can rely on a certain state after a Master
-Reset."* Its tables are indexed by the same Erase Codes as §8.1, in these
-columns: `-` Local Reset to default state, `02h` Reset to default state, `07h`
-Reset to default state without IA, `01h` Confirmed Restart, `none` Basic
-Restart, and Power Cycle.
+Reset."* Its tables have **six** columns, of which only **three** are Erase
+Codes: `-` Local Reset to default state (no Erase Code), `02h` Reset to default
+state, `07h` Reset to default state without IA, `01h` Confirmed Restart, and then
+two columns headed `none` — Basic Restart and Power Cycle. Any statement below of
+the form "in all six columns" therefore covers three Erase Codes plus a local
+reset, a Basic Restart and a Power Cycle, and must not be paraphrased as "by all
+six Erase Codes"; there are only three of those in the table.
 
 The vocabulary has to be read before the tables, because "default" means four
 different things (AN194 §2.3.2.1, quoted):
@@ -1055,19 +1235,55 @@ The rows that matter to this specification:
 | --- | --- | --- |
 | 5 `PID_LOAD_STATE_CONTROL` — §2.3.2.3, Object Type 1 Addresstable | *"implementation default"* | *"not influenced"* in all three |
 | 28 `PID_ERROR_CODE` — §2.3.2.3 | *"implementation default"* | *"not influenced"* in all three |
-| 7 `PID_TABLE_REFERENCE` — §2.3.2.3 | *"recalculate"* | *"not influenced"* in all three |
+| 7 `PID_TABLE_REFERENCE` — §2.3.2.3, Addresstable **only** | *"recalculate"* | *"not influenced"* in all three |
+| 7 `PID_TABLE_REFERENCE` — §2.3.2.10, Object Type 9 Group Object Table | *"recalculate"* | *"not influenced"* in all three |
+| 7 `PID_TABLE_REFERENCE` — §2.3.2.4 Associationtable, §2.3.2.5 Applicationprogram, §2.3.2.6 Application Program 2 | *"recalculate"* | *"recalculate"* in all three |
+| 6 `PID_RUN_STATE_CONTROL` — §2.3.2.5 and §2.3.2.6 | *"recalculate"* | *"recalculate"* in all three |
 | 14 `PID_DEVICE_CONTROL` — §2.3.2.2, Object Type 0 Device Object | *"KNX default"* | *"KNX default"* in all three |
 | 54 `PID_PROG_MODE` — §2.3.2.2 | *"KNX default"* | *"KNX default"* in all three |
 | 56 `PID_MAX_APDU_LENGTH` (CONSTANT value) — §2.3.2.2 | *"not influenced"* | *"not influenced"* in all three |
 | 30 `PID_DOWNLOAD_COUNTER` — §2.3.2.2 and §2.3.2.3 | *"recalculate"* | *"not influenced"* in all three |
 | 29 `PID_OBJECT_INDEX` (CONSTANT value) — §2.3.2.2 and §2.3.2.3 | *"not influenced"* | *"not influenced"* in all three |
 
-The load state and error code are listed here from the Addresstable Object's
-table because that is the object whose rows were read. AN194 gives a per-object
-table for every Interface Object; the per-part LSMs of §3.1 live in their own
-objects and their rows were not read one by one. The claim made is about the
-Addresstable Object's `PID_LOAD_STATE_CONTROL`. Phase 2 should expect the same
-pattern in the other objects and verify it per object before relying on it.
+**The per-object rows do not all agree, and one of them was generalised in
+error.** An earlier version of this document transcribed `PID_TABLE_REFERENCE` as
+*"not influenced"* in the three restart columns and drew a general rule from it.
+That is the **Addresstable Object's** row. Five objects carry PID 7, and they
+split two to three:
+
+- §2.3.2.3 Addresstable and §2.3.2.10 Group Object Table: `recalculate`
+  `recalculate` `recalculate` / `not influenced` `not influenced`
+  `not influenced` — a cached base address survives a restart.
+- §2.3.2.4 Associationtable, §2.3.2.5 Applicationprogram and §2.3.2.6
+  Application Program 2: `recalculate` in **all six columns** — a cached base
+  address does not survive anything, restart included.
+
+`PID_RUN_STATE_CONTROL` (PID 6) is `recalculate` in all six columns in the two
+Application Program objects as well, which is consistent with the RSM depending
+on the LSM (§9.3).
+
+Cross-object agreement therefore has to be checked per PID and not assumed. What
+the five objects read for this document **do** agree on:
+
+- `PID_LOAD_STATE_CONTROL` (PID 5): *"implementation default"* for `-`/`02h`/`07h`
+  and *"not influenced"* for Confirmed Restart, Basic Restart and Power Cycle, in
+  §2.3.2.3, §2.3.2.4, §2.3.2.5, §2.3.2.6 and §2.3.2.10 alike. Design rule 1 below
+  therefore holds across every object this specification touches, which is the
+  claim that matters most.
+- `PID_ERROR_CODE` (PID 28): the same pattern in the same five objects.
+- `PID_MCB_TABLE` (PID 27): the same pattern in all five.
+
+**What was still not read.** AN194 tabulates fourteen Interface Object types
+(§2.3.2.2 through §2.3.2.14). This document read five of them — Device Object,
+Addresstable, Associationtable, Applicationprogram, Application Program 2 and
+Group Object Table — chosen because they are the objects the download procedures
+of §7 touch. The Router, LTE Address Routing Table, cEMI Server, KNXnet/IP
+Parameter, Security Interface and RF Medium Objects were not read. No claim in
+this document rests on them, and no claim in this document generalises across
+objects any more: where phase 2 needs a reset semantic for a PID in an object not
+listed above, it reads that object's own AN194 row, because the
+`PID_TABLE_REFERENCE` split above is the evidence that "the other rows probably
+match" is not true.
 
 Read as design rules:
 
@@ -1087,9 +1303,17 @@ Read as design rules:
 4. **`PID_PROG_MODE` is `KNX default` in all six columns** — programming mode is
    off after any restart. §4.3's "programming mode may switch itself off
    underneath you" has a second cause: anything that restarts the device.
-5. **`PID_TABLE_REFERENCE` is `recalculate`.** A base address cached from before
-   a reset is invalid afterwards. §7.2's read-back of `PID_REFERENCE` is
-   mandatory per download, not cacheable across one.
+5. **`PID_TABLE_REFERENCE` must be re-read after any restart, not merely after a
+   reset.** In the Addresstable and Group Object Table it is `recalculate` for
+   the three Erase Codes and `not influenced` for the three restarts; in the
+   Associationtable and both Application Program objects it is `recalculate` in
+   **all six** columns. The rule that holds for every object is therefore the
+   stricter one: **re-read after any restart.** A base address cached across a
+   reset, a restart or a power cycle is invalid for at least three of the five
+   objects this specification touches, and the client does not get to know which
+   object it is dealing with cheaply enough for the distinction to be worth
+   keeping. §7.2's read-back of `PID_REFERENCE` is mandatory per download, and
+   caching it across any restart is forbidden.
 6. **`PID_MAX_APDU_LENGTH` is a CONSTANT value, *"not influenced"* by anything**
    — so §6.4's negotiated write length may be cached for the lifetime of the
    device, which is the one thing in this list that may.
@@ -1189,7 +1413,7 @@ evidence of what went wrong.
 | --- | --- | --- |
 | No response to `A_Memory_Write` | Lost frame, **or** protected/nonexistent target (AL §3.5.4: *"the service indication shall be ignored"*) | Retry indefinitely as if it were a lost frame |
 | No response during `LoadCompleting` | Normal — the device may be offline in this state (RES Table 94 footnote) | Treat as failure |
-| State unchanged after an event write | Illegal or unknown event, **or** genuinely no-op (RES §4.23.2.3.2), **or** an access level too low to write the property while high enough to read it (§10.8) | Assume the event was accepted |
+| State unchanged after an event write | Illegal or unknown event, **or** genuinely no-op (RES §4.23.2.3.2), **or** an access level too low to write the property while high enough to read it (§10.8), **or** the device has no loadable application at all, in which case the property is conformantly read-only and stuck at `Loaded` — **[D]** RES §4.23.2.3.3: *"For devices with a non-loadable application the Property Load Control shall be read-only and shall have the fix value Loaded."* | Assume the event was accepted. The read-only case is not an error at all and must not be reported as one: a device reading `Loaded` that refuses `Start Loading` may be a device with nothing to load |
 | `PID_REFERENCE` reads 0 | Allocation failed (CP §3.5.2), **or** allocation was attempted outside `Loading` and ignored (CP §3.5.1.2) | Use 0 as a base address |
 | State is `Error` after Start Loading | Requested allocation unsupported (MP §3.31.3 `0Ah`), or a data error | Re-send Start Loading |
 | Step 4 of §4.2 fails | *"the programming of the Individual Address may have failed, or the system (Router) is not configured correctly"* (MP §2.3) | Report only the first cause |
@@ -1204,7 +1428,25 @@ cannot distinguish them. Where it cannot, the implementation reports both — pe
 There is no rollback in any procedure cited in this document. There is no
 "stage then commit". `Start Loading` from `Loaded` invalidates the part
 immediately (§5.4), and the only way back to a working device is a successful
-download. The implementation must therefore:
+download.
+
+The Standard says what that costs, in the one clause that connects the load state
+to whether the device does anything. §3.3 keeps the Run State Machine out of
+scope, and it stays out of scope, but its dependency clause is the substantiation
+for the claim above: **[D]** RES §4.24.2.3.4 *"Dependencies between Load - and
+Run State Machine"*: *"One of the run conditions of the Run State Machine is the
+state of the Load State Machine. The executable part can only start if the Load
+State is Loaded. For an executable part that cannot be loaded the Run State may
+be read-only and may always be in the state Running."*
+
+So "the part is invalid" is not a bookkeeping state. An application part whose LSM
+is anything other than `Loaded` **cannot run**, by specification, and the window
+below is a window in which the device's application is stopped — not merely a
+window in which a table is stale. That is why this section is about transaction
+semantics and not about error reporting. (The document does not track or write the
+Run State; it cites this clause only to establish the consequence.)
+
+The implementation must therefore:
 
 - treat the interval between the first `Start Loading` and the last confirmed
   `Loaded` as a **window in which the device is non-functional**, and say so in
@@ -1338,10 +1580,63 @@ configured" — the procedure is skipped rather than run with a placeholder. And
 the device's mask version via its Profile, which §10.5 covers; it is not
 answered by trying.
 
-### 10.4 `DM_Authorize2_RCo`: the procedure to actually implement
+### 10.4 `DM_Authorize2_RCo`, and the profile scoping this document must respect
 
-**[D]** MP §3.5.2. This is the one a client with a user-supplied key should run,
-and the reason is §10.2's asymmetry:
+**[D]** MP §3.5.2. An earlier version of this section called this *"the procedure
+to actually implement"* and quoted its Conditions block while omitting the line
+immediately above that block. Quoted in full, in the order the clause prints it:
+
+> **[D]** *"Use*
+> *• Profiles — System 2, BIM M112*
+> *• Conditions — Write access, i.e. modifying memory- or Property contents; A
+> key must be available"*
+
+`DM_Authorize2_RCo` is **profile-scoped to System 2 and BIM M112**. The download
+this document specifies is CP §3.5.2, **System B**. Those are not the same
+profile, and this document may not quietly treat a System 2 / BIM M112 procedure
+as the System B default.
+
+**Ruling, and the reason.** `DM_Authorize_RCo` (MP §3.5.1) is the **default**.
+It carries no `Use • Profiles` restriction at all — MP §3.5's `Use` block is prose
+about when authorisation applies, and §3.5.1 adds only *"This Management Procedure
+shall use the connection oriented communication mode."* — so it is the procedure
+whose scope demonstrably covers System B. `DM_Authorize2_RCo`'s two-key
+comparison is kept as a **defensive extension**, enabled deliberately and never
+by default.
+
+Three reasons for that direction rather than the other:
+
+1. **It is the only choice that needs no unsourced claim.** Justifying
+   `DM_Authorize2_RCo` on System B would require asserting that a procedure
+   scoped to two other profiles applies to a third. Nothing in MP, CP or PROF
+   says it does, and §1's rule is that a claim without a source is removed rather
+   than softened. Making the unscoped procedure the default costs nothing and
+   asserts nothing.
+2. **The algorithm is not what protects the client; §10.2 is.** The failure this
+   whole section exists to prevent is sending a key that was not supplied by the
+   user, because a wrong key yields *less* access than no key (§10.2, R17).
+   `DM_Authorize_RCo`'s `key != FFFFFFFFh` guard already refuses to run without a
+   real key. The extra exchange in `DM_Authorize2_RCo` buys recovery from one
+   specific situation — a key configured in the project, a device that is not
+   actually locked with it — which is a convenience, not a safety property.
+3. **The extension is cheap and reversible; the claim is not.** A session that
+   implements the unscoped procedure can add the second and third exchanges later
+   behind a flag. A document that has claimed cross-profile applicability has to
+   be corrected, and by then a later task will have copied the claim.
+
+So: phase 2's session runs MP §3.5.1 on connect. The two-key comparison below is
+implemented and tested against the simulator, reachable by explicit opt-in, and
+documented as **[A]** *"an extension this project chose, scoped by its own source
+clause to System 2 and BIM M112 and therefore not run against a System B device
+by default"*. If phase 3 meets a device where the free level beats the configured
+key's level, that is the finding that would justify turning it on — and it is a
+read-only observation, so phase 3 can make it.
+
+The rest of this subsection describes the extension. It is quoted and specified
+because the asymmetry it handles is real; the scoping above is what decides when
+it runs.
+
+The asymmetry, in the clause's own words:
 
 > *"Opposite to the Management Procedure DM_Authorize_RCo, this Management
 > Procedure DM_Authorize2_RCo does not presume that the device has been locked
@@ -1354,9 +1649,11 @@ and the reason is §10.2's asymmetry:
 
 Preconditions, quoted: *"It shall assume that the Management Client has an
 access key provided by its user. If the Management Client does not have an access
-key, it shall not be executed."*, *"DM_Connect shall be executed before executing
-this Management Procedure."*, and under *"Conditions"*: *"Write access, i.e.
-modifying memory- or Property contents"* and *"A key must be available"*.
+key, it shall not be executed."* and *"DM_Connect shall be executed before
+executing this Management Procedure."* — the `Use • Profiles` and
+`Use • Conditions` lines that follow them in the clause are quoted at the top of
+this subsection, because the profile line is the one that decides whether this
+procedure runs at all.
 
 The algorithm, transcribed from the clause's sequence diagram:
 
@@ -1510,18 +1807,28 @@ not before the user has asked for it.
 
 ### 10.9 What phase 2 implements
 
-1. A session type that owns an optional key, performs MP §3.5.2's algorithm on
-   every connect, stores the resulting level, and re-runs it on reconnect.
+1. A session type that owns an optional key, performs **MP §3.5.1
+   `DMP_Authorize_RCo`** on every connect, stores the resulting level, and re-runs
+   it on reconnect. §3.5.1 and not §3.5.2, per §10.4's scoping ruling: §3.5.2 is
+   `Use • Profiles System 2 / BIM M112` and this document's download is System B.
 2. No key ⇒ skip the procedure entirely (MP §3.5.1's `key != FFFFFFFFh` guard),
    and record "free level, unknown value" rather than "authorised".
 3. Never send a key not supplied by the user (§10.2).
-4. A failed authorisation aborts the whole procedure before any destructive step
-   (MP §3.5.2's error handling).
-5. The simulator implements §10.2's two error rules, §10.5's "no protected areas"
+4. A failed authorisation aborts the whole procedure before any destructive step.
+   MP §3.5.2 states this outright — *"Failure of any of the contained Application
+   Layer Services shall lead to failure of the entire Configuration Procedure."* —
+   and MP §3.5.1 reaches the same place through *"The general exception handling
+   shall apply."* plus its own `A_Disconnect.ind ⇒ "error: connection was broken
+   down"* annotation. Where the two procedures differ the implementation takes the
+   stricter reading, which is abort.
+5. MP §3.5.2's two-key comparison, implemented and tested against the simulator
+   (§14 item 14), reachable only by explicit opt-in, and **off by default** — it
+   is an extension this project chose and not a System B requirement (§10.4).
+6. The simulator implements §10.2's two error rules, §10.5's "no protected areas"
    behaviour as a configurable mode, and a mode where reads are permitted and
    `PID_LOAD_STATE_CONTROL` writes are silently dropped — that last one being the
    failure §10.8 predicts and the only way to test for it without hardware.
-6. No `A_Key_Write` (§10.7).
+7. No `A_Key_Write` (§10.7).
 
 ## 11. How this maps onto the existing code
 
@@ -1594,7 +1901,34 @@ Everything in this section was searched for in both KNX specification knowledge
 bases and, where relevant, in the extracted Standard corpus and the product
 corpus of RESEARCH §8.6. These are gaps, not summaries of gaps.
 
-1. **The product-specific download matrix.** The *semantics of each individual
+**Identifiers, and why they exist.** Each item carries a stable id of the form
+`GAP-T30-nn`. The ordinal numbering this section used through 2026-09-13 has now
+been revised twice — once to withdraw the `L_Data_Extended` item and once to
+reclassify the `60h` parity item — and `docs/RESEARCH.md` §8.7.15 and
+`docs/KNOWN_LIMITATIONS.md` §7 had renumbered independently, so that "item 6"
+meant the parity gap in one file and the MP §3.16 delay in the others. The ids
+below are the canonical names, they are used verbatim in all three files, and
+they are **never reused or renumbered**. A withdrawn item keeps its id and says
+why it was withdrawn, so that anything citing it lands on the correction rather
+than on a neighbour. Ordinals in the list are presentation only; cite the id.
+
+The mapping from the ordinals the three files used before this pass, published
+once so that older references resolve:
+
+| Id | SPEC §12 ordinal (before) | RESEARCH §8.7.15 / KNOWN_LIMITATIONS §7 ordinal (before) | Status |
+| --- | --- | --- | --- |
+| `GAP-T30-01` | 1 | 1 | open |
+| `GAP-T30-02` | 2 | 2 | open |
+| `GAP-T30-03` | 3 | 3 | open |
+| `GAP-T30-04` | 4 | 4 | open |
+| `GAP-T30-05` | 5 | — (never listed there) | withdrawn 2026-09-13, documented |
+| `GAP-T30-06` | 6 | 5 | **reclassified 2026-09-14** — documented; now a project risk decision |
+| `GAP-T30-07` | 7 | 6 | open |
+| `GAP-T30-08` | 8 | 7 | open |
+| `GAP-T30-09` | 9 | — (never listed there) | open, narrowed |
+| `GAP-T30-10` | 10 | — (never listed there) | closed 2026-09-13 |
+
+1. **`GAP-T30-01` — the product-specific download matrix.** The *semantics of each individual
    `Legacy*` flag* are absent. RESEARCH §8.6 measured that all 13 program-level
    `Legacy*` names return **zero hits** across the entire extracted KNX
    Standard corpus, and the Standard acknowledges only the category: **[D]** CP
@@ -1608,7 +1942,7 @@ corpus of RESEARCH §8.6. These are gaps, not summaries of gaps.
    flags it cannot interpret. What it may do is **record** the flags and
    **refuse** to download products that set flags it does not understand —
    refusing is safe, guessing is not.
-2. **The `LdCtrl*` → load-control mapping, for 13 of 25 kinds.** RESEARCH §8.6
+2. **`GAP-T30-02` — the `LdCtrl*` → load-control mapping, for 13 of 25 kinds.** RESEARCH §8.6
    matched 12 of the 25 `LdCtrl*` element kinds in `knx_master.xml` to
    documented load controls; the other 13 have no documented counterpart, and
    the element names themselves appear nowhere in the Standard corpus. §7.3
@@ -1618,7 +1952,7 @@ corpus of RESEARCH §8.6. These are gaps, not summaries of gaps.
    §7.3: an unsupported allocation request does not return an error, it drives
    the LSM to `Error` (MP §3.31.3 subtype `0Ah`), from which only `Unload`
    escapes. Guessing here costs a configuration, not an error message.
-3. **Vendor DLL involvement in download.** RESEARCH §8.6 established **[V]**
+3. **`GAP-T30-03` — vendor DLL involvement in download.** RESEARCH §8.6 established **[V]**
    that no vendor DLL is *required* to reconstruct a download sequence — the
    step list is declarative product data — and that `EtsDownloadPlugin` appears
    on 5 of 35 corpus application programs without supplying the step list. What
@@ -1627,14 +1961,14 @@ corpus of RESEARCH §8.6. These are gaps, not summaries of gaps.
    **Forbidden:** claiming a device with an `EtsDownloadPlugin` is supported.
    The correct behaviour is to detect the hook, report it, and decline. See also
    `KNOWN_LIMITATIONS.md` §6.
-4. **The "differential download algorithm"** named in CP §3.5.3. The CRC
+4. **`GAP-T30-04` — the "differential download algorithm"** named in CP §3.5.3. The CRC
    comparison that gates it is specified; the algorithm is not.
    **Undocumented in both knowledge bases as searched** (`knx_spec_kb_programming`
    and the 177-PDF text-only base), and in the extracted text of the eight PDFs
    of §1.1, in which the phrase occurs only at CP §3.5.3 as a name.
    **Forbidden:** implementing or claiming differential download. Permitted:
    comparing the CRC and skipping an unchanged part.
-5. ~~**The `L_Data_Extended` discovery mechanism.**~~ **Withdrawn — this is
+5. **`GAP-T30-05`** — ~~**the `L_Data_Extended` discovery mechanism.**~~ **Withdrawn — this is
    documented, and listing it here was an error of this document.** It is
    `PID_MAX_APDU_LENGTH`, RES §4.3.7, quoted in full in §6.4: range 15–254, and
    *"A Management Client supporting the L_Data_Extended-frame has to check this
@@ -1645,41 +1979,125 @@ corpus of RESEARCH §8.6. These are gaps, not summaries of gaps.
    **Still forbidden:** writing more than 12 octets per `A_Memory_Write` on the
    basis of an assumption — but the value is now obtainable, from the Device
    Object of the device in front of you, and only from there (§6.4).
-6. **The programming-mode parity rule** at memory address `60h` (§4.4). The bit
-   position is documented; the computation is not, beyond *"The parity (bit 7)
-   has to be calculated."* **Undocumented in both knowledge bases as searched**,
-   and absent from RES §4.26 and MP §3.13, which are the two clauses that define
-   the resource and the procedure.
-   **Forbidden:** writing to `60h`.
-7. **The unquantified "delay for programming the memory in the device"**
-   (MP §3.16, non-verify path). Named, never given a value.
-   **Undocumented in both knowledge bases as searched**; MP §3.16 is the only
-   clause that mentions it and it states no figure, no range and no formula.
-   **Forbidden:** presenting any chosen default as a specification value.
-8. **LSM Realisation Type 2.** **[D]** RES §4.23.3: *"This Realisation Type is
+6. **`GAP-T30-06`** — ~~**the programming-mode parity rule** at memory address
+   `60h`.~~ **Reclassified 2026-09-14: not a documentation gap. It is documented,
+   and this document had cited the clause that documents it while claiming the
+   opposite.** RES §4.26.3.1 states the coverage (*"the complete range bit 0 to
+   bit 6 may be parity controlled"*) and the client-side operation (*"if the value
+   of prog_mode is changed from "0" to "1" or from "1" to "0" then the variable
+   p_parity shall be inverted"*), and RES §4.26.3.4.1 restates the latter as a
+   client obligation. §4.4 now specifies the derivation: read `0060h`, invert bit 0
+   and bit 7, preserve bits 1–6, write back, and skip the write entirely when the
+   mode already matches. No parity *convention* — odd or even — has to be known,
+   because the rule is invert rather than recompute. The earlier entry here is the
+   inverse of the failure §1 is written to prevent: not a guess dressed as a fact,
+   but an admitted gap that the cited clause closes, which is worse in one specific
+   way — a later task copies it forward as settled.
+   The residual unknown is narrow and is **not** counted as a gap: whether a given
+   device's stack checks odd or even parity is manufacturer-specific by design —
+   **[D]** RES §4.26.3.3: *"The reaction of an invalid parity value is manufacturer
+   specific"*, and if no parity checking is used at all *"the value of p_partity
+   shall be ignored"*. A per-device property is not a documentation gap.
+   **Still forbidden, on different grounds:** writing to `60h` on a real device.
+   That is now a **project risk decision** and is recorded as R11 in §13, not as a
+   gap here. The Standard tells us how; this project declines because the failure
+   mode is a restarted device (RES §4.26.3.3 footnote 96) and the recovery is a
+   site visit. §15 keeps `DM_ProgMode_Switch`'s write path as a non-goal, and §4.4
+   keeps it inside §2.3's mutation API so that the refusal survives a refactor as
+   well as a reading.
+7. **`GAP-T30-07` — the unquantified "delay for programming the memory in the
+   device"** (MP §3.16.2, non-verify path). Named, never given a value. The gap
+   survives this pass; what changes is that the earlier entry called MP §3.16
+   *"the only clause that mentions"* it, and it is not.
+   **What was actually searched, and found.** The sequence line *"delay for
+   programming the memory in the device"* occurs **five** times in MP — §3.16.2
+   `DMP_MemWrite_RCo` (footnote 12), §3.16.4 `DMP_MemWrite_LEmi1` (13), §3.19.2
+   `DMP_UserMemWrite_RCo` (14), §3.38.2 `DMP_LCSlaveMemWrite_Rco` (16) and §3.41.2
+   `DMP_LCExtMemWrite_Rco` (17) — each carrying the same footnote, quoted from
+   footnote 12: **[D]** *"The delay time depends on the Management Server and on the
+   amount of written octets (see [08])."* (§3.16.4's reads *"shall depend"*; the
+   other four read *"depends"*.) So the Standard states the delay's two
+   **dependencies** — the device, and the byte count — and gives neither a figure
+   nor a formula for either. Five occurrences agreeing is five times the same
+   silence, not corroboration of a value.
+   **The `(see [08])` pointer was followed**, which the earlier entry had not done.
+   MP `[08]` is `Chapter 3/7/2 "Datapoint Types"` — this document's **DPT**. It
+   holds nothing relevant: the only delay datapoint in it is `DPT_Time_Delay`
+   **20.013**, `Use: FB`, range `[0 to 25]`, an enumeration of Functional Block
+   time steps from *"0 : not active"* and *"1 : 1 s"* up to *"25 : 24 h"* with
+   *"26 to 255 : reserved, shall not be used"*, appearing as `PART_Time_Delay`,
+   `PART_Cycle_Time` and `PART_Prewarning_Delay`. A one-second minimum step for an
+   HVAC-style parameter is not a per-octet EEPROM programming delay, and nothing in
+   DPT connects 20.013 to `A_Memory_Write`. The pointer resolves to a dead end, and
+   saying so is the point: the reference was followed and yields nothing, which is
+   a different statement from the reference not having been noticed.
+   **Undocumented in both knowledge bases as searched** — `knx_spec_kb_programming`
+   (27 programming PDFs, with figures) and the 177-PDF text-only base — and
+   undocumented in the `pdftotext -layout` extractions of **MP** and **DPT**.
+   **Forbidden:** presenting any chosen default as a specification value. Permitted,
+   and what phase 2 does instead: use the Verify-Mode path (MP §3.16.3), where the
+   read-back replaces the delay with an observation. The delay only matters on the
+   non-verify path, and §6.2's project requirement means this project has no
+   non-verify write path without a following read anyway — which converts this gap
+   from a blocker into a documented reason for a design choice.
+8. **`GAP-T30-08` — LSM Realisation Type 2.** **[D]** RES §4.23.3: *"This Realisation Type is
    not specified in this version of this document."*
    **Forbidden:** claiming support for devices that require it.
-9. **Cross-LSM ordering between loadable parts, as a general rule.** CP §3.5.2
-   gives one concrete order for System B, which this document follows.
-   **PROF was read for this, and states no ordering requirement between the Load
-   State Machines of different loadable parts** — a search of the extracted
-   document for ordering and sortedness language returns no cross-LSM ordering
-   rule at all; the only "shall be sorted" requirements in the vicinity are
-   RES's, and they are about the *contents* of the Group Address Table, not about
-   the order in which parts are loaded (§5.6, value 15). What PROF does constrain
-   is which Load Controls a mask must support (§7.3), which Table 94 cell a mask
-   may not take (§5.4), whether authorisation is mandatory (§10.5), whether
-   Realisation Type 1 is mandatory (§3.4), and that an unimplemented Verify Mode
-   *"shall always be off"* (§6.3). None of those is an ordering.
-   So the gap is narrower than it was: it is not that the ordering rule is
-   unread, it is that **no general ordering rule has been found to exist**, in
-   PROF or in the clauses of CP and RES this document cites. What exists is one
-   concrete step list per Configuration Procedure, per system.
-   **Forbidden, unchanged:** generalising CP §3.5.2's order to masks it does not
-   cover. The absence of a stated general rule is not permission to invent one;
-   phase 2 follows the step list of the Configuration Procedure that matches the
-   device's mask version, and where no procedure matches, it declines.
-10. ~~**`DM_Authorize`'s parameters and the `DPT_ErrorClass_System` values.**~~
+9. **`GAP-T30-09` — cross-LSM ordering between loadable parts, as a general
+   rule.** CP §3.5.2 gives one concrete order for System B, which this document
+   follows.
+   **The Standard delegates this requirement to per-device Profiles, and that is
+   the fact that makes the rest of this item matter.** **[D]** RES §4.23.2.4.1:
+   *"If a device contains more than one Load State Machine, dependencies between
+   these Load State Machines have to be defined in the Profiles (see [17]) of these
+   devices."* RES `[17]` is `Volume 6 "Profiles"` — this document's **PROF**.
+   So the question is not "does the Standard state an ordering rule"; the Standard
+   has answered that, with "the Profiles do". The question is whether PROF states
+   one.
+   **PROF was searched for it, and states none.** Named so that a later reader can
+   re-run it rather than trust it:
+   - Base `knx_spec_kb_full179_clean.sqlite` (the 177-PDF text-only base), query
+     `"Load State Machine"`, limit 5. The only fact row it returns whose source is
+     `06 Profiles v02.01.01` has content *"Load State Machine a. Realisation Type
+     1"* — a table row label. The queries `"Load State Machine dependencies"` and
+     `"load order"` both return `[]`.
+   - Base `knx_spec_kb_programming.sqlite` (27 programming PDFs, with figures),
+     queries `"Load State Machine dependencies Profiles"`, `"dependencies"` and
+     `"ordering"`: `[]`, `[]`, `[]`. `"Load State Machine"` returns RES §4.23.1's
+     definition, not a PROF row.
+   - `pdftotext -layout` extraction of `06 Profiles v02.01.01.pdf`, swept
+     case-insensitively for `dependenc|shall be sorted|order of load|loading
+     order|sequence of load`: **one** hit, §9.1.2.6.4 Security Interface Object,
+     *"Further dependencies, e.g. accessibility in function of the Security Mode
+     …"* — Property accessibility, not load ordering. The six occurrences of
+     "Load State Machine" in the same extraction are table rows, §4.2.7.1, §5.3.8.1,
+     footnote a of §5.3 (quoted in §5.4) and Annex A's `5.1 Load State Machines`
+     support row. None is an ordering.
+   The `"shall be sorted"` requirements in the vicinity are RES's, and they concern
+   the *contents* of the Group Address Table (§5.6, value 15), not the order in
+   which parts are loaded. What PROF does constrain is which Load Controls a mask
+   must support (§7.3), which Table 94 cell a mask may not take (§5.4), whether
+   authorisation is mandatory (§10.5), whether Realisation Type 1 is mandatory
+   (§3.4), and that an unimplemented Verify Mode *"shall always be off"* (§6.3).
+   None of those is an ordering.
+   **The consequence, and it is stronger than "the Standard is silent".** Because
+   RES §4.23.2.4.1 delegates to *"the Profiles … of these devices"*, the absence of
+   an ordering rule in `06 Profiles` is **not** the absence of an ordering rule for
+   a given device. The per-mask Profile documents — `06_01_33 mask 2705h`,
+   `06_01_35 mask 27B0h`, `06_02_42 mask 2920h`, `06_03_31 mask 2311h` and their
+   siblings in Volume 6, none of which this document has read — are exactly where
+   such a dependency would live, and a device whose Profile states one is
+   conformant while this document knows nothing about it. A negative from the
+   general Profiles document is therefore evidence about that document only.
+   **Forbidden, and now for a better reason:** generalising CP §3.5.2's order to
+   masks it does not cover, and treating "Volume 6's general document states no
+   ordering" as licence to reorder. Phase 2 follows the step list of the
+   Configuration Procedure that matches the device's mask version, in the order
+   that procedure prints, and where no procedure matches it declines. It never
+   reorders parts on the strength of this negative. Reading the per-mask Profile of
+   a device actually in front of us is a phase 3 task, and a finding if it turns out
+   to state a dependency.
+10. **`GAP-T30-10`** — ~~**`DM_Authorize`'s parameters and the `DPT_ErrorClass_System` values.**~~
     **Closed 2026-09-13.** This item used to list four things as "documented but
     not read for this document". All four were read and folded in:
     `DM_Authorize`/`DM_Authorize2_RCo`/`DM_SetKey` and the services under them
@@ -1691,10 +2109,23 @@ corpus of RESEARCH §8.6. These are gaps, not summaries of gaps.
     that blurs them is the failure mode §1 exists to prevent. Items 1–4 and 6–8
     are the first kind. There are now none of the second kind.
 
-Seven genuine gaps remain, then: items 1, 2, 3, 4, 6, 7 and 8. Item 5 turned out
-to be documented and item 10 is closed. Each of the seven names which knowledge
-base or corpus was searched, which is what lets a later reader tell "the Standard
-is silent" apart from "nobody looked".
+**Six genuine gaps remain:** `GAP-T30-01`, `-02`, `-03`, `-04`, `-07`, `-08`, plus
+`GAP-T30-09` as a gap that has been *narrowed to a delegation* — the general
+Profiles document states no rule, per-mask Profiles are where one would live, and
+none has been read. Counting `-09` as a seventh open gap or as a closed one would
+both be wrong, so it is listed separately and the headline number is six.
+
+Two items left the list without being solved, and the distinction is the point of
+this section: `GAP-T30-05` was **withdrawn** because it was never a gap, and
+`GAP-T30-06` was **reclassified** because it was never a gap either — the
+documentation existed and this document had cited it. `GAP-T30-10` is **closed**:
+everything it recorded as unread was read. Three different reasons for three
+different disappearances, none of them "we implemented a workaround".
+
+Each of the six names which knowledge base or corpus was searched, and
+`GAP-T30-07` and `-09` now name the query strings as well, which is what lets a
+later reader tell "the Standard is silent" apart from "nobody looked" — and, in
+`-09`'s case, apart from "the Standard delegated it somewhere nobody looked".
 
 ## 13. Risk register: what a wrong implementation does to a real device
 
@@ -1708,12 +2139,12 @@ means recoverable using only what this application could implement.
 | R3 | `A_Restart` Master Reset with Erase Code `02h`/`03h` | Device reset to ex-factory state and/or its IA reset to the medium default. **[D]** MP Table 4: the reset resources *"are implementation dependent"*, so the application cannot state what was lost. The device is no longer at the address the project believes. | Re-commissioning from the programming button, if the project still holds the configuration |
 | R4 | `SerialNumber_IndividualAddress_Write(FFFFh)` (CP §3.5.4 step 07) | Device becomes unaddressable by individual address, by broadcast, keyed by serial number. | Knowing the serial number, or a site visit. Not implemented in phase 2 |
 | R5 | Writing memory with a chunk size the device does not support (§6.4) | Partial write of a memory region. **[D]** AL §3.5.4: a partially protected target means *"the complete write operation shall fail"*, and an over-long request is *ignored*, so the client may believe it wrote data it did not. Result: a `Loaded` part containing wrong bytes — the worst outcome in this table, because the device reports success. | Full re-download, **if** the corruption is noticed |
-| R6 | Skipping the mandatory read-back (§6.2) | Same as R5, reached by a different route: **[D]** AL §3.5.4 requires *"The value of the associated memory area shall be explicitly read back after writing to it."* Without it, silent corruption is undetectable. | Full re-download |
+| R6 | Skipping the client-side verification read (§6.2) | Same as R5, reached by a different route: without a read-back, silent corruption is undetectable. **[A]** The authority here is **this project's design rule, not the Standard's**: AL §3.5.4's *"The value of the associated memory area shall be explicitly read back after writing to it."* sits inside the **active-Verify-Mode** paragraph and constrains the **device**, and with Verify Mode inactive AL §3.5.4 obliges nobody to read anything back. The risk is real either way; the obligation to avoid it is self-imposed. | Full re-download |
 | R7 | Emitting an `Additional Load Control` with a guessed subtype or size (§7.3, §12 item 2) | **[D]** MP §3.31.3 subtype `0Ah`: an unsupported request drives the LSM to `Error`. §5.4: only `Unload` leaves `Error`, and **[D]** RES Table 93: unload makes the data *"undefined"*. The part is destroyed, not merely failed. | Unload + full re-download |
 | R8 | Beginning a download without the full payload resolved | `Start Loading` from `Loaded` immediately invalidates a working configuration (§5.4). If the data is then unavailable, the device stays invalid indefinitely — and the state is non-volatile, so power-cycling does not help. | Full re-download once the data exists |
 | R9 | Interrupting a download (network, crash, operator) | Part left in `Loading` or `Error` after restart (**[D]** RES Table 94 `Device Restart` row: from `Loading`, `R: Loading` / `O: Error`), invalid per Table 92, persistent per §4.23.1. | §9.1 recovery |
 | R10 | Treating `LoadCompleting` silence as failure and retrying | Writing load events at a device that is *"offline during state LoadCompleting"* (**[D]** RES Table 94 footnote). Per Table 94, `Start Loading` or `Load Completed` from `LoadCompleting` is `R: Error`. A correct device mid-checksum is driven into `Error` by the client's impatience. | Unload + re-download |
-| R11 | Writing to `60h` with a guessed parity (§4.4) | An out-of-spec byte at the device-control address. The effect is not documented, which is precisely why it must not be done. | Unknown, which is the point |
+| R11 | Writing to `60h` **at all** on a real device (§4.4) | Not a parity risk any more — §4.4 derives `p_parity` from RES §4.26.3.1 and §4.26.3.4.1 and computes it by inversion, so the octet this project would write is correct by construction. The risk is the write itself. `0060h` is a **device-control** address in the `curr_prog_mode` region whose bits 1 to 6 are **[D]** RES §4.26.3.1 *"shared with other functionality"* and therefore manufacturer-specific: a one-octet write there is a read-modify-write of somebody else's state, racing whatever the device's own firmware does to those bits, and a wrong or stale octet is **[D]** RES §4.26.3.3 *"manufacturer specific"* in its reaction — footnote 96: *"Typically the system is restarted if p_parity is invalid."* Knowing how to build the byte removed the accidental protection that ignorance provided, so the prohibition is now an explicit decision rather than a side effect of a gap. | Unknown, which is why the write half of `DM_ProgMode_Switch` stays inside §2.3's mutation API, out of phase 3 entirely, and simulator-only in phase 2 |
 | R12 | Polling the load state faster than the spec allows, or not reconnecting | **[D]** RES §4.23.2.4.1 caps the read period at 3 s and requires periodic reconnection. Too-fast polling loads the bus during a download; failing to reconnect makes a legitimate long transition look like a failure, which leads to R10. | Fix the client |
 | R13 | Skipping the Manufacturer ID check (CP §3.5.2 step 04) | One manufacturer's application downloaded into another's device. The Standard puts this check before any write for exactly this reason. Outcome is undefined and device-specific. | Unload + correct download, if the device still communicates |
 | R14 | Assuming programming mode is still on (§4.3) | The write is ignored (AL §3.2.2, no negative response), the operator believes the address was programmed, and the project's model of the installation diverges from the installation. Silent, and discovered later at the worst moment. | Re-run §4.2 |
@@ -1726,6 +2157,13 @@ means recoverable using only what this application could implement.
 R1 has no recovery row because it has no recovery. That is the argument for
 enforcing it in the type system rather than in a review checklist.
 
+R11 is the one row whose *reason* changed during fix round 2 without its verdict
+changing. It used to forbid the write because the byte could not be computed.
+The byte can now be computed (§4.4), and the write is still forbidden on real
+hardware — on the grounds above, and as a project risk decision rather than as a
+consequence of a documentation gap. §12 records the same reclassification from
+the other side.
+
 ## 14. Testing (phase 2, no hardware)
 
 1. **The transition table of §5.4**, exhaustively: 6 states × 6 events, with
@@ -1735,9 +2173,13 @@ enforcing it in the type system rather than in a review checklist.
 3. **Chunking** at the 12-octet default and at 63, including a region that
    straddles `FFFFh` so the §6.5 service-selection rule is exercised on
    `base + length`, not on `base`.
-4. **Read-back enforcement**: a write path without a read-back must not compile,
-   or at minimum must not exist — asserted by the simulator rejecting a session
-   that writes without reading back.
+4. **Read-back enforcement**: a write path without a verification read must not
+   compile, or at minimum must not exist — asserted by the simulator rejecting a
+   session that writes without reading back. Both branches of §6.2 are covered:
+   Verify Mode active, where the comparison is against `A_Memory_Write.res`, and
+   Verify Mode inactive, where an explicit `A_Memory_Read` must follow. This
+   enforces *this project's* rule, not a Standard obligation on the client, which
+   is exactly why it needs a test rather than a citation.
 5. **Verify Mode across a reconnect**: the simulator drops the connection, and
    the client is asserted to re-set `PID_DEVICE_CONTROL` bit 2 before the next
    write.
@@ -1756,8 +2198,11 @@ enforcing it in the type system rather than in a review checklist.
     site: a single read of `1.1.220` is refused; a single write to `1.1.220` is
     refused; a plan containing `1.1.220` cannot be constructed; a range
     `1.1.200`–`1.1.240` that spans it is refused rather than silently shortened;
-    a retry list that would re-add it is refused; and a broadcast operation is
-    refused when the programming-mode count is not exactly one. Each refusal is
+    a retry list that would re-add it is refused; and a broadcast operation
+    cannot be issued when the programming-mode count is not exactly one —
+    asserted as §2.1's witness value being unconstructible for a count of zero
+    and for a count of two, not merely as a runtime check returning an error.
+    Each refusal is
     also asserted to be *reported*, because a silent refusal and an absent guard
     look identical from outside. This is the test that makes R1 structural
     instead of procedural, and phase 2 is not done without it.
@@ -1767,12 +2212,20 @@ enforcing it in the type system rather than in a review checklist.
     15 ⇒ 12; with 254 ⇒ capped at 63 by the service limit; with 255 ⇒ treated as
     the ESCape Code and not as a length; a value found only in the Router Object
     ⇒ still 12, per RES §4.3.7.2.2.
-14. **The authorisation algorithm of §10.4**, against a simulator configured four
-    ways: no protected areas (always level 0, §10.5); free level worse than the
-    client key's level; free level better than the client key's level, so the
-    third exchange must happen; and an invalid key, where the device drops the
-    partner to the minimum level (§10.2) and the client must notice rather than
-    proceed.
+14. **The authorisation algorithms of §10.3 and §10.4.** MP §3.5.1, the default
+    path, against a simulator configured three ways: no key supplied (procedure
+    skipped, recorded as "free level, unknown value"); a valid key; and an invalid
+    key, where the device drops the partner to the minimum level (§10.2) and the
+    client must notice rather than proceed. Then MP §3.5.2's opt-in extension
+    against a simulator configured two more ways: free level worse than the client
+    key's level, and free level better than it, so the third exchange must happen.
+    Plus one test of the scoping ruling itself: with the extension off — the
+    default — a System B session must issue exactly **one** `A_Authorize_Request`
+    per connection, never the `FFFFFFFFh` probe. A default that quietly runs the
+    profile-scoped procedure is the regression this item exists to catch.
+    A simulator with no protected areas (always level 0, §10.5) is configured
+    for both paths, since a successful authorisation proving nothing is orthogonal
+    to which procedure produced it.
 15. **Re-authorisation on reconnect**: the simulator drops the connection
     mid-download; the client is asserted to re-authorise *and* to re-assert
     Verify Mode before the next write (§10.3, §6.3).
@@ -1783,6 +2236,18 @@ enforcing it in the type system rather than in a review checklist.
 17. **`DPT_ErrorClass_System` round-trip** (§5.6): 0–18 decode to their names,
     19–255 are surfaced as unknown rather than mapped, and the decoder is shared
     with the DPT 20.011 codec rather than duplicated.
+18. **The `curr_prog_mode` toggle of §4.4, simulator-only.** Three properties,
+    each asserted against a simulator whose `0060h` octet starts with arbitrary
+    bits 1 to 6: the toggle preserves those bits exactly; it inverts bit 0 and
+    bit 7 together and never *computes* a parity from scratch, so the same
+    derivation works for an odd-parity and an even-parity device without the
+    convention being known; and it issues **no write at all** when bit 0 already
+    equals the requested mode (RES §4.26.3.4.2/§4.26.3.4.3's guards), because a
+    no-op toggle would invert the parity against an unchanged `prog_mode` and
+    produce the invalid octet RES §4.26.3.3 leaves manufacturer-specific. Plus
+    the refusal: the write half must be unreachable without §2.3's authorisation
+    value, and unreachable against a non-simulator transport in any phase (§13
+    R11, §15).
 
 Phase 3, read-only, within `1.1.24`–`1.1.32` only: read every loadable part's
 `PID_LOAD_STATE_CONTROL`, `PID_ERROR_CODE`, `PID_DEVICE_CONTROL`,
@@ -1803,10 +2268,19 @@ the expected outcome is that there will be some.
   not have (`KNOWN_LIMITATIONS.md` §9). An unsecured procedure against a secured
   device is not in scope and must be detected and refused rather than attempted.
 - **No `A_MemoryExtended_*` procedures**, no LSM Realisation Type 2, no
-  mask-`070nh` `_RCo_Mem` variant, no `DM_ProgMode_Switch` write path, no
-  Master Reset with a destructive Erase Code, no `SerialNumber_
-  IndividualAddress_Write`, and **no `A_Key_Write`/`DM_SetKey`** (§10.7) — the
-  authorisation client is read-only with respect to the device's key table.
+  mask-`070nh` `_RCo_Mem` variant, no Master Reset with a destructive Erase
+  Code, no `SerialNumber_IndividualAddress_Write`, and **no
+  `A_Key_Write`/`DM_SetKey`** (§10.7) — the authorisation client is read-only
+  with respect to the device's key table.
+- **No `DM_ProgMode_Switch` write against real hardware, in any phase.** §4.4
+  now specifies the write completely, which is a change from the previous
+  revision: it used to be un-specifiable because the `p_parity` computation was
+  believed undocumented. Specifying it does not unblock it. The write half lives
+  behind §2.3's mutation API, is exercised only against phase 2's simulator, and
+  is **out of scope for phase 3**. The toggle's *read* half — one octet from
+  `0060h` — is read-only and therefore allowed in phase 3, but only inside
+  §2.2's approved range. §13 R11 carries the risk; §12 records why it is no
+  longer a documentation gap.
 - **No product-database schema change** is specified here. RESEARCH §8.6.5's
   parsing addition (storing `Options`, `LoadProcedures` and `LdCtrl*`) remains
   the separate prerequisite it was, and phase 2 depends on it for real product

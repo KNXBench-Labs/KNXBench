@@ -353,7 +353,9 @@ Procedures`, `03_05_03 Configuration Procedures`, `03_03_04 Transport Layer`,
 `03_07_02 Datapoint Types`, `AN194 v02 Master Reset of Resources`,
 `06 Profiles v02.01.01`). No code was written and no bus was contacted to produce
 it. This narrows the limitation to its two real causes and shortens the unknown
-list to **seven** named items.
+list to **six** named items, plus one narrowed to a delegation (the count was
+seven until the 2026-09-14 fix round reclassified the `60h` parity item; see
+below).
 
 *Documented, cited and specified* **[D]**: individual-address programming by
 programming button, including the four-step `NM_IndividualAddress_Write`
@@ -362,7 +364,11 @@ carries no data (the address arrives as the frame's source); the Load State
 Machine's six states, five events **and the complete transition table**
 (`03_05_01` Table 94 — §8.4 previously had states and events but not
 transitions); memory read/write with its 1–63-octet service limit, its
-**normative** read-back, the `DM_MemWrite` 12-octet cap for devices without
+read-back rule — **this project's design rule and not the Standard's obligation on
+the client**, corrected 2026-09-14: `03_03_07` §3.5.4's *"shall be explicitly read
+back"* sentence sits inside the active-Verify-Mode paragraph and constrains the
+**device**, and with Verify Mode inactive the device *"shall not respond"* at all —
+the `DM_MemWrite` 12-octet cap for devices without
 `L_Data_Extended`, and the `base + length > FFFFh` rule that selects
 `A_UserMemory_Write`; Verify Mode via `PID_DEVICE_CONTROL` bit 2 and the fact
 that it is auto-disabled when the Transport Layer connection closes; the
@@ -381,19 +387,34 @@ the connection is released"*, so per connection and re-done on every reconnect;
 not authorising grants the `FFFFFFFFh` level while a **wrong** key drops the
 partner to the *minimum* level with no negative response, which is why no guessed
 key may ever be sent; `DM_Authorize2_RCo`'s authorise-twice-and-keep-the-better
-algorithm; and a failed authorisation failing *"the entire Configuration
-Procedure"*, which is the safe direction because it happens before the first
-destructive step) **[D]**; the complete `DPT_ErrorClass_System` **20.011**
+algorithm — which, corrected 2026-09-14, is **profile-scoped** to *System 2* and
+*BIM M112* by its own *Use • Profiles* row, so for the System B download this
+project specifies the default is the unscoped `DMP_Authorize_RCo` of `03_05_02`
+§3.5.1 and the two-key comparison is an opt-in defensive extension; and a failed
+authorisation failing *"the entire Configuration Procedure"*, which is the safe
+direction because it happens before the first destructive step) **[D]**; the complete `DPT_ErrorClass_System` **20.011**
 enumeration, values 0–18 with 19–255 *"reserved, shall not be used"*, quoted from
 `03_07_02 Datapoint Types` and reusable by the DPT main-type-20 codec **[D]**;
 `AN194`'s per-resource reset semantics, which independently confirm that the load
 state and error code are *"not influenced"* by Basic Restart, Confirmed Restart
-or Power Cycle, and add that Verify Mode and programming mode are reset by all six
-Erase Codes, that `PID_TABLE_REFERENCE` must be re-read, that *"ex-factory"* means
+or Power Cycle, and add that Verify Mode and programming mode are *"KNX default"*
+in **all six columns** of AN194's tables — six columns of which only three are
+Erase Codes (`02h`, `07h`, `01h`), the others being Local Reset, Basic Restart and
+Power Cycle, so "all six Erase Codes" was the wrong paraphrase and is corrected
+here — that `PID_TABLE_REFERENCE` must be re-read after **any restart, not merely
+after a reset** (it is *"recalculate"* in the Local Reset column of all five
+Interface Objects read, while the three Erase Code columns differ per object:
+*"not influenced"* for the Address Table and Group Object Table, *"recalculate"*
+for the Association Table and both Application Program objects), that
+*"ex-factory"* means
 "a default state" and not "the delivery state", and that a device may legitimately
 be running an application after a Master Reset **[D, corpus]**; and `06 Profiles`,
 which states **no** cross-LSM ordering requirement — so the one concrete System B
-order in `03_05_03` §3.5.2 stands and may not be generalised — while it does
+order in `03_05_03` §3.5.2 stands and may not be generalised, though corrected
+2026-09-14 this is a *delegation* rather than a silence: `03_05_01` §4.23.2.4.1
+says dependencies between multiple Load State Machines *"have to be defined in the
+Profiles … of these devices"*, and the per-mask Profile documents where such a rule
+would live were not read — while it does
 constrain which Load Controls a mask must support (Annex A Table 7), forbids mask
 `0912h` couplers the optional `Loaded`→`Error` transition, makes authorisation
 mandatory for some profiles and optional for others with 4 or 16 levels, requires
@@ -401,17 +422,40 @@ a device without protected areas to grant level 0 to any key at all, and require
 that *"If Verify Mode is not implemented, it shall always be off."* **[D, corpus]**
 
 *Genuinely undocumented*, each searched for in both KNX specification knowledge
-bases and, where relevant, the extracted Standard corpus: (1) per-`Legacy*`-flag
-semantics; (2) the `LdCtrl*`-name → load-control-subtype mapping for 13 of the 25
-`knx_master.xml` kinds — note the payload *layouts* **are** documented, which
-narrows the earlier claim, and that a wrong subtype drives the Load State
-Machine to `Error` rather than returning an error; (3) what an
-`EtsDownloadPlugin` DLL does (compiled code; not documentable from either base);
-(4) the "differential download algorithm" named by `03_05_03` §3.5.3; (5) the
-parity computation for the programming-mode octet at memory address `60h`;
-(6) the unquantified "delay for programming the memory in the device" of
-`03_05_02` §3.16; (7) LSM Realisation Type 2, which `03_05_01` §4.23.3 states
-outright is *"not specified in this version of this document"*.
+bases and, where relevant, the extracted Standard corpus. The identifiers are the
+stable `GAP-T30-nn` names defined in the design spec §12 and used verbatim in
+RESEARCH §8.7.15; the plain ordinals this list used before 2026-09-14 are mapped
+in that section, because all three files had renumbered independently:
+`GAP-T30-01` per-`Legacy*`-flag semantics; `GAP-T30-02` the `LdCtrl*`-name →
+load-control-subtype mapping for 13 of the 25 `knx_master.xml` kinds — note the
+payload *layouts* **are** documented, which narrows the earlier claim, and that a
+wrong subtype drives the Load State Machine to `Error` rather than returning an
+error; `GAP-T30-03` what an `EtsDownloadPlugin` DLL does (compiled code; not
+documentable from either base); `GAP-T30-04` the "differential download algorithm"
+named by `03_05_03` §3.5.3; `GAP-T30-07` the unquantified "delay for programming
+the memory in the device" of `03_05_02` §3.16 and four sibling procedures — chased
+to the footnote's own reference (`03_07_02 Datapoint Types`), which yields only
+`DPT_Time_Delay` 20.013's 26 coarse labels and no formula, so the gap survives;
+and `GAP-T30-08` LSM Realisation Type 2, which `03_05_01` §4.23.3 states outright
+is *"not specified in this version of this document"*. Counted separately because
+it is neither open nor closed: `GAP-T30-09`, cross-Load-State-Machine ordering,
+narrowed to the delegation described above.
+
+**`GAP-T30-06` is no longer on that list, and this is the one reclassification
+with a safety consequence.** The parity computation for the programming-mode octet
+at `0060h` **is** documented — `03_05_01` §4.26.3.1, *"if the value of prog_mode is
+changed from "0" to "1" or from "1" to "0" then the variable p_parity shall be
+inverted"*, repeated as a client obligation in §4.26.3.4.1 — so the octet is
+`old XOR 0b1000_0001`: invert bit 0, invert bit 7, carry bits 1 to 6 through
+untouched. Because the derivation *inverts* rather than recomputes, whether a
+device uses odd or even parity never has to be known, so that residual unknown is
+not a gap either. Writing the derivation down removed an accidental protection:
+the write used to be impossible to specify, and now it is merely forbidden. The
+prohibition is therefore explicit and deliberate — design spec §13 **R11** is now
+*"writing to `60h` at all on a real device"* rather than *"writing with a guessed
+parity"*, §15 keeps `DM_ProgMode_Switch`'s write half a non-goal in **every**
+phase including phase 3, and phase 2 exercises it against the simulator only,
+behind the mutation API's per-operation authorisation value.
 
 The list lost an item to a **correction**, not to a discovery: how a client
 discovers `L_Data_Extended` support **is** documented — `03_05_01` §4.3.7

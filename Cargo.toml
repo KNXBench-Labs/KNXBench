@@ -47,6 +47,8 @@ zip = { version = "8.6", default-features = false, features = ["deflate-flate2-z
 quick-xml = "0.42"
 csv = "1"
 sha2 = "0.10"
+pbkdf2 = "0.12"
+base64 = "0.22"
 socket2 = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

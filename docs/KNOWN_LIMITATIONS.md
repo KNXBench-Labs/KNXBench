@@ -3718,10 +3718,11 @@ happens first does not happen by accident.
 
 ## 86. Duplicate identifiers inside one file are dropped with no record at all
 
-**Limitation.** `first_winner` (`crates/knx-productdb/src/parse/hardware.rs`
-and its near-identical twin in `crates/knx-productdb/src/parse/catalog.rs`,
-plus the inline equivalent for `application_program` in
-`crates/knx-productdb/src/parse/program.rs`) records an `IdConflict` only
+**Limitation.** `first_winner` — one copy, in
+`crates/knx-productdb/src/parse/mod.rs`, called by `parse/hardware.rs` and
+`parse/catalog.rs` since the two byte-identical copies were merged on
+2026-09-13, plus the inline equivalent for `application_program` in
+`crates/knx-productdb/src/parse/program.rs` — records an `IdConflict` only
 when an id it has already seen belongs to a *different* file — it compares
 the existing row's `source_sha256` to the id, so within one call. Because
 one `ingest_hardware`/`ingest_catalog` call always passes the same
@@ -3845,10 +3846,12 @@ can itself change) worth making on purpose rather than in passing.
 (`crates/knx-productdb/src/parse/master.rs`) writes `name` with `INSERT ...
 ON CONFLICT(id) DO UPDATE SET name = excluded.name` — whichever
 `knx_master.xml` is ingested last overwrites the name every earlier one
-wrote. Every other id-collision path this crate has (`first_winner`, shared
-by `hardware.rs`/`catalog.rs`/`program.rs` since 2026-09-13) is
-first-writer-wins instead, plus a recorded `IdConflict` when the losing
-row's file differs. Manufacturer names update silently and take the
+wrote. Every other id-collision path this crate has is first-writer-wins
+instead, plus a recorded `IdConflict` when the losing row's file differs:
+`first_winner` in `parse/mod.rs`, shared by `hardware.rs` and `catalog.rs`
+since 2026-09-13, and an equivalent that `program.rs` still inlines for
+`application_program` rather than calling — editing the shared helper does
+not reach it. Manufacturer names update silently and take the
 opposite side.
 
 **Cause.** `hardware.rs` and `catalog.rs` can each create a manufacturer row

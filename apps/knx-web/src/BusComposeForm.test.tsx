@@ -31,6 +31,7 @@ async function renderForm(
   resolution: ComposeResolution,
   projectOpen = true,
   sessionClosed = false,
+  contextStale = false,
 ) {
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -42,6 +43,7 @@ async function renderForm(
         resolution={resolution}
         projectOpen={projectOpen}
         sessionClosed={sessionClosed}
+        contextStale={contextStale}
       />,
     );
   });
@@ -216,6 +218,31 @@ describe("BusComposeForm", () => {
     expect(host!.querySelector(".bus-compose-closed-hint")!.textContent).toBe(
       "This session is closed — sending is disabled.",
     );
+
+    await clickSend();
+
+    expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+  });
+
+  // Task 4's stale lock, from this component's side. The severity that
+  // justifies a second test right next to the closed-session one: a closed
+  // session's send bounces off a `409` and nothing happens on the bus,
+  // whereas a stale context's send *succeeds* — with the previous project's
+  // DPT, on real hardware, and Project Undo cannot reach it.
+  it("disables every field and explains why when the project context is stale, and Send issues no request", async () => {
+    await renderForm("1/2/3", { kind: "single", dpt: "DPST-1-1" }, true, false, true);
+    await act(async () => {
+      setInputValue(".bus-compose-value", "on");
+    });
+
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-destination")!.disabled).toBe(true);
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-dpt")!.disabled).toBe(true);
+    expect(host!.querySelector<HTMLInputElement>(".bus-compose-value")!.disabled).toBe(true);
+    const sendButton = Array.from(host!.querySelectorAll("button")).find((b) => b.textContent === "Send")!;
+    expect(sendButton.disabled).toBe(true);
+    const hint = host!.querySelector(".bus-compose-stale-hint")!;
+    expect(hint.getAttribute("role")).toBe("alert");
+    expect(hint.textContent).toContain("sending is locked");
 
     await clickSend();
 

@@ -69,6 +69,34 @@ export const messages: Record<MessageKey, string> = {
   "toast.error.notToday": "Nicht heute: {msg}",
   "toast.error.houston": "Houston, wir haben ein Problem: {msg}",
   "toast.error.hardPass": "Klares Nein: {msg}",
+  // 23 more error wrappers. Native German lines in Marvin's/the dungeon
+  // keeper narrator's register, not word-for-word translations of the
+  // English set — "Filed under 'of course'", for instance, becomes
+  // "Abgelegt unter 'na klar'", because a literal filing-cabinet metaphor
+  // does not land the same dry tone in German.
+  "toast.error.marvinSigh": "Marvin würde seufzen und sagen: {msg}",
+  "toast.error.uncaringUniverse": "Eine weitere glorreiche Diagnose in einem gleichgültigen Universum: {msg}",
+  "toast.error.busSpoken": "Der Bus hat gesprochen, und er ist nicht beeindruckt: {msg}",
+  "toast.error.brainSizeOfPlanet": "Ein Gehirn von der Größe eines Planeten, und trotzdem: {msg}",
+  "toast.error.dontTalkToMeAboutLife": "Das Leben. Sprich mir nicht vom Leben. Oder von diesem hier: {msg}",
+  "toast.error.relayDespair": "Irgendwo hat ein Relais verzweifelt geklickt: {msg}",
+  "toast.error.dungeonKeeperNarrates": "Der dungeon keeper verkündet dein Verhängnis: {msg}",
+  "toast.error.oldTrick": "Ach, dieser alte Trick schon wieder: {msg}",
+  "toast.error.wiringConspires": "Die Verkabelung verschwört sich erneut: {msg}",
+  "toast.error.nothingWorks": "Nichts funktioniert, und dennoch geht der Tag weiter: {msg}",
+  "toast.error.minorApocalypse": "Eine kleine Apokalypse, ganz nach KNX-Geschmack: {msg}",
+  "toast.error.topologySighed": "Die Topologie hat hörbar geseufzt: {msg}",
+  "toast.error.hopeNowhere": "Gruppenadressen überall, Hoffnung nirgends: {msg}",
+  "toast.error.triumphOfEntropy": "Ein weiterer Triumph der Entropie: {msg}",
+  "toast.error.telegramBadNews": "Das Telegramm kam an und brachte schlechte Nachrichten: {msg}",
+  "toast.error.dontPanicWorse": "Keine Panik. Es ist schlimmer als das: {msg}",
+  "toast.error.busLineComplaint": "Die Linie reicht ihre Beschwerde ein: {msg}",
+  "toast.error.loadStateMachineWept": "Irgendwo hat eine Ladezustandsmaschine geweint: {msg}",
+  "toast.error.alsoInevitable": "Auch das war unausweichlich: {msg}",
+  "toast.error.gremlinsRegards": "Die Kobolde lassen grüßen: {msg}",
+  "toast.error.mediocrityInErrorForm": "Seht her, Mittelmäßigkeit in Fehlerform: {msg}",
+  "toast.error.universeIndifferent": "Das Universum bleibt zutiefst gleichgültig: {msg}",
+  "toast.error.filedUnderOfCourse": 'Abgelegt unter "na klar": {msg}',
 
   "toast.holiday.newYear.groupAddresses": "Frohes neues Jahr! Mögen deine Gruppenadressen einzigartig bleiben.",
   "toast.holiday.newYear.sameAddresses": "Neues Jahr, gleiche Gruppenadressen.",
@@ -88,6 +116,96 @@ export const messages: Record<MessageKey, string> = {
   "toast.holiday.christmasDay.greetings": "Frohe Festtage von deiner KNX-App.",
   "toast.holiday.newYearsEve.oneMoreSave": "Noch einmal speichern vor Mitternacht?",
   "toast.holiday.newYearsEve.seeYou": "Bis nächstes Jahr, Projektdatei.",
+  // 23 more holidays, native German wording per occasion, same pairing
+  // convention as the original seven above.
+  "toast.holiday.epiphany.starlight":
+    "Die Heiligen Drei Könige fanden ihren Weg im Sternenlicht. Deinen Gruppenadressen würde ein ähnliches Wunder nicht schaden.",
+  "toast.holiday.epiphany.noneArrived": "Heilige Drei Könige, angeblich. Zur Verkabelung ist keiner erschienen.",
+  "toast.holiday.piDay.neverResolves":
+    "Pi-Tag: eine unendliche, nicht periodische Erinnerung daran, dass sich manche Dinge nie ordentlich auflösen lassen — ganz wie deine offenen Bugs.",
+  "toast.holiday.piDay.percentSolved": "3,14 Prozent deiner Probleme sind heute gelöst. Der Rest macht weiter wie gewohnt.",
+  "toast.holiday.backupDay.reminder":
+    "Weltbackup-Tag. Eine sanfte, leicht bedrohliche Erinnerung, dein Projekt zu speichern.",
+  "toast.holiday.backupDay.hardWay":
+    "Irgendwo lernt gerade jemand die harte Lektion über Backups. Hoffentlich nicht du.",
+  "toast.holiday.earthDay.lightsOff":
+    "Tag der Erde. KNX gibt es unter anderem, damit Lichter ausgehen, wenn keiner hinschaut. Gern geschehen, Planet.",
+  "toast.holiday.earthDay.energyBill":
+    "Einmal im Jahr bekommt der Planet einen Toast. Jeden Tag bekommt deine Stromrechnung eine Gruppenadresse.",
+  "toast.holiday.germanBeerDay.reinheitsgebot":
+    "Tag des Deutschen Bieres. Das Reinheitsgebot regelte Bier ab 1516; deine Gruppenadressbenennung regelt bis heute niemand.",
+  "toast.holiday.germanBeerDay.rulesNeeded":
+    "1516 entschied Bayern, dass Bier Regeln braucht. Dein Projekt könnte auch ein paar vertragen.",
+  "toast.holiday.tagDerArbeit.busNoDayOff":
+    "Tag der Arbeit. Der Bus hat, wie man anmerken muss, keinen freien Tag.",
+  "toast.holiday.tagDerArbeit.lineOnDuty":
+    "Ein Feiertag für Arbeitende überall. Die KNX-Linie bleibt, wie immer, im Dienst.",
+  "toast.holiday.starWarsDay.fourthBeWithYou":
+    "Am vierten Mai sei die Macht mit dir. Der Bus bleibt, weniger mystisch, verdrilltes Adernpaar.",
+  "toast.holiday.starWarsDay.sithLord": "Irgendwo debuggt auch ein Sith-Lord eine Topologie. Solidarität.",
+  "toast.holiday.telecomDay.telegramsRegards":
+    "Weltfernmeldetag. Die KNX-Telegramme lassen grüßen, ungelesen wie immer.",
+  "toast.holiday.telecomDay.busUnimpressed":
+    "Ein ganzer Tag zu Ehren der Telekommunikation. Der Bus bleibt charakteristisch unbeeindruckt.",
+  "toast.holiday.towelDay.bringOne":
+    "Handtuchtag. Nimm eins mit. Es repariert die Verkabelung nicht, hebt aber die Stimmung.",
+  "toast.holiday.towelDay.mostlyBroken": "Keine Panik. Dein Projekt ist nur größtenteils kaputt, nicht vollständig.",
+  "toast.holiday.environmentDay.savingPlanet":
+    "Weltumwelttag. Irgendwo rettet gerade eine gut konfigurierte KNX-Anlage still und leise den Planeten.",
+  "toast.holiday.environmentDay.rarelySaysSo":
+    "Die Umwelt dankt dir für die Automatisierung. Nur sagt sie das selten direkt.",
+  "toast.holiday.summerSolstice.longestDay":
+    "Sommersonnenwende. Ungefähr der längste Tag, kalendarische Rundungsfehler eingeschlossen, für maximale Konfrontation mit ungelösten Diagnosen.",
+  "toast.holiday.summerSolstice.todoList":
+    "Die Sonne geht heute kaum unter. Deine To-do-Liste offenbar auch nicht.",
+  "toast.holiday.moonLanding.lessComputingPower":
+    "An diesem Tag landete die Menschheit auf dem Mond, mit weniger Rechenleistung als ein durchschnittliches KNX-Gateway. Zur Einordnung.",
+  "toast.holiday.moonLanding.houstonSmaller":
+    "Auch Houston hatte einmal ein Problem. Deins ist kleiner und bleibt auf der Erde.",
+  "toast.holiday.swissNationalDay.chalet":
+    "Schweizer Bundesfeiertag. Irgendwo feiert ein äußerst präzise verkabeltes Chalet pünktlich auf die Minute.",
+  "toast.holiday.swissNationalDay.punctuality":
+    "Der Schweizer Nationalfeiertag. Die Pünktlichkeit deines Projekts ist davon völlig unberührt.",
+  "toast.holiday.programmerDay.day256":
+    "Tag des Programmierers, ungefähr der 256. Tag des Jahres, Schaltjahre schieben das etwas. Eine Zahl, gewählt von Programmierern für Programmierer, verstanden von niemand sonst.",
+  "toast.holiday.programmerDay.countedOwnDays":
+    "Ein Feiertag, der existiert, weil Programmierer ihre eigenen Tage gezählt haben. Passt.",
+  "toast.holiday.pirateDay.plunderedByNobody":
+    "Arrr. Deine Gruppenadressen wurden von niemandem geplündert, was ja eigentlich der Sinn der Sache ist.",
+  "toast.holiday.pirateDay.unpiratical":
+    "Tag des Piratensprechens. Die Bus-Telegramme bleiben standhaft unpiratisch.",
+  "toast.holiday.germanUnity.twoNetworks":
+    "Tag der Deutschen Einheit. 1990 wurden aus zwei Netzen eins; deins war vermutlich schon immer so.",
+  "toast.holiday.germanUnity.ownAffair":
+    "Ein Tag zur Feier der Einheit. Deine Gruppenadressbereiche bleiben stur ihre eigene Angelegenheit.",
+  "toast.holiday.backToTheFuture.noFlyingCars":
+    "Die Zukunft enthält, anders als vorhergesagt, keine fliegenden Autos. Sie enthält KNX. Kleine Erfolge.",
+  "toast.holiday.backToTheFuture.noHoverboards":
+    "Zurück-in-die-Zukunft-Tag. Kein Hoverboard ist angekommen. Der Bus zumindest ist pünktlich.",
+  "toast.holiday.allSaintsDay.devicesRemembered":
+    "Allerheiligen. Ein stiller Tag im Gedenken an jedes Gerät, das die Inbetriebnahme nicht überlebt hat.",
+  "toast.holiday.allSaintsDay.addressesBefore":
+    "Allerheiligen. Ein Gedanke an die Gruppenadressen, die es vor diesem Projekt gab.",
+  "toast.holiday.elevenEleven.karnevalBegins":
+    "Elfter im Elften. Die Karnevalssaison beginnt; das Chaos deines Projekts hat, nebenbei bemerkt, nie Pause gemacht.",
+  "toast.holiday.elevenEleven.foolsOfficially":
+    "Heute übernehmen offiziell die Narren. Der Bus war ihnen inoffiziell schon die ganze Zeit voraus.",
+  "toast.holiday.computerSecurityDay.knxSecureExists":
+    "Tag der Computersicherheit. Ein guter Anlass, sich daran zu erinnern, dass es KNX Secure gibt, auch wenn dieser Build es noch nicht anfasst.",
+  "toast.holiday.computerSecurityDay.trustsEveryone":
+    "Ein Tag für Computersicherheit. Der Bus vertraut nach wie vor völlig jedem, der auf ihm sitzt.",
+  "toast.holiday.nikolaustag.properCommissioning":
+    "Nikolaustag. Brave Geräte werden ordentlich in Betrieb genommen; der Rest bekommt statt Kohle eine strenge Diagnosemeldung.",
+  "toast.holiday.nikolaustag.warningsOnList":
+    "Der Nikolaus prüft seine Liste. Deine ungelösten Warnungen stehen, leider, immer noch drauf.",
+  "toast.holiday.winterSolstice.longestNight":
+    "Wintersonnenwende, ungefähr die längste Nacht, kalendarische Rundung wie üblich. Reichlich Zeit für die Beleuchtungs-Gruppenadressen, sich zu bewähren.",
+  "toast.holiday.winterSolstice.backlogSameLength":
+    "Der kürzeste Tag des Jahres. Der Rückstand bleibt trotzdem exakt gleich lang.",
+  "toast.holiday.boxingDay.importWarningsUnopened":
+    "Zweiter Weihnachtstag. Die Geschenke sind ausgepackt; die Importwarnungen, weniger aufregend, immer noch nicht.",
+  "toast.holiday.boxingDay.readingManualLate":
+    "Der zweite Weihnachtstag. Irgendwo liest gerade endlich jemand das Handbuch. Reichlich spät dafür.",
 
   "toast.lateNight.midnightOil": "Nachtschicht? Dein KNX-Bus macht auch keine Pause.",
   // "Linie" doubles as "line" in the mundane sense and as the KNX topology
@@ -98,6 +216,35 @@ export const messages: Record<MessageKey, string> = {
   "toast.lateNight.busLineRest": "Es ist spät. Auch die Linie braucht mal Pause.",
   "toast.lateNight.stillAwake": "Noch wach? Die Gruppenadressen bewundern deinen Einsatz.",
   "toast.lateNight.nightOwl": "Nachteulen-Modus aktiviert.",
+  // 26 more late-night lines, native German wording.
+  "toast.lateNight.busQuiet": "Der Bus ist ruhig. Du offenbar nicht.",
+  "toast.lateNight.relayAwake": "Irgendwo ist auch ein Relais wach und ebenso unbeeindruckt.",
+  "toast.lateNight.hourOfRegret": "Das ist die Stunde für Reue und Konfigurationsdateien.",
+  "toast.lateNight.buildingSleeps": "Das Gebäude schläft. Du nicht. Interessante Entscheidungen.",
+  "toast.lateNight.addressesInBed": "Sogar die Gruppenadressen sind schlafen gegangen.",
+  "toast.lateNight.insomniaAndKnx": "Schlaflosigkeit und KNX: eine altehrwürdige Paarung.",
+  "toast.lateNight.darkHoursSuitDebugging": "Die dunklen Stunden eignen sich fürs Debuggen. Angeblich.",
+  "toast.lateNight.reasonableHourElsewhere": "Irgendwo ist es eine vernünftige Uhrzeit. Nicht hier.",
+  "toast.lateNight.topologyHoldsBreath": "Die Topologie hält den Atem an bis zum Morgen.",
+  "toast.lateNight.anotherCommit": "Noch ein Commit, noch ein Sonnenaufgang vermieden.",
+  "toast.lateNight.wiringDiagramsDontJudge": "Die Schaltpläne urteilen nicht. Wahrscheinlich.",
+  "toast.lateNight.stillHere": "Immer noch da. Der Bus technisch gesehen auch.",
+  "toast.lateNight.linesAreSilent": "Die Linien schweigen. Du bist die Ausnahme.",
+  "toast.lateNight.thisIsFine": "Alles bestens. Wirklich alles zu dieser Uhrzeit ist bestens.",
+  "toast.lateNight.gatewayBlinks": "Das Gateway blinkt geduldig in die Dunkelheit.",
+  "toast.lateNight.sleepIsForFewerBugs": "Schlaf ist für Installationen mit weniger Fehlern.",
+  "toast.lateNight.busMonitorLogsSoul":
+    "Der Busmonitor protokolliert eine weitere Seele, die eigentlich schlafen sollte.",
+  "toast.lateNight.telegramDedicationOrDespair":
+    "Ein Telegramm zu dieser Stunde bedeutet Hingabe oder Verzweiflung. Möglicherweise beides.",
+  "toast.lateNight.lightsAreOff": "Die Lichter sind aus. Das Urteilsvermögen des Universums wirkt davon auch nicht heller.",
+  "toast.lateNight.loadStateMachineClockedOut": "Sogar die Ladezustandsmaschine hat Feierabend gemacht.",
+  "toast.lateNight.hourBelongsToOwls": "Diese Stunde gehört den Eulen und den ungelösten Diagnosen.",
+  "toast.lateNight.projectWaits": "Das Projekt wartet. Es hat sonst nichts vor.",
+  "toast.lateNight.deviceRebootsUnaware": "Irgendwo startet gerade ein Gerät neu, das die Uhrzeit nicht kennt.",
+  "toast.lateNight.darkIsVast": "Die Dunkelheit ist grenzenlos, und ausnahmsweise ist deine Uptime es auch.",
+  "toast.lateNight.groupRangesNoOfficeHours": "Gruppenbereiche kennen keine Bürozeiten. Du offenbar auch nicht.",
+  "toast.lateNight.busLineClocksOut": "Die Linie macht Feierabend. Du offenbar nicht.",
 
   "inspector.address": "Adresse",
   "inspector.description": "Beschreibung",

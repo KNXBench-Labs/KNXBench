@@ -3350,7 +3350,10 @@ what the *product database* says on top.
   `apps/knx-web`** — a parallel session owns every file under it, and its
   checked-in `apps/knx-web/src/bindings/DeviceDetail.ts` is now stale
   relative to this branch; that copy is deliberately left untouched here,
-  for the other session to regenerate on its own schedule.
+  for the other session to regenerate on its own schedule. *Update
+  (2026-09-13, branch `codex-ui-workbench`):* it did, and built the UI on
+  top — see the Codex UI workbench section at the end of this file. The
+  checked-in `apps/knx-web/src/bindings/` is no longer stale.
 - **Tests.** `knx-projection`: a device with both refs (verbatim refs,
   `NoDatabase` placeholder), a device with neither (`NoReference`), plus
   the three new `ts-rs` export tests. `knx-productdb`: full chain
@@ -3486,7 +3489,82 @@ monitor remain wired through their existing owners. The graphical views use
 the generated `ProjectTree` projection and show hierarchy; they do not invent
 floor-plan coordinates. Browser evidence is recorded under `/tmp/knx-ui-proof/`.
 
-T16 remains partially open: the catalogue browser is available from topology
-and supports insertion, but the current `DeviceDetail` projection does not
-contain product/hardware/program identity for an existing device. Exposing that
-identity requires a server/projection change outside this frontend slice.
+**T16's product identity, on screen (2026-09-13), branch
+`codex-ui-workbench`.** The earlier note here said T16 stayed partially open
+because `DeviceDetail` carried no product identity and exposing it needed a
+server-side change outside the frontend slice. That change landed meanwhile
+(branch `t16-device-product`, merge `036503f`), so this task spent nothing on
+plumbing and everything on making the identity readable.
+
+- **Bindings, regenerated, never hand-written.**
+  `TS_RS_EXPORT_DIR=../../apps/knx-web/src/bindings cargo test -p
+  knx-projection` brought `apps/knx-web/src/bindings/` up to date:
+  `DeviceProductNode.ts`, `DeviceProductCatalog.ts` and `ProductResolution.ts`
+  are new, `DeviceDetail.ts` gained `product: DeviceProductNode`, and nothing
+  else in the directory moved.
+- **`Inspector.tsx` gains `DeviceIdentity`**, rendered by `DeviceWorkspace`
+  between the device heading and the tab strip — not as a third tab. A
+  device's identity answers "what am I even editing", which stays true in the
+  communication-object tab and in the parameter tab, so it sits above both
+  rather than competing with them. `product_ref` and `program_ref` print
+  verbatim in the monospace face, because an engineer comparing one against a
+  manufacturer package needs the exact string. A ref the project never stated
+  reads "not stated in the project" in the body face — deliberately not in
+  mono, so an absence never looks like a value.
+- **Four resolutions, four distinct verdicts.** `RESOLUTION_KEYS` maps
+  `ProductResolution` through a `Record`, not a ternary chain, so a fifth
+  variant arriving in the generated union is a compile error rather than a
+  silent fallthrough. `Resolved` needs no sentence (the catalogue says it);
+  `NoDatabase`, `NotInDatabase` and `NoReference` each get their own, and the
+  first two are worded so they cannot be mistaken for each other — no product
+  database loaded at all is a different problem from a loaded database that
+  does not contain this product. There is no bare "unknown" anywhere in the
+  section.
+- **A partly installed catalogue reads as partly installed.** Of the fourteen
+  catalogue fields, three (manufacturer, product text, order number) stay
+  above the disclosure; the other eleven live behind a `<details>` grouped as
+  product entry / hardware / application program. Fields the database left
+  `null` are omitted rather than dashed, a group whose every field is `null`
+  says the database holds no values there, and the count of omitted fields is
+  stated at the foot of the disclosure — so "the database is silent here" is
+  distinguishable from "this view only shows six fields". A `Resolved` verdict
+  with no catalogue behind it (which the server never emits, but the generated
+  type permits) admits it in words instead of rendering as a resolved device
+  with a suspiciously empty field list.
+- **Strings and styling.** 33 new `deviceIdentity.*` keys in
+  `messages/en.ts`/`messages/de.ts`, including the `omitted.one`/`omitted.other`
+  plural pair; German parity is enforced by the existing `Record<MessageKey,
+  string>` typing. `styles.css` gains `.device-identity` and friends, built
+  from the existing custom properties so all three themes, five accents and
+  both densities follow automatically. The verdict badge carries its colour in
+  border and background tint and its text in `--knx-foreground`: measured in a
+  real browser, the badge word sits at 10.55:1 to 14.69:1 across both themes
+  and all four variants, against 3.46:1 and 3.91:1 for the first attempt that
+  tinted the text itself.
+- **Layout, measured rather than assumed.** The first draft put label and
+  value side by side and inlined all fourteen fields; screenshotted at 1920px
+  the pairs drifted apart and the block grew to roughly 400px, pushing the
+  communication-object table off screen on a device that happened to be fully
+  resolved. Hence stacked label-over-value pairs in an `auto-fill` grid and
+  the disclosure.
+
+Tests: `DeviceWorkspace.test.tsx` grows from 1 case to 7 — one per resolution
+variant plus position (identity precedes the tablist and is inside no
+tabpanel), the resolved catalogue's disclosure split and omission count, and
+the partly-installed catalogue's empty group. Every fixture is fictional
+(`M-00FA`, "Example Manufacturing", `EX-4210`); no real product or
+installation appears. `App.test.tsx`'s device fixture and
+`scripts/workbench-browser-proof.mjs`'s mock gained a `product` field — the
+proof script's mock would otherwise have served a `DeviceDetail` without one
+and crashed the page it was meant to photograph.
+
+Web gates: `npm test -- --run` **357 passed across 36 files** (up from 351,
++6 in `DeviceWorkspace.test.tsx`), `tsc --noEmit` clean. Rust gates re-run
+because binding generation touches `crates/knx-projection`: `cargo fmt --all
+--check` and `cargo clippy --workspace --all-targets -- -D warnings` both
+clean; no Rust source was modified.
+
+What T16 still does not do: the catalogue browser is still insertion-only,
+there is no link from a device to its catalogue entry, and a device's serial
+number remains unreadable from the bus
+([KNOWN_LIMITATIONS.md §73](KNOWN_LIMITATIONS.md#73-a-line-scan-cannot-learn-product-identity-manufacturer-or-serial-number)).

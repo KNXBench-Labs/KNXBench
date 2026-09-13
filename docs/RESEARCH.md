@@ -2615,10 +2615,13 @@ No code was written and no bus was contacted. What follows is only what this
 pass *established or corrected*; the specification document carries the full
 citations.
 
-Five source PDFs were quoted: `03_03_07 Application Layer v02.01.01 AS`,
+**Eight** source PDFs were quoted: `03_03_07 Application Layer v02.01.01 AS`,
 `03_05_01 Resources v01.10.01 AS`, `03_05_02 Management Procedures v02.01.02
-AS`, `03_05_03 Configuration Procedures v02.01.01 AS`, and `03_03_04 Transport
-Layer v01.02.03 AS` (the last via §8.5's already-recorded clause 4 figures).
+AS`, `03_05_03 Configuration Procedures v02.01.01 AS`, `03_03_04 Transport
+Layer v01.02.03 AS` (the last via §8.5's already-recorded clause 4 figures), and
+— added in the same day's fix round, §8.7.10 to §8.7.13 —
+`03_07_02 Datapoint Types v02.02.01 AS`, `AN194 v02 Master Reset of Resources
+AS` and `06 Profiles v02.01.01`.
 
 #### 8.7.1 Method, and why it changes what is citable
 
@@ -2719,11 +2722,14 @@ format, then this maximal size shall be 12 octets."* **[D]**
 
 So the service permits 63 and a large real-device population permits 12. How a
 client discovers whether a device supports `L_Data_Extended` is **not stated in
-§3.16** — the clause states the consequence, not the discovery mechanism, and
-nothing in either knowledge base supplies it. Undocumented. The design spec
-therefore fixes the default at 12 with no automatic promotion, because the
-failure mode of guessing high is a partially written memory region that the
-device may report as successfully `Loaded`.
+§3.16** — the clause states the consequence, not the discovery mechanism. The
+first draft of this subsection concluded from that that the discovery mechanism
+was undocumented. **That was wrong, and the fix round of the same day corrected
+it: it is documented, in `03_05_01` §4.3.7 `PID_MAX_APDU_LENGTH`.** See §8.7.13.
+The default of 12 stands anyway, because it is what the Standard prescribes when
+the property is absent and because the failure mode of guessing high is a
+partially written memory region that the device may report as successfully
+`Loaded`.
 
 Two adjacent facts from the same clause, both design-relevant: **[D]**
 `03_03_07` §3.5.4 requires *"The value of the associated memory area shall be
@@ -2812,26 +2818,250 @@ this corpus. Undocumented. The design spec forbids writing to `60h`.
   'DM_LoadStateMachineWrite' in [09]"*, but in the current `03_05_02` that
   procedure is **§3.31** and §3.27 is `DM_InterfaceObjectRead`. Follow the name.
 
-#### 8.7.9 What this pass deliberately did not read
+#### 8.7.9 What this pass deliberately did not read — closed the same day
 
-Recorded so the next reader knows the difference between "absent from the
-corpus" and "nobody has opened it yet". These are all readable:
+The first version of this subsection listed four documents as readable but
+unread. A reviewer's ruling, which is worth recording because it is a good rule:
+*a gap that says "undocumented in the Standard" is a finding; a gap that says
+"documented, but I did not read it" is unfinished work.* All four were then read.
+What each contributed is §8.7.10 to §8.7.14 below, and the design spec's §10,
+§5.6, §8.2 and its per-mask notes. Nothing in the T30 phase 1 material now rests
+on an unread document.
 
-- `03_05_02` §3.5 `DM_Authorize`'s parameters — cited as existing and as step 03
-  of every download procedure, not reproduced.
-- `03_07_02 Datapoint Types` for the `DPT_ErrorClass_System` 20.011 member
-  values; §8.4 Q5 already lists them, but they were not re-verified here.
-- `AN194 Master Reset of Resources`, and `03_05_02` §3.7.1.2.3.2's network-
-  resource requirements for Factory Reset.
-- `06 Profiles v02.01.01` for cross-LSM ordering as a general requirement. The
-  design spec follows `03_05_03` §3.5.2's concrete System B order and declines
-  to generalise it.
+#### 8.7.10 The authorisation model, in full
 
-The genuinely undocumented set, after this pass, is: per-`Legacy*`-flag
-semantics; the `LdCtrl*`-name → load-control-subtype mapping for 13 of 25 kinds;
-what an `EtsDownloadPlugin` DLL does; the differential download algorithm; the
-`L_Data_Extended` capability-discovery mechanism; the `60h` parity computation;
-the unquantified memory-programming delay; and LSM Realisation Type 2.
+`03_03_07` §3.5.7 `A_Authorize_Request-service` specifies the whole model and it
+is small enough to state completely. **[D]**
+
+- A key is *"four octets long and of data type unsigned32"*. Access levels are
+  *"(unsigned8) between 0 (maximum level, i.e., maximum access rights) and 3
+  (minimum level …) or 0 … and 15 (minimum level …)"* — **lower is more
+  powerful**, and both ranges exist.
+- Lifetime: *"A current access level shall be valid until the connection is
+  released or a new key is indicated with the A_Authorize_Request service."* So
+  authorisation is **per connection**, not per operation, and every reconnect
+  must re-authorise — the same structural trap as Verify Mode in §8.7.6, and for
+  the same reason.
+- Not authorising is **not** an error: *"if the communication partner does not
+  authorize itself, the Remote Management shall select the maximum access level
+  protected with FFFFFFFFh as the current access level."*
+- Authorising with a wrong key is **worse than not authorising**: *"if the
+  communication partner authorizes itself with an invalid key, the Remote
+  Management shall select the minimal access level (this is level 3 or level
+  15)"*. There is no negative response. A guessed key therefore silently reduces
+  the access the client would have had by doing nothing — which is why the design
+  spec forbids sending any key the user did not supply.
+
+`03_05_02` §3.5 `DM_Authorize (flags, keys)` wraps it, requires `DM_Connect`
+first, runs *"only when it is required by the Management Server"*, and says the
+support question is answerable up front: *"Whether or not a Management Server
+supports authorisation can directly be retrieved from the Device Descriptor Type
+0 (mask version)."* Its `_RCo` sequence guards the exchange with
+*"if authorization is required (key != FFFF FFFFH)"*, making `FFFFFFFFh` the
+client-side "no key configured" sentinel.
+
+§3.5.2 `DM_Authorize2_RCo` is the procedure a real client should run, and the
+reason is the asymmetry above: it *"does not presume that the device has been
+locked with the key that is provided to the procedure. Therefore, it authorizes
+subsequently with the key FFFFFFFFh and with the key client_key and continues
+with the key that gives the maximal access rights."* Its error handling is
+absolute — *"Failure of any of the contained Application Layer Services shall
+lead to failure of the entire Configuration Procedure."* — which is the safe
+direction: step 03 failing means the destructive step 05 never runs.
+
+Key writing is `03_05_02` §3.6 `DM_SetKey (flags, keys, level)` over `03_03_07`
+§3.5.8 `A_Key_Write`: *"Every device shall be able to handle exactly one key per
+access level. The number of access levels supported by a device is Profile
+dependent."*, `FFFFFFFFh` invalidates a level's key, and you cannot grant what
+you do not hold — *"The current access level shall be less or equal to the access
+level indicated … otherwise the remote application process shall return FFh"*.
+Not implemented in this project, and the design spec says why: a key write can
+lock the client out of its own reach.
+
+How insufficient access **presents on the wire** is the part that matters for
+error reporting, and it splits by service family: classic memory and property
+services fail silently (`03_03_07` §3.5.4: *"the service indication shall be
+ignored"*), while the extended services carry `FCh E_ACCESS_DENIED` in their
+return-code tables (`03_03_07` §3.4.5.5, §3.4.8.3, §3.4.9.1, §3.4.9.2). **[D]**
+So an unauthorised classic write is indistinguishable from a lost frame, and the
+level has to be established before writing rather than diagnosed after.
+
+#### 8.7.11 `DPT_ErrorClass_System` 20.011, enumerated from its own PDF
+
+`03_07_02 Datapoint Types v02.02.01 AS`, DPT ID **20.011**,
+`field1 = ErrorClass_System`, `Range: [0 to 18]`, encoding `N8`: 0 no fault,
+1 general device fault, 2 communication fault, 3 configuration fault,
+4 hardware fault, 5 software fault, 6 insufficient non volatile memory,
+7 insufficient volatile memory, 8 memory allocation command with size 0
+received, 9 CRC-error, 10 watchdog reset detected, 11 invalid opcode detected,
+12 general protection fault, 13 maximal table length exceeded, 14 undefined load
+command received, 15 Group Address Table is not sorted, 16 invalid connection
+number (TSAP), 17 invalid Group Object number (ASAP), 18 Group Object Type
+exceeds (PID_MAX_APDU_LENGTH – 2), and *"19 to 255 : reserved, shall not be
+used"*. **[D]** Verbatim in the design spec §5.6, which is the copy the DPT
+main-type-20 codec should use.
+
+Two things fall out of it. **Values 6, 8, 9, 13 and 14 are download
+diagnostics** — they say the *client's* request was wrong, which is what resolves
+§9.2's "state is `Error` and I do not know why". And **value 15 is a validity
+rule for the download itself**: `03_05_01` §4.16.3 requires *"The Group Addresses
+shall be sorted in ascending order with increasing memory locations."*, so a
+client that writes an unsorted Group Address Table manufactures a runtime error
+report. For contrast, the neighbouring `20.012 DPT_ErrorClass_HVAC` has
+`Range: [0 to 4]`; the reserved boundary differs per sub-type and cannot be
+shared across main type 20.
+
+#### 8.7.12 `AN194`: what a reset does to which resource
+
+`AN194 v02 Master Reset of Resources AS` tabulates, per Interface Object and PID,
+the effect of each Erase Code, in columns `-` Local Reset, `02h`, `07h`, `01h`
+Confirmed Restart, `none` Basic Restart, and Power Cycle. Its vocabulary has to
+be read first, because "default" means four things: *"Not influenced"* (the
+client may rely on the value not changing), *"recalculate"* (*"The MaC shall read
+the value before using it."*), *"KNX default"* (a value *"not specified in the
+KNX Specifications"* that the client may nevertheless assume), and
+*"implementation default"* (*"If the value is given in the product description
+then the MaC may rely on this; otherwise, the MaC has to read the value."*).
+**[D, corpus]**
+
+The rows that matter here, from §2.3.2.2 (Device Object) and §2.3.2.3 (Address
+Table Object):
+
+- `PID_LOAD_STATE_CONTROL` and `PID_ERROR_CODE` are *"implementation default"*
+  after a local reset, `02h` or `07h`, and **`"not influenced"` by Confirmed
+  Restart, Basic Restart and Power Cycle**. That is an independent confirmation
+  of §8.7.2's conclusion from a different document: an interrupted download is
+  not repaired by power-cycling the device.
+- `PID_DEVICE_CONTROL` (Verify Mode) and `PID_PROG_MODE` are *"KNX default"* in
+  **all six** columns — so Verify Mode does not survive a power cycle, and
+  programming mode is off after any restart, which is a second cause for
+  §8.7.7's "it may be off when you get there".
+- `PID_TABLE_REFERENCE` is *"recalculate"*: a base address cached across a reset
+  is invalid.
+- `PID_MAX_APDU_LENGTH` is marked CONSTANT and *"not influenced"* everywhere —
+  the one value in this area that may legitimately be cached per device.
+- `PID_DOWNLOAD_COUNTER` is *"recalculate"*, so it is not a "has this device been
+  touched" fingerprint across a reset.
+
+Three limits AN194 sets on any client, all quoted: *"The interpretation of this
+term is implementation specific"* (Power Cycle — so no test plan step may be
+"power-cycle it"); *"The below defined Erase Codes “ex-factory” shall thus be
+understood as “set back a default state” rather than “set back to the delivery
+state”."*; and *"There are no requirements on whether or not an application may be
+running in the MaS after a Master Reset"*. The last one is the sharpest: a device
+that reports `Loaded` after a factory reset may be conformant, so device state
+must always be read and never inferred from an operation performed.
+
+#### 8.7.13 Correction: the `L_Data_Extended` discovery mechanism **is** documented
+
+§8.7.5 first recorded it as undocumented. It is `03_05_01` §4.3.7
+`PID_MAX_APDU_LENGTH` (PID 56, `PDT_UNSIGNED_INT`), whose §4.3.7.2.1 states:
+*"A Management Client supporting the L_Data_Extended-frame has to check this
+value before starting download. If the PID_MAX_APDU_LENGTH is not present in the
+Device Object, then the Management Client shall manage the device with
+L_Data_Standard-frames with an APDU-length of maximal 15 octets."*, with the
+value *"in the range between 15 and 254"* and 255 reserved as an ESCape Code.
+**[D]**
+
+That also explains where the 12 comes from: 15-octet APDU minus the 3 octets of
+`A_Memory_Write` overhead (`03_03_07` §3.5.4 ignores a request with
+`number > Maximum APDU Length – 3`) is exactly 12. The constant is arithmetic,
+not folklore.
+
+Two adjacent traps from the same clause: the property must be read from the
+**Device Object**, because *"If PID_MAX_APDU_LENGTH is solely in the Router
+Object …, then the device shall only support L_Data_Extended-frames for Routing
+and only L_Data_Standard-frames for Management."*; and `PID_EXT_FRAMEFORMAT` is
+**not** the mechanism — `03_05_01` §4.16.7.2.5: *"This Property is reserved for
+LTE-Mode devices."*
+
+#### 8.7.14 `06 Profiles`: no cross-LSM ordering, and five constraints that do exist
+
+The question §8.7.9 originally deferred was whether `06 Profiles v02.01.01`
+states an ordering requirement between the Load State Machines of different
+loadable parts. **It does not.** A search of the `-layout` extraction for
+ordering and sortedness language returns nothing on that subject; the only
+"shall be sorted" requirements nearby are `03_05_01`'s, and they concern the
+*contents* of the Group Address Table (§8.7.11, value 15), not the order in which
+parts are loaded. So the design spec's use of `03_05_03` §3.5.2's one concrete
+System B order stands, and its refusal to generalise that order to other masks
+stands too — the absence of a general rule is not permission to invent one.
+
+What `06 Profiles` does constrain, and the design spec now records:
+
+- **One Table 94 cell is narrowed per mask.** §5.3 footnote a: *"The Load State
+  Machine transition table allows an optional transition from state “Loaded” to
+  “Error” in case of an event “Load Completed”. This is not allowed for mask
+  version 0912h Couplers. Mask 0912h shall stay in state “Loaded” in case of an
+  error."* **[D, corpus]** So the permitted-outcome set for a cell with
+  alternatives is narrowed by mask, never widened.
+- **Which Load Controls a device must support is per mask.** Annex A.2.4.1,
+  *"Table 7 – Required Load Controls"*: absolute allocation and the four record
+  subtypes are `M` across the System 2 and System 300 columns and `n/a` for mask
+  `57B0h`; `0Ah` Relative Allocation is `M` for mask `0300h`; `0Bh` Data Relative
+  Allocation is `M` for `07B0h`, `17B0h` and `57B0h`. Footnote 66: *"The
+  Additional Load Controls are only required if Additional Data shall be
+  downloaded."* And the NOTE that decides how to use the table: *"Table 7
+  specifies globally for the device which Load Controls shall be supported. Which
+  Load Controls shall be supported for the management of a specific Resource is
+  specified in the (Realisation Type of) the Resource in [11]."* There is
+  therefore **no fallback between allocation styles** — pick by mask or decline.
+- **Authorisation is mandatory for some profiles and optional for others**, and
+  the number of access levels is 4 or 16 depending on the profile. Row-level
+  facts only (see the extraction caveat below).
+- **A device without protected areas grants level 0 to anything.** Footnotes 10
+  and 18: *"The support of the A_Authorize- and the A_Keywrite-service does not
+  imply that the device itself has access protected areas. If this is not the
+  case, a device shall always allow – regardless of the attributed keys – access
+  to the highest level (0), including when receiving an illegal key"*. So a
+  successful authorisation proves nothing about enforcement.
+- **`"If Verify Mode is not implemented, it shall always be off."`** (footnotes 8
+  and 16). A device may conformantly report bit 2 clear after the client sets it,
+  which means §8.7.6's re-assertion rule needs a read-back that decides which
+  write path runs rather than an error.
+- **LSM Realisation Type 1 is not universally mandatory** — the row contains both
+  `M` and `O` values — so a device without `PID_LOAD_STATE_CONTROL` is not
+  necessarily faulty.
+- **Access levels in Annex A are recommendations.** Annex A.1.2.1: levels are
+  noted *"read access level"/"write access level"*, and Table 3's legend defines
+  them as *"recommended default"* values. The `PID_LOAD_STATE_CONTROL` row's
+  values across masks include `3/3`, `3/1`, `3/0`, `15/2` and `15/1` — i.e. there
+  exist devices where reading the load state is permitted at the minimum level
+  but **writing a load event needs level 2, 1 or 0**. That is a silent failure
+  mode: pre-flight reads succeed and the first `Start Loading` write is ignored
+  with no negative response.
+
+**Extraction caveat, recorded because it limits what may be cited:** in the
+`-layout` extraction of `06 Profiles`, the mask-version columns of the feature
+tables in §4.2 and §5.3 are misaligned against their headers. Per-mask
+attribution from those two tables is therefore **not** citable and neither this
+section nor the design spec makes any. Annex A's Table 7 does survive extraction
+and is cited per mask; footnotes have no columns to misalign and are cited
+verbatim.
+
+#### 8.7.15 The genuinely undocumented set
+
+After both passes, **seven** items — one fewer than the first draft claimed,
+because the `L_Data_Extended` discovery mechanism turned out to be documented
+(§8.7.13):
+
+1. per-`Legacy*`-flag semantics (§8.6; zero hits across the extracted Standard
+   corpus);
+2. the `LdCtrl*`-name → load-control-subtype mapping for 13 of 25 kinds (§8.6);
+3. what an `EtsDownloadPlugin`/`Baggage` DLL does (compiled code; not
+   documentable from either knowledge base);
+4. the *"differential download algorithm"* named in `03_05_03` §3.5.3;
+5. the `60h` programming-mode parity computation (`03_05_01` §4.26, `03_05_02`
+   §3.13);
+6. the unquantified *"delay for programming the memory in the device"*
+   (`03_05_02` §3.16);
+7. LSM Realisation Type 2 — a gap the Standard states itself (`03_05_01` §4.23.3).
+
+Each was searched for in both KNX specification knowledge bases
+(`knx_spec_kb_programming`, 27 programming PDFs with figures; the 177-PDF
+text-only base) and, where relevant, in the extracted Standard corpus and §8.6's
+product corpus. That naming convention is the point: it is what lets a later
+reader tell "the Standard is silent" from "nobody looked".
 
 ---
 

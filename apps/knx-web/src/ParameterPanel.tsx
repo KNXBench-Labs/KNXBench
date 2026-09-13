@@ -34,9 +34,14 @@ function sectionLabel(t: Translate, scope: ModuleScope | null): string {
 // `ComObjectDescriptionField`/`DptField`: local draft state, commit on
 // blur, revert and surface the error inline on a rejected write — applied
 // here to `api.setParameterValue` instead of one of the ProjectTree
-// commands. A module-scoped field is writable exactly when the server
-// names a `writeEtsId` for it (design D43, superseding D25's blanket
-// read-only rule) — that happens when exactly one imported module
+// commands. That endpoint answers with a `ParameterPanelDto`, never a
+// `ProjectTree`, so a successful write cannot hand `onUpdated` anything
+// `App.tsx` could pass straight to `setTree` — `onValueApplied` (threaded
+// from `ParameterPanel`, see its own doc comment) is the fix's other half,
+// telling the caller a real, undoable command landed without pretending a
+// tree came back. A module-scoped field is writable exactly when the
+// server names a `writeEtsId` for it (design D43, superseding D25's
+// blanket read-only rule) — that happens when exactly one imported module
 // instance is its authority; every other case stays disabled with a
 // caption naming the read-only reason.
 function ParameterFieldRow(props: {
@@ -44,8 +49,9 @@ function ParameterFieldRow(props: {
   deviceId: number;
   language: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
+  onValueApplied: () => void;
 }) {
-  const { field, deviceId, language, onUpdated } = props;
+  const { field, deviceId, language, onUpdated, onValueApplied } = props;
   const t = useTranslate();
   const [value, setValue] = useState(field.value ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +74,7 @@ function ParameterFieldRow(props: {
     try {
       const panel = await api.setParameterValue(deviceId, field.writeEtsId, value, language);
       onUpdated(panel);
+      onValueApplied();
     } catch (e) {
       setError(api.errorMessage(e));
       setValue(current);
@@ -158,8 +165,9 @@ function ParameterSectionView(props: {
   deviceId: number;
   language: string | null;
   onUpdated: (panel: ParameterPanelDto) => void;
+  onValueApplied: () => void;
 }) {
-  const { section, diagnostics, deviceId, language, onUpdated } = props;
+  const { section, diagnostics, deviceId, language, onUpdated, onValueApplied } = props;
   const t = useTranslate();
   const ownDiagnostics = diagnostics.filter((d) => sameScope(d.scope, section.scope));
   return (
@@ -180,6 +188,7 @@ function ParameterSectionView(props: {
             deviceId={deviceId}
             language={language}
             onUpdated={onUpdated}
+            onValueApplied={onValueApplied}
           />
         ))}
       </div>
@@ -232,8 +241,21 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
   );
 }
 
-export default function ParameterPanel(props: { deviceId: number }) {
-  const { deviceId } = props;
+export default function ParameterPanel(props: {
+  deviceId: number;
+  // Called after every successful `api.setParameterValue`, once per field
+  // committed — never with the new `ParameterPanelDto`, because a caller
+  // that wanted to overlay parameter data onto something else would be
+  // building the very DPT-influence hazard `App.tsx`'s publish comment
+  // warns about. What it *can* promise, honestly, from the server's own
+  // contract (`domain.rs`'s `set_parameter_value_impl` ends in
+  // `apply(state, cmd)`, and `CommandStack::do_command` always pushes onto
+  // `undo` and clears `redo`): a real, undoable command just landed.
+  // Optional so `ParameterPanel.test.tsx`'s existing renders, which have
+  // no tree to update, need no prop they cannot supply.
+  onValueApplied?: () => void;
+}) {
+  const { deviceId, onValueApplied } = props;
   const t = useTranslate();
   const [language] = useProductLanguage();
   const [panel, setPanel] = useState<ParameterPanelDto | null>(null);
@@ -294,6 +316,7 @@ export default function ParameterPanel(props: { deviceId: number }) {
             deviceId={deviceId}
             language={language}
             onUpdated={setPanel}
+            onValueApplied={() => onValueApplied?.()}
           />
         ))
       )}

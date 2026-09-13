@@ -1336,3 +1336,21 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .companion-tabs button[aria-current="page"] { border-color: var(--knx-border); background: color-mix(in srgb, var(--knx-accent) 10%, var(--knx-surface)); }
 .companion-body { flex: 1; min-height: 0; overflow: auto; padding: 18px 20px 24px; }
 .companion-open { color: var(--knx-foreground); }
+
+/* The from-scratch project dialog (`NewProjectDialog.tsx`) and the welcome
+   screen's primary button that opens it. Reuses `.settings-field` for the
+   rows themselves — same overlay, same field rhythm — and only adds what
+   the settings panel has no equivalent of: a per-field hint line, an
+   action row, and the unsaved-changes prompt. */
+.new-project-panel { width: min(26rem, 92vw); }
+.new-project-intro { margin: 0 0 16px; color: var(--knx-muted); font-size: 13px; }
+.settings-field-hint { color: var(--knx-muted); font-size: 0.75rem; }
+.new-project-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.new-project-panel .primary-action { background: var(--knx-accent); color: var(--knx-on-accent, white); }
+.new-project-conflict { margin-top: 16px; padding: 12px 14px; border: 1px solid var(--knx-error-color); border-radius: 8px; }
+.new-project-conflict h3 { margin: 0 0 6px; font-size: 14px; }
+.new-project-conflict p { margin: 0 0 8px; font-size: 13px; }
+.new-project-conflict-detail { color: var(--knx-muted); font-size: 12px; }
+/* The welcome screen's own primary button: `.primary-action` is otherwise
+   scoped to `.workbench-toolbar`, and this one is not in the toolbar. */
+.welcome-workspace .primary-action { background: var(--knx-accent); color: var(--knx-on-accent, white); }

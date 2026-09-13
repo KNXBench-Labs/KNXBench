@@ -3523,3 +3523,61 @@ fingerprint still does not move.
    visible to the next reader. The check that settles it is a search of
    `apps/knx-web/src/busContext.ts` for literal C0 bytes, which should find
    none. **[V]**
+
+## 83. The from-scratch launcher exists, and has still never been clicked in a browser
+
+**Limitation.** §80's "Lifted when" has two clauses. The first is now met: a
+"New project" action exists in `apps/knx-web` — a welcome-screen button, a
+File-menu entry and a command-palette command, all opening
+`NewProjectDialog.tsx`, which calls `api.newProject` and hands the resulting
+tree to `App.tsx`'s `resetTree` **[V]** (`NewProjectDialog.test.tsx`,
+`App.test.tsx`'s "starting a project from scratch" block). The second clause
+— the catalog browser opened against an installation with no lines — is
+still only read, not run: §80 already established by code reading that
+`ProjectExplorer`'s unconditional "Unassigned" branch offers
+`onAddDevice(null)`, and this slice changed nothing there and did not
+exercise it **[A]**.
+
+**Cause.** Every test in this slice is a vitest render against a mocked
+`./api`. No browser, no running `knx-server`, no click. The full path —
+create a project, expand Unassigned, open the catalog, install a package,
+create a device — has been asserted end to end in Rust
+(`http_catalog_to_device.rs`) and never once driven through the actual UI.
+
+**Impact.** The headline capability is now reachable in principle, and the
+wiring that makes it reachable is unit-covered. What nobody can yet claim is
+that a human sitting in front of the application can complete it, because
+nobody has tried. COMPATIBILITY.md must keep saying nothing about it.
+
+**Lifted when.** Someone runs the application, creates a project from the
+dialog, and installs a device from a manufacturer package into it, and
+records what happened.
+
+## 84. A project's group address style can be chosen, and afterwards never seen
+
+**Limitation.** `POST /api/project/new` now accepts `groupAddressStyle` and
+the creation dialog asks for it, so a project can be started two-level, free
+or three-level **[V]** (`http_project_routes.rs`, three tests). After that
+moment the UI never mentions the style again: `knx_projection::ProjectTree`
+has no field for it (`crates/knx-projection/src/lib.rs`, `ProjectTree`), so
+no panel can display it, and no route can change it — nothing in `knx-core`
+restyles a project at all **[D]**.
+
+**Cause.** The projection carries group addresses already *formatted* per the
+project's style (`GroupAddressNode::address`), which was enough for every
+consumer that existed before a project could be created empty. An empty
+project has no addresses, so it has nothing to infer the style from either:
+the one place the setting is visible is the dialog that set it.
+
+**Impact.** A user who picks the wrong style finds out when the first group
+address is rejected or renders unexpectedly, and the only remedy is to
+create the project again. The dialog's own hint says the choice is
+effectively permanent, which is true, but "permanent" and "invisible" is a
+worse pair than "permanent" alone. The server-side refusal of an unknown
+style value (a `400`, never a silent fall back to three-level) at least
+means the style a project ends up with is always one that was asked for.
+
+**Lifted when.** `ProjectTree` carries the style, the properties inspector
+shows it for the project node, and — separately, and harder — a command in
+`knx-core` can restyle a project whose addresses all still fit the target
+style.

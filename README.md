@@ -131,6 +131,13 @@ Live bus operations require a compatible, reachable gateway. Use them with the
 same care you would use around a live distribution board: test first, then
 send.
 
+`knx bus discover` needs IP multicast to reach the KNX gateway; the `knx`
+CLI is not part of the `knx-server` Docker image above, but if you run it
+inside any container of your own (a dev container, CI, or a custom image),
+Docker's default bridge network will not carry that multicast traffic —
+run the container with `--network host` (Linux-only) instead. See
+[KNOWN_LIMITATIONS.md §79](docs/KNOWN_LIMITATIONS.md#79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry).
+
 ## Development and verification
 
 The workspace contains Rust crates for the domain, storage, import/export,

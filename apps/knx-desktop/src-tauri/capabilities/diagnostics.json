@@ -1,0 +1,9 @@
+{
+  "identifier": "diagnostics",
+  "description": "Capabilities for the read-only diagnostics companion window: enumerate windows and focus the main one, nothing else",
+  "windows": ["diagnostics"],
+  "permissions": ["core:window:allow-get-all-windows", "core:window:allow-set-focus"],
+  "remote": {
+    "urls": ["http://localhost:1420", "http://127.0.0.1:*"]
+  }
+}

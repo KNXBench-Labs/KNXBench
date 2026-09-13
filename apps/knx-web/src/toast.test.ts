@@ -10,10 +10,12 @@
 // DOM at all, so the switch from `node` is otherwise a no-op for it.
 import { afterEach, describe, expect, it } from "vitest";
 import { findHoliday, humorizeError, isLateNight, pickStartupToast } from "./toast";
-import { LATE_NIGHT_MESSAGES } from "./toastCopy";
+import { ERROR_WRAPPERS, HOLIDAYS, LATE_NIGHT_MESSAGES } from "./toastCopy";
 import type { HolidayEntry } from "./toastCopy";
 import { messages as enMessages } from "./messages/en";
 import { messages as deMessages } from "./messages/de";
+import { translateFor } from "./i18n";
+import type { TranslatableKey } from "./i18n";
 import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 
 afterEach(() => {
@@ -111,5 +113,46 @@ describe("toast copy honors the active UI language", () => {
     expect(humorizeError("Duplicate group address", () => 0)).toBe(
       deMessages["toast.error.notAsPlanned"].replace("{msg}", "Duplicate group address"),
     );
+  });
+});
+
+// Task 2 (humour copy): ships 30 distinct entries per array instead of the
+// 7/4/7 the toast mechanism launched with. `ERROR_WRAPPERS` is checked
+// through `translateFor("en", ...)` rather than as raw array strings,
+// because most of its entries are `messages/en.ts` keys, not the template
+// text itself — checking the raw string would fail on exactly the seven
+// entries this catalogue shipped with. `translateFor` falls back to
+// returning an unresolved key unchanged (see `i18n.ts`), which is also
+// what lets this task's new entries be plain literal template text
+// without adding a single `messages/en.ts`/`de.ts` row for them.
+describe("toastCopy has enough material to stop repeating itself", () => {
+  it("ERROR_WRAPPERS has at least 30 distinct entries", () => {
+    expect(ERROR_WRAPPERS.length).toBeGreaterThanOrEqual(30);
+    expect(new Set(ERROR_WRAPPERS).size).toBe(ERROR_WRAPPERS.length);
+  });
+
+  it("every ERROR_WRAPPERS entry resolves to a template containing the {msg} placeholder", () => {
+    for (const wrapper of ERROR_WRAPPERS) {
+      expect(translateFor("en", wrapper as TranslatableKey)).toContain("{msg}");
+    }
+  });
+
+  it("LATE_NIGHT_MESSAGES has at least 30 distinct entries", () => {
+    expect(LATE_NIGHT_MESSAGES.length).toBeGreaterThanOrEqual(30);
+    expect(new Set(LATE_NIGHT_MESSAGES).size).toBe(LATE_NIGHT_MESSAGES.length);
+  });
+
+  it("HOLIDAYS has at least 30 entries, each on a distinct calendar date", () => {
+    expect(HOLIDAYS.length).toBeGreaterThanOrEqual(30);
+    const dates = HOLIDAYS.map((h) => `${h.month}-${h.day}`);
+    expect(new Set(dates).size).toBe(dates.length);
+  });
+
+  it("every HOLIDAYS entry has at least one message, and no two holidays share a message", () => {
+    const allMessages = HOLIDAYS.flatMap((h) => h.messages);
+    for (const holiday of HOLIDAYS) {
+      expect(holiday.messages.length).toBeGreaterThan(0);
+    }
+    expect(new Set(allMessages).size).toBe(allMessages.length);
   });
 });

@@ -221,6 +221,13 @@ export const messages: Record<MessageKey, string> = {
   "busMonitor.column.service": "Dienst",
   "busMonitor.column.payload": "Nutzdaten",
   "busMonitor.column.decoded": "Dekodiert",
+  "busMonitor.contextStale":
+    "Das Projekt hat sich nach dem Start dieser Sitzung geändert. Die Dekodierung unten stammt aus dem Stand vom Verbindungsaufbau, Senden ist gesperrt. Für die Dekodierung gegen das aktuelle Projekt neu verbinden.",
+  "busMonitor.contextUnverified":
+    "Dieses Fenster hat die Sitzung nicht gestartet und kann daher nicht bestätigen, dass die Dekodierung zum aktuell geöffneten Projekt passt.",
+  "busMonitor.sessionReplaced":
+    "Die Bus-Sitzung wurde ersetzt — angezeigt wird jetzt Sitzung {id}. Zeilen der vorherigen Sitzung wurden entfernt.",
+  "busMonitor.endedElsewhere": "Die Bus-Sitzung wurde an anderer Stelle beendet.",
 
   "catalog.title": "Gerätekatalog",
   "catalog.installing": "Produktdatenbank wird installiert…",
@@ -362,6 +369,21 @@ export const messages: Record<MessageKey, string> = {
   "busCompose.send": "Senden",
   "busCompose.liveAction": "Sendet auf den verbundenen Bus. Projekt-Rückgängig kann diese Aktion nicht zurücknehmen.",
   "busCompose.sent": "Gesendet {service}: {payload}",
+  "busCompose.contextStaleMessage":
+    "Das Projekt hat sich nach dem Start dieser Bus-Sitzung geändert — der DPT würde gegen den alten Stand aufgelöst, deshalb ist Senden gesperrt. Zuerst neu verbinden.",
+
+  // `DiagnosticsCompanion.tsx` und der Knopf in `App.tsx`, der es öffnet.
+  "companion.open": "Diagnosefenster",
+  "companion.title": "Diagnose",
+  "companion.eyebrow": "Begleitfenster · nur lesend",
+  "companion.readOnly":
+    "Nur lesendes Begleitfenster. Das Projekt wird ausschließlich im Hauptfenster bearbeitet; hier gibt es kein Rückgängig, und dieses Fenster teilt sich die Bus-Sitzung des Hauptfensters, statt eine eigene zu öffnen.",
+  "companion.backToMain": "Zurück zum Hauptfenster",
+  "companion.noMainWindow": "Kein Hauptfenster vorhanden — dieses Fenster wurde eigenständig geöffnet.",
+  "companion.blocked":
+    "Das Diagnosefenster wurde blockiert. Pop-ups für diese Seite erlauben — oder den Monitor weiter hier benutzen.",
+  "companion.failed":
+    "Das Diagnosefenster konnte nicht geöffnet werden. Monitor und Protokoll bleiben hier verfügbar.",
 
   "fsPicker.open": "Öffnen",
   "fsPicker.saveAs": "Speichern unter",

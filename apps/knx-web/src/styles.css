@@ -767,6 +767,43 @@ main {
   margin: 0.5rem 0;
 }
 
+/* Task 4's stale lock. Same visual weight as `.bus-monitor-gap-notice`
+   above, and for the same reason: both say "what you are looking at is not
+   the whole/current truth", which is not a cosmetic note. The unverified
+   variant is deliberately quieter — it reports an absence of evidence, not
+   evidence of a problem. */
+.bus-monitor-stale-lock,
+.bus-monitor-replaced-notice,
+.bus-monitor-ended-elsewhere {
+  display: block;
+  color: var(--knx-error-color);
+  font-weight: bold;
+  margin: 0.5rem 0;
+}
+
+.bus-monitor-unverified-lock {
+  display: block;
+  color: var(--knx-warning-color);
+  margin: 0.5rem 0;
+}
+
+/* The table keeps carrying the lock after the banner has scrolled out of
+   view: the decoded column is the part that would otherwise look
+   authoritative on its own. */
+.bus-monitor-stale-table {
+  opacity: 0.72;
+}
+
+.bus-monitor-stale-table td[class^="bus-monitor-decoded-"] {
+  text-decoration: line-through;
+  text-decoration-color: var(--knx-error-color);
+}
+
+.bus-compose-stale-hint {
+  color: var(--knx-error-color);
+  font-weight: 600;
+}
+
 .bus-monitor-filters {
   display: flex;
   flex-wrap: wrap;
@@ -1281,3 +1318,21 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .telegram-details dl { display: grid; grid-template-columns: minmax(110px, 1fr) 3fr; gap: 10px; }
   .telegram-details dt, .telegram-details dd { margin: 0; }
 }
+
+/* The diagnostic companion window (`DiagnosticsCompanion.tsx`). Same
+   surface tokens as the main shell — it is the same application in a
+   second window, not a second application — but with none of the
+   three-pane chrome: it has no explorer, no inspector, and nothing to
+   resize. */
+.companion-shell { padding: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; gap: 0; }
+.companion-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 16px 20px 10px; border-bottom: 1px solid var(--knx-border); background: var(--knx-surface); }
+.companion-heading h1 { margin: 4px 0 0; font-size: 23px; }
+.companion-return { white-space: nowrap; }
+/* Stated in the window's own colours, not hidden in a tooltip: this is the
+   sentence that keeps the companion honest about what it cannot do. */
+.companion-read-only { margin: 0; padding: 10px 20px; color: var(--knx-muted); border-bottom: 1px solid var(--knx-border); font-size: 12px; }
+.companion-tabs { display: flex; gap: 4px; padding: 8px 16px; border-bottom: 1px solid var(--knx-border); }
+.companion-tabs button { background: transparent; color: var(--knx-foreground) !important; box-shadow: none; border: 1px solid transparent; padding: 6px 12px; }
+.companion-tabs button[aria-current="page"] { border-color: var(--knx-border); background: color-mix(in srgb, var(--knx-accent) 10%, var(--knx-surface)); }
+.companion-body { flex: 1; min-height: 0; overflow: auto; padding: 18px 20px 24px; }
+.companion-open { color: var(--knx-foreground); }

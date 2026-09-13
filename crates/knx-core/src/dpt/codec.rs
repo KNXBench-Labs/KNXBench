@@ -1,7 +1,8 @@
 //! Encode/decode between engineering values (text) and `GroupValue` wire
 //! payloads, for main types 1-19: the fourteen the original design doc's
-//! §4.1 "yes" column lists (`docs/superpowers/specs/2026-09-11-dpt-codec-design.md`),
-//! plus 4, 10, 11, 15, and 19, added by task E4 (2026-09-13) — see
+//! §4.1 lists (`docs/superpowers/specs/2026-09-11-dpt-codec-design.md` —
+//! eleven marked in its table, and 6, 12 and 16 named in the paragraph
+//! below it), plus 4, 10, 11, 15, and 19, added by task E4 (2026-09-13) — see
 //! `docs/KNOWN_LIMITATIONS.md` §61 for that extension's per-type citations
 //! and judgment calls (03_07_02 Datapoint Types v02.02.01 AS, hereafter
 //! "DPT-AS").
@@ -3718,11 +3719,12 @@ mod tests {
             GroupValue::Bytes(vec![124, o7, o6, (6 << 5) | 12, o4, o3, o2, o1])
         };
         // Reserved bits above Month (o7), above Day (o6), above Minutes
-        // (o4), above Seconds (o3), and the low 7 bits of octet 1 (o1),
-        // each checked independently. Octet 1 bit 6 specifically —
-        // the disputed "SRC" bit — has its own dedicated test below
+        // (o4), above Seconds (o3), and bit 0 of octet 1 (o1), each
+        // checked independently. Octet 1's bit 6 — the disputed "SRC"
+        // bit — has its own dedicated test below
         // (`datetime_decode_rejects_the_disputed_src_bit_position`)
-        // rather than being folded into this generic sweep.
+        // rather than being folded into this generic sweep. Bits 1-5 of
+        // octet 1 fall under the same mask and are not exercised here.
         let cases = [
             base(0b1000_0000, 0b0100_0001, 45, 30, 15, 0b1001_0110), // above Month
             base(0b1000_0000, 0b0100_0001, 45, 30, 0b0010_0000, 6),  // above Day
@@ -3759,9 +3761,9 @@ mod tests {
 
     #[test]
     fn datetime_not_valid_branches_encode_back_to_the_same_bytes() {
-        // Findings 5: decode-only tests for the "no date"/"no time"
-        // range-enforcement exemptions never exercised `encode`'s
-        // matching branch. Both round trips, byte for byte.
+        // The "no date"/"no time" exemptions from range enforcement had
+        // decode-only tests, so `encode`'s matching branch went
+        // unexercised. Both round trips, byte for byte.
         let d = dpt(19, Some(1));
 
         let no_date_bytes = vec![124, 0, 0, (6 << 5) | 12, 30, 45, 0b0100_1001, 0b1000_0000];

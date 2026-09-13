@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-13 (T17: line-scan closes — `docs/` updated for what four prior tasks on this branch shipped, plus a corrected timeout-policy citation and the live-validation results; see the end of this document)
+Last updated: 2026-09-13 (A6: `.knxproj` ZIP-password derivation implemented in `crates/knx-secure` and verified against the KNX Standard's own test vectors; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -3475,3 +3475,106 @@ pre-existing `advisory-not-detected` informational warnings for
 advisories that do not match any dependency in this workspace, zero
 errors). Web gates: not applicable — this task touched no
 `apps/knx-web` path.
+
+**A6, `.knxproj` ZIP-password derivation, verified against the KNX
+Standard's own test vectors (2026-09-13), branch
+`a6-knxproj-password`.** `docs/KNOWN_LIMITATIONS.md` §13 blamed both
+`.knxproj` decryption schemes on "documented from `xknxproject` source
+but unverified" as if they were one problem with one fix condition. They
+are not: the AES/PBKDF2 key derivation for schema ≥ 21 (ETS6+) is
+specified in *The KNX Standard v3.0.0*, *Project Schema23 v01.00.00*,
+clause 4.2.4 "Password protection" (p.64/64), complete with its own
+published test vectors — testable today, without any encrypted file.
+Container decryption is the part that still genuinely needs a real
+protected project.
+
+`crates/knx-secure` (previously an empty doc comment) gains
+`derive_knxproj_zip_password(project_password: &str) -> ZipPassword`:
+UTF-16LE-encodes the password (no BOM), PBKDF2-HMAC-SHA256s it against
+the clause's fixed ASCII salt `"21.project.ets.knx.org"` for 65536
+iterations into 32 bytes, and Base64-encodes the result via the `pbkdf2`
+crate's `pbkdf2_hmac::<Sha256>` (its default `"hmac"` feature is exactly
+this generic function — no separate `hmac` crate dependency needed) and
+the existing workspace `sha2`. `base64` (already present transitively at
+the same 0.22 line, so no new resolved version) does the encoding rather
+than a hand-rolled encoder, since the direct dependency was not awkward.
+The return type, `ZipPassword`, carries no `Display` impl and no `serde`
+impl at all — a compile-time guarantee it cannot enter a report or an
+API response by accident — and its `Debug` impl prints a fixed
+`"ZipPassword(REDACTED)"` regardless of contents; `expose(&self) -> &str`
+is the one deliberate way out, documented as the boundary where leak
+responsibility starts. It does not zero its buffer on drop: a hand-rolled
+zero-on-drop without a volatile write (the `zeroize` crate, not added
+here) can be optimised away as a dead store, and this change chose not
+to claim a guarantee it cannot back up — the enforced guarantee is the
+type-level one.
+
+Tests assert byte-exact agreement with two of the clause's three
+published vectors (`"a"` → `+FAwP4iI7/Pu4WB3HdIHbbFmteLahPAVkjJShKeozAA=`,
+`"test"` → `2+IIP7ErCPPKxFjJXc59GFx2+w/1VTLHjJ2duc04CYQ=`) — external
+vectors, not the implementation checked against itself. The clause's
+third vector, a password containing non-ASCII characters, defeats both
+this repository's spec-corpus Markdown extraction and a direct
+`pdftotext` run identically: both render it as `Penn¥w1se` followed by
+an unmappable glyph, because neither tool's embedded-font ToUnicode CMap
+resolves the final character. Rendering the source PDF's page 64 to a
+600 DPI raster and reading the glyph directly (bypassing text extraction
+altogether) identifies it unambiguously as the "Clown Face" emoji
+(U+1F921 🤡) by its distinctive red hair tufts, blue-ringed eyes, red
+nose and pink smile. One rendering-visible ambiguity remained — whether
+a space sits between `w1se` and the emoji, since typesetting can insert
+one before a wide inline glyph purely for layout — and was resolved by
+computing the derivation (already verified against the two vectors
+above) for both candidates: only `"Penn¥w1se 🤡"` (with the space)
+reproduces the clause's published hash
+`ZjlYlh+eTtoHvFadU7+EKvF4jOdEm7WkP49uanOMMk0=` exactly. A non-invertible
+PBKDF2-HMAC-SHA256 match is not something a wrong reconstruction could
+produce by chance, but it is a different evidence path than the other
+two vectors' plain text-extraction-and-assert, and the task brief that
+scoped this change anticipated this vector would likely stay
+unrecoverable — so it is committed as a third test, with the full
+recovery account attached in its comment, for a human to accept or
+reject on its own merits rather than silently promoted to the same
+footing as the two vectors above.
+
+`crates/knx-etsproj/src/container.rs` is untouched:
+`ContainerError::PasswordProtected` still refuses before ever opening
+the encrypted entry, for both schemes, unconditionally. This change
+makes one documented step verifiable; it does not add a feature, and no
+document may say otherwise.
+
+Dependencies added, workspace-pinned like their neighbours: `pbkdf2 =
+"0.12"` (RustCrypto), `base64 = "0.22"` (already present transitively at
+this exact version via the tauri/axum dependency chains — this change's
+direct use resolves to the same version, adding no new one).
+`cargo deny check` passed clean for both: MIT OR Apache-2.0, both already
+on the licence allowlist; `Cargo.lock` gained `hmac 0.12.1` and `pbkdf2
+0.12.2` as new entries (pulled in transitively by `pbkdf2`) plus
+`subtle 2.6.1`, nothing else.
+
+Docs: `docs/KNOWN_LIMITATIONS.md` §13 rewritten to split "Lifted when"
+into the key-derivation half (lifted, as of this change, for schema ≥
+21) and the container-decryption half (still needs a real
+password-protected project, for *both* schemes — ZipCrypto for schema <
+21 remains sourced only from `xknxproject`, untouched by this change).
+`docs/RESEARCH.md` §2.3's evidence marker corrected from "[V — read from
+`xknxproject` source]" to citing the Standard directly for the ETS6
+scheme, with `xknxproject`'s matching implementation now standing as
+corroborating evidence rather than the primary source; the ZipCrypto
+line is left as `[A]`, unchanged. `docs/GAP_ANALYSIS_ETS.md`'s A6 row
+gains a dated note; its core claim ("detected, refused, never
+decrypted") was already accurate and did not need correcting.
+
+All eight gates green: `cargo fmt --all --check` clean; `cargo clippy
+--workspace --all-targets -- -D warnings` clean; `cargo test --workspace
+--no-fail-fast`: **1184 passed / 0 failed / 3 ignored** across 78 `test
+result:` lines from one untruncated run (up from this branch's
+`e97a91c` baseline of 1180/0/3 across 78 lines — the 4-test increase is
+exactly `knx-secure`'s new test module, nothing else moved); `cargo run
+-p xtask -- check-layering` clean (`knx-secure` has no internal `knx-*`
+dependency, so no edge to check); `cargo run -p xtask -- check-headers`:
+ceiling unchanged at 169 files without a header — `knx-secure/src/lib.rs`
+already carried one; `cargo deny check` clean (only the same
+pre-existing `advisory-not-detected` informational warnings for
+advisories matching no dependency in this workspace). Web gates: not
+applicable — this task touched no `apps/knx-web` path.

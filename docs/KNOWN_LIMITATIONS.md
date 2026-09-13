@@ -3751,8 +3751,10 @@ happens first does not happen by accident.
 `parse/catalog.rs` since the two byte-identical copies were merged on
 2026-09-13, plus the inline equivalent for `application_program` in
 `crates/knx-productdb/src/parse/program.rs` — records an `IdConflict` only
-when an id it has already seen belongs to a *different* file — it compares
-the existing row's `source_sha256` to the id, so within one call. Because
+when an id it has already seen belongs to a *different* file — its only test
+is `kept != source_sha256`, comparing the existing row's stored
+`source_sha256` against the `source_sha256` the current parse call was handed
+(`crates/knx-productdb/src/parse/mod.rs`, `first_winner`) **[V]**. Because
 one `ingest_hardware`/`ingest_catalog` call always passes the same
 `source_sha256` for every element in that file, two `Hardware` (or
 `Product`, `Hardware2Program`, `CatalogSection`, `CatalogItem`,

@@ -212,7 +212,9 @@ mod tests {
     fn a_later_ingested_master_file_updates_the_name_the_earlier_one_wrote() {
         // Deliberately the mirror image of `first_winner`
         // (KNOWN_LIMITATIONS.md § 88): real manufacturers get renamed across
-        // ETS editions (Busch-Jaeger -> ABB-Busch-Jaeger and 51 more, per the
+        // ETS editions (`M-0007` is either `"Busch-Jaeger Elektro"` or
+        // `"ABB AG - BUSCH-JAEGER"`, and 51 further ids are the same shape,
+        // both spellings quoted as the corpus writes them, per the
         // 69-file corpus sweep behind that entry), and nothing in
         // knx_master.xml says which spelling is newer except ingest order.
         // First-writer-wins would leave a package's old spelling stuck

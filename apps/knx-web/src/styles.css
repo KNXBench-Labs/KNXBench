@@ -1149,9 +1149,13 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    `--knx-foreground` rather than the accent or warning colour, because those
    two are user-chosen: measured over the badge's own composited background,
    accent-coloured text ranges from 4.37:1 to 6.04:1 in Porcelain depending
-   on which of the five accents is active, where the foreground colour holds
-   12.66:1 to 15.32:1 whatever the user picked. A verdict's legibility should
-   not be a side effect of a theme preference. `NoReference` and `NoDatabase`
+   on which of the five accents is active, and warning-coloured text from
+   4.41:1 to 5.34:1, where the foreground colour holds 12.66:1 to 15.32:1
+   whatever the user picked. At 11px and weight 400 the AA threshold is
+   4.5:1, so both of those floors sit under it: the accent at its worst and
+   the warning at its worst would fail, not merely look weaker. A verdict's
+   legibility should not be a side effect of a theme preference, and here it
+   would not have been legible at all. `NoReference` and `NoDatabase`
    are states of the installation, not faults, so neither gets an error
    colour. */
 .resolution-badge { font-size: 11px; border-radius: 999px; padding: 2px 10px; white-space: nowrap; color: var(--knx-foreground); border: 1px solid var(--knx-border); }

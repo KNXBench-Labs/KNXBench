@@ -799,13 +799,26 @@ Each task: **what**, **why**, **depends on**.
   the R5 research spike ([RESEARCH.md §8.4](RESEARCH.md)), the *generic*
   load/unload/reset/memory-write procedures and the Load State Machine
   are documented in the Standard — a spike is documentation, not
-  implementation or verification, so this task remains unstarted. What
-  the spike could not find anywhere in either KNX specification database,
-  and what still blocks a safe start: the product-specific `Legacy*`
-  compatibility-flag matrix and vendor-DLL-driven download sequences,
-  plus hardware to verify against without real bricking risk.
-  Architecturally unblocked already: load procedures, memory layout and
-  mask data already live in the product database
+  implementation or verification, so this task remains unstarted. A
+  second spike ([RESEARCH.md §8.6](RESEARCH.md), 2026-09-13) then asked
+  the one question the R5 spike left open — whether the `Legacy*` matrix
+  needs a vendor DLL — and answered **no**, measured against the product
+  corpus: the 13 `Legacy*` flags are plain boolean attributes on
+  `ApplicationProgram/Static/Options` in files the importer already
+  opens, project exports materialise the full set so the defaults are
+  directly observable, and the download sequence is declarative
+  `LdCtrl*` data whose mask-default form reproduces the Standard's
+  normative step table row for row. Vendor DLLs appear only as an
+  optional `EtsDownloadPlugin` hook on 5 of 35 corpus programs and are
+  never the source of the step list. What still blocks a safe start,
+  therefore, is smaller and more specific than it was: per-flag
+  *semantics* remain undocumented (the flag names return zero hits in
+  the whole Standard corpus), `knx-productdb` currently drops `Options`
+  and `LoadProcedures` without even reporting them as unknown, and
+  hardware is still needed to verify anything against a real device
+  without bricking it. Architecturally unblocked already: load
+  procedures, memory layout and mask data already live in the product
+  database
   ([KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)).
   Closes **E1**.
 

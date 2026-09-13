@@ -1,8 +1,13 @@
 {
   "identifier": "default",
-  "description": "Capabilities for the main window",
+  "description": "Capabilities for the main window: file dialogs, plus opening and focusing the diagnostics companion",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:default"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "core:webview:allow-create-webview-window",
+    "core:window:allow-set-focus"
+  ],
   "remote": {
     "urls": ["http://localhost:1420", "http://127.0.0.1:*"]
   }

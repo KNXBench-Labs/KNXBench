@@ -347,12 +347,13 @@ device, and no bus was contacted to produce it.
 **Updated, 2026-09-13 (T30 phase 1 — the specification pass, RESEARCH §8.7).**
 An implementable written specification now exists:
 [`docs/superpowers/specs/2026-09-13-commissioning-download-design.md`](superpowers/specs/2026-09-13-commissioning-download-design.md),
-16 sections, every protocol claim quoted from one of five source PDFs
+16 sections and 49 subsections, every protocol claim quoted from one of **eight** source PDFs
 (`03_03_07 Application Layer`, `03_05_01 Resources`, `03_05_02 Management
-Procedures`, `03_05_03 Configuration Procedures`, `03_03_04 Transport Layer`).
-No code was written and no bus was contacted to produce it. This narrows the
-limitation to its two real causes and shortens the unknown list to eight named
-items.
+Procedures`, `03_05_03 Configuration Procedures`, `03_03_04 Transport Layer`,
+`03_07_02 Datapoint Types`, `AN194 v02 Master Reset of Resources`,
+`06 Profiles v02.01.01`). No code was written and no bus was contacted to produce
+it. This narrows the limitation to its two real causes and shortens the unknown
+list to **seven** named items.
 
 *Documented, cited and specified* **[D]**: individual-address programming by
 programming button, including the four-step `NM_IndividualAddress_Write`
@@ -372,6 +373,33 @@ interrupted download leaves behind: load state is non-volatile, only `Loaded` is
 valid, a restart during `Loading` yields `Loading` or `Error`, and `Error` is
 escapable only by `Unload`, which makes the data explicitly undefined.
 
+Added by the same day's fix round, closing four items that had been recorded as
+"documented but not read" — a formulation that is unfinished work rather than a
+finding: the **authorisation** model in full (4-octet unsigned32 keys; access
+levels where 0 is maximum rights and the range is 0–3 or 0–15; validity *"until
+the connection is released"*, so per connection and re-done on every reconnect;
+not authorising grants the `FFFFFFFFh` level while a **wrong** key drops the
+partner to the *minimum* level with no negative response, which is why no guessed
+key may ever be sent; `DM_Authorize2_RCo`'s authorise-twice-and-keep-the-better
+algorithm; and a failed authorisation failing *"the entire Configuration
+Procedure"*, which is the safe direction because it happens before the first
+destructive step) **[D]**; the complete `DPT_ErrorClass_System` **20.011**
+enumeration, values 0–18 with 19–255 *"reserved, shall not be used"*, quoted from
+`03_07_02 Datapoint Types` and reusable by the DPT main-type-20 codec **[D]**;
+`AN194`'s per-resource reset semantics, which independently confirm that the load
+state and error code are *"not influenced"* by Basic Restart, Confirmed Restart
+or Power Cycle, and add that Verify Mode and programming mode are reset by all six
+Erase Codes, that `PID_TABLE_REFERENCE` must be re-read, that *"ex-factory"* means
+"a default state" and not "the delivery state", and that a device may legitimately
+be running an application after a Master Reset **[D, corpus]**; and `06 Profiles`,
+which states **no** cross-LSM ordering requirement — so the one concrete System B
+order in `03_05_03` §3.5.2 stands and may not be generalised — while it does
+constrain which Load Controls a mask must support (Annex A Table 7), forbids mask
+`0912h` couplers the optional `Loaded`→`Error` transition, makes authorisation
+mandatory for some profiles and optional for others with 4 or 16 levels, requires
+a device without protected areas to grant level 0 to any key at all, and requires
+that *"If Verify Mode is not implemented, it shall always be off."* **[D, corpus]**
+
 *Genuinely undocumented*, each searched for in both KNX specification knowledge
 bases and, where relevant, the extracted Standard corpus: (1) per-`Legacy*`-flag
 semantics; (2) the `LdCtrl*`-name → load-control-subtype mapping for 13 of the 25
@@ -379,12 +407,19 @@ semantics; (2) the `LdCtrl*`-name → load-control-subtype mapping for 13 of the
 narrows the earlier claim, and that a wrong subtype drives the Load State
 Machine to `Error` rather than returning an error; (3) what an
 `EtsDownloadPlugin` DLL does (compiled code; not documentable from either base);
-(4) the "differential download algorithm" named by `03_05_03` §3.5.3; (5) how a
-client discovers `L_Data_Extended` support; (6) the parity computation for the
-programming-mode octet at memory address `60h`; (7) the unquantified "delay for
-programming the memory in the device" of `03_05_02` §3.16; (8) LSM Realisation
-Type 2, which `03_05_01` §4.23.3 states outright is *"not specified in this
-version of this document"*.
+(4) the "differential download algorithm" named by `03_05_03` §3.5.3; (5) the
+parity computation for the programming-mode octet at memory address `60h`;
+(6) the unquantified "delay for programming the memory in the device" of
+`03_05_02` §3.16; (7) LSM Realisation Type 2, which `03_05_01` §4.23.3 states
+outright is *"not specified in this version of this document"*.
+
+The list lost an item to a **correction**, not to a discovery: how a client
+discovers `L_Data_Extended` support **is** documented — `03_05_01` §4.3.7
+`PID_MAX_APDU_LENGTH`, range 15–254, *"A Management Client supporting the
+L_Data_Extended-frame has to check this value before starting download"*, absent
+⇒ standard frames with a 15-octet APDU, which is exactly where `DM_MemWrite`'s
+12-octet cap comes from (15 − 3) **[D]**. It was listed as a gap on 2026-09-13 and
+should not have been.
 
 Two things the specification also settled that are corrections rather than
 findings: RESEARCH §8.4's claim that no APCI value can be read out of
@@ -396,9 +431,13 @@ read-only property reporting an Interface Object's *own* index, while the
 selector is the `object_index` field of the property services **[D]**.
 
 The specification also fixes the hardware-safety rules as **design
-requirements** rather than operating advice: `1.1.220` (an alarm panel) is
-structurally unreachable via exclusion-by-construction shared with
-`knx_core::scan::ScanPlan`; `1.1.24`–`1.1.32` are the only addresses approved
+requirements** rather than operating advice: `1.1.220` (an alarm panel) is never
+read, never written and never included in any scan or address range, enforced
+structurally by exclusion-by-construction shared with `knx_core::scan::ScanPlan`,
+at the lowest layer that knows what an individual address is, with a test that
+proves the refusal for a single read, a single write, a plan, a spanning range
+and a retry list — phase 2 is not complete without that test;
+`1.1.24`–`1.1.32` are the only addresses approved
 for active reads; read and write entry points are separated in the type system;
 and because `A_IndividualAddress_Write` is a *broadcast* that no address filter
 can constrain, the programming-mode responder count must be exactly one before

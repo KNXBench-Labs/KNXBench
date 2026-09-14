@@ -232,7 +232,7 @@ mod tests {
         IndividualAddress::new(area, line, device).unwrap()
     }
 
-    /// §14 item 10, and §2.3: the value cannot be produced by default.
+    /// §14 item 18's refusal, and §2.3: no value is produced by default.
     #[test]
     fn a_write_authorisation_has_no_default_and_no_blanket_constructor() {
         // Compile-time facts, asserted by construction: the only two

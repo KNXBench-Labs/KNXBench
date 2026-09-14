@@ -246,7 +246,7 @@ impl AuthorisationPlan {
 mod tests {
     use super::*;
 
-    /// §14 item 15: lower is more powerful, and the ordering says so.
+    /// §14 item 14: lower is more powerful, and the ordering says so.
     #[test]
     fn level_zero_outranks_every_other_level() {
         for other in 1..=255u8 {

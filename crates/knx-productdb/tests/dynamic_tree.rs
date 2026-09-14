@@ -1506,6 +1506,83 @@ fn a_wide_module_def_trips_the_activation_budget_without_tripping_the_expansion_
     );
 }
 
+/// Fix round 3 (scoped re-review of round 2): a spent activation budget
+/// must stop the *walk*, not just the recording.
+///
+/// Round 2 checked `MAX_MODULE_ACTIVATIONS` only at the two activation
+/// sites, and only after the per-scope dedup had already built and
+/// inserted a `ScopeKey`. `walk`'s `Module` arm never consulted it. So a
+/// file that spent its activation budget early went on expanding until
+/// the 100,000-times-larger `MAX_MODULE_EXPANSIONS` stopped it, and every
+/// ref met on the way still allocated a `(Vec<i64>, String)` into a
+/// `seen` set that no budget bounded — the refs stopped being recorded,
+/// the work did not.
+///
+/// The shape here makes that difference observable rather than merely
+/// arguable. It is the previous test's shape with six more module levels:
+/// `fanout=4, module_levels=12`, whose unrefused expansion count is
+/// `(4^13 - 1) / 3 = 22,369,621` — 223x `MAX_MODULE_EXPANSIONS`. If the
+/// walk continued past a spent activation budget it would therefore reach
+/// the expansion budget and emit that budget's own diagnostic, as it did
+/// before this fix. After the fix the walk stops at the activation budget
+/// and the expansion budget is never approached, so the absence of a
+/// `budget == MAX_MODULE_EXPANSIONS` diagnostic is the assertion that
+/// distinguishes the two behaviours.
+#[test]
+fn a_spent_activation_budget_stops_further_module_expansion() {
+    const FANOUT: usize = 4;
+    const MODULE_LEVELS: usize = 12;
+    const REFS_PER_LEVEL: usize = 800;
+    let (program, modules) = build_fanout_chain_with_refs(MODULE_LEVELS, FANOUT, REFS_PER_LEVEL);
+    let trees = ProgramTrees::from_parts(program, modules);
+
+    let unrefused_expansions: usize = (0..=MODULE_LEVELS).map(|l| FANOUT.pow(l as u32)).sum();
+    assert!(
+        unrefused_expansions > MAX_MODULE_EXPANSIONS,
+        "this shape only proves anything if an unrefused walk would overrun the expansion \
+         budget: {unrefused_expansions} vs {MAX_MODULE_EXPANSIONS}"
+    );
+
+    let start = std::time::Instant::now();
+    let activation = evaluate(&trees, &values(&[]).into());
+    let elapsed = start.elapsed();
+    assert!(
+        elapsed < std::time::Duration::from_secs(20),
+        "a spent budget must end the walk promptly, not grind on: took {elapsed:?}"
+    );
+
+    assert_eq!(
+        activation.parameter_refs.len(),
+        MAX_MODULE_ACTIVATIONS,
+        "activation must stop recording refs exactly at the budget"
+    );
+    assert!(
+        !activation
+            .diagnostics
+            .iter()
+            .any(|d| matches!(d.diagnostic, Diagnostic::ModuleExpansionBudgetExhausted { budget, .. } if budget == MAX_MODULE_EXPANSIONS)),
+        "the walk must have stopped at the activation budget; reaching the expansion budget \
+         means it kept expanding after the activation budget was spent"
+    );
+    let budget_diagnostics: Vec<_> = activation
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            matches!(
+                d.diagnostic,
+                Diagnostic::ModuleExpansionBudgetExhausted { budget, .. }
+                    if budget == MAX_MODULE_ACTIVATIONS
+            )
+        })
+        .collect();
+    assert_eq!(
+        budget_diagnostics.len(),
+        1,
+        "still exactly one activation-budget diagnostic, even though the `Module` arm now \
+         reports the same budget too: {budget_diagnostics:?}"
+    );
+}
+
 /// D14: a diagnostic raised *inside* a module's expansion (here:
 /// `NoBranchMatched`, chosen because it exercises `evaluate_comparable_choose`)
 /// comes back carrying the instantiating `Module`'s scope, not `None` —

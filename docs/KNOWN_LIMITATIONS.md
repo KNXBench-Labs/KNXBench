@@ -285,11 +285,12 @@ application does, on any platform.
 **Limitation.** The application does not program devices (RESEARCH §8.3).
 
 **Cause.** As of 2026-09-13 the cause is **implementation and hardware, not
-research**: there is no commissioning code, nothing has been run against a
-device, bricking a real device is a real outcome of getting it wrong, and a
-short, named list of things genuinely remains undocumented (see the 2026-09-13
-phase-1 update below). The product database still does not store the load
-procedures it already reads. **[V]**
+research**: there is no commissioning code, nothing has been *written* to a
+device (a read-only pass has run, 2026-09-14, see below), bricking a real
+device is a real outcome of getting it wrong, and a short, named list of
+things genuinely remains undocumented (see the 2026-09-13 phase-1 update
+below). The product database still does not store the load procedures it
+already reads. **[V]**
 
 **Impact.** Planning and documentation happen here; downloading happens in
 ETS, for now.
@@ -563,16 +564,59 @@ and because `A_IndividualAddress_Write` is a *broadcast* that no address filter
 can constrain, the programming-mode responder count must be exactly one before
 it may be issued.
 
-**Lifted when.** Research no longer blocks this. What remains, in the order it
-can be done: the parsing addition described (and deliberately not built) in
-RESEARCH §8.6.5 (its `bool_flag` prerequisite is done); T30 phase 2 — implement
-the specification above against a device simulator, with no hardware attached,
-including the exhaustive transition-table tests the specification lists; T30
-phase 3 — verify **read-only** against real hardware inside `1.1.24`–`1.1.32`,
-expecting deviations and recording them as findings; and only then any write at
-all, on a device we can afford to destroy, on a line isolated from anything that
-matters, and only with a fresh explicit go-ahead naming the device and the
-operation. Per-flag semantics would be closed by the MT6 XSD
+**Updated, 2026-09-14 (T30 phase 3 — read-only verification against the real
+installation, RESEARCH §8.8).** Ran, against real hardware behind the gateway
+R-SAFE-2 approves, on all nine addresses `1.1.24`–`1.1.32`; `1.1.220` was
+never contacted (checked structurally, at the exclusion set, before the first
+frame). No write of any kind reached the wire: every session was
+`ManagementSession::read_only` with `AuthorisationPlan::Skip`, so neither a
+write path nor `A_Authorize_Request` existed to use. Findings, both from real
+devices and both corrections to how this project verifies them rather than to
+the protocol facts §8.7 established:
+
+- **The device-property reads were narrower than design spec §14's phase 3
+  checklist** — `PID_ERROR_CODE`, `PID_DEVICE_CONTROL` and `PID_OBJECT_INDEX`
+  were not read against real hardware this pass, only Device Descriptor
+  Type 0, `PID_MANUFACTURER_ID`, `PID_HARDWARE_TYPE` and
+  `PID_LOAD_STATE_CONTROL` on the three loadable Interface Objects. Carried
+  forward as a residual coverage gap, not closed here.
+- **`ManagementSession`'s own connect-then-read cannot be trusted to report a
+  device absent.** An independent cross-check with the already-shipped `bus
+  scan` probe found eight of the nine addresses occupied at mask `0701h`
+  (one, `1.1.29`, genuinely vacant); `ManagementSession` itself obtained a
+  usable answer from exactly one of those eight, `1.1.24` — the other seven
+  timed out through the session's own retry budget on every property tried,
+  indistinguishable from the one real vacancy. RESEARCH §8.8.3 has the
+  mechanical explanation (the scan probe resends a fresh `T_Connect` on every
+  retry; `ManagementSession` sends `T_Connect` once and retries only the data
+  frame after it) and design spec §13 **R20** now carries this as a named
+  risk for the write path this project has not built yet: it must not treat
+  its own read time-out as proof a target is absent.
+- **`1.1.24`'s partial refusal — `PID_MANUFACTURER_ID` answered,
+  `PID_HARDWARE_TYPE` and `PID_PROGRAM_VERSION` both refused with
+  `nr_of_elem = 0`, all under no authorisation — is a live confirmation of
+  design spec §10.2's prediction, not a new problem**: an unauthorised client
+  gets whatever the device's Profile grants the `FFFFFFFFh` key, and that can
+  differ by property.
+- **The mask `0701h` result is consistent with §8.5 Finding 4's earlier scan
+  of this same installation** (2026-09-13, nine consecutive occupied
+  addresses, same mask, addresses unnamed there). This section names its own
+  nine because they are the already-approved range from spec §2.2, not
+  because the broader-inventory redaction policy changed.
+
+**Lifted when.** Research no longer blocks this, and T30 phase 3's read-only
+pass has now run once (above) without exhausting what it could check. What
+remains, in the order it can be done: the parsing addition described (and
+deliberately not built) in RESEARCH §8.6.5 (its `bool_flag` prerequisite is
+done); T30 phase 2 — implement the specification above against a device
+simulator, with no hardware attached, including the exhaustive
+transition-table tests the specification lists; fixing or working around
+`ManagementSession`'s presence-detection gap (design spec §13 R20) before any
+write path relies on it; a second phase-3 pass covering the properties
+§14 names and this one did not; and only then any write at all, on a device
+we can afford to destroy, on a line isolated from anything that matters, and
+only with a fresh explicit go-ahead naming the device and the operation.
+Per-flag semantics would be closed by the MT6 XSD
 `KNX-Project-Schema-v23.xsd` (KNX-member distribution, updates via
 `gitlab.knx.org`) or by differential testing against ETS. Products setting flags
 the implementation cannot interpret, and products carrying an

@@ -178,7 +178,7 @@ pub enum CemiError {
     InvalidApci(u16),
     /// The encoded NPDU is longer than the `L` octet can name — `L` is one
     /// octet holding `npdu.len() - 1` (EMI_IMI v01.04.02 AS §4.1.5.3.2), so
-    /// 256 octets is the first length that does not fit. `got` is the
+    /// 256 octets still fits and 257 is the first length that does not. `got` is the
     /// measured NPDU length. `ApplicationService::GroupValueWrite`/
     /// `GroupValueResponse` with a long DPT-24/28 string are the paths
     /// that can reach this; rejected here rather than truncated, which

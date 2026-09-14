@@ -2313,6 +2313,7 @@ means recoverable using only what this application could implement.
 | R17 | Sending a guessed or default access key (§10.2) | **[D]** AL §3.5.7: an invalid key makes the device *"select the minimal access level (this is level 3 or level 15)"*. The client ends up with **less** access than if it had never authorised, and with no error to show for it. Every subsequent classic write is then silently ignored (§10.6), which lands on R5. | Re-authorise correctly on a fresh connection |
 | R18 | Losing authorisation on reconnect (§10.3) | The level is valid only *"until the connection is released"* (**[D]** AL §3.5.7). After the reconnect that §5.5 requires during a long load transition, the session is at the free level. Writes stop being applied, without a negative response. Indistinguishable from a dead bus. | Re-authorise per connect, as one unit with Verify Mode |
 | R19 | Writing a key (`A_Key_Write`, §10.7) | A key written to the level the client itself uses, or `FFFFFFFFh` written to it, removes the client's own access. **[D]** AL §3.5.8's privilege rule means the client may not be able to undo it: *"The current access level shall be less or equal to the access level indicated"*. The device stays manageable only by whoever holds a better key. | Nothing, from this application. Not implemented |
+| R20 | Treating a `ManagementSession` read time-out as proof a target is absent (RESEARCH §8.8, added 2026-09-14, **[V]**) | Seven of nine real devices in the approved range answered the scan probe's `T_Connect` → `A_DeviceDescriptor_Read` pair immediately but never answered the equivalent `ManagementSession` exchange within its own retry budget. A future write path that skips devices its own session reports silent would skip real, present, correctly wired devices. | Check presence with the scan probe (§8.5) before trusting a `ManagementSession` time-out. The mechanism is unconfirmed — see RESEARCH §8.8.3 — and no fix should be written before it is. |
 
 R1 has no recovery row because it has no recovery. That is the argument for
 enforcing it in the type system rather than in a review checklist.
@@ -2414,6 +2415,38 @@ Phase 3, read-only, within `1.1.24`–`1.1.32` only: read every loadable part's
 `PID_OBJECT_INDEX`, Device Descriptor Type 0 and `PID_MANUFACTURER_ID`, and
 compare the observed shapes against this document. Deviations are findings, and
 the expected outcome is that there will be some.
+
+### 14.1 Correction, phase 3 ran (2026-09-14): presence is not `ManagementSession`'s to establish
+
+**[V]** RESEARCH §8.8 records the run. Two corrections to the paragraph above,
+both from real hardware and neither hypothetical:
+
+- **The property list actually read was different from the one specified
+  here**: three of §14's properties were skipped and two it does not name
+  were added. Device Descriptor Type 0, `PID_MANUFACTURER_ID`,
+  `PID_HARDWARE_TYPE`, `PID_PROGRAM_VERSION` and `PID_LOAD_STATE_CONTROL` on
+  all three loadable Interface Objects were read; `PID_ERROR_CODE`,
+  `PID_DEVICE_CONTROL` and `PID_OBJECT_INDEX` were not read against real
+  hardware in this pass. That is a coverage gap in the *verification*, not a
+  correction to the device model, and it is carried forward rather than
+  closed here.
+- **`ManagementSession::read_only`'s own connect-then-read is not a reliable
+  presence check on this installation, and this document's phase 3 checklist
+  assumed it was.** Of the eight addresses in range that an independent
+  `bus scan` probe (§8.5, same transport, same `T_Connect` →
+  `A_DeviceDescriptor_Read(0)` sequence, sent as one back-to-back pair with no
+  separate retry of the data frame alone) found occupied at mask `0701h`,
+  `ManagementSession` obtained an answer from exactly one. The other seven
+  timed out through the session's own TL clause 4 retry budget (3 attempts ×
+  3 s) on *every* property this pass tried, indistinguishable by that method
+  alone from the range's one genuinely vacant address. RESEARCH §8.8.3 has the
+  detail and the most likely mechanical cause. **The correction:** presence on
+  real hardware must be established with the scan probe (`NM_IndividualAddress_
+  Check`, already shipped, §8.5), not inferred from whether a
+  `ManagementSession` read answers. A future phase 2 that reuses
+  `ManagementSession` for the write path inherits this same gap until it is
+  fixed or worked around, and should not treat its own read timeout as proof
+  a target is absent.
 
 ## 15. Non-goals
 

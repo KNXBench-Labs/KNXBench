@@ -194,12 +194,88 @@ that server-named id instead of the declared one (D43).
   (`Access="None"` alongside a `Memory` child came back roughly 50/50 in
   the corpus, `Visible` never observed at all); the editor shows `access`
   verbatim and never uses it to block, hide or grey out a write.
-- **`Float`/`Text`/`IPAddress`/`Picture`/`Raw` parameter kinds get only a
-  non-empty-string check on write.** Only `Number` (bounds) and
-  `Restriction` (enum membership) have columns the product database
-  actually carries. No IPv4 parsing, no byte-length check, no
-  fractional-format check — inventing rules with no spike behind them was
-  ruled out rather than attempted.
+- **T18 slice 5 (2026-09-14) gives `Float`, `Text` and `IPAddress` real
+  validation; `Picture` and `Raw` stay on the non-empty-string floor,
+  documented as a gap rather than guessed shut.** `Float` now rejects
+  non-finite input and anything outside the program's own
+  `minInclusive`/`maxInclusive` (`TypeFloat`'s own attributes,
+  corpus-observed: MDT `M-0083_A-0317-31-7DC6_PT-2ByteFloatTemp` carries
+  `<TypeFloat Encoding="DPT 9" minInclusive="-100" maxInclusive="200"/>`)
+  when the program declares bounds, and just finiteness when it does not.
+  What `Float` deliberately does *not* enforce is `Value_t`'s own stored
+  encoding for a `TypeFloat` — scientific notation with 16 significant
+  digits and a three-digit exponent, the shape `value.ToString("E15", ...)`
+  produces (*Project Schema23 v01.00.00* §1.1.3.19, p. 30/64) **[D]**.
+  That is the wire format, not what a person types into a form field, and
+  this design stores the raw string verbatim rather than reformatting it.
+  So any finite number in ordinary decimal or scientific notation is
+  accepted, and the E15 question stays open — the same kind of deliberate
+  narrowing as the IPv6 decision below, in the opposite direction:
+  `IPAddress` accepts less than reality allows, `Float` accepts more than
+  the wire format specifies. Also unenforced: `TypeFloat/@Increment`
+  (corpus-observed alongside `minInclusive`/`maxInclusive` on four of six
+  distinct `TypeFloat` shapes, e.g. `Increment="0.1"`), a real acceptance
+  constraint — with `minInclusive="1"` `maxInclusive="120"`
+  `Increment="0.1"`, the validator accepts `1.05` today. T18 fix round 1
+  (2026-09-14) made `Increment` visible — `insert_parameter_type` now
+  reports it as an unmodelled attribute rather than dropping it with no
+  record at all — but visibility is not enforcement; the value is still
+  read nowhere and the bound stays unchecked.
+  `Text` now rejects a value whose UTF-8 byte length exceeds the
+  program's own `SizeInBit` (`TypeText`'s own attribute, corpus-observed:
+  the same program's `<TypeText SizeInBit="240"/>` and
+  `SizeInBit="640"`) divided by 8, when declared; a `TypeText` with no
+  `SizeInBit` — which happens — gets no length cap rather than a
+  fabricated one. Both reuse `parameter_type`'s existing
+  `min_inclusive`/`max_inclusive`/`size_in_bit` columns; no schema
+  change, no change to how the value is stored (the raw string the user
+  typed is still what gets written verbatim into the command and the
+  exported `Value` attribute). The byte-length check is a proxy, not the
+  real rule, and it is a strict one: UTF-8 costs two bytes per umlaut, so
+  a 30-character German label — the norm in this corpus, not an edge
+  case — can be rejected by a `SizeInBit="240"` field (30 bytes) that ETS
+  itself would accept, since ETS's own storage is not attested to be
+  UTF-8-per-character (T18 fix round 1, item 5; the check itself is
+  intentionally left as-is — conservative-direction-only, per its own
+  comment in `apps/knx-server/src/domain.rs`).
+  `IPAddress` accepts both IPv4 and IPv6, on schema evidence: KNX Project
+  Schema23 v01.00.00 §1.1.3.19 (`simpleType Value_t`) documents
+  `TypeIPAddress` as "IPv4 addresses: decimal dotted notation" and
+  "IPv6 addresses: eight groups of four hexadecimal digits, separated by
+  colons, e.g. 2001:0db8:85a3:0000:0000:8a2e:0370:7334" — both forms, in
+  the same sentence, with a worked IPv6 example `[D]`. IPv4 is validated
+  with `std::net::Ipv4Addr::from_str`, which matches the schema's own
+  `Ipv4Address_t` restriction pattern (§1.1.3.21) closely enough
+  (rejects leading zeroes and out-of-range octets, same as the pattern
+  would). IPv6 is deliberately checked against only the schema's literal
+  documented shape — eight colon-separated groups of exactly four hex
+  digits — not the fuller RFC 4291 grammar `std::net::Ipv6Addr` would
+  accept (compression via `::`, elided leading zeroes, embedded IPv4
+  tails). The schema names one form; accepting a wider one would be
+  inventing a rule the Standard does not state, so the compressed forms
+  are rejected even though a real IPv6 address may use them — narrower
+  than necessary is the defensible choice here, not the complete one.
+  `Picture` and `Raw` get no format check beyond non-empty, because no
+  format exists to check against: `Value_t`'s encoding table (§1.1.3.19)
+  lists `TypeNone`, `TypeText`, `TypeNumber`, `TypeFloat`,
+  `TypeRestriction`, `TypeTime`, `TypeDate`, `TypeIPAddress` and
+  `TypeAllocatorRefId` — `TypePicture` and `TypeRawData` are absent from
+  it entirely `[D]`. A full sweep of all five corpus `.knxprod` archives
+  found zero `<TypePicture>` and zero `<TypeRawData>` elements to
+  cross-check against, and neither knx-spec-kb knowledge base nor
+  xknxproject's own source turned up a documented encoding. The schema
+  does use `xs:base64Binary` for other binary attributes elsewhere
+  (`SerialNumber`, `LoadedImage`, `PasswordHash`) `[D]`, which was
+  considered as a stand-in rule for Picture/Raw and rejected: that
+  convention is attested for those specific attributes, not for these
+  two parameter kinds, and guessing it across would risk rejecting a
+  legitimate value on a rule invented rather than found. What both kinds
+  do gain is a reject on any character outside XML 1.0's `Char`
+  production (`[V]`: this workspace's pinned `quick-xml 0.42.0` does not
+  filter or escape such characters on write, confirmed by a standalone
+  test), applied to every kind's fallback path too — a value containing
+  a raw control character would otherwise corrupt the exported
+  `.knxproj` rather than merely being semantically unchecked.
 
 **Impact.** Device configuration for a top-level field, and now for a
 module-scoped field with exactly one authoritative instance, can be done
@@ -285,11 +361,12 @@ application does, on any platform.
 **Limitation.** The application does not program devices (RESEARCH §8.3).
 
 **Cause.** As of 2026-09-13 the cause is **implementation and hardware, not
-research**: there is no commissioning code, nothing has been run against a
-device, bricking a real device is a real outcome of getting it wrong, and a
-short, named list of things genuinely remains undocumented (see the 2026-09-13
-phase-1 update below). The product database still does not store the load
-procedures it already reads. **[V]**
+research**: there is no commissioning code, nothing has been *written* to a
+device (a read-only pass has run, 2026-09-14, see below), bricking a real
+device is a real outcome of getting it wrong, and a short, named list of
+things genuinely remains undocumented (see the 2026-09-13 phase-1 update
+below). The product database still does not store the load procedures it
+already reads. **[V]**
 
 **Impact.** Planning and documentation happen here; downloading happens in
 ETS, for now.
@@ -563,16 +640,61 @@ and because `A_IndividualAddress_Write` is a *broadcast* that no address filter
 can constrain, the programming-mode responder count must be exactly one before
 it may be issued.
 
-**Lifted when.** Research no longer blocks this. What remains, in the order it
-can be done: the parsing addition described (and deliberately not built) in
-RESEARCH §8.6.5 (its `bool_flag` prerequisite is done); T30 phase 2 — implement
-the specification above against a device simulator, with no hardware attached,
-including the exhaustive transition-table tests the specification lists; T30
-phase 3 — verify **read-only** against real hardware inside `1.1.24`–`1.1.32`,
-expecting deviations and recording them as findings; and only then any write at
-all, on a device we can afford to destroy, on a line isolated from anything that
-matters, and only with a fresh explicit go-ahead naming the device and the
-operation. Per-flag semantics would be closed by the MT6 XSD
+**Updated, 2026-09-14 (T30 phase 3 — read-only verification against the real
+installation, RESEARCH §8.8).** Ran, against real hardware behind the gateway
+R-SAFE-2 approves, on all nine addresses `1.1.24`–`1.1.32`; `1.1.220` was
+never contacted (checked structurally, at the exclusion set, before the first
+frame). No write of any kind reached the wire: every session was
+`ManagementSession::read_only` with `AuthorisationPlan::Skip`, so neither a
+write path nor `A_Authorize_Request` existed to use. Findings, both from real
+devices and both corrections to how this project verifies them rather than to
+the protocol facts §8.7 established:
+
+- **The device-property reads were different from design spec §14's phase 3
+  checklist** — three of §14's properties were skipped and two it does not
+  name were added: `PID_ERROR_CODE`, `PID_DEVICE_CONTROL` and
+  `PID_OBJECT_INDEX` were not read against real hardware this pass, only
+  Device Descriptor Type 0, `PID_MANUFACTURER_ID`, `PID_HARDWARE_TYPE`,
+  `PID_PROGRAM_VERSION` and `PID_LOAD_STATE_CONTROL` on the three loadable
+  Interface Objects. Carried forward as a residual coverage gap, not closed
+  here.
+- **`ManagementSession`'s own connect-then-read cannot be trusted to report a
+  device absent.** An independent cross-check with the already-shipped `bus
+  scan` probe found eight of the nine addresses occupied at mask `0701h`
+  (one, `1.1.29`, genuinely vacant); `ManagementSession` itself obtained a
+  usable answer from exactly one of those eight, `1.1.24` — the other seven
+  timed out through the session's own retry budget on every property tried,
+  indistinguishable from the one real vacancy. RESEARCH §8.8.3 has the
+  mechanical explanation (the scan probe resends a fresh `T_Connect` on every
+  retry; `ManagementSession` sends `T_Connect` once and retries only the data
+  frame after it) and design spec §13 **R20** now carries this as a named
+  risk for the write path this project has not built yet: it must not treat
+  its own read time-out as proof a target is absent.
+- **`1.1.24`'s partial refusal — `PID_MANUFACTURER_ID` answered,
+  `PID_HARDWARE_TYPE` and `PID_PROGRAM_VERSION` both refused with
+  `nr_of_elem = 0`, all under no authorisation — is a live confirmation of
+  design spec §10.2's prediction, not a new problem**: an unauthorised client
+  gets whatever the device's Profile grants the `FFFFFFFFh` key, and that can
+  differ by property.
+- **The mask `0701h` result is consistent with §8.5 Finding 4's earlier scan
+  of this same installation** (2026-09-13, nine consecutive occupied
+  addresses, same mask, addresses unnamed there). This section names its own
+  nine because they are the already-approved range from spec §2.2, not
+  because the broader-inventory redaction policy changed.
+
+**Lifted when.** Research no longer blocks this, and T30 phase 3's read-only
+pass has now run once (above) without exhausting what it could check. What
+remains, in the order it can be done: the parsing addition described (and
+deliberately not built) in RESEARCH §8.6.5 (its `bool_flag` prerequisite is
+done); T30 phase 2 — implement the specification above against a device
+simulator, with no hardware attached, including the exhaustive
+transition-table tests the specification lists; fixing or working around
+`ManagementSession`'s presence-detection gap (design spec §13 R20) before any
+write path relies on it; a second phase-3 pass covering the properties
+§14 names and this one did not; and only then any write at all, on a device
+we can afford to destroy, on a line isolated from anything that matters, and
+only with a fresh explicit go-ahead naming the device and the operation.
+Per-flag semantics would be closed by the MT6 XSD
 `KNX-Project-Schema-v23.xsd` (KNX-member distribution, updates via
 `gitlab.knx.org`) or by differential testing against ETS. Products setting flags
 the implementation cannot interpret, and products carrying an
@@ -3100,7 +3222,7 @@ claim.
 **Closed, 2026-09-14 (T13, branch `d10-language-data`).** The residue
 above is what this slice closes: `FunctionType`, `FunctionPoint` and
 `SpaceUsage` each get a table now (`function_type`, `function_point`,
-`space_usage`; schema v8 → v9, `migrate_v8_to_v9`), filled by
+`space_usage`; schema v9 → v10, `migrate_v9_to_v10`), filled by
 `parse/master.rs`'s `ingest_master_data` the same `INSERT OR IGNORE` way
 `datapoint_type` already was. `query.rs` gained `function_types`/
 `function_type`, `function_points` (scoped to one `function_type_id`)
@@ -3109,9 +3231,9 @@ and `space_usages`/`space_usage`, each overlaying `text` from a
 other Master reader here already used — that function never filtered by
 `RefId` prefix, so the translations these three families needed were
 already sitting in `translation` since T32; only the join target was
-missing. A v8 database is backfilled the same way a v3 one was for T32:
+missing. A v9 database is backfilled the same way a v3 one was for T32:
 its `knx_master.xml` blob is replayed through `ingest_master_data` inside
-the migration (`a_v8_database_backfills_function_and_space_usage_rows_and_their_translations`,
+the migration (`a_v9_database_backfills_function_and_space_usage_rows_and_their_translations`,
 `migration.rs`), so a database that already existed before this slice
 does not stay short these three tables' worth of data. An end-to-end
 test through `install_package`
@@ -4268,7 +4390,7 @@ a documented gap, not a surprise.
 
 **Residue grows, 2026-09-14 (T13, branch `d10-language-data`).**
 `function_type`, `function_point` and `space_usage` (new tables, schema
-v8 → v9, closing §64's own residue) are filled by `parse/master.rs` the
+v9 → v10, closing §64's own residue) are filled by `parse/master.rs` the
 same bare `INSERT OR IGNORE` way `datapoint_type` already was — no
 `source_sha256` column, no occurrence counter, same restated-whole-catalogue
 collision shape a second `knx_master.xml` produces. Not measured
@@ -4281,10 +4403,11 @@ in the same pass rather than leaving them a second time.
 
 ## 87. A parse fix does not reach rows that were already ingested, and only a migration can go back for them
 
-**Fixed for `linkable`, on 2026-09-14, by product-database schema v8**
+**Fixed for `linkable`, on 2026-09-14, by product-database schema v8, and for
+`parameter_type`'s `Float`/`Text` bounds, the same day, by schema v9**
 ([ADR-0020](adr/0020-migrations-may-rederive-from-stored-bytes.md)). The
 general shape of the defect is not fixed and cannot be, so this section stays
-— rewritten to describe the class rather than the one instance.
+— rewritten to describe the class rather than either instance.
 
 **Limitation.** Every parsed row in `products.sqlite` is a derived value, and
 the derivation happens exactly once: at ingest. Three independent
@@ -4326,14 +4449,39 @@ programs refilled in 1.14 s, with values identical to a fresh ingest (27
 false, 7 true); a v6 database with nothing to fill opens in 0.038 s, the same
 as one already at v8.
 
+**The second instance, and how it differs.** T18 slice 5 (2026-09-13) gave
+`parameter_type` real bounds — `TypeFloat/@minInclusive`/`@maxInclusive` and
+`TypeText/@SizeInBit` — but, same as `Linkable` before it, only for rows
+ingested from that day forward; every program ingested earlier keeps
+`min_inclusive`/`max_inclusive`/`size_in_bit` `NULL` regardless of what its
+own `source_file` blob actually says. `migrate_v8_to_v9` re-reads those three
+attributes out of each affected blob and fills the columns, only where
+`Float`'s pair is `NULL` together or `Text`'s size is `NULL`, only for the row
+that blob's bytes produced (`backfill_parameter_type_bounds` in
+`crates/knx-productdb/src/migration.rs`, mirroring `backfill_linkable`'s
+shape exactly — `parameter_type` has no `source_sha256` of its own, so the
+scoping check joins through `application_program`, which does). One respect
+in which it does not mirror `linkable`: there was no stale `ingest_unknown`
+row to retire, because the pre-T18 parser never asked for these attributes at
+all — it neither read them nor rejected them, so nothing was ever reported.
+A separate, unrelated fix landing the same day
+(`insert_parameter_type` now calls `report_unknown_attrs` on `TypeFloat`'s
+children) means a freshly-ingested row and a v9-backfilled row still differ
+in one way this migration does not close: the fresh row also gets
+`ingest_unknown` entries for `Encoding`/`Increment`/`DisplayFormat`, and the
+backfilled one does not. Named here rather than silently left different.
+
+This is the class's **second** occurrence, not its third.
+
 **Lifted when.** For the class: never entirely, by construction — a
 derivation that already ran cannot know it should run again. What is missing
 is only the *detection*, and ADR-0020 records the shape of it (a parse
 generation recorded per `source_file` row, reported by `knx products verify`),
 deliberately not built for a single column. Reach for it if the class turns up
-a third time. For an individual instance: a v-next backfill migration, under
-ADR-0020's rule — permitted when the value is a pure function of bytes the
-database already holds, forbidden when it depended on the install event.
+a third time — two is not yet that threshold. For an individual instance: a
+v-next backfill migration, under ADR-0020's rule — permitted when the value
+is a pure function of bytes the database already holds, forbidden when it
+depended on the install event.
 
 ## 88. A manufacturer's display name is last-writer-wins, and that is on purpose
 

@@ -66,7 +66,10 @@ async fn probes_the_nine_approved_addresses_read_only() {
     let targets = approved_targets();
     assert_eq!(targets.len(), 9, "spec §2.2 names exactly nine addresses");
     for target in &targets {
-        assert_ne!(*target, alarm_panel, "the alarm panel must never be a probe target");
+        assert_ne!(
+            *target, alarm_panel,
+            "the alarm panel must never be a probe target"
+        );
     }
 
     let client = KnxNetIpClient::new();
@@ -94,22 +97,34 @@ async fn probes_the_nine_approved_addresses_read_only() {
             Ok(mask) => println!("  mask version: {mask}"),
             Err(err) => println!("  mask version: {err}"),
         }
-        match session.read_property(ObjectIndex::DEVICE, PID_MANUFACTURER_ID, 1, 1).await {
+        match session
+            .read_property(ObjectIndex::DEVICE, PID_MANUFACTURER_ID, 1, 1)
+            .await
+        {
             Ok(bytes) => println!("  PID_MANUFACTURER_ID: {bytes:02x?}"),
             Err(err) => println!("  PID_MANUFACTURER_ID: {err}"),
         }
-        match session.read_property(ObjectIndex::DEVICE, PID_HARDWARE_TYPE, 1, 1).await {
+        match session
+            .read_property(ObjectIndex::DEVICE, PID_HARDWARE_TYPE, 1, 1)
+            .await
+        {
             Ok(bytes) => println!("  PID_HARDWARE_TYPE: {bytes:02x?}"),
             Err(err) => println!("  PID_HARDWARE_TYPE: {err}"),
         }
-        match session.read_property(ObjectIndex::DEVICE, PID_PROGRAM_VERSION, 1, 1).await {
+        match session
+            .read_property(ObjectIndex::DEVICE, PID_PROGRAM_VERSION, 1, 1)
+            .await
+        {
             Ok(bytes) => println!("  PID_PROGRAM_VERSION: {bytes:02x?}"),
             Err(err) => println!("  PID_PROGRAM_VERSION: {err}"),
         }
         for (name, object_index) in [
             ("Address Table Object", ObjectIndex::ADDRESS_TABLE),
             ("Association Table Object", ObjectIndex::ASSOCIATION_TABLE),
-            ("Application Program Object", ObjectIndex::APPLICATION_PROGRAM),
+            (
+                "Application Program Object",
+                ObjectIndex::APPLICATION_PROGRAM,
+            ),
         ] {
             match session.read_load_state(object_index).await {
                 Ok(state) => println!("  load state, {name}: {state}"),

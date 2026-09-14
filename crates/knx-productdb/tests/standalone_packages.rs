@@ -778,3 +778,124 @@ fn signature_members_are_stored_verbatim_and_never_verified() {
         .unwrap();
     assert_eq!(member2.role, "Signature");
 }
+
+/// ADR-0020's v7 backfill, against the database it exists for rather than
+/// against a fixture: every corpus package is installed by the current build,
+/// the result is rolled back to exactly the state a pre-2026-09-13 ingest left
+/// — `linkable` `NULL`, one "attribute not understood" row per program,
+/// `user_version` 6 — and the file is reopened. Every value has to come back
+/// out of the stored blobs, with no package reinstalled and no original file
+/// touched.
+///
+/// These are the packages that made KNOWN_LIMITATIONS.md §87 real: all seven
+/// of their `ApplicationProgram` elements spell the attribute
+/// `Linkable="true"`/`"false"`, which is the spelling the old `bool_flag` read
+/// as absent.
+#[test]
+fn a_v6_corpus_database_gets_its_linkable_back_from_its_own_blobs() {
+    let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../OriginalData/ProductDatabases")
+        });
+    if !root.exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
+
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let expected: Vec<(String, Option<i64>, String)> = {
+        let conn = open_and_migrate(&path).unwrap();
+        for name in [
+            "MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod",
+            "Dummy_Applikation_Secure.knxprod",
+            "646704-04_ETS4_2012_47_DE_EN.knxprod",
+            "Weinzierl_730_KNX_IP_Interface_ETS4.knxprod",
+        ] {
+            let bytes = std::fs::read(root.join(name)).unwrap_or_else(|e| {
+                panic!("corpus fixture {name} unavailable: {e}; set KNXBENCH_PRODUCT_CORPUS to OriginalData/ProductDatabases")
+            });
+            install_package(&conn, name, &bytes).unwrap();
+        }
+        let rows = linkable_rows(&conn);
+        assert!(
+            !rows.is_empty(),
+            "sanity: the corpus installed some programs"
+        );
+        assert!(
+            rows.iter().all(|(_, linkable, _)| linkable.is_some()),
+            "sanity: the current build stores every corpus Linkable, \
+             which is the fix §87 says only reaches future ingests: {rows:?}"
+        );
+        rows
+    };
+
+    // Roll back the two things, and only the two things, the 2026-09-13 parse
+    // fix changed: the stored value, and the `ingest_unknown` row the old
+    // `bool_flag` wrote when it met a spelling it could not read.
+    {
+        let conn = Connection::open(&path).unwrap();
+        conn.execute("UPDATE application_program SET linkable = NULL", [])
+            .unwrap();
+        let mut stmt = conn
+            .prepare(
+                "INSERT INTO ingest_unknown
+                 (source_sha256, program_id, xpath, kind, name, occurrences, sample)
+                 VALUES (?1, NULL,
+                   '/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram',
+                   'Attribute', 'Linkable', 1, 'false')",
+            )
+            .unwrap();
+        for (_, _, source_sha256) in &expected {
+            stmt.execute([source_sha256]).unwrap();
+        }
+        drop(stmt);
+        conn.pragma_update(None, "user_version", 6i64).unwrap();
+    }
+
+    let conn = open_and_migrate(&path).unwrap();
+    assert_eq!(
+        conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        knx_productdb::CURRENT_PRODUCTDB_VERSION
+    );
+    assert_eq!(
+        linkable_rows(&conn),
+        expected,
+        "every value back, from the blobs alone"
+    );
+    assert_eq!(
+        conn.query_row(
+            "SELECT count(*) FROM ingest_unknown WHERE kind = 'Attribute' AND name = 'Linkable'",
+            [],
+            |r| r.get::<_, i64>(0)
+        )
+        .unwrap(),
+        0,
+        "and every report that said the attribute was not understood retired"
+    );
+    assert_eq!(
+        conn.query_row(
+            "SELECT count(*) FROM ingest_unknown WHERE kind = 'LinkableBackfillError'",
+            [],
+            |r| r.get::<_, i64>(0)
+        )
+        .unwrap(),
+        0,
+        "no corpus blob failed to re-parse"
+    );
+    eprintln!(
+        "a_v6_corpus_database_gets_its_linkable_back_from_its_own_blobs: {} program(s) refilled",
+        expected.len()
+    );
+}
+
+fn linkable_rows(conn: &Connection) -> Vec<(String, Option<i64>, String)> {
+    conn.prepare("SELECT id, linkable, source_sha256 FROM application_program ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap()
+}

@@ -3186,6 +3186,17 @@ mod tests {
     }
 
     #[test]
+    fn number_rejects_empty_with_the_same_message_every_kind_shares() {
+        // Item 8 of the whole-branch review: the `Number` arm's empty-string
+        // case was added to match `Float`/`Text`/`IPAddress`'s pre-existing
+        // one instead of falling through to a generic parse-failure
+        // message. Nothing exercised that until now.
+        let view = view_of_kind("Number");
+        let err = validate_kind_and_bounds(&view, "").unwrap_err();
+        assert_eq!(err, "'P-1' requires a non-empty value");
+    }
+
+    #[test]
     fn text_accepts_a_value_within_its_declared_size() {
         let mut view = view_of_kind("Text");
         view.size_in_bit = Some(240); // 30 bytes, corpus-observed shape
@@ -3206,6 +3217,19 @@ mod tests {
         view.size_in_bit = Some(240); // 30 bytes
         let thirty_one = "a".repeat(31);
         assert!(validate_kind_and_bounds(&view, &thirty_one).is_err());
+    }
+
+    #[test]
+    fn text_declared_narrower_than_a_byte_still_accepts_one_byte() {
+        // `SizeInBit="4"` still has a whole byte of storage (ETS devices
+        // are byte-addressed) — this is the ceiling-vs-floor case the
+        // whole-branch review's item 4 asked for: floor division
+        // (`size_in_bit / 8`) gives `max_bytes = 0` here, an unwritable
+        // field by construction, so this test fails if `(size_in_bit + 7)
+        // / 8` is ever reverted to plain floor division.
+        let mut view = view_of_kind("Text");
+        view.size_in_bit = Some(4);
+        assert!(validate_kind_and_bounds(&view, "a").is_ok());
     }
 
     #[test]

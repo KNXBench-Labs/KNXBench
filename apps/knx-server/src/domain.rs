@@ -2072,8 +2072,11 @@ fn diagnostic_message(diagnostic: &knx_productdb::dynamic::Diagnostic) -> &'stat
         Diagnostic::UnexpectedTypeNoneShape { .. } => "An unusual choice structure was skipped.",
         Diagnostic::UnrecognizedNode { .. } => "An unrecognized program element was skipped.",
         Diagnostic::ModuleDefNotFound { .. } => "A module could not be found in this program.",
-        Diagnostic::NestedModuleNotExpanded { .. } => {
-            "A module nested inside another module was not expanded."
+        Diagnostic::ModuleCycleDetected { .. } => {
+            "A module refers back to one of its own enclosing modules and was not expanded."
+        }
+        Diagnostic::ModuleNestingTooDeep { .. } => {
+            "A module is nested deeper than this program will expand."
         }
         Diagnostic::MissingValue { .. } => "A choice's controlling parameter has no value.",
         Diagnostic::ModuleWithoutId { .. } => {

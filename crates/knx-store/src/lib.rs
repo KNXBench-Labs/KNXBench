@@ -51,6 +51,12 @@ pub enum StoreError {
     /// reachable from a database written by something other than this code
     /// (hand-edited, corrupted, or a newer/third-party writer).
     UnknownOverrideAttr(String),
+    /// A `project_info.group_address_style` value that is none of `Free`,
+    /// `TwoLevel`, `ThreeLevel` — same cause as `UnknownOverrideAttr`
+    /// (hand-edited, corrupted, or a newer/third-party writer). Refused
+    /// rather than silently read back as `ThreeLevel`: a persisted style
+    /// that cannot round-trip is data loss (KNOWN_LIMITATIONS.md §84).
+    UnknownGroupAddressStyle(String),
 }
 
 impl std::error::Error for StoreError {}
@@ -77,6 +83,10 @@ impl fmt::Display for StoreError {
             StoreError::UnknownOverrideAttr(attr) => write!(
                 f,
                 "com_object_override.attr {attr:?} is not an attribute this build knows"
+            ),
+            StoreError::UnknownGroupAddressStyle(style) => write!(
+                f,
+                "project_info.group_address_style {style:?} is not Free, TwoLevel or ThreeLevel"
             ),
         }
     }

@@ -89,6 +89,12 @@ Measured 2026-09-14 on:
 - No other `cargo`/`rustc` process was running at measurement time (checked
   via `ps aux` immediately before and after) — this run was **not**
   contended by a concurrent build.
+- Context for whoever re-measures: other work was happening in sibling git
+  worktrees of this repository during the same session, so the `ps aux` check
+  above is a statement about the measurement window and not about the whole
+  afternoon. A run on an otherwise idle machine may come out faster; a run
+  alongside a workspace build will come out slower. Neither invalidates the
+  ratios between the five stages, which is what this file is actually for.
 
 Command:
 

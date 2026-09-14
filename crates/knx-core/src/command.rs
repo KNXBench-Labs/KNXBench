@@ -333,7 +333,7 @@ pub enum CommandError {
         direction: Direction,
     },
     /// A `SetGroupAddressStyle` was refused because `id`'s raw value does
-    /// not decompose within `style`'s component bounds
+    /// not survive a round trip through `style`'s own `format`/`parse` pair
     /// (`GroupAddress::fits_style`) — named concretely so the refusal is
     /// actionable, not "some address doesn't fit".
     GroupAddressDoesNotFitStyle {

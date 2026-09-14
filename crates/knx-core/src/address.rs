@@ -190,8 +190,9 @@ impl GroupAddress {
     /// so it round trips trivially, while `TwoLevel`'s and `ThreeLevel`'s
     /// splits are each an exact partition of the same 16 bits (5+11 and
     /// 5+3+8, both 16), so every raw value decomposes and recomposes
-    /// losslessly under either. Group address style is a rendering choice, never a capacity
-    /// limit (see the struct doc above); restyling a project can never
+    /// losslessly under either. Group address style is a rendering choice,
+    /// never a capacity limit (see the struct doc above); restyling a
+    /// project can never
     /// actually reject an address on this account today. Unlike a bounds
     /// check restating the same partition, though, this one is coupled to
     /// `format`/`parse` directly: it fails the moment those two disagree

@@ -1848,6 +1848,7 @@ dependencies = [
  "knx-diff",
  "knx-etsproj",
  "knx-productdb",
+ "knx-projection",
  "knx-report",
  "knx-store",
  "knx-testsupport",

@@ -3661,9 +3661,38 @@ nobody has tried. COMPATIBILITY.md must keep saying nothing about it.
 dialog, and installs a device from a manufacturer package into it, and
 records what happened.
 
-## 84. A project's group address style can be chosen, and afterwards never seen
+## 84. A project's group address style can be chosen, and afterwards never seen — RESOLVED (2026-09-14, T4)
 
-**Limitation.** `POST /api/project/new` now accepts `groupAddressStyle` and
+**Resolved.** All three of the "Lifted when" conditions below are now met.
+`knx_projection::ProjectTree` carries `group_address_style` (a plain
+`"Free"`/`"TwoLevel"`/`"ThreeLevel"` string, `crates/knx-projection/src/
+lib.rs`), the properties inspector shows it read-only on the project node
+(`apps/knx-web/src/Inspector.tsx`), and `knx_core::Command::
+SetGroupAddressStyle` restyles a project — undoable/redoable like every
+other command, wired through `knx-store`'s `command_sync` and a new `POST
+/api/project/group-address-style` route. The restyle command checks every
+existing group address against the target style *before* mutating anything
+and refuses the whole change, naming the offending address, if even one
+does not fit (`CommandError::GroupAddressDoesNotFitStyle`).
+
+One thing this cycle's own boundary testing found and is recorded here
+rather than left implicit: that refusal path is, as far as this codebase's
+own address encoding goes, unreachable. `TwoLevel`'s 5+11-bit split and
+`ThreeLevel`'s 5+3+8-bit split each partition the full 16 bits of a
+`GroupAddress`'s raw `u16` with no remainder, so `GroupAddress::fits_style`
+is `true` for all 65536 possible raw values under every style — proved
+exhaustively by `crates/knx-core/src/address.rs`'s own
+`group_address_fits_style_holds_for_every_possible_raw_value` test, not
+merely asserted. The check still runs on every restyle: it is the guard
+against a future change to this bit layout silently making one style
+narrower than another, not dead code. `knx-store`'s `style_from_str` was
+also hardened while this was open: an unrecognized persisted style now
+returns `StoreError::UnknownGroupAddressStyle` instead of silently
+defaulting to `ThreeLevel`, the same rule `POST /api/project/new` already
+applied at creation time, now applied at load time too. The original
+limitation text is kept below for context.
+
+**Limitation (as it stood before 2026-09-14).** `POST /api/project/new` now accepts `groupAddressStyle` and
 the creation dialog asks for it, so a project can be started two-level, free
 or three-level **[V]** (`http_project_routes.rs`, three tests). After that
 moment the UI never mentions the style again: `knx_projection::ProjectTree`
@@ -3685,8 +3714,8 @@ worse pair than "permanent" alone. The server-side refusal of an unknown
 style value (a `400`, never a silent fall back to three-level) at least
 means the style a project ends up with is always one that was asked for.
 
-**Lifted when.** `ProjectTree` carries the style, the properties inspector
-shows it for the project node, and — separately, and harder — a command in
+**Lifted when.** Done, 2026-09-14: `ProjectTree` carries the style, the
+properties inspector shows it for the project node, and a command in
 `knx-core` can restyle a project whose addresses all still fit the target
 style.
 

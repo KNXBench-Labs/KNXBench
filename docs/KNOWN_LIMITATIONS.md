@@ -105,7 +105,10 @@ specifically, activation totals grow from 22/18/14 (program tree only) to
 382/258/134 (expanded). **This is scoped to `prod3` only** — RESEARCH
 §4.4 Q7 lists seven module-bearing programs, but the other four live in
 the `kv25` demo `.knxproj`, which these corpus tests do not install;
-nothing here is a claim about `kv25`.
+nothing here is a claim about `kv25`. (`Diagnostic::NestedModuleNotExpanded`
+itself no longer exists as of task 11 below — nesting is now expanded, not
+refused by policy; this paragraph is kept as the dated historical record
+of what slice 2 shipped.)
 
 **T18 slice 3 (2026-09-11)** wires the evaluator into a real editor:
 `GET`/`POST /api/device/{id}/parameters` (`apps/knx-server`, DTOs and
@@ -176,12 +179,84 @@ that server-named id instead of the declared one (D43).
   exist; that was always the narrower, read-side meaning slice 3 gave it,
   and slice 4 makes it true on the write/activation side too, for the
   case D38-D39 can authorize.
-- **Nested modules and `Module` arguments stay exactly as limited as
-  before.** Nothing in slice 4 touches `NestedModuleNotExpanded` (design
-  D15, one level only, policy not capability) or the scoped key, which is
-  `(module_id, ref_id)` — a single `Module` node's position, not a path —
-  so a scope-aware key for a nested `Module` remains a follow-up if
-  nesting is ever observed (design Non-goals).
+- **Nested modules are now expanded, bounded, with cycle detection
+  (goal.md T18, task 11, 2026-09-14, design D44-D46,
+  [design addendum](superpowers/specs/2026-09-11-module-expansion-design.md#addendum-goalmd-t18-task-11-d15-superseded--bounded-recursive-expansion)).**
+  `Diagnostic::NestedModuleNotExpanded` (design D15, one-level policy) no
+  longer exists. A `Module` found inside an already-expanded `ModuleDef`'s
+  own tree is now walked recursively, up to
+  `evaluate::MAX_MODULE_NESTING_DEPTH = 16` (**[A]**, no Standard source
+  states a bound — see the constant's own doc comment). A `ModuleDef`
+  that, directly or through intermediate `ModuleDef`s, names itself again
+  is refused as `Diagnostic::ModuleCycleDetected`, checked by scanning the
+  whole ancestor chain, not just the immediate parent; a non-cyclic chain
+  past the bound is refused as `Diagnostic::ModuleNestingTooDeep`. A third
+  bound, `evaluate::MAX_MODULE_EXPANSIONS = 100_000` (added fix round 1,
+  2026-09-14), caps *total* `Module` expansions per `evaluate` call — the
+  depth bound alone only refuses one chain going too deep, not many
+  shallow chains multiplying by fan-out, which a measured probe showed
+  can reach millions of activations and gigabytes of memory well within
+  the depth bound; exceeding it is refused as
+  `Diagnostic::ModuleExpansionBudgetExhausted`. None of the three cases
+  panics, loops, or truncates silently. **Measured against the
+  installed corpus (two independent ways, RESEARCH.md §4.4 addendum): zero
+  products nest a `Module` inside a `ModuleDef`'s own tree** — the
+  capability is proven only by synthetic unit tests, not by a real
+  product, and would need re-verification against a corpus sample that
+  actually nests before being trusted on one.
+  - **Unattested scoped-value collision risk.** `ValueMap`'s scoped lookup
+    key is qualified by the *innermost* `module_id` (per-instantiation
+    values, design D35/D36), not the full ancestor chain. By analogy with
+    RESEARCH.md §4.4 Q5's finding for single-level `ModuleDef`s (inner
+    `@Id`s are reused verbatim across sibling instantiations), two
+    different outer instantiations of a nested `ModuleDef` whose inner
+    `Module/@Id` happens to repeat verbatim could theoretically collide on
+    scoped values. This is unattested — the corpus has zero nesting to
+    check it against — and is called out here rather than silently
+    assumed safe.
+  - **`apps/knx-server`'s `ModuleScopeDto` carries only the innermost
+    scope.** `module_scope_dto()` (`apps/knx-server/src/domain.rs`) reads
+    `scope.module_node`/`module_id`/`module_def_id` only; it does not walk
+    `ModuleScope::parent`. A nested-module diagnostic or activation
+    surfaced through the parameter-editor HTTP API therefore *displays*
+    only the innermost enclosing `Module`, not the full ancestor chain.
+    **Consequence sharpened, fix round 2 (2026-09-14):** the server now
+    correctly splits two nesting chains that share an innermost
+    `module_node` under different ancestors into two distinct sections
+    (previous bullet), but if both chains' innermost `Module`s are also
+    both nameless (no `@Id`) under the *same* `ModuleDef`, their DTOs are
+    identical — `moduleNode`/`moduleId`/`moduleDefId` all equal — so the
+    client cannot tell the two correctly-split sections apart. `ParameterPanel.tsx`'s
+    `sameScope()` then matches a diagnostic meant for one section against
+    both, misattributing it. This is no longer only lost ancestor
+    *context*; it is diagnostic *misattribution* between two sections the
+    server itself got right. Unattested against real data — no corpus
+    sample reaches this path — but this is a display omission, not the
+    section-collision defect the next bullet used to describe; that one
+    is fixed, this one is not.
+  - **Fixed in fix round 1 (2026-09-14): two nesting chains sharing a
+    `module_node` no longer collide into one section.** Before this fix,
+    `apps/knx-server`'s parameter-panel grouping keyed sections on the
+    flat `Option<i64>` `module_node` D18 used, even after `ScopeKey`
+    itself was widened to the full `Vec<i64>` ancestor chain. Because
+    `dynamic_node.node_id` resets per `(program_id, module_def_id)` tree,
+    two distinct nesting chains can reuse the same `module_node` at the
+    same depth under different ancestors — this branch's own test
+    `two_nesting_chains_sharing_a_module_node_do_not_merge_into_one_section`
+    (`apps/knx-server/tests/http_parameter_panel.rs`) constructs exactly
+    that pair. The two sections merged, the S4
+    duplicate-module-id backstop could not fire (it counts sections, and
+    the collision happened a step earlier), and `write_ets_id`
+    reconstruction could point the losing channel's fields at the
+    winner's module instance. This was a genuine collision, observable in
+    code, not merely a truncation — `section_order`/`sections_by_key` now
+    key on `Option<Vec<i64>>` (`ModuleScope::node_chain()`, made `pub` for
+    this), the same key `evaluate`'s own dedup already used. Also
+    unattested against real data — the corpus has zero nesting to trigger
+    it — but no longer latent in the code either.
+  - **`Module` arguments stay exactly as limited as before.** Argument
+    values (`NumericArg`/`TextArg`) remain stored but uninterpreted; see
+    the entry below.
 - **Argument values (`NumericArg`/`TextArg`) remain stored but
   uninterpreted.** They still fall through to the generic `extra` column;
   `choose` never branches on them (RESEARCH §4.4 Q3), so activation-set

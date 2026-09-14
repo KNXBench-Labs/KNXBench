@@ -311,3 +311,191 @@ reportable; they are simply not part of the activation walk.
   occurrences and stays unimplemented and undocumented beyond that fact.
 - **`RepeatIndex`'s `"NxM"` encoding** stays an opaque string in
   `knx-core` per ADR-0013.
+
+## Addendum (goal.md T18, task 11): D15 superseded — bounded recursive expansion
+
+D15 stood on "the corpus has zero nested modules and there is nothing to
+implement against." `goal.md` §3 T18 asked for the gap to be closed anyway,
+bounded and cycle-safe rather than left as a one-level policy limit. This
+addendum supersedes D15 and D17's `NestedModuleNotExpanded` row; D12-D14,
+D16, D19 are unaffected.
+
+### D44. `Module` nesting is expanded recursively, bounded by named constants
+
+A `Module` found while walking an already-expanded `ModuleDef`'s tree is now
+expanded the same way a top-level `Module` is: its `@RefId` is looked up in
+`ProgramTrees`, and if found, its tree is walked with a new `ModuleScope`
+whose `parent` is the enclosing scope. `ModuleScope` becomes a chain
+(`parent: Option<Box<ModuleScope>>`) rather than a single flat record, and
+carries a `depth()` method (1 + parent depth, 0 if none).
+
+Expansion stops — with a diagnostic, not a panic and not silent truncation —
+once `ModuleScope::depth()` would exceed
+`evaluate::MAX_MODULE_NESTING_DEPTH = 16`. **[A]** No source states a
+numeric bound for AP-side nesting; see the constant's own doc comment for
+the inference and the fresh `pdftotext -layout` re-extraction of `Project
+Schema23 v01.00.00.pdf` confirming (again) that the KNX Standard defines no
+application-program-side `ModuleDef`/`Module` complexType at all. The
+Standard is not silent about module nesting everywhere, though:
+`ModuleInstance_t/@Id`'s documented grammar (§1.2.5.18, project-instance
+side, **[D]**, already recorded at `docs/RESEARCH.md` §4.4 Q6) gives exactly
+one extra level, never a second `SubModule` segment. That text is
+project-side, not AP-side, so it does not settle this constant's value on
+its own — but it is the one documented data point that speaks to nesting
+depth at all, and it says 2, not 16; `16` is chosen deliberately far above
+that one documented neighbour, not found in the Standard and not fitted to
+any known file.
+
+**Fix round 1, blocking finding 1 (goal-completion task 11):** the depth
+bound alone does not bound *total* work — a non-cyclic tree with fan-out at
+every level can multiply activations combinatorially without any single
+chain exceeding `MAX_MODULE_NESTING_DEPTH`. A measured probe
+(`depth=12, fanout=4`, 44-node input) reached 4,194,304 `Module`
+activations, 11.5s and 8,170 MiB peak RSS — well short of depth 16. A
+second constant, `evaluate::MAX_MODULE_EXPANSIONS = 100_000`, now caps the
+total number of `Module` expansions any one `evaluate` call will perform,
+checked alongside the depth bound and refused the same way, with
+`Diagnostic::ModuleExpansionBudgetExhausted`. See that constant's own doc
+comment for where `100_000` comes from (roughly 260x the corpus's measured
+legitimate ceiling of 382 activations, recorded at
+`docs/IMPLEMENTATION_STATUS.md`'s "Corpus regression coverage" entry, not
+RESEARCH.md — fix round 2 correction, the citation was wrong in round 1).
+
+**Fix round 2, and its own residual in round 3:** an expansion count is not
+a work count. A `ModuleDef` carrying many `ParameterRefRef` children,
+expanded a modest number of times well inside the 100,000 ceiling, still
+reached multi-GB peak RSS — measured, standalone binary over the public
+API at `opt-level = 2`: 1,325,196 activations at 1,946 MiB, and 3,825,596
+at 5,691 MiB, both inside the expansion budget throughout **[V]**. Round 2
+added a third constant, `evaluate::MAX_MODULE_ACTIVATIONS = 1_000_000`,
+bounding the combined `parameter_refs`/`com_object_refs` count one
+`evaluate` call may record, refused with the same
+`Diagnostic::ModuleExpansionBudgetExhausted` variant distinguished by its
+`budget` field, and emitted exactly once rather than once per refused ref.
+
+Round 3 (from the scoped re-review of round 2) makes that budget stop the
+walk rather than only the recording. Round 2 checked it at the two
+activation sites and *after* the per-scope dedup, and `walk`'s `Module` arm
+never consulted it, so a run that had spent its activation budget kept
+expanding until the 100,000-times-larger expansion budget stopped it, and
+every ref it met on the way still allocated a `ScopeKey` into a `seen` set
+no budget bounded. The check now sits ahead of the dedup and is repeated in
+the `Module` arm, where a spent budget refuses further expansion outright.
+
+### D45. Cycles are detected by scanning the whole ancestor chain, not just the immediate parent
+
+Before expanding a `Module`'s target `ModuleDef`, `chain_contains` walks
+`self` and every `parent` comparing `module_def_id`. A `ModuleDef` that
+(directly or through intermediate `ModuleDef`s) contains a `Module` naming
+itself again is refused with `Diagnostic::ModuleCycleDetected { node_id,
+ref_id }` and its subtree is not descended — never a stack overflow, never a
+silent stop. This check runs *before* the depth-bound check, so a cycle is
+reported as a cycle even when it would also have crossed the depth bound.
+
+A non-cyclic chain that is simply too deep is refused with
+`Diagnostic::ModuleNestingTooDeep { node_id, ref_id, depth }`, where `depth`
+is the depth the expansion would have reached.
+
+`Diagnostic::NestedModuleNotExpanded` (D17's row) is **removed** — a `Module`
+inside a `ModuleDef`'s own tree is no longer a standing diagnostic by
+itself; it is either expanded, refused as a cycle, or refused as too deep.
+
+### D46. The dedup/scope key is qualified by the full ancestor node chain
+
+D18's key, `(Option<module_node>, ref_id)`, assumed at most one enclosing
+`Module`. A `node_id` is only unique within one `(program_id,
+module_def_id)` tree (`dynamic_node`'s own storage, design D1-D5), so two
+different nesting chains can reuse the same `node_id` at the same depth
+under different ancestors — a flat `Option<i64>` would collide them. The key
+becomes `(Vec<i64>, String)`: the full chain of `module_node` ids from the
+program root down, plus `ref_id`. `ModuleScope::node_chain()` builds this
+vector by walking `parent` outward-in.
+
+**Fix round 1, blocking finding 4 (goal-completion task 11):** this crate's
+own `evaluate`/`Activation` dedup got the widened key above, but
+`apps/knx-server/src/domain.rs`'s parameter-panel section grouping did not
+— it kept keying `section_order`/`sections_by_key` on the flat
+`Option<module_node>` D18 used, so two distinct nesting chains sharing a
+`module_node` (the branch's own two-level test constructs exactly this
+pair) collided into one section instead of two. `node_chain()` is now
+`pub`, and the server keys sections on `Option<Vec<i64>>` the same way this
+crate does.
+
+### Corpus measurement (task 11, required deliverable)
+
+Measured, not guessed, against every `.knxprod` file present under
+`OriginalData/ProductDatabases/` (all 5 archive files currently present
+locally: `646704-04_ETS4_2012_47_DE_EN`, `Dummy_Applikation_Secure`,
+`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a` (3 application programs),
+`Weinzierl_730_KNX_IP_Interface_ETS4`, `Weinzierl_730_KNX_IP_Interface_ETS4_v1`
+— the last two are byte-identical, so `install_package` stores only four
+distinct packages), two independent ways:
+
+1. A raw XML scan (`xml.etree.ElementTree`, scratch script, outside the
+   repo) over every extracted application-program XML file counted `Module`
+   elements found inside a `ModuleDef` element's own subtree: **0** across
+   all 7 application-program files.
+2. `crates/knx-productdb/tests/dynamic_tree.rs`'s
+   `corpus_nested_module_measurement_task_11` installs the same 5 archive
+   files into a fresh database and runs
+   `SELECT COUNT(*) FROM dynamic_node WHERE kind = 'Module' AND
+   module_def_id != ''` (a `Module` row stored under a non-empty
+   `module_def_id`, i.e. inside a `ModuleDef`'s own tree rather than the
+   program's): **0**, out of a total of 86 stored `Module` rows overall
+   (`kind = 'Module'`, any `module_def_id`; both counts are now asserted by
+   the test, not merely printed).
+
+Both measurements agree: **zero products in the installed database nest
+modules.** D44/D45's bounded recursion is therefore exercised, in this
+corpus, only by the new synthetic unit tests — the corpus itself gives it
+nothing to expand.
+
+### Acceptance criteria addendum
+
+11. A unit test with two genuine nesting levels (`Module` inside a
+    `ModuleDef`'s tree naming a *different* `ModuleDef`, no cycle) is
+    expanded fully, with a two-deep `ModuleScope` chain on the resulting
+    activations.
+12. A unit test with a cycle (a `ModuleDef`'s tree, directly or through one
+    intermediate `ModuleDef`, names a `ModuleDef` already in the ancestor
+    chain) yields `ModuleCycleDetected` and no activation from the cyclic
+    branch — and does not overflow the stack.
+13. A unit test at exactly `MAX_MODULE_NESTING_DEPTH` expands fully with no
+    diagnostic; one level deeper yields `ModuleNestingTooDeep { depth:
+    MAX_MODULE_NESTING_DEPTH + 1, .. }` and no activation from the refused
+    branch.
+14. The corpus measurement above is recorded here and in
+    `docs/RESEARCH.md`, not asserted from memory.
+15. All six gates pass (the deny/layering/headers set, not just the five
+    D-era ones): `cargo fmt --all -- --check`, `cargo clippy --workspace
+    --all-targets -- -D warnings`, `cargo test --workspace --no-fail-fast`,
+    `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
+    check-headers`, `cargo deny check`.
+16. *(Fix round 1, blocking finding 1.)* A unit test with a non-cyclic
+    fan-out tree that would exceed `MAX_MODULE_EXPANSIONS` before it would
+    exceed `MAX_MODULE_NESTING_DEPTH` yields
+    `ModuleExpansionBudgetExhausted { budget: MAX_MODULE_EXPANSIONS, .. }`
+    and `evaluate` returns rather than continuing to expand.
+16b. *(Fix round 2, and extended in round 3.)* A unit test with a fan-out
+    tree whose refs-per-expansion exceed `MAX_MODULE_ACTIVATIONS` while its
+    expansion count stays well under `MAX_MODULE_EXPANSIONS` yields exactly
+    one `ModuleExpansionBudgetExhausted { budget: MAX_MODULE_ACTIVATIONS, .. }`
+    and stops recording refs at the budget
+    (`a_wide_module_def_trips_the_activation_budget_without_tripping_the_expansion_budget`).
+    A second test, whose unrefused expansion count would overrun
+    `MAX_MODULE_EXPANSIONS` 223 times over, proves the spent activation
+    budget ends the walk: the expansion budget's own diagnostic never
+    appears (`a_spent_activation_budget_stops_further_module_expansion`,
+    `crates/knx-productdb/tests/dynamic_tree.rs`). Both were confirmed to
+    fail without their fix.
+17. *(Fix round 1, blocking finding 4; citation corrected fix round 2 —
+    round 1 named the wrong test here.)* A unit test with two distinct
+    nesting chains that reuse the same `module_node` at the same depth
+    under different ancestors produces two separate parameter-panel
+    sections in `apps/knx-server`, not one collided section:
+    `two_nesting_chains_sharing_a_module_node_do_not_merge_into_one_section`
+    (`apps/knx-server/tests/http_parameter_panel.rs`) is that test — not
+    `a_module_inside_a_module_def_naming_a_different_module_def_is_expanded_two_levels`
+    (`crates/knx-productdb/tests/dynamic_tree.rs`), which builds a single
+    chain whose two scopes both happen to use node id 0 and never
+    produces two sections in the first place.

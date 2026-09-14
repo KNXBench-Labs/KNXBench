@@ -815,7 +815,7 @@ fn allocation_payload(
     let size = u32::try_from(length).unwrap_or(u32::MAX);
     match allocation_subtype_for(mask)? {
         LoadControlSubtype::DataRelativeAllocation => Ok(data_relative_allocation(size, mode)),
-        LoadControlSubtype::RelativeAllocation => Ok(relative_allocation(size)),
+        LoadControlSubtype::RelativeAllocation => relative_allocation(length),
         subtype => Err(AllocationSubtypeError::StyleNotApplicable { mask, subtype }),
     }
 }
@@ -1294,10 +1294,13 @@ mod tests {
             .collect();
         assert_eq!(allocations.len(), 1);
         assert_eq!(allocations[0][1], 0x0A, "0300h profiles 0Ah, not 0Bh");
+        // `[D]` MP §3.31.3.4: subtype `0Ah` carries the size in **two**
+        // octets and pads with six fill octets, so a 6-octet part is
+        // `03 0A 00 06` followed by zeroes.
         assert_eq!(
-            &allocations[0][2..6],
-            &6u32.to_be_bytes(),
-            "the requested size is the payload length, most significant octet first"
+            allocations[0],
+            vec![0x03, 0x0A, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+            "the requested size is two octets, most significant first"
         );
     }
 

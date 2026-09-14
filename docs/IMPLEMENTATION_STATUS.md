@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-14 (T18 slice 5 fix round: product-database schema v9 — the second backfill ADR-0020 licenses, re-deriving `parameter_type`'s `Float`/`Text` bounds out of the same blobs `linkable` (schema v8) was re-derived from; see the end of this document)
+Last updated: 2026-09-14 (T15: ZipCrypto decryption for ETS4/ETS5 password-protected `.knxproj` projects — read-only, synthetic fixtures, AES still refused; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -445,7 +445,7 @@ across the workspace (up from 314), plus 64 `vitest` tests in
 | `crates/knx-projection/` | Pure `Project` → `ProjectTree` projection with `ts-rs` TypeScript bindings, including `GroupAddressNode` on `InstallationNode` (Session 5 cycle 5) — see the Session 5 paragraph above. No dependency beyond `knx-core`; the fourth `check-layering` root. |
 | `crates/knx-app/` | The import and export services (`import.rs`, `export.rs`) — the one crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together. |
 | `crates/knx-net/` | Empty crate with its responsibility stated in a doc comment. |
-| `crates/knx-secure/` | Was an empty crate with its responsibility stated in a doc comment; gained its first code in A6 (2026-09-13, see the dated entry at the end of this document): the `.knxproj` ZIP-password derivation, `pbkdf2`/`sha2`/`base64` as its first real dependencies. Still holds no KNX Secure runtime-key handling. |
+| `crates/knx-secure/` | Was an empty crate with its responsibility stated in a doc comment; gained its first code in A6 (2026-09-13, see the dated entry at the end of this document): the `.knxproj` ZIP-password derivation, `pbkdf2`/`sha2`/`base64` as its first real dependencies. Gained its second body of code in T15 (2026-09-14): `zipcrypto.rs`, PKWARE Traditional Encryption, read-only — `knx-etsproj` now depends on this crate for `Container::open_with_password`. Still holds no KNX Secure runtime-key handling (the bus-level protocol), which is what the crate's name is actually reserved for. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
 | `apps/knx-server/` | **New, web/Docker deployment target.** The axum HTTP API binary (`knx-server`) and library (`knx_server`) — see the paragraph above. `src/domain.rs` holds `AppState` and the same `_impl` functions the old Tauri commands wrapped; `src/routes.rs`/`fs_routes.rs` are the axum route handlers; `src/errors.rs` maps `AppError` to an HTTP status plus a `{"error": ...}` body. `main.rs` reads `KNX_PORT`/`KNX_STATIC_DIR`/`KNX_DATA_DIR` from the environment. `Dockerfile` is the three-stage build (Node frontend, Rust backend, Debian-slim runtime); `scripts/smoke-test.sh` builds and runs the image and exercises `/healthz` plus an import over HTTP. |
 | `apps/knx-web/` | **New, moved from `apps/knx-desktop/src`.** The React + Vite frontend, now a standalone npm package consumed by both `knx-server`'s static-file serving and the Tauri desktop shell. `src/api.ts` is the `fetch()`-based client (replaces Tauri's `invoke()`); `src/FsPicker.tsx` is the mount-directory listing/upload UI shown when `window.__TAURI__` is absent (the server's `/api/project/download` route has no UI caller yet, see [KNOWN_LIMITATIONS.md #26](KNOWN_LIMITATIONS.md#26-apiprojectdownload-has-no-frontend-caller)); `src/filePicker.ts` picks between it and the native Tauri dialog. `src/theme.ts` is cycle 13's named-theme registry, replacing cycle 7's `theme.ts`/`ThemeToggle.tsx` cycle and cycle 11's now-deleted `palette.ts`/`ThemePanel.tsx` token overrides outright — see the Session 5 paragraph above. Its `<select>` picker was `src/ThemeSwitcher.tsx` until T27 (2026-09-12) moved the Theme select into a new `src/SettingsPanel.tsx` alongside two new motion settings and deleted `ThemeSwitcher.tsx` outright, its one consumer gone. Everything else (`ProjectExplorer`, `Inspector`, `Search.tsx`/`CommandPalette.tsx`, `Dashboard.tsx`, `Toast.tsx`, the `ts-rs`-generated bindings under `src/bindings/`) moved unchanged from `knx-desktop`. `vitest` suite: 89 tests across 8 files, including `api.test.ts` against a mocked `fetch` and cycle 13's rewritten `theme.test.ts` (`palette.test.ts` is gone with `palette.ts`). |
@@ -5766,3 +5766,59 @@ path this project has not built yet: it must not treat its own read
 time-out as proof a target is absent. What discriminated the one address
 that did answer `ManagementSession` from the seven that did not is
 unconfirmed by this pass and not fixed here.
+
+
+## 2026-09-14 — Password-protected ETS4/ETS5 projects open now, with the cipher that protects them named for what it is (T15, branch `zipcrypto-projects`)
+
+**What shipped.** `crates/knx-secure/src/zipcrypto.rs` (new, 436 lines, 7
+tests) implements PKWARE Traditional Encryption — "ZipCrypto" — directly
+against APPNOTE.TXT v6.3.3 §6.1.3–§6.1.7, whose pseudocode is quoted verbatim
+in the module's own doc comment `[D]`. Public surface: `HEADER_LEN`,
+`CheckBytes`, `ZipCryptoError::{TruncatedHeader, WrongPassword}` and
+`decrypt(password, stream, check)`. There is no encryption function and there
+will not be one: this repository reads a protected project the caller already
+owns and never produces one.
+
+`knx-etsproj`'s `Container` (`crates/knx-etsproj/src/container.rs`, 8 tests)
+gains `open_with_password` beside the existing `open`, sharing all outer-archive
+parsing through a new private `open_raw`. `Container::open`'s behaviour is
+unchanged — it still refuses every protected project outright, now with the
+message "no password was supplied" rather than "decryption is not implemented",
+because the second sentence stopped being true. The nested `<project part>.zip`
+payload's entries are decrypted once at open time, decompressed with `flate2`
+(Stored and Deflated only; anything else is a typed error, not a guess), and
+then behave exactly like an unprotected project's entries — the opaque nested
+blob disappears from `entries()` and is replaced by what it contained.
+`knx-etsproj` therefore depends on `knx-secure` now, an edge
+[ARCHITECTURE.md](ARCHITECTURE.md)'s crate graph did not have before.
+
+**AES (schema ≥ 21 / ETS6) stays refused**, by a named error rather than a
+silent failure: `ContainerError::UnsupportedEncryption { nested_entry, scheme }`,
+distinct from `PasswordProtected` so a caller that *did* supply a password can
+tell "wrong scheme" from "no password given". The key derivation for it has
+lived in `knx-secure` since A6; the container half is unverified against a real
+protected export and is not shipped on a guess.
+
+**What this is not.** Both fixtures are synthetic — `crates/knx-secure/
+fixtures/zipcrypto-entry.bin` (66 bytes) and `crates/knx-etsproj/fixtures/
+zipcrypto-protected.knxproj` (1,037 bytes), both generated with Info-ZIP `zip`,
+never by any code path in this repository. **No real ETS4 or ETS5
+password-protected export has been opened by this code.** The algorithm is
+fully specified and does not vary by writer, so a fixture from an independent
+ZIP tool tests the algorithm; it does not test that ETS writes what the
+specification says. [COMPATIBILITY.md](COMPATIBILITY.md) §3 and
+[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §13 say so in those words.
+
+**One thing the cipher's own specification understates.** The password check is
+one byte, and there are two published conventions for what that byte contains
+(PKZIP's CRC-32 high byte, Info-ZIP's DOS-time high byte). `decrypt` accepts
+either, because nothing in the `zip` crate's public API says which one wrote a
+given entry — which doubles the false-accept rate from 1 in 256 to roughly **1
+in 128**. ZipCrypto's security is already nil (Biham & Kocher, 1994), so the
+number changes no decision, but it is now stated in all three places that state
+a number at all rather than only in the one place that is convenient.
+
+**Gates:** `cargo fmt` `0`, `cargo clippy --workspace --all-targets -D warnings`
+`0`, `cargo test --workspace` **1,542 passed / 0 failed**, `check-layering` `0`,
+`check-headers` 118 well-formed / 168 without one (ceiling 168 — the new file
+carries its header), `cargo deny check` `0`. No TypeScript was touched.

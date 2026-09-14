@@ -4121,7 +4121,7 @@ this change). First-writer-wins behaviour is unchanged: the second element
 in a same-file collision is still not stored as a row, but the fact that
 it existed and lost is now visible in the report, satisfying CLAUDE.md's
 "never silently discard information" for this path.
-Was pinned, now proven fixed, by
+Was pinned, now proven fixed **[V]**, by
 `two_hardware_elements_sharing_an_id_in_one_file_record_the_collision`
 (`parse/hardware.rs`) and
 `two_catalog_items_sharing_an_id_in_one_file_record_the_collision`

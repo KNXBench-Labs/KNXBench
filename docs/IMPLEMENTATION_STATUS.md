@@ -2157,9 +2157,21 @@ database — the product database stays at **v3**, `knx-store`'s
   silently dropped and never silently treated as live.
 - **The write path.** `POST /api/device/{id}/parameters` validates
   `etsId`/`raw` against the program's declared `parameter_ref`/
-  `parameter`/`parameter_type` chain — `Number` bounds, `Restriction`
-  enum membership, `None` rejected outright, every other kind a
-  non-empty-string check — before constructing exactly one
+  `parameter`/`parameter_type` chain, kind by kind, in
+  `validate_kind_and_bounds` (`domain.rs`): `Number` an integer within
+  its declared bounds, `Restriction` enum membership, `None` rejected
+  outright regardless of `raw` (it carries no writable value),
+  `Float`/`Text`/`IPAddress` checked against the Project Schema's own
+  documented or corpus-observed encoding for that kind (finite number
+  plus declared bounds; UTF-8 byte length against declared
+  `SizeInBit`; IPv4-dotted or eight-group-hex IPv6 — see
+  `validate_kind_and_bounds`'s own doc comment for each arm's
+  evidence) — not merely a non-empty string, since T18 slice 5
+  (2026-09-13/14, `crates/knx-productdb` schema unchanged, no new
+  entry of its own in this file) — and `Picture`/`Raw` a
+  non-empty-string-plus-XML-safety check, the two kinds that appear
+  nowhere in the schema's encoding table at all. Before constructing
+  exactly one
   `knx_core::Command::SetParameterValue`, undo/redo through
   `RestoreParameterValue` (`raw: Option<String>`, since
   `ParameterInstance.raw` is a plain `String`, not an `Override<T>` —
@@ -2217,7 +2229,15 @@ database — the product database stays at **v3**, `knx-store`'s
   `ValueMap` and a validated write path for a module-scoped `etsId`,
   including what `MI` means above `1`, unattested in the corpus); deep
   format validation for `Float`/`Text`/`IPAddress`/`Picture`/`Raw` beyond
-  a non-empty-string check; `Access` used for write gating (display-only,
+  a non-empty-string check *(Superseded for `Float`/`Text`/`IPAddress`: T18
+  slice 5 (2026-09-13/14) adds real format validation for those three
+  kinds — see this file's "The write path" bullet above and
+  `domain.rs`'s `validate_kind_and_bounds` for what each arm actually
+  checks. `Picture`/`Raw` stay a non-empty-string-plus-XML-safety
+  check — neither kind appears anywhere in the Project Schema's own
+  encoding table, so there is no format to validate against. Left
+  here, not deleted, for the record of what this slice's design
+  originally scoped out.)*; `Access` used for write gating (display-only,
   RESEARCH §4.3 found no usable correlation); diagnostics gating a write;
   `Argument` values; union-parameter cross-field validation; bulk/
   multi-field write; pagination; product-database editing; search/filter

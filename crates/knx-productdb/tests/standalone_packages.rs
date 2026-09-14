@@ -779,7 +779,7 @@ fn signature_members_are_stored_verbatim_and_never_verified() {
     assert_eq!(member2.role, "Signature");
 }
 
-/// ADR-0020's v7 backfill, against the database it exists for rather than
+/// ADR-0020's v8 backfill, against the database it exists for rather than
 /// against a fixture: every corpus package is installed by the current build,
 /// the result is rolled back to exactly the state a pre-2026-09-13 ingest left
 /// — `linkable` `NULL`, one "attribute not understood" row per program,

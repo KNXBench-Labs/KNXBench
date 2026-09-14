@@ -5,6 +5,8 @@
 //! ids `hardware.rs` writes into `product` / `hardware2program` — the
 //! catalog is a navigation view over that data, not a second copy of it.
 
+use std::collections::HashMap;
+
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 use rusqlite::{params, Connection};
@@ -50,6 +52,8 @@ pub fn ingest_catalog(
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
     let mut conflicts = Vec::new();
+    // Fresh per call, i.e. per file — see `first_winner`'s doc comment.
+    let mut seen = HashMap::new();
     let mut manufacturer_id = String::new();
     // The chain of currently-open `CatalogSection` ids, innermost last —
     // its top is the parent of whatever section or item comes next.
@@ -77,6 +81,7 @@ pub fn ingest_catalog(
                     source_sha256,
                     source_path,
                     &mut unknown,
+                    &mut seen,
                     &mut conflicts,
                     &mut manufacturer_id,
                     &section_stack,
@@ -90,6 +95,7 @@ pub fn ingest_catalog(
                     source_sha256,
                     source_path,
                     &mut unknown,
+                    &mut seen,
                     &mut conflicts,
                     &mut manufacturer_id,
                     &section_stack,
@@ -115,6 +121,7 @@ fn handle_element(
     source_sha256: &str,
     source_path: &str,
     unknown: &mut UnknownCollector,
+    seen: &mut HashMap<(String, String), u32>,
     conflicts: &mut Vec<IdConflict>,
     manufacturer_id: &mut String,
     section_stack: &[String],
@@ -141,6 +148,7 @@ fn handle_element(
                 "catalog_section",
                 a.get("Id"),
                 source_sha256,
+                seen,
                 conflicts,
             )? {
                 conn.execute(
@@ -168,7 +176,14 @@ fn handle_element(
                 &a,
                 ITEM_ATTRS,
             );
-            if first_winner(conn, "catalog_item", a.get("Id"), source_sha256, conflicts)? {
+            if first_winner(
+                conn,
+                "catalog_item",
+                a.get("Id"),
+                source_sha256,
+                seen,
+                conflicts,
+            )? {
                 conn.execute(
                     "INSERT INTO catalog_item
                  (id, manufacturer_id, section_id, name, number, visible_description,
@@ -301,16 +316,17 @@ mod tests {
         assert!(format!("{err}").contains("M-006A/Catalog.xml"));
     }
 
-    /// KNOWN_LIMITATIONS.md §86, `catalog.rs`'s half of the same gap
+    /// KNOWN_LIMITATIONS.md §86, closed — `catalog.rs`'s half of
     /// `hardware.rs::two_hardware_elements_sharing_an_id_in_one_file_
-    /// conflict_silently` pins: `first_winner` compares the existing row's
-    /// `source_sha256` to *this call's* `source_sha256`, one hash per
-    /// whole file, so two `CatalogItem` elements sharing an `@Id` inside
-    /// one `Catalog.xml` always compare equal and never reach the
-    /// `IdConflict` branch. Pinned, not fixed — see the sibling test's
-    /// doc comment for why a real fix is a schema change out of scope.
+    /// record_the_collision`. Two `CatalogItem` elements sharing an `@Id`
+    /// inside one `Catalog.xml` used to compare equal on `source_sha256`
+    /// alone and the second was dropped unrecorded; `first_winner`'s
+    /// per-call occurrence count now catches it. Proof this would have
+    /// failed before: it did, verbatim, as
+    /// `two_catalog_items_sharing_an_id_in_one_file_conflict_silently`,
+    /// asserting `ingest.conflicts.is_empty()`.
     #[test]
-    fn two_catalog_items_sharing_an_id_in_one_file_conflict_silently() {
+    fn two_catalog_items_sharing_an_id_in_one_file_record_the_collision() {
         let (_dir, conn) = db();
         let xml = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11">
@@ -332,15 +348,28 @@ mod tests {
         let ingest =
             ingest_catalog(&conn, "one-file-sha", "M-006A/Catalog.xml", xml.as_bytes()).unwrap();
 
-        assert!(
-            ingest.conflicts.is_empty(),
-            "first_winner cannot see a same-file collision — this is the documented gap"
+        assert_eq!(
+            ingest.conflicts.len(),
+            1,
+            "the same-file collision must now be recorded, not swallowed"
+        );
+        let conflict = &ingest.conflicts[0];
+        assert_eq!(conflict.table, "catalog_item");
+        assert_eq!(conflict.id, "CI-DUP");
+        assert_eq!(conflict.kept_sha256, "one-file-sha");
+        assert_eq!(conflict.other_sha256, "one-file-sha");
+        assert_eq!(
+            conflict.occurrence, 2,
+            "second sighting of CI-DUP within this one parse call"
         );
 
         let rows: i64 = conn
             .query_row("SELECT count(*) FROM catalog_item", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(rows, 1, "the second CatalogItem row never lands at all");
+        assert_eq!(
+            rows, 1,
+            "first writer still wins; the second row still never lands"
+        );
 
         let (name, product_ref): (String, String) = conn
             .query_row(

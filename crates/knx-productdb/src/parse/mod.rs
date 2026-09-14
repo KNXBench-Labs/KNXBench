@@ -10,6 +10,8 @@ pub mod master;
 pub mod program;
 pub mod translation;
 
+use std::collections::HashMap;
+
 use rusqlite::{Connection, OptionalExtension};
 
 use crate::report::{IdConflict, UnknownCollector};
@@ -62,28 +64,52 @@ pub(crate) fn bool_flag(
 }
 
 /// First writer wins: if `id` is not already in `table`, this is the row
-/// that gets to exist. If it is, and the existing row came from a
-/// different file (`source_sha256` differs), that is recorded as an
-/// `IdConflict` — but the existing row is kept regardless, so the answer
-/// is always "did the caller's row win", never "is this now the winner".
+/// that gets to exist. If it is, and the existing row lost regardless —
+/// either because it came from a different file (`source_sha256` differs)
+/// or because it is not the first time *this parse call* has handed
+/// `first_winner` this exact `(table, id)` pair — that is recorded as an
+/// `IdConflict`. The existing row is kept regardless, so the answer is
+/// always "did the caller's row win", never "is this now the winner".
 ///
 /// Extracted from two byte-identical copies (`hardware.rs` and
 /// `catalog.rs`; `program.rs` inlines the same idea for
 /// `application_program` alone, differently enough — it also gates several
 /// later match arms on the result — that folding it in here was not
-/// attempted). Behaviour is unchanged on purpose: it still compares
-/// `source_sha256` at the whole-file granularity it always has, same-file
-/// duplicate ids included (KNOWN_LIMITATIONS.md §86). Making that
-/// finer-grained is a separate, deliberate piece of work, not a side effect
-/// of tidying up the copies.
+/// attempted).
+///
+/// Comparing `source_sha256` alone (as this did until KNOWN_LIMITATIONS.md
+/// §86 was closed) cannot see a same-file collision: one parse call passes
+/// the *same* `source_sha256` for every element in the file it is reading,
+/// so two elements sharing an `@Id` in that one file always compared
+/// equal and the second was dropped without a trace. `seen_this_call`
+/// fixes that by counting, so the comparison is now "has this exact
+/// occurrence count been seen for this id, in this call" in addition to
+/// the original file-hash check — a finer question than "which file",
+/// answerable without touching the `source_sha256` column any row is
+/// actually stored under (still the whole file's hash, still what
+/// `program_should_be_skipped` and friends rely on elsewhere; only the
+/// *comparison* got finer, not what gets persisted).
+///
+/// `seen_this_call` must be fresh (empty) at the start of one parse call
+/// over one file and threaded through every `first_winner` call made
+/// during it — a stale or shared map would count occurrences across files,
+/// which is exactly the distinction this exists to preserve.
 pub(crate) fn first_winner(
     conn: &Connection,
     table: &str,
     id: Option<&str>,
     source_sha256: &str,
+    seen_this_call: &mut HashMap<(String, String), u32>,
     conflicts: &mut Vec<IdConflict>,
 ) -> Result<bool, ProductDbError> {
     let id = id.unwrap_or_default();
+    let occurrence = {
+        let count = seen_this_call
+            .entry((table.to_string(), id.to_string()))
+            .or_insert(0);
+        *count += 1;
+        *count
+    };
     let existing: Option<String> = conn
         .query_row(
             &format!("SELECT source_sha256 FROM {table} WHERE id = ?1"),
@@ -94,12 +120,13 @@ pub(crate) fn first_winner(
     match existing {
         None => Ok(true),
         Some(kept) => {
-            if kept != source_sha256 {
+            if kept != source_sha256 || occurrence > 1 {
                 conflicts.push(IdConflict {
                     table: table.to_string(),
                     id: id.to_string(),
                     kept_sha256: kept,
                     other_sha256: source_sha256.to_string(),
+                    occurrence,
                 });
             }
             Ok(false)
@@ -191,7 +218,13 @@ mod tests {
     #[test]
     fn first_winner_is_shared_by_every_caller_not_copy_pasted() {
         // hardware.rs and catalog.rs each carried a byte-identical private
-        // `first_winner`; this is the one they both now call.
+        // `first_winner`; this is the one they both now call. Each
+        // simulated "file" below gets its own fresh `seen` map, exactly as
+        // a real `ingest_hardware`/`ingest_catalog` call would — reusing
+        // one map across what are meant to be different files is the
+        // misuse `first_winner`'s own doc comment warns about, and would
+        // fabricate a same-file conflict between "H-1"/sha-a and
+        // "H-1"/sha-b that never shared a file at all.
         let (_dir, conn) = db();
         let mut conflicts = Vec::new();
         conn.execute(
@@ -200,21 +233,111 @@ mod tests {
         )
         .unwrap();
 
-        // A fresh id always wins, no conflict recorded.
-        assert!(first_winner(&conn, "hardware", Some("H-2"), "sha-a", &mut conflicts).unwrap());
+        // A fresh id always wins, no conflict recorded. Modelled as part of
+        // the same file ("sha-a") that "H-1" above came from.
+        let mut seen_a = HashMap::new();
+        assert!(first_winner(
+            &conn,
+            "hardware",
+            Some("H-2"),
+            "sha-a",
+            &mut seen_a,
+            &mut conflicts
+        )
+        .unwrap());
         assert!(conflicts.is_empty());
 
-        // The same id from the same file is not a conflict, just a loss.
-        assert!(!first_winner(&conn, "hardware", Some("H-1"), "sha-a", &mut conflicts).unwrap());
+        // The same id from the same file (same map, same hash) is not a
+        // conflict, just a loss — the idempotent re-ingest case.
+        assert!(!first_winner(
+            &conn,
+            "hardware",
+            Some("H-1"),
+            "sha-a",
+            &mut seen_a,
+            &mut conflicts
+        )
+        .unwrap());
         assert!(conflicts.is_empty());
 
-        // The same id from a different file's hash is a recorded conflict,
-        // and the first writer still keeps the row.
-        assert!(!first_winner(&conn, "hardware", Some("H-1"), "sha-b", &mut conflicts).unwrap());
+        // The same id from a different file's hash — its own fresh map, a
+        // genuinely different parse call — is a recorded conflict, and the
+        // first writer still keeps the row. `occurrence` is `1`: this file
+        // only saw the id once, the conflict is against a different file.
+        let mut seen_b = HashMap::new();
+        assert!(!first_winner(
+            &conn,
+            "hardware",
+            Some("H-1"),
+            "sha-b",
+            &mut seen_b,
+            &mut conflicts
+        )
+        .unwrap());
         assert_eq!(conflicts.len(), 1);
         assert_eq!(conflicts[0].table, "hardware");
         assert_eq!(conflicts[0].id, "H-1");
         assert_eq!(conflicts[0].kept_sha256, "sha-a");
         assert_eq!(conflicts[0].other_sha256, "sha-b");
+        assert_eq!(conflicts[0].occurrence, 1);
+    }
+
+    /// KNOWN_LIMITATIONS.md §86, now closed for every caller that uses this
+    /// helper: two elements sharing an `@Id` *inside one file* — same
+    /// `seen` map, same `source_sha256`, because a real caller only ever
+    /// creates one of each per file — now produce a recorded conflict
+    /// instead of a silent drop. Before this change, `first_winner` had no
+    /// `seen_this_call` parameter at all, its only test was `kept !=
+    /// source_sha256`, and that test is always false here (both calls carry
+    /// the identical `"one-file-sha"`), so this exact scenario would have
+    /// left `conflicts` empty — the fact this test asserts `conflicts.len()
+    /// == 1` is what would have failed against that old signature/logic.
+    #[test]
+    fn two_calls_sharing_a_seen_map_and_hash_record_a_same_file_conflict() {
+        let (_dir, conn) = db();
+        let mut seen = HashMap::new();
+        let mut conflicts = Vec::new();
+
+        assert!(first_winner(
+            &conn,
+            "hardware",
+            Some("H-DUP"),
+            "one-file-sha",
+            &mut seen,
+            &mut conflicts
+        )
+        .unwrap());
+        conn.execute(
+            "INSERT INTO hardware (id, manufacturer_id, source_sha256) VALUES ('H-DUP', 'M-1', 'one-file-sha')",
+            [],
+        )
+        .unwrap();
+        assert!(
+            conflicts.is_empty(),
+            "the first occurrence is never a conflict"
+        );
+
+        assert!(!first_winner(
+            &conn,
+            "hardware",
+            Some("H-DUP"),
+            "one-file-sha",
+            &mut seen,
+            &mut conflicts
+        )
+        .unwrap());
+        assert_eq!(
+            conflicts.len(),
+            1,
+            "a second occurrence of the same id, in the same file, is now a recorded conflict"
+        );
+        assert_eq!(conflicts[0].table, "hardware");
+        assert_eq!(conflicts[0].id, "H-DUP");
+        assert_eq!(conflicts[0].kept_sha256, "one-file-sha");
+        assert_eq!(conflicts[0].other_sha256, "one-file-sha");
+        assert_eq!(
+            conflicts[0].occurrence, 2,
+            "this is the second time this call has seen H-DUP in hardware"
+        );
     }
 }

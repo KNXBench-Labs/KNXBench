@@ -5,6 +5,8 @@
 //! `DeviceInstance.program_ref` into `hardware2program`, whose
 //! `application_program_ref` is the bridge to the application program.
 
+use std::collections::HashMap;
+
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use rusqlite::{params, Connection};
@@ -65,6 +67,10 @@ pub fn ingest_hardware(
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
     let mut conflicts = Vec::new();
+    // Fresh per call, i.e. per file: `first_winner` counts occurrences of
+    // each `(table, id)` pair against this, so a stale map would blur two
+    // files' ids together (KNOWN_LIMITATIONS.md §86).
+    let mut seen = HashMap::new();
     let mut manufacturer_id = String::new();
     let mut hardware_id = String::new();
     let mut h2p_id = String::new();
@@ -106,6 +112,7 @@ pub fn ingest_hardware(
                             "hardware",
                             Some(hardware_id.as_str()),
                             source_sha256,
+                            &mut seen,
                             &mut conflicts,
                         )? {
                             conn.execute(
@@ -182,6 +189,7 @@ pub fn ingest_hardware(
                             "product",
                             a.get("Id"),
                             source_sha256,
+                            &mut seen,
                             &mut conflicts,
                         )? {
                             conn.execute(
@@ -223,6 +231,7 @@ pub fn ingest_hardware(
                             "hardware2program",
                             Some(h2p_id.as_str()),
                             source_sha256,
+                            &mut seen,
                             &mut conflicts,
                         )?;
                         if h2p_is_first {
@@ -400,20 +409,17 @@ mod tests {
         assert!(format!("{err}").contains("M-006A/Hardware.xml"));
     }
 
-    /// KNOWN_LIMITATIONS.md §86. `first_winner`'s conflict detection compares
-    /// the *existing* row's `source_sha256` to the *current file's*
-    /// `source_sha256` — one hash per whole file. Two `Hardware` elements
-    /// sharing an `@Id` inside that same file therefore always compare
-    /// equal (both carry this call's one `source_sha256`), so the branch
-    /// that pushes an `IdConflict` never runs: the second `Hardware`
-    /// element is dropped with no record anywhere, unlike a collision that
-    /// crosses two different files (`hardware_2plus2_program_ids_conflict_
-    /// across_files`, `catalog.rs`'s equivalent). This test pins that gap
-    /// rather than closing it — closing it needs `hardware` to track a
-    /// per-row source finer than "the file this call was given", which is
-    /// a schema change out of this task's scope.
+    /// KNOWN_LIMITATIONS.md §86, closed. Two `Hardware` elements sharing an
+    /// `@Id` inside the same file used to compare equal on `source_sha256`
+    /// alone (both carry this call's one hash) and vanish with the second
+    /// one dropped and nothing recorded. `first_winner` now also counts
+    /// occurrences of `(table, id)` within one parse call, so the second
+    /// sighting is a conflict even though `kept_sha256 == other_sha256` —
+    /// proof this test would have failed before that counter existed: it
+    /// did, verbatim, as `two_hardware_elements_sharing_an_id_in_one_file_
+    /// conflict_silently`, asserting `ingest.conflicts.is_empty()`.
     #[test]
-    fn two_hardware_elements_sharing_an_id_in_one_file_conflict_silently() {
+    fn two_hardware_elements_sharing_an_id_in_one_file_record_the_collision() {
         let (_dir, conn) = db();
         let xml = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11">
@@ -441,22 +447,35 @@ mod tests {
         let ingest =
             ingest_hardware(&conn, "one-file-sha", "M-0001/Hardware.xml", xml.as_bytes()).unwrap();
 
-        // The gap: no conflict is recorded even though two different
-        // `Hardware` rows genuinely competed for one id.
-        assert!(
-            ingest.conflicts.is_empty(),
-            "first_winner cannot see a same-file collision — this is the documented gap, \
-             not a passing check"
+        // The gap is closed: a conflict is now recorded, and it names the
+        // table and id that collided. `kept_sha256 == other_sha256` here
+        // (both "one-file-sha") only because nothing had ingested this id
+        // before; the hashes would differ if something had, even with the
+        // duplicate inside this one file. `occurrence == 2` is the claim
+        // that holds either way, which is why the assertion below rests on
+        // it and not on the hashes.
+        assert_eq!(
+            ingest.conflicts.len(),
+            1,
+            "the same-file collision is now recorded"
         );
+        assert_eq!(ingest.conflicts[0].table, "hardware");
+        assert_eq!(ingest.conflicts[0].id, "H-DUP");
+        assert_eq!(ingest.conflicts[0].kept_sha256, "one-file-sha");
+        assert_eq!(ingest.conflicts[0].other_sha256, "one-file-sha");
+        assert_eq!(ingest.conflicts[0].occurrence, 2);
 
         let rows: i64 = conn
             .query_row("SELECT count(*) FROM hardware", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(rows, 1, "the second Hardware row never lands at all");
+        assert_eq!(
+            rows, 1,
+            "first-writer-wins is unchanged: the second row never lands"
+        );
 
-        // First-writer-wins: "First"'s data survives, "Second"'s is gone
-        // without a trace — not merged, not reported, not recoverable from
-        // this database.
+        // First-writer-wins: "First"'s data survives, "Second"'s is gone —
+        // now at least named in `conflicts`, not merged, still not
+        // recoverable from the row itself.
         let name: String = conn
             .query_row("SELECT name FROM hardware WHERE id = 'H-DUP'", [], |r| {
                 r.get(0)
@@ -464,19 +483,22 @@ mod tests {
             .unwrap();
         assert_eq!(name, "First");
 
-        // A second, worse consequence of the same blind spot: `Product`'s own
-        // `first_winner` check compares `P-1`/`P-2` (which never collide)
-        // and never asks whether the parent `Hardware` row it is about to
-        // reference was actually the one just inserted. Both products land,
-        // and "Second product" silently reparents onto "First"'s surviving
-        // `H-DUP` row — data for a hardware entry that, from this database's
-        // point of view, never existed.
+        // A separate, still-open consequence of first-writer-wins, not what
+        // this test is about: `Product`'s own `first_winner` check compares
+        // `P-1`/`P-2` (which never collide) and never asks whether the
+        // parent `Hardware` row it is about to reference was actually the
+        // one just inserted. Both products land, and "Second product"
+        // reparents onto "First"'s surviving `H-DUP` row — data for a
+        // hardware entry that, from this database's point of view, never
+        // existed. `first_winner` now reports *that* `H-DUP` collided; it
+        // was never asked to chase every row that references a loser, and
+        // still isn't.
         let products: i64 = conn
             .query_row("SELECT count(*) FROM product", [], |r| r.get(0))
             .unwrap();
         assert_eq!(
             products, 2,
-            "both products are inserted; P-2 silently reparents onto the surviving H-DUP row"
+            "both products are inserted; P-2 reparents onto the surviving H-DUP row"
         );
     }
 }

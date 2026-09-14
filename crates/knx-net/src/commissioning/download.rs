@@ -469,7 +469,10 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
             // CP §3.5.2 numbers the five parts it lists 06 to 10. A plan of
             // five parts therefore reproduces the clause's numbering exactly,
             // and a longer one continues the count rather than stopping at 10.
-            let number = 6 + u8::try_from(position).unwrap_or(u8::MAX - 6);
+            // The addition happens in `usize`: `6 + u8::try_from(position)`
+            // overflowed at 250 parts, which is a panic in debug and a step
+            // number of 0 in release.
+            let number = u8::try_from(position + 6).unwrap_or(u8::MAX);
             record(&mut report, kind, number, "load one loadable part");
             let outcome = load_one_part(
                 self.session,

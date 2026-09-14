@@ -1,4 +1,4 @@
-//! T30 phase 3: read-only commissioning probes against the real installation, never touching `1.1.220`.
+//! T30 phase 3: read-only commissioning probes against the real installation, skipping `1.1.220`.
 //!
 //! Integration test against a real KNXnet/IP gateway, like `live_gateway.rs`
 //! — requires actual hardware reachable on the LAN, never runs in CI, and

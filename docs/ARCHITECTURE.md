@@ -304,8 +304,11 @@ layout and mask data all live in the product database.
 
 `knx-secure` exists from the first commit of the workspace, with its own
 storage. It was empty until A6 (2026-09-13), which gave it the `.knxproj`
-ZIP-password derivation; it still holds no KNX Secure runtime-key handling
-(Data Secure, IP Secure, keyring) — that part of the crate's purpose remains
+ZIP-password derivation, and T15 (2026-09-14) added `zipcrypto` — a
+hand-written implementation of the ZipCrypto stream cipher (APPNOTE.TXT
+§6.1), decrypt-only, with no encryption function anywhere in the
+workspace. It still holds no KNX Secure runtime-key handling (Data
+Secure, IP Secure, keyring) — that part of the crate's purpose remains
 unimplemented (`KNOWN_LIMITATIONS.md §8`).
 
 The rules are in force from now on. Key material never enters the `Project`
@@ -319,6 +322,18 @@ project model) or to `serde` (so no `knx-secure` type can gain a
 `knx-secure` currently exports, ships a hand-written `Debug` impl that always
 prints a fixed placeholder instead of the value, with no `Display` impl and
 no `serde` derive.
+
+One caller now crosses that boundary in the other direction:
+`knx-etsproj`'s `Container::open_with_password` takes a plaintext password
+as a `&str` and hands its bytes to `knx_secure::zipcrypto::decrypt`. The
+password is a borrowed parameter and nothing more — it is not stored on
+`Container`, not copied into any `EntryInfo`, and not interpolated into
+any error variant or `Display` impl, so no container error can leak it
+into a log or a report. `zipcrypto::decrypt` takes `&[u8]` rather than
+`ZipPassword` deliberately: `ZipPassword` is the *derived* AES key for
+schema ≥ 21, a different thing from the raw ZipCrypto password, and
+conflating the two would be exactly the kind of convenience this section
+exists to prevent.
 
 Retrofitting isolation is how secrets leak, which is why the boundary exists
 before the feature does (ADR-0008).

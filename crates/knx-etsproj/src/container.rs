@@ -15,6 +15,13 @@
 //! real protected project, and shipping an untested decryption path would
 //! claim support this repository cannot demonstrate. [`Container::open`]
 //! (no password) refuses either scheme outright, unchanged.
+//!
+//! AES is detected from the entry's raw on-disk compression-method field
+//! (`raw_compression_method`), not from `zip`'s own parsed
+//! `CompressionMethod` — the `zip` crate overwrites that field with the
+//! entry's real underlying method the moment it parses a WinZip AES extra
+//! field (0x9901), so checking the parsed value can never see an AES
+//! entry at all.
 
 use std::collections::BTreeMap;
 use std::io::{Cursor, Read};
@@ -34,6 +41,31 @@ use zip::{CompressionMethod, ZipArchive};
 /// project is 5.7 MB; the whole uncompressed reference container is 22 MB
 /// (RESEARCH). 64 MB leaves ample headroom for a legitimate project.
 const MAX_ENTRY_SIZE: u64 = 64 * 1024 * 1024;
+
+/// The on-disk compression-method value APPNOTE §4.4.5 reserves to mean
+/// "see the WinZip AES extra field (0x9901) for the entry's real method".
+/// `zip` calls this `CompressionMethod::Unsupported(99)` internally but,
+/// per this module's header, overwrites it with the *real* underlying
+/// method the moment it parses that extra field — so this constant is only
+/// ever checked against the raw bytes below, never against
+/// [`zip::read::ZipFile::compression`] (finding 1 of the T15 branch
+/// review).
+const AES_RAW_COMPRESSION_METHOD: u16 = 99;
+
+/// Reads the raw on-disk compression-method field (APPNOTE §4.4.5,
+/// local-file-header offset 8, a `u16` little-endian) straight out of
+/// `payload`, bypassing `zip`'s own parsed [`CompressionMethod`], which a
+/// WinZip AES extra field (0x9901) overwrites with the real underlying
+/// method the instant `zip` parses it. `header_start` is
+/// [`zip::read::ZipFile::header_start`]; `payload` must be the exact bytes
+/// the enclosing `ZipArchive` was built from. `None` if the offset falls
+/// outside `payload` — treated as "not AES" by the caller, same as any
+/// other value that isn't 99.
+fn raw_compression_method(payload: &[u8], header_start: u64) -> Option<u16> {
+    let offset = usize::try_from(header_start).ok()?.checked_add(8)?;
+    let bytes = payload.get(offset..offset.checked_add(2)?)?;
+    Some(u16::from_le_bytes([bytes[0], bytes[1]]))
+}
 
 /// One entry's name and uncompressed size, snapshotted from the ZIP central
 /// directory at open time.
@@ -91,8 +123,38 @@ pub enum ContainerError {
     /// password given" apart.
     UnsupportedEncryption {
         nested_entry: String,
-        scheme: String,
+        scheme: EncryptionScheme,
     },
+    /// A nested payload entry's path already exists elsewhere in the
+    /// container's inventory — either the outer archive or an entry
+    /// already committed from this same payload. Never silently shadowed
+    /// (finding 6 of the T15 branch review): whichever of the two a
+    /// caller reads by path, the other one's bytes would vanish with no
+    /// warning.
+    DuplicateEntry {
+        path: String,
+    },
+}
+
+/// Which encryption scheme a nested payload turned out to be protected
+/// with, once its raw on-disk compression-method field (not `zip`'s parsed
+/// [`CompressionMethod`], which a WinZip AES extra field overwrites — see
+/// this module's header) named it. A type, not a string, so a caller can
+/// `match` it instead of comparing English prose (finding 12 of the T15
+/// branch review) — even though there is, for now, exactly one variant.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EncryptionScheme {
+    /// WinZip AES (`AE-x`, APPNOTE's compression-method 99 + extra field
+    /// 0x9901) — the scheme schema ≥ 21 (ETS6) `.knxproj` files use.
+    Aes,
+}
+
+impl std::fmt::Display for EncryptionScheme {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EncryptionScheme::Aes => write!(f, "AES (WinZip AES / schema ≥ 21)"),
+        }
+    }
 }
 
 impl std::fmt::Display for ContainerError {
@@ -124,6 +186,9 @@ impl std::fmt::Display for ContainerError {
                 "project is protected with {scheme}, which this build does not decrypt \
                  (nested payload {nested_entry})"
             ),
+            ContainerError::DuplicateEntry { path } => {
+                write!(f, "duplicate entry path across the container: {path}")
+            }
         }
     }
 }
@@ -199,13 +264,28 @@ impl Container {
             })?;
         drop(payload);
 
-        let mut inner =
-            ZipArchive::new(Cursor::new(payload_bytes)).map_err(|e| ContainerError::Read {
+        // Borrows `payload_bytes` rather than consuming it, so the raw
+        // on-disk local-file-header bytes stay available below for the AES
+        // check `zip`'s own parsed `CompressionMethod` cannot answer (see
+        // `raw_compression_method` and this module's header) — `inner`
+        // never outlives this function, so a borrow is enough; no need to
+        // clone a buffer that can be up to `MAX_ENTRY_SIZE` bytes.
+        let mut inner = ZipArchive::new(Cursor::new(payload_bytes.as_slice())).map_err(|e| {
+            ContainerError::Read {
                 path: nested_info.path.clone(),
                 cause: e.to_string(),
-            })?;
+            }
+        })?;
 
-        let mut decrypted_entries = Vec::new();
+        // The opaque nested-zip blob is about to be replaced by the
+        // entries it actually contains. Removed here, before the loop
+        // below, rather than after: each entry's collision check
+        // (`container.find`, just below) then sees every entry already
+        // committed for this payload as well as the outer archive's own
+        // inventory, including entries pushed by earlier iterations of
+        // this same loop (finding 6 of the T15 branch review).
+        container.entries.retain(|e| e.path != nested_info.path);
+
         for i in 0..inner.len() {
             // `by_index_raw` returns the entry's bytes exactly as stored —
             // still encrypted, still compressed. The `zip` crate's own
@@ -228,16 +308,20 @@ impl Container {
             // both this crate's fixture and real ETS output structure.
             let entry_path = entry.name().to_string();
 
+            if container.find(&entry_path).is_some() {
+                return Err(ContainerError::DuplicateEntry { path: entry_path });
+            }
+
             if !entry.encrypted() {
                 // Not every entry in a protected payload need be
                 // encrypted in principle; none observed so far are not,
                 // but nothing here assumes otherwise. Read it plain.
-                let size = entry.size();
-                if size > MAX_ENTRY_SIZE {
+                let declared_size = entry.size();
+                if declared_size > MAX_ENTRY_SIZE {
                     return Err(ContainerError::Read {
                         path: entry_path,
                         cause: format!(
-                            "declared uncompressed size {size} bytes exceeds the \
+                            "declared uncompressed size {declared_size} bytes exceeds the \
                              {MAX_ENTRY_SIZE}-byte limit"
                         ),
                     });
@@ -250,7 +334,17 @@ impl Container {
                         path: entry_path.clone(),
                         cause: e.to_string(),
                     })?;
-                let plain = decompress(entry.compression(), &raw, entry_path.clone())?;
+                let plain =
+                    decompress(entry.compression(), &raw, declared_size, entry_path.clone())?;
+                if plain.len() as u64 != declared_size || zipcrypto::crc32(&plain) != entry.crc32()
+                {
+                    return Err(ContainerError::Read {
+                        path: entry_path,
+                        cause: "decompressed bytes match neither the entry's declared size \
+                                nor its CRC-32"
+                            .to_string(),
+                    });
+                }
                 container.entries.push(EntryInfo {
                     path: entry_path.clone(),
                     size: plain.len() as u64,
@@ -259,10 +353,18 @@ impl Container {
                 continue;
             }
 
-            if entry.compression() == CompressionMethod::AES {
+            // `zip` overwrites `entry.compression()` with the real
+            // underlying method the instant it parses a WinZip AES extra
+            // field (0x9901), so checking the parsed `CompressionMethod`
+            // for `AES` here can never fire (finding 1 of the T15 branch
+            // review) — the raw on-disk field at the local file header's
+            // compression-method offset still says 99 either way.
+            if raw_compression_method(&payload_bytes, entry.header_start())
+                == Some(AES_RAW_COMPRESSION_METHOD)
+            {
                 return Err(ContainerError::UnsupportedEncryption {
                     nested_entry: nested.clone(),
-                    scheme: "AES (WinZip AES / schema ≥ 21)".to_string(),
+                    scheme: EncryptionScheme::Aes,
                 });
             }
 
@@ -274,15 +376,6 @@ impl Container {
                     .unwrap_or(0),
             };
             let declared_size = entry.size();
-
-            let mut raw = Vec::with_capacity(entry.compressed_size().min(MAX_ENTRY_SIZE) as usize);
-            entry
-                .read_to_end(&mut raw)
-                .map_err(|e| ContainerError::Read {
-                    path: entry_path.clone(),
-                    cause: e.to_string(),
-                })?;
-
             if declared_size > MAX_ENTRY_SIZE {
                 return Err(ContainerError::Read {
                     path: entry_path,
@@ -293,6 +386,14 @@ impl Container {
                 });
             }
 
+            let mut raw = Vec::with_capacity(entry.compressed_size().min(MAX_ENTRY_SIZE) as usize);
+            entry
+                .read_to_end(&mut raw)
+                .map_err(|e| ContainerError::Read {
+                    path: entry_path.clone(),
+                    cause: e.to_string(),
+                })?;
+
             let compressed =
                 zipcrypto::decrypt(password.as_bytes(), &raw, check).map_err(|e| match e {
                     ZipCryptoError::WrongPassword => ContainerError::WrongPassword {
@@ -302,25 +403,41 @@ impl Container {
                         path: entry_path.clone(),
                         cause: format!(
                             "ZipCrypto-encrypted entry is only {len} bytes, \
-                             shorter than the 12-byte encryption header"
+                             shorter than the {}-byte encryption header",
+                            zipcrypto::HEADER_LEN
                         ),
                     },
                 })?;
 
-            let plain = decompress(entry.compression(), &compressed, entry_path.clone())?;
-            decrypted_entries.push((entry_path, plain));
-        }
+            let plain = decompress(
+                entry.compression(),
+                &compressed,
+                declared_size,
+                entry_path.clone(),
+            )?;
 
-        // The opaque nested-zip blob is replaced by the entries it
-        // actually contains, so `Container::entries`/`read` treat a
-        // decrypted project exactly like an unprotected one.
-        container.entries.retain(|e| e.path != nested_info.path);
-        for (path, plain) in decrypted_entries {
+            // The check byte (APPNOTE §6.1.6) only rules out about 255 of
+            // 256 wrong passwords per convention it is tried against — see
+            // `knx_secure::zipcrypto`'s module docs. The entry's own
+            // CRC-32, already in hand from the central directory, rules
+            // out essentially all the rest: a mismatch here, immediately
+            // after a check byte that already passed, is the false accept
+            // that check byte cannot catch (finding 2 of the T15 branch
+            // review) — the wrong password proceeded far enough to
+            // decompress cleanly but produced the wrong bytes. Reported
+            // the same way an outright-wrong check byte is, not as
+            // ordinary data corruption.
+            if plain.len() as u64 != declared_size || zipcrypto::crc32(&plain) != entry.crc32() {
+                return Err(ContainerError::WrongPassword {
+                    nested_entry: nested.clone(),
+                });
+            }
+
             container.entries.push(EntryInfo {
-                path: path.clone(),
+                path: entry_path.clone(),
                 size: plain.len() as u64,
             });
-            container.decrypted.insert(path, plain);
+            container.decrypted.insert(entry_path, plain);
         }
 
         Ok(container)
@@ -357,6 +474,24 @@ impl Container {
 
     pub fn entries(&self) -> &[EntryInfo] {
         &self.entries
+    }
+
+    /// Whether any entry in this container came from a decrypted nested
+    /// payload ([`Container::open_with_password`]), rather than straight
+    /// from the outer archive. Always `false` for [`Container::open`] and
+    /// for an unprotected project opened via `open_with_password`.
+    ///
+    /// A decrypted project has no roundtrip claim yet
+    /// (`KNOWN_LIMITATIONS.md` §13): the opaque passthrough store
+    /// (ADR-0006) reads every entry back through
+    /// [`entries`](Container::entries)/[`read`](Container::read), which
+    /// cannot tell a decrypted entry from one the caller wrote plaintext,
+    /// and the original ZipCrypto ciphertext is not kept anywhere once
+    /// decryption has run. A later import stage can call this to decide
+    /// whether to warn the caller before writing such a project back out
+    /// (finding 7 of the T15 branch review).
+    pub fn was_decrypted(&self) -> bool {
+        !self.decrypted.is_empty()
     }
 
     /// Reads one entry's bytes. Looked up case-insensitively via `find`, so
@@ -424,29 +559,47 @@ impl Container {
     }
 }
 
-/// Decompresses one already-decrypted ZipCrypto entry's bytes.
+/// Decompresses one nested-payload entry's bytes, called from
+/// [`Container::open_with_password`] for both a ZipCrypto-decrypted entry
+/// and a plain (never-encrypted) one found inside the same protected
+/// payload — nothing here cares which.
 ///
 /// The `zip` crate's own decompression is fused to its own decryption
 /// (see the note in [`Container::open_with_password`]), so once
 /// `knx_secure::zipcrypto` has stripped the encryption layer, this crate
 /// has to finish the job itself. Every entry seen in either reference
 /// project and both fixtures is Stored or Deflated; anything else is
-/// reported, not guessed at.
+/// reported, not guessed at. `declared_size` is the entry's own
+/// central-directory uncompressed-size field: inflating is bounded by it
+/// (plus one byte, so an entry that inflates to exactly `declared_size`
+/// does not itself trip the bound) rather than left to run until memory
+/// runs out (finding 5 of the T15 branch review) — the caller still
+/// re-checks the *actual* decompressed length and CRC-32 against the
+/// entry afterward, this bound only stops the decoder from running away.
 fn decompress(
     method: CompressionMethod,
     bytes: &[u8],
+    declared_size: u64,
     path: String,
 ) -> Result<Vec<u8>, ContainerError> {
     match method {
         CompressionMethod::Stored => Ok(bytes.to_vec()),
         CompressionMethod::Deflated => {
+            let limit = declared_size.saturating_add(1);
             let mut out = Vec::new();
             DeflateDecoder::new(bytes)
+                .take(limit)
                 .read_to_end(&mut out)
                 .map_err(|e| ContainerError::Read {
-                    path,
+                    path: path.clone(),
                     cause: e.to_string(),
                 })?;
+            if out.len() as u64 > declared_size {
+                return Err(ContainerError::Read {
+                    path,
+                    cause: format!("inflated to more than the declared {declared_size} bytes"),
+                });
+            }
             Ok(out)
         }
         other => Err(ContainerError::Read {
@@ -590,5 +743,198 @@ mod tests {
             .expect("an unprotected project must open regardless of the password given");
         assert_eq!(c.project_part().unwrap(), "P-0512");
         assert_eq!(c.read("P-0512/Project.xml").unwrap(), b"<KNX/>");
+    }
+
+    /// Builds a minimal one-entry ZIP whose entry is WinZip AES protected:
+    /// raw compression method 99 in both headers, general-purpose bit 0
+    /// set, and a 0x9901 extra field naming the real underlying method.
+    /// Hand-assembled from APPNOTE §4.3.7, §4.3.12 and §4.3.16 rather
+    /// than written by a library, for two reasons: nothing in this
+    /// workspace's dependency tree can *write* AES, and the whole point
+    /// of the fixture is the raw on-disk method field that `zip`
+    /// overwrites the instant it reads the extra field. The entry's
+    /// "ciphertext" is arbitrary — no code path is ever allowed to reach
+    /// it, which is exactly what the test asserts.
+    fn zip_with_one_aes_entry(name: &str, data: &[u8]) -> Vec<u8> {
+        // APPNOTE §4.5's WinZip AES extra field: header id 0x9901 and 7
+        // data bytes — AE version 2, vendor "AE", strength 3 (AES-256),
+        // then the compression method the entry would have had without
+        // encryption (0, Stored).
+        let extra: [u8; 11] = [
+            0x01, 0x99, 0x07, 0x00, 0x02, 0x00, b'A', b'E', 0x03, 0x00, 0x00,
+        ];
+        let name_bytes = name.as_bytes();
+        let size = data.len() as u32;
+
+        let mut local = Vec::new();
+        local.extend_from_slice(&0x0403_4b50u32.to_le_bytes()); // local file header signature
+        local.extend_from_slice(&20u16.to_le_bytes()); // version needed to extract
+        local.extend_from_slice(&1u16.to_le_bytes()); // general purpose flags: bit 0, encrypted
+        local.extend_from_slice(&AES_RAW_COMPRESSION_METHOD.to_le_bytes());
+        local.extend_from_slice(&0u16.to_le_bytes()); // last modified time
+        local.extend_from_slice(&0x21u16.to_le_bytes()); // last modified date (1980-01-01)
+        local.extend_from_slice(&0u32.to_le_bytes()); // CRC-32 (AE-2 writes zero)
+        local.extend_from_slice(&size.to_le_bytes()); // compressed size
+        local.extend_from_slice(&size.to_le_bytes()); // uncompressed size
+        local.extend_from_slice(&(name_bytes.len() as u16).to_le_bytes());
+        local.extend_from_slice(&(extra.len() as u16).to_le_bytes());
+        local.extend_from_slice(name_bytes);
+        local.extend_from_slice(&extra);
+        local.extend_from_slice(data);
+        let central_offset = local.len() as u32;
+
+        let mut central = Vec::new();
+        central.extend_from_slice(&0x0201_4b50u32.to_le_bytes()); // central directory signature
+        central.extend_from_slice(&20u16.to_le_bytes()); // version made by
+        central.extend_from_slice(&20u16.to_le_bytes()); // version needed to extract
+        central.extend_from_slice(&1u16.to_le_bytes()); // general purpose flags
+        central.extend_from_slice(&AES_RAW_COMPRESSION_METHOD.to_le_bytes());
+        central.extend_from_slice(&0u16.to_le_bytes()); // last modified time
+        central.extend_from_slice(&0x21u16.to_le_bytes()); // last modified date
+        central.extend_from_slice(&0u32.to_le_bytes()); // CRC-32
+        central.extend_from_slice(&size.to_le_bytes()); // compressed size
+        central.extend_from_slice(&size.to_le_bytes()); // uncompressed size
+        central.extend_from_slice(&(name_bytes.len() as u16).to_le_bytes());
+        central.extend_from_slice(&(extra.len() as u16).to_le_bytes());
+        central.extend_from_slice(&0u16.to_le_bytes()); // file comment length
+        central.extend_from_slice(&0u16.to_le_bytes()); // disk number start
+        central.extend_from_slice(&0u16.to_le_bytes()); // internal file attributes
+        central.extend_from_slice(&0u32.to_le_bytes()); // external file attributes
+        central.extend_from_slice(&0u32.to_le_bytes()); // local header offset
+        central.extend_from_slice(name_bytes);
+        central.extend_from_slice(&extra);
+        let central_len = central.len() as u32;
+
+        let mut out = local;
+        out.extend_from_slice(&central);
+        out.extend_from_slice(&0x0605_4b50u32.to_le_bytes()); // end of central directory
+        out.extend_from_slice(&0u16.to_le_bytes()); // number of this disk
+        out.extend_from_slice(&0u16.to_le_bytes()); // disk with the central directory
+        out.extend_from_slice(&1u16.to_le_bytes()); // entries in the central directory, this disk
+        out.extend_from_slice(&1u16.to_le_bytes()); // entries in the central directory, total
+        out.extend_from_slice(&central_len.to_le_bytes());
+        out.extend_from_slice(&central_offset.to_le_bytes());
+        out.extend_from_slice(&0u16.to_le_bytes()); // archive comment length
+        out
+    }
+
+    #[test]
+    fn an_aes_payload_is_refused_by_name_and_never_blamed_on_the_password() {
+        let nested = zip_with_one_aes_entry("P-0001/Project.xml", b"ciphertext, allegedly");
+        let bytes = zip_with_entries(&[("P-0001.signature", b"x"), ("P-0001.zip", &nested)]);
+        let Err(err) = Container::open_with_password(bytes, "hunter2knx") else {
+            panic!("an AES-protected payload must not open, correct password or not");
+        };
+        assert!(
+            matches!(
+                err,
+                ContainerError::UnsupportedEncryption {
+                    scheme: EncryptionScheme::Aes,
+                    ..
+                }
+            ),
+            "an AES payload must be refused by name. `zip` overwrites its own parsed \
+             compression method with the entry's *underlying* one as soon as it reads the \
+             0x9901 extra field, so a check against the parsed value never fires and the \
+             ZipCrypto path ends up telling the user their correct password is wrong. \
+             Got: {err:?}"
+        );
+    }
+
+    // Fixture: `fixtures/zipcrypto-stored.knxproj`, generated with the
+    // Info-ZIP `zip` CLI exactly as the fixture above was, and identical
+    // to it in shape (outer archive, `P-0002.signature`, ZipCrypto-
+    // encrypted `P-0002.zip`, password `hunter2knx`) but for one thing:
+    // the nested entry is **Stored**, not Deflated. That difference is
+    // the whole reason it exists. Against a Deflated entry, a wrong
+    // password that slips past the check byte produces bytes that fail to
+    // inflate, and the failure is reported long before anyone gets to
+    // compare a CRC. Stored bytes always "decompress", so the entry's own
+    // CRC-32 is the only thing left standing between a false accept and a
+    // caller who thinks they have their project back.
+    fn zipcrypto_stored_fixture_bytes() -> Vec<u8> {
+        include_bytes!("../fixtures/zipcrypto-stored.knxproj").to_vec()
+    }
+
+    /// Pulls a fixture's first nested entry out by hand — raw bytes and
+    /// check bytes both — exactly the way [`Container::open_with_password`]
+    /// does, so a test can ask `knx_secure` directly whether some password
+    /// passes the check byte. The container's own result deliberately no
+    /// longer answers that question: it reports every wrong password the
+    /// same way, which is the point.
+    fn first_nested_entry_of(outer_bytes: Vec<u8>, nested_name: &str) -> (Vec<u8>, CheckBytes) {
+        let mut outer = ZipArchive::new(Cursor::new(outer_bytes)).unwrap();
+        let mut payload = Vec::new();
+        outer
+            .by_name(nested_name)
+            .unwrap()
+            .read_to_end(&mut payload)
+            .unwrap();
+        let mut inner = ZipArchive::new(Cursor::new(payload)).unwrap();
+        let mut entry = inner.by_index_raw(0).unwrap();
+        let check = CheckBytes {
+            crc32_high_byte: (entry.crc32() >> 24) as u8,
+            dos_time_high_byte: entry
+                .last_modified()
+                .map(|dt| (dt.timepart() >> 8) as u8)
+                .unwrap_or(0),
+        };
+        let mut raw = Vec::new();
+        entry.read_to_end(&mut raw).unwrap();
+        (raw, check)
+    }
+
+    #[test]
+    fn the_stored_fixture_decrypts_with_the_right_password() {
+        let mut c = Container::open_with_password(zipcrypto_stored_fixture_bytes(), "hunter2knx")
+            .expect("known-good password must decrypt the Stored fixture");
+        assert_eq!(c.project_part().unwrap(), "P-0002");
+        assert!(c.read("P-0002/Project.xml").unwrap().starts_with(b"<?xml"));
+        assert!(c.was_decrypted());
+    }
+
+    #[test]
+    fn a_wrong_password_that_survives_the_check_byte_is_caught_by_the_entrys_crc() {
+        let (raw, check) = first_nested_entry_of(zipcrypto_stored_fixture_bytes(), "P-0002.zip");
+        // One byte, tried against two conventions: roughly 1 wrong
+        // password in 128 walks straight past the check byte (APPNOTE
+        // §6.1.6, and `knx_secure::zipcrypto`'s own module docs). Finding
+        // one is arithmetic, not luck, and a few hundred candidates are
+        // enough — the search is bounded far above that so a fixture
+        // change can never turn this test into an infinite loop.
+        let lucky = (0..100_000u32)
+            .map(|n| format!("wrong{n}"))
+            .find(|p| zipcrypto::decrypt(p.as_bytes(), &raw, check).is_ok())
+            .expect("a check-byte false accept must exist within 100,000 candidates");
+        assert_ne!(lucky, "hunter2knx");
+
+        let result = Container::open_with_password(zipcrypto_stored_fixture_bytes(), &lucky);
+        assert!(
+            matches!(result, Err(ContainerError::WrongPassword { .. })),
+            "a password that passes the check byte but produces the wrong bytes is still a \
+             wrong password. Without the entry's own CRC-32 the container hands those bytes \
+             on as the project, and the protected path ends up trusted less than the \
+             unprotected one, which `zip` CRC-checks for free."
+        );
+    }
+
+    #[test]
+    fn a_nested_entry_colliding_with_an_outer_path_is_refused_not_shadowed() {
+        // `knx_master.xml` is the realistic collision: the outer archive
+        // carries one and nothing stops a payload from carrying another.
+        let nested = zip_with_entries(&[("knx_master.xml", b"<KNX>nested</KNX>")]);
+        let bytes = zip_with_entries(&[
+            ("P-0001.signature", b"x"),
+            ("knx_master.xml", b"<KNX>outer</KNX>"),
+            ("P-0001.zip", &nested),
+        ]);
+        let Err(err) = Container::open_with_password(bytes, "irrelevant") else {
+            panic!("a duplicate path must not be accepted: one of the two would vanish");
+        };
+        assert!(
+            matches!(err, ContainerError::DuplicateEntry { ref path } if path == "knx_master.xml"),
+            "a colliding path must be named, not silently shadowed by whichever copy the \
+             lookup happens to prefer. Got: {err:?}"
+        );
     }
 }

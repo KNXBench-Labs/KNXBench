@@ -47,3 +47,20 @@ manifest-level check was chosen over a Rust trait-absence test: it needs no
 new dependency and no compile-fail harness, and it fails at the same gate
 everything else in this repository's layering rules fails at, rather than in
 a test nobody runs in isolation.
+
+**Update, 2026-09-14 (T15).** A plaintext password now crosses out of
+`knx-secure`'s orbit for the first time: `knx-etsproj`'s
+`Container::open_with_password` takes one as a `&str` and passes its bytes
+to `knx_secure::zipcrypto::decrypt`. The list above says key material never
+enters the `Project` model, an `ImportReport`, an export, or a log; nothing
+in that list has changed, and the new path was checked against each item.
+The password is a borrowed parameter for the duration of one call. It is not
+retained on `Container`, not stored in any `EntryInfo`, and not interpolated
+into any `ContainerError` variant or `Display` impl — so no error this crate
+can produce carries it into a log or a report, including the `WrongPassword`
+error, which names only the nested entry. The direction of travel matters
+here: `check-layering` stops key material flowing *out* of `knx-secure`
+through the type system, and it has nothing to say about a caller passing a
+`&str` *in*. That one is a review obligation, discharged here, and it
+applies again to every future caller — the next one being whichever import
+stage eventually wires a password through to `open_with_password`.

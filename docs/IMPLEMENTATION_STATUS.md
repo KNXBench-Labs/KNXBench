@@ -5818,7 +5818,113 @@ in 128**. ZipCrypto's security is already nil (Biham & Kocher, 1994), so the
 number changes no decision, but it is now stated in all three places that state
 a number at all rather than only in the one place that is convenient.
 
-**Gates:** `cargo fmt` `0`, `cargo clippy --workspace --all-targets -D warnings`
+**Gates (superseded by the fix round below — see there for the current
+numbers):** `cargo fmt` `0`, `cargo clippy --workspace --all-targets -D warnings`
 `0`, `cargo test --workspace` **1,542 passed / 0 failed**, `check-layering` `0`,
 `check-headers` 118 well-formed / 168 without one (ceiling 168 — the new file
 carries its header), `cargo deny check` `0`. No TypeScript was touched.
+
+## 2026-09-14 — T15's fix round: the AES refusal never fired, and a decrypted entry was trusted more than an unencrypted one (branch `zipcrypto-projects`)
+
+Last updated: 2026-09-14.
+
+The whole-branch review reimplemented ZipCrypto independently in Python,
+decrypted both fixtures byte for byte against APPNOTE §6.1.5–§6.1.7, and
+confirmed the cipher — then returned **MERGE AFTER FIXES** with two blocking
+findings and eleven smaller ones. Both blocking findings were about the
+container, not the cipher.
+
+**Finding 1: the AES refusal was dead code.** `Container::open_with_password`
+tested `entry.compression() == CompressionMethod::AES`. The `zip` crate
+overwrites that parsed field with the entry's *real* underlying compression
+method the instant it parses a WinZip AES extra field (0x9901), exactly as
+APPNOTE §4.5 intends it to — so the comparison could never be true, for any
+input. An ETS6 project opened with its **correct** password would fall through
+to the ZipCrypto path and be reported as `WrongPassword` in about 127 cases out
+of 128, the remaining one being a check-byte false accept on the way to a
+decompression error. The fix reads the raw on-disk compression-method field
+straight out of the payload bytes (APPNOTE §4.4.5, local-file-header offset 8)
+where it still says 99 either way. `scheme` also stopped being a `String` and
+became an `EncryptionScheme` enum, so a caller can `match` on it instead of
+comparing English prose.
+
+*Ruling: the `zip` crate's `aes-crypto` feature stays off.* The review offered
+enabling it as one of three options. Enabling a decryption feature to fix a
+*refusal* buys a capability nobody asked for, pulls three crypto crates into
+the tree, and would have to be justified to `cargo deny` — all to avoid reading
+two bytes at a known offset. Cost if wrong: when AES decryption is eventually
+implemented, that feature gets enabled then, and this check becomes redundant
+rather than wrong.
+
+**Finding 2: a decrypted entry got no CRC-32 check.** The unprotected path gets
+one for free from `zip`'s `Crc32Reader`; the decrypted path, which bypasses
+`zip`'s reader entirely, had none — so the *protected* path was less trustworthy
+than the unprotected one, which is precisely backwards. ZipCrypto's check byte
+(APPNOTE §6.1.6) rules out only 255 of 256 wrong passwords per convention, and
+both conventions are tried, so roughly 1 wrong password in 128 walks past it.
+Every decrypted entry's decompressed bytes are now checked against the entry's
+declared size and its CRC-32 from the central directory, and a mismatch is
+reported as `WrongPassword` — after a check byte has already passed, that is
+what it almost certainly is.
+
+**The nine non-blocking findings**, all taken: the size guard in the encrypted
+branch moved to *before* the allocation it guards (it had sat after both the
+allocation and the read, contradicting the module's own doc comment); `decompress`
+now bounds inflation by the entry's declared size instead of running until memory
+does; a nested entry whose path collides with one already in the inventory is
+refused by name (`ContainerError::DuplicateEntry`) instead of being silently
+shadowed by whichever copy the lookup happened to prefer; `Container::was_decrypted()`
+exists so a later import stage can see the roundtrip gap coming; a test docstring
+that described a re-encryption the test never performed lost its false paragraph;
+the hard-coded `12-byte encryption header` became `zipcrypto::HEADER_LEN`; and
+`decompress`'s doc comment stopped claiming it only ever sees decrypted entries,
+which was stale on arrival.
+
+**Four regression tests**, three of which were confirmed to fail with their fix
+reverted:
+
+* `an_aes_payload_is_refused_by_name_and_never_blamed_on_the_password` — the
+  AES fixture is assembled byte by byte inside the test from APPNOTE §4.3.7,
+  §4.3.12, §4.3.16 and §4.5, because nothing in this workspace can *write* AES
+  and, more to the point, the defect is about a raw field that any ZIP library
+  would overwrite on the way in.
+* `a_wrong_password_that_survives_the_check_byte_is_caught_by_the_entrys_crc` —
+  needed a second fixture. Against the Deflated fixture, a check-byte false
+  accept produces bytes that fail to inflate and the failure is reported long
+  before any CRC is compared, so the new check could not be reached at all.
+  `fixtures/zipcrypto-stored.knxproj` is the same shape with the nested entry
+  **Stored**, generated with the Info-ZIP `zip` CLI exactly as the first was.
+  Stored bytes always "decompress", which leaves the CRC as the only gate. The
+  test searches for a password that genuinely passes the check byte — about 1
+  in 128, so it is arithmetic rather than luck — and asserts the container still
+  says `WrongPassword`.
+* `a_nested_entry_colliding_with_an_outer_path_is_refused_not_shadowed` —
+  `knx_master.xml` in both the outer archive and the payload.
+* `the_stored_fixture_decrypts_with_the_right_password` — the new fixture's
+  own sanity check, and the only test that exercises `was_decrypted()`.
+
+**Documentation.** `KNOWN_LIMITATIONS.md` §13 now says plainly that **no import
+path reaches this decryption**: `import()` calls `Container::open`, the only
+callers of `open_with_password` are its own tests, and stage 1 of a six-stage
+pipeline opening a protected project is not the pipeline importing one. The same
+section gained the roundtrip gap (a decrypted project exported through the opaque
+passthrough store comes back out *unprotected*, because the ciphertext is not kept
+anywhere) and a corrected account of what happens after a check-byte false accept.
+`IMPORT_EXPORT.md` §1's pipeline diagram and prose say the same. `COMPATIBILITY.md`
+§2 records the coverage caveat the review found: both container-level fixtures carry
+the Info-ZIP DOS-time check-byte convention, so the PKZIP CRC-high-byte convention
+is exercised only at the `knx-secure` unit level, never end to end. `ARCHITECTURE.md`
+§9 and ADR-0008's Consequences both record the one place a plaintext password now
+crosses a crate boundary, and that it is a borrowed parameter — never stored on
+`Container`, never in an `EntryInfo`, never interpolated into an error or a
+`Display` impl.
+
+*Also closed here:* `IMPORT_EXPORT.md`'s claim that the ZipCrypto password is taken
+as UTF-8 bytes carried a `[V]` marker sourced from reading `xknxproject`'s code.
+That is evidence about `xknxproject`, not about ETS, and an ASCII password cannot
+tell the two readings apart anyway. It is `[A]` now, with the reason written down.
+
+**Gates:** `cargo fmt` `0`, `cargo clippy --workspace --all-targets -D warnings`
+`0`, `cargo test --workspace` **1,580 passed / 0 failed / 5 ignored**, 0 corpus
+skips, `check-layering` `0`, `check-headers` 119 well-formed / 168 without one
+(ceiling 168), `cargo deny check` `0`. No TypeScript was touched.

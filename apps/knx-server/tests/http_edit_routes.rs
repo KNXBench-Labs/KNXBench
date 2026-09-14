@@ -1055,6 +1055,15 @@ async fn restyling_a_project_with_a_group_address_round_trips_and_undoes() {
         .await
         .unwrap();
     assert_eq!(restyled.status(), StatusCode::OK);
+    let restyled_tree = body_json(restyled).await;
+    // A handler that ignored `groupAddressStyle` and restyled to
+    // `ThreeLevel` regardless would still answer `200` here — the actual
+    // forward effect only shows up in the response body.
+    assert_eq!(restyled_tree["group_address_style"], "Free");
+    assert_eq!(
+        restyled_tree["installations"][0]["group_addresses"][0]["address"],
+        "4242"
+    );
 
     let undo = app
         .oneshot(

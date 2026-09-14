@@ -4,9 +4,22 @@
 //! reopen it, and confirm the projection carries the same golden counts.
 
 use std::path::PathBuf;
+use std::sync::Arc;
+
+use axum::body::Body;
+use axum::http::{Request, StatusCode};
+use serde_json::{json, Value};
+use tower::ServiceExt;
 
 fn reference_ets4_path() -> PathBuf {
     knx_testsupport::reference_ets4_path()
+}
+
+async fn body_json(response: axum::response::Response) -> Value {
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    serde_json::from_slice(&bytes).unwrap()
 }
 
 #[test]
@@ -55,4 +68,90 @@ fn saving_then_reopening_a_native_project_round_trips_the_golden_counts() {
 
 fn count_buildings(nodes: &[knx_projection::BuildingNode]) -> usize {
     nodes.iter().map(|n| 1 + count_buildings(&n.children)).sum()
+}
+
+/// Item 6 of the T4 fix round: restyling was covered at store level
+/// (`knx-store::project`'s round-trip tests) and the HTTP route's forward
+/// effect is covered by `http_edit_routes.rs`, but nothing before this took
+/// a style through the HTTP API and *then* through a save/load cycle — the
+/// end-to-end claim in `docs/KNOWN_LIMITATIONS.md` §84 and
+/// `docs/IMPLEMENTATION_STATUS.md`'s T4 entry was inferred from those two
+/// facts, not tested directly. No corpus needed: an empty project created
+/// through the same route the UI uses is enough to prove the style itself
+/// survives the trip.
+#[tokio::test]
+async fn restyling_over_http_then_saving_and_reloading_keeps_the_new_style() {
+    let state = Arc::new(knx_server::AppState::default());
+    let app = knx_server::app(state, None);
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("restyled.knxdb");
+
+    let new_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/new")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(new_response.status(), StatusCode::OK);
+    // `Project::new`'s default, confirmed before changing it.
+    assert_eq!(
+        body_json(new_response).await["group_address_style"],
+        "ThreeLevel"
+    );
+
+    let restyle_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/group-address-style")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "groupAddressStyle": "Free" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(restyle_response.status(), StatusCode::OK);
+
+    let save_response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/save-as")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "path": db_path.to_string_lossy() }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(save_response.status(), StatusCode::OK);
+
+    let reopen_response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/open")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "path": db_path.to_string_lossy() }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(reopen_response.status(), StatusCode::OK);
+    assert_eq!(
+        body_json(reopen_response).await["group_address_style"],
+        "Free"
+    );
 }

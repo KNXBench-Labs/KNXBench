@@ -2,9 +2,14 @@
 //! physical installation. Modelled as domain data, not import metadata,
 //! because that delta is engineering-critical (DATA_MODEL §7).
 
+pub mod authorisation;
 pub mod error_code;
+pub mod load_control;
 pub mod load_state;
 pub mod memory;
+pub mod mutation;
+pub mod procedure;
+pub mod programming_mode;
 
 use std::fmt;
 

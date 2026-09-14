@@ -2057,7 +2057,7 @@ already stored everything this slice reads (D12).
 - **Exactly one level of expansion (D15).** *(Superseded 2026-09-14: T18
   task 11, below, expands nested modules to a bounded depth and removes
   `NestedModuleNotExpanded` from the codebase entirely. D15 is described
-  here exactly as slice 2 shipped it, for the record; D20/D21 in
+  here exactly as slice 2 shipped it, for the record; D44/D45 in
   [docs/superpowers/specs/2026-09-11-module-expansion-design.md](superpowers/specs/2026-09-11-module-expansion-design.md)'s
   task-11 addendum are its successors.)* A `Module` found while already
   inside a module scope was not followed: it produced
@@ -2094,6 +2094,28 @@ already stored everything this slice reads (D12).
   only `prod3`'s three are reachable from these tests — `kv25` is a
   `.knxproj` demo project the corpus tests do not install, not one of the
   four `.knxprod` archives. Nothing above is a claim about `kv25`.
+- **Task 11 fix round 1 (2026-09-14, goal-completion task 11), four
+  changes to what shipped above:** (1) `evaluate::MAX_MODULE_EXPANSIONS =
+  100_000` now caps total `Module` expansions per `evaluate` call, on top
+  of the per-chain `MAX_MODULE_NESTING_DEPTH`; a non-cyclic fan-out tree
+  that multiplies activations across many shallow chains — measured at
+  4,194,304 activations / 8,170 MiB peak RSS for a `depth=12, fanout=4`,
+  44-node probe — now stops loudly with
+  `Diagnostic::ModuleExpansionBudgetExhausted` instead of exhausting
+  memory. (2) `apps/knx-server`'s parameter-panel section grouping now
+  keys sections on the same `Option<Vec<i64>>` ancestor chain
+  `evaluate`'s own dedup uses (`ModuleScope::node_chain()`, made `pub`),
+  not the flat `module_node` it kept using after D46 widened everything
+  else — two distinct nesting chains reusing one `module_node` no longer
+  collide into one section. (3) The corpus's total stored `Module` row
+  count, cited above and in RESEARCH.md as 90, is **86** — the design
+  doc's number was never actually run; the branch's own corpus test
+  prints the right figure and now also asserts it. (4) That same test's
+  "5 archives installed" undercounted a skip: the two
+  `Weinzierl_730_KNX_IP_Interface_ETS4` files are byte-identical, so
+  `install_package` skips the second — five archive files, four distinct
+  installed packages, now asserted via `InstallReport::skipped` rather
+  than assumed.
 - **A finding worth recording honestly, not smoothing over:** `prod3`'s
   three programs hold 44/28/14 structural `Module` rows each, but only
   12/8/4 are actually walked by `evaluate` under the corpus's own default

@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-14 (T9: ADR-0020 and product-database schema v7 — a migration may re-derive what the stored bytes determine, and `linkable` gets refilled out of the blobs that always held it; see the end of this document)
+Last updated: 2026-09-14 (T9: ADR-0020 and product-database schema v8 — a migration may re-derive what the stored bytes determine, and `linkable` gets refilled out of the blobs that always held it; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -5515,7 +5515,7 @@ Out of scope, left as documented residue: `parse/program.rs`'s
 `master.rs`'s `datapoint_type` ingestion (still no conflict tracking of
 any kind, cross-file or same-file).
 
-## 2026-09-14 — Migrations may re-derive from stored bytes (ADR-0020, product-database schema v7, branch `productdb-linkable-adr`)
+## 2026-09-14 — Migrations may re-derive from stored bytes (ADR-0020, product-database schema v8, branch `productdb-linkable-adr`)
 
 The task was an ADR, and the ADR had to be written before the code so that
 the code could be whatever the decision turned out to license. It licensed a
@@ -5525,7 +5525,7 @@ product-database migration may re-derive what the stored bytes determine, and
 must not invent what only the install knew.**
 
 **The premise the task started from was false, and reading the chain was the
-whole finding.** A v7 re-parsing migration was expected to be the first
+whole finding.** A re-parsing migration was expected to be the first
 migration to call the parser. It is the third. `migrate_v2_to_v3` calls
 `dynamic::parse::parse_dynamic_trees` over stored blobs and `migrate_v3_to_v4`
 calls `classify` plus `parse::translation::ingest_translations`, both with a
@@ -5554,10 +5554,10 @@ each blob in its own `SAVEPOINT` and record a failure as an `ingest_unknown`
 row rather than refusing to open the database; let `user_version` be the
 record that the backfill ran. Rules 1, 4 and 5 are the existing backfills'
 habits promoted to requirements. Rules 2 and 3 are new, because v2→v3 and
-v3→v4 only insert rows, and v6→v7 is the first one that `UPDATE`s a column an
+v3→v4 only insert rows, and v7→v8 is the first one that `UPDATE`s a column an
 earlier build already wrote.
 
-**What shipped.** `CURRENT_PRODUCTDB_VERSION` is 7. `migrate_v6_to_v7` adds no
+**What shipped.** `CURRENT_PRODUCTDB_VERSION` is 8. `migrate_v7_to_v8` adds no
 DDL at all — it is a backfill, and `user_version` is the entire mechanism by
 which it runs once. It selects only the blobs behind a `linkable IS NULL` row,
 and `backfill_linkable` (`crates/knx-productdb/src/parse/program.rs`) streams

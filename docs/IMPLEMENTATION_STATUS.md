@@ -5064,3 +5064,103 @@ ignored** across 81 test targets. The full Rust gate set — `cargo fmt
 that workspace test run, `cargo run -p xtask -- check-layering`,
 `cargo run -p xtask -- check-headers`, `cargo deny check` — exits `0` six
 times.
+
+## 2026-09-14 — Commissioning phase 2: the download protocol, offline (T21, branch `t30-commissioning-protocol`)
+
+Phase 1 was a design document; this is the code it specified. The
+commissioning download protocol of
+[docs/superpowers/specs/2026-09-13-commissioning-download-design.md](superpowers/specs/2026-09-13-commissioning-download-design.md)
+(§5.4, §5.5, §6.2–§6.5, §7.2, §7.3, §9.1, §10.9, §11.1–§11.3) now exists,
+entirely against a simulator written alongside it. **No socket was opened to
+any gateway, no device was addressed, and no frame left the machine** —
+`KNOWN_LIMITATIONS.md` §92 states what that costs.
+
+**`knx-core`, the domain half (no I/O, no async, ~4 400 lines, 108 tests).**
+
+- `commissioning/load_state.rs` — `LoadState` and `LoadEvent` as separate
+  enums because §5.1's read and write encodings differ, plus RES Table 94
+  transcribed as `permitted_outcomes(from, stimulus, mask)` with the
+  `R:`/`O:` alternatives both admitted. `accepts()` includes the
+  intermediate states, `is_settled()` does not, and `narrow_for_mask`
+  applies the one narrowing PROF documents (mask `0912h`) and no other.
+  `Error` is a trap: only `Unload` leaves it.
+- `commissioning/load_control.rs` — the ten-octet event payloads,
+  `nr_of_elem = 01h` / `start_index = 01h`, and `allocation_subtype_for`
+  mapping mask to subtype (`07B0h`/`17B0h`/`57B0h` ⇒ `0Bh` Data Relative
+  Allocation, `0300h` ⇒ `0Ah` Relative Allocation, anything else ⇒
+  `MaskNotProfiled`). No fallback between allocation styles: a mask whose
+  Table 7 row was not transcribed is a refusal.
+- `commissioning/memory.rs` — §6.4's chunk size
+  (`PID_MAX_APDU_LENGTH` absent, 255 or router-only ⇒ 12; a value *v* ⇒
+  `min(v, 254) − 3` capped at 63) and §6.5's service selection on
+  `base + length` rather than on `base`.
+- `commissioning/properties.rs`, `error_code.rs`, `authorisation.rs`,
+  `procedure.rs`, `programming_mode.rs`, `mutation.rs` — eleven cited PIDs
+  and the `PID_DEVICE_CONTROL` bit arithmetic; `DPT_ErrorClass_System`
+  decoding shared with the DPT 20.011 codec rather than duplicated;
+  `AccessLevel` where lower is more powerful and the ordering says so; the
+  cited procedures as declarative step lists that can be rendered and
+  dry-run; §4.4's `curr_prog_mode` toggle, which inverts bit 0 and bit 7
+  together, never computes a parity, and issues **no write at all** when the
+  mode already matches; and §2.3's `WriteAuthorisation`.
+
+**`knx-net`, the session and the sequencer (~5 000 lines, 40 tests).**
+
+- `commissioning.rs` — `ManagementSession`: one connection-oriented door to
+  one device. Sequence numbering, the TL clause 4 repeat rules, MP §3.5.1
+  authorisation on every connect (and on every reconnect), §6.3's Verify
+  Mode as a read-modify-write of `PID_DEVICE_CONTROL` bit 2 that tolerates a
+  device leaving it off, and the project's own `[A]` rule that **no write
+  path exists without a client-side verification read** — compared against
+  `A_Memory_Write.res` when Verify Mode is active, and against an explicit
+  `A_Memory_Read` after a programming delay when it is not.
+- `commissioning/download.rs` — CP §3.5.2 (complete download), §3.5.3
+  (partial download and its escalation), §3.5.4 (unload) and design §9.1
+  (recovery) as a sequencer that records every step it took. Nothing is
+  retried in a loop.
+- `commissioning/simulator.rs` — a device that implements RES Table 94,
+  §6's length limits, §7.6's "allocation is ignored outside `Loading`", and
+  the §9.2 failure modes including the ones that present as silence. It can
+  be told to drop the connection at a chosen step, to fail one allocation
+  once, to answer any mask version, and to permit reads while silently
+  dropping `PID_LOAD_STATE_CONTROL` writes.
+
+**Five things that are deviations, and are marked as such rather than
+quietly chosen.**
+
+1. *A matching CRC does not skip the data write.* CP §3.5.3 offers the
+   skip, but step 05 has already unloaded the part and **[D]** RES Table 93
+   declares the data undefined, and the "differential download algorithm"
+   the clause names for the case is specified nowhere. The comparison is
+   performed and reported (`CrcComparison::Matched`/`Differed`/`NoStoredCrc`);
+   the payload goes out regardless.
+2. *The recorded step order is 01, 03, 02.* `connect()` authorises as it
+   connects (§10.3), so the Authorize of CP §3.5.2 step 03 happens before
+   the Device Descriptor read of step 02. The trace says so instead of
+   pretending otherwise.
+3. *CP §3.5.3's Nr. 06 and Nr. 08 are recorded once, under Nr. 06.* Nr. 08
+   never appears in a trace.
+4. *§9.1 step 5 is read literally:* every part is reloaded during a
+   recovery, including parts that read `Loaded`, because an interrupted
+   download can leave old and new parts mixed. The cost is §9.3's: a
+   `Loaded` part is invalidated on the way through.
+5. *The 500 ms programming delay is this project's number.* MP §3.16 says a
+   delay is needed and never quantifies it.
+
+**§14's test list, item by item.** Items 1, 2, 3, 4, 5, 8, 9, 10, 11, 12,
+13, 14, 15, 16, 17 and 18 are implemented. Item 6's counting rules and item
+7's occupied-address refusal belong to §4.2 individual-address programming,
+which this task's scope list does not contain; the responder-counting half
+of item 6 exists anyway (`programming_mode.rs`), because the toggle needed
+it. Item 11 — the exclusion guard — is structural: `1.1.220` cannot be
+authorised, cannot be read, cannot be written, and cannot appear in a plan
+or in a range that spans it, and each refusal is asserted to be *reported*.
+
+**Re-measured, not remembered.** `cargo test --workspace --no-fail-fast` →
+**1503 passed, 0 failed, 3 ignored**; `grep -c 'skip: OriginalData'` over
+that log → **0**. The six Rust gates — `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, that workspace test
+run, `cargo run -p xtask -- check-layering`,
+`cargo run -p xtask -- check-headers` (116 headers, 168 without one, ceiling
+168 — unchanged), `cargo deny check` — exit `0` six times. No TypeScript was
+touched.

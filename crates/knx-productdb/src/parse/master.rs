@@ -437,7 +437,10 @@ mod tests {
                 |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
             )
             .unwrap();
-        assert_eq!((number, text.as_str(), status.as_str()), (1, "Switch", "Certified"));
+        assert_eq!(
+            (number, text.as_str(), status.as_str()),
+            (1, "Switch", "Certified")
+        );
         let (function_type_id, datapoint_type, role): (String, String, String) = conn
             .query_row(
                 "SELECT function_type_id, datapoint_type, role FROM function_point WHERE id = 'FT-1_DR-1'",
@@ -446,7 +449,11 @@ mod tests {
             )
             .unwrap();
         assert_eq!(
-            (function_type_id.as_str(), datapoint_type.as_str(), role.as_str()),
+            (
+                function_type_id.as_str(),
+                datapoint_type.as_str(),
+                role.as_str()
+            ),
             ("FT-1", "DPST-1-1", "Control")
         );
     }

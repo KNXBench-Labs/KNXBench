@@ -39,12 +39,33 @@ fn style_to_str(s: GroupAddressStyle) -> &'static str {
     }
 }
 
-fn style_from_str(s: &str) -> GroupAddressStyle {
+/// Refuses an unrecognized string rather than falling back to
+/// `ThreeLevel` — a persisted style that cannot be read back is data loss
+/// (KNOWN_LIMITATIONS.md §84), and `POST /api/project/new` already refuses
+/// an unknown style with a `400` rather than silently picking one, so
+/// `load_project` refusing too is the same rule applied at the other end
+/// of the round trip, not a new one.
+fn style_from_str(s: &str) -> Result<GroupAddressStyle, StoreError> {
     match s {
-        "Free" => GroupAddressStyle::Free,
-        "TwoLevel" => GroupAddressStyle::TwoLevel,
-        _ => GroupAddressStyle::ThreeLevel,
+        "Free" => Ok(GroupAddressStyle::Free),
+        "TwoLevel" => Ok(GroupAddressStyle::TwoLevel),
+        "ThreeLevel" => Ok(GroupAddressStyle::ThreeLevel),
+        other => Err(StoreError::UnknownGroupAddressStyle(other.to_string())),
     }
+}
+
+/// Overwrites `project_info.group_address_style` in place — the one-column
+/// counterpart to `save_project`'s full rewrite, for `command_sync`'s
+/// `Command::SetGroupAddressStyle` arm, which has no other field to touch.
+pub fn set_group_address_style(
+    conn: &Connection,
+    style: GroupAddressStyle,
+) -> Result<(), StoreError> {
+    conn.execute(
+        "UPDATE project_info SET group_address_style = ?1 WHERE id = 0",
+        params![style_to_str(style)],
+    )?;
+    Ok(())
 }
 
 const DELETE_ALL_TABLES: &[&str] = &[
@@ -428,7 +449,7 @@ pub fn load_project(conn: &Connection) -> Result<Project, StoreError> {
             project_id,
             name,
             project_number,
-            group_address_style: style_from_str(&style),
+            group_address_style: style_from_str(&style)?,
             completion: completion_from_str(&completion),
             last_modified: last_modified.map(|s| {
                 chrono::DateTime::parse_from_rfc3339(&s)
@@ -493,6 +514,61 @@ mod tests {
         save_project(&conn, &project).unwrap();
         let loaded = load_project(&conn).unwrap();
         assert_eq!(loaded, project);
+    }
+
+    /// `Project::new` defaults to `ThreeLevel` (see `ProjectInfo::default`),
+    /// so this exercises the other two styles specifically — the acceptance
+    /// list's store round-trip test for `style_from_str`'s now-fallible
+    /// signature actually reading back what `style_to_str` wrote.
+    #[test]
+    fn a_non_default_group_address_style_round_trips() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = Project::new(Language("en".into()));
+        project.info.group_address_style = GroupAddressStyle::Free;
+        save_project(&conn, &project).unwrap();
+        let loaded = load_project(&conn).unwrap();
+        assert_eq!(loaded.info.group_address_style, GroupAddressStyle::Free);
+
+        project.info.group_address_style = GroupAddressStyle::TwoLevel;
+        save_project(&conn, &project).unwrap();
+        let loaded = load_project(&conn).unwrap();
+        assert_eq!(loaded.info.group_address_style, GroupAddressStyle::TwoLevel);
+    }
+
+    /// A hand-edited or third-party-written `project_info.group_address_style`
+    /// that names none of the three known styles must be refused, not quietly
+    /// read back as `ThreeLevel` (KNOWN_LIMITATIONS.md §84) — the counterpart
+    /// to `POST /api/project/new`'s `400` on an unknown style at the other
+    /// end of the same round trip.
+    #[test]
+    fn an_unrecognized_persisted_style_is_refused_not_defaulted() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let project = Project::new(Language("en".into()));
+        save_project(&conn, &project).unwrap();
+        conn.execute(
+            "UPDATE project_info SET group_address_style = 'Sideways' WHERE id = 0",
+            [],
+        )
+        .unwrap();
+        match load_project(&conn) {
+            Err(StoreError::UnknownGroupAddressStyle(style)) => assert_eq!(style, "Sideways"),
+            other => panic!("expected UnknownGroupAddressStyle, got {other:?}"),
+        }
+    }
+
+    /// `set_group_address_style` is `command_sync`'s one-column counterpart
+    /// to `save_project`'s full rewrite — this checks it in isolation rather
+    /// than only through a `Command`.
+    #[test]
+    fn set_group_address_style_overwrites_the_one_column() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let project = Project::new(Language("en".into()));
+        save_project(&conn, &project).unwrap();
+
+        set_group_address_style(&conn, GroupAddressStyle::TwoLevel).unwrap();
+
+        let loaded = load_project(&conn).unwrap();
+        assert_eq!(loaded.info.group_address_style, GroupAddressStyle::TwoLevel);
     }
 
     #[test]

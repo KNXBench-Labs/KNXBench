@@ -15,7 +15,7 @@ accepted only `"1"` and `"0"` until that date, so every word-spelled
 two short-circuits keep the old `NULL` in place: `install_package`
 (`package.rs:373-405`) returns `skipped: true` on a package whose sha256 is
 already on record without re-reading a byte, and `migrate_v5_to_v6`
-(`migration.rs:293`) added its column without re-deriving anything.
+added its column without re-deriving anything.
 
 §87 asked for a migration that re-parses, and named the reason it had not
 been written: *"it would be the first migration in the chain to call the
@@ -26,8 +26,8 @@ checking it is what this ADR is for.**
 
 | Migration | Parse-layer call | What it re-derives |
 | --- | --- | --- |
-| `migrate_v2_to_v3` → `backfill_dynamic_nodes` (`migration.rs:531`) | `dynamic::parse::parse_dynamic_trees` | every `dynamic_node` row, from every blob that `classify`s as `ApplicationProgram` |
-| `migrate_v3_to_v4` → `backfill_shared_translations` (`migration.rs:410`) | `ingest::classify` + `parse::translation::ingest_translations` | `Catalog`/`Hardware`/`Master`-scoped `translation` rows, from every blob of those kinds |
+| `migrate_v2_to_v3` → `backfill_dynamic_nodes` | `dynamic::parse::parse_dynamic_trees` | every `dynamic_node` row, from every blob that `classify`s as `ApplicationProgram` |
+| `migrate_v3_to_v4` → `backfill_shared_translations` | `ingest::classify` + `parse::translation::ingest_translations` | `Catalog`/`Hardware`/`Master`-scoped `translation` rows, from every blob of those kinds |
 
 Both read every `source_file` blob, filter it by `classify`, give each blob
 its own `SAVEPOINT`, and record a failure as an `ingest_unknown` row through
@@ -151,8 +151,8 @@ requirement; rules 2 and 3 are new, because those two backfills only ever
 
 **Concretely, product-database schema v8 is that backfill for `linkable`, and
 adds no column.** `migrate_v7_to_v8` re-reads only the blobs that actually
-have an affected row — `SELECT DISTINCT source_sha256 FROM
-application_program WHERE linkable IS NULL` — reads
+have an affected row — the blobs whose `sha256` appears in
+`SELECT source_sha256 FROM application_program WHERE linkable IS NULL` — reads
 `ApplicationProgram/@Linkable` through the same `bool_flag` the ingest path
 uses, and fills the column. Where it fills one, it also deletes the now-false
 `ingest_unknown` row that said the attribute was not understood; that row was

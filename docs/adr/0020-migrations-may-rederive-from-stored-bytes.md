@@ -17,7 +17,7 @@ two short-circuits keep the old `NULL` in place: `install_package`
 already on record without re-reading a byte, and `migrate_v5_to_v6`
 (`migration.rs:293`) added its column without re-deriving anything.
 
-§87 asked for a v7 migration that re-parses, and named the reason it had not
+§87 asked for a migration that re-parses, and named the reason it had not
 been written: *"it would be the first migration in the chain to call the
 parser, which is an architectural commitment"*. **That premise is false, and
 checking it is what this ADR is for.**
@@ -149,8 +149,8 @@ requirement; rules 2 and 3 are new, because those two backfills only ever
 5. **`user_version` is the record that it ran.** A backfill happens once per
    database, on the open that crosses its version boundary.
 
-**Concretely, product-database schema v7 is that backfill for `linkable`, and
-adds no column.** `migrate_v6_to_v7` re-reads only the blobs that actually
+**Concretely, product-database schema v8 is that backfill for `linkable`, and
+adds no column.** `migrate_v7_to_v8` re-reads only the blobs that actually
 have an affected row — `SELECT DISTINCT source_sha256 FROM
 application_program WHERE linkable IS NULL` — reads
 `ApplicationProgram/@Linkable` through the same `bool_flag` the ingest path
@@ -161,7 +161,7 @@ untouched in `source_file`.
 
 **This fixes one generation of staleness, not the class.** If the parse layer
 ever changes its answer for bytes it has already read, a database that is
-already at v7 will keep the older answer and no migration will re-run.
+already at v8 will keep the older answer and no migration will re-run.
 §87 therefore stays open, rewritten to describe that class instead of the
 `linkable` instance it used to describe.
 
@@ -221,7 +221,7 @@ deliberately not bundled into a task about one column.
 
 ## Consequences
 
-**`CURRENT_PRODUCTDB_VERSION` becomes 7, with no DDL in the step.** A
+**`CURRENT_PRODUCTDB_VERSION` becomes 8, with no DDL in the step.** A
 migration that only moves data is a first for this chain; `user_version` is
 what makes it happen exactly once, so the version bump is the entire
 mechanism and not bookkeeping around one.

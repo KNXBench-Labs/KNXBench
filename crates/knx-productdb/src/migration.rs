@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 7;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 8;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -280,10 +280,11 @@ fn migrations() -> Vec<Migration> {
         migrate_v4_to_v5,
         migrate_v5_to_v6,
         migrate_v6_to_v7,
+        migrate_v7_to_v8,
     ]
 }
 
-/// v6 -> v7. The first step in this chain that adds no structure at all: it
+/// v7 -> v8. The first step in this chain that adds no structure at all: it
 /// re-derives `application_program.linkable` for the rows a pre-2026-09-13
 /// ingest left `NULL` (KNOWN_LIMITATIONS.md §87), reading
 /// `ApplicationProgram/@Linkable` back out of the `source_file` blob each row
@@ -299,7 +300,7 @@ fn migrations() -> Vec<Migration> {
 /// `user_version` is the entire mechanism. There is no column to guard on
 /// with `column_exists`, so what makes this run exactly once per database is
 /// the version bump `open_and_migrate` performs once the step returns.
-fn migrate_v6_to_v7(conn: &Connection) -> Result<(), ProductDbError> {
+fn migrate_v7_to_v8(conn: &Connection) -> Result<(), ProductDbError> {
     backfill_linkable(conn)
 }
 
@@ -349,6 +350,25 @@ fn backfill_linkable(conn: &Connection) -> Result<(), ProductDbError> {
                 )?;
             }
         }
+    }
+    Ok(())
+}
+
+/// v6 -> v7. `package_conflict` gains `occurrence`, `first_winner`'s own
+/// per-parse-call repeat count (KNOWN_LIMITATIONS.md §86): `1` for the
+/// cross-file conflicts this table has always stored, greater than `1`
+/// for a same-file duplicate id, now that `first_winner` can tell the two
+/// apart. Defaults to `1` for a `package_conflict` row written before this
+/// column existed — the same honest convention `migrate_v5_to_v6` and
+/// `migrate_v4_to_v5` use, and correct here besides: every conflict
+/// `first_winner` could record before this task closed §86 *was* a
+/// cross-file one, so `1` is not a guess for those rows, it is what
+/// `first_winner` would have written itself.
+fn migrate_v6_to_v7(conn: &Connection) -> Result<(), ProductDbError> {
+    if !column_exists(conn, "package_conflict", "occurrence")? {
+        conn.execute_batch(
+            "ALTER TABLE package_conflict ADD COLUMN occurrence INTEGER NOT NULL DEFAULT 1;",
+        )?;
     }
     Ok(())
 }
@@ -1260,7 +1280,7 @@ mod tests {
         // Truncated past the last end tag, which `quick-xml` rejects as "tag
         // not closed" rather than accepting as `Eof` — the same shape the
         // translation backfill's equivalent test uses. Given an
-        // `application_program` row of its own so the v7 filter selects it.
+        // `application_program` row of its own so the v8 filter selects it.
         let bad = &xml.as_bytes()[..xml.len() - 20];
         let bad_sha = crate::sha256_hex(bad);
         {
@@ -1317,10 +1337,10 @@ mod tests {
 
     #[test]
     fn a_database_with_nothing_to_backfill_reads_no_blob_at_all() {
-        // The v7 step is scoped by `linkable IS NULL`, so a database whose
+        // The v8 step is scoped by `linkable IS NULL`, so a database whose
         // programs all have a value — every one ingested after 2026-09-13 —
         // must not be dragged through its own blobs. Proven by giving it a
-        // blob that cannot be parsed at all: if v7 read it, the migration
+        // blob that cannot be parsed at all: if v8 read it, the migration
         // would record a `LinkableBackfillError`.
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("products.sqlite");

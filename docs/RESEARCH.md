@@ -1001,6 +1001,72 @@ specifically D40) is built so that it does not need the answer either
 way: a device with two `ModuleInstance`s sharing one `RefId` is refused,
 not resolved by guessing which repeat-counter value is "right".
 
+**Addendum (goal.md T18, task 11, 2026-09-14) — Q6 re-measured, D15
+superseded.** Q6's "one level only" evaluator policy is superseded by
+`docs/superpowers/specs/2026-09-11-module-expansion-design.md`'s D44/D45
+addendum: bounded recursive expansion (`MAX_MODULE_NESTING_DEPTH = 16`,
+**[A]**) plus ancestor-chain cycle detection, replacing the flat
+"refuse-if-nested" policy. Re-measured against the currently installed
+corpus, two independent ways, both agreeing on zero:
+
+1. **[V]** A fresh scratch Python scan
+   (`xml.etree.ElementTree`, run outside the repo) over every extracted
+   application-program XML file, counting `Module` elements found inside a
+   `ModuleDef` element's own subtree:
+   ```
+   646704-04_ETS4_2012_47_DE_EN/M-000C/M-000C_A-5703-10-085F.xml: ModuleDef=0 Module=0 nested_Module_inside_ModuleDef=0
+   Dummy_Applikation_Secure/M-0008/M-0008_A-9021-21-0CC4-O000A.xml: ModuleDef=0 Module=0 nested_Module_inside_ModuleDef=0
+   MDT_KP_AMI_AMS_03_Switch_Actuator_V31a/M-0083/M-0083_A-0317-31-7DC6.xml: ModuleDef=4 Module=44 nested_Module_inside_ModuleDef=0
+   MDT_KP_AMI_AMS_03_Switch_Actuator_V31a/M-0083/M-0083_A-0318-31-DB39.xml: ModuleDef=4 Module=28 nested_Module_inside_ModuleDef=0
+   MDT_KP_AMI_AMS_03_Switch_Actuator_V31a/M-0083/M-0083_A-0319-31-587B.xml: ModuleDef=4 Module=14 nested_Module_inside_ModuleDef=0
+   Weinzierl_730_KNX_IP_Interface_ETS4/M-00C5/M-00C5_A-0702-10-1B22.xml: ModuleDef=0 Module=0 nested_Module_inside_ModuleDef=0
+   Weinzierl_730_KNX_IP_Interface_ETS4_v1/M-00C5/M-00C5_A-0702-10-1B22.xml: ModuleDef=0 Module=0 nested_Module_inside_ModuleDef=0
+   TOTAL nested Module elements across all 7 application-program files: 0
+   ```
+   (`kv25`, referenced in Q6/Q7 above, is not present under this machine's
+   `OriginalData/ProductDatabases/` — the five archive files installed here
+   (`prod1`/`prod2`/`prod3`/`prod4`, four distinct packages) are the ones
+   this ran against; see the Rust corpus test below for the exact archive
+   list this measurement actually ran against.)
+2. **[V]**
+   `crates/knx-productdb/tests/dynamic_tree.rs`'s
+   `corpus_nested_module_measurement_task_11` installs every `.knxprod`
+   file under `OriginalData/ProductDatabases/` into a fresh database and
+   runs `SELECT COUNT(*) FROM dynamic_node WHERE kind = 'Module' AND
+   module_def_id != ''` — a `Module` row stored under a non-empty
+   `module_def_id`, i.e. found inside a `ModuleDef`'s own tree rather than
+   the program's top-level tree. Result: **0**, out of 86 total stored
+   `Module` rows (`kind = 'Module'`, any `module_def_id`) across all 5
+   installed archive files (four distinct packages — the two
+   `Weinzierl_730_KNX_IP_Interface_ETS4` files are byte-identical, so
+   `install_package` skips storing the second one's members a second
+   time). This test now asserts `total_module_rows == 86` as well as the
+   nesting count, so a corpus change that moves either number fails loudly
+   instead of only changing an `eprintln!`.
+
+**[D]** A fresh `pdftotext -layout` extraction of `Project Schema23
+v01.00.00.pdf` for this task (independent of the extraction Q2/Q6 used)
+confirms the same absence again: grepping the extraction's numbered
+`complexType`/`element`/`simpleType` headings for "module" finds only
+`1.1.2.38 simpleType ModuleDefArgType_t` and the `1.2.5.16`-`1.2.5.20`
+`ModuleInstance_t`/`Arguments` family (project-instance side, §4.4 Q6's
+`SubModuleDef` grammar) — no AP-side `ModuleDef`/`Module` complexType
+definition exists anywhere in this extraction. The bound and the cycle
+policy in D44/D45 are therefore inference (**[A]**), not derived from the
+Standard — but not from a blank slate either: the only Standard text that
+touches module nesting at all is the project-side `ModuleInstance_t/@Id`
+grammar §4.4 Q6 already records as **[D]**, and it documents exactly one
+extra level (a `SubModule` segment), not unbounded recursion. That text
+is project-side, not AP-side, so it does not settle `16`; it is the one
+documented neighbour `16` is chosen deliberately far above, not a source
+this addendum had nothing to derive from.
+
+**Conclusion: zero products in the installed database actually nest
+modules**, before and after this task. The bounded-recursion capability
+this task adds is exercised, in this corpus, only by synthetic unit
+tests — a documented, not hidden, gap between capability and corpus
+evidence.
+
 ---
 
 ## 5. `knx_master.xml`

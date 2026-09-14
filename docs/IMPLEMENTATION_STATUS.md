@@ -2054,9 +2054,14 @@ already stored everything this slice reads (D12).
   `Dynamic` root). The dedup key became `(Option<module_node>, ref_id)`
   (D18); without this, twelve `Module`s instantiating one `ModuleDef`
   would collapse into one set of results instead of twelve.
-- **Exactly one level of expansion (D15).** A `Module` found while already
-  inside a module scope is not followed: it produces
-  `Diagnostic::NestedModuleNotExpanded` and its subtree is not descended.
+- **Exactly one level of expansion (D15).** *(Superseded 2026-09-14: T18
+  task 11, below, expands nested modules to a bounded depth and removes
+  `NestedModuleNotExpanded` from the codebase entirely. D15 is described
+  here exactly as slice 2 shipped it, for the record; D44/D45 in
+  [docs/superpowers/specs/2026-09-11-module-expansion-design.md](superpowers/specs/2026-09-11-module-expansion-design.md)'s
+  task-11 addendum are its successors.)* A `Module` found while already
+  inside a module scope was not followed: it produced
+  `Diagnostic::NestedModuleNotExpanded` and its subtree was not descended.
   The corpus has zero nested modules and the Standard extraction defines
   no application-program-side `ModuleDef` complexType at all, so there is
   nothing to recurse against and no documented cycle rule to appeal to —
@@ -2064,12 +2069,18 @@ already stored everything this slice reads (D12).
   contains and incapable of looping on anything it does not.
 - **`Diagnostic::ModuleNotExpanded` is gone.** `ModuleDefNotFound {
   node_id, ref_id }` (no `@RefId`, or the named `ModuleDef` has no stored
-  tree) and `NestedModuleNotExpanded { node_id, ref_id }` (D15) replace it;
+  tree) and `NestedModuleNotExpanded { node_id, ref_id }` (D15) replaced
+  it — the second of those is itself gone as of task 11, which replaced it
+  with `ModuleCycleDetected` and `ModuleNestingTooDeep`;
   an empty-but-present `ModuleDef` tree is not a diagnostic (D17) — it
   legitimately activates nothing.
 - **Corpus regression coverage**, over the four installed `.knxprod`
   archives: zero `ModuleDefNotFound`, zero `NestedModuleNotExpanded` —
-  every `Module/@RefId` in the corpus resolves. For `prod3`'s three
+  every `Module/@RefId` in the corpus resolves. *(The second count is a
+  slice-2 measurement of a diagnostic that no longer exists. Task 11
+  re-measured the same question against all five archives and found zero
+  nested modules, which is why the diagnostic could be retired rather
+  than merely renamed.)* For `prod3`'s three
   programs, activation totals grow from 22/18/14 (program tree only,
   slice 1's behaviour) to 382/258/134 (expanded), independently derived
   from the raw `ApplicationProgram` XML by a from-scratch Python
@@ -2083,6 +2094,28 @@ already stored everything this slice reads (D12).
   only `prod3`'s three are reachable from these tests — `kv25` is a
   `.knxproj` demo project the corpus tests do not install, not one of the
   four `.knxprod` archives. Nothing above is a claim about `kv25`.
+- **Task 11 fix round 1 (2026-09-14, goal-completion task 11), four
+  changes to what shipped above:** (1) `evaluate::MAX_MODULE_EXPANSIONS =
+  100_000` now caps total `Module` expansions per `evaluate` call, on top
+  of the per-chain `MAX_MODULE_NESTING_DEPTH`; a non-cyclic fan-out tree
+  that multiplies activations across many shallow chains — measured at
+  4,194,304 activations / 8,170 MiB peak RSS for a `depth=12, fanout=4`,
+  44-node probe — now stops loudly with
+  `Diagnostic::ModuleExpansionBudgetExhausted` instead of exhausting
+  memory. (2) `apps/knx-server`'s parameter-panel section grouping now
+  keys sections on the same `Option<Vec<i64>>` ancestor chain
+  `evaluate`'s own dedup uses (`ModuleScope::node_chain()`, made `pub`),
+  not the flat `module_node` it kept using after D46 widened everything
+  else — two distinct nesting chains reusing one `module_node` no longer
+  collide into one section. (3) The corpus's total stored `Module` row
+  count, cited above and in RESEARCH.md as 90, is **86** — the design
+  doc's number was never actually run; the branch's own corpus test
+  prints the right figure and now also asserts it. (4) That same test's
+  "5 archives installed" undercounted a skip: the two
+  `Weinzierl_730_KNX_IP_Interface_ETS4` files are byte-identical, so
+  `install_package` skips the second — five archive files, four distinct
+  installed packages, now asserted via `InstallReport::skipped` rather
+  than assumed.
 - **A finding worth recording honestly, not smoothing over:** `prod3`'s
   three programs hold 44/28/14 structural `Module` rows each, but only
   12/8/4 are actually walked by `evaluate` under the corpus's own default

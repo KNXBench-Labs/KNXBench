@@ -43,25 +43,78 @@ use crate::ProductDbError;
 /// recursive `walk` call — this is what keeps the recursion in `walk`
 /// bounded even if the cycle check below ever has a bug, and it is the
 /// only thing standing between a pathological (or malicious) manufacturer
-/// file and a stack overflow.
+/// file and a *stack* overflow. It does **not**, by itself, bound total
+/// work: fan-out multiplies per level, and nothing here dedups distinct
+/// nesting chains, so a `ModuleDef` tree with `k` sibling `Module`s each
+/// pointing at the next can reach on the order of `k^depth` expansions
+/// without ever repeating a chain or tripping this check. See
+/// [`MAX_MODULE_EXPANSIONS`] for the budget that bounds *that* case —
+/// this constant alone is not "the only thing standing between a
+/// pathological file and" trouble; it is the only thing standing between
+/// one and a stack overflow specifically.
 ///
-/// **[A]** No source states a bound. The KNX Standard extraction
-/// available to this project defines no application-program-side
-/// `ModuleDef`/`Module` complexType at all (`docs/RESEARCH.md` §4.4 Q2,
-/// re-confirmed by a fresh `pdftotext -layout` extraction of `Project
-/// Schema23 v01.00.00.pdf` for this task: grepping every
-/// `complexType`/`element`/`simpleType` heading containing "module" finds
-/// only `ModuleDefArgType_t` (§1.1.2.38) and the project-instance-side
-/// `ModuleInstance_t` family (§1.2.5.16-20) — no AP-side `ModuleDef`
-/// complexType, so no documented nesting rule to appeal to). The
-/// installed corpus under `OriginalData/ProductDatabases/` has zero
-/// nested `Module` elements, measured for this task (see the corpus test
-/// below and the design doc addendum). This value is this project's own
-/// choice, not fitted to any known file: deep enough that no legitimate
+/// **[A]** No source states a numeric bound for AP-side `Module` nesting.
+/// The KNX Standard extraction available to this project defines no
+/// application-program-side `ModuleDef`/`Module` complexType at all
+/// (`docs/RESEARCH.md` §4.4 Q2, re-confirmed by a fresh `pdftotext
+/// -layout` extraction of `Project Schema23 v01.00.00.pdf` for this task:
+/// grepping every `complexType`/`element`/`simpleType` heading containing
+/// "module" finds only `ModuleDefArgType_t` (§1.1.2.38) and the
+/// project-instance-side `ModuleInstance_t` family (§1.2.5.16-20) — no
+/// AP-side `ModuleDef` complexType). The Standard is not silent about
+/// module nesting everywhere, though: `ModuleInstance_t/@Id`'s documented
+/// grammar (§1.2.5.18, project-instance side, **[D]**, already recorded
+/// at `docs/RESEARCH.md` §4.4 Q6) gives exactly one extra level —
+/// `MD-<n>_M-<m>_MI-<k>` for a plain instantiation,
+/// `MD-<n>_M-<m>_MI-<k>_SM-<n>_M-<m>_MI-<k>` for a `SubModule` one, never
+/// a second `SM-` segment. That is project-side, not AP-side, so it does
+/// not settle this constant's value on its own — but it is the one
+/// documented data point that speaks to nesting depth at all, and it
+/// says 2, not 16. `16` is this project's own choice, deliberately far
+/// above that one documented neighbour: deep enough that no legitimate
 /// hand-authored product is expected to reach it, shallow enough that
 /// hitting it is always worth a diagnostic rather than more silent
-/// recursion. Revisit if a genuine corpus sample ever needs more.
+/// recursion. The installed corpus under `OriginalData/ProductDatabases/`
+/// has zero nested `Module` elements, measured for this task (see the
+/// corpus test below and the design doc addendum's D44/D45). Revisit if
+/// a genuine corpus sample ever needs more.
 pub const MAX_MODULE_NESTING_DEPTH: usize = 16;
+
+/// Upper bound on the total number of `Module` expansions `evaluate` will
+/// perform in one call, counted across the *whole* walk — every nesting
+/// chain and every branch, not just the deepest one.
+/// [`MAX_MODULE_NESTING_DEPTH`] bounds how deep any single chain goes and
+/// is what stops a stack overflow; it does not bound how many chains
+/// there are. Fan-out multiplies per level with nothing to dedup it —
+/// every distinct nesting chain is its own `ScopeKey` by construction, so
+/// `seen_params`/`seen_coms` cannot collapse them the way they collapse
+/// repeats within one scope. A `ModuleDef` tree with `k` sibling
+/// `Module`s each pointing at the next, walked `depth` levels deep,
+/// produces on the order of `k^depth` expansions — no cycle, never as
+/// deep as `MAX_MODULE_NESTING_DEPTH`'s own ceiling of 16 needs to be to
+/// still be catastrophic: a measured probe (`depth=12, fanout=4`, a
+/// 44-node input, goal-completion task 11 fix round 1) reached 4,194,304
+/// `Module` activations, 11.5s wall time and a peak RSS of 8,170 MiB.
+/// Once expanding a `Module` would be the `MAX_MODULE_EXPANSIONS + 1`th
+/// expansion this call has performed, `walk` refuses it with
+/// [`Diagnostic::ModuleExpansionBudgetExhausted`] instead — the same
+/// contract as [`MAX_MODULE_NESTING_DEPTH`]: refuse loudly, never crash,
+/// never truncate the rest of the walk silently.
+///
+/// **[A]** This project's own choice, not derived from any source.
+/// Picked against the measured legitimate ceiling: the largest single
+/// program in the installed corpus tops out at 382 total activations
+/// (`prod3`'s `M-0083_A-0317-31-7DC6.xml`, RESEARCH.md §4.4 addendum),
+/// from only 44 stored `Module` rows — real files sit nowhere near this
+/// budget. `100_000` is roughly 260x that measured ceiling, enormous
+/// headroom before it can bite a legitimate file, while still stopping
+/// the fan-out probe above early: a running total crosses 100,000
+/// partway through the ninth level of a fanout-4 tree
+/// (`(4^9 - 4) / 3 = 87,380` at the end of level eight, `(4^10 - 4) / 3 =
+/// 349,525` at the end of level nine), nowhere near the depth-12 level
+/// where the measured 8,170 MiB case occurs. Revisit if a genuine corpus
+/// sample ever needs more.
+pub const MAX_MODULE_EXPANSIONS: usize = 100_000;
 
 /// [D] `Condition_t`'s three alternatives (`Project Schema23 v01.00.00.md`
 /// §1.1.3.18): a single number, a space-separated list of numbers, or a
@@ -560,6 +613,23 @@ pub enum Diagnostic {
         ref_id: Option<String>,
         depth: usize,
     },
+    /// A `Module` node whose expansion would be the
+    /// `MAX_MODULE_EXPANSIONS + 1`th `Module` expansion performed by this
+    /// `evaluate` call — a total-work budget, not a per-chain depth bound
+    /// (see [`MAX_MODULE_EXPANSIONS`]'s own doc comment for why the depth
+    /// bound alone cannot catch this: fan-out multiplies per level across
+    /// many distinct, non-cyclic chains, none of which individually
+    /// reaches [`MAX_MODULE_NESTING_DEPTH`]). `budget` is
+    /// `MAX_MODULE_EXPANSIONS`, carried on the diagnostic so a caller does
+    /// not need the constant to make sense of the message. The subtree is
+    /// not descended, and no further `Module` anywhere in this call is
+    /// descended either once the budget is spent — refused loudly, never
+    /// crashed into, never silently truncated.
+    ModuleExpansionBudgetExhausted {
+        node_id: i64,
+        ref_id: Option<String>,
+        budget: usize,
+    },
     /// A `choose`'s controlling `ParameterRef` resolved to a real
     /// comparable parameter, but no value for it exists anywhere in the
     /// resolution chain (supplied, `parameter_ref.value`, `parameter.value`).
@@ -632,8 +702,14 @@ impl ModuleScope {
 
     /// The `module_node` chain, outermost first, ending with this scope's
     /// own — the full-identity key nested dedup needs (see `module_node`'s
-    /// own doc comment for why `module_node` alone is not enough).
-    fn node_chain(&self) -> Vec<i64> {
+    /// own doc comment for why `module_node` alone is not enough). `pub`
+    /// (fix round 1, blocking finding 4, goal-completion task 11) so
+    /// callers outside this crate — `apps/knx-server`'s parameter-panel
+    /// section grouping, specifically — can key on the same full chain
+    /// this crate's own `Activation` dedup uses, instead of falling back
+    /// to the flat `module_node` that two different nesting chains can
+    /// share.
+    pub fn node_chain(&self) -> Vec<i64> {
         let mut chain = self
             .parent
             .as_deref()
@@ -740,6 +816,7 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
     let mut activation = Activation::default();
     let mut seen_params = HashSet::new();
     let mut seen_coms = HashSet::new();
+    let mut expansions_used = 0usize;
     for &root in trees.program.roots() {
         walk(
             trees,
@@ -749,6 +826,7 @@ pub fn evaluate(trees: &ProgramTrees, values: &ValueMap) -> Activation {
             &mut activation,
             &mut seen_params,
             &mut seen_coms,
+            &mut expansions_used,
             None,
         );
     }
@@ -766,10 +844,15 @@ fn is_transparent_container(kind: &str) -> bool {
 }
 
 /// `tree` is the `Dynamic` tree currently being walked — the program's own
-/// tree while `scope` is `None`, or the one `ModuleDef` tree `scope` names
-/// once a `Module` has been expanded (design D15's one level). `trees` is
-/// only consulted at a top-level `Module` node, to resolve its `@RefId`
-/// against the program's other stored scopes.
+/// tree while `scope` is `None`, or the `ModuleDef` tree named by the
+/// innermost `Module` in `scope`'s chain once one has been expanded.
+/// `trees` is consulted at *every* `Module` node, nesting included (D44
+/// supersedes D15's one-level policy), to resolve its `@RefId` against the
+/// program's other stored scopes. `expansions_used` is the running count of
+/// `Module` expansions performed by this whole `evaluate` call, checked
+/// against [`MAX_MODULE_EXPANSIONS`] before each one — see that constant's
+/// own doc comment for why the per-chain depth bound alone cannot do this
+/// job.
 #[allow(clippy::too_many_arguments)]
 fn walk(
     trees: &ProgramTrees,
@@ -779,6 +862,7 @@ fn walk(
     activation: &mut Activation,
     seen_params: &mut HashSet<ScopeKey>,
     seen_coms: &mut HashSet<ScopeKey>,
+    expansions_used: &mut usize,
     scope: Option<&ModuleScope>,
 ) {
     let Some(node) = tree.node(node_id) else {
@@ -794,6 +878,7 @@ fn walk(
                 activation,
                 seen_params,
                 seen_coms,
+                expansions_used,
                 scope,
             );
         }
@@ -808,6 +893,7 @@ fn walk(
             activation,
             seen_params,
             seen_coms,
+            expansions_used,
             scope,
         ),
         "ParameterRefRef" => {
@@ -871,6 +957,25 @@ fn walk(
                         );
                         return;
                     }
+                    // Blocking finding 1 (goal-completion task 11, fix
+                    // round 1): the depth bound above refuses one chain
+                    // going too deep; it does not refuse many chains each
+                    // staying shallow. This is the total-work backstop —
+                    // checked last, after the more specific cycle/depth
+                    // diagnoses, so a cycle or a too-deep chain still gets
+                    // its own precise diagnostic first.
+                    if *expansions_used >= MAX_MODULE_EXPANSIONS {
+                        activation.diagnose(
+                            scope,
+                            Diagnostic::ModuleExpansionBudgetExhausted {
+                                node_id,
+                                ref_id: node.ref_id.clone(),
+                                budget: MAX_MODULE_EXPANSIONS,
+                            },
+                        );
+                        return;
+                    }
+                    *expansions_used += 1;
                     // Design D37: a nameless instantiation can never be
                     // matched to a project-side `ModuleInstance`, so it
                     // is worth saying out loud even when — as here —
@@ -897,6 +1002,7 @@ fn walk(
                             activation,
                             seen_params,
                             seen_coms,
+                            expansions_used,
                             Some(&new_scope),
                         );
                     }
@@ -929,6 +1035,7 @@ fn evaluate_choose(
     activation: &mut Activation,
     seen_params: &mut HashSet<ScopeKey>,
     seen_coms: &mut HashSet<ScopeKey>,
+    expansions_used: &mut usize,
     scope: Option<&ModuleScope>,
 ) {
     let Some(control_kind) = node.control_kind else {
@@ -966,6 +1073,7 @@ fn evaluate_choose(
                     activation,
                     seen_params,
                     seen_coms,
+                    expansions_used,
                     scope,
                 ),
                 None => activation.diagnose(
@@ -984,6 +1092,7 @@ fn evaluate_choose(
             activation,
             seen_params,
             seen_coms,
+            expansions_used,
             scope,
         ),
     }
@@ -998,6 +1107,7 @@ fn evaluate_comparable_choose(
     activation: &mut Activation,
     seen_params: &mut HashSet<ScopeKey>,
     seen_coms: &mut HashSet<ScopeKey>,
+    expansions_used: &mut usize,
     scope: Option<&ModuleScope>,
 ) {
     let param_ref = node.ref_id.clone();
@@ -1088,6 +1198,7 @@ fn evaluate_comparable_choose(
             activation,
             seen_params,
             seen_coms,
+            expansions_used,
             scope,
         ),
         None => activation.diagnose(

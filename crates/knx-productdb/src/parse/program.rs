@@ -335,6 +335,183 @@ fn fill_linkable(
     Ok(filled)
 }
 
+/// Re-reads `TypeFloat/@minInclusive`/`@maxInclusive` and
+/// `TypeText/@SizeInBit` out of one already-stored blob and fills the
+/// `parameter_type` columns those rows are still missing, returning how
+/// many rows it filled. Backs `migration::migrate_v8_to_v9`; see that
+/// function's own doc comment for why this is permitted and what it
+/// deliberately does not also do.
+///
+/// Walks the same shape `ingest_program` walks for the `Static` tree —
+/// `ApplicationProgram/@Id` names the program a `ParameterType` belongs
+/// to, and the element immediately following `<ParameterType>` decides
+/// what, if anything, to fill — but tracks only that much state: no
+/// `Parameter`, `ComObject`, translation or union handling, since none of
+/// those can be missing what this backfill exists to fill in.
+pub(crate) fn backfill_parameter_type_bounds(
+    conn: &Connection,
+    source_sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<usize, ProductDbError> {
+    let mut reader = Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut filled = 0usize;
+    let mut program_id = String::new();
+    let mut current_parameter_type_id: Option<String> = None;
+    let mut expecting_type_child = false;
+
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        match event {
+            Event::Eof => break,
+            Event::Start(e) if local_name(&e) == "Dynamic" => {
+                skip_subtree(&mut reader, e.name().as_ref(), source_path)?;
+            }
+            Event::End(e) => {
+                if e.local_name().as_ref() == "ParameterType" {
+                    current_parameter_type_id = None;
+                }
+            }
+            Event::Empty(e) => {
+                let name = local_name(&e);
+                let a = attrs(&e, source_path)?;
+                filled += fill_parameter_type_bounds_element(
+                    conn,
+                    source_sha256,
+                    &name,
+                    &a,
+                    &mut program_id,
+                    &mut current_parameter_type_id,
+                    &mut expecting_type_child,
+                )?;
+            }
+            Event::Start(e) => {
+                let name = local_name(&e);
+                let a = attrs(&e, source_path)?;
+                filled += fill_parameter_type_bounds_element(
+                    conn,
+                    source_sha256,
+                    &name,
+                    &a,
+                    &mut program_id,
+                    &mut current_parameter_type_id,
+                    &mut expecting_type_child,
+                )?;
+            }
+            _ => {}
+        }
+    }
+
+    Ok(filled)
+}
+
+/// One element's contribution to `backfill_parameter_type_bounds`'s walk —
+/// either it updates the two pieces of state the walk tracks
+/// (`ApplicationProgram`/`ParameterType`), or, when it is the type-deciding
+/// child right after `<ParameterType>`, it is handed to the one fill
+/// function that matches its shape.
+#[allow(clippy::too_many_arguments)]
+fn fill_parameter_type_bounds_element(
+    conn: &Connection,
+    source_sha256: &str,
+    name: &str,
+    a: &Attrs,
+    program_id: &mut String,
+    current_parameter_type_id: &mut Option<String>,
+    expecting_type_child: &mut bool,
+) -> Result<usize, ProductDbError> {
+    if *expecting_type_child {
+        *expecting_type_child = false;
+        let Some(pt_id) = current_parameter_type_id.clone() else {
+            return Ok(0);
+        };
+        return match name {
+            "TypeFloat" => {
+                fill_parameter_type_float_bounds(conn, source_sha256, program_id, &pt_id, a)
+            }
+            "TypeText" => fill_parameter_type_text_size(conn, source_sha256, program_id, &pt_id, a),
+            _ => Ok(0),
+        };
+    }
+    match name {
+        "ApplicationProgram" => {
+            *program_id = a.get("Id").unwrap_or_default().to_string();
+        }
+        "ParameterType" => {
+            *current_parameter_type_id = Some(a.get("Id").unwrap_or_default().to_string());
+            *expecting_type_child = true;
+        }
+        _ => {}
+    }
+    Ok(0)
+}
+
+/// One `TypeFloat` element's contribution. Two guards, the shape
+/// ADR-0020 requires: `min_inclusive IS NULL AND max_inclusive IS NULL`
+/// (the pair the old parser always wrote together, never one alone) so a
+/// row a current ingest already derived is never overwritten
+/// (ADR-0012's absent-slot rule), and the `EXISTS` clause so a blob that
+/// lost this program's id conflict (ADR-0011) cannot write into the
+/// winning blob's row — `parameter_type` itself carries no
+/// `source_sha256` of its own, so the check goes through the
+/// `application_program` row that owns it.
+fn fill_parameter_type_float_bounds(
+    conn: &Connection,
+    source_sha256: &str,
+    program_id: &str,
+    pt_id: &str,
+    a: &Attrs,
+) -> Result<usize, ProductDbError> {
+    let min = a.get("minInclusive");
+    let max = a.get("maxInclusive");
+    if min.is_none() && max.is_none() {
+        return Ok(0);
+    }
+    let filled = conn.execute(
+        "UPDATE parameter_type
+         SET min_inclusive = ?1, max_inclusive = ?2
+         WHERE program_id = ?3 AND id = ?4 AND kind = 'Float'
+           AND min_inclusive IS NULL AND max_inclusive IS NULL
+           AND EXISTS (
+             SELECT 1 FROM application_program WHERE id = ?5 AND source_sha256 = ?6
+           )",
+        params![min, max, program_id, pt_id, program_id, source_sha256],
+    )?;
+    Ok(filled)
+}
+
+/// One `TypeText` element's contribution — same shape as
+/// `fill_parameter_type_float_bounds`, one column instead of two.
+fn fill_parameter_type_text_size(
+    conn: &Connection,
+    source_sha256: &str,
+    program_id: &str,
+    pt_id: &str,
+    a: &Attrs,
+) -> Result<usize, ProductDbError> {
+    let Some(size_in_bit) = parse_i64(a.get("SizeInBit")) else {
+        return Ok(0);
+    };
+    let filled = conn.execute(
+        "UPDATE parameter_type
+         SET size_in_bit = ?1
+         WHERE program_id = ?2 AND id = ?3 AND kind = 'Text'
+           AND size_in_bit IS NULL
+           AND EXISTS (
+             SELECT 1 FROM application_program WHERE id = ?4 AND source_sha256 = ?5
+           )",
+        params![size_in_bit, program_id, pt_id, program_id, source_sha256],
+    )?;
+    Ok(filled)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn handle_start_or_empty(
     conn: &Connection,
@@ -681,6 +858,38 @@ type TypeFields<'a> = (
     Option<&'a str>,
 );
 
+/// The type-deciding child element's own known attributes, one list per
+/// `child_name`, so `insert_parameter_type` can report what it does not
+/// read the same way every other element handler in this file does
+/// (T18 fix round 1, blocking finding 3: this function was the one arm
+/// that never called `report_unknown_attrs`, so `TypeFloat`'s
+/// `Encoding`/`Increment`/`DisplayFormat` — corpus-observed on four of six
+/// distinct `TypeFloat` shapes, e.g. `<TypeFloat Encoding="DPT 9"
+/// minInclusive="1" maxInclusive="120" Increment="0.1"
+/// DisplayFormat="0.0" />` — vanished with no record at all, not even the
+/// "seen, not understood" record every other unmodelled attribute gets).
+/// None of the three is read into a column by this commit — `Encoding`
+/// bounds representable range and precision, `Increment` is a real
+/// acceptance constraint `apps/knx-server`'s validator does not enforce
+/// (docs/KNOWN_LIMITATIONS.md §3), `DisplayFormat` is schema-documented
+/// (`FloatFormat_t`, "Project Schema23 v01.00.00.pdf" §1.1.3.16, p.29/64)
+/// — reporting them is a strictly smaller claim than storing them: it only
+/// says the parser met these attributes and did not model them, which is
+/// true today and was silently false before.
+fn known_type_child_attrs(child_name: &str) -> &'static [&'static str] {
+    match child_name {
+        "TypeRestriction" => &["SizeInBit", "Base"],
+        "TypeNumber" => &["SizeInBit", "minInclusive", "maxInclusive", "Type"],
+        "TypeText" => &["SizeInBit"],
+        "TypeNone" => &[],
+        "TypeFloat" => &["minInclusive", "maxInclusive"],
+        "TypeIPAddress" => &[],
+        "TypePicture" => &[],
+        "TypeRawData" => &[],
+        _ => &[],
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn insert_parameter_type(
     conn: &Connection,
@@ -710,9 +919,39 @@ fn insert_parameter_type(
                 a.get("maxInclusive"),
                 a.get("Type"),
             ),
-            "TypeText" => ("Text", None, None, None, None, None),
+            // `SizeInBit` is `TypeText`'s own declared maximum content
+            // length in bits (corpus-observed: `<TypeText SizeInBit="240"/>`
+            // and `SizeInBit="640"` in the MDT `M-0083_A-0317-31-7DC6`
+            // program — no `.knxprod` sample carries a `TypeText` without
+            // it, but the attribute is optional per its sibling types'
+            // shape, so a missing one stays `None`, not a fabricated
+            // default). T18 slice 5 reads it for a length check; the
+            // `Restriction`/`Number` arms above already read their own
+            // `SizeInBit` the same way.
+            "TypeText" => (
+                "Text",
+                parse_i64(a.get("SizeInBit")),
+                None,
+                None,
+                None,
+                None,
+            ),
             "TypeNone" => ("None", None, None, None, None, None),
-            "TypeFloat" => ("Float", None, None, None, None, None),
+            // `minInclusive`/`maxInclusive` on `TypeFloat` are corpus-
+            // observed (MDT `M-0083_A-0317-31-7DC6_PT-2ByteFloatTemp`:
+            // `<TypeFloat Encoding="DPT 9" minInclusive="-100"
+            // maxInclusive="200"/>`), the same bound shape `TypeNumber`
+            // already reads above — reusing `TypeFields`' existing
+            // min/max slots, not adding a new one. `Encoding` is read by
+            // nobody (see `known_type_child_attrs`'s own doc comment).
+            "TypeFloat" => (
+                "Float",
+                None,
+                None,
+                a.get("minInclusive"),
+                a.get("maxInclusive"),
+                None,
+            ),
             "TypeIPAddress" => ("IPAddress", None, None, None, None, None),
             "TypePicture" => ("Picture", None, None, None, None, None),
             "TypeRawData" => ("Raw", None, None, None, None, None),
@@ -721,6 +960,22 @@ fn insert_parameter_type(
                 ("Other", None, None, None, None, None)
             }
         };
+    // Reported at the type-deciding child's own path (`open_path` here is
+    // still the `ParameterType` element's ancestor stack — the child has
+    // not been pushed onto it yet, same as the `ApplicationProgram` arm
+    // above reports itself before it too is pushed), for every recognized
+    // child; the `other =>` arm already reported itself as an unmodelled
+    // *element* two lines up, so it is skipped here to avoid reporting a
+    // whole unmodelled element's attributes twice under two different
+    // reasons.
+    if kind != "Other" {
+        report_unknown_attrs(
+            unknown,
+            &xpath_of_child(open_path, child_name),
+            a,
+            known_type_child_attrs(child_name),
+        );
+    }
     conn.execute(
         "INSERT INTO parameter_type
          (program_id, id, name, kind, size_in_bit, base, min_inclusive, max_inclusive, number_type)
@@ -764,6 +1019,12 @@ mod tests {
               </ParameterType>
               <ParameterType Id="PT-Num" Name="delay">
                 <TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" />
+              </ParameterType>
+              <ParameterType Id="PT-Float" Name="threshold">
+                <TypeFloat Encoding="DPT 9" minInclusive="-100" maxInclusive="200" />
+              </ParameterType>
+              <ParameterType Id="PT-Text" Name="label">
+                <TypeText SizeInBit="240" />
               </ParameterType>
             </ParameterTypes>
             <Parameters>
@@ -885,6 +1146,112 @@ mod tests {
             (kind.as_str(), min.as_str(), max.as_str(), size),
             ("Number", "0", "255", 8)
         );
+    }
+
+    /// T18 slice 5: `TypeFloat`'s `minInclusive`/`maxInclusive` land in the
+    /// same columns `TypeNumber` already uses — corpus-observed shape (MDT
+    /// `M-0083_A-0317-31-7DC6_PT-2ByteFloatTemp`:
+    /// `<TypeFloat Encoding="DPT 9" minInclusive="-100" maxInclusive="200"/>`).
+    #[test]
+    fn a_float_type_stores_its_bounds() {
+        let (_dir, conn) = db();
+        ingest_program(&conn, "sha-1", "M-006A/A.xml", PROGRAM.as_bytes()).unwrap();
+        let (kind, min, max): (String, String, String) = conn
+            .query_row(
+                "SELECT kind, min_inclusive, max_inclusive
+                 FROM parameter_type WHERE id = 'PT-Float'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            (kind.as_str(), min.as_str(), max.as_str()),
+            ("Float", "-100", "200")
+        );
+    }
+
+    /// T18 slice 5: `TypeText`'s `SizeInBit` lands in the same column
+    /// `TypeNumber`/`TypeRestriction` already use — corpus-observed shape
+    /// (MDT `M-0083_A-0317-31-7DC6`: `<TypeText SizeInBit="240"/>` and
+    /// `SizeInBit="640"`).
+    #[test]
+    fn a_text_type_stores_its_size() {
+        let (_dir, conn) = db();
+        ingest_program(&conn, "sha-1", "M-006A/A.xml", PROGRAM.as_bytes()).unwrap();
+        let (kind, size): (String, i64) = conn
+            .query_row(
+                "SELECT kind, size_in_bit FROM parameter_type WHERE id = 'PT-Text'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!((kind.as_str(), size), ("Text", 240));
+    }
+
+    /// T18 fix round 1, blocking finding 3: `TypeFloat`'s own `Encoding` —
+    /// present in `PROGRAM` above and read by nobody — must show up as an
+    /// unrecognized attribute now, not vanish the way it did before this
+    /// fix (`insert_parameter_type` was the one element handler in this
+    /// file with no `report_unknown_attrs` call at all). `minInclusive`/
+    /// `maxInclusive`, which are read, must not.
+    #[test]
+    fn a_float_types_encoding_is_reported_unknown_but_its_bounds_are_not() {
+        let (_dir, conn) = db();
+        let out = ingest_program(&conn, "sha-1", "M-006A/A.xml", PROGRAM.as_bytes()).unwrap();
+        let encoding = out
+            .unknown
+            .iter()
+            .find(|u| u.name == "Encoding")
+            .expect("Encoding must be reported, not silently dropped");
+        assert_eq!(encoding.xpath, "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ParameterTypes/ParameterType/TypeFloat");
+        assert_eq!(encoding.sample.as_deref(), Some("DPT 9"));
+        assert!(
+            out.unknown
+                .iter()
+                .all(|u| u.name != "minInclusive" && u.name != "maxInclusive"),
+            "the two attributes this parser does read must not also be reported: {:?}",
+            out.unknown
+        );
+    }
+
+    /// The two `TypeFloat` attributes T18's opus review named alongside
+    /// `Encoding` — `Increment` (a real acceptance constraint the
+    /// validator does not enforce, docs/KNOWN_LIMITATIONS.md §3) and
+    /// `DisplayFormat` (schema-documented `FloatFormat_t`) — corpus-observed
+    /// together on four of six distinct `TypeFloat` shapes.
+    #[test]
+    fn a_float_types_increment_and_display_format_are_reported_unknown() {
+        const PROGRAM_WITH_INCREMENT: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData><Manufacturer RefId="M-006A">
+    <ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationNumber="1"
+      ApplicationVersion="1" MaskVersion="MV-0701"><Static>
+      <ParameterTypes>
+        <ParameterType Id="PT-Float" Name="temp">
+          <TypeFloat Encoding="DPT 9" minInclusive="1" maxInclusive="120"
+                     Increment="0.1" DisplayFormat="0.0" />
+        </ParameterType>
+      </ParameterTypes>
+      <Parameters />
+      <ParameterRefs />
+    </Static></ApplicationProgram></ApplicationPrograms>
+  </Manufacturer></ManufacturerData>
+</KNX>"#;
+        let (_dir, conn) = db();
+        let out = ingest_program(
+            &conn,
+            "sha-1",
+            "M-006A/A.xml",
+            PROGRAM_WITH_INCREMENT.as_bytes(),
+        )
+        .unwrap();
+        for name in ["Increment", "DisplayFormat"] {
+            assert!(
+                out.unknown.iter().any(|u| u.name == name),
+                "{name} must be reported unknown: {:?}",
+                out.unknown
+            );
+        }
     }
 
     #[test]

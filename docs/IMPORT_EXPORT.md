@@ -11,7 +11,7 @@ Six stages. Each has its own error type, and no stage knows the next one.
 
 ```text
 .knxproj (ZIP)
-  → Container    unpack, decrypt if protected (ZipCrypto < 21; AES ≥ 21 refused), entry inventory
+  → Container    unpack, entry inventory (can decrypt ZipCrypto < 21 given a password; AES ≥ 21 refused — but no caller passes a password yet)
   → Detect       schema version from the default namespace, never assumed
   → Parse        tolerant XML reader per schema version → SourceDocument
   → Validate     structural checks, reference resolution, conflicts
@@ -56,8 +56,12 @@ the inventory, not a hard-coded name.
 payload as `<P-xxxx>.zip`.
 
 - Schema < 21 (ETS4, ETS5): standard ZipCrypto (PKWARE APPNOTE.TXT
-  §6.0/§6.1 [D]), password taken as UTF-8 bytes [V, from `xknxproject`
-  source].
+  §6.0/§6.1 [D]), password taken as UTF-8 bytes — `[A]`, inferred from
+  `xknxproject`'s source, which is evidence about `xknxproject`, not
+  about ETS. APPNOTE itself leaves the password's byte encoding
+  unspecified, and no real protected ETS export has been available to
+  settle it. An ASCII password cannot tell the two readings apart, so the
+  inference is untested where it matters.
 - Schema ≥ 21 (ETS6): AES ZIP, with the password derived as
   `base64(PBKDF2-HMAC-SHA256(password = utf-16-le(user_password), salt =
   "21.project.ets.knx.org", iterations = 65536, dklen = 32))` — specified
@@ -68,13 +72,21 @@ against a real protected project**. `Container::open` (no password) still
 refuses a nested `<P-xxxx>.zip` payload by name
 (`ContainerError::PasswordProtected`) — unchanged. Given a password,
 `Container::open_with_password` now decrypts the ZipCrypto (schema < 21)
-case, tested against a synthetic fixture built with an independent ZIP
+case, tested against synthetic fixtures built with an independent ZIP
 tool (KNOWN_LIMITATIONS.md §13); ZipCrypto is not real security and this
 exists only to read a file the caller already has the password to
 (`knx_secure::zipcrypto`). The AES (schema ≥ 21) case is still refused by
 name (`ContainerError::UnsupportedEncryption`), not attempted — neither
 scheme may be described as *verified* before it has been tested against a
 real protected project.
+
+**Nothing in the import pipeline passes a password.** `import()` calls
+`Container::open`, not `open_with_password`; the only callers of the
+latter are its own tests. The decryption above is a capability of stage 1,
+not of the pipeline, and a protected project is still an import failure
+from the caller's point of view. It stays that way until a password
+reaches `import()` together with an `ImportReport` entry for the
+roundtrip gap a decrypted project carries (KNOWN_LIMITATIONS.md §13).
 
 **Container entry size guard (Session 3, malformed-input hardening):** an
 entry whose declared uncompressed size exceeds 64 MB is refused before any

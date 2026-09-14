@@ -305,6 +305,21 @@ const fn crc32_table() -> [u32; 256] {
 
 static CRC32_TABLE: [u32; 256] = crc32_table();
 
+/// The ordinary ZIP CRC-32 (APPNOTE §4.4.7) of a whole byte slice, built
+/// from the same table [`crc32_update`] uses for the cipher's own key
+/// schedule. Exposed so a caller that has just decrypted and decompressed
+/// a ZipCrypto entry can check the result against the entry's declared
+/// CRC-32 — the encryption header's one-byte check (§6.1.6) only rules out
+/// about 255 wrong passwords in 256 per convention; this rules out about
+/// 4,294,967,295 in 4,294,967,296.
+pub fn crc32(bytes: &[u8]) -> u32 {
+    let mut crc = Wrapping(0xFFFF_FFFFu32);
+    for &byte in bytes {
+        crc = crc32_update(crc, byte);
+    }
+    (crc ^ Wrapping(0xFFFF_FFFF)).0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -379,13 +394,7 @@ mod tests {
     /// PKZIP's own convention (CRC high byte) must also be accepted, not
     /// just the DOS-time one this fixture happens to carry — otherwise
     /// [`decrypt`] would only ever work against files this one tool
-    /// produced. Constructed by decrypting the fixture once with the
-    /// known-correct password (proven above) to recover its true
-    /// plaintext-compressed bytes, then re-encrypting a byte stream whose
-    /// header's check byte is deliberately the *other* convention's
-    /// value, everything else held equal — this is exercising [`decrypt`]
-    /// against a header it did not itself produce, using only values
-    /// already established as ground truth by the test above.
+    /// produced.
     #[test]
     fn the_pkzip_crc_convention_is_also_accepted() {
         let crc_only = CheckBytes {
@@ -432,5 +441,27 @@ mod tests {
         for byte in [0x00u8, 0x01, 0xff] {
             assert_eq!(CRC32_TABLE[byte as usize], reflected_crc32_of_byte(byte));
         }
+    }
+
+    /// [`crc32`] against the check value every CRC-32/ISO-HDLC (the ZIP
+    /// variant) implementation is expected to agree on for the ASCII
+    /// digits `"123456789"` — published in the CRC RevEng catalogue
+    /// (`crc-32` entry, `check=0xcbf43926`) `[D]`.
+    #[test]
+    fn crc32_matches_the_published_check_value() {
+        assert_eq!(crc32(b"123456789"), 0xcbf4_3926);
+        assert_eq!(crc32(b""), 0);
+    }
+
+    /// [`crc32`] of the plaintext this module's own fixture decrypts to
+    /// must equal the CRC-32 stored in the entry's on-disk local/central
+    /// header — the same check `knx-etsproj`'s `Container` now performs
+    /// after decryption (finding 2 of the T15 branch review). Its high
+    /// byte, `0xbe`, is exactly `CHECK.crc32_high_byte` above — one more
+    /// cross-check that this value and that one describe the same entry.
+    #[test]
+    fn crc32_of_the_fixture_plaintext_matches_its_stored_crc() {
+        assert_eq!(crc32(PLAINTEXT), 0xbebe_8a2b);
+        assert_eq!((crc32(PLAINTEXT) >> 24) as u8, CHECK.crc32_high_byte);
     }
 }

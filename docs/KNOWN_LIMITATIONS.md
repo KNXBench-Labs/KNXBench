@@ -961,23 +961,46 @@ one a given entry used.
   practice) — see §3 of `docs/COMPATIBILITY.md`, still listed as
   unverified against a real protected export.
 * **A wrong password** is reported as `ContainerError::WrongPassword`,
-  never a panic and never silently-wrong plaintext — but ZipCrypto's own
-  check byte only rules out 255/256 wrong passwords per convention, and
-  this implementation tries both published conventions, so the rate it
-  runs at is about 1 in 128; a false accept would proceed to decompress
-  garbage, which then fails as a
-  decompression error (`ContainerError::Read`) or, in the unlucky case
-  the garbage happens to inflate, produces wrong bytes indistinguishable
-  from a real but different plaintext. This is not a defect in this
-  implementation — it is the ceiling ZipCrypto's design imposes, stated
-  here rather than left implicit.
+  never a panic and never silently-wrong plaintext. ZipCrypto's own check
+  byte only rules out 255/256 wrong passwords per convention, and this
+  implementation tries both published conventions, so it lets roughly 1
+  wrong password in 128 through — but the check byte is not the last
+  gate. Every decrypted entry's decompressed bytes are checked against
+  the entry's own declared size and CRC-32 from the ZIP central
+  directory, and a mismatch there is reported as `WrongPassword` too,
+  because after a check byte has already passed that is what it almost
+  certainly is. A wrong password would have to survive a 1-in-128 check
+  byte *and* forge a 32-bit CRC to be silently accepted. That residual is
+  the ceiling ZipCrypto's design imposes, stated here rather than left
+  implicit.
 
-**Impact.** A ZipCrypto-protected (ETS4/ETS5) project can now be imported
-given its password, though only verified against a synthetic fixture, not
-a real export. An AES-protected (ETS6) project still cannot be imported
-at all — same as before this change, and for the same reason: refusing
-cleanly beats a decryption path nobody has run against a real encrypted
-file.
+**Impact.** The *container layer* can now decrypt a ZipCrypto-protected
+(ETS4/ETS5) project given its password — verified against synthetic
+fixtures, not a real export. **No import path reaches it yet.**
+`knx_etsproj::import` still calls `Container::open`, which refuses a
+protected project outright; there is no CLI flag, HTTP route or UI field
+that carries a password, and wiring one through is deliberately out of
+this change's scope. Stage 1 of a six-stage pipeline can open a protected
+project; the pipeline cannot.
+
+**A decrypted project also has no roundtrip claim.** The opaque
+passthrough store (ADR-0006) snapshots `Container::entries()` and reads
+every entry back through `Container::read`, which cannot tell a decrypted
+entry from one that was never encrypted — and the original ZipCrypto
+ciphertext is not kept anywhere once decryption has run. A protected
+project exported through that store would come back out *unprotected*.
+`Container::was_decrypted()` exists so the import stage that eventually
+wires a password through can see this coming and report it; nothing calls
+it yet, because nothing yet decrypts anything outside the tests.
+
+An AES-protected (ETS6) project still cannot be imported at all — same as
+before this change, and for the same reason: refusing cleanly beats a
+decryption path nobody has run against a real encrypted file. The refusal
+now reads the entry's *raw on-disk* compression-method field to recognise
+AES, because the `zip` crate overwrites its own parsed method with the
+entry's real underlying one the moment it sees a WinZip AES extra field
+(0x9901) — a check against the parsed value never fires, and the fall-
+through blames the user's perfectly correct password instead.
 
 **Lifted when.**
 
@@ -989,6 +1012,10 @@ file.
   enabled, the decryption path is implemented the same way ZipCrypto's
   was, and a real password-protected ETS6 project is available to verify
   it against.
+* The import pipeline's inability to reach the decryption it now owns is
+  lifted when a password reaches `import()` — and, with it, an
+  `ImportReport` entry for a decrypted project, so the roundtrip gap
+  above is reported rather than discovered.
 
 ## 14. The project's default language is a placeholder
 

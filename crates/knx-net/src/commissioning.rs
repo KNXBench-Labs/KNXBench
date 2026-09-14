@@ -41,7 +41,7 @@ use knx_core::commissioning::load_state::{
     UnknownLoadState,
 };
 use knx_core::commissioning::memory::{
-    chunks, write_limit, ApduLengthSource, ChunkError, MemoryService, WriteLimit,
+    chunks, service_for, write_limit, ApduLengthSource, ChunkError, MemoryService, WriteLimit,
 };
 use knx_core::commissioning::mutation::{TargetKind, WriteAuthorisation, WriteScope};
 use knx_core::commissioning::programming_mode::{
@@ -1367,16 +1367,34 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// which this reports rather than returning an empty vector that a
     /// caller might compare successfully against nothing.
     pub async fn read_memory(&mut self, address: u32, number: u8) -> Result<Vec<u8>, SessionError> {
-        let service = if address <= u32::from(u16::MAX) {
-            ApplicationService::MemoryRead {
+        // The service is chosen by `base + length`, exactly as CP §3.5.2
+        // chooses it for a write. Choosing it from the address alone is the
+        // trap `knx_core::commissioning::memory::service_for` documents: a
+        // region that `service_for` sent as `A_UserMemory_Write` would then be
+        // read back out of a different address space.
+        self.read_memory_as(service_for(address, u32::from(number)), address, number)
+            .await
+    }
+
+    /// The same read with the service named by the caller, for a read-back
+    /// that must use the service its own write used.
+    async fn read_memory_as(
+        &mut self,
+        service: MemoryService,
+        address: u32,
+        number: u8,
+    ) -> Result<Vec<u8>, SessionError> {
+        let request = match service {
+            // `service_for` names this service only below `FFFFh`, and a
+            // chunk's service is `service_for`'s answer for the whole region.
+            MemoryService::Memory => ApplicationService::MemoryRead {
                 number,
                 address: address as u16,
-            }
-        } else {
-            ApplicationService::UserMemoryRead { number, address }
+            },
+            MemoryService::UserMemory => ApplicationService::UserMemoryRead { number, address },
         };
         let data = self
-            .exchange(service, "A_Memory_Response", |answer| match answer {
+            .exchange(request, "A_Memory_Response", |answer| match answer {
                 ApplicationService::MemoryResponse { address: at, data }
                     if u32::from(*at) == address =>
                 {
@@ -1801,7 +1819,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                     "a chunk is at most SERVICE_MAX_OCTETS = 63 octets \
                      (AL §3.5.3/§3.5.4), so its length fits one octet",
                 );
-                let read = self.read_memory(address, number).await?;
+                let read = self.read_memory_as(service, address, number).await?;
                 if read != data {
                     return Err(SessionError::ReadBackMismatch {
                         address,
@@ -2355,14 +2373,82 @@ mod tests {
             vec![
                 Seen::MemoryWrite {
                     address: 0x4000,
-                    data: vec![0xAA, 0xBB, 0xCC]
+                    data: vec![0xAA, 0xBB, 0xCC],
+                    service: MemoryService::Memory,
                 },
                 Seen::MemoryRead {
                     address: 0x4000,
-                    number: 3
+                    number: 3,
+                    service: MemoryService::Memory,
                 },
             ],
             "a write with no Verify Mode must be followed by a read of the same octets"
+        );
+    }
+
+    /// CP §3.5.2 picks the service on `base + length`, and the read-back has
+    /// to pick the same one. A region that straddles `FFFFh` goes out as
+    /// `A_UserMemory_Write` throughout — so reading it back with
+    /// `A_Memory_Read`, which is what choosing the service from the address
+    /// alone did, would read a different address space and compare octets
+    /// nobody wrote.
+    #[tokio::test]
+    async fn a_region_that_straddles_ffffh_is_read_back_through_the_same_service() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            verify_mode_supported: false,
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Download);
+        session.connect().await.expect("connect");
+
+        let limit = write_limit(ApduLengthSource::Absent);
+        session
+            .write_memory_region(0xFFFC, &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06], limit)
+            .await
+            .expect("the straddling region is writable");
+
+        let tail: Vec<Seen> = device
+            .seen()
+            .into_iter()
+            .filter(|entry| matches!(entry, Seen::MemoryWrite { .. } | Seen::MemoryRead { .. }))
+            .collect();
+        assert_eq!(
+            tail,
+            vec![
+                Seen::MemoryWrite {
+                    address: 0xFFFC,
+                    data: vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
+                    service: MemoryService::UserMemory,
+                },
+                Seen::MemoryRead {
+                    address: 0xFFFC,
+                    number: 6,
+                    service: MemoryService::UserMemory,
+                },
+            ],
+            "both halves of the round trip must use the user-memory service"
+        );
+    }
+
+    /// And the plain public read picks its service the same way: the whole
+    /// point of `service_for` is that `base + length` decides, not `base`.
+    #[tokio::test]
+    async fn a_read_that_would_cross_ffffh_uses_the_user_memory_service() {
+        let device = SimulatedDevice::new();
+        let mut session = read_only(&device);
+        session.connect().await.expect("connect");
+        session
+            .read_memory(0xFFFA, 8)
+            .await
+            .expect("the simulator answers either service");
+        assert!(
+            device.seen().into_iter().any(|entry| entry
+                == Seen::MemoryRead {
+                    address: 0xFFFA,
+                    number: 8,
+                    service: MemoryService::UserMemory,
+                }),
+            "a read ending above FFFFh belongs to A_UserMemory_Read"
         );
     }
 

@@ -12,7 +12,7 @@
 use std::collections::HashSet;
 use std::time::Duration;
 
-use knx_core::scan::ScanPlan;
+use knx_core::scan::{ScanPlan, ScanPlanBuilder};
 use knx_core::IndividualAddress;
 use knx_net::{ProbeOutcome, ProbePolicy};
 
@@ -232,12 +232,16 @@ pub fn build_scan_plan(
     let (plan, first_device, last_device) = match range_spec {
         Some(spec) => {
             let (first, last) = parse_range(spec, area, line)?;
-            let plan = ScanPlan::range(first, last, excluded.iter().copied())
+            let plan = ScanPlanBuilder::new()
+                .exclude_all(excluded.iter().copied())
+                .range(first, last)
                 .map_err(|e| format!("could not build scan plan: {e}"))?;
             (plan, first.device(), last.device())
         }
         None => {
-            let plan = ScanPlan::line(area, line, excluded.iter().copied())
+            let plan = ScanPlanBuilder::new()
+                .exclude_all(excluded.iter().copied())
+                .line(area, line)
                 .map_err(|e| format!("could not build scan plan: {e}"))?;
             (plan, 1, 255)
         }
@@ -248,6 +252,11 @@ pub fn build_scan_plan(
         first_device,
         last_device,
     };
+    // The reported exclusion set is the plan's own, not just what the
+    // operator typed: `--dry-run` and the summary must show the project
+    // exclusions of `EXCLUDED_INDIVIDUAL_ADDRESSES` as well, or a scan of
+    // line 1.1 silently comes back one address short (spec §2.1).
+    let excluded = plan.excluded().clone();
     Ok((plan, range, excluded))
 }
 
@@ -307,6 +316,14 @@ pub fn format_dry_run(plan: &ScanPlan, excluded: &HashSet<IndividualAddress>) ->
     excluded_sorted.sort_by_key(|a| a.raw());
     out.push_str(&format!("\n  excluded ({}):", excluded_sorted.len()));
     for addr in &excluded_sorted {
+        out.push_str(&format!("\n    {addr}"));
+    }
+    // Which of those the plan actually had to remove from this span. The
+    // set above is the rule; this is the effect, and it is reported rather
+    // than left implicit so a shortened scan never looks like a full one.
+    let omitted = plan.omitted();
+    out.push_str(&format!("\n  omitted from this span ({}):", omitted.len()));
+    for addr in omitted {
         out.push_str(&format!("\n    {addr}"));
     }
     out
@@ -640,7 +657,8 @@ mod tests {
     #[test]
     fn full_line_with_no_range_or_exclude_covers_every_device() {
         let (plan, range, excluded) = build_scan_plan("1.1", None, &[]).unwrap();
-        assert_eq!(plan.addresses().len(), 255);
+        // 255 minus the one address the project exclusion list removes.
+        assert_eq!(plan.addresses().len(), 254);
         assert_eq!(
             range,
             ScannedRange {
@@ -650,7 +668,8 @@ mod tests {
                 last_device: 255
             }
         );
-        assert!(excluded.is_empty());
+        assert_eq!(excluded, HashSet::from([addr(1, 1, 220)]));
+        assert_eq!(plan.omitted(), [addr(1, 1, 220)]);
     }
 
     #[test]
@@ -723,16 +742,24 @@ mod tests {
         assert!(text.contains("6 candidate address(es)"));
         assert!(text.contains("first 1.1.2"));
         assert!(text.contains("last 1.1.9"));
-        assert!(text.contains("excluded (2):"));
+        // Two from the command line plus the project exclusion list, which
+        // no command line can shorten.
+        assert!(text.contains("excluded (3):"), "{text}");
         assert!(text.contains("1.1.4"));
         assert!(text.contains("1.1.5"));
+        assert!(text.contains("1.1.220"));
+        // The two that fell inside the span are named as dropped; the
+        // project's own entry lies outside it and so is not.
+        assert!(text.contains("omitted from this span (2):"), "{text}");
     }
 
     #[test]
     fn dry_run_with_no_exclusions_still_names_the_zero_count() {
         let (plan, _, excluded) = build_scan_plan("1.1", Some("1.1.2-1.1.3"), &[]).unwrap();
         let text = format_dry_run(&plan, &excluded);
-        assert!(text.contains("excluded (0):"));
+        // Never zero: the project exclusion list is always in force, and a
+        // report that said "excluded (0)" would be a lie about the guard.
+        assert!(text.contains("excluded (1):"), "{text}");
     }
 
     // --- build_probe_policy ---

@@ -17,6 +17,72 @@ pub const L_DATA_REQ: u8 = 0x11;
 pub const L_DATA_CON: u8 = 0x2E;
 pub const L_DATA_IND: u8 = 0x29;
 
+/// The APCIs of the management services this module types, read from
+/// Application Layer v02.01.01 AS Table 1 (spec §6.6, `[D]`). They are
+/// full 10-bit values: the memory trio's low six bits carry `number`,
+/// `A_Restart`'s carry the response bit and the Restart Type, and the
+/// `1111_xxxxxx` family uses all ten bits to name the service.
+pub const APCI_INDIVIDUAL_ADDRESS_WRITE: u16 = 0x0C0;
+/// `A_IndividualAddress_Read-PDU` (`0100000000`), broadcast; spec §4.2.
+pub const APCI_INDIVIDUAL_ADDRESS_READ: u16 = 0x100;
+/// `A_IndividualAddress_Response-PDU` (`0101000000`). Carries no data at
+/// all — the answering device is named by the frame's source address
+/// (spec §4.2), which is why this variant has no fields.
+pub const APCI_INDIVIDUAL_ADDRESS_RESPONSE: u16 = 0x140;
+/// `A_Memory_Read-PDU` (`1000nnnnnn`), `number` in the low six bits.
+pub const APCI_MEMORY_READ: u16 = 0x200;
+/// `A_Memory_Response-PDU` (`1001nnnnnn`).
+pub const APCI_MEMORY_RESPONSE: u16 = 0x240;
+/// `A_Memory_Write-PDU` (`1010nnnnnn`).
+pub const APCI_MEMORY_WRITE: u16 = 0x280;
+/// `A_UserMemory_Read-PDU` (`1011000000`).
+pub const APCI_USER_MEMORY_READ: u16 = 0x2C0;
+/// `A_UserMemory_Response-PDU` (`1011000001`).
+pub const APCI_USER_MEMORY_RESPONSE: u16 = 0x2C1;
+/// `A_UserMemory_Write-PDU` (`1011000010`).
+pub const APCI_USER_MEMORY_WRITE: u16 = 0x2C2;
+/// `A_Restart-PDU` (`1110000000`), low six bits per spec §8.
+pub const APCI_RESTART: u16 = 0x380;
+/// `A_Authorize_Request-PDU` (`1111010001`).
+pub const APCI_AUTHORIZE_REQUEST: u16 = 0x3D1;
+/// `A_Authorize_Response-PDU` (`1111010010`).
+pub const APCI_AUTHORIZE_RESPONSE: u16 = 0x3D2;
+/// `A_Key_Write-PDU` (`1111010011`) — named so the value is reserved and
+/// not reused, deliberately without a variant: spec §10.9 puts key writing
+/// out of phase 2, and a service with no encoder cannot be sent by
+/// accident.
+pub const APCI_KEY_WRITE: u16 = 0x3D3;
+/// `A_PropertyValue_Read-PDU` (`1111010101`).
+pub const APCI_PROPERTY_VALUE_READ: u16 = 0x3D5;
+/// `A_PropertyValue_Response-PDU` (`1111010110`).
+pub const APCI_PROPERTY_VALUE_RESPONSE: u16 = 0x3D6;
+/// `A_PropertyValue_Write-PDU` (`1111010111`).
+pub const APCI_PROPERTY_VALUE_WRITE: u16 = 0x3D7;
+
+/// The four-bit selector shared by services whose low six bits are a data
+/// field (the memory trio, `A_Restart`).
+const APCI_SELECTOR_MASK: u16 = 0x3C0;
+/// `A_Memory_*`'s `number` field is six bits: 1 to 63 octets
+/// (Application Layer v02.01.01 AS §3.4.4, Figures 74-76).
+pub const MEMORY_MAX_OCTETS: u8 = 63;
+/// `A_UserMemory_*`'s `number` field is four bits: 1 to 15 octets, and its
+/// address is 20 bits — *"4 bit address extension + 8 bit address high +
+/// 8 bit address low"* (Application Layer v02.01.01 AS §3.5.6.2/§3.5.6.3,
+/// Figures 79-81), `[D]`. This is the cap spec §6.4's chunk arithmetic
+/// does not mention, because §6.4 is written for `A_Memory_Write`.
+pub const USER_MEMORY_MAX_OCTETS: u8 = 15;
+/// The top of the 20-bit space `A_UserMemory_*` can address.
+pub const USER_MEMORY_ADDRESS_LIMIT: u32 = 1 << 20;
+/// `A_Restart`'s Response bit (bit 5 of the APCI's low six).
+const RESTART_RESPONSE_BIT: u8 = 0x20;
+/// `A_Restart`'s reserved bits 4-1, which are zero in a well-formed PDU.
+const RESTART_RESERVED_BITS: u8 = 0x1E;
+/// `A_PropertyValue_*`'s `nr_of_elem` is four bits and `start_index`
+/// twelve, sharing two octets (spec §7.3; AL §3.4.6 Figures 84/85).
+pub const PROPERTY_MAX_NR_OF_ELEM: u8 = 15;
+/// The twelve-bit ceiling of `start_index`.
+pub const PROPERTY_MAX_START_INDEX: u16 = 0x0FFF;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LDataMessageKind {
     Request,
@@ -125,6 +191,112 @@ pub enum ApplicationService {
         descriptor_type: u8,
         data: Vec<u8>,
     },
+    /// `A_IndividualAddress_Write-PDU` (AL Table 1 `0011000000`, spec
+    /// §4.1): broadcast, two data octets carrying the new address.
+    IndividualAddressWrite {
+        address: IndividualAddress,
+    },
+    /// `A_IndividualAddress_Read-PDU` (spec §4.2 step 1): broadcast, no
+    /// data. Every device in programming mode answers.
+    IndividualAddressRead,
+    /// `A_IndividualAddress_Response-PDU`: no data octets. The address
+    /// being reported is the frame's `source` — reading it from anywhere
+    /// else is the mistake this fieldless variant makes impossible.
+    IndividualAddressResponse,
+    /// `A_Memory_Read-PDU`: `number` octets from `address` (AL §3.4.4
+    /// Figure 74). `number` is the request's own field, so it is explicit
+    /// here; 1 to 63 on encode.
+    MemoryRead {
+        number: u8,
+        address: u16,
+    },
+    /// `A_Memory_Response-PDU` (Figure 75). `number` is *not* a field:
+    /// it is `data.len()`, so the two can never disagree. An empty `data`
+    /// is therefore the documented failure answer — *"the parameter number
+    /// of the A_Memory_Response-PDU shall be zero and shall contain no
+    /// data"* (spec §6.1) — and not a shape this type has to police.
+    MemoryResponse {
+        address: u16,
+        data: Vec<u8>,
+    },
+    /// `A_Memory_Write-PDU` (Figure 76), `number` again derived from
+    /// `data.len()`. Unlike a response, an empty write has no meaning, so
+    /// encoding one is an error rather than a zero-length frame.
+    MemoryWrite {
+        address: u16,
+        data: Vec<u8>,
+    },
+    /// `A_UserMemory_Read-PDU` (AL §3.5.6.2 Figure 79): a 20-bit
+    /// `address` and a four-bit `number`, for the memory above `FFFFh`
+    /// spec §6.5 routes here.
+    UserMemoryRead {
+        number: u8,
+        address: u32,
+    },
+    /// `A_UserMemory_Response-PDU` (Figure 80); `number` is `data.len()`,
+    /// zero meaning the same documented failure as `MemoryResponse`.
+    UserMemoryResponse {
+        address: u32,
+        data: Vec<u8>,
+    },
+    /// `A_UserMemory_Write-PDU` (Figure 81); `number` is `data.len()`,
+    /// 1 to 15.
+    UserMemoryWrite {
+        address: u32,
+        data: Vec<u8>,
+    },
+    /// `A_Restart-PDU` (spec §8): `restart_type` 0 is the unconfirmed
+    /// Basic Restart, 1 the confirmed Master Reset. `data` carries what
+    /// the type dictates — Erase Code and Channel Number on a Master
+    /// Reset request, Error Code and Process Time on its response — and is
+    /// not policed here: which octets belong to which type is a procedure
+    /// question (spec §8.1), not a framing one, and the frame layer
+    /// refusing to guess is what keeps a Master Reset from being
+    /// assembled by accident.
+    Restart {
+        response: bool,
+        restart_type: u8,
+        data: Vec<u8>,
+    },
+    /// `A_Authorize_Request-PDU` (AL §3.5.7 Figure 86, cited in spec
+    /// §11.1): one *"must be 0"* octet, then four key octets. That octet
+    /// is not a field because there is nothing to decide about it.
+    AuthorizeRequest {
+        key: [u8; 4],
+    },
+    /// `A_Authorize_Response-PDU` (Figure 87): one level octet, where a
+    /// *lower* number is more powerful (spec §10.1).
+    AuthorizeResponse {
+        level: u8,
+    },
+    /// `A_PropertyValue_Read-PDU` (spec §5.1, §7.3): object index,
+    /// property id, then `nr_of_elem` (4 bits) and `start_index`
+    /// (12 bits) packed into two octets.
+    PropertyValueRead {
+        object_index: u8,
+        property_id: u8,
+        nr_of_elem: u8,
+        start_index: u16,
+    },
+    /// `A_PropertyValue_Response-PDU`. A `nr_of_elem` of zero with no
+    /// data is how a device refuses a property read (spec §10.6), so it
+    /// is representable rather than rejected.
+    PropertyValueResponse {
+        object_index: u8,
+        property_id: u8,
+        nr_of_elem: u8,
+        start_index: u16,
+        data: Vec<u8>,
+    },
+    /// `A_PropertyValue_Write-PDU` — the service every load-state event
+    /// of spec §7.3 travels on, ten octets of payload at a time.
+    PropertyValueWrite {
+        object_index: u8,
+        property_id: u8,
+        nr_of_elem: u8,
+        start_index: u16,
+        data: Vec<u8>,
+    },
     /// The payload of a control PDU (`Tpci::Connect`/`Disconnect`/
     /// `Ack`/`Nak`): the brief's term for it, not a general-purpose
     /// "empty" state. These TPDUs carry no application layer at all
@@ -203,6 +375,39 @@ pub enum CemiError {
     /// and nothing else, and `NoApplicationPdu` requires a control `Tpci`.
     /// Naming both variant names rather than emitting a frame that would
     /// not survive its own round trip.
+    /// An `A_Memory_*` or `A_UserMemory_*` PDU whose octet count does not
+    /// fit its `number` field — six bits (1-63) for `A_Memory_*`, four
+    /// (1-15) for `A_UserMemory_*` (Application Layer v02.01.01 AS §3.4.4
+    /// and §3.5.6.2). `max` says which of the two limits was applied.
+    /// Rejected on encode: truncating the data to fit would write a
+    /// silently shorter region than the caller asked for, at the right
+    /// address, which is the worst available outcome.
+    /// Unreachable in a correct build: a management service (spec §6.6)
+    /// that `encode_management` did not claim, reached by the borrowed
+    /// encode path that cannot build an owned payload. It names the
+    /// service rather than panicking, so a future variant whose encoder
+    /// arm was forgotten costs one frame and not the process — the same
+    /// choice the `NoApplicationPdu` arm of `encode_l_data` already makes.
+    ManagementServiceNotEncoded(&'static str),
+    MemoryOctetCountOutOfRange {
+        number: usize,
+        max: u8,
+    },
+    /// An `A_UserMemory_*` address above the 20 bits the service has for
+    /// it (4-bit extension + 16-bit address). Masking would write to a
+    /// real but different address.
+    UserMemoryAddressOutOfRange(u32),
+    /// An `A_PropertyValue_*` PDU whose `nr_of_elem` exceeds four bits or
+    /// whose `start_index` exceeds twelve — the two share two octets, so
+    /// an overflow in either corrupts the other.
+    PropertyRequestOutOfRange {
+        nr_of_elem: u8,
+        start_index: u16,
+    },
+    /// An `A_Restart` `restart_type` above 1: the field is one bit (spec
+    /// §8), and 0/1 are Basic Restart and Master Reset. A value of 2 is
+    /// not a third kind of reset, it is a bug.
+    InvalidRestartType(u8),
     MismatchedTransport {
         transport: &'static str,
         service: &'static str,
@@ -244,6 +449,37 @@ impl std::fmt::Display for CemiError {
                     f,
                     "control PDU (TPCI {tpci:#04x}) carried {extra_octets} unexpected \
                      trailing octet(s)"
+                )
+            }
+            CemiError::ManagementServiceNotEncoded(service) => {
+                write!(f, "management service {service} has no encoder arm")
+            }
+            CemiError::MemoryOctetCountOutOfRange { number, max } => {
+                write!(
+                    f,
+                    "memory service octet count {number} does not fit its number field (1-{max})"
+                )
+            }
+            CemiError::UserMemoryAddressOutOfRange(address) => {
+                write!(
+                    f,
+                    "user-memory address {address:#07x} does not fit 20 bits (0-0xFFFFF)"
+                )
+            }
+            CemiError::PropertyRequestOutOfRange {
+                nr_of_elem,
+                start_index,
+            } => {
+                write!(
+                    f,
+                    "property request nr_of_elem {nr_of_elem} (max 15) / start_index \
+                     {start_index} (max 0xFFF) does not fit its two octets"
+                )
+            }
+            CemiError::InvalidRestartType(restart_type) => {
+                write!(
+                    f,
+                    "restart type {restart_type} is not 0 (Basic Restart) or 1 (Master Reset)"
                 )
             }
             CemiError::MismatchedTransport { transport, service } => {
@@ -383,10 +619,19 @@ pub fn decode_l_data(buf: &[u8]) -> Result<LDataFrame, CemiError> {
                 descriptor_type: inline6,
                 data: extra.to_vec(),
             },
-            _ => ApplicationService::Other {
-                apci: (((tpci_octet & 0x03) as u16) << 8) | apci_lo_and_data as u16,
-                data: extra.to_vec(),
-            },
+            _ => {
+                let apci = (((tpci_octet & 0x03) as u16) << 8) | apci_lo_and_data as u16;
+                // The §6.6 management services, which all live in APCIs
+                // this `match` does not select on. `None` means the octets
+                // did not fit the PDU shape that APCI names, and the frame
+                // falls through to `Other` with everything intact — the
+                // same treatment `A_DeviceDescriptor_Read` with unexpected
+                // trailing octets already gets above.
+                decode_management(apci, extra).unwrap_or(ApplicationService::Other {
+                    apci,
+                    data: extra.to_vec(),
+                })
+            }
         }
     };
     Ok(LDataFrame {
@@ -477,6 +722,130 @@ fn group_value(length: usize, inline6: u8, extra: &[u8]) -> GroupValue {
 /// broadcast, low priority, no ack request) and Ctrl2's hop-count-6 are
 /// this crate's only outbound defaults — the same values already implied
 /// by every hand-built fixture `decode_l_data` is tested against above.
+/// Names a management service (spec §6.6) from its APCI and data octets,
+/// or returns `None` if the octets do not fit that service's PDU.
+///
+/// Deliberately shape-based and not value-based: it checks the octet count
+/// the Standard's figures give each PDU and nothing else. A device that
+/// answers with a field value no procedure expects is still reported as
+/// the service it claimed to be — judging values is the procedure layer's
+/// job in `knx-core`, and a decoder that demotes a badly-filled frame to
+/// `Other` would hide exactly the misbehaviour spec §9.2 wants named.
+fn decode_management(apci: u16, extra: &[u8]) -> Option<ApplicationService> {
+    let be16 = |a: u8, b: u8| u16::from_be_bytes([a, b]);
+    // `A_UserMemory_*`: octet 8 is the address extension (bits 7-4) and
+    // `number` (bits 3-0), octets 9-10 the 16-bit address (Figure 79).
+    let user_memory = |extra: &[u8]| -> (u8, u32) {
+        let number = extra[0] & 0x0F;
+        let address = ((extra[0] >> 4) as u32) << 16 | be16(extra[1], extra[2]) as u32;
+        (number, address)
+    };
+    match apci {
+        APCI_INDIVIDUAL_ADDRESS_WRITE if extra.len() == 2 => {
+            Some(ApplicationService::IndividualAddressWrite {
+                address: IndividualAddress::from_raw(be16(extra[0], extra[1])),
+            })
+        }
+        APCI_INDIVIDUAL_ADDRESS_READ if extra.is_empty() => {
+            Some(ApplicationService::IndividualAddressRead)
+        }
+        APCI_INDIVIDUAL_ADDRESS_RESPONSE if extra.is_empty() => {
+            Some(ApplicationService::IndividualAddressResponse)
+        }
+        APCI_USER_MEMORY_READ if extra.len() == 3 => {
+            let (number, address) = user_memory(extra);
+            Some(ApplicationService::UserMemoryRead { number, address })
+        }
+        APCI_USER_MEMORY_RESPONSE | APCI_USER_MEMORY_WRITE if extra.len() >= 3 => {
+            let (number, address) = user_memory(extra);
+            if number as usize != extra.len() - 3 {
+                return None;
+            }
+            let data = extra[3..].to_vec();
+            Some(if apci == APCI_USER_MEMORY_RESPONSE {
+                ApplicationService::UserMemoryResponse { address, data }
+            } else {
+                ApplicationService::UserMemoryWrite { address, data }
+            })
+        }
+        APCI_AUTHORIZE_REQUEST if extra.len() == 5 && extra[0] == 0 => {
+            Some(ApplicationService::AuthorizeRequest {
+                key: [extra[1], extra[2], extra[3], extra[4]],
+            })
+        }
+        APCI_AUTHORIZE_RESPONSE if extra.len() == 1 => {
+            Some(ApplicationService::AuthorizeResponse { level: extra[0] })
+        }
+        APCI_PROPERTY_VALUE_READ if extra.len() == 4 => {
+            Some(ApplicationService::PropertyValueRead {
+                object_index: extra[0],
+                property_id: extra[1],
+                nr_of_elem: extra[2] >> 4,
+                start_index: be16(extra[2] & 0x0F, extra[3]),
+            })
+        }
+        APCI_PROPERTY_VALUE_RESPONSE | APCI_PROPERTY_VALUE_WRITE if extra.len() >= 4 => {
+            let object_index = extra[0];
+            let property_id = extra[1];
+            let nr_of_elem = extra[2] >> 4;
+            let start_index = be16(extra[2] & 0x0F, extra[3]);
+            let data = extra[4..].to_vec();
+            Some(if apci == APCI_PROPERTY_VALUE_RESPONSE {
+                ApplicationService::PropertyValueResponse {
+                    object_index,
+                    property_id,
+                    nr_of_elem,
+                    start_index,
+                    data,
+                }
+            } else {
+                ApplicationService::PropertyValueWrite {
+                    object_index,
+                    property_id,
+                    nr_of_elem,
+                    start_index,
+                    data,
+                }
+            })
+        }
+        _ => decode_memory_or_restart(apci, extra),
+    }
+}
+
+/// The two selector-plus-inline-field families: `A_Memory_*`, whose low six
+/// APCI bits are `number`, and `A_Restart`, whose low six carry the
+/// Response bit and the Restart Type.
+fn decode_memory_or_restart(apci: u16, extra: &[u8]) -> Option<ApplicationService> {
+    let number = (apci & 0x3F) as u8;
+    let selector = apci & APCI_SELECTOR_MASK;
+    if selector == APCI_MEMORY_READ && extra.len() == 2 {
+        return Some(ApplicationService::MemoryRead {
+            number,
+            address: u16::from_be_bytes([extra[0], extra[1]]),
+        });
+    }
+    if (selector == APCI_MEMORY_RESPONSE || selector == APCI_MEMORY_WRITE) && extra.len() >= 2 {
+        if number as usize != extra.len() - 2 {
+            return None;
+        }
+        let address = u16::from_be_bytes([extra[0], extra[1]]);
+        let data = extra[2..].to_vec();
+        return Some(if selector == APCI_MEMORY_RESPONSE {
+            ApplicationService::MemoryResponse { address, data }
+        } else {
+            ApplicationService::MemoryWrite { address, data }
+        });
+    }
+    if selector == APCI_RESTART && number & RESTART_RESERVED_BITS == 0 {
+        return Some(ApplicationService::Restart {
+            response: number & RESTART_RESPONSE_BIT != 0,
+            restart_type: number & 0x01,
+            data: extra.to_vec(),
+        });
+    }
+    None
+}
+
 pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
     let message_code = match frame.kind {
         LDataMessageKind::Request => L_DATA_REQ,
@@ -531,6 +900,18 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
             dest_raw,
             &[tpci_octet],
         );
+    }
+
+    // The §6.6 management services encode their whole 10-bit APCI plus an
+    // owned payload, so they take this path rather than the borrowed
+    // `(short_apci, inline6, extra)` one below.
+    if let Some((apci, payload)) = encode_management(&frame.service)? {
+        let tpci_octet = tpci_octet | (((apci >> 8) as u8) & 0x03);
+        let npdu: Vec<u8> = [tpci_octet, apci as u8]
+            .into_iter()
+            .chain(payload)
+            .collect();
+        return finish_l_data(message_code, ctrl1, ctrl2, source_raw, dest_raw, &npdu);
     }
 
     let (short_apci, inline6, extra): (u8, u8, &[u8]) = match &frame.service {
@@ -589,6 +970,30 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
                 service: application_service_variant_name(&frame.service),
             });
         }
+        // Every service above is encoded by `encode_management`, which
+        // returned before this `match` was reached. The arm exists because
+        // the `match` is total over `ApplicationService` — and it stays
+        // total on purpose, so that adding a service is a compile error
+        // here rather than a frame that quietly encodes as something else.
+        service @ (ApplicationService::IndividualAddressWrite { .. }
+        | ApplicationService::IndividualAddressRead
+        | ApplicationService::IndividualAddressResponse
+        | ApplicationService::MemoryRead { .. }
+        | ApplicationService::MemoryResponse { .. }
+        | ApplicationService::MemoryWrite { .. }
+        | ApplicationService::UserMemoryRead { .. }
+        | ApplicationService::UserMemoryResponse { .. }
+        | ApplicationService::UserMemoryWrite { .. }
+        | ApplicationService::Restart { .. }
+        | ApplicationService::AuthorizeRequest { .. }
+        | ApplicationService::AuthorizeResponse { .. }
+        | ApplicationService::PropertyValueRead { .. }
+        | ApplicationService::PropertyValueResponse { .. }
+        | ApplicationService::PropertyValueWrite { .. }) => {
+            return Err(CemiError::ManagementServiceNotEncoded(
+                application_service_variant_name(service),
+            ));
+        }
     };
     let tpci_octet = tpci_octet | ((short_apci >> 2) & 0x03);
     let apci_lo = ((short_apci & 0x03) << 6) | inline6;
@@ -597,6 +1002,166 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
         .chain(extra.iter().copied())
         .collect();
     finish_l_data(message_code, ctrl1, ctrl2, source_raw, dest_raw, &npdu)
+}
+
+/// Builds the APCI and payload octets of a management service (spec §6.6),
+/// or `None` if this is not one. Every field that shares an octet with
+/// another is range-checked here, because a silent mask would change which
+/// address gets written or which service the frame decodes as.
+fn encode_management(service: &ApplicationService) -> Result<Option<(u16, Vec<u8>)>, CemiError> {
+    // `number` is never stored next to the data it counts; it is derived
+    // from the data's length here, so a mismatch is unrepresentable.
+    fn counted(data: &[u8], max: u8, allow_empty: bool) -> Result<u8, CemiError> {
+        let n = data.len();
+        if n > max as usize || (n == 0 && !allow_empty) {
+            return Err(CemiError::MemoryOctetCountOutOfRange { number: n, max });
+        }
+        Ok(n as u8)
+    }
+    fn user_memory_head(address: u32, number: u8) -> Result<[u8; 3], CemiError> {
+        if address >= USER_MEMORY_ADDRESS_LIMIT {
+            return Err(CemiError::UserMemoryAddressOutOfRange(address));
+        }
+        let extension = ((address >> 16) as u8) & 0x0F;
+        let [_, _, high, low] = address.to_be_bytes();
+        Ok([(extension << 4) | number, high, low])
+    }
+    fn property_head(
+        object_index: u8,
+        property_id: u8,
+        nr_of_elem: u8,
+        start_index: u16,
+    ) -> Result<[u8; 4], CemiError> {
+        if nr_of_elem > PROPERTY_MAX_NR_OF_ELEM || start_index > PROPERTY_MAX_START_INDEX {
+            return Err(CemiError::PropertyRequestOutOfRange {
+                nr_of_elem,
+                start_index,
+            });
+        }
+        let [high, low] = start_index.to_be_bytes();
+        Ok([
+            object_index,
+            property_id,
+            (nr_of_elem << 4) | (high & 0x0F),
+            low,
+        ])
+    }
+
+    let encoded = match service {
+        ApplicationService::IndividualAddressWrite { address } => (
+            APCI_INDIVIDUAL_ADDRESS_WRITE,
+            address.raw().to_be_bytes().to_vec(),
+        ),
+        ApplicationService::IndividualAddressRead => (APCI_INDIVIDUAL_ADDRESS_READ, Vec::new()),
+        ApplicationService::IndividualAddressResponse => {
+            (APCI_INDIVIDUAL_ADDRESS_RESPONSE, Vec::new())
+        }
+        ApplicationService::MemoryRead { number, address } => {
+            if *number == 0 || *number > MEMORY_MAX_OCTETS {
+                return Err(CemiError::MemoryOctetCountOutOfRange {
+                    number: *number as usize,
+                    max: MEMORY_MAX_OCTETS,
+                });
+            }
+            (
+                APCI_MEMORY_READ | *number as u16,
+                address.to_be_bytes().to_vec(),
+            )
+        }
+        ApplicationService::MemoryResponse { address, data } => {
+            // A response may legitimately be empty: `number = 0` with no
+            // data is how a device reports a failed read (spec §6.1).
+            let number = counted(data, MEMORY_MAX_OCTETS, true)?;
+            let mut payload = address.to_be_bytes().to_vec();
+            payload.extend_from_slice(data);
+            (APCI_MEMORY_RESPONSE | number as u16, payload)
+        }
+        ApplicationService::MemoryWrite { address, data } => {
+            let number = counted(data, MEMORY_MAX_OCTETS, false)?;
+            let mut payload = address.to_be_bytes().to_vec();
+            payload.extend_from_slice(data);
+            (APCI_MEMORY_WRITE | number as u16, payload)
+        }
+        ApplicationService::UserMemoryRead { number, address } => {
+            if *number == 0 || *number > USER_MEMORY_MAX_OCTETS {
+                return Err(CemiError::MemoryOctetCountOutOfRange {
+                    number: *number as usize,
+                    max: USER_MEMORY_MAX_OCTETS,
+                });
+            }
+            (
+                APCI_USER_MEMORY_READ,
+                user_memory_head(*address, *number)?.to_vec(),
+            )
+        }
+        ApplicationService::UserMemoryResponse { address, data } => {
+            let number = counted(data, USER_MEMORY_MAX_OCTETS, true)?;
+            let mut payload = user_memory_head(*address, number)?.to_vec();
+            payload.extend_from_slice(data);
+            (APCI_USER_MEMORY_RESPONSE, payload)
+        }
+        ApplicationService::UserMemoryWrite { address, data } => {
+            let number = counted(data, USER_MEMORY_MAX_OCTETS, false)?;
+            let mut payload = user_memory_head(*address, number)?.to_vec();
+            payload.extend_from_slice(data);
+            (APCI_USER_MEMORY_WRITE, payload)
+        }
+        ApplicationService::Restart {
+            response,
+            restart_type,
+            data,
+        } => {
+            if *restart_type > 1 {
+                return Err(CemiError::InvalidRestartType(*restart_type));
+            }
+            let inline6 = if *response { RESTART_RESPONSE_BIT } else { 0 } | *restart_type;
+            (APCI_RESTART | inline6 as u16, data.clone())
+        }
+        ApplicationService::AuthorizeRequest { key } => {
+            // The leading octet is the Standard's *"must be 0"* reserved
+            // octet (AL §3.5.7 Figure 86), written here so no call site
+            // has to remember it.
+            let mut payload = vec![0u8];
+            payload.extend_from_slice(key);
+            (APCI_AUTHORIZE_REQUEST, payload)
+        }
+        ApplicationService::AuthorizeResponse { level } => (APCI_AUTHORIZE_RESPONSE, vec![*level]),
+        ApplicationService::PropertyValueRead {
+            object_index,
+            property_id,
+            nr_of_elem,
+            start_index,
+        } => (
+            APCI_PROPERTY_VALUE_READ,
+            property_head(*object_index, *property_id, *nr_of_elem, *start_index)?.to_vec(),
+        ),
+        ApplicationService::PropertyValueResponse {
+            object_index,
+            property_id,
+            nr_of_elem,
+            start_index,
+            data,
+        } => {
+            let mut payload =
+                property_head(*object_index, *property_id, *nr_of_elem, *start_index)?.to_vec();
+            payload.extend_from_slice(data);
+            (APCI_PROPERTY_VALUE_RESPONSE, payload)
+        }
+        ApplicationService::PropertyValueWrite {
+            object_index,
+            property_id,
+            nr_of_elem,
+            start_index,
+            data,
+        } => {
+            let mut payload =
+                property_head(*object_index, *property_id, *nr_of_elem, *start_index)?.to_vec();
+            payload.extend_from_slice(data);
+            (APCI_PROPERTY_VALUE_WRITE, payload)
+        }
+        _ => return Ok(None),
+    };
+    Ok(Some(encoded))
 }
 
 /// The `Tpci` variant name, for `CemiError::MismatchedTransport` — names
@@ -616,6 +1181,81 @@ fn tpci_variant_name(tpci: &Tpci) -> &'static str {
 /// The `ApplicationService` variant name, for `CemiError::
 /// MismatchedTransport` — names the offending pairing without needing
 /// `CemiError` to own a non-`Copy` `ApplicationService`.
+impl ApplicationService {
+    /// The variant's name, for logs and monitors. Public so a renderer
+    /// outside this crate can name a service without a 20-arm `match` of
+    /// its own — and so adding a service here does not break one.
+    pub fn variant_name(&self) -> &'static str {
+        application_service_variant_name(self)
+    }
+
+    /// A one-line rendering of the service's own fields, for a monitor
+    /// row. `None` for the services that have no fields worth a line.
+    pub fn payload_summary(&self) -> Option<String> {
+        match self {
+            ApplicationService::IndividualAddressWrite { address } => Some(format!("{address}")),
+            ApplicationService::MemoryRead { number, address } => {
+                Some(format!("{number} octets at {address:#06x}"))
+            }
+            ApplicationService::MemoryResponse { address, data }
+            | ApplicationService::MemoryWrite { address, data } => Some(format!(
+                "{} octets at {address:#06x} = {data:02x?}",
+                data.len()
+            )),
+            ApplicationService::UserMemoryRead { number, address } => {
+                Some(format!("{number} octets at {address:#07x}"))
+            }
+            ApplicationService::UserMemoryResponse { address, data }
+            | ApplicationService::UserMemoryWrite { address, data } => Some(format!(
+                "{} octets at {address:#07x} = {data:02x?}",
+                data.len()
+            )),
+            ApplicationService::Restart {
+                response,
+                restart_type,
+                data,
+            } => Some(format!(
+                "type={restart_type}{} data={data:02x?}",
+                if *response { " response" } else { "" }
+            )),
+            // The key itself is never rendered: a bus monitor is the
+            // last place a device key should be readable (spec §10.7).
+            ApplicationService::AuthorizeRequest { .. } => Some("key=<redacted>".to_string()),
+            ApplicationService::AuthorizeResponse { level } => Some(format!("level={level}")),
+            ApplicationService::PropertyValueRead {
+                object_index,
+                property_id,
+                nr_of_elem,
+                start_index,
+            } => Some(format!(
+                "object={object_index} pid={property_id} \
+                 nr_of_elem={nr_of_elem} start_index={start_index}"
+            )),
+            ApplicationService::PropertyValueResponse {
+                object_index,
+                property_id,
+                nr_of_elem,
+                start_index,
+                data,
+            }
+            | ApplicationService::PropertyValueWrite {
+                object_index,
+                property_id,
+                nr_of_elem,
+                start_index,
+                data,
+            } => Some(format!(
+                "object={object_index} pid={property_id} nr_of_elem={nr_of_elem} \
+                 start_index={start_index} data={data:02x?}"
+            )),
+            ApplicationService::Other { apci, data } => {
+                Some(format!("APCI {apci:#06x} data {data:02x?}"))
+            }
+            _ => None,
+        }
+    }
+}
+
 fn application_service_variant_name(service: &ApplicationService) -> &'static str {
     match service {
         ApplicationService::GroupValueRead => "GroupValueRead",
@@ -623,6 +1263,21 @@ fn application_service_variant_name(service: &ApplicationService) -> &'static st
         ApplicationService::GroupValueWrite(_) => "GroupValueWrite",
         ApplicationService::DeviceDescriptorRead { .. } => "DeviceDescriptorRead",
         ApplicationService::DeviceDescriptorResponse { .. } => "DeviceDescriptorResponse",
+        ApplicationService::IndividualAddressWrite { .. } => "IndividualAddressWrite",
+        ApplicationService::IndividualAddressRead => "IndividualAddressRead",
+        ApplicationService::IndividualAddressResponse => "IndividualAddressResponse",
+        ApplicationService::MemoryRead { .. } => "MemoryRead",
+        ApplicationService::MemoryResponse { .. } => "MemoryResponse",
+        ApplicationService::MemoryWrite { .. } => "MemoryWrite",
+        ApplicationService::UserMemoryRead { .. } => "UserMemoryRead",
+        ApplicationService::UserMemoryResponse { .. } => "UserMemoryResponse",
+        ApplicationService::UserMemoryWrite { .. } => "UserMemoryWrite",
+        ApplicationService::Restart { .. } => "Restart",
+        ApplicationService::AuthorizeRequest { .. } => "AuthorizeRequest",
+        ApplicationService::AuthorizeResponse { .. } => "AuthorizeResponse",
+        ApplicationService::PropertyValueRead { .. } => "PropertyValueRead",
+        ApplicationService::PropertyValueResponse { .. } => "PropertyValueResponse",
+        ApplicationService::PropertyValueWrite { .. } => "PropertyValueWrite",
         ApplicationService::NoApplicationPdu => "NoApplicationPdu",
         ApplicationService::Other { .. } => "Other",
     }
@@ -1388,22 +2043,27 @@ mod tests {
         }
     }
 
-    /// A 10-bit APCI this cycle does not interpret (`short_apci = 0b0101`,
-    /// not one of the group/device-descriptor services) still lands in
-    /// `Other` with its octets intact — same guarantee as the pre-T17
-    /// `unknown_apci_is_reported_as_other_not_dropped`, re-affirmed after
-    /// `Tpci` was split out of the stored `apci` value.
+    /// A 10-bit APCI this cycle does not interpret (`short_apci = 0b0110`,
+    /// `A_ADC_Read`) still lands in `Other` with its octets intact — same
+    /// guarantee as the pre-T17 `unknown_apci_is_reported_as_other_not_
+    /// dropped`, re-affirmed after `Tpci` was split out of the stored
+    /// `apci` value.
+    ///
+    /// T30 moved this test off `0b0101` (`0x0140`): that APCI is
+    /// `A_IndividualAddress_Response`, which is now a typed variant. The
+    /// guarantee under test is unchanged — it just needs an APCI that is
+    /// still genuinely uninterpreted, and `A_ADC_Read` is one.
     #[test]
     fn unknown_ten_bit_apci_lands_in_other_with_octets_intact() {
         let mut bytes = write_on_frame();
         let len = bytes.len();
         bytes[len - 2] = 0x01; // TPCI: UnnumberedData, APCI-high bits 01
-        bytes[len - 1] = 0x40; // APCI-low bits 01 -> short_apci = 0b0101
+        bytes[len - 1] = 0x80; // APCI-low bits 10 -> short_apci = 0b0110
         let frame = decode_l_data(&bytes).unwrap();
         assert_eq!(
             frame.service,
             ApplicationService::Other {
-                apci: 0x0140,
+                apci: 0x0180,
                 data: vec![],
             }
         );
@@ -1447,6 +2107,609 @@ mod tests {
             encode_l_data(&response_frame).unwrap_err(),
             CemiError::InvalidDescriptorType(0xFF)
         );
+    }
+
+    // ---------------------------------------------------------------
+    // The §6.6 management services (T30 phase 2). Every test here is
+    // pure codec: no socket, no device, no bus.
+    // ---------------------------------------------------------------
+
+    /// A connection-oriented management frame to a device, which is how
+    /// every one of these services actually travels (spec §7.1: the load
+    /// procedure is connection oriented).
+    fn mgmt(service: ApplicationService) -> LDataFrame {
+        LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Individual(IndividualAddress::from_raw(0x1118)),
+            transport: Tpci::NumberedData { seq: 0 },
+            service,
+        }
+    }
+
+    /// The NPDU (TPCI octet onwards), which is where all the interesting
+    /// arithmetic lives.
+    fn npdu_of(service: ApplicationService) -> Vec<u8> {
+        let bytes = encode_l_data(&mgmt(service)).unwrap();
+        // message code, add-info length, Ctrl1, Ctrl2, source (2),
+        // destination (2), L — nine octets before the NPDU.
+        bytes[9..].to_vec()
+    }
+
+    fn round_trip(service: ApplicationService) -> ApplicationService {
+        let bytes = encode_l_data(&mgmt(service)).unwrap();
+        decode_l_data(&bytes).unwrap().service
+    }
+
+    /// The APCI column of Application Layer v02.01.01 AS Table 1, as spec
+    /// §6.6 transcribes it. Written out in binary so a reader can compare
+    /// with the table directly rather than trusting a hex conversion.
+    #[test]
+    fn the_apci_constants_are_application_layer_table_1() {
+        assert_eq!(APCI_INDIVIDUAL_ADDRESS_WRITE, 0b00_1100_0000);
+        assert_eq!(APCI_INDIVIDUAL_ADDRESS_READ, 0b01_0000_0000);
+        assert_eq!(APCI_INDIVIDUAL_ADDRESS_RESPONSE, 0b01_0100_0000);
+        assert_eq!(APCI_MEMORY_READ, 0b10_0000_0000);
+        assert_eq!(APCI_MEMORY_RESPONSE, 0b10_0100_0000);
+        assert_eq!(APCI_MEMORY_WRITE, 0b10_1000_0000);
+        assert_eq!(APCI_USER_MEMORY_READ, 0b10_1100_0000);
+        assert_eq!(APCI_USER_MEMORY_RESPONSE, 0b10_1100_0001);
+        assert_eq!(APCI_USER_MEMORY_WRITE, 0b10_1100_0010);
+        assert_eq!(APCI_RESTART, 0b11_1000_0000);
+        assert_eq!(APCI_AUTHORIZE_REQUEST, 0b11_1101_0001);
+        assert_eq!(APCI_AUTHORIZE_RESPONSE, 0b11_1101_0010);
+        assert_eq!(APCI_KEY_WRITE, 0b11_1101_0011);
+        assert_eq!(APCI_PROPERTY_VALUE_READ, 0b11_1101_0101);
+        assert_eq!(APCI_PROPERTY_VALUE_RESPONSE, 0b11_1101_0110);
+        assert_eq!(APCI_PROPERTY_VALUE_WRITE, 0b11_1101_0111);
+    }
+
+    /// `A_Key_Write` has a constant and no variant, on purpose (spec
+    /// §10.9). The constant exists so nobody reuses the value; the absence
+    /// of a variant is what makes the service unsendable.
+    #[test]
+    fn key_write_has_an_apci_but_no_encoder() {
+        let frame = mgmt(ApplicationService::Other {
+            apci: APCI_KEY_WRITE,
+            data: vec![0x00, 0x01, 0x02, 0x03, 0x04],
+        });
+        // It encodes as `Other` — the escape hatch, which a caller has to
+        // ask for explicitly — and decodes back as `Other`, never as a
+        // typed key write, because there is none.
+        let decoded = decode_l_data(&encode_l_data(&frame).unwrap()).unwrap();
+        assert!(matches!(
+            decoded.service,
+            ApplicationService::Other {
+                apci: APCI_KEY_WRITE,
+                ..
+            }
+        ));
+    }
+
+    /// `A_Memory_Read-PDU` (AL §3.4.4 Figure 74): `number` rides in the
+    /// APCI's low six bits, then address high and low.
+    #[test]
+    fn memory_read_octets_match_figure_74() {
+        let npdu = npdu_of(ApplicationService::MemoryRead {
+            number: 3,
+            address: 0x1234,
+        });
+        assert_eq!(
+            npdu,
+            vec![
+                0x42, // T_Data_Connected seq 0 + APCI bits 9-8 = 10
+                0x03, // APCI bits 7-6 = 00, number = 3
+                0x12, 0x34,
+            ]
+        );
+        assert_eq!(
+            round_trip(ApplicationService::MemoryRead {
+                number: 3,
+                address: 0x1234
+            }),
+            ApplicationService::MemoryRead {
+                number: 3,
+                address: 0x1234
+            }
+        );
+    }
+
+    /// `number` is never a field next to the data it counts: it is
+    /// `data.len()`, so a write claiming three octets and carrying four is
+    /// not a shape this type can hold.
+    #[test]
+    fn memory_write_derives_its_number_from_the_data_it_carries() {
+        let npdu = npdu_of(ApplicationService::MemoryWrite {
+            address: 0x4000,
+            data: vec![0xAA, 0xBB, 0xCC],
+        });
+        assert_eq!(npdu, vec![0x42, 0x83, 0x40, 0x00, 0xAA, 0xBB, 0xCC]);
+        assert_eq!(
+            round_trip(ApplicationService::MemoryWrite {
+                address: 0x4000,
+                data: vec![0xAA, 0xBB, 0xCC]
+            }),
+            ApplicationService::MemoryWrite {
+                address: 0x4000,
+                data: vec![0xAA, 0xBB, 0xCC]
+            }
+        );
+    }
+
+    /// The documented failure answer: *"the parameter number of the
+    /// A_Memory_Response-PDU shall be zero and shall contain no data"*
+    /// (spec §6.1). It has to be representable — a client that cannot
+    /// receive a refusal cannot report one.
+    #[test]
+    fn a_memory_response_with_number_zero_is_the_failure_answer_and_not_an_error() {
+        let npdu = npdu_of(ApplicationService::MemoryResponse {
+            address: 0x4000,
+            data: vec![],
+        });
+        assert_eq!(npdu, vec![0x42, 0x40, 0x40, 0x00]);
+        assert_eq!(
+            round_trip(ApplicationService::MemoryResponse {
+                address: 0x4000,
+                data: vec![]
+            }),
+            ApplicationService::MemoryResponse {
+                address: 0x4000,
+                data: vec![]
+            }
+        );
+        // A write, by contrast, has nothing to say with zero octets.
+        assert_eq!(
+            encode_l_data(&mgmt(ApplicationService::MemoryWrite {
+                address: 0x4000,
+                data: vec![]
+            }))
+            .unwrap_err(),
+            CemiError::MemoryOctetCountOutOfRange { number: 0, max: 63 }
+        );
+    }
+
+    /// A frame whose `number` field disagrees with the octets that follow
+    /// is not an `A_Memory_Response` — it is something this decoder cannot
+    /// name, so it keeps every octet as `Other` rather than inventing a
+    /// length (Global Constraint 2).
+    #[test]
+    fn a_memory_frame_whose_number_lies_stays_other_with_its_octets() {
+        // APCI 0x244 claims four data octets; only one follows.
+        let frame = mgmt(ApplicationService::Other {
+            apci: 0x244,
+            data: vec![0x40, 0x00, 0xAA],
+        });
+        let decoded = decode_l_data(&encode_l_data(&frame).unwrap()).unwrap();
+        assert_eq!(
+            decoded.service,
+            ApplicationService::Other {
+                apci: 0x244,
+                data: vec![0x40, 0x00, 0xAA],
+            }
+        );
+    }
+
+    /// 64 octets do not fit a six-bit `number`. Rejected rather than
+    /// truncated: a short write to the right address is worse than no
+    /// write, because it looks like it worked.
+    #[test]
+    fn a_memory_write_of_sixty_four_octets_is_refused_not_truncated() {
+        assert_eq!(
+            encode_l_data(&mgmt(ApplicationService::MemoryWrite {
+                address: 0x4000,
+                data: vec![0u8; 64]
+            }))
+            .unwrap_err(),
+            CemiError::MemoryOctetCountOutOfRange {
+                number: 64,
+                max: 63
+            }
+        );
+        // 63 is the boundary and it fits.
+        assert!(encode_l_data(&mgmt(ApplicationService::MemoryWrite {
+            address: 0x4000,
+            data: vec![0u8; 63]
+        }))
+        .is_ok());
+    }
+
+    /// `A_UserMemory_Write-PDU` (AL §3.5.6.3 Figure 81): a 20-bit address
+    /// as *"4 bit address extension + 8 bit address high + 8 bit address
+    /// low"*, with the four-bit `number` sharing the extension's octet.
+    #[test]
+    fn user_memory_octets_match_figure_81() {
+        let npdu = npdu_of(ApplicationService::UserMemoryWrite {
+            address: 0x7_1234,
+            data: vec![0xDE, 0xAD],
+        });
+        assert_eq!(
+            npdu,
+            vec![
+                0x42, // APCI bits 9-8 = 10
+                0xC2, // APCI bits 7-0: 1100_0010 -> A_UserMemory_Write
+                0x72, // address extension 7, number 2
+                0x12, 0x34, 0xDE, 0xAD,
+            ]
+        );
+        assert_eq!(
+            round_trip(ApplicationService::UserMemoryWrite {
+                address: 0x7_1234,
+                data: vec![0xDE, 0xAD]
+            }),
+            ApplicationService::UserMemoryWrite {
+                address: 0x7_1234,
+                data: vec![0xDE, 0xAD]
+            }
+        );
+        assert_eq!(
+            round_trip(ApplicationService::UserMemoryRead {
+                number: 15,
+                address: 0xF_FFFF
+            }),
+            ApplicationService::UserMemoryRead {
+                number: 15,
+                address: 0xF_FFFF
+            }
+        );
+    }
+
+    /// The user-memory service's own limits, which are *not* the memory
+    /// service's: 15 octets, not 63, and 20 address bits, not 16.
+    #[test]
+    fn user_memory_refuses_sixteen_octets_and_a_twenty_one_bit_address() {
+        assert_eq!(
+            encode_l_data(&mgmt(ApplicationService::UserMemoryWrite {
+                address: 0x1_0000,
+                data: vec![0u8; 16]
+            }))
+            .unwrap_err(),
+            CemiError::MemoryOctetCountOutOfRange {
+                number: 16,
+                max: 15
+            }
+        );
+        assert_eq!(
+            encode_l_data(&mgmt(ApplicationService::UserMemoryWrite {
+                address: USER_MEMORY_ADDRESS_LIMIT,
+                data: vec![0xAA]
+            }))
+            .unwrap_err(),
+            CemiError::UserMemoryAddressOutOfRange(USER_MEMORY_ADDRESS_LIMIT)
+        );
+    }
+
+    /// `A_PropertyValue_Write-PDU`: object index, property id, then
+    /// `nr_of_elem` (4 bits) and `start_index` (12 bits) packed into two
+    /// octets — the exact frame spec §7.3's ten-octet load-state-control
+    /// payload travels in.
+    #[test]
+    fn property_value_write_carries_the_ten_octet_load_control_payload() {
+        let payload = vec![0x03, 0x0B, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00];
+        let npdu = npdu_of(ApplicationService::PropertyValueWrite {
+            object_index: 2,
+            property_id: 5,
+            nr_of_elem: 1,
+            start_index: 1,
+            data: payload.clone(),
+        });
+        assert_eq!(npdu[0], 0x43); // APCI bits 9-8 = 11
+        assert_eq!(npdu[1], 0xD7); // A_PropertyValue_Write
+        assert_eq!(&npdu[2..6], &[0x02, 0x05, 0x10, 0x01]);
+        assert_eq!(&npdu[6..], &payload[..]);
+        assert_eq!(
+            round_trip(ApplicationService::PropertyValueWrite {
+                object_index: 2,
+                property_id: 5,
+                nr_of_elem: 1,
+                start_index: 1,
+                data: payload.clone(),
+            }),
+            ApplicationService::PropertyValueWrite {
+                object_index: 2,
+                property_id: 5,
+                nr_of_elem: 1,
+                start_index: 1,
+                data: payload,
+            }
+        );
+    }
+
+    /// A property read refused by the device answers with `nr_of_elem = 0`
+    /// and no data (spec §10.6), which must decode rather than be demoted.
+    #[test]
+    fn a_property_response_with_no_elements_is_the_refusal_shape() {
+        assert_eq!(
+            round_trip(ApplicationService::PropertyValueResponse {
+                object_index: 0,
+                property_id: 56,
+                nr_of_elem: 0,
+                start_index: 1,
+                data: vec![],
+            }),
+            ApplicationService::PropertyValueResponse {
+                object_index: 0,
+                property_id: 56,
+                nr_of_elem: 0,
+                start_index: 1,
+                data: vec![],
+            }
+        );
+    }
+
+    /// `nr_of_elem` and `start_index` share two octets, so an overflow in
+    /// either silently rewrites the other. Refused on both.
+    #[test]
+    fn a_property_request_that_would_overflow_its_two_octets_is_refused() {
+        assert_eq!(
+            encode_l_data(&mgmt(ApplicationService::PropertyValueRead {
+                object_index: 0,
+                property_id: 5,
+                nr_of_elem: 16,
+                start_index: 1,
+            }))
+            .unwrap_err(),
+            CemiError::PropertyRequestOutOfRange {
+                nr_of_elem: 16,
+                start_index: 1
+            }
+        );
+        assert_eq!(
+            encode_l_data(&mgmt(ApplicationService::PropertyValueRead {
+                object_index: 0,
+                property_id: 5,
+                nr_of_elem: 1,
+                start_index: 0x1000,
+            }))
+            .unwrap_err(),
+            CemiError::PropertyRequestOutOfRange {
+                nr_of_elem: 1,
+                start_index: 0x1000
+            }
+        );
+    }
+
+    /// `A_Authorize_Request-PDU` (AL §3.5.7 Figure 86): one *"must be 0"*
+    /// octet, then four key octets. The octet is written by the encoder,
+    /// not by the caller, because there is nothing to decide about it.
+    #[test]
+    fn authorize_request_writes_the_reserved_octet_itself() {
+        let npdu = npdu_of(ApplicationService::AuthorizeRequest {
+            key: [0x12, 0x34, 0x56, 0x78],
+        });
+        assert_eq!(npdu, vec![0x43, 0xD1, 0x00, 0x12, 0x34, 0x56, 0x78]);
+        assert_eq!(
+            round_trip(ApplicationService::AuthorizeRequest {
+                key: [0x12, 0x34, 0x56, 0x78]
+            }),
+            ApplicationService::AuthorizeRequest {
+                key: [0x12, 0x34, 0x56, 0x78]
+            }
+        );
+        // A request whose reserved octet is not 0 does not fit the PDU and
+        // keeps its octets as `Other` rather than being read as a key.
+        let odd = mgmt(ApplicationService::Other {
+            apci: APCI_AUTHORIZE_REQUEST,
+            data: vec![0x01, 0x12, 0x34, 0x56, 0x78],
+        });
+        assert!(matches!(
+            decode_l_data(&encode_l_data(&odd).unwrap())
+                .unwrap()
+                .service,
+            ApplicationService::Other { .. }
+        ));
+    }
+
+    /// A bus monitor is the last place a device key should be readable
+    /// (spec §10.7), so the summary redacts it — while still naming the
+    /// service, because a hidden authorisation attempt is worse.
+    #[test]
+    fn an_authorize_request_never_renders_its_key() {
+        let service = ApplicationService::AuthorizeRequest {
+            key: [0xDE, 0xAD, 0xBE, 0xEF],
+        };
+        let summary = service.payload_summary().unwrap();
+        assert_eq!(service.variant_name(), "AuthorizeRequest");
+        assert_eq!(summary, "key=<redacted>");
+        assert!(!summary.contains("de"));
+        assert!(!summary.contains("ad"));
+    }
+
+    /// The response is one level octet, where a *lower* number is more
+    /// powerful (spec §10.1) — the codec carries it, the judging happens
+    /// in `knx-core`.
+    #[test]
+    fn authorize_response_round_trips_every_level_octet() {
+        for level in 0u8..=255 {
+            assert_eq!(
+                round_trip(ApplicationService::AuthorizeResponse { level }),
+                ApplicationService::AuthorizeResponse { level }
+            );
+        }
+    }
+
+    /// `A_IndividualAddress_Response-PDU` has no data octets at all: the
+    /// address is the frame's source (spec §4.2). This is the fieldless
+    /// variant's whole point — there is nowhere to read a wrong address
+    /// from.
+    #[test]
+    fn an_individual_address_response_names_its_sender_and_nothing_else() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Indication,
+            source: IndividualAddress::from_raw(0x1118),
+            destination: Destination::Group(GroupAddress::from_raw(0x0000)),
+            transport: Tpci::UnnumberedData,
+            service: ApplicationService::IndividualAddressResponse,
+        };
+        let decoded = decode_l_data(&encode_l_data(&frame).unwrap()).unwrap();
+        assert_eq!(
+            decoded.service,
+            ApplicationService::IndividualAddressResponse
+        );
+        assert_eq!(decoded.source, IndividualAddress::from_raw(0x1118));
+    }
+
+    /// `A_IndividualAddress_Write-PDU` carries the new address in two data
+    /// octets, and the broadcast destination `0/0/0`.
+    #[test]
+    fn an_individual_address_write_carries_the_new_address() {
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Group(GroupAddress::from_raw(0x0000)),
+            transport: Tpci::UnnumberedData,
+            service: ApplicationService::IndividualAddressWrite {
+                address: IndividualAddress::from_raw(0x1118),
+            },
+        };
+        let bytes = encode_l_data(&frame).unwrap();
+        assert_eq!(&bytes[9..], &[0x00, 0xC0, 0x11, 0x18]);
+        assert_eq!(
+            decode_l_data(&bytes).unwrap().service,
+            ApplicationService::IndividualAddressWrite {
+                address: IndividualAddress::from_raw(0x1118),
+            }
+        );
+    }
+
+    /// `A_Restart`: type 0 is the unconfirmed Basic Restart, type 1 the
+    /// confirmed Master Reset, and there is no type 2 (spec §8).
+    #[test]
+    fn restart_encodes_both_types_and_refuses_a_third() {
+        assert_eq!(
+            npdu_of(ApplicationService::Restart {
+                response: false,
+                restart_type: 0,
+                data: vec![],
+            }),
+            vec![0x43, 0x80]
+        );
+        // A Master Reset request carries Erase Code and Channel Number.
+        assert_eq!(
+            npdu_of(ApplicationService::Restart {
+                response: false,
+                restart_type: 1,
+                data: vec![0x01, 0x00],
+            }),
+            vec![0x43, 0x81, 0x01, 0x00]
+        );
+        // Its response sets bit 5.
+        assert_eq!(
+            npdu_of(ApplicationService::Restart {
+                response: true,
+                restart_type: 1,
+                data: vec![0x00, 0x00, 0x05],
+            }),
+            vec![0x43, 0xA1, 0x00, 0x00, 0x05]
+        );
+        assert_eq!(
+            encode_l_data(&mgmt(ApplicationService::Restart {
+                response: false,
+                restart_type: 2,
+                data: vec![],
+            }))
+            .unwrap_err(),
+            CemiError::InvalidRestartType(2)
+        );
+    }
+
+    /// `A_Restart`'s bits 4-1 are reserved. A frame that sets them is not
+    /// the restart service as this codec understands it, so it stays
+    /// `Other` with its octets — the difference between "a device sent a
+    /// restart" and "a device sent something restart-shaped" is worth
+    /// keeping.
+    #[test]
+    fn a_restart_with_reserved_bits_set_is_not_read_as_a_restart() {
+        let frame = mgmt(ApplicationService::Other {
+            apci: APCI_RESTART | 0x02,
+            data: vec![],
+        });
+        assert!(matches!(
+            decode_l_data(&encode_l_data(&frame).unwrap())
+                .unwrap()
+                .service,
+            ApplicationService::Other { .. }
+        ));
+    }
+
+    /// Every typed management service survives encode → decode unchanged,
+    /// and every one of them reports a name a log can print.
+    #[test]
+    fn every_management_service_round_trips_and_has_a_name() {
+        let services = vec![
+            ApplicationService::IndividualAddressRead,
+            ApplicationService::IndividualAddressResponse,
+            ApplicationService::IndividualAddressWrite {
+                address: IndividualAddress::from_raw(0x1118),
+            },
+            ApplicationService::MemoryRead {
+                number: 1,
+                address: 0x0060,
+            },
+            ApplicationService::MemoryResponse {
+                address: 0x0060,
+                data: vec![0x81],
+            },
+            ApplicationService::MemoryWrite {
+                address: 0x0060,
+                data: vec![0x00],
+            },
+            ApplicationService::UserMemoryRead {
+                number: 4,
+                address: 0xA_0000,
+            },
+            ApplicationService::UserMemoryResponse {
+                address: 0xA_0000,
+                data: vec![1, 2, 3, 4],
+            },
+            ApplicationService::UserMemoryWrite {
+                address: 0xA_0000,
+                data: vec![1, 2, 3, 4],
+            },
+            ApplicationService::Restart {
+                response: false,
+                restart_type: 0,
+                data: vec![],
+            },
+            ApplicationService::AuthorizeRequest { key: [1, 2, 3, 4] },
+            ApplicationService::AuthorizeResponse { level: 3 },
+            ApplicationService::PropertyValueRead {
+                object_index: 0,
+                property_id: 56,
+                nr_of_elem: 1,
+                start_index: 1,
+            },
+            ApplicationService::PropertyValueResponse {
+                object_index: 0,
+                property_id: 56,
+                nr_of_elem: 1,
+                start_index: 1,
+                data: vec![0x00, 0x0F],
+            },
+            ApplicationService::PropertyValueWrite {
+                object_index: 2,
+                property_id: 5,
+                nr_of_elem: 1,
+                start_index: 1,
+                data: vec![0x02; 10],
+            },
+        ];
+        for service in services {
+            assert_eq!(
+                round_trip(service.clone()),
+                service,
+                "{} did not survive its own round trip",
+                service.variant_name()
+            );
+            assert!(!service.variant_name().is_empty());
+            // The two fieldless services have nothing to summarise, and
+            // a summary invented for them would be noise in a monitor.
+            let fieldless = matches!(
+                service,
+                ApplicationService::IndividualAddressRead
+                    | ApplicationService::IndividualAddressResponse
+            );
+            assert_eq!(service.payload_summary().is_none(), fieldless);
+        }
     }
 
     /// Nit 10: `Other { apci, .. }` above `0x3FF` does not fit the APCI's

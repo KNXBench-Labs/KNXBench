@@ -2493,18 +2493,28 @@ fn assemble_parameter_panel(
     // Group `Activation::parameter_refs` into one section per distinct
     // scope (D23), preserving each ref's document-order position and the
     // order sections are first encountered.
+    //
+    // Fix round 1 (blocking finding 4, goal-completion task 11): this key
+    // used to be the flat `Option<i64>` `module_node` D18 introduced,
+    // which stopped being unique once nesting shipped —
+    // `dynamic_node.node_id` resets per `(program_id, module_def_id)`
+    // tree, so two distinct nesting chains can reuse the same
+    // `module_node` at the same depth under different ancestors, and the
+    // sections would silently merge. `ModuleScope::node_chain()` (made
+    // `pub` for this) gives the same full-chain key `evaluate`'s own
+    // dedup already uses.
     struct SectionBuild {
         scope: Option<knx_productdb::dynamic::ModuleScope>,
         ref_ids: Vec<String>,
     }
-    let mut section_order: Vec<Option<i64>> = Vec::new();
-    let mut sections_by_key: HashMap<Option<i64>, SectionBuild> = HashMap::new();
+    let mut section_order: Vec<Option<Vec<i64>>> = Vec::new();
+    let mut sections_by_key: HashMap<Option<Vec<i64>>, SectionBuild> = HashMap::new();
     for active in &activation.parameter_refs {
-        let key = active.scope.as_ref().map(|s| s.module_node);
+        let key = active.scope.as_ref().map(|s| s.node_chain());
         sections_by_key
-            .entry(key)
+            .entry(key.clone())
             .or_insert_with(|| {
-                section_order.push(key);
+                section_order.push(key.clone());
                 SectionBuild {
                     scope: active.scope.clone(),
                     ref_ids: Vec::new(),

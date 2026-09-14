@@ -2719,8 +2719,11 @@ pub(crate) fn parameter_panel_impl(
 /// pins): `BytesStart::push_attribute` writes such a character straight
 /// through, unescaped, rather than rejecting it — so
 /// `crates/knx-etsproj/src/export/schema21.rs`'s `p.push("Value",
-/// param.raw.clone())` would silently hand a value this validator let
-/// through to a writer that turns it into a not-well-formed `.knxproj`.
+/// param.raw.clone())` — and `crates/knx-etsproj/src/export/schema11.rs`'s
+/// identical line, same call, same shape, a different schema version's
+/// exporter making the identical assumption — would silently hand a value
+/// this validator let through to a writer that turns it into a
+/// not-well-formed `.knxproj`.
 /// T18 slice 5's own addition, applied below to every kind that can carry
 /// free-form text; `Number`/`Restriction` never need it (already
 /// numeric/enum-only) and `None` is never writable at all.
@@ -2734,8 +2737,11 @@ fn contains_disallowed_xml_char(s: &str) -> bool {
 /// The exact `TypeIPAddress` IPv6 encoding the KNX Project Schema
 /// documents: "eight groups of four hexadecimal digits, separated by
 /// colons, e.g. 2001:0db8:85a3:0000:0000:8a2e:0370:7334" (`Project
-/// Schema23 v01.00.00.pdf`, §1.1.3.19 `simpleType Value_t`, p.30/64 —
-/// extracted verbatim via `pdftotext -layout`). Deliberately narrower than
+/// Schema23 v01.00.00.pdf`, §1.1.3.19 `simpleType Value_t`, p.31/64 — the
+/// `TypeFloat` row's citation two arms up is p.30/64; the page breaks
+/// between the two rows of this same table, and the IPv6 sentence lands on
+/// the far side of it — extracted verbatim via `pdftotext -layout`).
+/// Deliberately narrower than
 /// `std::net::Ipv6Addr::from_str`, which also accepts `::`-compressed and
 /// short-group forms this schema text never mentions; accepting those here
 /// would be inventing a rule and presenting it as the schema's, which T18
@@ -2772,6 +2778,9 @@ fn validate_kind_and_bounds(
             view.id
         )),
         "Number" => {
+            if raw.is_empty() {
+                return Err(format!("'{}' requires a non-empty value", view.id));
+            }
             let parsed: i64 = raw.parse().map_err(|_| {
                 format!(
                     "'{}' is Number-kind; '{raw}' does not parse as an integer",
@@ -2893,7 +2902,18 @@ fn validate_kind_and_bounds(
             // value ISO 8859-1 would have allowed, never accept one that
             // overflows the device's declared storage.
             if let Some(size_in_bit) = view.size_in_bit {
-                let max_bytes = size_in_bit / 8;
+                // Rounded up, not floored: a device field declared
+                // `SizeInBit="4"` still has a whole byte of storage — ETS
+                // devices are byte-addressed, and no `.knxprod` under
+                // `OriginalData/` declares a `TypeText` whose `SizeInBit`
+                // is not itself a multiple of 8, so this is untested
+                // against a non-multiple-of-8 real value either way. Floor
+                // division would give `max_bytes = 0` for such a field —
+                // unwritable by construction, which is worse than the
+                // rounding-up direction's only risk (accepting one byte
+                // more than the true storage, for a declaration this
+                // corpus has never actually produced).
+                let max_bytes = (size_in_bit + 7) / 8;
                 let actual = raw.len() as i64;
                 if actual > max_bytes {
                     return Err(format!(

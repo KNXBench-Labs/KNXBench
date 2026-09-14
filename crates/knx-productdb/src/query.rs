@@ -439,6 +439,14 @@ pub struct ParameterView {
     pub access: Option<String>,
     pub min_inclusive: Option<String>,
     pub max_inclusive: Option<String>,
+    /// `parameter_type.size_in_bit`, verbatim. Populated by `Number` and
+    /// `Restriction` (both pre-T18 slice 5) and, since T18 slice 5, by
+    /// `Text` (`<TypeText SizeInBit="…"/>`'s own maximum content length in
+    /// bits — corpus-observed: `<TypeText SizeInBit="240"/>` and
+    /// `SizeInBit="640"` in the MDT `M-0083_A-0317-31-7DC6` program). `None`
+    /// for every other kind, including `Text` packages old enough (or
+    /// exotic enough) to omit the attribute.
+    pub size_in_bit: Option<i64>,
     /// `(value, text)`, only non-empty when `kind == "Restriction"` — the
     /// other seven kinds never have rows in `parameter_type_enum`.
     pub enum_options: Vec<(String, Option<String>)>,
@@ -461,6 +469,7 @@ struct ParameterRawRow {
     access: Option<String>,
     min_inclusive: Option<String>,
     max_inclusive: Option<String>,
+    size_in_bit: Option<i64>,
     parameter_type_id: String,
 }
 
@@ -526,7 +535,7 @@ pub fn parameter_views(
     let mut stmt = conn.prepare(
         "SELECT pr.id, pr.display_order, pr.tag,
                 p.id, p.name, p.text, pr.text,
-                pt.kind, p.access, pt.min_inclusive, pt.max_inclusive, pt.id
+                pt.kind, p.access, pt.min_inclusive, pt.max_inclusive, pt.size_in_bit, pt.id
          FROM parameter_ref pr
          JOIN parameter p ON p.program_id = pr.program_id AND p.id = pr.parameter_id
          JOIN parameter_type pt ON pt.program_id = p.program_id AND pt.id = p.parameter_type_id
@@ -547,7 +556,8 @@ pub fn parameter_views(
                 access: r.get(8)?,
                 min_inclusive: r.get(9)?,
                 max_inclusive: r.get(10)?,
-                parameter_type_id: r.get(11)?,
+                size_in_bit: r.get(11)?,
+                parameter_type_id: r.get(12)?,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
@@ -589,6 +599,7 @@ pub fn parameter_views(
             access: raw.access,
             min_inclusive: raw.min_inclusive,
             max_inclusive: raw.max_inclusive,
+            size_in_bit: raw.size_in_bit,
             enum_options,
         });
     }
@@ -2704,6 +2715,10 @@ mod tests {
         assert_eq!(pr3.kind, "Text");
         assert_eq!(pr3.display_order, Some(20));
         assert!(pr3.enum_options.is_empty());
+        // `<TypeText />` here carries no `SizeInBit` at all — `None`, not a
+        // fabricated `0` (T18 slice 5's own "package genuinely omits it"
+        // case, parallel to `DisplayOrder`'s reasoning two lines up).
+        assert_eq!(pr3.size_in_bit, None);
 
         let pr1 = &views[2];
         assert_eq!(pr1.kind, "Number");
@@ -2711,6 +2726,52 @@ mod tests {
         assert!(pr1.enum_options.is_empty());
         assert_eq!(pr1.min_inclusive.as_deref(), Some("0"));
         assert_eq!(pr1.max_inclusive.as_deref(), Some("255"));
+    }
+
+    /// T18 slice 5: `Float`'s bounds and `Text`'s length cap reach
+    /// `ParameterView` through the same generic columns `Number` already
+    /// used — a second, standalone program so this doesn't have to graft
+    /// onto `PARAMETER_PROGRAM`'s fixed three-row shape the tests above
+    /// depend on.
+    const PARAMETER_PROGRAM_FLOAT_AND_SIZED_TEXT: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-006A">
+<ApplicationPrograms><ApplicationProgram Id="A-3" Name="P" ApplicationNumber="3"
+  ApplicationVersion="22" MaskVersion="MV-0701"><Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Float" Name="temp"><TypeFloat Encoding="DPT 9" minInclusive="-100" maxInclusive="200" /></ParameterType>
+  <ParameterType Id="PT-SizedText" Name="label"><TypeText SizeInBit="240" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-1" Name="Temp" Text="Temp" ParameterType="PT-Float" Access="ReadWrite" Value="0" />
+  <Parameter Id="P-2" Name="Label" Text="Label" ParameterType="PT-SizedText" Access="ReadWrite" Value="hi" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="PR-1" RefId="P-1" DisplayOrder="1" Tag="1" />
+  <ParameterRef Id="PR-2" RefId="P-2" DisplayOrder="2" Tag="2" />
+</ParameterRefs>
+</Static></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+    #[test]
+    fn parameter_views_surfaces_float_bounds_and_text_size() {
+        let dir = tempfile::tempdir().unwrap();
+        let conn = open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+        ingest_program(
+            &conn,
+            "sha-p3",
+            "M-006A/A3.xml",
+            PARAMETER_PROGRAM_FLOAT_AND_SIZED_TEXT.as_bytes(),
+        )
+        .unwrap();
+        let views = parameter_views(&conn, "A-3", None).unwrap();
+
+        let temp = &views[0];
+        assert_eq!(temp.kind, "Float");
+        assert_eq!(temp.min_inclusive.as_deref(), Some("-100"));
+        assert_eq!(temp.max_inclusive.as_deref(), Some("200"));
+
+        let label = &views[1];
+        assert_eq!(label.kind, "Text");
+        assert_eq!(label.size_in_bit, Some(240));
     }
 
     #[test]

@@ -354,6 +354,14 @@ fn migrate_v9_to_v10(conn: &Connection) -> Result<(), ProductDbError> {
 /// `ON CONFLICT DO UPDATE SET name = excluded.name` against a blob's own
 /// unchanged bytes — the rows it already wrote at first ingest come back
 /// unchanged, and only the three new tables actually gain anything.
+///
+/// That argument covers `ingest_master_data`'s own writes and stops there.
+/// The one write this function makes on its own behalf — `insert_unknown` —
+/// is a plain `INSERT` into a table with no unique key, and the collector it
+/// would be handed is file-wide, so replaying it whole would duplicate every
+/// unknown construct `install_package` already recorded for this blob. It is
+/// therefore filtered to the two xpath prefixes this migration's three new
+/// element families live under; see the comment at the call site.
 fn backfill_function_and_space_data(conn: &Connection) -> Result<(), ProductDbError> {
     let mut stmt = conn.prepare("SELECT sha256, source_path, bytes FROM source_file")?;
     let blobs: Vec<(String, String, Vec<u8>)> = stmt
@@ -372,7 +380,30 @@ fn backfill_function_and_space_data(conn: &Connection) -> Result<(), ProductDbEr
         match crate::parse::master::ingest_master_data(conn, &bytes) {
             Ok(outcome) => {
                 conn.execute_batch("RELEASE SAVEPOINT function_space_backfill_blob;")?;
-                insert_unknown(conn, &sha256, &outcome.unknown)?;
+                // Only the unknowns belonging to the three element families
+                // this migration newly parses. `ingest_master_data`'s
+                // collector is file-wide, and every blob reaching this
+                // backfill was already ingested once — by `install_package`,
+                // which called `insert_unknown` on that same file-wide set.
+                // `ingest_unknown` has no unique key and `insert_unknown` is
+                // a plain `INSERT`, so handing it the whole set again would
+                // silently double each `Manufacturer`/`DatapointType`
+                // unknown that install already recorded: a count that
+                // depends on install history rather than on bytes, which is
+                // exactly what ADR-0020's E2 warns a re-derivation must not
+                // touch. `FunctionType`/`FunctionPoint`/`SpaceUsage`
+                // unknowns are the opposite case — the old parser never
+                // looked at those elements, so nothing about them was ever
+                // recorded and there is nothing to double.
+                let newly_parsed: Vec<_> = outcome
+                    .unknown
+                    .into_iter()
+                    .filter(|u| {
+                        u.xpath.starts_with("/KNX/MasterData/FunctionTypes/")
+                            || u.xpath.starts_with("/KNX/MasterData/SpaceUsages/")
+                    })
+                    .collect();
+                insert_unknown(conn, &sha256, &newly_parsed)?;
             }
             Err(error) => {
                 conn.execute_batch(
@@ -2045,5 +2076,104 @@ mod tests {
             )
             .unwrap();
         assert_eq!(space_usage_translation, "Büro");
+    }
+
+    /// A `knx_master.xml` whose `Manufacturer` and `FunctionType` each carry
+    /// one attribute no `*_ATTRS` list names, so `ingest_master_data`'s
+    /// file-wide `UnknownCollector` produces one of each.
+    const MASTER_WITH_UNKNOWN_ATTRS: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Siemens" KnxAdminMode="true" />
+    </Manufacturers>
+    <FunctionTypes>
+      <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified" Obsolete="false">
+        <FunctionPoint Id="FT-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+      </FunctionType>
+    </FunctionTypes>
+    <SpaceUsages>
+      <SpaceUsage Id="SU-1" Number="1" Text="Office" />
+    </SpaceUsages>
+  </MasterData>
+</KNX>"#;
+
+    /// The backfill replays the *whole* `ingest_master_data`, whose unknown
+    /// collector is file-wide, but the blob it replays was already ingested
+    /// once — `install_package` called `insert_unknown` on that same
+    /// file-wide set at install time, and `ingest_unknown` has no unique key
+    /// to collide on. Recording the whole set a second time would double
+    /// every unknown the *old* parser had already seen, turning a count into
+    /// a function of how many times a database happened to be migrated.
+    /// Only the two element families this migration newly parses may
+    /// contribute, because only those were never recorded before.
+    #[test]
+    fn the_backfill_records_only_the_unknowns_of_the_families_it_newly_parses() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let bytes = MASTER_WITH_UNKNOWN_ATTRS.as_bytes();
+        let sha = crate::sha256_hex(bytes);
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..9] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 9i64).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    sha,
+                    "knx_master.xml",
+                    None::<String>,
+                    bytes.len() as i64,
+                    bytes
+                ],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO source_parse_evidence (sha256) VALUES (?1)",
+                [&sha],
+            )
+            .unwrap();
+            // What the v9 install of this same blob recorded: the
+            // `Manufacturer` unknown, and nothing about `FunctionType`,
+            // whose element the old parser never entered.
+            conn.execute(
+                "INSERT INTO ingest_unknown
+                     (source_sha256, program_id, xpath, kind, name, occurrences, sample)
+                 VALUES (?1, NULL, '/KNX/MasterData/Manufacturers/Manufacturer',
+                         'Attribute', 'KnxAdminMode', 1, 'true')",
+                [&sha],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+
+        let manufacturer_rows: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM ingest_unknown WHERE name = 'KnxAdminMode'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            manufacturer_rows, 1,
+            "the backfill must not re-record an unknown the original ingest already recorded"
+        );
+
+        let function_type_rows: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM ingest_unknown WHERE name = 'Obsolete'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            function_type_rows, 1,
+            "an unknown on an element only this migration parses has never been recorded before, \
+             so it must be recorded now"
+        );
     }
 }

@@ -519,6 +519,7 @@ fn migrating_v1_preserves_existing_rows_and_blobs() {
     conn.execute_batch(
         "DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
          DROP TABLE package; DROP TABLE dynamic_node;
+         DROP TABLE module_def_argument;
          DROP INDEX translation_lookup;
          DROP TABLE translation;
          CREATE TABLE translation (
@@ -572,6 +573,7 @@ fn a_failed_v1_to_v2_migration_rolls_back_its_ddl_and_version() {
     conn.execute_batch(
         "DROP TABLE package_conflict; DROP TABLE package_member; DROP TABLE source_parse_evidence;
          DROP TABLE package; DROP TABLE dynamic_node;
+         DROP TABLE module_def_argument;
          DROP INDEX translation_lookup;
          DROP TABLE translation;
          CREATE TABLE translation (
@@ -851,6 +853,15 @@ fn a_v6_corpus_database_gets_its_linkable_back_from_its_own_blobs() {
             stmt.execute([source_sha256]).unwrap();
         }
         drop(stmt);
+        // v10's own DDL has to go with the version number: this test
+        // rewinds `user_version` without rewinding the schema, which was
+        // free while v7-v9 added no structure at all and stopped being
+        // free the moment v10 added a table and a column.
+        conn.execute_batch(
+            "DROP TABLE module_def_argument;
+             ALTER TABLE dynamic_node DROP COLUMN value;",
+        )
+        .unwrap();
         conn.pragma_update(None, "user_version", 6i64).unwrap();
     }
 

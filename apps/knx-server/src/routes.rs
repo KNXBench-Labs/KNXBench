@@ -380,10 +380,11 @@ struct NewProjectBody {
 /// Unknown values are refused, deliberately — unlike both of those
 /// mappers, which fall back to `ThreeLevel` (the importer at least records
 /// a `MapProblem` while doing so). Neither has a choice: they are reading
-/// a document that already exists. This route is creating one, where the
-/// style is effectively permanent once group addresses exist, and a
-/// silently wrong one is discovered far too late. Data integrity over
-/// convenience.
+/// a document that already exists. These two routes are creating or
+/// changing one, where a silently wrong style is discovered far too late —
+/// `POST /api/project/group-address-style` can restyle a project after the
+/// fact (T4), but a value nobody asked for is still a value nobody
+/// notices. Data integrity over convenience.
 fn parse_group_address_style(value: &str) -> Result<knx_core::GroupAddressStyle, ApiError> {
     match value {
         "Free" => Ok(knx_core::GroupAddressStyle::Free),

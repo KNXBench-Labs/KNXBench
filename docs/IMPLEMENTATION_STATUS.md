@@ -4998,9 +4998,14 @@ New tests: `crates/knx-core/src/address.rs` —
 `group_address_largest_possible_value_fits_every_style`,
 `group_address_smallest_possible_value_fits_every_style`,
 `group_address_fits_style_holds_for_every_possible_raw_value` (all three
-styles, boundary and exhaustive). `crates/knx-core/src/command.rs` —
+styles, boundary and exhaustive; renamed to
+`group_address_format_parse_round_trips_for_every_possible_raw_value` by
+fix round 1 below, which is the name in the tree today).
+`crates/knx-core/src/command.rs` —
 `set_group_address_style_do_undo_redo_round_trips_through_the_command_stack`,
-`set_group_address_style_checks_every_installation_not_just_the_first`,
+`set_group_address_style_checks_every_installation_not_just_the_first`
+(likewise renamed below, to
+`set_group_address_style_accepts_every_installations_addresses`),
 `group_address_does_not_fit_style_error_names_the_offender`.
 `crates/knx-store/src/project.rs` —
 `a_non_default_group_address_style_round_trips`,
@@ -5114,9 +5119,47 @@ observe a disagreement between the two. Eight items:
    `apps/knx-web/src/messages/en.ts`'s comment above the Project node's keys, pointing
    at `ProjectDiffPanel` — a component with nothing to do with this panel
    — was replaced with an accurate description (display only, no restyle
-   control here). `docs/IMPLEMENTATION_STATUS.md`'s own dated entries were
+   control here). `docs/IMPLEMENTATION_STATUS.md`'s own **dated** entries were
    normalised from a mix of `##`/`###` to all `##` per the standing ruling
-   that the next toucher does it; this round was the next toucher.
+   that the next toucher does it; this round was the next toucher. Per-task
+   headings nested under a dated entry, this one included, stay `####` —
+   the ruling was about the dated entries, not about every heading in the
+   file.
+
+#### T4 pre-merge review follow-ups (coordinator, 2026-09-14)
+
+The mandatory `goal.md` §10 whole-branch review returned **MERGE** with two
+Important findings, both about *permanence* rather than about the guard, and
+both fixed here by the coordinator rather than in a second fix round — five
+one-line edits and one new limitations section.
+
+1. Four places still told the reader a style can never change, which stopped
+   being true on this branch: `apps/knx-web/src/messages/en.ts` and `de.ts`'s
+   `newProject.styleHint` (**user-facing**, the worst of the four),
+   `apps/knx-web/src/NewProjectDialog.tsx`'s header comment, and
+   `apps/knx-server/src/routes.rs`'s doc comment on
+   `parse_group_address_style` — which now sits directly above the code that
+   refutes it, since the restyle route shares that helper. All four rewritten
+   to say the style is a rendering choice that can be changed later, while
+   keeping the reason it is still asked at creation rather than defaulted.
+2. `docs/KNOWN_LIMITATIONS.md` §91, new: a running bus session keeps rendering
+   and parsing group addresses in the style its project had at
+   `POST /api/bus/start` time, because `GroupAddressContext` is a snapshot and
+   nothing refreshes it. Verified by reading both paths that no address is ever
+   mis-parsed — the three styles have different field counts, so a cross-style
+   string is refused rather than reinterpreted. Left as a documented limitation
+   rather than fixed, because refreshing a live session from the mutation path
+   inverts the lock order the snapshot exists to avoid.
+   `apps/knx-server/src/bus.rs` points at the section from the accessor.
+3. `crates/knx-projection/src/lib.rs` said "three crates, one string table" for
+   the style's wire spelling; there is a fourth copy at
+   `crates/knx-etsproj/src/export/schema11.rs`'s `group_address_style_str`.
+   Now says four and names it.
+4. This file's own T4 entry listed two test names that fix round 1 renamed
+   away, so a reader grepping for them found nothing. Both now carry their
+   current names. The heading-normalisation claim was also narrowed: the
+   standing ruling covers *dated* entries, which are `##`; per-task headings
+   nested under them stay `####`.
 
 Gates for fix round 1, all judged by exit status and all 0: `cargo fmt
 --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`,

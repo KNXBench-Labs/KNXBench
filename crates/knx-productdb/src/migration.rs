@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 6;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 8;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -279,7 +279,98 @@ fn migrations() -> Vec<Migration> {
         migrate_v3_to_v4,
         migrate_v4_to_v5,
         migrate_v5_to_v6,
+        migrate_v6_to_v7,
+        migrate_v7_to_v8,
     ]
+}
+
+/// v7 -> v8. The first step in this chain that adds no structure at all: it
+/// re-derives `application_program.linkable` for the rows a pre-2026-09-13
+/// ingest left `NULL` (KNOWN_LIMITATIONS.md §87), reading
+/// `ApplicationProgram/@Linkable` back out of the `source_file` blob each row
+/// came from.
+///
+/// [ADR-0020](../../../docs/adr/0020-migrations-may-rederive-from-stored-bytes.md)
+/// is the decision that permits it, and the line it draws is why this is not
+/// the same request `migrate_v4_to_v5` and `migrate_v5_to_v6` refused:
+/// `Linkable` is a pure function of bytes this database already holds, while
+/// their counters count what one `INSERT OR IGNORE` changed at one moment of
+/// one database's history and cannot be recovered by replaying anything.
+///
+/// `user_version` is the entire mechanism. There is no column to guard on
+/// with `column_exists`, so what makes this run exactly once per database is
+/// the version bump `open_and_migrate` performs once the step returns.
+fn migrate_v7_to_v8(conn: &Connection) -> Result<(), ProductDbError> {
+    backfill_linkable(conn)
+}
+
+/// Scoped by the defect rather than by the database: only blobs that actually
+/// produced an `application_program` row with `linkable IS NULL` are read, so
+/// a database with none — every one ingested after 2026-09-13, and every
+/// fresh one — pays a single query and touches no blob. That filter is also
+/// why this backfill needs no `classify` call, unlike `backfill_dynamic_nodes`
+/// and `backfill_shared_translations` above: a blob that produced an
+/// `application_program` row is application-program content by construction,
+/// so asking its bytes what kind they are would be asking a question already
+/// answered.
+///
+/// Per-blob `SAVEPOINT`, and a failure recorded rather than an aborted
+/// migration, for the reason those two give in full: a database that refuses
+/// to open is worse than one with a gap.
+fn backfill_linkable(conn: &Connection) -> Result<(), ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT sha256, source_path, bytes FROM source_file
+         WHERE sha256 IN (
+             SELECT source_sha256 FROM application_program WHERE linkable IS NULL
+         )",
+    )?;
+    let blobs: Vec<(String, String, Vec<u8>)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    drop(stmt);
+
+    for (sha256, source_path, bytes) in blobs {
+        conn.execute_batch("SAVEPOINT linkable_backfill_blob;")?;
+        match crate::parse::program::backfill_linkable(conn, &sha256, &source_path, &bytes) {
+            Ok(_) => {
+                conn.execute_batch("RELEASE SAVEPOINT linkable_backfill_blob;")?;
+            }
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT linkable_backfill_blob;
+                     RELEASE SAVEPOINT linkable_backfill_blob;",
+                )?;
+                record_backfill_failure(
+                    conn,
+                    &sha256,
+                    &source_path,
+                    "LinkableBackfillError",
+                    "backfill_linkable",
+                    &error,
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// v6 -> v7. `package_conflict` gains `occurrence`, `first_winner`'s own
+/// per-parse-call repeat count (KNOWN_LIMITATIONS.md §86): `1` for the
+/// cross-file conflicts this table has always stored, greater than `1`
+/// for a same-file duplicate id, now that `first_winner` can tell the two
+/// apart. Defaults to `1` for a `package_conflict` row written before this
+/// column existed — the same honest convention `migrate_v5_to_v6` and
+/// `migrate_v4_to_v5` use, and correct here besides: every conflict
+/// `first_winner` could record before this task closed §86 *was* a
+/// cross-file one, so `1` is not a guess for those rows, it is what
+/// `first_winner` would have written itself.
+fn migrate_v6_to_v7(conn: &Connection) -> Result<(), ProductDbError> {
+    if !column_exists(conn, "package_conflict", "occurrence")? {
+        conn.execute_batch(
+            "ALTER TABLE package_conflict ADD COLUMN occurrence INTEGER NOT NULL DEFAULT 1;",
+        )?;
+    }
+    Ok(())
 }
 
 /// v5 -> v6. One more `package` counter, same shape and same reasoning as
@@ -965,5 +1056,326 @@ mod tests {
             )
             .unwrap();
         assert_eq!(recorded, 1);
+    }
+
+    /// One `ApplicationProgram`, spelled the way a `.knxprod` spells it —
+    /// `Linkable="false"`, not `"0"` — which is the spelling KNOWN_LIMITATIONS
+    /// §87's `bool_flag` could not read. `{LINKABLE}` is substituted per test.
+    const PROGRAM_TEMPLATE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/20">
+  <ManufacturerData>
+    <Manufacturer RefId="M-0083">
+      <ApplicationPrograms>
+        <ApplicationProgram Id="M-0083_A-0318-31-DB39" Name="Switch Actuator"
+                            ApplicationNumber="792" ApplicationVersion="31"
+                            MaskVersion="MV-0701"{LINKABLE}>
+          <Static />
+        </ApplicationProgram>
+      </ApplicationPrograms>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+
+    const PROGRAM_ID: &str = "M-0083_A-0318-31-DB39";
+
+    /// The xpath the ingest path computes for that element's attributes, and
+    /// therefore the key the `ingest_unknown` row a pre-fix ingest wrote is
+    /// under. Spelled out rather than derived, so that a change to either
+    /// side of the pairing has to come here and be looked at.
+    const LINKABLE_XPATH: &str =
+        "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram";
+
+    fn program_xml(linkable: &str) -> String {
+        PROGRAM_TEMPLATE.replace("{LINKABLE}", linkable)
+    }
+
+    /// Builds the thing this migration exists for: a database at
+    /// `user_version` 6 holding a program blob, the program's row, and
+    /// `linkable` `NULL` — plus, when `stale_report` is set, the
+    /// `ingest_unknown` row the old `bool_flag` wrote when it met a spelling
+    /// it could not read. Returns the blob's sha256.
+    ///
+    /// The rollback is done by ingesting with the *current* parser and then
+    /// undoing exactly the two effects the 2026-09-13 fix has — the stored
+    /// value and the retired report — rather than by hand-writing an
+    /// `application_program` row, so the fixture cannot drift away from the
+    /// table's real shape.
+    fn v6_database_with_a_null_linkable(
+        path: &Path,
+        xml: &str,
+        stale_report: Option<&str>,
+    ) -> String {
+        let bytes = xml.as_bytes();
+        let sha = crate::sha256_hex(bytes);
+        let conn = Connection::open(path).unwrap();
+        for migration in &migrations()[0..6] {
+            migration(&conn).unwrap();
+        }
+        conn.execute(
+            "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![sha, "M-0083/A.xml", "M-0083", bytes.len() as i64, bytes],
+        )
+        .unwrap();
+        crate::parse::program::ingest_program(&conn, &sha, "M-0083/A.xml", bytes).unwrap();
+        conn.execute("UPDATE application_program SET linkable = NULL", [])
+            .unwrap();
+        if let Some(sample) = stale_report {
+            conn.execute(
+                "INSERT INTO ingest_unknown
+                 (source_sha256, program_id, xpath, kind, name, occurrences, sample)
+                 VALUES (?1, NULL, ?2, 'Attribute', 'Linkable', 1, ?3)",
+                params![sha, LINKABLE_XPATH, sample],
+            )
+            .unwrap();
+        }
+        conn.pragma_update(None, "user_version", 6i64).unwrap();
+        sha
+    }
+
+    fn stored_linkable(conn: &Connection) -> Option<i64> {
+        conn.query_row(
+            "SELECT linkable FROM application_program WHERE id = ?1",
+            [PROGRAM_ID],
+            |r| r.get(0),
+        )
+        .unwrap()
+    }
+
+    fn stale_linkable_reports(conn: &Connection) -> i64 {
+        conn.query_row(
+            "SELECT count(*) FROM ingest_unknown
+             WHERE kind = 'Attribute' AND name = 'Linkable'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn a_v6_database_backfills_the_linkable_its_blob_already_held() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        v6_database_with_a_null_linkable(&path, &program_xml(" Linkable=\"false\""), Some("false"));
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            CURRENT_PRODUCTDB_VERSION
+        );
+        assert_eq!(
+            stored_linkable(&conn),
+            Some(0),
+            "`Linkable=\"false\"` is stored as 0, re-read from the blob alone"
+        );
+        assert_eq!(
+            stale_linkable_reports(&conn),
+            0,
+            "the report that said the attribute was not understood is retired, \
+             because it now is"
+        );
+    }
+
+    #[test]
+    fn a_v6_database_backfills_a_true_linkable_as_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        v6_database_with_a_null_linkable(&path, &program_xml(" Linkable=\"true\""), Some("true"));
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(stored_linkable(&conn), Some(1));
+        assert_eq!(stale_linkable_reports(&conn), 0);
+    }
+
+    #[test]
+    fn a_program_whose_file_never_stated_linkable_stays_null() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        v6_database_with_a_null_linkable(&path, &program_xml(""), None);
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            stored_linkable(&conn),
+            None,
+            "NULL means the file did not state it, and the backfill must not \
+             invent a value it never read"
+        );
+        assert_eq!(
+            conn.query_row("SELECT count(*) FROM ingest_unknown", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            0,
+            "and it must not report anything either — an absent attribute is \
+             nothing to report"
+        );
+    }
+
+    #[test]
+    fn a_linkable_an_ingest_already_determined_is_not_overwritten() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        v6_database_with_a_null_linkable(&path, &program_xml(" Linkable=\"false\""), Some("false"));
+        {
+            // The blob says `false`; the row says `true`. Only an ingest can
+            // have put a non-NULL value there, and ADR-0020 rule 2 says a
+            // migration does not argue with it.
+            let conn = Connection::open(&path).unwrap();
+            conn.execute("UPDATE application_program SET linkable = 1", [])
+                .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(stored_linkable(&conn), Some(1));
+        assert_eq!(
+            stale_linkable_reports(&conn),
+            1,
+            "and the report stays too, since nothing was filled"
+        );
+    }
+
+    #[test]
+    fn a_blob_does_not_backfill_a_row_that_came_from_a_different_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let sha = v6_database_with_a_null_linkable(
+            &path,
+            &program_xml(" Linkable=\"false\""),
+            Some("false"),
+        );
+        {
+            // The id-conflict shape of ADR-0011: this program id's row was won
+            // by some *other* file, so this blob must not write into it — even
+            // though the blob is still read, because a second row of its own
+            // (which it did win) is NULL and pulls it into the selection.
+            let conn = Connection::open(&path).unwrap();
+            conn.execute(
+                "INSERT INTO application_program (id, manufacturer_id, source_sha256)
+                 VALUES ('M-0083_A-OTHER', 'M-0083', ?1)",
+                [&sha],
+            )
+            .unwrap();
+            conn.execute(
+                "UPDATE application_program SET source_sha256 = 'deadbeef' WHERE id = ?1",
+                [PROGRAM_ID],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            stored_linkable(&conn),
+            None,
+            "the winning row belongs to another file's bytes"
+        );
+        assert_eq!(stale_linkable_reports(&conn), 1);
+    }
+
+    #[test]
+    fn a_v6_blob_that_fails_to_parse_records_itself_and_does_not_stop_the_migration() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let xml = program_xml(" Linkable=\"false\"");
+        let good_sha = v6_database_with_a_null_linkable(&path, &xml, Some("false"));
+        // Truncated past the last end tag, which `quick-xml` rejects as "tag
+        // not closed" rather than accepting as `Eof` — the same shape the
+        // translation backfill's equivalent test uses. Given an
+        // `application_program` row of its own so the v8 filter selects it.
+        let bad = &xml.as_bytes()[..xml.len() - 20];
+        let bad_sha = crate::sha256_hex(bad);
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![bad_sha, "M-BAD/A.xml", "M-BAD", bad.len() as i64, bad],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO application_program (id, manufacturer_id, source_sha256)
+                 VALUES ('M-BAD_A-1', 'M-BAD', ?1)",
+                [&bad_sha],
+            )
+            .unwrap();
+            conn.pragma_update(None, "user_version", 6i64).unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            CURRENT_PRODUCTDB_VERSION,
+            "one blob's parse failure must not abort the migration"
+        );
+        assert_eq!(
+            stored_linkable(&conn),
+            Some(0),
+            "the good blob must still be backfilled"
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT count(*) FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND kind = 'LinkableBackfillError'",
+                [&bad_sha],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            1
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT count(*) FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND kind = 'Attribute' AND name = 'Linkable'",
+                [&good_sha],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            0,
+            "and the good blob's own stale report is still retired"
+        );
+    }
+
+    #[test]
+    fn a_database_with_nothing_to_backfill_reads_no_blob_at_all() {
+        // The v8 step is scoped by `linkable IS NULL`, so a database whose
+        // programs all have a value — every one ingested after 2026-09-13 —
+        // must not be dragged through its own blobs. Proven by giving it a
+        // blob that cannot be parsed at all: if v8 read it, the migration
+        // would record a `LinkableBackfillError`.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let xml = program_xml(" Linkable=\"false\"");
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..6] {
+                migration(&conn).unwrap();
+            }
+            let bytes = xml.as_bytes();
+            let sha = crate::sha256_hex(bytes);
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![sha, "M-0083/A.xml", "M-0083", bytes.len() as i64, bytes],
+            )
+            .unwrap();
+            crate::parse::program::ingest_program(&conn, &sha, "M-0083/A.xml", bytes).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES ('feedface', 'M-BAD/A.xml', 'M-BAD', 7, ?1)",
+                [b"<KNX><".as_slice()],
+            )
+            .unwrap();
+            conn.pragma_update(None, "user_version", 6i64).unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(stored_linkable(&conn), Some(0));
+        assert_eq!(
+            conn.query_row("SELECT count(*) FROM ingest_unknown", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            0,
+            "no blob was read, so no blob could fail"
+        );
     }
 }

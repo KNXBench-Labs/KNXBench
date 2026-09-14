@@ -8,14 +8,15 @@
 
 use std::collections::HashMap;
 use std::io::{Cursor, Write};
+use std::rc::Rc;
 
 use rusqlite::Connection;
 use zip::write::SimpleFileOptions;
 
 use knx_productdb::dynamic::{
     evaluate, load_program_trees, ActiveRef, ControlKind, Diagnostic, DynamicNode, DynamicTree,
-    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, ValueMap, MAX_MODULE_EXPANSIONS,
-    MAX_MODULE_NESTING_DEPTH,
+    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, ValueMap, MAX_MODULE_ACTIVATIONS,
+    MAX_MODULE_EXPANSIONS, MAX_MODULE_NESTING_DEPTH,
 };
 
 fn db() -> (tempfile::TempDir, Connection) {
@@ -1071,12 +1072,12 @@ fn a_module_that_names_its_own_enclosing_module_def_is_a_cycle() {
     assert_eq!(
         activation.diagnostics,
         vec![ScopedDiagnostic {
-            scope: Some(ModuleScope {
+            scope: Some(Rc::new(ModuleScope {
                 module_node: 0,
                 module_id: Some("M-A".to_string()),
                 module_def_id: "MD-1".to_string(),
                 parent: None,
-            }),
+            })),
             diagnostic: Diagnostic::ModuleCycleDetected {
                 node_id: 0,
                 ref_id: Some("MD-1".to_string()),
@@ -1119,17 +1120,17 @@ fn a_two_step_cycle_through_a_second_module_def_is_detected() {
     assert_eq!(
         activation.diagnostics,
         vec![ScopedDiagnostic {
-            scope: Some(ModuleScope {
+            scope: Some(Rc::new(ModuleScope {
                 module_node: 0,
                 module_id: Some("M-B".to_string()),
                 module_def_id: "MD-2".to_string(),
-                parent: Some(Box::new(ModuleScope {
+                parent: Some(Rc::new(ModuleScope {
                     module_node: 0,
                     module_id: Some("M-A".to_string()),
                     module_def_id: "MD-1".to_string(),
                     parent: None,
                 })),
-            }),
+            })),
             diagnostic: Diagnostic::ModuleCycleDetected {
                 node_id: 0,
                 ref_id: Some("MD-1".to_string()),
@@ -1180,7 +1181,7 @@ fn a_module_inside_a_module_def_naming_a_different_module_def_is_expanded_two_le
         module_node: 0,
         module_id: Some("M-B".to_string()),
         module_def_id: "MD-2".to_string(),
-        parent: Some(Box::new(ModuleScope {
+        parent: Some(Rc::new(ModuleScope {
             module_node: 0,
             module_id: Some("M-A".to_string()),
             module_def_id: "MD-1".to_string(),
@@ -1191,7 +1192,7 @@ fn a_module_inside_a_module_def_naming_a_different_module_def_is_expanded_two_le
     assert_eq!(
         activation.parameter_refs,
         vec![ActiveRef {
-            scope: Some(inner_scope),
+            scope: Some(Rc::new(inner_scope)),
             ref_id: "LEAF".to_string(),
         }]
     );
@@ -1385,6 +1386,126 @@ fn a_wide_non_cyclic_fan_out_trips_the_expansion_budget_before_full_expansion() 
     );
 }
 
+/// Variant of `build_fanout_chain`: every level's `ModuleDef` gets
+/// `refs_per_level` extra `ParameterRefRef` roots (distinct ids, reused
+/// verbatim at every level — harmless, since the dedup key is
+/// `(chain, id)` and every expansion's chain is unique by construction)
+/// alongside its `fanout` fan-out `Module` children. Sized so total
+/// expansions stay far under `MAX_MODULE_EXPANSIONS` while total
+/// activations exceed `MAX_MODULE_ACTIVATIONS` — the shape blocking
+/// finding 1's residual (fix round 2, goal-completion task 11) needs: a
+/// few wide expansions, not many narrow ones.
+fn build_fanout_chain_with_refs(
+    module_levels: usize,
+    fanout: usize,
+    refs_per_level: usize,
+) -> (DynamicTree, HashMap<String, DynamicTree>) {
+    assert!(module_levels >= 1);
+    let program = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-ROOT".into()),
+        ref_id: Some("F-1".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let mut modules = HashMap::new();
+    for level in 1..=module_levels {
+        let this_id = format!("F-{level}");
+        let next_id = format!("F-{}", level + 1);
+        let mut nodes: Vec<DynamicNode> = (0..fanout)
+            .map(|i| DynamicNode {
+                element_id: Some(format!("M-{level}-{i}")),
+                ref_id: Some(next_id.clone()),
+                ..nd(i as i64, None, "Module")
+            })
+            .collect();
+        for r in 0..refs_per_level {
+            nodes.push(DynamicNode {
+                ref_id: Some(format!("P-{r}")),
+                ..nd((fanout + r) as i64, None, "ParameterRefRef")
+            });
+        }
+        modules.insert(this_id, DynamicTree::from_nodes(nodes));
+    }
+    let leaf_id = format!("F-{}", module_levels + 1);
+    modules.insert(
+        leaf_id,
+        DynamicTree::from_nodes(vec![DynamicNode {
+            ref_id: Some("LEAF".into()),
+            ..nd(0, None, "ParameterRefRef")
+        }]),
+    );
+    (program, modules)
+}
+
+/// Blocking finding 1's residual (goal-completion task 11, fix round 2):
+/// round 1's `MAX_MODULE_EXPANSIONS` bounds how many times a `Module`
+/// expands, not how many refs one expansion is allowed to activate. `F-L`
+/// is expanded `fanout^(L-1)` times (the program's own `Module` expands
+/// `F-1` exactly once; each of *that* expansion's `fanout` children
+/// expands `F-2`; and so on), so with `fanout=4, module_levels=6` the
+/// seven `ModuleDef`s `F-1..F-7` (six fan-out levels plus the shared leaf)
+/// are expanded `1+4+16+64+256+1024+4096 = 5,461` times total — under 6%
+/// of `MAX_MODULE_EXPANSIONS`. Levels `F-1..F-6` each also carry 800
+/// extra `ParameterRefRef` children, for `(1+4+16+64+256+1024) * 800 =
+/// 1,092,000` attempted activations (the leaf's own single `LEAF` ref
+/// adds one more; irrelevant to crossing the budget) — past
+/// `MAX_MODULE_ACTIVATIONS`. A file shape that passes the expansion
+/// budget with room to spare must still trip the activation budget.
+#[test]
+fn a_wide_module_def_trips_the_activation_budget_without_tripping_the_expansion_budget() {
+    const FANOUT: usize = 4;
+    const MODULE_LEVELS: usize = 6;
+    const REFS_PER_LEVEL: usize = 800;
+    let (program, modules) = build_fanout_chain_with_refs(MODULE_LEVELS, FANOUT, REFS_PER_LEVEL);
+    let trees = ProgramTrees::from_parts(program, modules);
+
+    let start = std::time::Instant::now();
+    let activation = evaluate(&trees, &values(&[]).into());
+    let elapsed = start.elapsed();
+    assert!(
+        elapsed < std::time::Duration::from_secs(20),
+        "evaluate must refuse the excess and return, not grind through it: took {elapsed:?}"
+    );
+
+    // F-1..F-{MODULE_LEVELS + 1} (fan-out levels plus the shared leaf),
+    // expanded fanout^0, fanout^1, ... times respectively — see this
+    // test's own doc comment.
+    let total_expansions: usize = (0..=MODULE_LEVELS).map(|l| FANOUT.pow(l as u32)).sum();
+    assert!(
+        total_expansions < MAX_MODULE_EXPANSIONS,
+        "this shape must stay comfortably under the expansion budget: {total_expansions} \
+         expansions vs a budget of {MAX_MODULE_EXPANSIONS}"
+    );
+    assert!(
+        !activation
+            .diagnostics
+            .iter()
+            .any(|d| matches!(d.diagnostic, Diagnostic::ModuleExpansionBudgetExhausted { budget, .. } if budget == MAX_MODULE_EXPANSIONS)),
+        "the expansion budget must never trip in this shape"
+    );
+
+    assert_eq!(
+        activation.parameter_refs.len(),
+        MAX_MODULE_ACTIVATIONS,
+        "activation must stop recording refs exactly at the budget"
+    );
+    let budget_diagnostics: Vec<_> = activation
+        .diagnostics
+        .iter()
+        .filter(|d| {
+            matches!(
+                d.diagnostic,
+                Diagnostic::ModuleExpansionBudgetExhausted { budget, .. }
+                    if budget == MAX_MODULE_ACTIVATIONS
+            )
+        })
+        .collect();
+    assert_eq!(
+        budget_diagnostics.len(),
+        1,
+        "exactly one activation-budget diagnostic, not one per refused ref: {budget_diagnostics:?}"
+    );
+}
+
 /// D14: a diagnostic raised *inside* a module's expansion (here:
 /// `NoBranchMatched`, chosen because it exercises `evaluate_comparable_choose`)
 /// comes back carrying the instantiating `Module`'s scope, not `None` —
@@ -1413,12 +1534,12 @@ fn a_diagnostic_raised_inside_a_module_carries_that_modules_scope() {
     assert_eq!(
         activation.diagnostics,
         vec![ScopedDiagnostic {
-            scope: Some(ModuleScope {
+            scope: Some(Rc::new(ModuleScope {
                 module_node: 0,
                 module_id: Some("M-A".to_string()),
                 module_def_id: "MD-1".to_string(),
                 parent: None,
-            }),
+            })),
             diagnostic: Diagnostic::NoBranchMatched {
                 choose_node: 0,
                 param_ref: Some("P".to_string()),
@@ -1488,12 +1609,12 @@ fn within_one_module_scope_a_ref_reachable_twice_is_deduplicated_once() {
     assert_eq!(
         activation.parameter_refs,
         vec![ActiveRef {
-            scope: Some(ModuleScope {
+            scope: Some(Rc::new(ModuleScope {
                 module_node: 0,
                 module_id: Some("M-A".to_string()),
                 module_def_id: "MD-1".to_string(),
                 parent: None,
-            }),
+            })),
             ref_id: "SHARED".to_string(),
         }]
     );
@@ -1536,21 +1657,21 @@ fn two_modules_instantiating_one_module_def_produce_two_scoped_activations() {
         activation.com_object_refs,
         vec![
             ActiveRef {
-                scope: Some(ModuleScope {
+                scope: Some(Rc::new(ModuleScope {
                     module_node: 1,
                     module_id: Some("M-A".to_string()),
                     module_def_id: "MD-1".to_string(),
                     parent: None,
-                }),
+                })),
                 ref_id: "O-1_R-1".to_string(),
             },
             ActiveRef {
-                scope: Some(ModuleScope {
+                scope: Some(Rc::new(ModuleScope {
                     module_node: 2,
                     module_id: Some("M-B".to_string()),
                     module_def_id: "MD-1".to_string(),
                     parent: None,
-                }),
+                })),
                 ref_id: "O-1_R-1".to_string(),
             },
         ]
@@ -1624,21 +1745,21 @@ fn a_scoped_value_wins_for_its_own_instantiation_and_the_other_sees_the_program_
         activation.parameter_refs,
         vec![
             ActiveRef {
-                scope: Some(ModuleScope {
+                scope: Some(Rc::new(ModuleScope {
                     module_node: 1,
                     module_id: Some("M-A".to_string()),
                     module_def_id: "MD-1".to_string(),
                     parent: None,
-                }),
+                })),
                 ref_id: "HIGH".to_string(),
             },
             ActiveRef {
-                scope: Some(ModuleScope {
+                scope: Some(Rc::new(ModuleScope {
                     module_node: 2,
                     module_id: Some("M-B".to_string()),
                     module_def_id: "MD-1".to_string(),
                     parent: None,
-                }),
+                })),
                 ref_id: "LOW".to_string(),
             },
         ]
@@ -1900,12 +2021,12 @@ fn module_without_id_is_reported_once_and_its_subtree_still_evaluates_from_the_u
     assert_eq!(
         activation.parameter_refs,
         vec![ActiveRef {
-            scope: Some(ModuleScope {
+            scope: Some(Rc::new(ModuleScope {
                 module_node: 0,
                 module_id: None,
                 module_def_id: "MD-1".to_string(),
                 parent: None,
-            }),
+            })),
             ref_id: "HIT".to_string(),
         }]
     );

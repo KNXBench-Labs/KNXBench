@@ -54,14 +54,34 @@ pub struct UnknownConstruct {
     pub sample: Option<String>,
 }
 
-/// An id that appeared in two files with different content hashes. The
-/// first ingest's rows are kept; this records that the second existed.
+/// An id that lost against an already-present row of the same `table`. The
+/// first ingest's row is kept; this records that a second one existed.
+///
+/// `occurrence` is `first_winner`'s own per-parse-call count of how many
+/// times this exact `(table, id)` pair has been handed to it so far,
+/// including this one, so it is always `>= 1`. `1` means what it always
+/// meant before KNOWN_LIMITATIONS.md §86 was closed: `kept_sha256 !=
+/// other_sha256`, a collision between this file and a different,
+/// previously-ingested one. Anything greater means the file currently
+/// being parsed declared this id more than once *by itself*, and
+/// `occurrence` is the only field that still says two different elements
+/// were competing rather than one being re-read.
+///
+/// The two readings are not exclusive, and the hashes do not classify them.
+/// `occurrence > 1` proves a same-file duplicate; `kept_sha256 !=
+/// other_sha256` proves a cross-file one; both hold at once when a file
+/// declares an id twice that another file had already ingested — the kept
+/// row is never overwritten, so the hashes still differ while `occurrence`
+/// climbs. `kept_sha256 == other_sha256` is therefore usual for a same-file
+/// duplicate and guaranteed only when the id was not already present from
+/// another file. Read `occurrence`, not the hashes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IdConflict {
     pub table: String,
     pub id: String,
     pub kept_sha256: String,
     pub other_sha256: String,
+    pub occurrence: u32,
 }
 
 /// How many `translation` rows an ingest pass actually wrote, by scope.
@@ -149,14 +169,25 @@ pub fn insert_unknown(
 
 /// Records an id collision as an `ingest_unknown` row with
 /// `kind = 'IdConflict'`, so both hashes and the winning row stay on record
-/// without a table of its own (spec §5).
+/// without a table of its own (spec §5). `occurrences` is repurposed to
+/// carry `IdConflict::occurrence` — `1` for every conflict recorded before
+/// KNOWN_LIMITATIONS.md §86 was closed, since that was the only value
+/// `first_winner` ever produced; a same-file collision now lands here as
+/// whatever repeat count it was, so this row alone says which kind it was
+/// without a schema change to `ingest_unknown`.
 pub fn insert_conflicts(conn: &Connection, conflicts: &[IdConflict]) -> Result<(), ProductDbError> {
     let mut stmt = conn.prepare(
         "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
-         VALUES (?1, NULL, ?2, 'IdConflict', ?3, 1, ?4)",
+         VALUES (?1, NULL, ?2, 'IdConflict', ?3, ?4, ?5)",
     )?;
     for c in conflicts {
-        stmt.execute(params![c.kept_sha256, c.table, c.id, c.other_sha256])?;
+        stmt.execute(params![
+            c.kept_sha256,
+            c.table,
+            c.id,
+            c.occurrence,
+            c.other_sha256
+        ])?;
     }
     Ok(())
 }

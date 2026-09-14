@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-14 (T18 slice 5 fix round: product-database schema v9 — the second backfill ADR-0020 licenses, re-deriving `parameter_type`'s `Float`/`Text` bounds out of the same blobs `linkable` (schema v8) was re-derived from; see the end of this document)
+Last updated: 2026-09-14 (T13: product-database schema v10 — `function_type`, `function_point` and `space_usage`, the three tables the master-scope `FT-*`/`FP-*`/`SU-*` translations had been waiting for a join partner to exist; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -5766,3 +5766,47 @@ path this project has not built yet: it must not treat its own read
 time-out as proof a target is absent. What discriminated the one address
 that did answer `ManagementSession` from the seven that did not is
 unconfirmed by this pass and not fixed here.
+
+
+## 2026-09-14 — The `FT-*`/`FP-*`/`SU-*` translations finally have something to join against (T13, product-database schema v10, branch `d10-language-data`)
+
+D10 slice 1 left a residue it named precisely: two of the five sampled
+packages' `knx_master.xml` carry `Master`-scope translations whose `RefId`s
+point at function types, function points and space usages, and
+`parse/master.rs` parsed none of those three elements. The translations were
+ingested, stored, and joined against nothing — text with no row to attach to.
+
+Schema v10 adds the three missing tables — `function_type`, `function_point`
+and `space_usage` — and `ingest_master_data` fills them from the same
+streaming walk that already filled `datapoint_type`. `query.rs` gains
+`function_types`/`function_type`, `function_points` and
+`space_usages`/`space_usage`, each overlaying `text` through the existing
+`master_text_overlay`, so every `RefId` family this project's corpus has ever
+produced a `Master`-scope translation for now has a reader. Backend only: no
+HTTP route, no frontend caller, the same scope discipline slice 1 kept.
+
+Existing databases are not left behind. `migrate_v9_to_v10` creates the three
+tables and then re-parses every stored `knx_master.xml` blob out of
+`source_file` — the third backfill [ADR-0020](adr/0020-migrations-may-rederive-from-stored-bytes.md)
+licenses, after `linkable` (v8) and `parameter_type`'s bounds (v9). The
+re-derivation is a function of the bytes and nothing else, which is what
+ADR-0020's rule E2 demands, and one write needed explicit fencing to keep it
+that way: `ingest_master_data`'s unknown-construct collector is file-wide,
+`ingest_unknown` has no unique key, and `install_package` had already recorded
+that same file-wide set at install time. Replaying it whole would have doubled
+every `Manufacturer`/`DatapointType` unknown on each migration — a count that
+measures install history rather than content. The backfill therefore records
+only unknowns under `/KNX/MasterData/FunctionTypes/` and
+`/KNX/MasterData/SpaceUsages/`, the two prefixes covering the three element
+families this migration is the first to parse, and a regression test pins that
+boundary from both sides: an unknown install already recorded stays at one row,
+an unknown on an element only this migration parses gets its first.
+
+A note on the version number, since the branch's own commits say otherwise:
+this migration was written as `migrate_v8_to_v9` while T18 slice 5 was
+independently writing a different `migrate_v8_to_v9` on another branch. T18
+merged first, so v9 already means "`parameter_type` bounds re-derived" in every
+database that has run it. Renumbering T13 to v10 was the only option that
+keeps a schema version meaning one thing forever; the alternative — two
+migrations sharing a number — would have made `user_version` ambiguous, which
+is the one thing a migration chain may never be.

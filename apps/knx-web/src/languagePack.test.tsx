@@ -121,6 +121,89 @@ describe("parseLanguagePack", () => {
     }
   });
 
+  // KNOWN_LIMITATIONS.md §67's fix: every rejection now carries a
+  // structured `reason` alongside the English `error` prose, so a caller
+  // (`SettingsPanel.tsx`) can translate it instead of rendering `error`
+  // verbatim. One assertion per validation rule, checked here at the
+  // `parseLanguagePack` level; §67 itself (translated *inside* a
+  // translated sentence, in German) is `SettingsPanel.test.tsx`'s job.
+  it("every rejection carries a structured reason, not just English prose", () => {
+    const notObject = parseLanguagePack("not an object");
+    if (!notObject.ok) expect(notObject.reason).toEqual({ kind: "notObject" });
+
+    const noFormatVersion = parseLanguagePack({ tag: "nl-NL", name: "X", messages: {} });
+    if (!noFormatVersion.ok) expect(noFormatVersion.reason).toEqual({ kind: "formatVersionMissing" });
+
+    const noTag = parseLanguagePack({ formatVersion: 1, name: "X", messages: {} });
+    if (!noTag.ok) expect(noTag.reason).toEqual({ kind: "tagMissing" });
+
+    const badTag = parseLanguagePack({
+      formatVersion: 1,
+      tag: "xx-not-a-language",
+      name: "X",
+      messages: {},
+    });
+    if (!badTag.ok) expect(badTag.reason).toEqual({ kind: "tagMalformed", tag: "xx-not-a-language" });
+
+    const noName = parseLanguagePack({ formatVersion: 1, tag: "nl-NL", messages: {} });
+    if (!noName.ok) expect(noName.reason).toEqual({ kind: "nameMissing" });
+
+    const noMessages = parseLanguagePack({ formatVersion: 1, tag: "nl-NL", name: "X" });
+    if (!noMessages.ok) expect(noMessages.reason).toEqual({ kind: "messagesMissing" });
+
+    const badMessageValue = parseLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "X",
+      messages: { "toolbar.save": 42 },
+    });
+    if (!badMessageValue.ok) {
+      expect(badMessageValue.reason).toEqual({
+        kind: "messageValueNotString",
+        key: "toolbar.save",
+        valueType: "number",
+      });
+    }
+
+    const badEnglishName = parseLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "X",
+      messages: {},
+      englishName: 42,
+    });
+    if (!badEnglishName.ok) expect(badEnglishName.reason).toEqual({ kind: "englishNameNotString" });
+
+    const badBasedOn = parseLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "X",
+      messages: {},
+      basedOn: 42,
+    });
+    if (!badBasedOn.ok) expect(badBasedOn.reason).toEqual({ kind: "basedOnNotString" });
+
+    const badPackVersion = parseLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "X",
+      messages: {},
+      packVersion: 42,
+    });
+    if (!badPackVersion.ok) expect(badPackVersion.reason).toEqual({ kind: "packVersionNotString" });
+
+    const badPluralCategories = parseLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "X",
+      messages: {},
+      pluralCategories: [1, 2],
+    });
+    if (!badPluralCategories.ok) {
+      expect(badPluralCategories.reason).toEqual({ kind: "pluralCategoriesInvalid" });
+    }
+  });
+
   it("rejects a non-string message value", () => {
     const result = parseLanguagePack({
       formatVersion: 1,
@@ -276,7 +359,10 @@ describe("a persist() failure is rolled back, not smuggled in later", () => {
 
     const result = importLanguagePack(dutchPack());
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/storage/i);
+    if (!result.ok) {
+      expect(result.error).toMatch(/storage/i);
+      expect(result.reason.kind).toBe("storageFailure");
+    }
     expect(listLanguagePacks()).toEqual([]);
     expect(getLanguagePack("nl-NL")).toBeUndefined();
 

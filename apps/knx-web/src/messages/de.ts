@@ -471,6 +471,24 @@ export const messages: Record<MessageKey, string> = {
   "languagePack.importReport.shadowedByBuiltIn":
     "Das Tag dieses Pakets (\"{tag}\") entspricht einer eingebauten Sprache und käme nie zum Einsatz — \"tag\" ändern, bevor es aktiviert oder weitergegeben wird.",
 
+  "languagePack.rejection.notObject": "Ein Sprachpaket muss ein JSON-Objekt sein.",
+  "languagePack.rejection.formatVersionMissing": "\"formatVersion\" ist erforderlich und muss eine Zahl sein.",
+  "languagePack.rejection.tagMissing": "\"tag\" ist erforderlich und muss eine nicht leere Zeichenkette sein.",
+  "languagePack.rejection.tagMalformed":
+    "\"tag\" (\"{tag}\") ist kein wohlgeformtes BCP-47-Tag, z. B. \"nl-NL\", \"tlh\" (Klingonisch), \"bar\" (Bairisch) oder \"art-x-sindarin\" (ein privates Tag für alles nicht Registrierte).",
+  "languagePack.rejection.nameMissing": "\"name\" ist erforderlich und muss eine nicht leere Zeichenkette sein.",
+  "languagePack.rejection.messagesMissing":
+    "\"messages\" ist erforderlich und muss ein Objekt sein, das Schlüssel auf Zeichenketten abbildet.",
+  "languagePack.rejection.messageValueNotString":
+    "\"messages.{key}\" muss eine Zeichenkette sein, ist aber {valueType}.",
+  "languagePack.rejection.englishNameNotString": "\"englishName\" muss, falls vorhanden, eine Zeichenkette sein.",
+  "languagePack.rejection.basedOnNotString": "\"basedOn\" muss, falls vorhanden, eine Zeichenkette sein.",
+  "languagePack.rejection.packVersionNotString": "\"packVersion\" muss, falls vorhanden, eine Zeichenkette sein.",
+  "languagePack.rejection.pluralCategoriesInvalid":
+    "\"pluralCategories\" muss, falls vorhanden, ein Array aus Zeichenketten sein.",
+  "languagePack.rejection.storageFailure":
+    "Die Änderung konnte nicht gespeichert werden: der Speicher des Browsers hat den Schreibvorgang abgelehnt ({detail}).",
+
   "projectDiff.compareButton": "Vergleichen mit…",
   "projectDiff.compareFilterName": "KNXBench-Projekt",
   "projectDiff.title": "Vergleichsergebnis",

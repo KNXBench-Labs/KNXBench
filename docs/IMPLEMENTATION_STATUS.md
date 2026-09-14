@@ -4927,3 +4927,108 @@ Gates for fix round 1, all judged by exit status and all 0: `cargo fmt --all
 --workspace --no-fail-fast` (1272 passed, 0 failed, 3 ignored; 1275 declared,
 identical to `main`), `xtask check-layering`, `xtask check-headers`, `cargo deny
 check`, `npx tsc --noEmit`, and `npx vitest run` (465 tests in 42 files).
+
+#### T4: group address style is visible and, cautiously, changeable (2026-09-14)
+
+Closes [KNOWN_LIMITATIONS.md §84](KNOWN_LIMITATIONS.md#84-a-projects-group-address-style-can-be-chosen-and-afterwards-never-seen--resolved-2026-09-14-t4).
+Five pieces, in the layer order the brief asked for:
+
+1. `knx-store::project::style_from_str` (`load_project`'s deserializer for
+   the `project_info.group_address_style` column) no longer falls back to
+   `ThreeLevel` on an unrecognised string. It returns
+   `StoreError::UnknownGroupAddressStyle(String)`, matching
+   `POST /api/project/new`'s existing `400` for the same input rather than
+   contradicting it. `Project::new`'s own in-memory default is untouched —
+   only a *persisted, unreadable* value now errors instead of lying.
+2. `knx_core::Command::SetGroupAddressStyle { style }` restyles the whole
+   project. `apply` walks every installation's every group address first
+   and refuses the entire change — no partial mutation, no rollback
+   needed — naming the offending address's id and raw value
+   (`CommandError::GroupAddressDoesNotFitStyle`) if even one does not fit.
+   Self-inverting like every other command, so undo/redo need no special
+   case. `knx-store::command_sync` gained a
+   `SetGroupAddressStyle` arm calling the existing
+   `set_group_address_style` column write directly (it has no device or
+   group-address row to key off, unlike every other arm).
+   `knx-server::domain::set_group_address_style_impl` and
+   `POST /api/project/group-address-style` wire it through, `400` on
+   refusal (there is no conflict state to resolve by saving first, unlike
+   `POST /api/project/new`'s `409`).
+3. `knx_projection::ProjectTree` gained `group_address_style: String`
+   (`"Free"` / `"TwoLevel"` / `"ThreeLevel"` — the enum stays in
+   `knx-core`, which deliberately has no `serde`/`ts-rs` dependency; same
+   pattern as `BuildingPartType` → `building_kind_str`). Regenerated
+   `apps/knx-web/src/bindings/ProjectTree.ts` via
+   `TS_RS_EXPORT_DIR=../../apps/knx-web/src/bindings cargo test -p
+   knx-projection`, mirroring CI's own binding-sync step.
+4. `apps/knx-web`: a new `"project"` `Selection` kind, a selectable
+   "Project" root node in `ProjectExplorer.tsx`, and a read-only
+   `ProjectInspector` panel in `Inspector.tsx` showing
+   `tree.group_address_style`. No restyle control anywhere in the UI —
+   display only, per the dispatcher's ruling that a change this
+   consequential does not qualify as "trivially additive". The `"project"`
+   variant carries a structural `id: number` (always `0`, meaningless)
+   purely so every existing `Selection`-generic call site
+   (`StructureWorkspace.tsx`'s `selected(kind, id)`, `App.tsx`'s React
+   `key`) keeps type-checking without being touched.
+5. Proved, not asserted: `TwoLevel` (5+11 bits) and `ThreeLevel` (5+3+8
+   bits) both partition the full 16 bits of a `u16` with no remainder, so
+   `GroupAddress::fits_style` is `true` for all 65536 possible raw values
+   under every style — confirmed by exhaustive test, not a sample. The
+   "does not fit" branch in `Command::SetGroupAddressStyle` and the whole
+   `CommandError::GroupAddressDoesNotFitStyle` variant are therefore
+   currently unreachable from any real address. Built anyway and
+   documented as such: the check is what stops a future change to the bit
+   layout from silently making one style narrower than another, and a
+   restyle command without a fits-check would be a data-integrity hole
+   waiting for that future change to open it.
+
+`CURRENT_SCHEMA_VERSION` stays at 6. No column changed shape or was added;
+only `load_project`'s handling of an already-invalid value in an
+already-existing column changed, from silent substitution to a typed
+error. Nothing that round-tripped correctly before behaves differently now.
+
+New tests: `crates/knx-core/src/address.rs` —
+`group_address_largest_possible_value_fits_every_style`,
+`group_address_smallest_possible_value_fits_every_style`,
+`group_address_fits_style_holds_for_every_possible_raw_value` (all three
+styles, boundary and exhaustive). `crates/knx-core/src/command.rs` —
+`set_group_address_style_do_undo_redo_round_trips_through_the_command_stack`,
+`set_group_address_style_checks_every_installation_not_just_the_first`,
+`group_address_does_not_fit_style_error_names_the_offender`.
+`crates/knx-store/src/project.rs` —
+`a_non_default_group_address_style_round_trips`,
+`an_unrecognized_persisted_style_is_refused_not_defaulted`,
+`set_group_address_style_overwrites_the_one_column`.
+`crates/knx-store/src/command_sync.rs` —
+`set_group_address_style_syncs_the_one_column`.
+`crates/knx-projection/src/lib.rs` —
+`project_tree_carries_the_projects_group_address_style`.
+`apps/knx-server/tests/http_edit_routes.rs` —
+`restyling_a_project_with_a_group_address_round_trips_and_undoes`,
+`restyling_to_an_unknown_style_is_a_400`.
+`apps/knx-web/src/Inspector.test.tsx` — `Inspector — project node` (two
+cases: default `ThreeLevel`, and a non-default `Free`).
+
+Thirteen pre-existing `apps/knx-web` fixture literals typed as
+`ProjectTree`, one each in thirteen `*.test.tsx`/`*.test.ts` files, needed
+a `group_address_style: "ThreeLevel"` field added once the type gained
+the field — mechanical, no behavioural change to what any of those tests
+covered (excluded: `CommandPalette.test.tsx`'s `tree`, cast `as unknown as
+ProjectTree` and so exempt from the structural check).
+
+`apps/knx-desktop` needed no changes: it depends on `knx-server` directly
+and reuses its HTTP routes rather than duplicating command wiring.
+`knx-cli`'s own pre-existing `ThreeLevel`-hardcoding (a different, already
+documented limitation) is untouched — out of scope for this task.
+
+Gates, all judged by exit status and all 0: `cargo fmt --all --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, `cargo test
+--workspace --no-fail-fast` (1298 passed, 0 failed, 3 ignored — up from
+`main`'s 1285/0/3 by exactly the 13 tests listed above, confirmed by diff,
+nothing else moved), `xtask check-layering`, `xtask check-headers`, `cargo
+deny check`, `npx tsc --noEmit`, and `npx vitest run` (467 tests in 42
+files, up from 465 by exactly the 2 new project-node cases). The
+`golden_reference_products.rs` corpus tests found their local, gitignored
+`OriginalData/` corpus present and ran full assertions (`grep -c 'skip:
+OriginalData/ corpus not present' <log>` on the run's own log is 0).

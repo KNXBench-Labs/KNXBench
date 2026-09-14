@@ -15,9 +15,8 @@
 //! an enumeration code to its name, does not enforce a subtype's narrowed
 //! range, and does not reject a bit a subtype table calls "reserved". The
 //! formats it implements (`N8`, `N2`, `Z8`, `B8`, `B16`, `B24`, `B32`,
-//! `U4U4`)
-//! are defined at the *format* level in DPT-AS and are implemented at that
-//! level; every raw field reaches the caller intact. See
+//! `U4U4`) are defined at the *format* level in DPT-AS and are implemented
+//! at that level; every raw field reaches the caller intact. See
 //! `docs/KNOWN_LIMITATIONS.md` §61 for the reasoning and the Standard's
 //! own self-contradiction (22.100) that makes the alternative worse.
 //!
@@ -589,7 +588,9 @@ fn require_bytes<const N: usize>(
 /// "cut to the maximum supported length" for a string that is *too long*
 /// for the receiver; that is a length limit belonging to whatever layer
 /// owns the APDU budget, not a rule about a missing terminator, and this
-/// codec imposes no maximum of its own.)
+/// codec imposes no maximum of its own. That layer is `knx_net::cemi`:
+/// `encode_l_data` refuses an over-length NPDU with `CemiError::
+/// NpduTooLong` rather than emitting a frame whose `L` octet wrapped.)
 fn require_var_string_body(payload: &GroupValue, dpt: DptRef) -> Result<&[u8], DptCodecError> {
     let wrong_length = |got: u32| DptCodecError::WrongLength {
         dpt,
@@ -2325,14 +2326,21 @@ fn encode_n8(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 //   PDT; 21.002 DPT_Device_Control defines b0 UserStopped, b1 OwnIA, b2
 //   VerifyMode and calls "b3…b7" "reserved, set 0". Either way it is
 //   eight bits in one octet. Further subtypes live in §4.4
-//   (21.100-21.106), §6.4 (21.601), §8.2 (21.1000-21.1002, 21.1010) and
-//   §9.6 (21.1200), with their own field splits.
+//   (21.100-21.106), §6.4 (21.601), §8.2 (21.1000-21.1002, 21.1010),
+//   §9.6 (21.1200) and §9.7 (21.1201, whose encoding row reserves
+//   b7-b3 while its Format line still reads `B8`), with their own
+//   field splits.
 // * Main type 22 — 2 octets. §4.5's subclauses "Data Type "16-Bit Set"":
 //   "2 octets: B16", PDT_BITSET16 (alt: PDT_GENERIC_02) in both §4.5.1
 //   (22.100) and §4.5.2 (22.101); §8.3 "Datatype B16" repeats the format
 //   for the system subtypes (22.1000, 22.1010), and 22.1000 DPT_Media
 //   reads b1 TP1, b2 PL110, b4 RF, b5 KNX IP with b0, b3 and "b6 … b15"
-//   reserved.
+//   reserved — with §4.5.1, §4.5.2 and §8.3 each reserving a different
+//   bit set and therefore no mask common to every main-22 subtype to
+//   enforce at the format level, unlike main type 26 below, whose one
+//   subtype makes format and subtype the same table and so does get its
+//   reserved bit (7) enforced, while 22.101's own reserved bit (15,
+//   §4.5.2 "r") is accepted, not rejected.
 // * Main type 27 — 4 octets. §3.26 "Datatype B32", §3.26.1
 //   DPT_CombinedInfoOnOff: "4 octets: B32", encoding row all `B`, "Range:
 //   All fields: {0, 1}", PDT_GENERIC_04. Its data-field tables put
@@ -5363,9 +5371,10 @@ mod tests {
     #[test]
     fn a_main_type_above_the_implemented_range_is_unsupported_not_a_panic() {
         // DPT-AS §2's overview table jumps from main type 31 to the
-        // 200-series LTE types; 46 is not a main type at all (it is the
-        // *count* of main types in the ETS master data, see
-        // `docs/KNOWN_LIMITATIONS.md` §90). Whatever the number, an
+        // 200-and-above LTE/system types, which run as high as 284
+        // (255, 265-274 and 276-284 all exist); 46 is not a main type at
+        // all (it is the *count* of main types in the ETS master data,
+        // see `docs/KNOWN_LIMITATIONS.md` §90). Whatever the number, an
         // unimplemented main type refuses rather than panics.
         for main in [32u16, 46, 200, 251, u16::MAX] {
             let d = dpt(main, Some(1));

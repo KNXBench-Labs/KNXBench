@@ -2311,10 +2311,12 @@ by main types 1-18: a reserved bit set to anything but zero is
 one ruling that spans seven of them and four that are local.** The
 spanning ruling first, because it is the one most likely to surprise:
 **for a main type whose format is a bare enumeration or a bare bit set,
-this codec validates the format and not the subtype's own table.** That
-covers main type 20 (`N8`, DPT-AS §3.21), 21 (`Z8`/`B8`, §3.22), 22
-(`B16`, §4.5/§8.3), 23 (`N2`, §3.23/§4.6), 25 (`U4U4`, §8.4), 27 (`B32`,
-§3.26) and 30 (`B24`, §8.5). Concretely: an enumeration code a subtype
+this codec validates the format and not the subtype's own table.**
+([A] — a judgment call about which table governs a bare-enumeration/
+bit-set format; no clause dictates it.) That covers main type 20 (`N8`,
+DPT-AS §3.21), 21 (`Z8`/`B8`, §3.22), 22 (`B16`, §4.5/§8.3), 23 (`N2`,
+§3.23/§4.6), 25 (`U4U4`, §8.4), 27 (`B32`, §3.26) and 30 (`B24`, §8.5).
+Concretely: an enumeration code a subtype
 calls "reserved" still decodes to its raw code, a bit a subtype's table
 calls "reserved, set 0" still survives into the decoded value, and a field
 a subtype narrows (25.1000's `[0 … 3]` inside the format's `[0 … 15]`) is
@@ -2335,17 +2337,19 @@ main types 273 and 274 only, no main type 20 subtype at all.)
 20.003 say "not used; reserved", 20.002 says "reserved, shall not be
 used", 22.100 says "reserved" with "default 0", 21.001 says "reserved, set
 0" — three different strengths of prohibition that cannot be collapsed
-into one check honestly. (3) In one case the Standard contradicts itself
-outright: 22.100 `DPT_StatusDHWC`'s encoding row (§4.5.1) reads
+into one check honestly ([D], the four quoted phrases). (3) In one
+case the Standard contradicts itself outright: 22.100 `DPT_StatusDHWC`'s
+encoding row (§4.5.1) reads
 `0 0 0 0 0 0 0 B BBBBBBBB`, defining bit 8 as a `B`, while the data-field
 table printed directly beneath the same diagram lists bits "8 to 15" as
 "reserved", "default 0" — read verbatim off page 126 of the source PDF
 (`pdftotext -layout "03_07_02 Datapoint Types v02.02.01 AS.pdf"`, which
 preserves both the encoding row and the table beneath it), not from a
-Markdown extraction. §4.5.2's own Encoding paragraph
-points the same way without settling the bit: "depending on the usage of
+Markdown extraction ([D], this whole contradiction). §4.5.2's own
+Encoding paragraph points the same way without settling the bit:
+"depending on the usage of
 this DPT in a given Datapoint, some bit-fields may be unused and set to
-'0' by the sender and will be ignored by the receiver." Nothing is
+'0' by the sender and will be ignored by the receiver." ([D]) Nothing is
 discarded by this ruling — every bit and every code reaches the caller in
 `DptValue::Enum` / `DptValue::BitSet` / `DptValue::DoubleNibble` — so a
 caller that *does* know its subtype can apply the table itself. The
@@ -2355,28 +2359,36 @@ commissioning design's `DPT_ErrorClass_System` (20.011) enumeration
 layer; it was checked against §3.21 during this slice and matches.
 
 The four local rulings. (a) **`6.020`'s mode field is enforced, unlike a
-subtype table**, because §3.7's Range row states `f = {001b,010b,100b}`
-for the *format* itself — so a mode field of `000b`, `011b`, `101b`,
+subtype table** ([A]), because §3.7's Range row states `f = {001b,010b,100b}`
+for the *format* itself ([D]) — so a mode field of `000b`, `011b`, `101b`,
 `110b` or `111b` is `InvalidData`. Its five status bits keep the
 Standard's own inverted polarity ("0 = set, 1 = clear") rather than being
 normalised, and print as binary digits for that reason. (b) **Main types
 24 and 28 (`A[n]`, NUL-terminated, DPT-AS §3.24 and §3.27) reject a
 payload without a terminating `00h`, and a payload with an interior
-`00h`.** Neither section says what a receiver should do with such a
+`00h`.** ([A]) Neither section says what a receiver should do with such a
 payload; every tolerant reading is a guess about a non-conforming sender's
 intent (cutting at the first `00h` assumes the remainder is padding;
 appending a terminator assumes one was lost), so the codec refuses rather
 than invents. The same rule makes an embedded `U+0000` unencodable, which
 is a real gap for main type 28: §3.27's Range row includes `U+000000`, but
-the format cannot transmit it unambiguously. (c) **Main type 29's printed
+the format cannot transmit it unambiguously. This codec still imposes no
+maximum encoded length of its own (§3.24/§3.27's own "cut to the maximum
+supported length" rule for an over-long *incoming* string is a receiver
+concern, not this codec's), but the layer that owns the APDU budget now
+exists and enforces it: `knx_net::cemi::encode_l_data` refuses an NPDU
+whose length does not fit the one-octet `L` field with `CemiError::
+NpduTooLong` rather than emitting a frame whose `L` octet silently
+wrapped (fixed 2026-09-14, T5 fix round 1, finding I1). (c) **Main type
+29's printed
 range is a typo, and this codec follows the datapoint-type rows instead of
-the format block.** §3.28.1's Range row reads "SignedValue = [9 223 372
-036 854 775 808 to 9 223 372 036 854 775 807]" — the lower bound has lost
+the format block.** ([A]) §3.28.1's Range row reads "SignedValue = [9 223 372
+036 854 775 808 to 9 223 372 036 854 775 807]" ([D]) — the lower bound has lost
 its minus sign, and as printed the range is empty and cannot fit 64 bits
 anyway. The 29.010/29.011/29.012 rows in the same clause print
 "-9 223 372 036 854 775 808 Wh to 9 223 372 036 854 775 807 Wh", exactly
 `i64`'s domain, and that is what is implemented. (d) **Main type 26
-carries the wire scene number undecorated**, like main types 17 and 18 —
+carries the wire scene number undecorated** ([A]), like main types 17 and 18 —
 see the scene-number paragraph below; §3.25 NOTE 16 is this type's own
 note rather than a borrowed one, and the answer does not change.
 

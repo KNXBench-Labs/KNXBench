@@ -5156,8 +5156,47 @@ it. Item 11 — the exclusion guard — is structural: `1.1.220` cannot be
 authorised, cannot be read, cannot be written, and cannot appear in a plan
 or in a range that spans it, and each refusal is asserted to be *reported*.
 
+**Fix round 1 (review on `opus`, 2 blocking findings and 13 others, all
+addressed).** Two things in the list above were published wrong and are now
+right:
+
+- *The `0300h` allocation payload was mis-encoded.* MP §3.31.3.4's *Load Event
+  Relative Allocation* table gives subtype `0Ah` a **two**-octet *"number of
+  octets"* field followed by six fill octets; `relative_allocation` wrote four
+  octets of `usize`. A request for 2048 octets went out as size `0000h` with
+  `0800h` leaking into the first two fill octets, which by the clause's own
+  next sentence sends the Load State Machine to `Error`. It now writes two
+  big-endian octets and refuses anything above `FFFFh`
+  (`AllocationSubtypeError::PartTooLarge`) instead of clamping; the `0Bh` path
+  refuses above `FFFF FFFFh` for the same reason. Subtype `0Bh`'s **fill**
+  octet, previously always `00h` and invisible in the API, is now
+  `AllocationMode::Fill(u8)` and lands at its own octet, separate from Mode.
+- *Four `[D]` markers cited this project's own prose and have been demoted.*
+  `[D]` means the Standard states it and the text is quoted from its PDF. Two
+  in `authorisation.rs` (the access-level inference, now `[D, corpus]` PROF
+  §4.2; the no-key policy, now named as this project's ruling with only MP
+  §3.5.1's `key != FFFFFFFFh` left under `[D]`), one in `load_control.rs` (the
+  allocation layout, now MP §3.31.3.4 quoted properly, with Mode and fill as
+  the two octets they are), and one paraphrased AL §3.5.3 sentence in
+  `commissioning.rs` now quoted verbatim. No marker was promoted. The word
+  "spec" no longer stands for both the Standard and the design document in
+  `load_control.rs`.
+
+Also in this round: the unverified-write path waits for the T_ACK through
+`send_acknowledged()`, so TL's acknowledge time-out and `MAX_REP_COUNT = 3`
+now apply to the normal download path instead of being skipped by a bare
+`send()`; a chunk is read back through the same service that carried it
+(`service_for(address, length)`), so a region straddling `FFFFh` is no longer
+verified against the wrong address space; `write_property` takes the required
+`WriteScope` as a parameter rather than reading it out of the authorisation it
+checks against; `require_subtype` is called from `allocation_payload` instead
+of only from its own tests; the partial-download trace uses CP §3.5.3's
+*"Partial Download of the 'application program 2'"* numbering (01–14), records
+the access-key step, and disconnects at 14 rather than at a number the clause
+never uses; and the step counter no longer overflows at 250 loadable parts.
+
 **Re-measured, not remembered.** `cargo test --workspace --no-fail-fast` →
-**1503 passed, 0 failed, 3 ignored**; `grep -c 'skip: OriginalData'` over
+**1508 passed, 0 failed, 3 ignored**; `grep -c 'skip: OriginalData'` over
 that log → **0**. The six Rust gates — `cargo fmt --all --check`,
 `cargo clippy --workspace --all-targets -- -D warnings`, that workspace test
 run, `cargo run -p xtask -- check-layering`,

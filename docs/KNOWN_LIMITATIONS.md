@@ -4079,28 +4079,72 @@ its consumers carry an explicit "unverified" qualifier so nobody can read
 `Signature` as a pass/fail result. This entry exists so that whichever
 happens first does not happen by accident.
 
-## 86. Duplicate identifiers inside one file are dropped with no record at all
+## 86. Duplicate identifiers inside one file are dropped with no record at all — closed for `hardware.rs`/`catalog.rs`, 2026-09-14; `application_program` and `datapoint_type` residue below
 
-**Limitation.** `first_winner` — one copy, in
+**Original limitation (as filed).** `first_winner` — one copy, in
 `crates/knx-productdb/src/parse/mod.rs`, called by `parse/hardware.rs` and
 `parse/catalog.rs` since the two byte-identical copies were merged on
 2026-09-13, plus the inline equivalent for `application_program` in
-`crates/knx-productdb/src/parse/program.rs` — records an `IdConflict` only
-when an id it has already seen belongs to a *different* file — its only test
-is `kept != source_sha256`, comparing the existing row's stored
-`source_sha256` against the `source_sha256` the current parse call was handed
-(`crates/knx-productdb/src/parse/mod.rs`, `first_winner`) **[V]**. Because
-one `ingest_hardware`/`ingest_catalog` call always passes the same
-`source_sha256` for every element in that file, two `Hardware` (or
+`crates/knx-productdb/src/parse/program.rs` — recorded an `IdConflict` only
+when an id it had already seen belonged to a *different* file — its only
+test was `kept != source_sha256`, comparing the existing row's stored
+`source_sha256` against the `source_sha256` the current parse call was
+handed. Because one `ingest_hardware`/`ingest_catalog` call always passes
+the same `source_sha256` for every element in that file, two `Hardware` (or
 `Product`, `Hardware2Program`, `CatalogSection`, `CatalogItem`,
 `ApplicationProgram`) elements sharing an `@Id` **inside the same file**
-always compare equal and never reach the `IdConflict` branch: the second
-element is dropped, first-writer-wins, with nothing recorded anywhere.
-Pinned by `two_hardware_elements_sharing_an_id_in_one_file_conflict_silently`
-and `two_catalog_items_sharing_an_id_in_one_file_conflict_silently`.
+always compared equal and never reached the `IdConflict` branch: the second
+element was dropped, first-writer-wins, with nothing recorded anywhere.
 
-A second, unrelated gap in the same family has no conflict tracking *at
-all*, not even the cross-file kind: `knx_master.xml`'s `DatapointType`/
+**Fixed for `first_winner`'s two real callers.** `first_winner`
+(`crates/knx-productdb/src/parse/mod.rs`) now takes an extra
+`seen_this_call: &mut HashMap<(String, String), u32>` parameter, freshly
+created once per `ingest_hardware`/`ingest_catalog` call and threaded
+through every `first_winner` invocation made while parsing that one file.
+Each call increments the count for `(table, id)` and reports it back as
+`occurrence`. A conflict is now recorded when *either* `kept !=
+source_sha256` (the original cross-file check, unchanged) *or* `occurrence
+> 1` (new: this exact id has already been seen earlier in this same parse
+call). `source_sha256` itself, and its meaning as file provenance
+elsewhere (idempotent re-parse detection, translation backfill), is
+untouched — this is additive, not a reinterpretation of an existing column.
+
+The new key costs one field, not a schema rewrite: `IdConflict`
+(`crates/knx-productdb/src/report.rs`) gained `pub occurrence: u32` (`1`
+means "first sighting this call, so any conflict is the old cross-file
+kind"; `>1` means "the Nth same-file sighting"). It is persisted by
+reusing the existing `ingest_unknown.occurrences` column (previously
+always written as the literal `1` for `IdConflict` rows) and, for
+installed-package reports, a new `package_conflict.occurrence` column
+(schema v6 → v7, `migrate_v6_to_v7`, `DEFAULT 1` for rows written before
+this change). First-writer-wins behaviour is unchanged: the second element
+in a same-file collision is still not stored as a row, but the fact that
+it existed and lost is now visible in the report, satisfying CLAUDE.md's
+"never silently discard information" for this path.
+Was pinned, now proven fixed, by
+`two_hardware_elements_sharing_an_id_in_one_file_record_the_collision`
+(`parse/hardware.rs`) and
+`two_catalog_items_sharing_an_id_in_one_file_record_the_collision`
+(`parse/catalog.rs`) — both are the exact same synthetic same-file-duplicate
+input as their now-retired `..._conflict_silently` predecessors, with the
+assertion flipped from "conflicts is empty" to "one conflict, occurrence
+2"; run against the pre-fix code both would fail (and did, verbatim,
+before this fix, since they are literally the old pinning tests renamed
+and re-asserted).
+
+**Residue: `application_program` still has the exact same blind spot.**
+`crates/knx-productdb/src/parse/program.rs`'s `handle_start_or_empty` has
+its own hand-rolled, not-shared, first-writer-wins logic for
+`ApplicationProgram` elements — it never called `first_winner` and so was
+out of scope for this fix. It still compares only `source_sha256` and
+still cannot see two `ApplicationProgram` elements sharing an `@Id` inside
+one file; it was touched only to keep compiling against the now-mandatory
+`IdConflict.occurrence` field (hardcoded to `1`, with a comment explaining
+why). Unifying it with `first_winner` (and giving it the same occurrence
+counter) is unfinished work, not a regression introduced here.
+
+**Residue: `datapoint_type` still has no conflict tracking at all**, not
+even the cross-file kind, unchanged by this fix: `knx_master.xml`'s `DatapointType`/
 `DatapointSubtype` elements are written with a bare `INSERT OR IGNORE`
 (`crates/knx-productdb/src/parse/master.rs`) into `datapoint_type`, whose
 primary key is `id` alone with no `source_sha256` column to compare
@@ -4121,8 +4165,9 @@ this measurement, not part of this commit **[V]**.
   vendor package, one test-fixture package and two near-duplicate
   fixtures — and no two files declare overlapping manufacturer/hardware
   ids, so this measures "never observed here", not "cannot happen"; the
-  same-file case above is demonstrated by a synthetic test instead because
-  no real file in this corpus happens to contain one.
+  same-file case (now closed for `hardware`/`catalog_item`/etc., see
+  above) is demonstrated by a synthetic test instead because no real file
+  in this corpus happens to contain one either.
 - `datapoint_type` (the untracked path): **routine, not rare.** Every
   package's `knx_master.xml` restates the *entire* KNX-standard DPT
   catalogue rather than only the DPTs its own products use. Installing the
@@ -4144,30 +4189,30 @@ carries the sum as `dropped_datapoint_types` (persisted in a new
 alongside the existing conflict count. This is a
 count of drops, not a full `IdConflict` — `datapoint_type` still has no
 `source_sha256` to build one from, so it cannot say *which* file's id won,
-only that one lost. The `first_winner` same-file blind spot above was
-**not** fixed: closing it needs a per-row source finer than "the file this
-parse call was given" (e.g. a synthetic per-element hash, or restructuring
-`first_winner`'s existing-row check), which is a real schema and behaviour
-change, not a counter, and is out of this task's scope.
+only that one lost.
 
-**Cause.** `first_winner`'s existing-row check answers "has this id been
+**Cause (as originally filed; the `first_winner` half is now closed, see
+above).** `first_winner`'s existing-row check answered "has this id been
 seen from a *different* file", which is the question package-retry
-deduplication needs, and conflates it with "has this id been seen more
+deduplication needs, and conflated it with "has this id been seen more
 than once", which is the question data-integrity reporting needs. Those
-happen to be the same question only when every file declares each of its
-own ids exactly once — true for every file this corpus contains, untested
-for the case CLAUDE.md's "never silently discard information" rule
-actually worries about.
+were the same question only when every file declared each of its own ids
+exactly once. The 2026-09-14 fix (above) stopped conflating them by
+tracking the second question separately, per parse call, instead of
+trying to answer it from `source_sha256` alone; it did not touch
+`application_program`'s separate hand-rolled copy or `datapoint_type`,
+where the conflation (or, for `datapoint_type`, the complete absence of
+tracking) still stands.
 
-**Lifted when.** Closing the same-file blind spot needs `first_winner` (or
-whatever replaces it) to compare against a hash finer than "the whole
-file", which likely means hashing each element's own attribute set rather
-than reading `source_sha256` off the call. `datapoint_type` additionally
-needs a `source_sha256` column before it could report *which* file's
-declaration survives a collision, not just that one happened. Neither is
-warranted by anything seen in the real corpus so far; this section exists
-so the next manufacturer package that actually trips either case is a
-documented gap, not a surprise.
+**Lifted when (residue only — `application_program` and `datapoint_type`).**
+Unifying `application_program`'s inline first-writer-wins copy with
+`first_winner` would give it the same occurrence counter for free.
+`datapoint_type` needs a `source_sha256` column before it could report
+*which* file's declaration survives a collision, not just that one
+happened — a real schema change, and not attempted here since nothing in
+the real corpus has warranted it so far (see the measurement above); this
+section exists so the next manufacturer package that actually trips it is
+a documented gap, not a surprise.
 
 ---
 

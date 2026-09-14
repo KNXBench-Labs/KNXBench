@@ -705,12 +705,17 @@ pub enum Diagnostic {
     ///   The subtree is not descended, and no further `Module` anywhere
     ///   in this call is descended either once this budget is spent.
     /// - `budget == MAX_MODULE_ACTIVATIONS` (fix round 2): `node_id`
-    ///   names a `ParameterRefRef`/`ComObjectRefRef` node whose
-    ///   activation would be the `MAX_MODULE_ACTIVATIONS + 1`th recorded
-    ///   by this call, combined across `parameter_refs` and
-    ///   `com_object_refs` — see [`MAX_MODULE_ACTIVATIONS`]'s own doc
-    ///   comment. Recorded once; every further ref that would also cross
-    ///   the budget is dropped without a repeat diagnostic.
+    ///   names the node at which the spent budget was first noticed —
+    ///   either a `ParameterRefRef`/`ComObjectRefRef` whose activation
+    ///   would be the `MAX_MODULE_ACTIVATIONS + 1`th recorded by this
+    ///   call, combined across `parameter_refs` and `com_object_refs`,
+    ///   or, since fix round 3, the `Module` node whose expansion was
+    ///   refused because the budget was already spent when the walk
+    ///   reached it. Which of the two it is depends on DFS order and on
+    ///   nothing else; both are ordinary. See [`MAX_MODULE_ACTIVATIONS`]'s
+    ///   own doc comment. Recorded once; every further ref or expansion
+    ///   that would also cross the budget is dropped without a repeat
+    ///   diagnostic.
     ///
     /// Either way: refused loudly, never crashed into, never silently
     /// truncated wholesale — only this one diagnostic marks where the

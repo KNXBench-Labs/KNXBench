@@ -24,7 +24,10 @@ pub mod string_table;
 pub mod topology;
 pub mod validation;
 
-pub use address::{AddressError, GroupAddress, GroupAddressStyle, IndividualAddress};
+pub use address::{
+    is_project_excluded, AddressError, ContactableAddress, ExcludedAddress, GroupAddress,
+    GroupAddressStyle, IndividualAddress, EXCLUDED_INDIVIDUAL_ADDRESSES,
+};
 pub use building::{BuildingPart, BuildingPartType};
 pub use command::{Command, CommandError, CommandStack};
 pub use commissioning::{CommissioningState, CompletionStatus};

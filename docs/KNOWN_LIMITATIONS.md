@@ -4001,3 +4001,52 @@ own name so nobody mistakes it for an invariant.
 use to actually rank two spellings by recency (a schema/edition attribute
 would do it) — at which point "last ingested" could become "provably newer",
 and this section would describe that instead.
+
+## 91. A running bus session keeps rendering group addresses in the style the project had when it started
+
+**What.** `GroupAddressContext` (`apps/knx-server/src/bus.rs`) is a snapshot
+taken once, by `from_project`, at `POST /api/bus/start` time: the project's
+group address style, its group address names, and its resolved DPTs. Nothing
+refreshes it for the life of the session. Before T4 that could not matter — a
+project's style was chosen at creation and never changed, so the snapshot and
+the project agreed by construction. T4 made the style editable
+(`POST /api/project/group-address-style`), and the snapshot is now the one
+place in the server that can disagree with the project it came from.
+
+Restyle a project while a bus session is open and two routes keep speaking the
+old style: `GET /api/bus/telegrams` renders every destination through
+`format_destination`, and `POST /api/bus/write` parses the incoming
+`destination` with the same cached style (`bus_routes.rs`, the
+`unwrap_or(GroupAddressStyle::ThreeLevel)` fallback applying only when no
+session is active or its snapshot carried no project). Meanwhile the Project
+Explorer, the Inspector, the projection and every exporter read the style from
+the live project and show the new one.
+
+**Why this is a display and ergonomics defect, not an addressing one.** No
+telegram is ever sent to the wrong address because of it. The three styles have
+different field counts — `Free` is one decimal number, `TwoLevel` is `main/sub`,
+`ThreeLevel` is `main/middle/sub` — and `GroupAddress::parse` requires the exact
+field count for the style it is given, so a string written in one style never
+parses as a *different* address in another: it is refused. A user who copies
+`4242` out of the restyled Explorer and posts it to `/write` on a session that
+started in `ThreeLevel` gets a `400` with a malformed-address message, not a
+telegram to `4/2/42`. **[V]** Verified by reading both code paths on
+`243a4d7`, not inferred from the type signatures.
+
+**Why it is left as it is.** The snapshot is deliberate and load-bearing for a
+different reason: the `/start` handler must build it from `AppState.project`
+*before* calling `BusSession::start`, so the project mutex is never held across
+that call's `.await` (see `BusSession::start`'s own doc comment, and the
+commissioning design spec §4.4, which specifies the snapshot). Refreshing it on
+restyle means reaching into a live session from the project-mutation path and
+re-acquiring locks in the opposite order — exactly the deadlock shape the
+snapshot exists to avoid. That is a bus-session-lifetime change, not a group
+address style change, and T4's scope is the style.
+
+**Workaround.** Stop and restart the bus session after restyling a project. The
+new session snapshots the new style.
+
+**Lifted when.** A bus session gains a supported way to be told its project
+changed — most plausibly a channel the session task owns, so the refresh
+happens on the session's side of the lock rather than the mutator's. Until
+then, restarting the session is the honest answer and this section says so.

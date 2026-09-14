@@ -787,7 +787,7 @@ export const messages = {
   "newProject.language": "Project language",
   "newProject.languageHint": "The language tag your project texts are stored under, e.g. en or de-DE. Not the language of this interface.",
   "newProject.style": "Group address style",
-  "newProject.styleHint": "Choose now: once group addresses exist, nothing changes the style back.",
+  "newProject.styleHint": "Pick the one you think in; the project properties can restyle it later.",
   "newProject.style.Free": "Free (0–65535)",
   "newProject.style.TwoLevel": "Two level (main/sub)",
   "newProject.style.ThreeLevel": "Three level (main/middle/sub)",

@@ -999,3 +999,103 @@ async fn linking_then_unlinking_a_com_object_to_a_group_address() {
         .unwrap();
     assert_eq!(unlink.status(), StatusCode::OK);
 }
+
+/// `Project::new` defaults to `ThreeLevel` (`ProjectInfo::default`), so
+/// restyling to `Free` and `TwoLevel` here exercises the other two
+/// (KNOWN_LIMITATIONS.md §84), with a group address already present —
+/// `Command::SetGroupAddressStyle` checks it and, per the exhaustive proof
+/// in `knx-core/src/address.rs`, always finds it fits, so this is also the
+/// route's ordinary, expected-to-succeed path, not a corner case.
+#[tokio::test]
+async fn restyling_a_project_with_a_group_address_round_trips_and_undoes() {
+    let mut project = Project::new(Language("en".into()));
+    project.installations.push(Installation {
+        id: InstallationId(0),
+        name: "I".into(),
+        default_line: None,
+        multicast_address: None,
+        completion: CompletionStatus::FinishedDesign,
+        topology: Topology {
+            areas: vec![],
+            lines: vec![],
+            unassigned: vec![],
+        },
+        buildings: vec![],
+        group_ranges: vec![],
+        group_addresses: vec![knx_core::GroupAddressEntry {
+            id: knx_core::GroupAddressId(1),
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "t".into(),
+            },
+            name: "GA".into(),
+            address: knx_core::GroupAddress::from_raw(4242),
+            central: false,
+            unfiltered: false,
+            range: None,
+        }],
+        parameters: vec![],
+    });
+    let state = knx_server::AppState::default();
+    *state.project.lock().unwrap() = Some(project);
+    let app = knx_server::app(Arc::new(state), None);
+
+    let restyled = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/group-address-style")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "groupAddressStyle": "Free" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(restyled.status(), StatusCode::OK);
+
+    let undo = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/undo")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(undo.status(), StatusCode::OK);
+    let tree = body_json(undo).await;
+    // Undone back to `ThreeLevel` (`Project::new`'s default), so the same
+    // raw address formats with a middle group again.
+    assert_eq!(
+        tree["installations"][0]["group_addresses"][0]["address"],
+        "2/0/146"
+    );
+}
+
+/// The counterpart to `POST /api/project/new`'s own `400` on an unknown
+/// `groupAddressStyle` — same wire vocabulary, same refusal, now at the
+/// other end of a project's life.
+#[tokio::test]
+async fn restyling_to_an_unknown_style_is_a_400() {
+    let state = Arc::new(state_with_one_installation());
+    let app = knx_server::app(state, None);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/project/group-address-style")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({ "groupAddressStyle": "Sideways" }).to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}

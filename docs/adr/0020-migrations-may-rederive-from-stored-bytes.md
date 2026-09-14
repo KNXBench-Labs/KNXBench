@@ -229,8 +229,13 @@ mechanism and not bookkeeping around one.
 **The cost is bounded by the defect, not by the database.** The backfill
 selects blobs through `application_program.linkable IS NULL`, so a database
 with no affected rows — every database built after 2026-09-13, and every
-fresh one — pays one indexed query and reads no blob. A database created by
-`open_and_migrate` from nothing runs the step against an empty table.
+fresh one — pays one query and reads no blob. Measured on E5's 128 MB
+corpus database, debug build, as the wall time of a `knx products list` that
+has to open it: **1.14 s** when all 34 programs need filling and all 34 of
+their blobs are read, **0.038 s** when the same file is rolled back to v6 with
+its values intact, which is to the millisecond the same as opening an
+already-migrated one. The worst case is paid once, by the databases that have
+the defect.
 
 **A frozen fixture is now owed, and paid.** `migration.rs`'s tests build a
 v6 database with a `NULL` `linkable` and a stale `ingest_unknown` row, open

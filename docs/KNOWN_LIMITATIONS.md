@@ -4171,39 +4171,61 @@ documented gap, not a surprise.
 
 ---
 
-## 87. A product database installed before 2026-09-13 keeps `linkable` NULL forever
+## 87. A parse fix does not reach rows that were already ingested, and only a migration can go back for them
 
-**Limitation.** `bool_flag` (`crates/knx-productdb/src/parse/mod.rs`) accepted
-only `"1"` and `"0"` until 2026-09-13, so every `Linkable="true"` and
-`Linkable="false"` in a schema-20 or schema-21 package was read as "absent"
-and stored as `NULL`. The helper now accepts all four of `xs:boolean`'s
-canonical spellings, which fixes every *future* ingest and no past one **[V]**.
+**Fixed for `linkable`, on 2026-09-14, by product-database schema v7**
+([ADR-0020](adr/0020-migrations-may-rederive-from-stored-bytes.md)). The
+general shape of the defect is not fixed and cannot be, so this section stays
+— rewritten to describe the class rather than the one instance.
 
-Two mechanisms keep the old value in place. `install_package`
-(`crates/knx-productdb/src/package.rs`) short-circuits on a package whose
-sha256 is already installed and returns `skipped: true` without re-reading a
-byte, so re-running `knx products ingest` against the same file changes
-nothing. And `migrate_v5_to_v6` (`crates/knx-productdb/src/migration.rs`)
-added the column without re-deriving it, following the same convention as
-`migrate_v4_to_v5`'s translation counts: a migration adds structure, never
-re-parses. The bytes are not lost — every member's XML is still in
-`source_file` — but nothing queries them a second time.
+**Limitation.** Every parsed row in `products.sqlite` is a derived value, and
+the derivation happens exactly once: at ingest. Three independent
+short-circuits then make sure it never happens again for the same bytes —
+`install_package` returns `skipped: true` on a package whose sha256 is already
+on record (`crates/knx-productdb/src/package.rs`), `ingest_file` skips a blob
+already in `source_parse_evidence` (`ingest.rs`), and `ingest_program` sets
+`already_present` when a program id is already in the table
+(`parse/program.rs`). They are all correct, and they are why a parse-layer fix
+shipped today changes nothing about a database ingested yesterday. The bytes
+are never lost — every member's XML is in `source_file`, which is the whole
+point of ADR-0011 — but nothing re-reads them of its own accord.
 
-**Consequence.** `select count(*) from application_program where linkable is
-null` returns the program count, not zero, on any database built before that
-date, and a reader who checks whether the fix worked by querying an existing
-database will conclude that it did not.
+**Consequence.** After any fix to the parse layer, a row that the old code
+derived wrongly keeps the old answer, and a reader who checks whether the fix
+worked by querying an existing database concludes that it did not. There is no
+marker on a row saying which build derived it, so a stale value and a current
+one are indistinguishable by inspection.
 
-**Workaround.** Ingest into a fresh database. The packages are the source of
-truth and re-ingesting them is cheap; nothing in a product database is
-authored by a user, so discarding one costs only the time to rebuild it.
+**Workaround.** Ingest into a fresh database, which re-derives everything
+from the packages. Measured on the repository corpus (five `.knxprod`, three
+`.knxproj`, debug build): 17.0 s for a 128 MB database. This needs the
+original files, which the blob store exists precisely so a user need not keep
+— see ADR-0020's alternatives for why that is a fallback rather than the
+answer.
 
-**Lifted when.** A v7 migration re-parses `Linkable` out of the
-`role='ApplicationProgram'` rows of `source_file` and writes it back. That is
-the one honest fix, and it is deliberately not done here: it would be the
-first migration in the chain to call the parser, which is an architectural
-commitment (migrations would gain a dependency on parse-layer behaviour that
-can itself change) worth making on purpose rather than in passing.
+**The one instance that was repaired, and how.** `bool_flag`
+(`crates/knx-productdb/src/parse/mod.rs`) accepted only `"1"` and `"0"` until
+2026-09-13, so every word-spelled `Linkable` was stored as `NULL`
+**[V]**. Not only in schema-20/21 packages, as this section previously
+claimed: the spelling belongs to the tool that wrote the file, and
+`grep -o 'Linkable="[^"]*"'` over the corpus finds word form in
+`project/11`, `20` and `21` archives and numeric form in `project/11` and `23`
+ones. `migrate_v6_to_v7` re-reads `ApplicationProgram/@Linkable` out of each
+affected blob and fills the column, only where it is `NULL`, only for the row
+that blob's bytes produced, and retires the now-false "attribute not
+understood" `ingest_unknown` row it supersedes. Measured: 34 of 34 corpus
+programs refilled in 1.14 s, with values identical to a fresh ingest (27
+false, 7 true); a v6 database with nothing to fill opens in 0.038 s, the same
+as one already at v7.
+
+**Lifted when.** For the class: never entirely, by construction — a
+derivation that already ran cannot know it should run again. What is missing
+is only the *detection*, and ADR-0020 records the shape of it (a parse
+generation recorded per `source_file` row, reported by `knx products verify`),
+deliberately not built for a single column. Reach for it if the class turns up
+a third time. For an individual instance: a v-next backfill migration, under
+ADR-0020's rule — permitted when the value is a pure function of bytes the
+database already holds, forbidden when it depended on the install event.
 
 ## 88. A manufacturer's display name is last-writer-wins, and that is on purpose
 

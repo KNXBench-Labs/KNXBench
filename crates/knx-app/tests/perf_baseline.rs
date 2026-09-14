@@ -37,11 +37,11 @@ use std::time::Instant;
 
 use knx_core::{
     Area, AreaId, BuildingPart, BuildingPartId, BuildingPartType, ComObjectInstance,
-    ComObjectInstanceId, CommissioningState, CompletionStatus, DeviceId, DeviceInstance, Devices,
-    Direction, DptRef, GroupAddress, GroupAddressEntry, GroupAddressId, GroupAddressStyle,
-    GroupLink, GroupRange, GroupRangeId, IdAllocators, IndividualAddress, Installation,
-    InstallationId, Language, Layer, Line, LineId, Override, Project, ProjectInfo, Resolved,
-    ResolvedFlags, SourceRef, StringTable, Text, Topology, CURRENT_SCHEMA_VERSION,
+    ComObjectInstanceId, CommissioningState, CompletionStatus, DeviceId, DeviceInstance,
+    DeviceLoadStates, Devices, Direction, DptRef, GroupAddress, GroupAddressEntry, GroupAddressId,
+    GroupAddressStyle, GroupLink, GroupRange, GroupRangeId, IdAllocators, IndividualAddress,
+    Installation, InstallationId, Language, Layer, Line, LineId, Override, Project, ProjectInfo,
+    Resolved, ResolvedFlags, SourceRef, StringTable, Text, Topology, CURRENT_SCHEMA_VERSION,
 };
 use knx_etsproj::export::export_knxproj;
 use knx_etsproj::opaque::{sha256_hex, OpaqueEntry, OpaqueKind};
@@ -362,6 +362,10 @@ fn build_devices_and_topology(
                 last_modified: None,
                 last_download: None,
                 broken: false,
+                // No device has ever answered this synthetic project, and
+                // the benchmark is not about to invent an answer: project
+                // intent above, device fact left empty.
+                device_reported: DeviceLoadStates::default(),
             },
             visibility_calculated: true,
             com_objects: com_ids,

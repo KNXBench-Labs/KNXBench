@@ -11,6 +11,20 @@ use std::fmt;
 /// AL §3.5.3/§3.5.4: *"between 1 and 63 octets"*.
 pub const SERVICE_MAX_OCTETS: u8 = 63;
 
+/// What `A_UserMemory_Write` can carry in one PDU, which is a quarter of
+/// what `A_Memory_Write` can.
+///
+/// `[D]` Application Layer v02.01.01 AS §3.5.6.3: the service writes
+/// *"between 1 octet and 15 octets"*, and Figure 81 shows why — its
+/// `number` field is four bits, sharing one octet with the four-bit address
+/// extension that makes the address 20 bits wide. §6.4 of the design spec
+/// derives the chunk size from `PID_MAX_APDU_LENGTH` alone and caps it at
+/// 63, which is correct for `A_Memory_Write` and too large by four times
+/// for the service §6.5 switches to above `FFFFh`. The spec does not say
+/// this; the Application Layer does, and a 63-octet chunk simply does not
+/// fit the PDU it would have to travel in.
+pub const USER_MEMORY_MAX_OCTETS: u8 = 15;
+
 /// The APDU length a device without `PID_MAX_APDU_LENGTH` is managed
 /// with. `[D]` RES §4.3.7.2.1: *"then the Management Client shall manage
 /// the device with L_Data_Standard-frames with an APDU-length of maximal
@@ -189,7 +203,9 @@ pub struct Chunk {
     /// Offset into the region's data, so the caller can slice.
     pub offset: usize,
     /// How many octets this chunk carries. Never zero, never above the
-    /// [`WriteLimit`] and never above [`SERVICE_MAX_OCTETS`].
+    /// [`WriteLimit`], never above [`SERVICE_MAX_OCTETS`] — and never above
+    /// [`USER_MEMORY_MAX_OCTETS`] when `service` is
+    /// [`MemoryService::UserMemory`].
     pub length: u8,
     /// The service that carries it, chosen once for the whole region.
     pub service: MemoryService,
@@ -254,7 +270,15 @@ pub fn chunks(base: u32, data: &[u8], limit: WriteLimit) -> Result<Vec<Chunk>, C
     // Chosen once for the region, from base + length, so a region that
     // straddles FFFFh does not change service half way through.
     let service = service_for(base, length);
-    let step = limit.max_octets() as usize;
+    // The negotiated limit is an upper bound, not the only one: the chosen
+    // service has a hard limit of its own, and `A_UserMemory_Write`'s is
+    // 15 octets (see `USER_MEMORY_MAX_OCTETS`). Taking the minimum here is
+    // the difference between a chunk plan that can be sent and one that
+    // cannot be encoded at all.
+    let step = match service {
+        MemoryService::Memory => limit.max_octets() as usize,
+        MemoryService::UserMemory => (limit.max_octets().min(USER_MEMORY_MAX_OCTETS)) as usize,
+    };
     let mut out = Vec::with_capacity(data.len().div_ceil(step));
     let mut offset = 0usize;
     while offset < data.len() {
@@ -394,9 +418,42 @@ mod tests {
                 .all(|c| c.service == MemoryService::UserMemory),
             "a region must not change service half way through"
         );
+        // A 12-octet negotiated limit is already below the user-memory
+        // service's own 15, so this region is chunked by the APDU limit.
+        assert!(chunks.iter().all(|c| c.length <= 12));
         // And the naive rule — switching on the base alone — would have
         // said otherwise, which is the bug this test exists for.
         assert_eq!(service_for(base, 1), MemoryService::Memory);
+    }
+
+    /// `A_UserMemory_Write`'s `number` field is four bits (AL §3.5.6.3,
+    /// Figure 81), so a negotiated limit of 63 octets — which §6.4's
+    /// arithmetic happily produces — cannot be used above `FFFFh`. The
+    /// design spec does not mention this cap; the Application Layer does.
+    #[test]
+    fn the_user_memory_service_caps_chunks_at_fifteen_octets_whatever_the_apdu_allows() {
+        let above = chunks(0x8_0000, &[0u8; 200], limit_of(63)).unwrap();
+        assert!(
+            above.iter().all(|c| c.service == MemoryService::UserMemory),
+            "a region entirely above FFFFh uses the user-memory service"
+        );
+        assert_eq!(
+            above.iter().map(|c| c.length).max(),
+            Some(USER_MEMORY_MAX_OCTETS),
+            "no chunk may exceed what the service's 4-bit number field can name"
+        );
+        // And the same data below FFFFh still uses the full 63, so the cap
+        // is scoped to the service and is not a new global ceiling.
+        let below = chunks(0x1000, &[0u8; 200], limit_of(63)).unwrap();
+        assert_eq!(below.iter().map(|c| c.length).max(), Some(63));
+    }
+
+    /// The cap narrows, never widens: a device that negotiated 12 octets
+    /// still gets 12-octet chunks above `FFFFh`, not 15.
+    #[test]
+    fn the_user_memory_cap_never_raises_a_smaller_negotiated_limit() {
+        let above = chunks(0x8_0000, &[0u8; 100], limit_of(12)).unwrap();
+        assert_eq!(above.iter().map(|c| c.length).max(), Some(12));
     }
 
     #[test]

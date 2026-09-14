@@ -2387,6 +2387,29 @@ fn format_service(
         ApplicationService::Other { apci, data } => {
             format!("APCI {apci:#06x} data {data:02x?}")
         }
+        // T30's management services (commissioning spec §6.6). Rendered
+        // from the service's own `variant_name`/`payload_summary` rather
+        // than fifteen near-identical `format!`s — but still listed one by
+        // one instead of a catch-all, so a sixteenth service is a compile
+        // error here and not a silently unlabelled monitor row.
+        service @ (ApplicationService::IndividualAddressWrite { .. }
+        | ApplicationService::IndividualAddressRead
+        | ApplicationService::IndividualAddressResponse
+        | ApplicationService::MemoryRead { .. }
+        | ApplicationService::MemoryResponse { .. }
+        | ApplicationService::MemoryWrite { .. }
+        | ApplicationService::UserMemoryRead { .. }
+        | ApplicationService::UserMemoryResponse { .. }
+        | ApplicationService::UserMemoryWrite { .. }
+        | ApplicationService::Restart { .. }
+        | ApplicationService::AuthorizeRequest { .. }
+        | ApplicationService::AuthorizeResponse { .. }
+        | ApplicationService::PropertyValueRead { .. }
+        | ApplicationService::PropertyValueResponse { .. }
+        | ApplicationService::PropertyValueWrite { .. }) => match service.payload_summary() {
+            Some(payload) => format!("{} {payload}", service.variant_name()),
+            None => service.variant_name().to_string(),
+        },
     }
 }
 

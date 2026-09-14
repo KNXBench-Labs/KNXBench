@@ -887,6 +887,29 @@ impl TelegramBuffer {
                 Some(format!("APCI {apci:#06x} data {data:02x?}")),
                 None,
             ),
+            // T30's management services (commissioning spec §6.6): named
+            // and summarised by `knx-net`, so this log gains a service
+            // without gaining fifteen arms of formatting. Listed rather
+            // than caught, so a new service still fails to compile here.
+            ref service @ (ApplicationService::IndividualAddressWrite { .. }
+            | ApplicationService::IndividualAddressRead
+            | ApplicationService::IndividualAddressResponse
+            | ApplicationService::MemoryRead { .. }
+            | ApplicationService::MemoryResponse { .. }
+            | ApplicationService::MemoryWrite { .. }
+            | ApplicationService::UserMemoryRead { .. }
+            | ApplicationService::UserMemoryResponse { .. }
+            | ApplicationService::UserMemoryWrite { .. }
+            | ApplicationService::Restart { .. }
+            | ApplicationService::AuthorizeRequest { .. }
+            | ApplicationService::AuthorizeResponse { .. }
+            | ApplicationService::PropertyValueRead { .. }
+            | ApplicationService::PropertyValueResponse { .. }
+            | ApplicationService::PropertyValueWrite { .. }) => (
+                service.variant_name().to_string(),
+                service.payload_summary(),
+                None,
+            ),
         };
         self.push(NewRow {
             source,

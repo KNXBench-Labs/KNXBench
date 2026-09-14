@@ -2078,6 +2078,9 @@ fn diagnostic_message(diagnostic: &knx_productdb::dynamic::Diagnostic) -> &'stat
         Diagnostic::ModuleNestingTooDeep { .. } => {
             "A module is nested deeper than this program will expand."
         }
+        Diagnostic::ModuleExpansionBudgetExhausted { .. } => {
+            "This program's modules are too numerous to fully expand; the rest were skipped."
+        }
         Diagnostic::MissingValue { .. } => "A choice's controlling parameter has no value.",
         Diagnostic::ModuleWithoutId { .. } => {
             "A module instance has no identifier and cannot be matched to stored values."

@@ -3322,6 +3322,196 @@ reader tell "the Standard is silent" from "nobody looked".
 
 ---
 
+### 8.8 Commissioning, phase 3 — read-only verification against the real installation (2026-09-14)
+
+§8.7 specified. This ran it, against the real hardware behind the gateway
+`192.0.2.1:3671` (redacted, as in §8.1) that R-SAFE-2 (spec §2.2) approves for
+**active reads only** on nine named individual addresses, `1.1.24`–`1.1.32`.
+`1.1.220`, the alarm panel R-SAFE-1 (spec §2.1) makes structurally
+unreachable, was never read, never written, and never named as a literal in
+any address collection the new test builds — its own first assertion checks
+that `1.1.220` is still in `EXCLUDED_INDIVIDUAL_ADDRESSES` before a single
+frame is sent, redundant with `ContactableAddress::new`'s own refusal and
+`ScanPlan::verify`'s. No write of any kind reached the wire in this pass:
+every session used `ManagementSession::read_only` (no `WriteAuthorisation`,
+so no write path exists to call) and `AuthorisationPlan::Skip` (so
+`authorise()` returns without sending `A_Authorize_Request` at all — spec
+§10.2's "free level, unknown value" path, not a tested one this time but a
+skipped one). Bus contact, one line per address, per `CLAUDE.md`'s rule
+against silently discarding information, applied here as the test's own
+module doc practice (`crates/knx-net/tests/live_commissioning_readonly.rs`:
+"prints one block per address and never summarises a non-answer away"):
+`1.1.24`–`1.1.32`, each via `A_DeviceDescriptor_Read` (mask version),
+`A_PropertyValue_Read` (`PID_MANUFACTURER_ID`, `PID_HARDWARE_TYPE`,
+`PID_PROGRAM_VERSION`, `PID_LOAD_STATE_CONTROL` ×3 objects) over a
+connection-oriented session, and again via the scan probe's own
+`A_DeviceDescriptor_Read`. Nothing else.
+
+#### 8.8.1 Method
+
+Two read-only probes ran, sequentially, minutes apart, 2026-09-14:
+
+1. **`crates/knx-net/tests/live_commissioning_readonly.rs`**, new, `#[ignore]`d,
+   this task's own deliverable, run as
+   `KNX_GATEWAY=<redacted>:3671 cargo test -p knx-net --test
+   live_commissioning_readonly -- --ignored --nocapture --test-threads=1`.
+   One `ManagementSession::read_only` per address, built fresh each time from
+   the address literal (never a range — see the source's own doc comment),
+   each doing `connect()` then, on the Device object (index 0): Device
+   Descriptor Type 0, `PID_MANUFACTURER_ID` (12), `PID_HARDWARE_TYPE` (78),
+   `PID_PROGRAM_VERSION` (13); then `PID_LOAD_STATE_CONTROL` (5) on the
+   Address Table (index 1), Association Table (index 2) and Application
+   Program (index 3) objects; then `disconnect()`. Every read or its error is
+   printed, never summarised away. Took 505.41s for the nine addresses,
+   `test result: ok. 1 passed; 0 failed`.
+2. **The already-shipped `knx bus scan`** (§8.5), run immediately after as an
+   independent cross-check: `knx bus scan --gateway <redacted>:3671 --line 1.1
+   --range 1.1.24-1.1.32`, `ProbePolicy::default()` (6000 ms response timeout,
+   1 confirmation, 100 ms inter-probe pause). `ScanPlan`'s exclusion-by-
+   construction still reported `1.1.220` excluded (1) even though the range
+   given never reaches it — the guard runs regardless of whether it would have
+   mattered. Took 7717 ms total for the nine addresses.
+
+Both probes reuse the connection-oriented `NM_IndividualAddress_Check`
+sequence (`03_05_02` §2.19: `T_Connect` → `A_DeviceDescriptor_Read(0)`) over
+the same underlying transport (`ManagementTransport`/`ScanTransport` share one
+blanket impl, `crates/knx-net/src/management.rs`) — the difference between
+them is explained in §8.8.3.
+
+#### 8.8.2 Raw observations, by address
+
+**`1.1.24`** — occupied, both methods agree:
+
+| Read | Raw payload / outcome |
+| --- | --- |
+| `A_DeviceDescriptor_Read(0)` | `07 01h` (Mask Version `0701h`) |
+| `A_PropertyValue_Read`(obj 0, PID 12, 1 elem @1) | `00 0Ch` |
+| `A_PropertyValue_Read`(obj 0, PID 78, 1 elem @1) | refused, `nr_of_elem = 0` (AL §3.4.4.2's own refusal shape) |
+| `A_PropertyValue_Read`(obj 0, PID 13, 1 elem @1) | refused, `nr_of_elem = 0`, same shape |
+| `A_PropertyValue_Read`(obj 1, PID 5, 1 elem @1) | `01h` (`Loaded`) |
+| `A_PropertyValue_Read`(obj 2, PID 5, 1 elem @1) | `01h` (`Loaded`) |
+| `A_PropertyValue_Read`(obj 3, PID 5, 1 elem @1) | `01h` (`Loaded`) |
+
+The scan probe's independent `A_DeviceDescriptor_Read(0)` on `1.1.24` agrees:
+`Occupied`, mask `0701h`, 202 ms.
+
+**`1.1.25`, `1.1.26`, `1.1.27`, `1.1.28`, `1.1.30`, `1.1.31`, `1.1.32`** —
+occupied per the scan probe: `Occupied`, mask `0701h` each, round trips
+86–107 ms. But every one of the seven `ManagementSession` reads listed above
+for `1.1.24` returned, for every one of these seven addresses, the identical
+outcome: *"no answer to A_DeviceDescriptor_Response / A_PropertyValue_Response
+after 3 attempt(s) of 3s; this is a lost frame, a protected or absent target,
+or a device that is not listening, and the wire does not distinguish them"* —
+the session's own honestly-worded time-out, TL clause 4's `max_rep_count = 3`
+exhausted every time. §8.8.3 reconciles this.
+
+**`1.1.29`** — vacant by both methods, and this is the one address where they
+agree on absence rather than disagree on presence: the scan probe got no
+`L_Data.con` at all for its `T_Connect` within the full 6006 ms window (the
+Standard's own presence signal, `03_05_02` §2.19); the `ManagementSession`
+read got the same worded time-out as the seven false negatives above — from
+that method alone, `1.1.29` is indistinguishable from them.
+
+#### 8.8.3 Finding — `ManagementSession`'s connect-then-read split misses present devices the scan probe sees
+
+This is the headline result of the phase, and it is a finding against the
+**verification method**, not against the nine devices: seven real, present,
+answering devices looked absent to the one API this project has for reading
+a device's properties.
+
+The mechanical difference between the two code paths, read from the source
+rather than inferred: `probe_once` (`crates/knx-net/src/scan.rs`) sends
+`T_Connect` and the `A_DeviceDescriptor_Read(0)` `T_Data_Connected` frame as
+one back-to-back pair, with no gap and no separate retry of the data frame —
+if nothing answers, the *next* attempt (`probe_address`'s own retry loop)
+sends a **fresh** `T_Connect` again. `ManagementSession::connect()` sends
+`T_Connect` once, and every read after it (`exchange`/`exchange_inner`,
+`crates/knx-net/src/commissioning.rs`) retries only the **data** frame, up to
+`MAX_REP_COUNT = 3` times, against the one `T_Connect` already sent — TL
+clause 4 read literally: a repeat is of the unacknowledged request, and
+`T_Connect` is not repeated by that clause. `ManagementSession` never
+inspects whether its own `T_Connect` actually got a positive `L_Data.con` at
+all; the scan probe does, and a negative or absent one is exactly what
+`deadline_verdict` in `scan.rs` treats as inconclusive rather than as
+`Occupied`.
+
+The two application-layer requests are otherwise identical (same descriptor
+type, same object indices, same property ids, same sequence number 0 on the
+first exchange after `connect()`), and both this test and the scan run went
+through the same tunnelling connection and the same gateway seconds apart —
+so a generic "the bus was busy" or "the gateway was overloaded" explanation
+does not fit seven-for-seven identical outcomes on one side and seven-for-
+seven identical successes on the other. The most likely mechanical
+explanation, stated as a hypothesis and not confirmed further by additional
+bus contact (out of this task's read-only-verification scope): whatever
+window these seven devices hold a fresh `T_Connect` open for is shorter than
+the gap between `connect()` returning and the first `exchange()` call
+actually reaching the wire, and/or the devices silently drop a connection
+attempt that a following data frame does not itself renew. Root-causing this
+further, and any change to `exchange_inner`'s retry shape, is future work —
+recorded as spec §13 R20 and design-spec §14.1, not fixed in this pass.
+
+This retry-shape difference cannot be what separated `1.1.24` from the other
+seven, though: the scan ran at `ProbePolicy::default()`, `vacant_confirmations
+= 1` (`crates/knx-net/src/scan.rs:120`, loop at `:302-309`), so with one
+confirmation the scan made exactly one pass per address and never retried at
+all. `1.1.24`'s success and the seven time-outs were each decided on a single
+`T_Connect` + data-frame pair on both sides — the difference in *how many*
+times each method would have retried never came into play for this run, and
+is not the discriminator for the first attempt.
+
+**What this does and does not mean:** it does not mean these seven devices
+are unreachable for reading — the scan probe reaches them fine, and a fixed
+`ManagementSession` presumably would too. It does mean that, as shipped
+today, a caller cannot treat a `ManagementSession` read time-out as proof of
+absence, on this installation, at all — seven of nine addresses would have
+been wrongly recorded as vacant or unreachable if this section trusted that
+signal alone.
+
+One confound this pass cannot exclude: `1.1.24` was the first address in the
+loop, and all nine sessions shared one tunnelling connection. "The first
+session on a fresh tunnel works and subsequent ones do not" fits the data as
+well as any per-device explanation, and would be separated by probing the
+nine in reverse order, or one tunnel per address.
+
+#### 8.8.4 Reconciliation against the spec
+
+- **`PID_ERROR_CODE`, `PID_DEVICE_CONTROL` and `PID_OBJECT_INDEX`**, named in
+  design spec §14's phase 3 checklist, were **not** read against real hardware
+  this pass — the properties this test reads are the ones named in this
+  task's own dispatch brief (device presence, mask version, descriptor reads,
+  property reads, load-state reads). That set is **different from** §14's
+  list, not merely narrower than it: three of §14's six were skipped, and two
+  it never named — `PID_HARDWARE_TYPE` and `PID_PROGRAM_VERSION` — were read
+  as well. Noted as a residual coverage gap in the design spec (§14.1), not
+  closed here — a second read-only pass, or an extension of this same test,
+  is the natural next step and needs no new safety reasoning to run.
+- **`1.1.24`'s access-level refusal on `PID_HARDWARE_TYPE`/`PID_PROGRAM_VERSION`
+  while `PID_MANUFACTURER_ID` succeeded, all under `AuthorisationPlan::Skip`**
+  is a live confirmation of design spec §10.2, not a contradiction of it:
+  *"the maximum access level protected with `FFFFFFFFh`"* is whatever the
+  device's own Profile grants an unauthorised client, and §10.2 already
+  predicted *"a client that skips authorisation therefore works until it does
+  not."* **[V]** This is the first live evidence for that sentence.
+- **The mask `0701h` result matches §8.5 Finding 4's prior scan of this same
+  installation** (2026-09-13, "nine consecutive occupied addresses... the same
+  Mask Version, `0x0701`", addresses unnamed there for the reason given in
+  that section). This section names the addresses because they are the
+  already-publicly-approved nine from spec §2.2, not because the redaction
+  policy changed — §8.5's broader, unapproved inventory stays unnamed.
+  Finding 4 did not record which addresses were in its nine, so this is
+  corroboration of "this stretch of the line runs the same mask", not a
+  re-identification of Finding 4's own sample.
+- **Design spec §14's implicit assumption — that phase 3's read-only checklist
+  is something `ManagementSession::read_only` can just run — is corrected**
+  by §8.8.3 above: presence must be established with the scan probe first.
+  design spec §14.1 and §13 R20 carry the correction.
+
+See [KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)
+for the durable record.
+
+---
+
 ## 9. KNX Secure
 
 Not present in our sample installation (`data_secure=false` on all 514 group addresses, no keyring) — everything here is **[D]**.

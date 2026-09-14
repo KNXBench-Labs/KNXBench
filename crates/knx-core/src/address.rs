@@ -185,11 +185,12 @@ impl GroupAddress {
     /// can represent it and recover it unchanged — the same test a
     /// hand-typed address effectively faces on entry.
     ///
-    /// This is provably `true` for every possible value today: `Free`'s
-    /// main/middle/sub split and `TwoLevel`'s and `ThreeLevel`'s are each
-    /// an exact partition of the same 16 bits (5+11 and 5+3+8, both 16),
-    /// so every raw value decomposes and recomposes losslessly under every
-    /// style. Group address style is a rendering choice, never a capacity
+    /// This is provably `true` for every possible value today: `Free`
+    /// renders the raw value as plain decimal and parses it straight back,
+    /// so it round trips trivially, while `TwoLevel`'s and `ThreeLevel`'s
+    /// splits are each an exact partition of the same 16 bits (5+11 and
+    /// 5+3+8, both 16), so every raw value decomposes and recomposes
+    /// losslessly under either. Group address style is a rendering choice, never a capacity
     /// limit (see the struct doc above); restyling a project can never
     /// actually reject an address on this account today. Unlike a bounds
     /// check restating the same partition, though, this one is coupled to

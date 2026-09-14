@@ -767,68 +767,102 @@ and an ambiguous DPT list are both visible in the product database and in
 **Lifted when.** See each gap above individually; none of the three shares
 a single condition.
 
-## 13. Password-protected projects are refused, not decrypted
+## 13. Password-protected projects: ZipCrypto (ETS4/ETS5) is decrypted, AES (ETS6) is still refused
 
 **Limitation.** A `.knxproj` whose project part is nested as `<P-xxxx>.zip`
-(IMPORT_EXPORT §2) is detected and named
-(`ContainerError::PasswordProtected`), but the file is never opened. This
-limitation is unchanged by the rest of this entry: nothing below makes
-KNXBench able to open a protected project.
+(IMPORT_EXPORT §2) can now be opened two ways:
 
-**Cause.** This used to be one undifferentiated cause ("both schemes are
-documented but unverified"). It is really two, and they resolve on
-different evidence:
+* `Container::open` (no password) still refuses it by name
+  (`ContainerError::PasswordProtected`), unchanged from before.
+* `Container::open_with_password(bytes, password)` decrypts a schema < 21
+  (ETS4/ETS5) project protected with **ZipCrypto**, given the right
+  password. A schema ≥ 21 (ETS6) project protected with **AES** is still
+  refused by name (`ContainerError::UnsupportedEncryption`), not
+  attempted — that half of this limitation is unchanged.
 
-* **The AES/PBKDF2 key derivation (schema ≥ 21, ETS6+)** is not an
-  ETS implementation detail read out of `xknxproject`'s source — it is
-  specified in the KNX Standard itself, with the Standard's own test
-  vectors: *The KNX Standard v3.0.0*, *Project Schema23 v01.00.00*,
-  clause 4.2.4 "Password protection", p.64/64. `crates/knx-secure`
-  implements exactly that derivation
-  (`derive_knxproj_zip_password`) and its tests assert the exact
-  Base64 output of two of the clause's three published vectors
-  (`"a"`, `"test"`) — `[D]` (cited clause and page) and `[V]` (two
-  vectors, byte-exact). The clause's third vector, a password
-  containing non-ASCII characters, renders as `Penn¥w1se` plus an
-  unmappable glyph in every text-extraction path this repository's
-  spec corpus offers (both the Markdown extraction and a direct
-  `pdftotext` run fail the same way); this repository's test module
-  documents a further attempt at recovering it by rendering the PDF
-  page directly and reading the glyph, which is a different evidence
-  path than the two `[D]`+`[V]` vectors and is presented in that test's
-  comment for a human to judge rather than promoted to the same
-  footing.
-* **The container decryption itself** — actually opening the nested,
-  encrypted `<P-xxxx>.zip` and reading a real project out of it, for
-  either scheme — is not attempted by this change and remains
-  unverified. `ContainerError::PasswordProtected` still refuses before
-  ever touching the encrypted entry. For schema ≥ 21 the key material
-  is now known-correct (see above); what is still missing is a real
-  password-protected ETS6 project to decrypt with it. For schema < 21
-  (ETS4/ETS5), the scheme is standard ZipCrypto with the password used
-  as UTF-8 bytes — that description remains sourced only from
-  `xknxproject`'s implementation, not from a KNX Standard clause, and
-  this change does not touch it at all.
+Read only, both ways: nothing in this repository writes a ZipCrypto- or
+AES-protected entry. `knx_secure::zipcrypto` exposes a `decrypt` function
+and nothing that encrypts.
 
-**Impact.** A protected project cannot be imported at all today, by design
-rather than by omission: refusing cleanly is preferred over a decryption
-path nobody has run against a real encrypted file. What changed is
-narrower than it might sound: KNXBench can now compute, and has verified,
-the *password* an ETS6-protected project's container would be encrypted
-with — it still cannot decrypt the container itself, for either schema,
-because doing that untested would claim support this repository cannot
-demonstrate.
+**What ZipCrypto is, plainly.** It is PKWARE's "Traditional Encryption",
+specified in APPNOTE.TXT §6.0/§6.1 [D] — a three-key stream cipher from
+1990, with a 1-in-256 false-accept rate on its own password check and a
+known-plaintext attack (Biham & Kocher, 1994) that recovers the key from
+a modest amount of known output, no brute force required. It is not
+security by any current standard; the KNX Standard specifying it for
+ETS4/ETS5 does not make it one. This code exists only to read a file
+whose password the caller already has — see `knx-secure/src/zipcrypto.rs`'s
+module docs for the full account, including both check-byte conventions
+(PKZIP's own vs. Info-ZIP's streamed-entry variant) this implementation
+has to try, because the `zip` crate's public API does not expose which
+one a given entry used.
 
-**Lifted when.** Two independent conditions, no longer one:
+**Cause / evidence, updated.**
 
-* The AES/PBKDF2 key derivation is lifted as of this change, for schema
-  ≥ 21 — specified, implemented, and verified against the Standard's own
-  vectors.
-* Container decryption — for *both* schemes — is lifted when a real
-  password-protected ETS4/5 project (ZipCrypto) and a real
-  password-protected ETS6 project (AES) are available to decrypt and
-  verify against. Nothing in this repository can open either kind of
-  protected project today.
+* **The AES/PBKDF2 key derivation (schema ≥ 21, ETS6+)** is specified in
+  the KNX Standard itself, with the Standard's own test vectors: *The KNX
+  Standard v3.0.0*, *Project Schema23 v01.00.00*, clause 4.2.4 "Password
+  protection", p.64/64. `crates/knx-secure` implements exactly that
+  derivation (`derive_knxproj_zip_password`) and its tests assert the
+  exact Base64 output of all three of the clause's published vectors
+  (`"a"`, `"test"`, and the non-ASCII third vector, recovered by
+  rendering the source PDF page directly since every text-extraction
+  path fails on it — see that test's own comment for the full account)
+  — `[D]` (cited clause and page) and `[V]` (byte-exact). **Container
+  decryption for this scheme is still not implemented** — AES needs the
+  `zip` crate's `aes-crypto` feature (not enabled in this workspace) and,
+  more importantly, a real AES-protected ETS6 project to verify against;
+  neither exists here yet, so `Container::open_with_password` refuses an
+  AES-protected nested payload by name rather than attempting it.
+* **ZipCrypto (schema < 21, ETS4/ETS5) is now implemented and tested.**
+  `knx-secure/src/zipcrypto.rs` hand-implements the cipher directly
+  against APPNOTE.TXT v6.3.3 §6.1.3-§6.1.7 [D] (quoted verbatim in that
+  module's docs, fetched 2026-09-14), rather than relying on the `zip`
+  crate's own (also-writes-capable) decryption internals.
+  `knx-etsproj`'s `Container::open_with_password` wires it into the
+  container: it walks the nested payload's raw entries, decrypts each
+  ZipCrypto-protected one, and decompresses the result (Stored or
+  Deflated; a third method is reported, not guessed at). Tested against
+  a synthetic fixture (`crates/knx-etsproj/fixtures/zipcrypto-protected.knxproj`,
+  password `hunter2knx`), generated with the independent Info-ZIP `zip`
+  CLI — never by any code path in this repository — plus a
+  crypto-primitive-level fixture in `knx-secure/fixtures/`. Both are
+  synthetic, not extracted from a real ETS project, and that is an
+  acceptable substitute *here*: ZipCrypto is a fully specified algorithm
+  (APPNOTE.TXT), not an ETS-specific quirk, so a fixture built with a
+  standard, independent tool exercises the same cipher a real ETS4/ETS5
+  export would use. **What this does not verify:** whether a real
+  ETS4/ETS5 export's nested payload matches this fixture's shape in every
+  detail (entry layout, compression choices, check-byte convention in
+  practice) — see §3 of `docs/COMPATIBILITY.md`, still listed as
+  unverified against a real protected export.
+* **A wrong password** is reported as `ContainerError::WrongPassword`,
+  never a panic and never silently-wrong plaintext — but ZipCrypto's own
+  check byte only rules out 255/256 wrong passwords; a false accept
+  (1/256) would proceed to decompress garbage, which then fails as a
+  decompression error (`ContainerError::Read`) or, in the unlucky case
+  the garbage happens to inflate, produces wrong bytes indistinguishable
+  from a real but different plaintext. This is not a defect in this
+  implementation — it is the ceiling ZipCrypto's design imposes, stated
+  here rather than left implicit.
+
+**Impact.** A ZipCrypto-protected (ETS4/ETS5) project can now be imported
+given its password, though only verified against a synthetic fixture, not
+a real export. An AES-protected (ETS6) project still cannot be imported
+at all — same as before this change, and for the same reason: refusing
+cleanly beats a decryption path nobody has run against a real encrypted
+file.
+
+**Lifted when.**
+
+* ZipCrypto decryption's remaining gap — verification against a real
+  ETS4/ETS5 protected export — is lifted when such a sample becomes
+  available and the unknown-construct/reconciliation report comes back
+  clean against it.
+* AES container decryption is lifted when the `aes-crypto` feature is
+  enabled, the decryption path is implemented the same way ZipCrypto's
+  was, and a real password-protected ETS6 project is available to verify
+  it against.
 
 ## 14. The project's default language is a placeholder
 

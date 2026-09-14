@@ -77,7 +77,9 @@
 //!
 //! §6.1.6's "last 1 or 2 bytes" check is one byte in every modern writer
 //! (PKZIP 2.0+): a wrong password has a 1-in-256 chance of producing a
-//! decrypted header whose last byte happens to match anyway. [`decrypt`]
+//! decrypted header whose last byte happens to match a given convention,
+//! and since [`decrypt`] accepts either of two conventions (below), the
+//! rate it actually runs at is twice that — **about 1 in 128**. [`decrypt`]
 //! reports that state as plainly as it can — [`ZipCryptoError::WrongPassword`]
 //! when the byte plainly does *not* match, and silence (an `Ok`) when it
 //! does — but an `Ok` is a statement about the header only. What follows
@@ -97,8 +99,12 @@
 //! even though it is not streamed from stdin, which is simply what that
 //! tool does for every encrypted entry. [`CheckBytes`] carries both, and
 //! [`decrypt`] accepts either — this repository has no way to know in
-//! advance which convention produced a given `.knxproj`, and trying both
-//! costs nothing a genuine password wouldn't already have to survive.
+//! advance which convention produced a given `.knxproj`. Trying both is
+//! not free: it doubles the false-accept rate to about 1 in 128, as said
+//! above. It costs a genuine password nothing, and it is the only way to
+//! read a file written by either tool — but the number is stated rather
+//! than waved past, because a check that is wrong twice as often as the
+//! specification's own figure should say so.
 //!
 //! ## Wrong-password behaviour
 //!
@@ -127,9 +133,9 @@ pub enum ZipCryptoError {
     },
     /// The decrypted header's check byte (APPNOTE §6.1.6) matched
     /// neither convention in [`CheckBytes`]. Since a correct password
-    /// almost never fails this check (1-in-256 odds per convention, and
-    /// both were tried), this is effectively certain to mean the
-    /// password was wrong — see the module docs for the one case this
+    /// almost never fails this check (1-in-256 odds per convention, both
+    /// of which were tried, so about 1 in 128 overall), this is
+    /// effectively certain to mean the password was wrong — see the module docs for the one case this
     /// cannot rule out (a false accept), which is the opposite failure
     /// and does not raise this error.
     WrongPassword,

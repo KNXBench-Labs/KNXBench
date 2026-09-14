@@ -30,7 +30,9 @@ pub use address::{
 };
 pub use building::{BuildingPart, BuildingPartType};
 pub use command::{Command, CommandError, CommandStack};
-pub use commissioning::{CommissioningState, CompletionStatus};
+pub use commissioning::{
+    CommissioningState, CompletionStatus, DeviceLoadStates, LoadDisagreement, LoadPart,
+};
 pub use device::{BinaryDataRef, ComObjectInstance, DeviceInstance};
 pub use devices::Devices;
 pub use dpt::{

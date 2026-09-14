@@ -592,9 +592,38 @@ fn insert_parameter_type(
                 a.get("maxInclusive"),
                 a.get("Type"),
             ),
-            "TypeText" => ("Text", None, None, None, None, None),
+            // `SizeInBit` is `TypeText`'s own declared maximum content
+            // length in bits (corpus-observed: `<TypeText SizeInBit="240"/>`
+            // and `SizeInBit="640"` in the MDT `M-0083_A-0317-31-7DC6`
+            // program — no `.knxprod` sample carries a `TypeText` without
+            // it, but the attribute is optional per its sibling types'
+            // shape, so a missing one stays `None`, not a fabricated
+            // default). T18 slice 5 reads it for a length check; the
+            // `Restriction`/`Number` arms above already read their own
+            // `SizeInBit` the same way.
+            "TypeText" => (
+                "Text",
+                parse_i64(a.get("SizeInBit")),
+                None,
+                None,
+                None,
+                None,
+            ),
             "TypeNone" => ("None", None, None, None, None, None),
-            "TypeFloat" => ("Float", None, None, None, None, None),
+            // `minInclusive`/`maxInclusive` on `TypeFloat` are corpus-
+            // observed (MDT `M-0083_A-0317-31-7DC6_PT-2ByteFloatTemp`:
+            // `<TypeFloat Encoding="DPT 9" minInclusive="-100"
+            // maxInclusive="200"/>`), the same bound shape `TypeNumber`
+            // already reads above — reusing `TypeFields`' existing
+            // min/max slots, not adding a new one.
+            "TypeFloat" => (
+                "Float",
+                None,
+                None,
+                a.get("minInclusive"),
+                a.get("maxInclusive"),
+                None,
+            ),
             "TypeIPAddress" => ("IPAddress", None, None, None, None, None),
             "TypePicture" => ("Picture", None, None, None, None, None),
             "TypeRawData" => ("Raw", None, None, None, None, None),
@@ -646,6 +675,12 @@ mod tests {
               </ParameterType>
               <ParameterType Id="PT-Num" Name="delay">
                 <TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" />
+              </ParameterType>
+              <ParameterType Id="PT-Float" Name="threshold">
+                <TypeFloat Encoding="DPT 9" minInclusive="-100" maxInclusive="200" />
+              </ParameterType>
+              <ParameterType Id="PT-Text" Name="label">
+                <TypeText SizeInBit="240" />
               </ParameterType>
             </ParameterTypes>
             <Parameters>
@@ -767,6 +802,46 @@ mod tests {
             (kind.as_str(), min.as_str(), max.as_str(), size),
             ("Number", "0", "255", 8)
         );
+    }
+
+    /// T18 slice 5: `TypeFloat`'s `minInclusive`/`maxInclusive` land in the
+    /// same columns `TypeNumber` already uses — corpus-observed shape (MDT
+    /// `M-0083_A-0317-31-7DC6_PT-2ByteFloatTemp`:
+    /// `<TypeFloat Encoding="DPT 9" minInclusive="-100" maxInclusive="200"/>`).
+    #[test]
+    fn a_float_type_stores_its_bounds() {
+        let (_dir, conn) = db();
+        ingest_program(&conn, "sha-1", "M-006A/A.xml", PROGRAM.as_bytes()).unwrap();
+        let (kind, min, max): (String, String, String) = conn
+            .query_row(
+                "SELECT kind, min_inclusive, max_inclusive
+                 FROM parameter_type WHERE id = 'PT-Float'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            (kind.as_str(), min.as_str(), max.as_str()),
+            ("Float", "-100", "200")
+        );
+    }
+
+    /// T18 slice 5: `TypeText`'s `SizeInBit` lands in the same column
+    /// `TypeNumber`/`TypeRestriction` already use — corpus-observed shape
+    /// (MDT `M-0083_A-0317-31-7DC6`: `<TypeText SizeInBit="240"/>` and
+    /// `SizeInBit="640"`).
+    #[test]
+    fn a_text_type_stores_its_size() {
+        let (_dir, conn) = db();
+        ingest_program(&conn, "sha-1", "M-006A/A.xml", PROGRAM.as_bytes()).unwrap();
+        let (kind, size): (String, i64) = conn
+            .query_row(
+                "SELECT kind, size_in_bit FROM parameter_type WHERE id = 'PT-Text'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!((kind.as_str(), size), ("Text", 240));
     }
 
     #[test]

@@ -2975,9 +2975,11 @@ answered and built.
 
 ## 64. `Languages` blocks outside an application program are discarded on import
 
-**Resolved for ingestion (2026-09-12, T32); still unread at most
-surfaces.** The heading is kept verbatim because five documents link to
-its anchor; read the status here, not in the title.
+**Resolved for ingestion (2026-09-12, T32); reading closed for every
+entity family this project's corpus has found a `Master`-scope
+translation for (2026-09-14, T13) — the residue below is what is left.**
+The heading is kept verbatim because five documents link to its anchor;
+read the status here, not in the title.
 
 **Ingested now.** `translation` was widened in schema v4 to `(scope,
 scope_id, language, ref_id, attribute_name)`
@@ -3095,15 +3097,65 @@ unavailable until a later slice gives those constructs their own
 tables — tracked here, not silently narrowed out of this section's
 claim.
 
+**Closed, 2026-09-14 (T13, branch `d10-language-data`).** The residue
+above is what this slice closes: `FunctionType`, `FunctionPoint` and
+`SpaceUsage` each get a table now (`function_type`, `function_point`,
+`space_usage`; schema v8 → v9, `migrate_v8_to_v9`), filled by
+`parse/master.rs`'s `ingest_master_data` the same `INSERT OR IGNORE` way
+`datapoint_type` already was. `query.rs` gained `function_types`/
+`function_type`, `function_points` (scoped to one `function_type_id`)
+and `space_usages`/`space_usage`, each overlaying `text` from a
+`Master`-scope translation through the same `master_text_overlay` every
+other Master reader here already used — that function never filtered by
+`RefId` prefix, so the translations these three families needed were
+already sitting in `translation` since T32; only the join target was
+missing. A v8 database is backfilled the same way a v3 one was for T32:
+its `knx_master.xml` blob is replayed through `ingest_master_data` inside
+the migration (`a_v8_database_backfills_function_and_space_usage_rows_and_their_translations`,
+`migration.rs`), so a database that already existed before this slice
+does not stay short these three tables' worth of data. An end-to-end
+test through `install_package`
+(`hardware_and_master_scope_translations_survive_install_with_their_text_intact`,
+`tests/standalone_packages.rs`) reads a planted `Hardware`-scope and a
+planted `Master`-scope translation's actual text back out of `translation`
+after a real package install, not merely a row count. Neither reader
+gained an HTTP route or a UI element — surfacing stops exactly where
+`datapoint_types` already stopped (no route in
+`apps/knx-server/src/routes.rs`), per this project's "surface only as far
+as existing machinery already reaches" rule; a caller inside the backend
+can call these functions today, nothing outside it can yet.
+
+**Residue restated, not claimed closed.** Three things this slice does
+not touch, stated plainly rather than left implicit: first, the other
+eight `MasterData` child sections `parse/master.rs`'s own module doc
+names (`DatapointRoles`, `InterfaceObjectTypes`,
+`InterfaceObjectProperties`, `PropertyDataTypes`, `MediumTypes`,
+`MaskVersions`, `FunctionalBlocks`, `ProductLanguages`) stay unparsed;
+none of them carried a `Master`-scope translation in any of the five
+sampled packages, but that is a corpus observation, not a schema
+guarantee, and a package that did translate one would have that
+translation's row sit in `translation` unread by anything, exactly as
+`FunctionType`/`SpaceUsage` did before this slice. Second, the
+`function_type`/`function_point`/`space_usage` tables inherit
+`datapoint_type`'s uncounted-collision gap outright — see §86's residue,
+extended 2026-09-14 to name them — a second package's `knx_master.xml`
+drops its restated rows with nothing recording that it happened. Third,
+`apps/knx-web` still sends no bare primary-language tag (§37's own open
+item, unchanged by this slice): the backend-side locale-prefix matching
+these new readers reuse has had a caller-reachable surface since D10
+slice 1, and still has none from the frontend.
+
 **Lifted when.** Ingestion: lifted 2026-09-12 (T32, branch
 `t32-shared-translations`). The `Hardware`-scope half of the reading
 residue: lifted 2026-09-13 (T16, branch `t16-device-product`). The
 `Master`-scope residue for `datapoint_type`, translation-count
 reporting, and backend locale-prefix matching: lifted 2026-09-13 (D10
 slice 1, branch `d10-master-translations`). `FunctionType`/
-`FunctionPoint`/`SpaceUsage` have no table at all and stay open under
-**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and under §37's
-own "still open" list. Not scheduled.
+`FunctionPoint`/`SpaceUsage`: lifted 2026-09-14 (T13, branch
+`d10-language-data`). This section's own residue (other `MasterData`
+sections, collision counting, frontend locale tags) stays open; see
+**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and §37's own
+"still open" list. Not scheduled.
 
 ## 65. `--version` names a commit, never a working tree
 
@@ -4213,6 +4265,17 @@ happened — a real schema change, and not attempted here since nothing in
 the real corpus has warranted it so far (see the measurement above); this
 section exists so the next manufacturer package that actually trips it is
 a documented gap, not a surprise.
+
+**Residue grows, 2026-09-14 (T13, branch `d10-language-data`).**
+`function_type`, `function_point` and `space_usage` (new tables, schema
+v8 → v9, closing §64's own residue) are filled by `parse/master.rs` the
+same bare `INSERT OR IGNORE` way `datapoint_type` already was — no
+`source_sha256` column, no occurrence counter, same restated-whole-catalogue
+collision shape a second `knx_master.xml` produces. Not measured
+separately against the corpus the way `datapoint_type` was above; the
+shape of the gap is identical, so it is stated rather than re-argued. A
+future fix for `datapoint_type`'s residue should cover these three tables
+in the same pass rather than leaving them a second time.
 
 ---
 

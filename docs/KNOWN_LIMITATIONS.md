@@ -4399,7 +4399,14 @@ collision shape a second `knx_master.xml` produces. Not measured
 separately against the corpus the way `datapoint_type` was above; the
 shape of the gap is identical, so it is stated rather than re-argued. A
 future fix for `datapoint_type`'s residue should cover these three tables
-in the same pass rather than leaving them a second time.
+in the same pass rather than leaving them a second time. The same three
+element families also inherit `datapoint_type`'s other silent-discard
+shape: a `FunctionType`, `FunctionPoint` or `SpaceUsage` with no `@Id`
+attribute at all binds `NULL` into a `TEXT PRIMARY KEY` column, and
+`INSERT OR IGNORE` drops that row with no error, no counter and no
+`ingest_unknown` entry — exactly as an id-less `DatapointType` already
+did before this slice, and not a new gap this slice introduces, only one
+it extends to three more tables.
 
 ---
 

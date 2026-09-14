@@ -86,6 +86,11 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                 source_path: source_path.to_string(),
                 cause: e.to_string(),
             })?;
+        // Self-closing elements fire no matching `Event::End`, so any
+        // "current" scope opened for one must be closed again before the
+        // match arm below returns — nothing downstream gets a second
+        // chance to notice.
+        let is_self_closing = matches!(&event, Event::Empty(_));
         match event {
             Event::Eof => break,
             Event::End(e) if e.local_name().as_ref() == "DatapointType" => {
@@ -160,7 +165,18 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                             &a,
                             FUNCTION_TYPE_ATTRS,
                         );
-                        current_function_type = a.get("Id").map(str::to_string);
+                        // A self-closing `FunctionType` (the corpus's own
+                        // `<FunctionType Text="custom" Id="FT-0" Number="0" />`
+                        // shape) fires no `Event::End` to clear this again,
+                        // so it must not open a scope that outlives itself
+                        // — otherwise a later sibling `FunctionPoint` would
+                        // silently inherit an id that was never really its
+                        // parent.
+                        current_function_type = if is_self_closing {
+                            None
+                        } else {
+                            a.get("Id").map(str::to_string)
+                        };
                         conn.execute(
                             "INSERT OR IGNORE INTO function_type (id, number, text, status)
                              VALUES (?1, ?2, ?3, ?4)",
@@ -403,7 +419,7 @@ mod tests {
     </Manufacturers>
     <FunctionTypes>
       <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified">
-        <FunctionPoint Id="FT-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+        <FunctionPoint Id="FP-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
       </FunctionType>
     </FunctionTypes>
     <SpaceUsages>
@@ -443,7 +459,7 @@ mod tests {
         );
         let (function_type_id, datapoint_type, role): (String, String, String) = conn
             .query_row(
-                "SELECT function_type_id, datapoint_type, role FROM function_point WHERE id = 'FT-1_DR-1'",
+                "SELECT function_type_id, datapoint_type, role FROM function_point WHERE id = 'FP-1_DR-1'",
                 [],
                 |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
             )
@@ -460,16 +476,27 @@ mod tests {
 
     #[test]
     fn a_function_point_outside_any_function_type_is_dropped_not_misparented() {
-        // Not a shape any sampled `knx_master.xml` produces, but a
-        // `FunctionPoint` cannot be stored without the parent id its
+        // A `FunctionPoint` cannot be stored without the parent id its
         // foreign key names — there is no sentinel value for "no parent"
-        // that would not silently misattribute a real one.
+        // that would not silently misattribute a real one. Two ways a
+        // trailing `FunctionPoint` could end up misparented instead of
+        // dropped: `FT-9` is opened and closed properly with its own real
+        // child, exercising the `Event::End` reset; `FT-0` is self-closing
+        // — the corpus's own `<FunctionType Text="custom" Id="FT-0"
+        // Number="0" />` shape — exercising the leak-on-`Event::Empty` path
+        // instead. Either bug would attribute the final `FunctionPoint` to
+        // whichever id is still lingering; a correct parser drops it,
+        // leaving exactly one row: `FT-9`'s own.
         let (_dir, conn) = db();
         let xml = r#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/11">
   <MasterData>
     <FunctionTypes>
-      <FunctionPoint Id="FT-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+      <FunctionType Id="FT-9" Number="9" Text="Dimming" Status="Certified">
+        <FunctionPoint Id="FP-9_DR-1" Text="Dim" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+      </FunctionType>
+      <FunctionType Id="FT-0" Number="0" Text="custom" Status="Certified" />
+      <FunctionPoint Id="FP-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
     </FunctionTypes>
   </MasterData>
 </KNX>"#;
@@ -477,7 +504,13 @@ mod tests {
         let points: i64 = conn
             .query_row("SELECT count(*) FROM function_point", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(points, 0);
+        assert_eq!(points, 1);
+        let function_type_id: String = conn
+            .query_row("SELECT function_type_id FROM function_point", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(function_type_id, "FT-9");
     }
 
     #[test]

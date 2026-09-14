@@ -363,7 +363,19 @@ fn migrate_v9_to_v10(conn: &Connection) -> Result<(), ProductDbError> {
 /// therefore filtered to the two xpath prefixes this migration's three new
 /// element families live under; see the comment at the call site.
 fn backfill_function_and_space_data(conn: &Connection) -> Result<(), ProductDbError> {
-    let mut stmt = conn.prepare("SELECT sha256, source_path, bytes FROM source_file")?;
+    // `ORDER BY rowid`: `Manufacturer`'s `ON CONFLICT DO UPDATE SET name =
+    // excluded.name` inside the replayed `ingest_master_data` is genuinely
+    // last-writer-wins, and the corpus's own master files disagree on a
+    // manufacturer's display name often enough to matter (132 of them,
+    // measured). Without an explicit order this table scan happens to
+    // come back in insertion order today, which is the only reason
+    // replaying it reproduces the original install's result — true by
+    // accident, not by anything SQLite promises. `rowid` pins it to what
+    // `source_file` actually promises: insertion order, by construction
+    // (ADR-0020 §E2 — this value depends on install history, not only on
+    // stored bytes, so the migration may not re-derive a *different* one).
+    let mut stmt =
+        conn.prepare("SELECT sha256, source_path, bytes FROM source_file ORDER BY rowid")?;
     let blobs: Vec<(String, String, Vec<u8>)> = stmt
         .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
         .collect::<Result<_, _>>()?;
@@ -1952,7 +1964,7 @@ mod tests {
     </Manufacturers>
     <FunctionTypes>
       <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified">
-        <FunctionPoint Id="FT-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+        <FunctionPoint Id="FP-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
       </FunctionType>
     </FunctionTypes>
     <SpaceUsages>
@@ -2041,7 +2053,7 @@ mod tests {
 
         let function_type_id: String = conn
             .query_row(
-                "SELECT function_type_id FROM function_point WHERE id = 'FT-1_DR-1'",
+                "SELECT function_type_id FROM function_point WHERE id = 'FP-1_DR-1'",
                 [],
                 |r| r.get(0),
             )
@@ -2089,7 +2101,7 @@ mod tests {
     </Manufacturers>
     <FunctionTypes>
       <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified" Obsolete="false">
-        <FunctionPoint Id="FT-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+        <FunctionPoint Id="FP-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
       </FunctionType>
     </FunctionTypes>
     <SpaceUsages>
@@ -2174,6 +2186,142 @@ mod tests {
             function_type_rows, 1,
             "an unknown on an element only this migration parses has never been recorded before, \
              so it must be recorded now"
+        );
+    }
+
+    #[test]
+    fn a_v9_blob_that_fails_to_parse_as_master_data_records_itself_and_does_not_stop_the_migration()
+    {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let good = MASTER_WITH_FUNCTIONS_AND_LANGUAGES.as_bytes();
+        let good_sha = crate::sha256_hex(good);
+        // Truncated mid-tag, in the same spirit as the linkable and
+        // parameter-type-bounds backfills' own parse-failure tests, but by
+        // a smaller, empirically-checked amount: `<MasterData>` opens early
+        // enough for `classify` to route this blob into
+        // `ingest_master_data` either way, but not every truncation length
+        // of this particular fixture leaves `quick-xml` mid-tag rather
+        // than at a tag boundary it is willing to read as `Eof` — 8 bytes
+        // off the end does, checked against this exact fixture rather than
+        // assumed from a sibling's number.
+        let bad = &good[..good.len() - 8];
+        let bad_sha = crate::sha256_hex(bad);
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..9] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 9i64).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    good_sha,
+                    "knx_master.xml",
+                    None::<String>,
+                    good.len() as i64,
+                    good
+                ],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO source_parse_evidence (sha256) VALUES (?1)",
+                [&good_sha],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    bad_sha,
+                    "M-BAD/knx_master.xml",
+                    None::<String>,
+                    bad.len() as i64,
+                    bad
+                ],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO source_parse_evidence (sha256) VALUES (?1)",
+                [&bad_sha],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            CURRENT_PRODUCTDB_VERSION,
+            "one blob's parse failure must not abort the migration"
+        );
+
+        let function_type_text: String = conn
+            .query_row(
+                "SELECT text FROM function_type WHERE id = 'FT-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            function_type_text, "Switch",
+            "the good blob must still be backfilled"
+        );
+
+        assert_eq!(
+            conn.query_row(
+                "SELECT count(*) FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND kind = 'FunctionSpaceBackfillError'",
+                [&bad_sha],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            1
+        );
+    }
+
+    #[test]
+    fn a_v9_database_with_no_master_data_blob_reads_no_blob_at_all() {
+        // `backfill_function_and_space_data` skips every blob that does not
+        // classify as `MasterData` before ever handing it to
+        // `ingest_master_data`. Proven with a blob that cannot be parsed as
+        // XML at all — the same garbage bytes the linkable and
+        // parameter-type-bounds backfills' own "nothing to backfill" tests
+        // use: if this backfill read it anyway, the migration would record
+        // a `FunctionSpaceBackfillError`.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..9] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 9i64).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES ('feedface', 'M-BAD/A.xml', 'M-BAD', 7, ?1)",
+                [b"<KNX><".as_slice()],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            conn.query_row("SELECT count(*) FROM function_type", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT count(*) FROM ingest_unknown WHERE kind = 'FunctionSpaceBackfillError'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            0,
+            "no MasterData blob was read, so no blob could fail"
         );
     }
 }

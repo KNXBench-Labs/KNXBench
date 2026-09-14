@@ -135,7 +135,7 @@ fn the_unknown_construct_table_is_a_short_list_not_a_flood() {
     );
     // Deliberately loose — ~4x headroom for a growing corpus, which at
     // today's construct profile is about 95 source files. For scale, this
-    // corpus fills the eight main parsed tables with 89,622 rows, ~22x
+    // corpus fills the eleven main parsed tables with 89,622 rows, ~22x
     // this bound; rerouting them here would not arrive one-for-one, which
     // is why this bound is not the regression guard.
     let rows = count(&conn, "SELECT count(*) FROM ingest_unknown");

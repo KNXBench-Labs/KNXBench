@@ -3952,9 +3952,43 @@ nobody has tried. COMPATIBILITY.md must keep saying nothing about it.
 dialog, and installs a device from a manufacturer package into it, and
 records what happened.
 
-## 84. A project's group address style can be chosen, and afterwards never seen
+## 84. A project's group address style can be chosen, and afterwards never seen — RESOLVED (2026-09-14, T4)
 
-**Limitation.** `POST /api/project/new` now accepts `groupAddressStyle` and
+**Resolved.** All three of the "Lifted when" conditions below are now met.
+`knx_projection::ProjectTree` carries `group_address_style` (a plain
+`"Free"`/`"TwoLevel"`/`"ThreeLevel"` string, `crates/knx-projection/src/
+lib.rs`), the properties inspector shows it read-only on the project node
+(`apps/knx-web/src/Inspector.tsx`), and `knx_core::Command::
+SetGroupAddressStyle` restyles a project — undoable/redoable like every
+other command, wired through `knx-store`'s `command_sync` and a new `POST
+/api/project/group-address-style` route. The restyle command checks every
+existing group address against the target style *before* mutating anything
+and refuses the whole change, naming the offending address, if even one
+does not fit (`CommandError::GroupAddressDoesNotFitStyle`).
+
+One thing this cycle's own boundary testing found and is recorded here
+rather than left implicit: that refusal path is, as far as this codebase's
+own address encoding goes, unreachable. `TwoLevel`'s 5+11-bit split and
+`ThreeLevel`'s 5+3+8-bit split each partition the full 16 bits of a
+`GroupAddress`'s raw `u16` with no remainder, so `GroupAddress::fits_style`
+— which renders an address in the target style and parses it back, and
+answers `true` only when that round trip returns the original address — is
+`true` for all 65536 possible raw values under every style, proved
+exhaustively by `crates/knx-core/src/address.rs`'s own
+`group_address_format_parse_round_trips_for_every_possible_raw_value` test,
+not merely asserted. The check still runs on every restyle: because it is a
+round trip through the real `format`/`parse` pair rather than a bounds
+comparison restating the same partition, it is the guard against a future
+change to this bit layout silently making one style narrower than another
+— it fails the moment `format` and `parse` disagree about the bit split —
+not dead code. `knx-store`'s `style_from_str` was
+also hardened while this was open: an unrecognized persisted style now
+returns `StoreError::UnknownGroupAddressStyle` instead of silently
+defaulting to `ThreeLevel`, the same rule `POST /api/project/new` already
+applied at creation time, now applied at load time too. The original
+limitation text is kept below for context.
+
+**Limitation (as it stood before 2026-09-14).** `POST /api/project/new` now accepts `groupAddressStyle` and
 the creation dialog asks for it, so a project can be started two-level, free
 or three-level **[V]** (`http_project_routes.rs`, three tests). After that
 moment the UI never mentions the style again: `knx_projection::ProjectTree`
@@ -3976,8 +4010,8 @@ worse pair than "permanent" alone. The server-side refusal of an unknown
 style value (a `400`, never a silent fall back to three-level) at least
 means the style a project ends up with is always one that was asked for.
 
-**Lifted when.** `ProjectTree` carries the style, the properties inspector
-shows it for the project node, and — separately, and harder — a command in
+**Lifted when.** Done, 2026-09-14: `ProjectTree` carries the style, the
+properties inspector shows it for the project node, and a command in
 `knx-core` can restyle a project whose addresses all still fit the target
 style.
 
@@ -4370,3 +4404,51 @@ exists so the number stops being re-derived. If a future brief asks for
 "main type 46" again, it means "the remaining main types in some
 `knx_master.xml`", and the right first step is to measure the file in front
 of you.
+## 91. A running bus session keeps rendering group addresses in the style the project had when it started
+
+**What.** `GroupAddressContext` (`apps/knx-server/src/bus.rs`) is a snapshot
+taken once, by `from_project`, at `POST /api/bus/start` time: the project's
+group address style, its group address names, and its resolved DPTs. Nothing
+refreshes it for the life of the session. Before T4 that could not matter — a
+project's style was chosen at creation and never changed, so the snapshot and
+the project agreed by construction. T4 made the style editable
+(`POST /api/project/group-address-style`), and the snapshot is now the one
+place in the server that can disagree with the project it came from.
+
+Restyle a project while a bus session is open and two routes keep speaking the
+old style: `GET /api/bus/telegrams` renders every destination through
+`format_destination`, and `POST /api/bus/write` parses the incoming
+`destination` with the same cached style (`bus_routes.rs`, the
+`unwrap_or(GroupAddressStyle::ThreeLevel)` fallback applying only when no
+session is active or its snapshot carried no project). Meanwhile the Project
+Explorer, the Inspector, the projection and every exporter read the style from
+the live project and show the new one.
+
+**Why this is a display and ergonomics defect, not an addressing one.** No
+telegram is ever sent to the wrong address because of it. The three styles have
+different field counts — `Free` is one decimal number, `TwoLevel` is `main/sub`,
+`ThreeLevel` is `main/middle/sub` — and `GroupAddress::parse` requires the exact
+field count for the style it is given, so a string written in one style never
+parses as a *different* address in another: it is refused. A user who copies
+`4242` out of the restyled Explorer and posts it to `/write` on a session that
+started in `ThreeLevel` gets a `400` with a malformed-address message, not a
+telegram to `4/2/42`. **[V]** Verified by reading both code paths on
+`243a4d7`, not inferred from the type signatures.
+
+**Why it is left as it is.** The snapshot is deliberate and load-bearing for a
+different reason: the `/start` handler must build it from `AppState.project`
+*before* calling `BusSession::start`, so the project mutex is never held across
+that call's `.await` (see `BusSession::start`'s own doc comment, and the
+commissioning design spec §4.4, which specifies the snapshot). Refreshing it on
+restyle means reaching into a live session from the project-mutation path and
+re-acquiring locks in the opposite order — exactly the deadlock shape the
+snapshot exists to avoid. That is a bus-session-lifetime change, not a group
+address style change, and T4's scope is the style.
+
+**Workaround.** Stop and restart the bus session after restyling a project. The
+new session snapshots the new style.
+
+**Lifted when.** A bus session gains a supported way to be told its project
+changed — most plausibly a channel the session task owns, so the refresh
+happens on the session's side of the lock rather than the mutator's. Until
+then, restarting the session is the honest answer and this section says so.

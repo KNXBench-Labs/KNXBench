@@ -3,12 +3,13 @@
 //! id(s) name, reading the resulting state out of the already-mutated
 //! `project` rather than re-deriving `command.rs`'s own mutation logic
 //! (design doc, "Incremental command sync"). Grows as `command.rs` grows —
-//! every `Command` variant has a match arm here, but only the original
-//! eight (device address/description, com-object DPT/description and their
-//! undo/redo forms, group-address create/delete) actually persist; the rest
-//! (topology/group-range/group-link variants, plus device create/delete)
-//! are no-op stubs awaiting a future incremental-sync pass (see each arm's
-//! own "persistence layer not yet implemented" comment).
+//! every `Command` variant has a match arm here, but only nine (device
+//! address/description, com-object DPT/description and their undo/redo
+//! forms, group-address create/delete, and the project-wide group-address
+//! style) actually persist; the rest (topology/group-range/group-link
+//! variants, plus device create/delete) are no-op stubs awaiting a future
+//! incremental-sync pass (see each arm's own "persistence layer not yet
+//! implemented" comment).
 
 use rusqlite::Connection;
 
@@ -186,6 +187,9 @@ pub fn sync_after_command(
         Command::MoveDeviceToBuildingPart { .. } => {
             // Building-part persistence layer not yet implemented (Task 4 scope).
         }
+        Command::SetGroupAddressStyle { .. } => {
+            crate::project::set_group_address_style(&tx, project.info.group_address_style)?;
+        }
         Command::Batch(_) => {
             // No arm needed here, not just none yet: nothing currently calls
             // `sync_after_command` from the server's command path (see
@@ -349,6 +353,30 @@ mod tests {
 
         let loaded = crate::load_project(&conn).unwrap();
         assert_eq!(loaded.installations[0].group_addresses, vec![]);
+    }
+
+    /// `SetGroupAddressStyle` has no device or group-address id to key off
+    /// — it is project-wide — so its sync arm calls
+    /// `project::set_group_address_style` directly rather than reading a
+    /// stored row back the way every other arm does.
+    #[test]
+    fn set_group_address_style_syncs_the_one_column() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = Project::new(knx_core::string_table::Language("en".into()));
+        project.installations.push(installation());
+        crate::save_project(&conn, &project).unwrap();
+
+        let command = Command::SetGroupAddressStyle {
+            style: knx_core::address::GroupAddressStyle::Free,
+        };
+        command.apply(&mut project).unwrap();
+        sync_after_command(&conn, &project, &command).unwrap();
+
+        let loaded = crate::load_project(&conn).unwrap();
+        assert_eq!(
+            loaded.info.group_address_style,
+            knx_core::address::GroupAddressStyle::Free
+        );
     }
 
     #[test]

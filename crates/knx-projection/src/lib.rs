@@ -43,6 +43,15 @@ pub struct ProjectTree {
     pub can_undo: bool,
     /// See `can_undo`.
     pub can_redo: bool,
+    /// The project-wide rendering choice every `GroupAddressNode`,
+    /// `GroupRangeNode` and `GroupLinkNode` address string in this tree was
+    /// already formatted with — carried through so the inspector can show
+    /// it on the project node without a second round trip
+    /// (KNOWN_LIMITATIONS.md §84). `GroupAddressStyle` as a plain string
+    /// (`"Free"`, `"TwoLevel"`, `"ThreeLevel"`) — same choice as
+    /// `BuildingPartType` below: the enum itself stays in `knx-core`, a
+    /// typed TS union is not worth a mirror type for one read-only field.
+    pub group_address_style: String,
     pub installations: Vec<InstallationNode>,
 }
 
@@ -197,6 +206,7 @@ pub fn build_project_tree(project: &Project) -> ProjectTree {
         warnings: 0,
         can_undo: false,
         can_redo: false,
+        group_address_style: group_address_style_str(project.info.group_address_style).to_string(),
         installations: project
             .installations
             .iter()
@@ -710,6 +720,20 @@ fn building_kind_str(kind: BuildingPartType) -> &'static str {
     }
 }
 
+/// Same wire spelling as `knx-store`'s `style_to_str`, `knx-server`'s
+/// `parse_group_address_style` and `knx-etsproj`'s
+/// `export::schema11::group_address_style_str` — four crates, one string
+/// table, kept in sync only by the shared exhaustive match, since
+/// `GroupAddressStyle` itself carries no `Serialize`/`TS` derive
+/// (`knx-core` depends on neither crate).
+fn group_address_style_str(style: GroupAddressStyle) -> &'static str {
+    match style {
+        GroupAddressStyle::Free => "Free",
+        GroupAddressStyle::TwoLevel => "TwoLevel",
+        GroupAddressStyle::ThreeLevel => "ThreeLevel",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -791,6 +815,25 @@ mod tests {
         assert_eq!(tree.errors, 0);
         assert_eq!(tree.warnings, 0);
         assert!(tree.installations.is_empty());
+    }
+
+    /// `ProjectTree::group_address_style` (KNOWN_LIMITATIONS.md §84) mirrors
+    /// `Project::info.group_address_style` for every style, not just the
+    /// `Project::new` default of `ThreeLevel`, so the inspector shows the
+    /// project's real choice rather than a constant.
+    #[test]
+    fn project_tree_carries_the_projects_group_address_style() {
+        let mut project = Project::new(Language("en".into()));
+        assert_eq!(
+            build_project_tree(&project).group_address_style,
+            "ThreeLevel"
+        );
+
+        project.info.group_address_style = knx_core::GroupAddressStyle::Free;
+        assert_eq!(build_project_tree(&project).group_address_style, "Free");
+
+        project.info.group_address_style = knx_core::GroupAddressStyle::TwoLevel;
+        assert_eq!(build_project_tree(&project).group_address_style, "TwoLevel");
     }
 
     #[test]

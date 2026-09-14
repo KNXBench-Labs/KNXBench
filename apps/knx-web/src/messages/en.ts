@@ -291,6 +291,14 @@ export const messages = {
   "inspector.deviceCount.other": "{count} devices",
   "inspector.childPartCount.one": "{count} child part",
   "inspector.childPartCount.other": "{count} child parts",
+  // Project node (KNOWN_LIMITATIONS.md §84) — read-only display, nothing
+  // more: no control on this panel restyles the project (that happens, if
+  // at all, through `POST /api/project/group-address-style`, which has no
+  // UI entry point yet). `explorer.project` is the tree label,
+  // `inspector.project` this panel's own heading.
+  "explorer.project": "Project",
+  "inspector.project": "Project",
+  "inspector.groupAddressStyle": "Group address style",
 
   // Shared between `Inspector.tsx` and `ProjectExplorer.tsx` — see the
   // header comment above for why this one namespace isn't per-surface.
@@ -779,7 +787,7 @@ export const messages = {
   "newProject.language": "Project language",
   "newProject.languageHint": "The language tag your project texts are stored under, e.g. en or de-DE. Not the language of this interface.",
   "newProject.style": "Group address style",
-  "newProject.styleHint": "Choose now: once group addresses exist, nothing changes the style back.",
+  "newProject.styleHint": "Pick the one you think in; the project properties can restyle it later.",
   "newProject.style.Free": "Free (0–65535)",
   "newProject.style.TwoLevel": "Two level (main/sub)",
   "newProject.style.ThreeLevel": "Three level (main/middle/sub)",

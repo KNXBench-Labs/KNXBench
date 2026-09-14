@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 function baseTree(): ProjectTree {
-  return { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, installations: [] };
+  return { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, group_address_style: "ThreeLevel", installations: [] };
 }
 
 function entry(overrides: Partial<LogEntry>): LogEntry {

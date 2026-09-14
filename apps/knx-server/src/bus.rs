@@ -1104,7 +1104,13 @@ impl BusSession {
 
     /// The open project's configured `GroupAddressStyle` at session-start
     /// time (design spec §4.4's snapshot), or `None` if no project was open
-    /// when this session started. Task 5 fix: `POST /api/bus/write`
+    /// when this session started. Since T4 made the style editable, this
+    /// snapshot can go stale mid-session: a restyle does not reach in here,
+    /// so `/telegrams` keeps rendering and `/write` keeps parsing in the
+    /// style this session started with. Documented as
+    /// `docs/KNOWN_LIMITATIONS.md` §91 — no address is ever mis-parsed,
+    /// because the three styles have different field counts and `parse`
+    /// refuses a mismatch rather than reinterpreting it. Task 5 fix: `POST /api/bus/write`
     /// (`bus_routes.rs`) uses this to parse an incoming `destination` string
     /// in the same style `GET /telegrams` used to *render* it — before this
     /// accessor existed, `/write` hardcoded `GroupAddressStyle::ThreeLevel`

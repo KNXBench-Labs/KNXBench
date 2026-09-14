@@ -71,6 +71,7 @@ function twoInstallationTree(): ProjectTree {
     warnings: 0,
     can_undo: false,
     can_redo: false,
+    group_address_style: "ThreeLevel",
     installations: [first, second],
   };
 }
@@ -113,5 +114,26 @@ describe("Inspector — collapsed delete-restriction message", () => {
     expect(host!.textContent).toContain(
       "Rename and Delete are only available for group ranges in the first installation.",
     );
+  });
+});
+
+// KNOWN_LIMITATIONS.md §84 — a project's group address style, once chosen,
+// used to be invisible again. This is display only: no button, dropdown, or
+// route call lives in `ProjectInspector`, just `tree.group_address_style`
+// read back onto the screen.
+describe("Inspector — project node", () => {
+  it("shows the project's current group address style", async () => {
+    const tree = twoInstallationTree();
+    await renderInspector({ kind: "project", id: 0 }, tree);
+
+    expect(host!.textContent).toContain("ThreeLevel");
+  });
+
+  it("reflects a non-default style the same way", async () => {
+    const tree = { ...twoInstallationTree(), group_address_style: "Free" };
+    await renderInspector({ kind: "project", id: 0 }, tree);
+
+    expect(host!.textContent).toContain("Free");
+    expect(host!.textContent).not.toContain("ThreeLevel");
   });
 });

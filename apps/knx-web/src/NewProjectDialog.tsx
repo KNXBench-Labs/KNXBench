@@ -22,10 +22,12 @@ const STYLES: readonly GroupAddressStyle[] = ["ThreeLevel", "TwoLevel", "Free"];
  * since 2026-09-08; until now nothing in the UI called it.
  *
  * Every field is pre-filled with something valid, so the fast path is
- * "open it, press Enter". The group address style is the one field that
- * genuinely has to be asked rather than defaulted quietly: nothing in the
- * domain restyles a project after group addresses exist, so a wrong
- * default is discovered a hundred addresses too late.
+ * "open it, press Enter". The group address style is still asked rather
+ * than defaulted quietly, because it is the field a reader thinks in and a
+ * wrong one is noticed a hundred addresses later — but as of T4 it is no
+ * longer a one-way door: `SetGroupAddressStyle` restyles a project after
+ * the fact, and the style is a rendering choice rather than a capacity
+ * limit, so no address is lost either way.
  *
  * Built on the shared `Overlay` shell (T31) — `role="dialog"`, Escape,
  * focus trap and focus restoration all come from there.

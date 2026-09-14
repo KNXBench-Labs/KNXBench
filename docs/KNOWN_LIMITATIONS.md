@@ -220,9 +220,20 @@ that server-named id instead of the declared one (D43).
     `ModuleScope::parent`. A nested-module diagnostic or activation
     surfaced through the parameter-editor HTTP API therefore *displays*
     only the innermost enclosing `Module`, not the full ancestor chain.
-    Unattested against real data — no corpus sample reaches this path —
-    but this is a display omission, not the section-collision defect the
-    next bullet used to describe; that one is fixed, this one is not.
+    **Consequence sharpened, fix round 2 (2026-09-14):** the server now
+    correctly splits two nesting chains that share an innermost
+    `module_node` under different ancestors into two distinct sections
+    (previous bullet), but if both chains' innermost `Module`s are also
+    both nameless (no `@Id`) under the *same* `ModuleDef`, their DTOs are
+    identical — `moduleNode`/`moduleId`/`moduleDefId` all equal — so the
+    client cannot tell the two correctly-split sections apart. `ParameterPanel.tsx`'s
+    `sameScope()` then matches a diagnostic meant for one section against
+    both, misattributing it. This is no longer only lost ancestor
+    *context*; it is diagnostic *misattribution* between two sections the
+    server itself got right. Unattested against real data — no corpus
+    sample reaches this path — but this is a display omission, not the
+    section-collision defect the next bullet used to describe; that one
+    is fixed, this one is not.
   - **Fixed in fix round 1 (2026-09-14): two nesting chains sharing a
     `module_node` no longer collide into one section.** Before this fix,
     `apps/knx-server`'s parameter-panel grouping keyed sections on the
@@ -231,8 +242,9 @@ that server-named id instead of the declared one (D43).
     `dynamic_node.node_id` resets per `(program_id, module_def_id)` tree,
     two distinct nesting chains can reuse the same `module_node` at the
     same depth under different ancestors — this branch's own test
-    `a_module_inside_a_module_def_naming_a_different_module_def_is_expanded_two_levels`
-    constructs exactly that pair. The two sections merged, the S4
+    `two_nesting_chains_sharing_a_module_node_do_not_merge_into_one_section`
+    (`apps/knx-server/tests/http_parameter_panel.rs`) constructs exactly
+    that pair. The two sections merged, the S4
     duplicate-module-id backstop could not fire (it counts sections, and
     the collision happened a step earlier), and `write_ets_id`
     reconstruction could point the losing channel's fields at the

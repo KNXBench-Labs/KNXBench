@@ -320,7 +320,7 @@ bounded and cycle-safe rather than left as a one-level policy limit. This
 addendum supersedes D15 and D17's `NestedModuleNotExpanded` row; D12-D14,
 D16, D19 are unaffected.
 
-### D20. `Module` nesting is expanded recursively, bounded by a named constant
+### D44. `Module` nesting is expanded recursively, bounded by named constants
 
 A `Module` found while walking an already-expanded `ModuleDef`'s tree is now
 expanded the same way a top-level `Module` is: its `@RefId` is looked up in
@@ -331,14 +331,35 @@ carries a `depth()` method (1 + parent depth, 0 if none).
 
 Expansion stops — with a diagnostic, not a panic and not silent truncation —
 once `ModuleScope::depth()` would exceed
-`evaluate::MAX_MODULE_NESTING_DEPTH = 16`. **[A]** No source states a bound;
-see the constant's own doc comment for the inference and the fresh
-`pdftotext -layout` re-extraction of `Project Schema23 v01.00.00.pdf`
-confirming (again) that the KNX Standard defines no application-program-side
-`ModuleDef`/`Module` complexType at all — there is nothing in the Standard
-to derive a bound from, so 16 is chosen, not found.
+`evaluate::MAX_MODULE_NESTING_DEPTH = 16`. **[A]** No source states a
+numeric bound for AP-side nesting; see the constant's own doc comment for
+the inference and the fresh `pdftotext -layout` re-extraction of `Project
+Schema23 v01.00.00.pdf` confirming (again) that the KNX Standard defines no
+application-program-side `ModuleDef`/`Module` complexType at all. The
+Standard is not silent about module nesting everywhere, though:
+`ModuleInstance_t/@Id`'s documented grammar (§1.2.5.18, project-instance
+side, **[D]**, already recorded at `docs/RESEARCH.md` §4.4 Q6) gives exactly
+one extra level, never a second `SubModule` segment. That text is
+project-side, not AP-side, so it does not settle this constant's value on
+its own — but it is the one documented data point that speaks to nesting
+depth at all, and it says 2, not 16; `16` is chosen deliberately far above
+that one documented neighbour, not found in the Standard and not fitted to
+any known file.
 
-### D21. Cycles are detected by scanning the whole ancestor chain, not just the immediate parent
+**Fix round 1, blocking finding 1 (goal-completion task 11):** the depth
+bound alone does not bound *total* work — a non-cyclic tree with fan-out at
+every level can multiply activations combinatorially without any single
+chain exceeding `MAX_MODULE_NESTING_DEPTH`. A measured probe
+(`depth=12, fanout=4`, 44-node input) reached 4,194,304 `Module`
+activations, 11.5s and 8,170 MiB peak RSS — well short of depth 16. A
+second constant, `evaluate::MAX_MODULE_EXPANSIONS = 100_000`, now caps the
+total number of `Module` expansions any one `evaluate` call will perform,
+checked alongside the depth bound and refused the same way, with
+`Diagnostic::ModuleExpansionBudgetExhausted`. See that constant's own doc
+comment for where `100_000` comes from (roughly 260x the corpus's measured
+legitimate ceiling of 382 activations).
+
+### D45. Cycles are detected by scanning the whole ancestor chain, not just the immediate parent
 
 Before expanding a `Module`'s target `ModuleDef`, `chain_contains` walks
 `self` and every `parent` comparing `module_def_id`. A `ModuleDef` that
@@ -356,7 +377,7 @@ is the depth the expansion would have reached.
 inside a `ModuleDef`'s own tree is no longer a standing diagnostic by
 itself; it is either expanded, refused as a cycle, or refused as too deep.
 
-### D22. The dedup/scope key is qualified by the full ancestor node chain
+### D46. The dedup/scope key is qualified by the full ancestor node chain
 
 D18's key, `(Option<module_node>, ref_id)`, assumed at most one enclosing
 `Module`. A `node_id` is only unique within one `(program_id,
@@ -367,30 +388,42 @@ becomes `(Vec<i64>, String)`: the full chain of `module_node` ids from the
 program root down, plus `ref_id`. `ModuleScope::node_chain()` builds this
 vector by walking `parent` outward-in.
 
+**Fix round 1, blocking finding 4 (goal-completion task 11):** this crate's
+own `evaluate`/`Activation` dedup got the widened key above, but
+`apps/knx-server/src/domain.rs`'s parameter-panel section grouping did not
+— it kept keying `section_order`/`sections_by_key` on the flat
+`Option<module_node>` D18 used, so two distinct nesting chains sharing a
+`module_node` (the branch's own two-level test constructs exactly this
+pair) collided into one section instead of two. `node_chain()` is now
+`pub`, and the server keys sections on `Option<Vec<i64>>` the same way this
+crate does.
+
 ### Corpus measurement (task 11, required deliverable)
 
 Measured, not guessed, against every `.knxprod` file present under
-`OriginalData/ProductDatabases/` (all 5 archives currently installed
+`OriginalData/ProductDatabases/` (all 5 archive files currently present
 locally: `646704-04_ETS4_2012_47_DE_EN`, `Dummy_Applikation_Secure`,
 `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a` (3 application programs),
-`Weinzierl_730_KNX_IP_Interface_ETS4`, `Weinzierl_730_KNX_IP_Interface_ETS4_v1`),
-two independent ways:
+`Weinzierl_730_KNX_IP_Interface_ETS4`, `Weinzierl_730_KNX_IP_Interface_ETS4_v1`
+— the last two are byte-identical, so `install_package` stores only four
+distinct packages), two independent ways:
 
 1. A raw XML scan (`xml.etree.ElementTree`, scratch script, outside the
    repo) over every extracted application-program XML file counted `Module`
    elements found inside a `ModuleDef` element's own subtree: **0** across
    all 7 application-program files.
 2. `crates/knx-productdb/tests/dynamic_tree.rs`'s
-   `corpus_nested_module_measurement_task_11` installs the same 5 archives
-   into a fresh database and runs
+   `corpus_nested_module_measurement_task_11` installs the same 5 archive
+   files into a fresh database and runs
    `SELECT COUNT(*) FROM dynamic_node WHERE kind = 'Module' AND
    module_def_id != ''` (a `Module` row stored under a non-empty
    `module_def_id`, i.e. inside a `ModuleDef`'s own tree rather than the
-   program's): **0**, out of a total of 90 stored `Module` rows overall
-   (`kind = 'Module'`, any `module_def_id`).
+   program's): **0**, out of a total of 86 stored `Module` rows overall
+   (`kind = 'Module'`, any `module_def_id`; both counts are now asserted by
+   the test, not merely printed).
 
 Both measurements agree: **zero products in the installed database nest
-modules.** D20/D21's bounded recursion is therefore exercised, in this
+modules.** D44/D45's bounded recursion is therefore exercised, in this
 corpus, only by the new synthetic unit tests — the corpus itself gives it
 nothing to expand.
 
@@ -415,3 +448,14 @@ nothing to expand.
     --all-targets -- -D warnings`, `cargo test --workspace --no-fail-fast`,
     `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
     check-headers`, `cargo deny check`.
+16. *(Fix round 1, blocking finding 1.)* A unit test with a non-cyclic
+    fan-out tree that would exceed `MAX_MODULE_EXPANSIONS` before it would
+    exceed `MAX_MODULE_NESTING_DEPTH` yields
+    `ModuleExpansionBudgetExhausted { budget: MAX_MODULE_EXPANSIONS, .. }`
+    and `evaluate` returns rather than continuing to expand.
+17. *(Fix round 1, blocking finding 4.)* A unit test with two distinct
+    nesting chains that reuse the same `module_node` at the same depth
+    under different ancestors — the shape
+    `a_module_inside_a_module_def_naming_a_different_module_def_is_expanded_two_levels`
+    already constructs — produces two separate parameter-panel sections in
+    `apps/knx-server`, not one collided section.

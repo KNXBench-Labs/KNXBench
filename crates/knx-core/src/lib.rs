@@ -30,6 +30,7 @@ pub use address::{
 };
 pub use building::{BuildingPart, BuildingPartType};
 pub use command::{Command, CommandError, CommandStack};
+pub use commissioning::mutation::{WriteAuthorisation, WriteScope};
 pub use commissioning::{
     CommissioningState, CompletionStatus, DeviceLoadStates, LoadDisagreement, LoadPart,
 };

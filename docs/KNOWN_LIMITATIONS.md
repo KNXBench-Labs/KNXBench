@@ -194,12 +194,62 @@ that server-named id instead of the declared one (D43).
   (`Access="None"` alongside a `Memory` child came back roughly 50/50 in
   the corpus, `Visible` never observed at all); the editor shows `access`
   verbatim and never uses it to block, hide or grey out a write.
-- **`Float`/`Text`/`IPAddress`/`Picture`/`Raw` parameter kinds get only a
-  non-empty-string check on write.** Only `Number` (bounds) and
-  `Restriction` (enum membership) have columns the product database
-  actually carries. No IPv4 parsing, no byte-length check, no
-  fractional-format check — inventing rules with no spike behind them was
-  ruled out rather than attempted.
+- **T18 slice 5 (2026-09-14) gives `Float`, `Text` and `IPAddress` real
+  validation; `Picture` and `Raw` stay on the non-empty-string floor,
+  documented as a gap rather than guessed shut.** `Float` now rejects
+  non-finite input and anything outside the program's own
+  `minInclusive`/`maxInclusive` (`TypeFloat`'s own attributes,
+  corpus-observed: MDT `M-0083_A-0317-31-7DC6_PT-2ByteFloatTemp` carries
+  `<TypeFloat Encoding="DPT 9" minInclusive="-100" maxInclusive="200"/>`)
+  when the program declares bounds, and just finiteness when it does not.
+  `Text` now rejects a value whose UTF-8 byte length exceeds the
+  program's own `SizeInBit` (`TypeText`'s own attribute, corpus-observed:
+  the same program's `<TypeText SizeInBit="240"/>` and
+  `SizeInBit="640"`) divided by 8, when declared; a `TypeText` with no
+  `SizeInBit` — which happens — gets no length cap rather than a
+  fabricated one. Both reuse `parameter_type`'s existing
+  `min_inclusive`/`max_inclusive`/`size_in_bit` columns; no schema
+  change, no change to how the value is stored (the raw string the user
+  typed is still what gets written verbatim into the command and the
+  exported `Value` attribute).
+  `IPAddress` accepts both IPv4 and IPv6, on schema evidence: KNX Project
+  Schema23 v01.00.00 §1.1.3.19 (`simpleType Value_t`) documents
+  `TypeIPAddress` as "IPv4 addresses: decimal dotted notation" and
+  "IPv6 addresses: eight groups of four hexadecimal digits, separated by
+  colons, e.g. 2001:0db8:85a3:0000:0000:8a2e:0370:7334" — both forms, in
+  the same sentence, with a worked IPv6 example `[D]`. IPv4 is validated
+  with `std::net::Ipv4Addr::from_str`, which matches the schema's own
+  `Ipv4Address_t` restriction pattern (§1.1.3.21) closely enough
+  (rejects leading zeroes and out-of-range octets, same as the pattern
+  would). IPv6 is deliberately checked against only the schema's literal
+  documented shape — eight colon-separated groups of exactly four hex
+  digits — not the fuller RFC 4291 grammar `std::net::Ipv6Addr` would
+  accept (compression via `::`, elided leading zeroes, embedded IPv4
+  tails). The schema names one form; accepting a wider one would be
+  inventing a rule the Standard does not state, so the compressed forms
+  are rejected even though a real IPv6 address may use them — narrower
+  than necessary is the defensible choice here, not the complete one.
+  `Picture` and `Raw` get no format check beyond non-empty, because no
+  format exists to check against: `Value_t`'s encoding table (§1.1.3.19)
+  lists `TypeNone`, `TypeText`, `TypeNumber`, `TypeFloat`,
+  `TypeRestriction`, `TypeTime`, `TypeDate`, `TypeIPAddress` and
+  `TypeAllocatorRefId` — `TypePicture` and `TypeRawData` are absent from
+  it entirely `[D]`. A full sweep of all five corpus `.knxprod` archives
+  found zero `<TypePicture>` and zero `<TypeRawData>` elements to
+  cross-check against, and neither knx-spec-kb knowledge base nor
+  xknxproject's own source turned up a documented encoding. The schema
+  does use `xs:base64Binary` for other binary attributes elsewhere
+  (`SerialNumber`, `LoadedImage`, `PasswordHash`) `[D]`, which was
+  considered as a stand-in rule for Picture/Raw and rejected: that
+  convention is attested for those specific attributes, not for these
+  two parameter kinds, and guessing it across would risk rejecting a
+  legitimate value on a rule invented rather than found. What both kinds
+  do gain is a reject on any character outside XML 1.0's `Char`
+  production (`[V]`: this workspace's pinned `quick-xml 0.42.0` does not
+  filter or escape such characters on write, confirmed by a standalone
+  test), applied to every kind's fallback path too — a value containing
+  a raw control character would otherwise corrupt the exported
+  `.knxproj` rather than merely being semantically unchecked.
 
 **Impact.** Device configuration for a top-level field, and now for a
 module-scoped field with exactly one authoritative instance, can be done

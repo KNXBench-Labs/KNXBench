@@ -45,9 +45,14 @@ pub const MAX_APDU_LENGTH: u16 = 254;
 /// an ESCape Code"* — not a length, and not a licence to write 252 octets.
 pub const APDU_ESCAPE_CODE: u16 = 255;
 
-/// The first address `A_Memory_Write` cannot reach. `[D]` CP §3.5.2:
-/// *"if BaseAddress plus allocated memory is lower than FFFFh then MaC:
-/// MemoryWrite(…); if … higher than FFFFh then MaC: UserMemoryWrite(…)"*.
+/// The first address CP §3.5.2 routes to the user-memory service.
+///
+/// Not the first address `A_Memory_Write` cannot reach: `[D]` AL §3.5.3 says
+/// *"The parameter memory_address shall specify the 16 bit start address"*, so
+/// `FFFFh` is perfectly reachable by that service. The clause draws the line
+/// here anyway. `[D]` CP §3.5.2: *"if BaseAddress
+/// plus allocated memory is lower than FFFFh then MaC: MemoryWrite(…); if …
+/// higher than FFFFh then MaC: UserMemoryWrite(…)"*.
 pub const MEMORY_SERVICE_LIMIT: u32 = 0xFFFF;
 
 /// Where a device's `PID_MAX_APDU_LENGTH` was found, which changes what

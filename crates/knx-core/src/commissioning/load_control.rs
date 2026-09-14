@@ -1,8 +1,13 @@
 //! The ten-octet payloads written to `PID_LOAD_STATE_CONTROL`, and the subtype each mask allows.
 //!
-//! Spec §7.3, from MP §3.31.3's `DM_LoadStateMachineWrite_RCo_IO` and
-//! PROF Annex A.2.4.1 Table 7. Building a payload is pure arithmetic and
+//! Design spec §7.3, from MP §3.31.3's `DM_LoadStateMachineWrite_RCo_IO`
+//! and PROF Annex A.2.4.1 Table 7. Building a payload is pure arithmetic and
 //! lives here; sending one is a write and lives behind the mutation API.
+//!
+//! Two documents are cited throughout this module and they are never both
+//! called "the spec": the KNX Standard's clauses carry their book and number
+//! (`MP §3.31.3.4`, `RES §4.23`), and this project's design document is
+//! always "design spec §x".
 
 use std::fmt;
 
@@ -148,10 +153,12 @@ const ADDITIONAL_LOAD_CONTROL: u8 = 0x03;
 /// Builds an `Additional Load Control` payload: `03h`, the subtype, and
 /// eight octets of subtype-specific fields.
 ///
-/// The eight field octets are passed whole rather than assembled here,
-/// because only two subtypes' layouts are transcribed in the spec and
-/// inventing the others would be exactly the guess §12's `GAP-T30-02`
-/// forbids. Use [`data_relative_allocation`] for the one System B needs.
+/// The eight field octets are passed whole rather than assembled here
+/// because only two of the eight subtypes are needed by the procedures in
+/// scope. The other six layouts are in MP §3.31.3.4, with widths and bit
+/// meanings, and are not built because nothing calls for them — not because
+/// the Standard is silent about them. Use [`data_relative_allocation`] for
+/// the one System B needs and [`relative_allocation`] for System 300.
 pub fn additional_load_control(subtype: LoadControlSubtype, fields: [u8; 8]) -> LoadControlPayload {
     let mut octets = [0u8; LOAD_CONTROL_PAYLOAD_OCTETS];
     octets[0] = ADDITIONAL_LOAD_CONTROL;
@@ -354,7 +361,7 @@ impl fmt::Display for AllocationSubtypeError {
 
 /// The allocation subtype a mask's profile requires, or a refusal.
 ///
-/// Only the rows spec §7.3 transcribes are represented. Everything else
+/// Only the rows design spec §7.3 transcribes are represented. Everything else
 /// returns [`AllocationSubtypeError::MaskNotProfiled`], because a `?` cell
 /// in the extraction is an extraction artefact and not a documented
 /// permission.
@@ -407,7 +414,7 @@ pub fn require_subtype(
 mod tests {
     use super::*;
 
-    /// Spec §5.3 and §7.3: the ten-octet payloads, octet for octet.
+    /// Design spec §5.3 and §7.3: the ten-octet payloads, octet for octet.
     #[test]
     fn every_plain_event_payload_is_the_event_octet_then_nine_zeroes() {
         let cases = [
@@ -510,7 +517,8 @@ mod tests {
         }
     }
 
-    /// Spec §7.3 rules 1 and 3: the subtype is chosen by mask, and the wrong
+    /// Design spec §7.3 rules 1 and 3: the subtype is chosen by mask, and the
+    /// wrong
     /// mask is a refusal rather than a fallback.
     #[test]
     fn the_system_b_masks_get_data_relative_allocation() {

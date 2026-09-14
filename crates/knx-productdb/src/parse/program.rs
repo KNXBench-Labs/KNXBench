@@ -223,6 +223,118 @@ pub fn ingest_program(
     })
 }
 
+/// Re-reads `ApplicationProgram/@Linkable` out of one already-stored blob
+/// and fills the column for the rows that blob produced, returning how many
+/// it filled. Backs `migration::migrate_v6_to_v7`; see
+/// [ADR-0020](../../../../docs/adr/0020-migrations-may-rederive-from-stored-bytes.md)
+/// for why a migration is allowed to call this at all — `Linkable` is a pure
+/// function of these bytes, so the only reason it is `NULL` is that the
+/// `bool_flag` of the day could not spell it.
+///
+/// Reads through the same `bool_flag` the ingest path uses rather than a
+/// frozen copy of its rule, so the two cannot drift. Only `ApplicationProgram`
+/// elements are looked at; `Dynamic` subtrees are skipped whole, exactly as
+/// `ingest_program` skips them, which is also most of the bytes.
+pub(crate) fn backfill_linkable(
+    conn: &Connection,
+    source_sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<usize, ProductDbError> {
+    let mut reader = Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    // Same stack, kept for the same reason, as `ingest_program`'s: the
+    // `ingest_unknown` row this may have to retire is keyed on the xpath the
+    // original ingest computed, so this pass has to compute the identical one.
+    let mut open_path: Vec<String> = Vec::new();
+    let mut filled = 0usize;
+
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        match event {
+            Event::Eof => break,
+            Event::Start(e) if local_name(&e) == "Dynamic" => {
+                skip_subtree(&mut reader, e.name().as_ref(), source_path)?;
+            }
+            Event::End(_) => {
+                open_path.pop();
+            }
+            Event::Empty(e) => {
+                let name = local_name(&e);
+                if name == "ApplicationProgram" {
+                    let a = attrs(&e, source_path)?;
+                    filled += fill_linkable(conn, source_sha256, &open_path, &a)?;
+                }
+            }
+            Event::Start(e) => {
+                let name = local_name(&e);
+                if name == "ApplicationProgram" {
+                    let a = attrs(&e, source_path)?;
+                    filled += fill_linkable(conn, source_sha256, &open_path, &a)?;
+                }
+                open_path.push(name);
+            }
+            _ => {}
+        }
+    }
+
+    Ok(filled)
+}
+
+/// One `ApplicationProgram` element's contribution to `backfill_linkable`.
+///
+/// Three guards, all from ADR-0020: `linkable IS NULL` so a value an ingest
+/// positively determined is never overwritten (ADR-0012's absent-slot rule),
+/// `source_sha256 = ` this blob so a program id that lost an id conflict
+/// (ADR-0011) cannot write over the winning row, and `id = ` the program's
+/// own id rather than "every row in the file".
+fn fill_linkable(
+    conn: &Connection,
+    source_sha256: &str,
+    open_path: &[String],
+    a: &Attrs,
+) -> Result<usize, ProductDbError> {
+    let Some(id) = a.get("Id").filter(|id| !id.is_empty()) else {
+        return Ok(0);
+    };
+    let xpath = xpath_of_child(open_path, "ApplicationProgram");
+    // The collector is discarded on purpose. A spelling `bool_flag` still
+    // does not recognize was already reported into `ingest_unknown` by the
+    // ingest that stored this blob — that is how §87's defect stayed visible
+    // in the first place — and recording it again would count one sighting
+    // twice.
+    let mut already_reported = UnknownCollector::default();
+    let Some(value) = bool_flag(&mut already_reported, &xpath, a, "Linkable") else {
+        return Ok(0);
+    };
+    let filled = conn.execute(
+        "UPDATE application_program SET linkable = ?1
+         WHERE id = ?2 AND source_sha256 = ?3 AND linkable IS NULL",
+        params![value, id, source_sha256],
+    )?;
+    if filled == 0 {
+        return Ok(0);
+    }
+    // The row that said this attribute was not understood is now false: it
+    // is understood, and stored. Retiring it discards no source information
+    // — the bytes are untouched in `source_file` and the value it sampled is
+    // now the column's own — while leaving it would make the ingest report
+    // contradict the row next to it.
+    conn.execute(
+        "DELETE FROM ingest_unknown
+         WHERE source_sha256 = ?1 AND kind = 'Attribute' AND name = 'Linkable'
+           AND xpath = ?2",
+        params![source_sha256, xpath],
+    )?;
+    Ok(filled)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn handle_start_or_empty(
     conn: &Connection,

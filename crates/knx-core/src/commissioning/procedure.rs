@@ -380,12 +380,20 @@ pub fn load_one_part() -> Procedure {
     }
 }
 
-/// §7.4, CP §3.5.3. Same shape as §7.1 with one insertion and one branch,
-/// and the branch escalates to a larger download rather than aborting.
+/// §7.4, CP §3.5.3's first variant, *"Partial Download of the 'application
+/// program 2'"*, whose rows are numbered 01 to 14. Same shape as §7.1 with one
+/// insertion and one branch, and the branch escalates to a larger download
+/// rather than aborting.
+///
+/// The clause's Nr. 06 ends *"⇒ Continue at Nr. 13"*, so on the happy path
+/// rows 07 to 12 are skipped and the procedure lands on the access keys and
+/// the disconnect. They are transcribed anyway: they are the escalation's
+/// destination, and a number missing from this list is a number the sequencer
+/// could invent.
 pub fn partial_download() -> Procedure {
     Procedure {
         kind: ProcedureKind::PartialDownload,
-        source: "CP §3.5.3",
+        source: "CP §3.5.3 'application program 2', steps 01-14",
         steps: vec![
             step(
                 1,
@@ -437,11 +445,45 @@ pub fn partial_download() -> Procedure {
             step(
                 8,
                 "load the part",
-                "the inner loop of §7.2",
+                "the inner loop of §7.2, run again after the escalation's unload; on \
+                 the happy path Nr. 06 already did this and jumped past here",
                 StepEffect::Write,
             ),
             step(
                 9,
+                "load Application Program 1",
+                "one of the four following segments the escalation reloads in \
+                 ascending order; the clause says to apply Nr. 06's routines to it",
+                StepEffect::Write,
+            ),
+            step(
+                10,
+                "load the Group Object Table",
+                "the second following segment, same routines",
+                StepEffect::Write,
+            ),
+            step(
+                11,
+                "load the Address Table",
+                "the third following segment; its PL110-only group responder table \
+                 write is out of scope for phase 2",
+                StepEffect::Write,
+            ),
+            step(
+                12,
+                "load the Association Table",
+                "the last following segment, same routines",
+                StepEffect::Write,
+            ),
+            step(
+                13,
+                "modify access keys",
+                "set access keys as required; A_Key_Write is out of scope for phase 2 \
+                 (spec §10.7), so the step is numbered, reported and empty",
+                StepEffect::Write,
+            ),
+            step(
+                14,
                 "disconnect",
                 "disconnect via the bus",
                 StepEffect::Connection,

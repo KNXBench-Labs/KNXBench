@@ -187,7 +187,8 @@ instruction. Concretely:
 ### 2.2 R-SAFE-2 — the approved address range
 
 Individual addresses `1.1.24`–`1.1.32` are approved for **active reads** on the
-real installation, via gateway `KNX_GATEWAY`. Nothing else is approved for
+real installation, via the gateway named by `KNX_GATEWAY` (its address is not
+recorded in this repository). Nothing else is approved for
 anything. Phase 3 is read-only within that range. Any write to a real device
 requires a fresh, explicit, specific go-ahead from the user for that write, and
 the implementation must not have a mode in which writes happen without one.

@@ -1276,11 +1276,12 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     }
 
     /// `A_Memory_Read` or `A_UserMemory_Read`, chosen by address, with the
-    /// `number = 0` failure answer surfaced as an error.
+    /// failure answer surfaced as an error.
     ///
-    /// `[D]` AL §3.5.3: a read failure answers with *"number = 0"* — which
-    /// this reports rather than returning an empty vector that a caller
-    /// might compare successfully against nothing.
+    /// `[D]` AL §3.5.3: on a failed read *"the parameter number of the
+    /// A_Memory_Response-PDU shall be zero and shall contain no data"* —
+    /// which this reports rather than returning an empty vector that a
+    /// caller might compare successfully against nothing.
     pub async fn read_memory(&mut self, address: u32, number: u8) -> Result<Vec<u8>, SessionError> {
         let service = if address <= u32::from(u16::MAX) {
             ApplicationService::MemoryRead {

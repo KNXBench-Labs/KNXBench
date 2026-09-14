@@ -38,8 +38,9 @@ use std::fmt;
 
 use knx_core::commissioning::error_code::SystemErrorClass;
 use knx_core::commissioning::load_control::{
-    allocation_subtype_for, data_relative_allocation, relative_allocation, AllocationMode,
-    AllocationSubtypeError, LoadControlPayload, LoadControlSubtype,
+    allocation_subtype_for, data_relative_allocation, relative_allocation, require_subtype,
+    AllocationMode, AllocationSubtypeError, LoadControlPayload, LoadControlSubtype,
+    DATA_RELATIVE_ALLOCATION_SIZE_OCTETS,
 };
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::memory::WriteLimit;
@@ -151,8 +152,10 @@ impl DownloadPlan {
         })
     }
 
-    /// Whether an allocation should keep or fill the memory it gets
-    /// (MP §3.31.3's Mode octet, bit 0).
+    /// Whether an allocation should keep the memory it gets or fill it, and
+    /// with what: MP §3.31.3.4's Mode octet bit 0 and its `fill` octet,
+    /// which `AllocationMode::Fill(u8)` carries together because they are
+    /// only ever meaningful together.
     pub fn with_allocation_mode(mut self, mode: AllocationMode) -> Self {
         self.allocation_mode = mode;
         self
@@ -809,20 +812,43 @@ async fn load_one_part<T: ManagementTransport>(
 
 /// The allocation payload the device's mask profiles, or a refusal.
 ///
-/// Spec §7.3 design rule 2: *"There is no fallback between allocation styles.
-/// Pick by mask, or refuse."* The two payload layouts that are transcribed are
-/// built here; a mask that profiles one of the others refuses, because
-/// inventing the remaining field layouts is what §12's `GAP-T30-02` forbids.
+/// Design spec §7.3 rule 2: *"There is no fallback between allocation styles.
+/// Pick by mask, or refuse."* The refusal path is
+/// [`AllocationSubtypeError::MaskNotProfiled`], from `allocation_subtype_for`:
+/// a mask whose PROF Table 7 row was not transcribed has no style to pick, and
+/// inventing the remaining field layouts is what design spec §12's
+/// `GAP-T30-02` forbids. `require_subtype` then re-checks the pick against the
+/// mask's profile before anything is built, so the two tables cannot disagree
+/// silently.
+///
+/// A part too large for the chosen subtype's size field is also a refusal
+/// here. It used to be `u32::MAX`, which asked a device for four gigabytes and
+/// meant it.
 fn allocation_payload(
     mask: MaskVersion,
     mode: AllocationMode,
     length: usize,
 ) -> Result<LoadControlPayload, AllocationSubtypeError> {
-    let size = u32::try_from(length).unwrap_or(u32::MAX);
-    match allocation_subtype_for(mask)? {
-        LoadControlSubtype::DataRelativeAllocation => Ok(data_relative_allocation(size, mode)),
+    let subtype = allocation_subtype_for(mask)?;
+    require_subtype(mask, subtype)?;
+    match subtype {
+        LoadControlSubtype::DataRelativeAllocation => {
+            let size = u32::try_from(length).map_err(|_| AllocationSubtypeError::PartTooLarge {
+                subtype,
+                requested: length,
+                field_octets: DATA_RELATIVE_ALLOCATION_SIZE_OCTETS,
+            })?;
+            Ok(data_relative_allocation(size, mode))
+        }
+        // `relative_allocation` performs its own two-octet check, because the
+        // width of that field is MP §3.31.3.4's business and not this
+        // function's.
         LoadControlSubtype::RelativeAllocation => relative_allocation(length),
-        subtype => Err(AllocationSubtypeError::StyleNotApplicable { mask, subtype }),
+        // `allocation_subtype_for` returns only the two subtypes above. If a
+        // transcribed row ever names one of the other six, this is the same
+        // refusal as a row that was never transcribed at all: no payload is
+        // built for a layout this module does not carry.
+        _ => Err(AllocationSubtypeError::MaskNotProfiled(mask)),
     }
 }
 
@@ -1308,6 +1334,37 @@ mod tests {
             vec![0x03, 0x0A, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
             "the requested size is two octets, most significant first"
         );
+    }
+
+    /// `[D]` MP §3.31.3.4 gives subtype `0Ah` a two-octet size field, so a
+    /// part of more than `FFFFh` octets cannot be asked for at all on a
+    /// `0300h` device. It is refused before the first write, not truncated
+    /// into an allocation of the wrong size.
+    #[tokio::test]
+    async fn a_part_too_large_for_the_0300_size_field_is_refused_before_any_write() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            mask_version: MASK_0300.0,
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Download);
+        let error = Downloader::new(
+            &mut session,
+            plan(vec![part(3, "Application Program 2", 0x1_0000)]),
+        )
+        .complete_download()
+        .await
+        .expect_err("65536 octets do not fit two octets");
+        assert!(
+            matches!(
+                error,
+                DownloadError::Allocation(AllocationSubtypeError::PartTooLarge {
+                    field_octets: 2,
+                    ..
+                })
+            ),
+            "got {error}"
+        );
+        assert!(!device.memory_was_written());
     }
 
     /// Spec §9.3: a plan that could not be finished is refused before it

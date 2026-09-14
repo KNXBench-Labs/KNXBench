@@ -5,6 +5,7 @@
 
 use std::fmt;
 
+use crate::address::GroupAddressStyle;
 use crate::building::BuildingPart;
 use crate::device::{ComObjectInstance, DeviceInstance};
 use crate::dpt::DptRef;
@@ -264,6 +265,16 @@ pub enum Command {
         ga: GroupAddressId,
         direction: Direction,
     },
+    /// Changes the project-wide `GroupAddressStyle` — refused
+    /// (`CommandError::GroupAddressDoesNotFitStyle`) if any existing group
+    /// address, in any installation, would not fit `style`
+    /// (`GroupAddress::fits_style`; see [KNOWN_LIMITATIONS.md
+    /// §84](../../../docs/KNOWN_LIMITATIONS.md)). Self-inverting like
+    /// `SetIndividualAddress`/`SetDeviceDescription` — its own inverse
+    /// carries the style it replaced.
+    SetGroupAddressStyle {
+        style: GroupAddressStyle,
+    },
     /// Applies every sub-command as one atomic, one-undo-step unit — see
     /// `docs/superpowers/specs/2026-09-10-bulk-operations-design.md` for the
     /// rollback rationale. On any sub-command's `Err`, every already-applied
@@ -317,6 +328,15 @@ pub enum CommandError {
         com_object: ComObjectInstanceId,
         ga: GroupAddressId,
         direction: Direction,
+    },
+    /// A `SetGroupAddressStyle` was refused because `id`'s raw value does
+    /// not decompose within `style`'s component bounds
+    /// (`GroupAddress::fits_style`) — named concretely so the refusal is
+    /// actionable, not "some address doesn't fit".
+    GroupAddressDoesNotFitStyle {
+        id: GroupAddressId,
+        raw: u16,
+        style: GroupAddressStyle,
     },
     InstallationNotFound,
     NothingToUndo,
@@ -378,6 +398,10 @@ impl fmt::Display for CommandError {
             } => write!(
                 f,
                 "communication object {com_object} has no {direction:?} link to group address {ga}"
+            ),
+            CommandError::GroupAddressDoesNotFitStyle { id, raw, style } => write!(
+                f,
+                "group address {id} (raw value {raw}) does not fit style {style:?}, refusing the whole restyle"
             ),
             CommandError::InstallationNotFound => write!(f, "project has no installation"),
             CommandError::NothingToUndo => write!(f, "nothing to undo"),
@@ -1217,6 +1241,23 @@ impl Command {
                     ga,
                     direction,
                 })
+            }
+            Command::SetGroupAddressStyle { style } => {
+                let style = *style;
+                for installation in &project.installations {
+                    for entry in &installation.group_addresses {
+                        if !entry.address.fits_style(style) {
+                            return Err(CommandError::GroupAddressDoesNotFitStyle {
+                                id: entry.id,
+                                raw: entry.address.raw(),
+                                style,
+                            });
+                        }
+                    }
+                }
+                let previous = project.info.group_address_style;
+                project.info.group_address_style = style;
+                Ok(Command::SetGroupAddressStyle { style: previous })
             }
             Command::Batch(commands) => {
                 let mut inverses = Vec::with_capacity(commands.len());
@@ -3550,5 +3591,86 @@ mod tests {
             project.installations[0].parameters[0].source.ets_id,
             "M-1_P-1_R-1"
         );
+    }
+
+    #[test]
+    fn set_group_address_style_do_undo_redo_round_trips_through_the_command_stack() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .group_addresses
+            .push(test_group_address_entry(GroupAddressId(1), u16::MAX));
+        assert_eq!(
+            project.info.group_address_style,
+            GroupAddressStyle::ThreeLevel
+        );
+        let mut stack = CommandStack::new();
+
+        stack
+            .do_command(
+                &mut project,
+                Command::SetGroupAddressStyle {
+                    style: GroupAddressStyle::Free,
+                },
+            )
+            .unwrap();
+        assert_eq!(project.info.group_address_style, GroupAddressStyle::Free);
+        assert!(stack.can_undo());
+        assert!(!stack.can_redo());
+
+        stack.undo(&mut project).unwrap();
+        assert_eq!(
+            project.info.group_address_style,
+            GroupAddressStyle::ThreeLevel
+        );
+        assert!(stack.can_redo());
+
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project.info.group_address_style, GroupAddressStyle::Free);
+    }
+
+    /// `SetGroupAddressStyle` walks every installation's group addresses,
+    /// not just `installations[0]` — this project has two, and the second
+    /// one's address is the one that must still be checked.
+    #[test]
+    fn set_group_address_style_checks_every_installation_not_just_the_first() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .group_addresses
+            .push(test_group_address_entry(GroupAddressId(1), 1));
+        let mut second = project.installations[0].clone();
+        second.id = InstallationId(1);
+        second.group_addresses = vec![test_group_address_entry(GroupAddressId(2), u16::MAX)];
+        project.installations.push(second);
+
+        let result = Command::SetGroupAddressStyle {
+            style: GroupAddressStyle::TwoLevel,
+        }
+        .apply(&mut project);
+        assert!(result.is_ok());
+        assert_eq!(
+            project.info.group_address_style,
+            GroupAddressStyle::TwoLevel
+        );
+    }
+
+    /// There is no matching "...is refused because an address does not
+    /// fit" test: as `GroupAddress::fits_style`'s own doc comment proves
+    /// exhaustively, no `u16` value fails to fit any style, so
+    /// `CommandError::GroupAddressDoesNotFitStyle` cannot actually be
+    /// triggered through `apply` with real data. This test instead pins
+    /// down its `Display` wording directly, so the message stays
+    /// actionable if the variant is ever constructed (a future change to
+    /// the bit layout, or a manually-built error in a test like this one).
+    #[test]
+    fn group_address_does_not_fit_style_error_names_the_offender() {
+        let err = CommandError::GroupAddressDoesNotFitStyle {
+            id: GroupAddressId(7),
+            raw: 42,
+            style: GroupAddressStyle::TwoLevel,
+        };
+        let message = err.to_string();
+        assert!(message.contains("7"));
+        assert!(message.contains("42"));
+        assert!(message.contains("TwoLevel"));
     }
 }

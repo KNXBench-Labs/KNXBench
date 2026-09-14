@@ -14,7 +14,7 @@ use zip::write::SimpleFileOptions;
 
 use knx_productdb::dynamic::{
     evaluate, load_program_trees, ActiveRef, ControlKind, Diagnostic, DynamicNode, DynamicTree,
-    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, ValueMap,
+    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, ValueMap, MAX_MODULE_NESTING_DEPTH,
 };
 
 fn db() -> (tempfile::TempDir, Connection) {
@@ -1000,9 +1000,13 @@ fn an_unrecognized_element_kind_is_reported_and_its_subtree_is_not_descended() {
 // The plan's step 9 replaces `a_module_node_is_recognized_but_not_expanded`
 // (asserted `ModuleNotExpanded`, a variant this slice removes) with the
 // step 8 tests below, which cover every `Module`-expansion outcome
-// (expanded-and-scoped, `ModuleDefNotFound`, `NestedModuleNotExpanded`,
-// a scoped non-Module diagnostic, and an empty `ModuleDef` tree) more
-// precisely than the one test it replaces ever did.
+// (expanded-and-scoped, `ModuleDefNotFound`, a scoped non-Module
+// diagnostic, and an empty `ModuleDef` tree) more precisely than the one
+// test it replaces ever did. `NestedModuleNotExpanded`, once part of that
+// list, no longer exists — task 11's nested-expansion addendum expands a
+// nested `Module` instead of refusing it outright; its replacements
+// (`ModuleCycleDetected`, `ModuleNestingTooDeep`) have their own tests
+// further down this file.
 
 /// D17/AC#4: a `Module` with no `@RefId` at all yields `ModuleDefNotFound`
 /// and activates nothing.
@@ -1042,18 +1046,20 @@ fn a_module_naming_an_absent_module_def_yields_module_def_not_found() {
     );
 }
 
-/// D15/AC#3: a `Module` inside a `ModuleDef`'s own tree is not expanded —
-/// `NestedModuleNotExpanded`, no activations, regardless of whether the
-/// nested `Module`'s own `@RefId` would otherwise resolve.
+/// Task 11 (nested-expansion addendum, superseding D15/AC#3): a `Module`
+/// inside a `ModuleDef`'s own tree that names its *own* enclosing
+/// `ModuleDef` is the simplest possible cycle — depth-1 self-reference —
+/// and must be refused as `ModuleCycleDetected`, not recursed into and
+/// not silently dropped. No activations either side of it.
 #[test]
-fn a_module_inside_a_module_defs_tree_is_reported_not_expanded() {
+fn a_module_that_names_its_own_enclosing_module_def_is_a_cycle() {
     let program = DynamicTree::from_nodes(vec![DynamicNode {
         element_id: Some("M-A".into()),
         ref_id: Some("MD-1".into()),
         ..nd(0, None, "Module")
     }]);
     let module_def = DynamicTree::from_nodes(vec![DynamicNode {
-        ref_id: Some("MD-1".into()), // even a self-reference is not followed
+        ref_id: Some("MD-1".into()), // self-reference: the cycle under test
         ..nd(0, None, "Module")
     }]);
     let trees =
@@ -1068,13 +1074,223 @@ fn a_module_inside_a_module_defs_tree_is_reported_not_expanded() {
                 module_node: 0,
                 module_id: Some("M-A".to_string()),
                 module_def_id: "MD-1".to_string(),
+                parent: None,
             }),
-            diagnostic: Diagnostic::NestedModuleNotExpanded {
+            diagnostic: Diagnostic::ModuleCycleDetected {
                 node_id: 0,
                 ref_id: Some("MD-1".to_string()),
             },
         }]
     );
+}
+
+/// A longer cycle: `MD-1` nests `MD-2`, whose own tree nests back to
+/// `MD-1` — the repeat is two levels away, not immediate, so this proves
+/// `chain_contains` walks the whole `parent` chain rather than only
+/// comparing against the immediate enclosing scope.
+#[test]
+fn a_two_step_cycle_through_a_second_module_def_is_detected() {
+    let program = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-A".into()),
+        ref_id: Some("MD-1".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let module_def_1 = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-B".into()),
+        ref_id: Some("MD-2".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let module_def_2 = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-C".into()),
+        ref_id: Some("MD-1".into()), // back to MD-1: the cycle closes here
+        ..nd(0, None, "Module")
+    }]);
+    let trees = ProgramTrees::from_parts(
+        program,
+        HashMap::from([
+            ("MD-1".to_string(), module_def_1),
+            ("MD-2".to_string(), module_def_2),
+        ]),
+    );
+    let activation = evaluate(&trees, &values(&[]).into());
+    assert!(activation.parameter_refs.is_empty());
+    assert!(activation.com_object_refs.is_empty());
+    assert_eq!(
+        activation.diagnostics,
+        vec![ScopedDiagnostic {
+            scope: Some(ModuleScope {
+                module_node: 0,
+                module_id: Some("M-B".to_string()),
+                module_def_id: "MD-2".to_string(),
+                parent: Some(Box::new(ModuleScope {
+                    module_node: 0,
+                    module_id: Some("M-A".to_string()),
+                    module_def_id: "MD-1".to_string(),
+                    parent: None,
+                })),
+            }),
+            diagnostic: Diagnostic::ModuleCycleDetected {
+                node_id: 0,
+                ref_id: Some("MD-1".to_string()),
+            },
+        }]
+    );
+}
+
+/// The actual feature this task adds: a `Module` inside a `ModuleDef`'s
+/// own tree that names a *different* `ModuleDef` (no cycle) is now
+/// expanded, not refused — two genuine nesting levels, with the
+/// resulting activation carrying a `ModuleScope` chain that names both.
+#[test]
+fn a_module_inside_a_module_def_naming_a_different_module_def_is_expanded_two_levels() {
+    let program = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-A".into()),
+        ref_id: Some("MD-1".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let module_def_1 = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-B".into()),
+        ref_id: Some("MD-2".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let module_def_2 = DynamicTree::from_nodes(vec![DynamicNode {
+        ref_id: Some("LEAF".into()),
+        ..nd(0, None, "ParameterRefRef")
+    }]);
+    let trees = ProgramTrees::from_parts(
+        program,
+        HashMap::from([
+            ("MD-1".to_string(), module_def_1),
+            ("MD-2".to_string(), module_def_2),
+        ]),
+    );
+    let activation = evaluate(&trees, &values(&[]).into());
+    assert!(
+        activation.diagnostics.is_empty(),
+        "{:?}",
+        activation.diagnostics
+    );
+    assert_eq!(
+        activation.com_object_refs,
+        Vec::<ActiveRef>::new(),
+        "the leaf is a ParameterRefRef, not a ComObjectRefRef"
+    );
+    let inner_scope = ModuleScope {
+        module_node: 0,
+        module_id: Some("M-B".to_string()),
+        module_def_id: "MD-2".to_string(),
+        parent: Some(Box::new(ModuleScope {
+            module_node: 0,
+            module_id: Some("M-A".to_string()),
+            module_def_id: "MD-1".to_string(),
+            parent: None,
+        })),
+    };
+    assert_eq!(inner_scope.depth(), 2);
+    assert_eq!(
+        activation.parameter_refs,
+        vec![ActiveRef {
+            scope: Some(inner_scope),
+            ref_id: "LEAF".to_string(),
+        }]
+    );
+}
+
+/// Builds a chain of `depth` distinct `ModuleDef`s, `MD-1..MD-depth`,
+/// each (except the last) nesting exactly one `Module` naming the next —
+/// `MD-depth` ends in a leaf `ParameterRefRef` instead. Expanding the
+/// program's own top-level `Module` (naming `MD-1`) walks exactly `depth`
+/// nesting levels deep before reaching the leaf.
+fn build_nesting_chain(depth: usize) -> (DynamicTree, HashMap<String, DynamicTree>) {
+    assert!(depth >= 1);
+    let program = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-0".into()),
+        ref_id: Some("MD-1".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let mut modules = HashMap::new();
+    for level in 1..=depth {
+        let this_id = format!("MD-{level}");
+        let tree = if level < depth {
+            DynamicTree::from_nodes(vec![DynamicNode {
+                element_id: Some(format!("M-{level}")),
+                ref_id: Some(format!("MD-{}", level + 1)),
+                ..nd(0, None, "Module")
+            }])
+        } else {
+            DynamicTree::from_nodes(vec![DynamicNode {
+                ref_id: Some("LEAF".into()),
+                ..nd(0, None, "ParameterRefRef")
+            }])
+        };
+        modules.insert(this_id, tree);
+    }
+    (program, modules)
+}
+
+/// AC (task 11): a nesting chain exactly `MAX_MODULE_NESTING_DEPTH` deep
+/// expands fully and reaches the leaf — the bound is inclusive, not an
+/// off-by-one trap.
+#[test]
+fn nesting_exactly_at_the_bound_expands_fully() {
+    let (program, modules) = build_nesting_chain(MAX_MODULE_NESTING_DEPTH);
+    let trees = ProgramTrees::from_parts(program, modules);
+    let activation = evaluate(&trees, &values(&[]).into());
+    assert!(
+        activation.diagnostics.is_empty(),
+        "{:?}",
+        activation.diagnostics
+    );
+    assert_eq!(activation.parameter_refs.len(), 1);
+    assert_eq!(activation.parameter_refs[0].ref_id, "LEAF");
+    let depth = activation.parameter_refs[0]
+        .scope
+        .as_ref()
+        .expect("leaf is inside the deepest module")
+        .depth();
+    assert_eq!(depth, MAX_MODULE_NESTING_DEPTH);
+}
+
+/// AC (task 11): one level beyond the bound is refused with
+/// `ModuleNestingTooDeep`, not a stack overflow and not a silently
+/// truncated result — the leaf inside the one-too-deep `ModuleDef` never
+/// gets activated at all.
+#[test]
+fn nesting_one_level_beyond_the_bound_is_refused() {
+    let (program, mut modules) = build_nesting_chain(MAX_MODULE_NESTING_DEPTH);
+    // Replace the innermost (leaf) ModuleDef with one more nesting level,
+    // pushing the true leaf to MAX_MODULE_NESTING_DEPTH + 1.
+    let deepest_id = format!("MD-{MAX_MODULE_NESTING_DEPTH}");
+    modules.insert(
+        deepest_id,
+        DynamicTree::from_nodes(vec![DynamicNode {
+            element_id: Some("M-overflow".into()),
+            ref_id: Some("MD-overflow".into()),
+            ..nd(0, None, "Module")
+        }]),
+    );
+    modules.insert(
+        "MD-overflow".to_string(),
+        DynamicTree::from_nodes(vec![DynamicNode {
+            ref_id: Some("LEAF".into()),
+            ..nd(0, None, "ParameterRefRef")
+        }]),
+    );
+    let trees = ProgramTrees::from_parts(program, modules);
+    let activation = evaluate(&trees, &values(&[]).into());
+    assert!(
+        activation.parameter_refs.is_empty(),
+        "the one-too-deep leaf must never activate: {:?}",
+        activation.parameter_refs
+    );
+    assert_eq!(activation.diagnostics.len(), 1);
+    match &activation.diagnostics[0].diagnostic {
+        Diagnostic::ModuleNestingTooDeep { depth, ref_id, .. } => {
+            assert_eq!(*depth, MAX_MODULE_NESTING_DEPTH + 1);
+            assert_eq!(ref_id.as_deref(), Some("MD-overflow"));
+        }
+        other => panic!("expected ModuleNestingTooDeep, got {other:?}"),
+    }
 }
 
 /// D14: a diagnostic raised *inside* a module's expansion (here:
@@ -1109,6 +1325,7 @@ fn a_diagnostic_raised_inside_a_module_carries_that_modules_scope() {
                 module_node: 0,
                 module_id: Some("M-A".to_string()),
                 module_def_id: "MD-1".to_string(),
+                parent: None,
             }),
             diagnostic: Diagnostic::NoBranchMatched {
                 choose_node: 0,
@@ -1183,6 +1400,7 @@ fn within_one_module_scope_a_ref_reachable_twice_is_deduplicated_once() {
                 module_node: 0,
                 module_id: Some("M-A".to_string()),
                 module_def_id: "MD-1".to_string(),
+                parent: None,
             }),
             ref_id: "SHARED".to_string(),
         }]
@@ -1230,6 +1448,7 @@ fn two_modules_instantiating_one_module_def_produce_two_scoped_activations() {
                     module_node: 1,
                     module_id: Some("M-A".to_string()),
                     module_def_id: "MD-1".to_string(),
+                    parent: None,
                 }),
                 ref_id: "O-1_R-1".to_string(),
             },
@@ -1238,6 +1457,7 @@ fn two_modules_instantiating_one_module_def_produce_two_scoped_activations() {
                     module_node: 2,
                     module_id: Some("M-B".to_string()),
                     module_def_id: "MD-1".to_string(),
+                    parent: None,
                 }),
                 ref_id: "O-1_R-1".to_string(),
             },
@@ -1316,6 +1536,7 @@ fn a_scoped_value_wins_for_its_own_instantiation_and_the_other_sees_the_program_
                     module_node: 1,
                     module_id: Some("M-A".to_string()),
                     module_def_id: "MD-1".to_string(),
+                    parent: None,
                 }),
                 ref_id: "HIGH".to_string(),
             },
@@ -1324,6 +1545,7 @@ fn a_scoped_value_wins_for_its_own_instantiation_and_the_other_sees_the_program_
                     module_node: 2,
                     module_id: Some("M-B".to_string()),
                     module_def_id: "MD-1".to_string(),
+                    parent: None,
                 }),
                 ref_id: "LOW".to_string(),
             },
@@ -1531,6 +1753,7 @@ fn a_scoped_value_for_one_module_id_never_answers_a_lookup_under_another() {
         module_node: 2,
         module_id: Some("M-B".to_string()),
         module_def_id: "MD-1".to_string(),
+        parent: None,
     };
     assert_eq!(vm.get(Some(&scope_b), "P"), Some("5"));
 }
@@ -1589,6 +1812,7 @@ fn module_without_id_is_reported_once_and_its_subtree_still_evaluates_from_the_u
                 module_node: 0,
                 module_id: None,
                 module_def_id: "MD-1".to_string(),
+                parent: None,
             }),
             ref_id: "HIT".to_string(),
         }]
@@ -2112,9 +2336,11 @@ fn corpus_evaluation_matches_research_no_unparsable_tests_no_unresolved_refs_and
 // ---------------------------------------------------------------------
 
 /// AC#6: every `prod3` `Module/@RefId` resolves (zero `ModuleDefNotFound`),
-/// nesting never occurs (zero `NestedModuleNotExpanded`), and expansion
-/// strictly grows each program's activation count over the program-tree-only
-/// baseline, by the exact amounts derived independently in Python.
+/// nesting never occurs (zero `ModuleCycleDetected`/`ModuleNestingTooDeep`,
+/// task 11's replacements for the removed `NestedModuleNotExpanded`), and
+/// expansion strictly grows each program's activation count over the
+/// program-tree-only baseline, by the exact amounts derived independently
+/// in Python.
 ///
 /// The corpus's own default parameter values only ever steer every one of
 /// prod3's per-channel "operating mode" `choose`s onto its first `ModuleDef`
@@ -2180,10 +2406,22 @@ fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_coun
             .iter()
             .filter(|sd| matches!(sd.diagnostic, Diagnostic::ModuleDefNotFound { .. }))
             .count();
-        let nested_not_expanded = full
+        // Task 11: `NestedModuleNotExpanded` no longer exists — a nested
+        // `Module` is now expanded, not refused. Its replacement
+        // diagnostics (`ModuleCycleDetected`, `ModuleNestingTooDeep`)
+        // fire only on an actual cycle or an actual too-deep chain, and
+        // this corpus (RESEARCH.md §4.4 Q6, re-measured for this task —
+        // see `corpus_nested_module_measurement_task_11` below) has zero
+        // of either.
+        let nested_diagnostics = full
             .diagnostics
             .iter()
-            .filter(|sd| matches!(sd.diagnostic, Diagnostic::NestedModuleNotExpanded { .. }))
+            .filter(|sd| {
+                matches!(
+                    sd.diagnostic,
+                    Diagnostic::ModuleCycleDetected { .. } | Diagnostic::ModuleNestingTooDeep { .. }
+                )
+            })
             .count();
         // Task 1's review nominated this loop for the check E2 already
         // states as fact: `Module/@Id` is present on 102/102 corpus
@@ -2217,7 +2455,7 @@ fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_coun
         eprintln!(
             "corpus {name} program {program_id}: single_total={single_total} \
              full_total={full_total} module_def_not_found={module_def_not_found} \
-             nested_not_expanded={nested_not_expanded} module_without_id={module_without_id} \
+             nested_diagnostics={nested_diagnostics} module_without_id={module_without_id} \
              distinct_scopes={distinct_scopes}"
         );
 
@@ -2226,8 +2464,9 @@ fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_coun
             "{program_id}: AC#6 — every Module/@RefId in the corpus resolves"
         );
         assert_eq!(
-            nested_not_expanded, 0,
-            "{program_id}: AC#6 — §4.4 Q6's zero-nesting finding, enforced as a regression"
+            nested_diagnostics, 0,
+            "{program_id}: AC#6 — §4.4 Q6's zero-nesting finding, enforced as a regression \
+             (task 11: covers both ModuleCycleDetected and ModuleNestingTooDeep)"
         );
         assert_eq!(
             module_without_id, 0,
@@ -2360,5 +2599,96 @@ fn corpus_module_expansion_leaves_a_module_free_program_unchanged() {
         no_branch_matched(&full.diagnostics),
         24,
         "{program_id}: AC#7 — diagnostics are unaffected too"
+    );
+}
+
+// ---------------------------------------------------------------------
+// Task 11 (goal-completion, 2026-09-14): the required corpus deliverable
+// — how many products in the *installed* database actually nest a
+// `Module` inside a `ModuleDef`'s own tree, measured against every
+// `.knxprod` archive under `OriginalData/ProductDatabases/`, not just
+// `prod3` (the one archive the two tests above install and walk with
+// default values). This is a storage-level measurement, stronger than
+// the diagnostic-count checks above: it counts every `Module` row
+// `dynamic_node` holds under a non-empty `module_def_id` scope,
+// regardless of whether any program's own default parameter values ever
+// cause `evaluate` to walk that far (the same reachability gap the
+// `distinct_scopes` doc comment above already names for ordinary,
+// unnested `Module` expansion).
+// ---------------------------------------------------------------------
+
+/// Installs every `.knxprod` archive under `OriginalData/ProductDatabases/`
+/// into one database and counts, with a single SQL query, how many stored
+/// `dynamic_node` rows are a `Module` element found inside a `ModuleDef`'s
+/// own tree (`kind = 'Module' AND module_def_id != ''`). RESEARCH.md §4.4
+/// Q6 already measured zero nesting on this same corpus by regex on the
+/// raw XML; this re-measures it independently, at the storage layer, for
+/// this task. Loudly skipped, same idiom as every other corpus test in
+/// this file, when `OriginalData/` is absent.
+#[test]
+fn corpus_nested_module_measurement_task_11() {
+    let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../OriginalData/ProductDatabases")
+        });
+    if !root.exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
+
+    let (_dir, conn) = db();
+    let mut installed = Vec::new();
+    for entry in std::fs::read_dir(&root).unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("knxprod") {
+            continue;
+        }
+        let name = path.file_name().unwrap().to_str().unwrap().to_string();
+        let bytes = std::fs::read(&path).unwrap();
+        knx_productdb::install_package(&conn, &name, &bytes).unwrap();
+        installed.push(name);
+    }
+    assert!(
+        !installed.is_empty(),
+        "OriginalData/ProductDatabases exists but contains no .knxprod archive"
+    );
+    installed.sort();
+
+    let total_module_def_rows: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM dynamic_node WHERE kind = 'Module' AND module_def_id != ''",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    let total_module_rows: i64 = conn
+        .query_row("SELECT COUNT(*) FROM dynamic_node WHERE kind = 'Module'", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+
+    eprintln!(
+        "corpus nesting measurement (task 11): installed {} .knxprod archives ({}); \
+         total Module rows = {total_module_rows}; Module rows nested inside a ModuleDef's own \
+         tree (kind='Module' AND module_def_id != '') = {total_module_def_rows}",
+        installed.len(),
+        installed.join(", ")
+    );
+
+    // Measured, not guessed: zero of the installed database's Module rows
+    // sit inside a ModuleDef's own tree. This mirrors RESEARCH.md §4.4
+    // Q6's regex-on-raw-XML finding (also zero) with an independent,
+    // storage-level query, and is the number the design doc's nested-
+    // expansion addendum and MAX_MODULE_NESTING_DEPTH's own doc comment
+    // both cite. A future corpus addition that changes this count is
+    // exactly the "falsified by a single sample" case §4.4 Q6 already
+    // named — this assertion is what would catch it.
+    assert_eq!(
+        total_module_def_rows, 0,
+        "measured nesting count in the installed database; see this test's own eprintln for \
+         the full breakdown"
     );
 }

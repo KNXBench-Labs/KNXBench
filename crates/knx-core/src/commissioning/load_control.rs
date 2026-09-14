@@ -206,23 +206,52 @@ pub fn data_relative_allocation(size: u32, mode: AllocationMode) -> LoadControlP
 
 /// Builds the `0Ah` Relative Allocation payload for `octets_requested`.
 ///
-/// Kept for the masks whose profile requires `0Ah` (`0300h`), and
-/// deliberately *not* reachable as a fallback from `0Bh`: §7.3 design rule
-/// 2 says there is no fallback between allocation styles.
-pub fn relative_allocation(octets_requested: u32) -> LoadControlPayload {
-    let requested = octets_requested.to_be_bytes();
+/// `[D]` MP §3.31.3.4's *Load Event Relative Allocation* table: the event
+/// octet `03h`, the subtype `0Ah`, then *"number of octets"* in **2
+/// octets**, then **6 fill octets**. Two, not four: a four-octet size here
+/// transmits `0000h` and leaks the high half into the fill octets, and
+/// MP §3.31.3.4 answers that with *"If the requested number of octets is
+/// not supported by the Management Server (device) then the Load State
+/// Machine of the loadable part shall change to error."*
+///
+/// A part too large for two octets is therefore refused rather than
+/// truncated. Kept for the masks whose profile requires `0Ah` (`0300h`),
+/// and deliberately *not* reachable as a fallback from `0Bh`: design spec
+/// §7.3 rule 2 says there is no fallback between allocation styles.
+pub fn relative_allocation(
+    octets_requested: usize,
+) -> Result<LoadControlPayload, AllocationSubtypeError> {
+    let requested = u16::try_from(octets_requested)
+        .map_err(|_| AllocationSubtypeError::PartTooLarge {
+            subtype: LoadControlSubtype::RelativeAllocation,
+            requested: octets_requested,
+            field_octets: RELATIVE_ALLOCATION_SIZE_OCTETS,
+        })?
+        .to_be_bytes();
     let fields = [
         requested[0],
         requested[1],
-        requested[2],
-        requested[3],
+        // The six fill octets, which MP §3.31.3.4 prints as `00h`.
+        0x00,
+        0x00,
         0x00,
         0x00,
         0x00,
         0x00,
     ];
-    additional_load_control(LoadControlSubtype::RelativeAllocation, fields)
+    Ok(additional_load_control(
+        LoadControlSubtype::RelativeAllocation,
+        fields,
+    ))
 }
+
+/// How wide subtype `0Ah`'s *"number of octets"* field is. `[D]` MP
+/// §3.31.3.4: 2 octets.
+pub const RELATIVE_ALLOCATION_SIZE_OCTETS: u8 = 2;
+
+/// How wide subtype `0Bh`'s *"requested memory size"* field is. `[D]` MP
+/// §3.31.3.4: 4 octets.
+pub const DATA_RELATIVE_ALLOCATION_SIZE_OCTETS: u8 = 4;
 
 /// Mask `0300h`, whose profile requires `0Ah` Relative Allocation.
 pub const MASK_0300: MaskVersion = MaskVersion(0x0300);
@@ -254,6 +283,20 @@ pub enum AllocationSubtypeError {
         /// The subtype whose cell is `n/a` for that mask.
         subtype: LoadControlSubtype,
     },
+    /// The loadable part is larger than the chosen subtype's size field can
+    /// express. `[D]` MP §3.31.3.4 gives subtype `0Ah` a 2-octet *"number of
+    /// octets"* and subtype `0Bh` a 4-octet *"requested memory size"*; a
+    /// size that does not fit is refused before the write, because the
+    /// truncated value would allocate the wrong length and the device would
+    /// never know it had been asked for anything else.
+    PartTooLarge {
+        /// The subtype whose size field is too narrow.
+        subtype: LoadControlSubtype,
+        /// How many octets the part needs.
+        requested: usize,
+        /// How wide that subtype's size field is, in octets.
+        field_octets: u8,
+    },
 }
 
 impl std::error::Error for AllocationSubtypeError {}
@@ -270,6 +313,16 @@ impl fmt::Display for AllocationSubtypeError {
                 f,
                 "PROF Table 7 marks {subtype} as not applicable for mask {mask}, \
                  and there is no fallback between allocation styles"
+            ),
+            AllocationSubtypeError::PartTooLarge {
+                subtype,
+                requested,
+                field_octets,
+            } => write!(
+                f,
+                "a loadable part of {requested} octets is too large for subtype \
+                 {subtype}, whose size field is {field_octets} octets wide \
+                 (MP §3.31.3.4)"
             ),
         }
     }
@@ -368,12 +421,33 @@ mod tests {
         assert_eq!(AllocationMode::default(), AllocationMode::Keep);
     }
 
+    /// `[D]` MP §3.31.3.4: two octets of *"number of octets"*, then six
+    /// fill octets. 2048 is `0800h`, and it goes in the first two.
     #[test]
-    fn relative_allocation_carries_the_requested_octet_count() {
-        let payload = relative_allocation(2048);
+    fn relative_allocation_carries_the_requested_count_in_two_octets() {
+        let payload = relative_allocation(2048).expect("2048 fits two octets");
         assert_eq!(
             payload.octets(),
-            &[0x03, 0x0A, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00]
+            &[0x03, 0x0A, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+        );
+    }
+
+    #[test]
+    fn the_largest_part_subtype_0a_can_request_is_ffffh_and_one_more_is_refused() {
+        let largest = relative_allocation(0xFFFF).expect("FFFFh is the widest two-octet value");
+        assert_eq!(largest.octets()[2..4], [0xFF, 0xFF]);
+        let err = relative_allocation(0x1_0000).unwrap_err();
+        assert_eq!(
+            err,
+            AllocationSubtypeError::PartTooLarge {
+                subtype: LoadControlSubtype::RelativeAllocation,
+                requested: 0x1_0000,
+                field_octets: 2,
+            }
+        );
+        assert!(
+            err.to_string().contains("65536") && err.to_string().contains("2 octets"),
+            "the refusal must name the size and the field width: {err}"
         );
     }
 

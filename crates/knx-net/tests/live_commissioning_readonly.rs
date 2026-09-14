@@ -36,9 +36,9 @@ use knx_net::{BusConnection, KnxNetIpClient, ManagementSession, SessionTiming};
 // public repository.
 fn gateway_addr() -> SocketAddrV4 {
     std::env::var("KNX_GATEWAY")
-        .expect("set KNX_GATEWAY to your gateway as host:port, e.g. KNX_GATEWAY:3671")
+        .expect("set KNX_GATEWAY to your gateway as host:port, e.g. 192.0.2.1:3671")
         .parse()
-        .expect("KNX_GATEWAY must be host:port, e.g. KNX_GATEWAY:3671")
+        .expect("KNX_GATEWAY must be host:port, e.g. 192.0.2.1:3671")
 }
 
 /// The nine addresses commissioning spec §2.2 approves for active reads,

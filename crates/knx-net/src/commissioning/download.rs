@@ -43,6 +43,7 @@ use knx_core::commissioning::load_control::{
 };
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::memory::WriteLimit;
+use knx_core::commissioning::mutation::WriteScope;
 use knx_core::commissioning::procedure::ProcedureKind;
 use knx_core::commissioning::properties::{ObjectIndex, PID_PROGRAM_VERSION};
 
@@ -780,7 +781,12 @@ async fn load_one_part<T: ManagementTransport>(
 
     record(report, kind, 5, "set the version");
     session
-        .write_property(object_index, PID_PROGRAM_VERSION, part.version.clone())
+        .write_property(
+            object_index,
+            PID_PROGRAM_VERSION,
+            part.version.clone(),
+            WriteScope::Download,
+        )
         .await?;
 
     record(report, kind, 6, "complete");
@@ -827,7 +833,7 @@ mod tests {
     use super::*;
     use knx_core::commissioning::authorisation::AuthorisationPlan;
     use knx_core::commissioning::load_control::MASK_0300;
-    use knx_core::commissioning::mutation::{WriteAuthorisation, WriteScope};
+    use knx_core::commissioning::mutation::WriteAuthorisation;
     use knx_core::commissioning::procedure::ProcedureKind;
     use knx_core::commissioning::properties::PID_LOAD_STATE_CONTROL;
     use std::time::Duration;

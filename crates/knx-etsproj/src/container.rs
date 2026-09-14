@@ -336,13 +336,28 @@ impl Container {
                     })?;
                 let plain =
                     decompress(entry.compression(), &raw, declared_size, entry_path.clone())?;
-                if plain.len() as u64 != declared_size || zipcrypto::crc32(&plain) != entry.crc32()
-                {
+                // Which of the two failed is diagnostic, not decoration:
+                // a length mismatch points at a truncated or padded
+                // archive, a CRC mismatch at bytes that were altered
+                // while keeping their length. Say which.
+                if plain.len() as u64 != declared_size {
                     return Err(ContainerError::Read {
                         path: entry_path,
-                        cause: "decompressed bytes match neither the entry's declared size \
-                                nor its CRC-32"
-                            .to_string(),
+                        cause: format!(
+                            "decompressed to {} bytes, but the archive declares {declared_size}",
+                            plain.len()
+                        ),
+                    });
+                }
+                let actual_crc = zipcrypto::crc32(&plain);
+                if actual_crc != entry.crc32() {
+                    return Err(ContainerError::Read {
+                        path: entry_path,
+                        cause: format!(
+                            "decompressed bytes have CRC-32 {actual_crc:#010x}, but the archive \
+                             declares {:#010x}",
+                            entry.crc32()
+                        ),
                     });
                 }
                 container.entries.push(EntryInfo {
@@ -842,11 +857,13 @@ mod tests {
     }
 
     // Fixture: `fixtures/zipcrypto-stored.knxproj`, generated with the
-    // Info-ZIP `zip` CLI exactly as the fixture above was, and identical
-    // to it in shape (outer archive, `P-0002.signature`, ZipCrypto-
-    // encrypted `P-0002.zip`, password `hunter2knx`) but for one thing:
-    // the nested entry is **Stored**, not Deflated. That difference is
-    // the whole reason it exists. Against a Deflated entry, a wrong
+    // Info-ZIP `zip` CLI, and the same shape as the fixture above in the
+    // respects that matter here (outer archive, a `P-NNNN.signature`, a
+    // ZipCrypto-encrypted `P-NNNN.zip`, password `hunter2knx`) — with the
+    // one difference it exists for: the nested entry is **Stored**, not
+    // Deflated. It is also smaller: part `P-0002` rather than `P-0001`,
+    // one nested entry rather than two, no directory entry, and no outer
+    // `knx_master.xml`. Against a Deflated entry, a wrong
     // password that slips past the check byte produces bytes that fail to
     // inflate, and the failure is reported long before anyone gets to
     // compare a CRC. Stored bytes always "decompress", so the entry's own

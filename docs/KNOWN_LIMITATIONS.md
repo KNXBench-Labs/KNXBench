@@ -3680,12 +3680,17 @@ rather than left implicit: that refusal path is, as far as this codebase's
 own address encoding goes, unreachable. `TwoLevel`'s 5+11-bit split and
 `ThreeLevel`'s 5+3+8-bit split each partition the full 16 bits of a
 `GroupAddress`'s raw `u16` with no remainder, so `GroupAddress::fits_style`
-is `true` for all 65536 possible raw values under every style — proved
+— which renders an address in the target style and parses it back, and
+answers `true` only when that round trip returns the original address — is
+`true` for all 65536 possible raw values under every style, proved
 exhaustively by `crates/knx-core/src/address.rs`'s own
-`group_address_fits_style_holds_for_every_possible_raw_value` test, not
-merely asserted. The check still runs on every restyle: it is the guard
-against a future change to this bit layout silently making one style
-narrower than another, not dead code. `knx-store`'s `style_from_str` was
+`group_address_format_parse_round_trips_for_every_possible_raw_value` test,
+not merely asserted. The check still runs on every restyle: because it is a
+round trip through the real `format`/`parse` pair rather than a bounds
+comparison restating the same partition, it is the guard against a future
+change to this bit layout silently making one style narrower than another
+— it fails the moment `format` and `parse` disagree about the bit split —
+not dead code. `knx-store`'s `style_from_str` was
 also hardened while this was open: an unrecognized persisted style now
 returns `StoreError::UnknownGroupAddressStyle` instead of silently
 defaulting to `ThreeLevel`, the same rule `POST /api/project/new` already

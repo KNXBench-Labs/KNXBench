@@ -4788,7 +4788,7 @@ Out of scope, left as-is: the `first_winner` helper's duplication between
 `manufacturer` table using `ON CONFLICT(id) DO UPDATE` (last-writer-wins,
 a different mechanism from `first_winner`, not touched).
 
-### 2026-09-13 — two closing fixes, finished by hand
+## 2026-09-13 — two closing fixes, finished by hand
 
 Both of these were dispatched as subagent tasks and both subagents were
 killed by an API rate limit before they could commit. Their work was
@@ -4824,7 +4824,7 @@ built. `corpus_available` checks all three projects rather than only the
 ETS4 one, so an override of a single variable cannot walk a guarded test
 into a panic.
 
-### 2026-09-13 — closes the `setParameterValue` publish hole (T3, goal.md §6 item 6)
+## 2026-09-13 — closes the `setParameterValue` publish hole (T3, goal.md §6 item 6)
 
 `api.setParameterValue` mutated the project server-side — `domain.rs`'s
 `set_parameter_value_impl` runs `apply(state, cmd)`, a real undoable
@@ -4973,9 +4973,15 @@ Five pieces, in the layer order the brief asked for:
    `key`) keeps type-checking without being touched.
 5. Proved, not asserted: `TwoLevel` (5+11 bits) and `ThreeLevel` (5+3+8
    bits) both partition the full 16 bits of a `u16` with no remainder, so
-   `GroupAddress::fits_style` is `true` for all 65536 possible raw values
-   under every style — confirmed by exhaustive test, not a sample. The
-   "does not fit" branch in `Command::SetGroupAddressStyle` and the whole
+   `GroupAddress::fits_style` — which renders an address in the target
+   style and parses the rendering back, answering `true` only if that
+   round trip returns the original address — is `true` for all 65536
+   possible raw values under every style, confirmed by exhaustive test,
+   not a sample. (Fix round 1, below, replaced an earlier version of
+   `fits_style` that compared bounds copied from `parse`/`format` rather
+   than calling them, which could drift from the real codec unnoticed;
+   the round-trip version cannot.) The "does not fit" branch in
+   `Command::SetGroupAddressStyle` and the whole
    `CommandError::GroupAddressDoesNotFitStyle` variant are therefore
    currently unreachable from any real address. Built anyway and
    documented as such: the check is what stops a future change to the bit
@@ -5032,3 +5038,91 @@ files, up from 465 by exactly the 2 new project-node cases). The
 `golden_reference_products.rs` corpus tests found their local, gitignored
 `OriginalData/` corpus present and ran full assertions (`grep -c 'skip:
 OriginalData/ corpus not present' <log>` on the run's own log is 0).
+
+#### T4 fix round 1 (2026-09-14)
+
+Both review verdicts on T4 came back PASS and PASS WITH RESERVATIONS —
+nothing here reverts shipped behaviour. The review's own mutation testing
+found the ten-line validation loop in `Command::apply`'s
+`SetGroupAddressStyle` arm was deletable without failing a single one of
+1298 tests, because `fits_style` carried a private copy of `parse`/
+`format`'s shifts and maxima rather than calling them, so it could never
+observe a disagreement between the two. Eight items:
+
+1. `GroupAddress::fits_style` (`crates/knx-core/src/address.rs`) now
+   renders the address in the target style and parses the rendering back,
+   answering `true` only if that round trip returns the original address
+   — a genuine call through `format`/`parse` rather than a restatement of
+   their bounds. Still `true` for every `u16` today (same 5+11/5+3+8
+   partition argument as before), but it now fails the moment `format`
+   and `parse` disagree about the bit split, which the old version could
+   not detect regardless of how badly they disagreed.
+2. The exhaustive test moved with it:
+   `group_address_fits_style_holds_for_every_possible_raw_value` became
+   `group_address_format_parse_round_trips_for_every_possible_raw_value`,
+   looping `format`/`parse` directly over all three styles and all 65536
+   raw values — the first exhaustive round trip anywhere in `address.rs`
+   (the two hand-picked-value tests at the boundaries stay, redundant but
+   harmless).
+3. `set_group_address_style_checks_every_installation_not_just_the_first`
+   — whose body put `u16::MAX` in installation two and asserted `Ok`,
+   which passes whether the guard reads every installation, only the
+   first, or does not exist — renamed to
+   `set_group_address_style_accepts_every_installations_addresses` with a
+   doc comment stating plainly what it can and cannot show: it fires only
+   if the check wrongly *rejects* a representable address, the opposite
+   direction from what the old name claimed; the bit-layout regression it
+   cannot observe is item 2's job.
+4. The check now also walks `installation.group_ranges`, checking each
+   range's `start` and `end` — both `GroupAddress` values, per
+   `GroupRange`'s own definition — with a new sibling error variant,
+   `CommandError::GroupRangeDoesNotFitStyle { id: GroupRangeId, raw: u16,
+   style: GroupAddressStyle }`, rather than stretching the existing
+   variant over a different id type. Moot while `fits_style` cannot
+   refuse anything, not moot after item 1: a future codec disagreement
+   would otherwise catch every group address while letting a range
+   boundary through unchecked. Both loops, for every installation, still
+   finish before `project.info.group_address_style` is written.
+5. `restyling_a_project_with_a_group_address_round_trips_and_undoes`
+   (`apps/knx-server/tests/http_edit_routes.rs`) checked status codes and
+   the post-undo rendering, never the restyled tree itself — a handler
+   ignoring `groupAddressStyle` and hard-coding `ThreeLevel` would have
+   passed. It now asserts on the response body before undoing:
+   `group_address_style == "Free"` and the raw address `4242` renders as
+   plain decimal `"4242"`.
+6. `apps/knx-server/tests/save_load_roundtrip.rs` gained
+   `restyling_over_http_then_saving_and_reloading_keeps_the_new_style`:
+   restyle over HTTP, save-as, reopen, assert the loaded project reports
+   the non-default style. The end-to-end claim in KNOWN_LIMITATIONS.md
+   §84 was inferred from store-level and route-level coverage, never
+   demonstrated directly, until now. No corpus needed — an empty project
+   through `POST /api/project/new` is enough.
+7. `apps/knx-web/src/ProjectExplorer.tsx`'s Project tree node — the only
+   way a user reaches `ProjectInspector` — had no test of its own;
+   `Inspector.test.tsx` builds the `{kind: "project"}` selection directly
+   and never touches the tree, so deleting the node left 467/467 green
+   (the review's own mutation). `ProjectExplorer.test.tsx` gained one
+   test: the "Project" label renders and a click on it calls `onSelect`
+   with `{kind: "project", id: 0}`.
+8. Two loose substring assertions
+   (`message.contains("7")`/`message.contains("42")` in
+   `group_address_does_not_fit_style_error_names_the_offender`) replaced
+   with an exact `assert_eq!` on the full message — `"7"` alone can match
+   inside all sorts of unrelated text by accident. The new
+   `GroupRangeDoesNotFitStyle` variant's test from item 4 uses the same
+   exact-match style from the start.
+   `apps/knx-web/src/messages/en.ts`'s comment above the Project node's keys, pointing
+   at `ProjectDiffPanel` — a component with nothing to do with this panel
+   — was replaced with an accurate description (display only, no restyle
+   control here). `docs/IMPLEMENTATION_STATUS.md`'s own dated entries were
+   normalised from a mix of `##`/`###` to all `##` per the standing ruling
+   that the next toucher does it; this round was the next toucher.
+
+Gates for fix round 1, all judged by exit status and all 0: `cargo fmt
+--all --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo test --workspace --no-fail-fast`, `xtask check-layering`, `xtask
+check-headers`, `cargo deny check`, `npx tsc --noEmit`, and `npx vitest
+run`. Exact totals recorded in
+`.superpowers/sdd/2026-09-13-goal-completion/task-4-fixround-1-report.md`,
+not reproduced here since they belong to a single point in time on a
+branch, not a durable project fact.

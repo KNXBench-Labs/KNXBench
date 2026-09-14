@@ -202,6 +202,17 @@ that server-named id instead of the declared one (D43).
   corpus-observed: MDT `M-0083_A-0317-31-7DC6_PT-2ByteFloatTemp` carries
   `<TypeFloat Encoding="DPT 9" minInclusive="-100" maxInclusive="200"/>`)
   when the program declares bounds, and just finiteness when it does not.
+  What `Float` deliberately does *not* enforce is `Value_t`'s own stored
+  encoding for a `TypeFloat` — scientific notation with 16 significant
+  digits and a three-digit exponent, the shape `value.ToString("E15", ...)`
+  produces (*Project Schema23 v01.00.00* §1.1.3.19, p. 30/64) **[D]**.
+  That is the wire format, not what a person types into a form field, and
+  this design stores the raw string verbatim rather than reformatting it.
+  So any finite number in ordinary decimal or scientific notation is
+  accepted, and the E15 question stays open — the same kind of deliberate
+  narrowing as the IPv6 decision below, in the opposite direction:
+  `IPAddress` accepts less than reality allows, `Float` accepts more than
+  the wire format specifies.
   `Text` now rejects a value whose UTF-8 byte length exceeds the
   program's own `SizeInBit` (`TypeText`'s own attribute, corpus-observed:
   the same program's `<TypeText SizeInBit="240"/>` and

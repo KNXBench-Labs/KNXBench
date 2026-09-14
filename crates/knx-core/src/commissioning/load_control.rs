@@ -323,7 +323,7 @@ pub fn require_subtype(
 mod tests {
     use super::*;
 
-    /// §14 item 4: the ten-octet payloads, octet for octet.
+    /// Spec §5.3 and §7.3: the ten-octet payloads, octet for octet.
     #[test]
     fn every_plain_event_payload_is_the_event_octet_then_nine_zeroes() {
         let cases = [
@@ -392,8 +392,8 @@ mod tests {
         }
     }
 
-    /// §14 item 5: the subtype is chosen by mask, and the wrong mask is a
-    /// refusal rather than a fallback.
+    /// Spec §7.3 rules 1 and 3: the subtype is chosen by mask, and the wrong
+    /// mask is a refusal rather than a fallback.
     #[test]
     fn the_system_b_masks_get_data_relative_allocation() {
         for mask in [MASK_07B0, MASK_17B0, MASK_57B0] {

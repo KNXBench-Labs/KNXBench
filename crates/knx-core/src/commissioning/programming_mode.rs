@@ -215,7 +215,7 @@ mod tests {
         IndividualAddress::new(area, line, device).unwrap()
     }
 
-    /// §14 item 7: the count is of distinct sources, and repetitions do not
+    /// §14 item 6: the count is of distinct sources, and repetitions do not
     /// inflate it.
     #[test]
     fn layer_two_repetitions_do_not_become_a_second_device() {
@@ -273,7 +273,7 @@ mod tests {
         assert_eq!(PROGRAMMING_MODE_AUTO_OFF, Duration::from_secs(240));
     }
 
-    /// §14 item 8: the toggle inverts bits 0 and 7 and preserves 1–6.
+    /// §14 item 18: the toggle inverts bits 0 and 7 and preserves 1–6.
     #[test]
     fn the_toggle_inverts_bit_zero_and_bit_seven_only() {
         // 0b0101_1010: prog_mode off, parity clear, shared bits set.

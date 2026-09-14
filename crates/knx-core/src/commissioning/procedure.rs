@@ -556,8 +556,8 @@ pub fn recovery() -> Procedure {
 mod tests {
     use super::*;
 
-    /// §14 item 6: the step lists match the clauses' own numbering and
-    /// order.
+    /// Spec §11.2's procedure model: the step lists match the clauses' own
+    /// numbering and order.
     #[test]
     fn every_procedure_numbers_its_steps_from_one_without_gaps() {
         for kind in ProcedureKind::ALL {

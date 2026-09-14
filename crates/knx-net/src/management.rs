@@ -15,6 +15,7 @@
 
 use std::time::Duration;
 
+use knx_core::commissioning::mutation::TargetKind;
 use knx_core::IndividualAddress;
 use tokio::sync::broadcast;
 
@@ -59,6 +60,18 @@ pub trait ManagementTransport {
         transport: Tpci,
         service: ApplicationService,
     ) -> Result<(), BusError>;
+
+    /// Whether frames sent through this transport can reach real hardware.
+    ///
+    /// Defaults to [`TargetKind::Hardware`], and the default is the point: a
+    /// transport that has not said otherwise is assumed to be wired to a
+    /// building. Only a simulator overrides it, and a write session refuses
+    /// to run against anything else in this phase (commissioning spec §15,
+    /// §13 R11). A new transport type added later is therefore hardware
+    /// until somebody deliberately says it is not.
+    fn target_kind(&self) -> TargetKind {
+        TargetKind::Hardware
+    }
 }
 
 impl<T: ScanTransport> ManagementTransport for T {

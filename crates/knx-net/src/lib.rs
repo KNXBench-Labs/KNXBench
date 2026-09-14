@@ -17,6 +17,7 @@
 
 pub mod cemi;
 pub mod client;
+pub mod commissioning;
 pub mod core;
 pub mod discovery;
 pub mod frame;
@@ -29,6 +30,9 @@ pub use cemi::{ApplicationService, CemiError, Destination, LDataFrame, LDataMess
 pub use client::{
     BusConnection, BusError, DiscoveredGateway, KnxNetIpClient, RoutingClient, TunnelClient,
     TunnelEvent,
+};
+pub use commissioning::{
+    ConnectionState, ManagementSession, SessionError, SessionTiming, VerifyMode,
 };
 pub use management::ManagementTransport;
 pub use scan::{

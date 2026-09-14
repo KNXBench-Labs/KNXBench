@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 8;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 9;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -281,7 +281,107 @@ fn migrations() -> Vec<Migration> {
         migrate_v5_to_v6,
         migrate_v6_to_v7,
         migrate_v7_to_v8,
+        migrate_v8_to_v9,
     ]
+}
+
+/// v8 -> v9. `knx_master.xml`'s `FunctionType`/`FunctionPoint`/`SpaceUsage`
+/// elements get their own tables — `function_type`, `function_point`
+/// (nested under its owning `FunctionType`, so it keeps a
+/// `function_type_id` foreign key) and `space_usage` — closing
+/// `docs/KNOWN_LIMITATIONS.md` §64's last residue: the `FT-*`, `FP-*_DR-*`
+/// and `SU-*` `Master`-scope translations `ingest_translations` has stored
+/// since T32 finally have something to join against.
+/// `parse/master.rs`'s `ingest_master_data` fills them the same `INSERT OR
+/// IGNORE` way it already fills `datapoint_type` — a package's
+/// `knx_master.xml` restates the whole catalogue, so a second package's
+/// rows collide and are dropped without a counter, the same accepted gap
+/// §86 already documents for `datapoint_type` (broadened there rather than
+/// re-argued here).
+///
+/// Backfilled from every stored blob that classifies as `MasterData`, the
+/// same shape `migrate_v3_to_v4`'s `backfill_shared_translations` uses —
+/// see `backfill_function_and_space_data` below for why replaying
+/// `ingest_master_data` whole, rather than a second, narrower parser, is
+/// safe here.
+fn migrate_v8_to_v9(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE function_type (
+             id     TEXT PRIMARY KEY,
+             number INTEGER,
+             text   TEXT,
+             status TEXT
+         ) STRICT;
+         CREATE TABLE function_point (
+             id               TEXT PRIMARY KEY,
+             function_type_id TEXT NOT NULL,
+             datapoint_type   TEXT,
+             role             TEXT,
+             characteristics  TEXT,
+             text             TEXT
+         ) STRICT;
+         CREATE INDEX function_point_function_type ON function_point (function_type_id);
+         CREATE TABLE space_usage (
+             id     TEXT PRIMARY KEY,
+             number INTEGER,
+             text   TEXT
+         ) STRICT;",
+    )?;
+    backfill_function_and_space_data(conn)?;
+    Ok(())
+}
+
+/// A product database that reached v8 before `function_type`/
+/// `function_point`/`space_usage` existed has `source_file` blobs whose
+/// `knx_master.xml` was already parsed for `Manufacturers`/`DatapointTypes`/
+/// `Languages` but never for `FunctionTypes`/`SpaceUsages` — installation's
+/// content-hash idempotence (`source_parse_evidence`) means an
+/// already-installed blob is never revisited by the ordinary path.
+/// Modelled on `backfill_shared_translations` above: every blob that
+/// classifies as `MasterData` is replayed through `ingest_master_data` in
+/// full, inside the same migration transaction `open_and_migrate` already
+/// holds. Replaying the whole function rather than a second, narrower
+/// parser is safe because every write it makes is `INSERT OR IGNORE` or
+/// `ON CONFLICT DO UPDATE SET name = excluded.name` against a blob's own
+/// unchanged bytes — the rows it already wrote at first ingest come back
+/// unchanged, and only the three new tables actually gain anything.
+fn backfill_function_and_space_data(conn: &Connection) -> Result<(), ProductDbError> {
+    let mut stmt = conn.prepare("SELECT sha256, source_path, bytes FROM source_file")?;
+    let blobs: Vec<(String, String, Vec<u8>)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    drop(stmt);
+
+    for (sha256, source_path, bytes) in blobs {
+        // Only `MasterData` content can carry `FunctionTypes`/`SpaceUsages`;
+        // everything else is skipped without being parsed at all, exactly
+        // as the ordinary ingest path already dispatches by `classify`.
+        if classify(&bytes) != FileKind::MasterData {
+            continue;
+        }
+        conn.execute_batch("SAVEPOINT function_space_backfill_blob;")?;
+        match crate::parse::master::ingest_master_data(conn, &bytes) {
+            Ok(outcome) => {
+                conn.execute_batch("RELEASE SAVEPOINT function_space_backfill_blob;")?;
+                insert_unknown(conn, &sha256, &outcome.unknown)?;
+            }
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT function_space_backfill_blob;
+                     RELEASE SAVEPOINT function_space_backfill_blob;",
+                )?;
+                record_backfill_failure(
+                    conn,
+                    &sha256,
+                    &source_path,
+                    "FunctionSpaceBackfillError",
+                    "ingest_master_data",
+                    &error,
+                )?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// v7 -> v8. The first step in this chain that adds no structure at all: it
@@ -1377,5 +1477,135 @@ mod tests {
             0,
             "no blob was read, so no blob could fail"
         );
+    }
+
+    /// A `knx_master.xml` carrying `FunctionTypes`/`SpaceUsages` plus
+    /// `Master`-scope translations for both — the same shape
+    /// `parse/master.rs`'s own fixture uses, kept here rather than shared so
+    /// this file's frozen-database tests stay self-contained the way its
+    /// neighbours already do.
+    const MASTER_WITH_FUNCTIONS_AND_LANGUAGES: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Siemens" />
+    </Manufacturers>
+    <FunctionTypes>
+      <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified">
+        <FunctionPoint Id="FT-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+      </FunctionType>
+    </FunctionTypes>
+    <SpaceUsages>
+      <SpaceUsage Id="SU-1" Number="1" Text="Office" />
+    </SpaceUsages>
+  </MasterData>
+  <Languages>
+    <Language Identifier="de-DE">
+      <TranslationUnit RefId="FT-1">
+        <TranslationElement RefId="FT-1">
+          <Translation AttributeName="Text" Text="Schalten" />
+        </TranslationElement>
+      </TranslationUnit>
+      <TranslationUnit RefId="SU-1">
+        <TranslationElement RefId="SU-1">
+          <Translation AttributeName="Text" Text="Büro" />
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+
+    /// A v8 database — built the frozen way, running only `migrations()`'s
+    /// first eight functions, exactly like every other "previous schema
+    /// version" test in this file — already holds the `knx_master.xml` blob
+    /// and its `source_parse_evidence` row, but has no `function_type`,
+    /// `function_point` or `space_usage` table to have written into, so the
+    /// `FunctionType`/`FunctionPoint`/`SpaceUsage` rows and their
+    /// `Master`-scope translations never got written on first ingest. This
+    /// proves `migrate_v8_to_v9`'s backfill recovers them anyway, closing
+    /// `docs/KNOWN_LIMITATIONS.md` §64's last residue for data already on
+    /// disk, not only for data ingested from here on.
+    #[test]
+    fn a_v8_database_backfills_function_and_space_usage_rows_and_their_translations() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let bytes = MASTER_WITH_FUNCTIONS_AND_LANGUAGES.as_bytes();
+        let sha = crate::sha256_hex(bytes);
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..8] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 8i64).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![sha, "knx_master.xml", None::<String>, bytes.len() as i64, bytes],
+            )
+            .unwrap();
+            // Present in `source_parse_evidence`, exactly like a blob a v8
+            // build already ingested through `ingest_master_data` — the
+            // content-hash skip means the ordinary path would never revisit
+            // it, which is the whole reason a backfill exists.
+            conn.execute(
+                "INSERT INTO source_parse_evidence (sha256) VALUES (?1)",
+                [&sha],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(version, CURRENT_PRODUCTDB_VERSION);
+        assert_eq!(version, 9);
+
+        let (number, text, status): (i64, String, String) = conn
+            .query_row(
+                "SELECT number, text, status FROM function_type WHERE id = 'FT-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!((number, text.as_str(), status.as_str()), (1, "Switch", "Certified"));
+
+        let function_type_id: String = conn
+            .query_row(
+                "SELECT function_type_id FROM function_point WHERE id = 'FT-1_DR-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(function_type_id, "FT-1");
+
+        let space_usage_text: String = conn
+            .query_row("SELECT text FROM space_usage WHERE id = 'SU-1'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(space_usage_text, "Office");
+
+        let function_type_translation: String = conn
+            .query_row(
+                "SELECT text FROM translation
+                 WHERE scope = 'Master' AND ref_id = 'FT-1' AND attribute_name = 'Text'
+                   AND language = 'de-DE'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(function_type_translation, "Schalten");
+
+        let space_usage_translation: String = conn
+            .query_row(
+                "SELECT text FROM translation
+                 WHERE scope = 'Master' AND ref_id = 'SU-1' AND attribute_name = 'Text'
+                   AND language = 'de-DE'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(space_usage_translation, "Büro");
     }
 }

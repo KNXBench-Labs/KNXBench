@@ -112,14 +112,16 @@ xtask/             Repository verification tasks, including the layering gate
 ```text
 knx-desktop ─> knx-server ─┬─> knx-app ─> knx-core
                            ├─> knx-store ────> knx-core
-                           ├─> knx-etsproj ──> knx-core
+                           ├─> knx-etsproj ──┬─> knx-core
+                           │                 └─> knx-secure
                            ├─> knx-projection ─> knx-core
                            ├─> knx-diff ──────> knx-core
                            └─> knx-net ──────> knx-core
 
 knx-cli ────────────────────> knx-app ─> knx-core
                                  ├─> knx-store ────> knx-core
-                                 ├─> knx-etsproj ──> knx-core
+                                 ├─> knx-etsproj ──┬─> knx-core
+                                 │                 └─> knx-secure
                                  ├─> knx-productdb ─> knx-core
                                  ├─> knx-net ──────> knx-core
                                  ├─> knx-diff ──────> knx-core

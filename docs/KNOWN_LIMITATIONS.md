@@ -908,7 +908,9 @@ and nothing that encrypts.
 
 **What ZipCrypto is, plainly.** It is PKWARE's "Traditional Encryption",
 specified in APPNOTE.TXT §6.0/§6.1 [D] — a three-key stream cipher from
-1990, with a 1-in-256 false-accept rate on its own password check and a
+1990, with a 1-in-256 false-accept rate on its own password check — about
+1 in 128 as this repository uses it, since it tries both published
+check-byte conventions — and a
 known-plaintext attack (Biham & Kocher, 1994) that recovers the key from
 a modest amount of known output, no brute force required. It is not
 security by any current standard; the KNX Standard specifying it for
@@ -960,8 +962,10 @@ one a given entry used.
   unverified against a real protected export.
 * **A wrong password** is reported as `ContainerError::WrongPassword`,
   never a panic and never silently-wrong plaintext — but ZipCrypto's own
-  check byte only rules out 255/256 wrong passwords; a false accept
-  (1/256) would proceed to decompress garbage, which then fails as a
+  check byte only rules out 255/256 wrong passwords per convention, and
+  this implementation tries both published conventions, so the rate it
+  runs at is about 1 in 128; a false accept would proceed to decompress
+  garbage, which then fails as a
   decompression error (`ContainerError::Read`) or, in the unlucky case
   the garbage happens to inflate, produces wrong bytes indistinguishable
   from a real but different plaintext. This is not a defect in this

@@ -3399,6 +3399,12 @@ absence, on this installation, at all — seven of nine addresses would have
 been wrongly recorded as vacant or unreachable if this section trusted that
 signal alone.
 
+One confound this pass cannot exclude: `1.1.24` was the first address in the
+loop, and all nine sessions shared one tunnelling connection. "The first
+session on a fresh tunnel works and subsequent ones do not" fits the data as
+well as any per-device explanation, and would be separated by probing the
+nine in reverse order, or one tunnel per address.
+
 #### 8.8.4 Reconciliation against the spec
 
 - **`PID_ERROR_CODE`, `PID_DEVICE_CONTROL` and `PID_OBJECT_INDEX`**, named in

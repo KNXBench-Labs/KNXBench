@@ -311,3 +311,107 @@ reportable; they are simply not part of the activation walk.
   occurrences and stays unimplemented and undocumented beyond that fact.
 - **`RepeatIndex`'s `"NxM"` encoding** stays an opaque string in
   `knx-core` per ADR-0013.
+
+## Addendum (goal.md T18, task 11): D15 superseded — bounded recursive expansion
+
+D15 stood on "the corpus has zero nested modules and there is nothing to
+implement against." `goal.md` §3 T18 asked for the gap to be closed anyway,
+bounded and cycle-safe rather than left as a one-level policy limit. This
+addendum supersedes D15 and D17's `NestedModuleNotExpanded` row; D12-D14,
+D16, D19 are unaffected.
+
+### D20. `Module` nesting is expanded recursively, bounded by a named constant
+
+A `Module` found while walking an already-expanded `ModuleDef`'s tree is now
+expanded the same way a top-level `Module` is: its `@RefId` is looked up in
+`ProgramTrees`, and if found, its tree is walked with a new `ModuleScope`
+whose `parent` is the enclosing scope. `ModuleScope` becomes a chain
+(`parent: Option<Box<ModuleScope>>`) rather than a single flat record, and
+carries a `depth()` method (1 + parent depth, 0 if none).
+
+Expansion stops — with a diagnostic, not a panic and not silent truncation —
+once `ModuleScope::depth()` would exceed
+`evaluate::MAX_MODULE_NESTING_DEPTH = 16`. **[A]** No source states a bound;
+see the constant's own doc comment for the inference and the fresh
+`pdftotext -layout` re-extraction of `Project Schema23 v01.00.00.pdf`
+confirming (again) that the KNX Standard defines no application-program-side
+`ModuleDef`/`Module` complexType at all — there is nothing in the Standard
+to derive a bound from, so 16 is chosen, not found.
+
+### D21. Cycles are detected by scanning the whole ancestor chain, not just the immediate parent
+
+Before expanding a `Module`'s target `ModuleDef`, `chain_contains` walks
+`self` and every `parent` comparing `module_def_id`. A `ModuleDef` that
+(directly or through intermediate `ModuleDef`s) contains a `Module` naming
+itself again is refused with `Diagnostic::ModuleCycleDetected { node_id,
+ref_id }` and its subtree is not descended — never a stack overflow, never a
+silent stop. This check runs *before* the depth-bound check, so a cycle is
+reported as a cycle even when it would also have crossed the depth bound.
+
+A non-cyclic chain that is simply too deep is refused with
+`Diagnostic::ModuleNestingTooDeep { node_id, ref_id, depth }`, where `depth`
+is the depth the expansion would have reached.
+
+`Diagnostic::NestedModuleNotExpanded` (D17's row) is **removed** — a `Module`
+inside a `ModuleDef`'s own tree is no longer a standing diagnostic by
+itself; it is either expanded, refused as a cycle, or refused as too deep.
+
+### D22. The dedup/scope key is qualified by the full ancestor node chain
+
+D18's key, `(Option<module_node>, ref_id)`, assumed at most one enclosing
+`Module`. A `node_id` is only unique within one `(program_id,
+module_def_id)` tree (`dynamic_node`'s own storage, design D1-D5), so two
+different nesting chains can reuse the same `node_id` at the same depth
+under different ancestors — a flat `Option<i64>` would collide them. The key
+becomes `(Vec<i64>, String)`: the full chain of `module_node` ids from the
+program root down, plus `ref_id`. `ModuleScope::node_chain()` builds this
+vector by walking `parent` outward-in.
+
+### Corpus measurement (task 11, required deliverable)
+
+Measured, not guessed, against every `.knxprod` file present under
+`OriginalData/ProductDatabases/` (all 5 archives currently installed
+locally: `646704-04_ETS4_2012_47_DE_EN`, `Dummy_Applikation_Secure`,
+`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a` (3 application programs),
+`Weinzierl_730_KNX_IP_Interface_ETS4`, `Weinzierl_730_KNX_IP_Interface_ETS4_v1`),
+two independent ways:
+
+1. A raw XML scan (`xml.etree.ElementTree`, scratch script, outside the
+   repo) over every extracted application-program XML file counted `Module`
+   elements found inside a `ModuleDef` element's own subtree: **0** across
+   all 7 application-program files.
+2. `crates/knx-productdb/tests/dynamic_tree.rs`'s
+   `corpus_nested_module_measurement_task_11` installs the same 5 archives
+   into a fresh database and runs
+   `SELECT COUNT(*) FROM dynamic_node WHERE kind = 'Module' AND
+   module_def_id != ''` (a `Module` row stored under a non-empty
+   `module_def_id`, i.e. inside a `ModuleDef`'s own tree rather than the
+   program's): **0**, out of a total of 90 stored `Module` rows overall
+   (`kind = 'Module'`, any `module_def_id`).
+
+Both measurements agree: **zero products in the installed database nest
+modules.** D20/D21's bounded recursion is therefore exercised, in this
+corpus, only by the new synthetic unit tests — the corpus itself gives it
+nothing to expand.
+
+### Acceptance criteria addendum
+
+11. A unit test with two genuine nesting levels (`Module` inside a
+    `ModuleDef`'s tree naming a *different* `ModuleDef`, no cycle) is
+    expanded fully, with a two-deep `ModuleScope` chain on the resulting
+    activations.
+12. A unit test with a cycle (a `ModuleDef`'s tree, directly or through one
+    intermediate `ModuleDef`, names a `ModuleDef` already in the ancestor
+    chain) yields `ModuleCycleDetected` and no activation from the cyclic
+    branch — and does not overflow the stack.
+13. A unit test at exactly `MAX_MODULE_NESTING_DEPTH` expands fully with no
+    diagnostic; one level deeper yields `ModuleNestingTooDeep { depth:
+    MAX_MODULE_NESTING_DEPTH + 1, .. }` and no activation from the refused
+    branch.
+14. The corpus measurement above is recorded here and in
+    `docs/RESEARCH.md`, not asserted from memory.
+15. All six gates pass (the deny/layering/headers set, not just the five
+    D-era ones): `cargo fmt --all -- --check`, `cargo clippy --workspace
+    --all-targets -- -D warnings`, `cargo test --workspace --no-fail-fast`,
+    `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
+    check-headers`, `cargo deny check`.

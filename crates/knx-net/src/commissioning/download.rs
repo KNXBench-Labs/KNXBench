@@ -501,7 +501,8 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
         Ok(report)
     }
 
-    /// CP §3.5.3, the partial download: unload one part, reload one part, and
+    /// CP §3.5.3's first variant, *"Partial Download of the 'application
+    /// program 2'"*, numbered 01 to 14: unload one part, reload one part, and
     /// escalate to the following segments if its allocation fails.
     ///
     /// The escalation is the clause's own: *"⇒ Continue at Nr. 07"*, which is
@@ -569,7 +570,19 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
             Err(err) => return Err(err),
         }
 
-        record(&mut report, kind, 9, "disconnect");
+        // Nr. 06 of this variant ends *"⇒ Continue at Nr. 13"*, so the
+        // access keys and the disconnect are 13 and 14 and not 8 and 9. Nr. 13
+        // is recorded and empty for the same reason it is in a complete
+        // download: `A_Key_Write` is out of scope for this phase (spec §10.7),
+        // and a step silently missing from a trace is indistinguishable from a
+        // step that was forgotten.
+        record(
+            &mut report,
+            kind,
+            13,
+            "modify access keys (not implemented)",
+        );
+        record(&mut report, kind, 14, "disconnect");
         self.session.disconnect().await;
         Ok(report)
     }
@@ -1168,8 +1181,9 @@ mod tests {
         assert_eq!(report.escalated_from, Some(ObjectIndex::new(3)));
         assert_eq!(
             report.outer_step_numbers(),
-            vec![1, 3, 2, 4, 5, 6, 7, 9],
-            "step 08 is folded into 06 and never appears: {:?}",
+            vec![1, 3, 2, 4, 5, 6, 7, 13, 14],
+            "steps 08 to 12 are the escalation's own reloads, recorded under \
+             ProcedureKind::LoadOnePart rather than out here: {:?}",
             report.steps
         );
         // The failed attempt plus three successful loads.

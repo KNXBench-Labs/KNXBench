@@ -634,7 +634,10 @@ impl ModuleScope {
     /// own — the full-identity key nested dedup needs (see `module_node`'s
     /// own doc comment for why `module_node` alone is not enough).
     fn node_chain(&self) -> Vec<i64> {
-        let mut chain = self.parent.as_deref().map_or_else(Vec::new, ModuleScope::node_chain);
+        let mut chain = self
+            .parent
+            .as_deref()
+            .map_or_else(Vec::new, ModuleScope::node_chain);
         chain.push(self.module_node);
         chain
     }

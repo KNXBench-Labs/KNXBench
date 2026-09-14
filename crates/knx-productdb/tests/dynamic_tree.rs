@@ -2419,7 +2419,8 @@ fn corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_coun
             .filter(|sd| {
                 matches!(
                     sd.diagnostic,
-                    Diagnostic::ModuleCycleDetected { .. } | Diagnostic::ModuleNestingTooDeep { .. }
+                    Diagnostic::ModuleCycleDetected { .. }
+                        | Diagnostic::ModuleNestingTooDeep { .. }
                 )
             })
             .count();
@@ -2665,9 +2666,11 @@ fn corpus_nested_module_measurement_task_11() {
         )
         .unwrap();
     let total_module_rows: i64 = conn
-        .query_row("SELECT COUNT(*) FROM dynamic_node WHERE kind = 'Module'", [], |r| {
-            r.get(0)
-        })
+        .query_row(
+            "SELECT COUNT(*) FROM dynamic_node WHERE kind = 'Module'",
+            [],
+            |r| r.get(0),
+        )
         .unwrap();
 
     eprintln!(

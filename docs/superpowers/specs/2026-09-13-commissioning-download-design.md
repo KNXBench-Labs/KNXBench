@@ -2421,13 +2421,15 @@ the expected outcome is that there will be some.
 **[V]** RESEARCH §8.8 records the run. Two corrections to the paragraph above,
 both from real hardware and neither hypothetical:
 
-- **The property list actually read was narrower than the one specified
-  here**: Device Descriptor Type 0, `PID_MANUFACTURER_ID`, `PID_HARDWARE_TYPE`
-  and `PID_LOAD_STATE_CONTROL` on all three loadable Interface Objects.
-  `PID_ERROR_CODE`, `PID_DEVICE_CONTROL` and `PID_OBJECT_INDEX` were not read
-  against real hardware in this pass. That is a coverage gap in the
-  *verification*, not a correction to the device model, and it is carried
-  forward rather than closed here.
+- **The property list actually read was different from the one specified
+  here**: three of §14's properties were skipped and two it does not name
+  were added. Device Descriptor Type 0, `PID_MANUFACTURER_ID`,
+  `PID_HARDWARE_TYPE`, `PID_PROGRAM_VERSION` and `PID_LOAD_STATE_CONTROL` on
+  all three loadable Interface Objects were read; `PID_ERROR_CODE`,
+  `PID_DEVICE_CONTROL` and `PID_OBJECT_INDEX` were not read against real
+  hardware in this pass. That is a coverage gap in the *verification*, not a
+  correction to the device model, and it is carried forward rather than
+  closed here.
 - **`ManagementSession::read_only`'s own connect-then-read is not a reliable
   presence check on this installation, and this document's phase 3 checklist
   assumed it was.** Of the eight addresses in range that an independent

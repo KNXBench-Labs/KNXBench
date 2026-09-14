@@ -574,12 +574,14 @@ write path nor `A_Authorize_Request` existed to use. Findings, both from real
 devices and both corrections to how this project verifies them rather than to
 the protocol facts §8.7 established:
 
-- **The device-property reads were narrower than design spec §14's phase 3
-  checklist** — `PID_ERROR_CODE`, `PID_DEVICE_CONTROL` and `PID_OBJECT_INDEX`
-  were not read against real hardware this pass, only Device Descriptor
-  Type 0, `PID_MANUFACTURER_ID`, `PID_HARDWARE_TYPE` and
-  `PID_LOAD_STATE_CONTROL` on the three loadable Interface Objects. Carried
-  forward as a residual coverage gap, not closed here.
+- **The device-property reads were different from design spec §14's phase 3
+  checklist** — three of §14's properties were skipped and two it does not
+  name were added: `PID_ERROR_CODE`, `PID_DEVICE_CONTROL` and
+  `PID_OBJECT_INDEX` were not read against real hardware this pass, only
+  Device Descriptor Type 0, `PID_MANUFACTURER_ID`, `PID_HARDWARE_TYPE`,
+  `PID_PROGRAM_VERSION` and `PID_LOAD_STATE_CONTROL` on the three loadable
+  Interface Objects. Carried forward as a residual coverage gap, not closed
+  here.
 - **`ManagementSession`'s own connect-then-read cannot be trusted to report a
   device absent.** An independent cross-check with the already-shipped `bus
   scan` probe found eight of the nine addresses occupied at mask `0701h`

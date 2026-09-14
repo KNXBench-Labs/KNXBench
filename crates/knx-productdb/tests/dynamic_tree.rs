@@ -2733,6 +2733,14 @@ fn corpus_nested_module_measurement_task_11() {
 
     let (_dir, conn) = db();
     let mut installed = Vec::new();
+    // Fix round 1, item 7: the report was previously discarded
+    // (`.unwrap()` and nothing else), so a byte-identical archive quietly
+    // skipping its own install went unnoticed — this file is five
+    // archives, but only four distinct packages: two Weinzierl files are
+    // byte-identical, and `install_package` skips re-storing the second
+    // one's members. Capture `skipped` per file so that fact is asserted,
+    // not just true by accident.
+    let mut skipped_files = Vec::new();
     for entry in std::fs::read_dir(&root).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
@@ -2741,7 +2749,10 @@ fn corpus_nested_module_measurement_task_11() {
         }
         let name = path.file_name().unwrap().to_str().unwrap().to_string();
         let bytes = std::fs::read(&path).unwrap();
-        knx_productdb::install_package(&conn, &name, &bytes).unwrap();
+        let report = knx_productdb::install_package(&conn, &name, &bytes).unwrap();
+        if report.skipped {
+            skipped_files.push(name.clone());
+        }
         installed.push(name);
     }
     assert!(
@@ -2749,6 +2760,13 @@ fn corpus_nested_module_measurement_task_11() {
         "OriginalData/ProductDatabases exists but contains no .knxprod archive"
     );
     installed.sort();
+    assert_eq!(
+        installed.len() - skipped_files.len(),
+        4,
+        "five archive files, four distinct packages -- one Weinzierl archive is byte-identical \
+         to its sibling and install_package skips it; installed = {installed:?}, skipped = \
+         {skipped_files:?}"
+    );
 
     let total_module_def_rows: i64 = conn
         .query_row(
@@ -2766,11 +2784,14 @@ fn corpus_nested_module_measurement_task_11() {
         .unwrap();
 
     eprintln!(
-        "corpus nesting measurement (task 11): installed {} .knxprod archives ({}); \
-         total Module rows = {total_module_rows}; Module rows nested inside a ModuleDef's own \
-         tree (kind='Module' AND module_def_id != '') = {total_module_def_rows}",
+        "corpus nesting measurement (task 11): installed {} .knxprod archives ({}), {} skipped \
+         as byte-identical duplicates ({}); total Module rows = {total_module_rows}; Module rows \
+         nested inside a ModuleDef's own tree (kind='Module' AND module_def_id != '') = \
+         {total_module_def_rows}",
         installed.len(),
-        installed.join(", ")
+        installed.join(", "),
+        skipped_files.len(),
+        skipped_files.join(", ")
     );
 
     // Measured, not guessed: zero of the installed database's Module rows
@@ -2785,5 +2806,17 @@ fn corpus_nested_module_measurement_task_11() {
         total_module_def_rows, 0,
         "measured nesting count in the installed database; see this test's own eprintln for \
          the full breakdown"
+    );
+
+    // Fix round 1, blocking finding 2: this used to be 90 in the docs,
+    // never actually produced by any run -- this was only ever
+    // `eprintln!`'d, never asserted, so the wrong number sat undetected.
+    // 86 is what running this test actually prints; asserting it means a
+    // corpus change that moves this number fails loudly here instead of
+    // only in an unread eprintln.
+    assert_eq!(
+        total_module_rows, 86,
+        "total stored Module rows across the installed corpus; see this test's own eprintln \
+         for the full breakdown"
     );
 }

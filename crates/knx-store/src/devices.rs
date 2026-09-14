@@ -223,6 +223,9 @@ pub fn load_device(conn: &Connection, id: DeviceId) -> Result<DeviceInstance, St
                     .with_timezone(&chrono::Utc)
             }),
             broken,
+            // Loaded from the project store, which stores intent only.
+            // The device side of §11.2 is a fact nobody has yet checked.
+            device_reported: Default::default(),
         },
         visibility_calculated,
         com_objects: vec![],
@@ -808,6 +811,7 @@ mod tests {
                 last_modified: None,
                 last_download: None,
                 broken: false,
+                device_reported: Default::default(),
             },
             visibility_calculated: true,
             com_objects: vec![],

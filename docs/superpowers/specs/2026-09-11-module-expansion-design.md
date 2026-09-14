@@ -361,6 +361,27 @@ legitimate ceiling of 382 activations, recorded at
 `docs/IMPLEMENTATION_STATUS.md`'s "Corpus regression coverage" entry, not
 RESEARCH.md — fix round 2 correction, the citation was wrong in round 1).
 
+**Fix round 2, and its own residual in round 3:** an expansion count is not
+a work count. A `ModuleDef` carrying many `ParameterRefRef` children,
+expanded a modest number of times well inside the 100,000 ceiling, still
+reached multi-GB peak RSS — measured, standalone binary over the public
+API at `opt-level = 2`: 1,325,196 activations at 1,946 MiB, and 3,825,596
+at 5,691 MiB, both inside the expansion budget throughout **[V]**. Round 2
+added a third constant, `evaluate::MAX_MODULE_ACTIVATIONS = 1_000_000`,
+bounding the combined `parameter_refs`/`com_object_refs` count one
+`evaluate` call may record, refused with the same
+`Diagnostic::ModuleExpansionBudgetExhausted` variant distinguished by its
+`budget` field, and emitted exactly once rather than once per refused ref.
+
+Round 3 (from the scoped re-review of round 2) makes that budget stop the
+walk rather than only the recording. Round 2 checked it at the two
+activation sites and *after* the per-scope dedup, and `walk`'s `Module` arm
+never consulted it, so a run that had spent its activation budget kept
+expanding until the 100,000-times-larger expansion budget stopped it, and
+every ref it met on the way still allocated a `ScopeKey` into a `seen` set
+no budget bounded. The check now sits ahead of the dedup and is repeated in
+the `Module` arm, where a spent budget refuses further expansion outright.
+
 ### D45. Cycles are detected by scanning the whole ancestor chain, not just the immediate parent
 
 Before expanding a `Module`'s target `ModuleDef`, `chain_contains` walks
@@ -455,6 +476,18 @@ nothing to expand.
     exceed `MAX_MODULE_NESTING_DEPTH` yields
     `ModuleExpansionBudgetExhausted { budget: MAX_MODULE_EXPANSIONS, .. }`
     and `evaluate` returns rather than continuing to expand.
+16b. *(Fix round 2, and extended in round 3.)* A unit test with a fan-out
+    tree whose refs-per-expansion exceed `MAX_MODULE_ACTIVATIONS` while its
+    expansion count stays well under `MAX_MODULE_EXPANSIONS` yields exactly
+    one `ModuleExpansionBudgetExhausted { budget: MAX_MODULE_ACTIVATIONS, .. }`
+    and stops recording refs at the budget
+    (`a_wide_module_def_trips_the_activation_budget_without_tripping_the_expansion_budget`).
+    A second test, whose unrefused expansion count would overrun
+    `MAX_MODULE_EXPANSIONS` 223 times over, proves the spent activation
+    budget ends the walk: the expansion budget's own diagnostic never
+    appears (`a_spent_activation_budget_stops_further_module_expansion`,
+    `crates/knx-productdb/tests/dynamic_tree.rs`). Both were confirmed to
+    fail without their fix.
 17. *(Fix round 1, blocking finding 4; citation corrected fix round 2 —
     round 1 named the wrong test here.)* A unit test with two distinct
     nesting chains that reuse the same `module_node` at the same depth

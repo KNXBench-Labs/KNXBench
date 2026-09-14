@@ -115,6 +115,55 @@ const TWO_INSTANTIATION_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?
 </ModuleDef></ModuleDefs>
 </ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 
+/// Blocking finding 4 (goal-completion task 11, fix round 1): two
+/// distinct nesting chains whose *innermost* `Module` shares the same
+/// local `module_node` -- `MD-Outer-A`'s and `MD-Outer-B`'s own `Dynamic`
+/// trees each hold exactly one node (their nested `Module`), so both land
+/// on node id 0 in their own tree, `dynamic_node.node_id` resetting per
+/// `(program_id, module_def_id)` as it does -- under two different
+/// ancestors (`MOD-A` vs `MOD-B`). The old flat `module_node`-only section
+/// key collided these into one section; the fix keys on the full ancestor
+/// chain instead.
+const NESTED_MODULE_NODE_COLLISION_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static><ParameterRefs/></Static>
+<Dynamic>
+  <Module Id="MOD-A" RefId="MD-Outer-A" />
+  <Module Id="MOD-B" RefId="MD-Outer-B" />
+</Dynamic>
+<ModuleDefs>
+<ModuleDef Id="MD-Outer-A" Name="outerA">
+<Static><ParameterRefs/></Static>
+<Dynamic>
+  <Module Id="MOD-A_INNER" RefId="MD-Inner" />
+</Dynamic>
+</ModuleDef>
+<ModuleDef Id="MD-Outer-B" Name="outerB">
+<Static><ParameterRefs/></Static>
+<Dynamic>
+  <Module Id="MOD-B_INNER" RefId="MD-Inner" />
+</Dynamic>
+</ModuleDef>
+<ModuleDef Id="MD-Inner" Name="inner">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="MD-Inner_PT-Num" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="MD-Inner_P-1" Name="Channel" Text="Channel" ParameterType="MD-Inner_PT-Num" Access="ReadWrite" Value="0" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="MD-Inner_P-1_R-1" RefId="MD-Inner_P-1" DisplayOrder="1" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterRefRef RefId="MD-Inner_P-1_R-1" />
+</Dynamic>
+</ModuleDef>
+</ModuleDefs>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
 /// The KV v2.5 demo shape verbatim (AC4): declared `ParameterRef`
 /// `M-00FA_A-2504-10-C071_MD-2_P-1_R-1`, five `Module` instantiations
 /// `M-2`..`M-6` of `ModuleDef` `M-00FA_A-2504-10-C071_MD-2`.
@@ -569,6 +618,75 @@ async fn a_module_instantiated_twice_produces_two_sections_with_the_same_ets_id_
             .collect();
         assert_eq!(ids, vec!["MOD-1_P-1_R-1"]);
         assert_eq!(s["fields"][0]["editable"], false);
+    }
+}
+
+// Blocking finding 4 (goal-completion task 11, fix round 1): two nesting
+// chains whose innermost `Module` shares the same local `module_node`
+// (`NESTED_MODULE_NODE_COLLISION_PROGRAM`'s doc comment above explains
+// why) must still come back as two sections, each with its own field —
+// not one section that silently swallowed the second chain's field under
+// the first chain's scope.
+#[tokio::test]
+async fn two_nesting_chains_sharing_a_module_node_do_not_merge_into_one_section() {
+    let (_dir, products) = temp_product_db(NESTED_MODULE_NODE_COLLISION_PROGRAM);
+    let state = Arc::new(state_with_device(products, vec![]));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    let (status, dto) = get_panel(app, 1).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let module_sections: Vec<&Value> = dto["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|s| !s["scope"].is_null())
+        .collect();
+    assert_eq!(
+        module_sections.len(),
+        2,
+        "two distinct nesting chains must not collapse into one section: {:?}",
+        dto["sections"]
+    );
+
+    // The bug this reproduces: both innermost scopes land on the same
+    // local `module_node` because `dynamic_node.node_id` resets per
+    // `(program_id, module_def_id)` tree, and each outer `ModuleDef`'s own
+    // tree holds exactly one node (its nested `Module`).
+    let module_nodes: Vec<i64> = module_sections
+        .iter()
+        .map(|s| s["scope"]["moduleNode"].as_i64().unwrap())
+        .collect();
+    assert_eq!(
+        module_nodes[0], module_nodes[1],
+        "both innermost scopes must share one module_node -- that is the collision this guards against: {module_nodes:?}"
+    );
+
+    // Despite the colliding module_node, the two chains are still
+    // distinguishable by their own (innermost) module_id, and each kept
+    // its own field rather than merging into a shared one.
+    let module_ids: std::collections::HashSet<&str> = module_sections
+        .iter()
+        .map(|s| s["scope"]["moduleId"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        module_ids,
+        std::collections::HashSet::from(["MOD-A_INNER", "MOD-B_INNER"]),
+        "each chain must keep its own innermost module_id, not one section's borrowed from the other"
+    );
+
+    for s in &module_sections {
+        let ids: Vec<&str> = s["fields"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["etsId"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            ids,
+            vec!["MD-Inner_P-1_R-1"],
+            "each section must hold exactly its own one field, not two merged together"
+        );
     }
 }
 

@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 6;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 7;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -279,7 +279,27 @@ fn migrations() -> Vec<Migration> {
         migrate_v3_to_v4,
         migrate_v4_to_v5,
         migrate_v5_to_v6,
+        migrate_v6_to_v7,
     ]
+}
+
+/// v6 -> v7. `package_conflict` gains `occurrence`, `first_winner`'s own
+/// per-parse-call repeat count (KNOWN_LIMITATIONS.md §86): `1` for the
+/// cross-file conflicts this table has always stored, greater than `1`
+/// for a same-file duplicate id, now that `first_winner` can tell the two
+/// apart. Defaults to `1` for a `package_conflict` row written before this
+/// column existed — the same honest convention `migrate_v5_to_v6` and
+/// `migrate_v4_to_v5` use, and correct here besides: every conflict
+/// `first_winner` could record before this task closed §86 *was* a
+/// cross-file one, so `1` is not a guess for those rows, it is what
+/// `first_winner` would have written itself.
+fn migrate_v6_to_v7(conn: &Connection) -> Result<(), ProductDbError> {
+    if !column_exists(conn, "package_conflict", "occurrence")? {
+        conn.execute_batch(
+            "ALTER TABLE package_conflict ADD COLUMN occurrence INTEGER NOT NULL DEFAULT 1;",
+        )?;
+    }
+    Ok(())
 }
 
 /// v5 -> v6. One more `package` counter, same shape and same reasoning as

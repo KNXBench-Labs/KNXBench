@@ -276,11 +276,17 @@ fn handle_start_or_empty(
             if let Some(kept) = existing {
                 *already_present = true;
                 if kept != source_sha256 {
+                    // This inline copy still has the exact blind spot
+                    // `first_winner` no longer does (KNOWN_LIMITATIONS.md
+                    // §86): it cannot see a same-file duplicate
+                    // `ApplicationProgram/@Id`, so every conflict it does
+                    // record is cross-file, `occurrence` is always `1`.
                     conflicts.push(IdConflict {
                         table: "application_program".into(),
                         id: program_id.clone(),
                         kept_sha256: kept,
                         other_sha256: source_sha256.to_string(),
+                        occurrence: 1,
                     });
                 }
             } else {

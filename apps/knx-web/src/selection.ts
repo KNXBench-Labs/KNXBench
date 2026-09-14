@@ -1,4 +1,11 @@
+// `project` is a singleton — there is only ever one open project, and
+// `knx_projection::ProjectTree` carries no id for it to select by — so its
+// `id` is always `0`, kept only so every `Selection` member shares the
+// `{ kind; id: number }` shape the rest of this file (and
+// `StructureWorkspace.tsx`'s generic `selected(kind, id)` helper) already
+// relies on structurally, not because `0` means anything.
 export type Selection =
+  | { kind: "project"; id: number }
   | { kind: "device"; id: number }
   | { kind: "group_address"; id: number }
   | { kind: "group_range"; id: number }

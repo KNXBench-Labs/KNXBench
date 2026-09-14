@@ -291,6 +291,13 @@ export const messages = {
   "inspector.deviceCount.other": "{count} devices",
   "inspector.childPartCount.one": "{count} child part",
   "inspector.childPartCount.other": "{count} child parts",
+  // Project node (KNOWN_LIMITATIONS.md §84) — read-only: no route or
+  // control here restyles the project, only `ProjectDiffPanel`-style
+  // display. `explorer.project` is the tree label, `inspector.project`
+  // this panel's own heading.
+  "explorer.project": "Project",
+  "inspector.project": "Project",
+  "inspector.groupAddressStyle": "Group address style",
 
   // Shared between `Inspector.tsx` and `ProjectExplorer.tsx` — see the
   // header comment above for why this one namespace isn't per-surface.

@@ -288,6 +288,9 @@ export const messages: Record<MessageKey, string> = {
   "inspector.deviceCount.other": "{count} Geräte",
   "inspector.childPartCount.one": "{count} untergeordneter Gebäudeteil",
   "inspector.childPartCount.other": "{count} untergeordnete Gebäudeteile",
+  "explorer.project": "Projekt",
+  "inspector.project": "Projekt",
+  "inspector.groupAddressStyle": "Gruppenadress-Stil",
 
   "buildingPartKind.building": "Gebäude",
   "buildingPartKind.floor": "Etage",
@@ -677,7 +680,7 @@ export const messages: Record<MessageKey, string> = {
   "newProject.language": "Projektsprache",
   "newProject.languageHint": "Das Sprachkennzeichen, unter dem die Projekttexte gespeichert werden, z. B. de oder de-DE. Nicht die Sprache dieser Oberfläche.",
   "newProject.style": "Gruppenadressstil",
-  "newProject.styleHint": "Jetzt wählen: Sobald Gruppenadressen existieren, ändert nichts den Stil zurück.",
+  "newProject.styleHint": "Wähle den Stil, in dem du denkst; die Projekteigenschaften können ihn später umstellen.",
   "newProject.style.Free": "Frei (0–65535)",
   "newProject.style.TwoLevel": "Zweistufig (Haupt/Unter)",
   "newProject.style.ThreeLevel": "Dreistufig (Haupt/Mittel/Unter)",

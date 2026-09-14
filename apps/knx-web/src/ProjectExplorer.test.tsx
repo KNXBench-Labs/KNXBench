@@ -79,6 +79,7 @@ function baseTree(): ProjectTree {
     warnings: 0,
     can_undo: false,
     can_redo: false,
+    group_address_style: "ThreeLevel",
     installations: [installation],
   };
 }
@@ -340,6 +341,27 @@ describe("ProjectExplorer — building-part kind: translated label vs. untouched
     ).find((o) => o.textContent === "Raum")!;
     expect(roomOption).toBeTruthy();
     expect(roomOption.value).toBe("Room");
+
+    await unmount(root);
+  });
+});
+
+describe("ProjectExplorer — Project node", () => {
+  // The Project node is the only way a user reaches `ProjectInspector`
+  // (T4, KNOWN_LIMITATIONS.md §84) — `Inspector.test.tsx` builds the
+  // `{ kind: "project" }` selection directly, so it never exercises
+  // whether a click on the tree actually produces that selection. Delete
+  // the node and this is the test that turns red; without it, review's
+  // own mutation (deleting the node) left the suite green.
+  it('renders and, on click, selects kind "project"', async () => {
+    const onSelect = vi.fn();
+    const { root } = await renderExplorer(baseTree(), onSelect);
+
+    const projectLabel = labelFor("Project");
+    expect(projectLabel).toBeTruthy();
+
+    await click(projectLabel);
+    expect(onSelect).toHaveBeenCalledWith({ kind: "project", id: 0 } satisfies Selection);
 
     await unmount(root);
   });

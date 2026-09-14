@@ -34,4 +34,15 @@ can_undo: boolean,
 /**
  * See `can_undo`.
  */
-can_redo: boolean, installations: Array<InstallationNode>, };
+can_redo: boolean, 
+/**
+ * The project-wide rendering choice every `GroupAddressNode`,
+ * `GroupRangeNode` and `GroupLinkNode` address string in this tree was
+ * already formatted with — carried through so the inspector can show
+ * it on the project node without a second round trip
+ * (KNOWN_LIMITATIONS.md §84). `GroupAddressStyle` as a plain string
+ * (`"Free"`, `"TwoLevel"`, `"ThreeLevel"`) — same choice as
+ * `BuildingPartType` below: the enum itself stays in `knx-core`, a
+ * typed TS union is not worth a mirror type for one read-only field.
+ */
+group_address_style: string, installations: Array<InstallationNode>, };

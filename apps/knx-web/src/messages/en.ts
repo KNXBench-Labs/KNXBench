@@ -516,6 +516,31 @@ export const messages = {
   "languagePack.importReport.shadowedByBuiltIn":
     'This pack\'s tag ("{tag}") matches a built-in language and will never be used — edit "tag" before activating or sharing it.',
 
+  // §67's fix: one key per `LanguagePackRejectionReason.kind`
+  // (`languagePack.ts`), so `SettingsPanel.tsx`'s `describeRejectionReason`
+  // can compose the "Import rejected: …" sentence above entirely in the
+  // active UI language — the rejection reason used to be a raw English
+  // string dropped into an otherwise-translated sentence. Deliberately
+  // one key per validation rule rather than one generic "invalid pack"
+  // key, so a translator (and a user reading their own mistake) gets the
+  // specific field name every time, same as the English original did.
+  "languagePack.rejection.notObject": "A language pack must be a JSON object.",
+  "languagePack.rejection.formatVersionMissing": '"formatVersion" is required and must be a number.',
+  "languagePack.rejection.tagMissing": '"tag" is required and must be a non-empty string.',
+  "languagePack.rejection.tagMalformed":
+    '"tag" ("{tag}") is not a well-formed BCP 47 tag, e.g. "nl-NL", "tlh" (Klingon), "bar" (Bavarian), or "art-x-sindarin" (a private-use tag for anything unregistered).',
+  "languagePack.rejection.nameMissing": '"name" is required and must be a non-empty string.',
+  "languagePack.rejection.messagesMissing":
+    '"messages" is required and must be an object mapping keys to strings.',
+  "languagePack.rejection.messageValueNotString": '"messages.{key}" must be a string, got {valueType}.',
+  "languagePack.rejection.englishNameNotString": '"englishName" must be a string when present.',
+  "languagePack.rejection.basedOnNotString": '"basedOn" must be a string when present.',
+  "languagePack.rejection.packVersionNotString": '"packVersion" must be a string when present.',
+  "languagePack.rejection.pluralCategoriesInvalid":
+    '"pluralCategories" must be an array of strings when present.',
+  "languagePack.rejection.storageFailure":
+    "Could not save the change: the browser's storage rejected the write ({detail}).",
+
   // `ProjectDiffPanel.tsx`. `projectDiff.entityStatus.*` doubles as both the
   // per-table count word ("1 {status}") and the whole-installation status
   // word (`projectDiff.installationStatusLine`'s `{status}`) — the same

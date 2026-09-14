@@ -1,11 +1,24 @@
 //! Encode/decode between engineering values (text) and `GroupValue` wire
-//! payloads, for main types 1-19: the fourteen the original design doc's
+//! payloads, for main types 1-30: the fourteen the original design doc's
 //! §4.1 lists (`docs/superpowers/specs/2026-09-11-dpt-codec-design.md` —
 //! eleven marked in its table, and 6, 12 and 16 named in the paragraph
-//! below it), plus 4, 10, 11, 15, and 19, added by task E4 (2026-09-13) — see
-//! `docs/KNOWN_LIMITATIONS.md` §61 for that extension's per-type citations
-//! and judgment calls (03_07_02 Datapoint Types v02.02.01 AS, hereafter
-//! "DPT-AS").
+//! below it), plus 4, 10, 11, 15, and 19, added by task E4 (2026-09-13),
+//! plus 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 and the one subtype the
+//! earlier slices carved out of main type 6 (`6.020 DPT_Status_Mode3`),
+//! added by E4's second slice the same day — see
+//! `docs/KNOWN_LIMITATIONS.md` §61 for those extensions' per-type
+//! citations and judgment calls (03_07_02 Datapoint Types v02.02.01 AS,
+//! hereafter "DPT-AS").
+//!
+//! What this codec deliberately does *not* do, uniformly, for every main
+//! type whose subtypes carry their own semantic table: it does not resolve
+//! an enumeration code to its name, does not enforce a subtype's narrowed
+//! range, and does not reject a bit a subtype table calls "reserved". The
+//! formats it implements (`N8`, `N2`, `Z8`, `B8`, `B16`, `B24`, `B32`,
+//! `U4U4`) are defined at the *format* level in DPT-AS and are implemented
+//! at that level; every raw field reaches the caller intact. See
+//! `docs/KNOWN_LIMITATIONS.md` §61 for the reasoning and the Standard's
+//! own self-contradiction (22.100) that makes the alternative worse.
 //!
 //! Pure: no I/O, no logging, no clock. Every fact this module states about
 //! bit layout, range or rounding is cited to a DPT-AS section or, for the
@@ -57,7 +70,11 @@ pub enum DptValue {
     /// fixed-length character string (main type 16, DPT-AS §3.17) — both
     /// share the same two character sets (7-bit ASCII / ISO 8859-1) and
     /// this one variant, since a `String` holds one character exactly as
-    /// well as fourteen.
+    /// well as fourteen. Also the two variable-length `A[n]` strings:
+    /// main type 24 (ISO 8859-1, DPT-AS §3.24) and main type 28 (UTF-8,
+    /// DPT-AS §3.27). The NULL octet those two formats use as their
+    /// terminator is a wire-framing detail and is not part of the
+    /// `String` — see `require_var_string_body`.
     Text(String),
     /// N3U5r2U6r2U6 — main type 10, time of day plus optional weekday
     /// (DPT-AS §3.11). `day` is `None` for wire code `0` ("no day",
@@ -140,6 +157,55 @@ pub enum DptValue {
     /// see `decode_scene_control`'s doc comment for why this codec
     /// still hands back the untouched wire value regardless.
     SceneControl { learn: bool, number: u8 },
+    /// A raw enumeration code: `N8` — main type 20 (DPT-AS §3.21,
+    /// "1 octet: N8", "Encoding absolute value N = [0 … 255]") — and
+    /// `N2` — main type 23 (DPT-AS §3.23/§4.6, "2 bit: N2", encoding
+    /// row `NN`). `code` is the code exactly as transmitted; this codec
+    /// neither resolves it to the name its subtype's table gives it nor
+    /// refuses a code that table leaves unassigned (see the module
+    /// header).
+    Enum { code: u8 },
+    /// A bit set transmitted as whole octets, most significant octet
+    /// first: `Z8`/`B8` — main type 21 (DPT-AS §3.22.1 "1 octet: Z8",
+    /// §3.22.2 "1 octet: B8"), `B16` — main type 22 (DPT-AS §4.5,
+    /// §8.3, "2 octets: B16"), `B24` — main type 30 (DPT-AS §8.5,
+    /// "3 octets: B24") and `B32` — main type 27 (DPT-AS §3.26,
+    /// "4 octets: B32"). Bit `b_n` of the Standard's own numbering sits
+    /// at bit `n` of `bits`, so `b0` is the least significant bit of the
+    /// last octet transmitted. `width` is 8, 16, 24 or 32 and says how
+    /// many bits the format defines; bits above it are always zero.
+    BitSet { bits: u32, width: u8 },
+    /// `U4U4` — main type 25 (DPT-AS §8.4, "1 octet: U4U4", "All field
+    /// values binary encoded"). `busy` and `nak` are §8.4's own two
+    /// field names, left to right in its field-names row, so `busy`
+    /// occupies bits 7-4 and `nak` bits 3-0. Both are `0..=15`, the
+    /// format's own `U4` range; 25.1000 DPT_DoubleNibble's narrower
+    /// `[0 … 3]` is a subtype range and is not enforced here (see the
+    /// module header).
+    DoubleNibble { busy: u8, nak: u8 },
+    /// `r1B1U6` — main type 26 (DPT-AS §3.25, encoding row
+    /// `0 b UUUUUU`). `inactive` is field `B` in the Standard's own
+    /// polarity — §3.25 reads "0 = scene is active, 1 = scene is
+    /// inactive", so `true` means the scene is *inactive*. `number` is
+    /// the undecorated 6-bit wire value 0-63, like `Scene`'s and
+    /// `SceneControl`'s, even though §3.25 NOTE 16 (the note main types
+    /// 17 and 18 both cite) recommends a +1 display offset.
+    SceneInfo { inactive: bool, number: u8 },
+    /// `B5N3` — the one subtype main type 6's `V8` arm excludes, 6.020
+    /// DPT_Status_Mode3 (DPT-AS §3.7, "8 bit: B5N3", encoding row
+    /// `B B B B B NNN`). `status` holds §3.7's fields `a`..`e` in that
+    /// order, so `status[0]` is `a` at bit 7 and `status[4]` is `e` at
+    /// bit 3; 6.020's own row spells the same five fields in upper case
+    /// and gives their polarity as "0 = set, 1 = clear", which this codec
+    /// transmits rather than normalises. `mode_code` is the 3-bit field
+    /// `f`, which §3.7's Range row restricts to `{001b,010b,100b}`.
+    StatusMode3 { status: [bool; 5], mode_code: u8 },
+    /// `V64` — main type 29 (DPT-AS §3.28.1, "8 octets: V64", "Two's
+    /// complement notation", resolution 1 of the subtype's unit). Kept
+    /// separate from `Signed` so the `V8`/`V16`/`V32` families keep their
+    /// documented 32-bit domain rather than being widened by a type they
+    /// do not share a range with.
+    Signed64(i64),
 }
 
 impl DptValue {
@@ -200,6 +266,24 @@ impl fmt::Display for DptValue {
             }
             DptValue::Unsigned(v) => write!(f, "{v}"),
             DptValue::Signed(v) => write!(f, "{v}"),
+            DptValue::Signed64(v) => write!(f, "{v}"),
+            DptValue::Enum { code } => write!(f, "{code}"),
+            DptValue::BitSet { bits, width } => {
+                let w = usize::from(*width);
+                write!(f, "{bits:0w$b}")
+            }
+            DptValue::DoubleNibble { busy, nak } => write!(f, "busy {busy} nak {nak}"),
+            DptValue::SceneInfo { inactive, number } => {
+                write!(
+                    f,
+                    "{} scene {number}",
+                    if *inactive { "inactive" } else { "active" }
+                )
+            }
+            DptValue::StatusMode3 { status, mode_code } => {
+                let digits: String = status.iter().map(|s| if *s { '1' } else { '0' }).collect();
+                write!(f, "status {digits} mode {mode_code:03b}")
+            }
             DptValue::Float(v) => write!(f, "{v}"),
             DptValue::Text(s) => write!(f, "{s}"),
             DptValue::Scene { number } => write!(f, "scene {number}"),
@@ -368,6 +452,17 @@ pub fn decode(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecErr
         17 => decode_scene(dpt, payload),
         18 => decode_scene_control(dpt, payload),
         19 => decode_datetime(dpt, payload),
+        20 => decode_n8(dpt, payload),
+        21 => decode_bit_set::<1>(dpt, payload),
+        22 => decode_bit_set::<2>(dpt, payload),
+        23 => decode_n2(dpt, payload),
+        24 => decode_var_string_8859_1(dpt, payload),
+        25 => decode_double_nibble(dpt, payload),
+        26 => decode_scene_info(dpt, payload),
+        27 => decode_bit_set::<4>(dpt, payload),
+        28 => decode_var_string_utf8(dpt, payload),
+        29 => decode_v64(dpt, payload),
+        30 => decode_bit_set::<3>(dpt, payload),
         _ => Err(DptCodecError::UnsupportedDpt(dpt)),
     }
 }
@@ -397,6 +492,17 @@ pub fn encode(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
         17 => encode_scene(dpt, input),
         18 => encode_scene_control(dpt, input),
         19 => encode_datetime(dpt, input),
+        20 => encode_n8(dpt, input),
+        21 => encode_bit_set::<1>(dpt, input),
+        22 => encode_bit_set::<2>(dpt, input),
+        23 => encode_n2(dpt, input),
+        24 => encode_var_string_8859_1(dpt, input),
+        25 => encode_double_nibble(dpt, input),
+        26 => encode_scene_info(dpt, input),
+        27 => encode_bit_set::<4>(dpt, input),
+        28 => encode_var_string_utf8(dpt, input),
+        29 => encode_v64(dpt, input),
+        30 => encode_bit_set::<3>(dpt, input),
         _ => Err(DptCodecError::UnsupportedDpt(dpt)),
     }
 }
@@ -456,6 +562,52 @@ fn require_bytes<const N: usize>(
             got: (b.len() * 8) as u32,
         }),
     }
+}
+
+/// Extracts the octets of a variable-length, NULL-terminated character
+/// string — main type 24 (DPT-AS §3.24) and main type 28 (DPT-AS
+/// §3.27), which share this framing exactly. §3.24: "the string shall be
+/// terminated by a single character NULL (00h). No length information
+/// shall be transmitted in the APDU"; footnote 18 to the same section:
+/// "The NULL character is actually part of the DPT_VarString_8859_1
+/// format." §3.27: "The string shall be terminated by the NULL- character
+/// (00h). No length information shall be transmitted in the APDU". So the
+/// shortest legal payload is the terminator alone, which rules out an
+/// empty `Bytes`; and an octet string is wider than AL-AS's 6-bit inline
+/// threshold, so a `GroupValue::Short` is never the right shape either.
+/// `expected_bits` is reported as 8, the minimum — the format has no
+/// fixed length to report.
+///
+/// Ruling (recorded in `docs/KNOWN_LIMITATIONS.md` §61): a payload whose
+/// last octet is not 00h, or which carries an interior 00h, is
+/// `InvalidData`. Neither section says what a receiver should do with
+/// one, and every tolerant reading is a guess about a non-conforming
+/// sender's intent — cutting at the first 00h assumes the rest is
+/// padding, appending a terminator assumes one was lost. Refusing states
+/// the fact without inventing a value. (§3.24 and §3.27 do prescribe
+/// "cut to the maximum supported length" for a string that is *too long*
+/// for the receiver; that is a length limit belonging to whatever layer
+/// owns the APDU budget, not a rule about a missing terminator, and this
+/// codec imposes no maximum of its own. That layer is `knx_net::cemi`:
+/// `encode_l_data` refuses an over-length NPDU with `CemiError::
+/// NpduTooLong` rather than emitting a frame whose `L` octet wrapped.)
+fn require_var_string_body(payload: &GroupValue, dpt: DptRef) -> Result<&[u8], DptCodecError> {
+    let wrong_length = |got: u32| DptCodecError::WrongLength {
+        dpt,
+        expected_bits: 8,
+        got,
+    };
+    let raw = match payload {
+        GroupValue::Bytes(b) => b.as_slice(),
+        GroupValue::Short(_) => return Err(wrong_length(6)),
+    };
+    let Some((last, body)) = raw.split_last() else {
+        return Err(wrong_length(0));
+    };
+    if *last != 0x00 || body.contains(&0x00) {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    Ok(body)
 }
 
 /// Parses `on`/`off`/`true`/`false`/`1`/`0`, case-insensitively, as the
@@ -792,16 +944,35 @@ fn encode_u8(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
 // 6.001/6.010 and every other subtype except 6.020 are plain 8-bit two's
 // complement (DPT-AS §1.3.1's `V` notation; range confirmed at §3.6.1:
 // "-128...127"). 6.020 DPT_Status_Mode3 is a structurally different
-// format under the same main number — `B5N3`, 5 status bits (A..E,
-// 0=set/1=clear) plus a 3-bit one-hot mode field (DPT-AS §3.7:
-// `001b`/`010b`/`100b` = mode 0/1/2 active; no other code is assigned).
-// `DptValue` has no variant for that shape, so 6.020 is `UnsupportedDpt`
-// here rather than being squeezed into `Signed` and silently misread as a
-// two's-complement number it is not.
+// format under the same main number: DPT-AS §3.7 gives it as "8 bit:
+// B5N3" with the encoding row `B B B B B NNN` over the field-names row
+// `a b c d e` / `f` — five status bits at bits 7-3, then a 3-bit mode
+// field at bits 2-0. §3.7's Range row reads `a, b, c, d, e = {0,1}` and
+// `f = {001b,010b,100b}`; 6.020's datapoint-type row names the same
+// fields in upper case and gives their meaning: "A,B,C,D,E: 0 = set,
+// 1 = clear" and "FFF: 001b = mode 0 is active, 010b = mode 1 is active,
+// 100b = mode 2 is active".
+//
+// It therefore decodes to its own `DptValue::StatusMode3`, not into
+// `Signed`, where it would be silently misread as a two's-complement
+// number it is not. A mode field outside the three assigned one-hot codes
+// is `InvalidData`: that restriction is stated for the *format* in §3.7's
+// own Range row, so enforcing it is not the per-subtype table checking
+// the module header rules out. Eight significant bits puts this above the
+// AL-AS §3.1.3 inline threshold, like the rest of main type 6, so the
+// payload is always `Bytes([_])`.
+//
+// Text grammar (this module's choice — the Standard specifies wire
+// encoding, not human text): `status abcde mode fff`, e.g.
+// `status 01001 mode 010`. Both fields are printed as the binary digits
+// the Standard itself prints, `a` first and most significant. The status
+// bits are deliberately not rendered as set/clear words: 6.020's polarity
+// inverts the usual reading (`0` is *set*), so a word would invite
+// exactly the misreading the digits prevent.
 
 fn decode_v8(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
     if dpt.sub == Some(20) {
-        return Err(DptCodecError::UnsupportedDpt(dpt));
+        return decode_status_mode3(dpt, payload);
     }
     let [raw] = require_bytes(payload, dpt, 8)?;
     Ok(DptValue::Signed(i32::from(raw as i8)))
@@ -809,7 +980,7 @@ fn decode_v8(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecErro
 
 fn encode_v8(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
     if dpt.sub == Some(20) {
-        return Err(DptCodecError::UnsupportedDpt(dpt));
+        return encode_status_mode3(dpt, input);
     }
     let trimmed = input.trim();
     let v: i32 = trimmed.parse().map_err(|_| DptCodecError::Unparsable {
@@ -823,6 +994,53 @@ fn encode_v8(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
         });
     }
     Ok(GroupValue::Bytes(vec![(v as i8) as u8]))
+}
+
+/// The `f` field's three assigned codes (DPT-AS §3.7 Range row:
+/// `f = {001b,010b,100b}`). Any other 3-bit value is unassigned.
+fn mode3_code_is_assigned(code: u8) -> bool {
+    matches!(code, 0b001 | 0b010 | 0b100)
+}
+
+fn decode_status_mode3(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let [raw] = require_bytes::<1>(payload, dpt, 8)?;
+    let mode_code = raw & 0b0000_0111;
+    if !mode3_code_is_assigned(mode_code) {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    let mut status = [false; 5];
+    for (i, bit) in status.iter_mut().enumerate() {
+        *bit = raw & (0b1000_0000 >> i) != 0;
+    }
+    Ok(DptValue::StatusMode3 { status, mode_code })
+}
+
+fn encode_status_mode3(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let unparsable = || DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    };
+    let tokens: Vec<&str> = input.split_whitespace().collect();
+    let (status_digits, mode_digits) = match tokens.as_slice() {
+        [s, status, m, mode]
+            if s.eq_ignore_ascii_case("status") && m.eq_ignore_ascii_case("mode") =>
+        {
+            (*status, *mode)
+        }
+        _ => return Err(unparsable()),
+    };
+    if status_digits.len() != 5 || mode_digits.len() != 3 {
+        return Err(unparsable());
+    }
+    let status_bits = u8::from_str_radix(status_digits, 2).map_err(|_| unparsable())?;
+    let mode_code = u8::from_str_radix(mode_digits, 2).map_err(|_| unparsable())?;
+    if !mode3_code_is_assigned(mode_code) {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: mode_digits.to_string(),
+        });
+    }
+    Ok(GroupValue::Bytes(vec![(status_bits << 3) | mode_code]))
 }
 
 // ---------------------------------------------------------------------
@@ -2023,6 +2241,499 @@ fn encode_datetime(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError
     Ok(GroupValue::Bytes(vec![o8, o7, o6, o5, o4, o3, o2, o1]))
 }
 
+// ---------------------------------------------------------------------
+// Main type 20 — N8, 1-octet enumeration (DPT-AS §3.21)
+// ---------------------------------------------------------------------
+//
+// "Format: 1 octet: N8", field-names row `field1`, encoding row
+// `NNNNNNNN`, "Encoding: Encoding absolute value N = [0 … 255]", unit
+// none, PDT_ENUM8 (alt: PDT_UNSIGNED_CHAR) — DPT-AS §3.21. Eight
+// significant bits is above the AL-AS §3.1.3 inline threshold, so the
+// payload is always one octet of its own, `Bytes([_])`, never `Short`.
+//
+// Ruling, no per-subtype enumeration check — this is the ruling the
+// module header states, recorded here once in full because main type 20
+// is where it bites hardest, and cited from the other affected types
+// (21, 22, 23, 25, 27, 30):
+//
+// Main type 20 has sixty-eight subtypes in DPT-AS, each with its own
+// value table, and those tables are not gathered in §3.21. They are
+// spread over §3.21 (20.001-20.022, sixteen), §4.3 (20.100-20.122,
+// nineteen), §6.3 (20.600-20.613, fourteen), §7.1 (20.801-20.804, four),
+// §8.1 (20.1000-20.1005, six) and §9.5 (20.1200-20.1209, nine), keyed
+// by application domain, and their wording for an unassigned code varies
+// between "not used; reserved" (20.001, 20.003), "reserved, shall not be
+// used" (20.002) and a bare "reserved" (20.005's "3 to 16 : reserved").
+// Enforcing them here would mean transcribing sixty-eight tables into
+// this codec, where every transcription slip silently *rejects* a legal
+// bus value — the failure mode this
+// project's correctness ordering likes least — or enforcing some and not
+// others, which is worse than enforcing none because it makes the codec's
+// behaviour unpredictable per subtype. So this codec validates what §3.21
+// states for the format: one octet, all 256 codes legal. Nothing is
+// discarded — the raw code reaches the caller in `DptValue::Enum` — and a
+// caller that does know its subtype's table can apply it. The
+// commissioning layer's `DPT_ErrorClass_System` (20.011) mapping in
+// `docs/superpowers/specs/2026-09-13-commissioning-download-design.md`
+// §5.6 is exactly such a caller, and its `[0 to 18]` range remains
+// correct at that layer. Recorded in `docs/KNOWN_LIMITATIONS.md` §61.
+//
+// Text grammar (this module's choice): the bare decimal code, `0`-`255`.
+// Not a name — a name could only come from the per-subtype table this
+// codec deliberately does not carry.
+
+fn decode_n8(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let [raw] = require_bytes::<1>(payload, dpt, 8)?;
+    Ok(DptValue::Enum { code: raw })
+}
+
+fn encode_n8(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let trimmed = input.trim();
+    let code: u32 = trimmed.parse().map_err(|_| DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    })?;
+    if code > u32::from(u8::MAX) {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: trimmed.to_string(),
+        });
+    }
+    Ok(GroupValue::Bytes(vec![code as u8]))
+}
+
+// ---------------------------------------------------------------------
+// Main types 21, 22, 27 and 30 — bit sets
+// (DPT-AS §3.22, §4.5, §8.3, §3.26, §8.5)
+// ---------------------------------------------------------------------
+//
+// Four main types, one format family: a fixed number of whole octets of
+// individually-meaningful bits, most significant octet transmitted first
+// (DPT-AS §1.4: "Data encoded according a DPT that is transmitted on the
+// KNX system shall be transmitted with the most significant octet first
+// in the frame and the least significant octet last"), with the
+// Standard's bit numbering `b0` at the least significant bit of the last
+// octet — §8.3.1's and §8.5.1's own diagrams spell that out, octet 1
+// (LSB) carrying `b7 … b0`. All four are above the AL-AS §3.1.3 inline
+// threshold, so each is always `Bytes` of its own length.
+//
+// * Main type 21 — 1 octet. §3.22.1 "General Status" gives the format as
+//   "1 octet: Z8" (the LTE status/command form of §1.3.1's `Z8`) with the
+//   encoding row `bbbbbbbb` and PDT_BITSET8 (alt: PDT_GENERIC_01); 21.001
+//   DPT_StatusGen defines b0 OutOfService, b1 Fault, b2 Overridden, b3
+//   InAlarm, b4 AlarmUnAck and calls "b5, b6, b7" "reserved, set 0".
+//   §3.22.2 "Device Control" gives "1 octet: B8", same encoding row and
+//   PDT; 21.002 DPT_Device_Control defines b0 UserStopped, b1 OwnIA, b2
+//   VerifyMode and calls "b3…b7" "reserved, set 0". Either way it is
+//   eight bits in one octet. Further subtypes live in §4.4
+//   (21.100-21.106), §6.4 (21.601), §8.2 (21.1000-21.1002, 21.1010),
+//   §9.6 (21.1200) and §9.7 (21.1201, whose encoding row reserves
+//   b7-b3 while its Format line still reads `B8`), with their own
+//   field splits.
+// * Main type 22 — 2 octets. §4.5's subclauses "Data Type "16-Bit Set"":
+//   "2 octets: B16", PDT_BITSET16 (alt: PDT_GENERIC_02) in both §4.5.1
+//   (22.100) and §4.5.2 (22.101); §8.3 "Datatype B16" repeats the format
+//   for the system subtypes (22.1000, 22.1010), and 22.1000 DPT_Media
+//   reads b1 TP1, b2 PL110, b4 RF, b5 KNX IP with b0, b3 and "b6 … b15"
+//   reserved — with §4.5.1, §4.5.2 and §8.3 each reserving a different
+//   bit set and therefore no mask common to every main-22 subtype to
+//   enforce at the format level, unlike main type 26 below, whose one
+//   subtype makes format and subtype the same table and so does get its
+//   reserved bit (7) enforced, while 22.101's own reserved bit (15,
+//   §4.5.2 "r") is accepted, not rejected.
+// * Main type 27 — 4 octets. §3.26 "Datatype B32", §3.26.1
+//   DPT_CombinedInfoOnOff: "4 octets: B32", encoding row all `B`, "Range:
+//   All fields: {0, 1}", PDT_GENERIC_04. Its data-field tables put
+//   `s0`…`s15` at bits 0-15 ("0 = output state is Off / 1 = output state
+//   is On") and `m0`…`m15` at bits 16-31 ("0 = output state is not valid
+//   / 1 = output state is valid").
+// * Main type 30 — 3 octets. §8.5 "Datapoint Types B24", §8.5.1: "3
+//   octets: B24", with octet 3 (MSB) carrying b23…b16, octet 2 b15…b8 and
+//   octet 1 (LSB) b7…b0, PDT_GENERIC_03. 30.1010
+//   DPT_Channel_Activation_24 reads `bn` as the "Activation state of
+//   channel n+1" for `n = 0 to 23`.
+//
+// Per the ruling at main type 20, none of those per-subtype splits is
+// applied or enforced here: `DptValue::BitSet` carries every bit and its
+// width, and a caller that knows its subtype can mask what it needs.
+//
+// Main type 22 is the strongest case for that ruling, because the
+// Standard contradicts itself there. 22.100 DPT_StatusDHWC's encoding row
+// (§4.5.1) reads `0 0 0 0 0 0 0 B BBBBBBBB` — bit 8 is a defined `B` —
+// while the data-field table under the same diagram lists bits "8 to 15"
+// as "reserved", "default 0". A codec enforcing "reserved" would refuse a
+// bit the encoding row defines; one enforcing the encoding row would
+// accept a bit the table reserves. §4.5.2's own Encoding paragraph points
+// at the tolerant reading without settling the bit: "depending on the
+// usage of this DPT in a given Datapoint, some bit-fields may be unused
+// and set to '0' by the sender and will be ignored by the receiver."
+// Sixteen bits in, sixteen bits out, none refused.
+//
+// Text grammar (this module's choice, and `Display`'s output, so every
+// value round-trips): exactly `width` binary digits, most significant bit
+// first, with an optional `0b` prefix — or a `0x` hexadecimal form for
+// the same value, which is far easier to type for the 24- and 32-bit
+// sets.
+
+/// Decodes a `B8`/`B16`/`B24`/`B32` payload of exactly `N` octets, most
+/// significant octet first. `N` is 1, 2, 3 or 4, so the result always fits
+/// a `u32`.
+fn decode_bit_set<const N: usize>(
+    dpt: DptRef,
+    payload: &GroupValue,
+) -> Result<DptValue, DptCodecError> {
+    let raw = require_bytes::<N>(payload, dpt, (N * 8) as u32)?;
+    let mut bits = 0u32;
+    for octet in raw {
+        bits = (bits << 8) | u32::from(octet);
+    }
+    Ok(DptValue::BitSet {
+        bits,
+        width: (N * 8) as u8,
+    })
+}
+
+/// Encodes the bit-set text grammar described above into `N` octets.
+fn encode_bit_set<const N: usize>(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let unparsable = || DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    };
+    let trimmed = input.trim();
+    let width = N * 8;
+    let bits: u32 = if let Some(hex) = trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+    {
+        let value = u32::from_str_radix(hex, 16).map_err(|_| unparsable())?;
+        // `width == 32` would make the shift below overflow, and every
+        // `u32` fits a 32-bit set anyway.
+        if width < 32 && value >> width != 0 {
+            return Err(DptCodecError::OutOfRange {
+                dpt,
+                value: trimmed.to_string(),
+            });
+        }
+        value
+    } else {
+        let digits = trimmed
+            .strip_prefix("0b")
+            .or_else(|| trimmed.strip_prefix("0B"))
+            .unwrap_or(trimmed);
+        if digits.len() != width {
+            return Err(unparsable());
+        }
+        u32::from_str_radix(digits, 2).map_err(|_| unparsable())?
+    };
+    let mut octets = Vec::with_capacity(N);
+    for shift in (0..N).rev() {
+        octets.push((bits >> (shift * 8)) as u8);
+    }
+    Ok(GroupValue::Bytes(octets))
+}
+
+// ---------------------------------------------------------------------
+// Main type 23 — N2, 2-bit enumeration (DPT-AS §3.23, §4.6)
+// ---------------------------------------------------------------------
+//
+// "Format: 2 bit: N2", field-names row `s`, encoding row `NN`, unit none,
+// PDT_ENUM8 (alt: PDT_UNSIGNED_CHAR) — DPT-AS §3.23, and §4.6 for 23.102
+// with an identical format block. Two significant bits is well under the
+// AL-AS §3.1.2/§3.1.3 six-bit inline threshold, so this type travels in
+// the inline data field: `encode` produces `GroupValue::Short` and
+// `require_short` enforces §1.3.1's "The preceding bits shall be 0",
+// which makes a payload of 4-255 `InvalidData` — exactly as for main
+// types 1-3 and 17.
+//
+// The subtype ranges differ — 23.001 DPT_OnOffAction `[00b…11b]`, 23.002
+// DPT_Alarm_Reaction `[00b…10b]` with "(11b = reserved; shall not be
+// used)", 23.003 DPT_UpDown_Action `[00b…11b]`, 23.102 DPT_HVAC_PB_Action
+// `[00b…11b]` — and per the ruling at main type 20 this codec enforces the
+// 2-bit format rather than the subtype's narrowing: a `11b` on a 23.002
+// decodes to `Enum { code: 3 }` instead of being refused.
+
+fn decode_n2(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let raw = require_short(payload, dpt, 2)?;
+    Ok(DptValue::Enum { code: raw })
+}
+
+fn encode_n2(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let trimmed = input.trim();
+    let code: u32 = trimmed.parse().map_err(|_| DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    })?;
+    if code > 0b11 {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: trimmed.to_string(),
+        });
+    }
+    Ok(GroupValue::Short(code as u8))
+}
+
+// ---------------------------------------------------------------------
+// Main type 24 — A[n], variable-length string (DPT-AS §3.24)
+// ---------------------------------------------------------------------
+//
+// "Format: variable length: A[n]", with the diagram's last position
+// holding `00` — DPT-AS §3.24. The terminator framing is
+// `require_var_string_body`'s, shared with main type 28; what belongs to
+// this type is the character encoding, which §3.24's own Encoding block
+// states for the format: "Each character shall be encoded according to
+// ISO 8859-1." 24.001 DPT_VarString_8859_1's range row says the same from
+// the other direction, "Acc. DPT 4.002 (DPT_Char_8859_1)" — the same
+// 0-255 character set main type 16's 8859-1 subtype uses, so the same 1:1
+// `char::from(u8)` mapping applies, for the reason main type 16's comment
+// gives.
+//
+// Because the character set is stated for the format and not per subtype,
+// every subnumber decodes the same way and none is refused — unlike main
+// type 16, where §3.17 offers two character sets and the subnumber is what
+// picks between them.
+//
+// EXAMPLE 15 in §3.24: 'KNX is OK' is `4Bh 4Eh 58h 20h 69h 73h 20h 4Fh
+// 4Bh 00h` — nine characters plus the terminator, and no length octet.
+//
+// Text grammar: the string itself, untrimmed (a leading or trailing space
+// inside a text DPT is content, same as main type 16). A character above
+// U+00FF is not representable in ISO 8859-1 and is `Unparsable`; so is an
+// embedded U+0000, which the format cannot transmit because 00h is its
+// terminator.
+
+fn decode_var_string_8859_1(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let body = require_var_string_body(payload, dpt)?;
+    Ok(DptValue::Text(
+        body.iter().copied().map(char::from).collect(),
+    ))
+}
+
+fn encode_var_string_8859_1(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let mut octets = Vec::with_capacity(input.len() + 1);
+    for ch in input.chars() {
+        let code = ch as u32;
+        if code == 0 || code > 0xFF {
+            return Err(DptCodecError::Unparsable {
+                dpt,
+                input: input.to_string(),
+            });
+        }
+        octets.push(code as u8);
+    }
+    octets.push(0x00);
+    Ok(GroupValue::Bytes(octets))
+}
+
+// ---------------------------------------------------------------------
+// Main type 25 — U4U4, two 4-bit unsigned fields (DPT-AS §8.4)
+// ---------------------------------------------------------------------
+//
+// "Format: 1 octet: U4U4" with the field-names row `Busy   Nak` left to
+// right — so `Busy` occupies bits 7-4 and `Nak` bits 3-0 — "Encoding: All
+// field values binary encoded.", unit none, PDT_GENERIC_01 (DPT-AS §8.4).
+// One octet, above the AL-AS inline threshold, `Bytes([_])` both ways.
+//
+// 25.1000 DPT_DoubleNibble, the only subtype §8.4 lists, narrows both
+// fields to `[0 … 3]` ("Number of busy repetitions." / "Number of inack
+// repetitions."). Per the ruling at main type 20 the codec does not
+// enforce that narrowing: the format is `U4U4`, each field is 0-15 on the
+// wire, and `DptValue::DoubleNibble` carries what was sent.
+//
+// Text grammar (this module's choice): `busy 3 nak 2` — §8.4's own two
+// field names in §8.4's own order, in main type 18's `<word> <value>`
+// shape.
+
+fn decode_double_nibble(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let [raw] = require_bytes::<1>(payload, dpt, 8)?;
+    Ok(DptValue::DoubleNibble {
+        busy: raw >> 4,
+        nak: raw & 0x0F,
+    })
+}
+
+fn encode_double_nibble(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let unparsable = || DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    };
+    let tokens: Vec<&str> = input.split_whitespace().collect();
+    let (busy, nak): (u32, u32) = match tokens.as_slice() {
+        [b, busy, n, nak] if b.eq_ignore_ascii_case("busy") && n.eq_ignore_ascii_case("nak") => (
+            busy.parse().map_err(|_| unparsable())?,
+            nak.parse().map_err(|_| unparsable())?,
+        ),
+        _ => return Err(unparsable()),
+    };
+    if busy > 0x0F || nak > 0x0F {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: format!("busy {busy} nak {nak}"),
+        });
+    }
+    Ok(GroupValue::Bytes(vec![((busy as u8) << 4) | nak as u8]))
+}
+
+// ---------------------------------------------------------------------
+// Main type 26 — r1B1U6, scene information (DPT-AS §3.25)
+// ---------------------------------------------------------------------
+//
+// "Format: 1 octet: r1B1U6", encoding row `0 b UUUUUU`, "Encoding: All
+// values binary encoded.", PDT_GENERIC_01 (DPT-AS §3.25). 26.001
+// DPT_SceneInfo's own rows name the fields: `r` "Reserved (0)", `B`
+// "info: 0 = scene is active, 1 = scene is inactive" with range `[0, 1]`,
+// and `SceneNumber` "Scene number" with range `[0 … 63]`. So bit 7 is
+// reserved, bit 6 is the info flag and bits 5-0 the scene number.
+//
+// Significant content is 1 + 6 = 7 bits, one over the AL-AS §3.1.2/
+// §3.1.3 six-bit inline threshold — so, exactly like main type 18, this
+// type always occupies its own octet: `encode` produces `Bytes([_])` and
+// `decode` refuses a `Short` as `WrongLength` rather than quietly
+// accepting it. The reserved bit 7 is checked; a set bit is the same
+// §1.3.1 "shall be 0" violation `require_short` catches elsewhere, so it
+// is `InvalidData`.
+//
+// This is the section whose NOTE 16 main types 17 and 18 both cite for the
+// +1 display convention: "DPT_SceneInfo allows numbering the scene from 0
+// to 63. KNX Association recommends displaying these scene numbers in
+// ETS™, other software and controllers numbered from 1 to 64, this is,
+// with an offset of 1 compared to the actual transmitted value." Here the
+// note is this type's own rather than a borrowed one, and the answer is
+// still the same as for main types 17 and 18: the offset is a display
+// decision, a later layer can only make it honestly if handed the
+// untouched wire value, so this codec keeps 0-63 undecorated in both
+// directions and `format()` prints the wire value.
+//
+// Text grammar (this module's choice): `active scene 5` /
+// `inactive scene 5` — §3.25's own two words for field `B`, in main type
+// 18's `<word> scene <n>` shape.
+
+fn decode_scene_info(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let [raw] = require_bytes::<1>(payload, dpt, 8)?;
+    if raw & 0b1000_0000 != 0 {
+        return Err(DptCodecError::InvalidData { dpt });
+    }
+    Ok(DptValue::SceneInfo {
+        inactive: raw & 0b0100_0000 != 0,
+        number: raw & 0b0011_1111,
+    })
+}
+
+fn encode_scene_info(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let unparsable = || DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    };
+    let tokens: Vec<&str> = input.split_whitespace().collect();
+    let (inactive, number): (bool, u32) = match tokens.as_slice() {
+        [state, scene, number] if scene.eq_ignore_ascii_case("scene") => {
+            let inactive = if state.eq_ignore_ascii_case("active") {
+                false
+            } else if state.eq_ignore_ascii_case("inactive") {
+                true
+            } else {
+                return Err(unparsable());
+            };
+            (inactive, number.parse().map_err(|_| unparsable())?)
+        }
+        _ => return Err(unparsable()),
+    };
+    if number > 63 {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: number.to_string(),
+        });
+    }
+    Ok(GroupValue::Bytes(vec![
+        (u8::from(inactive) << 6) | number as u8,
+    ]))
+}
+
+// ---------------------------------------------------------------------
+// Main type 28 — A[n], variable-length UTF-8 string (DPT-AS §3.27)
+// ---------------------------------------------------------------------
+//
+// "Format: A[n]" with the diagram's last position holding `00` — DPT-AS
+// §3.27, §3.27.1 DPT_UTF-8. The terminator framing is
+// `require_var_string_body`'s, shared with main type 24; what belongs to
+// this type is the character encoding: "This Datapoint Type shall be used
+// to transmit Unicode strings, whereas the UTF-8 encoding scheme shall be
+// used for Unicode Transformation to data contents for transmission. The
+// data length for one character is variable from 1 octet to 4 octets."
+// §3.27's Range row is `U+000000 … U+10FFFF`.
+//
+// A body that is not valid UTF-8 is `InvalidData`: the Standard names the
+// encoding, and an octet sequence that violates it is not a value of this
+// type. Rust's `String` is UTF-8 by construction and `char` cannot hold a
+// value above U+10FFFF, so the range bound and the re-encoding both come
+// for free rather than needing a check this codec writes. As with main
+// type 24, an embedded U+0000 is `Unparsable` — it is inside §3.27's range
+// but is the format's own terminator, so it cannot be transmitted
+// unambiguously.
+
+fn decode_var_string_utf8(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let body = require_var_string_body(payload, dpt)?;
+    let text = std::str::from_utf8(body).map_err(|_| DptCodecError::InvalidData { dpt })?;
+    Ok(DptValue::Text(text.to_string()))
+}
+
+fn encode_var_string_utf8(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    if input.contains('\0') {
+        return Err(DptCodecError::Unparsable {
+            dpt,
+            input: input.to_string(),
+        });
+    }
+    let mut octets = Vec::with_capacity(input.len() + 1);
+    octets.extend_from_slice(input.as_bytes());
+    octets.push(0x00);
+    Ok(GroupValue::Bytes(octets))
+}
+
+// ---------------------------------------------------------------------
+// Main type 29 — V64, 8-octet signed counter (DPT-AS §3.28)
+// ---------------------------------------------------------------------
+//
+// "Format: 8 octets: V64" over a single `SignedValue` field, octet 8 the
+// MSB down to octet 1 the LSB, "Encoding: Two's complement notation",
+// PDT_GENERIC_08 — DPT-AS §3.28, §3.28.1 "DPTs for electrical energy".
+// The three subtypes differ only in unit and all have resolution 1:
+// 29.010 DPT_ActiveEnergy_V64 (Wh), 29.011 DPT_ApparantEnergy_V64 (VAh),
+// 29.012 DPT_ReactiveEnergy_V64 (VARh). Since no scaling applies,
+// `format()` prints the bare number, the same treatment main types 12 and
+// 13's unscaled subtypes get.
+//
+// Ruling on §3.28.1's Range row (recorded in
+// `docs/KNOWN_LIMITATIONS.md` §61): that row reads "SignedValue = [9 223
+// 372 036 854 775 808 to 9 223 372 036 854 775 807]", whose lower bound
+// is missing its minus sign — as printed it is an empty, decreasing
+// range, and an asymmetric positive range of that size does not fit 64
+// bits in the first place. The datapoint-type rows in the same clause
+// give the bound with its sign, "-9 223 372 036 854 775 808 Wh to
+// 9 223 372 036 854 775 807 Wh", which is exactly `i64`'s domain and is
+// what a two's-complement 64-bit field can hold. This codec follows those
+// rows. A well-formed number outside that range is `OutOfRange`, not
+// `Unparsable`, which is why `encode` parses into an `i128` first.
+
+fn decode_v64(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecError> {
+    let raw = require_bytes::<8>(payload, dpt, 64)?;
+    Ok(DptValue::Signed64(i64::from_be_bytes(raw)))
+}
+
+fn encode_v64(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+    let trimmed = input.trim();
+    let value: i128 = trimmed.parse().map_err(|_| DptCodecError::Unparsable {
+        dpt,
+        input: input.to_string(),
+    })?;
+    if !(i128::from(i64::MIN)..=i128::from(i64::MAX)).contains(&value) {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: trimmed.to_string(),
+        });
+    }
+    Ok(GroupValue::Bytes((value as i64).to_be_bytes().to_vec()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2451,13 +3162,100 @@ mod tests {
     }
 
     #[test]
-    fn v8_status_mode3_is_unsupported_not_misread_as_a_plain_integer() {
+    fn status_mode3_round_trips_every_assigned_mode_and_both_status_edges() {
         let d = dpt(6, Some(20));
+        for (text, raw, status, mode_code) in [
+            ("status 00000 mode 001", 0b0000_0001u8, [false; 5], 0b001u8),
+            ("status 11111 mode 100", 0b1111_1100, [true; 5], 0b100),
+            (
+                "status 01001 mode 010",
+                0b0100_1010,
+                [false, true, false, false, true],
+                0b010,
+            ),
+        ] {
+            let payload = encode(d, text).unwrap();
+            assert_eq!(payload, GroupValue::Bytes(vec![raw]), "encoding {text:?}");
+            let value = decode(d, &payload).unwrap();
+            assert_eq!(value, DptValue::StatusMode3 { status, mode_code });
+            assert_eq!(value.to_string(), text);
+        }
+    }
+
+    #[test]
+    fn status_mode3_refuses_a_mode_code_the_format_does_not_assign() {
+        // DPT-AS §3.7's Range row: `f = {001b,010b,100b}`. That is a
+        // format-level restriction, not a subtype table's, so it is
+        // enforced.
+        let d = dpt(6, Some(20));
+        for raw in [
+            0b0000_0000u8,
+            0b0000_0011,
+            0b0000_0101,
+            0b0000_0110,
+            0b0000_0111,
+        ] {
+            assert_eq!(
+                decode(d, &GroupValue::Bytes(vec![raw])),
+                Err(DptCodecError::InvalidData { dpt: d }),
+                "decoding {raw:#010b}"
+            );
+        }
+        assert!(matches!(
+            encode(d, "status 00000 mode 000"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+        assert!(matches!(
+            encode(d, "status 00000 mode 111"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+    }
+
+    #[test]
+    fn status_mode3_refuses_malformed_text_and_malformed_payloads() {
+        let d = dpt(6, Some(20));
+        for text in [
+            "status 0000 mode 001",
+            "status 000000 mode 001",
+            "status 00000 mode 01",
+            "status 00002 mode 001",
+            "00000 001",
+            "",
+        ] {
+            assert!(
+                matches!(encode(d, text), Err(DptCodecError::Unparsable { .. })),
+                "expected Unparsable for {text:?}"
+            );
+        }
+        // Eight significant bits — never the inline form, never two octets.
+        assert!(matches!(
+            decode(d, &GroupValue::Short(1)),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+        assert!(matches!(
+            decode(d, &GroupValue::Bytes(vec![1, 2])),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+    }
+
+    #[test]
+    fn status_mode3_is_not_read_as_a_plain_v8_integer() {
+        // The point the older `..._is_unsupported_...` test made, kept now
+        // that 6.020 is implemented: the same octet means something
+        // entirely different under 6.020 (B5N3) than under any other main
+        // type 6 subtype (V8, two's complement).
+        let payload = GroupValue::Bytes(vec![0b1111_1100]);
         assert_eq!(
-            decode(d, &GroupValue::Bytes(vec![0b0010_0001])),
-            Err(DptCodecError::UnsupportedDpt(d))
+            decode(dpt(6, Some(20)), &payload).unwrap(),
+            DptValue::StatusMode3 {
+                status: [true; 5],
+                mode_code: 0b100,
+            }
         );
-        assert_eq!(encode(d, "1"), Err(DptCodecError::UnsupportedDpt(d)));
+        assert_eq!(
+            decode(dpt(6, Some(1)), &payload).unwrap(),
+            DptValue::Signed(-4)
+        );
     }
 
     // -- Main type 7 -----------------------------------------------------
@@ -3807,21 +4605,790 @@ mod tests {
         }
     }
 
+    // -- Main type 20 ------------------------------------------------------
+
+    #[test]
+    fn n8_round_trips_both_ends_of_its_range() {
+        let d = dpt(20, Some(1));
+        for code in [0u8, 1, 128, 254, 255] {
+            let payload = encode(d, &code.to_string()).unwrap();
+            assert_eq!(payload, GroupValue::Bytes(vec![code]));
+            let value = decode(d, &payload).unwrap();
+            assert_eq!(value, DptValue::Enum { code });
+            assert_eq!(value.to_string(), code.to_string());
+        }
+    }
+
+    #[test]
+    fn n8_rejects_a_code_outside_the_octet() {
+        let d = dpt(20, Some(1));
+        assert!(matches!(
+            encode(d, "256"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+        assert!(matches!(
+            encode(d, "-1"),
+            Err(DptCodecError::Unparsable { .. })
+        ));
+        assert!(matches!(
+            encode(d, "autonomous"),
+            Err(DptCodecError::Unparsable { .. })
+        ));
+    }
+
+    #[test]
+    fn n8_rejects_payloads_that_are_not_one_octet() {
+        let d = dpt(20, Some(11));
+        assert!(matches!(
+            decode(d, &GroupValue::Short(3)),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+        assert!(matches!(
+            decode(d, &GroupValue::Bytes(vec![1, 2])),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+        assert!(matches!(
+            decode(d, &GroupValue::Bytes(vec![])),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+    }
+
+    #[test]
+    fn n8_keeps_a_code_a_subtype_table_reserves() {
+        // 20.011 DPT_ErrorClass_System's range is `[0 to 18]` and its own
+        // table calls "19 to 255" reserved (DPT-AS §3.21). The codec
+        // validates the N8 format, not the subtype table — see the module
+        // header — so the raw code survives instead of being refused.
+        let d = dpt(20, Some(11));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![19])).unwrap(),
+            DptValue::Enum { code: 19 }
+        );
+        // 20.002 DPT_BuildingMode's range is `[0 to 2]`; same rule.
+        assert_eq!(
+            decode(dpt(20, Some(2)), &GroupValue::Bytes(vec![200])).unwrap(),
+            DptValue::Enum { code: 200 }
+        );
+    }
+
+    // -- Main type 21 ------------------------------------------------------
+
+    #[test]
+    fn b8_round_trips_its_boundary_patterns() {
+        let d = dpt(21, Some(1));
+        for (text, raw) in [
+            ("00000000", 0x00u8),
+            ("00000001", 0x01),
+            ("10000000", 0x80),
+            ("11111111", 0xFF),
+        ] {
+            let payload = encode(d, text).unwrap();
+            assert_eq!(payload, GroupValue::Bytes(vec![raw]), "encoding {text:?}");
+            let value = decode(d, &payload).unwrap();
+            assert_eq!(
+                value,
+                DptValue::BitSet {
+                    bits: u32::from(raw),
+                    width: 8,
+                }
+            );
+            assert_eq!(value.to_string(), text);
+        }
+    }
+
+    #[test]
+    fn b8_accepts_the_hex_form_and_refuses_a_value_that_does_not_fit() {
+        let d = dpt(21, Some(2));
+        assert_eq!(
+            encode(d, "0x07").unwrap(),
+            GroupValue::Bytes(vec![0b0000_0111])
+        );
+        assert_eq!(encode(d, "0b00000111").unwrap(), encode(d, "0x7").unwrap());
+        assert!(matches!(
+            encode(d, "0x100"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+        for text in ["0000000", "000000000", "00000002", "", "seven"] {
+            assert!(
+                matches!(encode(d, text), Err(DptCodecError::Unparsable { .. })),
+                "expected Unparsable for {text:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn b8_keeps_the_bits_its_subtype_tables_reserve() {
+        // 21.001 DPT_StatusGen calls b5, b6, b7 "reserved, set 0"
+        // (DPT-AS §3.22.1); 21.002 DPT_Device_Control calls b3…b7 the same
+        // (§3.22.2). Format-level validation only — the bits survive.
+        assert_eq!(
+            decode(dpt(21, Some(1)), &GroupValue::Bytes(vec![0xE0])).unwrap(),
+            DptValue::BitSet {
+                bits: 0xE0,
+                width: 8,
+            }
+        );
+        assert_eq!(
+            decode(dpt(21, Some(2)), &GroupValue::Bytes(vec![0xF8])).unwrap(),
+            DptValue::BitSet {
+                bits: 0xF8,
+                width: 8,
+            }
+        );
+    }
+
+    #[test]
+    fn b8_rejects_payloads_that_are_not_one_octet() {
+        let d = dpt(21, Some(1));
+        assert!(matches!(
+            decode(d, &GroupValue::Short(1)),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+        assert!(matches!(
+            decode(d, &GroupValue::Bytes(vec![0, 0])),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+    }
+
+    // -- Main type 22 ------------------------------------------------------
+
+    #[test]
+    fn b16_round_trips_its_boundary_patterns_most_significant_octet_first() {
+        let d = dpt(22, Some(101));
+        for (text, octets) in [
+            ("0000000000000000", vec![0x00u8, 0x00]),
+            ("0000000000000001", vec![0x00, 0x01]),
+            ("1000000000000000", vec![0x80, 0x00]),
+            ("1111111111111111", vec![0xFF, 0xFF]),
+            ("0000000111111111", vec![0x01, 0xFF]),
+        ] {
+            let payload = encode(d, text).unwrap();
+            assert_eq!(
+                payload,
+                GroupValue::Bytes(octets.clone()),
+                "encoding {text:?}"
+            );
+            let value = decode(d, &payload).unwrap();
+            let bits = (u32::from(octets[0]) << 8) | u32::from(octets[1]);
+            assert_eq!(value, DptValue::BitSet { bits, width: 16 });
+            assert_eq!(value.to_string(), text);
+        }
+    }
+
+    #[test]
+    fn b16_keeps_bit_8_of_22_100_that_the_standard_contradicts_itself_about() {
+        // 22.100 DPT_StatusDHWC's encoding row (DPT-AS §4.5.1) defines bit
+        // 8 as a `B`; the data-field table under the same diagram calls
+        // bits "8 to 15" reserved. The codec refuses neither reading and
+        // keeps all sixteen bits — see the bit-set section's comment.
+        let d = dpt(22, Some(100));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0xFF, 0x00])).unwrap(),
+            DptValue::BitSet {
+                bits: 0xFF00,
+                width: 16,
+            }
+        );
+    }
+
+    #[test]
+    fn b16_rejects_payloads_that_are_not_two_octets() {
+        let d = dpt(22, Some(1000));
+        for payload in [
+            GroupValue::Short(1),
+            GroupValue::Bytes(vec![0]),
+            GroupValue::Bytes(vec![0, 0, 0]),
+        ] {
+            assert!(
+                matches!(decode(d, &payload), Err(DptCodecError::WrongLength { .. })),
+                "expected WrongLength for {payload:?}"
+            );
+        }
+        assert!(matches!(
+            encode(d, "0x10000"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+    }
+
+    // -- Main type 23 ------------------------------------------------------
+
+    #[test]
+    fn n2_round_trips_every_code_in_the_inline_form() {
+        let d = dpt(23, Some(1));
+        for code in 0u8..=0b11 {
+            let payload = encode(d, &code.to_string()).unwrap();
+            assert_eq!(payload, GroupValue::Short(code));
+            let value = decode(d, &payload).unwrap();
+            assert_eq!(value, DptValue::Enum { code });
+            assert_eq!(value.to_string(), code.to_string());
+        }
+    }
+
+    #[test]
+    fn n2_refuses_a_value_outside_its_two_bits() {
+        let d = dpt(23, Some(1));
+        assert!(matches!(
+            encode(d, "4"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+        assert!(matches!(
+            encode(d, "-1"),
+            Err(DptCodecError::Unparsable { .. })
+        ));
+        // "The preceding bits shall be 0" — DPT-AS §1.3.1.
+        assert_eq!(
+            decode(d, &GroupValue::Short(0b100)),
+            Err(DptCodecError::InvalidData { dpt: d })
+        );
+        assert!(matches!(
+            decode(d, &GroupValue::Bytes(vec![0, 0])),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+    }
+
+    #[test]
+    fn n2_keeps_the_code_23_002_reserves() {
+        // 23.002 DPT_Alarm_Reaction: "(11b = reserved; shall not be used)"
+        // (DPT-AS §3.23). Format-level validation only.
+        let d = dpt(23, Some(2));
+        assert_eq!(
+            decode(d, &GroupValue::Short(0b11)).unwrap(),
+            DptValue::Enum { code: 0b11 }
+        );
+    }
+
+    // -- Main type 24 ------------------------------------------------------
+
+    #[test]
+    fn var_string_8859_1_round_trips_the_standards_own_example() {
+        // DPT-AS §3.24 EXAMPLE 15: 'KNX is OK' is encoded as
+        // 4Bh 4Eh 58h 20h 69h 73h 20h 4Fh 4Bh 00h.
+        let d = dpt(24, Some(1));
+        let payload = encode(d, "KNX is OK").unwrap();
+        assert_eq!(
+            payload,
+            GroupValue::Bytes(vec![
+                0x4B, 0x4E, 0x58, 0x20, 0x69, 0x73, 0x20, 0x4F, 0x4B, 0x00
+            ])
+        );
+        let value = decode(d, &payload).unwrap();
+        assert_eq!(value, DptValue::Text("KNX is OK".to_string()));
+        assert_eq!(value.to_string(), "KNX is OK");
+    }
+
+    #[test]
+    fn var_string_8859_1_round_trips_both_ends_of_its_character_range() {
+        let d = dpt(24, Some(1));
+        // The shortest legal payload is the terminator on its own.
+        assert_eq!(encode(d, "").unwrap(), GroupValue::Bytes(vec![0x00]));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x00])).unwrap(),
+            DptValue::Text(String::new())
+        );
+        // 01h and FFh are the lowest transmittable and highest characters
+        // of 4.002 DPT_Char_8859_1's [0...255] range (00h being the
+        // terminator).
+        for (text, octet) in [("\u{1}", 0x01u8), ("\u{ff}", 0xFF)] {
+            let payload = encode(d, text).unwrap();
+            assert_eq!(payload, GroupValue::Bytes(vec![octet, 0x00]));
+            assert_eq!(
+                decode(d, &payload).unwrap(),
+                DptValue::Text(text.to_string())
+            );
+        }
+        // A trailing space is content, not padding — no trimming.
+        assert_eq!(
+            encode(d, " a ").unwrap(),
+            GroupValue::Bytes(vec![0x20, 0x61, 0x20, 0x00])
+        );
+    }
+
+    #[test]
+    fn var_string_8859_1_refuses_malformed_payloads_and_untransmittable_text() {
+        let d = dpt(24, Some(1));
+        // No terminator.
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x41])),
+            Err(DptCodecError::InvalidData { dpt: d })
+        );
+        // Interior NULL.
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x41, 0x00, 0x42, 0x00])),
+            Err(DptCodecError::InvalidData { dpt: d })
+        );
+        // Not even the terminator, and never the inline form.
+        assert!(matches!(
+            decode(d, &GroupValue::Bytes(vec![])),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+        assert!(matches!(
+            decode(d, &GroupValue::Short(0)),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+        // Outside ISO 8859-1, and the terminator as content.
+        for text in ["\u{100}", "\u{20ac}", "a\u{0}b"] {
+            assert!(
+                matches!(encode(d, text), Err(DptCodecError::Unparsable { .. })),
+                "expected Unparsable for {text:?}"
+            );
+        }
+    }
+
+    // -- Main type 25 ------------------------------------------------------
+
+    #[test]
+    fn double_nibble_round_trips_both_field_boundaries() {
+        let d = dpt(25, Some(1000));
+        for (text, raw, busy, nak) in [
+            ("busy 0 nak 0", 0x00u8, 0u8, 0u8),
+            ("busy 0 nak 15", 0x0F, 0, 15),
+            ("busy 15 nak 0", 0xF0, 15, 0),
+            ("busy 15 nak 15", 0xFF, 15, 15),
+            ("busy 3 nak 2", 0x32, 3, 2),
+        ] {
+            let payload = encode(d, text).unwrap();
+            assert_eq!(payload, GroupValue::Bytes(vec![raw]), "encoding {text:?}");
+            let value = decode(d, &payload).unwrap();
+            assert_eq!(value, DptValue::DoubleNibble { busy, nak });
+            assert_eq!(value.to_string(), text);
+        }
+    }
+
+    #[test]
+    fn double_nibble_keeps_a_field_value_25_1000_narrows_away() {
+        // 25.1000 DPT_DoubleNibble's own range is `[0 … 3]` per field
+        // (DPT-AS §8.4); the format's is `[0 … 15]`, and that is what is
+        // enforced.
+        assert_eq!(
+            decode(dpt(25, Some(1000)), &GroupValue::Bytes(vec![0x45])).unwrap(),
+            DptValue::DoubleNibble { busy: 4, nak: 5 }
+        );
+    }
+
+    #[test]
+    fn double_nibble_refuses_an_out_of_range_field_and_a_foreign_grammar() {
+        let d = dpt(25, Some(1000));
+        assert!(matches!(
+            encode(d, "busy 16 nak 0"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+        assert!(matches!(
+            encode(d, "busy 0 nak 16"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+        for text in ["3 2", "busy 3", "nak 2 busy 3", "busy x nak 2", ""] {
+            assert!(
+                matches!(encode(d, text), Err(DptCodecError::Unparsable { .. })),
+                "expected Unparsable for {text:?}"
+            );
+        }
+        assert!(matches!(
+            decode(d, &GroupValue::Bytes(vec![0, 0])),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+        assert!(matches!(
+            decode(d, &GroupValue::Short(1)),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+    }
+
+    // -- Main type 26 ------------------------------------------------------
+
+    #[test]
+    fn scene_info_round_trips_both_states_at_both_scene_boundaries() {
+        let d = dpt(26, Some(1));
+        for (text, raw, inactive, number) in [
+            ("active scene 0", 0x00u8, false, 0u8),
+            ("active scene 63", 0x3F, false, 63),
+            ("inactive scene 0", 0x40, true, 0),
+            ("inactive scene 63", 0x7F, true, 63),
+        ] {
+            let payload = encode(d, text).unwrap();
+            assert_eq!(payload, GroupValue::Bytes(vec![raw]), "encoding {text:?}");
+            let value = decode(d, &payload).unwrap();
+            assert_eq!(value, DptValue::SceneInfo { inactive, number });
+            assert_eq!(value.to_string(), text);
+        }
+    }
+
+    #[test]
+    fn scene_info_keeps_the_wire_scene_number_without_the_note_16_offset() {
+        // DPT-AS §3.25 NOTE 16 recommends displaying 1-64; that is a
+        // display decision, and this codec hands back the wire value.
+        assert_eq!(
+            decode(dpt(26, Some(1)), &GroupValue::Bytes(vec![0x00]))
+                .unwrap()
+                .to_string(),
+            "active scene 0"
+        );
+    }
+
+    #[test]
+    fn scene_info_refuses_the_reserved_bit_the_inline_form_and_bad_text() {
+        let d = dpt(26, Some(1));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x80])),
+            Err(DptCodecError::InvalidData { dpt: d })
+        );
+        assert!(matches!(
+            decode(d, &GroupValue::Short(0x01)),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+        assert!(matches!(
+            encode(d, "active scene 64"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+        for text in ["maybe scene 1", "active 1", "scene 1", "active scene x", ""] {
+            assert!(
+                matches!(encode(d, text), Err(DptCodecError::Unparsable { .. })),
+                "expected Unparsable for {text:?}"
+            );
+        }
+    }
+
+    // -- Main type 27 ------------------------------------------------------
+
+    #[test]
+    fn b32_round_trips_its_boundary_patterns() {
+        let d = dpt(27, Some(1));
+        for (text, octets, bits) in [
+            (
+                "00000000000000000000000000000000",
+                vec![0x00u8, 0x00, 0x00, 0x00],
+                0x0000_0000u32,
+            ),
+            (
+                "00000000000000000000000000000001",
+                vec![0x00, 0x00, 0x00, 0x01],
+                0x0000_0001,
+            ),
+            (
+                "10000000000000000000000000000000",
+                vec![0x80, 0x00, 0x00, 0x00],
+                0x8000_0000,
+            ),
+            (
+                "11111111111111111111111111111111",
+                vec![0xFF, 0xFF, 0xFF, 0xFF],
+                0xFFFF_FFFF,
+            ),
+        ] {
+            let payload = encode(d, text).unwrap();
+            assert_eq!(payload, GroupValue::Bytes(octets), "encoding {text:?}");
+            let value = decode(d, &payload).unwrap();
+            assert_eq!(value, DptValue::BitSet { bits, width: 32 });
+            assert_eq!(value.to_string(), text);
+        }
+    }
+
+    #[test]
+    fn b32_hex_form_accepts_the_whole_32_bit_width() {
+        // The width guard in `encode_bit_set` must not shift by 32.
+        let d = dpt(27, Some(1));
+        assert_eq!(
+            encode(d, "0xFFFFFFFF").unwrap(),
+            GroupValue::Bytes(vec![0xFF, 0xFF, 0xFF, 0xFF])
+        );
+        assert_eq!(
+            encode(d, "0x00010002").unwrap(),
+            GroupValue::Bytes(vec![0x00, 0x01, 0x00, 0x02])
+        );
+        assert!(matches!(
+            encode(d, "0x1FFFFFFFF"),
+            Err(DptCodecError::Unparsable { .. })
+        ));
+    }
+
+    #[test]
+    fn b32_splits_nothing_into_the_27_001_mask_and_state_halves() {
+        // 27.001 DPT_CombinedInfoOnOff puts s0…s15 at bits 0-15 and
+        // m0…m15 at bits 16-31 (DPT-AS §3.26.1). The codec keeps the flat
+        // bit set; a caller that knows it has a 27.001 masks it itself.
+        let d = dpt(27, Some(1));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x00, 0x03, 0x00, 0x01])).unwrap(),
+            DptValue::BitSet {
+                bits: 0x0003_0001,
+                width: 32,
+            }
+        );
+    }
+
+    #[test]
+    fn b32_rejects_payloads_that_are_not_four_octets() {
+        let d = dpt(27, Some(1));
+        for payload in [
+            GroupValue::Short(1),
+            GroupValue::Bytes(vec![0, 0, 0]),
+            GroupValue::Bytes(vec![0, 0, 0, 0, 0]),
+        ] {
+            assert!(
+                matches!(decode(d, &payload), Err(DptCodecError::WrongLength { .. })),
+                "expected WrongLength for {payload:?}"
+            );
+        }
+    }
+
+    // -- Main type 28 ------------------------------------------------------
+
+    #[test]
+    fn utf8_string_round_trips_multi_octet_characters() {
+        let d = dpt(28, Some(1));
+        let text = "Gr\u{fc}\u{df}e \u{1f600}";
+        let payload = encode(d, text).unwrap();
+        let mut expected = text.as_bytes().to_vec();
+        expected.push(0x00);
+        assert_eq!(payload, GroupValue::Bytes(expected));
+        let value = decode(d, &payload).unwrap();
+        assert_eq!(value, DptValue::Text(text.to_string()));
+        assert_eq!(value.to_string(), text);
+    }
+
+    #[test]
+    fn utf8_string_round_trips_each_octet_width_boundary() {
+        // The four rows of DPT-AS §3.27's UTF-8 table: 1, 2, 3 and 4
+        // octets per character, at both ends of each row's range.
+        let d = dpt(28, Some(1));
+        for (text, octet_count) in [
+            ("\u{1}", 1usize),
+            ("\u{7f}", 1),
+            ("\u{80}", 2),
+            ("\u{7ff}", 2),
+            ("\u{800}", 3),
+            ("\u{ffff}", 3),
+            ("\u{10000}", 4),
+            ("\u{10ffff}", 4),
+        ] {
+            let payload = encode(d, text).unwrap();
+            assert_eq!(
+                payload,
+                GroupValue::Bytes({
+                    let mut v = text.as_bytes().to_vec();
+                    v.push(0x00);
+                    v
+                }),
+                "encoding {text:?}"
+            );
+            assert_eq!(text.len(), octet_count, "octet count for {text:?}");
+            assert_eq!(
+                decode(d, &payload).unwrap(),
+                DptValue::Text(text.to_string())
+            );
+        }
+        // The empty string is the terminator alone.
+        assert_eq!(encode(d, "").unwrap(), GroupValue::Bytes(vec![0x00]));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x00])).unwrap(),
+            DptValue::Text(String::new())
+        );
+        // U+0000 is inside §3.27's range but is the format's terminator.
+        assert!(matches!(
+            encode(d, "\u{0}"),
+            Err(DptCodecError::Unparsable { .. })
+        ));
+    }
+
+    #[test]
+    fn utf8_string_refuses_a_body_that_is_not_valid_utf8() {
+        let d = dpt(28, Some(1));
+        for body in [vec![0xC3u8], vec![0xFF], vec![0xE2, 0x82], vec![0x80]] {
+            let mut payload = body.clone();
+            payload.push(0x00);
+            assert_eq!(
+                decode(d, &GroupValue::Bytes(payload)),
+                Err(DptCodecError::InvalidData { dpt: d }),
+                "decoding body {body:02X?}"
+            );
+        }
+        // Terminator rules, shared with main type 24.
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x41])),
+            Err(DptCodecError::InvalidData { dpt: d })
+        );
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x41, 0x00, 0x42, 0x00])),
+            Err(DptCodecError::InvalidData { dpt: d })
+        );
+        assert!(matches!(
+            decode(d, &GroupValue::Short(0)),
+            Err(DptCodecError::WrongLength { .. })
+        ));
+    }
+
+    // -- Main type 29 ------------------------------------------------------
+
+    #[test]
+    fn v64_round_trips_both_ends_of_its_range() {
+        let d = dpt(29, Some(10));
+        for value in [i64::MIN, -1, 0, 1, i64::MAX] {
+            let payload = encode(d, &value.to_string()).unwrap();
+            assert_eq!(payload, GroupValue::Bytes(value.to_be_bytes().to_vec()));
+            let decoded = decode(d, &payload).unwrap();
+            assert_eq!(decoded, DptValue::Signed64(value));
+            assert_eq!(decoded.to_string(), value.to_string());
+        }
+    }
+
+    #[test]
+    fn v64_is_most_significant_octet_first() {
+        // DPT-AS §3.28.1: octet 8 is the MSB, octet 1 the LSB.
+        let d = dpt(29, Some(11));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0, 0, 0, 0, 0, 0, 0, 1])).unwrap(),
+            DptValue::Signed64(1)
+        );
+        assert_eq!(
+            decode(
+                d,
+                &GroupValue::Bytes(vec![0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])
+            )
+            .unwrap(),
+            DptValue::Signed64(-1)
+        );
+    }
+
+    #[test]
+    fn v64_refuses_a_value_one_past_each_boundary_and_a_wrong_length() {
+        let d = dpt(29, Some(12));
+        assert!(matches!(
+            encode(d, "9223372036854775808"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+        assert!(matches!(
+            encode(d, "-9223372036854775809"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+        assert!(matches!(
+            encode(d, "lots of watt-hours"),
+            Err(DptCodecError::Unparsable { .. })
+        ));
+        for payload in [
+            GroupValue::Short(1),
+            GroupValue::Bytes(vec![0; 4]),
+            GroupValue::Bytes(vec![0; 9]),
+        ] {
+            assert!(
+                matches!(decode(d, &payload), Err(DptCodecError::WrongLength { .. })),
+                "expected WrongLength for {payload:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn v64_prints_no_unit_because_its_resolution_is_one() {
+        assert_eq!(DptValue::Signed64(-5).format(dpt(29, Some(10))), "-5");
+    }
+
+    // -- Main type 30 ------------------------------------------------------
+
+    #[test]
+    fn b24_round_trips_its_boundary_patterns() {
+        let d = dpt(30, Some(1010));
+        for (text, octets, bits) in [
+            ("000000000000000000000000", vec![0x00u8, 0x00, 0x00], 0u32),
+            (
+                "000000000000000000000001",
+                vec![0x00, 0x00, 0x01],
+                0x00_0001,
+            ),
+            (
+                "100000000000000000000000",
+                vec![0x80, 0x00, 0x00],
+                0x80_0000,
+            ),
+            (
+                "111111111111111111111111",
+                vec![0xFF, 0xFF, 0xFF],
+                0xFF_FFFF,
+            ),
+        ] {
+            let payload = encode(d, text).unwrap();
+            assert_eq!(payload, GroupValue::Bytes(octets), "encoding {text:?}");
+            let value = decode(d, &payload).unwrap();
+            assert_eq!(value, DptValue::BitSet { bits, width: 24 });
+            assert_eq!(value.to_string(), text);
+        }
+    }
+
+    #[test]
+    fn b24_puts_octet_3_first_and_octet_1_last() {
+        // DPT-AS §8.5.1: octet 3 (MSB) carries b23…b16, octet 1 (LSB)
+        // carries b7…b0. So b23 — channel 24 — is the top bit of the
+        // first octet transmitted.
+        let d = dpt(30, Some(1010));
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x80, 0x00, 0x00])).unwrap(),
+            DptValue::BitSet {
+                bits: 1 << 23,
+                width: 24,
+            }
+        );
+        assert_eq!(
+            decode(d, &GroupValue::Bytes(vec![0x00, 0x00, 0x01])).unwrap(),
+            DptValue::BitSet { bits: 1, width: 24 }
+        );
+    }
+
+    #[test]
+    fn b24_rejects_payloads_that_are_not_three_octets() {
+        let d = dpt(30, Some(1010));
+        for payload in [
+            GroupValue::Short(1),
+            GroupValue::Bytes(vec![0, 0]),
+            GroupValue::Bytes(vec![0, 0, 0, 0]),
+        ] {
+            assert!(
+                matches!(decode(d, &payload), Err(DptCodecError::WrongLength { .. })),
+                "expected WrongLength for {payload:?}"
+            );
+        }
+        assert!(matches!(
+            encode(d, "0x1000000"),
+            Err(DptCodecError::OutOfRange { .. })
+        ));
+    }
+
     // -- Unsupported main types -------------------------------------------
 
     #[test]
     fn unimplemented_main_type_is_unsupported_not_a_panic() {
-        // Main type 9 graduated out of "unimplemented" this task — main
-        // type 20 (1-octet enumeration) is spec §4.3's deliberately
-        // excluded type: its wire value is a bare octet whose *meaning*
-        // lives in enumeration tables this codec does not ingest, so
-        // decoding it would be a guess dressed up as an answer.
-        let d = dpt(20, Some(1));
+        // Main type 20 graduated out of "unimplemented" this task. Main
+        // type 31 takes its place, and not arbitrarily: DPT-AS §4.7/§4.7.1
+        // gives it as "3 bit: N3" with exactly one subtype, 31.101
+        // DPT_PB_Action_HVAC_Extended, whose own entry states "This DPT
+        // shall not be used for runtime communication. This DPT shall only
+        // be used for encoding Parameter values in CH_PB_HVAC_Mode_1." A
+        // group-value codec has nothing legitimate to do with it, so it
+        // stays unsupported rather than being implemented for symmetry.
+        let d = dpt(31, Some(101));
         assert_eq!(
-            decode(d, &GroupValue::Bytes(vec![0, 0])),
+            decode(d, &GroupValue::Short(1)),
             Err(DptCodecError::UnsupportedDpt(d))
         );
-        assert_eq!(encode(d, "21.0"), Err(DptCodecError::UnsupportedDpt(d)));
+        assert_eq!(encode(d, "1"), Err(DptCodecError::UnsupportedDpt(d)));
+    }
+
+    #[test]
+    fn a_main_type_above_the_implemented_range_is_unsupported_not_a_panic() {
+        // DPT-AS §2's overview table jumps from main type 31 to the
+        // 200-and-above LTE/system types, which run as high as 284
+        // (255, 265-274 and 276-284 all exist); 46 is not a main type at
+        // all (it is the *count* of main types in the ETS master data,
+        // see `docs/KNOWN_LIMITATIONS.md` §90). Whatever the number, an
+        // unimplemented main type refuses rather than panics.
+        for main in [32u16, 46, 200, 251, u16::MAX] {
+            let d = dpt(main, Some(1));
+            assert_eq!(
+                decode(d, &GroupValue::Bytes(vec![0])),
+                Err(DptCodecError::UnsupportedDpt(d)),
+                "decoding main type {main}"
+            );
+            assert_eq!(
+                encode(d, "0"),
+                Err(DptCodecError::UnsupportedDpt(d)),
+                "encoding main type {main}"
+            );
+        }
     }
 
     // -- Formatting --------------------------------------------------------

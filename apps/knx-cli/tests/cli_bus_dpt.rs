@@ -273,13 +273,18 @@ fn an_unparsable_value_for_the_given_dpt_fails_before_connecting() {
 
 #[test]
 fn a_dpt_naming_an_unimplemented_main_type_fails_with_the_unsupported_error() {
+    // This used to name DPST-20-102, which stopped being unimplemented when
+    // main types 20-30 landed. DPST-31-101 replaces it, and stays
+    // unimplemented on purpose: DPT-AS §4.7.1 says of
+    // DPT_PB_Action_HVAC_Extended "This DPT shall not be used for runtime
+    // communication", so `bus write` has nothing legitimate to send with it.
     let out = run_cli(&[
         "bus",
         "write",
         "--gateway",
         "127.0.0.1:3671",
         "--dpt",
-        "DPST-20-102",
+        "DPST-31-101",
         "--dry-run",
         "1/2/3",
         "1",
@@ -288,5 +293,5 @@ fn a_dpt_naming_an_unimplemented_main_type_fails_with_the_unsupported_error() {
     assert_ne!(out.status.code(), Some(0));
     let stderr = String::from_utf8(out.stderr).unwrap();
     assert!(stderr.contains("unsupported"), "{stderr}");
-    assert!(stderr.contains("DPST-20-102"), "{stderr}");
+    assert!(stderr.contains("DPST-31-101"), "{stderr}");
 }

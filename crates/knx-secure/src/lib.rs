@@ -6,6 +6,8 @@ use base64::Engine as _;
 use pbkdf2::pbkdf2_hmac;
 use sha2::Sha256;
 
+pub mod zipcrypto;
+
 /// PBKDF2 iteration count fixed by the `.knxproj` password-protection
 /// scheme: KNX Standard v3.0.0, Project Schema23 v01.00.00, clause 4.2.4
 /// "Password protection", p.64/64.

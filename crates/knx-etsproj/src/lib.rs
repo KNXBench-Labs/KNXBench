@@ -17,7 +17,7 @@ mod testutil;
 pub mod validate;
 pub mod values;
 
-pub use container::{Container, ContainerError, EntryInfo};
+pub use container::{Container, ContainerError, EncryptionScheme, EntryInfo};
 pub use detect::{detect, DetectError, Detected, SchemaVersion};
 pub use known::{known_schema, KnownElement, KnownSchema};
 pub use parse::{

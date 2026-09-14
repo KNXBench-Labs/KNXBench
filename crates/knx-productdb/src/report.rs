@@ -63,10 +63,18 @@ pub struct UnknownConstruct {
 /// meant before KNOWN_LIMITATIONS.md §86 was closed: `kept_sha256 !=
 /// other_sha256`, a collision between this file and a different,
 /// previously-ingested one. Anything greater means the file currently
-/// being parsed declared this id more than once *by itself* — `kept_sha256
-/// == other_sha256` in that case, both being this file's own hash, and
+/// being parsed declared this id more than once *by itself*, and
 /// `occurrence` is the only field that still says two different elements
 /// were competing rather than one being re-read.
+///
+/// The two readings are not exclusive, and the hashes do not classify them.
+/// `occurrence > 1` proves a same-file duplicate; `kept_sha256 !=
+/// other_sha256` proves a cross-file one; both hold at once when a file
+/// declares an id twice that another file had already ingested — the kept
+/// row is never overwritten, so the hashes still differ while `occurrence`
+/// climbs. `kept_sha256 == other_sha256` is therefore usual for a same-file
+/// duplicate and guaranteed only when the id was not already present from
+/// another file. Read `occurrence`, not the hashes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IdConflict {
     pub table: String,
@@ -170,15 +178,15 @@ pub fn insert_unknown(
 pub fn insert_conflicts(conn: &Connection, conflicts: &[IdConflict]) -> Result<(), ProductDbError> {
     let mut stmt = conn.prepare(
         "INSERT INTO ingest_unknown (source_sha256, program_id, xpath, kind, name, occurrences, sample)
-         VALUES (?1, NULL, ?2, 'IdConflict', ?3, ?5, ?4)",
+         VALUES (?1, NULL, ?2, 'IdConflict', ?3, ?4, ?5)",
     )?;
     for c in conflicts {
         stmt.execute(params![
             c.kept_sha256,
             c.table,
             c.id,
-            c.other_sha256,
-            c.occurrence
+            c.occurrence,
+            c.other_sha256
         ])?;
     }
     Ok(())

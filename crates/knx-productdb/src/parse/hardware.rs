@@ -448,10 +448,12 @@ mod tests {
             ingest_hardware(&conn, "one-file-sha", "M-0001/Hardware.xml", xml.as_bytes()).unwrap();
 
         // The gap is closed: a conflict is now recorded, and it names the
-        // table and id that collided — `kept_sha256 == other_sha256` here
-        // (both "one-file-sha"), because that is exactly what tells a
-        // reader this was two elements in one file rather than two files;
-        // `occurrence == 2` says so explicitly either way.
+        // table and id that collided. `kept_sha256 == other_sha256` here
+        // (both "one-file-sha") only because nothing had ingested this id
+        // before; the hashes would differ if something had, even with the
+        // duplicate inside this one file. `occurrence == 2` is the claim
+        // that holds either way, which is why the assertion below rests on
+        // it and not on the hashes.
         assert_eq!(
             ingest.conflicts.len(),
             1,

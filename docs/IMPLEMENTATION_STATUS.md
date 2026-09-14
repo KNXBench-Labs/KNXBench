@@ -5305,3 +5305,29 @@ run`. Exact totals recorded in
 `.superpowers/sdd/2026-09-13-goal-completion/task-4-fixround-1-report.md`,
 not reproduced here since they belong to a single point in time on a
 branch, not a durable project fact.
+
+## 2026-09-14: Task 6 — a performance baseline, so future slowness has a witness
+
+`docs/PERFORMANCE.md` is new: a reproducible timing of import, open,
+projection, search and export over a synthetic, fixed-seed, 5,000-device /
+20,000-group-address project (`crates/knx-app/tests/perf_baseline.rs`, an
+`#[ignore]`d integration test — `cargo test --workspace` never runs it,
+`cargo test -p knx-app --release --test perf_baseline -- --ignored
+--nocapture` does). No `OriginalData/` corpus file is touched; the project
+is built by pure index arithmetic and pushed through the real
+`export_knxproj` / `import_ets_project` / `knx_store::load_project` /
+`knx_projection::build_project_tree` functions, so the numbers describe
+production code, not a benchmark-only shortcut. The "search" stage has no
+backend equivalent to measure — the real search is client-side
+(`apps/knx-web/src/searchMatch.ts`) — so it is a self-contained,
+documented-as-such substring scan, not a stand-in for the frontend's
+algorithm.
+
+Measured once, uncontended, on `Linux 7.2.3-arch1-3 x86_64` /
+`cargo 1.98.0 (797e8a9bc 2026-08-05)` / 16 cores: export 78 ms, import
+179 ms, open (`load_project`) 945 ms, projection 18 ms, search (41
+queries) 19 ms total. `open` is the slowest stage by a wide margin; nothing
+under `load_project` has been profiled further, and nothing has been
+"optimized" on the strength of one number — see `docs/PERFORMANCE.md` for
+the full numbers, the machine/toolchain they came from, and the exact
+reproduction command.

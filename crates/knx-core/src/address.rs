@@ -178,38 +178,26 @@ impl GroupAddress {
         }
     }
 
-    /// Whether this address's raw value decomposes within `style`'s own
-    /// declared component bounds — main ≤ 31 for `TwoLevel`/`ThreeLevel`,
-    /// sub ≤ 2047 for `TwoLevel`, middle ≤ 7 and sub ≤ 255 for `ThreeLevel`
-    /// — mirroring `parse`'s own range checks rather than inventing new
-    /// ones, so a restyle command validates against the exact same rule a
-    /// hand-typed address would face.
+    /// Whether this address survives a round trip through `style`'s own
+    /// `format`/`parse` pair: render it in `style`, parse the rendering
+    /// back in the same `style`, and check the result is this address
+    /// again. An address "fits" a style exactly when that style's codec
+    /// can represent it and recover it unchanged — the same test a
+    /// hand-typed address effectively faces on entry.
     ///
-    /// This is provably `true` for every possible value: `Free`'s main/
-    /// middle/sub split and `TwoLevel`'s and `ThreeLevel`'s are each an
-    /// exact partition of the same 16 bits (5+11 and 5+3+8, both 16), so
-    /// `main = raw >> 11` can never exceed 31, `sub = raw & 0x07FF` can
-    /// never exceed 2047, and so on — for *any* `u16`. Group address style
-    /// is a rendering choice, never a capacity limit (see the struct doc
-    /// above); restyling a project can never actually reject an address on
-    /// this account. The check still runs on every restyle: it is the
-    /// project's one guard against a future change to this bit layout
-    /// silently making some style narrower than another.
+    /// This is provably `true` for every possible value today: `Free`'s
+    /// main/middle/sub split and `TwoLevel`'s and `ThreeLevel`'s are each
+    /// an exact partition of the same 16 bits (5+11 and 5+3+8, both 16),
+    /// so every raw value decomposes and recomposes losslessly under every
+    /// style. Group address style is a rendering choice, never a capacity
+    /// limit (see the struct doc above); restyling a project can never
+    /// actually reject an address on this account today. Unlike a bounds
+    /// check restating the same partition, though, this one is coupled to
+    /// `format`/`parse` directly: it fails the moment those two disagree
+    /// about the bit split, which is the specific future regression this
+    /// guard exists to catch.
     pub fn fits_style(self, style: GroupAddressStyle) -> bool {
-        match style {
-            GroupAddressStyle::Free => true,
-            GroupAddressStyle::TwoLevel => {
-                let main = self.0 >> 11;
-                let sub = self.0 & 0x07FF;
-                main <= 31 && sub <= 2047
-            }
-            GroupAddressStyle::ThreeLevel => {
-                let main = self.0 >> 11;
-                let middle = (self.0 >> 8) & 0x07;
-                let sub = self.0 & 0xFF;
-                main <= 31 && middle <= 7 && sub <= 255
-            }
-        }
+        GroupAddress::parse(&self.format(style), style) == Ok(self)
     }
 }
 
@@ -315,19 +303,29 @@ mod tests {
     /// of the 65536 possible values fits every style. A "does not fit"
     /// case would mean this partition stopped covering all 16 bits, which
     /// is exactly the regression this test catches.
+    ///
+    /// This test exercises `format`/`parse` directly rather than only
+    /// `fits_style`, so it is the one that actually fails on a bit-layout
+    /// regression: if `format` and `parse` ever disagree about the 5+11 or
+    /// 5+3+8 split, the round trip below stops returning the original
+    /// value, whether or not `fits_style` is also checked in the same
+    /// loop.
     #[test]
-    fn group_address_fits_style_holds_for_every_possible_raw_value() {
+    fn group_address_format_parse_round_trips_for_every_possible_raw_value() {
         for raw in 0..=u16::MAX {
             let ga = GroupAddress::from_raw(raw);
-            assert!(ga.fits_style(GroupAddressStyle::Free), "raw {raw} vs Free");
-            assert!(
-                ga.fits_style(GroupAddressStyle::TwoLevel),
-                "raw {raw} vs TwoLevel"
-            );
-            assert!(
-                ga.fits_style(GroupAddressStyle::ThreeLevel),
-                "raw {raw} vs ThreeLevel"
-            );
+            for style in [
+                GroupAddressStyle::Free,
+                GroupAddressStyle::TwoLevel,
+                GroupAddressStyle::ThreeLevel,
+            ] {
+                assert_eq!(
+                    GroupAddress::parse(&ga.format(style), style),
+                    Ok(ga),
+                    "raw {raw} vs {style:?}"
+                );
+                assert!(ga.fits_style(style), "raw {raw} vs {style:?}");
+            }
         }
     }
 }

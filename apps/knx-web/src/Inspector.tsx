@@ -949,6 +949,26 @@ function GroupRangeInspector(props: {
 // No `RenameArea` command exists — `CreateArea`/`DeleteArea` are the only
 // two, so unlike `GroupRangeInspector` there is nothing to edit here, just
 // a summary and Delete.
+// The project node's own panel (KNOWN_LIMITATIONS.md §84) — display only:
+// no button, dropdown, or route call here restyles the project. Undoing
+// the closed limitation's own "afterwards never seen" complaint needs no
+// more than reading `tree.group_address_style` back onto the screen; a
+// restyle affordance is deliberately out of this cycle's scope (dispatcher
+// ruling: no UI trigger unless trivially additive, and a style change
+// this consequential is not).
+function ProjectInspector(props: { tree: ProjectTree }) {
+  const t = useTranslate();
+  return (
+    <div className="inspector">
+      <h2>{t("inspector.project")}</h2>
+      <dl className="inspector-facts">
+        <dt>{t("inspector.groupAddressStyle")}</dt>
+        <dd className="mono">{props.tree.group_address_style}</dd>
+      </dl>
+    </div>
+  );
+}
+
 function AreaInspector(props: {
   area: AreaNode;
   // Same `installations[0]`-only gate as every other Delete button in this
@@ -1145,6 +1165,10 @@ export default function Inspector(props: {
   onDeleted: (tree: ProjectTree) => void;
 }) {
   const { selection, tree, deviceDetail, onApplied, onDeleted } = props;
+
+  if (selection.kind === "project") {
+    return <ProjectInspector tree={tree} />;
+  }
 
   if (selection.kind === "device") {
     if (!deviceDetail) return null;

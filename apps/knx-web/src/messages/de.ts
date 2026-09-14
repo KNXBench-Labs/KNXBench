@@ -288,6 +288,9 @@ export const messages: Record<MessageKey, string> = {
   "inspector.deviceCount.other": "{count} Geräte",
   "inspector.childPartCount.one": "{count} untergeordneter Gebäudeteil",
   "inspector.childPartCount.other": "{count} untergeordnete Gebäudeteile",
+  "explorer.project": "Projekt",
+  "inspector.project": "Projekt",
+  "inspector.groupAddressStyle": "Gruppenadress-Stil",
 
   "buildingPartKind.building": "Gebäude",
   "buildingPartKind.floor": "Etage",

@@ -715,6 +715,11 @@ export default function ProjectExplorer(
       labels[e.key === "Home" ? 0 : e.key === "End" ? labels.length - 1 : Math.max(0, Math.min(labels.length - 1, index + (e.key === "ArrowDown" ? 1 : -1)))]?.focus();
     }}>
       <ul className="tree-root">
+        <TreeNode
+          label={t("explorer.project")}
+          selected={selection?.kind === "project"}
+          onSelect={() => onSelect({ kind: "project", id: 0 })}
+        />
         {tree.installations.map((inst, idx) => (
           <InstallationItem
             key={inst.id}

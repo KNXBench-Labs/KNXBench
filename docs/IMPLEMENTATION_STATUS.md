@@ -5540,7 +5540,7 @@ A value that is a pure function of bytes the database already holds may be
 re-derived by a migration. A value that was an artefact of the install *event*
 may not be invented, and must keep an honest default. That is why
 `migrate_v4_to_v5`'s four `package` counters and `migrate_v5_to_v6`'s
-`instance_ets_id` default to 0 and empty rather than being reconstructed: what
+`dropped_datapoint_type_count` default to 0 rather than being reconstructed: what
 an `INSERT OR IGNORE` actually changed on a particular afternoon is install
 history, and no blob records it. `linkable` is on the other side of the line —
 it is one attribute of one element of one file whose bytes are in

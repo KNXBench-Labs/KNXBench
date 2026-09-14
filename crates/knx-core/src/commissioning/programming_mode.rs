@@ -15,10 +15,10 @@ use crate::address::IndividualAddress;
 /// Management Client shall always wait until the time-out has elapsed."*
 pub const INDIVIDUAL_ADDRESS_READ_TIMEOUT: Duration = Duration::from_secs(3);
 
-/// `[D]` spec §4.3, RES §4.26: a device may *"autonomously and
-/// automatically disable its Programming Mode"* four minutes after it was
-/// enabled. Optional, so this is a lower bound on how long an observation
-/// stays true and on some devices no bound at all.
+/// `[D]` RES §4.26.1 (design spec §4.3 only collects it): a device may
+/// *"autonomously and automatically disable its Programming Mode"* four
+/// minutes after it was enabled. Optional, so this is a lower bound on how
+/// long an observation stays true and on some devices no bound at all.
 pub const PROGRAMMING_MODE_AUTO_OFF: Duration = Duration::from_secs(4 * 60);
 
 /// The responders to a broadcast `A_IndividualAddress_Read`, collected over

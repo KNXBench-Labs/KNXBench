@@ -25,6 +25,7 @@
 pub mod download;
 pub mod simulator;
 
+use std::convert::Infallible;
 use std::fmt;
 use std::time::Duration;
 
@@ -525,6 +526,32 @@ pub struct ConnectionState {
     pub authorise_requests: u32,
 }
 
+/// Whether a T_ACK on its own completes an exchange.
+///
+/// Only the Verify-Mode-inactive memory write says [`AckIsEnough::Yes`]:
+/// `[D]` AL §3.5.4 gives it no application-layer answer to wait for, and
+/// everything else in these procedures is answered.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AckIsEnough {
+    /// Wait for an answer the matcher accepts; a bare T_ACK is not the end.
+    No,
+    /// The T_ACK is the answer. Stop there.
+    Yes,
+}
+
+/// What one exchange came back with.
+enum Exchanged<R> {
+    /// A frame the matcher accepted.
+    Answer(R),
+    /// The request was acknowledged at the Transport Layer and the caller had
+    /// said that was all it was waiting for.
+    Acknowledged {
+        /// How many times the request went out, for a report and for the
+        /// `max_rep_count` assertions.
+        attempts: u8,
+    },
+}
+
 /// A connection-oriented management session against one device.
 ///
 /// Borrows its transport rather than owning it: a gateway connection is
@@ -759,8 +786,62 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         &mut self,
         service: ApplicationService,
         waiting_for: &'static str,
-        mut matcher: impl FnMut(&ApplicationService) -> Option<R>,
+        matcher: impl FnMut(&ApplicationService) -> Option<R>,
     ) -> Result<R, SessionError> {
+        match self
+            .exchange_inner(service, waiting_for, matcher, AckIsEnough::No)
+            .await?
+        {
+            Exchanged::Answer(answer) => Ok(answer),
+            // Only `AckIsEnough::Yes` asks for this variant, and this call
+            // site does not; a T_ACK with no answer behind it is the same
+            // time-out here as it has always been.
+            Exchanged::Acknowledged { attempts } => Err(SessionError::NoAnswer {
+                waiting_for,
+                each: self.timing.response_timeout,
+                attempts,
+            }),
+        }
+    }
+
+    /// A request whose only acknowledgement is the T_ACK, sent under exactly
+    /// the same TL clause 4 rules as [`Self::exchange`].
+    ///
+    /// `[D]` AL §3.5.4: with Verify Mode inactive a memory write gets no
+    /// application-layer answer, so the Transport Layer acknowledge is the
+    /// whole of the confirmation — which is why it has to be waited for.
+    /// Sending and walking away, as this used to do, meant TL's acknowledge
+    /// time-out and `max_rep_count = 3` never applied to the one path that
+    /// carries a download's data.
+    async fn send_acknowledged(
+        &mut self,
+        service: ApplicationService,
+        waiting_for: &'static str,
+    ) -> Result<(), SessionError> {
+        match self
+            .exchange_inner(
+                service,
+                waiting_for,
+                |_| None::<Infallible>,
+                AckIsEnough::Yes,
+            )
+            .await?
+        {
+            Exchanged::Acknowledged { .. } => Ok(()),
+            // The matcher never returns `Some`, and `Infallible` has no
+            // value to have been returned: the type system says this arm is
+            // uninhabited, so nothing needs to be invented for it.
+            Exchanged::Answer(answer) => match answer {},
+        }
+    }
+
+    async fn exchange_inner<R>(
+        &mut self,
+        service: ApplicationService,
+        waiting_for: &'static str,
+        mut matcher: impl FnMut(&ApplicationService) -> Option<R>,
+        ack_is_enough: AckIsEnough,
+    ) -> Result<Exchanged<R>, SessionError> {
         if self.connection.is_none() {
             return Err(SessionError::NotConnected);
         }
@@ -789,6 +870,9 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                         match frame.transport {
                             Tpci::Ack { seq: acked } if acked == seq => {
                                 acknowledged = true;
+                                if ack_is_enough == AckIsEnough::Yes {
+                                    return Ok(Exchanged::Acknowledged { attempts });
+                                }
                                 continue;
                             }
                             Tpci::Disconnect => {
@@ -811,7 +895,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                                     )
                                     .await;
                                 if let Some(answer) = matcher(&frame.service) {
-                                    return Ok(answer);
+                                    return Ok(Exchanged::Answer(answer));
                                 }
                                 continue;
                             }
@@ -1706,12 +1790,18 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             }
             VerifyMode::Unavailable => {
                 // `[D]` AL §3.5.4: with Verify Mode inactive the device
-                // *"shall not respond"*, so there is nothing to wait for and
-                // the T_ACK is the only acknowledgement there will be.
-                let seq = self.next_seq();
-                self.send(Tpci::NumberedData { seq }, request).await?;
+                // *"shall not respond"*, so the T_ACK is the only
+                // acknowledgement there will be — and therefore the one that
+                // has to be waited for, with TL clause 4's time-out and
+                // `max_rep_count = 3` applying to it like any other request.
+                self.send_acknowledged(request, "a T_ACK for the memory write")
+                    .await?;
                 tokio::time::sleep(self.timing.programming_delay).await;
-                let read = self.read_memory(address, data.len() as u8).await?;
+                let number = u8::try_from(data.len()).expect(
+                    "a chunk is at most SERVICE_MAX_OCTETS = 63 octets \
+                     (AL §3.5.3/§3.5.4), so its length fits one octet",
+                );
+                let read = self.read_memory(address, number).await?;
                 if read != data {
                     return Err(SessionError::ReadBackMismatch {
                         address,

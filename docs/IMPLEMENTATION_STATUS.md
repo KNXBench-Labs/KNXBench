@@ -5787,8 +5787,12 @@ HTTP route, no frontend caller, the same scope discipline slice 1 kept.
 
 Existing databases are not left behind. `migrate_v9_to_v10` creates the three
 tables and then re-parses every stored `knx_master.xml` blob out of
-`source_file` — the third backfill [ADR-0020](adr/0020-migrations-may-rederive-from-stored-bytes.md)
-licenses, after `linkable` (v8) and `parameter_type`'s bounds (v9). The
+`source_file` — the fifth backfill of this shape overall, and the third
+written under [ADR-0020](adr/0020-migrations-may-rederive-from-stored-bytes.md)
+specifically, after `linkable` (v8) and `parameter_type`'s bounds (v9); the
+ADR itself exists to record a decision already made twice before it was
+written, by `backfill_dynamic_nodes` (v2→v3) and
+`backfill_shared_translations` (v3→v4). The
 re-derivation is a function of the bytes and nothing else, which is what
 ADR-0020's rule E2 demands, and one write needed explicit fencing to keep it
 that way: `ingest_master_data`'s unknown-construct collector is file-wide,

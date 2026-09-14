@@ -1672,9 +1672,9 @@ pub fn function_type(
 }
 
 /// One `function_point` row, nested under its owning `FunctionType`. Its own
-/// `RefId` family (`FP-*_DR-*` per §64's earlier survey, though
-/// `master.rs`'s corpus fixtures spell it `<FunctionTypeId>_DR-*`) can carry
-/// `Master`-scope translations too, overlaid the same way.
+/// `RefId` family (`FP-*_DR-*` per §64's earlier survey, and this branch's
+/// fixtures spell it the same way) can carry `Master`-scope translations
+/// too, overlaid the same way.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionPointRow {
     pub id: String,
@@ -3286,7 +3286,7 @@ mod tests {
 </DatapointTypes>
 <FunctionTypes>
   <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified">
-    <FunctionPoint Id="FT-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+    <FunctionPoint Id="FP-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
   </FunctionType>
 </FunctionTypes>
 <SpaceUsages>
@@ -3414,10 +3414,10 @@ mod tests {
         let rows = function_points(&conn, "FT-1", Some("de-DE")).unwrap();
         assert_eq!(rows.len(), 1);
         let point = &rows[0];
-        assert_eq!(point.id, "FT-1_DR-1");
+        assert_eq!(point.id, "FP-1_DR-1");
         assert_eq!(point.datapoint_type.as_deref(), Some("DPST-1-1"));
         assert_eq!(point.role.as_deref(), Some("Control"));
-        // No `Master`-scope translation was planted for `FT-1_DR-1` itself
+        // No `Master`-scope translation was planted for `FP-1_DR-1` itself
         // in this fixture, so the stored text survives untouched.
         assert_eq!(point.text.as_deref(), Some("Switch"));
 

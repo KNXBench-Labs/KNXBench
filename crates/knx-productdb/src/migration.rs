@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 8;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 9;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -281,7 +281,90 @@ fn migrations() -> Vec<Migration> {
         migrate_v5_to_v6,
         migrate_v6_to_v7,
         migrate_v7_to_v8,
+        migrate_v8_to_v9,
     ]
+}
+
+/// v8 -> v9. The second instance of §87's class, not the third — `linkable`
+/// (v8) was the first. Re-derives `parameter_type.min_inclusive`/
+/// `max_inclusive`/`size_in_bit` for the rows a pre-2026-09-14 ingest left
+/// `NULL` on a `Float` or `Text` kind (KNOWN_LIMITATIONS.md §87), reading
+/// `TypeFloat/@minInclusive`/`@maxInclusive` and `TypeText/@SizeInBit` back
+/// out of the `source_file` blob each row's owning `ApplicationProgram`
+/// came from. Same shape as `backfill_linkable` for the same reason
+/// [ADR-0020](../../../docs/adr/0020-migrations-may-rederive-from-stored-bytes.md)
+/// gives: both attributes are pure functions of bytes this database
+/// already holds, with no dependence on install order.
+///
+/// Unlike `linkable`, there is no stale `ingest_unknown` row to retire —
+/// the old parser did not read-and-reject these attributes, it never asked
+/// `insert_parameter_type` for them at all, so nothing was ever reported
+/// about them either way. A backfilled row therefore differs from one a
+/// fresh v9 ingest would produce in one respect this migration does not
+/// close: T18 fix round 1's `report_unknown_attrs` call in
+/// `insert_parameter_type` means a fresh ingest also records `TypeFloat`'s
+/// unmodelled `Encoding`/`Increment`/`DisplayFormat` as `ingest_unknown`
+/// rows, and this backfill does not reach for that — bounds only, matching
+/// what this migration exists to fix. Named, not silently left different:
+/// see KNOWN_LIMITATIONS.md §87's own note on this narrower gap.
+fn migrate_v8_to_v9(conn: &Connection) -> Result<(), ProductDbError> {
+    backfill_parameter_type_bounds(conn)
+}
+
+/// Scoped by the defect, the same way `backfill_linkable` is scoped: a blob
+/// is read only if it is the `source_file` behind an `application_program`
+/// row that in turn owns a `parameter_type` row still missing its bounds —
+/// `Float`'s `min_inclusive`/`max_inclusive` both `NULL` together (the old
+/// parser always wrote that pair together, never one alone) or `Text`'s
+/// `size_in_bit` `NULL`. `parameter_type` carries no `source_sha256` of its
+/// own, so the join through `application_program` is what stands in for
+/// the direct column `backfill_linkable` reads.
+///
+/// Per-blob `SAVEPOINT`, and a failure recorded rather than an aborted
+/// migration, for the reason `backfill_linkable` gives in full: a database
+/// that refuses to open is worse than one with a gap.
+fn backfill_parameter_type_bounds(conn: &Connection) -> Result<(), ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT DISTINCT sf.sha256, sf.source_path, sf.bytes
+         FROM source_file sf
+         JOIN application_program ap ON ap.source_sha256 = sf.sha256
+         JOIN parameter_type pt ON pt.program_id = ap.id
+         WHERE (pt.kind = 'Float' AND pt.min_inclusive IS NULL AND pt.max_inclusive IS NULL)
+            OR (pt.kind = 'Text' AND pt.size_in_bit IS NULL)",
+    )?;
+    let blobs: Vec<(String, String, Vec<u8>)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    drop(stmt);
+
+    for (sha256, source_path, bytes) in blobs {
+        conn.execute_batch("SAVEPOINT parameter_type_bounds_backfill_blob;")?;
+        match crate::parse::program::backfill_parameter_type_bounds(
+            conn,
+            &sha256,
+            &source_path,
+            &bytes,
+        ) {
+            Ok(_) => {
+                conn.execute_batch("RELEASE SAVEPOINT parameter_type_bounds_backfill_blob;")?;
+            }
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT parameter_type_bounds_backfill_blob;
+                     RELEASE SAVEPOINT parameter_type_bounds_backfill_blob;",
+                )?;
+                record_backfill_failure(
+                    conn,
+                    &sha256,
+                    &source_path,
+                    "ParameterTypeBoundsBackfillError",
+                    "backfill_parameter_type_bounds",
+                    &error,
+                )?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// v7 -> v8. The first step in this chain that adds no structure at all: it
@@ -1374,6 +1457,344 @@ mod tests {
             conn.query_row("SELECT count(*) FROM ingest_unknown", [], |r| r
                 .get::<_, i64>(0))
                 .unwrap(),
+            0,
+            "no blob was read, so no blob could fail"
+        );
+    }
+
+    // --- v8 -> v9: parameter_type bounds backfill -------------------------
+
+    const PARAM_PROGRAM_TEMPLATE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-006A">
+      <ApplicationPrograms>
+        <ApplicationProgram Id="M-006A_A-0001-22-26C0-O0079" Name="Presence"
+                             ApplicationNumber="1" ApplicationVersion="22"
+                             MaskVersion="MV-0701">
+          <Static>
+            <ParameterTypes>
+              <ParameterType Id="PT-Float" Name="threshold">
+                <TypeFloat Encoding="DPT 9"{FLOAT} />
+              </ParameterType>
+              <ParameterType Id="PT-Text" Name="label">
+                <TypeText{TEXT} />
+              </ParameterType>
+            </ParameterTypes>
+            <Parameters />
+            <ParameterRefs />
+          </Static>
+        </ApplicationProgram>
+      </ApplicationPrograms>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+
+    const PARAM_PROGRAM_ID: &str = "M-006A_A-0001-22-26C0-O0079";
+
+    fn param_program_xml(float_attrs: &str, text_attrs: &str) -> String {
+        PARAM_PROGRAM_TEMPLATE
+            .replace("{FLOAT}", float_attrs)
+            .replace("{TEXT}", text_attrs)
+    }
+
+    /// Builds the thing v9 exists for: a database at `user_version` 8 (every
+    /// migration through `linkable`'s, none of `parameter_type`'s bounds)
+    /// holding a program blob whose `Float`/`Text` parameter types are
+    /// `NULL` on the columns a pre-2026-09-14 ingest never read — built the
+    /// same way `v6_database_with_a_null_linkable` is: ingest for real with
+    /// the *current* parser (which does read these attributes), then null
+    /// exactly the columns the old parser never wrote, so the fixture cannot
+    /// drift from the table's real shape. Returns the blob's sha256.
+    fn v8_database_with_null_parameter_type_bounds(path: &Path, xml: &str) -> String {
+        let bytes = xml.as_bytes();
+        let sha = crate::sha256_hex(bytes);
+        let conn = Connection::open(path).unwrap();
+        for migration in &migrations()[0..8] {
+            migration(&conn).unwrap();
+        }
+        conn.execute(
+            "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![sha, "M-006A/A.xml", "M-006A", bytes.len() as i64, bytes],
+        )
+        .unwrap();
+        crate::parse::program::ingest_program(&conn, &sha, "M-006A/A.xml", bytes).unwrap();
+        conn.execute(
+            "UPDATE parameter_type SET min_inclusive = NULL, max_inclusive = NULL
+             WHERE kind = 'Float'",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "UPDATE parameter_type SET size_in_bit = NULL WHERE kind = 'Text'",
+            [],
+        )
+        .unwrap();
+        conn.pragma_update(None, "user_version", 8i64).unwrap();
+        sha
+    }
+
+    fn stored_float_bounds(conn: &Connection) -> (Option<String>, Option<String>) {
+        conn.query_row(
+            "SELECT min_inclusive, max_inclusive FROM parameter_type
+             WHERE program_id = ?1 AND id = 'PT-Float'",
+            [PARAM_PROGRAM_ID],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap()
+    }
+
+    fn stored_text_size(conn: &Connection) -> Option<i64> {
+        conn.query_row(
+            "SELECT size_in_bit FROM parameter_type
+             WHERE program_id = ?1 AND id = 'PT-Text'",
+            [PARAM_PROGRAM_ID],
+            |r| r.get(0),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn a_v8_database_backfills_float_bounds_and_text_size_from_its_blob() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        v8_database_with_null_parameter_type_bounds(
+            &path,
+            &param_program_xml(
+                " minInclusive=\"-100\" maxInclusive=\"200\"",
+                " SizeInBit=\"240\"",
+            ),
+        );
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            CURRENT_PRODUCTDB_VERSION
+        );
+        assert_eq!(
+            stored_float_bounds(&conn),
+            (Some("-100".to_string()), Some("200".to_string())),
+            "bounds re-read from the blob alone"
+        );
+        assert_eq!(
+            stored_text_size(&conn),
+            Some(240),
+            "size re-read from the blob alone"
+        );
+    }
+
+    #[test]
+    fn a_program_whose_file_never_stated_bounds_stays_null() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        v8_database_with_null_parameter_type_bounds(&path, &param_program_xml("", ""));
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            stored_float_bounds(&conn),
+            (None, None),
+            "NULL means the file did not state it, and the backfill must not \
+             invent a value it never read"
+        );
+        assert_eq!(stored_text_size(&conn), None);
+    }
+
+    #[test]
+    fn a_bound_an_ingest_already_determined_is_not_overwritten() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        v8_database_with_null_parameter_type_bounds(
+            &path,
+            &param_program_xml(
+                " minInclusive=\"-100\" maxInclusive=\"200\"",
+                " SizeInBit=\"240\"",
+            ),
+        );
+        {
+            // The blob says -100/200; the row says 0/50. Only an ingest can
+            // have put a non-NULL value there, and ADR-0020 rule 2 says a
+            // migration does not argue with it.
+            let conn = Connection::open(&path).unwrap();
+            conn.execute(
+                "UPDATE parameter_type SET min_inclusive = '0', max_inclusive = '50'
+                 WHERE kind = 'Float'",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "UPDATE parameter_type SET size_in_bit = 64 WHERE kind = 'Text'",
+                [],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            stored_float_bounds(&conn),
+            (Some("0".to_string()), Some("50".to_string()))
+        );
+        assert_eq!(stored_text_size(&conn), Some(64));
+    }
+
+    #[test]
+    fn a_parameter_type_bounds_blob_does_not_backfill_a_row_from_a_different_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let sha = v8_database_with_null_parameter_type_bounds(
+            &path,
+            &param_program_xml(
+                " minInclusive=\"-100\" maxInclusive=\"200\"",
+                " SizeInBit=\"240\"",
+            ),
+        );
+        {
+            // The id-conflict shape of ADR-0011: this program id's row was
+            // won by some *other* file, so this blob must not write into
+            // its parameter_type rows — even though the blob is still read,
+            // because a second program (which it did win) is still NULL
+            // and pulls it into the selection.
+            let conn = Connection::open(&path).unwrap();
+            conn.execute(
+                "INSERT INTO application_program (id, manufacturer_id, source_sha256)
+                 VALUES ('M-006A_A-OTHER', 'M-006A', ?1)",
+                [&sha],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO parameter_type (program_id, id, name, kind)
+                 VALUES ('M-006A_A-OTHER', 'PT-Float', 'other', 'Float')",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "UPDATE application_program SET source_sha256 = 'deadbeef' WHERE id = ?1",
+                [PARAM_PROGRAM_ID],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            stored_float_bounds(&conn),
+            (None, None),
+            "the winning row belongs to another file's bytes"
+        );
+        assert_eq!(stored_text_size(&conn), None);
+    }
+
+    #[test]
+    fn a_v8_blob_that_fails_to_parse_records_itself_and_does_not_stop_the_migration() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let xml = param_program_xml(
+            " minInclusive=\"-100\" maxInclusive=\"200\"",
+            " SizeInBit=\"240\"",
+        );
+        v8_database_with_null_parameter_type_bounds(&path, &xml);
+        // Truncated past the last end tag, same shape the linkable
+        // backfill's own parse-failure test uses.
+        let bad = &xml.as_bytes()[..xml.len() - 20];
+        let bad_sha = crate::sha256_hex(bad);
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![bad_sha, "M-BAD/A.xml", "M-BAD", bad.len() as i64, bad],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO application_program (id, manufacturer_id, source_sha256)
+                 VALUES ('M-BAD_A-1', 'M-BAD', ?1)",
+                [&bad_sha],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO parameter_type (program_id, id, name, kind)
+                 VALUES ('M-BAD_A-1', 'PT-Float', 'bad', 'Float')",
+                [],
+            )
+            .unwrap();
+            conn.pragma_update(None, "user_version", 8i64).unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            CURRENT_PRODUCTDB_VERSION,
+            "one blob's parse failure must not abort the migration"
+        );
+        assert_eq!(
+            stored_float_bounds(&conn),
+            (Some("-100".to_string()), Some("200".to_string())),
+            "the good blob must still be backfilled"
+        );
+        assert_eq!(stored_text_size(&conn), Some(240));
+        assert_eq!(
+            conn.query_row(
+                "SELECT count(*) FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND kind = 'ParameterTypeBoundsBackfillError'",
+                [&bad_sha],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            1
+        );
+    }
+
+    #[test]
+    fn a_database_with_no_parameter_type_bounds_to_backfill_reads_no_blob_at_all() {
+        // The v9 step is scoped by the bounds columns being NULL, so a
+        // database whose `parameter_type` rows all already have a value —
+        // every one ingested after 2026-09-14 — must not be dragged through
+        // its own blobs. Proven by giving it a blob that cannot be parsed
+        // at all: if v9 read it, the migration would record a
+        // `ParameterTypeBoundsBackfillError`.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let xml = param_program_xml(
+            " minInclusive=\"-100\" maxInclusive=\"200\"",
+            " SizeInBit=\"240\"",
+        );
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..8] {
+                migration(&conn).unwrap();
+            }
+            let bytes = xml.as_bytes();
+            let sha = crate::sha256_hex(bytes);
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![sha, "M-006A/A.xml", "M-006A", bytes.len() as i64, bytes],
+            )
+            .unwrap();
+            crate::parse::program::ingest_program(&conn, &sha, "M-006A/A.xml", bytes).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES ('feedface', 'M-BAD/A.xml', 'M-BAD', 7, ?1)",
+                [b"<KNX><".as_slice()],
+            )
+            .unwrap();
+            conn.pragma_update(None, "user_version", 8i64).unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            stored_float_bounds(&conn),
+            (Some("-100".to_string()), Some("200".to_string()))
+        );
+        assert_eq!(stored_text_size(&conn), Some(240));
+        assert_eq!(
+            conn.query_row(
+                "SELECT count(*) FROM ingest_unknown WHERE kind = 'ParameterTypeBoundsBackfillError'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
             0,
             "no blob was read, so no blob could fail"
         );

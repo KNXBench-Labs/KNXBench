@@ -39,6 +39,7 @@ struct ElementSpec {
     test_attr: Option<&'static str>,
     default_attr: Option<&'static str>,
     text_attr: Option<&'static str>,
+    value_attr: Option<&'static str>,
 }
 
 const UNMODELLED: ElementSpec = ElementSpec {
@@ -48,6 +49,7 @@ const UNMODELLED: ElementSpec = ElementSpec {
     test_attr: None,
     default_attr: None,
     text_attr: None,
+    value_attr: None,
 };
 
 /// Design D4's table. `choose`'s `@ParamRefId`, `Channel`/`ParameterBlock`/
@@ -94,6 +96,23 @@ fn spec_for(kind: &str) -> ElementSpec {
             ref_attrs: &["RefId"],
             ..UNMODELLED
         },
+        // Design D47 (goal-completion task 12): a `Module`'s argument
+        // bindings. `@RefId` names the `ModuleDef/Arguments/Argument` being
+        // bound, `@Value` is what it is bound to, and `@Id` — present on
+        // `TextArg` in the researched corpus, absent on `NumericArg` — is
+        // the binding element's own identity. Both spellings were reaching
+        // `UNMODELLED` before v10, which left `@Value` in `extra`, a store
+        // documented as not re-parseable. `Assign`'s own `@Value` keeps
+        // landing in `extra`: `Assign` is still inert in the evaluator, so
+        // promoting its value to a column would claim an interpretation
+        // that does not exist.
+        "NumericArg" | "TextArg" => ElementSpec {
+            known: &["Id", "RefId", "Value"],
+            id_attr: Some("Id"),
+            ref_attrs: &["RefId"],
+            value_attr: Some("Value"),
+            ..UNMODELLED
+        },
         "Assign" => ElementSpec {
             known: &["TargetParamRefRef", "Value", "SourceParamRefRef"],
             ..UNMODELLED
@@ -138,6 +157,10 @@ pub fn parse_dynamic_trees(
     // included: one frame per currently-open ancestor.
     let mut stack: Vec<Frame> = Vec::new();
     let mut next_node_id: i64 = 0;
+    // Document position of the next `ModuleDef/Arguments/Argument`, reset
+    // at every `ModuleDef` the same way `next_node_id` resets at every
+    // `Dynamic` root.
+    let mut next_argument_position: i64 = 0;
 
     loop {
         buf.clear();
@@ -163,6 +186,7 @@ pub fn parse_dynamic_trees(
                     &mut skip_program,
                     &mut stack,
                     &mut next_node_id,
+                    &mut next_argument_position,
                     &mut unknown,
                 )?;
             }
@@ -180,6 +204,7 @@ pub fn parse_dynamic_trees(
                     &mut skip_program,
                     &mut stack,
                     &mut next_node_id,
+                    &mut next_argument_position,
                     &mut unknown,
                 )?;
             }
@@ -216,6 +241,7 @@ fn handle_start_or_empty(
     skip_program: &mut bool,
     stack: &mut Vec<Frame>,
     next_node_id: &mut i64,
+    next_argument_position: &mut i64,
     unknown: &mut UnknownCollector,
 ) -> Result<(), ProductDbError> {
     match name {
@@ -226,6 +252,7 @@ fn handle_start_or_empty(
         }
         "ModuleDef" => {
             *module_def_id = a.get("Id").unwrap_or_default().to_string();
+            *next_argument_position = 0;
             if !is_start {
                 // `quick-xml` never emits an `Event::End` for a self-closing
                 // element, so a `<ModuleDef .../>` would otherwise leak its
@@ -237,6 +264,28 @@ fn handle_start_or_empty(
                 // come.
                 module_def_id.clear();
             }
+        }
+        // Design D47: `ModuleDef/Arguments/Argument` is the declaration a
+        // `Module`'s `NumericArg`/`TextArg` binding points at, and the only
+        // place an argument's `@Name` is written down. It sits outside
+        // `Dynamic`, so it gets no `dynamic_node` row and no node id — it
+        // is not part of any tree — but the evaluator cannot resolve a
+        // `{{Name}}` placeholder without it, so it gets a table of its own.
+        // The `stack.is_empty()` guard keeps this to the real declaration
+        // site: an element that happens to be called `Argument` inside a
+        // `Dynamic` tree (none in the researched corpus) stays a plain
+        // `dynamic_node` row.
+        "Argument" if !module_def_id.is_empty() && stack.is_empty() => {
+            if !*skip_program {
+                insert_module_def_argument(
+                    conn,
+                    program_id,
+                    module_def_id,
+                    *next_argument_position,
+                    a,
+                )?;
+            }
+            *next_argument_position += 1;
         }
         _ => {
             handle_dynamic_element(
@@ -395,6 +444,7 @@ fn insert_node(
     let ref_id = spec.ref_attrs.iter().find_map(|n| a.get(n));
     let test = spec.test_attr.and_then(|n| a.get(n));
     let text = spec.text_attr.and_then(|n| a.get(n));
+    let value = spec.value_attr.and_then(|n| a.get(n));
 
     let mut captured: Vec<&str> = Vec::new();
     captured.extend(spec.id_attr);
@@ -404,6 +454,7 @@ fn insert_node(
         captured.extend(spec.default_attr);
     }
     captured.extend(spec.text_attr);
+    captured.extend(spec.value_attr);
     // `extra` is a human-readable audit trail, not a re-parseable encoding:
     // "name=value" pairs, sorted, newline-joined (design D2), which cannot
     // be split unambiguously back apart when a value itself contains `=` or
@@ -424,8 +475,8 @@ fn insert_node(
     conn.execute(
         "INSERT INTO dynamic_node
          (program_id, module_def_id, node_id, parent_id, position, kind,
-          element_id, ref_id, test, is_default, text, extra)
-         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)",
+          element_id, ref_id, test, is_default, text, value, extra)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)",
         params![
             program_id,
             module_def_id,
@@ -438,6 +489,61 @@ fn insert_node(
             test,
             is_default,
             text,
+            value,
+            extra,
+        ],
+    )?;
+    Ok(())
+}
+
+/// Stores one `ModuleDef/Arguments/Argument` declaration (design D47).
+///
+/// `@Type` is kept verbatim rather than normalized: the published schema's
+/// `ModuleDefArgType_t` (`Project Schema23 v01.00.00` §1.1.2.38, **[D]**)
+/// has three facets — `Numeric`, `Text`, `AllocatorRef` — and the evaluator
+/// interprets exactly two of them. Storing the spelling that was actually
+/// written is what lets the evaluator report the third as unsupported
+/// instead of guessing at it. An absent `@Type` is stored as `NULL` and
+/// read as numeric, which is how all 24 numeric declarations in the
+/// installed corpus are written (**[V]**, goal-completion task 12); no
+/// declaration anywhere in `OriginalData/` spells `Numeric` out.
+///
+/// Nothing is reported to `unknown` from here. The `Static` pass over the
+/// same bytes already reports `Arguments`/`Argument` and every attribute on
+/// them, and still should: this function models the name-to-value binding,
+/// not the memory-allocation facet (`@Allocates`, `Memory/@BaseOffset`,
+/// `ComObject/@BaseNumber`), which stays unmodelled and therefore stays
+/// reported.
+fn insert_module_def_argument(
+    conn: &Connection,
+    program_id: &str,
+    module_def_id: &str,
+    position: i64,
+    a: &Attrs,
+) -> Result<(), ProductDbError> {
+    const CAPTURED: &[&str] = &["Id", "Name", "Type", "Allocates"];
+    let extra: Vec<String> = a
+        .names()
+        .filter(|n| !CAPTURED.contains(n))
+        .map(|n| format!("{n}={}", a.get(n).unwrap_or_default()))
+        .collect();
+    let extra = if extra.is_empty() {
+        None
+    } else {
+        Some(extra.join("\n"))
+    };
+    conn.execute(
+        "INSERT OR IGNORE INTO module_def_argument
+         (program_id, module_def_id, id, name, arg_type, allocates, position, extra)
+         VALUES (?1,?2,?3,?4,?5,?6,?7,?8)",
+        params![
+            program_id,
+            module_def_id,
+            a.get("Id").unwrap_or_default(),
+            a.get("Name"),
+            a.get("Type"),
+            a.get("Allocates").and_then(|v| v.parse::<i64>().ok()),
+            position,
             extra,
         ],
     )?;

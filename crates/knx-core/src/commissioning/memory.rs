@@ -47,10 +47,10 @@ pub const APDU_ESCAPE_CODE: u16 = 255;
 
 /// The first address CP §3.5.2 routes to the user-memory service.
 ///
-/// Not the first address `A_Memory_Write` cannot reach: `[D]` AL §3.5.3 says
-/// *"The parameter memory_address shall specify the 16 bit start address"*, so
-/// `FFFFh` is perfectly reachable by that service. The clause draws the line
-/// here anyway. `[D]` CP §3.5.2: *"if BaseAddress
+/// Not the first address `A_Memory_Write` cannot reach: `[D]` AL §3.5.4, the
+/// clause that defines that very service, says *"The parameter memory_address
+/// shall specify the 16 bit start address"*, so `FFFFh` is perfectly reachable
+/// by it. The procedure draws the line here anyway. `[D]` CP §3.5.2: *"if BaseAddress
 /// plus allocated memory is lower than FFFFh then MaC: MemoryWrite(…); if …
 /// higher than FFFFh then MaC: UserMemoryWrite(…)"*.
 pub const MEMORY_SERVICE_LIMIT: u32 = 0xFFFF;

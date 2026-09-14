@@ -305,14 +305,22 @@ fn migrations() -> Vec<Migration> {
 /// `ingest_master_data` whole, rather than a second, narrower parser, is
 /// safe here.
 fn migrate_v8_to_v9(conn: &Connection) -> Result<(), ProductDbError> {
+    // `IF NOT EXISTS` throughout: this migration, uniquely among the ones in
+    // this file, is exercised by tests that roll a fully-migrated database's
+    // `user_version` pragma back below 9 without dropping the tables a first
+    // pass through this same file already created — an unguarded `CREATE
+    // TABLE` would then fail on the physically-still-there table. Every
+    // other structural migration here (`migrate_v2_to_v3`'s `dynamic_node`,
+    // `migrate_v1_to_v2`'s `package`) never had to survive that, because no
+    // later migration reintroduced their tables' names; this one does.
     conn.execute_batch(
-        "CREATE TABLE function_type (
+        "CREATE TABLE IF NOT EXISTS function_type (
              id     TEXT PRIMARY KEY,
              number INTEGER,
              text   TEXT,
              status TEXT
          ) STRICT;
-         CREATE TABLE function_point (
+         CREATE TABLE IF NOT EXISTS function_point (
              id               TEXT PRIMARY KEY,
              function_type_id TEXT NOT NULL,
              datapoint_type   TEXT,
@@ -320,8 +328,8 @@ fn migrate_v8_to_v9(conn: &Connection) -> Result<(), ProductDbError> {
              characteristics  TEXT,
              text             TEXT
          ) STRICT;
-         CREATE INDEX function_point_function_type ON function_point (function_type_id);
-         CREATE TABLE space_usage (
+         CREATE INDEX IF NOT EXISTS function_point_function_type ON function_point (function_type_id);
+         CREATE TABLE IF NOT EXISTS space_usage (
              id     TEXT PRIMARY KEY,
              number INTEGER,
              text   TEXT

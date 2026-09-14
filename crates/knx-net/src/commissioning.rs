@@ -1429,18 +1429,22 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// The comparison is skipped for `PID_LOAD_STATE_CONTROL` alone, and
     /// that is not an exception to the project's read-back rule: the
     /// property is `PDT_CONTROL`, so a read of it answers the resulting
-    /// *state* and never the ten-octet event that was written (spec §5.1).
-    /// Comparing them would fail every single time. The event's verification
-    /// is [`Self::write_load_event`]'s state check instead.
+    /// *state* and never the ten-octet event that was written (design spec
+    /// §5.1). Comparing them would fail every single time. The event's
+    /// verification is [`Self::write_load_event`]'s state check instead.
+    ///
+    /// `scope` is what the **caller** is doing, and it is checked against
+    /// the session's authorisation. Reading the scope out of that
+    /// authorisation instead — which this used to do — made the check pass
+    /// by construction and left `WriteScope` meaning nothing for property
+    /// writes.
     pub async fn write_property(
         &mut self,
         object_index: ObjectIndex,
         property_id: u8,
         data: Vec<u8>,
+        scope: WriteScope,
     ) -> Result<Vec<u8>, SessionError> {
-        let scope = self.session_scope().ok_or(SessionError::NoAuthorisation {
-            scope: WriteScope::Download,
-        })?;
         let comparison = if property_id == PID_LOAD_STATE_CONTROL {
             Comparison::ResultingStateInstead
         } else {
@@ -1933,7 +1937,12 @@ mod tests {
         let limit = write_limit(ApduLengthSource::Absent);
         let attempts: Vec<SessionError> = vec![
             session
-                .write_property(ObjectIndex::DEVICE, PID_DEVICE_CONTROL, vec![0x04])
+                .write_property(
+                    ObjectIndex::DEVICE,
+                    PID_DEVICE_CONTROL,
+                    vec![0x04],
+                    WriteScope::Download,
+                )
                 .await
                 .expect_err("a property write needs an authorisation"),
             session
@@ -2383,6 +2392,38 @@ mod tests {
                 },
             ],
             "a write with no Verify Mode must be followed by a read of the same octets"
+        );
+    }
+
+    /// §2.3: a property write is checked against the scope the **caller**
+    /// names, so an authorisation for one operation does not quietly cover
+    /// another, and the refusal says which scope was attempted.
+    #[tokio::test]
+    async fn a_property_write_is_refused_when_the_scope_is_not_the_one_authorised() {
+        let device = SimulatedDevice::new();
+        let mut session = writer(&device, WriteScope::Download);
+        session.connect().await.expect("connect");
+        // `connect()` has already written Verify Mode, so the interesting
+        // question is whether anything arrives *after* this point.
+        let before = device.seen().len();
+
+        let error = session
+            .write_property(
+                ObjectIndex::DEVICE,
+                PID_DEVICE_CONTROL,
+                vec![0x00],
+                WriteScope::Restart,
+            )
+            .await
+            .expect_err("a download authorisation does not cover a restart");
+        assert!(
+            error.to_string().contains("restart"),
+            "the refusal must name the scope attempted, not the one held: {error}"
+        );
+        assert_eq!(
+            device.seen().len(),
+            before,
+            "the device must have seen nothing at all"
         );
     }
 

@@ -14,7 +14,7 @@ const api = vi.hoisted(() => ({ deviceParameters: vi.fn().mockResolvedValue({ pr
 vi.mock("./api", () => ({ ...api, errorMessage: String }));
 import { DeviceWorkspace } from "./Inspector";
 
-const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, installations: [] };
+const tree: ProjectTree = { schema_version: 11, errors: 0, warnings: 0, can_undo: false, can_redo: false, group_address_style: "ThreeLevel", installations: [] };
 
 const NO_REFERENCE: DeviceProductNode = { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" };
 

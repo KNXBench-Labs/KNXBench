@@ -177,6 +177,40 @@ impl GroupAddress {
             }
         }
     }
+
+    /// Whether this address's raw value decomposes within `style`'s own
+    /// declared component bounds — main ≤ 31 for `TwoLevel`/`ThreeLevel`,
+    /// sub ≤ 2047 for `TwoLevel`, middle ≤ 7 and sub ≤ 255 for `ThreeLevel`
+    /// — mirroring `parse`'s own range checks rather than inventing new
+    /// ones, so a restyle command validates against the exact same rule a
+    /// hand-typed address would face.
+    ///
+    /// This is provably `true` for every possible value: `Free`'s main/
+    /// middle/sub split and `TwoLevel`'s and `ThreeLevel`'s are each an
+    /// exact partition of the same 16 bits (5+11 and 5+3+8, both 16), so
+    /// `main = raw >> 11` can never exceed 31, `sub = raw & 0x07FF` can
+    /// never exceed 2047, and so on — for *any* `u16`. Group address style
+    /// is a rendering choice, never a capacity limit (see the struct doc
+    /// above); restyling a project can never actually reject an address on
+    /// this account. The check still runs on every restyle: it is the
+    /// project's one guard against a future change to this bit layout
+    /// silently making some style narrower than another.
+    pub fn fits_style(self, style: GroupAddressStyle) -> bool {
+        match style {
+            GroupAddressStyle::Free => true,
+            GroupAddressStyle::TwoLevel => {
+                let main = self.0 >> 11;
+                let sub = self.0 & 0x07FF;
+                main <= 31 && sub <= 2047
+            }
+            GroupAddressStyle::ThreeLevel => {
+                let main = self.0 >> 11;
+                let middle = (self.0 >> 8) & 0x07;
+                let sub = self.0 & 0xFF;
+                main <= 31 && middle <= 7 && sub <= 255
+            }
+        }
+    }
 }
 
 /// A typed address failed to parse or fell outside its valid range.
@@ -250,5 +284,50 @@ mod tests {
     #[test]
     fn group_address_rejects_out_of_range_middle() {
         assert!(GroupAddress::parse("1/8/1", GroupAddressStyle::ThreeLevel).is_err());
+    }
+
+    /// The literal boundary `fits_style` is asked to straddle: the largest
+    /// possible raw value (`u16::MAX`, main=31/middle=7/sub=255 under
+    /// `ThreeLevel`, main=31/sub=2047 under `TwoLevel`) sits exactly on
+    /// every style's own component maximum, and still fits.
+    #[test]
+    fn group_address_largest_possible_value_fits_every_style() {
+        let largest = GroupAddress::from_raw(u16::MAX);
+        assert!(largest.fits_style(GroupAddressStyle::Free));
+        assert!(largest.fits_style(GroupAddressStyle::TwoLevel));
+        assert!(largest.fits_style(GroupAddressStyle::ThreeLevel));
+    }
+
+    #[test]
+    fn group_address_smallest_possible_value_fits_every_style() {
+        let smallest = GroupAddress::from_raw(0);
+        assert!(smallest.fits_style(GroupAddressStyle::Free));
+        assert!(smallest.fits_style(GroupAddressStyle::TwoLevel));
+        assert!(smallest.fits_style(GroupAddressStyle::ThreeLevel));
+    }
+
+    /// There is no "smallest raw value that does not fit" test alongside
+    /// the "largest that fits" ones above, and this is why: `TwoLevel`'s
+    /// 5+11 bit split and `ThreeLevel`'s 5+3+8 bit split both partition
+    /// the full 16 bits of a `u16` with no remainder, so `main = raw >> 11`
+    /// can never exceed 31 for *any* raw value — main only reaches 32 at
+    /// raw 65536, one past `u16::MAX`. Exhaustive, not sampled: every one
+    /// of the 65536 possible values fits every style. A "does not fit"
+    /// case would mean this partition stopped covering all 16 bits, which
+    /// is exactly the regression this test catches.
+    #[test]
+    fn group_address_fits_style_holds_for_every_possible_raw_value() {
+        for raw in 0..=u16::MAX {
+            let ga = GroupAddress::from_raw(raw);
+            assert!(ga.fits_style(GroupAddressStyle::Free), "raw {raw} vs Free");
+            assert!(
+                ga.fits_style(GroupAddressStyle::TwoLevel),
+                "raw {raw} vs TwoLevel"
+            );
+            assert!(
+                ga.fits_style(GroupAddressStyle::ThreeLevel),
+                "raw {raw} vs ThreeLevel"
+            );
+        }
     }
 }

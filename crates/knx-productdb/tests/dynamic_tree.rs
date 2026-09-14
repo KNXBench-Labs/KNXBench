@@ -14,7 +14,8 @@ use zip::write::SimpleFileOptions;
 
 use knx_productdb::dynamic::{
     evaluate, load_program_trees, ActiveRef, ControlKind, Diagnostic, DynamicNode, DynamicTree,
-    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, ValueMap, MAX_MODULE_NESTING_DEPTH,
+    ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test, ValueMap, MAX_MODULE_EXPANSIONS,
+    MAX_MODULE_NESTING_DEPTH,
 };
 
 fn db() -> (tempfile::TempDir, Connection) {
@@ -1291,6 +1292,97 @@ fn nesting_one_level_beyond_the_bound_is_refused() {
         }
         other => panic!("expected ModuleNestingTooDeep, got {other:?}"),
     }
+}
+
+/// Builds `module_levels` levels of `ModuleDef`s named `F-1..F-module_levels`,
+/// each holding `fanout` sibling `Module`s — no cycle, every chain the same
+/// modest depth — all pointing at the *same* next-level `ModuleDef`, plus
+/// one final leaf `ModuleDef` (`F-{module_levels + 1}`) holding a single
+/// `ParameterRefRef`. Expanding the program's own top-level `Module`
+/// (naming `F-1`) therefore fans out combinatorially: `fanout` expansions
+/// at level 1, `fanout^2` at level 2, and so on — the shape
+/// `MAX_MODULE_EXPANSIONS`'s own doc comment measures, no chain ever
+/// anywhere near `MAX_MODULE_NESTING_DEPTH` deep.
+fn build_fanout_chain(
+    module_levels: usize,
+    fanout: usize,
+) -> (DynamicTree, HashMap<String, DynamicTree>) {
+    assert!(module_levels >= 1);
+    let program = DynamicTree::from_nodes(vec![DynamicNode {
+        element_id: Some("M-ROOT".into()),
+        ref_id: Some("F-1".into()),
+        ..nd(0, None, "Module")
+    }]);
+    let mut modules = HashMap::new();
+    for level in 1..=module_levels {
+        let this_id = format!("F-{level}");
+        let next_id = format!("F-{}", level + 1);
+        let nodes: Vec<DynamicNode> = (0..fanout)
+            .map(|i| DynamicNode {
+                element_id: Some(format!("M-{level}-{i}")),
+                ref_id: Some(next_id.clone()),
+                ..nd(i as i64, None, "Module")
+            })
+            .collect();
+        modules.insert(this_id, DynamicTree::from_nodes(nodes));
+    }
+    let leaf_id = format!("F-{}", module_levels + 1);
+    modules.insert(
+        leaf_id,
+        DynamicTree::from_nodes(vec![DynamicNode {
+            ref_id: Some("LEAF".into()),
+            ..nd(0, None, "ParameterRefRef")
+        }]),
+    );
+    (program, modules)
+}
+
+/// Blocking finding 1 (goal-completion task 11, fix round 1): the depth
+/// bound alone does not stop this — no chain here ever gets anywhere near
+/// `MAX_MODULE_NESTING_DEPTH` deep, yet the fan-out multiplies expansions
+/// combinatorially with nothing to dedup them (every nesting chain is its
+/// own `ScopeKey` by construction). `MAX_MODULE_EXPANSIONS` must trip well
+/// before the full `fanout^MODULE_LEVELS`-leaf tree is walked, and
+/// `evaluate` must return promptly with
+/// `Diagnostic::ModuleExpansionBudgetExhausted` instead of grinding
+/// through it — the probe this reproduces (measured separately, at
+/// `depth=12, fanout=4`, unbounded) took 11.5s and 8,170 MiB peak RSS from
+/// a 44-node input; this test must complete in a small fraction of that.
+#[test]
+fn a_wide_non_cyclic_fan_out_trips_the_expansion_budget_before_full_expansion() {
+    const FANOUT: usize = 4;
+    const MODULE_LEVELS: usize = 9; // matches MAX_MODULE_EXPANSIONS's own doc comment
+    let (program, modules) = build_fanout_chain(MODULE_LEVELS, FANOUT);
+    let trees = ProgramTrees::from_parts(program, modules);
+
+    let start = std::time::Instant::now();
+    let activation = evaluate(&trees, &values(&[]).into());
+    let elapsed = start.elapsed();
+    assert!(
+        elapsed < std::time::Duration::from_secs(5),
+        "evaluate must refuse the excess and return, not grind through it: took {elapsed:?}"
+    );
+
+    assert!(
+        !activation.diagnostics.is_empty(),
+        "the budget must be tripped at least once"
+    );
+    for scoped in &activation.diagnostics {
+        match &scoped.diagnostic {
+            Diagnostic::ModuleExpansionBudgetExhausted { budget, .. } => {
+                assert_eq!(*budget, MAX_MODULE_EXPANSIONS);
+            }
+            other => panic!("expected only ModuleExpansionBudgetExhausted, got {other:?}"),
+        }
+    }
+
+    let full_combinatorial_leaf_count = FANOUT.pow(MODULE_LEVELS as u32);
+    assert!(
+        activation.parameter_refs.len() < full_combinatorial_leaf_count,
+        "evaluate must stop well short of the full {full_combinatorial_leaf_count}-leaf \
+         fan-out, got {} leaves",
+        activation.parameter_refs.len()
+    );
 }
 
 /// D14: a diagnostic raised *inside* a module's expansion (here:

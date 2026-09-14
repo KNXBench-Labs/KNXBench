@@ -1,7 +1,18 @@
-//! `knx_master.xml`: `Manufacturers` (id → display name) and
-//! `DatapointTypes` (main/sub numbers → id), ingested minimally per spec §4
-//! — the file itself stays in the project's opaque store
-//! (`OpaqueKind::MasterData`), so the export path is unchanged.
+//! `knx_master.xml`: `Manufacturers` (id → display name), `DatapointTypes`
+//! (main/sub numbers → id), `FunctionTypes`/`FunctionPoint` (the function-type
+//! catalogue, each type's per-role datapoints nested under it) and
+//! `SpaceUsages` (the standard list of room/space purposes), ingested
+//! minimally — the file itself stays in the project's opaque store
+//! (`OpaqueKind::MasterData`), so the export path is unchanged. Every other
+//! `MasterData` child (`DatapointRoles`, `InterfaceObjectTypes`,
+//! `InterfaceObjectProperties`, `PropertyDataTypes`, `MediumTypes`,
+//! `MaskVersions`, `FunctionalBlocks`, `ProductLanguages`) stays unparsed —
+//! [V], `knx_master.xml`'s own top-level section list, corpus-wide — and,
+//! like everything else this function does not recognize, falls through to
+//! `_ => {}` unreported rather than into `unknown` (KNOWN_LIMITATIONS.md
+//! §64 tracks only the two families that actually carry a `Master`-scope
+//! translation; the rest is a pre-existing, wider gap this slice does not
+//! close).
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -16,6 +27,17 @@ use crate::ProductDbError;
 const MANUFACTURER_ATTRS: &[&str] = &["Id", "Name"];
 const DATAPOINT_TYPE_ATTRS: &[&str] = &["Id", "Number", "Name", "Text"];
 const DATAPOINT_SUBTYPE_ATTRS: &[&str] = &["Id", "Number", "Name", "Text"];
+/// [V], corpus-wide (`Dummy_Applikation_Secure`, `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a`
+/// — the two sampled packages whose `knx_master.xml` carries this section at
+/// all). No published schema for `knx_master.xml` is available to this
+/// project (it is ETS's own, not part of the KNX Standard corpus), so this
+/// allowlist is corpus-observed, the same convention `DATAPOINT_TYPE_ATTRS`
+/// already uses.
+const FUNCTION_TYPE_ATTRS: &[&str] = &["Id", "Number", "Text", "Status"];
+/// [V], same two packages as `FUNCTION_TYPE_ATTRS`.
+const FUNCTION_POINT_ATTRS: &[&str] = &["Id", "Text", "DatapointType", "Role", "Characteristics"];
+/// [V], same two packages as `FUNCTION_TYPE_ATTRS`.
+const SPACE_USAGE_ATTRS: &[&str] = &["Id", "Number", "Text"];
 
 fn parse_i64(v: Option<&str>) -> Option<i64> {
     v.and_then(|v| v.parse::<i64>().ok())
@@ -53,6 +75,7 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
     let mut current_main: Option<i64> = None;
+    let mut current_function_type: Option<String> = None;
     let mut dropped_datapoint_types = 0usize;
 
     loop {
@@ -67,6 +90,9 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
             Event::Eof => break,
             Event::End(e) if e.local_name().as_ref() == "DatapointType" => {
                 current_main = None;
+            }
+            Event::End(e) if e.local_name().as_ref() == "FunctionType" => {
+                current_function_type = None;
             }
             Event::Start(e) | Event::Empty(e) => {
                 let name = local_name(&e);
@@ -126,6 +152,66 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                                 dropped_datapoint_types += 1;
                             }
                         }
+                    }
+                    "FunctionType" => {
+                        report_unknown_attrs(
+                            &mut unknown,
+                            "/KNX/MasterData/FunctionTypes/FunctionType",
+                            &a,
+                            FUNCTION_TYPE_ATTRS,
+                        );
+                        current_function_type = a.get("Id").map(str::to_string);
+                        conn.execute(
+                            "INSERT OR IGNORE INTO function_type (id, number, text, status)
+                             VALUES (?1, ?2, ?3, ?4)",
+                            params![
+                                a.get("Id"),
+                                parse_i64(a.get("Number")),
+                                a.get("Text"),
+                                a.get("Status"),
+                            ],
+                        )?;
+                    }
+                    "FunctionPoint" => {
+                        report_unknown_attrs(
+                            &mut unknown,
+                            "/KNX/MasterData/FunctionTypes/FunctionType/FunctionPoint",
+                            &a,
+                            FUNCTION_POINT_ATTRS,
+                        );
+                        // Mirrors `DatapointSubtype` below: a `FunctionPoint`
+                        // met outside any `FunctionType` (not a shape the
+                        // schema produces, going by every sampled package)
+                        // has no parent to key its foreign key on, so it is
+                        // skipped rather than stored half-addressed.
+                        if let Some(function_type_id) = current_function_type.as_deref() {
+                            conn.execute(
+                                "INSERT OR IGNORE INTO function_point
+                                     (id, function_type_id, datapoint_type, role, characteristics, text)
+                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                                params![
+                                    a.get("Id"),
+                                    function_type_id,
+                                    a.get("DatapointType"),
+                                    a.get("Role"),
+                                    a.get("Characteristics"),
+                                    a.get("Text"),
+                                ],
+                            )?;
+                        }
+                    }
+                    "SpaceUsage" => {
+                        report_unknown_attrs(
+                            &mut unknown,
+                            "/KNX/MasterData/SpaceUsages/SpaceUsage",
+                            &a,
+                            SPACE_USAGE_ATTRS,
+                        );
+                        conn.execute(
+                            "INSERT OR IGNORE INTO space_usage (id, number, text)
+                             VALUES (?1, ?2, ?3)",
+                            params![a.get("Id"), parse_i64(a.get("Number")), a.get("Text")],
+                        )?;
                     }
                     _ => {}
                 }
@@ -307,5 +393,125 @@ mod tests {
             )
             .unwrap();
         assert_eq!(main_only, (1, None));
+    }
+
+    const MASTER_WITH_FUNCTIONS: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Siemens" />
+    </Manufacturers>
+    <FunctionTypes>
+      <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified">
+        <FunctionPoint Id="FT-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+      </FunctionType>
+    </FunctionTypes>
+    <SpaceUsages>
+      <SpaceUsage Id="SU-1" Number="1" Text="Office" />
+    </SpaceUsages>
+  </MasterData>
+  <Languages>
+    <Language Identifier="de-DE">
+      <TranslationUnit RefId="FT-1">
+        <TranslationElement RefId="FT-1">
+          <Translation AttributeName="Text" Text="Schalten" />
+        </TranslationElement>
+      </TranslationUnit>
+      <TranslationUnit RefId="SU-1">
+        <TranslationElement RefId="SU-1">
+          <Translation AttributeName="Text" Text="Büro" />
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+
+    #[test]
+    fn function_types_and_their_points_are_stored() {
+        let (_dir, conn) = db();
+        ingest_master_data(&conn, MASTER_WITH_FUNCTIONS.as_bytes()).unwrap();
+        let (number, text, status): (i64, String, String) = conn
+            .query_row(
+                "SELECT number, text, status FROM function_type WHERE id = 'FT-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!((number, text.as_str(), status.as_str()), (1, "Switch", "Certified"));
+        let (function_type_id, datapoint_type, role): (String, String, String) = conn
+            .query_row(
+                "SELECT function_type_id, datapoint_type, role FROM function_point WHERE id = 'FT-1_DR-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            (function_type_id.as_str(), datapoint_type.as_str(), role.as_str()),
+            ("FT-1", "DPST-1-1", "Control")
+        );
+    }
+
+    #[test]
+    fn a_function_point_outside_any_function_type_is_dropped_not_misparented() {
+        // Not a shape any sampled `knx_master.xml` produces, but a
+        // `FunctionPoint` cannot be stored without the parent id its
+        // foreign key names — there is no sentinel value for "no parent"
+        // that would not silently misattribute a real one.
+        let (_dir, conn) = db();
+        let xml = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <FunctionTypes>
+      <FunctionPoint Id="FT-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+    </FunctionTypes>
+  </MasterData>
+</KNX>"#;
+        ingest_master_data(&conn, xml.as_bytes()).unwrap();
+        let points: i64 = conn
+            .query_row("SELECT count(*) FROM function_point", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(points, 0);
+    }
+
+    #[test]
+    fn space_usages_are_stored() {
+        let (_dir, conn) = db();
+        ingest_master_data(&conn, MASTER_WITH_FUNCTIONS.as_bytes()).unwrap();
+        let (number, text): (i64, String) = conn
+            .query_row(
+                "SELECT number, text FROM space_usage WHERE id = 'SU-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!((number, text.as_str()), (1, "Office"));
+    }
+
+    #[test]
+    fn function_type_and_space_usage_translations_join_against_their_new_tables() {
+        let (_dir, conn) = db();
+        ingest_master_data(&conn, MASTER_WITH_FUNCTIONS.as_bytes()).unwrap();
+        let function_type_text: String = conn
+            .query_row(
+                "SELECT t.text FROM translation t
+                 JOIN function_type f ON f.id = t.ref_id
+                 WHERE t.scope = 'Master' AND t.language = 'de-DE' AND t.attribute_name = 'Text'
+                   AND f.id = 'FT-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(function_type_text, "Schalten");
+        let space_usage_text: String = conn
+            .query_row(
+                "SELECT t.text FROM translation t
+                 JOIN space_usage s ON s.id = t.ref_id
+                 WHERE t.scope = 'Master' AND t.language = 'de-DE' AND t.attribute_name = 'Text'
+                   AND s.id = 'SU-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(space_usage_text, "Büro");
     }
 }

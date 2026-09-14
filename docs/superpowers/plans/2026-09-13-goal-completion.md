@@ -31,7 +31,8 @@ argument. Where the two disagree, `goal.md` wins.
    knowledge base was searched (see "KNX specification evidence" below).
 10. **Hardware:** `1.1.220` is an alarm panel — never read, never write,
     never in a scan range. `1.1.24`-`1.1.32` are approved for active reads.
-    Gateway `KNX_GATEWAY`. **Nothing writes to a real device without the
+    The gateway's address is supplied out of band (`KNX_GATEWAY`), not
+    written down here — see rule 11. **Nothing writes to a real device without the
     user's explicit, specific go-ahead for that operation.**
 11. Sweep by pattern class, never by one remembered literal (RFC 1918 ranges,
     not one address).
@@ -395,8 +396,10 @@ Closes `goal.md` §5 §62's first clause. §62 says the Group Monitor GUI is
 tunnelling-only, single-session, client-filtered, and "had never talked to a
 real gateway when that section was written."
 
-**Re-verify before fixing or restating.** A gateway is reachable at
-`KNX_GATEWAY`. Reading from the bus is allowed. Individual addresses
+**Re-verify before fixing or restating.** A gateway is reachable on the
+installation's own LAN; its address comes from `KNX_GATEWAY` at run time and
+is deliberately absent from this file. Reading from the bus is allowed.
+Individual addresses
 `1.1.24`-`1.1.32` are approved for active reads. **`1.1.220` is an alarm
 panel: never read it, never write to it, never include it in a range.**
 

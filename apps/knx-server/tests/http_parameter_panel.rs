@@ -75,6 +75,38 @@ const WRITE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 </ModuleDef></ModuleDefs>
 </ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
 
+/// T18 fix round 1, item 9: one `Float` parameter (`PT-Float`,
+/// `minInclusive="-100" maxInclusive="200"`) and one `Text` parameter
+/// (`PT-Text`, `SizeInBit="16"` — two bytes), each declared exactly the
+/// way `insert_parameter_type` (`knx-productdb`) reads them. Exists so one
+/// test can walk the whole chain end to end — `parameter_type.
+/// min_inclusive`/`max_inclusive`/`size_in_bit` (ingest) into
+/// `ParameterView` (`query.rs`) into `validate_kind_and_bounds`
+/// (`domain.rs`) — rather than trusting that three layers each separately
+/// unit-tested in isolation actually agree once wired together.
+const BOUNDS_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="PT-Float" Name="temp"><TypeFloat Encoding="DPT 9" minInclusive="-100" maxInclusive="200" /></ParameterType>
+  <ParameterType Id="PT-Text" Name="label"><TypeText SizeInBit="16" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="P-Float" Name="Temp" Text="Temp" ParameterType="PT-Float" Access="ReadWrite" Value="0" />
+  <Parameter Id="P-Text" Name="Label" Text="Label" ParameterType="PT-Text" Access="ReadWrite" Value="ok" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="P-Float_R-1" RefId="P-Float" DisplayOrder="1" Tag="1" />
+  <ParameterRef Id="P-Text_R-1" RefId="P-Text" DisplayOrder="2" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterRefRef RefId="P-Float_R-1" />
+  <ParameterRefRef RefId="P-Text_R-1" />
+</Dynamic>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
 /// Same shape as `WRITE_PROGRAM`'s module, instantiated twice
 /// (`MOD-1_M-2`, `MOD-1_M-3`) — AC2 (stale) and AC3 (two sections, same
 /// `ets_id` set).
@@ -799,6 +831,41 @@ async fn post_an_undeclared_ets_id_is_rejected() {
 
     let (status, _) = post_panel(app, 1, "NOPE", "1").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+// T18 fix round 1, item 9: `parameter_type.min_inclusive`/`max_inclusive`/
+// `size_in_bit` reach the write validator through `ParameterView`, proven
+// at the HTTP surface rather than only in each layer's own isolated unit
+// test.
+#[tokio::test]
+async fn parameter_type_bounds_flow_from_product_db_through_to_the_write_validator() {
+    let (_dir, products) = temp_product_db(BOUNDS_PROGRAM);
+    let state = Arc::new(state_with_device(products, vec![]));
+    let app = knx_server::app(Arc::clone(&state), None);
+
+    // Float: `parameter_type.max_inclusive` is "200"; one past it is
+    // rejected, the boundary itself is accepted.
+    let (status, _) = post_panel(app.clone(), 1, "P-Float_R-1", "201").await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "201 is past PT-Float's declared max_inclusive of 200"
+    );
+    let (status, dto) = post_panel(app.clone(), 1, "P-Float_R-1", "200").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(field(&dto, "P-Float_R-1").unwrap()["value"], "200");
+
+    // Text: `parameter_type.size_in_bit` is 16 (two bytes); three ASCII
+    // bytes overflows it, two fits exactly.
+    let (status, _) = post_panel(app.clone(), 1, "P-Text_R-1", "abc").await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "3 bytes overflows PT-Text's declared size_in_bit of 16 (2 bytes)"
+    );
+    let (status, dto) = post_panel(app.clone(), 1, "P-Text_R-1", "ab").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(field(&dto, "P-Text_R-1").unwrap()["value"], "ab");
 }
 
 // AC9: write + undo + redo round-trips through Command::SetParameterValue

@@ -1916,7 +1916,9 @@ name = "knx-etsproj"
 version = "0.1.0-alpha.1"
 dependencies = [
  "chrono",
+ "flate2",
  "knx-core",
+ "knx-secure",
  "knx-testsupport",
  "quick-xml 0.42.0",
  "serde",

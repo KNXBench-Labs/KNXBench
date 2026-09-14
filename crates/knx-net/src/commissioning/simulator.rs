@@ -24,6 +24,7 @@ use std::sync::Mutex;
 
 use knx_core::commissioning::load_control::LoadControlSubtype;
 use knx_core::commissioning::load_state::{LoadEvent, LoadState};
+use knx_core::commissioning::memory::MemoryService;
 use knx_core::commissioning::mutation::TargetKind;
 use knx_core::commissioning::properties::{
     verify_mode_active, ObjectIndex, PID_DEVICE_CONTROL, PID_ERROR_CODE, PID_LOAD_STATE_CONTROL,
@@ -322,6 +323,10 @@ pub enum Seen {
         address: u32,
         /// How many octets.
         number: u8,
+        /// Which of CP §3.5.2's two services carried it. Recorded because
+        /// reading a region back through the other one reads a different
+        /// address space, and a test cannot see that in the octets.
+        service: MemoryService,
     },
     /// A memory write. The test that matters most asserts this list is
     /// empty.
@@ -330,6 +335,8 @@ pub enum Seen {
         address: u32,
         /// The octets.
         data: Vec<u8>,
+        /// Which of CP §3.5.2's two services carried it.
+        service: MemoryService,
     },
     /// Anything else, by name.
     Other(&'static str),
@@ -778,18 +785,22 @@ impl SimulatedDevice {
             ApplicationService::MemoryRead { number, address } => Seen::MemoryRead {
                 address: u32::from(*address),
                 number: *number,
+                service: MemoryService::Memory,
             },
             ApplicationService::UserMemoryRead { number, address } => Seen::MemoryRead {
                 address: *address,
                 number: *number,
+                service: MemoryService::UserMemory,
             },
             ApplicationService::MemoryWrite { address, data } => Seen::MemoryWrite {
                 address: u32::from(*address),
                 data: data.clone(),
+                service: MemoryService::Memory,
             },
             ApplicationService::UserMemoryWrite { address, data } => Seen::MemoryWrite {
                 address: *address,
                 data: data.clone(),
+                service: MemoryService::UserMemory,
             },
             ApplicationService::NoApplicationPdu => return,
             other => Seen::Other(other.variant_name()),

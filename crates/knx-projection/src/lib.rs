@@ -720,8 +720,9 @@ fn building_kind_str(kind: BuildingPartType) -> &'static str {
     }
 }
 
-/// Same wire spelling as `knx-store`'s `style_to_str` and
-/// `knx-server`'s `parse_group_address_style` — three crates, one string
+/// Same wire spelling as `knx-store`'s `style_to_str`, `knx-server`'s
+/// `parse_group_address_style` and `knx-etsproj`'s
+/// `export::schema11::group_address_style_str` — four crates, one string
 /// table, kept in sync only by the shared exhaustive match, since
 /// `GroupAddressStyle` itself carries no `Serialize`/`TS` derive
 /// (`knx-core` depends on neither crate).

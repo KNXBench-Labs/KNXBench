@@ -192,12 +192,11 @@ impl GroupAddress {
     /// 5+3+8, both 16), so every raw value decomposes and recomposes
     /// losslessly under either. Group address style is a rendering choice,
     /// never a capacity limit (see the struct doc above); restyling a
-    /// project can never
-    /// actually reject an address on this account today. Unlike a bounds
-    /// check restating the same partition, though, this one is coupled to
-    /// `format`/`parse` directly: it fails the moment those two disagree
-    /// about the bit split, which is the specific future regression this
-    /// guard exists to catch.
+    /// project can never actually reject an address on this account today.
+    /// Unlike a bounds check restating the same partition, though, this one
+    /// is coupled to `format`/`parse` directly: it fails the moment those
+    /// two disagree about the bit split, which is the specific future
+    /// regression this guard exists to catch.
     pub fn fits_style(self, style: GroupAddressStyle) -> bool {
         GroupAddress::parse(&self.format(style), style) == Ok(self)
     }

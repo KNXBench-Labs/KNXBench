@@ -3849,7 +3849,9 @@ Linux Docker host): `tcpdump` on the host's real LAN interface during
 `knx bus discover` run inside a plain (bridge) `debian:bookworm-slim`
 container captured nothing on that interface, while `tcpdump` on
 `docker0` captured the `SEARCH_REQUEST` leaving the container
-(`DOCKER_HOST_ADDR.57836 > 224.0.23.12.3671`, 14-byte UDP payload) — the
+(`192.0.2.4.57836 > 224.0.23.12.3671`, 14-byte UDP payload, the container's
+own bridge address rewritten to an RFC 5737 literal the same way the host's is
+below) — the
 datagram reaches the bridge and goes no further. The identical container
 started with `--network host` instead put the same request straight onto
 the LAN interface, source-addressed as the host itself

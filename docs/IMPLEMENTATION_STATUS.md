@@ -5631,3 +5631,38 @@ actually ran. The six Rust gates — `cargo fmt --all -- --check`,
 `cargo run -p xtask -- check-headers` (117 headers, 168 without one, ceiling
 168 — unchanged, since no source file was added), `cargo deny check` — exit
 `0` six times. No TypeScript was touched.
+
+## 2026-09-14 — Commissioning phase 3: read-only verification against the real installation (T30, branch `t30-commissioning-readonly`)
+
+The repository's second `#[ignore]`d live-hardware test file,
+`crates/knx-net/tests/live_commissioning_readonly.rs`, joins
+`live_gateway.rs`. Gated the same way: no default gateway address, `KNX_GATEWAY`
+must be set as `host:port` by whoever runs it, and it never runs in CI or
+unattended (`cargo test -p knx-net --test live_commissioning_readonly --
+--ignored --nocapture`).
+
+Its construction is read-only by type, not by discipline. Every session it
+opens is a `ManagementSession::read_only` with `AuthorisationPlan::Skip`, so
+neither a write path nor `A_Authorize_Request` exists to call — no write of
+any kind reached the wire. Its nine targets, `1.1.24`–`1.1.32`, are the
+individual addresses design spec §2.2 (R-SAFE-2) approves for active reads,
+named one at a time as string literals and never iterated as a range, so
+`1.1.220` — the alarm panel R-SAFE-1 excludes structurally — cannot be
+constructed from this list by widening it; the test's own first assertion
+checks `1.1.220` is still in `EXCLUDED_INDIVIDUAL_ADDRESSES` before a single
+frame goes out, redundant with `ManagementSession::build`'s own refusal.
+
+The run itself (RESEARCH §8.8) read Device Descriptor Type 0,
+`PID_MANUFACTURER_ID`, `PID_HARDWARE_TYPE`, `PID_PROGRAM_VERSION` and
+`PID_LOAD_STATE_CONTROL` on the three loadable Interface Objects against all
+nine addresses, then cross-checked with the already-shipped `bus scan`
+probe. The finding (§8.8.3) is against the verification method, not the
+devices: seven of the nine real, present, answering devices timed out
+through `ManagementSession`'s own retry budget and were indistinguishable
+from the one genuinely vacant address, while the scan probe — which resends
+a fresh `T_Connect` on every retry rather than only the data frame — saw all
+seven as occupied. Recorded as spec §13 **R20**, a named risk for the write
+path this project has not built yet: it must not treat its own read
+time-out as proof a target is absent. What discriminated the one address
+that did answer `ManagementSession` from the seven that did not is
+unconfirmed by this pass and not fixed here.

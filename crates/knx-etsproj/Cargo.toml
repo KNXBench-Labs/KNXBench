@@ -9,7 +9,9 @@ publish = false
 
 [dependencies]
 knx-core.workspace = true
+knx-secure.workspace = true
 zip.workspace = true
+flate2.workspace = true
 quick-xml.workspace = true
 chrono.workspace = true
 sha2.workspace = true

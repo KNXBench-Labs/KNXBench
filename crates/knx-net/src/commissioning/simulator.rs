@@ -49,6 +49,15 @@ pub const SIMULATED_DEVICE_ADDRESS: (u8, u8, u8) = (1, 1, 25);
 /// Where the simulator's memory hands out allocations, when it allocates.
 const ALLOCATION_BASE: u32 = 0x4000;
 
+/// The Memory Control Block octets an object answers when nothing has put
+/// others there.
+///
+/// Eight octets with two of them standing in for a CRC. The layout is *not*
+/// a claim: spec §12 records that the MCB's internal structure is not in
+/// either knowledge base, so the client carries these octets and compares
+/// them whole, which is all §7.4 asks of it.
+const DEFAULT_MCB: [u8; 8] = [0x00, 0x00, 0x10, 0x00, 0xAB, 0xCD, 0x00, 0x00];
+
 /// Every `Additional Load Control` subtype, so the simulator can tell an
 /// allocation from a task record without a second table of octets.
 const ALL_SUBTYPES: [LoadControlSubtype; 8] = [
@@ -136,6 +145,120 @@ pub struct SimulatorConfig {
     pub corrupt_memory_writes: bool,
     /// The octet at `0060h`, the programming-mode byte.
     pub programming_mode: bool,
+    /// The mask version Device Descriptor Type 0 answers. `07B0h` by
+    /// default: a System B mask, which is the profile spec §7's CP §3.5.2
+    /// walkthrough covers.
+    pub mask_version: u16,
+    /// Answer `PID_TABLE_REFERENCE` = 0 for this one object the first time
+    /// an allocation is attempted for it, and allocate normally afterwards.
+    ///
+    /// The narrow version of [`SimulatorConfig::reference_always_zero`],
+    /// for §14 item 10: the escalation of CP §3.5.3 has to be able to
+    /// *succeed*, so the failure it escalates from must be a one-off.
+    pub allocation_fails_once_for: Option<u8>,
+    /// Break the connection down once, at a named step of the §7.2 inner
+    /// loop.
+    ///
+    /// This is spec §11.3's *"must be able to be told to fail at a chosen
+    /// step"*, and it is what §14 item 8's interruption at every step is
+    /// built on. A one-shot, like every other drop here, so that the
+    /// recovery procedure has a device to recover.
+    pub interrupt_at: Option<Interruption>,
+}
+
+/// The step of the §7.2 inner loop a simulated interruption strikes at.
+///
+/// Named by the service that carries the step rather than by a step number,
+/// because the device sees services and not procedures — and because a
+/// count of frames is not reproducible when the client's own framing
+/// changes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Interruption {
+    /// Step 1: the `Start Loading` event write.
+    StartLoading,
+    /// Step 2: the `Additional Load Controls` allocation write.
+    Allocate,
+    /// Step 3: the `PID_TABLE_REFERENCE` read-back.
+    ReferenceRead,
+    /// Step 4: a memory write carrying the data.
+    DataWrite,
+    /// Step 5: the `PID_PROGRAM_VERSION` write.
+    VersionWrite,
+    /// Step 6: the `Load Completed` event write.
+    LoadCompleted,
+    /// Step 7: the `PID_MCB_TABLE` read that stores the CRC.
+    ChecksumRead,
+}
+
+impl Interruption {
+    /// Every interruption point, so a test can walk all of them rather than
+    /// list the ones somebody remembered.
+    pub const ALL: [Interruption; 7] = [
+        Interruption::StartLoading,
+        Interruption::Allocate,
+        Interruption::ReferenceRead,
+        Interruption::DataWrite,
+        Interruption::VersionWrite,
+        Interruption::LoadCompleted,
+        Interruption::ChecksumRead,
+    ];
+
+    /// Whether this service is the step this interruption strikes at.
+    fn strikes(self, service: &ApplicationService) -> bool {
+        let load_event = |data: &[u8]| data.first().copied().and_then(load_event_from_octet);
+        match (self, service) {
+            (
+                Interruption::StartLoading,
+                ApplicationService::PropertyValueWrite {
+                    property_id: PID_LOAD_STATE_CONTROL,
+                    data,
+                    ..
+                },
+            ) => load_event(data) == Some(LoadEvent::StartLoading),
+            (
+                Interruption::Allocate,
+                ApplicationService::PropertyValueWrite {
+                    property_id: PID_LOAD_STATE_CONTROL,
+                    data,
+                    ..
+                },
+            ) => load_event(data) == Some(LoadEvent::AdditionalLoadControls),
+            (
+                Interruption::LoadCompleted,
+                ApplicationService::PropertyValueWrite {
+                    property_id: PID_LOAD_STATE_CONTROL,
+                    data,
+                    ..
+                },
+            ) => load_event(data) == Some(LoadEvent::LoadCompleted),
+            (
+                Interruption::VersionWrite,
+                ApplicationService::PropertyValueWrite {
+                    property_id: PID_PROGRAM_VERSION,
+                    ..
+                },
+            ) => true,
+            (
+                Interruption::ReferenceRead,
+                ApplicationService::PropertyValueRead {
+                    property_id: PID_TABLE_REFERENCE,
+                    ..
+                },
+            ) => true,
+            (
+                Interruption::ChecksumRead,
+                ApplicationService::PropertyValueRead {
+                    property_id: PID_MCB_TABLE,
+                    ..
+                },
+            ) => true,
+            (
+                Interruption::DataWrite,
+                ApplicationService::MemoryWrite { .. } | ApplicationService::UserMemoryWrite { .. },
+            ) => true,
+            _ => false,
+        }
+    }
 }
 
 impl Default for SimulatorConfig {
@@ -160,6 +283,9 @@ impl Default for SimulatorConfig {
             protected_memory: None,
             corrupt_memory_writes: false,
             programming_mode: false,
+            mask_version: 0x07B0,
+            allocation_fails_once_for: None,
+            interrupt_at: None,
         }
     }
 }
@@ -227,6 +353,13 @@ struct State {
     completing: HashMap<u8, u8>,
     error_code: HashMap<u8, u8>,
     reference: HashMap<u8, u32>,
+    /// How many allocations have been attempted per object, so that
+    /// [`SimulatorConfig::allocation_fails_once_for`] can fail exactly the
+    /// first one.
+    allocation_attempts: HashMap<u8, u32>,
+    /// The Memory Control Block per object, whose CRC octets spec §7.2 step
+    /// 7 stores and §7.4 compares.
+    mcb: HashMap<u8, Vec<u8>>,
     properties: HashMap<(u8, u8), Vec<u8>>,
     memory: HashMap<u32, u8>,
     seen: Vec<Seen>,
@@ -283,6 +416,8 @@ impl SimulatedDevice {
             completing: HashMap::new(),
             error_code: HashMap::new(),
             reference: HashMap::new(),
+            allocation_attempts: HashMap::new(),
+            mcb: HashMap::new(),
             properties,
             memory,
             seen: Vec::new(),
@@ -314,6 +449,23 @@ impl SimulatedDevice {
         for (offset, octet) in data.iter().enumerate() {
             state.memory.insert(base + offset as u32, *octet);
         }
+    }
+
+    /// Puts a Memory Control Block in place for one object, so that a
+    /// partial download has a CRC to compare against.
+    pub fn preset_mcb(&self, object_index: ObjectIndex, octets: &[u8]) {
+        self.lock()
+            .mcb
+            .insert(object_index.octet(), octets.to_vec());
+    }
+
+    /// The Memory Control Block one object currently answers.
+    pub fn mcb(&self, object_index: ObjectIndex) -> Vec<u8> {
+        self.lock()
+            .mcb
+            .get(&object_index.octet())
+            .cloned()
+            .unwrap_or_else(|| DEFAULT_MCB.to_vec())
     }
 
     /// What the device holds at `base`, or `None` for an octet never
@@ -427,7 +579,13 @@ impl SimulatedDevice {
                 let reference = state.reference.get(&object_index).copied().unwrap_or(0);
                 Some(reference.to_be_bytes().to_vec())
             }
-            PID_MCB_TABLE => Some(vec![0x00, 0x00, 0x10, 0x00, 0xAB, 0xCD, 0x00, 0x00]),
+            PID_MCB_TABLE => Some(
+                state
+                    .mcb
+                    .get(&object_index)
+                    .cloned()
+                    .unwrap_or_else(|| DEFAULT_MCB.to_vec()),
+            ),
             _ => state.properties.get(&(object_index, property_id)).cloned(),
         }
     }
@@ -497,6 +655,20 @@ impl SimulatedDevice {
         if self.config.reference_always_zero {
             return;
         }
+        let attempt = {
+            let mut state = self.lock();
+            let attempt = state
+                .allocation_attempts
+                .entry(object_index)
+                .and_modify(|count| *count += 1)
+                .or_insert(1);
+            *attempt
+        };
+        if self.config.allocation_fails_once_for == Some(object_index) && attempt == 1 {
+            // CP §3.5.3's failed allocation: no reference, no error, no
+            // complaint. The client finds out by reading zero.
+            return;
+        }
         let base = ALLOCATION_BASE + u32::from(object_index) * 0x1000;
         self.lock().reference.insert(object_index, base);
     }
@@ -521,7 +693,11 @@ impl SimulatedDevice {
             }
             let by_read = is_load_state_read
                 && self.config.drop_connection_on_load_state_read == Some(state.load_state_reads);
-            if (by_count || by_read) && state.connected && !state.dropped {
+            let by_step = self
+                .config
+                .interrupt_at
+                .is_some_and(|step| step.strikes(&service));
+            if (by_count || by_read || by_step) && state.connected && !state.dropped {
                 state.connected = false;
                 state.dropped = true;
                 state.verify_mode = false;
@@ -678,6 +854,15 @@ impl SimulatedDevice {
                     nr_of_elem,
                     start_index,
                     data,
+                });
+            }
+            ApplicationService::DeviceDescriptorRead { descriptor_type: 0 } => {
+                // AL §3.4.2.1 Figure 38: two octets, most significant
+                // first, and step 02 of every procedure in spec §7 reads
+                // them before it decides anything.
+                self.emit_answer(ApplicationService::DeviceDescriptorResponse {
+                    descriptor_type: 0,
+                    data: self.config.mask_version.to_be_bytes().to_vec(),
                 });
             }
             ApplicationService::MemoryRead { number, address } => {

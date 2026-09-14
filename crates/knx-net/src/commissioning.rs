@@ -22,6 +22,7 @@
 //! This layer knows how to ask one device one thing and how to disbelieve
 //! the answer.
 
+pub mod download;
 pub mod simulator;
 
 use std::fmt;
@@ -32,7 +33,7 @@ use knx_core::commissioning::authorisation::{
 };
 use knx_core::commissioning::error_code::{read_error_code, ErrorCodeReadError, SystemErrorClass};
 use knx_core::commissioning::load_control::{
-    event_payload, LOAD_CONTROL_NR_OF_ELEM, LOAD_CONTROL_START_INDEX,
+    event_payload, LoadControlPayload, LOAD_CONTROL_NR_OF_ELEM, LOAD_CONTROL_START_INDEX,
 };
 use knx_core::commissioning::load_state::{
     permitted_outcomes, LoadEvent, LoadState, MaskVersion, PermittedOutcomes, Stimulus,
@@ -258,6 +259,13 @@ pub enum SessionError {
         /// How many arrived.
         got: usize,
     },
+    /// `A_DeviceDescriptor_Response` for descriptor type 0 carried
+    /// something other than the two mask-version octets AL §3.4.2.1
+    /// Figure 38 gives it.
+    MalformedDescriptor {
+        /// How many octets followed the APCI.
+        got: usize,
+    },
     /// The state did not settle within [`SessionTiming::max_transition`].
     ///
     /// Spec §5.5: *"on expiry: the transition failed; do not assume which
@@ -425,6 +433,11 @@ impl fmt::Display for SessionError {
                 f,
                 "property {property_id} of {object_index} answered {got} octet(s) where \
                  its type has {expected}"
+            ),
+            SessionError::MalformedDescriptor { got } => write!(
+                f,
+                "A_DeviceDescriptor_Response for type 0 carried {got} octet(s) where the \
+                 mask version has two"
             ),
             SessionError::TransitionTimedOut {
                 object_index,
@@ -636,6 +649,21 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     pub fn with_mask(mut self, mask: MaskVersion) -> Self {
         self.mask = Some(mask);
         self
+    }
+
+    /// Records the mask version a procedure's step 02 has just read.
+    ///
+    /// The builder form is for a caller who already knows the mask; this one
+    /// is for the sequencer, which learns it from the device and must then
+    /// narrow RES Table 94 with it for the rest of the session (spec §5.4).
+    pub fn adopt_mask(&mut self, mask: MaskVersion) {
+        self.mask = Some(mask);
+    }
+
+    /// The mask version this session narrows RES Table 94 with, if it knows
+    /// one.
+    pub fn mask(&self) -> Option<MaskVersion> {
+        self.mask
     }
 
     /// Records how many access levels the device's Profile gives it.
@@ -1121,6 +1149,32 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         }
     }
 
+    /// Device Descriptor Type 0, which is step 02 of every procedure in
+    /// spec §7 and the only place the mask version comes from.
+    ///
+    /// The mask decides the allocation subtype (§7.3 design rule 1) and
+    /// narrows RES Table 94 (§5.4), so a download that skipped this step
+    /// would be guessing at both.
+    pub async fn read_mask_version(&mut self) -> Result<MaskVersion, SessionError> {
+        let data = self
+            .exchange(
+                ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+                "A_DeviceDescriptor_Response",
+                |service| match service {
+                    ApplicationService::DeviceDescriptorResponse {
+                        descriptor_type: 0,
+                        data,
+                    } => Some(data.clone()),
+                    _ => None,
+                },
+            )
+            .await?;
+        match data[..] {
+            [high, low] => Ok(MaskVersion(u16::from_be_bytes([high, low]))),
+            _ => Err(SessionError::MalformedDescriptor { got: data.len() }),
+        }
+    }
+
     /// `PID_TABLE_REFERENCE`, the base address spec §7.2 step 3 reads back.
     ///
     /// Zero is refused here rather than returned: it is
@@ -1361,13 +1415,55 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         object_index: ObjectIndex,
         event: LoadEvent,
     ) -> Result<LoadState, SessionError> {
+        self.write_load_control(object_index, event, event_payload(event))
+            .await
+    }
+
+    /// Writes an `Additional Load Controls` payload — an allocation, in
+    /// practice — and checks the Load State Machine the same way an event
+    /// write is checked.
+    ///
+    /// The payload is built in `knx-core` from the subtype the device's mask
+    /// profiles (spec §7.3), which is why this takes a whole
+    /// [`LoadControlPayload`] rather than a subtype: choosing the subtype is
+    /// a domain decision with a citation attached, and no part of it belongs
+    /// in a transport-layer session.
+    ///
+    /// `[D]` CP §3.5.1.2 Table 4: an allocation is *"ignored"* outside
+    /// `Loading`, with no error, so the state check here is what stands
+    /// between a caller and a silently absent allocation.
+    pub async fn write_allocation(
+        &mut self,
+        object_index: ObjectIndex,
+        payload: LoadControlPayload,
+    ) -> Result<LoadState, SessionError> {
+        self.write_load_control(object_index, LoadEvent::AdditionalLoadControls, payload)
+            .await
+    }
+
+    async fn write_load_control(
+        &mut self,
+        object_index: ObjectIndex,
+        event: LoadEvent,
+        payload: LoadControlPayload,
+    ) -> Result<LoadState, SessionError> {
         let scope = match event {
+            // An `Unload` is its own scope when it is the point of the
+            // operation — the standalone procedure of §7.5 — and part of the
+            // download when the download is the point: `[D]` CP §3.5.2 step
+            // 05 unloads every part *inside* the complete download, so an
+            // operator who authorised a download to this device authorised
+            // that. No other scope reaches an unload, and a download
+            // authorisation still reaches nothing but a download.
+            LoadEvent::Unload if self.session_scope() == Some(WriteScope::Download) => {
+                WriteScope::Download
+            }
             LoadEvent::Unload => WriteScope::Unload,
             _ => WriteScope::Download,
         };
         self.authorise_write(scope)?;
         let before = self.read_load_state(object_index).await?;
-        let payload = event_payload(event).octets().to_vec();
+        let payload = payload.octets().to_vec();
         self.property_write_octets(
             object_index,
             PID_LOAD_STATE_CONTROL,
@@ -1716,7 +1812,7 @@ mod tests {
 
     // ------------------------------------------------------- the refusals
 
-    /// §14 item 4 and §2.3: the write half of every entry point is
+    /// §2.3, and the brief's own demand: the write half of every entry point is
     /// unreachable without an authorisation value, and the proof is that the
     /// device saw nothing.
     #[tokio::test]

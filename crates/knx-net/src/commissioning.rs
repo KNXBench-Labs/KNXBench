@@ -1731,8 +1731,15 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// `[D]` RES §4.26.3.4.2/§4.26.3.4.3's guard and not an optimisation.
     ///
     /// Simulator-only in this phase, like every other write, and for one
-    /// extra reason: spec §4.4 records that on System B the meaning of this
-    /// octet is **not established**.
+    /// extra reason: design spec §4.4 records that on System B the meaning of
+    /// this octet is **not established**.
+    ///
+    /// The addendum's demand that phase 2 provide *"no path that fires it"* is
+    /// honoured by the two gates below — the caller must hold
+    /// [`WriteScope::ProgrammingModeToggle`], and `check_write_target()` then
+    /// refuses any transport that is not the simulator — rather than by the
+    /// method's absence, and no caller in this repository reaches it with a
+    /// hardware transport.
     pub async fn set_programming_mode(
         &mut self,
         enable: bool,

@@ -947,10 +947,14 @@ one a given entry used.
   container: it walks the nested payload's raw entries, decrypts each
   ZipCrypto-protected one, and decompresses the result (Stored or
   Deflated; a third method is reported, not guessed at). Tested against
-  a synthetic fixture (`crates/knx-etsproj/fixtures/zipcrypto-protected.knxproj`,
-  password `hunter2knx`), generated with the independent Info-ZIP `zip`
-  CLI — never by any code path in this repository — plus a
-  crypto-primitive-level fixture in `knx-secure/fixtures/`. Both are
+  two synthetic container fixtures, both password `hunter2knx` and both
+  generated with the independent Info-ZIP `zip` CLI — never by any code
+  path in this repository: `crates/knx-etsproj/fixtures/zipcrypto-protected.knxproj`
+  (nested entries Deflated) and `.../zipcrypto-stored.knxproj`, whose
+  nested entry is Stored so that the CRC-32 gate below is reachable at
+  all — against Deflated bytes a false accept fails to inflate and is
+  reported before any CRC is compared. Plus a crypto-primitive-level
+  fixture in `knx-secure/fixtures/`. All are
   synthetic, not extracted from a real ETS project, and that is an
   acceptable substitute *here*: ZipCrypto is a fully specified algorithm
   (APPNOTE.TXT), not an ETS-specific quirk, so a fixture built with a

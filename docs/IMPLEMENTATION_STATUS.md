@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-14 (T9: ADR-0020 and product-database schema v8 — a migration may re-derive what the stored bytes determine, and `linkable` gets refilled out of the blobs that always held it; see the end of this document)
+Last updated: 2026-09-14 (T18 slice 5 fix round: product-database schema v9 — the second backfill ADR-0020 licenses, re-deriving `parameter_type`'s `Float`/`Text` bounds out of the same blobs `linkable` (schema v8) was re-derived from; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -2167,8 +2167,12 @@ database — the product database stays at **v3**, `knx-store`'s
   `SizeInBit`; IPv4-dotted or eight-group-hex IPv6 — see
   `validate_kind_and_bounds`'s own doc comment for each arm's
   evidence) — not merely a non-empty string, since T18 slice 5
-  (2026-09-13/14, `crates/knx-productdb` schema unchanged, no new
-  entry of its own in this file) — and `Picture`/`Raw` a
+  (2026-09-13/14). Those two bounds columns did not always reach
+  every row, either: `crates/knx-productdb` moved from schema v8 to
+  v9 in the same slice's fix round, `migrate_v8_to_v9` backfilling
+  `min_inclusive`/`max_inclusive`/`size_in_bit` for `Float`/`Text`
+  rows a pre-v9 ingest left `NULL` — see this file's own v9 entry
+  below, alongside v8's — and `Picture`/`Raw` a
   non-empty-string-plus-XML-safety check, the two kinds that appear
   nowhere in the schema's encoding table at all. Before constructing
   exactly one
@@ -5651,3 +5655,79 @@ actually ran. The six Rust gates — `cargo fmt --all -- --check`,
 `cargo run -p xtask -- check-headers` (117 headers, 168 without one, ceiling
 168 — unchanged, since no source file was added), `cargo deny check` — exit
 `0` six times. No TypeScript was touched.
+
+## 2026-09-14 — T18 slice 5's fix round: product-database schema v9, `parameter_type` bounds re-derived the same way `linkable` was (ADR-0020, branch `t18-format-validation`)
+
+The whole-branch review of T18 slice 5's format-validation fix round found
+the same defect ADR-0020 exists to name: `crates/knx-productdb/src/parse/
+program.rs` started reading `TypeFloat/@minInclusive`/`@maxInclusive` and
+`TypeText/@SizeInBit` with no version bump, so every pre-existing
+`products.sqlite` kept `NULL` in `parameter_type.min_inclusive`/
+`max_inclusive`/`size_in_bit` forever — the exact shape `linkable` was in
+before schema v8. `CURRENT_PRODUCTDB_VERSION` is now **9**.
+
+**What shipped.** `migrate_v8_to_v9` (`crates/knx-productdb/src/
+migration.rs`) adds no DDL — same as v7→v8, it is a backfill and
+`user_version` is the entire mechanism by which it runs once. It selects
+distinct `source_file` blobs behind either a `Float` row with both
+`min_inclusive` and `max_inclusive` `NULL`, or a `Text` row with
+`size_in_bit` `NULL`, joined through `application_program` (`parameter_type`
+carries no `source_sha256` of its own, unlike `application_program`, so the
+join stands in for the direct column `backfill_linkable` reads). Each blob
+is streamed by `crate::parse::program::backfill_parameter_type_bounds` with
+quick-xml, and the `UPDATE` for each kind carries `... IS NULL` on both
+target columns plus an `EXISTS` check against `application_program`'s own
+`id`/`source_sha256`, so neither another package's row nor a value a real
+v9 ingest already wrote can be touched. Each blob runs inside its own
+`SAVEPOINT parameter_type_bounds_backfill_blob`; a parse failure rolls back
+to it and records a `ParameterTypeBoundsBackfillError` via
+`record_backfill_failure`, joining `LinkableBackfillError`,
+`DynamicBackfillError`, and `TranslationBackfillError` as the fourth `kind`
+of that shape.
+
+**Where it differs from `linkable`, on purpose.** The old (pre-v9) parser
+never asked `insert_parameter_type` about these two attributes at all, so
+there is no stale `ingest_unknown` row for a successful backfill to retire —
+unlike `linkable`, whose backfill turns a genuine old complaint false. A
+backfilled row also does not gain the `Encoding`/`Increment`/`DisplayFormat`
+`ingest_unknown` rows a fresh v9 ingest now records for `TypeFloat` (T18
+slice 5 fix round's `report_unknown_attrs` call) — this migration re-derives
+bounds only, matching what it exists to fix, and the gap is named rather
+than silently left different (see `migrate_v8_to_v9`'s own doc comment and
+`KNOWN_LIMITATIONS.md` §87).
+
+**Six unit tests, one end-to-end test, no corpus roundtrip test of its
+own.** The migration tests build a v8-shaped database by ingesting a
+program with the current parser and then manually `NULL`-ing the bounds
+columns and stamping `user_version = 8`, then reopen through
+`open_and_migrate`: a `Float` row's bounds filled from its blob, a `Text`
+row's `size_in_bit` filled from its blob, a program whose file never stated
+either attribute staying `NULL`, a bound an ingest already determined not
+being overwritten, a second blob's row not being touched by a different
+file's backfill, a malformed blob recording itself without stopping the
+migration, and a database with nothing to fill reading no blob at all.
+Unlike `linkable`'s eighth test, there is no separate corpus-roundtrip test
+in `tests/standalone_packages.rs` for this backfill — coverage instead comes
+from `apps/knx-server/tests/http_parameter_panel.rs`'s
+`parameter_type_bounds_flow_from_product_db_through_to_the_write_validator`,
+an end-to-end test that ingests a product database, then exercises the HTTP
+write endpoint through the product-database layer and `domain.rs`'s
+`validate_kind_and_bounds` together for both an accepted and a rejected
+value on each kind — it fails if the bounds columns are removed from either
+layer.
+
+**[KNOWN_LIMITATIONS.md
+§87](KNOWN_LIMITATIONS.md#87-a-parse-fix-does-not-reach-rows-that-were-already-ingested-and-only-a-migration-can-go-back-for-them)
+now names this as the class's second instance, not its third** — the
+generic per-`source_file` marker mechanism ADR-0020 sketches and defers
+stays unbuilt; two occurrences is not the threshold the ADR names for
+reaching for it.
+
+**Re-measured, not remembered.** `cargo test --workspace --no-fail-fast -j 2`
+→ **1563 passed, 0 failed, 4 ignored** across 82 suites;
+`grep -c 'skip: OriginalData'` over that log → **0**. The six gates —
+`cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -j 2
+-- -D warnings`, that test run, `cargo run -p xtask -- check-layering`,
+`cargo run -p xtask -- check-headers` (117 headers, 168 without one, ceiling
+168 — unchanged, no source file added or removed), `cargo deny check` —
+exit `0` six times.

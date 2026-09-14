@@ -1493,21 +1493,12 @@ const DATAPOINT_TYPE_COLUMNS: &str = "id, main, sub, name, text";
 /// variants, `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a`,
 /// `Dummy_Applikation_Secure`; no other `AttributeName` value was seen).
 ///
-/// This function's `ref_id -> text` map only ever has rows for `RefId`
-/// families `datapoint_type` itself holds data for (`DPST-*`, `DPT-*`): the
-/// master-data `RefId` families `FT-*`, `SU-*`, `FP-*_DR-*` (function
-/// types, space usages, functional-profile/datapoint pairs) also carry
-/// `Master`-scope translations in the two sampled packages whose
-/// `knx_master.xml` uses the newer scheme
-/// (`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a`, `Dummy_Applikation_Secure` —
-/// [V], n=2 independent master-data sets; the other 3 sampled packages'
-/// `knx_master.xml` predates that scheme and has no such families at all),
-/// but `master.rs` parses none of `FunctionType`/`FunctionPoint`/
-/// `SpaceUsage` — there is no table for those `RefId`s to join against, so
-/// no query here can surface them. A translated name for a function type
-/// or space usage stays unavailable until a later slice gives those
-/// constructs their own tables; see `docs/KNOWN_LIMITATIONS.md` §64 for the
-/// tracked gap, not a silent narrowing of this function's contract.
+/// This function's `ref_id -> text` map is entity-agnostic — it has one row
+/// per translated `RefId` regardless of which table (if any) that `RefId`
+/// names a row in — so it already serves `function_types`/`space_usages`
+/// below the same way it serves `datapoint_types` above; whether a given
+/// `RefId` family resolves to anything depends only on whether the caller
+/// joins it against a table that has that id, not on this function.
 fn master_text_overlay(
     conn: &Connection,
     language: &str,
@@ -1582,6 +1573,208 @@ pub fn datapoint_type(
     let row: Option<DatapointTypeRow> = conn
         .query_row(&sql, [id], row_to_datapoint_type)
         .optional()?;
+    let Some(mut row) = row else {
+        return Ok(None);
+    };
+    let Some(lang) = language else {
+        return Ok(Some(row));
+    };
+    if let Some(text) = overlay_one(conn, "Master", "", &row.id, "Text", lang)? {
+        row.text = Some(text);
+    }
+    Ok(Some(row))
+}
+
+/// One `function_type` row (design D10, closing `docs/KNOWN_LIMITATIONS.md`
+/// §64's last residue): `parse/master.rs`'s `ingest_master_data` fills this
+/// table from `knx_master.xml`'s `FunctionTypes`, `INSERT OR IGNORE`d,
+/// untranslated, the same shape `datapoint_type` above already used.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FunctionTypeRow {
+    /// `FT-<n>`, verbatim as `master.rs` stores it.
+    pub id: String,
+    pub number: Option<i64>,
+    /// `FunctionType`'s own `@Text`, overlaid from a `Master`-scope
+    /// translation in `language` when one resolves.
+    pub text: Option<String>,
+    pub status: Option<String>,
+}
+
+fn row_to_function_type(r: &rusqlite::Row) -> rusqlite::Result<FunctionTypeRow> {
+    Ok(FunctionTypeRow {
+        id: r.get(0)?,
+        number: r.get(1)?,
+        text: r.get(2)?,
+        status: r.get(3)?,
+    })
+}
+
+const FUNCTION_TYPE_COLUMNS: &str = "id, number, text, status";
+
+/// Every `function_type` row, `number` ascending, `text` overlaid the same
+/// way `datapoint_types` overlays its own — `language: None` skips the
+/// `translation` query entirely.
+pub fn function_types(
+    conn: &Connection,
+    language: Option<&str>,
+) -> Result<Vec<FunctionTypeRow>, ProductDbError> {
+    let sql = format!("SELECT {FUNCTION_TYPE_COLUMNS} FROM function_type ORDER BY number");
+    let mut stmt = conn.prepare(&sql)?;
+    let rows: Vec<FunctionTypeRow> = stmt
+        .query_map([], row_to_function_type)?
+        .collect::<Result<Vec<_>, _>>()?;
+    let Some(lang) = language else {
+        return Ok(rows);
+    };
+    let overlay = master_text_overlay(conn, lang)?;
+    Ok(rows
+        .into_iter()
+        .map(|mut row| {
+            if let Some(text) = overlay.get(&row.id) {
+                row.text = Some(text.clone());
+            }
+            row
+        })
+        .collect())
+}
+
+/// The single-row lookup — `function_types` narrowed to one `id`.
+pub fn function_type(
+    conn: &Connection,
+    id: &str,
+    language: Option<&str>,
+) -> Result<Option<FunctionTypeRow>, ProductDbError> {
+    let sql = format!("SELECT {FUNCTION_TYPE_COLUMNS} FROM function_type WHERE id = ?1");
+    let row: Option<FunctionTypeRow> = conn
+        .query_row(&sql, [id], row_to_function_type)
+        .optional()?;
+    let Some(mut row) = row else {
+        return Ok(None);
+    };
+    let Some(lang) = language else {
+        return Ok(Some(row));
+    };
+    if let Some(text) = overlay_one(conn, "Master", "", &row.id, "Text", lang)? {
+        row.text = Some(text);
+    }
+    Ok(Some(row))
+}
+
+/// One `function_point` row, nested under its owning `FunctionType`. Its own
+/// `RefId` family (`FP-*_DR-*` per §64's earlier survey, though
+/// `master.rs`'s corpus fixtures spell it `<FunctionTypeId>_DR-*`) can carry
+/// `Master`-scope translations too, overlaid the same way.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FunctionPointRow {
+    pub id: String,
+    pub function_type_id: String,
+    pub datapoint_type: Option<String>,
+    pub role: Option<String>,
+    pub characteristics: Option<String>,
+    pub text: Option<String>,
+}
+
+fn row_to_function_point(r: &rusqlite::Row) -> rusqlite::Result<FunctionPointRow> {
+    Ok(FunctionPointRow {
+        id: r.get(0)?,
+        function_type_id: r.get(1)?,
+        datapoint_type: r.get(2)?,
+        role: r.get(3)?,
+        characteristics: r.get(4)?,
+        text: r.get(5)?,
+    })
+}
+
+const FUNCTION_POINT_COLUMNS: &str =
+    "id, function_type_id, datapoint_type, role, characteristics, text";
+
+/// Every `function_point` row belonging to one `function_type_id`, `id`
+/// ascending, `text` overlaid the same way `function_types` overlays its
+/// own.
+pub fn function_points(
+    conn: &Connection,
+    function_type_id: &str,
+    language: Option<&str>,
+) -> Result<Vec<FunctionPointRow>, ProductDbError> {
+    let sql =
+        format!("SELECT {FUNCTION_POINT_COLUMNS} FROM function_point WHERE function_type_id = ?1 ORDER BY id");
+    let mut stmt = conn.prepare(&sql)?;
+    let rows: Vec<FunctionPointRow> = stmt
+        .query_map([function_type_id], row_to_function_point)?
+        .collect::<Result<Vec<_>, _>>()?;
+    let Some(lang) = language else {
+        return Ok(rows);
+    };
+    let overlay = master_text_overlay(conn, lang)?;
+    Ok(rows
+        .into_iter()
+        .map(|mut row| {
+            if let Some(text) = overlay.get(&row.id) {
+                row.text = Some(text.clone());
+            }
+            row
+        })
+        .collect())
+}
+
+/// One `space_usage` row (design D10, closing §64's last residue alongside
+/// `FunctionTypeRow` above): `parse/master.rs`'s `ingest_master_data` fills
+/// this table from `knx_master.xml`'s `SpaceUsages`, `INSERT OR IGNORE`d,
+/// untranslated.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpaceUsageRow {
+    /// `SU-<n>`, verbatim as `master.rs` stores it.
+    pub id: String,
+    pub number: Option<i64>,
+    /// `SpaceUsage`'s own `@Text`, overlaid from a `Master`-scope
+    /// translation in `language` when one resolves.
+    pub text: Option<String>,
+}
+
+fn row_to_space_usage(r: &rusqlite::Row) -> rusqlite::Result<SpaceUsageRow> {
+    Ok(SpaceUsageRow {
+        id: r.get(0)?,
+        number: r.get(1)?,
+        text: r.get(2)?,
+    })
+}
+
+const SPACE_USAGE_COLUMNS: &str = "id, number, text";
+
+/// Every `space_usage` row, `number` ascending, `text` overlaid the same way
+/// `datapoint_types` overlays its own.
+pub fn space_usages(
+    conn: &Connection,
+    language: Option<&str>,
+) -> Result<Vec<SpaceUsageRow>, ProductDbError> {
+    let sql = format!("SELECT {SPACE_USAGE_COLUMNS} FROM space_usage ORDER BY number");
+    let mut stmt = conn.prepare(&sql)?;
+    let rows: Vec<SpaceUsageRow> = stmt
+        .query_map([], row_to_space_usage)?
+        .collect::<Result<Vec<_>, _>>()?;
+    let Some(lang) = language else {
+        return Ok(rows);
+    };
+    let overlay = master_text_overlay(conn, lang)?;
+    Ok(rows
+        .into_iter()
+        .map(|mut row| {
+            if let Some(text) = overlay.get(&row.id) {
+                row.text = Some(text.clone());
+            }
+            row
+        })
+        .collect())
+}
+
+/// The single-row lookup — `space_usages` narrowed to one `id`.
+pub fn space_usage(
+    conn: &Connection,
+    id: &str,
+    language: Option<&str>,
+) -> Result<Option<SpaceUsageRow>, ProductDbError> {
+    let sql = format!("SELECT {SPACE_USAGE_COLUMNS} FROM space_usage WHERE id = ?1");
+    let row: Option<SpaceUsageRow> = conn.query_row(&sql, [id], row_to_space_usage).optional()?;
     let Some(mut row) = row else {
         return Ok(None);
     };
@@ -3030,12 +3223,30 @@ mod tests {
     </DatapointSubtypes>
   </DatapointType>
 </DatapointTypes>
+<FunctionTypes>
+  <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified">
+    <FunctionPoint Id="FT-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+  </FunctionType>
+</FunctionTypes>
+<SpaceUsages>
+  <SpaceUsage Id="SU-1" Number="1" Text="Office" />
+</SpaceUsages>
 </MasterData>
 <Languages>
   <Language Identifier="de-DE">
     <TranslationUnit RefId="DPST-1-1">
       <TranslationElement RefId="DPST-1-1">
         <Translation AttributeName="Text" Text="Schalten" />
+      </TranslationElement>
+    </TranslationUnit>
+    <TranslationUnit RefId="FT-1">
+      <TranslationElement RefId="FT-1">
+        <Translation AttributeName="Text" Text="Schalten" />
+      </TranslationElement>
+    </TranslationUnit>
+    <TranslationUnit RefId="SU-1">
+      <TranslationElement RefId="SU-1">
+        <Translation AttributeName="Text" Text="Büro" />
       </TranslationElement>
     </TranslationUnit>
   </Language>
@@ -3102,5 +3313,86 @@ mod tests {
             Some("Schalten")
         );
         assert!(datapoint_type(&conn, "nope", None).unwrap().is_none());
+    }
+
+    #[test]
+    fn function_types_overlay_their_translated_text() {
+        let (_dir, conn) = master_db();
+        let rows = function_types(&conn, Some("de-DE")).unwrap();
+        let ft = rows.iter().find(|r| r.id == "FT-1").unwrap();
+        assert_eq!(ft.number, Some(1));
+        assert_eq!(ft.status.as_deref(), Some("Certified"));
+        assert_eq!(ft.text.as_deref(), Some("Schalten"));
+    }
+
+    #[test]
+    fn function_types_without_a_language_returns_the_stored_text_unchanged() {
+        let (_dir, conn) = master_db();
+        let rows = function_types(&conn, None).unwrap();
+        let ft = rows.iter().find(|r| r.id == "FT-1").unwrap();
+        assert_eq!(ft.text.as_deref(), Some("Switch"));
+    }
+
+    #[test]
+    fn function_type_looks_up_a_single_row_by_id() {
+        let (_dir, conn) = master_db();
+        assert_eq!(
+            function_type(&conn, "FT-1", Some("de-DE"))
+                .unwrap()
+                .unwrap()
+                .text
+                .as_deref(),
+            Some("Schalten")
+        );
+        assert!(function_type(&conn, "nope", None).unwrap().is_none());
+    }
+
+    #[test]
+    fn function_points_are_scoped_to_their_owning_function_type() {
+        let (_dir, conn) = master_db();
+        let rows = function_points(&conn, "FT-1", Some("de-DE")).unwrap();
+        assert_eq!(rows.len(), 1);
+        let point = &rows[0];
+        assert_eq!(point.id, "FT-1_DR-1");
+        assert_eq!(point.datapoint_type.as_deref(), Some("DPST-1-1"));
+        assert_eq!(point.role.as_deref(), Some("Control"));
+        // No `Master`-scope translation was planted for `FT-1_DR-1` itself
+        // in this fixture, so the stored text survives untouched.
+        assert_eq!(point.text.as_deref(), Some("Switch"));
+
+        assert!(function_points(&conn, "FT-does-not-exist", None)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn space_usages_overlay_their_translated_text() {
+        let (_dir, conn) = master_db();
+        let rows = space_usages(&conn, Some("de-DE")).unwrap();
+        let su = rows.iter().find(|r| r.id == "SU-1").unwrap();
+        assert_eq!(su.number, Some(1));
+        assert_eq!(su.text.as_deref(), Some("Büro"));
+    }
+
+    #[test]
+    fn space_usages_with_an_unmatched_language_keeps_the_stored_text() {
+        let (_dir, conn) = master_db();
+        let rows = space_usages(&conn, Some("fr-FR")).unwrap();
+        let su = rows.iter().find(|r| r.id == "SU-1").unwrap();
+        assert_eq!(su.text.as_deref(), Some("Office"));
+    }
+
+    #[test]
+    fn space_usage_looks_up_a_single_row_by_id() {
+        let (_dir, conn) = master_db();
+        assert_eq!(
+            space_usage(&conn, "SU-1", Some("de-DE"))
+                .unwrap()
+                .unwrap()
+                .text
+                .as_deref(),
+            Some("Büro")
+        );
+        assert!(space_usage(&conn, "nope", None).unwrap().is_none());
     }
 }

@@ -212,7 +212,15 @@ that server-named id instead of the declared one (D43).
   accepted, and the E15 question stays open — the same kind of deliberate
   narrowing as the IPv6 decision below, in the opposite direction:
   `IPAddress` accepts less than reality allows, `Float` accepts more than
-  the wire format specifies.
+  the wire format specifies. Also unenforced: `TypeFloat/@Increment`
+  (corpus-observed alongside `minInclusive`/`maxInclusive` on four of six
+  distinct `TypeFloat` shapes, e.g. `Increment="0.1"`), a real acceptance
+  constraint — with `minInclusive="1"` `maxInclusive="120"`
+  `Increment="0.1"`, the validator accepts `1.05` today. T18 fix round 1
+  (2026-09-14) made `Increment` visible — `insert_parameter_type` now
+  reports it as an unmodelled attribute rather than dropping it with no
+  record at all — but visibility is not enforcement; the value is still
+  read nowhere and the bound stays unchecked.
   `Text` now rejects a value whose UTF-8 byte length exceeds the
   program's own `SizeInBit` (`TypeText`'s own attribute, corpus-observed:
   the same program's `<TypeText SizeInBit="240"/>` and
@@ -222,7 +230,14 @@ that server-named id instead of the declared one (D43).
   `min_inclusive`/`max_inclusive`/`size_in_bit` columns; no schema
   change, no change to how the value is stored (the raw string the user
   typed is still what gets written verbatim into the command and the
-  exported `Value` attribute).
+  exported `Value` attribute). The byte-length check is a proxy, not the
+  real rule, and it is a strict one: UTF-8 costs two bytes per umlaut, so
+  a 30-character German label — the norm in this corpus, not an edge
+  case — can be rejected by a `SizeInBit="240"` field (30 bytes) that ETS
+  itself would accept, since ETS's own storage is not attested to be
+  UTF-8-per-character (T18 fix round 1, item 5; the check itself is
+  intentionally left as-is — conservative-direction-only, per its own
+  comment in `apps/knx-server/src/domain.rs`).
   `IPAddress` accepts both IPv4 and IPv6, on schema evidence: KNX Project
   Schema23 v01.00.00 §1.1.3.19 (`simpleType Value_t`) documents
   `TypeIPAddress` as "IPv4 addresses: decimal dotted notation" and
@@ -4279,10 +4294,11 @@ a documented gap, not a surprise.
 
 ## 87. A parse fix does not reach rows that were already ingested, and only a migration can go back for them
 
-**Fixed for `linkable`, on 2026-09-14, by product-database schema v8**
+**Fixed for `linkable`, on 2026-09-14, by product-database schema v8, and for
+`parameter_type`'s `Float`/`Text` bounds, the same day, by schema v9**
 ([ADR-0020](adr/0020-migrations-may-rederive-from-stored-bytes.md)). The
 general shape of the defect is not fixed and cannot be, so this section stays
-— rewritten to describe the class rather than the one instance.
+— rewritten to describe the class rather than either instance.
 
 **Limitation.** Every parsed row in `products.sqlite` is a derived value, and
 the derivation happens exactly once: at ingest. Three independent
@@ -4324,14 +4340,39 @@ programs refilled in 1.14 s, with values identical to a fresh ingest (27
 false, 7 true); a v6 database with nothing to fill opens in 0.038 s, the same
 as one already at v8.
 
+**The second instance, and how it differs.** T18 slice 5 (2026-09-13) gave
+`parameter_type` real bounds — `TypeFloat/@minInclusive`/`@maxInclusive` and
+`TypeText/@SizeInBit` — but, same as `Linkable` before it, only for rows
+ingested from that day forward; every program ingested earlier keeps
+`min_inclusive`/`max_inclusive`/`size_in_bit` `NULL` regardless of what its
+own `source_file` blob actually says. `migrate_v8_to_v9` re-reads those three
+attributes out of each affected blob and fills the columns, only where
+`Float`'s pair is `NULL` together or `Text`'s size is `NULL`, only for the row
+that blob's bytes produced (`backfill_parameter_type_bounds` in
+`crates/knx-productdb/src/migration.rs`, mirroring `backfill_linkable`'s
+shape exactly — `parameter_type` has no `source_sha256` of its own, so the
+scoping check joins through `application_program`, which does). One respect
+in which it does not mirror `linkable`: there was no stale `ingest_unknown`
+row to retire, because the pre-T18 parser never asked for these attributes at
+all — it neither read them nor rejected them, so nothing was ever reported.
+A separate, unrelated fix landing the same day
+(`insert_parameter_type` now calls `report_unknown_attrs` on `TypeFloat`'s
+children) means a freshly-ingested row and a v9-backfilled row still differ
+in one way this migration does not close: the fresh row also gets
+`ingest_unknown` entries for `Encoding`/`Increment`/`DisplayFormat`, and the
+backfilled one does not. Named here rather than silently left different.
+
+This is the class's **second** occurrence, not its third.
+
 **Lifted when.** For the class: never entirely, by construction — a
 derivation that already ran cannot know it should run again. What is missing
 is only the *detection*, and ADR-0020 records the shape of it (a parse
 generation recorded per `source_file` row, reported by `knx products verify`),
 deliberately not built for a single column. Reach for it if the class turns up
-a third time. For an individual instance: a v-next backfill migration, under
-ADR-0020's rule — permitted when the value is a pure function of bytes the
-database already holds, forbidden when it depended on the install event.
+a third time — two is not yet that threshold. For an individual instance: a
+v-next backfill migration, under ADR-0020's rule — permitted when the value
+is a pure function of bytes the database already holds, forbidden when it
+depended on the install event.
 
 ## 88. A manufacturer's display name is last-writer-wins, and that is on purpose
 

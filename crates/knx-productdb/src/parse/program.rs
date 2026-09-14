@@ -335,6 +335,183 @@ fn fill_linkable(
     Ok(filled)
 }
 
+/// Re-reads `TypeFloat/@minInclusive`/`@maxInclusive` and
+/// `TypeText/@SizeInBit` out of one already-stored blob and fills the
+/// `parameter_type` columns those rows are still missing, returning how
+/// many rows it filled. Backs `migration::migrate_v8_to_v9`; see that
+/// function's own doc comment for why this is permitted and what it
+/// deliberately does not also do.
+///
+/// Walks the same shape `ingest_program` walks for the `Static` tree —
+/// `ApplicationProgram/@Id` names the program a `ParameterType` belongs
+/// to, and the element immediately following `<ParameterType>` decides
+/// what, if anything, to fill — but tracks only that much state: no
+/// `Parameter`, `ComObject`, translation or union handling, since none of
+/// those can be missing what this backfill exists to fill in.
+pub(crate) fn backfill_parameter_type_bounds(
+    conn: &Connection,
+    source_sha256: &str,
+    source_path: &str,
+    bytes: &[u8],
+) -> Result<usize, ProductDbError> {
+    let mut reader = Reader::from_reader(bytes);
+    let mut buf = Vec::new();
+    let mut filled = 0usize;
+    let mut program_id = String::new();
+    let mut current_parameter_type_id: Option<String> = None;
+    let mut expecting_type_child = false;
+
+    loop {
+        buf.clear();
+        let event = reader
+            .read_event_into(&mut buf)
+            .map_err(|e| ProductDbError::Xml {
+                source_path: source_path.to_string(),
+                cause: e.to_string(),
+            })?;
+        match event {
+            Event::Eof => break,
+            Event::Start(e) if local_name(&e) == "Dynamic" => {
+                skip_subtree(&mut reader, e.name().as_ref(), source_path)?;
+            }
+            Event::End(e) => {
+                if e.local_name().as_ref() == "ParameterType" {
+                    current_parameter_type_id = None;
+                }
+            }
+            Event::Empty(e) => {
+                let name = local_name(&e);
+                let a = attrs(&e, source_path)?;
+                filled += fill_parameter_type_bounds_element(
+                    conn,
+                    source_sha256,
+                    &name,
+                    &a,
+                    &mut program_id,
+                    &mut current_parameter_type_id,
+                    &mut expecting_type_child,
+                )?;
+            }
+            Event::Start(e) => {
+                let name = local_name(&e);
+                let a = attrs(&e, source_path)?;
+                filled += fill_parameter_type_bounds_element(
+                    conn,
+                    source_sha256,
+                    &name,
+                    &a,
+                    &mut program_id,
+                    &mut current_parameter_type_id,
+                    &mut expecting_type_child,
+                )?;
+            }
+            _ => {}
+        }
+    }
+
+    Ok(filled)
+}
+
+/// One element's contribution to `backfill_parameter_type_bounds`'s walk —
+/// either it updates the two pieces of state the walk tracks
+/// (`ApplicationProgram`/`ParameterType`), or, when it is the type-deciding
+/// child right after `<ParameterType>`, it is handed to the one fill
+/// function that matches its shape.
+#[allow(clippy::too_many_arguments)]
+fn fill_parameter_type_bounds_element(
+    conn: &Connection,
+    source_sha256: &str,
+    name: &str,
+    a: &Attrs,
+    program_id: &mut String,
+    current_parameter_type_id: &mut Option<String>,
+    expecting_type_child: &mut bool,
+) -> Result<usize, ProductDbError> {
+    if *expecting_type_child {
+        *expecting_type_child = false;
+        let Some(pt_id) = current_parameter_type_id.clone() else {
+            return Ok(0);
+        };
+        return match name {
+            "TypeFloat" => {
+                fill_parameter_type_float_bounds(conn, source_sha256, program_id, &pt_id, a)
+            }
+            "TypeText" => fill_parameter_type_text_size(conn, source_sha256, program_id, &pt_id, a),
+            _ => Ok(0),
+        };
+    }
+    match name {
+        "ApplicationProgram" => {
+            *program_id = a.get("Id").unwrap_or_default().to_string();
+        }
+        "ParameterType" => {
+            *current_parameter_type_id = Some(a.get("Id").unwrap_or_default().to_string());
+            *expecting_type_child = true;
+        }
+        _ => {}
+    }
+    Ok(0)
+}
+
+/// One `TypeFloat` element's contribution. Two guards, the shape
+/// ADR-0020 requires: `min_inclusive IS NULL AND max_inclusive IS NULL`
+/// (the pair the old parser always wrote together, never one alone) so a
+/// row a current ingest already derived is never overwritten
+/// (ADR-0012's absent-slot rule), and the `EXISTS` clause so a blob that
+/// lost this program's id conflict (ADR-0011) cannot write into the
+/// winning blob's row — `parameter_type` itself carries no
+/// `source_sha256` of its own, so the check goes through the
+/// `application_program` row that owns it.
+fn fill_parameter_type_float_bounds(
+    conn: &Connection,
+    source_sha256: &str,
+    program_id: &str,
+    pt_id: &str,
+    a: &Attrs,
+) -> Result<usize, ProductDbError> {
+    let min = a.get("minInclusive");
+    let max = a.get("maxInclusive");
+    if min.is_none() && max.is_none() {
+        return Ok(0);
+    }
+    let filled = conn.execute(
+        "UPDATE parameter_type
+         SET min_inclusive = ?1, max_inclusive = ?2
+         WHERE program_id = ?3 AND id = ?4 AND kind = 'Float'
+           AND min_inclusive IS NULL AND max_inclusive IS NULL
+           AND EXISTS (
+             SELECT 1 FROM application_program WHERE id = ?5 AND source_sha256 = ?6
+           )",
+        params![min, max, program_id, pt_id, program_id, source_sha256],
+    )?;
+    Ok(filled)
+}
+
+/// One `TypeText` element's contribution — same shape as
+/// `fill_parameter_type_float_bounds`, one column instead of two.
+fn fill_parameter_type_text_size(
+    conn: &Connection,
+    source_sha256: &str,
+    program_id: &str,
+    pt_id: &str,
+    a: &Attrs,
+) -> Result<usize, ProductDbError> {
+    let Some(size_in_bit) = parse_i64(a.get("SizeInBit")) else {
+        return Ok(0);
+    };
+    let filled = conn.execute(
+        "UPDATE parameter_type
+         SET size_in_bit = ?1
+         WHERE program_id = ?2 AND id = ?3 AND kind = 'Text'
+           AND size_in_bit IS NULL
+           AND EXISTS (
+             SELECT 1 FROM application_program WHERE id = ?4 AND source_sha256 = ?5
+           )",
+        params![size_in_bit, program_id, pt_id, program_id, source_sha256],
+    )?;
+    Ok(filled)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn handle_start_or_empty(
     conn: &Connection,

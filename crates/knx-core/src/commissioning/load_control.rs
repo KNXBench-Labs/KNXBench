@@ -175,27 +175,43 @@ pub fn additional_load_control(subtype: LoadControlSubtype, fields: [u8; 8]) -> 
 /// if bit 0 of Mode is set."*
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum AllocationMode {
-    /// Keep whatever the memory contained. Bit 0 clear.
+    /// Keep whatever the memory contained. Mode bit 0 clear, and the fill
+    /// octet then means nothing — it goes out as `00h`.
     #[default]
     Keep,
-    /// Fill the allocated memory. Bit 0 set.
-    Fill,
+    /// Fill the allocated memory with this octet. Mode bit 0 set, and the
+    /// octet is what MP §3.31.3.4 calls *"the value with which the allocated
+    /// memory shall be filled"*. Carried in the variant because a fill mode
+    /// with no visible fill value is a fill of `00h` that nobody chose.
+    Fill(u8),
 }
 
 impl AllocationMode {
-    /// The Mode/fill octet.
-    pub fn octet(self) -> u8 {
+    /// The Mode octet. Bits 1–7 are *"reserved and shall be 0"*, so the only
+    /// value that ever appears here is bit 0.
+    pub fn mode_octet(self) -> u8 {
         match self {
             AllocationMode::Keep => 0x00,
-            AllocationMode::Fill => 0x01,
+            AllocationMode::Fill(_) => 0x01,
+        }
+    }
+
+    /// The fill octet, which the device uses only when the Mode octet's bit
+    /// 0 is set.
+    pub fn fill_octet(self) -> u8 {
+        match self {
+            AllocationMode::Keep => 0x00,
+            AllocationMode::Fill(value) => value,
         }
     }
 }
 
 /// Builds the `0Bh` Data Relative Allocation payload for `size` octets.
 ///
-/// The size is four octets, most significant first, which is how every
-/// other multi-octet field in these procedures is ordered.
+/// `[D]` MP §3.31.3.4's *Load Event Data Relative Allocation* table, field
+/// for field: `03h`, `0Bh`, *"requested memory size"* in 4 octets most
+/// significant first, then *"Mode"* (1 octet), then *"fill"* (1 octet), then
+/// two reserved octets sent as zero.
 pub fn data_relative_allocation(size: u32, mode: AllocationMode) -> LoadControlPayload {
     let size = size.to_be_bytes();
     let fields = [
@@ -203,8 +219,9 @@ pub fn data_relative_allocation(size: u32, mode: AllocationMode) -> LoadControlP
         size[1],
         size[2],
         size[3],
-        mode.octet(),
-        0x00,
+        mode.mode_octet(),
+        mode.fill_octet(),
+        // The two reserved octets.
         0x00,
         0x00,
     ];
@@ -356,6 +373,13 @@ pub fn allocation_subtype_for(
 /// Exists so that the `57B0h` / absolute-allocation combination refuses
 /// loudly rather than being silently rerouted: a client that "falls back"
 /// there sends a device something its own profile calls not applicable.
+///
+/// Called by `knx-net`'s `allocation_payload` on the subtype
+/// [`allocation_subtype_for`] just returned, before any payload is built, so
+/// the promise above is a check that actually runs rather than one only its
+/// own tests ever exercise. The two functions agree today; if a transcribed
+/// PROF Table 7 row ever makes them disagree, the download refuses instead
+/// of emitting a payload the mask's profile forbids.
 pub fn require_subtype(
     mask: MaskVersion,
     subtype: LoadControlSubtype,
@@ -412,15 +436,28 @@ mod tests {
         assert_eq!(LOAD_CONTROL_PAYLOAD_OCTETS, 10);
     }
 
+    /// `[D]` MP §3.31.3.4: four octets of size, then Mode, then fill, then
+    /// two reserved. The fill octet is a field of its own and is emitted as
+    /// one.
     #[test]
-    fn data_relative_allocation_carries_the_size_big_endian_then_the_mode() {
-        let payload = data_relative_allocation(0x0001_2345, AllocationMode::Fill);
+    fn data_relative_allocation_carries_the_size_then_the_mode_then_the_fill() {
+        let payload = data_relative_allocation(0x0001_2345, AllocationMode::Fill(0xAB));
         assert_eq!(
             payload.octets(),
-            &[0x03, 0x0B, 0x00, 0x01, 0x23, 0x45, 0x01, 0x00, 0x00, 0x00]
+            &[0x03, 0x0B, 0x00, 0x01, 0x23, 0x45, 0x01, 0xAB, 0x00, 0x00]
         );
         let keep = data_relative_allocation(0x0001_2345, AllocationMode::Keep);
         assert_eq!(keep.octets()[6], 0x00, "keep clears Mode bit 0");
+        assert_eq!(
+            keep.octets()[7],
+            0x00,
+            "and sends no fill value, because none applies"
+        );
+        assert_eq!(
+            data_relative_allocation(1, AllocationMode::Fill(0x00)).octets()[6],
+            0x01,
+            "a fill with 00h is still a fill: bit 0 says so, the value does not"
+        );
     }
 
     #[test]

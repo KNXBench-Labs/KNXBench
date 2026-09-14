@@ -3382,6 +3382,15 @@ attempt that a following data frame does not itself renew. Root-causing this
 further, and any change to `exchange_inner`'s retry shape, is future work —
 recorded as spec §13 R20 and design-spec §14.1, not fixed in this pass.
 
+This retry-shape difference cannot be what separated `1.1.24` from the other
+seven, though: the scan ran at `ProbePolicy::default()`, `vacant_confirmations
+= 1` (`crates/knx-net/src/scan.rs:120`, loop at `:302-309`), so with one
+confirmation the scan made exactly one pass per address and never retried at
+all. `1.1.24`'s success and the seven time-outs were each decided on a single
+`T_Connect` + data-frame pair on both sides — the difference in *how many*
+times each method would have retried never came into play for this run, and
+is not the discriminator for the first attempt.
+
 **What this does and does not mean:** it does not mean these seven devices
 are unreachable for reading — the scan probe reaches them fine, and a fixed
 `ManagementSession` presumably would too. It does mean that, as shipped

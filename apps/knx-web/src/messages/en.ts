@@ -320,6 +320,46 @@ export const messages = {
   "parameters.diagnosticsCount.one": "{count} issue found while evaluating this device's parameters",
   "parameters.diagnosticsCount.other": "{count} issues found while evaluating this device's parameters",
   "parameters.copyDetails": "Copy details",
+
+  // KNOWN_LIMITATIONS.md §66: one key per `ParameterDiagnosticKindDto`
+  // variant (`apps/knx-server/src/routes.rs`) — the banner/section
+  // headline text `ParameterPanel.tsx`'s `describeParameterDiagnosticMessage`
+  // picks between. This is prose read in the normal course of using the
+  // parameter editor, so it is translatable; the corresponding
+  // `.detail` string never appears here and stays English (see
+  // `ParameterDiagnostic.detail`'s doc comment in `api.ts`) — it exists
+  // for a bug report, not for reading in German.
+  "parameters.diagnostic.parametersUnreadable":
+    "Some declared parameters could not be read from the product database and are not shown.",
+  "parameters.diagnostic.duplicateUnscopedValue":
+    "Two stored values target the same parameter; the later one is ignored.",
+  "parameters.diagnostic.duplicateModuleScopedValue":
+    "Two stored values target the same module-scoped parameter; the later one is ignored.",
+  "parameters.diagnostic.duplicateModuleId":
+    "Two or more sections in this program declare the same module id; its fields are read-only.",
+  "parameters.diagnostic.noModuleInstanceMatch":
+    "No imported module instance matches this module; its fields are read-only.",
+  "parameters.diagnostic.ambiguousModuleInstance":
+    "Two or more imported module instances share this module; its fields are read-only.",
+  "parameters.diagnostic.malformedModuleInstanceId":
+    "An imported module instance's identifier has an unexpected shape; this module's fields are read-only.",
+  "parameters.diagnostic.noBranchMatched": "A choice did not match any of its options.",
+  "parameters.diagnostic.unparsableTest": "A choice's condition could not be understood.",
+  "parameters.diagnostic.unresolvedParamRef": "A choice's controlling parameter could not be found.",
+  "parameters.diagnostic.nonNumericValue": "A choice's controlling value was not a valid number.",
+  "parameters.diagnostic.unexpectedTypeNoneShape": "An unusual choice structure was skipped.",
+  "parameters.diagnostic.unrecognizedNode": "An unrecognized program element was skipped.",
+  "parameters.diagnostic.moduleDefNotFound": "A module could not be found in this program.",
+  "parameters.diagnostic.moduleCycleDetected":
+    "A module refers back to one of its own enclosing modules and was not expanded.",
+  "parameters.diagnostic.moduleNestingTooDeep":
+    "A module is nested deeper than this program will expand.",
+  "parameters.diagnostic.moduleExpansionBudgetExhausted":
+    "This program's modules are too numerous to fully expand; the rest were skipped.",
+  "parameters.diagnostic.missingValue": "A choice's controlling parameter has no value.",
+  "parameters.diagnostic.moduleWithoutId":
+    "A module instance has no identifier and cannot be matched to stored values.",
+
   "parameters.title": "Parameters",
   "parameters.loading": "Loading parameters…",
   "parameters.noProgram":

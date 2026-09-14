@@ -311,6 +311,39 @@ export const messages: Record<MessageKey, string> = {
   "parameters.diagnosticsCount.other":
     "{count} Probleme beim Auswerten der Parameter dieses Geräts gefunden",
   "parameters.copyDetails": "Details kopieren",
+
+  "parameters.diagnostic.parametersUnreadable":
+    "Einige deklarierte Parameter konnten nicht aus der Produktdatenbank gelesen werden und werden nicht angezeigt.",
+  "parameters.diagnostic.duplicateUnscopedValue":
+    "Zwei gespeicherte Werte beziehen sich auf denselben Parameter; der spätere wird ignoriert.",
+  "parameters.diagnostic.duplicateModuleScopedValue":
+    "Zwei gespeicherte Werte beziehen sich auf denselben modulgebundenen Parameter; der spätere wird ignoriert.",
+  "parameters.diagnostic.duplicateModuleId":
+    "Zwei oder mehr Abschnitte dieses Programms deklarieren dieselbe Modul-ID; seine Felder sind schreibgeschützt.",
+  "parameters.diagnostic.noModuleInstanceMatch":
+    "Keine importierte Modulinstanz passt zu diesem Modul; seine Felder sind schreibgeschützt.",
+  "parameters.diagnostic.ambiguousModuleInstance":
+    "Zwei oder mehr importierte Modulinstanzen teilen sich dieses Modul; seine Felder sind schreibgeschützt.",
+  "parameters.diagnostic.malformedModuleInstanceId":
+    "Die Kennung einer importierten Modulinstanz hat eine unerwartete Form; die Felder dieses Moduls sind schreibgeschützt.",
+  "parameters.diagnostic.noBranchMatched": "Eine Auswahl passte auf keine ihrer Optionen.",
+  "parameters.diagnostic.unparsableTest": "Die Bedingung einer Auswahl konnte nicht verstanden werden.",
+  "parameters.diagnostic.unresolvedParamRef":
+    "Der steuernde Parameter einer Auswahl konnte nicht gefunden werden.",
+  "parameters.diagnostic.nonNumericValue": "Der steuernde Wert einer Auswahl war keine gültige Zahl.",
+  "parameters.diagnostic.unexpectedTypeNoneShape": "Eine ungewöhnliche Auswahlstruktur wurde übersprungen.",
+  "parameters.diagnostic.unrecognizedNode": "Ein nicht erkanntes Programmelement wurde übersprungen.",
+  "parameters.diagnostic.moduleDefNotFound": "Ein Modul konnte in diesem Programm nicht gefunden werden.",
+  "parameters.diagnostic.moduleCycleDetected":
+    "Ein Modul verweist zurück auf eines seiner eigenen umschließenden Module und wurde nicht expandiert.",
+  "parameters.diagnostic.moduleNestingTooDeep":
+    "Ein Modul ist tiefer verschachtelt, als dieses Programm expandiert.",
+  "parameters.diagnostic.moduleExpansionBudgetExhausted":
+    "Die Module dieses Programms sind zu zahlreich, um vollständig expandiert zu werden; der Rest wurde übersprungen.",
+  "parameters.diagnostic.missingValue": "Der steuernde Parameter einer Auswahl hat keinen Wert.",
+  "parameters.diagnostic.moduleWithoutId":
+    "Eine Modulinstanz hat keine Kennung und kann keinen gespeicherten Werten zugeordnet werden.",
+
   "parameters.title": "Parameter",
   "parameters.loading": "Parameter werden geladen…",
   "parameters.noProgram":

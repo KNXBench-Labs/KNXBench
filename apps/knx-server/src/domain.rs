@@ -2710,11 +2710,58 @@ pub(crate) fn parameter_panel_impl(
     assemble_parameter_panel(state, device_id, language).map(|assembly| assembly.dto)
 }
 
+/// True if `s` holds a character outside XML 1.0's own `Char` production
+/// (`#x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] |
+/// [#x10000-#x10FFFF]`) — one no XML 1.0 document can represent at all,
+/// escaped or not (a lone Unicode surrogate can never occur here: `char`
+/// already excludes it). Verified directly against this workspace's own
+/// exporter, `quick_xml` 0.42.0 (the version this workspace's `Cargo.lock`
+/// pins): `BytesStart::push_attribute` writes such a character straight
+/// through, unescaped, rather than rejecting it — so
+/// `crates/knx-etsproj/src/export/schema21.rs`'s `p.push("Value",
+/// param.raw.clone())` would silently hand a value this validator let
+/// through to a writer that turns it into a not-well-formed `.knxproj`.
+/// T18 slice 5's own addition, applied below to every kind that can carry
+/// free-form text; `Number`/`Restriction` never need it (already
+/// numeric/enum-only) and `None` is never writable at all.
+fn contains_disallowed_xml_char(s: &str) -> bool {
+    s.chars().any(|c| {
+        let cp = c as u32;
+        (cp < 0x20 && !matches!(cp, 0x9 | 0xA | 0xD)) || cp == 0xFFFE || cp == 0xFFFF
+    })
+}
+
+/// The exact `TypeIPAddress` IPv6 encoding the KNX Project Schema
+/// documents: "eight groups of four hexadecimal digits, separated by
+/// colons, e.g. 2001:0db8:85a3:0000:0000:8a2e:0370:7334" (`Project
+/// Schema23 v01.00.00.pdf`, §1.1.3.19 `simpleType Value_t`, p.30/64 —
+/// extracted verbatim via `pdftotext -layout`). Deliberately narrower than
+/// `std::net::Ipv6Addr::from_str`, which also accepts `::`-compressed and
+/// short-group forms this schema text never mentions; accepting those here
+/// would be inventing a rule and presenting it as the schema's, which T18
+/// slice 5 was explicitly told not to do (see
+/// docs/KNOWN_LIMITATIONS.md §3 for the recorded gap).
+fn is_schema_ipv6(s: &str) -> bool {
+    let groups: Vec<&str> = s.split(':').collect();
+    groups.len() == 8
+        && groups
+            .iter()
+            .all(|g| g.len() == 4 && g.chars().all(|c| c.is_ascii_hexdigit()))
+}
+
 /// D24 step 3: kind-appropriate validation of a candidate raw value
 /// against its declared `ParameterView`. `Number`/`Restriction` use the
-/// program's own bounds/enumeration; `None` is never writable (slice 1's
-/// D9); everything else is a non-empty-string check only (this design's
-/// stated non-goal on deep format validation).
+/// program's own bounds/enumeration. `None` is never writable (slice 1's
+/// D9). `Float`/`Text`/`IPAddress` (T18 slice 5) validate against the
+/// `.knxprod`/`.knxproj` schema's own documented or corpus-observed
+/// encoding for that kind — see each arm's own comment for its evidence.
+/// `Picture`/`Raw` stay a non-empty-string-plus-XML-safety check: neither
+/// kind appears anywhere in the Project Schema's `Value_t` encoding table,
+/// in either spec knowledge base, or in any `.knxprod` under
+/// `OriginalData/` (checked; zero occurrences of both `<TypePicture>` and
+/// `<TypeRawData>`), so there is no format to validate against without
+/// inventing one — recorded, not pretended away, in
+/// docs/KNOWN_LIMITATIONS.md §3.
 fn validate_kind_and_bounds(
     view: &knx_productdb::query::ParameterView,
     raw: &str,
@@ -2765,9 +2812,144 @@ fn validate_kind_and_bounds(
                 ))
             }
         }
+        "Float" => {
+            if raw.is_empty() {
+                return Err(format!("'{}' requires a non-empty value", view.id));
+            }
+            if contains_disallowed_xml_char(raw) {
+                return Err(format!(
+                    "'{}' contains a character no XML 1.0 document can represent",
+                    view.id
+                ));
+            }
+            // Value_t's own encoding for a stored `TypeFloat` is scientific
+            // notation with 16 significant digits and a 3-digit exponent
+            // ("Project Schema23 v01.00.00.pdf" §1.1.3.19, p.30/64) — but
+            // that describes the wire format `value.ToString("E15", ...)`
+            // produces, not what a person types into a form field, and this
+            // design stores `raw` verbatim rather than reformatting it
+            // (constraint 5: no change to the stored representation). So
+            // this accepts any finite number in ordinary decimal or
+            // scientific notation and leaves the E15 wire-format question
+            // open — recorded in docs/KNOWN_LIMITATIONS.md §3.
+            let parsed: f64 = raw.parse().map_err(|_| {
+                format!(
+                    "'{}' is Float-kind; '{raw}' does not parse as a number",
+                    view.id
+                )
+            })?;
+            if !parsed.is_finite() {
+                return Err(format!(
+                    "'{}' must be a finite number, not '{raw}'",
+                    view.id
+                ));
+            }
+            // `min_inclusive`/`max_inclusive` on a `Float` kind come from
+            // `<TypeFloat minInclusive maxInclusive>` (corpus-observed, MDT
+            // `M-0083_A-0317-31-7DC6_PT-2ByteFloatTemp`:
+            // `minInclusive="-100" maxInclusive="200"`) via the same
+            // generic columns `Number` already reads above.
+            if let Some(min) = &view.min_inclusive {
+                let min: f64 = min.parse().map_err(|_| {
+                    format!(
+                        "program declares an unparsable min_inclusive '{min}' for '{}'",
+                        view.id
+                    )
+                })?;
+                if parsed < min {
+                    return Err(format!("'{}' must be >= {min} (got {parsed})", view.id));
+                }
+            }
+            if let Some(max) = &view.max_inclusive {
+                let max: f64 = max.parse().map_err(|_| {
+                    format!(
+                        "program declares an unparsable max_inclusive '{max}' for '{}'",
+                        view.id
+                    )
+                })?;
+                if parsed > max {
+                    return Err(format!("'{}' must be <= {max} (got {parsed})", view.id));
+                }
+            }
+            Ok(())
+        }
+        "Text" => {
+            if raw.is_empty() {
+                return Err(format!("'{}' requires a non-empty value", view.id));
+            }
+            if contains_disallowed_xml_char(raw) {
+                return Err(format!(
+                    "'{}' contains a character no XML 1.0 document can represent",
+                    view.id
+                ));
+            }
+            // `size_in_bit` on a `Text` kind comes from `<TypeText
+            // SizeInBit="…">`'s own declared storage size (corpus-observed,
+            // MDT `M-0083_A-0317-31-7DC6`: `SizeInBit="240"` and `"640"`).
+            // UTF-8 byte length is used as the size proxy — KNX text
+            // parameters are conventionally single-byte-per-character
+            // (ISO 8859-1-shaped), unverified for this exact attribute, so
+            // this is the conservative direction: it can only reject a
+            // value ISO 8859-1 would have allowed, never accept one that
+            // overflows the device's declared storage.
+            if let Some(size_in_bit) = view.size_in_bit {
+                let max_bytes = size_in_bit / 8;
+                let actual = raw.len() as i64;
+                if actual > max_bytes {
+                    return Err(format!(
+                        "'{}' is Text-kind with a declared size of {max_bytes} bytes ({size_in_bit} bits); '{raw}' is {actual} bytes",
+                        view.id
+                    ));
+                }
+            }
+            Ok(())
+        }
+        "IPAddress" => {
+            if raw.is_empty() {
+                return Err(format!("'{}' requires a non-empty value", view.id));
+            }
+            // Value_t documents both address families for `TypeIPAddress`:
+            // "IPv4 addresses: decimal dotted notation" and "IPv6
+            // addresses: eight groups of four hexadecimal digits,
+            // separated by colons" ("Project Schema23 v01.00.00.pdf"
+            // §1.1.3.19, p.30-31/64) — so both are accepted here, neither
+            // preferred. IPv4 is checked with `std::net::Ipv4Addr`, whose
+            // parser was verified in this session (workspace's own pinned
+            // std/rustc) to already reject leading zeroes and
+            // out-of-range octets exactly as the schema's sibling
+            // `Ipv4Address_t` restriction pattern requires. IPv6 uses
+            // `is_schema_ipv6` (see its own doc comment) rather than
+            // `std::net::Ipv6Addr`, which accepts compressed forms the
+            // schema text does not document.
+            if raw.parse::<std::net::Ipv4Addr>().is_ok() || is_schema_ipv6(raw) {
+                Ok(())
+            } else {
+                Err(format!(
+                    "'{}' is IPAddress-kind; '{raw}' is neither IPv4 in decimal-dotted notation nor IPv6 as eight colon-separated groups of four hex digits",
+                    view.id
+                ))
+            }
+        }
+        "Picture" | "Raw" => {
+            if raw.is_empty() {
+                Err(format!("'{}' requires a non-empty value", view.id))
+            } else if contains_disallowed_xml_char(raw) {
+                Err(format!(
+                    "'{}' contains a character no XML 1.0 document can represent",
+                    view.id
+                ))
+            } else {
+                Ok(())
+            }
+        }
         _ => {
             if raw.is_empty() {
                 Err(format!("'{}' requires a non-empty value", view.id))
+            } else if contains_disallowed_xml_char(raw) {
+                Err(format!(
+                    "'{}' contains a character no XML 1.0 document can represent",
+                    view.id
+                ))
             } else {
                 Ok(())
             }
@@ -2899,6 +3081,169 @@ mod tests {
 
     fn reference_project_path() -> PathBuf {
         knx_testsupport::reference_ets4_path()
+    }
+
+    /// A minimal `ParameterView` of the given `kind`, for
+    /// `validate_kind_and_bounds` tests that need no more than kind plus
+    /// (optionally) bounds/size — every field beyond that is irrelevant to
+    /// the function under test.
+    fn view_of_kind(kind: &str) -> knx_productdb::query::ParameterView {
+        knx_productdb::query::ParameterView {
+            id: "P-1".to_string(),
+            display_order: None,
+            tag: None,
+            name: None,
+            text: None,
+            text_layer: knx_productdb::query::ValueLayer::Program,
+            kind: kind.to_string(),
+            access: None,
+            min_inclusive: None,
+            max_inclusive: None,
+            size_in_bit: None,
+            enum_options: Vec::new(),
+        }
+    }
+
+    // T18 slice 5: `Float`/`Text`/`IPAddress`/`Picture`/`Raw` deep format
+    // validation — accept/reject pairs including the boundary cases, per
+    // task-10's own acceptance criterion. `Picture`/`Raw` only get the
+    // universal non-empty/XML-safety checks (see `validate_kind_and_bounds`'s
+    // own doc comment for why nothing deeper is defensible), so their cases
+    // live here too, to keep that absence visibly tested rather than
+    // silently unexercised.
+
+    #[test]
+    fn float_accepts_a_plain_decimal_within_declared_bounds() {
+        let mut view = view_of_kind("Float");
+        view.min_inclusive = Some("-100".to_string());
+        view.max_inclusive = Some("200".to_string());
+        assert!(validate_kind_and_bounds(&view, "36.6").is_ok());
+    }
+
+    #[test]
+    fn float_accepts_the_inclusive_boundary_values() {
+        let mut view = view_of_kind("Float");
+        view.min_inclusive = Some("-100".to_string());
+        view.max_inclusive = Some("200".to_string());
+        assert!(validate_kind_and_bounds(&view, "-100").is_ok());
+        assert!(validate_kind_and_bounds(&view, "200").is_ok());
+    }
+
+    #[test]
+    fn float_rejects_one_past_each_bound() {
+        let mut view = view_of_kind("Float");
+        view.min_inclusive = Some("-100".to_string());
+        view.max_inclusive = Some("200".to_string());
+        assert!(validate_kind_and_bounds(&view, "-100.0001").is_err());
+        assert!(validate_kind_and_bounds(&view, "200.0001").is_err());
+    }
+
+    #[test]
+    fn float_rejects_unparsable_and_non_finite_input() {
+        let view = view_of_kind("Float");
+        assert!(validate_kind_and_bounds(&view, "not-a-number").is_err());
+        assert!(validate_kind_and_bounds(&view, "NaN").is_err());
+        assert!(validate_kind_and_bounds(&view, "inf").is_err());
+        assert!(validate_kind_and_bounds(&view, "").is_err());
+    }
+
+    #[test]
+    fn float_accepts_scientific_notation_without_bounds() {
+        let view = view_of_kind("Float");
+        assert!(validate_kind_and_bounds(&view, "1.5E+003").is_ok());
+    }
+
+    #[test]
+    fn text_accepts_a_value_within_its_declared_size() {
+        let mut view = view_of_kind("Text");
+        view.size_in_bit = Some(240); // 30 bytes, corpus-observed shape
+        assert!(validate_kind_and_bounds(&view, "hello").is_ok());
+    }
+
+    #[test]
+    fn text_accepts_exactly_the_declared_byte_boundary() {
+        let mut view = view_of_kind("Text");
+        view.size_in_bit = Some(240); // 30 bytes
+        let exactly_30 = "a".repeat(30);
+        assert!(validate_kind_and_bounds(&view, &exactly_30).is_ok());
+    }
+
+    #[test]
+    fn text_rejects_one_byte_past_its_declared_size() {
+        let mut view = view_of_kind("Text");
+        view.size_in_bit = Some(240); // 30 bytes
+        let thirty_one = "a".repeat(31);
+        assert!(validate_kind_and_bounds(&view, &thirty_one).is_err());
+    }
+
+    #[test]
+    fn text_without_a_declared_size_has_no_length_cap() {
+        let view = view_of_kind("Text");
+        let long = "a".repeat(10_000);
+        assert!(validate_kind_and_bounds(&view, &long).is_ok());
+    }
+
+    #[test]
+    fn text_rejects_empty_and_a_raw_control_character() {
+        let view = view_of_kind("Text");
+        assert!(validate_kind_and_bounds(&view, "").is_err());
+        assert!(validate_kind_and_bounds(&view, "a\u{1}b").is_err());
+    }
+
+    #[test]
+    fn ip_address_accepts_ipv4_decimal_dotted_notation() {
+        let view = view_of_kind("IPAddress");
+        assert!(validate_kind_and_bounds(&view, "192.168.1.1").is_ok());
+        assert!(validate_kind_and_bounds(&view, "0.0.0.0").is_ok());
+        assert!(validate_kind_and_bounds(&view, "255.255.255.255").is_ok());
+    }
+
+    #[test]
+    fn ip_address_rejects_leading_zeroes_and_out_of_range_octets() {
+        let view = view_of_kind("IPAddress");
+        assert!(validate_kind_and_bounds(&view, "192.168.001.1").is_err());
+        assert!(validate_kind_and_bounds(&view, "256.1.1.1").is_err());
+        assert!(validate_kind_and_bounds(&view, "1.2.3").is_err());
+    }
+
+    #[test]
+    fn ip_address_accepts_the_schema_example_ipv6_form() {
+        let view = view_of_kind("IPAddress");
+        assert!(validate_kind_and_bounds(&view, "2001:0db8:85a3:0000:0000:8a2e:0370:7334").is_ok());
+    }
+
+    #[test]
+    fn ip_address_rejects_compressed_ipv6_notation() {
+        // `::1` is valid IPv6 generally, but not the exact eight-group,
+        // four-hex-digit form Value_t documents for `TypeIPAddress` — see
+        // `is_schema_ipv6`'s own doc comment.
+        let view = view_of_kind("IPAddress");
+        assert!(validate_kind_and_bounds(&view, "::1").is_err());
+        assert!(validate_kind_and_bounds(&view, "2001:db8::1").is_err());
+    }
+
+    #[test]
+    fn ip_address_rejects_empty_and_garbage() {
+        let view = view_of_kind("IPAddress");
+        assert!(validate_kind_and_bounds(&view, "").is_err());
+        assert!(validate_kind_and_bounds(&view, "not-an-address").is_err());
+    }
+
+    #[test]
+    fn picture_and_raw_accept_any_non_empty_xml_safe_string() {
+        for kind in ["Picture", "Raw"] {
+            let view = view_of_kind(kind);
+            assert!(validate_kind_and_bounds(&view, "anything at all").is_ok());
+        }
+    }
+
+    #[test]
+    fn picture_and_raw_reject_empty_and_a_raw_control_character() {
+        for kind in ["Picture", "Raw"] {
+            let view = view_of_kind(kind);
+            assert!(validate_kind_and_bounds(&view, "").is_err());
+            assert!(validate_kind_and_bounds(&view, "a\u{1}b").is_err());
+        }
     }
 
     // Fix round 1, item 3: an id containing two syntactically valid

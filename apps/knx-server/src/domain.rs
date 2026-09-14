@@ -2072,8 +2072,19 @@ fn diagnostic_message(diagnostic: &knx_productdb::dynamic::Diagnostic) -> &'stat
         Diagnostic::UnexpectedTypeNoneShape { .. } => "An unusual choice structure was skipped.",
         Diagnostic::UnrecognizedNode { .. } => "An unrecognized program element was skipped.",
         Diagnostic::ModuleDefNotFound { .. } => "A module could not be found in this program.",
-        Diagnostic::NestedModuleNotExpanded { .. } => {
-            "A module nested inside another module was not expanded."
+        Diagnostic::ModuleCycleDetected { .. } => {
+            "A module refers back to one of its own enclosing modules and was not expanded."
+        }
+        Diagnostic::ModuleNestingTooDeep { .. } => {
+            "A module is nested deeper than this program will expand."
+        }
+        Diagnostic::ModuleExpansionBudgetExhausted { .. } => {
+            // Fix round 2: this one diagnostic variant now covers two
+            // distinct budgets (module-expansion count and total
+            // activated-ref count, see the type's own doc comment) —
+            // the wording stays generic on purpose so it reads sensibly
+            // for either.
+            "This program's modules are too numerous to fully expand; the rest were skipped."
         }
         Diagnostic::MissingValue { .. } => "A choice's controlling parameter has no value.",
         Diagnostic::ModuleWithoutId { .. } => {
@@ -2082,6 +2093,16 @@ fn diagnostic_message(diagnostic: &knx_productdb::dynamic::Diagnostic) -> &'stat
     }
 }
 
+/// Carries only the innermost `Module` — `scope.parent` is never walked.
+/// Known limitation (`docs/KNOWN_LIMITATIONS.md`, "`ModuleScopeDto`
+/// carries only the innermost scope"): since fix round 1, the server
+/// correctly splits two nesting chains that share an innermost
+/// `module_node` under different ancestors into two distinct sections,
+/// but if both chains' innermost `Module`s are also nameless under the
+/// same `ModuleDef`, this DTO is identical for both, so the client's
+/// `sameScope()` (`ParameterPanel.tsx`) cannot tell the two sections
+/// apart and misattributes each one's diagnostics to both — not merely
+/// lost ancestor context, an actual cross-section misattribution.
 fn module_scope_dto(scope: &knx_productdb::dynamic::ModuleScope) -> crate::routes::ModuleScopeDto {
     crate::routes::ModuleScopeDto {
         module_node: scope.module_node,
@@ -2450,7 +2471,7 @@ fn assemble_parameter_panel(
                 r.scope
                     .as_ref()
                     .filter(|s| s.module_id.as_deref() == Some(key.0.as_str()))
-                    .map(module_scope_dto)
+                    .map(|s| module_scope_dto(s))
             });
             diagnostics.push(crate::routes::ParameterDiagnosticDto {
                 scope: scope_dto,
@@ -2487,18 +2508,28 @@ fn assemble_parameter_panel(
     // Group `Activation::parameter_refs` into one section per distinct
     // scope (D23), preserving each ref's document-order position and the
     // order sections are first encountered.
+    //
+    // Fix round 1 (blocking finding 4, goal-completion task 11): this key
+    // used to be the flat `Option<i64>` `module_node` D18 introduced,
+    // which stopped being unique once nesting shipped —
+    // `dynamic_node.node_id` resets per `(program_id, module_def_id)`
+    // tree, so two distinct nesting chains can reuse the same
+    // `module_node` at the same depth under different ancestors, and the
+    // sections would silently merge. `ModuleScope::node_chain()` (made
+    // `pub` for this) gives the same full-chain key `evaluate`'s own
+    // dedup already uses.
     struct SectionBuild {
-        scope: Option<knx_productdb::dynamic::ModuleScope>,
+        scope: Option<std::rc::Rc<knx_productdb::dynamic::ModuleScope>>,
         ref_ids: Vec<String>,
     }
-    let mut section_order: Vec<Option<i64>> = Vec::new();
-    let mut sections_by_key: HashMap<Option<i64>, SectionBuild> = HashMap::new();
+    let mut section_order: Vec<Option<Vec<i64>>> = Vec::new();
+    let mut sections_by_key: HashMap<Option<Vec<i64>>, SectionBuild> = HashMap::new();
     for active in &activation.parameter_refs {
-        let key = active.scope.as_ref().map(|s| s.module_node);
+        let key = active.scope.as_ref().map(|s| s.node_chain());
         sections_by_key
-            .entry(key)
+            .entry(key.clone())
             .or_insert_with(|| {
-                section_order.push(key);
+                section_order.push(key.clone());
                 SectionBuild {
                     scope: active.scope.clone(),
                     ref_ids: Vec::new(),
@@ -2548,7 +2579,7 @@ fn assemble_parameter_panel(
                         > 1 =>
                 {
                     diagnostics.push(crate::routes::ParameterDiagnosticDto {
-                        scope: section.scope.as_ref().map(module_scope_dto),
+                        scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
                         message:
                             "Two or more sections in this program declare the same module id; its fields are read-only."
                                 .to_string(),
@@ -2562,7 +2593,7 @@ fn assemble_parameter_panel(
                     MiAuthority::Found(digits) => Some(digits),
                     MiAuthority::NoMatch => {
                         diagnostics.push(crate::routes::ParameterDiagnosticDto {
-                            scope: section.scope.as_ref().map(module_scope_dto),
+                            scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
                             message:
                                 "No imported module instance matches this module; its fields are read-only."
                                     .to_string(),
@@ -2577,7 +2608,7 @@ fn assemble_parameter_panel(
                         instance_ets_ids,
                     } => {
                         diagnostics.push(crate::routes::ParameterDiagnosticDto {
-                            scope: section.scope.as_ref().map(module_scope_dto),
+                            scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
                             message:
                                 "Two or more imported module instances share this module; its fields are read-only."
                                     .to_string(),
@@ -2593,7 +2624,7 @@ fn assemble_parameter_panel(
                         instance_ets_id,
                     } => {
                         diagnostics.push(crate::routes::ParameterDiagnosticDto {
-                            scope: section.scope.as_ref().map(module_scope_dto),
+                            scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
                             message:
                                 "An imported module instance's identifier has an unexpected shape; this module's fields are read-only."
                                     .to_string(),
@@ -2617,7 +2648,7 @@ fn assemble_parameter_panel(
             // knows, per scope, whether a stored (possibly module-scoped)
             // value or the program default answers.
             let value = values
-                .get(section.scope.as_ref(), ref_id)
+                .get(section.scope.as_ref().map(|s| s.as_ref()), ref_id)
                 .map(str::to_string);
             let is_scoped_stored = section.scope.as_ref().is_some_and(|scope| {
                 scope.module_id.as_ref().is_some_and(|module_id| {
@@ -2674,7 +2705,7 @@ fn assemble_parameter_panel(
             });
         }
         sections.push(crate::routes::ParameterSectionDto {
-            scope: section.scope.as_ref().map(module_scope_dto),
+            scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
             fields,
         });
     }
@@ -2682,7 +2713,7 @@ fn assemble_parameter_panel(
     // D26: every `Activation` diagnostic, mapped 1:1, in order.
     for scoped in &activation.diagnostics {
         diagnostics.push(crate::routes::ParameterDiagnosticDto {
-            scope: scoped.scope.as_ref().map(module_scope_dto),
+            scope: scoped.scope.as_ref().map(|s| module_scope_dto(s)),
             message: diagnostic_message(&scoped.diagnostic).to_string(),
             detail: format!("{:?}", scoped.diagnostic),
         });

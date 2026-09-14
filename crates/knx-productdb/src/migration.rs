@@ -1540,7 +1540,13 @@ mod tests {
             conn.execute(
                 "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
                  VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![sha, "knx_master.xml", None::<String>, bytes.len() as i64, bytes],
+                params![
+                    sha,
+                    "knx_master.xml",
+                    None::<String>,
+                    bytes.len() as i64,
+                    bytes
+                ],
             )
             .unwrap();
             // Present in `source_parse_evidence`, exactly like a blob a v8
@@ -1568,7 +1574,10 @@ mod tests {
                 |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
             )
             .unwrap();
-        assert_eq!((number, text.as_str(), status.as_str()), (1, "Switch", "Certified"));
+        assert_eq!(
+            (number, text.as_str(), status.as_str()),
+            (1, "Switch", "Certified")
+        );
 
         let function_type_id: String = conn
             .query_row(

@@ -357,7 +357,9 @@ total number of `Module` expansions any one `evaluate` call will perform,
 checked alongside the depth bound and refused the same way, with
 `Diagnostic::ModuleExpansionBudgetExhausted`. See that constant's own doc
 comment for where `100_000` comes from (roughly 260x the corpus's measured
-legitimate ceiling of 382 activations).
+legitimate ceiling of 382 activations, recorded at
+`docs/IMPLEMENTATION_STATUS.md`'s "Corpus regression coverage" entry, not
+RESEARCH.md — fix round 2 correction, the citation was wrong in round 1).
 
 ### D45. Cycles are detected by scanning the whole ancestor chain, not just the immediate parent
 
@@ -453,9 +455,14 @@ nothing to expand.
     exceed `MAX_MODULE_NESTING_DEPTH` yields
     `ModuleExpansionBudgetExhausted { budget: MAX_MODULE_EXPANSIONS, .. }`
     and `evaluate` returns rather than continuing to expand.
-17. *(Fix round 1, blocking finding 4.)* A unit test with two distinct
+17. *(Fix round 1, blocking finding 4; citation corrected fix round 2 —
+    round 1 named the wrong test here.)* A unit test with two distinct
     nesting chains that reuse the same `module_node` at the same depth
-    under different ancestors — the shape
+    under different ancestors produces two separate parameter-panel
+    sections in `apps/knx-server`, not one collided section:
+    `two_nesting_chains_sharing_a_module_node_do_not_merge_into_one_section`
+    (`apps/knx-server/tests/http_parameter_panel.rs`) is that test — not
     `a_module_inside_a_module_def_naming_a_different_module_def_is_expanded_two_levels`
-    already constructs — produces two separate parameter-panel sections in
-    `apps/knx-server`, not one collided section.
+    (`crates/knx-productdb/tests/dynamic_tree.rs`), which builds a single
+    chain whose two scopes both happen to use node id 0 and never
+    produces two sections in the first place.

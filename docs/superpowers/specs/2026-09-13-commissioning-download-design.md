@@ -982,6 +982,18 @@ Even so, phase 2's **default** stays 12 and is raised only from a value actually
 read from the Device Object of the device in front of it, never from a product
 database, a mask version or an assumption.
 
+**Amendment, 2026-09-14 (coordinator, T21 follow-up): the 63-octet ceiling
+above belongs to `A_Memory_*` alone.** **[D]** AL §3.5.6.2 and §3.5.6.3:
+`A_UserMemory_Read.req` and `A_UserMemory_Write.req` each read or write
+*"between 1 octet and 15 octets in the address space of the remote application
+controller"*, because the service's `number` field is four bits wide — it shares
+one octet with the four-bit address extension that makes the address 20 bits
+(*"the 20 bit start address (4 bit address extension + 8 bit address high + 8
+bit address low)"*). So the chunk size is `min(negotiated, 63)` for the service
+§6.5 uses below `FFFFh` and `min(negotiated, 15)` for the one it uses above.
+The paragraphs above derive only the negotiated value and were silent on the
+per-service ceiling; `knx-core`'s `commissioning::memory` implements both caps.
+
 ### 6.5 Above 64 kB: `A_UserMemory_*` and `A_MemoryExtended_*`
 
 **[D]** CP §3.5.1.4 with Table 5: `A_Memory_Write` addresses up to 64 kB,
@@ -996,6 +1008,16 @@ Note the condition is on **base + length**, not on the base alone: a region
 that starts below `FFFFh` and ends above it uses the user-memory service. An
 implementation that switches on the start address will write the tail of a
 segment to the wrong service.
+
+**One documented exception, and it is not the application program:** CP's
+router download pseudo-code splits a straddling **Filter Table** across both
+services instead of promoting it — *"IF (FilterTable_BaseAddress +
+FilterTableSize < FFFFh) THEN DMP_MemWrite_RCoV(FilterTable) … ELSIF
+FilterTable_BaseAddress < FFFFh THEN { DMP_MemWrite_RCoV(FilterTable part below
+FFFFh); DMP_UserMemWrite_RCoV(FilterTable part above FFFFh) } ELSE
+DMP_UserMemWrite_RCoV(FilterTable)"* **[D]**. That split is specific to the
+filter table of a coupler and does not reach the §3.5.2 step list this section
+implements; whoever adds filter-table download owes it a separate code path.
 
 `A_MemoryExtended_*` appears in AL Table 1 and is listed here for completeness;
 this document specifies no procedure using it, and none of the cited procedures

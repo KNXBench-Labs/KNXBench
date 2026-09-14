@@ -668,6 +668,10 @@ fn map_device(
         last_modified: optional_timestamp(&device.last_modified, &xpath, problems),
         last_download: optional_timestamp(&device.last_download, &xpath, problems),
         broken: required_bool(&device.broken, &xpath, problems),
+        // Project intent, read from a file or a row. Nothing here is a
+        // device fact, so the device side stays empty until a device
+        // answers (§11.2).
+        device_reported: Default::default(),
     };
 
     devices.insert(DeviceInstance {
@@ -1138,6 +1142,10 @@ fn map_device_v21(
         last_modified: optional_timestamp(&device.last_modified, &xpath, problems),
         last_download: optional_timestamp(&device.last_download, &xpath, problems),
         broken: required_bool(&device.broken, &xpath, problems),
+        // Project intent, read from a file or a row. Nothing here is a
+        // device fact, so the device side stays empty until a device
+        // answers (§11.2).
+        device_reported: Default::default(),
     };
 
     devices.insert(DeviceInstance {

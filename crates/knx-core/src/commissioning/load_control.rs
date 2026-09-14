@@ -163,9 +163,16 @@ pub fn additional_load_control(subtype: LoadControlSubtype, fields: [u8; 8]) -> 
 /// What subtype `0Bh`'s Mode octet asks the device to do with memory it
 /// allocates.
 ///
-/// `[D]` spec §7.3: *"4-octet requested memory size + Mode/fill octet;
-/// Mode bit 0 selects keep vs fill"*. Bits 1–7 of that octet are not
-/// specified here and are therefore sent as zero.
+/// Mode and fill are two separate octets, not one. `[D]` MP §3.31.3.4's
+/// *Load Event Data Relative Allocation* table lays the payload out as
+/// `03h`, `0Bh`, the *"requested memory size"* in 4 octets, then **Mode**
+/// (1 octet), then **fill** (1 octet), then 2 reserved octets, and defines
+/// them: *"Mode bit 0 (lsb) 0: keep the existing memory contents of the
+/// allocated memory unchanged 1: fill the memory contents of the allocated
+/// memory with the value as specified in the field fill. bit 1 to bit 7
+/// (msb) These bits are reserved and shall be 0."* and *"fill memory fill
+/// byte — This is the value with which the allocated memory shall be filled
+/// if bit 0 of Mode is set."*
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum AllocationMode {
     /// Keep whatever the memory contained. Bit 0 clear.

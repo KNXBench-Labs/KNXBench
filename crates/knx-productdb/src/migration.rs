@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 9;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 10;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -282,7 +282,143 @@ fn migrations() -> Vec<Migration> {
         migrate_v6_to_v7,
         migrate_v7_to_v8,
         migrate_v8_to_v9,
+        migrate_v9_to_v10,
     ]
+}
+
+/// v9 -> v10. `Module` argument interpretation (goal-completion task 12,
+/// design D47): the two pieces of an argument binding that the evaluator
+/// needs, and that nothing stored before v10 held in a readable form.
+///
+/// * `module_def_argument` — one row per `ModuleDef/Arguments/Argument`.
+///   The declaration's `@Name` is the only key by which a `{{Name}}`
+///   placeholder inside that `ModuleDef`'s own `Dynamic` tree can be
+///   resolved, and it lived nowhere at all before this: `Arguments` sits
+///   outside `Dynamic`, so the `Dynamic` pass never saw it, and the
+///   `Static` pass reported it as an unmodelled construct and moved on.
+/// * `dynamic_node.value` — `NumericArg`/`TextArg`'s `@Value`. The value
+///   *was* stored before v10, but only inside `extra`, which design D2's
+///   own schema comment declares is a human-readable audit trail and
+///   explicitly **not** re-parseable (a `@Text` value containing `=` or a
+///   newline splits it wrong). Re-deriving a column from a stored blob is
+///   cheaper than teaching something to parse a format documented as
+///   unparseable, which is the ADR-0020 check — "is it already stored?" —
+///   answered honestly: stored, yes; readable, no.
+///
+/// [ADR-0020](../../../docs/adr/0020-migrations-may-rederive-from-stored-bytes.md)
+/// E1 permits the backfill: every value re-derived here is a pure function
+/// of `source_file.bytes`, with no dependence on install order or install
+/// history. `migrate_v2_to_v3`'s own `backfill_dynamic_nodes` is the direct
+/// precedent — same parser, same blobs, same transaction.
+fn migrate_v9_to_v10(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE module_def_argument (
+            program_id    TEXT NOT NULL,
+            module_def_id TEXT NOT NULL,
+            id            TEXT NOT NULL,
+            name          TEXT,
+            arg_type      TEXT,
+            allocates     INTEGER,
+            position      INTEGER NOT NULL,
+            extra         TEXT,
+            PRIMARY KEY (program_id, module_def_id, id)
+        ) STRICT;
+        CREATE INDEX module_def_argument_scope
+            ON module_def_argument (program_id, module_def_id);
+        ALTER TABLE dynamic_node ADD COLUMN value TEXT;",
+    )?;
+    reparse_dynamic_trees(conn)
+}
+
+/// Replays every stored `ApplicationProgram` blob through
+/// `dynamic::parse::parse_dynamic_trees` again, after clearing what the
+/// previous parse of the *same* blob wrote.
+///
+/// Clearing first is what makes this different from
+/// `backfill_dynamic_nodes`, and it is not optional:
+/// `parse_dynamic_trees` deliberately skips a program that already has
+/// `dynamic_node` rows, so without the `DELETE` this function would be an
+/// elaborate no-op on precisely the databases it exists for. The delete is
+/// scoped to the programs this blob owns — `application_program.source_sha256
+/// = this sha` — so a program that lost an id conflict to an earlier,
+/// different file keeps the winner's rows, exactly as it does on the
+/// ordinary ingest path.
+///
+/// The `ingest_unknown` rows the previous `Dynamic` pass wrote are deleted
+/// alongside, matched on that pass's own xpath shape (`.../Dynamic//...`),
+/// and rewritten from the fresh parse. Without that, a database migrated to
+/// v10 would keep claiming `NumericArg/@Value` is an unmodelled attribute
+/// long after it acquired a column — `backfill_linkable`'s stale-row
+/// retirement, applied to the attributes this slice starts modelling. Rows
+/// from the `Static` pass are untouched: that pass still does not model
+/// `ModuleDef/Arguments`, and still says so, because its memory-allocation
+/// facet (`@Allocates`, `Memory/@BaseOffset`, `ComObject/@BaseNumber`)
+/// genuinely stays unmodelled here.
+///
+/// Per-blob `SAVEPOINT` and a recorded failure rather than an aborted
+/// migration, for the reason every backfill above gives: a database that
+/// refuses to open is worse than one with a gap.
+fn reparse_dynamic_trees(conn: &Connection) -> Result<(), ProductDbError> {
+    let mut stmt = conn.prepare("SELECT sha256, source_path, bytes FROM source_file")?;
+    let blobs: Vec<(String, String, Vec<u8>)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    drop(stmt);
+
+    for (sha256, source_path, bytes) in blobs {
+        if classify(&bytes) != FileKind::ApplicationProgram {
+            continue;
+        }
+        conn.execute_batch("SAVEPOINT dynamic_reparse_blob;")?;
+        let cleared = clear_dynamic_pass_output(conn, &sha256);
+        let outcome = cleared.and_then(|()| {
+            crate::dynamic::parse::parse_dynamic_trees(conn, &sha256, &source_path, &bytes)
+        });
+        match outcome {
+            Ok(outcome) => {
+                insert_unknown(conn, &sha256, &outcome.unknown)?;
+                conn.execute_batch("RELEASE SAVEPOINT dynamic_reparse_blob;")?;
+            }
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT dynamic_reparse_blob;
+                     RELEASE SAVEPOINT dynamic_reparse_blob;",
+                )?;
+                record_backfill_failure(
+                    conn,
+                    &sha256,
+                    &source_path,
+                    "DynamicReparseError",
+                    "parse_dynamic_trees",
+                    &error,
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Deletes everything the `Dynamic` pass wrote for the programs owned by
+/// one blob: their `dynamic_node` rows, their `module_def_argument` rows
+/// (empty on the way into v10, non-empty on a re-run), and the
+/// `ingest_unknown` rows that pass recorded — identified by the xpath shape
+/// `dynamic::parse::insert_node` builds and nothing else does.
+fn clear_dynamic_pass_output(conn: &Connection, sha256: &str) -> Result<(), ProductDbError> {
+    const OWNED_PROGRAMS: &str = "SELECT id FROM application_program WHERE source_sha256 = ?1";
+    conn.execute(
+        &format!("DELETE FROM dynamic_node WHERE program_id IN ({OWNED_PROGRAMS})"),
+        [sha256],
+    )?;
+    conn.execute(
+        &format!("DELETE FROM module_def_argument WHERE program_id IN ({OWNED_PROGRAMS})"),
+        [sha256],
+    )?;
+    conn.execute(
+        "DELETE FROM ingest_unknown
+         WHERE source_sha256 = ?1 AND xpath LIKE '%/Dynamic//%'",
+        [sha256],
+    )?;
+    Ok(())
 }
 
 /// v8 -> v9. The second instance of §87's class, not the third — `linkable`

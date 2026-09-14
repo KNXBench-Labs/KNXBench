@@ -156,9 +156,15 @@ pub const MAX_MODULE_EXPANSIONS: usize = 100_000;
 /// bounding the product — this is exactly the shape of the round-1
 /// residual (see [`MAX_MODULE_EXPANSIONS`]'s doc comment for the measured
 /// numbers). Checked inside `Activation::activate_parameter_ref`/
-/// `activate_com_object_ref`, after the per-scope dedup (a ref already
-/// seen in this scope never counted against the budget, same as before);
-/// once the combined count would be the `MAX_MODULE_ACTIVATIONS + 1`th,
+/// `activate_com_object_ref` — ahead of the per-scope dedup, so that once
+/// the budget is spent nothing further is allocated for a ref that cannot
+/// be recorded anyway — and again in `walk`'s `Module` arm, where a spent
+/// budget stops further expansion outright (fix round 3; round 2 checked
+/// only at the activation sites and only after the dedup, which left the
+/// `seen` sets growing unbounded while the walk ran on to the expansion
+/// budget). A ref already seen in its scope still never counts against
+/// the budget; once the combined count would be the
+/// `MAX_MODULE_ACTIVATIONS + 1`th,
 /// a single [`Diagnostic::ModuleExpansionBudgetExhausted`] is recorded
 /// (the same variant `MAX_MODULE_EXPANSIONS` uses, distinguished only by
 /// which constant appears in its `budget` field, per fix round 2's
@@ -882,6 +888,43 @@ impl Activation {
         })
     }
 
+    /// Whether the activation budget is spent, and — on the first call
+    /// that finds it spent — the place its one diagnostic is recorded.
+    /// `true` means the caller must stop: stop activating, and stop
+    /// expanding.
+    ///
+    /// Fix round 3 (scoped re-review of round 2) moved this ahead of
+    /// everything that allocates. Round 2 checked the budget *after*
+    /// `seen.insert(key)`, and `walk`'s `Module` arm did not consult it
+    /// at all, so a run that had spent its activation budget went right
+    /// on expanding — up to the far larger [`MAX_MODULE_EXPANSIONS`] —
+    /// and every ref it met still built and inserted a `ScopeKey`
+    /// (`(Vec<i64>, String)`, two heap allocations) into a `seen` set no
+    /// budget bounded. The refs stopped being recorded; the work did
+    /// not. That is the same defect round 2 was dispatched to fix,
+    /// relocated from `ActiveRef` cloning into `seen`-set growth.
+    fn activation_budget_spent(
+        &mut self,
+        scope: Option<&Rc<ModuleScope>>,
+        node_id: i64,
+        ref_id: Option<&str>,
+    ) -> bool {
+        if self.activations_recorded() < MAX_MODULE_ACTIVATIONS {
+            return false;
+        }
+        if !self.activation_budget_already_diagnosed() {
+            self.diagnose(
+                scope,
+                Diagnostic::ModuleExpansionBudgetExhausted {
+                    node_id,
+                    ref_id: ref_id.map(str::to_string),
+                    budget: MAX_MODULE_ACTIVATIONS,
+                },
+            );
+        }
+        true
+    }
+
     fn activate_parameter_ref(
         &mut self,
         seen: &mut HashSet<ScopeKey>,
@@ -889,21 +932,11 @@ impl Activation {
         node_id: i64,
         id: String,
     ) {
-        let key = (scope_key_chain(scope), id.clone());
-        if !seen.insert(key) {
+        if self.activation_budget_spent(scope, node_id, Some(&id)) {
             return;
         }
-        if self.activations_recorded() >= MAX_MODULE_ACTIVATIONS {
-            if !self.activation_budget_already_diagnosed() {
-                self.diagnose(
-                    scope,
-                    Diagnostic::ModuleExpansionBudgetExhausted {
-                        node_id,
-                        ref_id: Some(id),
-                        budget: MAX_MODULE_ACTIVATIONS,
-                    },
-                );
-            }
+        let key = (scope_key_chain(scope), id.clone());
+        if !seen.insert(key) {
             return;
         }
         self.parameter_refs.push(ActiveRef {
@@ -919,21 +952,11 @@ impl Activation {
         node_id: i64,
         id: String,
     ) {
-        let key = (scope_key_chain(scope), id.clone());
-        if !seen.insert(key) {
+        if self.activation_budget_spent(scope, node_id, Some(&id)) {
             return;
         }
-        if self.activations_recorded() >= MAX_MODULE_ACTIVATIONS {
-            if !self.activation_budget_already_diagnosed() {
-                self.diagnose(
-                    scope,
-                    Diagnostic::ModuleExpansionBudgetExhausted {
-                        node_id,
-                        ref_id: Some(id),
-                        budget: MAX_MODULE_ACTIVATIONS,
-                    },
-                );
-            }
+        let key = (scope_key_chain(scope), id.clone());
+        if !seen.insert(key) {
             return;
         }
         self.com_object_refs.push(ActiveRef {
@@ -1120,6 +1143,16 @@ fn walk(
                                 budget: MAX_MODULE_EXPANSIONS,
                             },
                         );
+                        return;
+                    }
+                    // Fix round 3: the other budget stops the walk here
+                    // too. Expanding a `ModuleDef` whose every activation
+                    // will be refused is pure cost — the subtree still
+                    // gets walked, its conditions still get evaluated,
+                    // and its refs still reach `activate_*`. Nothing
+                    // downstream can record a result, so there is nothing
+                    // to gain by descending.
+                    if activation.activation_budget_spent(scope, node_id, node.ref_id.as_deref()) {
                         return;
                     }
                     *expansions_used += 1;

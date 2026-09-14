@@ -100,10 +100,13 @@ impl AccessLevel {
     /// Wraps a level octet as the device reported it.
     ///
     /// Any octet is accepted, because the number of levels is a device
-    /// property and not a client choice: `[D]` spec §10.1 — *"The client
-    /// must not assume 4."* Out-of-range values are the device's business;
-    /// a client that rejected them would refuse to talk to a conforming
-    /// 16-level device.
+    /// property and not a client choice. `[D]` AL §3.5.7: *"Access levels
+    /// (unsigned8) between 0 … and 3 … or 0 … and 15 … are allowed."*, and
+    /// `[D, corpus]` PROF §4.2's row *"Authorization … nr of access
+    /// levels"* contains the values `4`, `16` and `O` — per-column
+    /// attribution is not citable, but profiled devices exist with both
+    /// counts. Out-of-range values are the device's business; a client that
+    /// rejected them would refuse to talk to a conforming 16-level device.
     pub const fn from_octet(level: u8) -> Self {
         Self(level)
     }
@@ -214,10 +217,13 @@ impl LevelCount {
 
 /// Whether MP §3.5.1 should run at all, and with what.
 ///
-/// `[D]` spec §10.9 items 2 and 3: no key means skip the procedure and
-/// record "free level, unknown value"; and never send a key the user did
-/// not supply. Encoding that as a two-variant type means there is no third
-/// state in which a guessed key could live.
+/// This project's ruling (design spec §10.9 items 2 and 3, which is a list
+/// of project decisions and not a clause): no key means skip the procedure
+/// and record "free level, unknown value", and a key the user did not
+/// supply is never sent. What the Standard contributes is the guard the
+/// first half rests on — `[D]` MP §3.5.1 runs `DMP_Authorize_RCo` only for
+/// `key != FFFFFFFFh`. Encoding the ruling as a two-variant type means
+/// there is no third state in which a guessed key could live.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AuthorisationPlan {
     /// Do not authorise. The device will grant the free level.

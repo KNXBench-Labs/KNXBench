@@ -681,6 +681,38 @@ type TypeFields<'a> = (
     Option<&'a str>,
 );
 
+/// The type-deciding child element's own known attributes, one list per
+/// `child_name`, so `insert_parameter_type` can report what it does not
+/// read the same way every other element handler in this file does
+/// (T18 fix round 1, blocking finding 3: this function was the one arm
+/// that never called `report_unknown_attrs`, so `TypeFloat`'s
+/// `Encoding`/`Increment`/`DisplayFormat` — corpus-observed on four of six
+/// distinct `TypeFloat` shapes, e.g. `<TypeFloat Encoding="DPT 9"
+/// minInclusive="1" maxInclusive="120" Increment="0.1"
+/// DisplayFormat="0.0" />` — vanished with no record at all, not even the
+/// "seen, not understood" record every other unmodelled attribute gets).
+/// None of the three is read into a column by this commit — `Encoding`
+/// bounds representable range and precision, `Increment` is a real
+/// acceptance constraint `apps/knx-server`'s validator does not enforce
+/// (docs/KNOWN_LIMITATIONS.md §3), `DisplayFormat` is schema-documented
+/// (`FloatFormat_t`, "Project Schema23 v01.00.00.pdf" §1.1.3.16, p.29/64)
+/// — reporting them is a strictly smaller claim than storing them: it only
+/// says the parser met these attributes and did not model them, which is
+/// true today and was silently false before.
+fn known_type_child_attrs(child_name: &str) -> &'static [&'static str] {
+    match child_name {
+        "TypeRestriction" => &["SizeInBit", "Base"],
+        "TypeNumber" => &["SizeInBit", "minInclusive", "maxInclusive", "Type"],
+        "TypeText" => &["SizeInBit"],
+        "TypeNone" => &[],
+        "TypeFloat" => &["minInclusive", "maxInclusive"],
+        "TypeIPAddress" => &[],
+        "TypePicture" => &[],
+        "TypeRawData" => &[],
+        _ => &[],
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn insert_parameter_type(
     conn: &Connection,
@@ -733,7 +765,8 @@ fn insert_parameter_type(
             // `<TypeFloat Encoding="DPT 9" minInclusive="-100"
             // maxInclusive="200"/>`), the same bound shape `TypeNumber`
             // already reads above — reusing `TypeFields`' existing
-            // min/max slots, not adding a new one.
+            // min/max slots, not adding a new one. `Encoding` is read by
+            // nobody (see `known_type_child_attrs`'s own doc comment).
             "TypeFloat" => (
                 "Float",
                 None,
@@ -750,6 +783,22 @@ fn insert_parameter_type(
                 ("Other", None, None, None, None, None)
             }
         };
+    // Reported at the type-deciding child's own path (`open_path` here is
+    // still the `ParameterType` element's ancestor stack — the child has
+    // not been pushed onto it yet, same as the `ApplicationProgram` arm
+    // above reports itself before it too is pushed), for every recognized
+    // child; the `other =>` arm already reported itself as an unmodelled
+    // *element* two lines up, so it is skipped here to avoid reporting a
+    // whole unmodelled element's attributes twice under two different
+    // reasons.
+    if kind != "Other" {
+        report_unknown_attrs(
+            unknown,
+            &xpath_of_child(open_path, child_name),
+            a,
+            known_type_child_attrs(child_name),
+        );
+    }
     conn.execute(
         "INSERT INTO parameter_type
          (program_id, id, name, kind, size_in_bit, base, min_inclusive, max_inclusive, number_type)
@@ -960,6 +1009,72 @@ mod tests {
             )
             .unwrap();
         assert_eq!((kind.as_str(), size), ("Text", 240));
+    }
+
+    /// T18 fix round 1, blocking finding 3: `TypeFloat`'s own `Encoding` —
+    /// present in `PROGRAM` above and read by nobody — must show up as an
+    /// unrecognized attribute now, not vanish the way it did before this
+    /// fix (`insert_parameter_type` was the one element handler in this
+    /// file with no `report_unknown_attrs` call at all). `minInclusive`/
+    /// `maxInclusive`, which are read, must not.
+    #[test]
+    fn a_float_types_encoding_is_reported_unknown_but_its_bounds_are_not() {
+        let (_dir, conn) = db();
+        let out = ingest_program(&conn, "sha-1", "M-006A/A.xml", PROGRAM.as_bytes()).unwrap();
+        let encoding = out
+            .unknown
+            .iter()
+            .find(|u| u.name == "Encoding")
+            .expect("Encoding must be reported, not silently dropped");
+        assert_eq!(encoding.xpath, "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ParameterTypes/ParameterType/TypeFloat");
+        assert_eq!(encoding.sample.as_deref(), Some("DPT 9"));
+        assert!(
+            out.unknown
+                .iter()
+                .all(|u| u.name != "minInclusive" && u.name != "maxInclusive"),
+            "the two attributes this parser does read must not also be reported: {:?}",
+            out.unknown
+        );
+    }
+
+    /// The two `TypeFloat` attributes T18's opus review named alongside
+    /// `Encoding` — `Increment` (a real acceptance constraint the
+    /// validator does not enforce, docs/KNOWN_LIMITATIONS.md §3) and
+    /// `DisplayFormat` (schema-documented `FloatFormat_t`) — corpus-observed
+    /// together on four of six distinct `TypeFloat` shapes.
+    #[test]
+    fn a_float_types_increment_and_display_format_are_reported_unknown() {
+        const PROGRAM_WITH_INCREMENT: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData><Manufacturer RefId="M-006A">
+    <ApplicationPrograms><ApplicationProgram Id="A-1" Name="P" ApplicationNumber="1"
+      ApplicationVersion="1" MaskVersion="MV-0701"><Static>
+      <ParameterTypes>
+        <ParameterType Id="PT-Float" Name="temp">
+          <TypeFloat Encoding="DPT 9" minInclusive="1" maxInclusive="120"
+                     Increment="0.1" DisplayFormat="0.0" />
+        </ParameterType>
+      </ParameterTypes>
+      <Parameters />
+      <ParameterRefs />
+    </Static></ApplicationProgram></ApplicationPrograms>
+  </Manufacturer></ManufacturerData>
+</KNX>"#;
+        let (_dir, conn) = db();
+        let out = ingest_program(
+            &conn,
+            "sha-1",
+            "M-006A/A.xml",
+            PROGRAM_WITH_INCREMENT.as_bytes(),
+        )
+        .unwrap();
+        for name in ["Increment", "DisplayFormat"] {
+            assert!(
+                out.unknown.iter().any(|u| u.name == name),
+                "{name} must be reported unknown: {:?}",
+                out.unknown
+            );
+        }
     }
 
     #[test]

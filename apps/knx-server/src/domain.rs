@@ -2925,6 +2925,19 @@ fn validate_kind_and_bounds(
                 // that fits in memory" rather than "accept nothing and
                 // lie about why" — the old floor division could not
                 // overflow either, so this restores that property.
+                // A negative declaration is not a small field, it is a
+                // broken one. Without this guard `max_bytes` comes out
+                // non-positive and the rejection message below presents
+                // `-8 bits` as though it were a legitimate declared size,
+                // which tells the user nothing they can act on. Say the
+                // declaration is unparsable, in the same words the
+                // `min_inclusive`/`max_inclusive` arms use for theirs.
+                if size_in_bit <= 0 {
+                    return Err(format!(
+                        "program declares an unparsable size_in_bit '{size_in_bit}' for '{}'",
+                        view.id
+                    ));
+                }
                 let max_bytes = size_in_bit.saturating_add(7) / 8;
                 let actual = raw.len() as i64;
                 if actual > max_bytes {
@@ -3217,6 +3230,22 @@ mod tests {
         view.size_in_bit = Some(240); // 30 bytes
         let thirty_one = "a".repeat(31);
         assert!(validate_kind_and_bounds(&view, &thirty_one).is_err());
+    }
+
+    #[test]
+    fn text_with_a_negative_declared_size_says_the_declaration_is_broken() {
+        // `parse_i64` accepts `SizeInBit="-8"` as happily as `"240"`, and
+        // a negative field is not a small field. Before the guard this
+        // rejected every value while quoting `-8 bits` back at the user
+        // as though the device really had a negative amount of storage.
+        let mut view = view_of_kind("Text");
+        view.size_in_bit = Some(-8);
+        let err = validate_kind_and_bounds(&view, "a")
+            .expect_err("a negative declared size must be rejected");
+        assert!(
+            err.contains("unparsable size_in_bit"),
+            "the message must blame the declaration, not the value: {err}"
+        );
     }
 
     #[test]

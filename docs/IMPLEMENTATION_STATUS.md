@@ -2054,9 +2054,14 @@ already stored everything this slice reads (D12).
   `Dynamic` root). The dedup key became `(Option<module_node>, ref_id)`
   (D18); without this, twelve `Module`s instantiating one `ModuleDef`
   would collapse into one set of results instead of twelve.
-- **Exactly one level of expansion (D15).** A `Module` found while already
-  inside a module scope is not followed: it produces
-  `Diagnostic::NestedModuleNotExpanded` and its subtree is not descended.
+- **Exactly one level of expansion (D15).** *(Superseded 2026-09-14: T18
+  task 11, below, expands nested modules to a bounded depth and removes
+  `NestedModuleNotExpanded` from the codebase entirely. D15 is described
+  here exactly as slice 2 shipped it, for the record; D20/D21 in
+  [docs/superpowers/specs/2026-09-11-module-expansion-design.md](superpowers/specs/2026-09-11-module-expansion-design.md)'s
+  task-11 addendum are its successors.)* A `Module` found while already
+  inside a module scope was not followed: it produced
+  `Diagnostic::NestedModuleNotExpanded` and its subtree was not descended.
   The corpus has zero nested modules and the Standard extraction defines
   no application-program-side `ModuleDef` complexType at all, so there is
   nothing to recurse against and no documented cycle rule to appeal to —
@@ -2064,12 +2069,18 @@ already stored everything this slice reads (D12).
   contains and incapable of looping on anything it does not.
 - **`Diagnostic::ModuleNotExpanded` is gone.** `ModuleDefNotFound {
   node_id, ref_id }` (no `@RefId`, or the named `ModuleDef` has no stored
-  tree) and `NestedModuleNotExpanded { node_id, ref_id }` (D15) replace it;
+  tree) and `NestedModuleNotExpanded { node_id, ref_id }` (D15) replaced
+  it — the second of those is itself gone as of task 11, which replaced it
+  with `ModuleCycleDetected` and `ModuleNestingTooDeep`;
   an empty-but-present `ModuleDef` tree is not a diagnostic (D17) — it
   legitimately activates nothing.
 - **Corpus regression coverage**, over the four installed `.knxprod`
   archives: zero `ModuleDefNotFound`, zero `NestedModuleNotExpanded` —
-  every `Module/@RefId` in the corpus resolves. For `prod3`'s three
+  every `Module/@RefId` in the corpus resolves. *(The second count is a
+  slice-2 measurement of a diagnostic that no longer exists. Task 11
+  re-measured the same question against all five archives and found zero
+  nested modules, which is why the diagnostic could be retired rather
+  than merely renamed.)* For `prod3`'s three
   programs, activation totals grow from 22/18/14 (program tree only,
   slice 1's behaviour) to 382/258/134 (expanded), independently derived
   from the raw `ApplicationProgram` XML by a from-scratch Python

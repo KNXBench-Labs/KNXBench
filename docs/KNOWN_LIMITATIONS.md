@@ -4458,7 +4458,7 @@ then, restarting the session is the honest answer and this section says so.
 
 **Limitation.** The download protocol of
 [docs/superpowers/specs/2026-09-13-commissioning-download-design.md](superpowers/specs/2026-09-13-commissioning-download-design.md)
-is implemented and tested — 148 tests across `knx-core::commissioning` and
+is implemented and tested — 153 tests across `knx-core::commissioning` and
 `knx-net::commissioning`, all of them against
 `crates/knx-net/src/commissioning/simulator.rs`. **No frame produced by this
 code has ever left the machine.** Every statement the implementation makes

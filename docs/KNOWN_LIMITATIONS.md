@@ -2379,7 +2379,7 @@ concern, not this codec's), but the layer that owns the APDU budget now
 exists and enforces it: `knx_net::cemi::encode_l_data` refuses an NPDU
 whose length does not fit the one-octet `L` field with `CemiError::
 NpduTooLong` rather than emitting a frame whose `L` octet silently
-wrapped (fixed 2026-09-14, T5 fix round 1, finding I1). (c) **Main type
+wrapped **[V]** (fixed 2026-09-14, T5 fix round 1, finding I1). (c) **Main type
 29's printed
 range is a typo, and this codec follows the datapoint-type rows instead of
 the format block.** ([A]) §3.28.1's Range row reads "SignedValue = [9 223 372

@@ -2913,7 +2913,19 @@ fn validate_kind_and_bounds(
                 // rounding-up direction's only risk (accepting one byte
                 // more than the true storage, for a declaration this
                 // corpus has never actually produced).
-                let max_bytes = (size_in_bit + 7) / 8;
+                //
+                // `size_in_bit` is whatever `parse_i64` accepted from an
+                // untrusted `TypeText/@SizeInBit` — a manufacturer file
+                // could declare `i64::MAX`, and plain `size_in_bit + 7`
+                // would panic on overflow in a debug build or wrap to a
+                // negative `max_bytes` in release, rejecting every value
+                // with a message quoting a negative byte count.
+                // `saturating_add` keeps this a rejection-only failure
+                // mode: an absurd declaration clamps to "accept anything
+                // that fits in memory" rather than "accept nothing and
+                // lie about why" — the old floor division could not
+                // overflow either, so this restores that property.
+                let max_bytes = size_in_bit.saturating_add(7) / 8;
                 let actual = raw.len() as i64;
                 if actual > max_bytes {
                     return Err(format!(

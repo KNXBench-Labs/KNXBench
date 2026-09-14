@@ -5331,3 +5331,46 @@ under `load_project` has been profiled further, and nothing has been
 "optimized" on the strength of one number — see `docs/PERFORMANCE.md` for
 the full numbers, the machine/toolchain they came from, and the exact
 reproduction command.
+
+## 2026-09-14: Task 8 — the same-file id collision blind spot, closed for `first_winner`'s real callers
+
+`crates/knx-productdb/src/parse/mod.rs`'s `first_winner` (see the
+2026-09-13 entry above, "Two parked findings closed") only detected an
+`IdConflict` when the colliding id came from a *different* file, because
+every element from one file was handed the same `source_sha256` and two
+same-file duplicates always compared equal. `first_winner` now also takes
+a `seen_this_call: &mut HashMap<(String, String), u32>`, created fresh
+once per `ingest_hardware`/`ingest_catalog` call and threaded through
+every call site in that one parse; a conflict is recorded when the old
+cross-file check fires *or* an id's occurrence count for this call exceeds
+1. `IdConflict` gained `pub occurrence: u32` (`crates/knx-productdb/src/
+report.rs`), persisted via the existing `ingest_unknown.occurrences`
+column and a new `package_conflict.occurrence` column (schema v6 → v7,
+`migrate_v6_to_v7`, `DEFAULT 1` for old rows). `source_sha256`'s meaning as
+file provenance is untouched everywhere else it is relied on (idempotent
+re-parse, translation backfill). `application_program`'s separate
+hand-rolled first-writer-wins copy in `parse/program.rs` was explicitly
+left with the same blind spot — out of scope, touched only to keep
+compiling against the new mandatory field. `datapoint_type`'s complete
+absence of conflict tracking is also untouched. Both are documented
+residue in KNOWN_LIMITATIONS.md §86, which is amended (not renumbered) to
+record the fix. Pinning tests
+`two_hardware_elements_sharing_an_id_in_one_file_conflict_silently` and
+`two_catalog_items_sharing_an_id_in_one_file_conflict_silently` are now
+`..._record_the_collision`, asserting one conflict with `occurrence == 2`
+instead of an empty conflict list; both were confirmed, in their old form,
+to fail against the new code before being rewritten.
+
+Gates run from the worktree root
+(`.worktrees/productdb-collision-record`, branch
+`productdb-collision-record`): `cargo fmt --all -- --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace
+--no-fail-fast`, `cargo run -p xtask -- check-layering`, `cargo run -p
+xtask -- check-headers`, `cargo deny check` — exit codes and test totals
+recorded in this session's dispatch report, not reproduced here since they
+belong to a single point in time on a branch, not a durable project fact.
+
+Out of scope, left as documented residue: `parse/program.rs`'s
+`application_program` first-writer-wins copy (still same-file blind);
+`master.rs`'s `datapoint_type` ingestion (still no conflict tracking of
+any kind, cross-file or same-file).

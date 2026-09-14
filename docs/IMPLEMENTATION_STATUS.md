@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-13 (T36: D10 master-translations slice 1 — a measured `Master`-scope `datapoint_type` reader, one-place locale-prefix matching, and ingest-time translation counts; see the end of this document)
+Last updated: 2026-09-14 (T9: ADR-0020 and product-database schema v8 — a migration may re-derive what the stored bytes determine, and `linkable` gets refilled out of the blobs that always held it; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -5471,3 +5471,163 @@ run, `cargo run -p xtask -- check-layering`,
 `cargo run -p xtask -- check-headers` (116 headers, 168 without one, ceiling
 168 — unchanged), `cargo deny check` — exit `0` six times. No TypeScript was
 touched.
+
+## 2026-09-14: Task 8 — the same-file id collision blind spot, closed for `first_winner`'s real callers
+
+`crates/knx-productdb/src/parse/mod.rs`'s `first_winner` (see the
+2026-09-13 entry above, "Two parked findings closed") only detected an
+`IdConflict` when the colliding id came from a *different* file, because
+every element from one file was handed the same `source_sha256` and two
+same-file duplicates always compared equal. `first_winner` now also takes
+a `seen_this_call: &mut HashMap<(String, String), u32>`, created fresh
+once per `ingest_hardware`/`ingest_catalog` call and threaded through
+every call site in that one parse; a conflict is recorded when the old
+cross-file check fires *or* an id's occurrence count for this call exceeds
+1. `IdConflict` gained `pub occurrence: u32` (`crates/knx-productdb/src/
+report.rs`), persisted via the existing `ingest_unknown.occurrences`
+column and a new `package_conflict.occurrence` column (schema v6 → v7,
+`migrate_v6_to_v7`, `DEFAULT 1` for old rows). `source_sha256`'s meaning as
+file provenance is untouched everywhere else it is relied on (idempotent
+re-parse, translation backfill). `application_program`'s separate
+hand-rolled first-writer-wins copy in `parse/program.rs` was explicitly
+left with the same blind spot — out of scope, touched only to keep
+compiling against the new mandatory field. `datapoint_type`'s complete
+absence of conflict tracking is also untouched. Both are documented
+residue in KNOWN_LIMITATIONS.md §86, which is amended (not renumbered) to
+record the fix. Pinning tests
+`two_hardware_elements_sharing_an_id_in_one_file_conflict_silently` and
+`two_catalog_items_sharing_an_id_in_one_file_conflict_silently` are now
+`..._record_the_collision`, asserting one conflict with `occurrence == 2`
+instead of an empty conflict list; both were confirmed, in their old form,
+to fail against the new code before being rewritten.
+
+Gates run from the worktree root
+(`.worktrees/productdb-collision-record`, branch
+`productdb-collision-record`): `cargo fmt --all -- --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace
+--no-fail-fast`, `cargo run -p xtask -- check-layering`, `cargo run -p
+xtask -- check-headers`, `cargo deny check` — exit codes and test totals
+recorded in this session's dispatch report, not reproduced here since they
+belong to a single point in time on a branch, not a durable project fact.
+
+Out of scope, left as documented residue: `parse/program.rs`'s
+`application_program` first-writer-wins copy (still same-file blind);
+`master.rs`'s `datapoint_type` ingestion (still no conflict tracking of
+any kind, cross-file or same-file).
+
+## 2026-09-14 — Migrations may re-derive from stored bytes (ADR-0020, product-database schema v8, branch `productdb-linkable-adr`)
+
+The task was an ADR, and the ADR had to be written before the code so that
+the code could be whatever the decision turned out to license. It licensed a
+migration, so there is one:
+[ADR-0020](adr/0020-migrations-may-rederive-from-stored-bytes.md), **a
+product-database migration may re-derive what the stored bytes determine, and
+must not invent what only the install knew.**
+
+**The premise the task started from was false, and reading the chain was the
+whole finding.** A re-parsing migration was expected to be the first
+migration to call the parser. It is the third. `migrate_v2_to_v3` calls
+`dynamic::parse::parse_dynamic_trees` over stored blobs and `migrate_v3_to_v4`
+calls `classify` plus `parse::translation::ingest_translations`, both with a
+per-blob `SAVEPOINT` and a `record_backfill_failure`, and `migrate_v2_to_v3`'s
+doc comment already argues the case in prose. So the question was never
+whether to take a new architectural risk; it was where the line runs, given
+that the chain has been crossing it since schema v3 without writing the rule
+down.
+
+**The line, and why it explains the migrations that refused to backfill.**
+A value that is a pure function of bytes the database already holds may be
+re-derived by a migration. A value that was an artefact of the install *event*
+may not be invented, and must keep an honest default. That is why
+`migrate_v4_to_v5`'s four `package` counters and `migrate_v5_to_v6`'s
+`dropped_datapoint_type_count` default to 0 rather than being reconstructed: what
+an `INSERT OR IGNORE` actually changed on a particular afternoon is install
+history, and no blob records it. `linkable` is on the other side of the line —
+it is one attribute of one element of one file whose bytes are in
+`source_file` — so it is re-derivable, and now is.
+
+**Five obligations the ADR imposes on any future backfill.** Call the parse
+layer, never a frozen private copy of its rules; write into absent slots only
+(ADR-0012's rule, reused as `linkable IS NULL`); scope every write by
+`source_sha256`, so a blob repairs only the rows its own bytes produced; wrap
+each blob in its own `SAVEPOINT` and record a failure as an `ingest_unknown`
+row rather than refusing to open the database; let `user_version` be the
+record that the backfill ran. Rules 1, 4 and 5 are the existing backfills'
+habits promoted to requirements. Rules 2 and 3 are new, because v2→v3 and
+v3→v4 only insert rows, and v7→v8 is the first one that `UPDATE`s a column an
+earlier build already wrote.
+
+**What shipped.** `CURRENT_PRODUCTDB_VERSION` is 8. `migrate_v7_to_v8` adds no
+DDL at all — it is a backfill, and `user_version` is the entire mechanism by
+which it runs once. It selects only the blobs behind a `linkable IS NULL` row,
+and `backfill_linkable` (`crates/knx-productdb/src/parse/program.rs`) streams
+each one with quick-xml, skipping `Dynamic` subtrees, and on every
+`ApplicationProgram` start or empty tag runs the attribute through the same
+`bool_flag` an ingest would use. The `UPDATE` carries `AND source_sha256 = ?`
+and `AND linkable IS NULL`, so neither another package's row nor a value a
+real ingest already determined can be touched, and a successful fill deletes
+the "attribute not understood" `ingest_unknown` row it has just made false —
+the report had a genuine complaint and no longer does. A blob that fails to
+parse rolls back to its own savepoint and records a `LinkableBackfillError`,
+joining `DynamicBackfillError` and `TranslationBackfillError` as the third
+`kind` of that shape.
+
+**Eight tests, seven of them against a database the previous version built.**
+The unit tests run `migrations()[0..6]` — literally the v6 chain, not a
+hand-written schema — ingest a program, blank the column the way the old
+`bool_flag` left it, plant the stale `ingest_unknown` row the old parser
+emitted, stamp `user_version = 6`, and then reopen through `open_and_migrate`.
+They cover a false value filled as 0, a true value filled as 1, a file that
+never stated the attribute staying `NULL`, a value an ingest already
+determined not being overwritten, a second row pointing at the same blob
+proving the `source_sha256` guard is load-bearing (the first draft of that test
+would have passed vacuously — repointing the row also removed the blob from
+the migration's own `SELECT`), a malformed blob recording itself without
+stopping the migration, and a database with nothing to fill reading no blob at
+all. The eighth is a corpus test in `tests/standalone_packages.rs`: install the
+four corpus packages with the current build, snapshot every
+`(id, linkable, source_sha256)`, roll the file back to the pre-fix state, and
+prove the migration returns every value identical, retires every stale report
+row, and records no failure.
+
+**Measured, not assumed.** 34 of 34 corpus programs refilled in 1.14 s, values
+identical to a fresh ingest (27 false, 7 true); a v6 database with nothing to
+fill opens in 0.038 s. The corpus holds 35 `Linkable` occurrences, all of them
+on `<ApplicationProgram>`, with word-spelled values in `project/11`, `20` and
+`21` archives and numeric ones in `project/11` and `23` — so the spelling
+belongs to the tool that wrote the file, not to the schema version, and the
+previous claim that this was a schema-20/21 problem understated it. Four
+packages come out of five `.knxprod` files because two Weinzierl archives are
+byte-identical, which is exactly the deduplication ADR-0011's content hash is
+for. The rejected alternative — rebuild the database from the original files —
+costs 17.0 s for 128 MB and needs files the blob store exists so that a user
+need not keep.
+
+**Rejected, and why.** Re-derive on read or lazily on first use: there is no
+reader to hook, `linkable` has zero consumers today, so the lazy path would be
+speculative machinery around a column nobody queries. Force a package
+reinstall: it would have to defeat three independent short-circuits and could
+still leave holes, because rows are first-writer-wins across packages. Freeze a
+private copy of the boolean rules inside the migration: duplicated logic that
+drifts silently, which is the failure this whole task is repairing. Deferred
+rather than dismissed: a parse-generation marker per `source_file` row,
+reported by `knx products verify`, whose by-construction false positive
+(a build that changed nothing still bumps the generation) is named in the ADR.
+Not built for one column; reach for it if the class turns up a third time.
+
+**[KNOWN_LIMITATIONS.md §87](KNOWN_LIMITATIONS.md#87-a-parse-fix-does-not-reach-rows-that-were-already-ingested-and-only-a-migration-can-go-back-for-them)
+keeps its number and changes its subject.** It was "existing databases keep
+their `NULL` `linkable`"; it is now the class — a derived row cannot know that
+its derivation should run again — with the `linkable` instance marked fixed
+and the rebuild workaround, the detection that is missing, and ADR-0020's rule
+for the next instance all recorded in it.
+
+**Re-measured, not remembered.** `cargo test --workspace --no-fail-fast -j 2`
+→ **1531 passed, 0 failed, 4 ignored** across 82 suites;
+`grep -c 'skip: OriginalData'` over that log → **0**, so the corpus tests
+actually ran. The six Rust gates — `cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -j 2 -- -D warnings`, that test run,
+`cargo run -p xtask -- check-layering`,
+`cargo run -p xtask -- check-headers` (117 headers, 168 without one, ceiling
+168 — unchanged, since no source file was added), `cargo deny check` — exit
+`0` six times. No TypeScript was touched.

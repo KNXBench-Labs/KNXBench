@@ -10,6 +10,7 @@ pub mod memory;
 pub mod mutation;
 pub mod procedure;
 pub mod programming_mode;
+pub mod properties;
 
 use std::fmt;
 

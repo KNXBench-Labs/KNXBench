@@ -10,7 +10,11 @@ use super::load_state::{LoadEvent, MaskVersion};
 
 /// `PID_LOAD_STATE_CONTROL`. `[D]` RES §4.23: property 5 of a loadable
 /// part's Interface Object, `PDT_CONTROL`.
-pub const PID_LOAD_STATE_CONTROL: u8 = 5;
+///
+/// Re-exported rather than restated: the number lives with the rest of the
+/// cited property identifiers in [`super::properties`], and one constant
+/// with two definitions is one constant that can disagree with itself.
+pub use super::properties::PID_LOAD_STATE_CONTROL;
 
 /// `[D]` MP §3.31.3: the property write is *"exactly 10 octets"*, at
 /// `start_index = 01h` with `nr_of_elem = 01h`. Not 1, not 2, and not

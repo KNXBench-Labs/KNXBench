@@ -464,6 +464,48 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     root.unmount();
   });
 
+  // KNOWN_LIMITATIONS.md §67: the rejection reason used to be
+  // `languagePack.ts`'s raw English validation message, dropped verbatim
+  // into `languagePack.importReport.rejected`'s `{reason}` slot even when
+  // the surrounding sentence was German. It must now come out translated
+  // *inside* that sentence, not merely translatable on its own — this
+  // switches the UI language to German first, then checks the whole
+  // rendered sentence, not an isolated `t("languagePack.rejection....")`
+  // call.
+  it("§67: a rejected pack's own reason is translated too, inside the translated sentence", async () => {
+    const { root } = await renderPanel();
+
+    const uiLanguageSelect = host!.querySelector<HTMLSelectElement>('select[aria-label="UI language"]')!;
+    await act(async () => {
+      uiLanguageSelect.value = "de";
+      uiLanguageSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    const input = host!.querySelector<HTMLInputElement>('.language-pack-manager input[type="file"]')!;
+    const file = jsonFile("bad.json", {
+      formatVersion: 1,
+      tag: "xx-not-a-language",
+      name: "X",
+      messages: {},
+    });
+    await act(async () => {
+      Object.defineProperty(input, "files", { value: [file], configurable: true });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const report = host!.querySelector(".language-pack-report")!;
+    // The wrapper sentence is German ("Import abgelehnt: …")...
+    expect(report.textContent).toContain("Import abgelehnt:");
+    // ...and so, now, is the reason inside it.
+    expect(report.textContent).toContain('ist kein wohlgeformtes BCP-47-Tag');
+    // The old English clause must not survive alongside the German one.
+    expect(report.textContent).not.toMatch(/is not a well-formed/i);
+
+    root.unmount();
+  });
+
   it("a hand-typed grandfathered tag gets a hint at its modern replacement", async () => {
     const { root } = await renderPanel();
 

@@ -103,13 +103,41 @@ export interface LanguagePackImportReport {
   pluralRulesSupported: boolean;
 }
 
+/**
+ * Every way `parseLanguagePack`/`importLanguagePack` can reject a pack,
+ * as a discriminated union instead of free-form prose — the
+ * `CreationDiagnostic` pattern (`api.ts`, used by `CatalogBrowser.tsx`'s
+ * `describeCreationDiagnostic`) applied to language packs, closing
+ * KNOWN_LIMITATIONS.md §67. `SettingsPanel.tsx`'s `describeRejectionReason`
+ * maps each `kind` to its own catalogue key so the reason renders in the
+ * active UI language *inside* the already-translated "Import rejected: …"
+ * sentence, instead of `{reason}` always being this type's English
+ * `LanguagePackParseResult.error`/`LanguagePackImportResult.error`, which
+ * still exists — untranslated — purely as the fallback a future `kind`
+ * this build doesn't recognise would need, and as what tests match against
+ * when they don't care about translation.
+ */
+export type LanguagePackRejectionReason =
+  | { kind: "notObject" }
+  | { kind: "formatVersionMissing" }
+  | { kind: "tagMissing" }
+  | { kind: "tagMalformed"; tag: string }
+  | { kind: "nameMissing" }
+  | { kind: "messagesMissing" }
+  | { kind: "messageValueNotString"; key: string; valueType: string }
+  | { kind: "englishNameNotString" }
+  | { kind: "basedOnNotString" }
+  | { kind: "packVersionNotString" }
+  | { kind: "pluralCategoriesInvalid" }
+  | { kind: "storageFailure"; detail: string };
+
 export type LanguagePackParseResult =
   | { ok: true; pack: LanguagePack }
-  | { ok: false; error: string };
+  | { ok: false; error: string; reason: LanguagePackRejectionReason };
 
 export type LanguagePackImportResult =
   | { ok: true; report: LanguagePackImportReport }
-  | { ok: false; error: string };
+  | { ok: false; error: string; reason: LanguagePackRejectionReason };
 
 /** How many missing-key names `LanguagePackImportReport.missingKeysSample`
  * carries — enough to give a translator a starting point, not so many the
@@ -182,8 +210,45 @@ export function grandfatheredHint(tag: unknown): string | undefined {
   return GRANDFATHERED_TAG_HINTS[tag.toLowerCase()];
 }
 
-function fail(error: string): { ok: false; error: string } {
-  return { ok: false, error };
+/** The English prose for a rejection `reason` — what `LanguagePackParseResult.error`/
+ * `LanguagePackImportResult.error` carries, and what `fail()` below always
+ * derives its `error` from, so the two can never drift apart. Never call
+ * this from the UI: `SettingsPanel.tsx` renders `reason` through its own
+ * translated catalogue keys instead (see `LanguagePackRejectionReason`'s
+ * doc comment). */
+function rejectionReasonMessage(reason: LanguagePackRejectionReason): string {
+  switch (reason.kind) {
+    case "notObject":
+      return "A language pack must be a JSON object.";
+    case "formatVersionMissing":
+      return '"formatVersion" is required and must be a number.';
+    case "tagMissing":
+      return '"tag" is required and must be a non-empty string.';
+    case "tagMalformed":
+      return `"tag" (${JSON.stringify(reason.tag)}) is not ${BCP47_SHAPE_HINT}.`;
+    case "nameMissing":
+      return '"name" is required and must be a non-empty string.';
+    case "messagesMissing":
+      return '"messages" is required and must be an object mapping keys to strings.';
+    case "messageValueNotString":
+      return `"messages.${reason.key}" must be a string, got ${reason.valueType}.`;
+    case "englishNameNotString":
+      return '"englishName" must be a string when present.';
+    case "basedOnNotString":
+      return '"basedOn" must be a string when present.';
+    case "packVersionNotString":
+      return '"packVersion" must be a string when present.';
+    case "pluralCategoriesInvalid":
+      return '"pluralCategories" must be an array of strings when present.';
+    case "storageFailure":
+      return `Could not save the change: the browser's storage rejected the write (${reason.detail}).`;
+  }
+}
+
+function fail(
+  reason: LanguagePackRejectionReason,
+): { ok: false; error: string; reason: LanguagePackRejectionReason } {
+  return { ok: false, error: rejectionReasonMessage(reason), reason };
 }
 
 /**
@@ -197,44 +262,44 @@ function fail(error: string): { ok: false; error: string } {
  */
 export function parseLanguagePack(raw: unknown): LanguagePackParseResult {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    return fail("A language pack must be a JSON object.");
+    return fail({ kind: "notObject" });
   }
   const obj = raw as Record<string, unknown>;
 
   if (typeof obj.formatVersion !== "number" || !Number.isFinite(obj.formatVersion)) {
-    return fail('"formatVersion" is required and must be a number.');
+    return fail({ kind: "formatVersionMissing" });
   }
   if (typeof obj.tag !== "string" || obj.tag.length === 0) {
-    return fail('"tag" is required and must be a non-empty string.');
+    return fail({ kind: "tagMissing" });
   }
   if (!isWellFormedBcp47Tag(obj.tag)) {
-    return fail(`"tag" (${JSON.stringify(obj.tag)}) is not ${BCP47_SHAPE_HINT}.`);
+    return fail({ kind: "tagMalformed", tag: obj.tag });
   }
   if (typeof obj.name !== "string" || obj.name.length === 0) {
-    return fail('"name" is required and must be a non-empty string.');
+    return fail({ kind: "nameMissing" });
   }
   if (typeof obj.messages !== "object" || obj.messages === null || Array.isArray(obj.messages)) {
-    return fail('"messages" is required and must be an object mapping keys to strings.');
+    return fail({ kind: "messagesMissing" });
   }
   const messagesObj = obj.messages as Record<string, unknown>;
   for (const [key, value] of Object.entries(messagesObj)) {
     if (typeof value !== "string") {
-      return fail(`"messages.${key}" must be a string, got ${typeof value}.`);
+      return fail({ kind: "messageValueNotString", key, valueType: typeof value });
     }
   }
   if (obj.englishName !== undefined && typeof obj.englishName !== "string") {
-    return fail('"englishName" must be a string when present.');
+    return fail({ kind: "englishNameNotString" });
   }
   if (obj.basedOn !== undefined && typeof obj.basedOn !== "string") {
-    return fail('"basedOn" must be a string when present.');
+    return fail({ kind: "basedOnNotString" });
   }
   if (obj.packVersion !== undefined && typeof obj.packVersion !== "string") {
-    return fail('"packVersion" must be a string when present.');
+    return fail({ kind: "packVersionNotString" });
   }
   if (obj.pluralCategories !== undefined) {
     const categories = obj.pluralCategories;
     if (!Array.isArray(categories) || categories.some((c) => typeof c !== "string")) {
-      return fail('"pluralCategories" must be an array of strings when present.');
+      return fail({ kind: "pluralCategoriesInvalid" });
     }
   }
 
@@ -392,9 +457,8 @@ export function getLanguagePack(tag: string): LanguagePack | undefined {
  * store in the app that accepts arbitrary user-supplied JSON of
  * unbounded size), but caught as `unknown` because nothing guarantees
  * that shape. Same fallback `api.ts`'s `errorMessage` uses. */
-function describeStorageFailure(error: unknown): string {
-  const detail = error instanceof Error ? error.message : String(error);
-  return `Could not save the change: the browser's storage rejected the write (${detail}).`;
+function storageFailureDetail(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /**
@@ -427,7 +491,7 @@ export function importLanguagePack(raw: unknown): LanguagePackImportResult {
   } catch (error) {
     if (previous === undefined) delete packs[tag];
     else packs[tag] = previous;
-    return fail(describeStorageFailure(error));
+    return fail({ kind: "storageFailure", detail: storageFailureDetail(error) });
   }
   notifyPackSubscribers();
 

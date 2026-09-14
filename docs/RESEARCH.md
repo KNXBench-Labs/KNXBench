@@ -3271,7 +3271,10 @@ every session used `ManagementSession::read_only` (no `WriteAuthorisation`,
 so no write path exists to call) and `AuthorisationPlan::Skip` (so
 `authorise()` returns without sending `A_Authorize_Request` at all — spec
 §10.2's "free level, unknown value" path, not a tested one this time but a
-skipped one). Bus contact, one line per address, per SAFETY RULE 8:
+skipped one). Bus contact, one line per address, per `CLAUDE.md`'s rule
+against silently discarding information, applied here as the test's own
+module doc practice (`crates/knx-net/tests/live_commissioning_readonly.rs`:
+"prints one block per address and never summarises a non-answer away"):
 `1.1.24`–`1.1.32`, each via `A_DeviceDescriptor_Read` (mask version),
 `A_PropertyValue_Read` (`PID_MANUFACTURER_ID`, `PID_HARDWARE_TYPE`,
 `PID_PROGRAM_VERSION`, `PID_LOAD_STATE_CONTROL` ×3 objects) over a

@@ -175,7 +175,7 @@ fn validate_manufacturer(path: &str, bytes: &[u8]) -> Result<(), PackageError> {
 }
 
 fn package_conflicts(conn: &Connection, sha256: &str) -> Result<Vec<IdConflict>, ProductDbError> {
-    Ok(conn.prepare("SELECT table_name, logical_id, kept_sha256, other_sha256 FROM package_conflict WHERE package_sha256 = ?1 ORDER BY ordinal")?.query_map([sha256], |r| Ok(IdConflict { table: r.get(0)?, id: r.get(1)?, kept_sha256: r.get(2)?, other_sha256: r.get(3)? }))?.collect::<Result<Vec<_>, _>>()?)
+    Ok(conn.prepare("SELECT table_name, logical_id, kept_sha256, other_sha256, occurrence FROM package_conflict WHERE package_sha256 = ?1 ORDER BY ordinal")?.query_map([sha256], |r| Ok(IdConflict { table: r.get(0)?, id: r.get(1)?, kept_sha256: r.get(2)?, other_sha256: r.get(3)?, occurrence: r.get(4)? }))?.collect::<Result<Vec<_>, _>>()?)
 }
 
 // Bound metadata allocation before ZipArchive constructs its entry index.
@@ -601,7 +601,7 @@ pub fn install_package(
     )?;
     for (ordinal, conflict) in report.conflicts.iter().enumerate() {
         tx.execute(
-            "INSERT INTO package_conflict (package_sha256, ordinal, table_name, logical_id, kept_sha256, other_sha256) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO package_conflict (package_sha256, ordinal, table_name, logical_id, kept_sha256, other_sha256, occurrence) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 report.sha256,
                 ordinal as i64,
@@ -609,6 +609,7 @@ pub fn install_package(
                 conflict.id,
                 conflict.kept_sha256,
                 conflict.other_sha256,
+                conflict.occurrence,
             ],
         )?;
     }

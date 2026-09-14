@@ -2442,7 +2442,7 @@ documentation pass: the only language-related line in the file is its own
 `"Text is rendered in the project's default language only."` notice — a
 disclosure, not a feature. `knx-report` would need its own follow-up task
 to consume a translation reader; none is scheduled. See
-[§66](#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack)
+[§66](#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14)
 for why no frontend catalogue or language pack (T25) can substitute for
 that follow-up either — this document is generated entirely server-side.
 
@@ -3402,78 +3402,144 @@ simply absent — `knx 0.1.0-alpha.1` — unless `KNX_BUILD_SHA` is passed
 in. Absence is the intended failure direction; a false number is the one
 this section, and the ADR, exist to rule out.
 
-## 66. Server-composed prose and the documentation export are not translated by any UI language or pack
+## 66. Server-composed prose and the documentation export are not translated by any UI language or pack — PARTIALLY RESOLVED (2026-09-14, T14)
 
-**Limitation.** T25 (2026-09-12) gave `apps/knx-web` a message catalogue
-and an open-ended language-pack format, but neither can translate a
-string the frontend never receives as a catalogue key. Several
-user-visible strings are composed in Rust and sent to the browser as
-plain text, rendered verbatim regardless of the active UI language or
-any installed pack:
+**Resolved, one surface.** `ParameterDiagnostic.message` — the parameter
+panel's own diagnostic headline — now follows the `CreationDiagnostic`
+pattern this section's own "Lifted when" paragraph named as the way
+across this boundary. `ParameterDiagnosticDto`
+(`apps/knx-server/src/routes.rs`) gained a `kind` field
+(`ParameterDiagnosticKindDto`, one variant per `Diagnostic` case in
+`apps/knx-server/src/domain.rs`); `diagnostic_kind_and_message` now
+returns `(kind, message)` instead of just `message`, and all eight
+`ParameterDiagnosticDto` construction sites carry it. `.message` itself
+is unchanged text — still English, still composed server-side — but it
+is now redundant: `ParameterPanel.tsx`'s
+`describeParameterDiagnosticMessage` looks `kind` up in
+`PARAMETER_DIAGNOSTIC_MESSAGE_KEYS` (19 entries, one per
+`parameters.diagnostic.*` catalogue key in `messages/en.ts`/`de.ts`) and
+renders the catalogue's translation, falling back to the raw `.message`
+only for a `kind` this build's frontend doesn't recognise — the same
+"trust the wire shape, degrade to English for the unknown case"
+contract `CreationDiagnostic.kind` already documents. This was cheap
+specifically because every one of the 19 messages is a fixed sentence
+with no interpolated value of its own (`ParametersUnreadable` through
+`ModuleWithoutId` in `domain.rs`); every dynamic value — ids, node
+numbers, counts — already lived in `.detail`, never in `.message`, so
+tagging the closed set cost one enum and a lookup table, not a
+server-side templating layer. Test:
+`apps/knx-web/src/ParameterPanel.test.tsx`, "§66: a diagnostic's message
+is translated with the UI language; its detail stays English".
 
-- `ParameterDiagnostic.message`/`.detail` (`apps/knx-web/src/api.ts`),
-  rendered by `ParameterPanel.tsx`'s `DiagnosticsBanner`
-  (`{d.message}`, and `.detail` behind the "Copy details" button) — one
-  sentence per diagnostic, composed server-side in
-  `crates/knx-productdb`/`apps/knx-server`.
-- `LogPanel.tsx`'s `entry.message`, `entry.location` and `entry.detail`
-  — every row of the session log (`apps/knx-server`'s in-memory
-  `SessionLog`) renders these three fields untouched; only the row's
-  *severity* label goes through the catalogue (`SEVERITY_LABEL_KEYS`).
-- API error strings surfaced in toasts. `api.errorMessage(e)` unwraps a
-  thrown request's `Error.message` — the server's own error body — and
-  every call site (`App.tsx`, `Inspector.tsx`, `ParameterPanel.tsx`,
-  `BusMonitorPanel.tsx`, `CatalogBrowser.tsx`, `LogPanel.tsx`,
-  `BulkActionToolbar.tsx`, `BusComposeForm.tsx`, ...) hands it straight
-  to `pushError`/`setError`. `toast.ts`'s `humorizeError` wraps that
-  string in a *translated* template (`toast.error.*`, a joke with a
-  `{msg}` slot) — the wrapper is bilingual, the substituted message is
-  not. The same shape appears elsewhere too: `BusMonitorPanel.tsx`'s
-  `stopSummary.warning` is `BusSessionSummary::drain_panic`
-  (`apps/knx-server/src/bus_routes.rs`), a caught panic message, which
-  is exactly as untranslatable as any other server string.
+**The boundary rule (apply this to the next string you add).** A
+server-composed string crossing into `apps/knx-web` is translatable
+work, not a given, and the question to ask before wiring it into the
+catalogue is: *does a user read this during normal use of the feature,
+and is its content a closed, enumerable set (or safely decomposable
+into a translated template plus untranslated data slots, `toast.ts`'s
+`{msg}` style)?* If yes, give the Rust side a `kind` tag (or reuse an
+existing enum's discriminant) the way `ParameterDiagnostic.message` and
+`CreationDiagnostic` (T25 Task 5) both do, and translate the *kind*
+client-side — never the composed sentence itself, and never by trying
+to parse or pattern-match English prose back into a language. If no —
+the text is developer-facing (read for a bug report, not during the
+task), or it is arbitrary/unbounded (a panic message, a raw debug
+formatter, a validator's free-form detail) — it stays English, on
+purpose, and this document is where that decision is recorded so the
+next person doesn't have to re-litigate it per string.
+
+**Ruled out under that rule, and why (still open, not scheduled):**
+
+- `ParameterDiagnostic.detail` (`apps/knx-web/src/api.ts`) — kept
+  English by design, not merely untranslated. It is `format!("{:?}",
+  diagnostic)` (`domain.rs`), a Rust `Debug` dump behind
+  `ParameterPanel.tsx`'s "Copy details" button, meant to be pasted into
+  a bug report or read by whoever wrote `domain.rs`, not by an end user
+  during normal use — arbitrary, not a closed set, and nobody reads it
+  in German. `api.ts`'s doc comment on the field says so; the new test
+  above asserts `.detail`'s content (`"NoBranchMatched"`) never appears
+  in the rendered banner text.
+- `LogPanel.tsx`'s `entry.message`/`entry.location`/`entry.detail` — the
+  session log is diagnostic output for whoever is debugging a bus
+  session, the textbook case of "log text nobody reads in German" this
+  task's brief named explicitly. Only the row's *severity* label
+  (`SEVERITY_LABEL_KEYS`) is UI chrome and was already translated before
+  this task.
+- API error strings surfaced in toasts (`api.errorMessage`,
+  `toast.ts`'s `humorizeError`, `BusMonitorPanel.tsx`'s
+  `stopSummary.warning` fed by `BusSessionSummary::drain_panic` in
+  `apps/knx-server/src/bus_routes.rs`) — these are not a closed,
+  enumerable set the way `ParameterDiagnostic.message` and
+  `LanguagePackRejectionReason` (§67) are; they're every `Result::Err`
+  path across the whole Rust backend, funnelled through one generic
+  `Error.message` unwrap at the HTTP boundary. Closing this would mean
+  auditing and tagging every fallible call site server-wide — a
+  cross-cutting rewrite well beyond one task, explicitly out of scope
+  per this task's brief ("do not perform unrelated refactors"). The
+  wrapper sentence around the message is already translated
+  (`toast.error.*`); only the substituted server text is not.
 - `crates/knx-report`'s generated documentation export
-  (`render_html`/`build_device_detail`). **This is not language-aware in
-  any respect.** It takes no language parameter at all and renders a
-  fixed set of English headings and labels plus whatever text the
-  project itself holds — see
+  (`render_html`/`build_device_detail`) — unchanged by this task, still
+  not language-aware in any respect (no language parameter at all). See
   [§48](#48-project-documentation-export-renders-in-one-language-only)
-  for the full account, unaffected by T25/T26/T32/T33. This document
-  states plainly: the export is not translated by a UI language, not by
-  a language pack, and not by the product-data language setting either.
+  for the full account; this task's brief named §48/T25/T26/T32/T33 as
+  the prior scope decision and did not reopen it.
 
-**Cause.** These strings are composed by Rust crates (`knx-productdb`,
-`knx-server`, `knx-report`) that have no notion of `apps/knx-web`'s UI
-language at all, and are sent across the HTTP boundary as opaque text,
-not as a message key plus parameters. A frontend catalogue can only
-translate a key it was given; a language pack can only override a key
-this build already defines. Neither mechanism has anywhere to attach to
-a string it never sees structured.
+**Cause (original, still true for everything above except
+`ParameterDiagnostic.message`).** These strings are composed by Rust
+crates (`knx-productdb`, `knx-server`, `knx-report`) that have no notion
+of `apps/knx-web`'s UI language at all, and are sent across the HTTP
+boundary as opaque text, not as a message key plus parameters. A
+frontend catalogue can only translate a key it was given; a language
+pack can only override a key this build already defines. Neither
+mechanism has anywhere to attach to a string it never sees structured.
 
 **Impact.** A user running any UI language — German, an imported pack,
-or an invented one — still sees English parameter diagnostics, log
-entries, error-toast bodies (inside an otherwise-translated wrapper
-sentence), and an entirely English generated documentation file. This is
-not a bug in T25's extraction pass; it is the boundary of what a
-frontend-only translation layer can reach at all.
+or an invented one — now sees a translated parameter-diagnostic
+headline, but still sees English `.detail` text (by design), English log
+entries (by design), English error-toast bodies (inside an
+otherwise-translated wrapper sentence), and an entirely English
+generated documentation file. The remaining gap is smaller than before
+this task, not closed.
 
-**Lifted when.** Open, not scheduled. The one precedent already in the
-codebase for crossing this boundary is `CatalogBrowser.tsx`'s
-`describeCreationDiagnostic` (T25 Task 5): `CreationDiagnostic` is a
-*structured*, internally-tagged Rust enum (`kind` plus typed fields), so
-the frontend composes its own translated sentence per `kind` and falls
-back to the server's own `detail` only for a `kind` it does not
-recognise. `ParameterDiagnostic` has no such structure today — it is
-flat `message`/`detail` prose — so the same technique is not available
-to it without a server-side change first. A general fix would need each
-of these origin points to either expose a structured, catalogue-mappable
-shape (the `CreationDiagnostic` pattern) or a server-side i18n layer,
-neither of which exists and neither of which is in scope for T25.
+**Lifted when.** Partially done, 2026-09-14 (T14): the
+`ParameterDiagnostic.message` surface closed, using the exact mechanism
+this section previously said would be needed. The remaining four
+surfaces above are ruled out for the stated reasons (two by design, two
+as too large for one task) rather than merely deferred by omission; none
+is scheduled.
 
-## 67. A rejected language pack's own reason is shown untranslated, inside a translated sentence
+## 67. A rejected language pack's own reason was shown untranslated, inside a translated sentence — RESOLVED (2026-09-14, T14)
 
-**Limitation.** When the Settings panel rejects an imported language
-pack, the surrounding sentence is translated
+**Resolved.** `apps/knx-web/src/languagePack.ts` now exports
+`LanguagePackRejectionReason`, a discriminated union (one variant per
+`parseLanguagePack` failure mode, plus `storageFailure` for a
+`localStorage.setItem` throw) — the `CreationDiagnostic` pattern
+(§66) applied to language packs. `fail()` builds both the untranslated
+`error` string (unchanged, still what a non-UI caller or a test that
+doesn't care about translation sees) and the structured `reason`;
+`LanguagePackParseResult`/`LanguagePackImportResult` carry both.
+`SettingsPanel.tsx`'s new `describeRejectionReason` switches on
+`reason.kind` and returns one of twelve new
+`languagePack.rejection.*` catalogue keys (English and German), falling
+back to the untranslated `error` only for a `kind` this switch has never
+heard of — which cannot happen today, since both sides of the union live
+in the same build, but the fallback costs nothing and matches
+`describeCreationDiagnostic`'s own precedent. The one rejection that
+never reaches `languagePack.ts` at all — the uploaded file failing
+`JSON.parse` before `importLanguagePack` is even called — reuses the
+already-existing `languagePack.importReport.invalidJson` key through the
+same switch, so both paths compose the same translated sentence.
+`SettingsPanel.test.tsx`'s "§67: a rejected pack's own reason is
+translated too, inside the translated sentence" test switches the UI
+language to German, rejects a pack for a malformed `tag`, and asserts on
+the *whole rendered sentence*: both "Import abgelehnt:" and the German
+reason clause are present, and the old English clause
+(`/is not a well-formed/i`) is not. The original limitation text is kept
+below for context.
+
+**Limitation (as it stood before 2026-09-14).** When the Settings panel
+rejects an imported language pack, the surrounding sentence is translated
 (`languagePack.importReport.rejected`: `"Import rejected: {reason}"` /
 `"Import abgelehnt: {reason}"`) but `{reason}` is not: it is
 `apps/knx-web/src/languagePack.ts`'s own English validation message,
@@ -3492,7 +3558,7 @@ write to `localStorage` fails; all of them return a
 free-form English string, not a discriminated `kind` the frontend could
 map to its own catalogue key the way `CatalogBrowser.tsx`'s
 `describeCreationDiagnostic` does for `CreationDiagnostic` (see
-[§66](#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack)).
+[§66](#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14)).
 Giving each of `parseLanguagePack`'s roughly dozen failure modes its own
 message key was judged not worth doing for a first cut of the feature.
 
@@ -3501,12 +3567,11 @@ text — a rejected pack is never installed regardless of language, so no
 functional behaviour depends on this string, only its readability to a
 non-English speaker debugging their own pack file.
 
-**Lifted when.** Open, not scheduled. Would need `languagePack.ts`'s
-`fail()` call sites to return a structured discriminant (mirroring
-`CreationDiagnostic`'s shape) that `SettingsPanel.tsx` could map to its
-own catalogue keys, the same restructuring §66 names as the general fix
-for server-composed prose — except this one is entirely frontend-side
-and does not need a Rust change.
+**Lifted when.** Done, 2026-09-14 (T14): `languagePack.ts`'s `fail()`
+call sites return a structured discriminant, and `SettingsPanel.tsx`
+maps it to its own catalogue keys — exactly the restructuring this
+section used to say §66 would also need for server-composed prose,
+except this one was entirely frontend-side and needed no Rust change.
 
 ## 68. Repeated module instantiation is refused, not supported
 

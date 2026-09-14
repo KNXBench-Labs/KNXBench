@@ -974,7 +974,7 @@ mod tests {
         // `vacant` gets no script at all: silence, resolved to `Vacant`.
         transport.fail_connect(failing);
 
-        let plan = ScanPlan::range(occupied, failing, std::iter::empty())
+        let plan = ScanPlan::range(occupied, failing)
             .expect("occupied..=failing is a valid same-line range");
 
         let result = scan_line(&transport, &plan, &fast_policy(), |_, _| {}).await;

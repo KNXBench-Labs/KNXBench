@@ -17,18 +17,24 @@
 
 pub mod cemi;
 pub mod client;
+pub mod commissioning;
 pub mod core;
 pub mod discovery;
 pub mod frame;
+pub mod management;
 pub mod routing;
 pub mod scan;
 pub mod tunnelling;
 
-pub use cemi::{ApplicationService, Destination, LDataFrame, LDataMessageKind, Tpci};
+pub use cemi::{ApplicationService, CemiError, Destination, LDataFrame, LDataMessageKind, Tpci};
 pub use client::{
     BusConnection, BusError, DiscoveredGateway, KnxNetIpClient, RoutingClient, TunnelClient,
     TunnelEvent,
 };
+pub use commissioning::{
+    ConnectionState, ManagementSession, SessionError, SessionTiming, VerifyMode,
+};
+pub use management::ManagementTransport;
 pub use scan::{
     probe_address, scan_line, ProbeOutcome, ProbePolicy, ProbePolicyError, ScanError, ScanTransport,
 };

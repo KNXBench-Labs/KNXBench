@@ -7,7 +7,11 @@ use std::str::FromStr;
 
 /// A device's individual address: area (4 bits), line (4 bits), device
 /// (8 bits), packed as ETS does.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+///
+/// Ordered by the packed value, which is area-then-line-then-device, so a
+/// sorted list of addresses reads topologically. `GroupAddress` below is
+/// ordered the same way and for the same reason: deterministic output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct IndividualAddress(u16);
 
 impl IndividualAddress {
@@ -31,7 +35,7 @@ impl IndividualAddress {
         ))
     }
 
-    pub fn from_raw(raw: u16) -> Self {
+    pub const fn from_raw(raw: u16) -> Self {
         Self(raw)
     }
 
@@ -230,6 +234,83 @@ impl fmt::Display for AddressError {
     }
 }
 
+/// Individual addresses this installation forbids all bus traffic to,
+/// in one place, shared by every layer that can reach a bus.
+///
+/// `1.1.220` is a live alarm panel on the installation this code will
+/// eventually run against. Spec §2.1 (R-SAFE-1) requires that it "must
+/// never be read, never be written, never be probed, and never appear
+/// inside any address range, scan plan, iteration, retry list or
+/// diagnostic sweep", and that the guard sit at "the lowest layer that
+/// knows what an individual address is" rather than being re-checked per
+/// caller. This constant is that one place; [`ContactableAddress`] is
+/// that guard.
+///
+/// Deliberately not a caller-supplied argument: a caller that can pass
+/// the list can pass a list with the alarm panel missing from it.
+pub const EXCLUDED_INDIVIDUAL_ADDRESSES: &[IndividualAddress] =
+    &[IndividualAddress::from_raw(0x11DC)];
+
+/// Whether `address` is on the project exclusion list of
+/// [`EXCLUDED_INDIVIDUAL_ADDRESSES`].
+pub fn is_project_excluded(address: IndividualAddress) -> bool {
+    EXCLUDED_INDIVIDUAL_ADDRESSES.contains(&address)
+}
+
+/// An individual address that has passed the project exclusion guard,
+/// and the only way to name a bus target in the commissioning layers.
+///
+/// Constructing one is the check: there is no field access, no `Default`,
+/// no `From<IndividualAddress>` and no unchecked constructor outside
+/// `test-support`, so "we forgot to check" is not a reachable state. A
+/// function that takes a `ContactableAddress` cannot be handed an
+/// excluded address at all, which is spec §2.1's "every higher layer
+/// inherits the refusal instead of repeating it".
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct ContactableAddress(IndividualAddress);
+
+impl ContactableAddress {
+    /// Admits `address` unless it is on the project exclusion list. The
+    /// refusal carries the address, because a silent refusal and an
+    /// absent guard look identical from outside (§2.1).
+    pub fn new(address: IndividualAddress) -> Result<Self, ExcludedAddress> {
+        if is_project_excluded(address) {
+            return Err(ExcludedAddress(address));
+        }
+        Ok(Self(address))
+    }
+
+    /// The address, once the guard has admitted it.
+    pub fn address(self) -> IndividualAddress {
+        self.0
+    }
+}
+
+impl fmt::Display for ContactableAddress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+/// An operation named an address on the project exclusion list and was
+/// refused. Reported, never swallowed: per `CLAUDE.md`'s "never silently
+/// discard information", the caller learns which address was refused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ExcludedAddress(pub IndividualAddress);
+
+impl std::error::Error for ExcludedAddress {}
+
+impl fmt::Display for ExcludedAddress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "individual address {} is on the project exclusion list and \
+             must never be contacted",
+            self.0
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -327,6 +408,39 @@ mod tests {
                 );
                 assert!(ga.fits_style(style), "raw {raw} vs {style:?}");
             }
+        }
+    }
+
+    #[test]
+    fn the_alarm_panel_is_on_the_shared_exclusion_list() {
+        // §14 item 11, the guard half: the list is a constant in one
+        // place, not an argument a caller can forget to pass.
+        let alarm_panel = IndividualAddress::new(1, 1, 220).unwrap();
+        assert!(is_project_excluded(alarm_panel));
+        assert_eq!(EXCLUDED_INDIVIDUAL_ADDRESSES, &[alarm_panel]);
+    }
+
+    #[test]
+    fn an_excluded_address_cannot_become_contactable_and_the_refusal_names_it() {
+        let alarm_panel = IndividualAddress::new(1, 1, 220).unwrap();
+        let err = ContactableAddress::new(alarm_panel).unwrap_err();
+        assert_eq!(err, ExcludedAddress(alarm_panel));
+        // Reported, not silent: the message names the address, so a
+        // refusal is distinguishable from a guard that never ran.
+        assert!(err.to_string().contains("1.1.220"));
+    }
+
+    #[test]
+    fn a_neighbour_of_the_excluded_address_is_contactable() {
+        // The guard excludes exactly one address, not a neighbourhood:
+        // 1.1.219 and 1.1.221 must stay reachable or the guard is wrong
+        // in the other direction.
+        for device in [219u8, 221] {
+            let address = IndividualAddress::new(1, 1, device).unwrap();
+            assert_eq!(
+                ContactableAddress::new(address).map(ContactableAddress::address),
+                Ok(address)
+            );
         }
     }
 }

@@ -409,7 +409,16 @@ Addresses are dedicated types, not integers. `IndividualAddress(u16)` exposes
 area, line and device; `GroupAddress(u16)` is rendered according to the
 project-wide `GroupAddressStyle` (Free, TwoLevel, ThreeLevel). Parsing and
 formatting are pure functions with typed errors, which makes them exhaustively
-unit-testable and keeps formatting decisions out of the UI.
+unit-testable and keeps formatting decisions out of the UI. The raw `u16`
+never changes when the style does — restyling
+(`knx_core::Command::SetGroupAddressStyle`, undoable, `knx-server`'s
+`POST /api/project/group-address-style`) only changes how every address is
+subsequently rendered, and refuses to touch anything if even one existing
+address would not survive the new style, though since TwoLevel's 5+11 bits
+and ThreeLevel's 5+3+8 bits both exhaust the full 16, that refusal currently
+has no way to trigger (`knx_projection::ProjectTree.group_address_style`
+carries the current choice out to the UI's Inspector, read-only —
+[KNOWN_LIMITATIONS.md §84](KNOWN_LIMITATIONS.md#84-a-projects-group-address-style-can-be-chosen-and-afterwards-never-seen--resolved-2026-09-14-t4)).
 
 Two rules that an over-strict model would get wrong:
 

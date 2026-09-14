@@ -394,13 +394,14 @@ pub struct UnsavedChanges;
 /// default label belongs to the frontend's message catalogue, not to a
 /// hardcoded string down here.
 ///
-/// `group_address_style` is the one field here that is close to
-/// irreversible: nothing in `knx-core` can restyle a project after the
-/// fact, and the raw 16-bit value a `TwoLevel` address holds is read back
-/// as a different-looking `ThreeLevel` one. An absent style keeps
-/// `Project::new`'s own `ThreeLevel` default, so every existing caller
-/// behaves exactly as before; the route above refuses an unrecognised one
-/// rather than guessing.
+/// `group_address_style` only sets the *initial* style for a brand-new
+/// project — restyling one that already has group addresses is
+/// `set_group_address_style_impl`'s job, not this one's, and it refuses
+/// the whole restyle unless every existing address survives it
+/// (`knx_core::Command::SetGroupAddressStyle`, KNOWN_LIMITATIONS.md §84).
+/// An absent style here keeps `Project::new`'s own `ThreeLevel` default,
+/// so every existing caller behaves exactly as before; the route above
+/// refuses an unrecognised one rather than guessing.
 ///
 /// Refuses with [`UnsavedChanges`] when a project is open and its command
 /// stack has anything to undo, unless `discard_changes` is set. There is no
@@ -1251,6 +1252,18 @@ pub fn set_com_object_flag_impl(
             value,
         },
     )
+}
+
+/// Restyles the whole project — `Command::SetGroupAddressStyle` itself
+/// checks every existing group address against the target style first and
+/// refuses the whole change, naming the offending address, if even one
+/// does not fit (KNOWN_LIMITATIONS.md §84). Undoable like every other
+/// command, through the same `apply`/`CommandStack` path.
+pub fn set_group_address_style_impl(
+    state: &AppState,
+    style: knx_core::GroupAddressStyle,
+) -> Result<knx_projection::ProjectTree, String> {
+    apply(state, knx_core::Command::SetGroupAddressStyle { style })
 }
 
 /// Allocates a fresh `GroupAddressId` and creates a new group address in

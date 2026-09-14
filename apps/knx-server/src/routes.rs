@@ -20,6 +20,10 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/project/save", post(save_project))
         .route("/api/project/save-as", post(save_project_as))
         .route("/api/project/export", post(export_project))
+        .route(
+            "/api/project/group-address-style",
+            post(set_group_address_style),
+        )
         .route("/api/device/{id}", axum::routing::get(device_detail))
         .route(
             "/api/device/{id}/parameters",
@@ -376,10 +380,11 @@ struct NewProjectBody {
 /// Unknown values are refused, deliberately — unlike both of those
 /// mappers, which fall back to `ThreeLevel` (the importer at least records
 /// a `MapProblem` while doing so). Neither has a choice: they are reading
-/// a document that already exists. This route is creating one, where the
-/// style is effectively permanent once group addresses exist, and a
-/// silently wrong one is discovered far too late. Data integrity over
-/// convenience.
+/// a document that already exists. These two routes are creating or
+/// changing one, where a silently wrong style is discovered far too late —
+/// `POST /api/project/group-address-style` can restyle a project after the
+/// fact (T4), but a value nobody asked for is still a value nobody
+/// notices. Data integrity over convenience.
 fn parse_group_address_style(value: &str) -> Result<knx_core::GroupAddressStyle, ApiError> {
     match value {
         "Free" => Ok(knx_core::GroupAddressStyle::Free),
@@ -401,6 +406,12 @@ fn parse_group_address_style(value: &str) -> Result<knx_core::GroupAddressStyle,
 /// `discardChanges`), not a malformed request. An unrecognised
 /// `groupAddressStyle` is the opposite case and does get the `400`: there
 /// is nothing about the server's state to resolve, only the request.
+///
+/// A wrong choice here is no longer permanent — `POST
+/// /api/project/group-address-style` restyles an existing project — but it
+/// still refuses the same unrecognised values for the same reason: data
+/// integrity over convenience applies at creation time too, not only when
+/// changing the mind later.
 async fn new_project(
     State(state): State<SharedState>,
     body: Option<Json<NewProjectBody>>,
@@ -597,6 +608,28 @@ async fn set_com_object_flag(
     Json(body): Json<SetComObjectFlagBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     domain::set_com_object_flag_impl(&state, body.com_object_id, body.flag, body.value)
+        .map(Json)
+        .map_err(ApiError::bad_request)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SetGroupAddressStyleBody {
+    group_address_style: String,
+}
+
+/// Restyles an already-open project. `400`, not `409`: unlike
+/// `POST /api/project/new`'s unsaved-changes conflict, there is no state
+/// here the caller could resolve by saving first — either every existing
+/// group address fits the requested style or it does not, and `apply`'s
+/// `bad_request` mapping already carries the offending address's id in the
+/// message when it does not (`Command::SetGroupAddressStyle`'s own error).
+async fn set_group_address_style(
+    State(state): State<SharedState>,
+    Json(body): Json<SetGroupAddressStyleBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let style = parse_group_address_style(&body.group_address_style)?;
+    domain::set_group_address_style_impl(&state, style)
         .map(Json)
         .map_err(ApiError::bad_request)
 }

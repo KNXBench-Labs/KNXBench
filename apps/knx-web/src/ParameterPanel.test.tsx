@@ -13,7 +13,7 @@ import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests } from "./pr
 // `setParameterValue` response needs a concrete one, since `apply()`'s
 // runtime guard throws on a write response with no tree.
 const panelTree: ProjectTree = {
-  schema_version: 11, errors: 0, warnings: 0, can_undo: true, can_redo: false, installations: [],
+  schema_version: 11, errors: 0, warnings: 0, can_undo: true, can_redo: false, group_address_style: "ThreeLevel", installations: [],
 };
 
 const apiMock = vi.hoisted(() => ({

@@ -176,6 +176,16 @@ pub enum CemiError {
     /// is a 10-bit field (Application Layer v02.01.01 AS §2.2 Table 1's
     /// APCI column). Rejected on encode rather than masked.
     InvalidApci(u16),
+    /// The encoded NPDU is longer than the `L` octet can name — `L` is one
+    /// octet holding `npdu.len() - 1` (EMI_IMI v01.04.02 AS §4.1.5.3.2), so
+    /// 256 octets still fits and 257 is the first length that does not. `got` is the
+    /// measured NPDU length. `ApplicationService::GroupValueWrite`/
+    /// `GroupValueResponse` with a long DPT-24/28 string are the paths
+    /// that can reach this; rejected here rather than truncated, which
+    /// would silently emit a frame with a wrong-but-valid-looking `L`.
+    NpduTooLong {
+        got: usize,
+    },
     /// A control PDU (`Tpci::Connect`/`Disconnect`/`Ack`/`Nak`, or an
     /// `Unknown` octet with bit 7 set) carried octets after its TPCI octet.
     /// These TPDUs have no field the Standard defines for them to live in
@@ -222,6 +232,12 @@ impl std::fmt::Display for CemiError {
             }
             CemiError::InvalidApci(apci) => {
                 write!(f, "APCI {apci:#06x} does not fit 10 bits (0-0x3FF)")
+            }
+            CemiError::NpduTooLong { got } => {
+                write!(
+                    f,
+                    "NPDU is {got} octets, but the cEMI length octet can only name up to 255"
+                )
             }
             CemiError::UnexpectedControlPduData { tpci, extra_octets } => {
                 write!(
@@ -507,14 +523,14 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
         // `Tpci::Connect`/`Disconnect`/`Ack`/`Nak` (or an `Unknown`
         // control-shaped octet): the TPDU is the TPCI octet alone — no
         // APCI, no data (Transport Layer v01.02.03 AS §2).
-        return Ok(finish_l_data(
+        return finish_l_data(
             message_code,
             ctrl1,
             ctrl2,
             source_raw,
             dest_raw,
             &[tpci_octet],
-        ));
+        );
     }
 
     let (short_apci, inline6, extra): (u8, u8, &[u8]) = match &frame.service {
@@ -555,14 +571,7 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
                 .into_iter()
                 .chain(data.iter().copied())
                 .collect();
-            return Ok(finish_l_data(
-                message_code,
-                ctrl1,
-                ctrl2,
-                source_raw,
-                dest_raw,
-                &npdu,
-            ));
+            return finish_l_data(message_code, ctrl1, ctrl2, source_raw, dest_raw, &npdu);
         }
         // Genuinely unreachable: `service_is_no_application_pdu` was
         // computed from this exact `matches!` above and, had it been
@@ -587,14 +596,7 @@ pub fn encode_l_data(frame: &LDataFrame) -> Result<Vec<u8>, CemiError> {
         .into_iter()
         .chain(extra.iter().copied())
         .collect();
-    Ok(finish_l_data(
-        message_code,
-        ctrl1,
-        ctrl2,
-        source_raw,
-        dest_raw,
-        &npdu,
-    ))
+    finish_l_data(message_code, ctrl1, ctrl2, source_raw, dest_raw, &npdu)
 }
 
 /// The `Tpci` variant name, for `CemiError::MismatchedTransport` — names
@@ -688,7 +690,11 @@ fn checked_seq(seq: u8) -> Result<u8, CemiError> {
 /// Assembles the fixed cEMI header around an already-encoded NPDU (TPCI
 /// octet, then APCI octet and data if the TPDU carries one) and derives
 /// `L` from its length (EMI_IMI v01.04.02 AS §4.1.5.3.2: `L` is the NPDU
-/// length minus one; `npdu` is never empty, so this never underflows).
+/// length minus one; `npdu` is never empty, so the subtraction itself
+/// never underflows). The result still has to fit in the one octet `L`
+/// is — `npdu.len() - 1` above 255 is rejected with `CemiError::
+/// NpduTooLong` rather than truncated, which is the only other option
+/// `as u8` has.
 fn finish_l_data(
     message_code: u8,
     ctrl1: u8,
@@ -696,7 +702,9 @@ fn finish_l_data(
     source_raw: u16,
     dest_raw: u16,
     npdu: &[u8],
-) -> Vec<u8> {
+) -> Result<Vec<u8>, CemiError> {
+    let l_octet =
+        u8::try_from(npdu.len() - 1).map_err(|_| CemiError::NpduTooLong { got: npdu.len() })?;
     let mut buf = Vec::with_capacity(9 + npdu.len());
     buf.push(message_code);
     buf.push(0x00); // additional info length
@@ -704,9 +712,9 @@ fn finish_l_data(
     buf.push(ctrl2);
     buf.extend_from_slice(&source_raw.to_be_bytes());
     buf.extend_from_slice(&dest_raw.to_be_bytes());
-    buf.push((npdu.len() - 1) as u8);
+    buf.push(l_octet);
     buf.extend_from_slice(npdu);
-    buf
+    Ok(buf)
 }
 
 #[cfg(test)]
@@ -846,6 +854,44 @@ mod tests {
         };
         let encoded = encode_l_data(&frame).unwrap();
         assert_eq!(decode_l_data(&encoded).unwrap(), frame);
+    }
+
+    /// The `L` octet at `finish_l_data` (EMI_IMI v01.04.02 AS §4.1.5.3.2)
+    /// is one octet holding `npdu.len() - 1`, so the largest NPDU it can
+    /// name is 256 octets (`L` = 255, `u8::MAX`). An NPDU one octet longer
+    /// than that has no `L` value to hold it — protects against I1
+    /// (`(npdu.len() - 1) as u8` used to wrap silently at this boundary
+    /// instead of erroring).
+    #[test]
+    fn encode_l_data_accepts_npdu_at_the_256_octet_l_boundary() {
+        // NPDU = TPCI octet + APCI-low octet + 254 data octets = 256.
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            transport: Tpci::UnnumberedData,
+            service: ApplicationService::GroupValueWrite(GroupValue::Bytes(vec![0xAA; 254])),
+        };
+        let encoded = encode_l_data(&frame).unwrap();
+        assert_eq!(encoded[8], 255); // L octet: 256 - 1
+        assert_eq!(decode_l_data(&encoded).unwrap(), frame);
+    }
+
+    #[test]
+    fn encode_l_data_rejects_npdu_one_octet_past_the_l_boundary() {
+        // NPDU = TPCI octet + APCI-low octet + 255 data octets = 257 —
+        // `npdu.len() - 1` = 256, which does not fit in the one-octet `L`.
+        let frame = LDataFrame {
+            kind: LDataMessageKind::Request,
+            source: IndividualAddress::from_raw(0x1101),
+            destination: Destination::Group(GroupAddress::from_raw(0x0903)),
+            transport: Tpci::UnnumberedData,
+            service: ApplicationService::GroupValueWrite(GroupValue::Bytes(vec![0xAA; 255])),
+        };
+        assert_eq!(
+            encode_l_data(&frame),
+            Err(CemiError::NpduTooLong { got: 257 })
+        );
     }
 
     #[test]

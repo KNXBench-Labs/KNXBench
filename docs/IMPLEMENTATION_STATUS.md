@@ -2285,7 +2285,7 @@ existing call site changed.
   reading for schema ≥ 21 projects (preserved, not modelled); no hardware
   verification — every test checks the codec against the Standard's own
   stated encodings, not a real device's actual telegrams. Full accounting:
-  [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-nineteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard).
+  [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard).
 
 `cargo test --workspace`: **920 passed, 0 failed, 3 ignored** (baseline
 before this cycle was 817/0/3, per the branch's Task 1 starting point; the
@@ -2341,10 +2341,11 @@ All five follow the existing reserved-bit policy (nonzero reserved bit →
 structure and naming. `cargo test -p knx-core --lib dpt::codec`: **121
 passed, 0 failed** (up from the pre-E4 baseline on this branch). Full
 per-type judgment-call accounting:
-[KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-nineteen-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard).
-Closes `GAP_ANALYSIS_ETS.md` row **E4** further (still open: main type 20
-and 21-30 onward, plus `knx_master.xml` catalogue consultation for units
-and enumeration wording). Out of scope by design: `apps/knx-web` and
+[KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard).
+Closed `GAP_ANALYSIS_ETS.md` row **E4** further; main types 20-30 and
+`6.020` followed in a second round the next day (entry below), leaving
+`knx_master.xml` catalogue consultation for units and enumeration wording
+as the row's remaining open item. Out of scope by design: `apps/knx-web` and
 `apps/knx-server` need no change, since neither pattern-matches on
 `DptValue`'s variants directly — confirmed by grep before closing this
 task, not assumed.
@@ -4993,3 +4994,73 @@ two lists that gated on it), `goal.md` §3, `KNOWN_LIMITATIONS.md` §89.
 What this entry does not claim: nothing here rules out a floor-plan feature
 inside ETS's own database or a paid ETS App, and schemas 12-14, 20 and 22 were
 never sampled — see ADR-0019's "What this evidence does not say".
+
+**T5, DPT main types 20-30 and `6.020` (2026-09-14), branch
+`dpt-main-types-20-46`.** The second E4 round on the codec, and the one
+that closes the numbering gap: `crates/knx-core/src/dpt/codec.rs` now
+decodes and encodes main types **1 through 30 inclusive, with no gaps**,
+`6.020` among them. Every layout below was read out of
+`03_07_02 Datapoint Types v02.02.01 AS.pdf` with
+`pdftotext -layout` before it was implemented, and every clause named here
+was re-checked against that output rather than carried over from a draft:
+three citations in the draft this branch inherited named clauses that do
+not say what the code claimed, and all three are now corrected in
+[KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard).
+
+- **`6.020` DPT_Status_Mode3** — §3.7, "8 bit: B5N3", encoding row
+  `B B B B B NNN`. New `DptValue::StatusMode3 { status: [bool; 5],
+  mode_code: u8 }`. The mode field is one-hot: §3.7's Range row assigns
+  only `{001b, 010b, 100b}`, and the other five codes are `InvalidData`,
+  not a guessed mode. This was the last subtype-level exclusion inside an
+  implemented main type.
+- **20** — `N8` enumeration, §3.21. New `DptValue::Enum { code: u8 }`.
+- **21** — `Z8`/`B8` bit set, §3.22.1 (General Status) and §3.22.2 (Device
+  Control). New `DptValue::BitSet { bits: u32, width: u8 }`, shared by 21,
+  22, 27 and 30.
+- **22** — `B16`, §4.5.1 (22.100) and §4.5.2 (22.101), plus §8.3 for the
+  system subtypes 22.1000 and 22.1010.
+- **23** — `N2`, §3.23, with §4.6 for 23.102.
+- **24** — `A[n]`, ISO 8859-1, NULL-terminated, §3.24. Extends `Text`.
+- **25** — `U4U4`, §8.4. New `DptValue::DoubleNibble { busy, nak }`.
+- **26** — `r1B1U6`, §3.25. New `DptValue::SceneInfo { inactive, number }`;
+  the field is named `inactive` because §3.25 encodes `1` as "scene is
+  inactive", the opposite polarity to main type 18's.
+- **27** — `B32`, §3.26/§3.26.1.
+- **28** — `A[n]`, UTF-8, NULL-terminated, §3.27/§3.27.1.
+- **29** — `V64`, §3.28/§3.28.1. New `DptValue::Signed64(i64)`.
+- **30** — `B24`, §8.5.
+
+**Deliberately not implemented, and why.** Main type **31** stays
+`UnsupportedDpt`: its single subtype 31.101 `DPT_PB_Action_HVAC_Extended`
+(§4.7.1) carries the sentence "This DPT shall not be used for runtime
+communication. This DPT shall only be used for encoding Parameter values in
+CH_PB_HVAC_Mode_1", so a group-value codec has nothing legitimate to do
+with it. It is what
+`unimplemented_main_type_is_unsupported_not_a_panic` now names, and what
+`apps/knx-cli/tests/cli_bus_dpt.rs`'s unsupported-DPT test now sends —
+that test named DPST-20-102, which stopped being unimplemented here. The
+eighteen 200-series LTE/system main types stay unsupported too. There is no
+**main type 46** to implement at all: 46 is the *count* of main types in one
+ETS master-data file, which is
+[KNOWN_LIMITATIONS.md §90](KNOWN_LIMITATIONS.md#90-there-is-no-dpt-main-type-46-46-is-a-count-of-main-types-in-one-ets-master-data-file)
+in full, including the `unzip | grep` command that re-measures it.
+
+**No `knx_master.xml` catalogue consultation, by ruling.** The codec hands
+back a raw enumeration code or raw bits, never a name. The brief did not
+settle whether to read enumeration names out of the ETS master data, so
+this task ruled it out: an enumeration whose names are invented is not a
+feature, the master file's catalogue is a property of that file rather than
+of the Standard (`docs/RESEARCH.md` §5), and
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) row **E4** already carries
+catalogue consultation as its own open item.
+
+**Re-measured, not remembered.**
+`cargo test -p knx-core --lib dpt::codec` → **164 passed, 0 failed**
+(main's copy of the file holds 123 `#[test]` functions, so 41 are new);
+`cargo test -p knx-core --lib dpt::` → **182 passed, 0 failed**;
+`cargo test --workspace --no-fail-fast` → **1313 passed, 0 failed, 3
+ignored** across 81 test targets. The full Rust gate set — `cargo fmt
+--all --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
+that workspace test run, `cargo run -p xtask -- check-layering`,
+`cargo run -p xtask -- check-headers`, `cargo deny check` — exits `0` six
+times.

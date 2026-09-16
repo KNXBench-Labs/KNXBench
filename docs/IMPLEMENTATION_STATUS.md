@@ -5961,3 +5961,29 @@ tell the two readings apart anyway. It is `[A]` now, with the reason written dow
 `0`, `cargo test --workspace` **1,580 passed / 0 failed / 5 ignored**, 0 corpus
 skips, `check-layering` `0`, `check-headers` 119 well-formed / 168 without one
 (ceiling 168), `cargo deny check` `0`. No TypeScript was touched.
+
+## 2026-09-16 — Goal Task 17: real-browser verification for “New project” (branch `launcher-browser-verify`)
+
+The from-scratch launcher now has a repeatable browser-level check instead of
+only Vitest components backed by a mocked `./api`.
+`apps/knx-web/e2e/new-project.e2e.ts` drives the production frontend through
+the real `knx-server` in system Chromium. Separate cases create
+`ThreeLevel`, `TwoLevel`, and `Free` projects and assert the dialog copy
+and defaults, the exact `POST /api/project/new` body, the returned
+one-installation tree with no topology or devices, the style shown in project
+properties, and the device catalog opened from the empty “Unassigned” branch.
+No project file or mocked API response participates.
+
+`apps/knx-web/playwright.config.ts` owns the Linux test boundary: one worker,
+the distribution Chromium at `/usr/bin/chromium`, the production build served
+by `cargo run -p knx-server`, and output under the already ignored workspace
+`target/`. The `*.e2e.ts` suffix and explicit Playwright `testMatch` keep
+these tests outside Vitest's `*.test.ts`/`*.spec.ts` discovery. The local
+`@playwright/test` dependency and `npm run test:e2e` script make the check
+repeatable from a clean npm install.
+
+Measured verification on Chromium 152: `npm test` **468 passed across 42
+files**, and `npm run test:e2e` built the production bundle and passed **3/3
+Playwright tests**. The browser suite stops after the empty catalog opens;
+package installation and device creation remain covered at the server boundary
+by `apps/knx-server/tests/http_catalog_to_device.rs`.

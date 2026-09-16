@@ -673,6 +673,99 @@ mod tests {
     }
 
     #[test]
+    fn orphaned_com_object_graph_rows_are_ignored_during_project_load() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        save_project(&conn, &Project::new(Language("en".into()))).unwrap();
+
+        conn.execute_batch("PRAGMA foreign_keys = OFF").unwrap();
+        conn.execute(
+            "INSERT INTO com_object_instance
+                 (id, device_id, position, source_path, source_ets_id, number,
+                  size_kind, size_value, size_layer, is_active, module_instance_id)
+             VALUES (77, 99, 0, 'orphan.xml', 'O-77', 0, 'bit', NULL, NULL, 1, NULL)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO com_object_override
+                 (com_object_instance_id, attr, state, value, text_kind, layer)
+             VALUES (77, 'priority', 'value', 'low', NULL, 'Instance')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO group_link
+                 (com_object_instance_id, group_address_id, direction, position)
+             VALUES (77, 88, 'Send', 0)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO com_object_override
+                 (com_object_instance_id, attr, state, value, text_kind, layer)
+             VALUES (78, 'priority', 'value', 'low', NULL, 'Instance')",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO group_link
+                 (com_object_instance_id, group_address_id, direction, position)
+             VALUES (78, 88, 'Send', 0)",
+            [],
+        )
+        .unwrap();
+
+        let loaded = load_project(&conn).unwrap();
+        assert_eq!(loaded.devices.iter().count(), 0);
+        assert_eq!(loaded.devices.com_objects().count(), 0);
+    }
+
+    #[test]
+    fn a_reachable_unknown_override_attribute_is_reported_by_project_load() {
+        use knx_core::device::ComObjectInstance;
+        use knx_core::flags::ResolvedFlags;
+        use knx_core::provenance::Override;
+
+        let conn = open_and_migrate_in_memory().unwrap();
+        let mut project = project_with_one_installation();
+        project.installations[0].topology.unassigned = vec![DeviceId(1)];
+        project.devices.insert(device(1));
+        project.devices.insert_com_object(ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        });
+        project
+            .devices
+            .get_mut(DeviceId(1))
+            .unwrap()
+            .com_objects
+            .push(ComObjectInstanceId(1));
+        save_project(&conn, &project).unwrap();
+        conn.execute(
+            "INSERT INTO com_object_override
+                 (com_object_instance_id, attr, state, value, text_kind, layer)
+             VALUES (1, 'priority', 'value', 'low', NULL, 'Instance')",
+            [],
+        )
+        .unwrap();
+
+        match load_project(&conn) {
+            Err(StoreError::UnknownOverrideAttr(attr)) => assert_eq!(attr, "priority"),
+            other => panic!("expected UnknownOverrideAttr, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn a_project_with_one_device_and_an_unassigned_one_round_trips() {
         use knx_core::device::ComObjectInstance;
         use knx_core::flags::ResolvedFlags;

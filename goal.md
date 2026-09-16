@@ -252,10 +252,12 @@ them, and do not quietly fold pieces of them into another task.
 - **§13 / row A6 — password-protected projects.** Partially closed
   2026-09-13: ETS6 AES/PBKDF2 derivation lives in `crates/knx-secure`. The
   ZipCrypto (ETS4/5) side remains.
-- **§62 — the Group Monitor GUI is tunnelling-only, single-session,
-  client-filtered, and had never talked to a real gateway when that section
-  was written.** Re-verify against the current state before either fixing or
-  restating it.
+- **§62 — passive Group Monitor real-gateway verification completed
+  2026-09-16.** Two bounded production-path sessions received 52 and 65
+  telegrams with no drops; with the real reference project open, 65/65 names
+  resolved and 10 values decoded. No bus read, write, response, management
+  request, or scan was sent. Tunnelling-only, single-session, client-side
+  filtering, no auto-reconnect, and unverified transmit behavior remain.
 
 ---
 

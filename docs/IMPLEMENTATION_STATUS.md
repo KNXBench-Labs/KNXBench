@@ -2483,14 +2483,13 @@ tunnelled KNXnet/IP connection.
   union would have had to either lie about or invent a category for.
 - **What this slice deliberately does not do**, and three more limitations
   found during this cycle's review: full accounting in
-  [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway).
+  [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence).
   In short — no routing, no auto-reconnect, no live DPT re-resolution
-  mid-session, one session at a time, no server-side filtering, no
-  hardware verification of any of it, an uncapped browser-side row list
-  (a deliberate choice over a second, possibly-disagreeing client-side
-  drop counter), a `/write` round-trip test covering `Free`/`TwoLevel`
-  but not a full round trip for `ThreeLevel`, and the CLI's own copy of
-  the `GroupAddressStyle` bug left unfixed on purpose.
+  mid-session, one session at a time, no server-side filtering, an uncapped
+  browser-side row list, a `/write` round-trip test covering `Free`/`TwoLevel`
+  but not a full round trip for `ThreeLevel`, and the CLI's own copy of the
+  `GroupAddressStyle` bug left unfixed. The passive real-gateway receive path
+  is now verified once; real transmit behavior remains unverified.
 
 `cargo test --workspace`: **951 passed, 0 failed, 3 ignored** (re-run in
 this worktree for this docs pass, not taken from any task's own report;
@@ -2500,9 +2499,25 @@ test` (`apps/knx-web`, `vitest run`): **179 passed across 17 files**. A
 user with an open project and a reachable gateway can now watch a live,
 decoded telegram table and send a group value, from the web/desktop UI,
 without a terminal — for one tunnelled gateway at a time, filtered only
-by what the browser already has, and never run against real hardware in
-this branch. Closes `GAP_ANALYSIS_ETS.md` row **D5** for tunnelling;
+by what the browser already has. T15 itself had fake-tunnel evidence only;
+Task 16 below later verified the passive real-gateway receive path. Closes
+`GAP_ANALYSIS_ETS.md` row **D5** for tunnelling;
 finishes **E4**'s display side for tunnelling.
+
+**Task 16, passive Group Monitor real-gateway re-verification
+(2026-09-16).** A dedicated server exercised the production
+`POST /api/bus/monitor/start`/poll/stop path against one physical gateway. The
+first 133-second session used the empty project and received 52 telegrams with
+zero drops. The second 107-second session opened the real schema-23 `Unser
+Zuhause` project and received 65 telegrams from 9 sources to 21 group
+destinations: all 65 names resolved, 10 values decoded, no conflict or decode
+error was observed, and zero telegrams were dropped. Both tunnels remained
+active until explicit successful stop. This was strictly passive: no group
+read/write/response, management request, scan, or `/api/bus/write` call was
+made. Gateway and bus addresses are deliberately omitted. This verifies one
+gateway model's tunnelling receive and project-resolution path; routing,
+transmit behavior, reconnect, other gateway models, and long sessions remain
+unverified. Full accounting: [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence).
 
 **T27, in-app motion control (2026-09-12), branch `t27-motion-control`.**
 Restores the user-facing motion setting cycle 13's theme rewrite deleted

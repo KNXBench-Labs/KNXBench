@@ -1582,7 +1582,7 @@ fixed to parse in the session's project's actual style (commit
 `b540264`); the CLI's copy was deliberately left as-is, since fixing it
 was not this branch's scope and CLAUDE.md asks that unrelated changes not
 ride along with a feature branch. See
-[§62](#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway)
+[§62](#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence)
 item 13 for the full account.
 
 ## 30. `/api/project/download` has no frontend caller
@@ -3009,7 +3009,7 @@ enumeration wording, or reads `GroupAddress/@DatapointType` directly for
 schema ≥ 21 projects instead of inferring from linked communication
 objects alone.
 
-## 62. The Group Monitor GUI (T15) is tunnelling-only, single-session, client-filtered, and has never talked to a real gateway
+## 62. The Group Monitor GUI (T15) is tunnelling-only, single-session, client-filtered, and only its passive receive path has real-gateway evidence
 
 **Limitation.** T15 (2026-09-11, design spec
 `docs/superpowers/specs/2026-09-11-group-monitor-design.md`) gives
@@ -3061,14 +3061,26 @@ ways, all deliberate and all recorded here per that design's own §7:
    this slice does not touch the codec. §61 is not edited, reworded, or
    superseded by this entry; it still fully applies to every decoded
    value the GUI shows.
-9. **No verification against real hardware.** Every test added by this
-   branch drives `BusSession`/the HTTP routes/the React panel against
-   `apps/knx-server/src/bus.rs`'s `fake` module (`FakeConnector`,
-   `FakeTunnel`) — no socket, no live gateway, anywhere. `crates/knx-net/
-   tests/live_gateway.rs` was not touched and stays what it was.
-   **Nothing in this GUI has been run against a physical KNX
-   installation**, and nothing in its code, tests, or UI strings says
-   otherwise.
+9. **Passive receive has one real-gateway verification; transmit paths do
+   not.** On 2026-09-16 the production `POST /api/bus/monitor/start` →
+   `BusSession::start` → `RealConnector` path opened a tunnel to a
+   user-supplied gateway on the installation LAN. A 133-second session with
+   the server's empty project received 52 group telegrams and stopped with
+   `droppedCount = 0`. A second 107-second session, after importing the real
+   schema-23 `Unser Zuhause` reference project into that same dedicated
+   server, received 65 telegrams from 9 source addresses to 21 group
+   destinations: all 65 destination names resolved against the project, 10
+   values decoded through their DPT, no conflict or decode error was observed,
+   and `droppedCount` again remained 0. Both sessions stayed `active` until an
+   explicit successful stop; the gateway assigned a tunnel address and no
+   disconnect or reconnect occurred. The run only called monitor start, poll,
+   and stop. It sent no group read, write, response, management request, or
+   scan; `/api/bus/write` was never called. The private gateway address and
+   observed bus addresses are deliberately not stored in the repository.
+   This is evidence for the passive tunnelling receive and project-resolution
+   path on one gateway model, not for routing, transmit behavior, reconnect,
+   another gateway, or long-running stability. The exact procedure is recorded
+   in `.ai/logs/2026-09-16_codex_group_monitor_reverify.md`.
 10. **No KNX certification or ETS-parity claim.** This is a monitor/write
     table, not a certified diagnostic tool, and not a claim of matching
     ETS's Group Monitor feature-for-feature — see item 6 above for
@@ -3126,18 +3138,17 @@ during review, after the design document was written.
 
 **Impact.** A user gets a live, DPT-decoded telegram table and a
 send-from-the-table form for one tunnelled gateway at a time, with a
-client-side text/service filter — genuinely more than the CLI's `bus
-monitor`/`bus write` offer a non-terminal user, but not a certified
-diagnostic tool, not ETS's Group Monitor, not verified against a real
-installation, and — for a very long browser session — not bounded in
-memory the way the server side already is.
+client-side text/service filter. The passive receive and project-resolution
+path now has one bounded real-installation observation, but the send form still
+has only fake-tunnel coverage. This remains neither a certified diagnostic
+tool nor ETS's Group Monitor and — for a very long browser session — is not
+bounded in memory the way the server side already is.
 
-**Lifted when.** A future slice adds routing support, auto-reconnect,
-live DPT re-resolution, multi-session support, server-side filtering, a
-client-side row cap with its own honestly-reported gap notice, a
-full-round-trip test (and, ideally, a fix) for the CLI's `ThreeLevel`
-hardcoding, or runs any part of this GUI against a physical KNX
-installation and records the result.
+**Lifted when.** Future slices add routing support, auto-reconnect, live DPT
+re-resolution, multi-session support, server-side filtering, a client-side row
+cap with its own honestly-reported gap notice, a full-round-trip test (and,
+ideally, a fix) for the CLI's `ThreeLevel` hardcoding, and separately authorized
+real-installation evidence for transmit behavior and longer-running stability.
 
 ## 63. `knx-server` has no multi-user/concurrent-edit support — one shared project, one shared undo stack, no conflict detection at all
 

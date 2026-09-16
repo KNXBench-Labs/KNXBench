@@ -689,9 +689,6 @@ pub fn load_com_object_instance(
     Ok(com)
 }
 
-// Used by `project::load_project` once its device/object graph assembly calls
-// the bulk path; keep it crate-visible while that orchestration stays separate.
-#[allow(dead_code)]
 pub(crate) fn load_all_com_objects(
     conn: &Connection,
 ) -> Result<BTreeMap<DeviceId, Vec<ComObjectInstance>>, StoreError> {

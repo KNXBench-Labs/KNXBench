@@ -234,10 +234,6 @@ them, and do not quietly fold pieces of them into another task.
   asks for it. After that moment nothing shows it and nothing can change it:
   `knx_projection::ProjectTree` has no field for it, no route restyles a
   project, and `knx-core` has no restyle operation at all.
-- **§83 — the from-scratch launcher has never been clicked in a browser.**
-  The code and its tests exist (`NewProjectDialog.test.tsx`,
-  `App.test.tsx`). The second clause of §80's "lifted when" is a manual
-  verification in a real browser, and it is still unmet.
 - **§87 — `linkable` stays NULL forever in databases built before
   2026-09-13.** `install_package` short-circuits on a known sha256 and
   `migrate_v5_to_v6` adds the column without re-deriving it. No data is lost

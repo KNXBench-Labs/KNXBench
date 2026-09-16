@@ -221,6 +221,33 @@ and group-link order. Lower latency from batching is still a hypothesis until
 the same benchmark and round-trip tests measure it; this investigation made no
 production optimization.
 
+### Bulk communication-object load result (2026-09-16)
+
+`load_project` now reads the communication-object graph in three ordered scans
+instead of issuing one ID-list query per device and three graph queries per
+communication object.
+The loader still reads each device row and its `binary_data_ref` rows
+individually, so that remaining device/binary N+1 work is deliberately outside
+this change.
+
+On the machine and command described above, one post-change release run
+reported:
+
+```text
+PERF device_count=5000 group_address_count=20000 building_depth=5 com_objects=20000
+PERF knxproj_bytes=407784
+PERF export_ms=83.299
+PERF import_ms=207.944
+PERF open_ms=245.367
+PERF projection_ms=35.878
+PERF search_total_ms=29.681 queries=41 avg_us_per_query=723.9
+```
+
+The earlier final quiet, uninstrumented run recorded `open_ms=994.615`; this
+run recorded `open_ms=245.367`. These are single wall-clock observations on a
+shared development machine, so they demonstrate the measured result in this
+environment and do not establish a stable speedup.
+
 ## Non-claims
 
 This benchmark says nothing about ETS compatibility or KNX certification.

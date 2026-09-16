@@ -250,10 +250,9 @@ Each task: **what**, **why**, **depends on**.
   `.knxproj` project archive as a typed `PackageError`, is idempotent
   (`skipped: true` on a byte-identical re-install), and preserves
   first-winner provenance on catalog-item id conflicts. Verified against
-  5 real-world files: 3 at master data scheme 11
+  4 real-world files: 2 at master data scheme 11
   (`646704-04_ETS4_2012_47_DE_EN.knxprod`,
-  `Weinzierl_730_KNX_IP_Interface_ETS4.knxprod`,
-  `Weinzierl_730_KNX_IP_Interface_ETS4_v1.knxprod`) and 2 at scheme 20
+  `Weinzierl_730_KNX_IP_Interface_ETS4.knxprod`) and 2 at scheme 20
   (`MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod`,
   `Dummy_Applikation_Secure.knxprod`) —
   `installs_the_readable_corpus` (`knx-productdb/tests/standalone_packages.rs`).

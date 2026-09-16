@@ -501,12 +501,11 @@ fn corpus_choose_and_when_counts_match_research_and_every_choose_resolves() {
         assert_eq!(dangling, 0, "{name}: dangling choose/@ParamRefId");
     }
 
-    // The fifth archive is byte-identical to the second and must contribute
-    // no new dynamic_node rows: `install_package` recognizes the repeat by
-    // whole-package content hash and skips re-parsing outright.
+    // Reinstalling the same archive must contribute no new dynamic_node rows:
+    // `install_package` recognizes the repeat by whole-package content hash
+    // and skips re-parsing outright.
     let bytes_a = std::fs::read(root.join("Weinzierl_730_KNX_IP_Interface_ETS4.knxprod")).unwrap();
-    let bytes_b =
-        std::fs::read(root.join("Weinzierl_730_KNX_IP_Interface_ETS4_v1.knxprod")).unwrap();
+    let bytes_b = bytes_a.clone();
     assert_eq!(
         knx_productdb::sha256_hex(&bytes_a),
         knx_productdb::sha256_hex(&bytes_b),
@@ -531,12 +530,12 @@ fn corpus_choose_and_when_counts_match_research_and_every_choose_resolves() {
     );
     let after = (count(&conn, "choose"), count(&conn, "when"));
     eprintln!(
-        "corpus v1 duplicate: before={before:?} after={after:?} (skipped={})",
+        "corpus duplicate install: before={before:?} after={after:?} (skipped={})",
         report.skipped
     );
     assert_eq!(
         before, after,
-        "the byte-identical fifth archive must add no new rows"
+        "the byte-identical reinstall must add no new rows"
     );
 }
 
@@ -2961,9 +2960,7 @@ fn corpus_nested_module_measurement_task_11() {
     assert_eq!(
         installed.len() - skipped_files.len(),
         4,
-        "five archive files, four distinct packages -- one Weinzierl archive is byte-identical \
-         to its sibling and install_package skips it; installed = {installed:?}, skipped = \
-         {skipped_files:?}"
+        "four archive files, four distinct packages; installed = {installed:?}, skipped = {skipped_files:?}"
     );
 
     let total_module_def_rows: i64 = conn

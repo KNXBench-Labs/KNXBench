@@ -285,7 +285,7 @@ Since T15 (2026-09-11), `apps/knx-server` runs the same kind of session
 server-side, behind `/api/bus/*`, for `apps/knx-web`/`apps/knx-desktop` —
 see [ADR-0017](adr/0017-knx-server-depends-on-knx-net.md) for why
 `knx-server` now depends on `knx-net` directly rather than shelling out to
-`knx-cli`, and [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway)
+`knx-cli`, and [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence)
 for what that GUI does and does not cover.
 
 `BusAccess` from `0.xml` — the ETS commissioning interface connection string —

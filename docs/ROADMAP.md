@@ -663,7 +663,7 @@ wire encoding themselves — for the main types this cycle covers. Closes
 **Update, 2026-09-11 (T15).** Landed later the same day: the GUI is no
 longer open. See row **D5** in
 [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and
-[KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway) —
+[KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence) —
 T15 closed the display side for tunnelling.
 
 **Entry condition.** All earlier sessions' deliverables exist and are tested.

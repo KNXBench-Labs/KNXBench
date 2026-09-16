@@ -15,9 +15,8 @@ use knx_core::string_table::Language;
 
 use crate::building::{load_buildings, upsert_building_part};
 use crate::devices::{
-    load_all_device_ids, load_com_object_ids_for_device, load_com_object_instance, load_device,
-    load_group_links, set_device_line, upsert_com_object_instance, upsert_device,
-    upsert_group_links,
+    load_all_com_objects, load_all_device_ids, load_device, set_device_line,
+    upsert_com_object_instance, upsert_device, upsert_group_links,
 };
 use crate::group::{
     load_group_addresses, load_group_ranges, upsert_group_address, upsert_group_range,
@@ -403,12 +402,12 @@ pub fn load_project(conn: &Connection) -> Result<Project, StoreError> {
     )?;
 
     let mut devices = knx_core::devices::Devices::new();
+    let mut com_objects_by_device = load_all_com_objects(conn)?;
     for device_id in load_all_device_ids(conn)? {
         let mut device = load_device(conn, device_id)?;
-        device.com_objects = load_com_object_ids_for_device(conn, device_id)?;
-        for com_id in device.com_objects.clone() {
-            let mut com = load_com_object_instance(conn, com_id)?;
-            com.links = load_group_links(conn, com_id)?;
+        let com_objects = com_objects_by_device.remove(&device_id).unwrap_or_default();
+        device.com_objects = com_objects.iter().map(|com| com.id).collect();
+        for com in com_objects {
             devices.insert_com_object(com);
         }
         devices.insert(device);
@@ -675,6 +674,10 @@ mod tests {
 
     #[test]
     fn a_project_with_one_device_and_an_unassigned_one_round_trips() {
+        use knx_core::device::ComObjectInstance;
+        use knx_core::flags::ResolvedFlags;
+        use knx_core::provenance::Override;
+
         let conn = open_and_migrate_in_memory().unwrap();
         let mut project = Project::new(Language("de-DE".into()));
         let line = Line {
@@ -730,9 +733,37 @@ mod tests {
                 binary_data: vec![],
             });
         }
+        for (id, number) in [(9, 0), (3, 1)] {
+            let id = ComObjectInstanceId(id);
+            project.devices.insert_com_object(ComObjectInstance {
+                id,
+                source: source(),
+                device: DeviceId(1),
+                number,
+                text: Override::Absent,
+                description: Override::Absent,
+                dpt: Override::Absent,
+                flags: ResolvedFlags::none(),
+                size: None,
+                is_active: true,
+                links: vec![],
+                module_instance: None,
+            });
+            project
+                .devices
+                .get_mut(DeviceId(1))
+                .unwrap()
+                .com_objects
+                .push(id);
+        }
 
         save_project(&conn, &project).unwrap();
         let loaded = load_project(&conn).unwrap();
+        let loaded_device = loaded.devices.get(DeviceId(1)).unwrap();
+        assert_eq!(
+            loaded_device.com_objects,
+            vec![ComObjectInstanceId(9), ComObjectInstanceId(3)]
+        );
         assert_eq!(loaded, project);
     }
 

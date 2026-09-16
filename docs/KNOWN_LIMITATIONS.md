@@ -3989,42 +3989,28 @@ image starts shipping discovery and a deployer chooses `--network host`
 solved, per the 2026-09-05/06 deployment-target and Session 6 planning
 calls (ROADMAP.md).
 
-## 80. A project can be created from scratch over HTTP, but not from the UI
+## 80. A project can be created from scratch in the UI — RESOLVED (2026-09-16, Goal Task 17)
 
-**Limitation.** `POST /api/project/new` (2026-09-13) creates an empty project
-with one seeded `Installation`, which is all `Command::CreateDevice` needs to
-place a device. No screen in `apps/knx-web` calls it. A user driving the
-shipped frontend still cannot start a project without importing a `.knxproj`
-or opening a previously saved `.knxdb`; only an HTTP client can **[V]**
-(`apps/knx-server/tests/http_catalog_to_device.rs` does exactly this and
-asserts the device's 104 communication objects).
+**Resolved.** The welcome screen, File menu and command palette expose the
+same "New project" flow. The dialog sends the chosen name, installation
+name, project language and group-address style to `POST /api/project/new`;
+the returned tree replaces the welcome screen. The first installation exposes
+its empty "Unassigned" branch and can open the device catalog without any
+area or line.
 
-**Cause.** Exactly one thing is missing, and it is the first one: nothing sets
-`App.tsx`'s `tree`. Only `importProject` and `openProject` call `resetTree`
-(`apps/knx-web/src/App.tsx:287,299`), there is no `newProject` in
-`apps/knx-web/src/api.ts`, and the toolbar offers only "Open project"
-(`App.tsx:379`). The whole editing surface is then gated on `tree` being
-non-null (`App.tsx:465`) **[D]**.
+**Verification.** `apps/knx-web/e2e/new-project.e2e.ts` builds the production
+frontend, starts a real `knx-server`, and drives it in system Chromium through
+Playwright. Separate cases for `ThreeLevel`, `TwoLevel` and `Free` assert
+the dialog's defaults and empty-project statement, the exact HTTP request, the
+server's one-installation response with no topology or unassigned devices, the
+style shown in project properties, and the catalog dialog opened from
+"Unassigned" **[V]**. Run it with `cd apps/knx-web && npm run test:e2e`.
 
-The rest of the path already works and needs nothing new. Once a tree exists
-with one installation, `ProjectExplorer.tsx` renders that installation's
-"Unassigned" branch unconditionally for the first installation and puts an
-`AddDeviceRow` in it that calls `onAddDevice(null)` — a `null` line, not a
-line id (`ProjectExplorer.tsx:640,652`) — which sets `catalogTarget` and opens
-`CatalogBrowser` (`ProjectExplorer.tsx:829-831`). So an empty project with no
-areas and no lines can already be pointed at the catalog; a device created
-that way lands in `topology.unassigned`, which is the same placement the new
-backend test asserts **[D]**, not verified by clicking it **[A]** — no
-frontend slice has been run against this route.
-
-**Impact.** The headline capability — install a device from a manufacturer's
-product database with no ETS project anywhere — is real at the API and
-regression-covered, but is not yet reachable by a user. Nothing about it may
-be described as done in COMPATIBILITY.md until a frontend slice lands.
-
-**Lifted when.** A "New project" action exists in `apps/knx-web` and the
-catalog browser can be opened against an installation with no lines. That is
-a separate, UI-owned slice.
+**Boundary.** This browser check stops when the empty catalog opens. Installing
+a manufacturer package and creating its device remain covered end to end at
+the HTTP/application boundary by
+`apps/knx-server/tests/http_catalog_to_device.rs`; no browser-level claim is
+made for those later actions.
 
 ## 81. `new_project_impl` refuses on "can undo", not on "is dirty"
 
@@ -4191,34 +4177,25 @@ fingerprint still does not move.
    `apps/knx-web/src/busContext.ts` for literal C0 bytes, which should find
    none. **[V]**
 
-## 83. The from-scratch launcher exists, and has still never been clicked in a browser
+## 83. The from-scratch launcher is browser-verified — RESOLVED (2026-09-16, Goal Task 17)
 
-**Limitation.** §80's "Lifted when" has two clauses. The first is now met: a
-"New project" action exists in `apps/knx-web` — a welcome-screen button, a
-File-menu entry and a command-palette command, all opening
-`NewProjectDialog.tsx`, which calls `api.newProject` and hands the resulting
-tree to `App.tsx`'s `resetTree` **[V]** (`NewProjectDialog.test.tsx`,
-`App.test.tsx`'s "starting a project from scratch" block). The second clause
-— the catalog browser opened against an installation with no lines — is
-still only read, not run: §80 already established by code reading that
-`ProjectExplorer`'s unconditional "Unassigned" branch offers
-`onAddDevice(null)`, and this slice changed nothing there and did not
-exercise it **[A]**.
+**Resolved.** The earlier evidence ended at Vitest components with a mocked
+`./api`. The committed Playwright suite now clicks the production build in a
+real Chromium process while the real Rust server owns project state. All three
+group-address styles complete the dialog-to-workbench path, and the resulting
+line-free installation opens the unassigned device catalog **[V]**
+(`apps/knx-web/e2e/new-project.e2e.ts`).
 
-**Cause.** Every test in this slice is a vitest render against a mocked
-`./api`. No browser, no running `knx-server`, no click. The full path —
-create a project, expand Unassigned, open the catalog, install a package,
-create a device — has been asserted end to end in Rust
-(`http_catalog_to_device.rs`) and never once driven through the actual UI.
+**Reproduction.** From `apps/knx-web`, run `npm run test:e2e`. The command
+builds the frontend first, then Playwright starts `cargo run -p knx-server`
+with that build as its static directory and executes Chromium at
+`/usr/bin/chromium`. No API response is mocked and no existing project file
+is used.
 
-**Impact.** The headline capability is now reachable in principle, and the
-wiring that makes it reachable is unit-covered. What nobody can yet claim is
-that a human sitting in front of the application can complete it, because
-nobody has tried. COMPATIBILITY.md must keep saying nothing about it.
-
-**Lifted when.** Someone runs the application, creates a project from the
-dialog, and installs a device from a manufacturer package into it, and
-records what happened.
+**Boundary.** The suite proves project creation and catalog reachability. It
+does not install a product package or create a device through the browser;
+`http_catalog_to_device.rs` remains the end-to-end proof for that downstream
+server path.
 
 ## 84. A project's group address style can be chosen, and afterwards never seen — RESOLVED (2026-09-14, T4)
 

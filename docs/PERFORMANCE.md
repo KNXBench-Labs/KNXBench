@@ -224,7 +224,8 @@ production optimization.
 ### Bulk communication-object load result (2026-09-16)
 
 `load_project` now reads the communication-object graph in three ordered scans
-instead of issuing one ID-list query and three graph queries for each device.
+instead of issuing one ID-list query per device and three graph queries per
+communication object.
 The loader still reads each device row and its `binary_data_ref` rows
 individually, so that remaining device/binary N+1 work is deliberately outside
 this change.

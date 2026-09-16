@@ -693,9 +693,12 @@ pub(crate) fn load_all_com_objects(
     conn: &Connection,
 ) -> Result<BTreeMap<DeviceId, Vec<ComObjectInstance>>, StoreError> {
     let mut stmt = conn.prepare(
-        "SELECT id, device_id, source_path, source_ets_id, number,
-                size_kind, size_value, size_layer, is_active, module_instance_id
-         FROM com_object_instance ORDER BY device_id, position",
+        "SELECT com.id, com.device_id, com.source_path, com.source_ets_id, com.number,
+                com.size_kind, com.size_value, com.size_layer, com.is_active,
+                com.module_instance_id
+         FROM com_object_instance AS com
+         INNER JOIN device ON device.id = com.device_id
+         ORDER BY com.device_id, com.position",
     )?;
     let mut objects = Vec::new();
     let mut indices = BTreeMap::new();
@@ -725,8 +728,12 @@ pub(crate) fn load_all_com_objects(
     }
 
     let mut stmt = conn.prepare(
-        "SELECT com_object_instance_id, attr, state, value, text_kind, layer
-         FROM com_object_override ORDER BY com_object_instance_id",
+        "SELECT override.com_object_instance_id, override.attr, override.state,
+                override.value, override.text_kind, override.layer
+         FROM com_object_override AS override
+         INNER JOIN com_object_instance AS com ON com.id = override.com_object_instance_id
+         INNER JOIN device ON device.id = com.device_id
+         ORDER BY override.com_object_instance_id",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok((
@@ -748,8 +755,11 @@ pub(crate) fn load_all_com_objects(
     }
 
     let mut stmt = conn.prepare(
-        "SELECT com_object_instance_id, group_address_id, direction
-         FROM group_link ORDER BY com_object_instance_id, position",
+        "SELECT link.com_object_instance_id, link.group_address_id, link.direction
+         FROM group_link AS link
+         INNER JOIN com_object_instance AS com ON com.id = link.com_object_instance_id
+         INNER JOIN device ON device.id = com.device_id
+         ORDER BY link.com_object_instance_id, link.position",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok((

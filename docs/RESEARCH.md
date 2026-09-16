@@ -781,7 +781,7 @@ project) exercise `Module`/`ModuleDef` anywhere in the available corpus** —
 confirmed zero in `prod1` (4 AP files), `prod2` (Weinzierl 730, 3 AP
 files), `prod4` (Dummy_Secure, 3 AP files), and in three further files
 scanned directly from `OriginalData/` without extraction: both `Unser
-Zuhause` exports and `Weinzierl_730_KNX_IP_Interface_ETS4_v1.knxprod`.
+Zuhause` exports and `Weinzierl_730_KNX_IP_Interface_ETS4.knxprod`.
 **The sample is narrow: two manufacturers, no independent third source to
 cross-validate structural assumptions against.** Any acceptance test slice
 2 writes will need its module-bearing fixtures from just these two.
@@ -1020,11 +1020,10 @@ corpus, two independent ways, both agreeing on zero:
    MDT_KP_AMI_AMS_03_Switch_Actuator_V31a/M-0083/M-0083_A-0318-31-DB39.xml: ModuleDef=4 Module=28 nested_Module_inside_ModuleDef=0
    MDT_KP_AMI_AMS_03_Switch_Actuator_V31a/M-0083/M-0083_A-0319-31-587B.xml: ModuleDef=4 Module=14 nested_Module_inside_ModuleDef=0
    Weinzierl_730_KNX_IP_Interface_ETS4/M-00C5/M-00C5_A-0702-10-1B22.xml: ModuleDef=0 Module=0 nested_Module_inside_ModuleDef=0
-   Weinzierl_730_KNX_IP_Interface_ETS4_v1/M-00C5/M-00C5_A-0702-10-1B22.xml: ModuleDef=0 Module=0 nested_Module_inside_ModuleDef=0
-   TOTAL nested Module elements across all 7 application-program files: 0
+   TOTAL nested Module elements across all 6 application-program files: 0
    ```
    (`kv25`, referenced in Q6/Q7 above, is not present under this machine's
-   `OriginalData/ProductDatabases/` — the five archive files installed here
+   `OriginalData/ProductDatabases/` — the four archive files installed here
    (`prod1`/`prod2`/`prod3`/`prod4`, four distinct packages) are the ones
    this ran against; see the Rust corpus test below for the exact archive
    list this measurement actually ran against.)

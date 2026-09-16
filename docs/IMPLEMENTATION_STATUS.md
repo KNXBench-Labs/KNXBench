@@ -2111,11 +2111,10 @@ already stored everything this slice reads (D12).
   count, cited above and in RESEARCH.md as 90, is **86** — the design
   doc's number was never actually run; the branch's own corpus test
   prints the right figure and now also asserts it. (4) That same test's
-  "5 archives installed" undercounted a skip: the two
-  `Weinzierl_730_KNX_IP_Interface_ETS4` files are byte-identical, so
-  `install_package` skips the second — five archive files, four distinct
-  installed packages, now asserted via `InstallReport::skipped` rather
-  than assumed.
+  the duplicate `Weinzierl_730_KNX_IP_Interface_ETS4_v1.knxprod` filename
+  is no longer in the local corpus. Four archive files now represent four
+  distinct packages; idempotent re-install remains covered by installing
+  the same package bytes twice and asserting `InstallReport::skipped`.
 - **A finding worth recording honestly, not smoothing over:** `prod3`'s
   three programs hold 44/28/14 structural `Module` rows each, but only
   12/8/4 are actually walked by `evaluate` under the corpus's own default

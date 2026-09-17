@@ -81,7 +81,7 @@ still pass.
 
 ---
 
-## 2. Session 7 — the three deliverables still outstanding
+## 2. Session 7 — the two deliverables still outstanding
 
 `docs/ROADMAP.md:622` and `docs/IMPLEMENTATION_STATUS.md:779` both list
 Session 7 as in progress. Roundtrip/migration fixtures and the DPT codec are

@@ -77,3 +77,11 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check
+
+  docker:
+    name: Docker artifact smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and exercise Docker image
+        run: apps/knx-server/scripts/smoke-test.sh

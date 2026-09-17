@@ -76,6 +76,11 @@ that is all we can honestly say.
 [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md),
 [ADR-0012](adr/0012-enrichment-into-absent-slots.md).
 
+The supplied legacy Eibmarkt `.vd4` product database, the two known public
+implementations, the licence and independent-implementation assessment, its
+reproducible direct-import failure, and the official conversion route are
+recorded in [VD4_PRODUCT_DATABASE_IMPORT.md](VD4_PRODUCT_DATABASE_IMPORT.md).
+
 **Goal.** The shared product database.
 
 **Deliverables, all shipped.** `knx-productdb`: its own SQLite schema and
@@ -349,6 +354,50 @@ left unbuilt.
 
 Cycle 14+ candidates (from `ideas.md`, not yet scheduled).
 
+### T37 — Visible, honest progress while loading a project
+
+Added 2026-09-16. Opening a native `.knxdb` project and importing an ETS
+`.knxproj` currently leave the user without feedback: `App.tsx` awaits one
+HTTP response from `/api/project/open` or `/api/project/import`, and neither
+the frontend nor the backend exposes an operation state or progress event.
+For a large project this is indistinguishable from a stalled application.
+
+The loading flow must show which operation is running and its current phase.
+For ETS import, the phases must follow the real external-data pipeline where
+applicable: open/read the container, parse, validate, normalize, persist, and
+build the UI projection. Native open must report its own real phases, such as
+opening/migrating the store, loading the normalized project, and building the
+projection. A determinate percentage may be shown only where the responsible
+layer has a real total; all other work uses an indeterminate progress
+indicator with a truthful phase label. Elapsed time must never be converted
+into a fabricated percentage.
+
+While loading, the UI prevents a second open/import action and announces
+phase changes accessibly (`aria-live`). The previously open project remains
+intact until the replacement is completely loaded and validated; failure
+ends the busy state, preserves that project, and surfaces the error. Safe
+cancellation is not part of this task unless the implementation design can
+prove the parser/store operation is cancellable without publishing partial
+state. The implementation design must choose and document the HTTP progress
+transport rather than hiding a second ad-hoc state channel in the UI.
+
+Acceptance requires focused backend tests for ordered, truthful progress
+events and frontend tests for phase rendering, determinate versus
+indeterminate progress, duplicate-action prevention, success, and failure.
+At least one real large-project import/open run must be recorded so the task
+does not close on mocked progress alone.
+
+### T38 — Show the web UI version in the footer and browser title — shipped 2026-09-16
+
+`App.tsx` now imports the independent `knx-web` SemVer directly from
+`apps/knx-web/package.json`, renders `v<version>` in the footer, and sets the
+browser title to `KNXBench <version>`. No second version literal exists in
+TypeScript or HTML; Vite resolves the manifest import into the production
+bundle. Focused tests cover the manifest-backed default and an injected
+sentinel so stale hard-coding fails. The welcome screen keeps the existing
+`KNX-compatible` product wording. Verification: 471 Vitest tests, TypeScript,
+and the Vite production build pass; implementation commit `57ed42b`.
+
 ## Cross-cutting — Internationalization
 
 **T25, T26's first slice, T32, and T33 all shipped 2026-09-12; no cycle
@@ -507,8 +556,10 @@ thin wrapper that spawns `knx-server` locally and points its WebView at
 it — one frontend, one API surface, two ways to run it, per the design's
 "converge, don't duplicate" decision; a three-stage Docker build with no
 GTK/WebKit2GTK in the final image; a scripted smoke test
-(`apps/knx-server/scripts/smoke-test.sh`) that builds the image, runs it,
-and imports the reference project over HTTP against a mounted volume.
+(`apps/knx-server/scripts/smoke-test.sh`) that builds the image, runs it, checks
+health, and proves native save/reopen against the mounted volume without a
+private fixture. `KNXBENCH_REFERENCE_PROJECT` optionally adds real ETS import,
+and CI runs the fixture-free mode on every push and pull request.
 LAN-only, no auth, single in-memory project, by design (see
 [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)) — matching the stated use
 case, not a gap.
@@ -629,7 +680,8 @@ so that captured telegrams have something to resolve against.
 **Deliverables.** The full roundtrip and migration suites with frozen fixtures
 per schema version; performance measurement on large projects, with
 optimization driven by those measurements rather than by guesswork; packaging
-for Linux; the licence decision.
+for Linux; the licence decision (**resolved 2026-09-16:**
+`AGPL-3.0-or-later`, canonical text in [`LICENSE`](../LICENSE)).
 
 **Status.** Cycle 1 (2026-09-06) audited and froze what "per schema version"
 actually means given the fixtures on hand: schema 11 (ETS4 reference
@@ -666,6 +718,15 @@ longer open. See row **D5** in
 [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence) —
 T15 closed the display side for tunnelling.
 
+**Update, 2026-09-17 — performance measurement delivered.** The deterministic
+ignored release benchmark in `crates/knx-app/tests/perf_baseline.rs` measures
+export, import, native open, projection, and search over 5,000 devices, 20,000
+group addresses, and 20,000 communication objects. [PERFORMANCE.md](PERFORMANCE.md)
+records the baseline, the measured `load_project` investigation, and the
+bulk-load result. A fresh 2026-09-17 run passed on current `main`; its
+single-run values remain machine-specific observations rather than performance
+guarantees.
+
 **Update, 2026-09-17 — Linux packaging delivered.** [ADR 0021](adr/0021-appimage-is-the-first-linux-package.md)
 selects an x86_64 AppImage as the first desktop package. The local artifact
 `KNXBench_0.1.0-alpha.1_amd64.AppImage` was built, structurally inspected, and
@@ -674,7 +735,9 @@ bounded verification is recorded in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_ST
 The GitHub Actions workflow is configured to upload manual-run artifacts and
 to publish pushed `v*` tags, but it has not executed. This delivery establishes
 only the tested compatible glibc, GTK 3, and WebKitGTK 4.1 x86_64 boundary; it
-does not establish Ubuntu CI success or general Linux distribution support.
+does not establish Ubuntu CI success or general Linux distribution support. With
+the performance measurement, Linux packaging, licence decision, and the
+earlier fixture and codec work delivered, Session 7 is complete.
 
 **Entry condition.** All earlier sessions' deliverables exist and are tested.
 
@@ -751,5 +814,5 @@ architecture; each has a defined landing place.
 | Whether ETS re-imports an unsigned third-party `.knxproj` | Session 3 delivered the mechanism (`ExportWarning::Unsigned`, always present); per ADR-0015 (Session 7), ETS reimport is no longer a project goal, so the verification itself (risk R9) is deprioritized — no fixed session, and none needed |
 | Whether Data Secure runtime keys are readable from `.knxproj` | Session 7 or later — `knx-secure` |
 | `.knxprod` encryption for master data scheme ≥ 12 | Session 4 delivered `.knxproj`-sourced product database ingest; 2026-09-10's standalone package installer (`knx_productdb::install_package`) showed the "encryption" premise was wrong for schemes 11 and 20 specifically — those 4 real-world files parse with no encryption at all, direct `.knxprod` ingest now works for both (see [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly)). Schemes 12-19/21/22 remain untested (no standalone sample acquired yet) and, as of 2026-09-11, **accepted out of scope by user decision** rather than merely unscheduled — no further sample-hunting is planned, though whether they are genuinely encrypted was never established either way. `.vd2` is a distinct legacy format, also **accepted out of scope, user decision 2026-09-11** (not an encryption question at all). See [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly) for both dated notes. |
-| The project licence | Session 7 — currently a placeholder, see [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) |
+| The project licence | **Answered 2026-09-16:** `AGPL-3.0-or-later`; canonical text tracked in [`LICENSE`](../LICENSE), resolution recorded in [KNOWN_LIMITATIONS.md §10](KNOWN_LIMITATIONS.md#10-the-project-licence-is-not-decided). |
 | Whether building parts and devices carry spatial coordinates (T21's second half) | **Answered 2026-09-13** by [ADR-0019](adr/0019-building-model-stays-topological.md): no, not in v1.0.0. The building model stays topological, graphical views keep computing layout at render time, and no entity gains a position — evidence being that `Space_t`/`DeviceInstance_t` carry no spatial attribute in schema 23's published schema, none of the three reference projects (schema 11/21/23) has one, and the KNX Standard's own location model (3/10/3 *KNX IoT Information Model*) keeps geometry out of its location classes and references IFC instead. The ADR pre-commits the shape of a later `FloorPlan`/`Placement` layer (own tables, integer millimetres, per-plan origin, no `z`, imported plan assets rather than drawing) so it cannot be improvised; **building it needs its own ADR and a store schema 7, and neither exists** — post-v1.0.0, no fixed session. Side finding: five documented `Space/@Type` values are coarsened on import ([KNOWN_LIMITATIONS.md §89](KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import)). |

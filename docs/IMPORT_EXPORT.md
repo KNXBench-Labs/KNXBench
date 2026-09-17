@@ -305,6 +305,12 @@ and keeps stating it until someone has verified it against a real ETS
 installation. No claim of ETS interoperability is made on the strength of the
 file being well-formed.
 
+A group address without a group range is not silently discarded. Both the
+schema-11 and schema-21 writers return `ExportError::UnrangedGroupAddress`,
+because the verified writer shape emits addresses only inside `GroupRange` and
+KNXBench has no evidenced faithful external representation for a range-less
+address. Native `.knxdb` persistence continues to preserve it.
+
 ## 9. Roundtrip fidelity
 
 Byte equality is not attempted and is never claimed (risk R4). Three testable

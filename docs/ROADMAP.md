@@ -666,6 +666,16 @@ longer open. See row **D5** in
 [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence) —
 T15 closed the display side for tunnelling.
 
+**Update, 2026-09-17 — Linux packaging delivered.** [ADR 0021](adr/0021-appimage-is-the-first-linux-package.md)
+selects an x86_64 AppImage as the first desktop package. The local artifact
+`KNXBench_0.1.0-alpha.1_amd64.AppImage` was built, structurally inspected, and
+launched for 15,003 ms on the Arch Linux/XWayland host `big-omarchy`; its
+bounded verification is recorded in [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).
+The GitHub Actions workflow is configured to upload manual-run artifacts and
+to publish pushed `v*` tags, but it has not executed. This delivery establishes
+only the tested compatible glibc, GTK 3, and WebKitGTK 4.1 x86_64 boundary; it
+does not establish Ubuntu CI success or general Linux distribution support.
+
 **Entry condition.** All earlier sessions' deliverables exist and are tested.
 
 Deferred beyond Session 7 (from `ideas.md`, no fixed session): MCP

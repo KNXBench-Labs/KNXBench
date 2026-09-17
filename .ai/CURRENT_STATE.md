@@ -1,3 +1,33 @@
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-17 18:01
+- **Completed:** Task 5 documented the first local Linux AppImage verification in README, ROADMAP, IMPLEMENTATION_STATUS, and goal. It records the exact 105839096-byte `KNXBench_0.1.0-alpha.1_amd64.AppImage`, SHA-256 `b0ec49aebcec984ffdce21639306713862fc6c7baf15f7247f060ac314cdaef7`, Arch/XWayland startup evidence (15003 ms, timeout 124), contents inspection, launch boundary, and user install/update/removal guidance. `.ai/logs/2026-09-17_codex_linux_appimage.md` records the decision, commands, environment, checks, and limitations.
+- **Pending/Next Steps:** The configured GitHub Actions workflow remains unexecuted. No push, tag, release, workflow dispatch, broader distribution test, signing, updater, ARM64 build, or native package-management path has occurred.
+- **Notes for Claude:** Documentation claims local Arch/XWayland evidence only. It must not be read as evidence that the Ubuntu workflow succeeds or that this AppImage runs on all distributions. Task 5's `xtask` tests, AppImage check, and layering check passed; `check-headers` remains red at the pre-existing 170-versus-168 ceiling. The generated AppImage and `apps/knx-web/node_modules` remain uncommitted.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-17 17:54
+- **Completed:** Task 4 fix round 1 committed as `facd6a0`: replaced the permissive workflow text scan with `yaml-rust2` semantic parsing. `verify_workflow` now requires a `jobs.build.steps` entry named exactly `Build AppImage` with `env.NO_STRIP` exactly YAML string `"1"`; shell block text, later unnamed/other steps, and numeric `1` are rejected. RED: both requested negative tests failed against the scanner; GREEN: 46 xtask tests pass. Fmt, xtask clippy, `cargo deny check`, `check-appimage`, and diff check passed. Task 4 report appended.
+- **Pending/Next Steps:** Task 5 wording must distinguish the locally verified AppImage from the configured, unexecuted GitHub workflow. No push or workflow dispatch is authorized. Generated AppImage and `node_modules` remain uncommitted.
+- **Notes for Claude:** `yaml-rust2 0.13.0` uses YAML 1.2 with default encoding feature disabled; only new transitive crate is `arraydeque 0.5.1`, and existing `hashlink 0.12.1` is reused. `cargo deny check` exited 0 with existing duplicate-version warnings. Local AppImage evidence still depends on the temporary Arch-only GTK plugin adjustment and does not prove Ubuntu CI execution or failure.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-17 17:44
+- **Completed:** Task 4 built, inspected, and launched the real AppImage. Evidence-driven fix `7f0abd4` sets `NO_STRIP=1` in the CI build step and adds a step-scoped `xtask` regression. Final artifact `KNXBench_0.1.0-alpha.1_amd64.AppImage` is 105839096 bytes, SHA-256 `b0ec49aebcec984ffdce21639306713862fc6c7baf15f7247f060ac314cdaef7`; `check-appimage`, clean extraction, executable/desktop/icons/88-file frontend/canonical LICENSE checks passed. Active-XWayland launch mapped visible `Knx-desktop` window and remained alive 15003 ms to timeout status 124; log had two GBM allocation warnings and no library/resource/panic/server failure. `cargo fmt --all --check`, 44 xtask tests, xtask clippy, and diff check passed. Full report: `.superpowers/sdd/2026-09-17-linux-appimage/task-4-report.md`.
+- **Pending/Next Steps:** No Task 4 implementation remains. Generated AppImage and `node_modules` are uncommitted. A release publish or cross-distribution portability run was not performed.
+- **Notes for Claude:** Current Arch gdk-pixbuf 2.44.7 omits its advertised legacy loader directory; final local build used an isolated `/tmp` Tauri cache with a one-line-class GTK plugin compatibility adjustment, not a repository patch. Vanilla linuxdeploy also failed on modern `.relr.dyn` sections; committed `NO_STRIP=1` addresses that reproducibly and is statically guarded. ADR 0021's compatible glibc/GTK/WebKit boundary remains accurate. No discovery, gateway contact, or bus IO occurred.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-17 17:28
+- **Completed:** Task 3 committed as `2549e40`: added `.github/workflows/linux-appimage.yml`. Fix round 1 committed as `dd80c6d`: release and `--tag` validation now require both a `push` event and tag ref; manual validation requires `workflow_dispatch`, so a dispatch from a tag cannot validate as a release or publish. Focused `xtask` AppImage tests: 14 passed; static workflow contract and diff checks passed. Task 2 remains `7df78eb`: root license, required icons, exact active AppImage bundle contract, and ADR 0021.
+- **Pending/Next Steps:** Produce and inspect a real AppImage. `check-headers` remains red at 170 absent headers against its 168 ceiling; it is an existing unrelated baseline and not expanded in this task.
+- **Notes for Claude:** Tauri’s exact `bundle` object is guarded by `cargo run -p xtask -- check-appimage`; do not loosen it. Task reports: `.superpowers/sdd/2026-09-17-linux-appimage/task-2-report.md` and `task-3-report.md`. No real release or upload was performed.
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-17 17:11
+- **Completed:** Task 1 on `linux-appimage` committed as `4f45d61`: added `xtask/src/appimage.rs` and `check-appimage`. Fix round 1 adds x86_64-only validation: the artifact name must end in `_{version}_amd64.AppImage`; `aarch64` is rejected by a focused RED-then-GREEN regression test. The validator resolves `knx-desktop` through Cargo metadata; verifies exact AppImage bundling targets and resources, required frontend/licence files, Cargo/npm version agreement, one non-empty executable versioned artifact, and an optional `vVERSION` tag. The focused suite now has 14 passing tests; xtask clippy passes.
+- **Pending/Next Steps:** Implement the configured AppImage bundle contract and build workflow. `check-headers` is currently red at 170 absent headers against its 168 ceiling; this task's new Rust module has a valid header and did not create the baseline failure.
+- **Notes for Claude:** `check-appimage` currently rejects the repository configuration by design because `tauri.conf.json` has `bundle.active: false` and no `targets: ["appimage"]`. The exact contract gate must remain enabled as subsequent packaging tasks alter that configuration. Full report: `.superpowers/sdd/2026-09-17-linux-appimage/task-1-report.md`.
+
 - **Last Agent:** Claude
 - **Timestamp:** 2026-09-12 05:40
 - **Completed:** **T26 (product-data language) merged to `main`

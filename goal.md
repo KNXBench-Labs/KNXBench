@@ -93,10 +93,14 @@ done. These are not:
   project (import, open, projection, search, export), with numbers recorded
   in `docs/` so a later optimization has a baseline to beat. Only optimize
   what the measurement shows.
-- **Linux packaging.** Nothing exists. Linux-first is the project's stated
-  platform stance (CLAUDE.md), so this is the delivery path, not a nicety.
-  Decide the format explicitly (AppImage, Flatpak, plain tarball, distro
-  package) and record the decision and its reasoning.
+- **Linux packaging.** Delivered 2026-09-17 as the first x86_64 AppImage,
+  following [ADR 0021](docs/adr/0021-appimage-is-the-first-linux-package.md).
+  The local Arch Linux/XWayland build was inspected and launched successfully;
+  its evidence is recorded in
+  [IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md). The configured
+  GitHub Actions workflow has not run, and this does not claim Ubuntu CI or
+  general Linux distribution compatibility. Automatic updates, signatures,
+  ARM64 builds, and native package management remain outside this alpha slice.
 - **The licence decision** — see section 1.
 
 ---

@@ -417,7 +417,7 @@ dir if unset, so `/api/fs/*` and `/api/project/download` respect a mounted
 Docker volume in production; this was a real gap found and fixed mid-plan
 — the original `main.rs` never read `KNX_DATA_DIR` at all, despite the
 Dockerfile already setting `ENV KNX_DATA_DIR=/data`. Docker packaging
-(`apps/knx-server/Dockerfile`) is a three-stage build — `node:20-alpine`
+(`apps/knx-server/Dockerfile`) is a three-stage build — `node:22-alpine`
 builds the frontend, `rust:1.98-slim` builds the release binary,
 `debian:bookworm-slim` ships just the binary and static assets, no
 GTK/WebKit2GTK anywhere in the image — verified by
@@ -447,12 +447,12 @@ across the workspace (up from 314), plus 64 `vitest` tests in
 | `crates/knx-net/` | Empty crate with its responsibility stated in a doc comment. |
 | `crates/knx-secure/` | Was an empty crate with its responsibility stated in a doc comment; gained its first code in A6 (2026-09-13, see the dated entry at the end of this document): the `.knxproj` ZIP-password derivation, `pbkdf2`/`sha2`/`base64` as its first real dependencies. Gained its second body of code in T15 (2026-09-14): `zipcrypto.rs`, PKWARE Traditional Encryption, read-only — `knx-etsproj` now depends on this crate for `Container::open_with_password`. Still holds no KNX Secure runtime-key handling (the bus-level protocol), which is what the crate's name is actually reserved for. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
-| `apps/knx-server/` | **New, web/Docker deployment target.** The axum HTTP API binary (`knx-server`) and library (`knx_server`) — see the paragraph above. `src/domain.rs` holds `AppState` and the same `_impl` functions the old Tauri commands wrapped; `src/routes.rs`/`fs_routes.rs` are the axum route handlers; `src/errors.rs` maps `AppError` to an HTTP status plus a `{"error": ...}` body. `main.rs` reads `KNX_PORT`/`KNX_STATIC_DIR`/`KNX_DATA_DIR` from the environment. `Dockerfile` is the three-stage build (Node frontend, Rust backend, Debian-slim runtime); `scripts/smoke-test.sh` builds and runs the image and exercises `/healthz` plus an import over HTTP. |
+| `apps/knx-server/` | **New, web/Docker deployment target.** The axum HTTP API binary (`knx-server`) and library (`knx_server`) — see the paragraph above. `src/domain.rs` holds `AppState` and the same `_impl` functions the old Tauri commands wrapped; `src/routes.rs`/`fs_routes.rs` are the axum route handlers; `src/errors.rs` maps `AppError` to an HTTP status plus a `{"error": ...}` body. `main.rs` reads `KNX_PORT`/`KNX_STATIC_DIR`/`KNX_DATA_DIR` from the environment. `Dockerfile` is the three-stage build (Node frontend, Rust backend, Debian-slim runtime); `scripts/smoke-test.sh` builds and runs the image, exercises `/healthz`, and proves native save/reopen over the mounted volume; `KNXBENCH_REFERENCE_PROJECT` additionally exercises ETS import. |
 | `apps/knx-web/` | **New, moved from `apps/knx-desktop/src`.** The React + Vite frontend, now a standalone npm package consumed by both `knx-server`'s static-file serving and the Tauri desktop shell. `src/api.ts` is the `fetch()`-based client (replaces Tauri's `invoke()`); `src/FsPicker.tsx` is the mount-directory listing/upload UI shown when `window.__TAURI__` is absent (the server's `/api/project/download` route has no UI caller yet, see [KNOWN_LIMITATIONS.md #26](KNOWN_LIMITATIONS.md#26-apiprojectdownload-has-no-frontend-caller)); `src/filePicker.ts` picks between it and the native Tauri dialog. `src/theme.ts` is cycle 13's named-theme registry, replacing cycle 7's `theme.ts`/`ThemeToggle.tsx` cycle and cycle 11's now-deleted `palette.ts`/`ThemePanel.tsx` token overrides outright — see the Session 5 paragraph above. Its `<select>` picker was `src/ThemeSwitcher.tsx` until T27 (2026-09-12) moved the Theme select into a new `src/SettingsPanel.tsx` alongside two new motion settings and deleted `ThemeSwitcher.tsx` outright, its one consumer gone. Everything else (`ProjectExplorer`, `Inspector`, `Search.tsx`/`CommandPalette.tsx`, `Dashboard.tsx`, `Toast.tsx`, the `ts-rs`-generated bindings under `src/bindings/`) moved unchanged from `knx-desktop`. `vitest` suite: 89 tests across 8 files, including `api.test.ts` against a mocked `fetch` and cycle 13's rewritten `theme.test.ts` (`palette.test.ts` is gone with `palette.ts`). |
 | `apps/knx-desktop/` | **Thin native wrapper as of the web/Docker deployment target** — see the paragraph above. `src-tauri/` is now just window/process wiring (`lib.rs`, ~80 lines): spawn `knx-server`'s router locally, point one `WebviewWindowBuilder` at it, keep the native file-dialog plugin available for `apps/knx-web`'s `window.__TAURI__` check. No `#[tauri::command]` handlers and no integration tests remain here — both moved to `apps/knx-server`. No `src/` of its own any more; it loads `apps/knx-web`'s build output (dev: Vite HMR on a fixed port; release: bundled as a Tauri resource). |
 | `xtask/` | Repository verification tasks. `check-layering` walks the resolved dependency graph and reports the shortest path to any forbidden package, for eight roots (`knx-core`, `knx-etsproj`, `knx-productdb` — the third added Session 4 — `knx-projection`, the fourth, added Session 5, then `knx-csv`, `knx-report` and `knx-diff`, and `knx-secure`, the eighth, added by A6 on 2026-09-13 to keep that crate away from `knx-core` and `serde`); `check-headers` (T35) checks the shape of every first-line header that exists — one sentence, one period, at most 100 columns — and ratchets the count of files without one (`ABSENT_CEILING`, lowered as headers are added, never raised); `freeze-fixture` (Session 3) regenerates a canonical migration-test fixture. |
 | `deny.toml` | Licence, advisory, ban and source policy for `cargo-deny`. |
-| `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, `knx-web`'s own `npm test` (Vitest, Session 5 cycle 5; path updated from `knx-desktop` to `knx-web` with the web/Docker deployment target), the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-web/src/bindings` are not stale (Session 5; path likewise updated). Does not build or smoke-test the `knx-server` Docker image — that stays a local/manual step (`apps/knx-server/scripts/smoke-test.sh`), not yet wired into CI. |
+| `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, `knx-web`'s own `npm test` (Vitest, Session 5 cycle 5; path updated from `knx-desktop` to `knx-web` with the web/Docker deployment target), the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-web/src/bindings` are not stale (Session 5; path likewise updated). A separate Docker artifact job runs `apps/knx-server/scripts/smoke-test.sh` on every push and pull request, building the shipped image and exercising health plus native persistence without private fixtures. |
 | `docs/ARCHITECTURE.md` | Layering, workspace layout, enforced rules, core approach, UI boundary, KNXnet/IP, key material, test strategy. |
 | `docs/DATA_MODEL.md` | The target domain model, per section marked implemented / planned / retained-but-uninterpreted. |
 | `docs/IMPORT_EXPORT.md` | The six-stage pipeline, container handling, tolerant parsing, opaque store, import report, export rules, roundtrip guarantees. |
@@ -793,8 +793,10 @@ previously attributed to schema 23 alone already exist at 21, plus one new
 one (`ModuleInstances`) — flagged as the next major format-support task, not
 attempted this cycle (see [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md)).
 `knx-store`'s `.knxdb` migration chain (v1→v4) was verified, not touched —
-already complete. Remaining Session 7 deliverables: performance measurement
-on large projects, Linux packaging, the licence decision.
+already complete. The `AGPL-3.0-or-later` licence decision was finalized and
+the canonical `LICENSE` file added on 2026-09-16. The deterministic large-project
+performance benchmark and x86_64 AppImage were also delivered, so Session 7 is
+complete as of 2026-09-17.
 
 Session 6's KNX IP Secure was scoped after cycle 4 (routing), then shelved
 indefinitely (2026-09-06, not just deferred to "a later cycle") — plain
@@ -6031,3 +6033,20 @@ build/upload artifacts and to publish a pushed tag, but it was not executed;
 no tag, release, or push occurred. This is evidence for the local Arch/XWayland
 run within the compatible x86_64 glibc, GTK 3, and WebKitGTK 4.1 boundary only,
 not Ubuntu CI success or general Linux distribution compatibility.
+
+## 2026-09-17 — Range-less group-address export loss closed
+
+Schema-11 and schema-21 export now reject a group address whose `range` is
+`None` with `ExportError::UnrangedGroupAddress`, naming its installation,
+internal ID, and raw address. Native `.knxdb` persistence and the optional
+range field remain unchanged; no synthetic range is invented. Focused tests
+cover both schema writers, replacing the previous successful but lossy export.
+
+## 2026-09-17 — Same-file application-program ID collisions recorded
+
+`parse/program.rs` now routes `ApplicationProgram/@Id` through the shared
+`first_winner` helper with a fresh per-file occurrence map. A duplicate ID in
+one XML source keeps the first declaration and records `IdConflict` occurrence
+2, matching hardware and catalog ingestion. The prior cross-file behavior stays
+unchanged. `datapoint_type` collision provenance remains separate because its
+table lacks `source_sha256`; the existing dropped-declaration counter remains.

@@ -1,3 +1,5 @@
+/** Verifies new-project creation across every supported group-address style in a browser. */
+
 import { expect, test } from "@playwright/test";
 
 const styles = ["ThreeLevel", "TwoLevel", "Free"] as const;

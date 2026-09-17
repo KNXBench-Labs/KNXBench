@@ -66,10 +66,18 @@ The server has **no authentication**. Run it only on a trusted network; use a
 firewall or an authenticated reverse proxy before exposing it anywhere less
 friendly than your LAN.
 
-To run the Docker smoke test (build, boot, health check, and project import):
+To run the Docker smoke test (build, boot, health check, and native
+save/reopen cycle):
 
 ```bash
 apps/knx-server/scripts/smoke-test.sh
+```
+
+To additionally import a local ETS project through the running image:
+
+```bash
+KNXBENCH_REFERENCE_PROJECT="/path/to/reference.knxproj" \
+  apps/knx-server/scripts/smoke-test.sh
 ```
 
 ### Update a running Docker installation
@@ -218,4 +226,10 @@ from. See [ADR-0018](docs/adr/0018-program-versions-and-file-headers.md).
 
 ## License
 
-AGPL-3.0-or-later.
+KNXBench is free software licensed under the
+[GNU Affero General Public License version 3 or later](LICENSE).
+
+The licence permits private and commercial use, modification, and
+redistribution under its terms. Modified versions made available to users over
+a network must also offer those users the corresponding source code as required
+by the AGPL.

@@ -71,11 +71,9 @@ pub(crate) fn bool_flag(
 /// `IdConflict`. The existing row is kept regardless, so the answer is
 /// always "did the caller's row win", never "is this now the winner".
 ///
-/// Extracted from two byte-identical copies (`hardware.rs` and
-/// `catalog.rs`; `program.rs` inlines the same idea for
-/// `application_program` alone, differently enough — it also gates several
-/// later match arms on the result — that folding it in here was not
-/// attempted).
+/// Extracted from byte-identical hardware and catalog copies. The program
+/// parser also uses it for `application_program`, while keeping its later
+/// child-row gating local to that parser.
 ///
 /// Comparing `source_sha256` alone (as this did until KNOWN_LIMITATIONS.md
 /// §86 was closed) cannot see a same-file collision: one parse call passes

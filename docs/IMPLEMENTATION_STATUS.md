@@ -6001,3 +6001,33 @@ files**, and `npm run test:e2e` built the production bundle and passed **3/3
 Playwright tests**. The browser suite stops after the empty catalog opens;
 package installation and device creation remain covered at the server boundary
 by `apps/knx-server/tests/http_catalog_to_device.rs`.
+
+## 2026-09-17 — First Linux AppImage: local build, inspection, and bounded launch
+
+[ADR 0021](adr/0021-appimage-is-the-first-linux-package.md) selects AppImage
+as KNXBench's first Linux desktop package. The local build on `big-omarchy`
+(Arch Linux, Linux `7.2.5-3-omarchy`, x86_64) produced exactly one artifact:
+`KNXBench_0.1.0-alpha.1_amd64.AppImage`, `105839096` bytes, mode
+`-rwxr-xr-x`, SHA-256
+`b0ec49aebcec984ffdce21639306713862fc6c7baf15f7247f060ac314cdaef7`.
+The host used Rust `1.98.0`, Cargo `1.98.0`, Node `v26.8.1`, npm `11.19.0`,
+Tauri CLI `2.11.4`, and gdk-pixbuf `2.44.7`.
+
+`cargo run -p xtask -- check-appimage` passed. Extraction verified the
+executable `usr/bin/knx-desktop`; `KNXBench.desktop` with the expected
+`Exec`, `Icon`, and type; the root icon and 128/256-pixel hicolor icons; the
+frontend `index.html` and 88 frontend files; and the 34,523-byte bundled
+`LICENSE`, byte-identical to the repository's canonical license. The AppImage
+started on the active Arch XWayland display, mapped a visible `KNXBench` window
+(`Knx-desktop`), and remained alive for 15,003 ms; `timeout` ended it with
+status 124. The log contained two GBM allocation warnings, with no missing
+library or resource, panic, or server-start failure.
+
+Focused package checks passed: `cargo fmt --all --check`, `cargo test -p xtask`
+(46 passed, 0 failed), `cargo clippy -p xtask --all-targets -- -D warnings`,
+`check-appimage`, and `git diff --check`. No KNX discovery, gateway contact,
+bus read, or bus write occurred. The GitHub Actions workflow is configured to
+build/upload artifacts and to publish a pushed tag, but it was not executed;
+no tag, release, or push occurred. This is evidence for the local Arch/XWayland
+run within the compatible x86_64 glibc, GTK 3, and WebKitGTK 4.1 boundary only,
+not Ubuntu CI success or general Linux distribution compatibility.

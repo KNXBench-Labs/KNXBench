@@ -80,3 +80,33 @@ Linux distribution compatibility. The checked-in workflow remains unexecuted.
 linuxdeploy-copied libraries. The GBM warnings leave other GPU/display stacks
 untested. There is no updater, signature, ARM64 build, or native dependency
 management in this alpha package.
+
+## Final verification and scope review
+
+Task 6 reviewed the 11 commits and all 20 changed files from `f7893ec` through
+`23b27a4`. `cargo fmt --all --check`, xtask clippy, 46 xtask tests, layering,
+471 web tests across 42 files, the web production build (81 modules),
+`check-appimage`, and `git diff --check f7893ec..HEAD` passed. `check-headers`
+failed exactly at the known pre-existing baseline: 170 files without a header
+against ceiling 168. No source-header cleanup was added to this packaging
+branch.
+
+The final artifact identity was unchanged: 105839096 bytes, executable, and
+SHA-256 `b0ec49aebcec984ffdce21639306713862fc6c7baf15f7247f060ac314cdaef7`.
+A fresh empty-directory extraction again verified the 25,444,888-byte desktop
+binary, expected desktop metadata, root and 128/256 icons, 88 frontend files,
+and the 34,523-byte canonical licence with SHA-256
+`0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0`.
+A second active-XWayland launch mapped a visible `Knx-desktop` window and ran
+15002 ms until timeout status 124. Its 126-byte log again contained only the
+two GBM allocation warnings. No KNX discovery, gateway action, bus read, or
+bus write was invoked.
+
+The full branch review confirmed exactly one `appimage` bundle target, no
+updater, signing, ARM64, native package format, runtime, storage, or bus-layer
+change, and no packaged project, manufacturer database, keyring, password, or
+gateway data. Release publication is conditioned on both a push event and tag
+ref; manual dispatch can only upload an Actions artifact. Documentation keeps
+the local Arch/XWayland evidence separate from the configured but unexecuted
+Ubuntu workflow. No push, tag, release, workflow dispatch, merge, or
+publication occurred.

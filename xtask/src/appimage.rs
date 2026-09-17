@@ -107,13 +107,40 @@ fn verify_workflow(root: &Path) -> Result<(), String> {
     let Yaml::Array(steps) = &workflow["jobs"]["build"]["steps"] else {
         return Err("Linux AppImage workflow must set NO_STRIP to 1".to_string());
     };
-    if steps.iter().any(|step| {
+    if !steps.iter().any(|step| {
         step["name"].as_str() == Some("Build AppImage")
             && step["env"]["NO_STRIP"].as_str() == Some("1")
     }) {
-        return Ok(());
+        return Err("Linux AppImage workflow must set NO_STRIP to 1".to_string());
     }
-    Err("Linux AppImage workflow must set NO_STRIP to 1".to_string())
+
+    let smoke_contract = concat!(
+        "status=$?\n",
+        "set -e\n",
+        "test \"$status\" -eq 124 || { cat appimage-startup.log; exit 1; }"
+    );
+    if !steps.iter().any(|step| {
+        step["name"].as_str() == Some("Smoke test AppImage startup")
+            && step["run"]
+                .as_str()
+                .is_some_and(|run| run.trim_end().ends_with(smoke_contract))
+    }) {
+        return Err("Linux AppImage smoke test must accept only timeout status 124".to_string());
+    }
+
+    let repository_context_error =
+        "Linux AppImage release step must set GH_REPO to ${{ github.repository }}";
+    let Yaml::Array(release_steps) = &workflow["jobs"]["release"]["steps"] else {
+        return Err(repository_context_error.to_string());
+    };
+    if !release_steps.iter().any(|step| {
+        step["name"].as_str() == Some("Create or update release")
+            && step["env"]["GH_REPO"].as_str() == Some("${{ github.repository }}")
+    }) {
+        return Err(repository_context_error.to_string());
+    }
+
+    Ok(())
 }
 
 fn verify_artifacts(dir: &Path, version: &str) -> Result<VerifiedAppImage, String> {
@@ -147,6 +174,12 @@ fn verify_artifacts(dir: &Path, version: &str) -> Result<VerifiedAppImage, Strin
     }
     let metadata = fs::metadata(path)
         .map_err(|error| format!("cannot inspect {}: {error}", path.display()))?;
+    if !metadata.is_file() {
+        return Err(format!(
+            "AppImage artifact {} is not a regular file",
+            path.display()
+        ));
+    }
     if metadata.len() == 0 {
         return Err(format!("AppImage artifact {} is empty", path.display()));
     }
@@ -233,6 +266,19 @@ mod tests {
     }
 
     #[test]
+    fn directory_named_as_appimage_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("KNXBench_0.1.0-alpha.1_amd64.AppImage");
+        fs::create_dir(&path).unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
+
+        assert_eq!(
+            verify_artifacts(dir.path(), "0.1.0-alpha.1").unwrap_err(),
+            format!("AppImage artifact {} is not a regular file", path.display())
+        );
+    }
+
+    #[test]
     fn wrong_version_appimage_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
         write_executable(
@@ -298,7 +344,7 @@ mod tests {
 
         fs::write(
             workflow,
-            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n        run: cargo tauri build\n",
+            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n        run: cargo tauri build\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit 1; }\n  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_REPO: ${{ github.repository }}\n",
         )
         .unwrap();
         assert!(verify_workflow(dir.path()).is_ok());
@@ -335,6 +381,40 @@ mod tests {
         assert_eq!(
             verify_workflow(dir.path()).unwrap_err(),
             "Linux AppImage workflow must set NO_STRIP to 1"
+        );
+    }
+
+    #[test]
+    fn release_workflow_requires_exact_repository_context() {
+        let dir = tempfile::tempdir().unwrap();
+        let workflow_dir = dir.path().join(".github/workflows");
+        fs::create_dir_all(&workflow_dir).unwrap();
+        fs::write(
+            workflow_dir.join("linux-appimage.yml"),
+            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit 1; }\n  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_TOKEN: ${{ github.token }}\n        run: gh release view \"$GITHUB_REF_NAME\"\n",
+        )
+        .unwrap();
+
+        assert_eq!(
+            verify_workflow(dir.path()).unwrap_err(),
+            "Linux AppImage release step must set GH_REPO to ${{ github.repository }}"
+        );
+    }
+
+    #[test]
+    fn release_workflow_rejects_smoke_test_that_can_exit_successfully() {
+        let dir = tempfile::tempdir().unwrap();
+        let workflow_dir = dir.path().join(".github/workflows");
+        fs::create_dir_all(&workflow_dir).unwrap();
+        fs::write(
+            workflow_dir.join("linux-appimage.yml"),
+            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n      - name: Smoke test AppImage startup\n        run: |\n          status=$?\n          set -e\n          test \"$status\" -eq 124 || { cat appimage-startup.log; exit \"$status\"; }\n  release:\n    steps:\n      - name: Create or update release\n        env:\n          GH_REPO: ${{ github.repository }}\n",
+        )
+        .unwrap();
+
+        assert_eq!(
+            verify_workflow(dir.path()).unwrap_err(),
+            "Linux AppImage smoke test must accept only timeout status 124"
         );
     }
 

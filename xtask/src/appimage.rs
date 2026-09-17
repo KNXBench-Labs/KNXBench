@@ -20,6 +20,7 @@ pub fn verify(
 ) -> Result<VerifiedAppImage, String> {
     let version = workspace_desktop_version(root)?;
     verify_config(root, &version)?;
+    verify_workflow(root)?;
     let artifact = verify_artifacts(artifact_dir, &version)?;
     verify_tag(tag, &version)?;
     Ok(artifact)
@@ -88,6 +89,25 @@ fn read_json(path: &Path) -> Result<Value, String> {
         .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
     serde_json::from_str(&source)
         .map_err(|error| format!("cannot parse {}: {error}", path.display()))
+}
+
+fn verify_workflow(root: &Path) -> Result<(), String> {
+    let path = root.join(".github/workflows/linux-appimage.yml");
+    let source = fs::read_to_string(&path)
+        .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+    let mut build_step_indent = None;
+    for line in source.lines() {
+        let trimmed = line.trim_start();
+        let indent = line.len() - trimmed.len();
+        if trimmed == "- name: Build AppImage" {
+            build_step_indent = Some(indent);
+        } else if build_step_indent == Some(indent) && trimmed.starts_with("- name: ") {
+            break;
+        } else if build_step_indent.is_some() && trimmed == r#"NO_STRIP: "1""# {
+            return Ok(());
+        }
+    }
+    Err("Linux AppImage workflow must set NO_STRIP to 1".to_string())
 }
 
 fn verify_artifacts(dir: &Path, version: &str) -> Result<VerifiedAppImage, String> {
@@ -231,6 +251,41 @@ mod tests {
         assert!(verify_tag(Some("v0.1.0-alpha.1"), "0.1.0-alpha.1").is_ok());
         assert!(verify_tag(Some("v0.1.0-alpha.2"), "0.1.0-alpha.1").is_err());
         assert!(verify_tag(Some("0.1.0-alpha.1"), "0.1.0-alpha.1").is_err());
+    }
+
+    #[test]
+    fn release_workflow_disables_linuxdeploy_stripping() {
+        let dir = tempfile::tempdir().unwrap();
+        let workflow_dir = dir.path().join(".github/workflows");
+        fs::create_dir_all(&workflow_dir).unwrap();
+        let workflow = workflow_dir.join("linux-appimage.yml");
+
+        fs::write(
+            &workflow,
+            "- name: Build AppImage\n  run: cargo tauri build\n",
+        )
+        .unwrap();
+        assert_eq!(
+            verify_workflow(dir.path()).unwrap_err(),
+            "Linux AppImage workflow must set NO_STRIP to 1"
+        );
+
+        fs::write(
+            &workflow,
+            "- name: Build AppImage\n  run: cargo tauri build\n- name: Other\n  env:\n    NO_STRIP: \"1\"\n",
+        )
+        .unwrap();
+        assert_eq!(
+            verify_workflow(dir.path()).unwrap_err(),
+            "Linux AppImage workflow must set NO_STRIP to 1"
+        );
+
+        fs::write(
+            workflow,
+            "- name: Build AppImage\n  env:\n    NO_STRIP: \"1\"\n  run: cargo tauri build\n",
+        )
+        .unwrap();
+        assert!(verify_workflow(dir.path()).is_ok());
     }
 
     fn fixture_root() -> tempfile::TempDir {

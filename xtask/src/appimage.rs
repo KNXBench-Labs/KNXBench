@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use cargo_metadata::MetadataCommand;
 use serde_json::Value;
+use yaml_rust2::{Yaml, YamlLoader};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct VerifiedAppImage {
@@ -95,17 +96,22 @@ fn verify_workflow(root: &Path) -> Result<(), String> {
     let path = root.join(".github/workflows/linux-appimage.yml");
     let source = fs::read_to_string(&path)
         .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-    let mut build_step_indent = None;
-    for line in source.lines() {
-        let trimmed = line.trim_start();
-        let indent = line.len() - trimmed.len();
-        if trimmed == "- name: Build AppImage" {
-            build_step_indent = Some(indent);
-        } else if build_step_indent == Some(indent) && trimmed.starts_with("- name: ") {
-            break;
-        } else if build_step_indent.is_some() && trimmed == r#"NO_STRIP: "1""# {
-            return Ok(());
-        }
+    let documents = YamlLoader::load_from_str(&source)
+        .map_err(|error| format!("cannot parse {}: {error}", path.display()))?;
+    let [workflow] = documents.as_slice() else {
+        return Err(format!(
+            "{} must contain exactly one YAML document",
+            path.display()
+        ));
+    };
+    let Yaml::Array(steps) = &workflow["jobs"]["build"]["steps"] else {
+        return Err("Linux AppImage workflow must set NO_STRIP to 1".to_string());
+    };
+    if steps.iter().any(|step| {
+        step["name"].as_str() == Some("Build AppImage")
+            && step["env"]["NO_STRIP"].as_str() == Some("1")
+    }) {
+        return Ok(());
     }
     Err("Linux AppImage workflow must set NO_STRIP to 1".to_string())
 }
@@ -262,7 +268,7 @@ mod tests {
 
         fs::write(
             &workflow,
-            "- name: Build AppImage\n  run: cargo tauri build\n",
+            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        run: cargo tauri build\n",
         )
         .unwrap();
         assert_eq!(
@@ -272,7 +278,17 @@ mod tests {
 
         fs::write(
             &workflow,
-            "- name: Build AppImage\n  run: cargo tauri build\n- name: Other\n  env:\n    NO_STRIP: \"1\"\n",
+            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        run: cargo tauri build\n      - name: Other\n        env:\n          NO_STRIP: \"1\"\n",
+        )
+        .unwrap();
+        assert_eq!(
+            verify_workflow(dir.path()).unwrap_err(),
+            "Linux AppImage workflow must set NO_STRIP to 1"
+        );
+
+        fs::write(
+            &workflow,
+            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: 1\n        run: cargo tauri build\n",
         )
         .unwrap();
         assert_eq!(
@@ -282,10 +298,44 @@ mod tests {
 
         fs::write(
             workflow,
-            "- name: Build AppImage\n  env:\n    NO_STRIP: \"1\"\n  run: cargo tauri build\n",
+            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        env:\n          NO_STRIP: \"1\"\n        run: cargo tauri build\n",
         )
         .unwrap();
         assert!(verify_workflow(dir.path()).is_ok());
+    }
+
+    #[test]
+    fn release_workflow_rejects_nostrip_in_shell_text() {
+        let dir = tempfile::tempdir().unwrap();
+        let workflow_dir = dir.path().join(".github/workflows");
+        fs::create_dir_all(&workflow_dir).unwrap();
+        fs::write(
+            workflow_dir.join("linux-appimage.yml"),
+            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        run: |\n          NO_STRIP: \"1\"\n          cargo tauri build\n",
+        )
+        .unwrap();
+
+        assert_eq!(
+            verify_workflow(dir.path()).unwrap_err(),
+            "Linux AppImage workflow must set NO_STRIP to 1"
+        );
+    }
+
+    #[test]
+    fn release_workflow_rejects_nostrip_in_later_unnamed_step() {
+        let dir = tempfile::tempdir().unwrap();
+        let workflow_dir = dir.path().join(".github/workflows");
+        fs::create_dir_all(&workflow_dir).unwrap();
+        fs::write(
+            workflow_dir.join("linux-appimage.yml"),
+            "jobs:\n  build:\n    steps:\n      - name: Build AppImage\n        run: cargo tauri build\n      - env:\n          NO_STRIP: \"1\"\n        run: echo later\n",
+        )
+        .unwrap();
+
+        assert_eq!(
+            verify_workflow(dir.path()).unwrap_err(),
+            "Linux AppImage workflow must set NO_STRIP to 1"
+        );
     }
 
     fn fixture_root() -> tempfile::TempDir {

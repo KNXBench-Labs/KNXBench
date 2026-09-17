@@ -120,12 +120,12 @@ frontend always talks HTTP rather than directly to storage or import code.
 ### Linux AppImage
 
 The AppImage is the first Linux desktop package ([ADR 0021](docs/adr/0021-appimage-is-the-first-linux-package.md)).
-After downloading `KNXBench_<version>_amd64.AppImage`, make it executable and
-start it:
+After downloading the current alpha artifact, make it executable and start it:
 
 ```bash
-chmod +x KNXBench_<version>_amd64.AppImage
-./KNXBench_<version>_amd64.AppImage
+appimage='KNXBench_0.1.0-alpha.1_amd64.AppImage'
+chmod +x "$appimage"
+"./$appimage"
 ```
 
 The GitHub Actions `Linux AppImage` workflow is configured to build and upload

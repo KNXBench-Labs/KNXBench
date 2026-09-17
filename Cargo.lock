@@ -5177,6 +5177,8 @@ version = "0.1.0-alpha.1"
 dependencies = [
  "cargo_metadata 0.18.1",
  "knx-store",
+ "serde_json",
+ "tempfile",
 ]
 
 [[package]]

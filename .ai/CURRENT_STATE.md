@@ -1,4 +1,10 @@
 - **Last Agent:** Codex
+- **Timestamp:** 2026-09-17 18:05
+- **Completed:** Task 5 fix round 1 corrects `goal.md`'s Session 7 heading to state that two deliverables remain: performance measurement and the licence decision. Linux packaging remains recorded as delivered with its bounded local evidence.
+- **Pending/Next Steps:** The configured GitHub Actions workflow remains unexecuted. No push, tag, release, workflow dispatch, broader distribution test, signing, updater, ARM64 build, or native package-management path has occurred.
+- **Notes for Claude:** This is a documentation consistency correction only; it does not alter either remaining item or any AppImage evidence claim.
+
+- **Last Agent:** Codex
 - **Timestamp:** 2026-09-17 18:01
 - **Completed:** Task 5 documented the first local Linux AppImage verification in README, ROADMAP, IMPLEMENTATION_STATUS, and goal. It records the exact 105839096-byte `KNXBench_0.1.0-alpha.1_amd64.AppImage`, SHA-256 `b0ec49aebcec984ffdce21639306713862fc6c7baf15f7247f060ac314cdaef7`, Arch/XWayland startup evidence (15003 ms, timeout 124), contents inspection, launch boundary, and user install/update/removal guidance. `.ai/logs/2026-09-17_codex_linux_appimage.md` records the decision, commands, environment, checks, and limitations.
 - **Pending/Next Steps:** The configured GitHub Actions workflow remains unexecuted. No push, tag, release, workflow dispatch, broader distribution test, signing, updater, ARM64 build, or native package-management path has occurred.

@@ -110,3 +110,33 @@ ref; manual dispatch can only upload an Actions artifact. Documentation keeps
 the local Arch/XWayland evidence separate from the configured but unexecuted
 Ubuntu workflow. No push, tag, release, workflow dispatch, merge, or
 publication occurred.
+
+## Final review fix wave (18:33 CEST)
+
+Commit `38c3554` fixes all four binding final-review findings. The release step
+now sets `GH_REPO: ${{ github.repository }}` beside `GH_TOKEN`; `xtask` uses the
+existing semantic YAML parser to require that exact context on the exact
+`Create or update release` step. The smoke branch now prints its log and exits
+1 for every status except 124, and the named smoke step's parsed `run` scalar
+must end in that safe status contract. Artifact validation now rejects anything
+for which `metadata.is_file()` is false, including an executable directory with
+the exact expected AppImage filename. README launch commands now use a safely
+quoted `appimage='KNXBench_0.1.0-alpha.1_amd64.AppImage'` variable.
+
+Actual TDD evidence: the repository-context and unsafe-smoke regressions each
+failed before implementation because `verify_workflow` returned `Ok(())`
+(exit 101), then passed individually after their validator/workflow changes.
+The executable-directory regression failed before implementation because
+`verify_artifacts` returned `Ok(VerifiedAppImage { ... })` (exit 101), then
+passed after the regular-file check. A direct shell reproduction returned 1
+for simulated status 0 and 0 for status 124.
+
+Final checks: `cargo fmt --all --check` passed; `cargo test -p xtask` passed 49
+of 49; xtask clippy with `-D warnings` passed; `check-appimage` passed; README
+shell syntax, placeholder absence, and `git diff --check` passed. The existing
+105839096-byte artifact completed a bounded 15-second run at expected timeout
+status 124; its 126-byte log again contained only the two known GBM warnings.
+`check-headers` remains at the known pre-existing 170-versus-168 baseline
+failure. The GitHub workflow remains configured but unexecuted. No push, tag,
+release, workflow dispatch, merge, or KNX contact occurred. Full report:
+`.superpowers/sdd/2026-09-17-linux-appimage/final-fix-report.md`.

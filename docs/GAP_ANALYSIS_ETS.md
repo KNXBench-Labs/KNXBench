@@ -112,7 +112,7 @@ underlying model field exists.
 |---|-----|-------|
 | F1 | **No authentication on the web/Docker deployment.** | [KNOWN_LIMITATIONS.md §22](KNOWN_LIMITATIONS.md#22-the-webdocker-deployment-target-has-no-authentication); deliberate LAN-only scope, not a bug. |
 | F2 | **No multi-user/concurrent-edit support.** `knx-server` holds one project behind one `Mutex` — a second connected client editing the same project has no conflict detection, merge, or locking at all. | [KNOWN_LIMITATIONS.md §63](KNOWN_LIMITATIONS.md#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all). Only matters once more than one person opens the same web deployment at once, which the current single-project server model doesn't anticipate; still open, still unimplemented — tracked as **T22** below. |
-| F3 | **The project licence is undecided** (`AGPL-3.0-or-later` placeholder). | [KNOWN_LIMITATIONS.md §10](KNOWN_LIMITATIONS.md#10-the-project-licence-is-not-decided). |
+| F3 | **Closed 2026-09-16.** The project is licensed under `AGPL-3.0-or-later`; the canonical text is tracked in [`LICENSE`](../LICENSE). | [KNOWN_LIMITATIONS.md §10](KNOWN_LIMITATIONS.md#10-the-project-licence-is-not-decided). |
 | F4 | **No ETS-style "App"/plugin ecosystem.** ETS 6 supports third-party ETS Apps (e.g. manufacturer diagnostic tools) embedded in the workbench. | Nothing analogous exists or is planned; not currently blocking anything, listed for completeness since it's a real ETS differentiator for manufacturer-specific tooling. |
 
 ---
@@ -166,9 +166,9 @@ Each task: **what**, **why**, **depends on**.
   `knx-core` commands with `apps/knx-server` routes; no frontend UI yet.
 - **T5. Group-range CRUD commands.** **Done** (2026-09-06, backend only).
   `CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange` land; the
-  export-drop bug ([KNOWN_LIMITATIONS.md §21](KNOWN_LIMITATIONS.md#21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved))
-  is only partially closed — see that entry for why `range_id` stays
-  optional until a UI exists to pick one.
+  the former export-drop bug is closed ([KNOWN_LIMITATIONS.md §21](KNOWN_LIMITATIONS.md#21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved)):
+  `range_id` remains optional, but schema-11/schema-21 export now refuses an
+  address it cannot represent instead of silently omitting it.
 - **T6. Group-link editing command.** **Done** (2026-09-06, backend
   only). `LinkComObject`/`UnlinkComObject` land, finally calling the
   validation.rs function that already existed for this

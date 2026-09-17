@@ -1,3 +1,5 @@
+/** Configures Playwright to exercise the built web app against the local KNX server. */
+
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({

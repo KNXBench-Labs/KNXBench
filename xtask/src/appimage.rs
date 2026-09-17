@@ -114,9 +114,9 @@ fn verify_artifacts(dir: &Path, version: &str) -> Result<VerifiedAppImage, Strin
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or_default();
-    if !name.contains(&format!("_{version}_")) {
+    if !name.ends_with(&format!("_{version}_amd64.AppImage")) {
         return Err(format!(
-            "AppImage artifact {name} does not contain version {version}"
+            "AppImage artifact {name} must use version {version} and x86_64 architecture"
         ));
     }
     let metadata = fs::metadata(path)
@@ -211,6 +211,16 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         write_executable(
             &dir.path().join("KNXBench_0.1.0-alpha.2_amd64.AppImage"),
+            b"appimage",
+        );
+        assert!(verify_artifacts(dir.path(), "0.1.0-alpha.1").is_err());
+    }
+
+    #[test]
+    fn non_x86_64_appimage_is_rejected() {
+        let dir = tempfile::tempdir().unwrap();
+        write_executable(
+            &dir.path().join("KNXBench_0.1.0-alpha.1_aarch64.AppImage"),
             b"appimage",
         );
         assert!(verify_artifacts(dir.path(), "0.1.0-alpha.1").is_err());

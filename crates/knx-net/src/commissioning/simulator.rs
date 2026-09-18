@@ -545,6 +545,16 @@ impl SimulatedDevice {
         }));
     }
 
+    fn emit_connect_confirmation(&self) {
+        let _ = self.events.send(TunnelEvent::Telegram(LDataFrame {
+            kind: LDataMessageKind::Confirmation { error: false },
+            source: self.client,
+            destination: Destination::Individual(self.address),
+            transport: Tpci::Connect,
+            service: ApplicationService::NoApplicationPdu,
+        }));
+    }
+
     fn emit_answer(&self, service: ApplicationService) {
         let seq = {
             let mut state = self.lock();
@@ -1017,6 +1027,9 @@ impl ManagementTransport for SimulatedDevice {
             // A frame for somebody else is dropped rather than answered:
             // the simulator is one device, not a bus.
             return Ok(());
+        }
+        if transport == Tpci::Connect {
+            self.emit_connect_confirmation();
         }
         self.handle(transport, service);
         Ok(())

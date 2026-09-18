@@ -6050,3 +6050,15 @@ one XML source keeps the first declaration and records `IdConflict` occurrence
 2, matching hardware and catalog ingestion. The prior cross-file behavior stays
 unchanged. `datapoint_type` collision provenance remains separate because its
 table lacks `source_sha256`; the existing dropped-declaration counter remains.
+
+## 2026-09-18 — T30 R20 read-only comparison
+
+A temporary, uncommitted hardware probe narrowed the known management-session
+timeout defect without sending any write service. In reverse order on one
+shared tunnel, first target `1.1.32` answered mask `0701h` and all later targets
+timed out, ruling out a device-specific explanation for the earlier sole
+`1.1.24` success. A fresh tunnel per target yielded alternating success and
+timeout, so fresh tunnels alone are not a reliable fix and immediate tunnel
+lifecycle remains involved. `1.1.220` was structurally excluded before socket
+open. The temporary test was deleted; R20 remains open and the independent scan
+probe remains the required presence check.

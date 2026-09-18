@@ -6062,3 +6062,27 @@ timeout, so fresh tunnels alone are not a reliable fix and immediate tunnel
 lifecycle remains involved. `1.1.220` was structurally excluded before socket
 open. The temporary test was deleted; R20 remains open and the independent scan
 probe remains the required presence check.
+
+## 2026-09-18 — T30 R20 KNX Standard audit
+
+The 179 PDFs in *The KNX Standard v3.0.0* were searched for the observed management-session and tunnel-lifecycle behaviour. KNXnet/IP Core §5.5 states that `DISCONNECT_RESPONSE` signals final termination of a communication channel. `TunnelClient::disconnect` currently sends `DISCONNECT_REQUEST`, stops its receive loop immediately and never processes the response, although the response decoder already exists. This is a concrete specification mismatch and a credible mechanism for the alternating fresh-tunnel result; real-gateway causality remains unproved and the shared-tunnel failure needs a further mechanism. Management Procedures §2.19 confirms the existing connection-oriented presence probe; §2.17's connectionless scan is restricted to KNX RF, so it is not a general replacement. No product code or hardware state was changed by this audit.
+
+## 2026-09-18 — T30 R20 response-aware disconnect fix
+
+`TunnelClient::disconnect` now keeps its receive loop alive until the matching `DISCONNECT_RESPONSE` reports success, then shuts down the tunnel tasks. A missing response is bounded by ten seconds and a non-zero response status becomes a protocol error; neither path adds a sleep or retry intended to alter gateway timing. A real UDP loopback regression withholds the response and proves disconnect does not finish early. TDD RED observed the prior immediate return; GREEN passed afterward. Verification passed 174 `knx-net` library tests, package Clippy with warnings denied, workspace formatting and diff checks. At implementation time the real-gateway causal comparison remained pending; the following entry records its later result.
+
+## 2026-09-18 — T30 R20 response-aware hardware comparison
+
+The approved read-only fresh-tunnel comparison was repeated against the real gateway with the response-aware disconnect implementation. All nine KNXnet/IP disconnects received successful final responses, but the earlier strict alternation reproduced unchanged: `.32`, `.30`, `.28`, `.26` and `.24` answered descriptor type 0 with mask `0701h`; `.31`, `.29`, `.27` and `.25` timed out. This rules out incomplete KNXnet/IP channel teardown as the cause on this gateway while retaining the Core §5.5 correctness fix. The temporary test was deleted. R20 remains open at the management transport/application-session layer; presence checks must continue to use the independent scan probe.
+
+## 2026-09-18 — T30 R20 complete `devices.md` read-only sequence
+
+The response-aware, fresh-tunnel descriptor probe covered all 34 literal entries in `devices.md`; `1.1.200` and `1.1.220` were excluded before socket creation. Exactly the 17 odd-position attempts answered and the 17 even-position attempts timed out. Reversing the outcome of addresses `.24` through `.32` from the earlier descending run proves that attempt order, rather than address, manufacturer or mask version, selects the result. `1.1.23` returned `0012h`; all other answers returned `0701h`. Every tunnel disconnect completed successfully. No property read, authorisation request, write service or scan was sent, and the temporary test was deleted. R20 remains open.
+
+## 2026-09-18 — T30 R20 frame-level isolation
+
+A temporary two-target diagnostic ruled out tunnel-address allocation and KNXnet/IP receive-sequence rejection: both fresh tunnels were assigned `1.1.249`, and every incoming channel sequence began at zero and matched. The successful target received a current-target `T_Connect` `L_Data.con`, `T_ACK`, and descriptor response. The alternating failed target first received a late connect confirmation for the previous destination; its descriptor reads were confirmed onto the bus, but no current-target `T_Connect` confirmation, device `T_ACK`, or descriptor response arrived. `ManagementSession::connect()` currently completes on the gateway's KNXnet/IP `TUNNELLING_ACK` without waiting for matching cEMI `L_Data.con`, so it can report connected and issue reads without evidence that the device transport connection progressed. The exact reason every alternate connect confirmation is absent remains open. Temporary instrumentation and test source were removed byte-for-byte; no product change remains from this diagnostic.
+
+## 2026-09-18 — T30 R20 connection-confirmation fix
+
+`ManagementSession::connect()` now distinguishes gateway acceptance from bus-level connection progress. It subscribes before `T_Connect`, waits up to the Transport Layer clause 4 connection timeout of six seconds for a matching positive `L_Data.con`, ignores stale confirmations for other targets, returns `ConnectRejected` immediately on a matching negative confirmation, and creates connection state only after success. `SessionTiming` exposes the injectable timeout and the simulator emits the real confirmation shape. Focused TDD observed the prior immediate return and wait-through-negative failures before implementation. In the final all-device hardware run, 33 positive confirmations arrived in 2.851–144.245 ms (median 134.530 ms) and all 33 descriptor reads succeeded. `1.1.253` explicitly rejected `T_Connect` after 162.709 ms and received no descriptor read. The former strict alternating timeouts disappeared; R20's false-connected mechanism is fixed.

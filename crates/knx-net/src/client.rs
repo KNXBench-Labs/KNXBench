@@ -28,6 +28,11 @@ use crate::discovery;
 use crate::frame;
 use crate::tunnelling;
 
+/// Local bound for the final control-channel response. Core §5.5 requires
+/// `DISCONNECT_RESPONSE` but defines no separate timeout; ten seconds matches
+/// the existing CONNECT/CONNECTIONSTATE control-response budget.
+const DISCONNECT_RESPONSE_TIMEOUT: Duration = Duration::from_secs(10);
+
 #[derive(Debug)]
 pub enum BusError {
     Io(std::io::Error),
@@ -241,6 +246,8 @@ struct TunnelState {
     tx: broadcast::Sender<TunnelEvent>,
     heartbeat_reply: Mutex<Option<u8>>,
     heartbeat_notify: Notify,
+    disconnect_reply: Mutex<Option<(u8, u8)>>,
+    disconnect_notify: Notify,
     shutdown: Notify,
     /// Guards the whole send-and-wait-for-ack critical section, so at most
     /// one `TUNNELLING_REQUEST` is outstanding at a time (Tunnelling
@@ -312,6 +319,8 @@ impl TunnelClient {
             tx,
             heartbeat_reply: Mutex::new(None),
             heartbeat_notify: Notify::new(),
+            disconnect_reply: Mutex::new(None),
+            disconnect_notify: Notify::new(),
             shutdown: Notify::new(),
             send_seq: Mutex::new(0),
             ack_reply: Mutex::new(None),
@@ -422,19 +431,37 @@ impl TunnelClient {
         Err(BusError::Timeout)
     }
 
-    /// Best-effort graceful disconnect (Core v01.06.02 AS §5.5): sends
-    /// `DISCONNECT_REQUEST` and signals the background tasks to stop. Does
-    /// not block on the server's `DISCONNECT_RESPONSE` — `receive_loop`
-    /// observes it (or the socket simply going quiet) and exits on its own.
+    /// Graceful disconnect (Core v01.06.02 AS §5.5): sends
+    /// `DISCONNECT_REQUEST`, waits for the matching `DISCONNECT_RESPONSE`
+    /// which marks final channel termination, then stops background tasks.
     ///
     /// `shutdown.notify_waiters()` always fires, even if sending the
     /// datagram fails — `disconnect` consumes `self`, so a caller who got an
     /// `Err` here has no way to retry; the background tasks must still be
     /// told to stop rather than leaking forever.
     pub async fn disconnect(self) -> Result<(), BusError> {
-        let result = self.try_send_disconnect_request().await;
+        *self.state.disconnect_reply.lock().await = None;
+        if let Err(error) = self.try_send_disconnect_request().await {
+            self.state.shutdown.notify_waiters();
+            return Err(error);
+        }
+
+        let deadline = tokio::time::Instant::now() + DISCONNECT_RESPONSE_TIMEOUT;
+        let response = wait_for_reply(
+            &self.state.disconnect_notify,
+            &self.state.disconnect_reply,
+            deadline,
+            |&(channel_id, _)| channel_id == self.state.channel_id,
+        )
+        .await;
         self.state.shutdown.notify_waiters();
-        result
+        match response {
+            Some((_, services::E_NO_ERROR)) => Ok(()),
+            Some((_, status)) => Err(BusError::Protocol(format!(
+                "DISCONNECT_RESPONSE returned status {status:#04x}"
+            ))),
+            None => Err(BusError::Timeout),
+        }
     }
 
     async fn try_send_disconnect_request(&self) -> Result<(), BusError> {
@@ -783,6 +810,14 @@ async fn receive_loop(state: Arc<TunnelState>) {
                     }
                 }
             }
+            services::DISCONNECT_RESPONSE => {
+                if let Ok(resp) = services::decode_disconnect_response(body) {
+                    if resp.channel_id == state.channel_id {
+                        *state.disconnect_reply.lock().await = Some((resp.channel_id, resp.status));
+                        state.disconnect_notify.notify_one();
+                    }
+                }
+            }
             services::DISCONNECT_REQUEST => {
                 // Server-initiated disconnect (Core v01.06.02 AS §5.5):
                 // acknowledge with a DISCONNECT_RESPONSE, then tear down.
@@ -908,6 +943,94 @@ async fn wait_for_reply<T: Clone>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Core v01.06.02 AS §5.5: `DISCONNECT_RESPONSE` is the final
+    /// termination of the communication channel. A graceful client must not
+    /// report completion while the server is still holding that response.
+    #[tokio::test]
+    async fn graceful_disconnect_waits_for_the_servers_final_response() {
+        let server = UdpSocket::bind("127.0.0.1:0")
+            .await
+            .expect("bind loopback KNXnet/IP server");
+        let server_addr = match server.local_addr().expect("server address") {
+            SocketAddr::V4(addr) => addr,
+            SocketAddr::V6(_) => unreachable!("bound an IPv4 socket"),
+        };
+        let (request_seen_tx, request_seen_rx) = tokio::sync::oneshot::channel();
+        let (release_response_tx, release_response_rx) = tokio::sync::oneshot::channel();
+
+        let peer = tokio::spawn(async move {
+            let mut buf = [0u8; 128];
+            let (n, client_addr) = server
+                .recv_from(&mut buf)
+                .await
+                .expect("receive CONNECT_REQUEST");
+            let (header, _) = frame::decode_frame(&buf[..n]).expect("decode CONNECT_REQUEST");
+            assert_eq!(header.service_type, services::CONNECT_REQUEST);
+
+            let channel_id = 0x15;
+            let mut body = vec![channel_id, services::E_NO_ERROR];
+            body.extend_from_slice(
+                &Hpai {
+                    addr: *server_addr.ip(),
+                    port: server_addr.port(),
+                }
+                .encode(),
+            );
+            body.extend_from_slice(&[0x04, tunnelling::TUNNEL_CONNECTION, 0x11, 0x01]);
+            server
+                .send_to(
+                    &frame::encode_frame(services::CONNECT_RESPONSE, &body),
+                    client_addr,
+                )
+                .await
+                .expect("send CONNECT_RESPONSE");
+
+            let (n, client_addr) = server
+                .recv_from(&mut buf)
+                .await
+                .expect("receive DISCONNECT_REQUEST");
+            let (header, body) = frame::decode_frame(&buf[..n]).expect("decode DISCONNECT_REQUEST");
+            assert_eq!(header.service_type, services::DISCONNECT_REQUEST);
+            assert_eq!(body.first(), Some(&channel_id));
+            request_seen_tx.send(()).expect("test still waiting");
+
+            release_response_rx.await.expect("release final response");
+            server
+                .send_to(
+                    &frame::encode_frame(
+                        services::DISCONNECT_RESPONSE,
+                        &services::encode_disconnect_response(channel_id, services::E_NO_ERROR),
+                    ),
+                    client_addr,
+                )
+                .await
+                .expect("send DISCONNECT_RESPONSE");
+        });
+
+        let client = KnxNetIpClient::new()
+            .connect_tunnel(server_addr)
+            .await
+            .expect("connect to loopback server");
+        let mut disconnect = tokio::spawn(async move { client.disconnect().await });
+        request_seen_rx
+            .await
+            .expect("server saw disconnect request");
+
+        assert!(
+            tokio::time::timeout(Duration::from_millis(50), &mut disconnect)
+                .await
+                .is_err(),
+            "disconnect returned before DISCONNECT_RESPONSE"
+        );
+
+        release_response_tx.send(()).expect("peer still waiting");
+        disconnect
+            .await
+            .expect("disconnect task did not panic")
+            .expect("matching successful response completes disconnect");
+        peer.await.expect("loopback peer did not panic");
+    }
 
     /// KNOWN_LIMITATIONS.md #27: a stale `Notify` wakeup — one meant for an
     /// earlier attempt, firing after this attempt already reset the shared
@@ -1271,6 +1394,8 @@ mod tests {
             tx,
             heartbeat_reply: Mutex::new(None),
             heartbeat_notify: Notify::new(),
+            disconnect_reply: Mutex::new(None),
+            disconnect_notify: Notify::new(),
             shutdown: Notify::new(),
             send_seq: Mutex::new(0),
             ack_reply: Mutex::new(None),

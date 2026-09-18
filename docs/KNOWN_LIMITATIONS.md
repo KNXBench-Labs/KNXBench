@@ -734,17 +734,18 @@ the protocol facts §8.7 established:
   Interface Objects. Carried forward as a residual coverage gap, not closed
   here.
 - **`ManagementSession`'s own connect-then-read cannot be trusted to report a
-  device absent.** An independent cross-check with the already-shipped `bus
-  scan` probe found eight of the nine addresses occupied at mask `0701h`
-  (one, `1.1.29`, genuinely vacant); `ManagementSession` itself obtained a
-  usable answer from exactly one of those eight, `1.1.24` — the other seven
-  timed out through the session's own retry budget on every property tried,
-  indistinguishable from the one real vacancy. RESEARCH §8.8.3 has the
-  mechanical explanation (the scan probe resends a fresh `T_Connect` on every
-  retry; `ManagementSession` sends `T_Connect` once and retries only the data
-  frame after it) and design spec §13 **R20** now carries this as a named
-  risk for the write path this project has not built yet: it must not treat
-  its own read time-out as proof a target is absent.
+  device absent.** The independent scan probe found eight of nine addresses
+  occupied with mask `0701h`; the original shared-tunnel session obtained a
+  usable answer only from first target `1.1.24`. A 2026-09-18 read-only
+  comparison reversed the order: first target `1.1.32` then answered and all
+  later shared-tunnel sessions timed out, proving a first-session effect rather
+  than a device-specific one. One fresh tunnel per target restored answers only
+  on alternating targets (`.32`, `.30`, `.28`, `.26`, `.24`), implicating
+  immediate tunnel teardown/recreation or gateway channel lifecycle without
+  identifying the exact missing delay, sequence or acknowledgement. RESEARCH
+  §8.8.3a records the evidence; design spec §13 **R20** remains open. A future
+  write path must use the independent scan probe for presence and must never
+  treat its own management read timeout as proof the target is absent.
 - **`1.1.24`'s partial refusal — `PID_MANUFACTURER_ID` answered,
   `PID_HARDWARE_TYPE` and `PID_PROGRAM_VERSION` both refused with
   `nr_of_elem = 0`, all under no authorisation — is a live confirmation of

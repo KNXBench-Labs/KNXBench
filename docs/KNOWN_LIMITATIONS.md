@@ -742,10 +742,32 @@ the protocol facts §8.7 established:
   than a device-specific one. One fresh tunnel per target restored answers only
   on alternating targets (`.32`, `.30`, `.28`, `.26`, `.24`), implicating
   immediate tunnel teardown/recreation or gateway channel lifecycle without
-  identifying the exact missing delay, sequence or acknowledgement. RESEARCH
-  §8.8.3a records the evidence; design spec §13 **R20** remains open. A future
-  write path must use the independent scan probe for presence and must never
-  treat its own management read timeout as proof the target is absent.
+  identifying the exact missing delay, sequence or acknowledgement. A subsequent
+  Standard audit found one concrete mismatch: KNXnet/IP Core §5.5 defines
+  `DISCONNECT_RESPONSE` as the final channel-termination signal, while
+  `TunnelClient::disconnect` stopped its receive loop immediately after sending
+  `DISCONNECT_REQUEST` and never observed that response. This protocol defect
+  is now fixed: a real UDP loopback regression proves graceful disconnect waits
+  for the matching successful response. A bounded real-gateway rerun then
+  received a successful final response for every tunnel but reproduced exactly
+  the same alternating device answers. Incomplete IP-channel teardown is
+  therefore ruled out as the cause on this gateway, and the fix cannot explain
+  the shared-tunnel result either. A full ascending pass over all 34 `devices.md`
+  targets then produced exactly 17 odd-position answers and 17 even-position
+  timeouts, reversing the earlier result for `.24` through `.32` and ruling out
+  address, manufacturer and mask version as selectors. A frame-level follow-up
+  then ruled out tunnel-address allocation and KNXnet/IP receive-sequence
+  rejection: the failed session had no current-target `T_Connect` `L_Data.con`
+  but proceeded with descriptor reads because `ManagementSession::connect()`
+  completes on the gateway's earlier `TUNNELLING_ACK`. RESEARCH §8.8.3a–e records
+  the diagnosis. The fix now waits up to the specification-defined six-second
+  connection timeout for the matching positive `L_Data.con`, rejects a matching
+  negative confirmation immediately, and creates session state only afterward.
+  A final all-device run removed the alternation: 33 positive connects produced
+  33 descriptor answers; `1.1.253` explicitly rejected its connect. R20's
+  false-connected mechanism is fixed. A later management read timeout remains
+  ambiguous and must never by itself prove that the target is absent; RESEARCH
+  §8.8.3f records the verification.
 - **`1.1.24`'s partial refusal — `PID_MANUFACTURER_ID` answered,
   `PID_HARDWARE_TYPE` and `PID_PROGRAM_VERSION` both refused with
   `nr_of_elem = 0`, all under no authorisation — is a live confirmation of

@@ -686,14 +686,24 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
                         .write_load_event(part.object_index, LoadEvent::Unload)
                         .await?;
                 }
-                for part in &self.plan.parts[position..] {
+                // CP §3.5.3 AP2 variant Nr. 08, p. 46, is the reload of the
+                // *target* part after escalation, and it carries the same
+                // full "Compare CRC checksum" block as Nr. 06, p. 46 — Nr.
+                // 08's text is Nr. 06's, word for word, down to the
+                // `PID_MCB` read. Nr. 09-12, p. 47, reload the segments that
+                // merely followed the target and never carry that block; they
+                // only "Read and save CRC checksum" at the end, which this
+                // module already records as `CrcComparison::NotCompared`
+                // rather than a comparison. So only the first part reloaded
+                // here — the target itself — compares; the rest do not.
+                for (offset, part) in self.plan.parts[position..].iter().enumerate() {
                     let outcome = load_one_part(
                         self.session,
                         part,
                         mask,
                         self.plan.allocation_mode,
                         limit,
-                        false,
+                        offset == 0,
                         &mut report,
                     )
                     .await?;
@@ -1481,6 +1491,63 @@ mod tests {
                 device.load_state(ObjectIndex::new(index)),
                 LoadState::Loaded,
                 "object {index} is not Loaded after the escalation"
+            );
+        }
+    }
+
+    /// `[C9]` acceptance: CP §3.5.3 AP2 variant Nr. 08, p. 46, is the target
+    /// part's own reload after escalation, and it carries the same full
+    /// "Compare CRC checksum" block as Nr. 06, p. 46 — the two are worded
+    /// identically, `PID_MCB` read and all. Nr. 09-12, p. 47, reload the
+    /// segments that only followed the target and end with "Read and save
+    /// CRC checksum" — storing, not comparing; no such block. A version of
+    /// this fix that passed `compare_crc = false` for the whole
+    /// `parts[position..]` slice reported `NotCompared` for the target too,
+    /// which is what this test pins down.
+    #[tokio::test]
+    async fn an_escalated_reload_compares_the_crc_for_the_target_part_only() {
+        let device = ap2_device_with(SimulatorConfig {
+            allocation_fails_once_for: Some(3),
+            ..SimulatorConfig::default()
+        });
+        let stored = device.mcb(ObjectIndex::new(3));
+        let parts = plan(vec![
+            part(
+                3,
+                "Application Program 2",
+                16,
+                PartKind::ApplicationProgram2,
+            )
+            .with_stored_mcb(stored),
+            part(1, "Address Table", 8, PartKind::GroupAddressTable),
+            part(2, "Association Table", 6, PartKind::AssociationTable),
+        ]);
+        let mut session = writer(&device, WriteScope::Download);
+        let report = Downloader::new(&mut session, parts)
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect("the escalation completes the download it turned into");
+
+        assert_eq!(report.escalated_from, Some(ObjectIndex::new(3)));
+        assert_eq!(report.parts.len(), 3);
+        assert_eq!(
+            report.parts[0].object_index,
+            ObjectIndex::new(3),
+            "the target is reloaded first, ascending order (CP §3.5.3 Nr. 07, p. 46)"
+        );
+        assert_eq!(
+            report.parts[0].crc,
+            CrcComparison::Matched,
+            "Nr. 08's reload of the target part must compare for real, not read \
+             NotCompared for the very part whose failed CRC comparison escalated this \
+             download in the first place"
+        );
+        for outcome in &report.parts[1..] {
+            assert_eq!(
+                outcome.crc,
+                CrcComparison::NotCompared,
+                "Nr. 09-12 carry no CRC comparison block for the segments that only \
+                 followed the target"
             );
         }
     }

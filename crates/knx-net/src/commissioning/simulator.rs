@@ -19,7 +19,7 @@
 //! the client sends what the Standard says a client sends; it proves nothing
 //! whatsoever about what a physical device does with it.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
 
 use knx_core::commissioning::load_control::LoadControlSubtype;
@@ -165,6 +165,18 @@ pub struct SimulatorConfig {
     /// built on. A one-shot, like every other drop here, so that the
     /// recovery procedure has a device to recover.
     pub interrupt_at: Option<Interruption>,
+    /// Object indices that are Application Program 1 or Application
+    /// Program 2 — the only objects RES gives `PID_PROGRAM_VERSION`.
+    ///
+    /// `[C1]` RES Table 90, p. 288 and Table 91, p. 290 list the property
+    /// for those two objects. RES Table 77, p. 238 (Group Address Table),
+    /// Table 80, p. 249 (Association Table) and Table 85, p. 270 (Group
+    /// Object Table) do not. Which object index is which Interface Object
+    /// is product data (spec §3.2), not something this simulator can
+    /// infer, so a test says which of its indices are the two application
+    /// programs and every other index refuses the write the way `[D]`
+    /// AL §3.4.4.2 says an unlisted property is refused.
+    pub application_program_objects: HashSet<u8>,
 }
 
 /// The step of the §7.2 inner loop a simulated interruption strikes at.
@@ -287,6 +299,7 @@ impl Default for SimulatorConfig {
             mask_version: 0x07B0,
             allocation_fails_once_for: None,
             interrupt_at: None,
+            application_program_objects: HashSet::new(),
         }
     }
 }
@@ -949,6 +962,19 @@ impl SimulatedDevice {
                     .properties
                     .insert((0, PID_DEVICE_CONTROL), vec![stored]);
                 Some(vec![stored])
+            }
+            PID_PROGRAM_VERSION
+                if !self
+                    .config
+                    .application_program_objects
+                    .contains(&object_index) =>
+            {
+                // `[C1]` RES Table 77, p. 238; Table 80, p. 249; Table 85,
+                // p. 270: none of the Group Address Table, the Association
+                // Table or the Group Object Table has this property. `[D]`
+                // AL §3.4.4.2: a property that does not exist is answered
+                // with `nr_of_elem = 0`, which the `None` below reproduces.
+                None
             }
             _ => {
                 self.lock()

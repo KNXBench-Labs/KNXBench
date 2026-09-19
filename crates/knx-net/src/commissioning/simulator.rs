@@ -155,6 +155,16 @@ pub struct SimulatorConfig {
     /// whole `MAX_TRANSMISSIONS` ladder, so the client's repetitions run out
     /// and TL's action A6 has to release the connection.
     pub unacknowledged_load_state_reads: Option<Range<u32>>,
+    /// Answer nothing at all to the `T_Connect` frames numbered in this
+    /// half-open range, counting from one — no `L_Data.con`, no recorded
+    /// [`Seen::Connect`], no connection.
+    ///
+    /// The device this models is the one RES §4.23.2.4.1's NOTE 86 has in
+    /// mind for the whole of its *"periodically"* clause: *"A device may be
+    /// offline during state LoadCompleting."* An offline device does not
+    /// answer a re-establishment attempt either, so a client that treats one
+    /// refused attempt as fatal never waits out the transition at all.
+    pub unanswered_connects: Option<Range<u32>>,
     /// `PID_MAX_APDU_LENGTH` of the Device Object, if it has one.
     pub max_apdu_length: Option<u16>,
     /// `PID_MAX_APDU_LENGTH` of the Router Object, if it has one. Spec
@@ -342,6 +352,7 @@ impl Default for SimulatorConfig {
             silent_in_load_completing: false,
             unanswered_load_state_reads: None,
             unacknowledged_load_state_reads: None,
+            unanswered_connects: None,
             max_apdu_length: Some(15),
             router_max_apdu_length: None,
             free_access_level: 0,
@@ -428,6 +439,9 @@ struct State {
     dropped: bool,
     /// How many reads of `PID_LOAD_STATE_CONTROL` have arrived.
     load_state_reads: u32,
+    /// How many `T_Connect` frames have arrived, answered or not — what
+    /// [`SimulatorConfig::unanswered_connects`] counts against.
+    connects: u32,
     /// How many `T_DATA_CONNECTED` transmissions have arrived, counting
     /// every retransmission of the same sequence number — what
     /// [`SimulatorConfig::silent_for_first_numbered_data_frames`] counts
@@ -505,6 +519,7 @@ impl SimulatedDevice {
             connected: false,
             dropped: false,
             load_state_reads: 0,
+            connects: 0,
             numbered_data_frames: 0,
             level: config.free_access_level,
             verify_mode: false,
@@ -539,6 +554,19 @@ impl SimulatedDevice {
     /// a test of one transition does not have to drive every earlier one.
     pub fn preset_load_state(&self, object_index: ObjectIndex, state: LoadState) {
         self.lock().load.insert(object_index.octet(), state);
+    }
+
+    /// Puts a `LoadCompleting` countdown in place without a download
+    /// having produced it: the next `count` *answered* load-state reads
+    /// report `LoadCompleting`, and the one after that reports whatever
+    /// [`SimulatedDevice::preset_load_state`] left behind.
+    ///
+    /// A counter rather than a clock, so a test that needs a state to
+    /// settle can say *after how many reads* instead of *after how long*.
+    /// Reads the device does not answer do not count, which is the point:
+    /// a quiet poll must not be able to spend the countdown.
+    pub fn preset_load_completing_polls(&self, object_index: ObjectIndex, count: u8) {
+        self.lock().completing.insert(object_index.octet(), count);
     }
 
     /// Puts octets in the device's memory.
@@ -1208,6 +1236,21 @@ impl ManagementTransport for SimulatedDevice {
             return Ok(());
         }
         if transport == Tpci::Connect {
+            let attempt = {
+                let mut state = self.lock();
+                state.connects += 1;
+                state.connects
+            };
+            if self
+                .config
+                .unanswered_connects
+                .as_ref()
+                .is_some_and(|window| window.contains(&attempt))
+            {
+                // An offline device answers nothing and remembers nothing,
+                // so neither the confirmation nor `handle` happens here.
+                return Ok(());
+            }
             self.emit_connect_confirmation();
         }
         self.handle(transport, service);

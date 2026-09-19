@@ -6778,9 +6778,63 @@ Two new `SimulatorConfig` knobs make the halves say which device they are:
 `unanswered_load_state_reads` (T_ACK, no answer) and
 `unacknowledged_load_state_reads` (nothing at all), both numbered windows
 over `PID_LOAD_STATE_CONTROL` reads counting every transmission, so neither
-test depends on how long anything took.
+test depends on how long anything took. (A third knob,
+`unanswered_connects`, arrived with the fix round below.)
 
 `docs/KNOWN_LIMITATIONS.md` entry **104**: the release is correct and costs a
 full reconnect per quiet poll against a device that went offline in
 `LoadCompleting`. Latency and bus traffic, not correctness, and it compounds
 with entry 101's accounting of the same loop.
+
+### Review fix round (2026-09-19), five changes and one refusal
+
+1. **The tolerant re-establishment was untested and is now tested.** The
+   review mutated `reestablishment_may_be_retried` to `return false` —
+   reverting the whole scope addition — and every test still passed: the
+   offline half above withholds only `PID_LOAD_STATE_CONTROL` frames, so its
+   `T_Connect` was always answered and `reconnect()` always succeeded.
+   `a_failed_re_establishment_is_retried_until_the_deadline` closes it with a
+   device that breaks the connection on read #2 and then answers no
+   `T_Connect` at all (new `SimulatorConfig::unanswered_connects`): the wait
+   must survive three or more failed re-establishments and end in
+   `TransitionTimedOut` carrying `LoadCompleting`, not in the refused
+   attempt's error. The `return false` mutation now fails it.
+2. **A half-established connection was left in the field.** `connect()`
+   populates `self.connection` before `authorise()` and before
+   `assert_verify_mode()`, so either one failing returns `Err` with a
+   connection still set — and the busy-in-`LoadCompleting` device this task
+   models fails in precisely that way. The tolerated arm swallowed it and the
+   next iteration then polled a connection that never finished coming up,
+   skipping the retry the arm had just promised. The arm now clears
+   `self.connection`, as the `ConnectionReleased` arm already did.
+3. **An assertion claimed more than it could prove.** The busy half's
+   message said a quiet poll costs one read "because an acknowledged request
+   is not repeated", and mutating `if acknowledged {` to
+   `if acknowledged && attempts >= MAX_TRANSMISSIONS {` left it green. So the
+   discriminator is now pinned directly by
+   `an_acknowledged_request_is_never_repeated`, which swallows every answer
+   and asserts one transmission and `attempts == 1`; the wait-loop message
+   was narrowed to what it actually observes. The review's prescribed fix —
+   widening the quiet window to a full `MAX_TRANSMISSIONS` — was tried and
+   does not discriminate: with the window four wide both the correct code
+   (four consecutive quiet polls) and the mutant (one poll repeated four
+   times) produce exactly six reads. Measured, not assumed; both runs are in
+   the task report.
+4. **The last real-time dependency is gone.** The wait-loop test settled its
+   state with `settle_load_state_after`, an `Instant`-based knob no paused
+   clock can help. It now settles by answered-read count, via the new
+   `SimulatedDevice::preset_load_completing_polls`. A read that goes quiet
+   spends nothing, which is the property that makes the counts meaningful.
+5. **`Lagged`'s absence from the retry set is now explained** in
+   `reestablishment_may_be_retried`'s doc: it is a local broadcast-buffer
+   overrun, not evidence that a device was silent, and retrying it would
+   excuse a client-side fault as a device-side one.
+
+The refusal: `KNOWN_LIMITATIONS.md` **105** records a real conformance gap
+the review found and C19 does not fix. TL §3.7 p. 13 and §3.8 p. 14 require
+`priority = system` and `ack_request = true` for `T_CONNECT_REQ_PDU` and
+`T_DISCONNECT_REQ_PDU`, and §5.3 p. 19 repeats it for `A2`/`A3`/`A4`'s
+`T_ACK`/`T_NAK`; `encode_l_data` hard-codes Ctrl1 `0xBC` — low priority, no
+ack request — as the crate's only outbound default. Both citations verified
+in the PDF at offset 0. Fixing it changes every frame the crate emits,
+group communication included, so it gets its own change and its own tests.

@@ -11,6 +11,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { version as packageVersion } from "../package.json";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
@@ -76,6 +77,7 @@ afterEach(() => {
   resetProductLanguageForTests();
   window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
   document.documentElement.removeAttribute("lang");
+  document.title = "";
   resetUiLanguageForTests();
 });
 
@@ -133,15 +135,44 @@ function entry(overrides: Partial<LogEntry>): LogEntry {
   };
 }
 
-async function renderApp() {
+async function renderApp(manifestVersion?: string) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<App />);
+    root.render(<App manifestVersion={manifestVersion} />);
   });
   return root;
 }
+
+describe("App manifest version", () => {
+  it("uses package.json for the footer and document title by default", async () => {
+    const root = await renderApp();
+
+    expect(host!.querySelector(".workbench-status > span:last-child")?.textContent)
+      .toBe(`v${packageVersion}`);
+    expect(document.title).toBe(`KNXBench ${packageVersion}`);
+
+    await act(async () => root.unmount());
+  });
+
+  it("shows the injected manifest version at the right edge of the footer", async () => {
+    const root = await renderApp("98.76.54-test");
+
+    expect(host!.querySelector(".workbench-status > span:last-child")?.textContent)
+      .toBe("v98.76.54-test");
+
+    await act(async () => root.unmount());
+  });
+
+  it("sets the document title from the injected manifest version", async () => {
+    const root = await renderApp("98.76.54-test");
+
+    expect(document.title).toBe("KNXBench 98.76.54-test");
+
+    await act(async () => root.unmount());
+  });
+});
 
 function findButton(text: string): HTMLButtonElement {
   const button = Array.from(host!.querySelectorAll("button")).find((b) => b.textContent === text);

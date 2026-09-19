@@ -77,6 +77,12 @@ export const messages = {
   "documentationExport.summaryWithWarnings.other": "Project documentation exported, {count} warnings — see Log.",
 
   "toast.dismiss": "Dismiss",
+  // §67's shape (a translated sentence quoting an untranslated reason)
+  // closed for language-pack rejection; this is the same shape here,
+  // left standing on purpose (KNOWN_LIMITATIONS.md §66) — disclosed
+  // rather than silently presented as a translation gap. Rendered once
+  // per error toast, next to the `{msg}` it explains.
+  "toast.error.messageIsEnglish": "This message is the server's own text, in English.",
 
   "toast.error.notAsPlanned": "Well, that didn't go as planned: {msg}",
   "toast.error.busObjects": "The bus objects: {msg}",
@@ -413,6 +419,9 @@ export const messages = {
   "logPanel.severity.info": "Info",
   "logPanel.emptyNoEntries": "No log entries yet.",
   "logPanel.emptyFiltered": "No log entries match the current filters.",
+  // Same §66/§67 disclosure as `toast.error.messageIsEnglish`, for this
+  // panel's own untranslated fields.
+  "logPanel.entryTextIsEnglish": "Message, location and detail are the server's own text, in English.",
 
   "busMonitor.title": "Bus monitor",
   "busMonitor.eyebrow": "KNXnet/IP · Tunnelling",

@@ -1071,6 +1071,37 @@ export const messages = {
   "help.tip.busGateway.label": "What to enter as the gateway",
   "help.tip.busGateway.text":
     "The address and port of a KNXnet/IP gateway, such as 192.0.2.1:3671. Tunnelling only — this application does not search the network for one.",
+
+  // T28, from the user's own hands-on run. The two separator labels name
+  // what moves, not where the handle is: a screen reader announcing
+  // "Navigation, separator" would leave a keyboard user guessing which of
+  // the two horizontal handles they had landed on.
+  "workbench.resizeNavigation": "Height of the navigation block",
+  "workbench.resizeDiagnostics": "Height of the diagnostics block",
+
+  "toolbar.quit": "Quit",
+  "toolbar.about": "About KNXBench…",
+
+  "quit.title": "Unsaved changes",
+  "quit.message":
+    "This project has edits that are in no file yet. Quitting now throws them away.",
+  "quit.hint":
+    "Cancel, save with “Save” or “Save as…”, and quit after that.",
+  "quit.cancel": "Cancel",
+  "quit.discard": "Quit without saving",
+
+  "about.title": "About KNXBench",
+  "about.version": "Version",
+  "about.versionUnknown": "unknown — the server did not answer",
+  "about.licence": "Licence",
+  // Not translated and not spelled out: an SPDX identifier is an
+  // identifier, and “GNU Affero General Public License, version 3 or
+  // later” in prose is the thing people mistype.
+  "about.licenceValue": "AGPL-3.0-or-later",
+  "about.independence":
+    "KNXBench is an independent project. It is not certified by the KNX Association and is not affiliated with it.",
+  "about.trademark": "ETS is a trademark of the KNX Association.",
+  "about.close": "Close",
 } as const;
 
 export type Messages = typeof messages;

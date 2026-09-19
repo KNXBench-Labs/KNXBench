@@ -610,6 +610,43 @@ layer's own completion. Recorded here only so the idea is not lost before
 someone does that research; whoever picks it up should treat this
 paragraph as a starting prompt, not a constraint.
 
+
+## Cross-cutting — Third-party extension and plugins
+
+**Studied and answered, 2026-09-20 (T30). Nothing implemented.** The
+question "could a third party extend KNXBench, and how" is surveyed in
+[PLUGIN_FEASIBILITY.md](PLUGIN_FEASIBILITY.md) and decided in
+[ADR-0025](adr/0025-extension-is-data-not-code.md).
+
+The answer is **no plugin API, and extension stays data-shaped**. Four
+surfaces already work for someone who has never compiled this repository —
+language packs ([LANGUAGE_PACKS.md](LANGUAGE_PACKS.md)), product databases
+([ADR-0005](adr/0005-separate-product-database.md)), group-address CSV
+([IMPORT_EXPORT.md §11](IMPORT_EXPORT.md)) and the headless `knx` CLI —
+and they are the supported story. The reason is not the AGPL licence, which
+sustains plugin ecosystems elsewhere; it is that there is nothing to expose.
+The whole workspace holds eight traits, six of them single-implementer or
+test seams, no importer/exporter/template trait at all, and every candidate
+seam has exactly one implementation — so a plugin interface would be
+generalised from a sample of one. All 16 crates are `publish = false`, and
+`check-layering` cannot see past the workspace.
+
+**The blocker is the same one this file already names twice.** A code
+extension point of any kind needs a mature, serialisable `Command` layer —
+the identical prerequisite recorded above for MCP capabilities and for the
+in-app LLM surface. Two further conditions are
+[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §22 (no authentication on
+`knx-server`) and §63 (one shared project, one shared undo stack). Until all
+three are resolved for their own reasons, a plugin host is the speculative
+abstraction CLAUDE.md warns against; §107 there records what a third party
+cannot do meanwhile.
+
+If a code seam is later required, the study's recommended shape is an
+out-of-process helper over a documented protocol, and its named falsifying
+experiment is to write a *second* implementation of one seam as an ordinary
+workspace crate first — if a shared trait falls out of that without
+contorting the first implementation, ADR-0025 should be revised.
+
 ## Session 6 — KNXnet/IP
 
 **Goal.** Talk to the bus.

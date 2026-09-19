@@ -20,15 +20,17 @@
 //! always the owning `ApplicationProgram`'s id, since `ModuleDef` never
 //! reassigns it. Verified directly (Task 9, 2026-09), not assumed.
 
+use std::collections::HashMap;
+
 use quick_xml::events::Event;
 use quick_xml::Reader;
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection};
 
 use super::comobject::{
     insert_com_object, insert_com_object_ref, COM_OBJECT_ATTRS, COM_OBJECT_REF_ATTRS,
 };
 use super::translation::{insert_translations, TranslationScope};
-use super::{bool_flag, report_unknown_attrs};
+use super::{bool_flag, first_winner, report_unknown_attrs};
 use crate::report::{IdConflict, UnknownCollector, UnknownConstruct};
 use crate::xml::{attrs, local_name, skip_subtree, Attrs};
 use crate::ProductDbError;
@@ -118,6 +120,7 @@ pub fn ingest_program(
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
     let mut conflicts = Vec::new();
+    let mut seen_this_call = HashMap::new();
     let mut manufacturer_id = String::new();
     let mut program_id = String::new();
     let mut already_present = false;
@@ -174,6 +177,7 @@ pub fn ingest_program(
                     source_sha256,
                     &mut unknown,
                     &mut conflicts,
+                    &mut seen_this_call,
                     &mut manufacturer_id,
                     &mut program_id,
                     &mut already_present,
@@ -198,6 +202,7 @@ pub fn ingest_program(
                     source_sha256,
                     &mut unknown,
                     &mut conflicts,
+                    &mut seen_this_call,
                     &mut manufacturer_id,
                     &mut program_id,
                     &mut already_present,
@@ -522,6 +527,7 @@ fn handle_start_or_empty(
     source_sha256: &str,
     unknown: &mut UnknownCollector,
     conflicts: &mut Vec<IdConflict>,
+    seen_this_call: &mut HashMap<(String, String), u32>,
     manufacturer_id: &mut String,
     program_id: &mut String,
     already_present: &mut bool,
@@ -555,30 +561,15 @@ fn handle_start_or_empty(
         }
         "ApplicationProgram" => {
             *program_id = a.get("Id").unwrap_or_default().to_string();
-            let existing: Option<String> = conn
-                .query_row(
-                    "SELECT source_sha256 FROM application_program WHERE id = ?1",
-                    [program_id.as_str()],
-                    |r| r.get(0),
-                )
-                .optional()?;
-            if let Some(kept) = existing {
-                *already_present = true;
-                if kept != source_sha256 {
-                    // This inline copy still has the exact blind spot
-                    // `first_winner` no longer does (KNOWN_LIMITATIONS.md
-                    // §86): it cannot see a same-file duplicate
-                    // `ApplicationProgram/@Id`, so every conflict it does
-                    // record is cross-file, `occurrence` is always `1`.
-                    conflicts.push(IdConflict {
-                        table: "application_program".into(),
-                        id: program_id.clone(),
-                        kept_sha256: kept,
-                        other_sha256: source_sha256.to_string(),
-                        occurrence: 1,
-                    });
-                }
-            } else {
+            *already_present = !first_winner(
+                conn,
+                "application_program",
+                a.get("Id"),
+                source_sha256,
+                seen_this_call,
+                conflicts,
+            )?;
+            if !*already_present {
                 let xpath = xpath_of_child(open_path, name);
                 report_unknown_attrs(unknown, &xpath, a, PROGRAM_ATTRS);
                 let linkable = bool_flag(unknown, &xpath, a, "Linkable");
@@ -1330,6 +1321,37 @@ mod tests {
             .conflicts
             .iter()
             .any(|c| c.id == "M-006A_A-0001-22-26C0-O0079" && c.other_sha256 == "sha-2"));
+    }
+
+    #[test]
+    fn two_application_programs_sharing_an_id_in_one_file_record_the_collision() {
+        let (_dir, conn) = db();
+        let duplicate = r#"<ApplicationProgram
+            Id="M-006A_A-0001-22-26C0-O0079"
+            Name="Duplicate Presence"
+            ApplicationVersion="23"
+            MaskVersion="MV-0701"><Static/></ApplicationProgram>"#;
+        let xml = PROGRAM.replace(
+            "</ApplicationPrograms>",
+            &format!("{duplicate}</ApplicationPrograms>"),
+        );
+
+        let out = ingest_program(&conn, "sha-1", "M-006A/A.xml", xml.as_bytes()).unwrap();
+
+        let name: String = conn
+            .query_row(
+                "SELECT name FROM application_program WHERE id = ?1",
+                ["M-006A_A-0001-22-26C0-O0079"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(name, "Presence", "the first declaration remains stored");
+        assert_eq!(out.conflicts.len(), 1);
+        assert_eq!(out.conflicts[0].table, "application_program");
+        assert_eq!(out.conflicts[0].id, "M-006A_A-0001-22-26C0-O0079");
+        assert_eq!(out.conflicts[0].kept_sha256, "sha-1");
+        assert_eq!(out.conflicts[0].other_sha256, "sha-1");
+        assert_eq!(out.conflicts[0].occurrence, 2);
     }
 
     const MODULE_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>

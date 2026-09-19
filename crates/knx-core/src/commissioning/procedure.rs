@@ -315,7 +315,12 @@ pub fn complete_download() -> Procedure {
             step(
                 11,
                 "modify access keys",
-                "not implemented in phase 2: A_Key_Write is out of scope (§10.7)",
+                "CP §3.5.2 Nr. 11, p. 44: 'set access keys as required'. \
+                 `DownloadPlan::with_access_keys` (C10) is the field that \
+                 says what 'as required' means for a given plan: declaring \
+                 none leaves this step reported and empty, and declaring \
+                 any is refused before it runs, because `A_Key_Write` has \
+                 no encoder (§10.7)",
                 StepEffect::Guard,
             ),
             step(
@@ -484,9 +489,13 @@ pub fn partial_download() -> Procedure {
             step(
                 13,
                 "modify access keys",
-                "set access keys as required; A_Key_Write is out of scope for phase 2 \
-                 (spec §10.7), so the step is numbered, reported and empty",
-                StepEffect::Write,
+                "CP §3.5.3 AP2 Nr. 13, p. 47: 'set access keys as required'. \
+                 `DownloadPlan::with_access_keys` (C10) is the field that \
+                 says what 'as required' means for a given plan: declaring \
+                 none leaves this step reported and empty, and declaring \
+                 any is refused before it runs, because `A_Key_Write` has \
+                 no encoder (§10.7)",
+                StepEffect::Guard,
             ),
             step(
                 14,

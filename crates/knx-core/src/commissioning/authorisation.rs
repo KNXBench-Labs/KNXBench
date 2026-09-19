@@ -248,6 +248,96 @@ impl AuthorisationPlan {
     }
 }
 
+/// One level a download plan wants set to a particular key.
+///
+/// `[D]` AL §3.5.8, p. 129: `A_Key_Write.req` carries exactly this pair —
+/// the level and the key to associate with it. Nothing here sends that
+/// primitive; it has no encoder (`cemi.rs`'s
+/// `key_write_has_an_apci_but_no_encoder`). This is only the declaration a
+/// plan makes, for [`AccessKeyDeclaration::Required`] to refuse on.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct AccessKeyAssignment {
+    /// The level to modify.
+    pub level: AccessLevel,
+    /// The key to associate with it.
+    pub key: AccessKey,
+}
+
+impl fmt::Debug for AccessKeyAssignment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // `AccessKey`'s own `Debug` already redacts the value; this only
+        // keeps the pairing visible without re-printing the key itself.
+        f.debug_struct("AccessKeyAssignment")
+            .field("level", &self.level)
+            .field("key", &self.key)
+            .finish()
+    }
+}
+
+/// What a download plan declares it needs from CP §3.5.2 Nr. 11 / CP
+/// §3.5.3 AP2 Nr. 13, the "modify access keys" step.
+///
+/// CP §3.5.2 Nr. 11, p. 44, and CP §3.5.3 AP2 Nr. 13, p. 47, both read
+/// *"Set access keys as required"* — text that is silently correct when a
+/// plan needs nothing done there and silently wrong when it needed
+/// something that got skipped. `DownloadPlan` had no field either state
+/// could live in, which is the defect: the report read the same in both
+/// cases. This type is that field.
+///
+/// `A_Key_Write` has no encoder (`cemi.rs`'s
+/// `key_write_has_an_apci_but_no_encoder`, spec §10.7), so a plan that
+/// declares [`AccessKeyDeclaration::Required`] cannot be carried out; the
+/// download sequencer refuses it with a named error instead of reporting
+/// Nr. 11/13 as done.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub enum AccessKeyDeclaration {
+    /// The plan leaves every access level at whatever key the device
+    /// already has. Nr. 11/13 has nothing to do, and the report says so.
+    #[default]
+    NoneRequired,
+    /// The plan calls for one or more levels to be (re)keyed. Never empty:
+    /// [`AccessKeyDeclaration::required`] refuses an empty list rather than
+    /// accept a "required" that requires nothing.
+    Required(Vec<AccessKeyAssignment>),
+}
+
+impl AccessKeyDeclaration {
+    /// A plan that wants `assignments` set once `A_Key_Write` exists.
+    ///
+    /// Refuses an empty list: a `Required` with nothing in it is
+    /// [`AccessKeyDeclaration::NoneRequired`] under a name that overstates
+    /// it.
+    pub fn required(
+        assignments: Vec<AccessKeyAssignment>,
+    ) -> Result<Self, EmptyAccessKeyDeclaration> {
+        if assignments.is_empty() {
+            return Err(EmptyAccessKeyDeclaration);
+        }
+        Ok(Self::Required(assignments))
+    }
+
+    /// Whether this declaration would need `A_Key_Write`, which is the
+    /// question the download sequencer refuses a plan over.
+    pub fn requires_keys(&self) -> bool {
+        matches!(self, Self::Required(_))
+    }
+}
+
+/// [`AccessKeyDeclaration::required`] was asked to declare zero keys required.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct EmptyAccessKeyDeclaration;
+
+impl std::error::Error for EmptyAccessKeyDeclaration {}
+
+impl fmt::Display for EmptyAccessKeyDeclaration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(
+            "a `Required` access-key declaration with no assignments in it is just \
+             `NoneRequired` under a more alarming name",
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -355,5 +445,48 @@ mod tests {
     fn not_authorising_is_never_flagged_as_a_wrong_key() {
         assert!(!Authorisation::FreeLevelUnknown.is_suspicious_for(LevelCount::Four));
         assert!(!Authorisation::FreeLevelUnknown.is_suspicious_for(LevelCount::Sixteen));
+    }
+
+    /// C10: the default is the field `DownloadPlan` used to be missing —
+    /// "nothing to do at Nr. 11/13", stated rather than merely implied.
+    #[test]
+    fn an_access_key_declaration_defaults_to_none_required() {
+        assert_eq!(
+            AccessKeyDeclaration::default(),
+            AccessKeyDeclaration::NoneRequired
+        );
+        assert!(!AccessKeyDeclaration::default().requires_keys());
+    }
+
+    #[test]
+    fn a_required_declaration_with_no_assignments_is_refused() {
+        let err = AccessKeyDeclaration::required(Vec::new()).unwrap_err();
+        assert_eq!(err, EmptyAccessKeyDeclaration);
+        assert!(err.to_string().contains("NoneRequired"), "{err}");
+    }
+
+    #[test]
+    fn a_declared_assignment_requires_keys() {
+        let assignment = AccessKeyAssignment {
+            level: AccessLevel::from_octet(2),
+            key: AccessKey::new(0x1122_3344).unwrap(),
+        };
+        let declaration = AccessKeyDeclaration::required(vec![assignment]).unwrap();
+        assert!(declaration.requires_keys());
+        assert_eq!(
+            declaration,
+            AccessKeyDeclaration::Required(vec![assignment])
+        );
+    }
+
+    #[test]
+    fn an_access_key_assignment_never_prints_its_key() {
+        let assignment = AccessKeyAssignment {
+            level: AccessLevel::from_octet(0),
+            key: AccessKey::new(0xDEAD_BEEF).unwrap(),
+        };
+        let rendered = format!("{assignment:?}");
+        assert!(!rendered.contains("dead"), "{rendered}");
+        assert!(!rendered.contains("DEAD"), "{rendered}");
     }
 }

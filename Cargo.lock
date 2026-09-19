@@ -2025,6 +2025,9 @@ dependencies = [
 [[package]]
 name = "knx-testsupport"
 version = "0.1.0-alpha.1"
+dependencies = [
+ "zip",
+]
 
 [[package]]
 name = "libappindicator"

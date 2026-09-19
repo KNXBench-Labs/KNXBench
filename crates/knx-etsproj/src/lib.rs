@@ -10,6 +10,7 @@ pub mod known;
 pub mod map;
 pub mod opaque;
 pub mod parse;
+pub mod progress;
 pub mod report;
 pub mod source;
 #[cfg(test)]
@@ -23,6 +24,7 @@ pub use known::{known_schema, KnownElement, KnownSchema};
 pub use parse::{
     parse_installation, parse_project_info, ParseError, ParseOutput, UnknownConstruct, UnknownKind,
 };
+pub use progress::{ImportObserver, ImportStage};
 pub use report::ImportReport;
 pub use source::{
     RetainedAttribute, RetainedElement, SourceArea, SourceBinaryDataRef, SourceBuildingPart,
@@ -95,13 +97,23 @@ impl std::error::Error for ImportFailure {}
 
 /// Reads and imports a `.knxproj` file from disk.
 pub fn import_knxproj(path: &std::path::Path) -> Result<ImportOutcome, ImportFailure> {
+    import_knxproj_observed(path, &())
+}
+
+/// [`import_knxproj`] with somebody watching: `observer` is told which
+/// stage is running as it runs (ADR-0023). The unobserved form above is
+/// this one with `&()`, so there is one import implementation, not two.
+pub fn import_knxproj_observed(
+    path: &std::path::Path,
+    observer: &dyn ImportObserver,
+) -> Result<ImportOutcome, ImportFailure> {
     let bytes = std::fs::read(path).map_err(ImportFailure::Io)?;
     let file_name = path
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or_default()
         .to_string();
-    import_knxproj_bytes(bytes, &file_name)
+    import_knxproj_bytes_observed(bytes, &file_name, observer)
 }
 
 /// Imports a `.knxproj` archive already in memory, running every stage in
@@ -114,7 +126,20 @@ pub fn import_knxproj_bytes(
     bytes: Vec<u8>,
     file_name: &str,
 ) -> Result<ImportOutcome, ImportFailure> {
+    import_knxproj_bytes_observed(bytes, file_name, &())
+}
+
+/// [`import_knxproj_bytes`] with somebody watching. The `observer.stage(..)`
+/// calls below are the definition of the import's stage list — ADR-0023's
+/// rule is that each is announced *before* the work it names, so a caller
+/// showing the label shows what is running, not what has just finished.
+pub fn import_knxproj_bytes_observed(
+    bytes: Vec<u8>,
+    file_name: &str,
+    observer: &dyn ImportObserver,
+) -> Result<ImportOutcome, ImportFailure> {
     let file_size = bytes.len() as u64;
+    observer.stage(ImportStage::OpenContainer);
     let mut container = Container::open(bytes).map_err(ImportFailure::Container)?;
     // Checked here, first, and not left to surface however `detect` (which
     // also needs it internally, wrapped in its own `DetectError`) happens
@@ -135,6 +160,7 @@ pub fn import_knxproj_bytes(
     let topology_bytes = container
         .read(&topology_path)
         .map_err(ImportFailure::Container)?;
+    observer.stage(ImportStage::DetectSchema);
     let detected = detect::detect_from_bytes(&topology_bytes, &topology_path, &mut container)
         .map_err(ImportFailure::Detect)?;
     let schema = known_schema(detected.version.0).ok_or(ImportFailure::NoKnownSchemaTable {
@@ -147,6 +173,7 @@ pub fn import_knxproj_bytes(
     // tolerant walker over the schema-≥21 known-element table (Task 6/7),
     // not a variant of `parse_installation`. Schema 11 keeps its original
     // parser untouched, per the plan's Global Constraints.
+    observer.stage(ImportStage::ParseTopology);
     let mut parsed = if detected.version.0 >= 21 {
         parse::parse_installation_v21(&topology_bytes, &topology_path, schema)
     } else {
@@ -154,6 +181,7 @@ pub fn import_knxproj_bytes(
     }
     .map_err(ImportFailure::Parse)?;
 
+    observer.stage(ImportStage::ParseProjectInfo);
     let info_bytes = container
         .read(&info_path)
         .map_err(ImportFailure::Container)?;
@@ -164,13 +192,18 @@ pub fn import_knxproj_bytes(
     let mut unknown = parsed.unknown;
     unknown.extend(info_unknown);
 
+    observer.stage(ImportStage::Validate);
     let validation = validate::validate(&parsed.document);
+    observer.stage(ImportStage::Map);
     let mapped = map::map(&parsed.document, &topology_path);
+    observer.stage(ImportStage::InferDatapointTypes);
     let inference = infer::infer_group_address_dpts(&mapped.project);
 
-    let collected = opaque::collect_container_entries(
+    observer.stage(ImportStage::CollectContainerEntries);
+    let collected = opaque::collect_container_entries_observed(
         &mut container,
         &[topology_path.as_str(), info_path.as_str()],
+        observer,
     )
     .map_err(ImportFailure::Container)?;
     let mut opaque_entries = collected.opaque;

@@ -7285,3 +7285,47 @@ the crate has no consumer there. `check-headers` is unchanged (158/167,
 ceiling 168): no new source file, `download.rs` already carried its header.
 Out of scope, unchanged: `PID_GROUP_RESPONSER_TABLE`, the unload-address
 step and procedure-level retries, per the task's own explicit non-tasks.
+
+## C9 — the escalated reload of the target part now compares its own CRC
+
+`Downloader::partial_download`'s escalation arm (CP §3.5.3, p. 46, Nr. 07:
+*"⇒ Continue at Nr. 07"*, unloading and reloading the target part plus every
+segment after it) passed `compare_crc = false` to `load_one_part` for the
+whole `parts[position..]` slice, target included. `PID_MCB` was therefore
+never read back for the target on its escalated reload, and its
+`PartOutcome.crc` read `NotCompared` — for the one part whose failed CRC
+comparison had just triggered the escalation.
+
+Verified against the PDF, not the brief's quote alone: table 23 of
+`03_05_03 Configuration Procedures v02.01.01 AS.pdf`, printed page 46 (no
+offset), Nr. 08's cell is Nr. 06's "Compare CRC checksum: MaC:
+PropertyRead(ID_ApplicationProgram_2, PID_MCB) … If the CRC matches, then
+MaC shall use differential download algorithm" block verbatim. Table 24, p.
+47, Nr. 09-12's cells end in "Read and save CRC checksum" — storing a fresh
+value, never comparing it against a stored one. Nr. 08 is the target's own
+reload; Nr. 09-12 are the segments that only followed it. `[C9]` fix:
+`self.plan.parts[position..].iter().enumerate()`, `compare_crc = offset ==
+0` — the target compares, the rest do not, matching the two tables exactly.
+
+New test `an_escalated_reload_compares_the_crc_for_the_target_part_only` in
+`crates/knx-net/src/commissioning/download.rs`: an allocation failure on
+part 3 of a three-part plan escalates, and the report is asserted to read
+`report.parts[0].crc == CrcComparison::Matched` (the target, with a stored
+MCB matching the simulator's default) and `CrcComparison::NotCompared` for
+the two segments that follow.
+
+Mutation-tested per the task brief, both directions, each reverted after
+committing the fix, tested, restored: (a) reverting to `compare_crc = false`
+for the whole slice fails the new test on `report.parts[0].crc` — left
+`NotCompared`, right `Matched` (`cargo test -p knx-net --lib
+commissioning::download`, exit 101); (b) `compare_crc = true` for every part
+in the slice fails the same test on the following segments — left
+`NoStoredCrc`, right `NotCompared` (exit 101, same command). Neither
+mutation was caught by wording; both assertions are on `PartOutcome.crc`
+values.
+
+One file changed, one function's escalation-reload loop and its
+justifying comment; `DownloadPlan::new` (C8, in review on another branch)
+was not touched. No `docs/KNOWN_LIMITATIONS.md` entry: the fix is spec-stated
+from the two cited tables, not inferred, and nothing about it is left
+unsupported.

@@ -764,17 +764,40 @@ the protocol facts §8.7 established:
   Interface Objects. Carried forward as a residual coverage gap, not closed
   here.
 - **`ManagementSession`'s own connect-then-read cannot be trusted to report a
-  device absent.** An independent cross-check with the already-shipped `bus
-  scan` probe found eight of the nine addresses occupied at mask `0701h`
-  (one, `1.1.29`, genuinely vacant); `ManagementSession` itself obtained a
-  usable answer from exactly one of those eight, `1.1.24` — the other seven
-  timed out through the session's own retry budget on every property tried,
-  indistinguishable from the one real vacancy. RESEARCH §8.8.3 has the
-  mechanical explanation (the scan probe resends a fresh `T_Connect` on every
-  retry; `ManagementSession` sends `T_Connect` once and retries only the data
-  frame after it) and design spec §13 **R20** now carries this as a named
-  risk for the write path this project has not built yet: it must not treat
-  its own read time-out as proof a target is absent.
+  device absent.** The independent scan probe found eight of nine addresses
+  occupied with mask `0701h`; the original shared-tunnel session obtained a
+  usable answer only from first target `1.1.24`. A 2026-09-18 read-only
+  comparison reversed the order: first target `1.1.32` then answered and all
+  later shared-tunnel sessions timed out, proving a first-session effect rather
+  than a device-specific one. One fresh tunnel per target restored answers only
+  on alternating targets (`.32`, `.30`, `.28`, `.26`, `.24`), implicating
+  immediate tunnel teardown/recreation or gateway channel lifecycle without
+  identifying the exact missing delay, sequence or acknowledgement. A subsequent
+  Standard audit found one concrete mismatch: KNXnet/IP Core §5.5 defines
+  `DISCONNECT_RESPONSE` as the final channel-termination signal, while
+  `TunnelClient::disconnect` stopped its receive loop immediately after sending
+  `DISCONNECT_REQUEST` and never observed that response. This protocol defect
+  is now fixed: a real UDP loopback regression proves graceful disconnect waits
+  for the matching successful response. A bounded real-gateway rerun then
+  received a successful final response for every tunnel but reproduced exactly
+  the same alternating device answers. Incomplete IP-channel teardown is
+  therefore ruled out as the cause on this gateway, and the fix cannot explain
+  the shared-tunnel result either. A full ascending pass over all 34 `devices.md`
+  targets then produced exactly 17 odd-position answers and 17 even-position
+  timeouts, reversing the earlier result for `.24` through `.32` and ruling out
+  address, manufacturer and mask version as selectors. A frame-level follow-up
+  then ruled out tunnel-address allocation and KNXnet/IP receive-sequence
+  rejection: the failed session had no current-target `T_Connect` `L_Data.con`
+  but proceeded with descriptor reads because `ManagementSession::connect()`
+  completes on the gateway's earlier `TUNNELLING_ACK`. RESEARCH §8.8.3a–e records
+  the diagnosis. The fix now waits up to the specification-defined six-second
+  connection timeout for the matching positive `L_Data.con`, rejects a matching
+  negative confirmation immediately, and creates session state only afterward.
+  A final all-device run removed the alternation: 33 positive connects produced
+  33 descriptor answers; `1.1.253` explicitly rejected its connect. R20's
+  false-connected mechanism is fixed. A later management read timeout remains
+  ambiguous and must never by itself prove that the target is absent; RESEARCH
+  §8.8.3f records the verification.
 - **`1.1.24`'s partial refusal — `PID_MANUFACTURER_ID` answered,
   `PID_HARDWARE_TYPE` and `PID_PROGRAM_VERSION` both refused with
   `nr_of_elem = 0`, all under no authorisation — is a live confirmation of
@@ -845,21 +868,22 @@ between two versions requires the application.
 **Lifted when.** A textual export and import format is added, if a demonstrated
 need arises. It is deliberately not built speculatively.
 
-## 10. The project licence is not decided
+<a id="10-the-project-licence-is-not-decided"></a>
 
-**Limitation.** The Cargo workspace declares `AGPL-3.0-or-later` as a
-placeholder. This is not a decision.
+## 10. Project licence — resolved 2026-09-16
 
-**Cause.** The licence has not been chosen yet.
+**Resolution.** KNXBench is licensed under `AGPL-3.0-or-later`. The canonical
+licence text is tracked in [`LICENSE`](../LICENSE), and the workspace metadata
+and README carry the same licence decision.
 
-**Impact.** No practical impact today, since nothing is distributed. It must be
-settled before any release.
+**Effect.** Everyone may use KNXBench privately or commercially, modify it, and
+redistribute it under the AGPL's terms. The AGPL also requires corresponding
+source availability when a modified version is made available to users over a
+network.
 
-**Lifted when.** The licence is chosen and the workspace `license` field is
-updated. Whatever it becomes, it must remain consistent with the constraint
-that no GPL crate enters the runtime graph — that constraint is about *incoming*
-dependencies and is independent of our own licence
-([ADR-0002](adr/0002-own-knxproj-parser.md)).
+The separate constraint that no GPL crate enters the runtime dependency graph
+remains unchanged. It governs *incoming* dependencies and is independent of
+KNXBench's own licence ([ADR-0002](adr/0002-own-knxproj-parser.md)).
 
 ## 11. `.knxprod` files for master data scheme ≥ 12 cannot be imported directly
 
@@ -994,68 +1018,137 @@ and an ambiguous DPT list are both visible in the product database and in
 **Lifted when.** See each gap above individually; none of the three shares
 a single condition.
 
-## 13. Password-protected projects are refused, not decrypted
+## 13. Password-protected projects: ZipCrypto (ETS4/ETS5) is decrypted, AES (ETS6) is still refused
 
 **Limitation.** A `.knxproj` whose project part is nested as `<P-xxxx>.zip`
-(IMPORT_EXPORT §2) is detected and named
-(`ContainerError::PasswordProtected`), but the file is never opened. This
-limitation is unchanged by the rest of this entry: nothing below makes
-KNXBench able to open a protected project.
+(IMPORT_EXPORT §2) can now be opened two ways:
 
-**Cause.** This used to be one undifferentiated cause ("both schemes are
-documented but unverified"). It is really two, and they resolve on
-different evidence:
+* `Container::open` (no password) still refuses it by name
+  (`ContainerError::PasswordProtected`), unchanged from before.
+* `Container::open_with_password(bytes, password)` decrypts a schema < 21
+  (ETS4/ETS5) project protected with **ZipCrypto**, given the right
+  password. A schema ≥ 21 (ETS6) project protected with **AES** is still
+  refused by name (`ContainerError::UnsupportedEncryption`), not
+  attempted — that half of this limitation is unchanged.
 
-* **The AES/PBKDF2 key derivation (schema ≥ 21, ETS6+)** is not an
-  ETS implementation detail read out of `xknxproject`'s source — it is
-  specified in the KNX Standard itself, with the Standard's own test
-  vectors: *The KNX Standard v3.0.0*, *Project Schema23 v01.00.00*,
-  clause 4.2.4 "Password protection", p.64/64. `crates/knx-secure`
-  implements exactly that derivation
-  (`derive_knxproj_zip_password`) and its tests assert the exact
-  Base64 output of two of the clause's three published vectors
-  (`"a"`, `"test"`) — `[D]` (cited clause and page) and `[V]` (two
-  vectors, byte-exact). The clause's third vector, a password
-  containing non-ASCII characters, renders as `Penn¥w1se` plus an
-  unmappable glyph in every text-extraction path this repository's
-  spec corpus offers (both the Markdown extraction and a direct
-  `pdftotext` run fail the same way); this repository's test module
-  documents a further attempt at recovering it by rendering the PDF
-  page directly and reading the glyph, which is a different evidence
-  path than the two `[D]`+`[V]` vectors and is presented in that test's
-  comment for a human to judge rather than promoted to the same
-  footing.
-* **The container decryption itself** — actually opening the nested,
-  encrypted `<P-xxxx>.zip` and reading a real project out of it, for
-  either scheme — is not attempted by this change and remains
-  unverified. `ContainerError::PasswordProtected` still refuses before
-  ever touching the encrypted entry. For schema ≥ 21 the key material
-  is now known-correct (see above); what is still missing is a real
-  password-protected ETS6 project to decrypt with it. For schema < 21
-  (ETS4/ETS5), the scheme is standard ZipCrypto with the password used
-  as UTF-8 bytes — that description remains sourced only from
-  `xknxproject`'s implementation, not from a KNX Standard clause, and
-  this change does not touch it at all.
+Read only, both ways: nothing in this repository writes a ZipCrypto- or
+AES-protected entry. `knx_secure::zipcrypto` exposes a `decrypt` function
+and nothing that encrypts.
 
-**Impact.** A protected project cannot be imported at all today, by design
-rather than by omission: refusing cleanly is preferred over a decryption
-path nobody has run against a real encrypted file. What changed is
-narrower than it might sound: KNXBench can now compute, and has verified,
-the *password* an ETS6-protected project's container would be encrypted
-with — it still cannot decrypt the container itself, for either schema,
-because doing that untested would claim support this repository cannot
-demonstrate.
+**What ZipCrypto is, plainly.** It is PKWARE's "Traditional Encryption",
+specified in APPNOTE.TXT §6.0/§6.1 [D] — a three-key stream cipher from
+1990, with a 1-in-256 false-accept rate on its own password check — about
+1 in 128 as this repository uses it, since it tries both published
+check-byte conventions — and a
+known-plaintext attack (Biham & Kocher, 1994) that recovers the key from
+a modest amount of known output, no brute force required. It is not
+security by any current standard; the KNX Standard specifying it for
+ETS4/ETS5 does not make it one. This code exists only to read a file
+whose password the caller already has — see `knx-secure/src/zipcrypto.rs`'s
+module docs for the full account, including both check-byte conventions
+(PKZIP's own vs. Info-ZIP's streamed-entry variant) this implementation
+has to try, because the `zip` crate's public API does not expose which
+one a given entry used.
 
-**Lifted when.** Two independent conditions, no longer one:
+**Cause / evidence, updated.**
 
-* The AES/PBKDF2 key derivation is lifted as of this change, for schema
-  ≥ 21 — specified, implemented, and verified against the Standard's own
-  vectors.
-* Container decryption — for *both* schemes — is lifted when a real
-  password-protected ETS4/5 project (ZipCrypto) and a real
-  password-protected ETS6 project (AES) are available to decrypt and
-  verify against. Nothing in this repository can open either kind of
-  protected project today.
+* **The AES/PBKDF2 key derivation (schema ≥ 21, ETS6+)** is specified in
+  the KNX Standard itself, with the Standard's own test vectors: *The KNX
+  Standard v3.0.0*, *Project Schema23 v01.00.00*, clause 4.2.4 "Password
+  protection", p.64/64. `crates/knx-secure` implements exactly that
+  derivation (`derive_knxproj_zip_password`) and its tests assert the
+  exact Base64 output of all three of the clause's published vectors
+  (`"a"`, `"test"`, and the non-ASCII third vector, recovered by
+  rendering the source PDF page directly since every text-extraction
+  path fails on it — see that test's own comment for the full account)
+  — `[D]` (cited clause and page) and `[V]` (byte-exact). **Container
+  decryption for this scheme is still not implemented** — AES needs the
+  `zip` crate's `aes-crypto` feature (not enabled in this workspace) and,
+  more importantly, a real AES-protected ETS6 project to verify against;
+  neither exists here yet, so `Container::open_with_password` refuses an
+  AES-protected nested payload by name rather than attempting it.
+* **ZipCrypto (schema < 21, ETS4/ETS5) is now implemented and tested.**
+  `knx-secure/src/zipcrypto.rs` hand-implements the cipher directly
+  against APPNOTE.TXT v6.3.3 §6.1.3-§6.1.7 [D] (quoted verbatim in that
+  module's docs, fetched 2026-09-14), rather than relying on the `zip`
+  crate's own (also-writes-capable) decryption internals.
+  `knx-etsproj`'s `Container::open_with_password` wires it into the
+  container: it walks the nested payload's raw entries, decrypts each
+  ZipCrypto-protected one, and decompresses the result (Stored or
+  Deflated; a third method is reported, not guessed at). Tested against
+  two synthetic container fixtures, both password `hunter2knx` and both
+  generated with the independent Info-ZIP `zip` CLI — never by any code
+  path in this repository: `crates/knx-etsproj/fixtures/zipcrypto-protected.knxproj`
+  (nested entries Deflated) and `.../zipcrypto-stored.knxproj`, whose
+  nested entry is Stored so that the CRC-32 gate below is reachable at
+  all — against Deflated bytes a false accept fails to inflate and is
+  reported before any CRC is compared. Plus a crypto-primitive-level
+  fixture in `knx-secure/fixtures/`. All are
+  synthetic, not extracted from a real ETS project, and that is an
+  acceptable substitute *here*: ZipCrypto is a fully specified algorithm
+  (APPNOTE.TXT), not an ETS-specific quirk, so a fixture built with a
+  standard, independent tool exercises the same cipher a real ETS4/ETS5
+  export would use. **What this does not verify:** whether a real
+  ETS4/ETS5 export's nested payload matches this fixture's shape in every
+  detail (entry layout, compression choices, check-byte convention in
+  practice) — see §3 of `docs/COMPATIBILITY.md`, still listed as
+  unverified against a real protected export.
+* **A wrong password** is reported as `ContainerError::WrongPassword`,
+  never a panic and never silently-wrong plaintext. ZipCrypto's own check
+  byte only rules out 255/256 wrong passwords per convention, and this
+  implementation tries both published conventions, so it lets roughly 1
+  wrong password in 128 through — but the check byte is not the last
+  gate. Every decrypted entry's decompressed bytes are checked against
+  the entry's own declared size and CRC-32 from the ZIP central
+  directory, and a mismatch there is reported as `WrongPassword` too,
+  because after a check byte has already passed that is what it almost
+  certainly is. A wrong password would have to survive a 1-in-128 check
+  byte *and* forge a 32-bit CRC to be silently accepted. That residual is
+  the ceiling ZipCrypto's design imposes, stated here rather than left
+  implicit.
+
+**Impact.** The *container layer* can now decrypt a ZipCrypto-protected
+(ETS4/ETS5) project given its password — verified against synthetic
+fixtures, not a real export. **No import path reaches it yet.**
+`knx_etsproj::import` still calls `Container::open`, which refuses a
+protected project outright; there is no CLI flag, HTTP route or UI field
+that carries a password, and wiring one through is deliberately out of
+this change's scope. Stage 1 of a six-stage pipeline can open a protected
+project; the pipeline cannot.
+
+**A decrypted project also has no roundtrip claim.** The opaque
+passthrough store (ADR-0006) snapshots `Container::entries()` and reads
+every entry back through `Container::read`, which cannot tell a decrypted
+entry from one that was never encrypted — and the original ZipCrypto
+ciphertext is not kept anywhere once decryption has run. A protected
+project exported through that store would come back out *unprotected*.
+`Container::was_decrypted()` exists so the import stage that eventually
+wires a password through can see this coming and report it; nothing calls
+it yet, because nothing yet decrypts anything outside the tests.
+
+An AES-protected (ETS6) project still cannot be imported at all — same as
+before this change, and for the same reason: refusing cleanly beats a
+decryption path nobody has run against a real encrypted file. The refusal
+now reads the entry's *raw on-disk* compression-method field to recognise
+AES, because the `zip` crate overwrites its own parsed method with the
+entry's real underlying one the moment it sees a WinZip AES extra field
+(0x9901) — a check against the parsed value never fires, and the fall-
+through blames the user's perfectly correct password instead.
+
+**Lifted when.**
+
+* ZipCrypto decryption's remaining gap — verification against a real
+  ETS4/ETS5 protected export — is lifted when such a sample becomes
+  available and the unknown-construct/reconciliation report comes back
+  clean against it.
+* AES container decryption is lifted when the `aes-crypto` feature is
+  enabled, the decryption path is implemented the same way ZipCrypto's
+  was, and a real password-protected ETS6 project is available to verify
+  it against.
+* The import pipeline's inability to reach the decryption it now owns is
+  lifted when a password reaches `import()` — and, with it, an
+  `ImportReport` entry for a decrypted project, so the roundtrip gap
+  above is reported rather than discovered.
 
 ## 14. The project's default language is a placeholder
 
@@ -1278,36 +1371,21 @@ handling); no result list anywhere carried `role="listbox"`/`role="option"`;
 nothing backing it; and `CatalogBrowser.tsx`'s rows had no keyboard path
 into the list at all.
 
-## 21. A UI-created group address without a range is still dropped on export — partially resolved
+<a id="21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved"></a>
 
-**Partially resolved.** `create_group_address_impl`
-(`apps/knx-server/src/domain.rs`) now writes a synthetic, stable
-`ets_id`/`path` (`KB-GA-<id>`) instead of the empty string it used to —
-the "colliding `Id=""` attribute if export were ever wired up" half of
-this limitation is fixed regardless of whether a range is given.
+## 21. Resolved: export refuses a group address without a range
 
-**Still open.** `range_id` stays optional at the HTTP boundary — a
-UI-created group address with no range assigned is still silently
-omitted by `crates/knx-etsproj/src/export/schema11.rs`'s exporter, which
-only emits a group address nested inside its `GroupRange`.
-`apps/knx-web`'s Project Explorer now has both halves the previous
-version of this entry was waiting on: a "Group Ranges" tree branch
-(create/rename/delete main and middle ranges, T23 first slice,
-2026-09-07) and a range `<select>` on the group-address create row, so a
-user *can* pick a range at creation time. The picker's default is
-"(no range)", not a forced choice, so a range-less group address remains
-one click away — the gap is now "the UI allows skipping it", not "the UI
-has no way to do it at all".
+**Resolution, 2026-09-17.** Schema 11 and schema 21 encode group addresses
+inside their `GroupRange` tree. KNXBench has no verified faithful external
+representation for a range-less address, so both writers now return the typed
+`ExportError::UnrangedGroupAddress` instead of producing a successful archive
+that omits it. The error identifies the installation, internal group-address
+ID, and raw address. Focused tests cover both schema writers.
 
-**Originally.** [as before — the empty-`ets_id`/`range: None` behavior
-this entry first documented].
-
-**Lifted when.** A deliberate product decision to require a range at
-creation time (defaulting the picker to the first available range rather
-than "none", or rejecting the create with no range chosen) — not
-attempted this cycle, since forcing it changes today's already-shipped
-range-less creation behavior for existing users, not just adds a new
-option.
+Range membership remains optional in the normalized model and at the HTTP/UI
+creation boundary. This preserves native `.knxdb` projects and imported oddities
+without inventing a range or changing existing authoring semantics; only the
+lossy external export is refused until the user assigns a range.
 
 ## 22. The web/Docker deployment target has no authentication
 
@@ -1380,30 +1458,14 @@ drag-and-drop and multi-select can be added to `FsPicker.tsx` without
 touching the underlying `/api/fs/*` routes, which already accept one file
 per request by design.
 
-## 25. `apps/knx-web`'s declared Node version and the Docker build's Node image disagree
+## 25. Resolved: the web package and Docker frontend stage use Node 22
 
-**Limitation.** `apps/knx-web/package.json` declares `engines.node:
-">=22.12.0"`, but `apps/knx-server/Dockerfile`'s frontend build stage
-(`FROM node:20-alpine`) builds it with Node 20. `npm ci` in that stage
-prints a non-fatal `EBADENGINE` warning; the build still succeeds today.
-
-**Cause.** The `engines` field was set to match the Node version already
-in use for local development and CI (Node 22, per `.github/workflows/
-ci.yml`'s `actions/setup-node@v4`) when `apps/knx-web` was created; the
-Dockerfile's frontend stage was written independently and pinned to
-`node:20-alpine` without cross-checking that declaration.
-
-**Impact.** None today — `EBADENGINE` is a warning, not an error, and
-nothing in the built frontend has been observed to need a Node
-22-specific feature. It is a latent risk, not a live bug: if Node 20
-reaches its upstream EOL, or a future change enables `engine-strict` in
-either `npm ci` invocation or an `.npmrc`, the same build would start
-failing outright instead of warning.
-
-**Lifted when.** The Dockerfile's frontend stage is bumped to a Node 22
-(or later, matching `engines.node`) base image — a one-line change,
-deliberately not made speculatively ahead of an actual failure, but worth
-fixing before Node 20's EOL removes the option of doing it calmly.
+**Resolution, 2026-09-17.** `apps/knx-web/package.json` declares
+`engines.node: ">=22.12.0"`, and `apps/knx-server/Dockerfile` now builds the
+frontend from `node:22-alpine`. This removes the previous Node 20 `EBADENGINE`
+warning and makes the Docker artifact use the same supported Node major as
+local development and CI. The runtime image remains `debian:bookworm-slim`;
+Node is present only in the disposable frontend build stage.
 
 ## 26. `BusConnection` does not yet support KNX IP Secure
 
@@ -1543,7 +1605,7 @@ fixed to parse in the session's project's actual style (commit
 `b540264`); the CLI's copy was deliberately left as-is, since fixing it
 was not this branch's scope and CLAUDE.md asks that unrelated changes not
 ride along with a feature branch. See
-[§62](#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-has-never-talked-to-a-real-gateway)
+[§62](#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence)
 item 13 for the full account.
 
 ## 30. `/api/project/download` has no frontend caller
@@ -2970,7 +3032,7 @@ enumeration wording, or reads `GroupAddress/@DatapointType` directly for
 schema ≥ 21 projects instead of inferring from linked communication
 objects alone.
 
-## 62. The Group Monitor GUI (T15) is tunnelling-only, single-session, client-filtered, and has never talked to a real gateway
+## 62. The Group Monitor GUI (T15) is tunnelling-only, single-session, client-filtered, and only its passive receive path has real-gateway evidence
 
 **Limitation.** T15 (2026-09-11, design spec
 `docs/superpowers/specs/2026-09-11-group-monitor-design.md`) gives
@@ -3022,14 +3084,26 @@ ways, all deliberate and all recorded here per that design's own §7:
    this slice does not touch the codec. §61 is not edited, reworded, or
    superseded by this entry; it still fully applies to every decoded
    value the GUI shows.
-9. **No verification against real hardware.** Every test added by this
-   branch drives `BusSession`/the HTTP routes/the React panel against
-   `apps/knx-server/src/bus.rs`'s `fake` module (`FakeConnector`,
-   `FakeTunnel`) — no socket, no live gateway, anywhere. `crates/knx-net/
-   tests/live_gateway.rs` was not touched and stays what it was.
-   **Nothing in this GUI has been run against a physical KNX
-   installation**, and nothing in its code, tests, or UI strings says
-   otherwise.
+9. **Passive receive has one real-gateway verification; transmit paths do
+   not.** On 2026-09-16 the production `POST /api/bus/monitor/start` →
+   `BusSession::start` → `RealConnector` path opened a tunnel to a
+   user-supplied gateway on the installation LAN. A 133-second session with
+   the server's empty project received 52 group telegrams and stopped with
+   `droppedCount = 0`. A second 107-second session, after importing the real
+   schema-23 `Unser Zuhause` reference project into that same dedicated
+   server, received 65 telegrams from 9 source addresses to 21 group
+   destinations: all 65 destination names resolved against the project, 10
+   values decoded through their DPT, no conflict or decode error was observed,
+   and `droppedCount` again remained 0. Both sessions stayed `active` until an
+   explicit successful stop; the gateway assigned a tunnel address and no
+   disconnect or reconnect occurred. The run only called monitor start, poll,
+   and stop. It sent no group read, write, response, management request, or
+   scan; `/api/bus/write` was never called. The private gateway address and
+   observed bus addresses are deliberately not stored in the repository.
+   This is evidence for the passive tunnelling receive and project-resolution
+   path on one gateway model, not for routing, transmit behavior, reconnect,
+   another gateway, or long-running stability. The exact procedure is recorded
+   in `.ai/logs/2026-09-16_codex_group_monitor_reverify.md`.
 10. **No KNX certification or ETS-parity claim.** This is a monitor/write
     table, not a certified diagnostic tool, and not a claim of matching
     ETS's Group Monitor feature-for-feature — see item 6 above for
@@ -3087,18 +3161,17 @@ during review, after the design document was written.
 
 **Impact.** A user gets a live, DPT-decoded telegram table and a
 send-from-the-table form for one tunnelled gateway at a time, with a
-client-side text/service filter — genuinely more than the CLI's `bus
-monitor`/`bus write` offer a non-terminal user, but not a certified
-diagnostic tool, not ETS's Group Monitor, not verified against a real
-installation, and — for a very long browser session — not bounded in
-memory the way the server side already is.
+client-side text/service filter. The passive receive and project-resolution
+path now has one bounded real-installation observation, but the send form still
+has only fake-tunnel coverage. This remains neither a certified diagnostic
+tool nor ETS's Group Monitor and — for a very long browser session — is not
+bounded in memory the way the server side already is.
 
-**Lifted when.** A future slice adds routing support, auto-reconnect,
-live DPT re-resolution, multi-session support, server-side filtering, a
-client-side row cap with its own honestly-reported gap notice, a
-full-round-trip test (and, ideally, a fix) for the CLI's `ThreeLevel`
-hardcoding, or runs any part of this GUI against a physical KNX
-installation and records the result.
+**Lifted when.** Future slices add routing support, auto-reconnect, live DPT
+re-resolution, multi-session support, server-side filtering, a client-side row
+cap with its own honestly-reported gap notice, a full-round-trip test (and,
+ideally, a fix) for the CLI's `ThreeLevel` hardcoding, and separately authorized
+real-installation evidence for transmit behavior and longer-running stability.
 
 ## 63. `knx-server` has no multi-user/concurrent-edit support — one shared project, one shared undo stack, no conflict detection at all
 
@@ -3202,9 +3275,11 @@ answered and built.
 
 ## 64. `Languages` blocks outside an application program are discarded on import
 
-**Resolved for ingestion (2026-09-12, T32); still unread at most
-surfaces.** The heading is kept verbatim because five documents link to
-its anchor; read the status here, not in the title.
+**Resolved for ingestion (2026-09-12, T32); reading closed for every
+entity family this project's corpus has found a `Master`-scope
+translation for (2026-09-14, T13) — the residue below is what is left.**
+The heading is kept verbatim because five documents link to its anchor;
+read the status here, not in the title.
 
 **Ingested now.** `translation` was widened in schema v4 to `(scope,
 scope_id, language, ref_id, attribute_name)`
@@ -3322,15 +3397,65 @@ unavailable until a later slice gives those constructs their own
 tables — tracked here, not silently narrowed out of this section's
 claim.
 
+**Closed, 2026-09-14 (T13, branch `d10-language-data`).** The residue
+above is what this slice closes: `FunctionType`, `FunctionPoint` and
+`SpaceUsage` each get a table now (`function_type`, `function_point`,
+`space_usage`; schema v9 → v10, `migrate_v9_to_v10`), filled by
+`parse/master.rs`'s `ingest_master_data` the same `INSERT OR IGNORE` way
+`datapoint_type` already was. `query.rs` gained `function_types`/
+`function_type`, `function_points` (scoped to one `function_type_id`)
+and `space_usages`/`space_usage`, each overlaying `text` from a
+`Master`-scope translation through the same `master_text_overlay` every
+other Master reader here already used — that function never filtered by
+`RefId` prefix, so the translations these three families needed were
+already sitting in `translation` since T32; only the join target was
+missing. A v9 database is backfilled the same way a v3 one was for T32:
+its `knx_master.xml` blob is replayed through `ingest_master_data` inside
+the migration (`a_v9_database_backfills_function_and_space_usage_rows_and_their_translations`,
+`migration.rs`), so a database that already existed before this slice
+does not stay short these three tables' worth of data. An end-to-end
+test through `install_package`
+(`hardware_and_master_scope_translations_survive_install_with_their_text_intact`,
+`tests/standalone_packages.rs`) reads a planted `Hardware`-scope and a
+planted `Master`-scope translation's actual text back out of `translation`
+after a real package install, not merely a row count. Neither reader
+gained an HTTP route or a UI element — surfacing stops exactly where
+`datapoint_types` already stopped (no route in
+`apps/knx-server/src/routes.rs`), per this project's "surface only as far
+as existing machinery already reaches" rule; a caller inside the backend
+can call these functions today, nothing outside it can yet.
+
+**Residue restated, not claimed closed.** Three things this slice does
+not touch, stated plainly rather than left implicit: first, the other
+eight `MasterData` child sections `parse/master.rs`'s own module doc
+names (`DatapointRoles`, `InterfaceObjectTypes`,
+`InterfaceObjectProperties`, `PropertyDataTypes`, `MediumTypes`,
+`MaskVersions`, `FunctionalBlocks`, `ProductLanguages`) stay unparsed;
+none of them carried a `Master`-scope translation in any of the five
+sampled packages, but that is a corpus observation, not a schema
+guarantee, and a package that did translate one would have that
+translation's row sit in `translation` unread by anything, exactly as
+`FunctionType`/`SpaceUsage` did before this slice. Second, the
+`function_type`/`function_point`/`space_usage` tables inherit
+`datapoint_type`'s uncounted-collision gap outright — see §86's residue,
+extended 2026-09-14 to name them — a second package's `knx_master.xml`
+drops its restated rows with nothing recording that it happened. Third,
+`apps/knx-web` still sends no bare primary-language tag (§37's own open
+item, unchanged by this slice): the backend-side locale-prefix matching
+these new readers reuse has had a caller-reachable surface since D10
+slice 1, and still has none from the frontend.
+
 **Lifted when.** Ingestion: lifted 2026-09-12 (T32, branch
 `t32-shared-translations`). The `Hardware`-scope half of the reading
 residue: lifted 2026-09-13 (T16, branch `t16-device-product`). The
 `Master`-scope residue for `datapoint_type`, translation-count
 reporting, and backend locale-prefix matching: lifted 2026-09-13 (D10
 slice 1, branch `d10-master-translations`). `FunctionType`/
-`FunctionPoint`/`SpaceUsage` have no table at all and stay open under
-**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and under §37's
-own "still open" list. Not scheduled.
+`FunctionPoint`/`SpaceUsage`: lifted 2026-09-14 (T13, branch
+`d10-language-data`). This section's own residue (other `MasterData`
+sections, collision counting, frontend locale tags) stays open; see
+**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and §37's own
+"still open" list. Not scheduled.
 
 ## 65. `--version` names a commit, never a working tree
 
@@ -3981,42 +4106,28 @@ image starts shipping discovery and a deployer chooses `--network host`
 solved, per the 2026-09-05/06 deployment-target and Session 6 planning
 calls (ROADMAP.md).
 
-## 80. A project can be created from scratch over HTTP, but not from the UI
+## 80. A project can be created from scratch in the UI — RESOLVED (2026-09-16, Goal Task 17)
 
-**Limitation.** `POST /api/project/new` (2026-09-13) creates an empty project
-with one seeded `Installation`, which is all `Command::CreateDevice` needs to
-place a device. No screen in `apps/knx-web` calls it. A user driving the
-shipped frontend still cannot start a project without importing a `.knxproj`
-or opening a previously saved `.knxdb`; only an HTTP client can **[V]**
-(`apps/knx-server/tests/http_catalog_to_device.rs` does exactly this and
-asserts the device's 104 communication objects).
+**Resolved.** The welcome screen, File menu and command palette expose the
+same "New project" flow. The dialog sends the chosen name, installation
+name, project language and group-address style to `POST /api/project/new`;
+the returned tree replaces the welcome screen. The first installation exposes
+its empty "Unassigned" branch and can open the device catalog without any
+area or line.
 
-**Cause.** Exactly one thing is missing, and it is the first one: nothing sets
-`App.tsx`'s `tree`. Only `importProject` and `openProject` call `resetTree`
-(`apps/knx-web/src/App.tsx:287,299`), there is no `newProject` in
-`apps/knx-web/src/api.ts`, and the toolbar offers only "Open project"
-(`App.tsx:379`). The whole editing surface is then gated on `tree` being
-non-null (`App.tsx:465`) **[D]**.
+**Verification.** `apps/knx-web/e2e/new-project.e2e.ts` builds the production
+frontend, starts a real `knx-server`, and drives it in system Chromium through
+Playwright. Separate cases for `ThreeLevel`, `TwoLevel` and `Free` assert
+the dialog's defaults and empty-project statement, the exact HTTP request, the
+server's one-installation response with no topology or unassigned devices, the
+style shown in project properties, and the catalog dialog opened from
+"Unassigned" **[V]**. Run it with `cd apps/knx-web && npm run test:e2e`.
 
-The rest of the path already works and needs nothing new. Once a tree exists
-with one installation, `ProjectExplorer.tsx` renders that installation's
-"Unassigned" branch unconditionally for the first installation and puts an
-`AddDeviceRow` in it that calls `onAddDevice(null)` — a `null` line, not a
-line id (`ProjectExplorer.tsx:640,652`) — which sets `catalogTarget` and opens
-`CatalogBrowser` (`ProjectExplorer.tsx:829-831`). So an empty project with no
-areas and no lines can already be pointed at the catalog; a device created
-that way lands in `topology.unassigned`, which is the same placement the new
-backend test asserts **[D]**, not verified by clicking it **[A]** — no
-frontend slice has been run against this route.
-
-**Impact.** The headline capability — install a device from a manufacturer's
-product database with no ETS project anywhere — is real at the API and
-regression-covered, but is not yet reachable by a user. Nothing about it may
-be described as done in COMPATIBILITY.md until a frontend slice lands.
-
-**Lifted when.** A "New project" action exists in `apps/knx-web` and the
-catalog browser can be opened against an installation with no lines. That is
-a separate, UI-owned slice.
+**Boundary.** This browser check stops when the empty catalog opens. Installing
+a manufacturer package and creating its device remain covered end to end at
+the HTTP/application boundary by
+`apps/knx-server/tests/http_catalog_to_device.rs`; no browser-level claim is
+made for those later actions.
 
 ## 81. `new_project_impl` refuses on "can undo", not on "is dirty"
 
@@ -4183,34 +4294,25 @@ fingerprint still does not move.
    `apps/knx-web/src/busContext.ts` for literal C0 bytes, which should find
    none. **[V]**
 
-## 83. The from-scratch launcher exists, and has still never been clicked in a browser
+## 83. The from-scratch launcher is browser-verified — RESOLVED (2026-09-16, Goal Task 17)
 
-**Limitation.** §80's "Lifted when" has two clauses. The first is now met: a
-"New project" action exists in `apps/knx-web` — a welcome-screen button, a
-File-menu entry and a command-palette command, all opening
-`NewProjectDialog.tsx`, which calls `api.newProject` and hands the resulting
-tree to `App.tsx`'s `resetTree` **[V]** (`NewProjectDialog.test.tsx`,
-`App.test.tsx`'s "starting a project from scratch" block). The second clause
-— the catalog browser opened against an installation with no lines — is
-still only read, not run: §80 already established by code reading that
-`ProjectExplorer`'s unconditional "Unassigned" branch offers
-`onAddDevice(null)`, and this slice changed nothing there and did not
-exercise it **[A]**.
+**Resolved.** The earlier evidence ended at Vitest components with a mocked
+`./api`. The committed Playwright suite now clicks the production build in a
+real Chromium process while the real Rust server owns project state. All three
+group-address styles complete the dialog-to-workbench path, and the resulting
+line-free installation opens the unassigned device catalog **[V]**
+(`apps/knx-web/e2e/new-project.e2e.ts`).
 
-**Cause.** Every test in this slice is a vitest render against a mocked
-`./api`. No browser, no running `knx-server`, no click. The full path —
-create a project, expand Unassigned, open the catalog, install a package,
-create a device — has been asserted end to end in Rust
-(`http_catalog_to_device.rs`) and never once driven through the actual UI.
+**Reproduction.** From `apps/knx-web`, run `npm run test:e2e`. The command
+builds the frontend first, then Playwright starts `cargo run -p knx-server`
+with that build as its static directory and executes Chromium at
+`/usr/bin/chromium`. No API response is mocked and no existing project file
+is used.
 
-**Impact.** The headline capability is now reachable in principle, and the
-wiring that makes it reachable is unit-covered. What nobody can yet claim is
-that a human sitting in front of the application can complete it, because
-nobody has tried. COMPATIBILITY.md must keep saying nothing about it.
-
-**Lifted when.** Someone runs the application, creates a project from the
-dialog, and installs a device from a manufacturer package into it, and
-records what happened.
+**Boundary.** The suite proves project creation and catalog reachability. It
+does not install a product package or create a device through the browser;
+`http_catalog_to_device.rs` remains the end-to-end proof for that downstream
+server path.
 
 ## 84. A project's group address style can be chosen, and afterwards never seen — RESOLVED (2026-09-14, T4)
 
@@ -4339,7 +4441,7 @@ its consumers carry an explicit "unverified" qualifier so nobody can read
 `Signature` as a pass/fail result. This entry exists so that whichever
 happens first does not happen by accident.
 
-## 86. Duplicate identifiers inside one file are dropped with no record at all — closed for `hardware.rs`/`catalog.rs`, 2026-09-14; `application_program` and `datapoint_type` residue below
+## 86. Duplicate identifiers inside one file — recorded for normalized product identifiers; DPT provenance remains limited
 
 **Original limitation (as filed).** `first_winner` — one copy, in
 `crates/knx-productdb/src/parse/mod.rs`, called by `parse/hardware.rs` and
@@ -4356,7 +4458,7 @@ the same `source_sha256` for every element in that file, two `Hardware` (or
 always compared equal and never reached the `IdConflict` branch: the second
 element was dropped, first-writer-wins, with nothing recorded anywhere.
 
-**Fixed for `first_winner`'s two real callers.** `first_winner`
+**Initially fixed for `first_winner`'s two callers.** `first_winner`
 (`crates/knx-productdb/src/parse/mod.rs`) now takes an extra
 `seen_this_call: &mut HashMap<(String, String), u32>` parameter, freshly
 created once per `ingest_hardware`/`ingest_catalog` call and threaded
@@ -4392,19 +4494,17 @@ assertion flipped from "conflicts is empty" to "one conflict, occurrence
 before this fix, since they are literally the old pinning tests renamed
 and re-asserted).
 
-**Residue: `application_program` still has the exact same blind spot.**
-`crates/knx-productdb/src/parse/program.rs`'s `handle_start_or_empty` has
-its own hand-rolled, not-shared, first-writer-wins logic for
-`ApplicationProgram` elements — it never called `first_winner` and so was
-out of scope for this fix. It still compares only `source_sha256` and
-still cannot see two `ApplicationProgram` elements sharing an `@Id` inside
-one file; it was touched only to keep compiling against the now-mandatory
-`IdConflict.occurrence` field (hardcoded to `1`, with a comment explaining
-why). Unifying it with `first_winner` (and giving it the same occurrence
-counter) is unfinished work, not a regression introduced here.
+**Closed for `application_program`, 2026-09-17.**
+`ingest_program` now uses the same `first_winner` helper and a fresh
+`seen_this_call` map for each source file. Two `ApplicationProgram` elements
+with the same `@Id` in one file retain the first declaration and record an
+`IdConflict` with `occurrence = 2`; the existing cross-file behavior remains
+unchanged. The regression test
+`two_application_programs_sharing_an_id_in_one_file_record_the_collision`
+failed against the old inline logic and passes with the shared helper.
 
-**Residue: `datapoint_type` still has no conflict tracking at all**, not
-even the cross-file kind, unchanged by this fix: `knx_master.xml`'s `DatapointType`/
+**Residue: `datapoint_type` still has no declaration provenance**, even
+though collisions are counted: `knx_master.xml`'s `DatapointType`/
 `DatapointSubtype` elements are written with a bare `INSERT OR IGNORE`
 (`crates/knx-productdb/src/parse/master.rs`) into `datapoint_type`, whose
 primary key is `id` alone with no `source_sha256` column to compare
@@ -4451,28 +4551,33 @@ count of drops, not a full `IdConflict` — `datapoint_type` still has no
 `source_sha256` to build one from, so it cannot say *which* file's id won,
 only that one lost.
 
-**Cause (as originally filed; the `first_winner` half is now closed, see
-above).** `first_winner`'s existing-row check answered "has this id been
-seen from a *different* file", which is the question package-retry
-deduplication needs, and conflated it with "has this id been seen more
-than once", which is the question data-integrity reporting needs. Those
-were the same question only when every file declared each of its own ids
-exactly once. The 2026-09-14 fix (above) stopped conflating them by
-tracking the second question separately, per parse call, instead of
-trying to answer it from `source_sha256` alone; it did not touch
-`application_program`'s separate hand-rolled copy or `datapoint_type`,
-where the conflation (or, for `datapoint_type`, the complete absence of
-tracking) still stands.
+**Remaining limitation — `datapoint_type` provenance.** The current counter
+shows how many declarations collided, but the `datapoint_type` table has no
+`source_sha256` column. Reports therefore cannot identify which file supplied
+the retained declaration. This needs a deliberate schema migration and remains
+separate from the now-complete same-file detection for every `first_winner`
+caller.
 
-**Lifted when (residue only — `application_program` and `datapoint_type`).**
-Unifying `application_program`'s inline first-writer-wins copy with
-`first_winner` would give it the same occurrence counter for free.
-`datapoint_type` needs a `source_sha256` column before it could report
-*which* file's declaration survives a collision, not just that one
-happened — a real schema change, and not attempted here since nothing in
-the real corpus has warranted it so far (see the measurement above); this
-section exists so the next manufacturer package that actually trips it is
-a documented gap, not a surprise.
+**Residue grows, 2026-09-14 (T13, branch `d10-language-data`).**
+`function_type`, `function_point` and `space_usage` (new tables, schema
+v9 → v10, closing §64's own residue) are filled by `parse/master.rs` the
+same bare `INSERT OR IGNORE` way `datapoint_type` already was — no
+`source_sha256` column, no occurrence counter, same restated-whole-catalogue
+collision shape a second `knx_master.xml` produces. Not measured
+separately against the corpus the way `datapoint_type` was above; the
+shape of the gap is identical, so it is stated rather than re-argued. A
+future fix for `datapoint_type`'s residue should cover these three tables
+in the same pass rather than leaving them a second time. The same three
+element families also inherit `datapoint_type`'s other silent-discard
+shape: a `FunctionType`, `FunctionPoint` or `SpaceUsage` with no `@Id`
+attribute at all binds `NULL` into a `TEXT PRIMARY KEY` column, and
+`INSERT OR IGNORE` drops that row with no error, no counter and no
+`ingest_unknown` entry — exactly as an id-less `DatapointType` already
+did before this slice, and not a new gap this slice introduces, only one
+it extends to three more tables. An id-less `FunctionType` compounds the
+loss: it orphans every `FunctionPoint` nested inside it too, and those
+are then silently dropped a second time by the parentless-`FunctionPoint`
+guard at `parse/master.rs:213` (T13 fix round 2).
 
 ---
 
@@ -4645,6 +4750,35 @@ own name so nobody mistakes it for an invariant.
 use to actually rank two spellings by recency (a schema/edition attribute
 would do it) — at which point "last ingested" could become "provably newer",
 and this section would describe that instead.
+
+**A second scan order, not covered above (2026-09-14, T13 fix round 2).**
+Everything above is about first *ingest* order. The v9→v10 backfill
+(`backfill_function_and_space_data`, `migration.rs`) replays this same
+last-writer-wins `Manufacturer` write over every blob a database already
+holds, ordered by `source_file.rowid` — the order distinct blobs were
+first *written* to that table, which is not always the order they were
+first *ingested*. `store_source_file` (`blob.rs`) returns `false` without
+inserting a row when a blob's sha256 is already on record, but
+`install_package` (`package.rs`) calls `ingest_master_data` on that blob
+regardless, so a master blob installed by two different packages is
+ingested twice but occupies one rowid — the backfill then replays it once,
+at its *first* install's position, which can differ from its *last*
+install's position (the one whose names actually won under last-writer-wins
+at real install time). Measured **[V]**: installed Weinzierl 730 ETS4, then
+MDT KP AMI/AMS 03, then the Weinzierl archive repacked with one XML comment
+appended to `M-00C5/Catalog.xml` (package hash differs, `knx_master.xml`
+byte-identical to the first install). Rolled back to `user_version = 9`,
+dropped the three v10 tables, reopened through `open_and_migrate`: **21 of
+799** manufacturer display names changed relative to the pre-rollback
+database — `M-0002` from `ABB` to `ABB AG - STOTZ-KONTAKT`, `M-0007` from
+`Busch-Jaeger Elektro` to `ABB AG - BUSCH-JAEGER`, `M-000A` from
+`INSTA ELEKTRO` to `Insta GmbH`; `translation`, `datapoint_type` and
+`ingest_unknown` counts were unchanged. `ORDER BY rowid` is still the right
+order to hold — it is the only order `source_file` actually records — but
+it reproduces first-install's own answer only when no master blob in the
+database was ever installed by more than one package; the third install
+above was constructed specifically to violate that, to make the residual
+measurable rather than asserted.
 
 ## 89. Five documented `Space/@Type` values are coarsened to `BuildingPart` on import
 

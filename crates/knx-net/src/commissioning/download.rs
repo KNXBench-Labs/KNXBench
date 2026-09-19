@@ -888,6 +888,7 @@ mod tests {
     /// the procedure's order, not that thirty seconds is thirty seconds.
     fn fast() -> SessionTiming {
         SessionTiming {
+            connection_timeout: Duration::from_millis(50),
             response_timeout: Duration::from_millis(50),
             poll_interval: Duration::from_millis(1),
             max_transition: Duration::from_millis(40),

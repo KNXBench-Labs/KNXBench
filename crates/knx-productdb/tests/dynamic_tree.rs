@@ -623,6 +623,8 @@ fn nd(node_id: i64, parent_id: Option<i64>, kind: &str) -> DynamicNode {
         ref_id: None,
         test: None,
         is_default: false,
+        text: None,
+        value: None,
         control_kind: None,
     }
 }
@@ -1075,6 +1077,7 @@ fn a_module_that_names_its_own_enclosing_module_def_is_a_cycle() {
                 module_node: 0,
                 module_id: Some("M-A".to_string()),
                 module_def_id: "MD-1".to_string(),
+                arguments: Vec::new(),
                 parent: None,
             })),
             diagnostic: Diagnostic::ModuleCycleDetected {
@@ -1123,10 +1126,12 @@ fn a_two_step_cycle_through_a_second_module_def_is_detected() {
                 module_node: 0,
                 module_id: Some("M-B".to_string()),
                 module_def_id: "MD-2".to_string(),
+                arguments: Vec::new(),
                 parent: Some(Rc::new(ModuleScope {
                     module_node: 0,
                     module_id: Some("M-A".to_string()),
                     module_def_id: "MD-1".to_string(),
+                    arguments: Vec::new(),
                     parent: None,
                 })),
             })),
@@ -1180,10 +1185,12 @@ fn a_module_inside_a_module_def_naming_a_different_module_def_is_expanded_two_le
         module_node: 0,
         module_id: Some("M-B".to_string()),
         module_def_id: "MD-2".to_string(),
+        arguments: Vec::new(),
         parent: Some(Rc::new(ModuleScope {
             module_node: 0,
             module_id: Some("M-A".to_string()),
             module_def_id: "MD-1".to_string(),
+            arguments: Vec::new(),
             parent: None,
         })),
     };
@@ -1614,6 +1621,7 @@ fn a_diagnostic_raised_inside_a_module_carries_that_modules_scope() {
                 module_node: 0,
                 module_id: Some("M-A".to_string()),
                 module_def_id: "MD-1".to_string(),
+                arguments: Vec::new(),
                 parent: None,
             })),
             diagnostic: Diagnostic::NoBranchMatched {
@@ -1689,6 +1697,7 @@ fn within_one_module_scope_a_ref_reachable_twice_is_deduplicated_once() {
                 module_node: 0,
                 module_id: Some("M-A".to_string()),
                 module_def_id: "MD-1".to_string(),
+                arguments: Vec::new(),
                 parent: None,
             })),
             ref_id: "SHARED".to_string(),
@@ -1737,6 +1746,7 @@ fn two_modules_instantiating_one_module_def_produce_two_scoped_activations() {
                     module_node: 1,
                     module_id: Some("M-A".to_string()),
                     module_def_id: "MD-1".to_string(),
+                    arguments: Vec::new(),
                     parent: None,
                 })),
                 ref_id: "O-1_R-1".to_string(),
@@ -1746,6 +1756,7 @@ fn two_modules_instantiating_one_module_def_produce_two_scoped_activations() {
                     module_node: 2,
                     module_id: Some("M-B".to_string()),
                     module_def_id: "MD-1".to_string(),
+                    arguments: Vec::new(),
                     parent: None,
                 })),
                 ref_id: "O-1_R-1".to_string(),
@@ -1825,6 +1836,7 @@ fn a_scoped_value_wins_for_its_own_instantiation_and_the_other_sees_the_program_
                     module_node: 1,
                     module_id: Some("M-A".to_string()),
                     module_def_id: "MD-1".to_string(),
+                    arguments: Vec::new(),
                     parent: None,
                 })),
                 ref_id: "HIGH".to_string(),
@@ -1834,6 +1846,7 @@ fn a_scoped_value_wins_for_its_own_instantiation_and_the_other_sees_the_program_
                     module_node: 2,
                     module_id: Some("M-B".to_string()),
                     module_def_id: "MD-1".to_string(),
+                    arguments: Vec::new(),
                     parent: None,
                 })),
                 ref_id: "LOW".to_string(),
@@ -2042,6 +2055,7 @@ fn a_scoped_value_for_one_module_id_never_answers_a_lookup_under_another() {
         module_node: 2,
         module_id: Some("M-B".to_string()),
         module_def_id: "MD-1".to_string(),
+        arguments: Vec::new(),
         parent: None,
     };
     assert_eq!(vm.get(Some(&scope_b), "P"), Some("5"));
@@ -2101,6 +2115,7 @@ fn module_without_id_is_reported_once_and_its_subtree_still_evaluates_from_the_u
                 module_node: 0,
                 module_id: None,
                 module_def_id: "MD-1".to_string(),
+                arguments: Vec::new(),
                 parent: None,
             })),
             ref_id: "HIT".to_string(),
@@ -2187,6 +2202,7 @@ fn migrating_from_v2_backfills_dynamic_node_from_stored_blobs_without_a_reinstal
     // expects to migrate away from.
     conn.execute_batch(
         "DROP TABLE dynamic_node;
+         DROP TABLE module_def_argument;
          DROP INDEX translation_lookup;
          DROP TABLE translation;
          CREATE TABLE translation (
@@ -2273,6 +2289,7 @@ fn a_parse_failure_during_the_v2_to_v3_backfill_does_not_abort_the_migration() {
     // expects to migrate away from.
     conn.execute_batch(
         "DROP TABLE dynamic_node;
+         DROP TABLE module_def_argument;
          DROP INDEX translation_lookup;
          DROP TABLE translation;
          CREATE TABLE translation (
@@ -3014,4 +3031,578 @@ fn corpus_nested_module_measurement_task_11() {
         "total stored Module rows across the installed corpus; see this test's own eprintln \
          for the full breakdown"
     );
+}
+
+// ---------------------------------------------------------------------
+// Task 12 (goal-completion, 2026-09-14): `Module` argument interpretation.
+// Design D47-D51 in
+// `docs/superpowers/specs/2026-09-11-module-expansion-design.md`.
+// ---------------------------------------------------------------------
+
+/// Two instantiations of one `ModuleDef`, differing in nothing but their
+/// argument values. Shaped after the only attested arrangement in the
+/// installed corpus (MDT `M-0083`): a numeric argument carrying an
+/// `@Allocates` memory offset, a `Type="Text"` argument named `ChNo`, and
+/// `{{...}}` placeholders in the `ModuleDef`'s own `Dynamic` text.
+///
+/// The third declaration is `Type="AllocatorRef"`. That facet exists in the
+/// published `ModuleDefArgType_t` (§1.1.2.38) and nowhere else — zero
+/// occurrences in the whole installed corpus, zero hits in either KNX
+/// specification knowledge base — so it appears here only to prove the
+/// evaluator reports it rather than inventing a meaning for it.
+const ARGUMENT_PROGRAM: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/21"><ManufacturerData><Manufacturer RefId="M-00FC">
+<ApplicationPrograms><ApplicationProgram Id="M-00FC_A-1000-10-C071" Name="Args" ApplicationVersion="10" MaskVersion="MV-0701">
+<Static><ParameterRefs>
+  <ParameterRef Id="M-00FC_A-1000-10-C071_MD-1_P-1_R-1" RefId="M-00FC_A-1000-10-C071_MD-1_P-1" />
+</ParameterRefs></Static>
+<Dynamic>
+  <ChannelIndependentBlock>
+    <Module Id="MOD-A" RefId="M-00FC_A-1000-10-C071_MD-1" Name="Channel A">
+      <NumericArg RefId="M-00FC_A-1000-10-C071_MD-1_A-1" Value="32" />
+      <TextArg RefId="M-00FC_A-1000-10-C071_MD-1_A-2" Id="MOD-A_A-2" Value="A" />
+      <NumericArg RefId="M-00FC_A-1000-10-C071_MD-1_A-3" Value="7" />
+    </Module>
+    <Module Id="MOD-B" RefId="M-00FC_A-1000-10-C071_MD-1" Name="Channel B">
+      <NumericArg RefId="M-00FC_A-1000-10-C071_MD-1_A-1" Value="164" />
+      <TextArg RefId="M-00FC_A-1000-10-C071_MD-1_A-2" Id="MOD-B_A-2" Value="B" />
+      <NumericArg RefId="M-00FC_A-1000-10-C071_MD-1_A-3" Value="7" />
+    </Module>
+  </ChannelIndependentBlock>
+</Dynamic>
+<ModuleDefs><ModuleDef Id="M-00FC_A-1000-10-C071_MD-1" Name="ModuleDefChannel">
+<Arguments>
+  <Argument Id="M-00FC_A-1000-10-C071_MD-1_A-1" Name="ParamOffsBase" Allocates="132" />
+  <Argument Id="M-00FC_A-1000-10-C071_MD-1_A-2" Name="ChNo" Type="Text" />
+  <Argument Id="M-00FC_A-1000-10-C071_MD-1_A-3" Name="Alloc" Type="AllocatorRef" />
+</Arguments>
+<Static/>
+<Dynamic>
+  <Channel Id="CH-1" Text="Channel {{ChNo}}: {{0}} at {{ParamOffsBase}}">
+    <ParameterBlock Id="PB-1" Text="Block {{Missing}}">
+      <ParameterRefRef RefId="M-00FC_A-1000-10-C071_MD-1_P-1_R-1" />
+    </ParameterBlock>
+  </Channel>
+</Dynamic>
+</ModuleDef></ModuleDefs>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+/// The acceptance test for task 12: an argument **value** changes what the
+/// evaluator produces. Not that the argument was stored — it was stored
+/// before this task and produced nothing — but that two `Module` elements
+/// naming the same `ModuleDef`, identical in every respect except the
+/// `@Value` on their bindings, now evaluate to two different labels.
+///
+/// Fails without the change in the most literal way available: before
+/// task 12 `Activation` had no `labels` field to assert on, because an
+/// argument value reached exactly nothing.
+#[test]
+fn an_argument_value_changes_the_evaluated_label_of_each_module_instantiation() {
+    let (_dir, conn) = db();
+    knx_productdb::ingest_file(&conn, "M-00FC/A.xml", ARGUMENT_PROGRAM.as_bytes()).unwrap();
+    let pid = "M-00FC_A-1000-10-C071";
+
+    let trees = load_program_trees(&conn, pid).unwrap();
+    let activation = evaluate(&trees, &ValueMap::default());
+
+    let label_of = |module_id: &str, kind: &str| -> String {
+        activation
+            .labels
+            .iter()
+            .find(|l| {
+                l.kind == kind
+                    && l.scope.as_ref().and_then(|s| s.module_id.as_deref()) == Some(module_id)
+            })
+            .unwrap_or_else(|| panic!("no {kind} label for {module_id}"))
+            .text
+            .clone()
+    };
+
+    assert_eq!(
+        label_of("MOD-A", "Channel"),
+        "Channel A: {{0}} at 32",
+        "the text argument and the numeric argument both reach the label"
+    );
+    assert_eq!(
+        label_of("MOD-B", "Channel"),
+        "Channel B: {{0}} at 164",
+        "the same ModuleDef, the same element, a different result"
+    );
+    assert_ne!(
+        label_of("MOD-A", "Channel"),
+        label_of("MOD-B", "Channel"),
+        "acceptance: the argument value is what makes the two differ"
+    );
+
+    // `{{0}}` survives verbatim and is not reported: it belongs to the
+    // positional placeholder family tied to `TextParameterRefId`, which is
+    // not this mechanism's to resolve.
+    assert!(label_of("MOD-A", "Channel").contains("{{0}}"));
+    assert_eq!(
+        activation
+            .diagnostics
+            .iter()
+            .filter(|d| matches!(
+                &d.diagnostic,
+                Diagnostic::UnresolvedTextPlaceholder { name, .. } if name == "0"
+            ))
+            .count(),
+        0,
+        "a numeric placeholder is not an unresolved argument"
+    );
+
+    // A name-shaped placeholder with no binding keeps its text and is
+    // reported — once per instantiation, since each expansion meets it.
+    assert_eq!(label_of("MOD-A", "ParameterBlock"), "Block {{Missing}}");
+    assert_eq!(
+        activation
+            .diagnostics
+            .iter()
+            .filter(|d| matches!(
+                &d.diagnostic,
+                Diagnostic::UnresolvedTextPlaceholder { name, .. } if name == "Missing"
+            ))
+            .count(),
+        2
+    );
+
+    // The unattested facet is reported, never interpreted.
+    let allocator: Vec<&str> = activation
+        .diagnostics
+        .iter()
+        .filter_map(|d| match &d.diagnostic {
+            Diagnostic::UnsupportedModuleArgumentKind { kind, .. } => Some(kind.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        allocator,
+        vec!["AllocatorRef", "AllocatorRef"],
+        "one per instantiation, and not a single guess at what it means"
+    );
+
+    // The refs themselves are unchanged by arguments: same ids, two scopes.
+    assert_eq!(activation.parameter_refs.len(), 2);
+}
+
+/// The other half of the acceptance claim: it is the argument *value* doing
+/// the work, not the tree. The same trees, evaluated without the `ModuleDef`
+/// argument declarations attached, leave every placeholder standing and say
+/// so — which is precisely the pre-task-12 behaviour, reproduced on demand.
+#[test]
+fn without_the_argument_declarations_the_same_trees_leave_every_placeholder_standing() {
+    let (_dir, conn) = db();
+    knx_productdb::ingest_file(&conn, "M-00FC/A.xml", ARGUMENT_PROGRAM.as_bytes()).unwrap();
+    let pid = "M-00FC_A-1000-10-C071";
+
+    let program = knx_productdb::dynamic::load_tree(&conn, pid, "").unwrap();
+    let mut modules = HashMap::new();
+    modules.insert(
+        "M-00FC_A-1000-10-C071_MD-1".to_string(),
+        knx_productdb::dynamic::load_tree(&conn, pid, "M-00FC_A-1000-10-C071_MD-1").unwrap(),
+    );
+    let undeclared = evaluate(
+        &ProgramTrees::from_parts(program, modules),
+        &ValueMap::default(),
+    );
+
+    let texts: Vec<&str> = undeclared
+        .labels
+        .iter()
+        .filter(|l| l.kind == "Channel")
+        .map(|l| l.text.as_str())
+        .collect();
+    assert_eq!(
+        texts,
+        vec![
+            "Channel {{ChNo}}: {{0}} at {{ParamOffsBase}}",
+            "Channel {{ChNo}}: {{0}} at {{ParamOffsBase}}"
+        ],
+        "with no declarations there is no name to bind to, so both instantiations look identical"
+    );
+    assert_eq!(
+        undeclared
+            .diagnostics
+            .iter()
+            .filter(|d| matches!(d.diagnostic, Diagnostic::ModuleArgumentNotBound { .. }))
+            .count(),
+        6,
+        "three bindings per instantiation, every one of them reported rather than dropped"
+    );
+}
+
+/// Storage, checked once: the two columns task 12 added carry what the file
+/// said. This is the part the acceptance test deliberately does *not*
+/// assert, because storing an argument was never the problem.
+#[test]
+fn an_argument_declaration_and_its_binding_value_land_in_their_own_columns() {
+    let (_dir, conn) = db();
+    knx_productdb::ingest_file(&conn, "M-00FC/A.xml", ARGUMENT_PROGRAM.as_bytes()).unwrap();
+    let pid = "M-00FC_A-1000-10-C071";
+
+    let (name, arg_type, allocates): (String, Option<String>, Option<i64>) = conn
+        .query_row(
+            "SELECT name, arg_type, allocates FROM module_def_argument
+             WHERE program_id = ?1 AND id = ?2",
+            rusqlite::params![pid, "M-00FC_A-1000-10-C071_MD-1_A-1"],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(name, "ParamOffsBase");
+    assert_eq!(arg_type, None, "a numeric argument omits @Type in the wild");
+    assert_eq!(allocates, Some(132));
+
+    let values: Vec<String> = conn
+        .prepare(
+            "SELECT value FROM dynamic_node
+             WHERE program_id = ?1 AND module_def_id = '' AND kind IN ('NumericArg','TextArg')
+             ORDER BY node_id",
+        )
+        .unwrap()
+        .query_map([pid], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(values, vec!["32", "A", "7", "164", "B", "7"]);
+
+    // The binding elements are stored as ordinary `dynamic_node` rows and
+    // are still not walked into: D19 is narrowed by task 12, not reversed.
+    let extra: Option<String> = conn
+        .query_row(
+            "SELECT extra FROM dynamic_node
+             WHERE program_id = ?1 AND module_def_id = '' AND kind = 'TextArg'
+             ORDER BY node_id LIMIT 1",
+            [pid],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        extra, None,
+        "@Id/@RefId/@Value all have columns now, so nothing is left over in `extra`"
+    );
+}
+
+/// A `Module` child whose element name is neither `NumericArg` nor
+/// `TextArg` is reported and skipped. No such spelling occurs anywhere in
+/// the installed corpus — this is the hand-built case for a file that does
+/// something the corpus does not, which is the only kind of file this arm
+/// will ever see.
+#[test]
+fn an_unrecognized_module_child_is_reported_as_an_unsupported_argument_kind() {
+    let program = DynamicTree::from_nodes(vec![
+        nd(0, None, "Dynamic"),
+        DynamicNode {
+            element_id: Some("MOD-1".to_string()),
+            ref_id: Some("MD-1".to_string()),
+            ..nd(1, Some(0), "Module")
+        },
+        DynamicNode {
+            ref_id: Some("MD-1_A-1".to_string()),
+            value: Some("3".to_string()),
+            ..nd(2, Some(1), "AllocatorRefArg")
+        },
+    ]);
+    let module = DynamicTree::from_nodes(vec![nd(0, None, "Dynamic")]);
+    let mut modules = HashMap::new();
+    modules.insert("MD-1".to_string(), module);
+    let activation = evaluate(
+        &ProgramTrees::from_parts(program, modules),
+        &ValueMap::default(),
+    );
+    assert_eq!(
+        activation
+            .diagnostics
+            .iter()
+            .map(|d| d.diagnostic.clone())
+            .collect::<Vec<_>>(),
+        vec![Diagnostic::UnsupportedModuleArgumentKind {
+            node_id: 2,
+            kind: "AllocatorRefArg".to_string()
+        }]
+    );
+}
+
+/// The required corpus deliverable for task 12, measured rather than
+/// estimated, and re-measured on every run of this test.
+///
+/// Two claims, both `[V]`:
+///
+/// 1. **`AllocatorRef` does not occur.** Zero occurrences of the literal
+///    across every member of every archive under
+///    `OriginalData/ProductDatabases`, in any spelling the scan below can
+///    see — element, attribute, or `@Type` value. That is the whole reason
+///    it stays unimplemented: the two KNX specification knowledge bases
+///    searched for this task (`knx_spec_kb_programming.sqlite`, 2,207 facts
+///    over 27 programming PDFs with figures; `knx_spec_kb_full179_clean.sqlite`,
+///    16,536 facts over 177 PDFs, text only) return nothing for it either,
+///    across `content`, `title`, `keywords` and `evidenceText` — the only
+///    `Allocator` hits in either base are "heat cost allocator" in DPT
+///    documents. The single documented mention anywhere is the facet name
+///    itself in `ModuleDefArgType_t` (§1.1.2.38) plus a one-line `Value_t`
+///    row, "TypeAllocatorRefId — A module allocator refId as string",
+///    neither of which states a semantic. Nothing here guesses one.
+/// 2. **Arguments are used, richly.** The counts below are what the one
+///    module-bearing package in the installed corpus actually contains,
+///    and the evaluation at the end is the corpus-scale version of the
+///    acceptance test: twelve instantiations of four `ModuleDef`s produce
+///    twelve *different* channel labels, where before task 12 they
+///    produced twelve identical ones.
+#[test]
+fn corpus_argument_measurement_task_12() {
+    let root = std::env::var_os("KNXBENCH_PRODUCT_CORPUS")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../OriginalData/ProductDatabases")
+        });
+    if !root.exists() {
+        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+        return;
+    }
+
+    // Claim 1, measured over the archives as they sit on disk — not over
+    // what this crate chose to parse out of them, which would only prove
+    // the parser's own blind spots agree with themselves.
+    let mut allocator_ref_hits = 0usize;
+    let mut members_scanned = 0usize;
+    // Encrypted members cannot be searched. They are counted, not ignored:
+    // a measurement that quietly skipped part of its own population would
+    // be an estimate wearing a `[V]` badge. All four sit inside legacy
+    // archives this project rules out of scope: three in the one `.vd2`
+    // (`progra~1/ets2v12/...`), one in the `.vd4` added to the corpus on
+    // 2026-09-16 (`ets/präsmit kl/ets.vd_`). So the number is a caveat on
+    // the measurement rather than a gap in the feature — both formats
+    // predate `ModuleDef` entirely.
+    let mut members_unreadable = 0usize;
+    for entry in std::fs::read_dir(&root).unwrap() {
+        let path = entry.unwrap().path();
+        let Ok(file) = std::fs::File::open(&path) else {
+            continue;
+        };
+        let Ok(mut archive) = zip::ZipArchive::new(file) else {
+            continue; // `.vd2` and anything else that is not a zip
+        };
+        for i in 0..archive.len() {
+            let Ok(mut member) = archive.by_index(i) else {
+                members_unreadable += 1;
+                continue;
+            };
+            if member.is_dir() {
+                continue;
+            }
+            let mut bytes = Vec::new();
+            std::io::copy(&mut member, &mut bytes).unwrap();
+            members_scanned += 1;
+            allocator_ref_hits += String::from_utf8_lossy(&bytes)
+                .matches("AllocatorRef")
+                .count();
+        }
+    }
+    assert!(
+        members_scanned > 0,
+        "the corpus directory exists but yielded no archive members to scan"
+    );
+    assert_eq!(
+        members_unreadable, 4,
+        "the encrypted members of the `.vd2` (3) and the `.vd4` (1), named here \
+         rather than quietly dropped from the denominator"
+    );
+    assert_eq!(
+        allocator_ref_hits, 0,
+        "AllocatorRef is unattested in the installed corpus; if this ever fires, \
+         the evidence finally exists and the feature can stop being a diagnostic"
+    );
+
+    // Claim 2. MDT `M-0083` is the only module-bearing package installed.
+    let name = "MDT_KP_AMI_AMS_03_Switch_Actuator_V31a.knxprod";
+    let bytes = std::fs::read(root.join(name)).unwrap();
+    let (_dir, conn) = db();
+    knx_productdb::install_package(&conn, name, &bytes).unwrap();
+
+    let count = |sql: &str| -> i64 { conn.query_row(sql, [], |r| r.get(0)).unwrap() };
+    assert_eq!(
+        count("SELECT count(*) FROM dynamic_node WHERE kind = 'Module'"),
+        86
+    );
+    assert_eq!(
+        count("SELECT count(*) FROM dynamic_node WHERE kind = 'NumericArg'"),
+        172
+    );
+    assert_eq!(
+        count("SELECT count(*) FROM dynamic_node WHERE kind = 'TextArg'"),
+        86
+    );
+    assert_eq!(count("SELECT count(*) FROM module_def_argument"), 36);
+    assert_eq!(
+        count("SELECT count(*) FROM module_def_argument WHERE arg_type = 'Text'"),
+        12,
+        "one `ChNo` per ModuleDef"
+    );
+    assert_eq!(
+        count("SELECT count(*) FROM module_def_argument WHERE arg_type IS NULL"),
+        24,
+        "the numeric declarations, every one of which omits @Type"
+    );
+    assert_eq!(
+        count("SELECT count(*) FROM module_def_argument WHERE arg_type = 'AllocatorRef'"),
+        0
+    );
+    let names: Vec<String> = conn
+        .prepare("SELECT DISTINCT name FROM module_def_argument ORDER BY name")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(names, vec!["ChNo", "ObjNumberBase", "ParamOffsBase"]);
+
+    // Substituted-label counts per program, under the corpus's own default
+    // parameter values: 12/8/4, matching the 12/8/4 distinct `ModuleScope`s
+    // `corpus_module_expansion_resolves_every_prod3_module_and_grows_activation_counts`
+    // already pins. One substituted `Channel/@Text` per instantiation.
+    let expected: &[(&str, usize)] = &[
+        ("M-0083_A-0317-31-7DC6", 12),
+        ("M-0083_A-0318-31-DB39", 8),
+        ("M-0083_A-0319-31-587B", 4),
+    ];
+    for (program_id, substituted) in expected {
+        let trees = load_program_trees(&conn, program_id).unwrap();
+        let values =
+            knx_productdb::dynamic::resolve_values(&conn, program_id, &HashMap::new()).unwrap();
+        let activation = evaluate(&trees, &values);
+
+        let changed: Vec<&str> = activation
+            .labels
+            .iter()
+            .filter(|l| l.text != l.raw_text)
+            .map(|l| l.text.as_str())
+            .collect();
+        assert_eq!(
+            changed.len(),
+            *substituted,
+            "{program_id}: substituted labels"
+        );
+        let mut distinct = changed.clone();
+        distinct.sort_unstable();
+        distinct.dedup();
+        assert_eq!(
+            distinct.len(),
+            *substituted,
+            "{program_id}: every instantiation's label is different from every other's — \
+             which is the whole point, and was not true before task 12"
+        );
+        assert!(
+            activation
+                .labels
+                .iter()
+                .all(|l| !l.text.contains("{{ChNo}}")),
+            "{program_id}: no argument placeholder survives substitution"
+        );
+        // Every task-12 diagnostic, counted by name: real corpus data
+        // resolves cleanly, so all three must be zero.
+        let argument_diagnostics: Vec<&str> = activation
+            .diagnostics
+            .iter()
+            .filter_map(|d| match &d.diagnostic {
+                Diagnostic::UnresolvedTextPlaceholder { .. } => Some("UnresolvedTextPlaceholder"),
+                Diagnostic::ModuleArgumentNotBound { .. } => Some("ModuleArgumentNotBound"),
+                Diagnostic::UnsupportedModuleArgumentKind { .. } => {
+                    Some("UnsupportedModuleArgumentKind")
+                }
+                _ => None,
+            })
+            .collect();
+        assert!(
+            argument_diagnostics.is_empty(),
+            "{program_id}: argument diagnostics on real corpus data: {argument_diagnostics:?}"
+        );
+    }
+}
+
+/// The renumber, checked where it can actually fail: a database standing at
+/// v10 — the version T13's `migrate_v9_to_v10` leaves behind — is carried to
+/// v11 by `migrate_v10_to_v11` running on its own, with no reinstall and no
+/// earlier migration to lean on. Task 12's migration used to be v9->v10 and
+/// now queues behind T13's; a migration that is never reached in sequence
+/// still passes every unit test of its own body, which is exactly the
+/// failure this test exists to rule out. T13's own tables are asserted to
+/// survive the step, because "the other branch's v10 work is still there"
+/// is the other half of the same question.
+#[test]
+fn a_v10_database_gains_its_arguments_from_the_stored_blob_alone() {
+    let (dir, conn) = db();
+    knx_productdb::ingest_file(&conn, "M-00FC/A.xml", ARGUMENT_PROGRAM.as_bytes()).unwrap();
+    let pid = "M-00FC_A-1000-10-C071";
+
+    let before: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM module_def_argument WHERE program_id = ?1",
+            [pid],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(
+        before > 0,
+        "sanity: the declarations are stored before the rollback"
+    );
+
+    // Roll back to precisely what a v10 database looks like: task 12's
+    // table dropped and its column removed, every table v10 itself brought
+    // — T13's `function_type`, `function_point`, `space_usage` among them —
+    // left standing, and the stored blob untouched.
+    conn.execute_batch(
+        "DROP TABLE module_def_argument;
+         ALTER TABLE dynamic_node DROP COLUMN value;
+         PRAGMA user_version = 10;",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    assert_eq!(
+        conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        knx_productdb::CURRENT_PRODUCTDB_VERSION,
+        "the single remaining step lands on the current version"
+    );
+
+    let after: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM module_def_argument WHERE program_id = ?1",
+            [pid],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        after, before,
+        "every declaration came back from the blob, not from a reinstall"
+    );
+
+    let values: Vec<String> = conn
+        .prepare(
+            "SELECT value FROM dynamic_node
+             WHERE program_id = ?1 AND module_def_id = '' AND kind IN ('NumericArg','TextArg')
+             ORDER BY node_id",
+        )
+        .unwrap()
+        .query_map([pid], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(
+        values,
+        vec!["32", "A", "7", "164", "B", "7"],
+        "the re-derived binding values are the file's own, in file order"
+    );
+
+    for table in ["function_type", "function_point", "space_usage"] {
+        let present: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?1",
+                [table],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(present, 1, "v10's `{table}` survives the v11 step");
+    }
 }

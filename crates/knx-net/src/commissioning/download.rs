@@ -76,9 +76,11 @@ pub struct LoadablePart {
 /// and in CP §3.5.3 AP2 Nr. 08-12 (the partial-download variants) both list
 /// Application Program 2, Application Program 1, the Group Object Table,
 /// the Group Address Table and the Association Table in exactly this
-/// sequence. `[C8]` will validate a plan against that order; this type only
-/// names the five, it does not yet enforce it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+/// sequence. `[C8]` `DownloadPlan::new` checks a plan's parts against this
+/// declaration order (via `Ord`) to enforce that download order — the
+/// *memory layout* is a separate matter and is only ever a recommendation
+/// (CP §3.5.1.3, p. 40).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum PartKind {
     /// RES Table 91, p. 290.
     ApplicationProgram2,
@@ -188,6 +190,21 @@ impl DownloadPlan {
     /// CP §3.5.2 steps 06 to 10 give for the five parts it names. The same
     /// order is used for the unload of step 05, because that clause's own
     /// order and its loading order agree on Application Program 2 first.
+    ///
+    /// `[C8]` That order is checked here, against [`PartKind`]'s declaration
+    /// order, and a plan may skip kinds (a partial download need not carry
+    /// all five) but may not present two it does carry out of the sequence
+    /// CP §3.5.2 Nr. 06-10 and CP §3.5.3 AP2 Nr. 08-12 both give it. This is
+    /// the *download* order, which is normative and carried only by row
+    /// position in those two tables — not the memory *layout*, which
+    /// CP §3.5.1.3, p. 40, calls a recommendation and explicitly allows to
+    /// differ: *"it shall be possible to arrange the segments in different
+    /// ways."* The reason this matters more than a cosmetic ordering: the
+    /// escalation slice in [`Downloader::partial_download`]
+    /// (`parts[position..]`) takes its entire target set from this order, so
+    /// a plan built in the wrong order would escalate the wrong parts with
+    /// no error at all — silently, and after the point where the caller
+    /// could still fix it.
     pub fn new(expected_manufacturer_id: u16, parts: Vec<LoadablePart>) -> Result<Self, PlanError> {
         if parts.is_empty() {
             return Err(PlanError::NoParts);
@@ -199,6 +216,22 @@ impl DownloadPlan {
             {
                 return Err(PlanError::DuplicatePart {
                     object_index: part.object_index,
+                });
+            }
+        }
+        // `[C8]` The download order is row position in CP §3.5.2 Nr. 06-10 and
+        // CP §3.5.3 AP2 Nr. 08-12, both of which `PartKind`'s declaration
+        // order reproduces. Two parts of the same kind have no defined
+        // relative order in either table (each lists exactly one row per
+        // kind), so `<=` rather than `<` refuses that case too instead of
+        // guessing at an order the Standard never states.
+        for window in parts.windows(2) {
+            let (before, after) = (&window[0], &window[1]);
+            if after.kind <= before.kind {
+                return Err(PlanError::OutOfOrder {
+                    object_index: after.object_index,
+                    kind: after.kind,
+                    preceding_kind: before.kind,
                 });
             }
         }
@@ -269,6 +302,24 @@ pub enum PlanError {
         /// The offending part.
         object_index: ObjectIndex,
     },
+    /// A part precedes, in the plan's own order, a part CP §3.5.2 Nr. 06-10
+    /// and CP §3.5.3 AP2 Nr. 08-12 both place *after* it in the download
+    /// order. This is about the download order, which those two clauses'
+    /// row position fixes; the memory *layout* is a different question and
+    /// CP §3.5.1.3, p. 40, calls it only a recommendation. `[C8]` This is
+    /// caught here rather than in [`Downloader::partial_download`] because
+    /// that procedure's escalation (`parts[position..]`) trusts the plan's
+    /// order completely: a plan that got the order wrong would escalate the
+    /// wrong parts with no error at all.
+    OutOfOrder {
+        /// The part found out of place.
+        object_index: ObjectIndex,
+        /// Its kind.
+        kind: PartKind,
+        /// The kind of the part immediately before it in the plan, which
+        /// the download order places *after* `kind`, not before it.
+        preceding_kind: PartKind,
+    },
 }
 
 impl std::error::Error for PlanError {}
@@ -291,6 +342,19 @@ impl fmt::Display for PlanError {
                 f,
                 "the application program at {object_index} has no version to write, and CP \
                  §3.5.2 Nr. 06/07 requires that write (RES Table 90/91 list the property there)"
+            ),
+            PlanError::OutOfOrder {
+                object_index,
+                kind,
+                preceding_kind,
+            } => write!(
+                f,
+                "the part at {object_index} ({kind:?}) follows a {preceding_kind:?} part, but \
+                 CP §3.5.2 Nr. 06-10 and CP §3.5.3 AP2 Nr. 08-12 both give {kind:?} an earlier \
+                 row than {preceding_kind:?} in the download order — the target set an \
+                 escalation would use is built from this order, so a wrong one is refused here \
+                 rather than acted on (the memory layout itself is a separate, non-normative \
+                 question: CP §3.5.1.3, p. 40)"
             ),
         }
     }
@@ -1927,6 +1991,130 @@ mod tests {
             DownloadPlan::new(SIMULATED_MANUFACTURER, Vec::new()),
             Err(PlanError::NoParts)
         ));
+    }
+
+    /// `[C8]` Acceptance: all five kinds, in the order CP §3.5.2 Nr. 06-10
+    /// and CP §3.5.3 AP2 Nr. 08-12 both give them, build without complaint.
+    #[test]
+    fn the_normative_download_order_is_accepted() {
+        let parts = vec![
+            part(1, "AP2", 4, PartKind::ApplicationProgram2),
+            part(2, "AP1", 4, PartKind::ApplicationProgram1),
+            part(3, "GOT", 4, PartKind::GroupObjectTable),
+            part(4, "Address Table", 4, PartKind::GroupAddressTable),
+            part(5, "Association Table", 4, PartKind::AssociationTable),
+        ];
+        assert!(DownloadPlan::new(SIMULATED_MANUFACTURER, parts).is_ok());
+    }
+
+    /// A partial plan may skip kinds — a plan of just two of the five is
+    /// ordinary — as long as the ones it keeps stay in relative order.
+    #[test]
+    fn a_gapped_plan_that_keeps_relative_order_is_accepted() {
+        let parts = vec![
+            part(1, "AP2", 4, PartKind::ApplicationProgram2),
+            part(2, "Address Table", 4, PartKind::GroupAddressTable),
+        ];
+        assert!(DownloadPlan::new(SIMULATED_MANUFACTURER, parts).is_ok());
+    }
+
+    /// One adjacent pair swapped: Application Program 1 loaded before
+    /// Application Program 2, which CP §3.5.2 Nr. 06-10 places the other
+    /// way round by row position.
+    #[test]
+    fn an_adjacent_swap_is_rejected() {
+        let parts = vec![
+            part(1, "AP1", 4, PartKind::ApplicationProgram1),
+            part(2, "AP2", 4, PartKind::ApplicationProgram2),
+        ];
+        let error = DownloadPlan::new(SIMULATED_MANUFACTURER, parts)
+            .expect_err("Application Program 1 before Application Program 2 is out of order");
+        assert!(
+            matches!(
+                error,
+                PlanError::OutOfOrder {
+                    kind: PartKind::ApplicationProgram2,
+                    preceding_kind: PartKind::ApplicationProgram1,
+                    ..
+                }
+            ),
+            "got {error:?}"
+        );
+    }
+
+    /// The full reverse of the normative order. Every adjacent pair
+    /// violates it; the constructor reports the first one it finds rather
+    /// than trying to describe all of them at once.
+    #[test]
+    fn a_fully_reversed_plan_is_rejected() {
+        let parts = vec![
+            part(1, "Association Table", 4, PartKind::AssociationTable),
+            part(2, "Address Table", 4, PartKind::GroupAddressTable),
+            part(3, "GOT", 4, PartKind::GroupObjectTable),
+            part(4, "AP1", 4, PartKind::ApplicationProgram1),
+            part(5, "AP2", 4, PartKind::ApplicationProgram2),
+        ];
+        let error = DownloadPlan::new(SIMULATED_MANUFACTURER, parts)
+            .expect_err("a fully reversed plan is out of order at its very first pair");
+        assert!(
+            matches!(
+                error,
+                PlanError::OutOfOrder {
+                    kind: PartKind::GroupAddressTable,
+                    preceding_kind: PartKind::AssociationTable,
+                    ..
+                }
+            ),
+            "got {error:?}"
+        );
+    }
+
+    /// Two parts of the same kind (different objects; same-object duplicates
+    /// are their own error, tested separately). Neither download-order table
+    /// lists a second row for a kind it already lists once, so there is no
+    /// order to place them in, and the constructor refuses rather than
+    /// picking one.
+    #[test]
+    fn two_parts_of_the_same_kind_are_rejected() {
+        let parts = vec![
+            part(1, "Association Table one", 4, PartKind::AssociationTable),
+            part(2, "Association Table two", 4, PartKind::AssociationTable),
+        ];
+        let error = DownloadPlan::new(SIMULATED_MANUFACTURER, parts)
+            .expect_err("no download order distinguishes two parts of the same kind");
+        assert!(
+            matches!(
+                error,
+                PlanError::OutOfOrder {
+                    kind: PartKind::AssociationTable,
+                    preceding_kind: PartKind::AssociationTable,
+                    ..
+                }
+            ),
+            "got {error:?}"
+        );
+    }
+
+    /// `[C8]` The escalation slice (`parts[position..]` in
+    /// [`Downloader::partial_download`]) takes its target set entirely from
+    /// the plan's order. This proves the actual danger the order check
+    /// exists for: build a plan with Application Program 1 ahead of
+    /// Application Program 2 and confirm the constructor never hands it to
+    /// a procedure to escalate from — not just that the error variant looks
+    /// right, but that a caller cannot get a `DownloadPlan` out of a
+    /// wrongly-ordered `Vec` at all.
+    #[test]
+    fn a_wrongly_ordered_plan_never_becomes_a_downloadable_plan() {
+        let parts = vec![
+            part(1, "AP1", 4, PartKind::ApplicationProgram1),
+            part(2, "AP2", 4, PartKind::ApplicationProgram2),
+            part(3, "Association Table", 4, PartKind::AssociationTable),
+        ];
+        assert!(
+            DownloadPlan::new(SIMULATED_MANUFACTURER, parts).is_err(),
+            "a caller-supplied order that violates CP §3.5.2 Nr. 06-10 must never reach \
+             partial_download's escalation slice"
+        );
     }
 
     /// A part the plan never heard of is refused before the connection is

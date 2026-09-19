@@ -16,6 +16,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceNode } from "./bindings/DeviceNode";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { LogEntry } from "./api";
+import { messages as enMessages } from "./messages/en";
 import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests, useProductLanguage } from "./productLanguage";
 import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
 
@@ -1356,5 +1357,61 @@ describe("App — a load's banner and its polling both end with the load", () =>
 
     expect(host!.querySelector(".load-progress")).toBeNull();
     await act(async () => root.unmount());
+  });
+
+  // F-T26-1: `loadSource` never goes null between a failed load and the
+  // next one, so without `key={loadKey}` React keeps the same
+  // `LoadProgressBanner` instance alive across both — and the flavour
+  // line's shuffle, which runs once in a `useState` initialiser, is
+  // therefore the *first* load's shuffle, still sitting at the index the
+  // first load left it on. The second load then opens on a line
+  // byte-identical to the first's. Removing the `key` kept `tsc` at 0 and
+  // all 589 tests green, which is the defect class this session keeps
+  // finding: two behaviours, one code path, nothing telling them apart.
+  //
+  // `Math.random` is pinned per load rather than per call, so the
+  // assertion does not depend on how many other things (a startup toast,
+  // an error wrapper) happen to draw from it in between. A constant 0
+  // makes Fisher-Yates a left rotation by one, opening on entry 02; a
+  // constant just under 1 makes it the identity, opening on entry 01.
+  it("F-T26-1: a second load reshuffles instead of inheriting the first load's flavour line", async () => {
+    const dice = vi.spyOn(Math, "random");
+    try {
+      dice.mockReturnValue(0);
+      filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+      let fail: (error: Error) => void = () => {};
+      apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
+      apiMock.loadProgress.mockResolvedValue(runningSnapshot());
+      const root = await renderApp();
+
+      await clickOpen();
+      const first = host!.querySelector(".load-progress-flavour")!.textContent;
+      expect(first, "a constant zero opens on entry 02").toBe(enMessages["loadProgress.flavour.02"]);
+
+      // The first load dies. Its banner stays on screen — deliberately,
+      // that is what tells the user what happened — so nothing unmounts.
+      apiMock.loadProgress.mockResolvedValue(failedSnapshot());
+      await act(async () => { fail(new Error("invalid Zip archive")); });
+      expect(host!.querySelector(".load-progress")!.getAttribute("data-failed")).toBe("true");
+      expect(host!.querySelector(".load-progress-flavour"), "and stops joking").toBeNull();
+
+      // A second file, and different dice. Neither its POST nor its poll
+      // ever answers, so the only thing that can have changed the flavour
+      // line is the remount.
+      dice.mockReturnValue(0.9999999);
+      filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/cottage.knxproj");
+      apiMock.importProject.mockReturnValue(new Promise<ProjectTree>(() => {}));
+      apiMock.loadProgress.mockReturnValue(new Promise(() => {}));
+
+      await clickOpen();
+
+      const second = host!.querySelector(".load-progress-flavour")!.textContent;
+      expect(second, "the second load draws its own order").toBe(enMessages["loadProgress.flavour.01"]);
+      expect(second, "two loads in a row do not open on the same line").not.toBe(first);
+
+      await act(async () => root.unmount());
+    } finally {
+      dice.mockRestore();
+    }
   });
 });

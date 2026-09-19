@@ -497,3 +497,212 @@ nothing to expand.
     (`crates/knx-productdb/tests/dynamic_tree.rs`), which builds a single
     chain whose two scopes both happen to use node id 0 and never
     produces two sections in the first place.
+
+---
+
+## Addendum (goal.md T18, task 12, 2026-09-14): argument interpretation
+
+Task 11 left `Module` arguments exactly where slice 2 put them: stored,
+reportable, and consumed by nobody. The out-of-scope bullet at the top of
+this document ("**Structured argument values.** … are stored losslessly
+today … and stay that way. … There is no `argument` or `module_def` table
+and this slice does not add one") is **superseded by this addendum** —
+there is now a `module_def_argument` table, and D19 is narrowed rather
+than reversed: a `Module`'s `NumericArg`/`TextArg` children are *read* on
+the way past, and are still never descended into as activations.
+
+### Evidence (measured 2026-09-14, `[V]` unless marked otherwise)
+
+Corpus, counted over every `ApplicationProgram` member of every archive
+under `OriginalData/`:
+
+| Where | `Module` | `NumericArg` | `TextArg` | `AllocatorRef` | `Argument` decls |
+|---|---|---|---|---|---|
+| `ProductDatabases/` | 86 | 172 | 86 | **0** | 36 |
+| `DemoProjects/` | 32 | 96 | 0 | **0** | 12 |
+
+* Every one of the 118 `Module` elements carries at least one binding.
+  Arguments are not a rare corner of the format; they are how modular
+  products are written.
+* The 36 `ProductDatabases` declarations are all MDT `M-0083`: 12×
+  `Name="ParamOffsBase"` (no `@Type`, `Allocates="132"`), 12×
+  `Name="ObjNumberBase"` (no `@Type`, `Allocates="20"`), 12×
+  `Name="ChNo" Type="Text"`. The 12 `DemoProjects` ones are all KV25
+  `M-00FA`: `argCH`/`argObj`/`argPar`, all numeric, all `@Type`-less.
+  **No declaration anywhere spells `Numeric` explicitly** — numeric is the
+  absent case.
+* Attested consumption sites for an argument id, corpus-wide:
+  `Memory/@BaseOffset` → a numeric argument, **705**;
+  `ComObject/@BaseNumber` → a numeric argument, **157**; `{{Name}}` text
+  placeholders, **978**, of which **978 resolve to an `Argument/@Name`
+  declared by the enclosing `ModuleDef` and 0 do not** (resolved through
+  `TranslationElement/@RefId` for the 775 that live in a translation unit;
+  203 are direct).
+* Separately, **948** purely numeric `{{<digits>}}` placeholders (e.g.
+  `Text="Channel {{ChNo}}: {{0}}"`) match no argument name in any file.
+  A different family, tied to `TextParameterRefId`, and not this
+  mechanism's to resolve.
+* Placeholders the `Dynamic` evaluator can actually *reach* — i.e. stored
+  in `dynamic_node.text` inside a `ModuleDef`'s own tree: **24** (12×
+  `Channel/@Text` `{{ChNo}}`, 4× `Channel/@Text` `{{argCH}}`, 4×
+  `ParameterBlock/@Name`, 4× `ParameterBlock/@Text`).
+
+Published schema, from the project's extraction of
+`The KNX Standard v3.0.0 / Project Schema23 v01.00.00`:
+
+* **[D]** §1.1.2.38 `simpleType ModuleDefArgType_t` — "Enum that can be
+  used to define the argument in a module definition. Required for modular
+  application programs." Facets: `Numeric`, `Text`, `AllocatorRef`.
+* **[D]** §1.1.3.9 `simpleType Identifier50_t` — "This type is for
+  specifying the name of `ModuleDef\Arguments\Argument`", pattern
+  `[A-Za-z_][A-Za-z0-9_]*`. This is the documented proof that a `ModuleDef`
+  argument is addressed *by name*, which is what makes `{{Name}}`
+  resolution more than a guess.
+* **[D]** `Value_t` — "TypeAllocatorRefId — A module allocator refId as
+  string." One line, no semantics.
+* **[A]** The extraction defines **no** AP-side `ModuleDef`/`Module`/
+  `Arguments` complexType and **no** `{{…}}` substitution rule anywhere.
+  The substitution semantics below therefore rest on the 978/978 corpus
+  consistency above, not on a published rule, and are marked `[A]` in the
+  code that implements them.
+
+`AllocatorRef`, searched and not found — **the bases searched, named**:
+`OriginalData/` in full (`.knxprod` and `.knxproj`, element and attribute
+spellings, every readable archive member: 0 hits; the only 3 unreadable
+members are the encrypted contents of the one `.vd2`, a format already out
+of scope); `knx_spec_kb_programming.sqlite` (2,207 facts over 27
+programming PDFs with figures); `knx_spec_kb_full179_clean.sqlite` (16,536
+facts over 177 PDFs, text only) — both across `content`, `title`,
+`keywords` and `evidenceText`, 0 hits; the only `Allocator` matches in
+either base are "heat cost allocator" in DPT documents. It stays
+unimplemented, and is reported rather than ignored.
+
+### Decisions
+
+**D47 — storage: one new table, one new column.** `ModuleDef/Arguments/
+Argument` gets `module_def_argument (program_id, module_def_id, id, name,
+arg_type, allocates, position, extra)`. It cannot be a `dynamic_node` row:
+`Arguments` sits *outside* `Dynamic`, so it has no node id and belongs to
+no tree. `NumericArg`/`TextArg`'s `@Value` gets `dynamic_node.value`.
+The ADR-0020 "is it already stored?" check was asked and answered
+honestly: the value *was* stored, in `extra` — which design D2's own
+schema comment declares is a human-readable audit trail and explicitly
+**not** re-parseable. Stored, yes; readable, no.
+
+**D48 — resolution belongs to the scope.** `ProgramTrees` carries the
+declarations (`with_arguments`, loaded by `load_program_trees`);
+`ModuleScope` carries the resolved `Vec<BoundArgument>` — the `@Name`s and
+the `@Value`s this instantiation bound them to. The task brief's
+expectation that arguments "almost certainly belong there rather than in a
+new mechanism" held up: nothing new was threaded through `walk`, because
+`ModuleScope` was already on every activation and every diagnostic.
+Lookup is deliberately **not** recursive up the `parent` chain: a name is
+scoped to its own `ModuleDef` (`Identifier50_t`, `[D]`), and the corpus
+has zero nested `Module`s to show otherwise.
+
+**D49 — `{{Name}}` substitution, the one consumption site `evaluate` can
+reach.** `Activation` gains `labels: Vec<ActiveLabel>` — one per activated
+`Channel`/`ParameterBlock`/`ParameterSeparator` with a non-empty `@Text`,
+carrying both `raw_text` (as stored) and `text` (substituted). This is
+what makes two instantiations of one `ModuleDef` differ. The rejected
+alternative was interpreting the *numeric* consumption sites instead
+(`Memory/@BaseOffset`, `ComObject/@BaseNumber`, 862 occurrences between
+them): both are `Static`-side constructs the pure `evaluate` cannot reach
+without a much larger cross-cut — `com_object` has no `base_number` column
+and memory placement is not modelled at all — so the interpretation with
+the most corpus evidence behind it is also the one furthest out of this
+slice's reach.
+
+**D50 — nothing is discarded, and nothing is invented.** Three new
+diagnostics, all scoped like every other:
+`ModuleArgumentNotBound` (a binding with no resolvable declaration),
+`UnsupportedModuleArgumentKind` (a `Module` child that is not
+`NumericArg`/`TextArg`, or a declaration whose `@Type` is outside the two
+facets read — `AllocatorRef` being the one such facet the schema names),
+`UnresolvedTextPlaceholder` (a name-shaped placeholder with no binding).
+An unresolved placeholder is left **verbatim**: substituting an empty
+string would erase the only evidence that a value was meant to be there.
+A purely numeric placeholder is left verbatim and *not* reported — it was
+never an argument reference, and reporting it would be a false positive
+948 occurrences wide.
+
+**D51 — arguments do not multiply expansions, but labels multiply with
+them.** An argument binding costs O(children of one `Module`) per
+expansion and adds no fan-out of its own. A *label*, though, is produced
+per activated element per expansion — exactly the way a ref is — so
+`labels.len()` folds into `Activation::activations_recorded()` and counts
+against `MAX_MODULE_ACTIVATIONS`. A budget that counted refs but not
+labels would be a budget with a hole in it the width of a `ModuleDef`
+whose tree is all `Channel`s. No new constant was needed.
+
+**Deliberately not done:** the `Static` pass keeps reporting
+`ModuleDef/Arguments`/`Argument` as unmodelled constructs. That is still
+true of the facet it means — `@Allocates` and the memory placement it
+feeds — and silencing the report would claim an interpretation this build
+does not have.
+
+### Migration
+
+v10 → v11: create `module_def_argument`, `ALTER TABLE dynamic_node ADD
+COLUMN value TEXT`, then replay every stored `ApplicationProgram` blob
+through `dynamic::parse::parse_dynamic_trees` after **clearing** what the
+previous parse of the same blob wrote — `parse_dynamic_trees` skips a
+program that already has rows, so without the delete the backfill would be
+an elaborate no-op on precisely the databases it exists for. The stale
+`ingest_unknown` rows from the previous `Dynamic` pass are retired and
+rewritten too, so a migrated database stops claiming `NumericArg/@Value`
+is unmodelled the moment it acquires a column for it. Permitted by
+ADR-0020 E1: every value re-derived is a pure function of bytes the
+database already holds. `migrate_v2_to_v3`'s own backfill is the direct
+precedent.
+
+### Corpus measurement (task 12, required deliverable)
+
+Re-measured on every run by `corpus_argument_measurement_task_12`
+(`crates/knx-productdb/tests/dynamic_tree.rs`), over the installed
+`OriginalData/ProductDatabases`:
+
+* `AllocatorRef`: **0** occurrences across every readable archive member;
+  4 members unreadable (encrypted, 3 inside the one `.vd2` and 1 inside the
+  `.vd4` the corpus gained on 2026-09-16), counted and named rather than
+  dropped from the denominator.
+* Stored rows for the one module-bearing package: 86 `Module`, 172
+  `NumericArg`, 86 `TextArg`, 36 declarations (12 `Text`, 24 `@Type`-less,
+  0 `AllocatorRef`), names `{ChNo, ObjNumberBase, ParamOffsBase}`.
+* Evaluated under the corpus's own default values: **12 / 8 / 4**
+  substituted labels for the three programs, every one of them distinct
+  from the others — where before task 12 all twelve read
+  `Channel {{ChNo}}: {{0}}`. Zero `UnresolvedTextPlaceholder`, zero
+  `ModuleArgumentNotBound`, zero `UnsupportedModuleArgumentKind` on real
+  data.
+
+### Acceptance criteria addendum
+
+18. A test in which an **argument value** changes the evaluated result:
+    two `Module` elements naming one `ModuleDef`, identical except for
+    their binding `@Value`s, evaluate to two different labels
+    (`an_argument_value_changes_the_evaluated_label_of_each_module_instantiation`).
+    Its mirror, `without_the_argument_declarations_the_same_trees_leave_every_placeholder_standing`,
+    evaluates the same trees with no declarations attached and gets the
+    pre-task-12 result — identical labels, every binding reported as
+    `ModuleArgumentNotBound` — so the claim is about the argument, not
+    about the tree.
+19. A **measured** statement of `AllocatorRef`'s presence in the installed
+    corpus, asserted rather than remembered
+    (`corpus_argument_measurement_task_12`), together with the bases
+    searched, named above.
+20. An unresolved name-shaped placeholder is left verbatim and reported; a
+    numeric placeholder is left verbatim and not reported; a declaration
+    typed `AllocatorRef` is reported once per instantiation and never
+    interpreted. All three asserted by the acceptance test.
+21. The v10 → v11 migration recreates `dynamic_node` and
+    `module_def_argument` from stored blobs with no re-install, and the
+    pre-existing migration tests still pass after being taught that v11
+    has structure to rewind. (Renumbered from the v9 → v10 this design
+    was originally written against: T13 reached `main` first and kept
+    that slot — see IMPLEMENTATION_STATUS.md's task-12 entry.)
+22. All six gates pass, judged by exit status:
+    `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets
+    -j 2 -- -D warnings`, `cargo test --workspace --no-fail-fast -j 2`,
+    `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
+    check-headers`, `cargo deny check`.

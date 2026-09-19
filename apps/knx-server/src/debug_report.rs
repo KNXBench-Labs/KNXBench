@@ -152,47 +152,76 @@ fn boundary_ok(bytes: &[u8], start: usize, end: usize) -> bool {
 }
 
 /// Replaces every dotted quad — four decimal groups of one to three digits,
-/// each 0-255 — wherever one stands on its own.
+/// each 0-255 — wherever one appears *inside* a run of digits and dots, not
+/// only where the whole run happens to be exactly one.
 ///
-/// Two shapes deliberately survive this: a KNX group address (`1/2/3`, no
-/// dots between the numbers at all) and a version string (`0.1.0-alpha.1`,
-/// three groups then a non-digit, so never four). Neither is an address of
-/// the kind this pass exists to remove.
+/// A run is greedy over `.`, so a sentence-final address arrives as
+/// `10.0.0.5.` (five groups), one after an ellipsis as `...10.0.0.5` (also
+/// five, three of them empty), and a typo'd fifth octet or a glued VLAN tag
+/// as `192.168.1.1.5` or `5.192.168.1.1` (also five, all non-empty). A test
+/// that requires the run to split into *exactly* four groups says "not an
+/// address" about every one of those and leaks the real one. Instead this
+/// slides a four-group window across the run's dot-separated groups,
+/// left to right, and takes the first valid quad it finds, then resumes
+/// scanning right after it — so `1.2.3.4.5.6.7.8` yields two hits, not zero.
+///
+/// Two shapes deliberately survive this regardless: a KNX group address
+/// (`1/2/3`, no dots between the numbers at all — `/` is not in the scan
+/// class) and this project's own version string (`0.1.0-alpha.1`, three
+/// groups then a non-digit, never four in a row). A bare, unlabelled
+/// five-or-more-part number that happens to be a version rather than an
+/// address (`1.2.3.4.5`) is not distinguishable from an address by shape
+/// alone and is treated as one; see `docs/KNOWN_LIMITATIONS.md` §104.
 fn redact_ipv4(text: &str) -> String {
-    scan_and_replace(
-        text,
-        |c| c.is_ascii_digit() || c == '.',
-        |run| {
-            // A run is greedy over `.`, so a sentence-final address arrives
-            // here as `10.0.0.5.` and one after an ellipsis as `...10.0.0.5`
-            // — five groups either way, and a quad test applied to the whole
-            // run says no and leaks the address. Strip the dots that cannot
-            // belong to a quad and judge the core. The boundary rule then
-            // applies to that core rather than to the run, which is what
-            // still protects `v1.2.3.4.`: the `v` sits directly in front of
-            // the trimmed core too.
-            let start = run.len() - run.trim_start_matches('.').len();
-            let end = run.trim_end_matches('.').len();
-            if start >= end {
-                return None;
-            }
-            is_dotted_quad(&run[start..end]).then_some(Hit {
-                start,
-                end,
-                placeholder: IPV4_PLACEHOLDER,
-            })
-        },
-    )
+    scan_and_replace(text, |c| c.is_ascii_digit() || c == '.', ipv4_hits)
 }
 
-fn is_dotted_quad(run: &str) -> bool {
-    let groups: Vec<&str> = run.split('.').collect();
-    groups.len() == 4
-        && groups.iter().all(|g| {
-            (1..=3).contains(&g.len())
-                && g.bytes().all(|b| b.is_ascii_digit())
-                && g.parse::<u16>().is_ok_and(|n| n <= 255)
-        })
+/// Byte offsets of the `.`-separated groups in `run`, in the same order
+/// `str::split('.')` would produce them, so that an empty group from a
+/// leading, trailing or doubled dot still occupies its slot in the window
+/// below rather than being silently skipped.
+fn dotted_groups(run: &str) -> Vec<(usize, usize)> {
+    let mut groups = Vec::new();
+    let mut start = 0usize;
+    for (i, b) in run.bytes().enumerate() {
+        if b == b'.' {
+            groups.push((start, i));
+            start = i + 1;
+        }
+    }
+    groups.push((start, run.len()));
+    groups
+}
+
+fn is_valid_octet(group: &str) -> bool {
+    (1..=3).contains(&group.len())
+        && group.bytes().all(|b| b.is_ascii_digit())
+        && group.parse::<u16>().is_ok_and(|n| n <= 255)
+}
+
+/// Every non-overlapping dotted quad in `run`, found by sliding a
+/// four-group window left to right over its dot-separated groups and
+/// jumping past a match rather than merely stepping into it — so the two
+/// quads in `1.2.3.4.5.6.7.8` are found as `1.2.3.4` and `5.6.7.8`, not as
+/// four overlapping, mutually destructive candidates.
+fn ipv4_hits(run: &str) -> Vec<Hit> {
+    let groups = dotted_groups(run);
+    let mut hits = Vec::new();
+    let mut i = 0usize;
+    while i + 4 <= groups.len() {
+        let window = &groups[i..i + 4];
+        if window.iter().all(|&(s, e)| is_valid_octet(&run[s..e])) {
+            hits.push(Hit {
+                start: window[0].0,
+                end: window[3].1,
+                placeholder: IPV4_PLACEHOLDER,
+            });
+            i += 4;
+        } else {
+            i += 1;
+        }
+    }
+    hits
 }
 
 /// Replaces every IPv6 literal. Validation is `std::net::Ipv6Addr`'s own
@@ -200,7 +229,11 @@ fn is_dotted_quad(run: &str) -> bool {
 /// knows every compressed and full form there is, and a second opinion here
 /// would only be a worse one.
 fn redact_ipv6(text: &str) -> String {
-    scan_and_replace(text, |c| c.is_ascii_hexdigit() || c == ':', ipv6_hit)
+    scan_and_replace(
+        text,
+        |c| c.is_ascii_hexdigit() || c == ':',
+        |run| ipv6_hit(run).into_iter().collect(),
+    )
 }
 
 /// Finds the address inside one candidate run, trying four sub-runs in a
@@ -242,10 +275,11 @@ fn ipv6_hit(run: &str) -> Option<Hit> {
 }
 
 /// Walks `text` once, hands every maximal run of `in_class` characters to
-/// `verdict`, and substitutes the placeholder it returns over the range it
-/// names. A hit whose neighbours are word characters is dropped — see
-/// [`boundary_ok`], which is checked against the hit rather than against the
-/// greedy run around it.
+/// `verdict`, and substitutes the placeholder it returns over each range it
+/// names. A run may contain more than one hit — `1.2.3.4.5.6.7.8` is one run
+/// and two addresses — so `verdict` returns every candidate it finds, in
+/// left-to-right, non-overlapping order; each is independently checked
+/// against [`boundary_ok`] and applied if it passes.
 ///
 /// ASCII-only by construction: every character class used here is ASCII, so
 /// byte indices and character indices agree inside a run, and a multi-byte
@@ -254,7 +288,7 @@ fn ipv6_hit(run: &str) -> Option<Hit> {
 fn scan_and_replace(
     text: &str,
     in_class: impl Fn(char) -> bool,
-    verdict: impl Fn(&str) -> Option<Hit>,
+    verdict: impl Fn(&str) -> Vec<Hit>,
 ) -> String {
     let bytes = text.as_bytes();
     let mut out = String::with_capacity(text.len());
@@ -270,7 +304,7 @@ fn scan_and_replace(
             i += 1;
         }
         let run = &text[start..i];
-        if let Some(hit) = verdict(run) {
+        for hit in verdict(run) {
             let (from, to) = (start + hit.start, start + hit.end);
             if !boundary_ok(bytes, from, to) {
                 continue;
@@ -671,6 +705,67 @@ mod tests {
         let r = plain();
         assert_eq!(r.apply("v1.2.3.4."), "v1.2.3.4.");
         assert_eq!(r.apply("see 0.1.0-alpha.1."), "see 0.1.0-alpha.1.");
+    }
+
+    #[test]
+    fn a_dotted_quad_glued_to_an_extra_digit_and_dot_group_is_still_an_address() {
+        // Trimming the run's leading and trailing dots closed the
+        // sentence-final case, but it trims dots, not digits: a typo'd
+        // fifth octet or a glued extra group still arrives as a run of
+        // more than four groups, and a test that requires exactly four
+        // says "not an address" about the address hiding inside it.
+        let r = plain();
+        let probes = [
+            // The scan is greedy left to right and takes the first valid
+            // quad it finds; here that is `5.192.168.1`, a syntactically
+            // valid address in its own right, leaving `.1` over. Which
+            // four-group window is chosen is not the point — that the real
+            // address never survives intact is checked separately below.
+            ("5.192.168.1.1", "{P}.1"),
+            ("addr=192.168.1.1.5", "addr={P}.5"),
+            (
+                "gateway 192.168.1.1.2 unreachable",
+                "gateway {P}.2 unreachable",
+            ),
+        ];
+        let leaks: Vec<String> = probes
+            .iter()
+            .filter(|(input, want)| r.apply(input) != want.replace("{P}", IPV4_PLACEHOLDER))
+            .map(|(input, _)| format!("{input:?} -> {:?}", r.apply(input)))
+            .collect();
+        assert!(leaks.is_empty(), "not redacted: {leaks:#?}");
+
+        // The literal address must not survive anywhere in the output, not
+        // merely differ from a hand-picked expectation.
+        for input in ["5.192.168.1.1", "addr=192.168.1.1.5"] {
+            let redacted = r.apply(input);
+            assert!(
+                !redacted.contains("192.168.1.1"),
+                "{input:?} -> {redacted:?} still leaks the address"
+            );
+        }
+    }
+
+    #[test]
+    fn a_long_glued_run_yields_every_address_hiding_inside_it() {
+        // A run can hide more than one quad. Both must go, not just the
+        // first the scan happens to trip over.
+        let r = plain();
+        let redacted = r.apply("1.2.3.4.5.6.7.8");
+        assert!(!redacted.contains("1.2.3.4"), "{redacted}");
+        assert!(!redacted.contains("5.6.7.8"), "{redacted}");
+        assert_eq!(redacted.matches(IPV4_PLACEHOLDER).count(), 2, "{redacted}");
+    }
+
+    #[test]
+    fn a_bare_multi_part_version_number_is_treated_as_an_address_this_is_a_documented_residue() {
+        // `1.2.3.4.5` glued to nothing could be a five-part version number
+        // instead of an address with a typo'd fifth octet — shape alone
+        // cannot tell them apart, and this pass picks the side that
+        // protects the user's data. Documented in KNOWN_LIMITATIONS.md
+        // §104 rather than left as a silent surprise.
+        let r = plain();
+        assert_eq!(r.apply("1.2.3.4.5"), format!("{IPV4_PLACEHOLDER}.5"));
     }
 
     #[test]

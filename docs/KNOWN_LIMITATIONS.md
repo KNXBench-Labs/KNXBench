@@ -5624,7 +5624,7 @@ The dialog says so in the user's language — "with IP addresses removed", not
 "with addresses removed" — and the privacy paragraph states plainly that KNX
 addresses and project names are never replaced anywhere.
 
-**Two knowable failure modes inside the four classes.** An IPv6 literal that
+**Three knowable failure modes inside the four classes.** An IPv6 literal that
 follows a word character with no separator at all (`peer2001:db8::1`) is not
 redacted: the boundary rule that keeps `knx_core::Project` from being read as
 a compressed address cannot tell that case from a Rust path. One separating
@@ -5634,6 +5634,22 @@ word-boundary check on its right-hand side only, so `/home/knxbench-old` is
 still rewritten to `~-old` when `$HOME` is `/home/knxbench` — over-redaction
 that garbles a path rather than a leak, and the far more common
 `/home/andrea` case is left alone.
+
+A third is the mirror image of the second fix round's IPv4 change. The scan
+now slides a four-group window across a whole run of digits and dots rather
+than requiring the run to split into exactly four groups, which is what
+closes a typo'd fifth octet or a glued extra group (`192.168.1.1.5`,
+`5.192.168.1.1`) that used to survive intact. But a bare, unlabelled number
+with five or more dot-separated parts is not distinguishable from an address
+by shape alone, and a genuine version string in that shape (`1.2.3.4.5` with
+nothing in front of it) is over-redacted the same way a real address would
+be caught — this pass picks the side that protects the user's data. A
+version string glued to a leading letter (`v1.2.3.4`) is unaffected: the
+boundary rule still refuses it. This project's own version string never
+takes the bare five-part shape (`0.1.0-alpha.1[+g<sha>]` has three digit
+groups before the first non-digit), so the residue does not touch anything
+this application prints; it would only bite a third party's version string
+quoted verbatim into the report with no letter in front of it.
 
 **Cause.** Deliberate, and scoped that way by the brief: redaction is by
 pattern class rather than by a list of known values, and each class has to be

@@ -7048,3 +7048,80 @@ deleted) was checked against `docs/IMPLEMENTATION_STATUS.md` and
 `docs/KNOWN_LIMITATIONS.md` for a repeated "two tests" claim; neither
 document repeats that count, so there is nothing to correct here — the
 number lives only in the run's own transcript outside `docs/`.
+
+## 2026-09-20 — T30 plugin and extension feasibility (branch `t30-plugin-study`)
+
+**A study. Nothing was implemented.** No crate, no trait, no prototype, no
+dependency, no `Cargo.toml` edit — deliberately, because the deliverable was a
+decision, and a study that quietly ships scaffolding has answered its own
+question by cheating. Four files changed, all of them Markdown:
+`docs/PLUGIN_FEASIBILITY.md` (new, the survey),
+`docs/adr/0025-extension-is-data-not-code.md` (new, the decision), plus index
+and cross-reference lines in `docs/adr/README.md` and `docs/ROADMAP.md`, and
+`docs/KNOWN_LIMITATIONS.md` §107.
+
+**What it concluded: no plugin API. Extension is data-shaped.** The four
+surfaces that already work for someone who has never compiled this repository
+— language packs, product databases, group-address CSV, and the headless `knx`
+CLI — are the supported story, and nothing is built on top of them.
+
+The evidence, all of it from this tree rather than from opinion. The whole
+16-crate workspace exposes **eight** traits; six are statically dispatched
+single-implementer or test seams, `BusConnection` is not even
+`dyn`-compatible by its own deliberate design, and the two that are
+dynamically dispatched (`GatewayConnector`, `BusTunnel` in
+`apps/knx-server/src/bus.rs`) say in their own doc comments that their second
+implementer is a test fake. There is no importer trait, no exporter trait, no
+report-template trait, and no `register` on `apps/knx-web/src/commandRegistry.ts`
+— `knx-app` re-exports `import_ets_project`/`export_ets_project` by name in
+412 lines. Every candidate seam has exactly one implementation, so any plugin
+interface would be generalised from a sample of one.
+
+Three mechanical facts close the trait route independently: all 16 manifests
+are `publish = false`; `check-layering` is a hand-written allowlist of crate
+names built from `cargo metadata`, so a third-party or runtime-loaded crate is
+invisible to it; and `knx-core` depends on `chrono` alone, with no `serde`, so
+the 31-variant `Command` enum has no serialisable form for any out-of-process
+or WebAssembly boundary to carry.
+
+The data-integrity finding is the one worth remembering: `Project`'s six
+fields are all `pub` (`crates/knx-core/src/project.rs:181-186`), so "all mutations
+go through `Command`" is a convention held by review rather than an invariant
+held by the type system — fine inside one workspace, quite different when
+`&mut Project` is handed to a stranger. And `Layer` has five variants, none of
+which means "a plugin did this", so a plugin write would forge `UserEdit`
+provenance or force a sixth variant through the persistence schema and its
+migration chain.
+
+The AGPL licence mechanics were worked through rather than waved at (FSF
+interpretation, `#GPLPlugins` / `#MereAggregation` / `#IfInterpreterIsGPL`,
+read for this study; not legal advice, not case law). The conclusion is
+deliberately *not* used to carry the decision: AGPL sustains plugin ecosystems
+elsewhere, and what it actually rules out is proprietary in-process addons,
+with certainty falling away as the boundary moves to WASM and then to a
+separate process. The codebase, not the copyright, is what is not ready.
+
+**Reconsider when** the `Command` layer is complete and serialisable — the
+same blocker `ROADMAP.md` already records for MCP capabilities and the in-app
+LLM surface, reached here by a third road — and when §22 (no authentication)
+and §63 (one shared project, one shared undo stack) are answered. If a code
+seam is then required, the recommended shape is an out-of-process helper over
+a documented protocol, not a `cdylib` and not a scripting engine.
+
+**The recommendation is falsifiable and the experiment is named, not run:**
+write a second implementation of one seam as an ordinary workspace crate (the
+cheapest candidate is a second output format on the pure, IO-free
+`knx-report` path) and see whether a shared trait falls out without contorting
+the first. If it does, ADR-0025 should be revised; if it does not, the
+sample-of-one finding is confirmed at the cost of one crate that is a feature
+rather than scaffolding.
+
+Gates: documentation-only, so nothing should have moved and nothing did.
+`cargo fmt --all -- --check`, `cargo run -p xtask -- check-layering` and
+`cargo run -p xtask -- check-headers` all exit 0, as does `npx tsc --noEmit`
+in `apps/knx-web`. `check-headers` still reports 158 files with a well-formed
+header and 167 without one against a ceiling of 168 — unchanged, because
+`headers::SCAN_ROOTS` is `apps`, `crates`, `xtask` and `Language::of` only
+recognises `.rs`/`.ts`/`.tsx`, so a Markdown file under `docs/` is not scanned
+at all and the one remaining ceiling slot was never at risk. `cargo test` and
+`cargo clippy` were skipped: no Rust file was touched.

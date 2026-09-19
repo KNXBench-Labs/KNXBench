@@ -61,6 +61,17 @@ use crate::management::{
     ManagementTransport, ACKNOWLEDGE_TIMEOUT, CONNECTION_TIMEOUT, MAX_REP_COUNT,
 };
 
+/// Total transmissions of a connected request before it is given up on: the
+/// original send plus `MAX_REP_COUNT` repetitions.
+///
+/// `[D]` TL §3, p. 15: *"the local Transport Layer shall repeat the
+/// transmission of the T_DATA_CONNECTED_REQ_PDU up to 3 times"* — 3
+/// repetitions of the original send, 4 transmissions total. Comparing the
+/// running `attempts` count against `MAX_REP_COUNT` directly stops one
+/// transmission short of that, because `attempts` already includes the
+/// original send; this constant exists so that mistake cannot recur.
+const MAX_TRANSMISSIONS: u8 = MAX_REP_COUNT + 1;
+
 /// The timings a session runs on, all of them injectable so that a test of
 /// the §5.5 wait loop does not take thirty seconds to fail.
 ///
@@ -945,7 +956,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             // `[D]` TL clause 4: repeat up to `max_rep_count` times, and
             // only while the frame has not been acknowledged — a repeat of
             // an acknowledged request would be a second request.
-            if acknowledged || attempts >= MAX_REP_COUNT {
+            if acknowledged || attempts >= MAX_TRANSMISSIONS {
                 return Err(SessionError::NoAnswer {
                     waiting_for,
                     each: self.timing.response_timeout,
@@ -2376,11 +2387,64 @@ mod tests {
             .expect_err("a silent device cannot answer");
         match error {
             SessionError::NoAnswer { attempts, .. } => {
-                assert_eq!(attempts, MAX_REP_COUNT, "TL clause 4's max_rep_count");
+                assert_eq!(
+                    attempts, MAX_TRANSMISSIONS,
+                    "TL clause 4's max_rep_count of 3 repetitions is 4 transmissions"
+                );
                 assert!(error.to_string().contains("does not distinguish"));
             }
             other => panic!("expected a time-out, got {other}"),
         }
+    }
+
+    /// C4, TL §3, p. 15: 3 repetitions of the original send is 4
+    /// transmissions, and the fourth must actually go out — not stop at
+    /// the third the way `attempts >= MAX_REP_COUNT` used to.
+    #[tokio::test]
+    async fn a_connected_exchange_makes_exactly_four_transmissions_before_giving_up() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            // Every transmission is dropped, so the count in the resulting
+            // `NoAnswer` is exactly how many the client sent — not how many
+            // more it would have sent had the device answered.
+            silent: true,
+            ..SimulatorConfig::default()
+        });
+        let mut session = read_only(&device);
+        session.connect().await.expect("T_Connect needs no answer");
+        let error = session
+            .read_load_state(ObjectIndex::APPLICATION_PROGRAM)
+            .await
+            .expect_err("a silent device cannot answer");
+        match error {
+            SessionError::NoAnswer { attempts, .. } => {
+                assert_eq!(attempts, 4, "the original send plus 3 repetitions");
+            }
+            other => panic!("expected a time-out, got {other}"),
+        }
+    }
+
+    /// C4: a device that stays silent for the original send and the first
+    /// two repetitions, then answers on what TL §3 calls the third and
+    /// final repetition — the fourth transmission overall — must still be
+    /// heard. `MAX_REP_COUNT` transmissions never leaving the wire would
+    /// make this one time out instead.
+    #[tokio::test]
+    async fn an_answer_on_the_fourth_transmission_is_accepted() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            silent_for_first_numbered_data_frames: 3,
+            ..SimulatorConfig::default()
+        });
+        let mut session = read_only(&device);
+        session.connect().await.expect("T_Connect needs no answer");
+        let state = session
+            .read_load_state(ObjectIndex::APPLICATION_PROGRAM)
+            .await
+            .expect("the fourth transmission must be answered");
+        assert_eq!(
+            state,
+            LoadState::Unloaded,
+            "the device answers normally once it stops dropping frames"
+        );
     }
 
     // ----------------------------------------------------- authorisation

@@ -90,6 +90,15 @@ pub struct SimulatorConfig {
     /// first row: the client must report a time-out and must not report a
     /// cause it did not observe.
     pub silent: bool,
+    /// Drop this many `T_DATA_CONNECTED` transmissions — no `T_ACK`, no
+    /// answer, as if lost in transit — before answering normally.
+    ///
+    /// The narrow, temporary cousin of [`SimulatorConfig::silent`], for
+    /// C4's TL §3, p. 15 retry count: a permanently silent device proves
+    /// the client eventually gives up, this one proves the client's retry
+    /// still gets an answer through on a transmission that would have been
+    /// one too many for the pre-fix cap.
+    pub silent_for_first_numbered_data_frames: u32,
     /// Accept `PID_DEVICE_CONTROL` bit 2 and honour it. When false the
     /// device keeps the bit clear, which is what PROF footnote 8 requires
     /// of a device that does not implement Verify Mode.
@@ -278,6 +287,7 @@ impl Default for SimulatorConfig {
     fn default() -> Self {
         Self {
             silent: false,
+            silent_for_first_numbered_data_frames: 0,
             verify_mode_supported: true,
             drop_load_state_writes: false,
             reference_always_zero: false,
@@ -365,6 +375,11 @@ struct State {
     dropped: bool,
     /// How many reads of `PID_LOAD_STATE_CONTROL` have arrived.
     load_state_reads: u32,
+    /// How many `T_DATA_CONNECTED` transmissions have arrived, counting
+    /// every retransmission of the same sequence number — what
+    /// [`SimulatorConfig::silent_for_first_numbered_data_frames`] counts
+    /// against.
+    numbered_data_frames: u32,
     level: u8,
     verify_mode: bool,
     send_seq: u8,
@@ -436,6 +451,7 @@ impl SimulatedDevice {
             connected: false,
             dropped: false,
             load_state_reads: 0,
+            numbered_data_frames: 0,
             level: config.free_access_level,
             verify_mode: false,
             send_seq: 0,
@@ -785,6 +801,17 @@ impl SimulatedDevice {
                 if self.config.silent {
                     // Not even a T_ACK: silence in §11.3 means silence.
                     self.record(&service);
+                    return;
+                }
+                let still_dropping = {
+                    let mut state = self.lock();
+                    state.numbered_data_frames += 1;
+                    state.numbered_data_frames <= self.config.silent_for_first_numbered_data_frames
+                };
+                if still_dropping {
+                    // A transmission lost in transit: no T_ACK, no answer,
+                    // nothing recorded — the client's own retry is what is
+                    // under test here, not this drop.
                     return;
                 }
                 self.emit(Tpci::Ack { seq }, ApplicationService::NoApplicationPdu);

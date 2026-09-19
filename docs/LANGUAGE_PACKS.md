@@ -253,8 +253,12 @@ a user sees are not asked for through this mechanism at all, because they
 are composed as plain text on the server and sent to the browser already
 finished:
 
-- **Parameter diagnostic messages** shown in the device parameter panel
-  (validation errors/warnings about a parameter's value).
+- **A parameter diagnostic's own detail** (the raw text behind the device
+  parameter panel's "Copy details" button) — developer-facing by design,
+  meant for a bug report, not for reading in your own language. The
+  diagnostic's headline sentence above it, once in this same list, closed
+  in T14 (2026-09-14): it now carries a `kind` tag your pack's own
+  `parameters.diagnostic.*` keys can translate.
 - **Session log entries** shown in the Log panel (what happened, when,
   and why).
 - **Error messages inside toast notifications** — the joke wrapper around
@@ -266,15 +270,15 @@ finished:
   UI language, product data language, or anything else.
 
 Full technical accounting of each of these:
-[KNOWN_LIMITATIONS.md §66](KNOWN_LIMITATIONS.md#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack).
+[KNOWN_LIMITATIONS.md §66](KNOWN_LIMITATIONS.md#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14).
 
-A smaller instance of the same boundary: if the application *rejects*
+A related instance closed by the same task: if the application *rejects*
 your language pack on import (a malformed `tag`, a missing required
 field, etc.), the sentence explaining *why* it was rejected is
-translated, but the specific reason quoted inside that sentence is not —
-it is the validator's own English diagnostic text, not a catalogue key.
-See
-[KNOWN_LIMITATIONS.md §67](KNOWN_LIMITATIONS.md#67-a-rejected-language-packs-own-reason-is-shown-untranslated-inside-a-translated-sentence).
+translated — and, since T14 (2026-09-14), so is the specific reason
+quoted inside that sentence, through its own `languagePack.rejection.*`
+keys your pack can supply. See
+[KNOWN_LIMITATIONS.md §67](KNOWN_LIMITATIONS.md#67-a-rejected-language-packs-own-reason-was-shown-untranslated-inside-a-translated-sentence--resolved-2026-09-14-t14).
 
 Knowing this boundary in advance means that if you spot English text in
 an otherwise fully translated screen, you can tell at a glance whether it

@@ -3747,4 +3747,113 @@ mod tests {
         assert_eq!(last.source, "import");
         assert_eq!(last.severity, Severity::Info);
     }
+
+    // Fix round 1 (Q2): `diagnostic_kind_and_message`'s twelve literals
+    // and `messages/en.ts`'s `parameters.diagnostic.*` entries for the
+    // same twelve kinds are two independent sources of the same English
+    // sentence, and nothing before this test asserted they had to agree.
+    // This pins this file's half of that pair: every string below is
+    // copied verbatim from `apps/knx-web/src/messages/en.ts` (as of this
+    // fix round), so an edit to either side that isn't mirrored on the
+    // other fails here, on this side, immediately. It does not and
+    // cannot fail on a divergence introduced by editing `en.ts` alone —
+    // that half has no Rust test to run against it — but a `git blame`
+    // on this test block is now the pointer from here to there.
+    #[test]
+    fn diagnostic_kind_and_message_matches_the_english_catalogue() {
+        use knx_productdb::dynamic::Diagnostic;
+
+        let cases: Vec<(Diagnostic, &str)> = vec![
+            (
+                Diagnostic::NoBranchMatched {
+                    choose_node: 1,
+                    param_ref: None,
+                    observed_value: "x".to_string(),
+                },
+                "A choice did not match any of its options.",
+            ),
+            (
+                Diagnostic::UnparsableTest {
+                    when_node: 1,
+                    raw: "x".to_string(),
+                },
+                "A choice's condition could not be understood.",
+            ),
+            (
+                Diagnostic::UnresolvedParamRef {
+                    choose_node: 1,
+                    param_ref: None,
+                },
+                "A choice's controlling parameter could not be found.",
+            ),
+            (
+                Diagnostic::NonNumericValue {
+                    choose_node: 1,
+                    param_ref: None,
+                    raw: "x".to_string(),
+                },
+                "A choice's controlling value was not a valid number.",
+            ),
+            (
+                Diagnostic::UnexpectedTypeNoneShape { choose_node: 1 },
+                "An unusual choice structure was skipped.",
+            ),
+            (
+                Diagnostic::UnrecognizedNode {
+                    node_id: 1,
+                    kind: "x".to_string(),
+                },
+                "An unrecognized program element was skipped.",
+            ),
+            (
+                Diagnostic::ModuleDefNotFound {
+                    node_id: 1,
+                    ref_id: None,
+                },
+                "A module could not be found in this program.",
+            ),
+            (
+                Diagnostic::ModuleCycleDetected {
+                    node_id: 1,
+                    ref_id: None,
+                },
+                "A module refers back to one of its own enclosing modules and was not expanded.",
+            ),
+            (
+                Diagnostic::ModuleNestingTooDeep {
+                    node_id: 1,
+                    ref_id: None,
+                    depth: 9,
+                },
+                "A module is nested deeper than this program will expand.",
+            ),
+            (
+                Diagnostic::ModuleExpansionBudgetExhausted {
+                    node_id: 1,
+                    ref_id: None,
+                    budget: 9,
+                },
+                "This program's modules are too numerous to fully expand; the rest were skipped.",
+            ),
+            (
+                Diagnostic::MissingValue {
+                    choose_node: 1,
+                    param_ref: None,
+                },
+                "A choice's controlling parameter has no value.",
+            ),
+            (
+                Diagnostic::ModuleWithoutId { node_id: 1 },
+                "A module instance has no identifier and cannot be matched to stored values.",
+            ),
+        ];
+
+        for (diagnostic, expected_message) in cases {
+            let (_, message) = diagnostic_kind_and_message(&diagnostic);
+            assert_eq!(
+                message, expected_message,
+                "diagnostic_kind_and_message drifted from messages/en.ts for {diagnostic:?}"
+            );
+        }
+    }
 }

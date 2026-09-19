@@ -3241,18 +3241,24 @@ parameter text is not this application's own content to substitute a
 guess for; a user configuring a physical device needs to know the text
 came from that vendor's package, not from a fallback chain.
 
-What no catalogue or pack can reach, because it is composed as plain
-text on the server rather than requested as a catalogue key:
-`ParameterDiagnostic.message`/`.detail`, `LogPanel`'s session-log entry
-fields, the error text quoted inside a translated toast wrapper, and
-`crates/knx-report`'s generated documentation export, which is not
-language-aware in any respect — no language parameter of any kind, not
-UI language, not product-data language. New backlog entry:
-[KNOWN_LIMITATIONS.md §66](KNOWN_LIMITATIONS.md#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack).
-A second, smaller instance: a rejected pack's own rejection reason is
+What no catalogue or pack could reach at the time, because it was
+composed as plain text on the server rather than requested as a
+catalogue key: `ParameterDiagnostic.message`/`.detail`, `LogPanel`'s
+session-log entry fields, the error text quoted inside a translated
+toast wrapper, and `crates/knx-report`'s generated documentation export,
+which is not language-aware in any respect — no language parameter of
+any kind, not UI language, not product-data language. New backlog
+entry:
+[KNOWN_LIMITATIONS.md §66](KNOWN_LIMITATIONS.md#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14).
+Of that list, `.message` was later closed (T14, 2026-09-14): it gained a
+`kind` tag of its own and now resolves through a catalogue key too,
+leaving `.detail`, the session log, the toast text, and the report
+export as the open remainder — see §66 for the current boundary rule
+that decides the rest.
+A second, smaller instance: a rejected pack's own rejection reason was
 validator text, not a catalogue key, inside an otherwise-translated
-sentence —
-[KNOWN_LIMITATIONS.md §67](KNOWN_LIMITATIONS.md#67-a-rejected-language-packs-own-reason-is-shown-untranslated-inside-a-translated-sentence).
+sentence — also closed by T14 (2026-09-14) —
+[KNOWN_LIMITATIONS.md §67](KNOWN_LIMITATIONS.md#67-a-rejected-language-packs-own-reason-was-shown-untranslated-inside-a-translated-sentence--resolved-2026-09-14-t14).
 
 `npx tsc -p apps/knx-web/tsconfig.json --noEmit`: clean. `npm --prefix
 apps/knx-web run test`: **336 passed across 31 files** (branch baseline

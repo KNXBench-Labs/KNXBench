@@ -4,6 +4,8 @@
 //! `com_object_instance` + the `Override<T>` codec next, `group_link`
 //! last (it needs `group_address` rows to exist first).
 
+use std::collections::BTreeMap;
+
 use rusqlite::{params, Connection};
 
 use knx_core::address::IndividualAddress;
@@ -593,6 +595,28 @@ pub fn upsert_com_object_instance(
     Ok(())
 }
 
+fn apply_override(
+    com: &mut ComObjectInstance,
+    attr: &str,
+    state: &str,
+    value: Option<String>,
+    text_kind: Option<String>,
+    layer: Option<String>,
+) -> Result<(), StoreError> {
+    match attr {
+        "text" => com.text = decode_text(state, value, text_kind, layer),
+        "description" => com.description = decode_text(state, value, text_kind, layer),
+        "dpt" => com.dpt = decode_dpt(state, value, layer),
+        "read" => com.flags.read = decode_bool(state, value, layer),
+        "write" => com.flags.write = decode_bool(state, value, layer),
+        "transmit" => com.flags.transmit = decode_bool(state, value, layer),
+        "update" => com.flags.update = decode_bool(state, value, layer),
+        "communication" => com.flags.communication = decode_bool(state, value, layer),
+        other => return Err(StoreError::UnknownOverrideAttr(other.to_string())),
+    }
+    Ok(())
+}
+
 pub fn load_com_object_instance(
     conn: &Connection,
     id: ComObjectInstanceId,
@@ -609,8 +633,8 @@ pub fn load_com_object_instance(
         module_instance_id,
     ) = conn.query_row(
         "SELECT source_path, source_ets_id, device_id, number, size_kind, size_value,
-                    size_layer, is_active, module_instance_id
-             FROM com_object_instance WHERE id = ?1",
+                size_layer, is_active, module_instance_id
+         FROM com_object_instance WHERE id = ?1",
         params![id.0],
         |row| {
             Ok((
@@ -626,16 +650,28 @@ pub fn load_com_object_instance(
             ))
         },
     )?;
-    let _ = device_id; // not part of ComObjectInstance's own fields beyond `device` below
+    let mut com = ComObjectInstance {
+        id,
+        source: SourceRef {
+            path: source_path,
+            ets_id: source_ets_id,
+        },
+        device: DeviceId(device_id),
+        number,
+        text: Override::Absent,
+        description: Override::Absent,
+        dpt: Override::Absent,
+        flags: ResolvedFlags::none(),
+        size: decode_size(size_kind, size_value, size_layer),
+        is_active,
+        links: vec![],
+        module_instance: module_instance_id.map(ModuleInstanceId),
+    };
 
     let mut stmt = conn.prepare(
         "SELECT attr, state, value, text_kind, layer FROM com_object_override
          WHERE com_object_instance_id = ?1",
     )?;
-    let mut text = Override::Absent;
-    let mut description = Override::Absent;
-    let mut dpt = Override::Absent;
-    let mut flags = ResolvedFlags::none();
     let rows = stmt
         .query_map(params![id.0], |row| {
             Ok((
@@ -648,40 +684,109 @@ pub fn load_com_object_instance(
         })?
         .collect::<Result<Vec<_>, _>>()?;
     for (attr, state, value, text_kind, layer) in rows {
-        match attr.as_str() {
-            "text" => text = decode_text(&state, value, text_kind, layer),
-            "description" => description = decode_text(&state, value, text_kind, layer),
-            "dpt" => dpt = decode_dpt(&state, value, layer),
-            "read" => flags.read = decode_bool(&state, value, layer),
-            "write" => flags.write = decode_bool(&state, value, layer),
-            "transmit" => flags.transmit = decode_bool(&state, value, layer),
-            "update" => flags.update = decode_bool(&state, value, layer),
-            "communication" => flags.communication = decode_bool(&state, value, layer),
-            // Not a coding-bug-only branch: this code never writes an
-            // attribute it does not know, but a hand-edited, corrupted or
-            // third-party-written database can hold one, and refusing to
-            // read it is better than aborting the process.
-            other => return Err(StoreError::UnknownOverrideAttr(other.to_string())),
-        }
+        apply_override(&mut com, &attr, &state, value, text_kind, layer)?;
+    }
+    Ok(com)
+}
+
+pub(crate) fn load_all_com_objects(
+    conn: &Connection,
+) -> Result<BTreeMap<DeviceId, Vec<ComObjectInstance>>, StoreError> {
+    let mut stmt = conn.prepare(
+        "SELECT com.id, com.device_id, com.source_path, com.source_ets_id, com.number,
+                com.size_kind, com.size_value, com.size_layer, com.is_active,
+                com.module_instance_id
+         FROM com_object_instance AS com
+         INNER JOIN device ON device.id = com.device_id
+         ORDER BY com.device_id, com.position",
+    )?;
+    let mut objects = Vec::new();
+    let mut indices = BTreeMap::new();
+    let rows = stmt.query_map([], |row| {
+        Ok(ComObjectInstance {
+            id: ComObjectInstanceId(row.get(0)?),
+            source: SourceRef {
+                path: row.get(2)?,
+                ets_id: row.get(3)?,
+            },
+            device: DeviceId(row.get(1)?),
+            number: row.get(4)?,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: decode_size(row.get(5)?, row.get(6)?, row.get(7)?),
+            is_active: row.get(8)?,
+            links: Vec::new(),
+            module_instance: row.get::<_, Option<u32>>(9)?.map(ModuleInstanceId),
+        })
+    })?;
+    for row in rows {
+        let com = row?;
+        indices.insert(com.id, objects.len());
+        objects.push(com);
     }
 
-    Ok(ComObjectInstance {
-        id,
-        source: SourceRef {
-            path: source_path,
-            ets_id: source_ets_id,
-        },
-        device: DeviceId(device_id),
-        number,
-        text,
-        description,
-        dpt,
-        flags,
-        size: decode_size(size_kind, size_value, size_layer),
-        is_active,
-        links: vec![],
-        module_instance: module_instance_id.map(ModuleInstanceId),
-    })
+    let mut stmt = conn.prepare(
+        "SELECT override.com_object_instance_id, override.attr, override.state,
+                override.value, override.text_kind, override.layer
+         FROM com_object_override AS override
+         INNER JOIN com_object_instance AS com ON com.id = override.com_object_instance_id
+         INNER JOIN device ON device.id = com.device_id
+         ORDER BY override.com_object_instance_id",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            ComObjectInstanceId(row.get(0)?),
+            row.get::<_, String>(1)?,
+            row.get::<_, String>(2)?,
+            row.get::<_, Option<String>>(3)?,
+            row.get::<_, Option<String>>(4)?,
+            row.get::<_, Option<String>>(5)?,
+        ))
+    })?;
+    for row in rows {
+        let (id, attr, state, value, text_kind, layer) = row?;
+        let index = indices
+            .get(&id)
+            .copied()
+            .ok_or_else(|| StoreError::from(rusqlite::Error::QueryReturnedNoRows))?;
+        apply_override(&mut objects[index], &attr, &state, value, text_kind, layer)?;
+    }
+
+    let mut stmt = conn.prepare(
+        "SELECT link.com_object_instance_id, link.group_address_id, link.direction
+         FROM group_link AS link
+         INNER JOIN com_object_instance AS com ON com.id = link.com_object_instance_id
+         INNER JOIN device ON device.id = com.device_id
+         ORDER BY link.com_object_instance_id, link.position",
+    )?;
+    let rows = stmt.query_map([], |row| {
+        Ok((
+            ComObjectInstanceId(row.get(0)?),
+            GroupLink {
+                ga: GroupAddressId(row.get(1)?),
+                direction: direction_from_str(&row.get::<_, String>(2)?),
+            },
+        ))
+    })?;
+    for row in rows {
+        let (id, link) = row?;
+        let index = indices
+            .get(&id)
+            .copied()
+            .ok_or_else(|| StoreError::from(rusqlite::Error::QueryReturnedNoRows))?;
+        objects[index].links.push(link);
+    }
+
+    let mut by_device = BTreeMap::new();
+    for com in objects {
+        by_device
+            .entry(com.device)
+            .or_insert_with(Vec::new)
+            .push(com);
+    }
+    Ok(by_device)
 }
 
 pub fn load_com_object_ids_for_device(
@@ -1117,5 +1222,89 @@ mod tests {
         ];
         upsert_group_links(&conn, com.id, &links).unwrap();
         assert_eq!(load_group_links(&conn, com.id).unwrap(), links);
+    }
+
+    #[test]
+    fn bulk_loader_preserves_device_ownership_positions_and_links() {
+        let conn = open_and_migrate_in_memory().unwrap();
+        upsert_installation_row(&conn, &installation()).unwrap();
+
+        let d1 = device();
+        let mut d2 = device();
+        d2.id = DeviceId(2);
+        upsert_device(&conn, InstallationId(0), 0, &d1).unwrap();
+        upsert_device(&conn, InstallationId(0), 1, &d2).unwrap();
+
+        conn.execute(
+            "INSERT INTO module_instance
+             (id, device_id, position, source_path, source_ets_id, repeat_index, instance_ets_id)
+             VALUES (7, 1, 0, '0.xml', 'MI-7', '', 'MI-7')",
+            [],
+        )
+        .unwrap();
+        for id in [10, 20] {
+            conn.execute(
+                "INSERT INTO group_address
+                 (id, installation_id, range_id, position, source_path, source_ets_id,
+                  name, address, central, unfiltered)
+                 VALUES (?1, 0, NULL, ?2, '0.xml', ?3, 'GA', ?4, 0, 0)",
+                params![id, id, format!("GA-{id}"), id],
+            )
+            .unwrap();
+        }
+
+        let mut first = com_object_fixture();
+        first.id = ComObjectInstanceId(9);
+        first.device = d1.id;
+        first.module_instance = Some(ModuleInstanceId(7));
+        let mut second = com_object_fixture();
+        second.id = ComObjectInstanceId(3);
+        second.device = d1.id;
+        second.number = 1;
+        let mut third = com_object_fixture();
+        third.id = ComObjectInstanceId(4);
+        third.device = d2.id;
+
+        upsert_com_object_instance(&conn, d1.id, 0, &first).unwrap();
+        upsert_com_object_instance(&conn, d1.id, 1, &second).unwrap();
+        upsert_com_object_instance(&conn, d2.id, 0, &third).unwrap();
+        let expected_links = vec![
+            GroupLink {
+                ga: GroupAddressId(20),
+                direction: Direction::Receive,
+            },
+            GroupLink {
+                ga: GroupAddressId(10),
+                direction: Direction::Send,
+            },
+        ];
+        upsert_group_links(&conn, first.id, &expected_links).unwrap();
+
+        let loaded = load_all_com_objects(&conn).unwrap();
+        assert_eq!(
+            loaded[&DeviceId(1)]
+                .iter()
+                .map(|com| com.id)
+                .collect::<Vec<_>>(),
+            vec![ComObjectInstanceId(9), ComObjectInstanceId(3)]
+        );
+        assert_eq!(loaded[&DeviceId(1)][0].links, expected_links);
+        assert_eq!(
+            loaded[&DeviceId(1)][0].module_instance,
+            Some(ModuleInstanceId(7))
+        );
+        assert_eq!(loaded[&DeviceId(1)][0].text, first.text);
+        assert_eq!(loaded[&DeviceId(1)][0].description, first.description);
+        assert_eq!(loaded[&DeviceId(1)][0].dpt, first.dpt);
+        assert_eq!(loaded[&DeviceId(1)][0].flags, first.flags);
+        assert_eq!(loaded[&DeviceId(1)][0].size, first.size);
+        assert_eq!(loaded[&DeviceId(1)][0].is_active, first.is_active);
+        assert_eq!(
+            loaded[&DeviceId(2)]
+                .iter()
+                .map(|com| com.id)
+                .collect::<Vec<_>>(),
+            vec![ComObjectInstanceId(4)]
+        );
     }
 }

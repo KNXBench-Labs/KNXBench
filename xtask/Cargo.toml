@@ -2,8 +2,14 @@
 name = "xtask"
 version = "0.1.0-alpha.1"
 edition.workspace = true
+license.workspace = true
 publish = false
 
 [dependencies]
 cargo_metadata = "0.18"
 knx-store.workspace = true
+serde_json.workspace = true
+yaml-rust2.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -6389,6 +6389,35 @@ Web tests 591 → 640 across 50 files; `check-headers` unchanged at 167 absent
 against a ceiling of 168, with all six new files carrying an ADR-0018 header.
 Closes **D12**'s help half; the end-user *manual* half stays open by
 decision, since ADR-0024 rules that `docs/` never ships to users. New
-limitation **§99**: help prose lives in the message catalogue one paragraph
+limitation **§100**: help prose lives in the message catalogue one paragraph
 per key, which buys a compile-time translation check and costs translation
 tooling.
+
+**Fix round 1 (2026-09-19, same branch).** Review found one real defect and
+three escaped mutations, all on the same seam. F1 closed only the search
+overlay and the palette, so pressing it over Settings, the new-project
+dialog or the catalog browser mounted a second `aria-modal` dialog beside a
+live one — with focus inside the newer panel and an opaque backdrop over it.
+The branch now closes every overlay `App` owns and declines to open at all
+while `FsPicker` is up, since that one mounts its own React root and cannot
+be closed from there. Three mutations that had passed 640/640 are pinned:
+deleting `setSearchOpen(false)`, deleting `e.preventDefault()` (F1 is the
+browser's help key too), and deleting `:not(.is-still)` from the tip's
+transition selector — the last of which needed a test that reads
+`styles.css` the way `motionGuard.test.ts` does, because asserting a class
+is applied says nothing about the rule behind it.
+
+The tip's hidden state changed from `visibility: hidden` to `opacity: 0`.
+`visibility: hidden` removes an element from the accessibility tree, so the
+permanent `aria-describedby` the whole component is built around resolved to
+nothing while the bubble was closed, and the description only arrived
+because `onFocus` opened it first — a state update racing the screen
+reader's lookup. ADR-0024 decision 1 now records the technique as part of
+the decision rather than as styling. Prose corrections in both languages:
+five communication-object flags is what KNXBench models, not what KNX
+defines (the sixth, Read-on-Init, is parsed by `knx-productdb` and modelled
+nowhere else, now stated in the limits topic); gateway discovery and routing
+are absent from *this window*, not from `knx-net`, which ships both; the
+address filter also matches datapoint types; `.knxproj` export is greyed out
+until the project has a file; and F1 reaches help from the main window only,
+not from the diagnostics companion. Web tests 640 → 648.

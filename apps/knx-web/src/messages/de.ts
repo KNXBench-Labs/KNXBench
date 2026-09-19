@@ -847,11 +847,11 @@ export const messages: Record<MessageKey, string> = {
   "toolbar.help": "Hilfe (F1)",
   "help.title": "Hilfe",
   "help.intro":
-    "Was die Teile dieses Fensters tun und was die KNX-Begriffe dahinter bedeuten. F1 öffnet das hier von überall aus.",
+    "Was die Teile dieses Fensters tun und was die KNX-Begriffe dahinter bedeuten. F1 öffnet das hier von überall im Hauptfenster; das abgetrennte Diagnosefenster hat keine eigene Hilfe.",
   "help.topics": "Themen",
   "help.close": "Schließen",
   "help.standardNote":
-    "Das beschreibt, wie KNXBench den Begriff verwendet, nicht wie die KNX-Spezifikation ihn definiert — maßgeblich bleibt die Spezifikation.",
+    "Das beschreibt, wie KNXBench den Begriff verwendet, nicht wie der KNX Standard ihn definiert — maßgeblich bleibt der Standard.",
 
   "help.topic.gettingStarted.title": "Erste Schritte",
   "help.topic.gettingStarted.p1":
@@ -893,7 +893,7 @@ export const messages: Record<MessageKey, string> = {
 
   "help.topic.comObjectFlags.title": "Flags der Kommunikationsobjekte",
   "help.topic.comObjectFlags.p1":
-    "Ein Kommunikationsobjekt ist ein Ein- oder Ausgang des Applikationsprogramms eines Geräts. Es mit einer Gruppenadresse zu verknüpfen, setzt das Gerät auf diese Adresse. Fünf Flags legen fest, was es dort darf; in den Eigenschaften stehen sie als R, W, T, U und C.",
+    "Ein Kommunikationsobjekt ist ein Ein- oder Ausgang des Applikationsprogramms eines Geräts. Es mit einer Gruppenadresse zu verknüpfen, setzt das Gerät auf diese Adresse. KNXBench bildet dafür fünf Flags ab — in den Eigenschaften stehen sie als R, W, T, U und C — und zusammen legen sie fest, was das Objekt dort darf.",
   "help.topic.comObjectFlags.p2":
     "C, Kommunikation, ist der Hauptschalter: ist es aus, nimmt das Objekt am Busverkehr gar nicht teil, und die übrigen vier haben nichts, woran sie wirken könnten. R, Lesen, lässt das Objekt eine Leseanfrage mit seinem aktuellen Wert beantworten. W, Schreiben, lässt ein eintreffendes Telegramm diesen Wert ändern.",
   "help.topic.comObjectFlags.p3":
@@ -903,7 +903,7 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.busMonitor.p1":
     "Der Busmonitor verfolgt den laufenden Verkehr über ein KNXnet/IP-Gateway. Adresse und Port eintragen, verbinden, und die Telegramme erscheinen, sobald sie eintreffen. Mitlesen und Senden sind getrennt: die Tabelle zeigt nur an, und ein Telegramm zu senden ist ein eigener, bewusster Schritt.",
   "help.topic.busMonitor.p2":
-    "Tunneling ist der einzige Übertragungsweg. KNXBench sucht das Netz nicht nach Gateways ab und tritt keiner Routing-Multicast-Gruppe bei — deshalb muss die Adresse von Hand eingetragen werden.",
+    "Tunneling ist der einzige Übertragungsweg. Dieses Fenster sucht das Netz nicht nach Gateways ab und tritt keiner Routing-Multicast-Gruppe bei — deshalb muss die Adresse von Hand eingetragen werden.",
   "help.topic.busMonitor.p3":
     "Telegramme werden gegen das geöffnete Projekt decodiert. Ändert sich dieses Projekt während einer laufenden Sitzung, sagt der Monitor das, statt bereits Decodiertes klammheimlich umzubeschriften — der Hinweis bedeutet, dass die decodierte Spalte die Antwort des älteren Projektstands ist.",
 
@@ -913,7 +913,7 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.importExport.p2":
     "Daten, die diese Anwendung nicht abbildet, werden nicht weggeworfen. Sie werden entweder unverändert aufbewahrt oder als nicht unterstützt aufgeführt und tauchen im Importbericht auf, statt zwischen Datei und Projekt zu verschwinden.",
   "help.topic.importExport.p3":
-    "„Nach .knxproj exportieren…“ schreibt aus dem aktuellen Projekt eine Datei in ETS-Form. Ob eine echte ETS-Installation diese Datei wieder öffnet, ist nicht geprüft, und es wird in keine Richtung ETS-Kompatibilität behauptet. Gruppenadressen lassen sich zusätzlich als CSV ein- und ausgeben, und „Dokumentation exportieren…“ schreibt eine lesbare Beschreibung des Projekts.",
+    "„Nach .knxproj exportieren…“ schreibt aus dem aktuellen Projekt eine Datei in ETS-Form und bleibt ausgegraut, solange das Projekt selbst noch nicht in einer Datei gespeichert ist. Ob eine echte ETS-Installation diese Datei wieder öffnet, ist nicht geprüft, und es wird in keine Richtung ETS-Kompatibilität behauptet. Gruppenadressen lassen sich zusätzlich als CSV ein- und ausgeben, und „Dokumentation exportieren…“ schreibt eine lesbare Beschreibung des Projekts.",
 
   "help.topic.keyboard.title": "Tastatur",
   "help.topic.keyboard.p1":
@@ -927,7 +927,7 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.limits.p1":
     "KNXBench ist eine unabhängige Anwendung. Sie stammt nicht von der KNX Association, ist von ihr weder unterstützt noch zertifiziert, und sie ist nicht die ETS. Wo sie eine ETS-Datei liest oder schreibt, tut sie das nach eigener Lesart dieser Datei.",
   "help.topic.limits.p2":
-    "KNX Secure wird nicht unterstützt. Ein kennwortgeschütztes Projekt lässt sich aus diesem Fenster nicht öffnen — es gibt keine Stelle, an der das Kennwort einzugeben wäre. Geräte über den Bus zu programmieren, ist hier ebenfalls nicht vorgesehen: die Busfunktionen sind Mitlesen und das Senden einzelner Telegramme.",
+    "KNX Secure wird nicht unterstützt. Ein kennwortgeschütztes Projekt lässt sich aus diesem Fenster nicht öffnen — es gibt keine Stelle, an der das Kennwort einzugeben wäre. Geräte über den Bus zu programmieren, ist hier ebenfalls nicht vorgesehen: die Busfunktionen sind Mitlesen und das Senden einzelner Telegramme. Das sechste Kommunikationsobjekt-Flag des KNX, Read-on-Init (I), bildet das Projektmodell nicht ab: Produktdaten, die es mitbringen, werden gelesen, das Flag selbst wird aber weder angezeigt noch lässt es sich ändern.",
   "help.topic.limits.p3":
     "Was vorhanden ist, ist getestet, aber eine Testsuite ist keine Begehung. Bevor Sie sich in einer Anlage auf diese Anwendung verlassen, gleichen Sie ab, was sie Ihnen sagt, mit dem, was die Anlage tut.",
 
@@ -936,7 +936,7 @@ export const messages: Record<MessageKey, string> = {
     "R, W, T, U und C legen fest, was dieses Objekt am Bus darf. C ist der Hauptschalter — ist es aus, bewirken die anderen vier nichts. Die ausführliche Erklärung steht unter F1.",
   "help.tip.addressTable.label": "Was diese Tabelle zeigt",
   "help.tip.addressTable.text":
-    "Alle Gruppenadressen des Projekts mit ihrem Datenpunkttyp und den damit verknüpften Kommunikationsobjekten. Das Feld filtert nach Adresse oder Name. Was eine Gruppenadresse ist, erklärt F1.",
+    "Alle Gruppenadressen des Projekts mit ihrem Datenpunkttyp und den damit verknüpften Kommunikationsobjekten. Das Feld filtert nach Adresse, Name oder Datenpunkttyp. Was eine Gruppenadresse ist, erklärt F1.",
   "help.tip.busGateway.label": "Was als Gateway einzutragen ist",
   "help.tip.busGateway.text":
     "Adresse und Port eines KNXnet/IP-Gateways, etwa 192.0.2.1:3671. Nur Tunneling — diese Anwendung sucht das Netz nicht nach einem Gateway ab.",

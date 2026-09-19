@@ -450,6 +450,16 @@ export function productLanguages(): Promise<ProductLanguage[]> {
   return request("/api/product-languages");
 }
 
+/// What the running build is: `<version>[+g<sha>]`, straight from
+/// `knx-server`'s `version_string()` and therefore from its manifest plus
+/// the commit the build knew about. Carries no crate name — the About
+/// dialog puts the *application's* name in front of it. Fetched rather
+/// than imported from `package.json`, which versions the frontend package
+/// and nothing else.
+export function serverVersion(): Promise<{ version: string }> {
+  return request("/api/version");
+}
+
 /// Uses multipart directly rather than `request()`: setting JSON's
 /// `Content-Type` on a FormData request would remove the required boundary.
 export async function installProductPackage(file: File): Promise<CatalogInstallReport> {

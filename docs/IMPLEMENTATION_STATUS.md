@@ -6838,3 +6838,51 @@ the review found and C19 does not fix. TL §3.7 p. 13 and §3.8 p. 14 require
 ack request — as the crate's only outbound default. Both citations verified
 in the PDF at offset 0. Fixing it changes every frame the crate emits,
 group communication included, so it gets its own change and its own tests.
+
+### Second review fix round (2026-09-19), three lines that nothing made fail
+
+The re-review mutated the fix round's own work and found three pieces with no
+test behind them: the tolerated arm's `self.connection = None`, and
+`ConnectRejected` and `ConnectionLost` in `reestablishment_may_be_retried`'s
+match. Deleting any of them left the suite green. Each now has a test that
+fails without it.
+
+1. **The half-established connection had no test.** Every scenario that
+   reached the tolerated arm got there through an `AuthorisationPlan::Skip`
+   session whose `T_Connect` never confirmed, so `self.connection` was
+   already `None` and the line changed nothing. Giving it an effect needs a
+   `connect()` that confirms its `T_Connect` and then fails *after*
+   `self.connection` is set — which is the Verify Mode step of a
+   write-capable session.
+   `a_half_established_connection_is_not_inherited_by_the_next_poll` builds
+   that: poll #2 is unacknowledged (action A6 releases the connection), and
+   the re-establishment's `PID_DEVICE_CONTROL` read is acknowledged and never
+   answered, so `connect()` returns `NoAnswer` holding a half-built
+   connection. The assertions are on what the stale `Some(..)` costs, not on
+   the field: the device's own Verify Mode bit, the count of
+   `PID_DEVICE_CONTROL` writes, the count of `T_Connect` frames. Deleting the
+   line fails it on the Verify Mode bit — the mutant polls happily to the end
+   on a connection whose §10.3 handshake never ran.
+2. **`ConnectRejected` had no test.** `a_refused_re_establishment_is_tried_again`
+   answers the first re-establishment's `T_Connect` with a *negative*
+   `L_Data.con` (`[D]` TL §3.7, p. 13 sends it with `ack_request` set, so the
+   confirmation carries the layer-2 answer) and asserts the wait tries again
+   and settles. Dropping the variant from the match fails it with the
+   refusal as the wait's return value.
+3. **`ConnectionLost` had no test.** `a_re_establishment_the_device_drops_is_tried_again`
+   has the device confirm the `T_Connect` and then send
+   `T_DISCONNECT_REQ_PDU` under the Verify Mode read, so the loss is raised
+   from inside `connect()` rather than from a poll — the only place
+   `reestablishment_may_be_retried` ever sees one. Dropping the variant fails
+   it the same way.
+
+Three new `SimulatorConfig` knobs, each the twin of one that already existed:
+`unanswered_device_control_reads` and `drop_connection_on_device_control_read`
+(the `PID_DEVICE_CONTROL` versions of the two `PID_LOAD_STATE_CONTROL` knobs)
+and `rejected_connects` (the negative-confirmation sibling of
+`unanswered_connects`). All four members of the tolerated set are now pinned
+by a test that fails without them.
+
+Round 1's refusal of the prescribed window widening stands; the re-review
+reproduced the non-discrimination independently. Limitation **105** is
+unchanged and still not fixed here.

@@ -2170,6 +2170,7 @@ mod tests {
     use crate::cemi::LDataFrame;
     use knx_core::commissioning::authorisation::AccessKey;
     use knx_core::commissioning::programming_mode::CURR_PROG_MODE_ADDRESS;
+    use std::ops::Range;
 
     /// The cited timings with the waiting taken out. A test of the shape of
     /// the §5.5 loop has no business taking thirty seconds to find out that
@@ -2761,12 +2762,6 @@ mod tests {
     /// elapsed time: the counts are what the Standard constrains.
     #[tokio::test]
     async fn the_wait_loop_tells_a_released_connection_from_a_silent_device() {
-        /// The reads of one poll that goes quiet, numbered from one and
-        /// counting every transmission. Read #1 is the first poll, which
-        /// must answer so that the loop has a state Table 94 permits
-        /// silence in; the quiet poll is next.
-        const FIRST_QUIET_READ: u32 = 2;
-
         async fn wait_out(config: SimulatorConfig) -> (SimulatedDevice, u32, bool, usize, usize) {
             let device = SimulatedDevice::with_config(config);
             // Settling by answered reads rather than by elapsed time: the
@@ -3020,6 +3015,250 @@ mod tests {
             session.connection().is_none(),
             "a re-establishment that failed leaves no connection behind, \
              half-established or otherwise"
+        );
+    }
+
+    /// The reads of the first poll that goes quiet, numbered from one and
+    /// counting every transmission. Read #1 has to answer, because a wait
+    /// that has read nothing has no Table 94 permission to tolerate
+    /// anything; the quiet poll is the next one.
+    const FIRST_QUIET_READ: u32 = 2;
+
+    /// The whole ladder of one unacknowledged poll: four transmissions, no
+    /// `T_ACK` for any of them, TL action `A6` at the end of it.
+    fn one_unacknowledged_poll() -> Range<u32> {
+        FIRST_QUIET_READ..FIRST_QUIET_READ + u32::from(MAX_TRANSMISSIONS)
+    }
+
+    /// The states that make a wait sit in `LoadCompleting` for exactly one
+    /// answered read and report `Loaded` on the next one it answers.
+    fn completing_once(device: &SimulatedDevice) {
+        device.preset_load_state(ObjectIndex::APPLICATION_PROGRAM, LoadState::Loaded);
+        device.preset_load_completing_polls(ObjectIndex::APPLICATION_PROGRAM, 1);
+    }
+
+    /// A write-capable session whose `connect()` therefore performs the
+    /// Verify Mode step, with a deadline far enough away to play no part.
+    fn patient_writer<'t>(device: &'t SimulatedDevice) -> ManagementSession<'t, SimulatedDevice> {
+        ManagementSession::authorised(
+            device,
+            AuthorisationPlan::Skip,
+            SessionTiming {
+                max_transition: Duration::from_secs(30),
+                ..fast()
+            },
+            simulator_authorisation(device, WriteScope::Download),
+        )
+        .expect("a simulator authorisation against a simulator transport is accepted")
+    }
+
+    /// Runs the `LoadCompleting` wait these three tests share, under an
+    /// outer time-out so that a loop which stops making progress fails as a
+    /// test rather than as a hung suite.
+    async fn wait_out_load_completing(
+        session: &mut ManagementSession<'_, SimulatedDevice>,
+    ) -> Result<LoadState, SessionError> {
+        let outcomes = permitted_outcomes(
+            LoadState::Loading,
+            Stimulus::Event(LoadEvent::LoadCompleted),
+            None,
+        );
+        tokio::time::timeout(
+            Duration::from_secs(5),
+            session.wait_for_load_state(
+                ObjectIndex::APPLICATION_PROGRAM,
+                LoadEvent::LoadCompleted,
+                LoadState::Loading,
+                &outcomes,
+            ),
+        )
+        .await
+        .expect("the wait must terminate, not spin")
+    }
+
+    fn connects(device: &SimulatedDevice) -> usize {
+        device
+            .seen()
+            .iter()
+            .filter(|entry| matches!(entry, Seen::Connect))
+            .count()
+    }
+
+    /// C19 fix round 2: a half-established connection is not a connection,
+    /// and the next poll may not inherit one.
+    ///
+    /// [`ManagementSession::connect`] puts `self.connection` in place as
+    /// soon as the `T_Connect` confirms, and only then authorises and
+    /// asserts Verify Mode — spec §10.3 makes those one unit with the
+    /// connection, not an optional epilogue to it. A device that
+    /// acknowledges the Verify Mode read and withholds the answer is RES
+    /// §4.23.2.4.1's *"If the MaS responds during state LoadCompleting, an
+    /// established TL-connection is kept alive"* — busy, not gone — and it
+    /// makes `connect()` return [`SessionError::NoAnswer`] with that
+    /// half-built connection still in the field.
+    ///
+    /// Left there, the next iteration takes the `Some(_)` branch, skips the
+    /// re-establishment this arm just promised, and polls on a connection
+    /// whose Verify Mode step never ran. So the assertions below are on what
+    /// that costs and not on the field: the device's own Verify Mode bit,
+    /// the `PID_DEVICE_CONTROL` write that sets it, and the session's record
+    /// of it — which is what spec §6.2 branches every memory write on.
+    #[tokio::test]
+    async fn a_half_established_connection_is_not_inherited_by_the_next_poll() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            // Poll #2 is acknowledged by nobody, so action A6 releases the
+            // connection and the loop has to build another.
+            unacknowledged_load_state_reads: Some(one_unacknowledged_poll()),
+            // …and that one gets as far as `Some(..)` and no further: its
+            // Verify Mode read is acknowledged and never answered.
+            unanswered_device_control_reads: Some(2..3),
+            ..SimulatorConfig::default()
+        });
+        completing_once(&device);
+        let mut session = patient_writer(&device);
+        session.connect().await.expect("connect");
+
+        let observed = wait_out_load_completing(&mut session)
+            .await
+            .expect("the device answers once a whole connection is up again");
+
+        assert_eq!(observed, LoadState::Loaded);
+        assert!(
+            device.verify_mode(),
+            "the wait polled on to the end holding a connection whose Verify \
+             Mode step never ran: the device says bit 2 is clear while the \
+             session says it is connected"
+        );
+        assert_eq!(
+            session.verify_mode(),
+            Some(VerifyMode::Active),
+            "spec §6.2 picks a write procedure from this value, so a \
+             connection that inherited it from a connect that never finished \
+             picks the wrong one"
+        );
+        assert_eq!(
+            device_control_writes(&device),
+            2,
+            "one per connection that finished coming up: the first one and \
+             the one that replaced the half-established attempt"
+        );
+        assert_eq!(
+            device.device_control_reads(),
+            3,
+            "three attempts at the Verify Mode step — the original, the one \
+             that went unanswered, and the retry it earned"
+        );
+        assert_eq!(
+            connects(&device),
+            3,
+            "the original T_Connect, the half-established one, and the \
+             re-establishment the tolerated failure promised"
+        );
+        assert_eq!(
+            session.reconnects(),
+            2,
+            "a failed re-establishment still has to be followed by another \
+             one, which is what `periodically` means"
+        );
+    }
+
+    /// C19 fix round 2: a re-establishment the Data Link Layer refuses is
+    /// still a re-establishment that may be tried again.
+    ///
+    /// `[D]` TL §3.7, p. 13: `T_Connect` goes out with `ack_request` set, so
+    /// the `L_Data.con` reports whether the addressed device acknowledged it
+    /// at layer 2, and a negative one is [`SessionError::ConnectRejected`].
+    /// RES §4.23.2.4.1's NOTE 86 — *"A device may be offline during state
+    /// LoadCompleting"* — is exactly the device that fails to acknowledge,
+    /// so a refusal here is the expected answer from a device that is coming
+    /// back, not a fault to report.
+    #[tokio::test]
+    async fn a_refused_re_establishment_is_tried_again() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            unacknowledged_load_state_reads: Some(one_unacknowledged_poll()),
+            // The first re-establishment is refused at the Data Link Layer;
+            // the one after it is not.
+            rejected_connects: Some(2..3),
+            ..SimulatorConfig::default()
+        });
+        completing_once(&device);
+        let mut session = ManagementSession::read_only(
+            &device,
+            device.address(),
+            AuthorisationPlan::Skip,
+            SessionTiming {
+                max_transition: Duration::from_secs(30),
+                ..fast()
+            },
+        )
+        .expect("the simulated device is contactable");
+        session.connect().await.expect("connect");
+
+        let observed = wait_out_load_completing(&mut session)
+            .await
+            .expect("RES §4.23.2.4.1: a refused attempt is not the answer to this wait");
+
+        assert_eq!(observed, LoadState::Loaded);
+        assert_eq!(
+            connects(&device),
+            2,
+            "the refused T_Connect never reached the device, so only the \
+             original and the attempt after the refusal are recorded"
+        );
+        assert_eq!(
+            session.reconnects(),
+            2,
+            "the refusal was an attempt too, and the wait made another"
+        );
+        assert!(
+            session.connection().is_some(),
+            "the wait returned holding the connection its last attempt built"
+        );
+    }
+
+    /// C19 fix round 2: a re-establishment the device tears down mid-way is
+    /// likewise tried again.
+    ///
+    /// The device here answers the `T_Connect` and then sends
+    /// `T_DISCONNECT_REQ_PDU` while the client is reading
+    /// `PID_DEVICE_CONTROL` for the Verify Mode step, which is
+    /// [`SessionError::ConnectionLost`] raised from inside `connect()`
+    /// rather than from a poll. NOTE 86's second sentence has this one by
+    /// name: *"A running TL-connection may be lost..."*
+    #[tokio::test]
+    async fn a_re_establishment_the_device_drops_is_tried_again() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            unacknowledged_load_state_reads: Some(one_unacknowledged_poll()),
+            // Read #1 belongs to the session's first connect; read #2 is the
+            // re-establishment's, and the device drops the connection under
+            // it.
+            drop_connection_on_device_control_read: Some(2),
+            ..SimulatorConfig::default()
+        });
+        completing_once(&device);
+        let mut session = patient_writer(&device);
+        session.connect().await.expect("connect");
+
+        let observed = wait_out_load_completing(&mut session)
+            .await
+            .expect("RES §4.23.2.4.1: a connection lost while being built is rebuilt");
+
+        assert_eq!(observed, LoadState::Loaded);
+        assert!(
+            device.verify_mode(),
+            "the wait did not settle for the connection it lost: the one it \
+             returned with completed its Verify Mode step"
+        );
+        assert_eq!(
+            connects(&device),
+            3,
+            "the original T_Connect, the one the device dropped, and the one \
+             that replaced it"
+        );
+        assert_eq!(
+            session.reconnects(),
+            2,
+            "the lost attempt counted, and the wait made another"
         );
     }
 

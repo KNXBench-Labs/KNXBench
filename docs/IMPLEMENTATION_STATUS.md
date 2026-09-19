@@ -6415,3 +6415,33 @@ dispatch report for the exact panic text of each. No
 with no residual deviation left over the wire. Out of scope, unchanged: the
 low-level frame acknowledge mechanics of `T_DATA_CONNECTED` itself.
 
+## 2026-09-19 — C5: the load-state wait gave up right on the deadline, one attempt early
+
+RES §4.23.2.4.1, p. 297: *"If a before established TL-connection
+breaks down, the MaC shall try to re-establish the connection periodically
+during the maximum transition time and once more when the maximum
+transition time has passed."* `wait_for_load_state` reconnected inside its
+poll loop citing this clause, but returned `TransitionTimedOut` the instant
+`started.elapsed() >= max_transition`, skipping the one attempt the clause
+asks for past the deadline. Fixed with a single `made_the_one_more_attempt`
+flag: crossing the deadline sets the flag and lets the loop run one more
+full iteration (reconnect included) before the next deadline check actually
+returns the error — so the extra attempt happens exactly once, never zero
+and never in a loop. Two new tests exercise both directions directly
+against the private `wait_for_load_state` method: one where the simulator
+only settles into the target load state after `max_transition` has passed
+and the call still succeeds
+(`a_late_answer_past_the_deadline_still_succeeds`), and one bounded by an
+outer `tokio::time::timeout` proving a device that never settles gets
+exactly one attempt past the deadline, not an infinite retry
+(`a_device_that_never_settles_gets_exactly_one_attempt_past_the_deadline`).
+
+Mutation-tested per the task brief: removing the post-deadline attempt
+(returning immediately on the first deadline crossing) fails the late-answer
+test; letting the post-deadline branch loop instead of firing once fails
+the not-twice test, bounded by its own inner `tokio::time::timeout` rather
+than by an unbounded hang. See the C4/C5 dispatch report for the exact
+panic text of each. No `docs/KNOWN_LIMITATIONS.md` entry: this is a closed
+spec-conformance fix with no residual deviation left in the state machine.
+Out of scope, unchanged: every other clause of RES §4.23.2.4.1 not
+concerning the count of post-deadline attempts.

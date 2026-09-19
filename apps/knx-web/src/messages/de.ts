@@ -941,4 +941,46 @@ export const messages: Record<MessageKey, string> = {
   "help.tip.busGateway.label": "Was als Gateway einzutragen ist",
   "help.tip.busGateway.text":
     "Adresse und Port eines KNXnet/IP-Gateways, etwa 192.0.2.1:3671. Nur Tunneling — diese Anwendung sucht das Netz nicht nach einem Gateway ab.",
+
+  // T29 — der Fehlerbericht. Der Dialog ist übersetzt, report.md und der
+  // GitHub-Text nicht (beides erzeugt der Server auf Englisch, gelesen von
+  // dem, der das Issue bearbeitet).
+  "debugReport.button": "Fehlerbericht…",
+  "debugReport.title": "Fehlerbericht",
+  "debugReport.intro":
+    "Sammelt das, was zur Fehlersuche taugt, in einer Zip-Datei auf diesem Rechner. Es wird nichts verschickt: die Datei entsteht dort, wo Sie sie hinlegen, und die GitHub-Schaltfläche öffnet lediglich eine vorausgefüllte Issue-Seite im Browser, die Sie vor dem Absenden lesen.",
+  "debugReport.descriptionLabel": "Was ist passiert?",
+  "debugReport.descriptionPlaceholder": "Was Sie getan haben, was Sie erwartet haben, was stattdessen geschah.",
+  "debugReport.descriptionHint":
+    "Kommt in Ihren eigenen Worten in den Bericht. Alles Weitere unten wird automatisch gesammelt.",
+  "debugReport.filterName": "Zip-Archiv",
+  "debugReport.include.log.label": "Sitzungsprotokoll",
+  "debugReport.include.log.hint": "Die Einträge aus dem Reiter „Log“, ohne Adressen.",
+  "debugReport.include.projectSummary.label": "Projektstatistik",
+  "debugReport.include.projectSummary.hint":
+    "Wie viele Geräte, Linien und Gruppenadressen das geöffnete Projekt hat. Nur Anzahlen — keine Namen, keine Adressen.",
+  "debugReport.include.busTelegrams.label": "Telegramme des Busmonitors",
+  "debugReport.include.busTelegrams.hint":
+    "Die Telegramme, die gerade im Puffer des Monitors liegen. Sie behalten die physikalischen und Gruppenadressen Ihrer Geräte.",
+  "debugReport.contentsTitle": "Was in der Datei stehen wird",
+  "debugReport.contents.report": "report.md — Ihre Beschreibung, die Versionen und die Umgebung.",
+  "debugReport.contents.environment": "environment.json — dieselben Angaben maschinenlesbar.",
+  "debugReport.contents.log": "log.json — die Protokolleinträge dieser Sitzung.",
+  "debugReport.contents.projectSummary": "project-summary.json — Anzahlen zum geöffneten Projekt.",
+  "debugReport.contents.busTelegrams": "bus-telegrams.json — der Puffer des Busmonitors.",
+  "debugReport.privacyRedacted":
+    "IP-Adressen, Ihr Home-Verzeichnis und der Name dieses Rechners werden in report.md, environment.json und log.json durch Platzhalter ersetzt.",
+  "debugReport.privacyTelegrams":
+    "bus-telegrams.json ist die Ausnahme: die Datei behält die physikalischen und Gruppenadressen Ihrer Anlage, denn ohne sie sagen die Telegramme nichts aus. Nehmen Sie sie nur auf, wenn Sie das weitergeben wollen.",
+  "debugReport.save": "Zip speichern…",
+  "debugReport.openIssue": "GitHub-Issue öffnen…",
+  "debugReport.close": "Schließen",
+  "debugReport.busy": "Wird gesammelt…",
+  "debugReport.saved.one": "Fehlerbericht gespeichert, {count} Datei.",
+  "debugReport.saved.other": "Fehlerbericht gespeichert, {count} Dateien.",
+  "debugReport.issueOpened":
+    "Im Browser wurde ein vorausgefülltes Issue geöffnet. Abgeschickt ist nichts — lesen Sie es, hängen Sie die Zip-Datei an und senden Sie es selbst ab.",
+  "debugReport.issueTruncated":
+    "Im Browser wurde ein vorausgefülltes Issue geöffnet. Der Bericht war für einen Link zu lang und wurde gekürzt — speichern Sie bitte zusätzlich die Zip-Datei und hängen Sie sie an.",
+  "debugReport.issueTitle": "Fehlerbericht aus KNXBench",
 };

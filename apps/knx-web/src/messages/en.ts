@@ -1071,6 +1071,48 @@ export const messages = {
   "help.tip.busGateway.label": "What to enter as the gateway",
   "help.tip.busGateway.text":
     "The address and port of a KNXnet/IP gateway, such as 192.0.2.1:3671. Tunnelling only — this application does not search the network for one.",
+
+  // T29 — the debug report. The dialog is translated; `report.md` and the
+  // GitHub issue body are not (they are server-generated English, read by
+  // whoever picks the issue up).
+  "debugReport.button": "Debug report…",
+  "debugReport.title": "Debug report",
+  "debugReport.intro":
+    "Collects what is useful for diagnosing a problem into one zip file on this computer. Nothing is sent anywhere: the file is written where you choose it, and the GitHub button only opens a prefilled issue page in your browser for you to read before you post it.",
+  "debugReport.descriptionLabel": "What happened?",
+  "debugReport.descriptionPlaceholder": "What you did, what you expected, what happened instead.",
+  "debugReport.descriptionHint":
+    "Goes into the report in your own words. Everything else below is collected automatically.",
+  "debugReport.filterName": "Zip archive",
+  "debugReport.include.log.label": "Session log",
+  "debugReport.include.log.hint": "The entries from the Log tab, with addresses removed.",
+  "debugReport.include.projectSummary.label": "Project statistics",
+  "debugReport.include.projectSummary.hint":
+    "How many devices, lines and group addresses the open project has. Counts only — no names, no addresses.",
+  "debugReport.include.busTelegrams.label": "Bus monitor telegrams",
+  "debugReport.include.busTelegrams.hint":
+    "The telegrams currently in the monitor buffer. These keep the individual and group addresses of your devices.",
+  "debugReport.contentsTitle": "What the file will contain",
+  "debugReport.contents.report": "report.md — your description, the versions and the environment.",
+  "debugReport.contents.environment": "environment.json — the same facts in machine-readable form.",
+  "debugReport.contents.log": "log.json — this session's log entries.",
+  "debugReport.contents.projectSummary": "project-summary.json — counts describing the open project.",
+  "debugReport.contents.busTelegrams": "bus-telegrams.json — the bus monitor buffer.",
+  "debugReport.privacyRedacted":
+    "IP addresses, your home directory and this computer's name are replaced by placeholders in report.md, environment.json and log.json.",
+  "debugReport.privacyTelegrams":
+    "bus-telegrams.json is the exception: it keeps the KNX individual and group addresses of your installation, because without them the telegrams say nothing. Include it only if you are willing to share that.",
+  "debugReport.save": "Save zip…",
+  "debugReport.openIssue": "Open a GitHub issue…",
+  "debugReport.close": "Close",
+  "debugReport.busy": "Collecting…",
+  "debugReport.saved.one": "Debug report saved, {count} file.",
+  "debugReport.saved.other": "Debug report saved, {count} files.",
+  "debugReport.issueOpened":
+    "A prefilled issue was opened in your browser. Nothing has been posted — read it, attach the zip, then submit it yourself.",
+  "debugReport.issueTruncated":
+    "A prefilled issue was opened in your browser. The report was too long for a link and has been shortened — please save the zip as well and attach it.",
+  "debugReport.issueTitle": "Bug report from KNXBench",
 } as const;
 
 export type Messages = typeof messages;

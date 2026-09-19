@@ -607,9 +607,15 @@ impl SimulatedDevice {
         }
     }
 
-    /// The Load State Machine of RES Table 94, as far as a simulator needs
-    /// it: the recommended transition for each event, plus the two ways
-    /// spec §11.3 asks it to go wrong.
+    /// The Load State Machine of RES Table 94, p. 296, as far as a simulator
+    /// needs it: mostly the table's recommended (`R`) transition for each
+    /// event, except `LoadCompleted` and `AdditionalLoadControls` received in
+    /// `Unloaded`, where Table 94 marks `Error` as the optional (`O`)
+    /// transition rather than the recommended one (staying `Unloaded`) — the
+    /// legend defines, in its own printed order, I (intermediate state), M
+    /// (mandatory), O (optional) and R (recommended), and both O and R are
+    /// legal device behaviour, so this simulator simply exercises the
+    /// optional one. Plus the two ways spec §11.3 asks it to go wrong.
     fn apply_event(&self, object_index: u8, event: LoadEvent) {
         if self.config.drop_load_state_writes {
             return;

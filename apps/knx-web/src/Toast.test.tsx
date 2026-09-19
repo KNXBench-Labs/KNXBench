@@ -47,4 +47,18 @@ describe("ToastStack", () => {
     expect(host!.textContent).not.toContain(enMessages["toast.error.messageIsEnglish"]);
     root.unmount();
   });
+
+  it("calls onDismiss with the toast's id when its close button is clicked", async () => {
+    const onDismiss = vi.fn();
+    const root = await renderStack(
+      [{ id: 7, kind: "error", message: "The bus objects: boom", serverText: true }],
+      onDismiss,
+    );
+    const button = host!.querySelector("button")!;
+    await act(async () => {
+      button.click();
+    });
+    expect(onDismiss).toHaveBeenCalledWith(7);
+    root.unmount();
+  });
 });

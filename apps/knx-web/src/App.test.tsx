@@ -1036,4 +1036,39 @@ describe("App — a failed load never renders a running banner", () => {
     expect(banner.textContent).toContain("connection closed");
     await act(async () => root.unmount());
   });
+
+  // Fix round 2, F8: a foreign operation that starts *after* our baseline
+  // read but before our POST is refused. Unlike probe C, the pre-flight
+  // read here sees nothing (baseline 0), so the id-greater-than-baseline
+  // test alone cannot distinguish "our own operation" from "somebody
+  // else's that merely started later" — `ownsOperation` also needs the
+  // snapshot's `source` to match the file this load submitted.
+  it("a foreign operation starting after our baseline is not ours (F8)", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    let fail: (error: Error) => void = () => {};
+    apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
+    apiMock.loadProgress.mockResolvedValueOnce(null); // baseline: nothing has ever loaded
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 2, kind: "open", source: "someone-elses.knxdb", phase: "loadStoredProject",
+      completed: null, total: null, status: "running", error: null,
+    });
+    const root = await renderApp();
+
+    await clickOpen();
+
+    // Give the immediate poll a chance to run and try to adopt the
+    // foreign operation before our own POST is rejected.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      fail(new Error("a project load is already running (operation 2)"));
+    });
+
+    expectFailedBanner(["Reading the stored project", "someone-elses.knxdb"]);
+    await act(async () => root.unmount());
+  });
 });

@@ -254,16 +254,46 @@ that server-named id instead of the declared one (D43).
     this), the same key `evaluate`'s own dedup already used. Also
     unattested against real data — the corpus has zero nesting to trigger
     it — but no longer latent in the code either.
-  - **`Module` arguments stay exactly as limited as before.** Argument
-    values (`NumericArg`/`TextArg`) remain stored but uninterpreted; see
-    the entry below.
-- **Argument values (`NumericArg`/`TextArg`) remain stored but
-  uninterpreted.** They still fall through to the generic `extra` column;
-  `choose` never branches on them (RESEARCH §4.4 Q3), so activation-set
-  computation does not need them, but memory-offset placement and
-  `{{ChNo}}`-style text substitution are unresearched and unimplemented.
+  - **`Module` arguments are no longer inert** (task 12, 2026-09-14); see
+    the narrowed entry below.
+- **Argument values (`NumericArg`/`TextArg`) are interpreted for text
+  substitution and for nothing else** (narrowed 2026-09-14, goal-completion
+  task 12, design D47-D51). What changed: a `ModuleDef`'s declared
+  arguments are stored (`module_def_argument`), a `Module`'s bindings get a
+  `dynamic_node.value` column instead of the unparseable `extra` blob, and
+  `{{Name}}` placeholders in an activated `Channel`/`ParameterBlock`/
+  `ParameterSeparator` `@Text` are resolved against the instantiating
+  `Module`'s bindings, so two instantiations of one `ModuleDef` now
+  evaluate to two different labels
+  (`Activation::labels`; closed by
+  `an_argument_value_changes_the_evaluated_label_of_each_module_instantiation`
+  and, on real corpus data, `corpus_argument_measurement_task_12`, both in
+  `crates/knx-productdb/tests/dynamic_tree.rs`).
+  **What remains unimplemented, precisely:** the *memory-allocation* facet
+  — `Argument/@Allocates` is stored and not interpreted, and the two
+  constructs that consume a numeric argument, `Memory/@BaseOffset` (705
+  corpus occurrences `[V]`) and `ComObject/@BaseNumber` (157 `[V]`), are
+  `Static`-side and unmodelled, so a module's parameters and communication
+  objects still carry their `ModuleDef`-local memory placement and object
+  numbers rather than their per-instance ones. The purely numeric
+  placeholder family (`{{0}}`, 948 corpus occurrences `[V]`, tied to
+  `TextParameterRefId`) is also not substituted — it is left verbatim and
+  is deliberately *not* reported as an unresolved argument, because it
+  never was one. `choose` still never branches on an argument (RESEARCH
+  §4.4 Q3), so activation sets are unchanged by any of this.
 - **`AllocatorRef`** (`ModuleDefArgType_t`'s third argument-type facet)
-  has zero corpus occurrences and stays unattested and unimplemented.
+  stays unattested and unimplemented — **0 occurrences** across every
+  readable member of every archive under `OriginalData/ProductDatabases`
+  and `OriginalData/DemoProjects` (`[V]`, re-measured 2026-09-14 and
+  re-measured on every run by `corpus_argument_measurement_task_12`), and
+  0 hits in either KNX specification knowledge base
+  (`knx_spec_kb_programming.sqlite`, 2,207 facts / 27 PDFs;
+  `knx_spec_kb_full179_clean.sqlite`, 16,536 facts / 177 PDFs) across
+  `content`, `title`, `keywords` and `evidenceText`. Changed in task 12
+  only in that it is now **reported** rather than ignored: a declaration
+  spelling it produces `Diagnostic::UnsupportedModuleArgumentKind` per
+  instantiation instead of passing unremarked. Nothing about its semantics
+  is guessed at.
 - **`Access` has no attested correlation and is not used for write
   gating.** RESEARCH §4.3 found no usable correlation for `Access`
   (`Access="None"` alongside a `Memory` child came back roughly 50/50 in
@@ -3245,9 +3275,11 @@ answered and built.
 
 ## 64. `Languages` blocks outside an application program are discarded on import
 
-**Resolved for ingestion (2026-09-12, T32); still unread at most
-surfaces.** The heading is kept verbatim because five documents link to
-its anchor; read the status here, not in the title.
+**Resolved for ingestion (2026-09-12, T32); reading closed for every
+entity family this project's corpus has found a `Master`-scope
+translation for (2026-09-14, T13) — the residue below is what is left.**
+The heading is kept verbatim because five documents link to its anchor;
+read the status here, not in the title.
 
 **Ingested now.** `translation` was widened in schema v4 to `(scope,
 scope_id, language, ref_id, attribute_name)`
@@ -3365,15 +3397,65 @@ unavailable until a later slice gives those constructs their own
 tables — tracked here, not silently narrowed out of this section's
 claim.
 
+**Closed, 2026-09-14 (T13, branch `d10-language-data`).** The residue
+above is what this slice closes: `FunctionType`, `FunctionPoint` and
+`SpaceUsage` each get a table now (`function_type`, `function_point`,
+`space_usage`; schema v9 → v10, `migrate_v9_to_v10`), filled by
+`parse/master.rs`'s `ingest_master_data` the same `INSERT OR IGNORE` way
+`datapoint_type` already was. `query.rs` gained `function_types`/
+`function_type`, `function_points` (scoped to one `function_type_id`)
+and `space_usages`/`space_usage`, each overlaying `text` from a
+`Master`-scope translation through the same `master_text_overlay` every
+other Master reader here already used — that function never filtered by
+`RefId` prefix, so the translations these three families needed were
+already sitting in `translation` since T32; only the join target was
+missing. A v9 database is backfilled the same way a v3 one was for T32:
+its `knx_master.xml` blob is replayed through `ingest_master_data` inside
+the migration (`a_v9_database_backfills_function_and_space_usage_rows_and_their_translations`,
+`migration.rs`), so a database that already existed before this slice
+does not stay short these three tables' worth of data. An end-to-end
+test through `install_package`
+(`hardware_and_master_scope_translations_survive_install_with_their_text_intact`,
+`tests/standalone_packages.rs`) reads a planted `Hardware`-scope and a
+planted `Master`-scope translation's actual text back out of `translation`
+after a real package install, not merely a row count. Neither reader
+gained an HTTP route or a UI element — surfacing stops exactly where
+`datapoint_types` already stopped (no route in
+`apps/knx-server/src/routes.rs`), per this project's "surface only as far
+as existing machinery already reaches" rule; a caller inside the backend
+can call these functions today, nothing outside it can yet.
+
+**Residue restated, not claimed closed.** Three things this slice does
+not touch, stated plainly rather than left implicit: first, the other
+eight `MasterData` child sections `parse/master.rs`'s own module doc
+names (`DatapointRoles`, `InterfaceObjectTypes`,
+`InterfaceObjectProperties`, `PropertyDataTypes`, `MediumTypes`,
+`MaskVersions`, `FunctionalBlocks`, `ProductLanguages`) stay unparsed;
+none of them carried a `Master`-scope translation in any of the five
+sampled packages, but that is a corpus observation, not a schema
+guarantee, and a package that did translate one would have that
+translation's row sit in `translation` unread by anything, exactly as
+`FunctionType`/`SpaceUsage` did before this slice. Second, the
+`function_type`/`function_point`/`space_usage` tables inherit
+`datapoint_type`'s uncounted-collision gap outright — see §86's residue,
+extended 2026-09-14 to name them — a second package's `knx_master.xml`
+drops its restated rows with nothing recording that it happened. Third,
+`apps/knx-web` still sends no bare primary-language tag (§37's own open
+item, unchanged by this slice): the backend-side locale-prefix matching
+these new readers reuse has had a caller-reachable surface since D10
+slice 1, and still has none from the frontend.
+
 **Lifted when.** Ingestion: lifted 2026-09-12 (T32, branch
 `t32-shared-translations`). The `Hardware`-scope half of the reading
 residue: lifted 2026-09-13 (T16, branch `t16-device-product`). The
 `Master`-scope residue for `datapoint_type`, translation-count
 reporting, and backend locale-prefix matching: lifted 2026-09-13 (D10
 slice 1, branch `d10-master-translations`). `FunctionType`/
-`FunctionPoint`/`SpaceUsage` have no table at all and stay open under
-**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and under §37's
-own "still open" list. Not scheduled.
+`FunctionPoint`/`SpaceUsage`: lifted 2026-09-14 (T13, branch
+`d10-language-data`). This section's own residue (other `MasterData`
+sections, collision counting, frontend locale tags) stays open; see
+**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and §37's own
+"still open" list. Not scheduled.
 
 ## 65. `--version` names a commit, never a working tree
 
@@ -3676,6 +3758,15 @@ needs; making the `RefId` clause itself plural would touch the
 the format string — more than a one-line fix, so left for a future pass
 rather than done here.
 
+**Task 12 (2026-09-14), and why it does not lift this.** Argument
+interpretation now tells two *program-side* instantiations of one
+`ModuleDef` apart — `MOD-A` and `MOD-B` produce different labels because
+they bind different values. This limitation is about the *project* side:
+two `ModuleInstance` elements claiming one `Module`. `ValueMap`'s scoped
+key is still `(module_id, ref_id)` with no `MI-` dimension, because the
+thing that is missing is a repeat index in the project file's authority,
+not a way to distinguish `Module` nodes. Unchanged, in full.
+
 **Lifted when.** RESEARCH.md's sharpest unknown #1 (what
 `ModuleInstance/@RepeatIndex`'s embedded `MI-<k>` component means, and
 whether/how it legitimately exceeds `1`,
@@ -3706,6 +3797,15 @@ value would have applied to it.
 that `Module`'s channel behaves exactly as every module-scoped channel did
 before T18 slice 4: displayed where a value happens to already resolve,
 never editable.
+
+**Task 12 (2026-09-14): unaffected, and marginally better reported.** An
+`@Id`-less `Module` still cannot be matched to a project instance — an
+argument binding names an `Argument`, not the `Module` carrying it, so it
+supplies no identity. It does now produce a *different-looking* section:
+its labels are substituted like any other instantiation's, so a nameless
+module is at least distinguishable on screen from its siblings even while
+remaining unmatchable and read-only. Nothing about the matching rule
+changed.
 
 **Lifted when.** Never by invention — a synthesised id would be a
 fabricated identifier that looks like project data and matches nothing
@@ -3743,6 +3843,11 @@ branch. No corpus-observed workflow depends on writing a hidden field
 sight-unseen; `Access` itself has no attested write-gating correlation
 either ([§3](#3-device-parameters-are-preserved-but-not-interpreted)).
 
+**Task 12 (2026-09-14): unaffected.** The task added a
+`module_def_argument` table, not a scope marker on `parameter_ref`. A
+declared parameter id still carries no scope of its own, so the panel
+remains the single authority on what is writable, exactly as D43 has it.
+
 **Lifted when.** Would need `parameter_ref` (or a sibling table) to carry
 a `module_def_id` or equivalent scope marker, so the server could resolve
 a bare id's scope without first evaluating the tree it belongs to. Not
@@ -3771,6 +3876,14 @@ into the store, and the migration has nothing to backfill it from.
 not re-imported since upgrading sees read-only channels with no reason
 that names "schema version" or "re-import" specifically — only the
 generic no-authority diagnostic.
+
+**Task 12 (2026-09-14): unaffected, and a different database.** This
+limitation is about the *project* store (`.knxdb`, schema 6); task 12
+migrated the *product* database (`products.sqlite`, v10 -> v11), which is
+a separate file with a separate version chain. The product-db migration
+re-derives everything it needs from stored `source_file` bytes and so
+needs no re-install; this one still needs a re-import, for the reason
+below.
 
 **Lifted when.** Automatically, the moment the project's source
 `.knxproj` is re-imported (not merely re-opened) — re-import re-parses
@@ -4568,6 +4681,27 @@ the retained declaration. This needs a deliberate schema migration and remains
 separate from the now-complete same-file detection for every `first_winner`
 caller.
 
+**Residue grows, 2026-09-14 (T13, branch `d10-language-data`).**
+`function_type`, `function_point` and `space_usage` (new tables, schema
+v9 → v10, closing §64's own residue) are filled by `parse/master.rs` the
+same bare `INSERT OR IGNORE` way `datapoint_type` already was — no
+`source_sha256` column, no occurrence counter, same restated-whole-catalogue
+collision shape a second `knx_master.xml` produces. Not measured
+separately against the corpus the way `datapoint_type` was above; the
+shape of the gap is identical, so it is stated rather than re-argued. A
+future fix for `datapoint_type`'s residue should cover these three tables
+in the same pass rather than leaving them a second time. The same three
+element families also inherit `datapoint_type`'s other silent-discard
+shape: a `FunctionType`, `FunctionPoint` or `SpaceUsage` with no `@Id`
+attribute at all binds `NULL` into a `TEXT PRIMARY KEY` column, and
+`INSERT OR IGNORE` drops that row with no error, no counter and no
+`ingest_unknown` entry — exactly as an id-less `DatapointType` already
+did before this slice, and not a new gap this slice introduces, only one
+it extends to three more tables. An id-less `FunctionType` compounds the
+loss: it orphans every `FunctionPoint` nested inside it too, and those
+are then silently dropped a second time by the parentless-`FunctionPoint`
+guard at `parse/master.rs:213` (T13 fix round 2).
+
 ---
 
 ## 87. A parse fix does not reach rows that were already ingested, and only a migration can go back for them
@@ -4739,6 +4873,35 @@ own name so nobody mistakes it for an invariant.
 use to actually rank two spellings by recency (a schema/edition attribute
 would do it) — at which point "last ingested" could become "provably newer",
 and this section would describe that instead.
+
+**A second scan order, not covered above (2026-09-14, T13 fix round 2).**
+Everything above is about first *ingest* order. The v9→v10 backfill
+(`backfill_function_and_space_data`, `migration.rs`) replays this same
+last-writer-wins `Manufacturer` write over every blob a database already
+holds, ordered by `source_file.rowid` — the order distinct blobs were
+first *written* to that table, which is not always the order they were
+first *ingested*. `store_source_file` (`blob.rs`) returns `false` without
+inserting a row when a blob's sha256 is already on record, but
+`install_package` (`package.rs`) calls `ingest_master_data` on that blob
+regardless, so a master blob installed by two different packages is
+ingested twice but occupies one rowid — the backfill then replays it once,
+at its *first* install's position, which can differ from its *last*
+install's position (the one whose names actually won under last-writer-wins
+at real install time). Measured **[V]**: installed Weinzierl 730 ETS4, then
+MDT KP AMI/AMS 03, then the Weinzierl archive repacked with one XML comment
+appended to `M-00C5/Catalog.xml` (package hash differs, `knx_master.xml`
+byte-identical to the first install). Rolled back to `user_version = 9`,
+dropped the three v10 tables, reopened through `open_and_migrate`: **21 of
+799** manufacturer display names changed relative to the pre-rollback
+database — `M-0002` from `ABB` to `ABB AG - STOTZ-KONTAKT`, `M-0007` from
+`Busch-Jaeger Elektro` to `ABB AG - BUSCH-JAEGER`, `M-000A` from
+`INSTA ELEKTRO` to `Insta GmbH`; `translation`, `datapoint_type` and
+`ingest_unknown` counts were unchanged. `ORDER BY rowid` is still the right
+order to hold — it is the only order `source_file` actually records — but
+it reproduces first-install's own answer only when no master blob in the
+database was ever installed by more than one package; the third install
+above was constructed specifically to violate that, to make the residual
+measurable rather than asserted.
 
 ## 89. Five documented `Space/@Type` values are coarsened to `BuildingPart` on import
 

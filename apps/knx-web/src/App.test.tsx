@@ -46,6 +46,10 @@ const apiMock = vi.hoisted(() => ({
   // a 404 is the "no session yet" answer that leaves the connect form up.
   pollBusTelegrams: vi.fn().mockRejectedValue(new Error("no session")),
   errorStatus: vi.fn().mockReturnValue(404),
+  // ADR-0023's progress poll. `null` is the honest default for a server
+  // that has loaded nothing, and the answer every test here wants except
+  // the two that drive a load on purpose.
+  loadProgress: vi.fn().mockResolvedValue(null),
 }));
 
 const filePickerMock = vi.hoisted(() => ({
@@ -842,6 +846,69 @@ describe("App — starting a project from scratch", () => {
 
     expect(host!.querySelector('[role="dialog"]')).not.toBeNull();
     expect(host!.querySelector("input[aria-label=\"Project name\"]")).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+});
+
+// T37 / ADR-0023. The banner itself is covered in
+// `LoadProgressBanner.test.tsx`; what belongs here is the wiring: one load
+// at a time, feedback for its whole duration, and a failure that leaves
+// both the banner and whatever was already open in place.
+describe("App — project load progress", () => {
+  it("shows the banner for the whole load and refuses a second one while it runs", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    let finish: (tree: ProjectTree) => void = () => {};
+    apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((resolve) => { finish = resolve; }));
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 1, kind: "import", source: "villa.knxproj", phase: "parseTopology",
+      completed: null, total: null, status: "running", error: null,
+    });
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(host!.querySelector(".load-progress")).not.toBeNull();
+    expect(host!.textContent).toContain("villa.knxproj");
+    expect(findButton("Open project…").disabled).toBe(true);
+    expect(findButton("Open (.knxdb)…").disabled).toBe(true);
+
+    // A second click while the first load is still running must not reach
+    // the server at all — the `409` is the backstop, not the mechanism.
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(apiMock.importProject).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      finish(baseTree());
+    });
+    expect(host!.querySelector(".load-progress")).toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  it("keeps the banner after a failure, naming the phase the load died in", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    apiMock.importProject.mockRejectedValue(new Error("invalid Zip archive"));
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 1, kind: "import", source: "villa.knxproj", phase: "openContainer",
+      completed: null, total: null, status: "failed", error: "invalid Zip archive",
+    });
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const banner = host!.querySelector(".load-progress")!;
+    expect(banner.getAttribute("data-failed")).toBe("true");
+    expect(banner.textContent).toContain("Could not load villa.knxproj");
+    expect(banner.textContent).toContain("Opening the archive");
+    // And the load is over: the buttons are usable again.
+    expect(findButton("Open project…").disabled).toBe(false);
 
     await act(async () => root.unmount());
   });

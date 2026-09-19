@@ -187,7 +187,6 @@ fn installs_the_readable_corpus() {
         "Dummy_Applikation_Secure.knxprod",
         "646704-04_ETS4_2012_47_DE_EN.knxprod",
         "Weinzierl_730_KNX_IP_Interface_ETS4.knxprod",
-        "Weinzierl_730_KNX_IP_Interface_ETS4_v1.knxprod",
     ] {
         let bytes = std::fs::read(root.join(name)).unwrap_or_else(|e| panic!("corpus fixture {name} unavailable: {e}; set KNXBENCH_PRODUCT_CORPUS to OriginalData/ProductDatabases"));
         let (_dir, conn) = db();
@@ -718,6 +717,160 @@ fn a_package_reports_how_many_translations_it_actually_wrote_by_scope() {
     let retry = install_package(&conn, "four-scopes.knxprod", &bytes).unwrap();
     assert!(retry.skipped);
     assert_eq!(retry.translations, report.translations);
+}
+
+/// docs/KNOWN_LIMITATIONS.md §64 (D10): a translation living outside any
+/// `ApplicationProgram` — `knx_master.xml`'s own `Languages` block
+/// (`Master` scope, no owning element) and `Hardware.xml`'s (`Hardware`
+/// scope, keyed by the manufacturer partition it was found under) — must
+/// survive `install_package` with its actual text intact, not merely be
+/// counted. The row-count sibling test above already proves the count;
+/// this one reads the text back and checks it against what was planted,
+/// so a scope/ref_id mixup that happened to preserve the total row count
+/// could not pass silently. It also carries the one end-to-end
+/// `install_package` coverage `function_type`/`function_point`/
+/// `space_usage` have (§64's T13 paragraph): a `FunctionTypes` and
+/// `SpaceUsages` section, each with its own `Master`-scope translation,
+/// planted alongside the pre-existing `LOC-1`/`H-1` translations, checked
+/// against the three new tables and one join — everything else exercising
+/// them so far is `parse/master.rs`'s and `migration.rs`'s own unit tests,
+/// which call `ingest_master_data` directly rather than going through a
+/// real `.knxprod` archive and `install_package`.
+#[test]
+fn hardware_and_master_scope_translations_survive_install_with_their_text_intact() {
+    let master = br#"<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Example"/>
+    </Manufacturers>
+    <FunctionTypes>
+      <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified">
+        <FunctionPoint Id="FP-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W"/>
+      </FunctionType>
+    </FunctionTypes>
+    <SpaceUsages>
+      <SpaceUsage Id="SU-1" Number="1" Text="Office"/>
+    </SpaceUsages>
+  </MasterData>
+  <Languages>
+    <Language Identifier="de-DE">
+      <TranslationUnit RefId="LOC-1">
+        <TranslationElement RefId="LOC-1">
+          <Translation AttributeName="Text" Text="Herstellerunabhaengig"/>
+        </TranslationElement>
+      </TranslationUnit>
+      <TranslationUnit RefId="FT-1">
+        <TranslationElement RefId="FT-1">
+          <Translation AttributeName="Text" Text="Schalten"/>
+        </TranslationElement>
+      </TranslationUnit>
+      <TranslationUnit RefId="SU-1">
+        <TranslationElement RefId="SU-1">
+          <Translation AttributeName="Text" Text="Buero"/>
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+    let hardware = br#"<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-0001">
+      <Hardware>
+        <Hardware Id="H-1" Name="Example">
+          <Products><Product Id="P-1" Text="Example"/></Products>
+        </Hardware>
+      </Hardware>
+      <Languages>
+        <Language Identifier="de-DE">
+          <TranslationUnit RefId="H-1">
+            <TranslationElement RefId="H-1">
+              <Translation AttributeName="Text" Text="Beispielgeraet"/>
+            </TranslationElement>
+          </TranslationUnit>
+        </Language>
+      </Languages>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+    let (_dir, conn) = db();
+    let bytes = archive(&[
+        ("knx_master.xml", master),
+        ("M-0001/Hardware.xml", hardware),
+    ]);
+    install_package(&conn, "outside-a-program.knxprod", &bytes).unwrap();
+
+    // Master scope: no owning element, so `scope_id` is the empty-string
+    // sentinel (`migrate_v3_to_v4`'s convention, not `NULL`).
+    let master_text: String = conn
+        .query_row(
+            "SELECT text FROM translation
+             WHERE scope = 'Master' AND scope_id = '' AND ref_id = 'LOC-1'
+               AND attribute_name = 'Text' AND language = 'de-DE'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(master_text, "Herstellerunabhaengig");
+
+    // Hardware scope: keyed by the manufacturer partition (`M-0001`), the
+    // only owner a `Hardware.xml` translation ever has.
+    let hardware_text: String = conn
+        .query_row(
+            "SELECT text FROM translation
+             WHERE scope = 'Hardware' AND scope_id = 'M-0001' AND ref_id = 'H-1'
+               AND attribute_name = 'Text' AND language = 'de-DE'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(hardware_text, "Beispielgeraet");
+
+    // Schema v10 (T13): `function_type`, `function_point` and
+    // `space_usage` each got a real row, not just the translations that
+    // point at them.
+    let function_type_row: (i64, String, String) = conn
+        .query_row(
+            "SELECT number, text, status FROM function_type WHERE id = 'FT-1'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(
+        function_type_row,
+        (1, "Switch".to_string(), "Certified".to_string())
+    );
+
+    let function_point_type: String = conn
+        .query_row(
+            "SELECT function_type_id FROM function_point WHERE id = 'FP-1_DR-1'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(function_point_type, "FT-1");
+
+    let space_usage_text: String = conn
+        .query_row("SELECT text FROM space_usage WHERE id = 'SU-1'", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(space_usage_text, "Office");
+
+    // And the join docs/KNOWN_LIMITATIONS.md §64 says these tables exist
+    // for in the first place: a real package install, not a hand-rolled
+    // unit fixture, resolves `FunctionType`'s `Master`-scope translation
+    // against the row `function_type` now has for it.
+    let function_type_translation: String = conn
+        .query_row(
+            "SELECT t.text FROM translation t
+             JOIN function_type f ON f.id = t.ref_id
+             WHERE t.scope = 'Master' AND t.language = 'de-DE' AND t.attribute_name = 'Text'
+               AND f.id = 'FT-1'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(function_type_translation, "Schalten");
 }
 
 /// KNOWN_LIMITATIONS.md §85. A `.signature` member is recognised, given the

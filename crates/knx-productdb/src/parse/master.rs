@@ -1,7 +1,18 @@
-//! `knx_master.xml`: `Manufacturers` (id → display name) and
-//! `DatapointTypes` (main/sub numbers → id), ingested minimally per spec §4
-//! — the file itself stays in the project's opaque store
-//! (`OpaqueKind::MasterData`), so the export path is unchanged.
+//! `knx_master.xml`: `Manufacturers` (id → display name), `DatapointTypes`
+//! (main/sub numbers → id), `FunctionTypes`/`FunctionPoint` (the function-type
+//! catalogue, each type's per-role datapoints nested under it) and
+//! `SpaceUsages` (the standard list of room/space purposes), ingested
+//! minimally — the file itself stays in the project's opaque store
+//! (`OpaqueKind::MasterData`), so the export path is unchanged. Every other
+//! `MasterData` child (`DatapointRoles`, `InterfaceObjectTypes`,
+//! `InterfaceObjectProperties`, `PropertyDataTypes`, `MediumTypes`,
+//! `MaskVersions`, `FunctionalBlocks`, `ProductLanguages`) stays unparsed —
+//! [V], `knx_master.xml`'s own top-level section list, corpus-wide — and,
+//! like everything else this function does not recognize, falls through to
+//! `_ => {}` unreported rather than into `unknown` (KNOWN_LIMITATIONS.md
+//! §64 tracks only the two families that actually carry a `Master`-scope
+//! translation; the rest is a pre-existing, wider gap this slice does not
+//! close).
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -16,6 +27,17 @@ use crate::ProductDbError;
 const MANUFACTURER_ATTRS: &[&str] = &["Id", "Name"];
 const DATAPOINT_TYPE_ATTRS: &[&str] = &["Id", "Number", "Name", "Text"];
 const DATAPOINT_SUBTYPE_ATTRS: &[&str] = &["Id", "Number", "Name", "Text"];
+/// [V], corpus-wide (`Dummy_Applikation_Secure`, `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a`
+/// — the two sampled packages whose `knx_master.xml` carries this section at
+/// all). No published schema for `knx_master.xml` is available to this
+/// project (it is ETS's own, not part of the KNX Standard corpus), so this
+/// allowlist is corpus-observed, the same convention `DATAPOINT_TYPE_ATTRS`
+/// already uses.
+const FUNCTION_TYPE_ATTRS: &[&str] = &["Id", "Number", "Text", "Status"];
+/// [V], same two packages as `FUNCTION_TYPE_ATTRS`.
+const FUNCTION_POINT_ATTRS: &[&str] = &["Id", "Text", "DatapointType", "Role", "Characteristics"];
+/// [V], same two packages as `FUNCTION_TYPE_ATTRS`.
+const SPACE_USAGE_ATTRS: &[&str] = &["Id", "Number", "Text"];
 
 fn parse_i64(v: Option<&str>) -> Option<i64> {
     v.and_then(|v| v.parse::<i64>().ok())
@@ -53,6 +75,7 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
     let mut buf = Vec::new();
     let mut unknown = UnknownCollector::default();
     let mut current_main: Option<i64> = None;
+    let mut current_function_type: Option<String> = None;
     let mut dropped_datapoint_types = 0usize;
 
     loop {
@@ -63,10 +86,18 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                 source_path: source_path.to_string(),
                 cause: e.to_string(),
             })?;
+        // Self-closing elements fire no matching `Event::End`, so any
+        // "current" scope opened for one must be closed again before the
+        // match arm below returns — nothing downstream gets a second
+        // chance to notice.
+        let is_self_closing = matches!(&event, Event::Empty(_));
         match event {
             Event::Eof => break,
             Event::End(e) if e.local_name().as_ref() == "DatapointType" => {
                 current_main = None;
+            }
+            Event::End(e) if e.local_name().as_ref() == "FunctionType" => {
+                current_function_type = None;
             }
             Event::Start(e) | Event::Empty(e) => {
                 let name = local_name(&e);
@@ -93,7 +124,17 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                             DATAPOINT_TYPE_ATTRS,
                         );
                         let main = parse_i64(a.get("Number")).unwrap_or_default();
-                        current_main = Some(main);
+                        // Same shape as `FunctionType` below: a self-closing
+                        // `<DatapointType/>` fires `Event::Empty`, never
+                        // `Event::End`, so it must not leave `current_main`
+                        // open for a following `DatapointSubtype` to inherit
+                        // — the corpus has none of these today (0 of 5
+                        // masters, T13 fix round 2), but the shape is
+                        // identical to the `FunctionType` leak this same
+                        // round fixed, and it costs one line to close now
+                        // rather than wait for the first manufacturer who
+                        // writes one.
+                        current_main = if is_self_closing { None } else { Some(main) };
                         let written = conn.execute(
                             "INSERT OR IGNORE INTO datapoint_type (id, main, sub, name, text)
                              VALUES (?1, ?2, NULL, ?3, ?4)",
@@ -126,6 +167,77 @@ pub fn ingest_master_data(conn: &Connection, bytes: &[u8]) -> Result<MasterInges
                                 dropped_datapoint_types += 1;
                             }
                         }
+                    }
+                    "FunctionType" => {
+                        report_unknown_attrs(
+                            &mut unknown,
+                            "/KNX/MasterData/FunctionTypes/FunctionType",
+                            &a,
+                            FUNCTION_TYPE_ATTRS,
+                        );
+                        // A self-closing `FunctionType` (the corpus's own
+                        // `<FunctionType Text="custom" Id="FT-0" Number="0" />`
+                        // shape) fires no `Event::End` to clear this again,
+                        // so it must not open a scope that outlives itself
+                        // — otherwise a later sibling `FunctionPoint` would
+                        // silently inherit an id that was never really its
+                        // parent.
+                        current_function_type = if is_self_closing {
+                            None
+                        } else {
+                            a.get("Id").map(str::to_string)
+                        };
+                        conn.execute(
+                            "INSERT OR IGNORE INTO function_type (id, number, text, status)
+                             VALUES (?1, ?2, ?3, ?4)",
+                            params![
+                                a.get("Id"),
+                                parse_i64(a.get("Number")),
+                                a.get("Text"),
+                                a.get("Status"),
+                            ],
+                        )?;
+                    }
+                    "FunctionPoint" => {
+                        report_unknown_attrs(
+                            &mut unknown,
+                            "/KNX/MasterData/FunctionTypes/FunctionType/FunctionPoint",
+                            &a,
+                            FUNCTION_POINT_ATTRS,
+                        );
+                        // Mirrors `DatapointSubtype` below: a `FunctionPoint`
+                        // met outside any `FunctionType` (not a shape the
+                        // schema produces, going by every sampled package)
+                        // has no parent to key its foreign key on, so it is
+                        // skipped rather than stored half-addressed.
+                        if let Some(function_type_id) = current_function_type.as_deref() {
+                            conn.execute(
+                                "INSERT OR IGNORE INTO function_point
+                                     (id, function_type_id, datapoint_type, role, characteristics, text)
+                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                                params![
+                                    a.get("Id"),
+                                    function_type_id,
+                                    a.get("DatapointType"),
+                                    a.get("Role"),
+                                    a.get("Characteristics"),
+                                    a.get("Text"),
+                                ],
+                            )?;
+                        }
+                    }
+                    "SpaceUsage" => {
+                        report_unknown_attrs(
+                            &mut unknown,
+                            "/KNX/MasterData/SpaceUsages/SpaceUsage",
+                            &a,
+                            SPACE_USAGE_ATTRS,
+                        );
+                        conn.execute(
+                            "INSERT OR IGNORE INTO space_usage (id, number, text)
+                             VALUES (?1, ?2, ?3)",
+                            params![a.get("Id"), parse_i64(a.get("Number")), a.get("Text")],
+                        )?;
                     }
                     _ => {}
                 }
@@ -307,5 +419,245 @@ mod tests {
             )
             .unwrap();
         assert_eq!(main_only, (1, None));
+    }
+
+    #[test]
+    fn a_datapoint_subtype_after_a_self_closing_datapoint_type_is_dropped_not_misparented() {
+        // Same shape as `FunctionType`/`FunctionPoint`'s leak-on-`Event::Empty`
+        // bug, fixed for `DatapointType` in the same round that added this
+        // test: a self-closing `<DatapointType/>` fires `Event::Empty`,
+        // never `Event::End`, so it must not leave `current_main` open for
+        // a following `DatapointSubtype` to inherit. Worth guarding even
+        // though the corpus has zero self-closing `DatapointType` elements
+        // across all five masters today (unlike `FunctionType`, which has
+        // one in each of two packages) — `main` is `NOT NULL`, so a leaked
+        // scope would not even get the free protection `function_point`'s
+        // missing-parent case gets from its own `NOT NULL` column; the
+        // orphan would just quietly become `DPT-0`'s child instead of being
+        // dropped.
+        let (_dir, conn) = db();
+        let xml = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <DatapointTypes>
+      <DatapointType Id="DPT-9" Number="9" Name="9.xxx" Text="2-byte float">
+        <DatapointSubtypes>
+          <DatapointSubtype Id="DPST-9-1" Number="1" Name="DPT_Value_Temp" Text="temperature" />
+        </DatapointSubtypes>
+      </DatapointType>
+      <DatapointType Id="DPT-0" Number="0" Name="custom" Text="x" />
+      <DatapointSubtype Id="DPST-ORPHAN" Number="1" Name="orphan" Text="orphan" />
+    </DatapointTypes>
+  </MasterData>
+</KNX>"#;
+        ingest_master_data(&conn, xml.as_bytes()).unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM datapoint_type WHERE id = 'DPST-ORPHAN'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            count, 0,
+            "an orphan DatapointSubtype must be dropped, not attributed to DPT-0's main number"
+        );
+    }
+
+    const MASTER_WITH_FUNCTIONS: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Siemens" />
+    </Manufacturers>
+    <FunctionTypes>
+      <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified">
+        <FunctionPoint Id="FP-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+      </FunctionType>
+    </FunctionTypes>
+    <SpaceUsages>
+      <SpaceUsage Id="SU-1" Number="1" Text="Office" />
+    </SpaceUsages>
+  </MasterData>
+  <Languages>
+    <Language Identifier="de-DE">
+      <TranslationUnit RefId="FT-1">
+        <TranslationElement RefId="FT-1">
+          <Translation AttributeName="Text" Text="Schalten" />
+        </TranslationElement>
+      </TranslationUnit>
+      <TranslationUnit RefId="SU-1">
+        <TranslationElement RefId="SU-1">
+          <Translation AttributeName="Text" Text="Büro" />
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+
+    #[test]
+    fn function_types_and_their_points_are_stored() {
+        let (_dir, conn) = db();
+        ingest_master_data(&conn, MASTER_WITH_FUNCTIONS.as_bytes()).unwrap();
+        let (number, text, status): (i64, String, String) = conn
+            .query_row(
+                "SELECT number, text, status FROM function_type WHERE id = 'FT-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            (number, text.as_str(), status.as_str()),
+            (1, "Switch", "Certified")
+        );
+        let (function_type_id, datapoint_type, role): (String, String, String) = conn
+            .query_row(
+                "SELECT function_type_id, datapoint_type, role FROM function_point WHERE id = 'FP-1_DR-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            (
+                function_type_id.as_str(),
+                datapoint_type.as_str(),
+                role.as_str()
+            ),
+            ("FT-1", "DPST-1-1", "Control")
+        );
+    }
+
+    #[test]
+    fn a_function_point_outside_any_function_type_is_dropped_not_misparented() {
+        // A `FunctionPoint` cannot be stored without the parent id its
+        // foreign key names — there is no sentinel value for "no parent"
+        // that would not silently misattribute a real one. Two ways a
+        // trailing `FunctionPoint` could end up misparented instead of
+        // dropped: `FT-9` is opened and closed properly with its own real
+        // child, exercising the `Event::End` reset; `FT-0` is self-closing
+        // — the corpus's own `<FunctionType Text="custom" Id="FT-0"
+        // Number="0" />` shape — exercising the leak-on-`Event::Empty` path
+        // instead. Either bug would attribute the final `FunctionPoint` to
+        // whichever id is still lingering; a correct parser drops it,
+        // leaving exactly one row: `FT-9`'s own.
+        let (_dir, conn) = db();
+        let xml = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <FunctionTypes>
+      <FunctionType Id="FT-9" Number="9" Text="Dimming" Status="Certified">
+        <FunctionPoint Id="FP-9_DR-1" Text="Dim" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+      </FunctionType>
+      <FunctionType Id="FT-0" Number="0" Text="custom" Status="Certified" />
+      <FunctionPoint Id="FP-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+    </FunctionTypes>
+  </MasterData>
+</KNX>"#;
+        ingest_master_data(&conn, xml.as_bytes()).unwrap();
+        let points: i64 = conn
+            .query_row("SELECT count(*) FROM function_point", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(points, 1);
+        let function_type_id: String = conn
+            .query_row("SELECT function_type_id FROM function_point", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(function_type_id, "FT-9");
+    }
+
+    #[test]
+    fn a_function_point_right_after_a_properly_closed_function_type_is_still_dropped() {
+        // `a_function_point_outside_any_function_type_is_dropped_not_misparented`
+        // above puts a self-closing `FT-0` between the real `FunctionType`
+        // and the orphan; that self-closing element clears
+        // `current_function_type` on its own (the `is_self_closing` branch),
+        // which happens to also cover for a second bug a mutation test found
+        // it does not actually exercise: deleting the
+        // `Event::End(FunctionType)` reset arm. This fixture removes the
+        // self-closing element, so that revert has nothing else standing in
+        // for it — run against it, this test does fail (`left: 2, right: 1`,
+        // T13 fix round 2).
+        //
+        // A third revert the same finding named — deleting the
+        // `if let Some(function_type_id)` guard at the `FunctionPoint` arm —
+        // was run against this fixture too and is *not* caught, and,
+        // reasoning from the schema, cannot be by any fixture shaped this
+        // way: `function_point.function_type_id` is `NOT NULL`
+        // (`migration.rs`), so with the guard gone the call site binds
+        // `current_function_type.as_deref()` straight into the statement,
+        // `None` becomes SQL `NULL`, and `INSERT OR IGNORE` silently drops
+        // the constraint violation — the exact same zero-rows outcome the
+        // guard produces on purpose. The guard and the `NOT NULL` column
+        // enforce the identical thing twice; removing the Rust-level one is
+        // behaviorally invisible from outside the database. Kept for
+        // intent (a reader should not have to know the schema to see that a
+        // parentless `FunctionPoint` is deliberately skipped), not because
+        // a test can tell it apart from its absence.
+        let (_dir, conn) = db();
+        let xml = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <FunctionTypes>
+      <FunctionType Id="FT-9" Number="9" Text="Dimming" Status="Certified">
+        <FunctionPoint Id="FP-9_DR-1" Text="Dim" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+      </FunctionType>
+      <FunctionPoint Id="FP-ORPHAN" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+    </FunctionTypes>
+  </MasterData>
+</KNX>"#;
+        ingest_master_data(&conn, xml.as_bytes()).unwrap();
+        let points: i64 = conn
+            .query_row("SELECT count(*) FROM function_point", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(points, 1);
+        let function_type_id: String = conn
+            .query_row("SELECT function_type_id FROM function_point", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(function_type_id, "FT-9");
+    }
+
+    #[test]
+    fn space_usages_are_stored() {
+        let (_dir, conn) = db();
+        ingest_master_data(&conn, MASTER_WITH_FUNCTIONS.as_bytes()).unwrap();
+        let (number, text): (i64, String) = conn
+            .query_row(
+                "SELECT number, text FROM space_usage WHERE id = 'SU-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!((number, text.as_str()), (1, "Office"));
+    }
+
+    #[test]
+    fn function_type_and_space_usage_translations_join_against_their_new_tables() {
+        let (_dir, conn) = db();
+        ingest_master_data(&conn, MASTER_WITH_FUNCTIONS.as_bytes()).unwrap();
+        let function_type_text: String = conn
+            .query_row(
+                "SELECT t.text FROM translation t
+                 JOIN function_type f ON f.id = t.ref_id
+                 WHERE t.scope = 'Master' AND t.language = 'de-DE' AND t.attribute_name = 'Text'
+                   AND f.id = 'FT-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(function_type_text, "Schalten");
+        let space_usage_text: String = conn
+            .query_row(
+                "SELECT t.text FROM translation t
+                 JOIN space_usage s ON s.id = t.ref_id
+                 WHERE t.scope = 'Master' AND t.language = 'de-DE' AND t.attribute_name = 'Text'
+                   AND s.id = 'SU-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(space_usage_text, "Büro");
     }
 }

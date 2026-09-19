@@ -1,5 +1,6 @@
 /** Root component wiring project state, panels, and toolbars into the KNX Web UI shell. */
 import { useEffect, useRef, useState } from "react";
+import { version as packageVersion } from "../package.json";
 import { pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -54,13 +55,20 @@ function describeExportWarning(w: unknown): string {
   return JSON.stringify(w);
 }
 
-function App() {
+type AppProps = {
+  manifestVersion?: string;
+};
+
+function App({ manifestVersion = packageVersion }: AppProps) {
   // Called unconditionally on every render (not just from `SettingsPanel`,
   // which only mounts once Settings is opened) so `useUiLanguage()`'s own
   // effect — setting `document.documentElement.lang` — runs for the whole
   // session, not only for whoever happens to open Settings first. See
   // `App.test.tsx`'s "lang attribute is correct on a fresh mount" test.
   const t = useTranslate();
+  useEffect(() => {
+    document.title = `KNXBench ${manifestVersion}`;
+  }, [manifestVersion]);
   // Rebuilt every render instead of hoisted to module scope: a module-level
   // `const` would call `t()` exactly once at import time and freeze the
   // filter name in whatever language happened to be active then — the same
@@ -593,7 +601,7 @@ function App() {
           {tree && selection ? <Inspector propertiesOnly key={`${selection.kind}-${selection.id}`} selection={selection} tree={tree} deviceDetail={deviceDetail} onApplied={handleTreeUpdate} onDeleted={resetTree} /> : <p className="inspector-empty">{t("workbench.noSelection")}</p>}
         </ResizablePane>}
       </div>
-      <footer className="workbench-status"><span>{tree ? tree.installations.map((i) => i.name).join(" / ") : "KNXBench"}</span><span>KNX-compatible</span></footer>
+      <footer className="workbench-status"><span>{tree ? tree.installations.map((i) => i.name).join(" / ") : "KNXBench"}</span><span>v{manifestVersion}</span></footer>
       <ToastStack toasts={toasts} onDismiss={dismiss} />
       {catalogTarget && <CatalogBrowser lineId={catalogTarget.lineId} onCreated={handleTreeUpdate} onClose={() => setCatalogTarget(null)} />}
       {newProjectOpen && <NewProjectDialog onCreated={newProjectCreated} onClose={() => setNewProjectOpen(false)} />}

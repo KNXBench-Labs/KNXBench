@@ -5980,7 +5980,7 @@ can be added deliberately, cited, and tested, rather than inferred here.
 Program 1 and Group Object Table variants each carry a step that writes the
 Group Address Table segment and, within it, a group responser table via
 `PID_GROUP_RESPONSER_TABLE` — footnoted in each case as PL110-only (CP
-§3.5.3 footnotes 7, 9 and 10, pp. 44, 47, 52). RES §4.16.8.2.5, p. 239 is
+§3.5.3 footnotes 8, 9 and 10, pp. 47, 50, 52). RES §4.16.8.2.5, p. 239 is
 explicit both ways: *"This Property is mandatory for PL110 devices. For all
 other media this Property shall not be implemented."* This project targets
 TP1, RF and IP; it does not implement `PID_GROUP_RESPONSER_TABLE`, and the

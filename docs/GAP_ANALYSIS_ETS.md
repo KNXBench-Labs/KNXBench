@@ -840,7 +840,16 @@ Design spec: `docs/superpowers/specs/2026-09-11-group-monitor-design.md`.
   procedures, memory layout and mask data already live in the product
   database
   ([KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)).
-  Closes **E1**.
+  Closes **E1**. The named per-item gaps this task tracks (`GAP-T30-01`
+  through `GAP-T30-10`) live in the design spec's own registry, not in this
+  document — see
+  [`docs/superpowers/specs/2026-09-13-commissioning-download-design.md`
+  §12](superpowers/specs/2026-09-13-commissioning-download-design.md), cross-referenced from
+  [KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)
+  and `RESEARCH.md` §8.7.15. `GAP-T30-04` (the "differential download
+  algorithm") was corrected there 2026-09-19: three of its four newly-found
+  citations are substantive documentation, and what survives as a genuine gap
+  is narrower than earlier text here implied.
 
 ### Tier 6 — internationalization
 

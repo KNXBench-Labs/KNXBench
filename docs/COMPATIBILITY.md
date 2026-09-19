@@ -112,3 +112,94 @@ Compatibility is not a document the user has to find. Every import produces an
 
 Nothing is dropped without appearing in one of these three lists or in the
 opaque store. If it is, that is an importer bug.
+
+## 6. KNX Standard errata — printed text this project deliberately does not follow
+
+A specification is not automatically self-consistent just because it is
+official. Reading the commissioning procedures of `03_05_03 Configuration
+Procedures` ("CP") and `03_05_01 Resources` ("RES") against the code in
+`crates/knx-core/src/commissioning` and `crates/knx-net/src/commissioning`
+turned up seven places where the printed text is internally inconsistent, or
+says something the code deliberately does not do. None of these is a defect
+report against the KNX Association — a published standard this size having a
+handful of transcription slips is unremarkable. What would be a defect is
+leaving them unwritten: an undocumented divergence from a published
+specification reads exactly like a bug to the next person who opens the PDF
+beside this code and finds a difference. This list is that person's answer.
+
+All page numbers below are PDF page numbers of the cited document, offset
+zero — verified per document by its own footer, not assumed.
+
+1. **The three table-variant load procedures read AP2's Memory Control Block,
+   not their own.** CP §3.5.3's Group Object Table variant (pp. 51-52), Group
+   Address Table variant (pp. 54-55) and Association Table variant (p. 56) all
+   print `PropertyRead(ID_ApplicationProgram_2, PID_MCB)` in a row that
+   otherwise addresses the part being loaded — every surrounding row in the
+   same procedure reads or writes *that part's own* object, not Application
+   Program 2's. The code reads each loaded part's own MCB instead
+   (`load_one_part`, `crates/knx-net/src/commissioning/download.rs:788` and
+   `:817`) — the sensible reading of "read back what you just loaded", and,
+   absent this note, an undocumented divergence from the printed text.
+2. **AP2 Nr. 11 files a Group Object Table step under the Address Table's own
+   row.** "Loading the Address Table" (CP §3.5.3 AP2 Nr. 11, p. 47) reads *"Get
+   Group Object Table base pointer"* and *"Set Group Object Table to the
+   LoadState 'Loaded'"* — both plainly about the Group Object Table — inside
+   the row that loads the Address Table. The same misplacement repeats at AP1
+   Nr. 10 (p. 50) and GOT Nr. 09 (p. 52). The code treats each table as its
+   own segment and does not carry this cross-wiring into the load order.
+3. **Group Address Table Nr. 05 lists `LoadCompleted` as an event inside an
+   unload wait.** CP §3.5.3, p. 53: the row waits for the *previous* Group
+   Address Table to leave its old state and names `LoadCompleted` among the
+   events that wait tolerates. But `LoadCompleted` received while a Load State
+   Machine is `Unloaded` is, per RES Table 94, p. 296, `R: Unloaded /
+   O: Error` — not a step of unloading anything. The code's unload wait does
+   not treat an incoming `LoadCompleted` as expected input.
+4. **CP §3.5.2 and CP §3.5.3 disagree on whether `PID_PROGRAM_VERSION` is
+   written to the three table objects at all.** CP §3.5.3's Group Address
+   Table variant Nr. 06, p. 54, and Association Table variant Nr. 06, p. 56
+   (the Group Object Table variant likewise, pp. 51-52), each instruct
+   `PropertyWrite(..., PID_PROGRAM_VERSION)` on the table object itself. CP
+   §3.5.2's own table steps 08/09/10, pp. 43-44, list no such write for the
+   same objects. RES's own property tables side with §3.5.2: Table 77 (Group
+   Address Table, p. 238), Table 80 (Association Table, p. 249) and Table 85
+   (Group Object Table, p. 270) do not list `PID_PROGRAM_VERSION` among the
+   object's properties at all; only Table 90 (Application Program 1, p. 288)
+   and Table 91 (Application Program 2, p. 290) do. Both readings of the
+   contradiction are handled without picking a winner: the write is attempted
+   and a device-side refusal of a property RES never granted the object is
+   recorded as an expected outcome, not a procedure failure — see task C1.
+5. **CP §3.5.4 step 05's cross-reference points at nothing.** CP §3.5.4, p. 57,
+   step 05 reads *"refer to the routines of 'Unload Device' in 3.5.1.3"* — but
+   CP §3.5.1.3, p. 40, is titled *"Memory architecture"*, and the string
+   `Unload Device` occurs exactly once in the entire document: inside this
+   same dangling reference.
+6. **RES §4.23.2.4.1, p. 297, names a Load Control value as if it were a Load
+   State.** It reads *"continue with further access only after load state has
+   changed to LoadCompleted"*, but Table 92 (the Load State Machine's state
+   list) names the terminal state `Loaded`; `LoadCompleting` is the
+   intermediate state on the way there, and `LoadCompleted` (`02h`) is a Load
+   Control *value* a client writes to request the transition, never a state a
+   device reports back. The code polls for `Loaded`, matching Table 92, not
+   the clause's own wording.
+7. **CP §3.5.2, §3.5.3 and §3.5.4 each unload and load the five parts in a
+   different order, and cannot all three be matched by one implementation.**
+   CP §3.5.2 step 05, p. 42, unloads Application Program 2, Application
+   Program 1, Group Object Table, Association Table, Address Table. CP §3.5.4
+   step 05, p. 57, unloads Address Table, Association Table, Object Table,
+   Application Program 2, Application Program 1. CP §3.5.2's own *load* order,
+   steps 06-10, pp. 43-44, is Application Program 2, Application Program 1,
+   Group Object Table, Address Table, Association Table — a third ordering,
+   distinct from both unload orders above. Freeing (and loading) memory is
+   order-independent
+   as far as the Load State Machine cares, so this is a trace-fidelity
+   observation, not a defect, and is explicitly not something the code
+   changes iteration order to "fix": the code iterates `plan.parts` in one
+   fixed order for all three procedures.
+
+Nothing above authorises implementing or claiming behaviour the KNX Standard
+does not specify — see §1's wording policy. It records seven places where
+following the printed text *literally* would either duplicate a transcription
+error or contradict another clause of the same Standard, and where the actual
+behaviour was chosen instead.
+[KNOWN_LIMITATIONS.md §95](KNOWN_LIMITATIONS.md#95-seven-places-where-the-knx-standards-printed-text-must-not-be-followed-literally)
+points here.

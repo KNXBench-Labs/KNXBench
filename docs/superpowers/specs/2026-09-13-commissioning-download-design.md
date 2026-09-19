@@ -2069,7 +2069,7 @@ once so that older references resolve:
 | `GAP-T30-01` | 1 | 1 | open |
 | `GAP-T30-02` | 2 | 2 | open |
 | `GAP-T30-03` | 3 | 3 | open |
-| `GAP-T30-04` | 4 | 4 | open |
+| `GAP-T30-04` | 4 | 4 | narrowed 2026-09-19 |
 | `GAP-T30-05` | 5 | — (never listed there) | withdrawn 2026-09-13, documented |
 | `GAP-T30-06` | 6 | 5 | **reclassified 2026-09-14** — documented; now a project risk decision |
 | `GAP-T30-07` | 7 | 6 | open |
@@ -2110,13 +2110,44 @@ once so that older references resolve:
    **Forbidden:** claiming a device with an `EtsDownloadPlugin` is supported.
    The correct behaviour is to detect the hook, report it, and decline. See also
    `KNOWN_LIMITATIONS.md` §6.
-4. **`GAP-T30-04` — the "differential download algorithm"** named in CP §3.5.3. The CRC
-   comparison that gates it is specified; the algorithm is not.
-   **Undocumented in both knowledge bases as searched** (`knx_spec_kb_programming`
+4. **`GAP-T30-04` — the "differential download algorithm"** named in CP §3.5.3, p. 46.
+   ~~**Undocumented in both knowledge bases as searched** (`knx_spec_kb_programming`
    and the 177-PDF text-only base), and in the extracted text of the eight PDFs
-   of §1.1, in which the phrase occurs only at CP §3.5.3 as a name.
-   **Forbidden:** implementing or claiming differential download. Permitted:
-   comparing the CRC and skipping an unchanged part.
+   of §1.1, in which the phrase occurs only at CP §3.5.3 as a name.~~
+   **Narrowed 2026-09-19** (spec audit
+   `docs/spec-audits/2026-09-19-cp-3_5_3-partial-download.md` Q1): the phrase
+   occurs in four more places, three of them substantive, and between them the
+   trigger, the goal, the required client-side state and the consistency
+   argument are all documented — the claim above overstated the gap.
+
+   > `03_01_02 Glossary v01.05.03 AS.pdf`, p. 9: *"**Differential Download** —
+   > Optimisation of the Configuration Procedure in S-Mode, in which only the
+   > data is downloaded that is assumed to differ between the current contents
+   > and the intended contents after download. NOTE 3 To this purpose, the
+   > Management Client may for instance hold a memory image of a preceding
+   > download, which it compares with a new memory image (new parameters,
+   > links…) to decide on which data to write in the device."*
+
+   > RES §4.2.27.1.2, p. 39: *"The CRC checksum calculation shall provide a
+   > higher consistency while using differential download."*
+
+   > `Project Schema23 v01.00.00.pdf`, `DeviceInstance` attributes, p. 44:
+   > `LoadedImage | xs:base64Binary | optional | The image loaded into the
+   > device the last time (used with differential download)`, `CheckSums |
+   > xs:base64Binary | optional | Check sums read from the device the last
+   > time (used with differential download)`, and `DownloadCounter |
+   > xs:unsignedInt | optional`.
+
+   **What is genuinely absent is only the diffing and chunk-selection
+   strategy** — and the Glossary's own *"may for instance"* marks that absence
+   as implementation-defined, not unspecified. That is a licence, not a gap.
+   **Forbidden, unchanged:** implementing or claiming a specific algorithm as
+   *the Standard's* differential download algorithm — none is prescribed.
+   Permitted, unchanged and now wider: comparing the CRC and skipping an
+   unchanged part; choosing any chunk-selection strategy; using
+   `LoadedImage`/`CheckSums`/`DownloadCounter` for whatever comparison this
+   project designs, since the Standard licenses that choice rather than
+   withholding it.
 5. **`GAP-T30-05`** — ~~**the `L_Data_Extended` discovery mechanism.**~~ **Withdrawn — this is
    documented, and listing it here was an error of this document.** It is
    `PID_MAX_APDU_LENGTH`, RES §4.3.7, quoted in full in §6.4: range 15–254, and

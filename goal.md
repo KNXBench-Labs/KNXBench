@@ -282,11 +282,16 @@ them, and do not quietly fold pieces of them into another task.
   2026-09-13: ETS6 AES/PBKDF2 derivation lives in `crates/knx-secure`. The
   ZipCrypto (ETS4/5) side remains.
 - **§62 — passive Group Monitor real-gateway verification completed
-  2026-09-16.** Two bounded production-path sessions received 52 and 65
-  telegrams with no drops; with the real reference project open, 65/65 names
-  resolved and 10 values decoded. No bus read, write, response, management
-  request, or scan was sent. Tunnelling-only, single-session, client-side
-  filtering, no auto-reconnect, and unverified transmit behavior remain.
+  2026-09-16, re-verified 2026-09-19.** Three bounded production-path
+  sessions (52, 65, and 1299 telegrams, the last running 34 minutes) all
+  received zero drops; with the real reference project open, destination
+  names resolved 100% of the time and values decoded through their DPT.
+  The 2026-09-19 pass also confirmed the single-session `409` guard live
+  and found the gateway itself allows only one concurrent tunnel — a new,
+  previously undocumented hardware fact. No bus read, write, response,
+  management request, or scan was sent in any session. Tunnelling-only,
+  single-session, client-side filtering, no auto-reconnect, and unverified
+  transmit behavior/reconnect/other-gateway-models remain.
 
 ---
 

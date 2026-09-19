@@ -42,6 +42,39 @@ export function openProject(path: string): Promise<ProjectTree> {
 }
 
 /**
+ * What the server is doing inside the one `importProject`/`openProject`
+ * call that is still in flight — `GET /api/project/load-progress`, the
+ * whole of ADR-0023's transport.
+ *
+ * `completed`/`total` are both `null` for every phase that has no real
+ * count to report, which is most of them; the two that do are counting
+ * things they have already finished, never predicting. Nothing here is
+ * derived from elapsed time, and the snapshot deliberately carries no
+ * timestamp for a caller to be tempted by.
+ */
+export interface LoadProgressSnapshot {
+  /** Monotonic per server run, never reused — how a poller tells "still
+   * the load I started" from "somebody else's, already finished". */
+  operationId: number;
+  kind: "import" | "open";
+  /** The file name, never the full path. */
+  source: string;
+  /** A wire phase name (`loadProgress.ts`'s `LOAD_PHASES`). */
+  phase: string;
+  completed: number | null;
+  total: number | null;
+  status: "running" | "succeeded" | "failed";
+  /** Set only when `status` is `"failed"` — the same message the POST
+   * rejected with, kept for a client that lost that response. */
+  error: string | null;
+}
+
+/** `null` when this server run has never loaded anything. */
+export function loadProgress(): Promise<LoadProgressSnapshot | null> {
+  return request("/api/project/load-progress");
+}
+
+/**
  * The three spellings `POST /api/project/new` accepts for
  * `groupAddressStyle` — the same tokens ETS writes into a `.knxproj` and
  * `knx-store` persists, so nothing here needs translating on the way to

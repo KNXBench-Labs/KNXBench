@@ -53,7 +53,7 @@ WebAssembly boundary to carry.
 
 **Data integrity, which decides it.** `Command::apply` returns its own
 inverse, calls the validators in `validation.rs`, and feeds `CommandStack`
-for undo and redo. But `crates/knx-core/src/project.rs:181-187` declares all
+for undo and redo. But `crates/knx-core/src/project.rs:181-186` declares all
 six of `Project`'s fields `pub`. "All mutations go through `Command`" is a
 convention held by review, not an invariant held by the type system — fine
 inside one workspace with one test suite, and a different proposition when

@@ -6384,3 +6384,34 @@ project picked the table's left-to-right column order and recorded the
 choice as inferred, not cited — `KNOWN_LIMITATIONS.md` #99. Explicitly out
 of scope, per the task brief: `PID_GROUP_RESPONSER_TABLE`, CP §3.5.4 step 07
 (unload individual address), and any procedure-level retry loop.
+
+## 2026-09-19 — C4: the transport counted to three, and the Standard asked for four
+
+TL §3, p. 15 permits up to 3 repetitions of `T_DATA_CONNECTED_REQ_PDU`
+after the original send, i.e. 4 transmissions total, before the local
+Transport Layer gives up (TL §4, p. 16: `max_rep_count 3; maximum of
+T_Connect.req repetitions`). `crates/knx-net/src/commissioning.rs`'s
+`exchange_inner` counted the original send as `attempts = 1` and bailed at
+`attempts >= MAX_REP_COUNT` (3), which is only 2 repetitions — 3
+transmissions, one short. A device that would have answered the third
+repeat was abandoned as `SessionError::NoAnswer` a transmission early. Fixed
+by adding `MAX_TRANSMISSIONS: u8 = MAX_REP_COUNT + 1` next to
+`MAX_REP_COUNT` in scope, with a doc comment citing TL §3/§4, and comparing
+`attempts` against the new constant instead of the old one — `MAX_REP_COUNT`
+itself is untouched and still correctly names the Standard's repetition
+count; the bug was purely in how the transmission cap read it. Two new
+tests pin the transmission count as a literal `4` rather than the constant
+(`a_connected_exchange_makes_exactly_four_transmissions_before_giving_up`,
+`an_answer_on_the_fourth_transmission_is_accepted`), because a test that
+compares against the same constant it is meant to check cannot catch that
+constant being wrong — the pre-existing silent-device test did exactly
+that, and kept passing under mutation for exactly that reason.
+
+Mutation-tested per the task brief: capping `MAX_TRANSMISSIONS` back down to
+3 fails both new tests (the fourth-transmission and the exactly-four-count
+one); capping it up to 5 fails the exactly-four-count test. See the C4/C5
+dispatch report for the exact panic text of each. No
+`docs/KNOWN_LIMITATIONS.md` entry: this is a closed spec-conformance fix
+with no residual deviation left over the wire. Out of scope, unchanged: the
+low-level frame acknowledge mechanics of `T_DATA_CONNECTED` itself.
+

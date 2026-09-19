@@ -36,6 +36,7 @@ import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
 import DocumentationExportButton from "./DocumentationExportButton";
 import ProjectDiffPanel from "./ProjectDiffPanel";
 import LoadProgressBanner from "./LoadProgressBanner";
+import { localFailure, ownsOperation } from "./loadProgress";
 
 // How often the browser asks the server what a running load is doing
 // (ADR-0023). Fast enough that a phase lasting a second is still seen,
@@ -122,6 +123,13 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   // same tick would both read the same stale state value, and the second
   // one would reach the server for a `409` it never needed to earn.
   const loadingRef = useRef(false);
+  // ADR-0023's client half of the operation id. `loadBaselineRef` is the
+  // counter as it stood just before this load asked for an operation;
+  // `loadOperationRef` is the id it adopted once a poll produced one.
+  // Refs, not state: the poll must read the current values, not the ones
+  // captured when its effect was created.
+  const loadBaselineRef = useRef<number | null>(null);
+  const loadOperationRef = useRef<number | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -450,6 +458,17 @@ function App({ manifestVersion = packageVersion }: AppProps) {
     clearErrors();
     setLoadSource(fileNameOf(path));
     setLoadSnapshot(null);
+    // Read the operation counter before asking for a new operation. Every
+    // snapshot from here on is judged against it, so a finished earlier
+    // load or another client's operation can never be rendered under this
+    // file's name. A failed read leaves the baseline `null`, and then
+    // nothing at all is adopted: "Starting…" until the POST answers is
+    // less informative than a phase name and a great deal truer.
+    loadOperationRef.current = null;
+    loadBaselineRef.current = await api
+      .loadProgress()
+      .then((snapshot) => snapshot?.operationId ?? 0)
+      .catch(() => null);
     setLoading(true);
     try {
       resetTree(await load(path));
@@ -461,7 +480,20 @@ function App({ manifestVersion = packageVersion }: AppProps) {
       // The rejection is already on screen as a toast; the snapshot adds
       // the one thing it cannot, which phase was running when it failed.
       // Fetched once, after the fact — the poll below has stopped by now.
-      setLoadSnapshot(await api.loadProgress().catch(() => null));
+      //
+      // Accepted only when it is *our* operation and it says `failed`.
+      // Anything else — a stranger's operation behind a `409`, the
+      // previous load's snapshot behind a pre-flight rejection, no
+      // snapshot at all behind an unreachable server, or our own
+      // operation reporting `succeeded` after its response was lost — is
+      // replaced by a local failure carrying the error the POST actually
+      // threw. A load that is over must never leave a bar moving.
+      const message = api.errorMessage(e);
+      const final = await api.loadProgress().catch(() => null);
+      const ours =
+        final?.status === "failed" &&
+        ownsOperation({ baseline: loadBaselineRef.current, adopted: loadOperationRef.current }, final);
+      setLoadSnapshot((previous) => (ours && final ? final : localFailure(previous, message)));
     } finally {
       setLoading(false);
       loadingRef.current = false;
@@ -470,16 +502,23 @@ function App({ manifestVersion = packageVersion }: AppProps) {
 
   // A poll that fails is not a load that failed — the POST is the only
   // thing that decides that — so a rejected snapshot fetch is swallowed
-  // rather than turned into an error the user cannot act on. Only a
-  // `running` snapshot is accepted: anything else belongs to an operation
-  // that is already over, possibly a previous one.
+  // rather than turned into an error the user cannot act on. Two filters
+  // must both pass: `running`, because anything else belongs to an
+  // operation that is already over, and ownership, because a `running`
+  // operation can still be somebody else's — the `409` case, where our
+  // POST is refused precisely *because* another operation is in flight.
   useEffect(() => {
     if (!loading) return;
     let cancelled = false;
     async function poll() {
       try {
         const snapshot = await api.loadProgress();
-        if (!cancelled && snapshot?.status === "running") setLoadSnapshot(snapshot);
+        if (cancelled || snapshot?.status !== "running") return;
+        if (!ownsOperation({ baseline: loadBaselineRef.current, adopted: loadOperationRef.current }, snapshot)) return;
+        // First sighting wins: from here on this load answers to exactly
+        // one id, and a later operation cannot take the banner over.
+        loadOperationRef.current = snapshot.operationId;
+        setLoadSnapshot(snapshot);
       } catch {
         /* see above */
       }

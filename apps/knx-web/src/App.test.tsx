@@ -77,6 +77,11 @@ afterEach(() => {
   apiMock.getSessionLog.mockResolvedValue([]);
   apiMock.productLanguages.mockResolvedValue([]);
   apiMock.deviceParameters.mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] });
+  // `clearAllMocks` keeps implementations, including a queued
+  // `mockResolvedValueOnce`, so the load tests below would otherwise
+  // hand their pre-flight answer to whoever runs next.
+  apiMock.loadProgress.mockReset();
+  apiMock.loadProgress.mockResolvedValue(null);
   window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
   resetProductLanguageForTests();
   window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
@@ -860,6 +865,9 @@ describe("App — project load progress", () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
     let finish: (tree: ProjectTree) => void = () => {};
     apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((resolve) => { finish = resolve; }));
+    // The pre-flight read ADR-0023's client contract starts with: this
+    // server has loaded nothing, so every operation id is ours.
+    apiMock.loadProgress.mockResolvedValueOnce(null);
     apiMock.loadProgress.mockResolvedValue({
       operationId: 1, kind: "import", source: "villa.knxproj", phase: "parseTopology",
       completed: null, total: null, status: "running", error: null,
@@ -872,6 +880,7 @@ describe("App — project load progress", () => {
 
     expect(host!.querySelector(".load-progress")).not.toBeNull();
     expect(host!.textContent).toContain("villa.knxproj");
+    expect(host!.textContent).toContain("Parsing the topology");
     expect(findButton("Open project…").disabled).toBe(true);
     expect(findButton("Open (.knxdb)…").disabled).toBe(true);
 
@@ -893,6 +902,7 @@ describe("App — project load progress", () => {
   it("keeps the banner after a failure, naming the phase the load died in", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
     apiMock.importProject.mockRejectedValue(new Error("invalid Zip archive"));
+    apiMock.loadProgress.mockResolvedValueOnce(null);
     apiMock.loadProgress.mockResolvedValue({
       operationId: 1, kind: "import", source: "villa.knxproj", phase: "openContainer",
       completed: null, total: null, status: "failed", error: "invalid Zip archive",
@@ -910,6 +920,120 @@ describe("App — project load progress", () => {
     // And the load is over: the buttons are usable again.
     expect(findButton("Open project…").disabled).toBe(false);
 
+    await act(async () => root.unmount());
+  });
+});
+
+// T37 fix round 1, finding F1. Every one of these four failures used to
+// leave a banner claiming a load was still running — three of them showing
+// a *different* operation's phase under our file name. The rule they all
+// pin: when a load is over, the banner says so, whatever the server's
+// snapshot happens to be. A moving bar for nothing is the exact defect
+// this feature exists to avoid.
+describe("App — a failed load never renders a running banner", () => {
+  // The banner is a failure, not a fiction: no progressbar at all, so no
+  // indeterminate shuttle, and no phase borrowed from another operation.
+  function expectFailedBanner(foreignPhrases: string[]) {
+    const banner = host!.querySelector(".load-progress")!;
+    expect(banner, "the banner must stay up to report the failure").not.toBeNull();
+    expect(banner.getAttribute("data-failed")).toBe("true");
+    expect(banner.querySelector('[role="progressbar"]')).toBeNull();
+    expect(banner.querySelector('[data-indeterminate="true"]')).toBeNull();
+    expect(banner.textContent).toContain("Could not load villa.knxproj");
+    for (const phrase of foreignPhrases) {
+      expect(banner.textContent, `banner must not borrow "${phrase}"`).not.toContain(phrase);
+    }
+  }
+
+  async function clickOpen() {
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+  }
+
+  it("probe A: a pre-flight rejection does not inherit the previous operation's phase", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    // The server refused before it began an operation, so the newest
+    // snapshot is still the *previous*, finished load — a native open of
+    // a different file, sitting on its final phase.
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 3, kind: "open", source: "older.knxdb", phase: "buildProjectTree",
+      completed: null, total: null, status: "succeeded", error: null,
+    });
+    apiMock.importProject.mockRejectedValue(new Error("path is outside the data directory"));
+    const root = await renderApp();
+
+    await clickOpen();
+
+    expectFailedBanner(["Building the project tree", "older.knxdb"]);
+    expect(host!.querySelector(".load-progress")!.textContent).toContain("path is outside the data directory");
+    await act(async () => root.unmount());
+  });
+
+  it("probe B: an unreachable server leaves a failure, not a permanent 'Starting…'", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    // Nothing answers: not the pre-flight read, not the poll, not the
+    // snapshot fetched after the POST died.
+    apiMock.loadProgress.mockRejectedValue(new Error("Failed to fetch"));
+    apiMock.importProject.mockRejectedValue(new Error("Failed to fetch"));
+    const root = await renderApp();
+
+    await clickOpen();
+
+    expectFailedBanner([]);
+    expect(host!.querySelector(".load-progress")!.textContent).toContain("Failed to fetch");
+    await act(async () => root.unmount());
+  });
+
+  it("probe C: a 409 shows our failure, never the holder's operation", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    // Another client holds the slot: its operation is genuinely running,
+    // and it is genuinely not ours. It predates our attempt, so the
+    // baseline read at the start of the load rules it out by id.
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 7, kind: "open", source: "someone-elses.knxdb", phase: "loadStoredProject",
+      completed: null, total: null, status: "running", error: null,
+    });
+    apiMock.importProject.mockRejectedValue(new Error("a project load is already running (operation 7)"));
+    const root = await renderApp();
+
+    await clickOpen();
+
+    expectFailedBanner(["Reading the stored project", "someone-elses.knxdb"]);
+    expect(host!.querySelector(".load-progress")!.textContent).toContain("already running");
+    await act(async () => root.unmount());
+  });
+
+  it("a lost response to a load that succeeded still reports a failure (§93)", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    apiMock.loadProgress.mockResolvedValueOnce(null); // pre-flight: nothing loaded yet
+    apiMock.loadProgress.mockResolvedValueOnce({
+      operationId: 1, kind: "import", source: "villa.knxproj", phase: "parseTopology",
+      completed: null, total: null, status: "running", error: null,
+    });
+    // The operation finished on the server; only its answer was lost.
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 1, kind: "import", source: "villa.knxproj", phase: "buildProjectTree",
+      completed: null, total: null, status: "succeeded", error: null,
+    });
+    let fail: (error: Error) => void = () => {};
+    apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
+    const root = await renderApp();
+
+    await clickOpen();
+    // The poll has adopted operation 1 by now and the banner is running.
+    expect(host!.querySelector(".load-progress")!.getAttribute("data-failed")).toBeNull();
+    await act(async () => {
+      fail(new Error("connection closed"));
+    });
+
+    // Our own operation, and it says `succeeded` — but this client never
+    // received the project, so a running or finished banner would both be
+    // lies. It reports the failure, on the last phase it actually saw.
+    expectFailedBanner([]);
+    const banner = host!.querySelector(".load-progress")!;
+    expect(banner.textContent).toContain("Parsing the topology");
+    expect(banner.textContent).toContain("connection closed");
     await act(async () => root.unmount());
   });
 });

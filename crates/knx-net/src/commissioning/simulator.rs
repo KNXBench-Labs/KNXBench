@@ -132,8 +132,8 @@ pub struct SimulatorConfig {
     /// The level the key earns.
     pub key_level: u8,
     /// The worst level still allowed to write. A session at a numerically
-    /// higher level is refused with `nr_of_elem = 0`, which AL §3.4.4.2
-    /// gives as the answer for insufficient access rights.
+    /// higher level is refused with `nr_of_elem = 0`, which AL §3.4.4.2,
+    /// p. 66, gives as the answer for insufficient access rights.
     pub write_requires_level: u8,
     /// A memory region that refuses every write with `number = 0`.
     pub protected_memory: Option<(u32, u32)>,
@@ -175,7 +175,7 @@ pub struct SimulatorConfig {
     /// is product data (spec §3.2), not something this simulator can
     /// infer, so a test says which of its indices are the two application
     /// programs and every other index refuses the write the way `[D]`
-    /// AL §3.4.4.2 says an unlisted property is refused.
+    /// AL §3.4.4.2, p. 66, says an unlisted property is refused.
     pub application_program_objects: HashSet<u8>,
 }
 
@@ -413,7 +413,15 @@ impl SimulatedDevice {
         let mut properties: HashMap<(u8, u8), Vec<u8>> = HashMap::new();
         properties.insert((0, PID_DEVICE_CONTROL), vec![0x00]);
         properties.insert((0, PID_MANUFACTURER_ID), vec![0x00, 0x02]);
-        properties.insert((0, PID_PROGRAM_VERSION), vec![0x00, 0x02, 0x12, 0x34, 0x01]);
+        // `[C1]` F10: seeded only when a test has told this device that
+        // object 0 is one of the two application programs, so a read of
+        // `PID_PROGRAM_VERSION` and `property_write`'s refusal of the same
+        // pair (below) agree on whether object 0 carries the property —
+        // RES Table 90, p. 288, and Table 91, p. 290, are what decide that,
+        // not this constructor.
+        if config.application_program_objects.contains(&0) {
+            properties.insert((0, PID_PROGRAM_VERSION), vec![0x00, 0x02, 0x12, 0x34, 0x01]);
+        }
         if let Some(length) = config.max_apdu_length {
             properties.insert((0, PID_MAX_APDU_LENGTH), length.to_be_bytes().to_vec());
         }
@@ -940,9 +948,10 @@ impl SimulatedDevice {
                 if event == LoadEvent::AdditionalLoadControls {
                     self.apply_allocation(object_index, data);
                 }
-                // `[D]` CP NOTE 9 with AL §3.4.4.2: the answer to a write of
-                // a PDT_CONTROL property is a read of it, and a read of this
-                // one is the resulting state — never the ten octets sent.
+                // `[D]` CP NOTE 9 with AL §3.4.4.2, p. 66: the answer to a
+                // write of a PDT_CONTROL property is a read of it, and a
+                // read of this one is the resulting state — never the ten
+                // octets sent.
                 Some(vec![self
                     .load_state(ObjectIndex::new(object_index))
                     .octet()])
@@ -972,8 +981,9 @@ impl SimulatedDevice {
                 // `[C1]` RES Table 77, p. 238; Table 80, p. 249; Table 85,
                 // p. 270: none of the Group Address Table, the Association
                 // Table or the Group Object Table has this property. `[D]`
-                // AL §3.4.4.2: a property that does not exist is answered
-                // with `nr_of_elem = 0`, which the `None` below reproduces.
+                // AL §3.4.4.2, p. 66: a property that does not exist is
+                // answered with `nr_of_elem = 0`, which the `None` below
+                // reproduces.
                 None
             }
             _ => {

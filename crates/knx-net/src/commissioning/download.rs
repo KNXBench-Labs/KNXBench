@@ -349,7 +349,7 @@ pub enum VersionOutcome {
     /// The part carried no version, which is only valid for a part whose
     /// [`PartKind::has_program_version`] is false: `LoadablePart::new`
     /// refuses an empty version otherwise. CP §3.5.2's table steps 08/09/10
-    /// (pp. 43-44) ask for no such write, so a plan built for that procedure
+    /// (p. 44) ask for no such write, so a plan built for that procedure
     /// can leave a table's version empty to match it exactly.
     NotAttempted,
     /// The device accepted the write and read the octets back.
@@ -363,9 +363,10 @@ pub enum VersionOutcome {
     /// audit behind this task (see C18). Both readings leave the part
     /// `Loaded`.
     ///
-    /// `[D]` AL §3.4.4.2 answers `nr_of_elem = 0` both when *"Interface
-    /// Object or Property doesn't exist"* and when *"the requester does not
-    /// have the required access rights"* — one shape, two causes. This
+    /// `[D]` AL §3.4.4.2, p. 66, answers `nr_of_elem = 0` both when
+    /// *"Interface Object or Property doesn't exist"* and when *"the
+    /// requester does not have the required access rights"* — one shape,
+    /// two causes. This
     /// variant cannot and does not distinguish them; it only records that
     /// the write did not take effect.
     Refused,
@@ -922,16 +923,16 @@ async fn load_one_part<T: ManagementTransport>(
     // Volume 6 Annex A's question, not decided here (see C18). RES Table 77,
     // p. 238; Table 80, p. 249; Table 85, p. 270 do not list the property
     // for the three tables, so a plan may leave a table's version empty
-    // (nothing attempted, matching CP §3.5.2 Nr. 08-10, pp. 43-44, which
-    // asks for no such write) or supply one anyway to match CP §3.5.3's
-    // table variants (pp. 51-52, 54, 56) — in which case a refusal is
-    // recorded, not propagated as an error.
+    // (nothing attempted, matching CP §3.5.2 Nr. 08-10, p. 44, which asks
+    // for no such write) or supply one anyway to match CP §3.5.3's table
+    // variants (pp. 51-52, 54, 56) — in which case a refusal is recorded,
+    // not propagated as an error.
     record(
         report,
         kind,
         5,
         if part.version.is_empty() {
-            "no version to set (CP §3.5.2 Nr. 09/10, p. 44, lists none here)"
+            "no version to set (CP §3.5.2 Nr. 08-10, p. 44, lists none here)"
         } else {
             "set the version"
         },
@@ -1071,7 +1072,7 @@ mod tests {
     }
 
     /// A table part with no version to write, the shape CP §3.5.2 Nr. 08-10
-    /// (pp. 43-44) actually asks for: it lists no `PID_PROGRAM_VERSION`
+    /// (p. 44) actually asks for: it lists no `PID_PROGRAM_VERSION`
     /// write at all, unlike CP §3.5.3's table variants.
     fn table_part_with_no_version(
         index: u8,
@@ -1190,7 +1191,7 @@ mod tests {
             step_5_titles,
             vec![
                 "set the version",
-                "no version to set (CP §3.5.2 Nr. 09/10, p. 44, lists none here)",
+                "no version to set (CP §3.5.2 Nr. 08-10, p. 44, lists none here)",
             ]
         );
 
@@ -1739,8 +1740,8 @@ mod tests {
     /// Address Table, the Association Table or the Group Object Table. A
     /// device that was never told an object is one of the two application
     /// programs (RES Table 90, p. 288; Table 91, p. 290) must refuse a
-    /// write of it, the same as `[D]` AL §3.4.4.2 requires for a property
-    /// that does not exist on that object.
+    /// write of it, the same as `[D]` AL §3.4.4.2, p. 66, requires for a
+    /// property that does not exist on that object.
     ///
     /// Before `[C1]`, `simulator.rs`'s fallback stored any
     /// `(object_index, property_id)` pair unconditionally, so this write
@@ -1770,6 +1771,53 @@ mod tests {
                     object_index,
                     property_id: PID_PROGRAM_VERSION,
                 } if object_index == ObjectIndex::new(1)
+            ),
+            "got {error}"
+        );
+    }
+
+    /// `[C1]` F9: the `PropertyRefused` arm in `load_one_part` tolerates a
+    /// refused version write only for a part whose
+    /// [`PartKind::has_program_version`] is false. This is the negative half
+    /// of `a_partial_download_of_the_association_table_tolerates_a_refused_
+    /// version`: a refusal on an application-program part — which RES Table
+    /// 90, p. 288, and Table 91, p. 290, both give the property — must still
+    /// fail the procedure, not be swallowed the way a table's refusal is.
+    /// `[D]` AL §3.4.4.2, p. 66, gives a real device no way to tell the two
+    /// refusals apart on the wire, so only `part.kind` can.
+    ///
+    /// Deleting `&& !part.kind.has_program_version()` from that arm leaves
+    /// this test the only one in the suite that notices: every other test
+    /// either supplies a version the simulator accepts, or refuses on a
+    /// table kind the guard was always meant to tolerate.
+    #[tokio::test]
+    async fn a_refused_version_write_on_an_application_program_fails_the_download() {
+        // No `application_program_objects` registered for object 3: the
+        // simulator refuses the version write for this application-program
+        // part the same way it would refuse one for a table, and the two
+        // must not be confused by the arm that tolerates the table's case.
+        let device = SimulatedDevice::new();
+        let parts = plan(vec![part(
+            3,
+            "Application Program 2",
+            4,
+            PartKind::ApplicationProgram2,
+        )]);
+        let mut session = writer(&device, WriteScope::Download);
+        let error = Downloader::new(&mut session, parts)
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect_err(
+                "a refused version write on an application program is a procedure failure, \
+                 not something to tolerate",
+            );
+        assert!(
+            matches!(
+                error,
+                DownloadError::Session(SessionError::PropertyRefused {
+                    object_index,
+                    property_id: PID_PROGRAM_VERSION,
+                }) if object_index == ObjectIndex::new(3)
             ),
             "got {error}"
         );

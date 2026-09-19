@@ -6705,3 +6705,184 @@ passed. It now also reads the height the parent actually applied.
 and against `de.ts` directly, for the same reason `motionGuard.test.ts`
 does: happy-dom applies no author stylesheet, and the catalogues are
 checked for matching keys, never for matching meaning.
+
+## 2026-09-19 — C19: the repetitions ran out and the connection stayed open anyway
+
+TL §3.9, p. 15, the sentence immediately after the one `MAX_TRANSMISSIONS`
+already cites: *"If it fails, the local Transport Layer shall pass a
+T_Disconnect.ind primitive to the local user indicating that the connection
+is released (state = CLOSED)."* `exchange_inner` did the repetitions and
+skipped the release: it returned `SessionError::NoAnswer` and left
+`self.connection` populated, so every subsequent exchange went out on a
+connection the peer had, by the Standard, already forgotten. What came back
+was undefined rather than merely absent, and no caller could tell a slow
+device from one that closed the connection four transmissions ago.
+
+Citations verified in the PDFs at offset 0 before they were written into
+comments, and one of the brief's was wrong. TL §5.5.3.6 is on **p. 35**, not
+p. 34 — and it is the `T_NAK_PDU` route to the give-up condition, not the
+acknowledge time-out this code actually hits. The clause that governs a
+time-out is the state machine's, in three pieces: event `E18`
+(`ACKNOWLEDGE_TIME_OUT_ind (rep_count >= max_rep_count)`, §5.2, p. 19), its
+cell in the Style 1 transition table (`OPEN_WAIT` → `CLOSED`, action `A6`,
+§5.4.1, p. 22), and `A6` itself (*"Send a N_Data_Individual.req with
+T_DISCONNECT_REQ_PDU [...] Send a T_Disconnect.ind to the user"*, §5.3,
+p. 19). Those are the citations in the code; §5.5.3.6 p. 35 is named as the
+parallel `T_NAK` diagram and nothing more. RES §4.23.2.4.1, p. 297
+(*"otherwise, the TL-connection will close after TL-timeout"*) and its
+NOTE 86 verified unchanged.
+
+**The fix, three parts.** (1) `exchange_inner`'s give-up condition split in
+two. `acknowledged` — a T_ACK arrived and the application answer did not —
+keeps returning `NoAnswer` and keeps the connection, because action `A8`
+stopped the acknowledge timer and `E18` never fires. `attempts >=
+MAX_TRANSMISSIONS` with nothing acknowledged runs `A6` (`self.disconnect()`
+*is* its two halves) and returns the new
+`SessionError::ConnectionReleased { waiting_for, each, attempts }`. (2)
+`wait_for_load_state`'s silence swallow split the same way: the acknowledged
+silence keeps polling the live connection (RES: *"If the MaS responds during
+state LoadCompleting, an established TL-connection is kept alive"*), the
+released one clears the connection so the loop re-establishes before the next
+poll. (3) A failed re-establishment inside the wait is no longer fatal while
+the device's last state is one Table 94 permits silence in — RES asks for
+*"periodically"*, and before C19 the question never arose, because an
+exhausted read left a stale connection in place and nothing was ever
+re-established. Only the four connection-shaped errors are tolerated
+(`reestablishment_may_be_retried`); a refused property or a mismatched
+read-back from `connect()` still reaches the caller. The deadline still
+bounds the whole thing, so a device that never comes back still ends in
+`TransitionTimedOut` carrying the last state read — the same report as
+before.
+
+**No caller depended on the connection surviving a `NoAnswer`.** Checked
+before the behaviour was changed, as the brief asked: `SessionError` is
+matched in `commissioning.rs` and `commissioning/download.rs` only
+(`BusSessionError` in `knx-server` is an unrelated type), every download step
+propagates with `?`, and the single site that continues past a `NoAnswer` is
+`wait_for_load_state`'s swallow — the one this task fixes.
+
+Two tests, both mutation-checked. `exhausting_the_repetitions_releases_the_connection`
+asserts the variant, `attempts == 4`, `session.connection().is_none()`, one
+`Seen::Disconnect` on the device (A6's `T_DISCONNECT_REQ_PDU`, so a local
+state change alone is not enough), and `reconnects() == 0`. Deleting the
+`self.disconnect().await` fails it on the `connection().is_none()` assertion.
+`the_wait_loop_tells_a_released_connection_from_a_silent_device` runs the
+same wait twice against the same states, differing only in whether the T_ACK
+comes back, and asserts counts rather than elapsed time: the acknowledged
+silence costs one read, no reconnect, one `Seen::Connect`, no
+`Seen::Disconnect`; the unacknowledged one costs six reads (1 + a full
+four-transmission ladder + the poll after the re-established connection), one
+reconnect, two `Seen::Connect`, one `Seen::Disconnect`. Merging the two
+error paths back into one — the pre-C19 shape — fails it on `reconnects`.
+Two new `SimulatorConfig` knobs make the halves say which device they are:
+`unanswered_load_state_reads` (T_ACK, no answer) and
+`unacknowledged_load_state_reads` (nothing at all), both numbered windows
+over `PID_LOAD_STATE_CONTROL` reads counting every transmission, so neither
+test depends on how long anything took. (A third knob,
+`unanswered_connects`, arrived with the fix round below.)
+
+`docs/KNOWN_LIMITATIONS.md` entry **104**: the release is correct and costs a
+full reconnect per quiet poll against a device that went offline in
+`LoadCompleting`. Latency and bus traffic, not correctness, and it compounds
+with entry 101's accounting of the same loop.
+
+### Review fix round (2026-09-19), five changes and one refusal
+
+1. **The tolerant re-establishment was untested and is now tested.** The
+   review mutated `reestablishment_may_be_retried` to `return false` —
+   reverting the whole scope addition — and every test still passed: the
+   offline half above withholds only `PID_LOAD_STATE_CONTROL` frames, so its
+   `T_Connect` was always answered and `reconnect()` always succeeded.
+   `a_failed_re_establishment_is_retried_until_the_deadline` closes it with a
+   device that breaks the connection on read #2 and then answers no
+   `T_Connect` at all (new `SimulatorConfig::unanswered_connects`): the wait
+   must survive three or more failed re-establishments and end in
+   `TransitionTimedOut` carrying `LoadCompleting`, not in the refused
+   attempt's error. The `return false` mutation now fails it.
+2. **A half-established connection was left in the field.** `connect()`
+   populates `self.connection` before `authorise()` and before
+   `assert_verify_mode()`, so either one failing returns `Err` with a
+   connection still set — and the busy-in-`LoadCompleting` device this task
+   models fails in precisely that way. The tolerated arm swallowed it and the
+   next iteration then polled a connection that never finished coming up,
+   skipping the retry the arm had just promised. The arm now clears
+   `self.connection`, as the `ConnectionReleased` arm already did.
+3. **An assertion claimed more than it could prove.** The busy half's
+   message said a quiet poll costs one read "because an acknowledged request
+   is not repeated", and mutating `if acknowledged {` to
+   `if acknowledged && attempts >= MAX_TRANSMISSIONS {` left it green. So the
+   discriminator is now pinned directly by
+   `an_acknowledged_request_is_never_repeated`, which swallows every answer
+   and asserts one transmission and `attempts == 1`; the wait-loop message
+   was narrowed to what it actually observes. The review's prescribed fix —
+   widening the quiet window to a full `MAX_TRANSMISSIONS` — was tried and
+   does not discriminate: with the window four wide both the correct code
+   (four consecutive quiet polls) and the mutant (one poll repeated four
+   times) produce exactly six reads. Measured, not assumed; both runs are in
+   the task report.
+4. **The last real-time dependency is gone.** The wait-loop test settled its
+   state with `settle_load_state_after`, an `Instant`-based knob no paused
+   clock can help. It now settles by answered-read count, via the new
+   `SimulatedDevice::preset_load_completing_polls`. A read that goes quiet
+   spends nothing, which is the property that makes the counts meaningful.
+5. **`Lagged`'s absence from the retry set is now explained** in
+   `reestablishment_may_be_retried`'s doc: it is a local broadcast-buffer
+   overrun, not evidence that a device was silent, and retrying it would
+   excuse a client-side fault as a device-side one.
+
+The refusal: `KNOWN_LIMITATIONS.md` **105** records a real conformance gap
+the review found and C19 does not fix. TL §3.7 p. 13 and §3.8 p. 14 require
+`priority = system` and `ack_request = true` for `T_CONNECT_REQ_PDU` and
+`T_DISCONNECT_REQ_PDU`, and §5.3 p. 19 repeats it for `A2`/`A3`/`A4`'s
+`T_ACK`/`T_NAK`; `encode_l_data` hard-codes Ctrl1 `0xBC` — low priority, no
+ack request — as the crate's only outbound default. Both citations verified
+in the PDF at offset 0. Fixing it changes every frame the crate emits,
+group communication included, so it gets its own change and its own tests.
+
+### Second review fix round (2026-09-19), three lines that nothing made fail
+
+The re-review mutated the fix round's own work and found three pieces with no
+test behind them: the tolerated arm's `self.connection = None`, and
+`ConnectRejected` and `ConnectionLost` in `reestablishment_may_be_retried`'s
+match. Deleting any of them left the suite green. Each now has a test that
+fails without it.
+
+1. **The half-established connection had no test.** Every scenario that
+   reached the tolerated arm got there through an `AuthorisationPlan::Skip`
+   session whose `T_Connect` never confirmed, so `self.connection` was
+   already `None` and the line changed nothing. Giving it an effect needs a
+   `connect()` that confirms its `T_Connect` and then fails *after*
+   `self.connection` is set — which is the Verify Mode step of a
+   write-capable session.
+   `a_half_established_connection_is_not_inherited_by_the_next_poll` builds
+   that: poll #2 is unacknowledged (action A6 releases the connection), and
+   the re-establishment's `PID_DEVICE_CONTROL` read is acknowledged and never
+   answered, so `connect()` returns `NoAnswer` holding a half-built
+   connection. The assertions are on what the stale `Some(..)` costs, not on
+   the field: the device's own Verify Mode bit, the count of
+   `PID_DEVICE_CONTROL` writes, the count of `T_Connect` frames. Deleting the
+   line fails it on the Verify Mode bit — the mutant polls happily to the end
+   on a connection whose §10.3 handshake never ran.
+2. **`ConnectRejected` had no test.** `a_refused_re_establishment_is_tried_again`
+   answers the first re-establishment's `T_Connect` with a *negative*
+   `L_Data.con` (`[D]` TL §3.7, p. 13 sends it with `ack_request` set, so the
+   confirmation carries the layer-2 answer) and asserts the wait tries again
+   and settles. Dropping the variant from the match fails it with the
+   refusal as the wait's return value.
+3. **`ConnectionLost` had no test.** `a_re_establishment_the_device_drops_is_tried_again`
+   has the device confirm the `T_Connect` and then send
+   `T_DISCONNECT_REQ_PDU` under the Verify Mode read, so the loss is raised
+   from inside `connect()` rather than from a poll — the only place
+   `reestablishment_may_be_retried` ever sees one. Dropping the variant fails
+   it the same way.
+
+Three new `SimulatorConfig` knobs, each the twin of one that already existed:
+`unanswered_device_control_reads` and `drop_connection_on_device_control_read`
+(the `PID_DEVICE_CONTROL` versions of the two `PID_LOAD_STATE_CONTROL` knobs)
+and `rejected_connects` (the negative-confirmation sibling of
+`unanswered_connects`). All four members of the tolerated set are now pinned
+by a test that fails without them.
+
+Round 1's refusal of the prescribed window widening stands; the re-review
+reproduced the non-discrimination independently. Limitation **105** is
+unchanged and still not fixed here.

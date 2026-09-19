@@ -5628,3 +5628,95 @@ work: an extra question gets asked, nothing is discarded.
 
 **Lifted when.** The server grows a real dirty flag; then the guard becomes
 exact. Not scheduled.
+
+## 104. A device that goes offline mid-`LoadCompleting` now costs a full reconnect per quiet poll
+
+**Limitation.** Since C19, a connected request whose four transmissions
+(`MAX_TRANSMISSIONS`, TL §3, p. 15) all go unacknowledged releases the
+Transport Layer connection, per TL §3.9, p. 15 and the state machine's `E18`
+→ `A6` cell (§5.2 p. 19, §5.4.1's table p. 22, §5.3 p. 19).
+`wait_for_load_state` tolerates that release while the device's last reported
+state is one RES Table 94 permits silence in — but the next poll may no
+longer reuse the connection, so it re-establishes first. That
+re-establishment is `connect()` in full: `T_Connect` and its confirmation,
+`A_Authorize_Request` — and, on a write-capable session, the Verify Mode
+read-modify-write as well, which is gated on the session holding a write
+authorisation and not on which `AuthorisationPlan` it uses. One quiet poll
+therefore costs one whole reconnect.
+
+**Cause.** The Standard says the connection is gone and the Standard says to
+carry on polling; it does not say the polls become cheaper. RES §4.23.2.4.1
+asks the MaC to *"try to re-establish the connection periodically during the
+maximum transition time"*, and RES's NOTE 86 expects exactly this device:
+*"A device may be offline during state LoadCompleting."* The previous
+behaviour was cheaper only because it was wrong — it kept polling a
+connection the peer had already forgotten, and read whatever came back as if
+it meant something.
+
+**Impact.** Latency and bus traffic, not correctness, and it compounds with
+entry 101's accounting of the same wait loop. With `SessionTiming::default()`
+each quiet poll is `4 × 3 s = 12 s` of unacknowledged transmissions plus the
+re-establishment (up to `connection_timeout` = 6 s for the `T_Connect`
+confirmation alone, more with a key), where before C19 it was the 12 s and
+nothing else. With the default `max_transition` of 30 s that is room for
+roughly one or two such polls before the wait gives up, not an open-ended
+series — the cost is a slower failure, not a longer one. Against a device that never comes back the wait still ends in
+`SessionError::TransitionTimedOut` with the last state read, as it did
+before; the failed re-establishments are tolerated rather than reported,
+because a single failure is not what *"periodically"* means.
+
+**Not a regression in what is reported.** A re-establishment that fails for a
+reason other than the connection failing to come up — a refused property, a
+mismatched read-back, a Verify Mode the device will not take — is still
+returned to the caller unchanged (`reestablishment_may_be_retried` in
+`crates/knx-net/src/commissioning.rs` lists exactly the four
+connection-shaped errors it swallows, and since C19's second fix round each
+of the four has a test that fails when it is removed from that list).
+
+**Lifted when.** A measurement on real hardware says the reconnect cost
+matters. The cheaper alternative — keeping a released connection and hoping
+the peer still honours it — is not available: it is the defect C19 fixed.
+
+
+## 105. Transport Layer control frames go out at low priority, not `SYSTEM`
+
+**Limitation.** Every frame this crate sends carries Ctrl1 `0xBC` —
+`encode_l_data` in `crates/knx-net/src/cemi.rs` hard-codes it for all
+outbound `L_Data`, the only exception being `0xBD` for a negative
+confirmation. `0xBC` means low priority and `ack_request = false`. The
+Transport Layer's connection-oriented control frames are specified
+otherwise, and this crate sends all of them: `T_CONNECT_REQ_PDU`,
+`T_DISCONNECT_REQ_PDU`, `T_ACK_PDU` and `T_NAK_PDU`.
+
+**Cause.** `[D]` TL §3.7, p. 13 on `T_Connect`: *"the priority shall be set
+to 'system'; the ack_request shall be set to true; the octet_count shall be
+set to 6"*. `[D]` TL §3.8, p. 14 says the same for `T_Disconnect`: *"the
+priority shall be set to 'system'; the ack_request shall be set to true"*.
+`[D]` The state machine's actions repeat it per frame — TL §5.3, p. 19: `A2`
+and `A3` *"Send a N_Data_Individual.req with T_ACK_PDU, priority = SYSTEM"*,
+`A4` the same with `T_NAK_PDU`, and `A6` *"Send a N_Data_Individual.req with
+T_DISCONNECT_REQ_PDU, priority = SYSTEM"*. The crate has one outbound Ctrl1
+and no per-frame priority at all, so there is nowhere for `SYSTEM` to be
+set.
+
+**Impact.** Unknown on real hardware and untested. Priority affects bus
+arbitration, not frame semantics, so a control frame that wins the bus
+anyway is indistinguishable from a conforming one; on a loaded line a
+`T_ACK` sent at low priority may be delayed behind group traffic, and the
+peer's acknowledge timer does not care why the acknowledgement was late.
+`ack_request = false` on a control frame likewise removes a link-layer
+retransmission the Standard asks for. Every commissioning result this
+project has produced so far came from the simulator, which does not
+arbitrate.
+
+**Not caused by C19.** This predates every commissioning task; C19 is
+merely the first code whose correctness argument quotes `A6` in full,
+which is how it surfaced. C19 deliberately did not fix it: a per-frame
+priority is a behavioural change to every frame the crate emits, including
+group communication, and it belongs in its own change with its own tests.
+
+**Lifted when.** `encode_l_data` takes a priority (and an `ack_request`)
+from its caller, the Transport Layer control paths in
+`crates/knx-net/src/commissioning.rs` pass `SYSTEM`/true, and a cEMI
+encoding test pins the Ctrl1 octet of each of the four control frames
+against the clauses above.

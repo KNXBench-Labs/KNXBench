@@ -37,7 +37,7 @@ pub struct MemoryControlBlock {
     pub read_access: u8,
     /// Write Access 1, the low nibble of octet 5.
     pub write_access: u8,
-    /// CRC, octets 6-7, big-endian. RES §4.2.27.1.2, p. 39: a CRC16-CCITT
+    /// CRC, octets 6-7, big-endian. RES §4.2.27.1.2, p. 40: a CRC16-CCITT
     /// (width 16, polynomial `1021h`, initial value `FFFFh`, input and
     /// output not reflected, no output XOR), valid only in the load state
     /// 'Loaded'.

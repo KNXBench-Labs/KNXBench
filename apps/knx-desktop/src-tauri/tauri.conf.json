@@ -12,9 +12,16 @@
     "windows": []
   },
   "bundle": {
-    "active": false,
+    "active": true,
+    "targets": ["appimage"],
+    "category": "Development",
+    "shortDescription": "KNX-compatible engineering application",
+    "longDescription": "Linux-first KNX-compatible project engineering application.",
+    "licenseFile": "../../../LICENSE",
+    "icon": ["icons/icon.png", "icons/128x128.png", "icons/256x256.png"],
     "resources": {
-      "../../knx-web/dist": "frontend"
+      "../../knx-web/dist": "frontend",
+      "../../../LICENSE": "LICENSE"
     }
   }
 }

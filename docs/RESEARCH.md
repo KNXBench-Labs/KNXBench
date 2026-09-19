@@ -781,7 +781,7 @@ project) exercise `Module`/`ModuleDef` anywhere in the available corpus** —
 confirmed zero in `prod1` (4 AP files), `prod2` (Weinzierl 730, 3 AP
 files), `prod4` (Dummy_Secure, 3 AP files), and in three further files
 scanned directly from `OriginalData/` without extraction: both `Unser
-Zuhause` exports and `Weinzierl_730_KNX_IP_Interface_ETS4_v1.knxprod`.
+Zuhause` exports and `Weinzierl_730_KNX_IP_Interface_ETS4.knxprod`.
 **The sample is narrow: two manufacturers, no independent third source to
 cross-validate structural assumptions against.** Any acceptance test slice
 2 writes will need its module-bearing fixtures from just these two.
@@ -1020,11 +1020,10 @@ corpus, two independent ways, both agreeing on zero:
    MDT_KP_AMI_AMS_03_Switch_Actuator_V31a/M-0083/M-0083_A-0318-31-DB39.xml: ModuleDef=4 Module=28 nested_Module_inside_ModuleDef=0
    MDT_KP_AMI_AMS_03_Switch_Actuator_V31a/M-0083/M-0083_A-0319-31-587B.xml: ModuleDef=4 Module=14 nested_Module_inside_ModuleDef=0
    Weinzierl_730_KNX_IP_Interface_ETS4/M-00C5/M-00C5_A-0702-10-1B22.xml: ModuleDef=0 Module=0 nested_Module_inside_ModuleDef=0
-   Weinzierl_730_KNX_IP_Interface_ETS4_v1/M-00C5/M-00C5_A-0702-10-1B22.xml: ModuleDef=0 Module=0 nested_Module_inside_ModuleDef=0
-   TOTAL nested Module elements across all 7 application-program files: 0
+   TOTAL nested Module elements across all 6 application-program files: 0
    ```
    (`kv25`, referenced in Q6/Q7 above, is not present under this machine's
-   `OriginalData/ProductDatabases/` — the five archive files installed here
+   `OriginalData/ProductDatabases/` — the four archive files installed here
    (`prod1`/`prod2`/`prod3`/`prod4`, four distinct packages) are the ones
    this ran against; see the Rust corpus test below for the exact archive
    list this measurement actually ran against.)
@@ -3473,6 +3472,70 @@ loop, and all nine sessions shared one tunnelling connection. "The first
 session on a fresh tunnel works and subsequent ones do not" fits the data as
 well as any per-device explanation, and would be separated by probing the
 nine in reverse order, or one tunnel per address.
+
+#### 8.8.3a Follow-up — order ruled out; tunnel lifecycle implicated (2026-09-18)
+
+The approved read-only comparison was run against the same installation with
+only `A_DeviceDescriptor_Read`, no property reads, no authorisation and no
+writes **[V]**. The target list was the nine explicit addresses from R-SAFE-2;
+`1.1.220` was asserted excluded before any socket opened.
+
+In reverse order on one shared tunnel, `1.1.32` answered with mask `0701h` and
+all eight subsequent targets timed out. This rules out a special property of
+`1.1.24`: whichever approved target owns the first management session on a
+fresh shared tunnel answers, while later sessions do not.
+
+With one newly opened and cleanly disconnected tunnel per target, still in
+reverse order, `1.1.32`, `1.1.30`, `1.1.28`, `1.1.26` and `1.1.24` answered
+with `0701h`; `1.1.31`, `1.1.29`, `1.1.27` and `1.1.25` timed out. The strict
+alternation means a fresh tunnel per target is not by itself a reliable fix;
+immediate tunnel teardown/recreation or gateway channel lifecycle is also in
+the causal path. It does not prove which endpoint retains state or which delay,
+sequence or acknowledgement is missing. R20 therefore stays open, and callers
+must continue using the independent scan probe for presence rather than
+interpreting a `ManagementSession` timeout as absence.
+
+#### 8.8.3b Specification audit — KNXnet/IP disconnect completion is not observed (2026-09-18)
+
+A targeted audit of the PDFs under *The KNX Standard v3.0.0* identifies one concrete protocol defect that fits the fresh-tunnel alternation, without yet proving it caused that hardware result **[D+V]**:
+
+- *03_08_02 KNXnet/IP Core v01.06.02 AS* §5.3.4 (page 13) requires an independent sequence counter per communication channel, reset to zero for a newly established channel. `TunnelClient` does this. *03_08_04 KNXnet/IP Tunnelling v01.07.01 AS* §2.6.1 (page 9) requires one repeat with the same counter after a one-second missing `TUNNELLING_ACK`; `send_frame` does this too. These rules expose no discrepancy.
+- Core §5.5 (pages 13–14) says the peer receiving `DISCONNECT_REQUEST` shall acknowledge with `DISCONNECT_RESPONSE`, and that this data packet signals the **final termination** of the communication channel. The KNXnet/IP system conformance test (*08_TSSH ... KNXnet_IP_1_3_AS*, §3.6.1, pages 21–22) likewise sends a request and expects the matching response before cleanup.
+- `TunnelClient::disconnect` sends `DISCONNECT_REQUEST`, immediately signals both background tasks to stop and returns without waiting. Its sole socket reader handles server-initiated `DISCONNECT_REQUEST`, but has no `DISCONNECT_RESPONSE` arm; the response decoder exists unused outside unit tests. KNXBench therefore cannot know the server completed channel teardown before opening the next tunnel. That is a specification mismatch, not an inferred gateway quirk.
+
+This was a plausible explanation for strict alternating results when a new tunnel was opened immediately after each disconnect: each next connect could have raced the gateway's unfinished release of the previous channel. The shared-tunnel first-session failure involves KNX Transport Layer sessions inside one unchanged IP tunnel, so the missing IP `DISCONNECT_RESPONSE` could not by itself explain that half of R20.
+
+The same audit rules out replacing the existing presence probe casually. *03_05_02 Management Procedures v02.01.02 AS* §2.19 (pages 34–35) defines the general `NM_IndividualAddress_Check` exactly as `T_Connect`, connected `A_DeviceDescriptor_Read(0)`, then `T_Disconnect`, which is the procedure `scan.rs` implements. §2.17's connectionless descriptor scan (pages 32–33) explicitly applies only to a KNX RF subnetwork and documents that it misses devices detected only through `T_Connect`. §3.2 (pages 68–70) permits both connection-oriented and connectionless `DM_Connect`; the current `ManagementSession` connection-oriented choice is therefore valid.
+
+The causal test is now implemented. A real UDP loopback peer holds channel release until it sends `DISCONNECT_RESPONSE`; the regression test failed against the old client because `disconnect()` returned immediately, then passed after `TunnelClient` began waiting for the matching successful response. A ten-second local error bound matches the existing control-response budget; it is not a delay or retry intended to influence gateway behaviour. All 174 `knx-net` library tests and package Clippy with warnings denied pass.
+
+#### 8.8.3c Real-gateway causal rerun after response-aware disconnect (2026-09-18)
+
+The bounded fresh-tunnel comparison from §8.8.3a was repeated with the response-aware disconnect implementation **[V]**. The safety boundary was unchanged: the nine literal targets in reverse order (`1.1.32` through `1.1.24`), the excluded `1.1.220` checked before socket creation, one fresh tunnel per target, `ManagementSession::read_only`, `AuthorisationPlan::Skip`, and only `A_DeviceDescriptor_Read(0)`. No property read, authorisation request, write service or scan was sent.
+
+Every KNXnet/IP disconnect received its matching successful `DISCONNECT_RESPONSE`, proving that the gateway had finally terminated each channel before the next was opened. Nevertheless the result was identical to the earlier run: `.32`, `.30`, `.28`, `.26` and `.24` answered mask version `0701h`, while `.31`, `.29`, `.27` and `.25` timed out after the defined three descriptor-read attempts. Waiting for final IP-channel termination therefore does **not** remove the alternation and is ruled out as its cause on this gateway. The fix remains required for Core §5.5 compliance. R20 stays open because the evidence now points below or outside KNXnet/IP channel teardown; it still does not identify the missing state transition, acknowledgement or timing rule. No retry or delay constant may be inferred from this result.
+
+#### 8.8.3d Full listed-device sequence test (2026-09-18)
+
+The response-aware fresh-tunnel test was extended, with user approval, to all 34 literal targets in `devices.md`: `1.1.1` through `1.1.32`, then the listed IP interfaces `1.1.250` and `1.1.253` **[V]**. The user-excluded `1.1.200` and the project-excluded `1.1.220` were both absent from the target set and checked before socket creation. The wire boundary remained `ManagementSession::read_only`, `AuthorisationPlan::Skip`, and only `A_DeviceDescriptor_Read(0)`; no property read, authorisation request, write service or scan was sent.
+
+The 34 sessions split exactly by ordinal position. All 17 odd-position attempts answered: `1.1.1`, `.3`, `.5`, `.7`, `.9`, `.11`, `.13`, `.15`, `.17`, `.19`, `.21`, `.23`, `.25`, `.27`, `.29`, `.31` and `.250`. All 17 even-position attempts timed out: `1.1.2`, `.4`, `.6`, `.8`, `.10`, `.12`, `.14`, `.16`, `.18`, `.20`, `.22`, `.24`, `.26`, `.28`, `.30`, `.32` and `.253`. `1.1.23` returned mask `0012h`; the other 16 answers returned `0701h`. Every fresh tunnel received its matching successful `DISCONNECT_RESPONSE`.
+
+This reverses the previous outcome for the same addresses `1.1.24` through `.32`: ascending order makes `.25/.27/.29/.31` answer and `.24/.26/.28/.30/.32` time out, while reverse order did the opposite. Device address, manufacturer and mask version are therefore ruled out as selectors for the failure. The alternating state follows attempt order across 34 independently terminated IP tunnels. Its owner remains unidentified below or outside the KNXnet/IP channel lifecycle, so R20 remains open and no delay or retry constant is justified.
+
+#### 8.8.3e Frame-level isolation of the failed connection (2026-09-18)
+
+A two-target read-only diagnostic recorded the gateway-assigned address, incoming KNXnet/IP sequence counters and decoded cEMI frames without changing protocol timing **[V]**. Both success and failure tunnels were assigned `1.1.249`; every incoming channel began at sequence zero and every counter matched the client's expectation. Tunnel address assignment and client-side KNXnet/IP receive-sequence rejection are therefore ruled out.
+
+The successful `1.1.1` session received, in order, successful `L_Data.con` for its `T_Connect`, successful `L_Data.con` for `A_DeviceDescriptor_Read(0)`, `T_ACK` from `1.1.1`, then `A_DeviceDescriptor_Response(0, 0701h)`. The following timed-out `1.1.2` session first received a late `L_Data.con` carrying `T_Connect` for the previous destination `1.1.1`. Its three descriptor-read attempts each received successful `L_Data.con` toward `1.1.2`, but no `L_Data.con` for the current `T_Connect`, no `T_ACK` from `1.1.2` and no descriptor response arrived.
+
+This identifies the direct failure mechanism. `ManagementSession::connect()` awaits `TunnelClient::send_frame()`, which completes on the gateway's KNXnet/IP `TUNNELLING_ACK`; it does not await a matching cEMI `L_Data.con` proving the bus-level `T_Connect` progressed. The failed session therefore sends connected descriptor reads without evidence that its current transport connection was established. The trace does not yet explain why the gateway or bus omits every alternate current-target connect confirmation. A causal correction must synchronize with the matching successful bus confirmation or another specification-grounded readiness event, not an unexplained delay.
+
+#### 8.8.3f Specification-timed connection confirmation fix (2026-09-18)
+
+`ManagementSession::connect()` now subscribes before sending `T_Connect` and does not establish session state until a matching positive cEMI `L_Data.con` arrives **[V+D]**. The match binds the assigned tunnel source, current target, `T_Connect` and `NoApplicationPdu`, so the late previous-target confirmation observed in §8.8.3e cannot release the next session. `SessionTiming::connection_timeout` defaults to Transport Layer clause 4's normative six seconds. Silence returns `NoAnswer` after that bound; a matching negative confirmation returns `ConnectRejected` immediately. The simulator emits the same confirmation shape. TDD RED proved the old gateway-ACK-only return and the old wait-through-negative behavior before both changes.
+
+A final fresh-tunnel, read-only run covered all 34 literal `devices.md` targets **[V]**. Thirty-three positive confirmations arrived in 2.851–144.245 ms (median 134.530 ms), and all 33 subsequent `A_DeviceDescriptor_Read(0)` requests answered. `1.1.253` returned an explicit negative `L_Data.con` after 162.709 ms and was reported as `ConnectRejected`; no descriptor read was sent after rejection. The earlier strict alternation disappeared completely. The relevant lateness was therefore roughly 0.1–0.16 seconds, while the old session allowed zero time for confirmation; six seconds is a specification bound, not a measured delay guess. R20's false-connected timeout mechanism is fixed. A later management timeout remains inherently ambiguous and must not by itself prove absence, but connection establishment no longer proceeds without bus evidence.
 
 #### 8.8.4 Reconciliation against the spec
 

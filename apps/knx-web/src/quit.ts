@@ -13,17 +13,17 @@ export function canQuit(): boolean {
 }
 
 /**
- * Closes the editing window. The desktop shell builds exactly one window
- * up front (`apps/knx-desktop/src-tauri/src/lib.rs`'s `setup`), so closing
- * it ends the process — with the one exception of a diagnostics companion
- * still being open, recorded in KNOWN_LIMITATIONS.md §103.
+ * Closes the main window. That is the whole job on this side: this only
+ * needs `core:window:allow-close` in `capabilities/default.json`, the
+ * narrowest permission that does anything here. Ending the process is the
+ * other half, and it lives in Rust — `apps/knx-desktop/src-tauri/src/lib.rs`'s
+ * `on_window_event` clause turns the main window's destruction into
+ * `AppHandle::exit(0)`, which is also why the window manager's own close
+ * button quits the whole application, not just this window.
  *
- * `close()` rather than a process-level `exit()`: the latter needs
- * `tauri-plugin-process` on both sides, and this needs only
- * `core:window:allow-close` in `capabilities/default.json` — the narrowest
- * permission that does the job. The import is dynamic for the same reason
- * `diagnosticsWindow.ts`'s is: the module must not be pulled into the
- * browser bundle's startup path, where there is no Tauri to talk to.
+ * The import is dynamic for the same reason `diagnosticsWindow.ts`'s is:
+ * the module must not be pulled into the browser bundle's startup path,
+ * where there is no Tauri to talk to.
  */
 export async function quitApp(): Promise<void> {
   const { getCurrentWindow } = await import("@tauri-apps/api/window");

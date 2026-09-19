@@ -6290,3 +6290,31 @@ A temporary two-target diagnostic ruled out tunnel-address allocation and KNXnet
 `apps/knx-web` now has a written rule for what a theme is. ADR-0022 splits the `--knx-*` custom properties into a theme layer (one `:root[data-theme="<id>"]` block per theme, custom properties plus `color-scheme` only) and a component layer (`:root` and the density/motion setting blocks, which own `--knx-control-height`, `--knx-cell-padding`, `--knx-transition-duration`, `--knx-motion-easing` and `--knx-feedback-duration`). Membership in the theme layer is derived from the stylesheet rather than curated: a token belongs to a theme exactly when some rule reads it through `var()` and no user setting owns it, which is 27 tokens today. `apps/knx-web/src/themeTokens.ts` parses the stylesheet and computes that set; `themeTokens.test.ts` holds every registered theme to it and additionally rejects negation selectors, theme-scoped element rules, component-layer tokens inside a theme, plain properties other than `color-scheme`, tokens declared but never read, accent variations that change more than the accent pair, and drift between `index.html`'s pre-mount id list and `THEMES`.
 
 Two themes were added against that boundary — `cupertino` (Apple-subtle, light) and `neon-grid` (cyberpunk, dark) — bringing the registry to five palettes. The restructure fixed four measured defects along the way: the light palette and all four accent overrides had been defined by negation (`:root:not([data-theme="bitcoin-defi"])`), so every future theme would have silently inherited them; `bitcoin-defi` had no `--knx-on-accent` and hard-coded white buttons at roughly 2.3:1 contrast; `graphite` inherited the light theme's invisible shadows; and `bitcoin-defi` declared the two motion tokens itself, able to override a user's reduced-motion setting. The cyberpunk *motion* register stays on T27's `data-motion-style="glitch"` axis inside `@media (prefers-reduced-motion: no-preference)`; no theme carries its own durations. Theme selection still persists only in `localStorage["knx-desktop:theme"]`, legacy `"light"`/`"dark"` values still migrate. Contrast was measured in a real browser across all five themes: every foreground/background and on-accent/accent pair is at or above 4.5:1. Nothing checks contrast automatically yet; that is named in ADR-0022 as the next tightening.
+
+## 2026-09-19 — C14: ETS's differential-download state stops being an unknown-attribute false alarm
+
+`DeviceInstance`'s `LoadedImage`, `CheckSums` and `DownloadCounter`
+(`Project Schema23 v01.00.00.pdf` p. 44 — ETS's record of the device's last
+download, used to decide whether the next one can be differential) are now
+in `crate::known::DEVICE_INSTANCE_ATTRS_21` (schema ≥21 only; schema 11's
+own attribute list is unaffected, and none of the three reference projects
+happens to carry any of the three). Before this task the generic
+unknown-attribute fallback already preserved the bytes byte-exact — nothing
+was silently lost — but misreported them as an `unknown` construct, which
+tripped `ImportReport::has_losses()` for documented, optional ETS state, and
+the preserved-data report (`OpaqueSummary`) could not say *which* attribute
+had been kept. `OpaqueSummary` now carries `xpath` and `name` (empty for a
+whole-file entry or a manufacturer file), so a preserved `LoadedImage` no
+longer reads identically to a preserved `Comment`. `LoadedImage` stays
+opaque base64 text, exactly as stored in the `.knxproj` attribute — this
+application does not decode it, only keeps it. No export/round-trip-through-
+a-file path exists for these three yet, same as the other per-device
+known-but-unmapped attributes `KNOWN_LIMITATIONS.md` #34 already tracks
+(`RetainedAttrs` is keyed project-wide, not per device — writing one
+device's real state onto every device would be corruption, not
+preservation); #34's attribute lists and impact paragraph now name all
+three. This application never reads or acts on `DownloadCounter` to decide
+anything itself — that is `knx-net`'s job (C13), a separate crate, kept a
+separate source of truth on purpose. Fixture-based round-trip tests (no
+`OriginalData/` corpus dependency) cover both the present and the absent
+case in `crates/knx-etsproj/tests/download_state.rs`.

@@ -321,7 +321,9 @@ mod tests {
             }],
             vec![knx_etsproj::report::OpaqueSummary {
                 source_path: "P-0512/1.xml".into(),
+                xpath: String::new(),
                 kind: "Baggage".into(),
+                name: String::new(),
                 size: 42,
                 sha256: "deadbeef".into(),
                 reason: "unrecognized manufacturer namespace".into(),

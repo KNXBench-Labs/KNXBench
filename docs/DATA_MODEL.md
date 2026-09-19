@@ -469,7 +469,23 @@ but not interpreted in v1:
   here either: `ParameterInstance` is still keyed by `(device, ets_id)`
   only and still holds a plain `raw: String`. That single-key shape is
   exactly why module-scoped (per-channel) editing is out of scope for this
-  slice (design D25).
+  slice (design D25). **T18 task 12 (2026-09-14)** gives the product
+  database its first structure for module *arguments*: `products.sqlite`
+  schema **v11** adds a `module_def_argument` table (one row per
+  `ModuleDef/Arguments/Argument`, keyed `(program_id, module_def_id, id)`,
+  carrying `name`/`arg_type`/`allocates`/`position`) and a
+  `dynamic_node.value` column holding a `NumericArg`/`TextArg`'s `@Value`
+  in a column of its own rather than only inside the deliberately
+  not-re-parseable `extra` audit string. `migrate_v10_to_v11` backfills both
+  by replaying stored `ApplicationProgram` blobs ([ADR-0020](adr/0020-migrations-may-rederive-from-stored-bytes.md)
+  rule E1). The evaluator uses them to substitute `{{ArgumentName}}` into
+  `Channel`/`ParameterBlock`/`ParameterSeparator` text, so two
+  instantiations of one `ModuleDef` no longer read identically. This
+  domain model is again untouched: the project side still stores a
+  `ParameterInstance` keyed by `(device, ets_id)`, and argument
+  interpretation happens entirely on the product-database side of the
+  fence ([KNOWN_LIMITATIONS.md §§68-71](KNOWN_LIMITATIONS.md) name what
+  that leaves open).
 - `Memory`, `AbsoluteSegment`, `LoadProcedures`, mask and resource data — held
   in the product database, not in the project.
 - `BusAccess`, `BCUKey`, `SplitType`, `BinaryData` and vendor baggage — held in

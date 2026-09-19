@@ -254,16 +254,46 @@ that server-named id instead of the declared one (D43).
     this), the same key `evaluate`'s own dedup already used. Also
     unattested against real data — the corpus has zero nesting to trigger
     it — but no longer latent in the code either.
-  - **`Module` arguments stay exactly as limited as before.** Argument
-    values (`NumericArg`/`TextArg`) remain stored but uninterpreted; see
-    the entry below.
-- **Argument values (`NumericArg`/`TextArg`) remain stored but
-  uninterpreted.** They still fall through to the generic `extra` column;
-  `choose` never branches on them (RESEARCH §4.4 Q3), so activation-set
-  computation does not need them, but memory-offset placement and
-  `{{ChNo}}`-style text substitution are unresearched and unimplemented.
+  - **`Module` arguments are no longer inert** (task 12, 2026-09-14); see
+    the narrowed entry below.
+- **Argument values (`NumericArg`/`TextArg`) are interpreted for text
+  substitution and for nothing else** (narrowed 2026-09-14, goal-completion
+  task 12, design D47-D51). What changed: a `ModuleDef`'s declared
+  arguments are stored (`module_def_argument`), a `Module`'s bindings get a
+  `dynamic_node.value` column instead of the unparseable `extra` blob, and
+  `{{Name}}` placeholders in an activated `Channel`/`ParameterBlock`/
+  `ParameterSeparator` `@Text` are resolved against the instantiating
+  `Module`'s bindings, so two instantiations of one `ModuleDef` now
+  evaluate to two different labels
+  (`Activation::labels`; closed by
+  `an_argument_value_changes_the_evaluated_label_of_each_module_instantiation`
+  and, on real corpus data, `corpus_argument_measurement_task_12`, both in
+  `crates/knx-productdb/tests/dynamic_tree.rs`).
+  **What remains unimplemented, precisely:** the *memory-allocation* facet
+  — `Argument/@Allocates` is stored and not interpreted, and the two
+  constructs that consume a numeric argument, `Memory/@BaseOffset` (705
+  corpus occurrences `[V]`) and `ComObject/@BaseNumber` (157 `[V]`), are
+  `Static`-side and unmodelled, so a module's parameters and communication
+  objects still carry their `ModuleDef`-local memory placement and object
+  numbers rather than their per-instance ones. The purely numeric
+  placeholder family (`{{0}}`, 948 corpus occurrences `[V]`, tied to
+  `TextParameterRefId`) is also not substituted — it is left verbatim and
+  is deliberately *not* reported as an unresolved argument, because it
+  never was one. `choose` still never branches on an argument (RESEARCH
+  §4.4 Q3), so activation sets are unchanged by any of this.
 - **`AllocatorRef`** (`ModuleDefArgType_t`'s third argument-type facet)
-  has zero corpus occurrences and stays unattested and unimplemented.
+  stays unattested and unimplemented — **0 occurrences** across every
+  readable member of every archive under `OriginalData/ProductDatabases`
+  and `OriginalData/DemoProjects` (`[V]`, re-measured 2026-09-14 and
+  re-measured on every run by `corpus_argument_measurement_task_12`), and
+  0 hits in either KNX specification knowledge base
+  (`knx_spec_kb_programming.sqlite`, 2,207 facts / 27 PDFs;
+  `knx_spec_kb_full179_clean.sqlite`, 16,536 facts / 177 PDFs) across
+  `content`, `title`, `keywords` and `evidenceText`. Changed in task 12
+  only in that it is now **reported** rather than ignored: a declaration
+  spelling it produces `Diagnostic::UnsupportedModuleArgumentKind` per
+  instantiation instead of passing unremarked. Nothing about its semantics
+  is guessed at.
 - **`Access` has no attested correlation and is not used for write
   gating.** RESEARCH §4.3 found no usable correlation for `Access`
   (`Access="None"` alongside a `Memory` child came back roughly 50/50 in
@@ -3605,6 +3635,15 @@ needs; making the `RefId` clause itself plural would touch the
 the format string — more than a one-line fix, so left for a future pass
 rather than done here.
 
+**Task 12 (2026-09-14), and why it does not lift this.** Argument
+interpretation now tells two *program-side* instantiations of one
+`ModuleDef` apart — `MOD-A` and `MOD-B` produce different labels because
+they bind different values. This limitation is about the *project* side:
+two `ModuleInstance` elements claiming one `Module`. `ValueMap`'s scoped
+key is still `(module_id, ref_id)` with no `MI-` dimension, because the
+thing that is missing is a repeat index in the project file's authority,
+not a way to distinguish `Module` nodes. Unchanged, in full.
+
 **Lifted when.** RESEARCH.md's sharpest unknown #1 (what
 `ModuleInstance/@RepeatIndex`'s embedded `MI-<k>` component means, and
 whether/how it legitimately exceeds `1`,
@@ -3635,6 +3674,15 @@ value would have applied to it.
 that `Module`'s channel behaves exactly as every module-scoped channel did
 before T18 slice 4: displayed where a value happens to already resolve,
 never editable.
+
+**Task 12 (2026-09-14): unaffected, and marginally better reported.** An
+`@Id`-less `Module` still cannot be matched to a project instance — an
+argument binding names an `Argument`, not the `Module` carrying it, so it
+supplies no identity. It does now produce a *different-looking* section:
+its labels are substituted like any other instantiation's, so a nameless
+module is at least distinguishable on screen from its siblings even while
+remaining unmatchable and read-only. Nothing about the matching rule
+changed.
 
 **Lifted when.** Never by invention — a synthesised id would be a
 fabricated identifier that looks like project data and matches nothing
@@ -3672,6 +3720,11 @@ branch. No corpus-observed workflow depends on writing a hidden field
 sight-unseen; `Access` itself has no attested write-gating correlation
 either ([§3](#3-device-parameters-are-preserved-but-not-interpreted)).
 
+**Task 12 (2026-09-14): unaffected.** The task added a
+`module_def_argument` table, not a scope marker on `parameter_ref`. A
+declared parameter id still carries no scope of its own, so the panel
+remains the single authority on what is writable, exactly as D43 has it.
+
 **Lifted when.** Would need `parameter_ref` (or a sibling table) to carry
 a `module_def_id` or equivalent scope marker, so the server could resolve
 a bare id's scope without first evaluating the tree it belongs to. Not
@@ -3700,6 +3753,14 @@ into the store, and the migration has nothing to backfill it from.
 not re-imported since upgrading sees read-only channels with no reason
 that names "schema version" or "re-import" specifically — only the
 generic no-authority diagnostic.
+
+**Task 12 (2026-09-14): unaffected, and a different database.** This
+limitation is about the *project* store (`.knxdb`, schema 6); task 12
+migrated the *product* database (`products.sqlite`, v10 -> v11), which is
+a separate file with a separate version chain. The product-db migration
+re-derives everything it needs from stored `source_file` bytes and so
+needs no re-install; this one still needs a re-import, for the reason
+below.
 
 **Lifted when.** Automatically, the moment the project's source
 `.knxproj` is re-imported (not merely re-opened) — re-import re-parses

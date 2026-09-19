@@ -90,12 +90,31 @@ pub fn collect_container_entries(
     container: &mut Container,
     regenerated: &[&str],
 ) -> Result<CollectedEntries, ContainerError> {
+    collect_container_entries_observed(container, regenerated, &())
+}
+
+/// [`collect_container_entries`] reporting its progress as it goes. This is
+/// the one place in the import with a real total to report (ADR-0023): the
+/// archive's entry count is known before the loop starts, so `completed`
+/// of `total` here is a measurement rather than an estimate. `completed`
+/// counts entries *walked*, including the regenerated ones skipped below —
+/// those are the entries the loop is done with, and a counter that skipped
+/// them would stall short of its own total.
+pub fn collect_container_entries_observed(
+    container: &mut Container,
+    regenerated: &[&str],
+    observer: &dyn crate::ImportObserver,
+) -> Result<CollectedEntries, ContainerError> {
     let paths: Vec<String> = container.entries().iter().map(|e| e.path.clone()).collect();
+    let total = paths.len() as u64;
+    let mut walked = 0u64;
     let mut out = CollectedEntries {
         opaque: Vec::with_capacity(paths.len()),
         manufacturer: Vec::new(),
     };
     for path in paths {
+        walked += 1;
+        observer.items(walked, total);
         if regenerated.iter().any(|r| r.eq_ignore_ascii_case(&path)) {
             continue;
         }

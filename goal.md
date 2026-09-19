@@ -129,26 +129,36 @@ started, which is a statement about evidence, not about intent.
 
 ### T18 — Parameter interpretation and editor, remaining slices
 
-Four slices shipped (through 2026-09-12). Still open, per row A3 and
+Four slices shipped through 2026-09-12; the goal-completion run closed
+three of the four residues below during 2026-09-14. Per row A3 and
 `docs/KNOWN_LIMITATIONS.md` §§68-71:
 
-- Nested modules are not expanded.
-- `Module` argument values (`NumericArg`/`TextArg`) are stored but
-  uninterpreted; `AllocatorRef` is unattested.
-- Deep format validation is missing — `Float`, `Text`, `IPAddress`,
-  `Picture` and `Raw` get a non-empty-string check and nothing more.
-- Repeated `ModuleInstance`s are refused rather than supported (§68); a
-  `Module` with no `@Id` cannot be matched to a project instance (§69);
-  projects imported before store schema 6 stay read-only for module-scoped
-  fields unless re-imported (§71).
+- **Closed 2026-09-14 (task 11).** Nested modules are expanded, bounded at
+  `MAX_MODULE_NESTING_DEPTH = 16` with ancestor-chain cycle detection. The
+  installed corpus measures zero products that actually nest, so the
+  capability is proven by synthetic tests only.
+- **Closed 2026-09-14 (task 12, product-database schema v11).** `Module`
+  argument values (`NumericArg`/`TextArg`) are resolved against their
+  `ModuleDef`'s parameters, and a missing binding or an unsupported kind is
+  reported per instantiation. `AllocatorRef` stays unattested and open.
+- **Closed 2026-09-14 (task 10).** Deep format validation covers `Float`,
+  `Text` and `IPAddress` (`validate_kind_and_bounds`). `Picture` and `Raw`
+  keep the non-empty-string-plus-XML-safety check, because the Project
+  Schema's own encoding table names no format for either.
+- **Still open.** Repeated `ModuleInstance`s are refused rather than
+  supported (§68); a `Module` with no `@Id` cannot be matched to a project
+  instance (§69); projects imported before store schema 6 stay read-only
+  for module-scoped fields unless re-imported (§71).
 
 ### E4 — DPT main types still missing from the codec
 
-`crates/knx-core/src/dpt/codec.rs` covers main types 1-19 (except `6.020`).
-Main types 20, 21-30 and 46 are not implemented. See
-`docs/KNOWN_LIMITATIONS.md` §61 for what the codec infers rather than reads,
-and which encoding questions rest on a stated ruling rather than the
-standard — extend that section honestly as the coverage grows.
+`crates/knx-core/src/dpt/codec.rs` covered main types 1-19 (except
+`6.020`) when this was written. Task 5 added main types 20-30 and `6.020`
+on 2026-09-14; **main type 46 remains unimplemented**, and it is the whole
+of what is left here. See `docs/KNOWN_LIMITATIONS.md` §61 for what the
+codec infers rather than reads, and which encoding questions rest on a
+stated ruling rather than the standard — extend that section honestly as
+the coverage grows.
 
 ### T21 — Graphical topology and building views, decided
 

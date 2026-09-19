@@ -132,7 +132,11 @@ future cycle rather than bundled into "Session 4 leftovers":
   instantiation of one `ModuleDef` with two or more stored instances
   sharing a `RefId` (refused, not supported, D40 —
   [KNOWN_LIMITATIONS.md §68](KNOWN_LIMITATIONS.md#68-repeated-module-instantiation-is-refused-not-supported)),
-  and `Module` *arguments*, still stored-but-uninterpreted.
+  and `AllocatorRef`, which the corpus never attests. `Module`
+  *arguments* stopped being decoration on 2026-09-14 (product-database
+  schema v11, goal-completion task 12): `NumericArg`/`TextArg` bindings
+  are resolved against their `ModuleDef`'s parameters and reported per
+  instantiation when a binding is missing or its kind is unsupported.
 - **A layer stack in `Override<T>`** that would make a program value
   behind an instance-level `Empty` slot visible without risking the export
   change ADR-0012 identifies. A domain-model change with a migration; not

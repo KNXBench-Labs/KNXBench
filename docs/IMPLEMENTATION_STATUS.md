@@ -7125,3 +7125,74 @@ header and 167 without one against a ceiling of 168 — unchanged, because
 recognises `.rs`/`.ts`/`.tsx`, so a Markdown file under `docs/` is not scanned
 at all and the one remaining ceiling slot was never at risk. `cargo test` and
 `cargo clippy` were skipped: no Rust file was touched.
+
+## 2026-09-20 — C8: `DownloadPlan::new` stops trusting the caller's part order
+
+CP §3.5.1.3, p. 40, calls the memory *layout* a recommendation and says so
+explicitly: *"Nevertheless it shall be possible to arrange the segments in
+different ways."* The *download* order is a different question, and it is
+normative — carried only by row position in CP §3.5.2 Nr. 06-10 (complete
+download) and CP §3.5.3 AP2 Nr. 08-12 (the Application Program 2 partial
+variant's escalation), both of which list Application Program 2,
+Application Program 1, the Group Object Table, the Group Address Table and
+the Association Table in that order, with no free-standing sentence stating
+it. `DownloadPlan::new` (`crates/knx-net/src/commissioning/download.rs`)
+validated non-emptiness and object-index uniqueness but nothing about order,
+even though `Downloader::partial_download`'s escalation slice
+(`parts[position..]`) takes its entire target set from the plan's own
+`Vec` order — a caller that got the order wrong got no error, a plausible
+report, and a device loaded in the wrong sequence.
+
+Fixed by checking `parts.windows(2)` against `PartKind`'s `Ord` (`[C1]`'s
+type, whose declaration order already *is* the normative download order) and
+returning a new `PlanError::OutOfOrder { object_index, kind, preceding_kind }`
+the first time a part's kind is not strictly greater than its predecessor's.
+`<=` rather than `<`: a plan may skip kinds (a partial download need not
+carry all five), but two parts of the same kind have no row in either
+table to place them against, so equality is refused rather than guessed at
+(see `docs/KNOWN_LIMITATIONS.md` §108). `PartKind` gained `Hash` so it can
+sit inside `PlanError`, which already derived it via its `ObjectIndex`
+fields. The error's `Display` text and the new doc comments are careful to
+say *download order*, not *memory layout* — the two are different claims in
+the clause and conflating them would misstate what CP §3.5.1.3 actually
+permits.
+
+Six constructor tests cover the permutation classes: the full normative
+order accepted, a gapped-but-relatively-ordered subsequence accepted, one
+adjacent swap rejected, a fully reversed five-part plan rejected (reporting
+the first violated pair, not all of them), two parts of the same kind
+rejected, and a positive existence check that a caller cannot get a
+`DownloadPlan` at all out of a wrongly-ordered `Vec` — directly aimed at the
+danger the escalation slice creates. The pre-existing
+`a_failed_allocation_escalates_to_every_following_segment` test
+(`download.rs`) stays green untouched, because its fixture already carries
+Application Program 2, the Address Table and the Association Table in that
+relative order.
+
+Mutation-tested twice, both against the six new tests plus every other test
+in `commissioning::download`: (1) short-circuiting the whole order check
+with `after.kind < before.kind && false` — exit 101, the four tests that
+depend on rejection failing (`an_adjacent_swap_is_rejected`,
+`a_fully_reversed_plan_is_rejected`, `two_parts_of_the_same_kind_are_rejected`,
+`a_wrongly_ordered_plan_never_becomes_a_downloadable_plan`), with panic text
+naming the accepted `DownloadPlan` verbatim; (2) inverting the comparison to
+`after.kind >= before.kind`, which accepts every reversed order and rejects
+every correct one — exit 101, 12 of 28 tests failing, including the
+escalation acceptance test itself and the ordinary complete-download test.
+Both mutations restored and the suite returned to exit 0, 28 passed. The
+three page/clause citations above (CP §3.5.1.3 p. 40; CP §3.5.2 Nr. 06-10;
+CP §3.5.3 AP2 Nr. 08-12) were checked against the source PDF page images,
+not against memory or the task brief alone: pdftotext page 40 of
+`03_05_03 Configuration Procedures v02.01.01 AS.pdf` carries the footer
+"page 40 of 198" and the exact "arrange the segments in different ways"
+sentence, and both procedure tables were read in full to confirm row order.
+
+Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets
+-j 2 -- -D warnings`, `cargo test --workspace --no-fail-fast -j 2`,
+`cargo run -p xtask -- check-layering`, `cargo run -p xtask -- check-headers`
+and `cargo deny check` all exit 0; `npx tsc --noEmit` and `npx vitest run`
+in `apps/knx-web` (692 tests) exit 0 too, though no web file was touched —
+the crate has no consumer there. `check-headers` is unchanged (158/167,
+ceiling 168): no new source file, `download.rs` already carried its header.
+Out of scope, unchanged: `PID_GROUP_RESPONSER_TABLE`, the unload-address
+step and procedure-level retries, per the task's own explicit non-tasks.

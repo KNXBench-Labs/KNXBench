@@ -5797,7 +5797,7 @@ another shape-recognising pass next to the existing four, with the same
 requirement that it name what it removes rather than silently blanking text.
 
 
-## 107. MP §2.3 contradicts itself about an occupied IA_new, and this project follows the exception text
+## 108. MP §2.3 contradicts itself about an occupied IA_new, and this project follows the exception text
 
 **Limitation.** `NM_IndividualAddress_Write`'s own body text and its own
 exception-handling paragraph disagree about what happens when the address

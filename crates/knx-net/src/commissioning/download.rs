@@ -1690,6 +1690,36 @@ mod tests {
         );
     }
 
+    /// The "regardless" half of bit 0 outranking the CRC: this pairs bit 0
+    /// set with CRC octets that differ, which `compare_mcb_bit_0_outranks_a_
+    /// matching_crc` above does not cover. A comparison that checked the
+    /// CRC first, and only inspected bit 0 once the CRC already matched,
+    /// would report `Differed` here instead — this guards against exactly
+    /// that ordering bug.
+    #[test]
+    fn compare_mcb_bit_0_outranks_a_differing_crc() {
+        let stored = MemoryControlBlock {
+            segment_size: 4,
+            crc_control_byte: 0,
+            read_access: 0,
+            write_access: 0,
+            crc: 0x1234,
+        }
+        .to_octets();
+        let current = MemoryControlBlock {
+            segment_size: 4,
+            crc_control_byte: 0b0000_0001,
+            read_access: 0,
+            write_access: 0,
+            crc: 0x5678,
+        }
+        .to_octets();
+        assert_eq!(
+            compare_mcb(Some(&stored), &current),
+            CrcComparison::MayHaveChanged
+        );
+    }
+
     /// Unparseable octets on either side must not be read as a match: RES
     /// §4.2.27, Table 12, p. 39 fixes the width at eight octets, and a
     /// stored value from before this crate parsed the block (or garbage)

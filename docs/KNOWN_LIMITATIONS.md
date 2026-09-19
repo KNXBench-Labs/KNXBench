@@ -3756,7 +3756,7 @@ generic no-authority diagnostic.
 
 **Task 12 (2026-09-14): unaffected, and a different database.** This
 limitation is about the *project* store (`.knxdb`, schema 6); task 12
-migrated the *product* database (`products.sqlite`, v9 -> v10), which is
+migrated the *product* database (`products.sqlite`, v10 -> v11), which is
 a separate file with a separate version chain. The product-db migration
 re-derives everything it needs from stored `source_file` bytes and so
 needs no re-install; this one still needs a re-import, for the reason

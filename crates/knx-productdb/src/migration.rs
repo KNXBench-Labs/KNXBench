@@ -2220,7 +2220,11 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         assert_eq!(version, CURRENT_PRODUCTDB_VERSION);
-        assert_eq!(version, 10);
+        // Not a literal 10 any more: the module-argument migration was
+        // renumbered behind this one, so a v9 database now climbs two steps.
+        // What this test is about is the backfill below, not where the chain
+        // happens to stop.
+        assert_eq!(version, CURRENT_PRODUCTDB_VERSION);
 
         let (number, text, status): (i64, String, String) = conn
             .query_row(

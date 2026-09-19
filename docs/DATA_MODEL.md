@@ -471,12 +471,12 @@ but not interpreted in v1:
   exactly why module-scoped (per-channel) editing is out of scope for this
   slice (design D25). **T18 task 12 (2026-09-14)** gives the product
   database its first structure for module *arguments*: `products.sqlite`
-  schema **v10** adds a `module_def_argument` table (one row per
+  schema **v11** adds a `module_def_argument` table (one row per
   `ModuleDef/Arguments/Argument`, keyed `(program_id, module_def_id, id)`,
   carrying `name`/`arg_type`/`allocates`/`position`) and a
   `dynamic_node.value` column holding a `NumericArg`/`TextArg`'s `@Value`
   in a column of its own rather than only inside the deliberately
-  not-re-parseable `extra` audit string. `migrate_v9_to_v10` backfills both
+  not-re-parseable `extra` audit string. `migrate_v10_to_v11` backfills both
   by replaying stored `ApplicationProgram` blobs ([ADR-0020](adr/0020-migrations-may-rederive-from-stored-bytes.md)
   rule E1). The evaluator uses them to substitute `{{ArgumentName}}` into
   `Channel`/`ParameterBlock`/`ParameterSeparator` text, so two

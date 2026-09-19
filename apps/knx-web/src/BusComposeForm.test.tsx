@@ -85,7 +85,11 @@ async function clickSend() {
 }
 
 beforeEach(() => {
-  apiMock.writeBusValue.mockResolvedValue({ encodedPayload: "0x01", service: "GroupValueWrite" } satisfies BusWriteResponse);
+  apiMock.writeBusValue.mockResolvedValue({
+    encodedPayload: "0x01",
+    service: "GroupValueWrite",
+    decodedEcho: { kind: "value", dpt: "DPST-1-1", text: "on" },
+  } satisfies BusWriteResponse);
 });
 
 afterEach(() => {
@@ -186,7 +190,11 @@ describe("BusComposeForm", () => {
   });
 
   it("shows the server's echoed encodedPayload on success", async () => {
-    apiMock.writeBusValue.mockResolvedValue({ encodedPayload: "0x01 (6-bit)", service: "GroupValueWrite" });
+    apiMock.writeBusValue.mockResolvedValue({
+      encodedPayload: "0x01 (6-bit)",
+      service: "GroupValueWrite",
+      decodedEcho: { kind: "value", dpt: "DPST-1-1", text: "on" },
+    });
     await renderForm("1/2/3", { kind: "single", dpt: "DPST-1-1" });
     await act(async () => {
       setInputValue(".bus-compose-value", "on");
@@ -194,7 +202,50 @@ describe("BusComposeForm", () => {
 
     await clickSend();
 
-    expect(host!.querySelector(".bus-compose-sent")!.textContent).toBe("Sent GroupValueWrite: 0x01 (6-bit)");
+    expect(host!.querySelector(".bus-compose-sent")!.textContent).toBe(
+      "Sent GroupValueWrite: 0x01 (6-bit) — Decoded: on",
+    );
+  });
+
+  it("shows the decoded echo of the bytes actually sent, not a verbatim copy of the typed value", async () => {
+    // A DPT-9 (float) write: what went on the wire decodes back to a
+    // different-looking string than what was typed ("21" in, "21°C" out,
+    // per this DPT's own unit-rendering rule) — the surest sign this is
+    // reading `decodedEcho`, not silently echoing the form's own input.
+    apiMock.writeBusValue.mockResolvedValue({
+      encodedPayload: "0c:1a",
+      service: "GroupValueWrite",
+      decodedEcho: { kind: "value", dpt: "DPST-9-1", text: "21 °C" },
+    });
+    await renderForm("1/2/3", { kind: "single", dpt: "DPST-9-1" });
+    await act(async () => {
+      setInputValue(".bus-compose-value", "21");
+    });
+
+    await clickSend();
+
+    expect(host!.querySelector(".bus-compose-sent")!.textContent).toBe(
+      "Sent GroupValueWrite: 0c:1a — Decoded: 21 °C",
+    );
+  });
+
+  it("shows a decode-failure echo as text, alongside the encoded payload, without the send itself failing", async () => {
+    apiMock.writeBusValue.mockResolvedValue({
+      encodedPayload: "0x01",
+      service: "GroupValueWrite",
+      decodedEcho: { kind: "error", text: "an encode/decode mismatch", error: "an encode/decode mismatch" },
+    });
+    await renderForm("1/2/3", { kind: "single", dpt: "DPST-1-1" });
+    await act(async () => {
+      setInputValue(".bus-compose-value", "on");
+    });
+
+    await clickSend();
+
+    expect(host!.querySelector(".bus-compose-error")).toBeNull();
+    expect(host!.querySelector(".bus-compose-sent")!.textContent).toBe(
+      "Sent GroupValueWrite: 0x01 — Decoded: an encode/decode mismatch",
+    );
   });
 
   it("shows a server error inline on the form, not only as a toast", async () => {

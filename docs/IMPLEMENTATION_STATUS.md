@@ -7048,3 +7048,92 @@ deleted) was checked against `docs/IMPLEMENTATION_STATUS.md` and
 `docs/KNOWN_LIMITATIONS.md` for a repeated "two tests" claim; neither
 document repeats that count, so there is nothing to correct here — the
 number lives only in the run's own transcript outside `docs/`.
+
+## 2026-09-20 — C3+C6: the individual-address procedure's time-out and its re-assignment guard
+
+`individual_address_write()` in
+`crates/knx-core/src/commissioning/procedure.rs` carried a time-out from the
+wrong clause and a stop condition too broad to reach its own guard.
+
+**C3(a).** Step 2's detail text said *"wait out the full 3 s time-out"*. That
+3 s belongs to MP §2.2 `NM_IndividualAddress_Read`, p. 12 (verified against
+the PDF: the remark column literally reads *"time-out: 3 s"*). MP §2.3's own
+step 2, p. 14, remarks *"time-out: 1 s"* — a different procedure, a shorter
+wait. The declarative text now says *"1 s"* with the p. 14 citation attached.
+
+**C3(b).** Step 1's detail text said *"any answer means the address is
+occupied and the procedure stops"*. MP §2.3's exception handling, p. 15, "to
+2.", says an answer only stops the procedure if it comes from a device other
+than the one step 2 finds in Programming Mode; the same device answering (the
+re-assignment case) or no device at all both continue. The flat "any
+answer... stops" made step 3's own guard — *"set Individual Address if
+IA_new != IA_current"* (p. 15) — unreachable, since a device being
+re-programmed to its current address always answers when probed. Step 1's
+text now distinguishes the three outcomes.
+
+**The clause contradicts itself, and this project picks a side.** MP §2.3's
+body text, p. 14, says *"if A_Disconnect-PDU is received then IA_new shall be
+regarded as occupied; end procedure"* — unconditional. Its own exception
+handling, p. 15, "to 1.", describes the identical situation and says *"The
+Management Client shall continue with the Management Procedure in every
+case."* This project implements the exception text (more specific, later in
+reading order, and the only reading under which the guard is reachable at
+all) and surfaces the occupancy to the operator as a finding rather than a
+silent stop. Recorded as `docs/KNOWN_LIMITATIONS.md` §107; nothing here is
+waiting on a fix, the clause is what disagrees with itself.
+
+All three page citations (MP §2.2 p. 12, MP §2.3 p. 14, MP §2.3 p. 15) and
+the two CP/RES citations below were verified against the actual PDFs at
+`/mnt/daten-i/Sourcecode/knx-spec-kb/sources/...` — printed page number, no
+offset — not taken from the brief on trust.
+
+**C6, three strings that named the wrong authority, no behavioural change.**
+(a) `recovery()`'s `source` read `"spec §9.1"`, and the doc comment on
+`Downloader::recover` opened `/// Spec §9.1, recovery after an interrupted
+download.` — both readable as a Standard clause. The Standard prescribes no
+recovery procedure at all; its whole position is MP §3.1, p. 68's general
+exception handling: *"if an error is detected, the download shall be
+interrupted and an error-message shall be raised."* Both now read `"KNXBench
+design spec §9.1 — no Standard equivalent"` (the `source` field verbatim per
+the task brief) and the doc comment quotes MP §3.1 directly; the doc comment's
+"the clause's own wording" for a quoted design-spec sentence was also fixed
+to "this design spec's own wording — not the Standard's".
+(b) `ProcedureKind::Unload`'s `Display` said `"unload"` unqualified. CP
+§3.5.4 steps 01-06 unload a device's application; step 07, which frees the
+individual address, is deliberately not implemented (making a device
+unaddressable by broadcast is out of scope for phase 2). The bare word reads
+as "the address is gone" to an operator who has not read CP §3.5.4. Now
+`"unload the download (individual address kept)"`.
+(c) `download.rs`'s partial-download escalation unloads `parts[position..]`,
+the failed part included, justified by a comment claiming *"§7.6 says only an
+unload frees that"*. §7.6 (the design spec's own numbering) says the
+opposite for allocation specifically — CP §3.5.1.2, p. 40: *"the device
+shall free the previously allocated memory and attempt to reallocate the
+requested memory size at the original base address"* — re-allocation frees
+memory too. The real authority for unloading the failed part along with the
+rest is CP §3.5.3 itself, p. 46, Nr. 07: *"Continue at Nr. 07"* is the
+clause's own escalation step, *"Unloading all the following segments"*
+(verified against the PDF, including its own `AP1`/`GOT`/`AddressTable`/
+`AssociationTable` list — not `AP2`). The comment now cites Nr. 07 as the
+reason and no longer claims re-allocation cannot free the memory.
+
+**Mutation-tested per the task brief**, one behaviour at a time, each
+reverted, tested, restored: reverting the 1 s time-out back to 3 s fails
+`the_programming_mode_count_waits_out_one_second_not_three`
+(`cargo test -p knx-core`, exit 101); reverting step 1's detail text to the
+flat "any answer... stops" wording fails
+`occupancy_only_stops_the_procedure_for_a_different_device` (exit 101);
+reverting `recovery()`'s `source` to `"spec §9.1"` fails
+`the_recovery_source_names_itself_not_the_standard` (exit 101); reverting
+`ProcedureKind::Unload`'s `Display` to `"unload"` fails
+`the_unload_procedure_name_does_not_claim_to_free_the_address` (exit 101).
+C6(c) is a comment with no runtime signature — "no behavioural change" is
+the acceptance criterion itself — so there is nothing to mutate-test; it was
+checked by re-reading the diff against the cited pages instead.
+
+Four new unit tests in `crates/knx-core/src/commissioning/procedure.rs`
+(17 tests in that module now, all passing); `knx-net`'s
+`crates/knx-net/src/commissioning/download.rs` changed only in comments and
+doc text, no new tests needed there. No behavioural code moved in either
+crate. Out of scope, unchanged: everything else MP §2.3, CP §3.5.3 and CP
+§3.5.4 describe.

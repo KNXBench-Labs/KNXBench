@@ -699,7 +699,16 @@ impl GroupAddressContext {
     }
 }
 
-fn decode_single(dpt: DptRef, value: &GroupValue) -> DecodedValue {
+/// `pub(crate)` (task 27 addition, was module-private through task 26):
+/// `bus_routes.rs`'s `POST /api/bus/write` handler reuses this directly to
+/// build `decodedEcho` — decoding the exact bytes the write just put on
+/// the wire with the exact DPT it was encoded against, the same pair a
+/// monitored row decodes its payload with. Unlike
+/// [`GroupAddressContext::decode`], this one function lives entirely in
+/// this crate (never in the CLI's `[[bin]]`-only one), so calling it from
+/// `bus_routes.rs` is ordinary in-crate reuse, not the cross-crate
+/// re-derivation that function's doc comment explains and defends.
+pub(crate) fn decode_single(dpt: DptRef, value: &GroupValue) -> DecodedValue {
     match knx_core::decode(dpt, value) {
         Ok(v) => DecodedValue::Value {
             dpt: dpt.to_string(),

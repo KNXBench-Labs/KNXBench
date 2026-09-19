@@ -262,6 +262,8 @@ export default function BusComposeForm({
       {sent && (
         <p className="bus-compose-sent">
           {t("busCompose.sent", { service: sent.service, payload: sent.encodedPayload })}
+          {" — "}
+          {t("busCompose.sentDecoded", { text: sent.decodedEcho.text })}
         </p>
       )}
     </div>

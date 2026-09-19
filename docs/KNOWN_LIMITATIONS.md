@@ -4406,7 +4406,10 @@ attribute at all binds `NULL` into a `TEXT PRIMARY KEY` column, and
 `INSERT OR IGNORE` drops that row with no error, no counter and no
 `ingest_unknown` entry — exactly as an id-less `DatapointType` already
 did before this slice, and not a new gap this slice introduces, only one
-it extends to three more tables.
+it extends to three more tables. An id-less `FunctionType` compounds the
+loss: it orphans every `FunctionPoint` nested inside it too, and those
+are then silently dropped a second time by the parentless-`FunctionPoint`
+guard at `parse/master.rs:213` (T13 fix round 2).
 
 ---
 
@@ -4579,6 +4582,35 @@ own name so nobody mistakes it for an invariant.
 use to actually rank two spellings by recency (a schema/edition attribute
 would do it) — at which point "last ingested" could become "provably newer",
 and this section would describe that instead.
+
+**A second scan order, not covered above (2026-09-14, T13 fix round 2).**
+Everything above is about first *ingest* order. The v9→v10 backfill
+(`backfill_function_and_space_data`, `migration.rs`) replays this same
+last-writer-wins `Manufacturer` write over every blob a database already
+holds, ordered by `source_file.rowid` — the order distinct blobs were
+first *written* to that table, which is not always the order they were
+first *ingested*. `store_source_file` (`blob.rs`) returns `false` without
+inserting a row when a blob's sha256 is already on record, but
+`install_package` (`package.rs`) calls `ingest_master_data` on that blob
+regardless, so a master blob installed by two different packages is
+ingested twice but occupies one rowid — the backfill then replays it once,
+at its *first* install's position, which can differ from its *last*
+install's position (the one whose names actually won under last-writer-wins
+at real install time). Measured **[V]**: installed Weinzierl 730 ETS4, then
+MDT KP AMI/AMS 03, then the Weinzierl archive repacked with one XML comment
+appended to `M-00C5/Catalog.xml` (package hash differs, `knx_master.xml`
+byte-identical to the first install). Rolled back to `user_version = 9`,
+dropped the three v10 tables, reopened through `open_and_migrate`: **21 of
+799** manufacturer display names changed relative to the pre-rollback
+database — `M-0002` from `ABB` to `ABB AG - STOTZ-KONTAKT`, `M-0007` from
+`Busch-Jaeger Elektro` to `ABB AG - BUSCH-JAEGER`, `M-000A` from
+`INSTA ELEKTRO` to `Insta GmbH`; `translation`, `datapoint_type` and
+`ingest_unknown` counts were unchanged. `ORDER BY rowid` is still the right
+order to hold — it is the only order `source_file` actually records — but
+it reproduces first-install's own answer only when no master blob in the
+database was ever installed by more than one package; the third install
+above was constructed specifically to violate that, to make the residual
+measurable rather than asserted.
 
 ## 89. Five documented `Space/@Type` values are coarsened to `BuildingPart` on import
 

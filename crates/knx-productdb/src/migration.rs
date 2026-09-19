@@ -352,8 +352,13 @@ fn migrate_v9_to_v10(conn: &Connection) -> Result<(), ProductDbError> {
 /// holds. Replaying the whole function rather than a second, narrower
 /// parser is safe because every write it makes is `INSERT OR IGNORE` or
 /// `ON CONFLICT DO UPDATE SET name = excluded.name` against a blob's own
-/// unchanged bytes — the rows it already wrote at first ingest come back
-/// unchanged, and only the three new tables actually gain anything.
+/// unchanged bytes — that reproduces first ingest's result whenever no
+/// master blob was installed by more than one package, and only the three
+/// new tables actually gain anything. That qualifier is not automatic and
+/// is not decoration: see the `ORDER BY rowid` comment below for the
+/// `store_source_file` short-circuit that makes install order and
+/// `source_file` rowid order two different things, and for the measured
+/// case where it matters.
 ///
 /// That argument covers `ingest_master_data`'s own writes and stops there.
 /// The one write this function makes on its own behalf — `insert_unknown` —
@@ -365,15 +370,51 @@ fn migrate_v9_to_v10(conn: &Connection) -> Result<(), ProductDbError> {
 fn backfill_function_and_space_data(conn: &Connection) -> Result<(), ProductDbError> {
     // `ORDER BY rowid`: `Manufacturer`'s `ON CONFLICT DO UPDATE SET name =
     // excluded.name` inside the replayed `ingest_master_data` is genuinely
-    // last-writer-wins, and the corpus's own master files disagree on a
-    // manufacturer's display name often enough to matter (132 of them,
-    // measured). Without an explicit order this table scan happens to
-    // come back in insertion order today, which is the only reason
-    // replaying it reproduces the original install's result — true by
-    // accident, not by anything SQLite promises. `rowid` pins it to what
-    // `source_file` actually promises: insertion order, by construction
-    // (ADR-0020 §E2 — this value depends on install history, not only on
-    // stored bytes, so the migration may not re-derive a *different* one).
+    // last-writer-wins, and the corpus's own master files disagree about a
+    // manufacturer's display name often enough to matter — 36 manufacturer
+    // ids disagree across the corpus's five master files, 132 disagreeing
+    // file pairs in total, measured (KNOWN_LIMITATIONS.md §88); `M-0052` is
+    // `Theodor HEIMEIER Metallwerk` in one master and `IMI Hydronic
+    // Engineering` in another. Without an explicit order this table scan
+    // happens to come back in insertion order today, which is the only
+    // reason replaying it reproduces the original install's result — true
+    // by accident, not by anything SQLite promises. `rowid` pins it to
+    // what `source_file` actually promises: the order distinct blobs were
+    // first written, by construction (ADR-0020 §E2 — this value depends on
+    // install history, not only on stored bytes, so the migration may not
+    // re-derive a *different* one).
+    //
+    // "The order distinct blobs were first written" is *not* the same
+    // thing as "install order", and that gap is real, not theoretical.
+    // `store_source_file` (`blob.rs`) returns `false` without inserting a
+    // row when a blob's sha256 is already on record, but `install_package`
+    // (`package.rs`) calls `ingest_master_data` on that blob regardless —
+    // so a master blob installed by two different packages is genuinely
+    // ingested twice, at two different points in real install history,
+    // while `source_file` only ever gives it one rowid. This scan then
+    // replays that blob once, at the position its *first* install
+    // occupies, which can differ from the position its *last* install
+    // (the one whose `Manufacturer` names actually won, under last-writer-
+    // wins) occupied. Measured [V]: install Weinzierl 730 ETS4, then MDT KP
+    // AMI/AMS 03, then the Weinzierl archive repacked with one XML comment
+    // appended to `M-00C5/Catalog.xml` (package hash differs,
+    // `knx_master.xml` byte-identical to the first install — so the third
+    // install's `ingest_master_data` call replays the *same* manufacturer
+    // rows a second time, at a rowid that still reflects only the first
+    // install). Roll back to `user_version = 9`, drop the three v10 tables,
+    // reopen through `open_and_migrate`: 21 of 799 manufacturer display
+    // names change relative to the pre-rollback database. `M-0002` goes
+    // from `ABB` to `ABB AG - STOTZ-KONTAKT`, `M-0007` from `Busch-Jaeger
+    // Elektro` to `ABB AG - BUSCH-JAEGER`, `M-000A` from `INSTA ELEKTRO` to
+    // `Insta GmbH`; `translation`, `datapoint_type` and `ingest_unknown`
+    // counts are unchanged. This flip happens with or without `ORDER BY
+    // rowid` — the ordering is still the right one to hold, since it is
+    // still the *only* order `source_file` actually records — but it does
+    // mean this function's result is not guaranteed to equal first
+    // install's result in every database, only in the (typical) one where
+    // no master blob was ever installed by more than one package.
+    // KNOWN_LIMITATIONS.md §88 records the residual beside its existing
+    // first-winner/last-winner pair.
     let mut stmt =
         conn.prepare("SELECT sha256, source_path, bytes FROM source_file ORDER BY rowid")?;
     let blobs: Vec<(String, String, Vec<u8>)> = stmt
@@ -732,7 +773,27 @@ fn migrate_v3_to_v4(conn: &Connection) -> Result<(), ProductDbError> {
 /// from reaching the next blob or abort the migration outright — a database
 /// that refuses to open is worse than one with a gap.
 fn backfill_shared_translations(conn: &Connection) -> Result<(), ProductDbError> {
-    let mut stmt = conn.prepare("SELECT sha256, source_path, bytes FROM source_file")?;
+    // `ORDER BY rowid`: `ingest_translations`' write is `INSERT OR IGNORE`
+    // (`parse/translation.rs`) against `(scope, scope_id, language, ref_id,
+    // attribute_name)` — first-writer-wins, so which text survives a
+    // conflicting re-declaration depends on scan order. This is a real
+    // hazard, not a hypothetical one: measured across the corpus's five
+    // master files [V], 13 `(language, RefId, AttributeName)` keys carry
+    // conflicting text — `de-DE/DPT-18/Text` is `Szenensteuerung` in one
+    // file and `Szenen Kontrolle` in another, `de-DE/DPST-9-7/Text` is
+    // `Feuchtigkeit (%)` in one and `Prozent (%)` in another. `rowid` pins
+    // the scan to the order distinct blobs were first written — the same
+    // qualifier `backfill_function_and_space_data` above carries and for
+    // the same reason (ADR-0020 §E2): a blob installed by two different
+    // packages is ingested twice but occupies one rowid, so this order
+    // matches true install order only when no `Catalog`/`Hardware`/
+    // `MasterData` blob was installed by more than one package. This hazard
+    // pre-dates T13's `d10-language-data` branch — `backfill_shared_translations`
+    // has been unordered since it was added in `migrate_v3_to_v4` — it is
+    // named and fixed here because the same measurement pass that found
+    // finding A's manufacturer-name flip found this one too.
+    let mut stmt =
+        conn.prepare("SELECT sha256, source_path, bytes FROM source_file ORDER BY rowid")?;
     let blobs: Vec<(String, String, Vec<u8>)> = stmt
         .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
         .collect::<Result<_, _>>()?;
@@ -2322,6 +2383,180 @@ mod tests {
             .unwrap(),
             0,
             "no MasterData blob was read, so no blob could fail"
+        );
+    }
+
+    const MASTER_OLD_SPELLING: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0042" Name="Old Spelling" />
+    </Manufacturers>
+  </MasterData>
+</KNX>"#;
+
+    const MASTER_NEW_SPELLING: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0042" Name="New Spelling" />
+    </Manufacturers>
+  </MasterData>
+</KNX>"#;
+
+    /// Regression guard for `backfill_function_and_space_data`'s
+    /// `ORDER BY rowid` (T13 fix round 2, KNOWN_LIMITATIONS.md §88's
+    /// residual). Two `knx_master.xml` blobs disagree about `M-0042`'s
+    /// display name; `Manufacturer`'s write is `ON CONFLICT DO UPDATE SET
+    /// name = excluded.name` — last-writer-wins — so the surviving name
+    /// must be the blob inserted *last*, i.e. the one at the higher
+    /// `rowid`. `PRAGMA reverse_unordered_selects` makes this an actual
+    /// regression guard rather than a test that would pass with or without
+    /// the clause: a plain two-insert setup does not distinguish them,
+    /// because SQLite's own unordered table scan already visits a
+    /// never-deleted-from table in rowid order in practice — the very
+    /// "true by accident" behaviour the `ORDER BY rowid` comment on
+    /// `backfill_function_and_space_data` warns about. The pragma is
+    /// SQLite's own documented knob for finding exactly this class of
+    /// unstated-order assumption: it reverses a table/index scan that has
+    /// no explicit `ORDER BY` of its own, and leaves one that does (this
+    /// backfill's `ORDER BY rowid`) alone. Calls `migrate_v9_to_v10`
+    /// directly, on the same connection the pragma is set on — through
+    /// `open_and_migrate` the migration would run on a second, fresh
+    /// connection the pragma never reached.
+    #[test]
+    fn the_function_and_space_backfill_scan_order_determines_which_manufacturer_name_survives() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let old_bytes = MASTER_OLD_SPELLING.as_bytes();
+        let new_bytes = MASTER_NEW_SPELLING.as_bytes();
+        let old_sha = crate::sha256_hex(old_bytes);
+        let new_sha = crate::sha256_hex(new_bytes);
+        let conn = Connection::open(&path).unwrap();
+        for migration in &migrations()[0..9] {
+            migration(&conn).unwrap();
+        }
+        // Insertion order fixes rowid order: `old_sha` first, `new_sha`
+        // second, so a correct last-writer-wins replay must leave
+        // "New Spelling" standing.
+        for (sha, source_path, bytes) in [
+            (&old_sha, "M-0042/A/knx_master.xml", old_bytes),
+            (&new_sha, "M-0042/B/knx_master.xml", new_bytes),
+        ] {
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![sha, source_path, "M-0042", bytes.len() as i64, bytes],
+            )
+            .unwrap();
+        }
+        conn.execute_batch("PRAGMA reverse_unordered_selects = ON;")
+            .unwrap();
+        migrate_v9_to_v10(&conn).unwrap();
+        let name: String = conn
+            .query_row(
+                "SELECT name FROM manufacturer WHERE id = 'M-0042'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            name, "New Spelling",
+            "last-writer-wins requires the backfill to replay blobs in a fixed, \
+             recorded order (rowid), not whatever order SQLite's scan happens to prefer"
+        );
+    }
+
+    const MASTER_TRANSLATION_FIRST: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Siemens" />
+    </Manufacturers>
+  </MasterData>
+  <Languages>
+    <Language Identifier="de-DE">
+      <TranslationUnit RefId="LOC-1">
+        <TranslationElement RefId="LOC-1">
+          <Translation AttributeName="Text" Text="First Text" />
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+
+    const MASTER_TRANSLATION_SECOND: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0002" Name="MDT" />
+    </Manufacturers>
+  </MasterData>
+  <Languages>
+    <Language Identifier="de-DE">
+      <TranslationUnit RefId="LOC-1">
+        <TranslationElement RefId="LOC-1">
+          <Translation AttributeName="Text" Text="Second Text" />
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+
+    /// Regression guard for `backfill_shared_translations`'s `ORDER BY
+    /// rowid` (T13 fix round 2). Two `knx_master.xml` blobs both declare
+    /// `Master`-scope text for the same `(language, RefId, AttributeName)`
+    /// key; `ingest_translations`' write is `INSERT OR IGNORE` —
+    /// first-writer-wins, the mirror image of the manufacturer-name test
+    /// above — so the surviving text must be the blob inserted *first*,
+    /// i.e. the one at the lower `rowid`. Same
+    /// `PRAGMA reverse_unordered_selects` mechanism as that test, and the
+    /// same reason it is needed: a plain two-insert setup cannot tell
+    /// "with `ORDER BY rowid`" apart from "without" it, because an
+    /// unordered table scan already comes back in rowid order in practice
+    /// on a table nothing has deleted from. Calls `migrate_v3_to_v4`
+    /// directly, on the same connection the pragma is set on.
+    #[test]
+    fn the_translation_backfill_scan_order_determines_which_conflicting_text_survives() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let first_bytes = MASTER_TRANSLATION_FIRST.as_bytes();
+        let second_bytes = MASTER_TRANSLATION_SECOND.as_bytes();
+        let first_sha = crate::sha256_hex(first_bytes);
+        let second_sha = crate::sha256_hex(second_bytes);
+        let conn = Connection::open(&path).unwrap();
+        for migration in &migrations()[0..3] {
+            migration(&conn).unwrap();
+        }
+        // Insertion order fixes rowid order: `first_sha` first,
+        // `second_sha` second, so a correct first-writer-wins replay
+        // must leave "First Text" standing.
+        for (sha, source_path, bytes) in [
+            (&first_sha, "M-0001/knx_master.xml", first_bytes),
+            (&second_sha, "M-0002/knx_master.xml", second_bytes),
+        ] {
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![sha, source_path, None::<String>, bytes.len() as i64, bytes],
+            )
+            .unwrap();
+        }
+        conn.execute_batch("PRAGMA reverse_unordered_selects = ON;")
+            .unwrap();
+        migrate_v3_to_v4(&conn).unwrap();
+        let text: String = conn
+            .query_row(
+                "SELECT text FROM translation
+                 WHERE scope = 'Master' AND ref_id = 'LOC-1' AND attribute_name = 'Text'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            text, "First Text",
+            "first-writer-wins requires the backfill to replay blobs in a fixed, \
+             recorded order (rowid), not whatever order SQLite's scan happens to prefer"
         );
     }
 }

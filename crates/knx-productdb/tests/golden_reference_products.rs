@@ -136,8 +136,11 @@ fn the_unknown_construct_table_is_a_short_list_not_a_flood() {
     // Deliberately loose — ~4x headroom for a growing corpus, which at
     // today's construct profile is about 95 source files. For scale, this
     // corpus fills the eleven main parsed tables with 89,622 rows, ~22x
-    // this bound; rerouting them here would not arrive one-for-one, which
-    // is why this bound is not the regression guard.
+    // this bound (`manufacturer_files()` above only takes `M-*` members, so
+    // `knx_master.xml` never reaches this fixture and three of those eleven
+    // — `function_type`, `function_point`, `space_usage` — hold zero rows
+    // here, T13 fix round 2); rerouting them here would not arrive
+    // one-for-one, which is why this bound is not the regression guard.
     let rows = count(&conn, "SELECT count(*) FROM ingest_unknown");
     assert!(
         rows < 4000,

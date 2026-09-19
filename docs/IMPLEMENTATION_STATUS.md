@@ -6445,3 +6445,36 @@ panic text of each. No `docs/KNOWN_LIMITATIONS.md` entry: this is a closed
 spec-conformance fix with no residual deviation left in the state machine.
 Out of scope, unchanged: every other clause of RES §4.23.2.4.1 not
 concerning the count of post-deadline attempts.
+
+**Review fix round (2026-09-19), five changes to what shipped above:** (1)
+the "not-twice" claim two paragraphs up was true in intent but not in what
+the test actually enforced — its only assertion was the outer
+`tokio::time::timeout`, and a reviewer's three-line mutation (the flag
+widened to a `u8` counter, exit condition `>= 2`) still passed the whole
+suite, because two attempts at a 2 ms `poll_interval` are as fast as one.
+`a_device_that_never_settles_gets_exactly_one_attempt_past_the_deadline` now
+sets `max_transition: Duration::ZERO`, so the deadline is already crossed on
+the very first read, and asserts `device.load_state_reads() == 2` — read #1
+crosses the (zeroed) deadline, read #2 is the one attempt past it, and a
+mutant granting a second one produces an unmistakable read #3. This is what
+makes the sentence above true rather than merely intended. (2) The comment
+on the unconditional-grant branch now states RES §4.23.2.4.1's leading
+condition — *"if a before established TL-connection breaks down"* — and
+marks the fact that this code grants the extra attempt even when the
+connection never dropped as an `[A]` project extension, the way
+`programming_delay` already does; the behaviour is unchanged; only the
+comment was overclaiming what the clause itself authorises. (3) A
+`docs/KNOWN_LIMITATIONS.md` entry **is** owed after all, not for a
+conformance deviation but for a latency characteristic: entry #101 quantifies
+how much the one extra attempt (now a full loop body, not a bare poll) plus
+C4's widened retry ladder can push a call past its `max_transition` budget.
+(4) `a_silent_device_is_reported_as_silence_and_not_as_a_diagnosis`'s
+`assert_eq!(attempts, MAX_TRANSMISSIONS, …)` was comparing the observed
+count against the same constant the production code compares against —
+vacuous; dropped, leaving that test's actual subject, the message text,
+asserted alone. (5) `SimulatorConfig::settle_load_state_after` measured
+from device construction (`State::created`, since removed) rather than from
+the first `PID_LOAD_STATE_CONTROL` read, an invisible coupling that made
+`a_late_answer_past_the_deadline_still_succeeds` depend on the gap between
+constructing the device and starting to poll it; it now measures from
+`State::first_load_state_read`, set on the first such read.

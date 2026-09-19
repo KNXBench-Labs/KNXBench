@@ -70,6 +70,20 @@ use crate::management::{
 /// running `attempts` count against `MAX_REP_COUNT` directly stops one
 /// transmission short of that, because `attempts` already includes the
 /// original send; this constant exists so that mistake cannot recur.
+///
+/// TL §4's clause 4 names `max_rep_count` (`3; maximum of T_Connect.req
+/// repetitions`, p. 16) for a different service, `T_Connect`, not
+/// `T_DATA_CONNECTED` — read alone it would be the wrong citation here.
+/// The stronger ground is TL §5, p. 17, where the same `rep_count`
+/// variable is defined as *"used to count the number of
+/// T_DATA_CONNECTED_REQ repetitions"* — the service this constant actually
+/// governs. The state machine's actions turn that into arithmetic, not
+/// just wording: action A7 (p. 20, invoked on the original send, §5.5.3.1
+/// p. 33) *"Clear[s] the rep_count"*, and action A9 (p. 20, invoked on
+/// each repeat, §5.5.3.5 p. 35) *"Increment[s] the rep_count"*, so
+/// `rep_count == max_rep_count` (the give-up clause, §5.5.3.6 p. 35) is
+/// reached only after `max_rep_count` repeats past the original, cleared
+/// send — 3 repetitions is 4 transmissions by construction.
 const MAX_TRANSMISSIONS: u8 = MAX_REP_COUNT + 1;
 
 /// The timings a session runs on, all of them injectable so that a test of
@@ -1771,12 +1785,25 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                         waited: started.elapsed(),
                     });
                 }
-                // RES §4.23.2.4.1: *"...periodically during the maximum
-                // transition time and once more when the maximum
+                // `[D]` RES §4.23.2.4.1's leading condition: *"If a before
+                // established TL-connection breaks down, the MaC shall try
+                // to re-establish the connection periodically during the
+                // maximum transition time and once more when the maximum
                 // transition time has passed."* The loop above already is
-                // the periodic part; setting the flag without returning
-                // lets exactly one further iteration — reconnect included —
-                // run past the deadline before the next crossing gives up.
+                // the periodic part.
+                //
+                // (**[A]**, this project's and not the Standard's): the
+                // clause is conditioned on a connection that broke down;
+                // this code grants the one extra attempt unconditionally,
+                // including to a connection that never dropped and a
+                // device that is simply slow. From here, a dropped
+                // connection and a slow-but-still-connected one are
+                // indistinguishable, and the generous reading only costs
+                // one extra poll on a path that is already failing.
+                //
+                // Setting the flag without returning lets exactly one
+                // further iteration — reconnect included — run past the
+                // deadline before the next crossing gives up.
                 made_the_one_more_attempt = true;
             }
             tokio::time::sleep(self.timing.poll_interval).await;
@@ -2398,12 +2425,12 @@ mod tests {
             .read_load_state(ObjectIndex::APPLICATION_PROGRAM)
             .await
             .expect_err("a silent device cannot answer");
-        match error {
-            SessionError::NoAnswer { attempts, .. } => {
-                assert_eq!(
-                    attempts, MAX_TRANSMISSIONS,
-                    "TL clause 4's max_rep_count of 3 repetitions is 4 transmissions"
-                );
+        match &error {
+            SessionError::NoAnswer { .. } => {
+                // The transmission count has its own test, against the
+                // literal 4, below — comparing it here against
+                // `MAX_TRANSMISSIONS` would just check the production code
+                // against itself. This test's subject is the message.
                 assert!(error.to_string().contains("does not distinguish"));
             }
             other => panic!("expected a time-out, got {other}"),
@@ -3005,6 +3032,14 @@ mod tests {
     /// bounded time — a retry loop instead of a single extra attempt would
     /// hang here forever, which is what the bounding [`tokio::time::timeout`]
     /// below is for.
+    ///
+    /// A zero `max_transition` makes the deadline check fail on the very
+    /// first read, deterministically, regardless of scheduler timing: read
+    /// #1 is the ordinary poll that finds the deadline already passed, and
+    /// read #2 is the one extra attempt the clause promises. The bounding
+    /// timeout alone cannot tell one extra attempt from two — both return
+    /// in single-digit milliseconds at this `poll_interval` — so the read
+    /// count below is the assertion that actually pins "once", not "twice".
     #[tokio::test]
     async fn a_device_that_never_settles_gets_exactly_one_attempt_past_the_deadline() {
         let device = SimulatedDevice::new();
@@ -3014,8 +3049,8 @@ mod tests {
             device.address(),
             AuthorisationPlan::Skip,
             SessionTiming {
-                max_transition: Duration::from_millis(20),
-                poll_interval: Duration::from_millis(2),
+                max_transition: Duration::ZERO,
+                poll_interval: Duration::from_millis(1),
                 ..fast()
             },
         )
@@ -3044,6 +3079,12 @@ mod tests {
             Err(SessionError::TransitionTimedOut { .. }) => {}
             other => panic!("expected a transition time-out, got {other:?}"),
         }
+        assert_eq!(
+            device.load_state_reads(),
+            2,
+            "read #1 crosses the zeroed deadline, read #2 is the one \
+             attempt past it; a third read would mean the retry fired twice"
+        );
     }
 
     /// RES Table 94 has no cell that turns `Start Loading` in `Unloaded`

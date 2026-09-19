@@ -22,10 +22,12 @@ mod load_progress;
 pub use load_progress::*;
 mod paths;
 mod routes;
-/// Public so an integration test can seed a log entry directly — the only
-/// other way in is an import failure, which cannot be made to say an
-/// arbitrary address.
-pub mod session_log;
+mod session_log;
+/// Exported so an integration test can seed a log entry directly. The two
+/// types and nothing else: the module also holds `SessionLog`'s internals
+/// and the import-report converters, which would drag `knx-etsproj` and
+/// `knx-csv` into this crate's public surface for no test's benefit.
+pub use session_log::{LogEntry, Severity};
 
 pub type SharedState = Arc<AppState>;
 

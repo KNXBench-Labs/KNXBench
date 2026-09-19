@@ -881,6 +881,35 @@ export const messages = {
   "newProject.conflictBody": "Creating a new project throws those changes away, and no undo brings them back. Keep editing to save them first, or discard them deliberately.",
   "newProject.conflictDiscard": "Discard changes and create",
   "newProject.conflictKeep": "Keep editing",
+
+  // The project-load banner (ADR-0023). Every `loadProgress.phase.*` entry
+  // names a stage the import/open pipeline really runs, in pipeline order;
+  // a phase the server sends that is missing here renders as its raw wire
+  // name rather than as a soothing generic label.
+  "loadProgress.importing": "Importing {source}…",
+  "loadProgress.opening": "Opening {source}…",
+  "loadProgress.failed": "Could not load {source}",
+  "loadProgress.failedDuring": "Failed during: {phase}",
+  "loadProgress.barLabel": "Load progress",
+  "loadProgress.counted": "{completed} of {total}",
+  "loadProgress.phase.starting": "Starting…",
+  "loadProgress.phase.openContainer": "Opening the archive",
+  "loadProgress.phase.detectSchema": "Detecting the schema version",
+  "loadProgress.phase.parseTopology": "Parsing the topology",
+  "loadProgress.phase.parseProjectInfo": "Parsing the project information",
+  "loadProgress.phase.validate": "Validating references",
+  "loadProgress.phase.map": "Building the project model",
+  "loadProgress.phase.inferDatapointTypes": "Inferring datapoint types",
+  "loadProgress.phase.collectContainerEntries": "Reading the remaining archive entries",
+  "loadProgress.phase.ingestManufacturerData": "Ingesting manufacturer data",
+  "loadProgress.phase.ingestMasterData": "Ingesting the KNX master data",
+  "loadProgress.phase.enrichFromProductDatabase": "Enriching from the product database",
+  "loadProgress.phase.persistOpaque": "Storing passthrough data",
+  "loadProgress.phase.openStore": "Opening the project file",
+  "loadProgress.phase.loadStoredProject": "Reading the stored project",
+  "loadProgress.phase.loadOpaque": "Reading passthrough data",
+  "loadProgress.phase.loadManufacturerRefs": "Reading manufacturer references",
+  "loadProgress.phase.buildProjectTree": "Building the project tree",
 } as const;
 
 export type Messages = typeof messages;

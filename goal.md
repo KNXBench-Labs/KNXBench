@@ -374,7 +374,13 @@ suite green:
 14. The unenforced contrast invariant is recorded in ADR-0022 and
     `IMPLEMENTATION_STATUS.md` but not in `docs/KNOWN_LIMITATIONS.md`, where
     the other 92 numbered limitations live.
-15. `xtask/src/headers.rs:206` — `ABSENT_CEILING` is 168 against a count of
+15. ADR-0022's no-hard-coded-colours rule is **unenforced on the component
+    layer**. The T37 reviewer put `color: #ff00aa` into a component rule and
+    all 541 tests stayed green. The boundary test proves that theme blocks are
+    complete; nothing proves that component rules contain no literal colours,
+    which is the half the ADR argues for at greater length. Same neighbourhood
+    as finding 8 and worth fixing in the same sitting.
+16. `xtask/src/headers.rs:206` — `ABSENT_CEILING` is 168 against a count of
     167. Worth noting for the ratchet's own sake: the same command reports
     `167 without / 15 skipped` in a worktree and `168 without / 30 skipped` in
     main, because the generated-file skip set depends on what build output

@@ -19,14 +19,28 @@ describe("api", () => {
     vi.unstubAllGlobals();
   });
 
-  it("importProject posts the path and returns the parsed tree", async () => {
+  it("importProject posts the path and client token, and returns the parsed tree", async () => {
     mockFetchOnce({ installations: [] });
-    const tree = await api.importProject("/x.knxproj");
+    const tree = await api.importProject("/x.knxproj", "a-client-token");
     expect(tree).toEqual({ installations: [] });
     const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe("/api/project/import");
     expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body as string)).toEqual({ path: "/x.knxproj" });
+    expect(JSON.parse(init.body as string)).toEqual({ path: "/x.knxproj", clientToken: "a-client-token" });
+  });
+
+  // Fix round 4, F11: the same assertion for the native open, which had
+  // none. Dropping `clientToken` from this one body left every gate green
+  // while the banner froze on "Starting…" for every `.knxdb` — the
+  // import/open asymmetry is the shape three earlier rounds kept.
+  it("openProject posts the path and client token, and returns the parsed tree", async () => {
+    mockFetchOnce({ installations: [] });
+    const tree = await api.openProject("/x.knxdb", "a-client-token");
+    expect(tree).toEqual({ installations: [] });
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/project/open");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ path: "/x.knxdb", clientToken: "a-client-token" });
   });
 
   it("newProject posts the camelCase creation body, discardChanges spelled out", async () => {

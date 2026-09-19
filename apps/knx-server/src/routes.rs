@@ -15,6 +15,7 @@ use crate::SharedState;
 pub fn project_routes() -> Router<SharedState> {
     Router::new()
         .route("/api/project/import", post(import_project))
+        .route("/api/project/load-progress", get(load_progress))
         .route("/api/project/new", post(new_project))
         .route("/api/project/open", post(open_native_project))
         .route("/api/project/save", post(save_project))
@@ -394,6 +395,126 @@ async fn install_catalog_package(
 #[derive(Deserialize)]
 pub(crate) struct PathBody {
     pub(crate) path: String,
+    /// The opaque per-load id `loadProgress.ts` generates with
+    /// `crypto.randomUUID()` (ADR-0023 fix round 3, F9) — read only by
+    /// `import_project` and `open_native_project`, which hand it to
+    /// `tracked_load` so it lands on the operation and comes back in
+    /// every snapshot. Every other handler sharing this body type ignores
+    /// it, and an omitted field defaults to `None` rather than failing to
+    /// deserialize.
+    #[serde(default, rename = "clientToken")]
+    pub(crate) client_token: Option<String>,
+}
+
+/// The `LoadSnapshot` on the wire. Hand-written rather than derived on
+/// the domain type for the same reason `ExportWarningDto` is: the enums
+/// live in a module that has no business knowing JSON exists, and their
+/// wire spellings are already `as_str()` — one vocabulary shared with
+/// `knx-etsproj` and `knx-app`, not a second one restated here.
+///
+/// `completed`/`total` are `null` for every phase without a real count,
+/// which the frontend renders as an indeterminate indicator. There is no
+/// timestamp field and there will not be one: ADR-0023 forbids progress
+/// derived from elapsed time, and a client that cannot see the clock
+/// cannot be tempted by it.
+///
+/// `client_token` is the id the client sent when it started this
+/// operation (ADR-0023 fix round 3, F9), echoed verbatim, or `null` when
+/// none was sent. `ownsOperation()` in `loadProgress.ts` is exact equality
+/// against it — the whole of this round's ownership test, replacing the
+/// three-round id/source heuristic it retires.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LoadProgressDto {
+    operation_id: u64,
+    kind: &'static str,
+    source: String,
+    phase: &'static str,
+    completed: Option<u64>,
+    total: Option<u64>,
+    status: &'static str,
+    error: Option<String>,
+    client_token: Option<String>,
+}
+
+impl From<crate::LoadSnapshot> for LoadProgressDto {
+    fn from(snapshot: crate::LoadSnapshot) -> Self {
+        Self {
+            operation_id: snapshot.operation_id,
+            kind: snapshot.kind.as_str(),
+            source: snapshot.source,
+            phase: snapshot.phase.as_str(),
+            completed: snapshot.completed,
+            total: snapshot.total,
+            status: snapshot.status.as_str(),
+            error: snapshot.error,
+            client_token: snapshot.client_token,
+        }
+    }
+}
+
+/// The current load operation, running or finished, or `null` when this
+/// server run has never loaded a project (ADR-0023). Cheap on purpose:
+/// this is polled every few hundred milliseconds while an import runs, and
+/// it takes one short-lived lock that the import itself only ever holds
+/// for the length of a field assignment.
+async fn load_progress(State(state): State<SharedState>) -> Json<Option<LoadProgressDto>> {
+    Json(state.load_operations.snapshot().map(LoadProgressDto::from))
+}
+
+/// Refusing a second load while one runs: a state conflict the caller can
+/// resolve by waiting, which is `409`, not `400` (see `errors.rs` on the
+/// split). The UI disables its own buttons for the same reason, but a
+/// command palette, a second tab and a script all reach these routes too.
+fn already_running(conflict: crate::AlreadyRunning) -> ApiError {
+    ApiError::with_status(
+        axum::http::StatusCode::CONFLICT,
+        format!(
+            "a project load is already running (operation {}); wait for it to finish",
+            conflict.operation_id
+        ),
+    )
+}
+
+/// Runs `work` on a blocking thread as one tracked load operation
+/// (ADR-0023). Three things this shape buys, all of which the previous
+/// `domain::open_project(&state, &path).map(Json)` lacked:
+///
+/// 1. The import no longer blocks a tokio worker for seconds — which is
+///    also what makes the progress poll answer promptly while it runs.
+/// 2. The operation outlives its request. A client that disconnects
+///    cancels nothing; the project still lands, and the snapshot is
+///    waiting for whoever polls next.
+/// 3. A panic inside the import marks the operation failed through
+///    `LoadHandle`'s `Drop`, instead of leaving the slot claimed for the
+///    rest of the server's life.
+async fn tracked_load(
+    state: SharedState,
+    kind: crate::LoadKind,
+    path: std::path::PathBuf,
+    client_token: Option<String>,
+    work: fn(
+        &crate::AppState,
+        &std::path::Path,
+        &crate::LoadHandle,
+    ) -> Result<knx_projection::ProjectTree, String>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let handle = state
+        .load_operations
+        .begin(kind, domain::file_name_of(&path), client_token)
+        .map_err(already_running)?;
+    tokio::task::spawn_blocking(move || {
+        let outcome = work(&state, &path, &handle);
+        match &outcome {
+            Ok(_) => handle.succeed(),
+            Err(error) => handle.fail(error.clone()),
+        }
+        outcome
+    })
+    .await
+    .map_err(|e| ApiError::internal(format!("the load task did not finish: {e}")))?
+    .map(Json)
+    .map_err(ApiError::internal)
 }
 
 async fn import_project(
@@ -401,9 +522,14 @@ async fn import_project(
     Json(body): Json<PathBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let path = resolve_project_path(&state.data_dir, &body.path)?;
-    domain::open_project(&state, &path)
-        .map(Json)
-        .map_err(ApiError::internal)
+    tracked_load(
+        state,
+        crate::LoadKind::Import,
+        path,
+        body.client_token,
+        domain::open_project,
+    )
+    .await
 }
 
 /// Every field optional, so `POST /api/project/new` with `{}` is a valid
@@ -500,9 +626,14 @@ async fn open_native_project(
     Json(body): Json<PathBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let path = resolve_project_path(&state.data_dir, &body.path)?;
-    domain::open_native_project(&state, &path)
-        .map(Json)
-        .map_err(ApiError::internal)
+    tracked_load(
+        state,
+        crate::LoadKind::Open,
+        path,
+        body.client_token,
+        domain::open_native_project,
+    )
+    .await
 }
 
 async fn save_project(State(state): State<SharedState>) -> Result<(), ApiError> {

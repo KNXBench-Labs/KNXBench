@@ -1519,3 +1519,32 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 /* The welcome screen's own primary button: `.primary-action` is otherwise
    scoped to `.workbench-toolbar`, and this one is not in the toolbar. */
 .welcome-workspace .primary-action { background: var(--knx-accent); color: var(--knx-on-accent); }
+
+/* The project-load banner (`LoadProgressBanner.tsx`, ADR-0023). Sits under
+   the toolbar for the whole of a load, and stays there afterwards only if
+   the load failed. Built entirely from tokens the five palettes already
+   define — nothing here needs a sixth colour, so nothing here adds one. */
+.load-progress { display: grid; gap: 6px; padding: 10px 20px 12px; border-bottom: 1px solid var(--knx-border); background: var(--knx-surface); }
+.load-progress[data-failed="true"] { border-bottom-color: var(--knx-error-color); }
+.load-progress-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin: 0; font-size: 13px; }
+.load-progress-phase { color: var(--knx-muted); font-size: 12px; }
+.load-progress-track { position: relative; overflow: hidden; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--knx-accent) 16%, transparent); }
+.load-progress-bar { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--knx-accent); }
+/* Indeterminate is a shuttle, not a bar parked at zero: an empty track
+   that never moves reads as "stuck", which is a claim about the server
+   nobody here is in a position to make. With motion turned off it simply
+   sits still at a third of the track — still not claiming a position. */
+.load-progress-bar[data-indeterminate="true"] { width: 34%; }
+.load-progress-count { margin: 0; color: var(--knx-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.load-progress-error { margin: 0; color: var(--knx-error-color); font-size: 12px; overflow-wrap: anywhere; }
+@keyframes knx-load-shuttle {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(195%); }
+}
+/* Both declarations take their duration from the motion setting, so
+   "Motion: none" sets it to 0ms and the shuttle stops dead — the roadmap's
+   standing rule, enforced by `motionGuard.test.ts`. */
+@media (prefers-reduced-motion: no-preference) {
+  .load-progress-bar { transition: width var(--knx-transition-duration) var(--knx-motion-easing); }
+  .load-progress-bar[data-indeterminate="true"] { animation: knx-load-shuttle calc(var(--knx-transition-duration) * 8) var(--knx-motion-easing) infinite; }
+}

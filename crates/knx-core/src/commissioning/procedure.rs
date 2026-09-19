@@ -603,6 +603,7 @@ pub fn recovery() -> Procedure {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::commissioning::programming_mode::INDIVIDUAL_ADDRESS_READ_TIMEOUT;
 
     /// Spec §11.2's procedure model: the step lists match the clauses' own
     /// numbering and order.
@@ -774,9 +775,13 @@ mod tests {
             "step 2 must cite MP §2.3's own 1 s time-out: {}",
             step_two.detail
         );
+        // Tied to the other procedure's constant, not to the literal "3 s":
+        // the mistake being guarded against is borrowing MP §2.2's time-out,
+        // so the guard has to move if that time-out ever does.
+        let borrowed = format!("{} s", INDIVIDUAL_ADDRESS_READ_TIMEOUT.as_secs());
         assert!(
-            !step_two.detail.contains("3 s"),
-            "step 2 must not carry MP §2.2's 3 s time-out: {}",
+            !step_two.detail.contains(&borrowed),
+            "step 2 must not carry MP §2.2's {borrowed} time-out: {}",
             step_two.detail
         );
     }
@@ -799,6 +804,19 @@ mod tests {
         assert!(
             !step_one.detail.contains("any answer means"),
             "step 1 must not treat every answer as an unconditional stop: {}",
+            step_one.detail
+        );
+        // MP §2.3 "to 2." has three outcomes, and dropping either of the two
+        // continuing ones is the same defect as the flat stop this replaced:
+        // a device re-programmed to the address it already holds is legal.
+        assert!(
+            step_one.detail.to_lowercase().contains("programming mode"),
+            "step 1 must keep the same-device-in-programming-mode case: {}",
+            step_one.detail
+        );
+        assert!(
+            step_one.detail.contains("no device at all"),
+            "step 1 must keep the nobody-answers case: {}",
             step_one.detail
         );
     }

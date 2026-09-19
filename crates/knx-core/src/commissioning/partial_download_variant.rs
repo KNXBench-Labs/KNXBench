@@ -238,7 +238,7 @@ fn application_program_2() -> Vec<ProcedureStep> {
             11,
             "load the Group Address Table",
             "the third segment the escalation reloads; its PL110-only group responser table \
-             write is out of scope for phase 2 (CP §3.5.3 footnote 7, p. 44)",
+             write is out of scope for phase 2 (CP §3.5.3 footnote 8, p. 47)",
             StepEffect::Write,
         ),
         step(
@@ -304,7 +304,7 @@ fn application_program_1() -> Vec<ProcedureStep> {
             10,
             "load the Group Address Table",
             "the second segment the escalation reloads; its PL110-only group responser table \
-             write is out of scope for phase 2 (CP §3.5.3 footnote 9, p. 47)",
+             write is out of scope for phase 2 (CP §3.5.3 footnote 9, p. 50)",
             StepEffect::Write,
         ),
         step(
@@ -669,6 +669,36 @@ mod tests {
                 positions, sorted,
                 "{variant:?} escalation targets are out of the download order: {targets:?}"
             );
+        }
+    }
+
+    /// `escalation_targets()` and the reload steps' own titles are two independently
+    /// hand-maintained copies of the same fact (the order Nr. 07's escalation reloads
+    /// segments in), and only `escalation_targets_are_in_the_download_order` checked the
+    /// first copy. This walks the second: for every variant with an escalation, the reload
+    /// step immediately after "load `<part>` again" (step 8, 0-indexed 7) must name
+    /// `escalation_targets()[0]` in its title, the next one `escalation_targets()[1]`, and so
+    /// on — so a title swap between two reload steps (moving the right words to the wrong
+    /// step number) fails here even though the target list itself stays untouched and sorted.
+    #[test]
+    fn reload_step_titles_name_their_escalation_target_in_order() {
+        for variant in PartialDownloadVariant::ALL {
+            let targets = variant.escalation_targets();
+            if targets.is_empty() {
+                continue;
+            }
+            let steps = variant.procedure().steps;
+            // Step 8 (index 7) is "load `<part>` again," not a target; the reload steps for
+            // the escalation targets start right after it, one step number per target.
+            let reload_titles = &steps[8..8 + targets.len()];
+            for (target, reload_step) in targets.iter().zip(reload_titles) {
+                assert!(
+                    reload_step.title.contains(target),
+                    "{variant:?} step {} (\"{}\") should name escalation target \"{target}\"",
+                    reload_step.number,
+                    reload_step.title
+                );
+            }
         }
     }
 

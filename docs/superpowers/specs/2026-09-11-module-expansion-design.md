@@ -424,19 +424,17 @@ crate does.
 ### Corpus measurement (task 11, required deliverable)
 
 Measured, not guessed, against every `.knxprod` file present under
-`OriginalData/ProductDatabases/` (all 5 archive files currently present
+`OriginalData/ProductDatabases/` (all 4 archive files currently present
 locally: `646704-04_ETS4_2012_47_DE_EN`, `Dummy_Applikation_Secure`,
 `MDT_KP_AMI_AMS_03_Switch_Actuator_V31a` (3 application programs),
-`Weinzierl_730_KNX_IP_Interface_ETS4`, `Weinzierl_730_KNX_IP_Interface_ETS4_v1`
-— the last two are byte-identical, so `install_package` stores only four
-distinct packages), two independent ways:
+`Weinzierl_730_KNX_IP_Interface_ETS4`), two independent ways:
 
 1. A raw XML scan (`xml.etree.ElementTree`, scratch script, outside the
    repo) over every extracted application-program XML file counted `Module`
    elements found inside a `ModuleDef` element's own subtree: **0** across
-   all 7 application-program files.
+   all 6 application-program files.
 2. `crates/knx-productdb/tests/dynamic_tree.rs`'s
-   `corpus_nested_module_measurement_task_11` installs the same 5 archive
+   `corpus_nested_module_measurement_task_11` installs the same 4 archive
    files into a fresh database and runs
    `SELECT COUNT(*) FROM dynamic_node WHERE kind = 'Module' AND
    module_def_id != ''` (a `Module` row stored under a non-empty

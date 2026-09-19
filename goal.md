@@ -60,44 +60,40 @@ green (1272 Rust tests, 456 web tests).
 
 ---
 
-## 1. Blocked on a user decision — ask once, early
+## 1. Project licence — resolved 2026-09-16
 
-**The project licence.** `Cargo.toml:24` declares `AGPL-3.0-or-later`, set in
-the very first skeleton commit `dbbadd6` and never revisited.
-`docs/KNOWN_LIMITATIONS.md` §10 states in as many words that this is a
-placeholder and not a decision. There is no `LICENSE` file in the repository
-at all. Nothing is distributed yet, so there is no impact today, but this must
-be settled before any release, and only the user can settle it.
+The user selected `AGPL-3.0-or-later` so everyone may use KNXBench
+without a licence fee, privately or professionally. `Cargo.toml` already
+carried the correct SPDX expression; the canonical GNU AGPLv3 text is now
+tracked as `LICENSE`, the README states the decision, and
+`docs/KNOWN_LIMITATIONS.md` §10 records the resolution.
 
-Ask for the licence choice at the start of the run, then continue with other
-work rather than blocking. Whatever it becomes, it must stay consistent with
-the constraint that no GPL crate enters the runtime dependency graph
-(ADR-0002) — that constraint governs *incoming* dependencies and is
-independent of the project's own licence.
-
-When the answer arrives: update the workspace `license` field, add the
-`LICENSE` file, close §10, and check that `cargo deny check`'s licence rules
-still pass.
+The constraint that no GPL crate enters the runtime dependency graph remains
+unchanged. It governs *incoming* dependencies and is independent of the
+project's own AGPL licence (ADR-0002).
 
 ---
 
-## 2. Session 7 — the three deliverables still outstanding
+## 2. Session 7 — completed 2026-09-17
 
-`docs/ROADMAP.md:622` and `docs/IMPLEMENTATION_STATUS.md:779` both list
-Session 7 as in progress. Roundtrip/migration fixtures and the DPT codec are
-done. These are not:
+All Session 7 deliverables are complete. The deterministic large-project
+benchmark in `crates/knx-app/tests/perf_baseline.rs` exercises export, import,
+native open, projection, and search over 5,000 devices, 20,000 group addresses,
+and 20,000 communication objects. `docs/PERFORMANCE.md` records the original
+baseline, the measured `load_project` bottleneck, and the subsequent bulk-load
+result. A fresh run on 2026-09-17 passed on current `main` with export 82.790 ms,
+import 185.351 ms, open 230.286 ms, projection 23.018 ms, and 41 searches in
+19.510 ms. These are single-run observations on the development machine, not
+portable performance guarantees.
 
-- **Performance measurement on large projects.** Never done. CLAUDE.md
-  requires optimization to follow measurement rather than guesswork, so the
-  measurement is the deliverable — a reproducible benchmark over a large
-  project (import, open, projection, search, export), with numbers recorded
-  in `docs/` so a later optimization has a baseline to beat. Only optimize
-  what the measurement shows.
-- **Linux packaging.** Nothing exists. Linux-first is the project's stated
-  platform stance (CLAUDE.md), so this is the delivery path, not a nicety.
-  Decide the format explicitly (AppImage, Flatpak, plain tarball, distro
-  package) and record the decision and its reasoning.
-- **The licence decision** — see section 1.
+Linux packaging was delivered on 2026-09-17 as the first x86_64 AppImage,
+following [ADR 0021](docs/adr/0021-appimage-is-the-first-linux-package.md).
+The local Arch Linux/XWayland artifact was built, inspected, and launched;
+[IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) records the evidence.
+The configured GitHub Actions workflow has not run, so this does not claim
+Ubuntu CI or general Linux distribution compatibility. Automatic updates,
+signatures, ARM64 builds, and native package management remain outside this
+alpha slice.
 
 ---
 
@@ -196,9 +192,42 @@ Related and also open: §66 (server-composed diagnostic/log/error prose and
 and §67 (a rejected language pack's own rejection reason is shown
 untranslated inside a translated sentence).
 
+### T37 — Visible progress while loading a project
+
+Both project-entry paths are currently silent while work is in progress:
+`apps/knx-web/src/App.tsx` awaits a single response from
+`POST /api/project/import` for ETS `.knxproj` files or
+`POST /api/project/open` for native `.knxdb` files. The user cannot tell a
+large import/open from a stalled request.
+
+Add one coherent loading-operation model spanning the owning backend stages
+and the frontend. Show the operation and truthful current phase. Use a
+percentage only when a real completed/total measurement exists; otherwise
+show indeterminate progress with a phase label — never synthesize progress
+from elapsed time. Import stages follow the actual external-data pipeline;
+native open reports store open/migration, normalized load, and projection as
+applicable. Prevent duplicate open/import actions, announce phase changes via
+`aria-live`, retain the old project until the replacement is fully ready, and
+retain it on failure while reporting the error. Cancellation is out of scope
+unless a design proves it cannot publish partial state.
+
+**Acceptance:** the progress transport and operation lifecycle are designed
+before implementation; backend tests prove ordered real stages, frontend
+tests cover determinate/indeterminate rendering, duplicate prevention,
+success and failure, and one real large-project run verifies feedback is
+visible for the duration. Full Rust and web gates apply.
+
+### T38 — Web UI version in footer and browser title — completed 2026-09-16
+
+`App.tsx` imports `knx-web`'s version from `package.json`, shows it in the
+footer, and applies it to `document.title`; the welcome screen retains the
+`KNX-compatible` product wording. Manifest-default and sentinel tests guard
+against a stale duplicate. Evidence: 471 Vitest tests, TypeScript, and the
+production build pass; implementation commit `57ed42b`.
+
 ### T28 — In-application help
 
-Deliberately scheduled last, by explicit user request (`docs/ROADMAP.md:680`),
+Deliberately scheduled last, by explicit user request (`docs/ROADMAP.md:743`),
 and the reason still holds: help text describes a specific UI, and a UI still
 being built invalidates its own help every cycle. Do not start this before
 the UI-touching items above are settled.
@@ -234,10 +263,6 @@ them, and do not quietly fold pieces of them into another task.
   asks for it. After that moment nothing shows it and nothing can change it:
   `knx_projection::ProjectTree` has no field for it, no route restyles a
   project, and `knx-core` has no restyle operation at all.
-- **§83 — the from-scratch launcher has never been clicked in a browser.**
-  The code and its tests exist (`NewProjectDialog.test.tsx`,
-  `App.test.tsx`). The second clause of §80's "lifted when" is a manual
-  verification in a real browser, and it is still unmet.
 - **§87 — `linkable` stays NULL forever in databases built before
   2026-09-13.** `install_package` short-circuits on a known sha256 and
   `migrate_v5_to_v6` adds the column without re-deriving it. No data is lost
@@ -256,10 +281,12 @@ them, and do not quietly fold pieces of them into another task.
 - **§13 / row A6 — password-protected projects.** Partially closed
   2026-09-13: ETS6 AES/PBKDF2 derivation lives in `crates/knx-secure`. The
   ZipCrypto (ETS4/5) side remains.
-- **§62 — the Group Monitor GUI is tunnelling-only, single-session,
-  client-filtered, and had never talked to a real gateway when that section
-  was written.** Re-verify against the current state before either fixing or
-  restating it.
+- **§62 — passive Group Monitor real-gateway verification completed
+  2026-09-16.** Two bounded production-path sessions received 52 and 65
+  telegrams with no drops; with the real reference project open, 65/65 names
+  resolved and 10 values decoded. No bus read, write, response, management
+  request, or scan was sent. Tunnelling-only, single-session, client-side
+  filtering, no auto-reconnect, and unverified transmit behavior remain.
 
 ---
 
@@ -323,7 +350,7 @@ mobile, multi-OS — are already covered by sections 8 and 9 below, or shipped
 
 ## 8. Research before design — do not implement
 
-`docs/ROADMAP.md:527` records an LLM / natural-language interaction item: an
+`docs/ROADMAP.md:590` records an LLM / natural-language interaction item: an
 in-app chat surface over the project, *plus* MCP capability from outside —
 not decided, not designed, no research done. Both rest on the same
 prerequisite: a mature, near-complete `Command` layer. Automation of

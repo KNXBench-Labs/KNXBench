@@ -3,19 +3,22 @@
 //! These are architectural rules that would otherwise erode silently, so they
 //! run in CI rather than living in a document.
 
+mod appimage;
 mod headers;
 mod layering;
 
 use std::path::Path;
 use std::process::ExitCode;
 
-const AVAILABLE_TASKS: &str = "check-layering, check-headers, freeze-fixture <path>";
+const AVAILABLE_TASKS: &str =
+    "check-layering, check-headers, check-appimage, freeze-fixture <path>";
 
 fn main() -> ExitCode {
     let task = std::env::args().nth(1);
     match task.as_deref() {
         Some("check-layering") => check_layering(),
         Some("check-headers") => check_headers(),
+        Some("check-appimage") => check_appimage(),
         Some("freeze-fixture") => freeze_fixture(std::env::args().nth(2)),
         Some(other) => {
             eprintln!("unknown task: {other}");
@@ -25,6 +28,56 @@ fn main() -> ExitCode {
         None => {
             eprintln!("usage: cargo run -p xtask -- <task>");
             eprintln!("available tasks: {AVAILABLE_TASKS}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn check_appimage() -> ExitCode {
+    const USAGE: &str =
+        "usage: cargo run -p xtask -- check-appimage [--artifact-dir PATH] [--tag vVERSION]";
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("xtask lives one level below workspace root");
+    let default_artifact_dir = root.join("target/release/bundle/appimage");
+    let mut artifact_dir = default_artifact_dir.clone();
+    let mut artifact_dir_set = false;
+    let mut tag = None;
+    let mut args = std::env::args().skip(2);
+
+    while let Some(option) = args.next() {
+        let value = match option.as_str() {
+            "--artifact-dir" | "--tag" => args.next(),
+            _ => None,
+        };
+        let Some(value) = value else {
+            eprintln!("{USAGE}");
+            return ExitCode::FAILURE;
+        };
+        match option.as_str() {
+            "--artifact-dir" if !artifact_dir_set => {
+                artifact_dir = value.into();
+                artifact_dir_set = true;
+            }
+            "--tag" if tag.is_none() => tag = Some(value),
+            _ => {
+                eprintln!("{USAGE}");
+                return ExitCode::FAILURE;
+            }
+        }
+    }
+
+    match appimage::verify(root, &artifact_dir, tag.as_deref()) {
+        Ok(artifact) => {
+            println!(
+                "AppImage ok: version {}, artifact {}",
+                artifact.version,
+                artifact.path.display()
+            );
+            ExitCode::SUCCESS
+        }
+        Err(error) => {
+            eprintln!("{error}");
             ExitCode::FAILURE
         }
     }

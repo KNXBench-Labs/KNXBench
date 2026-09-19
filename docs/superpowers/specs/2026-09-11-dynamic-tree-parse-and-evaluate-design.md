@@ -251,10 +251,9 @@ so the output is stable and diffable across runs.
    [RESEARCH.md §4.3](../../RESEARCH.md)'s table exactly: 1646/2252 for
    `646704-04_ETS4_2012_47_DE_EN`, 5/5 for the Weinzierl ETS4 interface,
    509/982 for the MDT switch actuator, 0/0 for
-   `Dummy_Applikation_Secure`. The fifth archive
-   (`Weinzierl_730_KNX_IP_Interface_ETS4_v1`) is byte-identical to the
-   second and contributes no new rows — that it does not is itself worth
-   asserting. Counted from the database, not from the parser's own
+   `Dummy_Applikation_Secure`. Reinstalling
+   `Weinzierl_730_KNX_IP_Interface_ETS4` contributes no new rows after
+   content-hash deduplication. Counted from the database, not from the parser's own
    bookkeeping.
 2. Every `choose` stored from that corpus resolves its `@ParamRefId`
    against the already-stored `parameter_ref` rows — 0 dangling, matching

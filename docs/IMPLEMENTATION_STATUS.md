@@ -6424,7 +6424,8 @@ not from the diagnostics companion. Web tests 640 → 648.
 **Fix round 2 (2026-09-19, same branch).** The two lines of the F1 branch
 that a mutation could still delete for free are now pinned: the
 `.fs-picker` guard — this suite mocks `./filePicker` wholesale, so the test
-puts the node in the document itself and a second assertion reads
-`FsPicker.tsx` so the rendered class and the queried selector cannot drift
-apart — and `setCatalogTarget(null)`, the third of the three dialogs the
-original blocker named. Web tests 648 → 651.
+puts the node in the document itself, and a second assertion reads both
+`FsPicker.tsx` and `App.tsx`, since the rendered class and the queried
+selector are one contract written in two files and nothing in a mocked
+suite connects them — and `setCatalogTarget(null)`, the third of the three
+dialogs the original blocker named. Web tests 648 → 651.

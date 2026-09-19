@@ -1598,3 +1598,41 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .help-panel-body { grid-template-columns: 1fr; }
   .help-panel-topics { border-right: 0; border-bottom: 1px solid var(--knx-border); padding-right: 0; padding-bottom: 8px; max-height: 26vh; }
 }
+
+/* The debug-report dialog (`DebugReportButton.tsx`, T29). Wider than the
+   settings panel because the point of it is the contents list — the user
+   is meant to read what the bundle holds before anything is written, and a
+   list squeezed into 22rem does not get read. Tokens only, all five
+   palettes already declare every one of them (ADR-0022). */
+.debug-report-panel { width: min(34rem, 92vw); }
+.debug-report-intro { margin: 0 0 12px; font-size: 13px; color: var(--knx-muted); }
+.debug-report-panel textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  padding: 0.4rem;
+  resize: vertical;
+}
+/* The label row is a checkbox followed by its text, not a stacked field. */
+.debug-report-option { margin-bottom: 0.5rem; }
+.debug-report-option .settings-field-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--knx-foreground);
+  font-size: 0.9rem;
+}
+.debug-report-option input[type="checkbox"] { margin: 0; }
+.debug-report-contents {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+}
+.debug-report-contents h3 { margin: 0 0 6px; font-size: 13px; }
+.debug-report-contents ul { margin: 0 0 8px; padding-left: 18px; font-size: 12px; }
+.debug-report-contents li { font-family: var(--knx-font-mono); margin-bottom: 2px; }
+.debug-report-contents p { margin: 0 0 6px; font-size: 12px; color: var(--knx-muted); }
+/* The one file redaction deliberately leaves alone. Coloured like an
+   error because it is the sentence that must not be skimmed past. */
+.debug-report-warning { color: var(--knx-error-color) !important; }

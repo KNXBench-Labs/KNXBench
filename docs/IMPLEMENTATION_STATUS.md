@@ -6614,3 +6614,70 @@ warnings`, `cargo test --workspace` (cross-verified directly for
 `knx-server`), `xtask check-layering`, `xtask check-headers` (file counts
 unchanged — no new source files), `cargo deny check`, `npx tsc --noEmit`,
 `npx vitest run` — all exit 0.
+
+## 2026-09-19 — T29 the debug report (branch `debug-report`)
+
+A user who has just watched something go wrong now has somewhere to put it.
+New `POST /api/debug-report` (`apps/knx-server/src/debug_report_routes.rs`)
+builds a bundle and, when given a path, writes it as a zip;
+`apps/knx-web/src/DebugReportButton.tsx` is the File-menu entry and dialog
+that drives it.
+
+**What leaves the machine: nothing, unless the user sends it.** The zip is
+written locally, always — there is no upload in this application, no
+telemetry, and no anonymous usage statistics. The GitHub button builds a
+`https://github.com/KNXBench-Labs/KNXBench/issues/new?title=…&body=…` URL
+(`apps/knx-web/src/githubIssue.ts`), opens it in the browser and stops:
+no token, no credential storage, no `POST` from the application. That path
+calls the route with `path: null`, which builds the bundle in memory and
+writes nothing — hence `written` in the response, so the UI never infers
+"saved" from "did not throw".
+
+**Bundle.** `report.md` and `environment.json` always; `log.json` (on by
+default), `project-summary.json` and `bus-telegrams.json` (both off) on
+request. The manifest is derived from what was built rather than from what
+was asked for — the three opt-in artifacts are `Option<Value>` in
+`BundleInput`, so a flag cannot drift from its payload. `project-summary.
+json` is counts only (installations, areas, lines, devices, com objects,
+group ranges/addresses, building parts, parameters, import error/warning
+tallies, schema versions, group-address style, whether a `.knxdb` path is
+set) — deliberately no "where did this project come from" field, because
+nothing in `AppState` records that and adding one would be a change to the
+state model wearing a debug report's clothes; `etsSchemaVersion` is the
+honest stand-in.
+
+**Redaction** (`apps/knx-server/src/debug_report.rs`) is by pattern class,
+never by a list of known values: any IPv4 dotted quad, any IPv6 literal
+(validated with `std::net::Ipv6Addr`), the `HOME` prefix, the hostname read
+from `/proc/sys/kernel/hostname`. It covers `report.md`, `environment.json`
+and `log.json`; `bus-telegrams.json` keeps its KNX addresses, and the dialog
+says so in the user's language rather than leaving them to assume otherwise
+(`docs/KNOWN_LIMITATIONS.md` §104). Two boundary rules earn their keep: a
+candidate run whose neighbour is `[A-Za-z0-9_]` is rejected, without which
+`knx_core::Project` parses as an IPv6 address and every Rust path in the log
+is destroyed; and a dotted run must have exactly four groups, which is what
+leaves `1/2/3`, `1.1.220` and `0.1.0-alpha.1` alone.
+
+`zip` moved from `knx-server`'s dev-dependencies to its dependencies; no new
+crate was added (the redaction scanners are hand-written rather than pulling
+in `regex` for two grammars).
+
+**Tests.** 22 unit tests in `debug_report.rs`, 6 in
+`apps/knx-server/tests/http_debug_report.rs`, 7 in
+`apps/knx-web/src/githubIssue.test.ts`, 9 in
+`apps/knx-web/src/DebugReportButton.test.tsx`; `App.test.tsx`'s File-menu
+tab-order list gained the new entry. Every one was mutation-checked. Two
+mutations initially survived and forced better tests: dropping the
+`input.log.is_some()` guard so the manifest advertised a file the bundle did
+not hold (now caught by a test that compares `environment.json`'s `files`
+array and `report.md`'s contents list against the built files for all eight
+flag combinations), and slicing the issue body by UTF-16 code units instead
+of code points (now caught by sweeping 300 limits rather than testing one,
+since only about a quarter of limits land a cut between surrogate halves).
+Web tests 669, up from 660.
+
+Gates: `cargo fmt --check`, `cargo clippy --workspace --all-targets -D
+warnings`, `cargo test --workspace --no-fail-fast`, `xtask check-layering`,
+`xtask check-headers` (152 with a header, 167 without, ceiling 168 — every
+new file carries one, the free slot is untouched), `cargo deny check`,
+`npx tsc --noEmit`, `npx vitest run` — all exit 0.

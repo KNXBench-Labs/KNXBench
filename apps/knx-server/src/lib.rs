@@ -11,6 +11,8 @@ mod bus;
 pub use bus::*;
 
 mod bus_routes;
+mod debug_report;
+mod debug_report_routes;
 mod domain;
 pub use domain::*;
 
@@ -20,7 +22,10 @@ mod load_progress;
 pub use load_progress::*;
 mod paths;
 mod routes;
-mod session_log;
+/// Public so an integration test can seed a log entry directly — the only
+/// other way in is an import failure, which cannot be made to say an
+/// arbitrary address.
+pub mod session_log;
 
 pub type SharedState = Arc<AppState>;
 
@@ -61,6 +66,7 @@ pub fn app(state: SharedState, static_dir: Option<PathBuf>) -> Router {
         .merge(routes::project_routes())
         .merge(fs_routes::fs_routes())
         .merge(bus_routes::bus_routes())
+        .merge(debug_report_routes::debug_report_routes())
         .route("/healthz", get(|| async { "ok" }))
         .with_state(state);
 

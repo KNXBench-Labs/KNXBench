@@ -44,6 +44,12 @@ export default function LoadProgressBanner({ source, snapshot }: LoadProgressBan
         <div
           className="load-progress-track"
           role="progressbar"
+          // Outside the live region: the counted phases step through
+          // every value (38 entries, 24 files), and a screen reader that
+          // announced each one would read a phase change out of a queue
+          // of dozens of numbers. The phase is the news; the count is
+          // there for whoever asks the bar directly.
+          aria-live="off"
           aria-label={t("loadProgress.barLabel")}
           aria-valuemin={0}
           aria-valuemax={100}
@@ -62,7 +68,7 @@ export default function LoadProgressBanner({ source, snapshot }: LoadProgressBan
         </div>
       )}
       {fraction && (
-        <p className="load-progress-count">
+        <p className="load-progress-count" aria-live="off">
           {t("loadProgress.counted", { completed: fraction.completed, total: fraction.total })}
         </p>
       )}

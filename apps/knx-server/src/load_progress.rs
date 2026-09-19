@@ -344,23 +344,39 @@ mod tests {
     // it back unexamined. Pin both halves — an operation started with a
     // token echoes it, and one started without carries `None` rather than
     // this module inventing something to put there.
+    //
+    // Fix round 4, F13: both tests used to drop the handle on the spot,
+    // so `Drop` failed the operation and every assertion below was
+    // secretly about a failure snapshot. Binding it keeps the operation
+    // running, which is what these names claim to be looking at.
     #[test]
     fn a_client_token_is_stored_and_echoed_verbatim() {
         let ops = operations();
-        ops.begin(LoadKind::Import, "a.knxproj", Some("token-a".to_string()))
+        let handle = ops
+            .begin(LoadKind::Import, "a.knxproj", Some("token-a".to_string()))
             .unwrap();
 
-        assert_eq!(
-            ops.snapshot().unwrap().client_token.as_deref(),
-            Some("token-a")
-        );
+        let running = ops.snapshot().unwrap();
+        assert_eq!(running.status, LoadStatus::Running);
+        assert_eq!(running.client_token.as_deref(), Some("token-a"));
+
+        // And the operation keeps its owner past the end, which is the
+        // moment the token earns its keep: a client that lost the POST's
+        // response has nothing else left to recognise the result by.
+        handle.succeed();
+        let finished = ops.snapshot().unwrap();
+        assert_eq!(finished.status, LoadStatus::Succeeded);
+        assert_eq!(finished.client_token.as_deref(), Some("token-a"));
     }
 
     #[test]
     fn an_operation_started_with_no_token_carries_none_not_a_guess() {
         let ops = operations();
-        ops.begin(LoadKind::Import, "a.knxproj", None).unwrap();
+        let handle = ops.begin(LoadKind::Import, "a.knxproj", None).unwrap();
 
+        assert_eq!(ops.snapshot().unwrap().client_token, None);
+
+        handle.succeed();
         assert_eq!(ops.snapshot().unwrap().client_token, None);
     }
 

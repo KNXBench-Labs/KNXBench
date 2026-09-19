@@ -11,6 +11,11 @@ export interface ToastEntry {
   id: number;
   kind: ToastKind;
   message: string;
+  /** True when `message` quotes the server's own text verbatim (still
+   * English, whatever the UI locale) — gates the B4 disclosure hint in
+   * `Toast.tsx`. Meaningless for `kind === "fun"`, which never quotes the
+   * server. */
+  serverText: boolean;
 }
 
 /** Local-hour window treated as "late night": 23:00-04:59. */
@@ -75,12 +80,19 @@ export function useToasts() {
   }
 
   /** Clears any existing error toast, then shows the new one. Mirrors the
-   * old `setError(null)`-then-`setError(...)` pattern at every call site. */
-  function pushError(rawMessage: string) {
+   * old `setError(null)`-then-`setError(...)` pattern at every call site.
+   *
+   * `serverText` defaults to `true`: a call site that forgets to pass it
+   * gets an over-disclosure (an honest hint on a fully-translated message)
+   * rather than an under-disclosure (silently claiming a raw server
+   * sentence is translated, which is the actual lie B4 exists to prevent).
+   * Annoying beats dishonest. */
+  function pushError(rawMessage: string, options?: { serverText?: boolean }) {
+    const serverText = options?.serverText ?? true;
     const id = nextId.current++;
     setToasts((ts) => [
       ...ts.filter((t) => t.kind !== "error"),
-      { id, kind: "error" as const, message: humorizeError(rawMessage) },
+      { id, kind: "error" as const, message: humorizeError(rawMessage), serverText },
     ]);
   }
 
@@ -90,7 +102,7 @@ export function useToasts() {
 
   function pushFun(message: string, autoDismissMs = 6000) {
     const id = nextId.current++;
-    setToasts((ts) => [...ts, { id, kind: "fun" as const, message }]);
+    setToasts((ts) => [...ts, { id, kind: "fun" as const, message, serverText: false }]);
     setTimeout(() => dismiss(id), autoDismissMs);
   }
 

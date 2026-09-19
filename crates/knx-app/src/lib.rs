@@ -9,8 +9,11 @@
 
 pub mod export;
 pub mod import;
+pub mod progress;
 
 pub use export::export_ets_project;
 pub use import::{
-    import_ets_project, import_ets_project_with, AppError, ImportOptions, ImportedProject,
+    import_ets_project, import_ets_project_observed, import_ets_project_with, AppError,
+    ImportOptions, ImportedProject,
 };
+pub use progress::{LoadObserver, LoadStage};

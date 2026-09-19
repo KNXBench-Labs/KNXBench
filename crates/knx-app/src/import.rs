@@ -23,6 +23,8 @@ use knx_store::{
     StoredOpaqueEntry,
 };
 
+use crate::progress::{LoadObserver, LoadStage};
+
 pub struct ImportedProject {
     pub project: knx_core::Project,
     pub report: ImportReport,
@@ -115,7 +117,26 @@ pub fn import_ets_project_with(
     conn: &Connection,
     options: ImportOptions<'_>,
 ) -> Result<ImportedProject, AppError> {
-    let mut outcome = knx_etsproj::import_knxproj(path)?;
+    import_ets_project_observed(path, conn, options, &())
+}
+
+/// The general form with somebody watching: `observer` is told which stage
+/// of the load is running, parser stages included (ADR-0023). Every other
+/// entry point above is this one with `&()`, so the observed and the
+/// unobserved import are the same code.
+///
+/// Where the `stage(..)` calls sit is the whole contract: each is announced
+/// before the work it names, and [`LoadObserver::items`] is called only in
+/// the manufacturer loop, the one place here whose total is known before it
+/// starts.
+pub fn import_ets_project_observed(
+    path: &Path,
+    conn: &Connection,
+    options: ImportOptions<'_>,
+    observer: &dyn LoadObserver,
+) -> Result<ImportedProject, AppError> {
+    let mut outcome =
+        knx_etsproj::import_knxproj_observed(path, &crate::progress::ParseStages(observer))?;
 
     // The manifest is written whichever way the manufacturer files are
     // stored: it describes what the project was imported with, not where
@@ -138,25 +159,31 @@ pub fn import_ets_project_with(
 
     match options.product_db {
         Some(products) => {
-            for file in &outcome.manufacturer {
+            observer.stage(LoadStage::IngestManufacturerData);
+            let total = outcome.manufacturer.len() as u64;
+            for (index, file) in outcome.manufacturer.iter().enumerate() {
                 match knx_productdb::ingest_file(products, &file.source_path, &file.bytes)? {
                     knx_productdb::IngestOutcome::Ingested { .. } => ingested += 1,
                     knx_productdb::IngestOutcome::Skipped { .. } => skipped += 1,
                 }
+                observer.items(index as u64 + 1, total);
             }
             if let Some(master) = outcome
                 .opaque
                 .iter()
                 .find(|e| e.kind == knx_etsproj::opaque::OpaqueKind::MasterData)
             {
+                observer.stage(LoadStage::IngestMasterData);
                 knx_productdb::ingest_master_data(products, &master.bytes)?;
             }
+            observer.stage(LoadStage::EnrichFromProductDatabase);
             enrichment = Some(knx_productdb::enrich(&mut outcome.project, products)?);
         }
         None => stored.extend(outcome.manufacturer.iter().map(manufacturer_to_stored)),
     }
 
     let opaque_entries = stored.len();
+    observer.stage(LoadStage::PersistOpaque);
     insert_opaque(conn, &stored)?;
     insert_manufacturer_refs(conn, &manifest)?;
 

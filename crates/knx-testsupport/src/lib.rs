@@ -72,3 +72,106 @@ pub fn corpus_available() -> bool {
         && reference_ets6_path().exists()
         && reference_kv_schema21_path().exists()
 }
+
+/// A hand-written, structurally valid schema-11 `.knxproj` in memory: one
+/// area, one line, one device, one group address, plus the `.signature`
+/// entry [`knx_etsproj::Container::project_part`] needs to find the project
+/// part at all. Six container entries in total, two of which the importer
+/// regenerates rather than retains.
+///
+/// Exists so a test can exercise the *whole* import pipeline — container,
+/// detection, parse, validate, map, infer, collect — without the gitignored
+/// `OriginalData/` corpus, which CI and every contributor but the
+/// maintainer lack. The real projects stay the golden-count fixtures; this
+/// one is for tests about the pipeline's shape rather than its output, and
+/// it is small enough that any count asserted against it can be read off
+/// the source above.
+pub fn minimal_knxproj_bytes() -> Vec<u8> {
+    zip_with_entries(&[
+        ("P-0001.signature", b"not a real signature"),
+        ("P-0001/0.xml", MINIMAL_TOPOLOGY),
+        ("P-0001/Project.xml", MINIMAL_PROJECT_INFO),
+        ("knx_master.xml", MINIMAL_MASTER_DATA),
+        ("M-0001/M-0001_A-1.xml", MINIMAL_MANUFACTURER_DATA),
+        (
+            "M-0001/Baggages/note.txt",
+            b"carried through, never executed",
+        ),
+    ])
+}
+
+/// Writes `bytes` to a `.knxproj` file inside `dir` and returns its path —
+/// the on-disk form of [`minimal_knxproj_bytes`], for the routes and CLI
+/// paths that take a path rather than bytes.
+pub fn write_minimal_knxproj(dir: &Path) -> PathBuf {
+    let path = dir.join("minimal.knxproj");
+    std::fs::write(&path, minimal_knxproj_bytes()).expect("writing a fixture into a temp dir");
+    path
+}
+
+fn zip_with_entries(entries: &[(&str, &[u8])]) -> Vec<u8> {
+    use std::io::{Cursor, Write};
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let options =
+        zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+    for (name, bytes) in entries {
+        writer.start_file(*name, options).expect("zip entry");
+        writer.write_all(bytes).expect("zip entry body");
+    }
+    writer.finish().expect("zip central directory").into_inner()
+}
+
+const MINIMAL_TOPOLOGY: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11" CreatedBy="ETS4" ToolVersion="ETS 4.1.8">
+  <Project Id="P-0001">
+    <Installations>
+      <Installation InstallationId="0" Name="" DefaultLine="P-0001-0_L-2" CompletionStatus="Undefined">
+        <Topology>
+          <Area Id="P-0001-0_A-1" Name="A" Address="1" CompletionStatus="Undefined">
+            <Line Id="P-0001-0_L-2" Name="L" Address="1" MediumTypeRefId="MT-0" CompletionStatus="Accepted">
+              <DeviceInstance Id="P-0001-0_DI-1" Name="D" ProductRefId="M-0001_H-1_P-1"
+                              Hardware2ProgramRefId="M-0001_H-1_HP-1" Address="1"
+                              LastModified="2023-07-14T11:55:33" CompletionStatus="FinishedDesign"
+                              IndividualAddressLoaded="1" ApplicationProgramLoaded="1"
+                              ParametersLoaded="1" CommunicationPartLoaded="1"
+                              MediumConfigLoaded="1" IsCommunicationObjectVisibilityCalculated="1"
+                              Broken="0">
+                <ComObjectInstanceRefs>
+                  <ComObjectInstanceRef RefId="M-0001_A-1_O-0_R-1" DatapointType="" IsActive="1">
+                    <Connectors><Send GroupAddressRefId="P-0001-0_GA-1" /></Connectors>
+                  </ComObjectInstanceRef>
+                </ComObjectInstanceRefs>
+              </DeviceInstance>
+            </Line>
+          </Area>
+        </Topology>
+        <GroupAddresses>
+          <GroupRanges>
+            <GroupRange Id="P-0001-0_GR-1" Name="Licht" RangeStart="1" RangeEnd="255">
+              <GroupRange Id="P-0001-0_GR-2" Name="An/Aus" RangeStart="1" RangeEnd="127">
+                <GroupAddress Id="P-0001-0_GA-1" Address="1" Name="GA" />
+              </GroupRange>
+            </GroupRange>
+          </GroupRanges>
+        </GroupAddresses>
+      </Installation>
+    </Installations>
+  </Project>
+</KNX>"#;
+
+const MINIMAL_PROJECT_INFO: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <Project Id="P-0001">
+    <ProjectInformation Name="Minimal" GroupAddressStyle="ThreeLevel" CompletionStatus="Undefined" />
+  </Project>
+</KNX>"#;
+
+const MINIMAL_MASTER_DATA: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData />
+</KNX>"#;
+
+const MINIMAL_MANUFACTURER_DATA: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData />
+</KNX>"#;

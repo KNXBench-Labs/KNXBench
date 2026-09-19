@@ -43,6 +43,7 @@ use knx_core::commissioning::load_control::{
     DATA_RELATIVE_ALLOCATION_SIZE_OCTETS,
 };
 use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
+use knx_core::commissioning::mcb::MemoryControlBlock;
 use knx_core::commissioning::memory::WriteLimit;
 use knx_core::commissioning::mutation::WriteScope;
 use knx_core::commissioning::procedure::ProcedureKind;
@@ -314,10 +315,12 @@ impl fmt::Display for StepRecord {
 
 /// What the CRC comparison of CP §3.5.3 found, when it was performed at all.
 ///
-/// Note what is *not* here: a "differential download" outcome. The clause says
-/// *"If the CRC matches, then MaC shall use differential download algorithm"*
-/// and that algorithm is not specified in either knowledge base (spec §7.4,
-/// §12). So the comparison is performed, reported, and not acted on.
+/// The comparison is RES §4.2.27, Table 12, p. 39's CRC field alone, not the
+/// eight octets `PID_MCB_TABLE` answers with. Note what is *not* here: a
+/// "differential download" outcome. The clause says *"If the CRC matches,
+/// then MaC shall use differential download algorithm"* and that algorithm
+/// is not specified in either knowledge base (spec §7.4, §12). So the
+/// comparison is performed, reported, and not acted on.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CrcComparison {
     /// This procedure does not compare CRCs. A complete download replaces
@@ -329,7 +332,14 @@ pub enum CrcComparison {
     /// The device's current Memory Control Block equals the stored one.
     Matched,
     /// They differ, which is the ordinary case for a part being replaced.
+    /// Also reported when either octet set does not fit RES §4.2.27, Table
+    /// 12's eight octets: unparseable is not provably matching.
     Differed,
+    /// RES §4.2.27.1.1, Table 13, p. 39, bit 0 of the CRC Control Byte is
+    /// set: the device itself says the protected memory area may have
+    /// changed since the load, so its CRC — matching or not — proves
+    /// nothing.
+    MayHaveChanged,
 }
 
 impl fmt::Display for CrcComparison {
@@ -339,6 +349,10 @@ impl fmt::Display for CrcComparison {
             CrcComparison::NoStoredCrc => "no stored CRC to compare against",
             CrcComparison::Matched => "matches the stored CRC",
             CrcComparison::Differed => "differs from the stored CRC",
+            CrcComparison::MayHaveChanged => {
+                "the device says the protected memory may have changed since the load, \
+                 so its CRC cannot be trusted"
+            }
         })
     }
 }
@@ -902,11 +916,7 @@ async fn load_one_part<T: ManagementTransport>(
     let mut crc = CrcComparison::NotCompared;
     if compare_crc {
         let current = session.read_memory_control_block(object_index).await?;
-        crc = match &part.stored_mcb {
-            None => CrcComparison::NoStoredCrc,
-            Some(stored) if *stored == current => CrcComparison::Matched,
-            Some(_) => CrcComparison::Differed,
-        };
+        crc = compare_mcb(part.stored_mcb.as_deref(), &current);
     }
 
     record(report, kind, 4, "write the data");
@@ -977,6 +987,38 @@ async fn load_one_part<T: ManagementTransport>(
         version,
         mcb,
     })
+}
+
+/// CP §3.5.3's Memory Control Block comparison, RES §4.2.27, Table 12, p. 39:
+/// the CRC alone, not the segment size or the access nibbles that share the
+/// same eight octets.
+///
+/// `stored` and `current_octets` both come from [`MemoryControlBlock::parse`];
+/// a length that does not fit Table 12 is not a Memory Control Block this
+/// crate can read a CRC out of, so it is treated the same as a genuine
+/// mismatch — [`CrcComparison::Differed`] never claims a match it cannot
+/// prove. RES §4.2.27.1.1, Table 13, p. 39, bit 0 of the *current* read is
+/// checked first: when set, the device itself is saying the protected
+/// memory may have changed since the load, so a matching CRC proves
+/// nothing.
+fn compare_mcb(stored: Option<&[u8]>, current_octets: &[u8]) -> CrcComparison {
+    let Some(stored_octets) = stored else {
+        return CrcComparison::NoStoredCrc;
+    };
+    let (Ok(stored_mcb), Ok(current_mcb)) = (
+        MemoryControlBlock::parse(stored_octets),
+        MemoryControlBlock::parse(current_octets),
+    ) else {
+        return CrcComparison::Differed;
+    };
+    if current_mcb.protected_memory_may_change() {
+        return CrcComparison::MayHaveChanged;
+    }
+    if stored_mcb.crc == current_mcb.crc {
+        CrcComparison::Matched
+    } else {
+        CrcComparison::Differed
+    }
 }
 
 /// The allocation payload the device's mask profiles, or a refusal.
@@ -1505,6 +1547,171 @@ mod tests {
         .await
         .expect("a partial download of one part");
         assert_eq!(unknown.parts[0].crc, CrcComparison::NoStoredCrc);
+    }
+
+    /// RES §4.2.27, Table 12, p. 39: Segment Size is octets 0-3, not the
+    /// CRC. A partial download allocates before comparing
+    /// (`load_one_part` step 2 precedes step 3's MCB read), so a changed
+    /// payload length changes the device's current Segment Size on every
+    /// partial download — that must not turn into `Differed`.
+    #[tokio::test]
+    async fn a_changed_segment_size_with_the_same_crc_still_matches() {
+        let device = ap2_device();
+        let stored = MemoryControlBlock {
+            segment_size: 12,
+            crc_control_byte: 0,
+            read_access: 0,
+            write_access: 0,
+            crc: 0xBEEF,
+        }
+        .to_octets();
+        // The allocation this same download performs picks a different
+        // segment size (the part below is 40 octets, not 12) but the same
+        // CRC — this is what step 2 having already run before step 3 reads
+        // looks like on the wire.
+        let current = MemoryControlBlock {
+            segment_size: 40,
+            crc_control_byte: 0,
+            read_access: 0xF,
+            write_access: 0xF,
+            crc: 0xBEEF,
+        }
+        .to_octets();
+        device.preset_mcb(ObjectIndex::new(3), &current);
+        let parts = plan(vec![part(
+            3,
+            "Application Program 2",
+            40,
+            PartKind::ApplicationProgram2,
+        )
+        .with_stored_mcb(stored.to_vec())]);
+        let mut session = writer(&device, WriteScope::Download);
+        let report = Downloader::new(&mut session, parts)
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect("a partial download of one part");
+        assert_eq!(report.parts[0].crc, CrcComparison::Matched);
+    }
+
+    /// RES §4.2.27.1.1, Table 13, p. 39, bit 0: when the device's current
+    /// read sets it, the CRC comparison must not report `Matched` even if
+    /// the CRC octets are numerically equal — the device is saying the
+    /// comparison cannot be trusted.
+    #[tokio::test]
+    async fn crc_control_byte_bit_0_set_reports_may_have_changed_regardless_of_the_crc() {
+        let device = ap2_device();
+        let stored = MemoryControlBlock {
+            segment_size: 4,
+            crc_control_byte: 0,
+            read_access: 0,
+            write_access: 0,
+            crc: 0x1234,
+        }
+        .to_octets();
+        let current = MemoryControlBlock {
+            segment_size: 4,
+            crc_control_byte: 0b0000_0001,
+            read_access: 0,
+            write_access: 0,
+            crc: 0x1234,
+        }
+        .to_octets();
+        device.preset_mcb(ObjectIndex::new(3), &current);
+        let parts = plan(vec![part(
+            3,
+            "Application Program 2",
+            4,
+            PartKind::ApplicationProgram2,
+        )
+        .with_stored_mcb(stored.to_vec())]);
+        let mut session = writer(&device, WriteScope::Download);
+        let report = Downloader::new(&mut session, parts)
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect("a partial download of one part");
+        assert_eq!(report.parts[0].crc, CrcComparison::MayHaveChanged);
+    }
+
+    /// [`compare_mcb`] directly: the same two behaviours as the integration
+    /// tests above, without a session in the way, so a broken comparison
+    /// cannot hide behind an unrelated procedure failure.
+    #[test]
+    fn compare_mcb_reports_the_crc_field_alone() {
+        let stored = MemoryControlBlock {
+            segment_size: 12,
+            crc_control_byte: 0,
+            read_access: 0,
+            write_access: 0,
+            crc: 0xBEEF,
+        }
+        .to_octets();
+        let current = MemoryControlBlock {
+            segment_size: 999,
+            crc_control_byte: 0,
+            read_access: 0xF,
+            write_access: 0xF,
+            crc: 0xBEEF,
+        }
+        .to_octets();
+        assert_eq!(compare_mcb(Some(&stored), &current), CrcComparison::Matched);
+
+        let differing_crc = MemoryControlBlock {
+            crc: 0xDEAD,
+            ..MemoryControlBlock::parse(&current).unwrap()
+        }
+        .to_octets();
+        assert_eq!(
+            compare_mcb(Some(&stored), &differing_crc),
+            CrcComparison::Differed
+        );
+    }
+
+    #[test]
+    fn compare_mcb_bit_0_outranks_a_matching_crc() {
+        let stored = MemoryControlBlock {
+            segment_size: 4,
+            crc_control_byte: 0,
+            read_access: 0,
+            write_access: 0,
+            crc: 0x1234,
+        }
+        .to_octets();
+        let current = MemoryControlBlock {
+            segment_size: 4,
+            crc_control_byte: 0b0000_0001,
+            read_access: 0,
+            write_access: 0,
+            crc: 0x1234,
+        }
+        .to_octets();
+        assert_eq!(
+            compare_mcb(Some(&stored), &current),
+            CrcComparison::MayHaveChanged
+        );
+    }
+
+    /// Unparseable octets on either side must not be read as a match: RES
+    /// §4.2.27, Table 12, p. 39 fixes the width at eight octets, and a
+    /// stored value from before this crate parsed the block (or garbage)
+    /// gets the conservative verdict.
+    #[test]
+    fn compare_mcb_treats_unparseable_octets_as_differed() {
+        let valid = MemoryControlBlock {
+            segment_size: 0,
+            crc_control_byte: 0,
+            read_access: 0,
+            write_access: 0,
+            crc: 0,
+        }
+        .to_octets();
+        assert_eq!(
+            compare_mcb(Some(&[0xDE, 0xAD]), &valid),
+            CrcComparison::Differed
+        );
+        assert_eq!(
+            compare_mcb(Some(&valid), &[0xDE, 0xAD]),
+            CrcComparison::Differed
+        );
     }
 
     /// CP §3.5.4 steps 01 to 06, and no step 07: nothing here can make a

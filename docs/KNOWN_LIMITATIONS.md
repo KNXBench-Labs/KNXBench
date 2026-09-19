@@ -5628,3 +5628,48 @@ work: an extra question gets asked, nothing is discarded.
 
 **Lifted when.** The server grows a real dirty flag; then the guard becomes
 exact. Not scheduled.
+
+## 104. A device that goes offline mid-`LoadCompleting` now costs a full reconnect per quiet poll
+
+**Limitation.** Since C19, a connected request whose four transmissions
+(`MAX_TRANSMISSIONS`, TL §3, p. 15) all go unacknowledged releases the
+Transport Layer connection, per TL §3.9, p. 15 and the state machine's `E18`
+→ `A6` cell (§5.2 p. 19, §5.4.1's table p. 22, §5.3 p. 19).
+`wait_for_load_state` tolerates that release while the device's last reported
+state is one RES Table 94 permits silence in — but the next poll may no
+longer reuse the connection, so it re-establishes first. For
+`AuthorisationPlan::WithKey` that re-establishment is `connect()` in full:
+`T_Connect` and its confirmation, `A_Authorize_Request`, and the Verify Mode
+read-modify-write. One quiet poll therefore costs one whole reconnect, and a
+device that stays offline for the maximum transition time pays it on every
+poll.
+
+**Cause.** The Standard says the connection is gone and the Standard says to
+carry on polling; it does not say the polls become cheaper. RES §4.23.2.4.1
+asks the MaC to *"try to re-establish the connection periodically during the
+maximum transition time"*, and RES's NOTE 86 expects exactly this device:
+*"A device may be offline during state LoadCompleting."* The previous
+behaviour was cheaper only because it was wrong — it kept polling a
+connection the peer had already forgotten, and read whatever came back as if
+it meant something.
+
+**Impact.** Latency and bus traffic, not correctness, and it compounds with
+entry 101's accounting of the same wait loop. With `SessionTiming::default()`
+each quiet poll is `4 × 3 s = 12 s` of unacknowledged transmissions plus the
+re-establishment (up to `connection_timeout` = 6 s for the `T_Connect`
+confirmation alone, more with a key), where before C19 it was the 12 s and
+nothing else. Against a device that never comes back the wait still ends in
+`SessionError::TransitionTimedOut` with the last state read, as it did
+before; the failed re-establishments are tolerated rather than reported,
+because a single failure is not what *"periodically"* means.
+
+**Not a regression in what is reported.** A re-establishment that fails for a
+reason other than the connection failing to come up — a refused property, a
+mismatched read-back, a Verify Mode the device will not take — is still
+returned to the caller unchanged (`reestablishment_may_be_retried` in
+`crates/knx-net/src/commissioning.rs` lists exactly the four
+connection-shaped errors it swallows).
+
+**Lifted when.** A measurement on real hardware says the reconnect cost
+matters. The cheaper alternative — keeping a released connection and hoping
+the peer still honours it — is not available: it is the defect C19 fixed.

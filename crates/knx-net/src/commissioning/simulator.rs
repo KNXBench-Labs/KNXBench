@@ -20,6 +20,7 @@
 //! whatsoever about what a physical device does with it.
 
 use std::collections::{HashMap, HashSet};
+use std::ops::Range;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -129,7 +130,31 @@ pub struct SimulatorConfig {
     pub load_completing_polls: u8,
     /// Answer nothing while in `LoadCompleting`, which RES Table 94's
     /// footnote permits and spec §5.5 requires the client to tolerate.
+    ///
+    /// The T_ACK still goes out: this device is busy at the application
+    /// layer and alive at the Transport Layer, which is RES §4.23.2.4.1's
+    /// *"If the MaS responds during state LoadCompleting, an established
+    /// TL-connection is kept alive"*.
     pub silent_in_load_completing: bool,
+    /// Withhold the *answer* to the `PID_LOAD_STATE_CONTROL` reads numbered
+    /// in this half-open range, counting every transmission separately and
+    /// from one. The T_ACK still goes out.
+    ///
+    /// The device this models is busy, not gone: RES §4.23.2.4.1's *"If the
+    /// MaS responds during state LoadCompleting, an established
+    /// TL-connection is kept alive"*. Numbered rather than state-gated so
+    /// that a test can say which poll goes quiet without depending on how
+    /// long anything took.
+    pub unanswered_load_state_reads: Option<Range<u32>>,
+    /// Acknowledge *nothing* for the `PID_LOAD_STATE_CONTROL` reads numbered
+    /// in this half-open range — no T_ACK, no answer — counted the same way.
+    ///
+    /// The device this models is offline, which RES §4.23.2.4.1's NOTE 86
+    /// expects: *"A device may be offline during state LoadCompleting. A
+    /// running TL-connection may be lost..."* A window four wide is one
+    /// whole `MAX_TRANSMISSIONS` ladder, so the client's repetitions run out
+    /// and TL's action A6 has to release the connection.
+    pub unacknowledged_load_state_reads: Option<Range<u32>>,
     /// `PID_MAX_APDU_LENGTH` of the Device Object, if it has one.
     pub max_apdu_length: Option<u16>,
     /// `PID_MAX_APDU_LENGTH` of the Router Object, if it has one. Spec
@@ -315,6 +340,8 @@ impl Default for SimulatorConfig {
             error_code: 2,
             load_completing_polls: 0,
             silent_in_load_completing: false,
+            unanswered_load_state_reads: None,
+            unacknowledged_load_state_reads: None,
             max_apdu_length: Some(15),
             router_max_apdu_length: None,
             free_access_level: 0,
@@ -848,6 +875,13 @@ impl SimulatedDevice {
                     self.record(&service);
                     return;
                 }
+                if self.load_state_read_in(&service, &self.config.unacknowledged_load_state_reads) {
+                    // An offline device acknowledges nothing and remembers
+                    // nothing, so this one does not record the frame either.
+                    // The client's four transmissions and the release that
+                    // follows them are what the test is watching.
+                    return;
+                }
                 let still_dropping = {
                     let mut state = self.lock();
                     state.numbered_data_frames += 1;
@@ -917,7 +951,38 @@ impl SimulatedDevice {
         self.lock().seen.push(entry);
     }
 
+    /// Whether this frame is a `PID_LOAD_STATE_CONTROL` read whose number
+    /// falls inside `window`.
+    ///
+    /// The number is `State::load_state_reads`, which `handle` has already
+    /// incremented for this frame, and which counts every transmission —
+    /// so a window four wide is exactly one of the client's
+    /// `MAX_TRANSMISSIONS` ladders and not four polls.
+    fn load_state_read_in(
+        &self,
+        service: &ApplicationService,
+        window: &Option<Range<u32>>,
+    ) -> bool {
+        let Some(window) = window else {
+            return false;
+        };
+        let is_load_state_read = matches!(
+            service,
+            ApplicationService::PropertyValueRead {
+                property_id: PID_LOAD_STATE_CONTROL,
+                ..
+            }
+        );
+        is_load_state_read && window.contains(&self.lock().load_state_reads)
+    }
+
     fn answer(&self, service: ApplicationService) {
+        if self.load_state_read_in(&service, &self.config.unanswered_load_state_reads) {
+            // The T_ACK went out from `handle` moments ago; only the
+            // application answer is withheld. A device that is busy rather
+            // than gone.
+            return;
+        }
         match service {
             ApplicationService::AuthorizeRequest { key } => {
                 let key = u32::from_be_bytes(key);

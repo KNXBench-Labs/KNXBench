@@ -1759,7 +1759,9 @@ obtained" in tooling/reporting — no fixed cycle.
 **Limitation.** `crate::known::SCHEMA_21`/`SCHEMA_23` list several
 attributes with no dedicated field on `SourceDevice`/`SourceLine`:
 `DeviceInstance`'s `Comment`, `SerialNumber`, `LastUsedAPDULength`,
-`ReadMaxAPDULength`, `Puid`; `Segment`'s own `Id`,
+`ReadMaxAPDULength`, `Puid`, `LoadedImage`, `CheckSums`, `DownloadCounter`
+(the last three, C14: ETS's differential-download state, `Project
+Schema23 v01.00.00.pdf` p. 44); `Segment`'s own `Id`,
 `Number`, `Puid`; and `Puid` generally, on every element that carries it.
 `map.rs` folds all of these into one project-wide
 `Vec<RetainedAttribute>`, keyed only by their schema-shaped xpath (e.g.
@@ -1783,11 +1785,20 @@ for the first time at schema ≥21, where several genuinely do not.
 
 **Impact.** Round-tripping a schema-≥21 project through this
 application loses `Comment`, `SerialNumber`, `LastUsedAPDULength`,
-`ReadMaxAPDULength` and `Puid` on every device, and
-`Id`/`Number`/`Puid` on every `Segment` — cosmetic/bookkeeping data in
-most cases (nothing else in the file refers back to a `Segment`'s own
-`Id`), except `SerialNumber`, which is real hardware identification a
-technician may care about.
+`ReadMaxAPDULength`, `Puid`, `LoadedImage`, `CheckSums` and
+`DownloadCounter` on every device, and `Id`/`Number`/`Puid` on every
+`Segment` — cosmetic/bookkeeping data in most cases (nothing else in
+the file refers back to a `Segment`'s own `Id`), except `SerialNumber`,
+which is real hardware identification a technician may care about, and
+`LoadedImage`/`CheckSums`/`DownloadCounter`, which ETS uses to decide
+whether the *next* download can be differential — re-importing a
+project exported by this application forces ETS's next download to be
+a full one, never a wrong one: import (this application never reads or
+acts on the three) and re-export (this section) are the only two paths
+that touch them, and the loss is "ETS does more work than strictly
+necessary," not "ETS decides wrong." Not lost internally: preserved
+byte-exact in the opaque store and named in the import report (C14);
+lost only on the way back out to a `.knxproj` file.
 
 **Lifted when.** `installation_v21.rs`'s parser gains a per-instance
 xpath for `DeviceInstance`'s and `Segment`'s own leftover attributes —

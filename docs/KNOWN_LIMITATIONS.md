@@ -5604,7 +5604,7 @@ for some DPT, giving a server test something real to drive the branch with.
 Until then, adding one anyway would assert nothing the codec's own contract
 does not already guarantee some other way.
 
-## 104. The debug report redacts four pattern classes, and nothing else
+## 106. The debug report redacts four pattern classes, and nothing else
 
 **Limitation.** The debug-report bundle (T29,
 `apps/knx-server/src/debug_report.rs`) replaces exactly four things in

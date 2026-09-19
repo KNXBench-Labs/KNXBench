@@ -171,7 +171,7 @@ fn boundary_ok(bytes: &[u8], start: usize, end: usize) -> bool {
 /// groups then a non-digit, never four in a row). A bare, unlabelled
 /// five-or-more-part number that happens to be a version rather than an
 /// address (`1.2.3.4.5`) is not distinguishable from an address by shape
-/// alone and is treated as one; see `docs/KNOWN_LIMITATIONS.md` §104.
+/// alone and is treated as one; see `docs/KNOWN_LIMITATIONS.md` §106.
 fn redact_ipv4(text: &str) -> String {
     scan_and_replace(text, |c| c.is_ascii_digit() || c == '.', ipv4_hits)
 }
@@ -774,7 +774,7 @@ mod tests {
         // instead of an address with a typo'd fifth octet — shape alone
         // cannot tell them apart, and this pass picks the side that
         // protects the user's data. Documented in KNOWN_LIMITATIONS.md
-        // §104 rather than left as a silent surprise.
+        // §106 rather than left as a silent surprise.
         let r = plain();
         assert_eq!(r.apply("1.2.3.4.5"), format!("{IPV4_PLACEHOLDER}.5"));
     }

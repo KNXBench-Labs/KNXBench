@@ -21,6 +21,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use knx_core::commissioning::load_control::LoadControlSubtype;
 use knx_core::commissioning::load_state::{LoadEvent, LoadState};
@@ -186,6 +187,20 @@ pub struct SimulatorConfig {
     /// programs and every other index refuses the write the way `[D]`
     /// AL §3.4.4.2, p. 66, says an unlisted property is refused.
     pub application_program_objects: HashSet<u8>,
+    /// Once this much wall-clock time has passed since the device was
+    /// constructed, `PID_LOAD_STATE_CONTROL` answers
+    /// [`SimulatorConfig::settled_load_state`] instead of whatever
+    /// [`SimulatedDevice::preset_load_state`] put there.
+    ///
+    /// C5's deterministic way of building a device that only settles once
+    /// `max_transition` is already spent: a test sets this comfortably past
+    /// the session's `max_transition` and can then tell, from whether
+    /// `wait_for_load_state` ever sees the settled value, whether its
+    /// RES §4.23.2.4.1 "once more" attempt actually happens.
+    pub settle_load_state_after: Option<Duration>,
+    /// The state [`SimulatorConfig::settle_load_state_after`] settles to.
+    /// Meaningless while that field is `None`.
+    pub settled_load_state: LoadState,
 }
 
 /// The step of the §7.2 inner loop a simulated interruption strikes at.
@@ -310,6 +325,8 @@ impl Default for SimulatorConfig {
             allocation_fails_once_for: None,
             interrupt_at: None,
             application_program_objects: HashSet::new(),
+            settle_load_state_after: None,
+            settled_load_state: LoadState::Unloaded,
         }
     }
 }
@@ -367,6 +384,9 @@ pub enum Seen {
 
 #[derive(Debug)]
 struct State {
+    /// When the device was constructed, for
+    /// [`SimulatorConfig::settle_load_state_after`] to measure against.
+    created: Instant,
     connected: bool,
     /// Whether the one connection drop the configuration asks for has
     /// happened. Once, not on every frame afterwards: a connection that
@@ -448,6 +468,7 @@ impl SimulatedDevice {
         memory.insert(0x0060, u8::from(config.programming_mode));
 
         let state = State {
+            created: Instant::now(),
             connected: false,
             dropped: false,
             load_state_reads: 0,
@@ -612,6 +633,11 @@ impl SimulatedDevice {
         let mut state = self.lock();
         match property_id {
             PID_LOAD_STATE_CONTROL => {
+                if let Some(delay) = self.config.settle_load_state_after {
+                    if state.created.elapsed() >= delay {
+                        return Some(vec![self.config.settled_load_state.octet()]);
+                    }
+                }
                 let current = state
                     .load
                     .get(&object_index)

@@ -1717,6 +1717,10 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     ) -> Result<LoadState, SessionError> {
         let started = tokio::time::Instant::now();
         let mut last_state: Option<LoadState> = None;
+        // C5, RES §4.23.2.4.1: the deadline below buys exactly one more
+        // attempt, not a second polling loop — this flag is what makes
+        // "once more" mean once.
+        let mut made_the_one_more_attempt = false;
         loop {
             if self.connection.is_none() {
                 self.reconnect().await?;
@@ -1759,12 +1763,21 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                 Err(err) => return Err(err),
             }
             if started.elapsed() >= self.timing.max_transition {
-                return Err(SessionError::TransitionTimedOut {
-                    object_index,
-                    event,
-                    last_state,
-                    waited: started.elapsed(),
-                });
+                if made_the_one_more_attempt {
+                    return Err(SessionError::TransitionTimedOut {
+                        object_index,
+                        event,
+                        last_state,
+                        waited: started.elapsed(),
+                    });
+                }
+                // RES §4.23.2.4.1: *"...periodically during the maximum
+                // transition time and once more when the maximum
+                // transition time has passed."* The loop above already is
+                // the periodic part; setting the flag without returning
+                // lets exactly one further iteration — reconnect included —
+                // run past the deadline before the next crossing gives up.
+                made_the_one_more_attempt = true;
             }
             tokio::time::sleep(self.timing.poll_interval).await;
         }
@@ -2933,6 +2946,104 @@ mod tests {
             .await
             .expect("the transition settles once the checksum is done");
         assert_eq!(state, LoadState::Loaded);
+    }
+
+    /// C5, RES §4.23.2.4.1: *"...periodically during the maximum
+    /// transition time and once more when the maximum transition time has
+    /// passed."* A device that only settles well after the 50 ms deadline
+    /// must still be heard: the pre-fix code returned `TransitionTimedOut`
+    /// the instant the deadline passed and never asked again, so this
+    /// device would never have been heard from.
+    ///
+    /// The 40 ms `poll_interval` is deliberately as large as
+    /// `max_transition` itself, so the one extra attempt (fired at ~80 ms,
+    /// the first poll after the deadline) lands in a window — roughly
+    /// 80–120 ms — comfortably clear of both the last pre-deadline poll
+    /// (~40 ms) and of any plausible scheduler jitter.
+    #[tokio::test]
+    async fn a_late_answer_past_the_deadline_still_succeeds() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            settle_load_state_after: Some(Duration::from_millis(100)),
+            settled_load_state: LoadState::Loaded,
+            ..SimulatorConfig::default()
+        });
+        device.preset_load_state(ObjectIndex::APPLICATION_PROGRAM, LoadState::LoadCompleting);
+        let mut session = ManagementSession::read_only(
+            &device,
+            device.address(),
+            AuthorisationPlan::Skip,
+            SessionTiming {
+                max_transition: Duration::from_millis(50),
+                poll_interval: Duration::from_millis(40),
+                ..fast()
+            },
+        )
+        .expect("the simulated device is contactable");
+        session.connect().await.expect("connect");
+        let outcomes = permitted_outcomes(
+            LoadState::Loading,
+            Stimulus::Event(LoadEvent::LoadCompleted),
+            None,
+        );
+        let observed = session
+            .wait_for_load_state(
+                ObjectIndex::APPLICATION_PROGRAM,
+                LoadEvent::LoadCompleted,
+                LoadState::Loading,
+                &outcomes,
+            )
+            .await
+            .expect(
+                "the device settles at 100ms, past the 50ms deadline; the \
+                 one-more attempt (fired at ~80ms and ~120ms) must catch it",
+            );
+        assert_eq!(observed, LoadState::Loaded);
+    }
+
+    /// C5: the clause's "once more" is exactly one attempt, not a second
+    /// polling loop. A device that never settles must still time out in
+    /// bounded time — a retry loop instead of a single extra attempt would
+    /// hang here forever, which is what the bounding [`tokio::time::timeout`]
+    /// below is for.
+    #[tokio::test]
+    async fn a_device_that_never_settles_gets_exactly_one_attempt_past_the_deadline() {
+        let device = SimulatedDevice::new();
+        device.preset_load_state(ObjectIndex::APPLICATION_PROGRAM, LoadState::LoadCompleting);
+        let mut session = ManagementSession::read_only(
+            &device,
+            device.address(),
+            AuthorisationPlan::Skip,
+            SessionTiming {
+                max_transition: Duration::from_millis(20),
+                poll_interval: Duration::from_millis(2),
+                ..fast()
+            },
+        )
+        .expect("the simulated device is contactable");
+        session.connect().await.expect("connect");
+        let outcomes = permitted_outcomes(
+            LoadState::Loading,
+            Stimulus::Event(LoadEvent::LoadCompleted),
+            None,
+        );
+        let result = tokio::time::timeout(
+            Duration::from_millis(500),
+            session.wait_for_load_state(
+                ObjectIndex::APPLICATION_PROGRAM,
+                LoadEvent::LoadCompleted,
+                LoadState::Loading,
+                &outcomes,
+            ),
+        )
+        .await
+        .expect(
+            "a single extra attempt must give up well inside 500ms; a \
+             retry loop instead of one more try would never return at all",
+        );
+        match result {
+            Err(SessionError::TransitionTimedOut { .. }) => {}
+            other => panic!("expected a transition time-out, got {other:?}"),
+        }
     }
 
     /// RES Table 94 has no cell that turns `Start Loading` in `Unloaded`

@@ -2121,6 +2121,24 @@ fn diagnostic_kind_and_message(
             Kind::ModuleWithoutId,
             "A module instance has no identifier and cannot be matched to stored values.",
         ),
+        // Fix round 1 (merge): main's module-argument work (T12) added
+        // these three variants against the pre-T14 `diagnostic_message`,
+        // which returned a bare string. Folded into the Kind-tagged shape
+        // here so they get the same §66 translation path as everything
+        // else in this match, instead of staying English-only by accident
+        // of merge order.
+        Diagnostic::ModuleArgumentNotBound { .. } => (
+            Kind::ModuleArgumentNotBound,
+            "A module argument could not be matched to the module's declaration and was ignored.",
+        ),
+        Diagnostic::UnsupportedModuleArgumentKind { .. } => (
+            Kind::UnsupportedModuleArgumentKind,
+            "A module argument uses a kind this build does not interpret and was ignored.",
+        ),
+        Diagnostic::UnresolvedTextPlaceholder { .. } => (
+            Kind::UnresolvedTextPlaceholder,
+            "A text placeholder had no matching module argument and was left as written.",
+        ),
     }
 }
 
@@ -3748,9 +3766,11 @@ mod tests {
         assert_eq!(last.severity, Severity::Info);
     }
 
-    // Fix round 1 (Q2): `diagnostic_kind_and_message`'s twelve literals
-    // and `messages/en.ts`'s `parameters.diagnostic.*` entries for the
-    // same twelve kinds are two independent sources of the same English
+    // Fix round 1 (Q2): `diagnostic_kind_and_message`'s fifteen literals
+    // (twelve at fix round 1, plus three more folded in by this round's
+    // merge of main's T12 module-argument work) and `messages/en.ts`'s
+    // `parameters.diagnostic.*` entries for the same fifteen kinds are two
+    // independent sources of the same English
     // sentence, and nothing before this test asserted they had to agree.
     // This pins this file's half of that pair: every string below is
     // copied verbatim from `apps/knx-web/src/messages/en.ts` (as of this
@@ -3845,6 +3865,27 @@ mod tests {
             (
                 Diagnostic::ModuleWithoutId { node_id: 1 },
                 "A module instance has no identifier and cannot be matched to stored values.",
+            ),
+            (
+                Diagnostic::ModuleArgumentNotBound {
+                    node_id: 1,
+                    ref_id: None,
+                },
+                "A module argument could not be matched to the module's declaration and was ignored.",
+            ),
+            (
+                Diagnostic::UnsupportedModuleArgumentKind {
+                    node_id: 1,
+                    kind: "x".to_string(),
+                },
+                "A module argument uses a kind this build does not interpret and was ignored.",
+            ),
+            (
+                Diagnostic::UnresolvedTextPlaceholder {
+                    node_id: 1,
+                    name: "x".to_string(),
+                },
+                "A text placeholder had no matching module argument and was left as written.",
             ),
         ];
 

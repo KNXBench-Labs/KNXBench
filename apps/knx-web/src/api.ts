@@ -997,14 +997,17 @@ export type ParameterDiagnosticKind =
   | "moduleNestingTooDeep"
   | "moduleExpansionBudgetExhausted"
   | "missingValue"
-  | "moduleWithoutId";
+  | "moduleWithoutId"
+  | "moduleArgumentNotBound"
+  | "unsupportedModuleArgumentKind"
+  | "unresolvedTextPlaceholder";
 
 export interface ParameterDiagnostic {
   scope: ModuleScope | null;
   /** Same trust boundary as `CreationDiagnostic.kind` (D4 exception,
    * `CatalogBrowser.tsx`): this type is a promise about the wire shape
    * this build's server sends, not something TS enforces at the network
-   * boundary. A future server release adding a twentieth diagnostic would
+   * boundary. A future server release adding a twenty-third diagnostic would
    * hand an older frontend a `kind` outside this union at runtime; that
    * frontend's `describeParameterDiagnosticMessage` falls back to
    * `message` verbatim (English) rather than rendering nothing. */

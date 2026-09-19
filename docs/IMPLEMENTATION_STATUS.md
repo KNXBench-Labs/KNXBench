@@ -1,6 +1,6 @@
 # IMPLEMENTATION_STATUS.md
 
-Last updated: 2026-09-14 (T15: ZipCrypto decryption for ETS4/ETS5 password-protected `.knxproj` projects — read-only, synthetic fixtures, AES still refused; see the end of this document)
+Last updated: 2026-09-14 (T13: product-database schema v10 — `function_type`, `function_point` and `space_usage`, the three tables the master-scope `FT-*`/`FP-*`/`SU-*` translations had been waiting for a join partner to exist; see the end of this document)
 
 **Rebrand (2026-09-05):** the project is now named **KNXBench** — product
 name, app title, and GitHub repo (`KNXBench-Labs/KNX` → `KNXBench-Labs/KNXBench`)
@@ -5983,6 +5983,170 @@ tell the two readings apart anyway. It is `[A]` now, with the reason written dow
 `0`, `cargo test --workspace` **1,580 passed / 0 failed / 5 ignored**, 0 corpus
 skips, `check-layering` `0`, `check-headers` 119 well-formed / 168 without one
 (ceiling 168), `cargo deny check` `0`. No TypeScript was touched.
+
+## 2026-09-14 — The `FT-*`/`FP-*`/`SU-*` translations finally have something to join against (T13, product-database schema v10, branch `d10-language-data`)
+
+D10 slice 1 left a residue it named precisely: two of the five sampled
+packages' `knx_master.xml` carry `Master`-scope translations whose `RefId`s
+point at function types, function points and space usages, and
+`parse/master.rs` parsed none of those three elements. The translations were
+ingested, stored, and joined against nothing — text with no row to attach to.
+
+Schema v10 adds the three missing tables — `function_type`, `function_point`
+and `space_usage` — and `ingest_master_data` fills them from the same
+streaming walk that already filled `datapoint_type`. `query.rs` gains
+`function_types`/`function_type`, `function_points` and
+`space_usages`/`space_usage`, each overlaying `text` through the existing
+`master_text_overlay`, so every `RefId` family this project's corpus has ever
+produced a `Master`-scope translation for now has a reader. Backend only: no
+HTTP route, no frontend caller, the same scope discipline slice 1 kept.
+
+Existing databases are not left behind. `migrate_v9_to_v10` creates the three
+tables and then re-parses every stored `knx_master.xml` blob out of
+`source_file` — the fifth backfill of this shape overall, and the third
+written under [ADR-0020](adr/0020-migrations-may-rederive-from-stored-bytes.md)
+specifically, after `linkable` (v8) and `parameter_type`'s bounds (v9); the
+ADR itself exists to record a decision already made twice before it was
+written, by `backfill_dynamic_nodes` (v2→v3) and
+`backfill_shared_translations` (v3→v4). The
+re-derivation is a function of the bytes and nothing else, which is what
+ADR-0020's rule E2 demands, and one write needed explicit fencing to keep it
+that way: `ingest_master_data`'s unknown-construct collector is file-wide,
+`ingest_unknown` has no unique key, and `install_package` had already recorded
+that same file-wide set at install time. Replaying it whole would have doubled
+every `Manufacturer`/`DatapointType` unknown on each migration — a count that
+measures install history rather than content. The backfill therefore records
+only unknowns under `/KNX/MasterData/FunctionTypes/` and
+`/KNX/MasterData/SpaceUsages/`, the two prefixes covering the three element
+families this migration is the first to parse, and a regression test pins that
+boundary from both sides: an unknown install already recorded stays at one row,
+an unknown on an element only this migration parses gets its first.
+
+A note on the version number, since the branch's own commits say otherwise:
+this migration was written as `migrate_v8_to_v9` while T18 slice 5 was
+independently writing a different `migrate_v8_to_v9` on another branch. T18
+merged first, so v9 already means "`parameter_type` bounds re-derived" in every
+database that has run it. Renumbering T13 to v10 was the only option that
+keeps a schema version meaning one thing forever; the alternative — two
+migrations sharing a number — would have made `user_version` ambiguous, which
+is the one thing a migration chain may never be.
+
+## 2026-09-14 — Task 12: module arguments stop being decoration (T18, product-database schema v11, branch `t18-module-arguments`)
+
+Since T18 slice 2 the evaluator has walked into a `ModuleDef` twice and
+produced the same thing twice, because the one input that distinguishes two
+instantiations — the argument values on the `Module` element — was stored
+and then ignored. Twelve MDT channels all called themselves
+`Channel {{ChNo}}`. They now call themselves `Channel A` through
+`Channel L`.
+
+**Measured first, designed second.** Across every `ApplicationProgram`
+member of every archive under `OriginalData/`: 86 `Module` / 172
+`NumericArg` / 86 `TextArg` / 36 `Argument` declarations in
+`ProductDatabases`, and 32 / 96 / 0 / 12 in `DemoProjects` — all **[V]**,
+this run. Every one of the 118 `Module` elements binds at least one
+argument. `{{Name}}` placeholders: **978**, of which **978** resolve to an
+`Argument/@Name` declared by the enclosing `ModuleDef` and **0** do not —
+the consistency that makes name substitution evidence rather than a guess,
+since the schema extraction (**[D]** `Project Schema23 v01.00.00`) defines
+no AP-side `ModuleDef`/`Module` complexType and no `{{…}}` rule at all.
+A separate **948** purely numeric `{{<digits>}}` placeholders belong to
+`TextParameterRefId` and are deliberately left alone. Details and the full
+table in [RESEARCH.md §4.4](RESEARCH.md)'s task-12 addendum; the design
+decisions D47–D51 in
+[the module-expansion design spec](superpowers/specs/2026-09-11-module-expansion-design.md).
+
+**`AllocatorRef`: 0, and the bases searched are named.** **[D]** §1.1.2.38
+`ModuleDefArgType_t` lists it as a facet and `Value_t` gives it one
+sentence — *"A module allocator refId as string"* — and that is the entire
+published account of it. **[V]** `OriginalData/` in full: **0** occurrences
+across every readable archive member (4 members unreadable, all encrypted
+contents of out-of-scope legacy archives — 3 in the one `.vd2`, 1 in the
+`.vd4` the corpus gained on 2026-09-16 — counted rather than quietly
+excluded). **[V]** `knx_spec_kb_programming.sqlite` (2,207 facts, 27 PDFs)
+and `knx_spec_kb_full179_clean.sqlite` (16,536 facts, 177 PDFs), searched
+across `content`, `title`, `keywords`, `evidenceText`: **0** each; the only
+`Allocator` matches anywhere are "heat cost allocator" in DPT documents. So
+it is not implemented, and — this being the part that matters — it is not
+silently ignored either: a declaration typed `AllocatorRef` produces an
+`UnsupportedModuleArgumentKind` diagnostic per instantiation, with the
+`@Type` spelling carried along.
+
+**What shipped.** `CURRENT_PRODUCTDB_VERSION` is **11**. `migrate_v10_to_v11`
+creates `module_def_argument (program_id, module_def_id, id, name,
+arg_type, allocates, position, extra)`, adds `dynamic_node.value`, and then
+replays every stored `ApplicationProgram` blob through
+`parse_dynamic_trees` — after deleting what the previous parse of that same
+blob wrote, because `parse_dynamic_trees` skips a program that already has
+rows and the backfill would otherwise be a no-op on exactly the databases
+it exists for. Stale `Dynamic`-pass `ingest_unknown` rows are retired with
+it, so a migrated database stops complaining that `NumericArg/@Value` is
+unmodelled the moment it grows a column for it. ADR-0020 rule E1, and the
+rule's own "is it already stored?" question was asked and answered
+honestly: the value *was* stored — in `extra`, which D2's schema comment
+declares a human-readable audit trail and explicitly not re-parseable.
+Stored, yes; readable, no.
+
+In the evaluator, `ProgramTrees` carries the declarations, `ModuleScope`
+carries the resolved `Vec<BoundArgument>`, and `Activation` grows
+`labels: Vec<ActiveLabel>` — one per activated `Channel`/`ParameterBlock`/
+`ParameterSeparator` with non-empty `@Text`, holding both `raw_text` as
+stored and `text` after substitution. Name lookup does **not** walk up the
+parent chain: **[D]** `Identifier50_t` scopes an argument name to its own
+`ModuleDef`, and the corpus has zero nested `Module`s to argue otherwise.
+Three new diagnostics keep the "never silently discard" rule:
+`ModuleArgumentNotBound`, `UnsupportedModuleArgumentKind`,
+`UnresolvedTextPlaceholder` — all scoped like every other diagnostic, all
+given prose in `apps/knx-server/src/domain.rs`. An unresolved placeholder
+is left **verbatim**, because substituting an empty string would delete the
+only evidence that something was meant to be there.
+
+Arguments add no fan-out — binding costs O(children of one `Module`) per
+expansion — but labels are produced per activated element per expansion,
+exactly the way a ref is, so `labels.len()` folds into
+`Activation::activations_recorded()` and counts against
+`MAX_MODULE_ACTIVATIONS`. A budget that counted refs but not labels would
+have a hole in it the width of a `ModuleDef` whose tree is all `Channel`s.
+No new constant was needed.
+
+**The acceptance test is a difference, not a demonstration.**
+`an_argument_value_changes_the_evaluated_label_of_each_module_instantiation`
+evaluates two `Module` elements naming one `ModuleDef`, identical except
+for their bound `@Value`s, and asserts the two labels differ
+(`Channel A: {{0}} at 32` vs `Channel B: {{0}} at 164` — the `{{0}}` left
+standing on purpose, and unreported on purpose).
+`without_the_argument_declarations_the_same_trees_leave_every_placeholder_standing`
+runs the same trees with the declarations withheld and gets the
+pre-task-12 answer back: identical labels, six `ModuleArgumentNotBound`.
+`corpus_argument_measurement_task_12` asserts the corpus numbers above
+against the installed archives and checks that the three real MDT programs
+produce **12 / 8 / 4** substituted labels, every one distinct, with zero
+argument diagnostics on real data. Five new tests in all.
+
+**What this does not fix.**
+[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) §§68–71 were re-read one by
+one and each gained a "Task 12, unaffected, and here is why" paragraph
+rather than being closed: they are project-side `ModuleInstance`
+limitations, and this change is entirely program-side. A binding supplies a
+distinguishable *label*, not an identity — nothing here lets a
+`ParameterInstance` keyed by `(device, ets_id)` address a per-channel
+value. And `apps/knx-server` consumes the new diagnostics but not yet
+`Activation.labels`: the substituted text exists in the evaluator and has
+not reached the parameter panel's DTOs. The `Static` pass also still
+reports `ModuleDef/Arguments`/`Argument` as unmodelled, deliberately —
+`@Allocates` and the memory placement it feeds genuinely are.
+
+**A note on the version number, since the branch's own commit says otherwise:** this migration was written as `migrate_v9_to_v10` while T13 was independently writing a different `migrate_v9_to_v10` — the `FunctionType`/`FunctionPoint`/`SpaceUsage` migration above — on another branch. T13 merged into `main` first (merge `17eee8f`), so v10 already means "function/space data" in every database that has run it. This migration is renumbered to `migrate_v10_to_v11`, placed after T13's entry in `migrations()`, for the same reason T13's own note gives: a schema version may mean only one thing, ever.
+
+**Re-measured, not remembered.** `cargo test --workspace --no-fail-fast
+-j 2` → **1578 passed, 0 failed, 5 ignored** (baseline at `eea821f`:
+1573 / 0 / 5); `grep -c 'skip: OriginalData'` over that log → **0**. The
+six gates — `cargo fmt --all -- --check`, `cargo clippy --workspace
+--all-targets -j 2 -- -D warnings`, that test run, `cargo run -p xtask --
+check-layering`, `cargo run -p xtask -- check-headers` (**118** files with
+a well-formed header, **168** without one, ceiling 168, 30 generated files
+skipped — no source file added or removed), `cargo deny check` (advisories,
+bans, licenses, sources all ok) — exit `0` six times.
 
 ## 2026-09-16 — Goal Task 17: real-browser verification for “New project” (branch `launcher-browser-verify`)
 

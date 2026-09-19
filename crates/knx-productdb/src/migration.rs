@@ -16,7 +16,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::insert_unknown;
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 9;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 11;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -282,7 +282,321 @@ fn migrations() -> Vec<Migration> {
         migrate_v6_to_v7,
         migrate_v7_to_v8,
         migrate_v8_to_v9,
+        migrate_v9_to_v10,
+        migrate_v10_to_v11,
     ]
+}
+
+fn migrate_v9_to_v10(conn: &Connection) -> Result<(), ProductDbError> {
+    // `IF NOT EXISTS` throughout: this migration, uniquely among the ones in
+    // this file, is exercised by tests that roll a fully-migrated database's
+    // `user_version` pragma back below 10 without dropping the tables a first
+    // pass through this same file already created — an unguarded `CREATE
+    // TABLE` would then fail on the physically-still-there table. Every
+    // other structural migration here (`migrate_v2_to_v3`'s `dynamic_node`,
+    // `migrate_v1_to_v2`'s `package`) never had to survive that, because no
+    // later migration reintroduced their tables' names; this one does.
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS function_type (
+             id     TEXT PRIMARY KEY,
+             number INTEGER,
+             text   TEXT,
+             status TEXT
+         ) STRICT;
+         CREATE TABLE IF NOT EXISTS function_point (
+             id               TEXT PRIMARY KEY,
+             function_type_id TEXT NOT NULL,
+             datapoint_type   TEXT,
+             role             TEXT,
+             characteristics  TEXT,
+             text             TEXT
+         ) STRICT;
+         CREATE INDEX IF NOT EXISTS function_point_function_type ON function_point (function_type_id);
+         CREATE TABLE IF NOT EXISTS space_usage (
+             id     TEXT PRIMARY KEY,
+             number INTEGER,
+             text   TEXT
+         ) STRICT;",
+    )?;
+    backfill_function_and_space_data(conn)?;
+    Ok(())
+}
+
+/// A product database that reached v9 before `function_type`/
+/// `function_point`/`space_usage` existed has `source_file` blobs whose
+/// `knx_master.xml` was already parsed for `Manufacturers`/`DatapointTypes`/
+/// `Languages` but never for `FunctionTypes`/`SpaceUsages` — installation's
+/// content-hash idempotence (`source_parse_evidence`) means an
+/// already-installed blob is never revisited by the ordinary path.
+/// Modelled on `backfill_shared_translations` above: every blob that
+/// classifies as `MasterData` is replayed through `ingest_master_data` in
+/// full, inside the same migration transaction `open_and_migrate` already
+/// holds. Replaying the whole function rather than a second, narrower
+/// parser is safe because every write it makes is `INSERT OR IGNORE` or
+/// `ON CONFLICT DO UPDATE SET name = excluded.name` against a blob's own
+/// unchanged bytes — that reproduces first ingest's result whenever no
+/// master blob was installed by more than one package, and only the three
+/// new tables actually gain anything. That qualifier is not automatic and
+/// is not decoration: see the `ORDER BY rowid` comment below for the
+/// `store_source_file` short-circuit that makes install order and
+/// `source_file` rowid order two different things, and for the measured
+/// case where it matters.
+///
+/// That argument covers `ingest_master_data`'s own writes and stops there.
+/// The one write this function makes on its own behalf — `insert_unknown` —
+/// is a plain `INSERT` into a table with no unique key, and the collector it
+/// would be handed is file-wide, so replaying it whole would duplicate every
+/// unknown construct `install_package` already recorded for this blob. It is
+/// therefore filtered to the two xpath prefixes this migration's three new
+/// element families live under; see the comment at the call site.
+fn backfill_function_and_space_data(conn: &Connection) -> Result<(), ProductDbError> {
+    // `ORDER BY rowid`: `Manufacturer`'s `ON CONFLICT DO UPDATE SET name =
+    // excluded.name` inside the replayed `ingest_master_data` is genuinely
+    // last-writer-wins, and the corpus's own master files disagree about a
+    // manufacturer's display name often enough to matter — 36 manufacturer
+    // ids disagree across the corpus's five master files, 132 disagreeing
+    // file pairs in total, measured (KNOWN_LIMITATIONS.md §88); `M-0052` is
+    // `Theodor HEIMEIER Metallwerk` in one master and `IMI Hydronic
+    // Engineering` in another. Without an explicit order this table scan
+    // happens to come back in insertion order today, which is the only
+    // reason replaying it reproduces the original install's result — true
+    // by accident, not by anything SQLite promises. `rowid` pins it to
+    // what `source_file` actually promises: the order distinct blobs were
+    // first written, by construction (ADR-0020 §E2 — this value depends on
+    // install history, not only on stored bytes, so the migration may not
+    // re-derive a *different* one).
+    //
+    // "The order distinct blobs were first written" is *not* the same
+    // thing as "install order", and that gap is real, not theoretical.
+    // `store_source_file` (`blob.rs`) returns `false` without inserting a
+    // row when a blob's sha256 is already on record, but `install_package`
+    // (`package.rs`) calls `ingest_master_data` on that blob regardless —
+    // so a master blob installed by two different packages is genuinely
+    // ingested twice, at two different points in real install history,
+    // while `source_file` only ever gives it one rowid. This scan then
+    // replays that blob once, at the position its *first* install
+    // occupies, which can differ from the position its *last* install
+    // (the one whose `Manufacturer` names actually won, under last-writer-
+    // wins) occupied. Measured [V]: install Weinzierl 730 ETS4, then MDT KP
+    // AMI/AMS 03, then the Weinzierl archive repacked with one XML comment
+    // appended to `M-00C5/Catalog.xml` (package hash differs,
+    // `knx_master.xml` byte-identical to the first install — so the third
+    // install's `ingest_master_data` call replays the *same* manufacturer
+    // rows a second time, at a rowid that still reflects only the first
+    // install). Roll back to `user_version = 9`, drop the three v10 tables,
+    // reopen through `open_and_migrate`: 21 of 799 manufacturer display
+    // names change relative to the pre-rollback database. `M-0002` goes
+    // from `ABB` to `ABB AG - STOTZ-KONTAKT`, `M-0007` from `Busch-Jaeger
+    // Elektro` to `ABB AG - BUSCH-JAEGER`, `M-000A` from `INSTA ELEKTRO` to
+    // `Insta GmbH`; `translation`, `datapoint_type` and `ingest_unknown`
+    // counts are unchanged. This flip happens with or without `ORDER BY
+    // rowid` — the ordering is still the right one to hold, since it is
+    // still the *only* order `source_file` actually records — but it does
+    // mean this function's result is not guaranteed to equal first
+    // install's result in every database, only in the (typical) one where
+    // no master blob was ever installed by more than one package.
+    // KNOWN_LIMITATIONS.md §88 records the residual beside its existing
+    // first-winner/last-winner pair.
+    let mut stmt =
+        conn.prepare("SELECT sha256, source_path, bytes FROM source_file ORDER BY rowid")?;
+    let blobs: Vec<(String, String, Vec<u8>)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    drop(stmt);
+
+    for (sha256, source_path, bytes) in blobs {
+        // Only `MasterData` content can carry `FunctionTypes`/`SpaceUsages`;
+        // everything else is skipped without being parsed at all, exactly
+        // as the ordinary ingest path already dispatches by `classify`.
+        if classify(&bytes) != FileKind::MasterData {
+            continue;
+        }
+        conn.execute_batch("SAVEPOINT function_space_backfill_blob;")?;
+        match crate::parse::master::ingest_master_data(conn, &bytes) {
+            Ok(outcome) => {
+                conn.execute_batch("RELEASE SAVEPOINT function_space_backfill_blob;")?;
+                // Only the unknowns belonging to the three element families
+                // this migration newly parses. `ingest_master_data`'s
+                // collector is file-wide, and every blob reaching this
+                // backfill was already ingested once — by `install_package`,
+                // which called `insert_unknown` on that same file-wide set.
+                // `ingest_unknown` has no unique key and `insert_unknown` is
+                // a plain `INSERT`, so handing it the whole set again would
+                // silently double each `Manufacturer`/`DatapointType`
+                // unknown that install already recorded: a count that
+                // depends on install history rather than on bytes, which is
+                // exactly what ADR-0020's E2 warns a re-derivation must not
+                // touch. `FunctionType`/`FunctionPoint`/`SpaceUsage`
+                // unknowns are the opposite case — the old parser never
+                // looked at those elements, so nothing about them was ever
+                // recorded and there is nothing to double.
+                let newly_parsed: Vec<_> = outcome
+                    .unknown
+                    .into_iter()
+                    .filter(|u| {
+                        u.xpath.starts_with("/KNX/MasterData/FunctionTypes/")
+                            || u.xpath.starts_with("/KNX/MasterData/SpaceUsages/")
+                    })
+                    .collect();
+                insert_unknown(conn, &sha256, &newly_parsed)?;
+            }
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT function_space_backfill_blob;
+                     RELEASE SAVEPOINT function_space_backfill_blob;",
+                )?;
+                record_backfill_failure(
+                    conn,
+                    &sha256,
+                    &source_path,
+                    "FunctionSpaceBackfillError",
+                    "ingest_master_data",
+                    &error,
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// v10 -> v11. `Module` argument interpretation (goal-completion task 12,
+/// design D47): the two pieces of an argument binding that the evaluator
+/// needs, and that nothing stored before v11 held in a readable form.
+///
+/// * `module_def_argument` — one row per `ModuleDef/Arguments/Argument`.
+///   The declaration's `@Name` is the only key by which a `{{Name}}`
+///   placeholder inside that `ModuleDef`'s own `Dynamic` tree can be
+///   resolved, and it lived nowhere at all before this: `Arguments` sits
+///   outside `Dynamic`, so the `Dynamic` pass never saw it, and the
+///   `Static` pass reported it as an unmodelled construct and moved on.
+/// * `dynamic_node.value` — `NumericArg`/`TextArg`'s `@Value`. The value
+///   *was* stored before v11, but only inside `extra`, which design D2's
+///   own schema comment declares is a human-readable audit trail and
+///   explicitly **not** re-parseable (a `@Text` value containing `=` or a
+///   newline splits it wrong). Re-deriving a column from a stored blob is
+///   cheaper than teaching something to parse a format documented as
+///   unparseable, which is the ADR-0020 check — "is it already stored?" —
+///   answered honestly: stored, yes; readable, no.
+///
+/// [ADR-0020](../../../docs/adr/0020-migrations-may-rederive-from-stored-bytes.md)
+/// E1 permits the backfill: every value re-derived here is a pure function
+/// of `source_file.bytes`, with no dependence on install order or install
+/// history. `migrate_v2_to_v3`'s own `backfill_dynamic_nodes` is the direct
+/// precedent — same parser, same blobs, same transaction.
+///
+/// Renumbered from v9->v10 to v10->v11 (goal-completion task 12 renumber):
+/// T13's `FunctionType`/`FunctionPoint`/`SpaceUsage` migration landed on
+/// `main` first and kept the v9->v10 slot; this one runs after it, not
+/// before, so it appears second in `migrations()` too.
+fn migrate_v10_to_v11(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch(
+        "CREATE TABLE module_def_argument (
+            program_id    TEXT NOT NULL,
+            module_def_id TEXT NOT NULL,
+            id            TEXT NOT NULL,
+            name          TEXT,
+            arg_type      TEXT,
+            allocates     INTEGER,
+            position      INTEGER NOT NULL,
+            extra         TEXT,
+            PRIMARY KEY (program_id, module_def_id, id)
+        ) STRICT;
+        CREATE INDEX module_def_argument_scope
+            ON module_def_argument (program_id, module_def_id);
+        ALTER TABLE dynamic_node ADD COLUMN value TEXT;",
+    )?;
+    reparse_dynamic_trees(conn)
+}
+
+/// Replays every stored `ApplicationProgram` blob through
+/// `dynamic::parse::parse_dynamic_trees` again, after clearing what the
+/// previous parse of the *same* blob wrote.
+///
+/// Clearing first is what makes this different from
+/// `backfill_dynamic_nodes`, and it is not optional:
+/// `parse_dynamic_trees` deliberately skips a program that already has
+/// `dynamic_node` rows, so without the `DELETE` this function would be an
+/// elaborate no-op on precisely the databases it exists for. The delete is
+/// scoped to the programs this blob owns — `application_program.source_sha256
+/// = this sha` — so a program that lost an id conflict to an earlier,
+/// different file keeps the winner's rows, exactly as it does on the
+/// ordinary ingest path.
+///
+/// The `ingest_unknown` rows the previous `Dynamic` pass wrote are deleted
+/// alongside, matched on that pass's own xpath shape (`.../Dynamic//...`),
+/// and rewritten from the fresh parse. Without that, a database migrated to
+/// v11 would keep claiming `NumericArg/@Value` is an unmodelled attribute
+/// long after it acquired a column — `backfill_linkable`'s stale-row
+/// retirement, applied to the attributes this slice starts modelling. Rows
+/// from the `Static` pass are untouched: that pass still does not model
+/// `ModuleDef/Arguments`, and still says so, because its memory-allocation
+/// facet (`@Allocates`, `Memory/@BaseOffset`, `ComObject/@BaseNumber`)
+/// genuinely stays unmodelled here.
+///
+/// Per-blob `SAVEPOINT` and a recorded failure rather than an aborted
+/// migration, for the reason every backfill above gives: a database that
+/// refuses to open is worse than one with a gap.
+fn reparse_dynamic_trees(conn: &Connection) -> Result<(), ProductDbError> {
+    let mut stmt = conn.prepare("SELECT sha256, source_path, bytes FROM source_file")?;
+    let blobs: Vec<(String, String, Vec<u8>)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+        .collect::<Result<_, _>>()?;
+    drop(stmt);
+
+    for (sha256, source_path, bytes) in blobs {
+        if classify(&bytes) != FileKind::ApplicationProgram {
+            continue;
+        }
+        conn.execute_batch("SAVEPOINT dynamic_reparse_blob;")?;
+        let cleared = clear_dynamic_pass_output(conn, &sha256);
+        let outcome = cleared.and_then(|()| {
+            crate::dynamic::parse::parse_dynamic_trees(conn, &sha256, &source_path, &bytes)
+        });
+        match outcome {
+            Ok(outcome) => {
+                insert_unknown(conn, &sha256, &outcome.unknown)?;
+                conn.execute_batch("RELEASE SAVEPOINT dynamic_reparse_blob;")?;
+            }
+            Err(error) => {
+                conn.execute_batch(
+                    "ROLLBACK TO SAVEPOINT dynamic_reparse_blob;
+                     RELEASE SAVEPOINT dynamic_reparse_blob;",
+                )?;
+                record_backfill_failure(
+                    conn,
+                    &sha256,
+                    &source_path,
+                    "DynamicReparseError",
+                    "parse_dynamic_trees",
+                    &error,
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Deletes everything the `Dynamic` pass wrote for the programs owned by
+/// one blob: their `dynamic_node` rows, their `module_def_argument` rows
+/// (empty on the way into v11, non-empty on a re-run), and the
+/// `ingest_unknown` rows that pass recorded — identified by the xpath shape
+/// `dynamic::parse::insert_node` builds and nothing else does.
+fn clear_dynamic_pass_output(conn: &Connection, sha256: &str) -> Result<(), ProductDbError> {
+    const OWNED_PROGRAMS: &str = "SELECT id FROM application_program WHERE source_sha256 = ?1";
+    conn.execute(
+        &format!("DELETE FROM dynamic_node WHERE program_id IN ({OWNED_PROGRAMS})"),
+        [sha256],
+    )?;
+    conn.execute(
+        &format!("DELETE FROM module_def_argument WHERE program_id IN ({OWNED_PROGRAMS})"),
+        [sha256],
+    )?;
+    conn.execute(
+        "DELETE FROM ingest_unknown
+         WHERE source_sha256 = ?1 AND xpath LIKE '%/Dynamic//%'",
+        [sha256],
+    )?;
+    Ok(())
 }
 
 /// v8 -> v9. The second instance of §87's class, not the third — `linkable`
@@ -581,7 +895,27 @@ fn migrate_v3_to_v4(conn: &Connection) -> Result<(), ProductDbError> {
 /// from reaching the next blob or abort the migration outright — a database
 /// that refuses to open is worse than one with a gap.
 fn backfill_shared_translations(conn: &Connection) -> Result<(), ProductDbError> {
-    let mut stmt = conn.prepare("SELECT sha256, source_path, bytes FROM source_file")?;
+    // `ORDER BY rowid`: `ingest_translations`' write is `INSERT OR IGNORE`
+    // (`parse/translation.rs`) against `(scope, scope_id, language, ref_id,
+    // attribute_name)` — first-writer-wins, so which text survives a
+    // conflicting re-declaration depends on scan order. This is a real
+    // hazard, not a hypothetical one: measured across the corpus's five
+    // master files [V], 13 `(language, RefId, AttributeName)` keys carry
+    // conflicting text — `de-DE/DPT-18/Text` is `Szenensteuerung` in one
+    // file and `Szenen Kontrolle` in another, `de-DE/DPST-9-7/Text` is
+    // `Feuchtigkeit (%)` in one and `Prozent (%)` in another. `rowid` pins
+    // the scan to the order distinct blobs were first written — the same
+    // qualifier `backfill_function_and_space_data` above carries and for
+    // the same reason (ADR-0020 §E2): a blob installed by two different
+    // packages is ingested twice but occupies one rowid, so this order
+    // matches true install order only when no `Catalog`/`Hardware`/
+    // `MasterData` blob was installed by more than one package. This hazard
+    // pre-dates T13's `d10-language-data` branch — `backfill_shared_translations`
+    // has been unordered since it was added in `migrate_v3_to_v4` — it is
+    // named and fixed here because the same measurement pass that found
+    // finding A's manufacturer-name flip found this one too.
+    let mut stmt =
+        conn.prepare("SELECT sha256, source_path, bytes FROM source_file ORDER BY rowid")?;
     let blobs: Vec<(String, String, Vec<u8>)> = stmt
         .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
         .collect::<Result<_, _>>()?;
@@ -1797,6 +2131,558 @@ mod tests {
             .unwrap(),
             0,
             "no blob was read, so no blob could fail"
+        );
+    }
+
+    /// A `knx_master.xml` carrying `FunctionTypes`/`SpaceUsages` plus
+    /// `Master`-scope translations for both — the same shape
+    /// `parse/master.rs`'s own fixture uses, kept here rather than shared so
+    /// this file's frozen-database tests stay self-contained the way its
+    /// neighbours already do.
+    const MASTER_WITH_FUNCTIONS_AND_LANGUAGES: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Siemens" />
+    </Manufacturers>
+    <FunctionTypes>
+      <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified">
+        <FunctionPoint Id="FP-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+      </FunctionType>
+    </FunctionTypes>
+    <SpaceUsages>
+      <SpaceUsage Id="SU-1" Number="1" Text="Office" />
+    </SpaceUsages>
+  </MasterData>
+  <Languages>
+    <Language Identifier="de-DE">
+      <TranslationUnit RefId="FT-1">
+        <TranslationElement RefId="FT-1">
+          <Translation AttributeName="Text" Text="Schalten" />
+        </TranslationElement>
+      </TranslationUnit>
+      <TranslationUnit RefId="SU-1">
+        <TranslationElement RefId="SU-1">
+          <Translation AttributeName="Text" Text="Büro" />
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+
+    /// A v9 database — built the frozen way, running only `migrations()`'s
+    /// first nine functions, exactly like every other "previous schema
+    /// version" test in this file — already holds the `knx_master.xml` blob
+    /// and its `source_parse_evidence` row, but has no `function_type`,
+    /// `function_point` or `space_usage` table to have written into, so the
+    /// `FunctionType`/`FunctionPoint`/`SpaceUsage` rows and their
+    /// `Master`-scope translations never got written on first ingest. This
+    /// proves `migrate_v9_to_v10`'s backfill recovers them anyway, closing
+    /// `docs/KNOWN_LIMITATIONS.md` §64's last residue for data already on
+    /// disk, not only for data ingested from here on.
+    #[test]
+    fn a_v9_database_backfills_function_and_space_usage_rows_and_their_translations() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let bytes = MASTER_WITH_FUNCTIONS_AND_LANGUAGES.as_bytes();
+        let sha = crate::sha256_hex(bytes);
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..9] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 9i64).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    sha,
+                    "knx_master.xml",
+                    None::<String>,
+                    bytes.len() as i64,
+                    bytes
+                ],
+            )
+            .unwrap();
+            // Present in `source_parse_evidence`, exactly like a blob a v9
+            // build already ingested through `ingest_master_data` — the
+            // content-hash skip means the ordinary path would never revisit
+            // it, which is the whole reason a backfill exists.
+            conn.execute(
+                "INSERT INTO source_parse_evidence (sha256) VALUES (?1)",
+                [&sha],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(version, CURRENT_PRODUCTDB_VERSION);
+        // Not a literal 10 any more: the module-argument migration was
+        // renumbered behind this one, so a v9 database now climbs two steps.
+        // What this test is about is the backfill below, not where the chain
+        // happens to stop.
+        assert_eq!(version, CURRENT_PRODUCTDB_VERSION);
+
+        let (number, text, status): (i64, String, String) = conn
+            .query_row(
+                "SELECT number, text, status FROM function_type WHERE id = 'FT-1'",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            (number, text.as_str(), status.as_str()),
+            (1, "Switch", "Certified")
+        );
+
+        let function_type_id: String = conn
+            .query_row(
+                "SELECT function_type_id FROM function_point WHERE id = 'FP-1_DR-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(function_type_id, "FT-1");
+
+        let space_usage_text: String = conn
+            .query_row("SELECT text FROM space_usage WHERE id = 'SU-1'", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(space_usage_text, "Office");
+
+        let function_type_translation: String = conn
+            .query_row(
+                "SELECT text FROM translation
+                 WHERE scope = 'Master' AND ref_id = 'FT-1' AND attribute_name = 'Text'
+                   AND language = 'de-DE'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(function_type_translation, "Schalten");
+
+        let space_usage_translation: String = conn
+            .query_row(
+                "SELECT text FROM translation
+                 WHERE scope = 'Master' AND ref_id = 'SU-1' AND attribute_name = 'Text'
+                   AND language = 'de-DE'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(space_usage_translation, "Büro");
+    }
+
+    /// A `knx_master.xml` whose `Manufacturer` and `FunctionType` each carry
+    /// one attribute no `*_ATTRS` list names, so `ingest_master_data`'s
+    /// file-wide `UnknownCollector` produces one of each.
+    const MASTER_WITH_UNKNOWN_ATTRS: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Siemens" KnxAdminMode="true" />
+    </Manufacturers>
+    <FunctionTypes>
+      <FunctionType Id="FT-1" Number="1" Text="Switch" Status="Certified" Obsolete="false">
+        <FunctionPoint Id="FP-1_DR-1" Text="Switch" DatapointType="DPST-1-1" Role="Control" Characteristics="W" />
+      </FunctionType>
+    </FunctionTypes>
+    <SpaceUsages>
+      <SpaceUsage Id="SU-1" Number="1" Text="Office" />
+    </SpaceUsages>
+  </MasterData>
+</KNX>"#;
+
+    /// The backfill replays the *whole* `ingest_master_data`, whose unknown
+    /// collector is file-wide, but the blob it replays was already ingested
+    /// once — `install_package` called `insert_unknown` on that same
+    /// file-wide set at install time, and `ingest_unknown` has no unique key
+    /// to collide on. Recording the whole set a second time would double
+    /// every unknown the *old* parser had already seen, turning a count into
+    /// a function of how many times a database happened to be migrated.
+    /// Only the two element families this migration newly parses may
+    /// contribute, because only those were never recorded before.
+    #[test]
+    fn the_backfill_records_only_the_unknowns_of_the_families_it_newly_parses() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let bytes = MASTER_WITH_UNKNOWN_ATTRS.as_bytes();
+        let sha = crate::sha256_hex(bytes);
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..9] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 9i64).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    sha,
+                    "knx_master.xml",
+                    None::<String>,
+                    bytes.len() as i64,
+                    bytes
+                ],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO source_parse_evidence (sha256) VALUES (?1)",
+                [&sha],
+            )
+            .unwrap();
+            // What the v9 install of this same blob recorded: the
+            // `Manufacturer` unknown, and nothing about `FunctionType`,
+            // whose element the old parser never entered.
+            conn.execute(
+                "INSERT INTO ingest_unknown
+                     (source_sha256, program_id, xpath, kind, name, occurrences, sample)
+                 VALUES (?1, NULL, '/KNX/MasterData/Manufacturers/Manufacturer',
+                         'Attribute', 'KnxAdminMode', 1, 'true')",
+                [&sha],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+
+        let manufacturer_rows: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM ingest_unknown WHERE name = 'KnxAdminMode'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            manufacturer_rows, 1,
+            "the backfill must not re-record an unknown the original ingest already recorded"
+        );
+
+        let function_type_rows: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM ingest_unknown WHERE name = 'Obsolete'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            function_type_rows, 1,
+            "an unknown on an element only this migration parses has never been recorded before, \
+             so it must be recorded now"
+        );
+    }
+
+    #[test]
+    fn a_v9_blob_that_fails_to_parse_as_master_data_records_itself_and_does_not_stop_the_migration()
+    {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let good = MASTER_WITH_FUNCTIONS_AND_LANGUAGES.as_bytes();
+        let good_sha = crate::sha256_hex(good);
+        // Truncated mid-tag, in the same spirit as the linkable and
+        // parameter-type-bounds backfills' own parse-failure tests, but by
+        // a smaller, empirically-checked amount: `<MasterData>` opens early
+        // enough for `classify` to route this blob into
+        // `ingest_master_data` either way, but not every truncation length
+        // of this particular fixture leaves `quick-xml` mid-tag rather
+        // than at a tag boundary it is willing to read as `Eof` — 8 bytes
+        // off the end does, checked against this exact fixture rather than
+        // assumed from a sibling's number.
+        let bad = &good[..good.len() - 8];
+        let bad_sha = crate::sha256_hex(bad);
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..9] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 9i64).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    good_sha,
+                    "knx_master.xml",
+                    None::<String>,
+                    good.len() as i64,
+                    good
+                ],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO source_parse_evidence (sha256) VALUES (?1)",
+                [&good_sha],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![
+                    bad_sha,
+                    "M-BAD/knx_master.xml",
+                    None::<String>,
+                    bad.len() as i64,
+                    bad
+                ],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO source_parse_evidence (sha256) VALUES (?1)",
+                [&bad_sha],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            CURRENT_PRODUCTDB_VERSION,
+            "one blob's parse failure must not abort the migration"
+        );
+
+        let function_type_text: String = conn
+            .query_row(
+                "SELECT text FROM function_type WHERE id = 'FT-1'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            function_type_text, "Switch",
+            "the good blob must still be backfilled"
+        );
+
+        assert_eq!(
+            conn.query_row(
+                "SELECT count(*) FROM ingest_unknown
+                 WHERE source_sha256 = ?1 AND kind = 'FunctionSpaceBackfillError'",
+                [&bad_sha],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            1
+        );
+    }
+
+    #[test]
+    fn a_v9_database_with_no_master_data_blob_reads_no_blob_at_all() {
+        // `backfill_function_and_space_data` skips every blob that does not
+        // classify as `MasterData` before ever handing it to
+        // `ingest_master_data`. Proven with a blob that cannot be parsed as
+        // XML at all — the same garbage bytes the linkable and
+        // parameter-type-bounds backfills' own "nothing to backfill" tests
+        // use: if this backfill read it anyway, the migration would record
+        // a `FunctionSpaceBackfillError`.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        {
+            let conn = Connection::open(&path).unwrap();
+            for migration in &migrations()[0..9] {
+                migration(&conn).unwrap();
+            }
+            conn.pragma_update(None, "user_version", 9i64).unwrap();
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES ('feedface', 'M-BAD/A.xml', 'M-BAD', 7, ?1)",
+                [b"<KNX><".as_slice()],
+            )
+            .unwrap();
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        assert_eq!(
+            conn.query_row("SELECT count(*) FROM function_type", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            conn.query_row(
+                "SELECT count(*) FROM ingest_unknown WHERE kind = 'FunctionSpaceBackfillError'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            0,
+            "no MasterData blob was read, so no blob could fail"
+        );
+    }
+
+    const MASTER_OLD_SPELLING: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0042" Name="Old Spelling" />
+    </Manufacturers>
+  </MasterData>
+</KNX>"#;
+
+    const MASTER_NEW_SPELLING: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0042" Name="New Spelling" />
+    </Manufacturers>
+  </MasterData>
+</KNX>"#;
+
+    /// Regression guard for `backfill_function_and_space_data`'s
+    /// `ORDER BY rowid` (T13 fix round 2, KNOWN_LIMITATIONS.md §88's
+    /// residual). Two `knx_master.xml` blobs disagree about `M-0042`'s
+    /// display name; `Manufacturer`'s write is `ON CONFLICT DO UPDATE SET
+    /// name = excluded.name` — last-writer-wins — so the surviving name
+    /// must be the blob inserted *last*, i.e. the one at the higher
+    /// `rowid`. `PRAGMA reverse_unordered_selects` makes this an actual
+    /// regression guard rather than a test that would pass with or without
+    /// the clause: a plain two-insert setup does not distinguish them,
+    /// because SQLite's own unordered table scan already visits a
+    /// never-deleted-from table in rowid order in practice — the very
+    /// "true by accident" behaviour the `ORDER BY rowid` comment on
+    /// `backfill_function_and_space_data` warns about. The pragma is
+    /// SQLite's own documented knob for finding exactly this class of
+    /// unstated-order assumption: it reverses a table/index scan that has
+    /// no explicit `ORDER BY` of its own, and leaves one that does (this
+    /// backfill's `ORDER BY rowid`) alone. Calls `migrate_v9_to_v10`
+    /// directly, on the same connection the pragma is set on — through
+    /// `open_and_migrate` the migration would run on a second, fresh
+    /// connection the pragma never reached.
+    #[test]
+    fn the_function_and_space_backfill_scan_order_determines_which_manufacturer_name_survives() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let old_bytes = MASTER_OLD_SPELLING.as_bytes();
+        let new_bytes = MASTER_NEW_SPELLING.as_bytes();
+        let old_sha = crate::sha256_hex(old_bytes);
+        let new_sha = crate::sha256_hex(new_bytes);
+        let conn = Connection::open(&path).unwrap();
+        for migration in &migrations()[0..9] {
+            migration(&conn).unwrap();
+        }
+        // Insertion order fixes rowid order: `old_sha` first, `new_sha`
+        // second, so a correct last-writer-wins replay must leave
+        // "New Spelling" standing.
+        for (sha, source_path, bytes) in [
+            (&old_sha, "M-0042/A/knx_master.xml", old_bytes),
+            (&new_sha, "M-0042/B/knx_master.xml", new_bytes),
+        ] {
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![sha, source_path, "M-0042", bytes.len() as i64, bytes],
+            )
+            .unwrap();
+        }
+        conn.execute_batch("PRAGMA reverse_unordered_selects = ON;")
+            .unwrap();
+        migrate_v9_to_v10(&conn).unwrap();
+        let name: String = conn
+            .query_row(
+                "SELECT name FROM manufacturer WHERE id = 'M-0042'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            name, "New Spelling",
+            "last-writer-wins requires the backfill to replay blobs in a fixed, \
+             recorded order (rowid), not whatever order SQLite's scan happens to prefer"
+        );
+    }
+
+    const MASTER_TRANSLATION_FIRST: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0001" Name="Siemens" />
+    </Manufacturers>
+  </MasterData>
+  <Languages>
+    <Language Identifier="de-DE">
+      <TranslationUnit RefId="LOC-1">
+        <TranslationElement RefId="LOC-1">
+          <Translation AttributeName="Text" Text="First Text" />
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+
+    const MASTER_TRANSLATION_SECOND: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <MasterData>
+    <Manufacturers>
+      <Manufacturer Id="M-0002" Name="MDT" />
+    </Manufacturers>
+  </MasterData>
+  <Languages>
+    <Language Identifier="de-DE">
+      <TranslationUnit RefId="LOC-1">
+        <TranslationElement RefId="LOC-1">
+          <Translation AttributeName="Text" Text="Second Text" />
+        </TranslationElement>
+      </TranslationUnit>
+    </Language>
+  </Languages>
+</KNX>"#;
+
+    /// Regression guard for `backfill_shared_translations`'s `ORDER BY
+    /// rowid` (T13 fix round 2). Two `knx_master.xml` blobs both declare
+    /// `Master`-scope text for the same `(language, RefId, AttributeName)`
+    /// key; `ingest_translations`' write is `INSERT OR IGNORE` —
+    /// first-writer-wins, the mirror image of the manufacturer-name test
+    /// above — so the surviving text must be the blob inserted *first*,
+    /// i.e. the one at the lower `rowid`. Same
+    /// `PRAGMA reverse_unordered_selects` mechanism as that test, and the
+    /// same reason it is needed: a plain two-insert setup cannot tell
+    /// "with `ORDER BY rowid`" apart from "without" it, because an
+    /// unordered table scan already comes back in rowid order in practice
+    /// on a table nothing has deleted from. Calls `migrate_v3_to_v4`
+    /// directly, on the same connection the pragma is set on.
+    #[test]
+    fn the_translation_backfill_scan_order_determines_which_conflicting_text_survives() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("products.sqlite");
+        let first_bytes = MASTER_TRANSLATION_FIRST.as_bytes();
+        let second_bytes = MASTER_TRANSLATION_SECOND.as_bytes();
+        let first_sha = crate::sha256_hex(first_bytes);
+        let second_sha = crate::sha256_hex(second_bytes);
+        let conn = Connection::open(&path).unwrap();
+        for migration in &migrations()[0..3] {
+            migration(&conn).unwrap();
+        }
+        // Insertion order fixes rowid order: `first_sha` first,
+        // `second_sha` second, so a correct first-writer-wins replay
+        // must leave "First Text" standing.
+        for (sha, source_path, bytes) in [
+            (&first_sha, "M-0001/knx_master.xml", first_bytes),
+            (&second_sha, "M-0002/knx_master.xml", second_bytes),
+        ] {
+            conn.execute(
+                "INSERT INTO source_file (sha256, source_path, manufacturer_id, len, bytes)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![sha, source_path, None::<String>, bytes.len() as i64, bytes],
+            )
+            .unwrap();
+        }
+        conn.execute_batch("PRAGMA reverse_unordered_selects = ON;")
+            .unwrap();
+        migrate_v3_to_v4(&conn).unwrap();
+        let text: String = conn
+            .query_row(
+                "SELECT text FROM translation
+                 WHERE scope = 'Master' AND ref_id = 'LOC-1' AND attribute_name = 'Text'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(
+            text, "First Text",
+            "first-writer-wins requires the backfill to replay blobs in a fixed, \
+             recorded order (rowid), not whatever order SQLite's scan happens to prefer"
         );
     }
 }

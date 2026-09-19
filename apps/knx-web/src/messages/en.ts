@@ -359,6 +359,12 @@ export const messages = {
   "parameters.diagnostic.missingValue": "A choice's controlling parameter has no value.",
   "parameters.diagnostic.moduleWithoutId":
     "A module instance has no identifier and cannot be matched to stored values.",
+  "parameters.diagnostic.moduleArgumentNotBound":
+    "A module argument could not be matched to the module's declaration and was ignored.",
+  "parameters.diagnostic.unsupportedModuleArgumentKind":
+    "A module argument uses a kind this build does not interpret and was ignored.",
+  "parameters.diagnostic.unresolvedTextPlaceholder":
+    "A text placeholder had no matching module argument and was left as written.",
 
   "parameters.title": "Parameters",
   "parameters.loading": "Loading parameters…",

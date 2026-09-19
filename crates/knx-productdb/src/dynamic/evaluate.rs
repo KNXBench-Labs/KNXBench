@@ -290,13 +290,17 @@ pub enum ControlKind {
     Comparable,
 }
 
-/// One `dynamic_node` row, loaded for evaluation. `text` and `extra` play
-/// no role in evaluation and are left out on purpose, not by oversight.
+/// One `dynamic_node` row, loaded for evaluation. `extra` plays no role in
+/// evaluation and is left out on purpose, not by oversight — it is a
+/// human-readable audit trail, documented as not re-parseable.
 /// `element_id` (`Module/@Id`) is the one field slice 1 deliberately left
 /// unloaded because nothing needed it yet; slice 2 needs it to fill
 /// `ModuleScope::module_id` (design D14) for human-readable diagnostic and
 /// activation reporting — it is never relied on for identity, which is
-/// `module_node` (this row's own `node_id`).
+/// `module_node` (this row's own `node_id`). `text` and `value` joined it
+/// in goal-completion task 12 (design D49/D47): `text` is what a `{{Name}}`
+/// placeholder is substituted into, `value` is what a `NumericArg`/
+/// `TextArg` binding binds.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DynamicNode {
     pub node_id: i64,
@@ -306,6 +310,12 @@ pub struct DynamicNode {
     pub ref_id: Option<String>,
     pub test: Option<String>,
     pub is_default: bool,
+    /// `Channel`/`ParameterBlock`/`ParameterSeparator`'s `@Text`, verbatim
+    /// — placeholders included. Substitution happens in `evaluate`, not
+    /// here: the stored row must keep saying what the file said.
+    pub text: Option<String>,
+    /// `NumericArg`/`TextArg`'s `@Value`, verbatim.
+    pub value: Option<String>,
     /// Only meaningful when `kind == "choose"`. `load_tree` resolves this
     /// from `parameter_ref`/`parameter`/`parameter_type`; hand-built trees
     /// (unit tests) set it directly.
@@ -362,7 +372,8 @@ pub fn load_tree(
     module_def_id: &str,
 ) -> Result<DynamicTree, ProductDbError> {
     let mut stmt = conn.prepare(
-        "SELECT node_id, parent_id, kind, element_id, ref_id, test, is_default
+        "SELECT node_id, parent_id, kind, element_id, ref_id, test, is_default,
+                text, value
          FROM dynamic_node
          WHERE program_id = ?1 AND module_def_id = ?2
          ORDER BY node_id",
@@ -375,6 +386,8 @@ pub fn load_tree(
         Option<String>,
         Option<String>,
         Option<i64>,
+        Option<String>,
+        Option<String>,
     );
     let rows: Vec<Row> = stmt
         .query_map(params![program_id, module_def_id], |r| {
@@ -386,13 +399,15 @@ pub fn load_tree(
                 r.get(4)?,
                 r.get(5)?,
                 r.get(6)?,
+                r.get(7)?,
+                r.get(8)?,
             ))
         })?
         .collect::<Result<_, _>>()?;
     drop(stmt);
 
     let mut nodes = Vec::with_capacity(rows.len());
-    for (node_id, parent_id, kind, element_id, ref_id, test, is_default) in rows {
+    for (node_id, parent_id, kind, element_id, ref_id, test, is_default, text, value) in rows {
         let control_kind = if kind == "choose" {
             match ref_id.as_deref() {
                 Some(rid) => resolve_control_kind(conn, program_id, rid)?,
@@ -409,6 +424,8 @@ pub fn load_tree(
             ref_id,
             test,
             is_default: is_default == Some(1),
+            text,
+            value,
             control_kind,
         });
     }
@@ -424,6 +441,74 @@ pub fn load_tree(
 pub struct ProgramTrees {
     program: DynamicTree,
     modules: HashMap<String, DynamicTree>,
+    /// Every `ModuleDef/Arguments/Argument` declared anywhere in this
+    /// program, keyed by the declaration's own `@Id` — the id a
+    /// `Module`'s `NumericArg`/`TextArg` binding names in its `@RefId`
+    /// (design D48). Empty for a `ProgramTrees` built by `single` or by
+    /// `from_parts` without `with_arguments`, which is what every
+    /// pre-task-12 hand-built test tree is: no declarations, so no
+    /// substitution, so those trees evaluate exactly as they did before.
+    arguments: HashMap<String, ModuleDefArgument>,
+}
+
+/// One `ModuleDef/Arguments/Argument` declaration (design D47). The
+/// `ModuleDef`-scoped *name* is the interesting field: it is the token a
+/// `{{Name}}` placeholder in that `ModuleDef`'s own `Dynamic` tree spells,
+/// and the published schema gives it a type of its own — `Identifier50_t`,
+/// "This type is for specifying the name of `ModuleDef\Arguments\Argument`"
+/// (`Project Schema23 v01.00.00` §1.1.3.9, **[D]**).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModuleDefArgument {
+    /// `Argument/@Id`.
+    pub id: String,
+    /// The `ModuleDef/@Id` this declaration belongs to.
+    pub module_def_id: String,
+    /// `Argument/@Name`. `None` when the file omitted it, which no file in
+    /// the installed corpus does (**[V]**) and which leaves the argument
+    /// permanently unresolvable by name.
+    pub name: Option<String>,
+    /// `Argument/@Type`, verbatim. `None` means the attribute was absent,
+    /// which is how every numeric declaration in the installed corpus is
+    /// written (**[V]**). See [`ArgumentKind`] for how it is read.
+    pub arg_type: Option<String>,
+    /// `Argument/@Allocates`, the memory-allocation facet. Stored, loaded,
+    /// and deliberately not interpreted: the constructs that would consume
+    /// it (`Memory/@BaseOffset`, `ComObject/@BaseNumber`) live in the
+    /// `Static` half of the file, which `evaluate` cannot reach and this
+    /// crate does not model.
+    pub allocates: Option<i64>,
+}
+
+/// How an argument declaration's `@Type` is read (design D50). The
+/// published `ModuleDefArgType_t` enumeration has exactly three facets —
+/// `Numeric`, `Text`, `AllocatorRef` (`Project Schema23 v01.00.00`
+/// §1.1.2.38, **[D]**) — and this build interprets two of them.
+///
+/// `AllocatorRef` is **unattested**: zero occurrences in the whole
+/// installed corpus and zero hits in either KNX specification knowledge
+/// base (**[V]**, goal-completion task 12 — see the design document's task
+/// 12 addendum for what was searched). No source anywhere states what it
+/// means, so nothing here guesses; a declaration that spells it is
+/// reported as [`Diagnostic::UnsupportedModuleArgumentKind`] and its
+/// bindings are not substituted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArgumentKind {
+    /// `@Type` absent, or spelled `Numeric`.
+    Numeric,
+    /// `@Type="Text"`.
+    Text,
+    /// Anything else, `AllocatorRef` included.
+    Unsupported,
+}
+
+impl ModuleDefArgument {
+    pub fn kind(&self) -> ArgumentKind {
+        match self.arg_type.as_deref() {
+            None | Some("Numeric") => ArgumentKind::Numeric,
+            Some("Text") => ArgumentKind::Text,
+            Some(_) => ArgumentKind::Unsupported,
+        }
+    }
 }
 
 impl ProgramTrees {
@@ -431,7 +516,27 @@ impl ProgramTrees {
     /// already-loaded `ModuleDef` trees. The database-touching counterpart
     /// is `load_program_trees`.
     pub fn from_parts(program: DynamicTree, modules: HashMap<String, DynamicTree>) -> ProgramTrees {
-        ProgramTrees { program, modules }
+        ProgramTrees {
+            program,
+            modules,
+            arguments: HashMap::new(),
+        }
+    }
+
+    /// Attaches the program's `ModuleDef` argument declarations. A separate
+    /// step rather than a third `from_parts` parameter so that every
+    /// pre-task-12 caller keeps compiling and keeps meaning what it meant:
+    /// a tree set with no declarations substitutes nothing.
+    pub fn with_arguments(
+        mut self,
+        arguments: impl IntoIterator<Item = ModuleDefArgument>,
+    ) -> ProgramTrees {
+        self.arguments = arguments.into_iter().map(|a| (a.id.clone(), a)).collect();
+        self
+    }
+
+    fn argument(&self, id: &str) -> Option<&ModuleDefArgument> {
+        self.arguments.get(id)
     }
 
     /// A program with no `ModuleDef` trees at all — every existing
@@ -442,6 +547,7 @@ impl ProgramTrees {
         ProgramTrees {
             program,
             modules: HashMap::new(),
+            arguments: HashMap::new(),
         }
     }
 
@@ -478,7 +584,36 @@ pub fn load_program_trees(
         let tree = load_tree(conn, program_id, &module_def_id)?;
         modules.insert(module_def_id, tree);
     }
-    Ok(ProgramTrees::from_parts(program, modules))
+    Ok(ProgramTrees::from_parts(program, modules)
+        .with_arguments(load_module_def_arguments(conn, program_id)?))
+}
+
+/// Loads every `ModuleDef/Arguments/Argument` declaration stored for one
+/// program (design D48). Declarations live in `module_def_argument`, not in
+/// any `Dynamic` tree — `Arguments` sits outside `Dynamic` — so this is a
+/// query of its own rather than another `load_tree` scope.
+pub fn load_module_def_arguments(
+    conn: &Connection,
+    program_id: &str,
+) -> Result<Vec<ModuleDefArgument>, ProductDbError> {
+    let mut stmt = conn.prepare(
+        "SELECT id, module_def_id, name, arg_type, allocates
+         FROM module_def_argument
+         WHERE program_id = ?1
+         ORDER BY module_def_id, position",
+    )?;
+    let rows = stmt
+        .query_map([program_id], |r| {
+            Ok(ModuleDefArgument {
+                id: r.get(0)?,
+                module_def_id: r.get(1)?,
+                name: r.get(2)?,
+                arg_type: r.get(3)?,
+                allocates: r.get(4)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(rows)
 }
 
 /// `choose/@ParamRefId` -> `parameter_ref.parameter_id` ->
@@ -737,6 +872,43 @@ pub enum Diagnostic {
     /// to a project-side `ModuleInstance`, so its stored per-channel values
     /// are unreachable and it evaluates against program defaults.
     ModuleWithoutId { node_id: i64 },
+    /// A `Module` child that binds an argument (`NumericArg`/`TextArg`)
+    /// but cannot be resolved to a declaration: no `@RefId`, no `@Value`,
+    /// an `@RefId` naming no `ModuleDef/Arguments/Argument` this program
+    /// declares, or a declaration with no `@Name` to bind to. The binding
+    /// is reported, never dropped — an argument the evaluator cannot
+    /// interpret is a compatibility fact, not a rounding error (design
+    /// D50).
+    ModuleArgumentNotBound {
+        /// The binding element's own `node_id`, not the `Module`'s.
+        node_id: i64,
+        ref_id: Option<String>,
+    },
+    /// An argument construct this build does not interpret: a `Module`
+    /// child that is neither `NumericArg` nor `TextArg`, or a declaration
+    /// whose `@Type` is outside the two facets of `ModuleDefArgType_t`
+    /// this build reads — `AllocatorRef` being the one such facet the
+    /// published schema names (§1.1.2.38, **[D]**) and the one with zero
+    /// attestation anywhere (**[V]**, task 12). Reported, never guessed at
+    /// (design D50).
+    UnsupportedModuleArgumentKind {
+        node_id: i64,
+        /// The element name, or the `@Type` spelling, that was met.
+        kind: String,
+    },
+    /// A `{{Name}}` placeholder in an activated element's `@Text` whose
+    /// `Name` matches no argument bound in the enclosing scope. The text
+    /// keeps the placeholder verbatim — substituting an empty string would
+    /// destroy the only evidence that something was meant to go there
+    /// (design D50).
+    ///
+    /// Purely numeric placeholders (`{{0}}`, `{{1}}`) are a different,
+    /// separately-attested family — 948 occurrences corpus-wide against
+    /// 978 named ones (**[V]**, task 12) — tied to `TextParameterRefId`,
+    /// not to module arguments. They are left verbatim and are *not*
+    /// reported here: nothing about them is unresolved by this mechanism,
+    /// because they were never this mechanism's to resolve.
+    UnresolvedTextPlaceholder { node_id: i64, name: String },
 }
 
 /// Which expansion produced a given activation or diagnostic (design D14).
@@ -765,6 +937,18 @@ pub struct ModuleScope {
     pub module_id: Option<String>,
     /// `Module/@RefId`, i.e. the `ModuleDef/@Id` whose tree was walked.
     pub module_def_id: String,
+    /// This instantiation's resolved argument bindings, in the document
+    /// order of the `Module`'s own `NumericArg`/`TextArg` children (design
+    /// D48): each declaration's `@Name` paired with the `@Value` this
+    /// `Module` bound it to. A `Vec`, not a map, because it holds three
+    /// entries in the widest corpus sample and a linear scan of three is
+    /// cheaper than hashing — and because `ModuleScope` is `Hash`, which a
+    /// `HashMap` field would not be.
+    ///
+    /// This is what makes two instantiations of one `ModuleDef` differ:
+    /// everything else in the scope describes *where* the expansion
+    /// happened, this describes what it was told.
+    pub arguments: Vec<BoundArgument>,
     /// The enclosing scope one level up the nesting chain: `None` when
     /// this `Module` was found in the application program's own tree
     /// (nesting depth 1); `Some` when it was found inside another
@@ -780,7 +964,27 @@ pub struct ModuleScope {
     pub parent: Option<Rc<ModuleScope>>,
 }
 
+/// One resolved argument binding: a `ModuleDef/Arguments/Argument`'s
+/// declared `@Name` and the `@Value` one `Module` bound to it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct BoundArgument {
+    pub name: String,
+    pub value: String,
+}
+
 impl ModuleScope {
+    /// The value bound to `name` in *this* scope. Deliberately not
+    /// recursive up the `parent` chain: `Identifier50_t` names a
+    /// `ModuleDef`'s own argument (**[D]**, §1.1.3.9), the corpus has no
+    /// nested `Module` at all to show otherwise (**[V]**), and inventing
+    /// outer-scope inheritance would be inventing semantics.
+    fn argument(&self, name: &str) -> Option<&str> {
+        self.arguments
+            .iter()
+            .find(|a| a.name == name)
+            .map(|a| a.value.as_str())
+    }
+
     /// Nesting depth of this scope: 1 for a `Module` found directly in
     /// the application program's own tree, 2 for one found inside that
     /// expansion's `ModuleDef` tree, and so on.
@@ -827,6 +1031,32 @@ pub struct ActiveRef {
     pub ref_id: String,
 }
 
+/// One activated label: the `@Text` of an activated `Channel`,
+/// `ParameterBlock` or `ParameterSeparator`, with every `{{Name}}`
+/// placeholder resolved against the enclosing scope's argument bindings
+/// (design D49).
+///
+/// This is the evaluator's answer to "what does this module instance
+/// actually say", and it is the one place where an argument value changes
+/// the evaluated result: two `Module` elements naming the same `ModuleDef`
+/// produce the same refs under different scopes, but different labels.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActiveLabel {
+    pub scope: Option<Rc<ModuleScope>>,
+    /// `dynamic_node.node_id` of the labelled element, within the tree
+    /// named by `scope` — the same contract `Diagnostic`'s node ids have.
+    pub node_id: i64,
+    /// The element kind the label came from (`Channel`, `ParameterBlock`,
+    /// `ParameterSeparator`).
+    pub kind: String,
+    /// `@Text` as stored, placeholders and all.
+    pub raw_text: String,
+    /// `@Text` after substitution. Equal to `raw_text` when there was
+    /// nothing to substitute — the overwhelmingly common case, since only
+    /// text inside a `ModuleDef` tree can carry an argument placeholder.
+    pub text: String,
+}
+
 /// One `Diagnostic`, qualified by where it was found (design D14).
 /// `Diagnostic`'s own variants are unchanged — the scope wraps them, it
 /// does not move into them, so a diagnostic's `node_id`/`choose_node`/
@@ -851,6 +1081,10 @@ pub struct ScopedDiagnostic {
 pub struct Activation {
     pub parameter_refs: Vec<ActiveRef>,
     pub com_object_refs: Vec<ActiveRef>,
+    /// Activated `Channel`/`ParameterBlock`/`ParameterSeparator` labels in
+    /// document order (design D49), one per activated element carrying a
+    /// non-empty `@Text`.
+    pub labels: Vec<ActiveLabel>,
     pub diagnostics: Vec<ScopedDiagnostic>,
 }
 
@@ -871,8 +1105,13 @@ impl Activation {
     /// against [`MAX_MODULE_ACTIVATIONS`] by `activate_parameter_ref`/
     /// `activate_com_object_ref` before pushing (fix round 2, blocking
     /// finding 1's residual).
+    /// Task 12 (design D51) folds `labels` in: a label is produced per
+    /// activated element per expansion, so it multiplies with fan-out
+    /// exactly the way a ref does, and a budget that counted refs but not
+    /// labels would be a budget with a hole in it the width of a
+    /// `ModuleDef` whose tree is all `Channel`s.
     fn activations_recorded(&self) -> usize {
-        self.parameter_refs.len() + self.com_object_refs.len()
+        self.parameter_refs.len() + self.com_object_refs.len() + self.labels.len()
     }
 
     /// Whether the activation budget has already produced its one
@@ -1044,6 +1283,7 @@ fn walk(
         return;
     };
     if is_transparent_container(&node.kind) {
+        record_label(activation, scope, node);
         for &child in tree.children_of(Some(node_id)) {
             walk(
                 trees,
@@ -1086,7 +1326,11 @@ fn walk(
         // semantics this slice does not model. Neither activates anything
         // nor is expected to have children in the corpus, so there is
         // nothing to descend into.
-        "ParameterSeparator" | "Assign" => {}
+        // `ParameterSeparator` is still inert as an activation, but it
+        // carries `@Text` and therefore a label (design D49). `Assign`
+        // does not and stays entirely inert.
+        "ParameterSeparator" => record_label(activation, scope, node),
+        "Assign" => {}
         // Design D19: `Module` is dispatched here like any other node kind,
         // no special container handling. Its own children (`NumericArg`/
         // `TextArg`) are argument bindings, not activations, and are never
@@ -1172,10 +1416,13 @@ fn walk(
                     if node.element_id.is_none() {
                         activation.diagnose(scope, Diagnostic::ModuleWithoutId { node_id });
                     }
+                    let arguments =
+                        bind_arguments(trees, tree, node_id, &module_def_id, activation, scope);
                     let new_scope = Rc::new(ModuleScope {
                         module_node: node_id,
                         module_id: node.element_id.clone(),
                         module_def_id,
+                        arguments,
                         parent: scope.cloned(),
                     });
                     for &root in module_tree.roots() {
@@ -1209,6 +1456,210 @@ fn walk(
             },
         ),
     }
+}
+
+/// Reads one `Module` element's argument bindings into the resolved
+/// `(name, value)` pairs its scope will carry (design D48).
+///
+/// Design D19 said a `Module`'s own children are not descended into, being
+/// argument bindings rather than activations. That still holds — this is
+/// not a `walk` call and nothing here activates anything. What changes in
+/// task 12 is that the bindings are now *read* on the way past instead of
+/// being left where they lay.
+///
+/// Every binding that cannot be resolved produces a diagnostic rather than
+/// silence, and the diagnostics carry the *binding element's* `node_id`,
+/// which lives in `tree` — the enclosing tree the `Module` was found in —
+/// so they are reported against the enclosing `scope`, not the scope about
+/// to be created.
+fn bind_arguments(
+    trees: &ProgramTrees,
+    tree: &DynamicTree,
+    module_node_id: i64,
+    module_def_id: &str,
+    activation: &mut Activation,
+    scope: Option<&Rc<ModuleScope>>,
+) -> Vec<BoundArgument> {
+    let mut bound = Vec::new();
+    for &child_id in tree.children_of(Some(module_node_id)) {
+        let Some(child) = tree.node(child_id) else {
+            continue;
+        };
+        match child.kind.as_str() {
+            "NumericArg" | "TextArg" => {}
+            // Not a binding spelling this build knows. The published
+            // `ModuleDefArgType_t` has a third facet with no attested
+            // element spelling at all, so anything else found here is
+            // reported and left alone rather than guessed at.
+            other => {
+                activation.diagnose(
+                    scope,
+                    Diagnostic::UnsupportedModuleArgumentKind {
+                        node_id: child_id,
+                        kind: other.to_string(),
+                    },
+                );
+                continue;
+            }
+        }
+        let declaration = child.ref_id.as_deref().and_then(|r| trees.argument(r));
+        let resolved = match (declaration, child.value.as_deref()) {
+            // A declaration belonging to a different `ModuleDef` than the
+            // one being instantiated is not a binding this build claims to
+            // understand: nothing in the corpus does it, so it is reported
+            // rather than honoured.
+            (Some(decl), Some(value)) if decl.module_def_id == module_def_id => {
+                match (decl.kind(), decl.name.as_deref()) {
+                    (ArgumentKind::Unsupported, _) => {
+                        activation.diagnose(
+                            scope,
+                            Diagnostic::UnsupportedModuleArgumentKind {
+                                node_id: child_id,
+                                kind: decl.arg_type.clone().unwrap_or_default(),
+                            },
+                        );
+                        None
+                    }
+                    (_, Some(name)) => Some(BoundArgument {
+                        name: name.to_string(),
+                        value: value.to_string(),
+                    }),
+                    // Declared, typed, and nameless: there is no token a
+                    // placeholder could spell, so the value can never be
+                    // reached.
+                    (_, None) => {
+                        activation.diagnose(
+                            scope,
+                            Diagnostic::ModuleArgumentNotBound {
+                                node_id: child_id,
+                                ref_id: child.ref_id.clone(),
+                            },
+                        );
+                        None
+                    }
+                }
+            }
+            _ => {
+                activation.diagnose(
+                    scope,
+                    Diagnostic::ModuleArgumentNotBound {
+                        node_id: child_id,
+                        ref_id: child.ref_id.clone(),
+                    },
+                );
+                None
+            }
+        };
+        if let Some(binding) = resolved {
+            bound.push(binding);
+        }
+    }
+    bound
+}
+
+/// Records one activated element's `@Text` as a label, substituted against
+/// the enclosing scope's argument bindings (design D49). An element with no
+/// `@Text`, or an empty one, produces nothing — an empty label says less
+/// than no label and would cost a budget slot to say it.
+fn record_label(activation: &mut Activation, scope: Option<&Rc<ModuleScope>>, node: &DynamicNode) {
+    let Some(raw) = node.text.as_deref().filter(|t| !t.is_empty()) else {
+        return;
+    };
+    if activation.activation_budget_spent(scope, node.node_id, None) {
+        return;
+    }
+    let text = substitute_arguments(raw, scope, node.node_id, activation);
+    activation.labels.push(ActiveLabel {
+        scope: scope.cloned(),
+        node_id: node.node_id,
+        kind: node.kind.clone(),
+        raw_text: raw.to_string(),
+        text,
+    });
+}
+
+/// The opening and closing delimiters of the placeholder syntax every
+/// `@Text` in the researched corpus uses. **[A]**: no published schema in
+/// either knowledge base states a substitution rule for application-program
+/// text — the inference rests on corpus consistency, all 978 named
+/// placeholders resolving to an `Argument/@Name` declared by the enclosing
+/// `ModuleDef`, with none left over (**[V]**, task 12).
+const PLACEHOLDER_OPEN: &str = "{{";
+const PLACEHOLDER_CLOSE: &str = "}}";
+
+/// Replaces every `{{Name}}` in `raw` with the value `scope` bound to the
+/// argument called `Name` (design D49).
+///
+/// Three things deliberately do not happen here:
+///
+/// * A name with no binding is **left verbatim** and reported as
+///   [`Diagnostic::UnresolvedTextPlaceholder`]. Substituting an empty
+///   string would erase the only trace that a value was meant to appear.
+/// * A purely numeric placeholder (`{{0}}`) is left verbatim and *not*
+///   reported: it belongs to the positional family tied to
+///   `TextParameterRefId`, which this build does not model and which was
+///   never an argument reference to begin with.
+/// * The substituted value is not re-scanned. A value that itself contains
+///   `{{...}}` is inserted as-is, so no input can make this loop feed
+///   itself — the scan advances strictly left to right over `raw` and
+///   terminates in one pass.
+fn substitute_arguments(
+    raw: &str,
+    scope: Option<&Rc<ModuleScope>>,
+    node_id: i64,
+    activation: &mut Activation,
+) -> String {
+    if !raw.contains(PLACEHOLDER_OPEN) {
+        return raw.to_string();
+    }
+    let mut out = String::with_capacity(raw.len());
+    let mut rest = raw;
+    while let Some(open) = rest.find(PLACEHOLDER_OPEN) {
+        let after_open = &rest[open + PLACEHOLDER_OPEN.len()..];
+        let Some(close) = after_open.find(PLACEHOLDER_CLOSE) else {
+            break;
+        };
+        let name = &after_open[..close];
+        out.push_str(&rest[..open]);
+        match (is_argument_name(name), scope.and_then(|s| s.argument(name))) {
+            (true, Some(value)) => out.push_str(value),
+            (true, None) => {
+                out.push_str(PLACEHOLDER_OPEN);
+                out.push_str(name);
+                out.push_str(PLACEHOLDER_CLOSE);
+                activation.diagnose(
+                    scope,
+                    Diagnostic::UnresolvedTextPlaceholder {
+                        node_id,
+                        name: name.to_string(),
+                    },
+                );
+            }
+            (false, _) => {
+                out.push_str(PLACEHOLDER_OPEN);
+                out.push_str(name);
+                out.push_str(PLACEHOLDER_CLOSE);
+            }
+        }
+        rest = &after_open[close + PLACEHOLDER_CLOSE.len()..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Whether `name` is shaped like an argument name — `Identifier50_t`'s
+/// published pattern, "a letter or underscore followed by letters, digits
+/// or underscores" (`Project Schema23 v01.00.00` §1.1.3.9, **[D]**). This
+/// is what separates `{{ChNo}}` from `{{0}}`: the second cannot be an
+/// argument name under that pattern, so it is not treated as one and not
+/// reported as an unresolved one.
+fn is_argument_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    match chars.next() {
+        Some(c) if c.is_ascii_alphabetic() || c == '_' => {}
+        _ => return false,
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 #[allow(clippy::too_many_arguments)]

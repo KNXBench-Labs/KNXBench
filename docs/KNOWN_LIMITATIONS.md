@@ -5603,3 +5603,39 @@ that asymmetry appears, because none exists to break.
 for some DPT, giving a server test something real to drive the branch with.
 Until then, adding one anyway would assert nothing the codec's own contract
 does not already guarantee some other way.
+
+## 104. The debug report redacts four pattern classes, and nothing else
+
+**Limitation.** The debug-report bundle (T29,
+`apps/knx-server/src/debug_report.rs`) replaces exactly four things in
+`report.md`, `environment.json` and `log.json`: any IPv4 dotted quad, any
+IPv6 literal, the user's home-directory prefix, and the machine's hostname.
+Anything else identifying that reaches those files travels with them — a MAC
+address, a device serial number, a project file name sitting outside the home
+directory, a hostname the machine does not report, or whatever the user types
+into the description field beyond those four shapes.
+
+**Cause.** Deliberate, and scoped that way by the brief: redaction is by
+pattern class rather than by a list of known values, and each class has to be
+a shape that can be recognised without guessing. A dotted quad and an IPv6
+literal have grammars; "an identifier that matters to this user" does not. A
+broader filter would either miss things anyway or start mangling ordinary
+text — the IPv6 pass already has to refuse `knx_core::Project`, which a
+parser will happily read as a compressed address. Two classes also have a
+knowable failure mode: `hostname()` reads `/proc/sys/kernel/hostname`,
+`/etc/hostname` and then the environment, and a process where none of those
+answer simply redacts one class fewer; `HOME` unset does the same for paths.
+
+**Consequence.** The bundle is safer than an unfiltered log but is not
+anonymous, and nothing in the product claims it is. The dialog names the
+three redacted files and says which file is deliberately not redacted
+(`bus-telegrams.json` keeps the KNX individual and group addresses of the
+installation — without them its telegrams say nothing), and the zip is
+written locally and shown to the user before anything is shared. The GitHub
+path opens a prefilled issue page in the browser and stops there: no token,
+no credential, no `POST` from the application, and no upload anywhere.
+
+**Lifted when.** Nothing here is waiting on a fix. If a further class is ever
+worth adding — MAC addresses are the obvious candidate — it goes in as
+another shape-recognising pass next to the existing four, with the same
+requirement that it name what it removes rather than silently blanking text.

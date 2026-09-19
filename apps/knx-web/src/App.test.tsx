@@ -722,6 +722,7 @@ describe("App — the File menu by keyboard alone", () => {
       "Import group addresses (CSV)…",
       "Export documentation…",
       "Compare with…",
+      "Debug report…",
     ]);
     expect(entries.every((b) => b.tabIndex >= 0)).toBe(true);
     // An ETS import has no `.knxdb` path yet, so only the .knxproj export is

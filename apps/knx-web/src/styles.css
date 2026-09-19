@@ -1554,3 +1554,47 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .load-progress-bar { transition: width var(--knx-transition-duration) var(--knx-motion-easing); }
   .load-progress-bar[data-indeterminate="true"] { animation: knx-load-shuttle calc(var(--knx-transition-duration) * 8) var(--knx-motion-easing) infinite; }
 }
+
+/* T23 / ADR-0024 — the help tip.
+   The bubble sits in the DOM whether or not it is showing, because the
+   trigger's `aria-describedby` points at it permanently; that is the whole
+   accessibility argument for this component over a `title` attribute. So
+   "hidden" here is `opacity: 0` alone, and deliberately neither
+   `display: none` nor `visibility: hidden`: both of those remove the element
+   from the accessibility tree, which would leave `aria-describedby` pointing
+   at nothing and make the description depend on a React state update winning
+   a race against the screen reader's lookup at focus time. `opacity: 0`
+   keeps the node in the tree, leaves the fade something to move, and
+   `pointer-events: none` keeps the invisible box out of the mouse's way.
+   `.is-still` is the JS side of the motion rule (`helpTipAnimates`, for
+   `data-motion-level="off"`); `prefers-reduced-motion: reduce` is handled
+   structurally by the media query, as everywhere else in this file. */
+.help-tip { position: relative; display: inline-flex; align-items: center; }
+.help-tip-trigger { width: 18px; height: 18px; min-height: 18px; padding: 0; border: 1px solid var(--knx-border); border-radius: 50%; background: transparent; box-shadow: none; color: var(--knx-muted); font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: normal; display: inline-flex; align-items: center; justify-content: center; cursor: help; }
+.help-tip-trigger:hover:not(:disabled) { transform: none; box-shadow: none; color: var(--knx-accent); border-color: var(--knx-border-hover); }
+.help-tip-trigger:focus-visible { color: var(--knx-accent); border-color: var(--knx-accent); }
+.help-tip-bubble { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: max-content; max-width: min(34ch, 80vw); padding: 8px 10px; background: var(--knx-surface); color: var(--knx-foreground); border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); box-shadow: 0 4px 24px var(--knx-overlay-shadow); font-size: 12px; font-weight: 400; line-height: 1.45; text-align: left; text-transform: none; white-space: normal; opacity: 0; pointer-events: none; }
+.help-tip-bubble.is-open { opacity: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .help-tip-bubble:not(.is-still) { transition: opacity min(var(--knx-feedback-duration), var(--knx-transition-duration)) var(--knx-motion-easing); }
+}
+
+/* T23 / ADR-0024 — the help panel. Wider than the other overlays because it
+   is the only one holding paragraphs rather than a list; the topic column
+   drops above the prose on a narrow window rather than squeezing both. */
+.search-panel.help-panel { width: min(56rem, 94vw); max-height: 80vh; display: flex; flex-direction: column; padding: 1rem 1.15rem; }
+.help-panel-header h2 { margin: 0 0 4px; font-size: 20px; }
+.help-panel-intro { margin: 0 0 12px; color: var(--knx-muted); font-size: 12px; line-height: 1.45; max-width: 72ch; }
+.help-panel-body { display: grid; grid-template-columns: minmax(150px, 210px) 1fr; gap: 16px; flex: 1; min-height: 0; }
+.help-panel-topics { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; border-right: 1px solid var(--knx-border); padding-right: 10px; }
+.help-panel-topics button { background: transparent; box-shadow: none; border: 0; border-radius: var(--knx-radius-button); color: var(--knx-foreground); text-align: left; text-transform: none; letter-spacing: normal; font-weight: 500; font-size: 13px; padding: 7px 9px; }
+.help-panel-topics button:hover:not(:disabled) { transform: none; box-shadow: none; background: color-mix(in srgb, var(--knx-accent) 8%, transparent); }
+.help-panel-topics button[aria-current="page"] { background: color-mix(in srgb, var(--knx-accent) 14%, transparent); color: var(--knx-accent); }
+.help-panel-topic { overflow-y: auto; min-width: 0; padding-right: 4px; }
+.help-panel-topic h3 { margin: 0 0 10px; font-size: 16px; }
+.help-panel-topic p { margin: 0 0 11px; font-size: 13px; line-height: 1.55; max-width: 72ch; }
+.help-panel-footer { display: flex; justify-content: flex-end; margin-top: 12px; border-top: 1px solid var(--knx-border); padding-top: 10px; }
+@media (max-width: 720px) {
+  .help-panel-body { grid-template-columns: 1fr; }
+  .help-panel-topics { border-right: 0; border-bottom: 1px solid var(--knx-border); padding-right: 0; padding-bottom: 8px; max-height: 26vh; }
+}

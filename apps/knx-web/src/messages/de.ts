@@ -836,4 +836,108 @@ export const messages: Record<MessageKey, string> = {
   "loadProgress.flavour.48": "Mache Platz für die Gebäudestruktur",
   "loadProgress.flavour.49": "Lege die unbekannten Attribute sorgfältig ab",
   "loadProgress.flavour.50": "Überrede das Projekt, sich zu öffnen",
+
+  // T23 (ADR-0024). Die Hilfe ist der längste Fließtext dieser Anwendung,
+  // und damit die Stelle, an der eine Wort-für-Wort-Übertragung am
+  // deutlichsten auffiele. Die Absätze sind daher auf Deutsch geschrieben,
+  // nicht übersetzt: gleiche Aussage, gleiche Reihenfolge, eigene Sätze.
+  // Fachbegriffe bleiben die der KNX-Praxis (Gruppenadresse,
+  // Kommunikationsobjekt, Linie, Bereich), die Flag-Buchstaben bleiben
+  // R/W/T/U/C, weil sie auf dem Gerät auch so heißen.
+  "toolbar.help": "Hilfe (F1)",
+  "help.title": "Hilfe",
+  "help.intro":
+    "Was die Teile dieses Fensters tun und was die KNX-Begriffe dahinter bedeuten. F1 öffnet das hier von überall im Hauptfenster; das abgetrennte Diagnosefenster hat keine eigene Hilfe.",
+  "help.topics": "Themen",
+  "help.close": "Schließen",
+  "help.standardNote":
+    "Das beschreibt, wie KNXBench den Begriff verwendet, nicht wie der KNX Standard ihn definiert — maßgeblich bleibt der Standard.",
+
+  "help.topic.gettingStarted.title": "Erste Schritte",
+  "help.topic.gettingStarted.p1":
+    "KNXBench öffnet zwei Arten von Datei. Das eigene Format, ein .knxdb-Projekt, liest „Öffnen (.knxdb)…“ und schreibt „Speichern“. Einen ETS-Projektexport, eine .knxproj-Datei, liest „Projekt öffnen…“ und wandelt sie beim Einlesen in ein KNXBench-Projekt um.",
+  "help.topic.gettingStarted.p2":
+    "Ein Import schreibt nie in die importierte Datei zurück. Die .knxproj wird gelesen und bleibt unangetastet; was entsteht, ist ein Projekt im Arbeitsspeicher, und auf die Festplatte kommt es erst, wenn Sie es als .knxdb speichern.",
+  "help.topic.gettingStarted.p3":
+    "Ohne Ausgangsdatei legt „Neues Projekt…“ ein leeres Projekt mit Name, Projektsprache und Gruppenadressstil an; die Struktur bauen Sie danach im Baum links auf.",
+
+  "help.topic.workbench.title": "Das Fenster",
+  "help.topic.workbench.p1":
+    "Drei Bereiche. Links die Navigation mit den Ansichten und dem Projektbaum. In der Mitte die gewählte Ansicht. Rechts die Eigenschaften, die das jeweils Ausgewählte anzeigen und bearbeiten lassen.",
+  "help.topic.workbench.p2":
+    "Die vier Ansichten sind Übersicht, Gebäude, Topologie und Gruppenadressen. Die Übersicht fasst das Projekt zusammen und zeigt, was der letzte Import bemängelt hat. Gebäude und Topologie sind zwei Ordnungen über denselben Geräten. Gruppenadressen ist die Tabelle der Adressen samt ihren Verknüpfungen.",
+  "help.topic.workbench.p3":
+    "Beide Seitenbereiche lassen sich über die Schaltflächen darüber einklappen und an ihrer inneren Kante in der Breite ziehen. Der Produktkatalog öffnet sich aus der Navigation und fügt Geräte aus einer installierten Herstellerdatenbank ein.",
+
+  "help.topic.buildings.title": "Gebäude, Geschosse und Räume",
+  "help.topic.buildings.p1":
+    "Die Gebäudestruktur sagt, wo ein Gerät körperlich sitzt — Gebäude, Geschoss, Raum, Verteiler. Sie gibt es, damit man ein Gerät findet, indem man das Haus abgeht, statt sich seine Adresse zu merken.",
+  "help.topic.buildings.p2":
+    "Hier ist sie ein Baum benannter Teile, die einander enthalten, und keine Zeichnung: keine Koordinaten, keine Grundrisse, keine Positionen. Ein Gerät gehört zu höchstens einem Gebäudeteil, und ein Umhängen ändert nichts an seiner Verdrahtung.",
+
+  "help.topic.topology.title": "Bereiche, Linien und Geräte",
+  "help.topic.topology.p1":
+    "Die Topologie sagt, wie ein Gerät verdrahtet ist: Bereiche enthalten Linien, Linien enthalten Geräte. Die physikalische Adresse eines Geräts schreibt sich Bereich.Linie.Gerät und ist seine Identität am Bus.",
+  "help.topic.topology.p2":
+    "Die drei Teile sind unterschiedlich breit. Bereich geht von 0 bis 15, Linie von 0 bis 15, Gerät von 0 bis 255. Eine Adresse außerhalb dieser Bereiche wird abgelehnt und nicht stillschweigend abgeschnitten.",
+  "help.topic.topology.p3":
+    "Eine physikalische Adresse ist im Projekt eindeutig: zwei Geräte können nicht dieselbe tragen. In der Topologie-Ansicht sehen Sie, an welcher Linie ein Gerät hängt, und dort verschieben Sie es auch.",
+
+  "help.topic.groupAddresses.title": "Gruppenadressen",
+  "help.topic.groupAddresses.p1":
+    "Eine Gruppenadresse ist kein Gerät. Sie benennt einen gemeinsamen Zustand — das Ein/Aus einer Leuchte, die Position einer Jalousie, den Sollwert eines Raums — auf den beliebig viele Geräte senden oder hören können. Geräte erreichen einander ausschließlich über Gruppenadressen.",
+  "help.topic.groupAddresses.p2":
+    "Darunter liegt eine einzelne 16-Bit-Zahl. Wie sie geschrieben wird, entscheidet das Projekt als Ganzes: dreistufig (Haupt/Mittel/Unter), zweistufig (Haupt/Unter) oder frei, also schlicht die Zahl. Ein Stilwechsel ändert die Schreibweise, nie die Adresse.",
+  "help.topic.groupAddresses.p3":
+    "Zu einer Gruppenadresse gehört außerdem ein Datenpunkttyp, der sagt, wie die Bytes auf der Leitung zu lesen sind — 1.001 ist ein Schalter, 5.001 ein Prozentwert. Die Ansicht zeigt den vorhandenen Typ, markiert Adressen ohne Typ und solche, deren Verknüpfungen sich über den Typ uneinig sind.",
+
+  "help.topic.comObjectFlags.title": "Flags der Kommunikationsobjekte",
+  "help.topic.comObjectFlags.p1":
+    "Ein Kommunikationsobjekt ist ein Ein- oder Ausgang des Applikationsprogramms eines Geräts. Es mit einer Gruppenadresse zu verknüpfen, setzt das Gerät auf diese Adresse. KNXBench bildet dafür fünf Flags ab — in den Eigenschaften stehen sie als R, W, T, U und C — und zusammen legen sie fest, was das Objekt dort darf.",
+  "help.topic.comObjectFlags.p2":
+    "C, Kommunikation, ist der Hauptschalter: ist es aus, nimmt das Objekt am Busverkehr gar nicht teil, und die übrigen vier haben nichts, woran sie wirken könnten. R, Lesen, lässt das Objekt eine Leseanfrage mit seinem aktuellen Wert beantworten. W, Schreiben, lässt ein eintreffendes Telegramm diesen Wert ändern.",
+  "help.topic.comObjectFlags.p3":
+    "T, Übertragen, lässt das Objekt von sich aus senden, wenn sein Wert sich ändert — das Flag, das aus einem Sensor einen Sender macht. U, Aktualisieren, lässt es einen Wert übernehmen, den es in der Leseantwort eines anderen Geräts sieht. KNXBench speichert die fünf so, wie Sie sie setzen, und beurteilt nicht, welche Kombination zu Ihrem Gerät passt.",
+
+  "help.topic.busMonitor.title": "Busmonitor",
+  "help.topic.busMonitor.p1":
+    "Der Busmonitor verfolgt den laufenden Verkehr über ein KNXnet/IP-Gateway. Adresse und Port eintragen, verbinden, und die Telegramme erscheinen, sobald sie eintreffen. Mitlesen und Senden sind getrennt: die Tabelle zeigt nur an, und ein Telegramm zu senden ist ein eigener, bewusster Schritt.",
+  "help.topic.busMonitor.p2":
+    "Tunneling ist der einzige Übertragungsweg. Dieses Fenster sucht das Netz nicht nach Gateways ab und tritt keiner Routing-Multicast-Gruppe bei — deshalb muss die Adresse von Hand eingetragen werden.",
+  "help.topic.busMonitor.p3":
+    "Telegramme werden gegen das geöffnete Projekt decodiert. Ändert sich dieses Projekt während einer laufenden Sitzung, sagt der Monitor das, statt bereits Decodiertes klammheimlich umzubeschriften — der Hinweis bedeutet, dass die decodierte Spalte die Antwort des älteren Projektstands ist.",
+
+  "help.topic.importExport.title": "Import und Export",
+  "help.topic.importExport.p1":
+    "Ein Import berichtet, was er vorgefunden hat: Fehler, Warnungen und alles, was er nicht zuordnen konnte. Die Übersicht zeigt die Zahlen, das Protokoll führt sie einzeln auf. Beides lohnt sich zu lesen — sonst sehen ein Import ohne Befund und ein Import, in den niemand geschaut hat, gleich aus.",
+  "help.topic.importExport.p2":
+    "Daten, die diese Anwendung nicht abbildet, werden nicht weggeworfen. Sie werden entweder unverändert aufbewahrt oder als nicht unterstützt aufgeführt und tauchen im Importbericht auf, statt zwischen Datei und Projekt zu verschwinden.",
+  "help.topic.importExport.p3":
+    "„Nach .knxproj exportieren…“ schreibt aus dem aktuellen Projekt eine Datei in ETS-Form und bleibt ausgegraut, solange das Projekt selbst noch nicht in einer Datei gespeichert ist. Ob eine echte ETS-Installation diese Datei wieder öffnet, ist nicht geprüft, und es wird in keine Richtung ETS-Kompatibilität behauptet. Gruppenadressen lassen sich zusätzlich als CSV ein- und ausgeben, und „Dokumentation exportieren…“ schreibt eine lesbare Beschreibung des Projekts.",
+
+  "help.topic.keyboard.title": "Tastatur",
+  "help.topic.keyboard.p1":
+    "Strg+K öffnet die Suche über das Projekt. Strg+Umschalt+P öffnet die Befehlspalette, die zeigt, was gerade möglich ist, samt Tastenkürzel. F1 öffnet diese Hilfe — nur F1 allein; ein F1 mit Zusatztaste bleibt dem Browser und der Arbeitsumgebung überlassen.",
+  "help.topic.keyboard.p2":
+    "Strg+Z macht rückgängig, Strg+Umschalt+Z stellt wieder her, und zwar am Projekt, nicht an dem Text, den Sie gerade tippen: in einem Eingabefeld, einem Dialog oder beim Umbenennen im Baum gilt das Rückgängig des Feldes.",
+  "help.topic.keyboard.p3":
+    "Esc schließt, was obenauf liegt — zuerst einen offenen Hilfehinweis, dann den Dialog darum herum. Solange ein Dialog offen ist, wandert Tab nur in ihm und kann ihn nicht verlassen; beim Schließen kehrt der Fokus dorthin zurück, wo er herkam.",
+
+  "help.topic.limits.title": "Was diese Anwendung nicht tut",
+  "help.topic.limits.p1":
+    "KNXBench ist eine unabhängige Anwendung. Sie stammt nicht von der KNX Association, ist von ihr weder unterstützt noch zertifiziert, und sie ist nicht die ETS. Wo sie eine ETS-Datei liest oder schreibt, tut sie das nach eigener Lesart dieser Datei.",
+  "help.topic.limits.p2":
+    "KNX Secure wird nicht unterstützt. Ein kennwortgeschütztes Projekt lässt sich aus diesem Fenster nicht öffnen — es gibt keine Stelle, an der das Kennwort einzugeben wäre. Geräte über den Bus zu programmieren, ist hier ebenfalls nicht vorgesehen: die Busfunktionen sind Mitlesen und das Senden einzelner Telegramme. Das sechste Kommunikationsobjekt-Flag des KNX, Read-on-Init (I), bildet das Projektmodell nicht ab: Produktdaten, die es mitbringen, werden gelesen, das Flag selbst wird aber weder angezeigt noch lässt es sich ändern.",
+  "help.topic.limits.p3":
+    "Was vorhanden ist, ist getestet, aber eine Testsuite ist keine Begehung. Bevor Sie sich in einer Anlage auf diese Anwendung verlassen, gleichen Sie ab, was sie Ihnen sagt, mit dem, was die Anlage tut.",
+
+  "help.tip.comFlags.label": "Was die Flags der Kommunikationsobjekte bedeuten",
+  "help.tip.comFlags.text":
+    "R, W, T, U und C legen fest, was dieses Objekt am Bus darf. C ist der Hauptschalter — ist es aus, bewirken die anderen vier nichts. Die ausführliche Erklärung steht unter F1.",
+  "help.tip.addressTable.label": "Was diese Tabelle zeigt",
+  "help.tip.addressTable.text":
+    "Alle Gruppenadressen des Projekts mit ihrem Datenpunkttyp und den damit verknüpften Kommunikationsobjekten. Das Feld filtert nach Adresse, Name oder Datenpunkttyp. Was eine Gruppenadresse ist, erklärt F1.",
+  "help.tip.busGateway.label": "Was als Gateway einzutragen ist",
+  "help.tip.busGateway.text":
+    "Adresse und Port eines KNXnet/IP-Gateways, etwa 192.0.2.1:3671. Nur Tunneling — diese Anwendung sucht das Netz nicht nach einem Gateway ab.",
 };

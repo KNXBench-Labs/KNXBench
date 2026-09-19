@@ -6384,3 +6384,91 @@ project picked the table's left-to-right column order and recorded the
 choice as inferred, not cited — `KNOWN_LIMITATIONS.md` #99. Explicitly out
 of scope, per the task brief: `PID_GROUP_RESPONSER_TABLE`, CP §3.5.4 step 07
 (unload individual address), and any procedure-level retry loop.
+## 2026-09-19 — T23 in-application help (branch `t28-help`)
+
+The application can now explain itself without a browser tab open next to
+it. Design first: **ADR-0024** answers the four questions `ROADMAP.md` left
+open, and was committed before a line of the implementation existed.
+
+Two mechanisms, with a rule for which is which. `HelpTip.tsx` is a small
+focusable `?` next to one control: one or two sentences, a `role="tooltip"`
+bubble that is *permanently* in the DOM and *permanently* the trigger's
+`aria-describedby` target, opened on focus as well as on pointer enter, and
+dismissed by Escape — but only when it is open, so a closed tip lets Escape
+through to whatever dialog surrounds it. It sits in three places today: the
+communication-object flag row (`Inspector.tsx`), the group-address filter
+(`GroupAddressTable.tsx`), and the bus monitor's gateway field
+(`BusMonitorPanel.tsx`). `HelpPanel.tsx` is the other half: a modal built on
+the existing `Overlay`, ten topics, a topic list marked with
+`aria-current="page"`, and the prose in a focusable region labelled by its
+own heading. It opens on `F1`, from a new toolbar button, and from the
+`open-help` palette command (the registry is now thirteen entries).
+
+`help.ts` holds everything about help that is not a component: the topic
+table, the paragraph key lists, `opensHelp` (plain `F1` only — a modified
+F1 belongs to the browser or the desktop and is left alone) and
+`helpTipAnimates`, which mirrors `loadFlavour.ts`'s `flavourRotates`
+including its "a runtime without `matchMedia` never asked for less motion"
+default. Topic and paragraph key lists are `satisfies readonly MessageKey[]`,
+so a typo'd help key is a compile error rather than an empty paragraph.
+
+All help prose lives in `messages/en.ts` and `messages/de.ts` under `help.*`
+— 50 keys, German written to read as German rather than as translated
+English. Four concept topics (buildings, topology, group addresses,
+com-object flags) carry a shared closing note saying they describe how
+KNXBench uses the concept and not how the KNX Standard defines it. Two help
+strings mention certification or compatibility and both are denials; a test
+pins the exact key list allowed to mention either in either language, so a
+new sentence touching those words fails the suite and has to be read by a
+human before it ships.
+
+What no test can check is whether a help sentence is *true*, and ADR-0024
+says so outright. Every factual claim in the current prose was checked
+against the code that implements it (address bit widths, the group-address
+styles, flag letters, the bus layer being tunnelling-only with no discovery
+and no routing) before it was written down.
+
+Web tests 591 → 640 across 50 files; `check-headers` unchanged at 167 absent
+against a ceiling of 168, with all six new files carrying an ADR-0018 header.
+Closes **D12**'s help half; the end-user *manual* half stays open by
+decision, since ADR-0024 rules that `docs/` never ships to users. New
+limitation **§100**: help prose lives in the message catalogue one paragraph
+per key, which buys a compile-time translation check and costs translation
+tooling.
+
+**Fix round 1 (2026-09-19, same branch).** Review found one real defect and
+three escaped mutations, all on the same seam. F1 closed only the search
+overlay and the palette, so pressing it over Settings, the new-project
+dialog or the catalog browser mounted a second `aria-modal` dialog beside a
+live one — with focus inside the newer panel and an opaque backdrop over it.
+The branch now closes every overlay `App` owns and declines to open at all
+while `FsPicker` is up, since that one mounts its own React root and cannot
+be closed from there. Three mutations that had passed 640/640 are pinned:
+deleting `setSearchOpen(false)`, deleting `e.preventDefault()` (F1 is the
+browser's help key too), and deleting `:not(.is-still)` from the tip's
+transition selector — the last of which needed a test that reads
+`styles.css` the way `motionGuard.test.ts` does, because asserting a class
+is applied says nothing about the rule behind it.
+
+The tip's hidden state changed from `visibility: hidden` to `opacity: 0`.
+`visibility: hidden` removes an element from the accessibility tree, so the
+permanent `aria-describedby` the whole component is built around resolved to
+nothing while the bubble was closed, and the description only arrived
+because `onFocus` opened it first — a state update racing the screen
+reader's lookup. ADR-0024 decision 1 now records the technique as part of
+the decision rather than as styling. Prose corrections in both languages:
+five communication-object flags is what KNXBench models, not what KNX
+defines (the sixth, Read-on-Init, is parsed by `knx-productdb` and modelled
+nowhere else, now stated in the limits topic); gateway discovery and routing
+are absent from *this window*, not from `knx-net`, which ships both; the
+address filter also matches datapoint types; `.knxproj` export is greyed out
+until the project has a file; and F1 reaches help from the main window only,
+not from the diagnostics companion. Web tests 640 → 648.
+**Fix round 2 (2026-09-19, same branch).** The two lines of the F1 branch
+that a mutation could still delete for free are now pinned: the
+`.fs-picker` guard — this suite mocks `./filePicker` wholesale, so the test
+puts the node in the document itself, and a second assertion reads both
+`FsPicker.tsx` and `App.tsx`, since the rendered class and the queried
+selector are one contract written in two files and nothing in a mocked
+suite connects them — and `setCatalogTarget(null)`, the third of the three
+dialogs the original blocker named. Web tests 648 → 651.

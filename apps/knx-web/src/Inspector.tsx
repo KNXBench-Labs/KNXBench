@@ -15,6 +15,7 @@ import type { LineNode } from "./bindings/LineNode";
 import type { BuildingNode } from "./bindings/BuildingNode";
 import type { Selection } from "./selection";
 import ParameterPanel from "./ParameterPanel";
+import HelpTip from "./HelpTip";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import {
   directionLabel,
@@ -286,6 +287,10 @@ function ComObjectFlagsRow(props: { com: ComObjectNode; onApplied: (tree: Projec
 
   return (
     <div className="com-object-flags">
+      {/* The five `title` attributes below stay — they are a fine mouse
+          affordance for a one-word flag name. The tip is the keyboard's
+          way in, and carries the sentence the letters cannot (ADR-0024). */}
+      <HelpTip labelKey="help.tip.comFlags.label" textKey="help.tip.comFlags.text" />
       {flags.map((f) => (
         <label key={f.name} title={t(f.titleKey)}>
           <input

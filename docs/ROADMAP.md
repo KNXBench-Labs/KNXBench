@@ -759,6 +759,20 @@ not bundled into a UI cycle.
 
 ## Cross-cutting — In-application help and user documentation
 
+**Shipped 2026-09-19 (T23), for the help half only.** The four questions
+this section poses are answered in
+[ADR-0024](adr/0024-in-application-help.md), and the implementation landed
+with it: a focusable help tip (`HelpTip.tsx`), a ten-topic help panel on
+`F1` (`HelpPanel.tsx`), and all help prose in `messages/en.ts`/`de.ts`
+under `help.*`. In short: both mechanisms, each with a stated job; prose in
+the ordinary message catalogue, so German is a compile error rather than an
+afterthought; KNX concepts explained in-app with no outbound links; and
+`docs/` never ships. The **user manual** half of this item is still open —
+ADR-0024 rules `docs/` out as user documentation, so a manual would be a
+new document written for users, which nobody has written. The measured
+counts in the paragraphs below are the pre-T23 state, kept as written; the
+same command gives 9 / 41 / 5 today.
+
 **Deliberately last.** Added 2026-09-10 by explicit request: an in-app
 help system — hover explanations, contextual help, an actual manual —
 scheduled at the end of everything rather than folded into the UI cycles

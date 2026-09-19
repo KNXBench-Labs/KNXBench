@@ -1,8 +1,206 @@
+/* The component layer's base. ADR-0022 draws the line down the middle of
+   this stylesheet: the tokens below belong to a *setting*, never to a
+   palette, so they live here and the [data-motion-*] / [data-density]
+   blocks override them. The motion pair is the fallback for a document
+   that rendered before index.html's bootstrap set data-motion-* (a stale
+   cached page, a test without the bootstrap). It used to sit inside a
+   theme block, where every future theme would have had to remember to
+   copy it. */
+:root {
+  font-family: var(--knx-font-body);
+  --knx-transition-duration: 200ms;
+  --knx-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── The theme layer (ADR-0022) ──────────────────────────────────────────
+
+   One block per theme, holding nothing but custom properties and
+   `color-scheme`, and every block defines every token the component layer
+   reads. `themeTokens.test.ts` enforces both halves of that sentence, so a
+   theme that forgets a token fails the suite instead of quietly inheriting
+   a stranger's colour.
+
+   Selectors here take exactly two shapes: `:root[data-theme="<id>"]` and
+   `:root[data-theme="<id>"][data-accent="<name>"]`. Note what is absent:
+   `:not([data-theme="…"])`, which used to define the light palette by
+   negation and so swept every theme added afterwards into it by accident.
+
+   The document always carries a resolved `data-theme` — index.html's
+   pre-mount bootstrap sets it, `useThemeId` keeps it — so no theme needs
+   to double as the no-attribute default. */
+
+/* Porcelain — the daylight engineering theme: flat, quiet, high contrast. */
+:root[data-theme="porcelain"] {
+  color-scheme: light;
+
+  --knx-bg: #f5f6fa;
+  --knx-surface: #ffffff;
+  --knx-foreground: #202438;
+  --knx-muted: #60697d;
+  --knx-border: #dce0e9;
+  --knx-border-hover: var(--knx-accent);
+
+  --knx-accent: #7041dc;
+  --knx-on-accent: #ffffff;
+  --knx-accent-tertiary: var(--knx-accent);
+  --knx-gradient-primary: linear-gradient(var(--knx-accent), var(--knx-accent));
+  --knx-gradient-display: var(--knx-gradient-primary);
+
+  --knx-error-color: #b52c3b;
+  --knx-warning-color: #946000;
+  --knx-success-color: #137551;
+
+  --knx-overlay-backdrop: #18203566;
+  --knx-overlay-shadow: #17213916;
+  --knx-shadow-raised: 0 1px 2px #1721390a;
+  --knx-shadow-hover: 0 2px 5px #17213914;
+
+  --knx-font-heading: "Inter", sans-serif;
+  --knx-font-body: "Inter", sans-serif;
+  --knx-font-mono: "JetBrains Mono", monospace;
+
+  --knx-radius-card: 8px;
+  --knx-radius-button: 6px;
+  --knx-radius-input: 5px;
+
+  --knx-backdrop-image: none;
+  --knx-backdrop-size: auto;
+  --knx-backdrop-mask: none;
+}
+
+/* Graphite — Porcelain after dark: identical geometry, night palette. */
+:root[data-theme="graphite"] {
+  color-scheme: dark;
+
+  --knx-bg: #171b22;
+  --knx-surface: #20252e;
+  --knx-foreground: #edf0f6;
+  --knx-muted: #a6afbf;
+  --knx-border: #363f4d;
+  --knx-border-hover: var(--knx-accent);
+
+  --knx-accent: #bb9aff;
+  --knx-on-accent: #24123f;
+  --knx-accent-tertiary: var(--knx-accent);
+  --knx-gradient-primary: linear-gradient(var(--knx-accent), var(--knx-accent));
+  --knx-gradient-display: var(--knx-gradient-primary);
+
+  --knx-error-color: #ff8993;
+  --knx-warning-color: #eec071;
+  --knx-success-color: #65d4ad;
+
+  --knx-overlay-backdrop: #080d17aa;
+  --knx-overlay-shadow: #00000040;
+  /* Before ADR-0022 this theme inherited the light theme's shadows
+     (#1721390a over a #171b22 canvas: a shadow nobody could see). */
+  --knx-shadow-raised: 0 1px 2px #00000059;
+  --knx-shadow-hover: 0 2px 6px #00000073;
+
+  --knx-font-heading: "Inter", sans-serif;
+  --knx-font-body: "Inter", sans-serif;
+  --knx-font-mono: "JetBrains Mono", monospace;
+
+  --knx-radius-card: 8px;
+  --knx-radius-button: 6px;
+  --knx-radius-input: 5px;
+
+  --knx-backdrop-image: none;
+  --knx-backdrop-size: auto;
+  --knx-backdrop-mask: none;
+}
+
+/* Cupertino — the Apple-subtle register: warm neutrals, a single blue,
+   soft elevation, generous corners. Its accent is part of its identity, so
+   it declares no accent variations and ignores the accent setting. */
+:root[data-theme="cupertino"] {
+  color-scheme: light;
+
+  --knx-bg: #f2f2f7;
+  --knx-surface: #ffffff;
+  --knx-foreground: #1c1c1e;
+  --knx-muted: #636366;
+  --knx-border: #d9d9de;
+  --knx-border-hover: var(--knx-accent);
+
+  --knx-accent: #0a66d0;
+  --knx-on-accent: #ffffff;
+  --knx-accent-tertiary: #4b49c9;
+  --knx-gradient-primary: linear-gradient(var(--knx-accent), var(--knx-accent));
+  --knx-gradient-display: linear-gradient(100deg, #0a66d0, #4b49c9);
+
+  --knx-error-color: #c1272d;
+  --knx-warning-color: #8a5a00;
+  --knx-success-color: #1a7a43;
+
+  --knx-overlay-backdrop: rgba(28, 28, 30, 0.32);
+  --knx-overlay-shadow: rgba(60, 60, 67, 0.18);
+  --knx-shadow-raised: 0 1px 3px rgba(60, 60, 67, 0.12);
+  --knx-shadow-hover: 0 8px 24px -6px rgba(60, 60, 67, 0.28);
+
+  --knx-font-heading: "Inter", sans-serif;
+  --knx-font-body: "Inter", sans-serif;
+  --knx-font-mono: "JetBrains Mono", monospace;
+
+  --knx-radius-card: 14px;
+  --knx-radius-button: 10px;
+  --knx-radius-input: 10px;
+
+  --knx-backdrop-image: none;
+  --knx-backdrop-size: auto;
+  --knx-backdrop-mask: none;
+}
+
+/* Neon Grid — the cyberpunk register, kept sleek: near-black canvas, one
+   cyan and one magenta, hairline corners, a scanline backdrop. The glitch
+   *motion* is deliberately not here: motion is the Settings panel's own
+   axis (Motion style "Glitch"), and ADR-0022 keeps themes out of it. Pair
+   this theme with that style for the full register. Accent is identity
+   here too, so there are no accent variations. */
+:root[data-theme="neon-grid"] {
+  color-scheme: dark;
+
+  --knx-bg: #05060d;
+  --knx-surface: #0b0f1c;
+  --knx-foreground: #e8fbff;
+  --knx-muted: #8fa8c0;
+  --knx-border: #1e2f4a;
+  --knx-border-hover: #ff2e88;
+
+  --knx-accent: #22e0f5;
+  --knx-on-accent: #00161b;
+  --knx-accent-tertiary: #ff62aa;
+  --knx-gradient-primary: linear-gradient(105deg, #ff2e88, #22e0f5);
+  --knx-gradient-display: linear-gradient(90deg, #22e0f5, #a855f7, #ff2e88);
+
+  --knx-error-color: #ff5d7a;
+  --knx-warning-color: #ffd166;
+  --knx-success-color: #3ef5b0;
+
+  --knx-overlay-backdrop: rgba(5, 6, 13, 0.78);
+  --knx-overlay-shadow: rgba(34, 224, 245, 0.28);
+  --knx-shadow-raised: 0 0 14px -4px rgba(34, 224, 245, 0.55);
+  --knx-shadow-hover: 0 0 28px -4px rgba(255, 46, 136, 0.65);
+
+  --knx-font-heading: "Space Grotesk", sans-serif;
+  --knx-font-body: "Inter", sans-serif;
+  --knx-font-mono: "JetBrains Mono", monospace;
+
+  --knx-radius-card: 3px;
+  --knx-radius-button: 2px;
+  --knx-radius-input: 2px;
+
+  --knx-backdrop-image:
+    repeating-linear-gradient(to bottom, rgba(34, 224, 245, 0.05) 0 1px, transparent 1px 4px),
+    linear-gradient(to right, rgba(255, 46, 136, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(34, 224, 245, 0.12) 1px, transparent 1px);
+  --knx-backdrop-size: auto, 48px 48px, 48px 48px;
+  --knx-backdrop-mask: radial-gradient(circle at 50% 30%, black 30%, transparent 100%);
+}
+
+/* Bitcoin DeFi — the loud one: black canvas, orange gradients, real glow. */
 :root[data-theme="bitcoin-defi"] {
   color-scheme: dark;
-  font-family: var(--knx-font-body);
 
-  /* Surfaces */
   --knx-bg: #030304;
   --knx-surface: #0f1115;
   --knx-foreground: #ffffff;
@@ -10,42 +208,50 @@
   --knx-border: rgba(255, 255, 255, 0.1);
   --knx-border-hover: rgba(247, 147, 26, 0.5);
 
-  /* Accents */
   --knx-accent: #f7931a;
-  --knx-accent-secondary: #ea580c;
+  /* Ink for text sitting on the accent. This theme had no such token
+     before ADR-0022, so buttons hard-coded white onto orange at 2.2:1. */
+  --knx-on-accent: #2a1500;
   --knx-accent-tertiary: #ffd600;
   --knx-gradient-primary: linear-gradient(to right, #ea580c, #f7931a);
-  --knx-gradient-gold: linear-gradient(to right, #f7931a, #ffd600);
+  --knx-gradient-display: linear-gradient(to right, #f7931a, #ffd600);
 
-  /* Feedback (colored, never pure black) */
   --knx-error-color: #ff6b6b;
   --knx-warning-color: #ffd600;
-  /* Porcelain and Graphite gained a success colour in 90da7da, the commit
-     that brought the workbench shell over; this theme never got one,
-     because nothing used the token until the bus compose form's "sent"
-     line did. */
   --knx-success-color: #3ddc97;
+
   --knx-overlay-backdrop: rgba(3, 3, 4, 0.7);
   --knx-overlay-shadow: rgba(234, 88, 12, 0.25);
-  --knx-glow-orange: 0 0 20px -5px rgba(234, 88, 12, 0.5);
-  --knx-glow-orange-strong: 0 0 30px -5px rgba(247, 147, 26, 0.6);
-  --knx-glow-gold: 0 0 20px rgba(255, 214, 0, 0.3);
+  --knx-shadow-raised: 0 0 20px -5px rgba(234, 88, 12, 0.5);
+  --knx-shadow-hover: 0 0 30px -5px rgba(247, 147, 26, 0.6);
 
-  /* Typography */
   --knx-font-heading: "Space Grotesk", sans-serif;
   --knx-font-body: "Inter", sans-serif;
   --knx-font-mono: "JetBrains Mono", monospace;
 
-  /* Radius */
   --knx-radius-card: 16px;
   --knx-radius-button: 999px;
   --knx-radius-input: 8px;
 
-  --knx-transition-duration: 200ms;
-  /* Fallback easing for a document with no data-motion-* attribute yet
-     (a stale cached index.html, a test rendering without the bootstrap). */
-  --knx-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --knx-backdrop-image:
+    linear-gradient(to right, rgba(30, 41, 59, 0.5) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(30, 41, 59, 0.5) 1px, transparent 1px);
+  --knx-backdrop-size: 50px 50px;
+  --knx-backdrop-mask: radial-gradient(circle at center, black 40%, transparent 100%);
 }
+
+/* Accent variations — opt-in, per theme, never by negation. Porcelain and
+   Graphite treat the accent as the user's choice; the other three treat it
+   as part of their identity and declare nothing here. "violet" is these
+   two themes' base accent, so it needs no rule of its own. */
+:root[data-theme="porcelain"][data-accent="mint"] { --knx-accent: #087a62; }
+:root[data-theme="porcelain"][data-accent="blue"] { --knx-accent: #2560c8; }
+:root[data-theme="porcelain"][data-accent="amber"] { --knx-accent: #916000; }
+:root[data-theme="porcelain"][data-accent="rose"] { --knx-accent: #b82f69; }
+:root[data-theme="graphite"][data-accent="mint"] { --knx-accent: #65dabc; --knx-on-accent: #10332c; }
+:root[data-theme="graphite"][data-accent="blue"] { --knx-accent: #8bb6ff; --knx-on-accent: #122740; }
+:root[data-theme="graphite"][data-accent="amber"] { --knx-accent: #edc278; --knx-on-accent: #34260f; }
+:root[data-theme="graphite"][data-accent="rose"] { --knx-accent: #f29cc2; --knx-on-accent: #3a1728; }
 
 /* The motion control's two axes (see motion.ts). Level sets the duration,
    style sets the easing curve; together they drive every transition below.
@@ -105,14 +311,12 @@ body::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-}
-
-:root[data-theme="bitcoin-defi"] body::before {
-  background-image:
-    linear-gradient(to right, rgba(30, 41, 59, 0.5) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(30, 41, 59, 0.5) 1px, transparent 1px);
-  background-size: 50px 50px;
-  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+  /* The decorative backdrop is a theme's to draw (ADR-0022): three
+     tokens instead of a `[data-theme=…] body::before` rule that only
+     one theme could ever match. `none`/`auto`/`none` means no backdrop. */
+  background-image: var(--knx-backdrop-image);
+  background-size: var(--knx-backdrop-size);
+  mask-image: var(--knx-backdrop-mask);
 }
 
 main {
@@ -319,7 +523,7 @@ main {
 .com-object-list li:hover {
   transform: translateY(-4px);
   border-color: var(--knx-border-hover);
-  box-shadow: var(--knx-glow-orange);
+  box-shadow: var(--knx-shadow-raised);
 }
 
 .com-object-label {
@@ -954,9 +1158,9 @@ button {
   border-radius: var(--knx-radius-button);
   padding: 0.5rem 1.25rem;
   min-height: 44px;
-  color: #ffffff;
+  color: var(--knx-on-accent);
   background: var(--knx-gradient-primary);
-  box-shadow: var(--knx-glow-orange);
+  box-shadow: var(--knx-shadow-raised);
   cursor: pointer;
 }
 
@@ -969,7 +1173,7 @@ button {
 
 button:hover:not(:disabled) {
   transform: scale(1.05);
-  box-shadow: var(--knx-glow-orange-strong);
+  box-shadow: var(--knx-shadow-hover);
 }
 
 button:disabled {
@@ -1009,7 +1213,7 @@ h6 {
 }
 
 .dashboard > h2:first-child {
-  background: var(--knx-gradient-gold);
+  background: var(--knx-gradient-display);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -1042,60 +1246,6 @@ h6 {
   border: 0;
 }
 
-/* Shared engineering workbench tokens: Porcelain and Graphite use the same components. */
-:root:not([data-theme="bitcoin-defi"]) {
-  color-scheme: light;
-  font-family: var(--knx-font-body);
-  --knx-font-heading: "Inter", sans-serif;
-  --knx-font-body: "Inter", sans-serif;
-  --knx-font-mono: "JetBrains Mono", monospace;
-  --knx-bg: #f5f6fa;
-  --knx-surface: #ffffff;
-  --knx-foreground: #202438;
-  --knx-muted: #60697d;
-  --knx-border: #dce0e9;
-  --knx-error-color: #b52c3b;
-  --knx-warning-color: #946000;
-  --knx-success-color: #137551;
-  --knx-overlay-backdrop: #18203566;
-  --knx-overlay-shadow: #17213916;
-  --knx-radius-card: 8px;
-  --knx-radius-button: 6px;
-  --knx-radius-input: 5px;
-  --knx-glow-orange: 0 1px 2px #1721390a;
-  --knx-glow-orange-strong: 0 2px 5px #17213914;
-  --knx-glow-gold: none;
-  --knx-accent: #7041dc;
-  --knx-on-accent: #ffffff;
-  --knx-accent-secondary: var(--knx-accent);
-  --knx-accent-tertiary: var(--knx-accent);
-  --knx-gradient-primary: linear-gradient(var(--knx-accent), var(--knx-accent));
-  --knx-gradient-gold: var(--knx-gradient-primary);
-  --knx-border-hover: var(--knx-accent);
-}
-:root[data-theme="graphite"] {
-  color-scheme: dark;
-  --knx-bg: #171b22;
-  --knx-surface: #20252e;
-  --knx-foreground: #edf0f6;
-  --knx-muted: #a6afbf;
-  --knx-border: #363f4d;
-  --knx-error-color: #ff8993;
-  --knx-warning-color: #eec071;
-  --knx-success-color: #65d4ad;
-  --knx-overlay-backdrop: #080d17aa;
-  --knx-overlay-shadow: #00000040;
-  --knx-accent: #bb9aff;
-  --knx-on-accent: #24123f;
-}
-:root[data-accent="mint"]:not([data-theme="bitcoin-defi"]) { --knx-accent: #087a62; }
-:root[data-accent="blue"]:not([data-theme="bitcoin-defi"]) { --knx-accent: #2560c8; }
-:root[data-accent="amber"]:not([data-theme="bitcoin-defi"]) { --knx-accent: #916000; }
-:root[data-accent="rose"]:not([data-theme="bitcoin-defi"]) { --knx-accent: #b82f69; }
-:root[data-theme="graphite"][data-accent="mint"] { --knx-accent: #65dabc; --knx-on-accent: #10332c; }
-:root[data-theme="graphite"][data-accent="blue"] { --knx-accent: #8bb6ff; --knx-on-accent: #122740; }
-:root[data-theme="graphite"][data-accent="amber"] { --knx-accent: #edc278; --knx-on-accent: #34260f; }
-:root[data-theme="graphite"][data-accent="rose"] { --knx-accent: #f29cc2; --knx-on-accent: #3a1728; }
 :root { --knx-control-height: 32px; --knx-cell-padding: 7px 12px; }
 :root[data-density="comfortable"] { --knx-control-height: 40px; --knx-cell-padding: 11px 14px; }
 * { box-sizing: border-box; }
@@ -1103,8 +1253,6 @@ body { font-size: 13px; line-height: 1.5; }
 button, input, select, textarea { font-size: inherit; }
 button { min-height: var(--knx-control-height); text-transform: none; letter-spacing: normal; }
 button:hover { transform: none; }
-:root:not([data-theme="bitcoin-defi"]) button { color: var(--knx-on-accent); }
-:root:not([data-theme="bitcoin-defi"]) button:disabled { color: var(--knx-muted); }
 input, select, textarea {
   min-height: var(--knx-control-height);
   padding: 6px 9px;
@@ -1131,12 +1279,12 @@ h1, h2, h3 { letter-spacing: -0.025em; }
 .workbench { padding: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 .workbench-toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--knx-border); background: var(--knx-surface); flex-wrap: wrap; z-index: 5; }
 .workbench-brand { display: flex; align-items: center; gap: 10px; font-size: 19px; color: var(--knx-foreground); text-decoration: none; margin-right: 16px; }
-.brand-mark { display: grid; place-items: center; background: var(--knx-accent); color: var(--knx-on-accent, white); width: 34px; height: 34px; border-radius: 7px; font-weight: 700; }
+.brand-mark { display: grid; place-items: center; background: var(--knx-accent); color: var(--knx-on-accent); width: 34px; height: 34px; border-radius: 7px; font-weight: 700; }
 .workbench-toolbar button, .workbench-navigation button, .workbench-panel-controls button, .diagram-heading, .diagram-device, .table-select, .diagram-line-heading > button {
   background: transparent; color: var(--knx-foreground) !important; box-shadow: none; border: 1px solid transparent; text-align: left; padding: 6px 10px;
 }
 .workbench-toolbar button:hover, .workbench-navigation button:hover, .diagram-device:hover, .diagram-heading:hover { background: color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface)); }
-.workbench-toolbar .primary-action { background: var(--knx-accent); color: var(--knx-on-accent, white) !important; padding-inline: 20px; }
+.workbench-toolbar .primary-action { background: var(--knx-accent); color: var(--knx-on-accent) !important; padding-inline: 20px; }
 .history-actions { display: flex; border-inline: 1px solid var(--knx-border); padding-inline: 8px; }
 .history-actions button { font-size: 23px; line-height: 1; }
 .workbench-toolbar .workbench-search { display: flex; justify-content: space-between; align-items: center; gap: 30px; flex: 1; min-width: 140px; border-color: var(--knx-border); color: var(--knx-muted) !important; }
@@ -1363,11 +1511,11 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .new-project-intro { margin: 0 0 16px; color: var(--knx-muted); font-size: 13px; }
 .settings-field-hint { color: var(--knx-muted); font-size: 0.75rem; }
 .new-project-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-.new-project-panel .primary-action { background: var(--knx-accent); color: var(--knx-on-accent, white); }
+.new-project-panel .primary-action { background: var(--knx-accent); color: var(--knx-on-accent); }
 .new-project-conflict { margin-top: 16px; padding: 12px 14px; border: 1px solid var(--knx-error-color); border-radius: 8px; }
 .new-project-conflict h3 { margin: 0 0 6px; font-size: 14px; }
 .new-project-conflict p { margin: 0 0 8px; font-size: 13px; }
 .new-project-conflict-detail { color: var(--knx-muted); font-size: 12px; }
 /* The welcome screen's own primary button: `.primary-action` is otherwise
    scoped to `.workbench-toolbar`, and this one is not in the toolbar. */
-.welcome-workspace .primary-action { background: var(--knx-accent); color: var(--knx-on-accent, white); }
+.welcome-workspace .primary-action { background: var(--knx-accent); color: var(--knx-on-accent); }

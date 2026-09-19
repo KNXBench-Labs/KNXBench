@@ -101,7 +101,7 @@ fn spec_for(kind: &str) -> ElementSpec {
         // bound, `@Value` is what it is bound to, and `@Id` — present on
         // `TextArg` in the researched corpus, absent on `NumericArg` — is
         // the binding element's own identity. Both spellings were reaching
-        // `UNMODELLED` before v10, which left `@Value` in `extra`, a store
+        // `UNMODELLED` before v11, which left `@Value` in `extra`, a store
         // documented as not re-parseable. `Assign`'s own `@Value` keeps
         // landing in `extra`: `Assign` is still inert in the evaluator, so
         // promoting its value to a column would claim an interpretation

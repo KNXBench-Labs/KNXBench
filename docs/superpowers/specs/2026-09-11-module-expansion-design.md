@@ -643,7 +643,7 @@ does not have.
 
 ### Migration
 
-v9 → v10: create `module_def_argument`, `ALTER TABLE dynamic_node ADD
+v10 → v11: create `module_def_argument`, `ALTER TABLE dynamic_node ADD
 COLUMN value TEXT`, then replay every stored `ApplicationProgram` blob
 through `dynamic::parse::parse_dynamic_trees` after **clearing** what the
 previous parse of the same blob wrote — `parse_dynamic_trees` skips a
@@ -663,8 +663,9 @@ Re-measured on every run by `corpus_argument_measurement_task_12`
 `OriginalData/ProductDatabases`:
 
 * `AllocatorRef`: **0** occurrences across every readable archive member;
-  3 members unreadable (encrypted, all inside the one `.vd2`), counted and
-  named rather than dropped from the denominator.
+  4 members unreadable (encrypted, 3 inside the one `.vd2` and 1 inside the
+  `.vd4` the corpus gained on 2026-09-16), counted and named rather than
+  dropped from the denominator.
 * Stored rows for the one module-bearing package: 86 `Module`, 172
   `NumericArg`, 86 `TextArg`, 36 declarations (12 `Text`, 24 `@Type`-less,
   0 `AllocatorRef`), names `{ChNo, ObjNumberBase, ParamOffsBase}`.
@@ -694,10 +695,12 @@ Re-measured on every run by `corpus_argument_measurement_task_12`
     numeric placeholder is left verbatim and not reported; a declaration
     typed `AllocatorRef` is reported once per instantiation and never
     interpreted. All three asserted by the acceptance test.
-21. The v9 → v10 migration recreates `dynamic_node` and
+21. The v10 → v11 migration recreates `dynamic_node` and
     `module_def_argument` from stored blobs with no re-install, and the
-    pre-existing migration tests still pass after being taught that v10
-    has structure to rewind.
+    pre-existing migration tests still pass after being taught that v11
+    has structure to rewind. (Renumbered from the v9 → v10 this design
+    was originally written against: T13 reached `main` first and kept
+    that slot — see IMPLEMENTATION_STATUS.md's task-12 entry.)
 22. All six gates pass, judged by exit status:
     `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets
     -j 2 -- -D warnings`, `cargo test --workspace --no-fail-fast -j 2`,

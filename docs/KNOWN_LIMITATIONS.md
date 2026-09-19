@@ -5603,3 +5603,28 @@ that asymmetry appears, because none exists to break.
 for some DPT, giving a server test something real to drive the branch with.
 Until then, adding one anyway would assert nothing the codec's own contract
 does not already guarantee some other way.
+## 103. "Unsaved" is inferred from the undo stack, not a real dirty flag
+
+**Limitation.** The File menu's Quit entry (T28/F4, desktop shell only) guards
+itself with an unsaved-changes check before it lets the window close.
+KNXBench has no dirty flag, so "there is unsaved work" is read off
+`ProjectTree.can_undo`, which stays `true` after a save.
+
+**Cause.** `can_undo` is the only mutation signal the server publishes, it is
+already what the welcome screen's unsaved-changes guard uses, and
+`domain.rs`'s `new_project_impl` documents the over-refusal as deliberate.
+Adding a real dirty flag means a server-side change to every mutating route,
+which is a task of its own and not a UI finding's business.
+
+**Consequence.** Anyone who saves and then quits is asked about unsaved
+changes that no longer exist — a false alarm, in the safe direction. The
+dialog offers Cancel and "Quit without saving" only, with no "Save and quit":
+`saveProject` swallows its own failures into a toast and returns nothing, so
+a save-then-quit path could close the window over a save that silently
+failed, which is the exact accident this dialog exists to stop.
+
+**Not a data-loss risk.** The imprecision errs towards keeping the user's
+work: an extra question gets asked, nothing is discarded.
+
+**Lifted when.** The server grows a real dirty flag; then the guard becomes
+exact. Not scheduled.

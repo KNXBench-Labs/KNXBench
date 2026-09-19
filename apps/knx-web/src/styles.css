@@ -1112,6 +1112,15 @@ main {
   z-index: 100;
 }
 
+/* T28/F2 — the picker used to open far larger than whatever it was
+   showing, on both axes. It had a `min-width` and no `max-width`, and as a
+   flex item under `align-items: stretch` it grew to its height cap
+   whatever the directory held, so three entries and three hundred looked
+   identical. Now: a width that scales with the viewport rather than a
+   fixed pixel figure, a height that follows the content up to a cap, and a
+   list that is the part which scrolls. Long names wrap — deliberately not
+   `text-overflow: ellipsis`, because a picker that hides the end of a
+   filename is worse than a wide one. */
 .fs-picker {
   background: var(--knx-surface);
   backdrop-filter: blur(12px);
@@ -1119,8 +1128,10 @@ main {
   box-shadow: 0 4px 24px var(--knx-overlay-shadow);
   color: var(--knx-foreground);
   padding: 1rem;
-  min-width: 24rem;
-  max-height: 70vh;
+  width: min(30rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  align-self: flex-start;
+  max-height: min(70vh, calc(100dvh - 4rem));
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -1128,7 +1139,10 @@ main {
 }
 
 .fs-picker-list {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  overflow-wrap: anywhere;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1305,6 +1319,11 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .workbench-pane-left .pane-resizer { right: -3px; }
 .workbench-pane-right .pane-resizer { left: -3px; }
 .pane-resizer:hover, .pane-resizer:focus-visible { background: var(--knx-accent); opacity: 0.5; }
+/* T28/F3 — `.pane-resizer`'s horizontal counterpart. Not absolutely
+   positioned like that one: this handle is a flex item sitting *between*
+   the two blocks it divides, not an overlay on one block's edge. */
+.pane-splitter { flex: 0 0 6px; cursor: row-resize; touch-action: none; }
+.pane-splitter:hover, .pane-splitter:focus-visible { background: var(--knx-accent); opacity: 0.5; }
 .workbench-center { flex: 1; min-width: 200px; overflow: auto; padding: 24px; }
 .workbench-navigation { display: flex; flex-direction: column; gap: 4px; padding: 16px 12px; }
 .workbench-navigation button { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 6px; }
@@ -1312,7 +1331,11 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .diagnostic-navigation { margin-top: auto; border-top: 1px solid var(--knx-border); }
 .workbench .project-explorer { padding: 14px 10px; flex: 0; font-size: 12px; border-top: 1px solid var(--knx-border); overflow-wrap: anywhere; }
 .workbench-pane-left .workbench-pane-content { overflow: hidden; }
-.workbench-pane-left .workbench-navigation { flex: 0 0 auto; }
+/* `0 1 auto`, not `0 0 auto`: once a splitter has given one of these two
+   blocks an explicit height, a short column must still be allowed to take
+   some of it back rather than pushing the explorer out of existence. Both
+   scroll internally for the same reason. */
+.workbench-pane-left .workbench-navigation { flex: 0 1 auto; overflow: auto; }
 .workbench-pane-left .project-explorer { flex: 1 1 auto; min-height: 0; overflow: auto; }
 .workbench .project-explorer .tree-root { margin: 0; }
 .workbench .project-explorer ul { padding-left: 14px; }
@@ -1387,7 +1410,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .workbench-toolbar { padding: 10px; gap: 6px; }
   .workbench-brand { font-size: 16px; margin-right: 0; }
   .workbench-pane-left { width: 100% !important; }
-  .pane-resizer { display: none; }
+  .pane-resizer, .pane-splitter { display: none; }
   .workbench-center { padding: 16px; }
   .file-menu-content { position: fixed; left: 10px; right: 10px; top: 65px; }
 }
@@ -1456,7 +1479,9 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .workbench .tree-label.selected { background: color-mix(in srgb, var(--knx-accent) 14%, transparent); color: var(--knx-accent) !important; }
 .fs-picker-list button { display: block; width: 100%; background: transparent; color: var(--knx-foreground) !important; text-align: left; box-shadow: none; border: 0; }
 .fs-picker-upload-input { display: block; max-width: 100%; }
-.fs-picker { min-width: 0; }
+/* The narrow-viewport `min-width: 0` that used to sit here is gone with
+   T28/F2: the rule above no longer sets a `min-width` for it to undo, and
+   the width it does set already scales down on its own. */
 
 .monitor-data { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 20px; align-items: start; }
 .monitor-table-scroll { overflow: auto; border: 1px solid var(--knx-border); border-radius: 8px; background: var(--knx-surface); }
@@ -1598,3 +1623,25 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   .help-panel-body { grid-template-columns: 1fr; }
   .help-panel-topics { border-right: 0; border-bottom: 1px solid var(--knx-border); padding-right: 0; padding-bottom: 8px; max-height: 26vh; }
 }
+
+/* T28/F5 — About. Two checkable facts in a definition list, then the two
+   sentences this project is obliged to keep saying out loud. Narrower than
+   the help panel and taller than nothing: it is a card, not a document. */
+.search-panel.about-dialog { width: min(34rem, 92vw); padding: 1rem 1.15rem; }
+.about-dialog h2 { margin: 0 0 12px; font-size: 20px; }
+.about-dialog-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 0 0 16px; }
+.about-dialog-facts dt { color: var(--knx-muted); font-size: 12px; }
+.about-dialog-facts dd { margin: 0; font-size: 13px; }
+.about-dialog-version { font-family: var(--knx-font-mono); overflow-wrap: anywhere; }
+.about-dialog p { margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--knx-muted); max-width: 60ch; }
+.about-dialog-footer { display: flex; justify-content: flex-end; margin-top: 14px; border-top: 1px solid var(--knx-border); padding-top: 12px; }
+
+/* T28/F4 — the question asked before unsaved work goes in the bin. The
+   discarding button is coloured as the warning it is; Cancel stays plain
+   and comes first, which is also where the focus lands. */
+.search-panel.quit-confirm { width: min(30rem, 92vw); padding: 1rem 1.15rem; }
+.quit-confirm h2 { margin: 0 0 10px; font-size: 18px; }
+.quit-confirm p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; }
+.quit-confirm-hint { color: var(--knx-muted); }
+.quit-confirm-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.quit-confirm-discard { color: var(--knx-warning-color) !important; }

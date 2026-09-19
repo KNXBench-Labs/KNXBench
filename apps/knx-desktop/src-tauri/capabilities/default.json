@@ -1,12 +1,13 @@
 {
   "identifier": "default",
-  "description": "Capabilities for the main window: file dialogs, plus opening and focusing the diagnostics companion",
+  "description": "Capabilities for the main window: file dialogs, opening and focusing the diagnostics companion, and closing itself for File > Quit",
   "windows": ["main"],
   "permissions": [
     "core:default",
     "dialog:default",
     "core:webview:allow-create-webview-window",
-    "core:window:allow-set-focus"
+    "core:window:allow-set-focus",
+    "core:window:allow-close"
   ],
   "remote": {
     "urls": ["http://localhost:1420", "http://127.0.0.1:*"]

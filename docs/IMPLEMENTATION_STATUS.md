@@ -6614,3 +6614,94 @@ warnings`, `cargo test --workspace` (cross-verified directly for
 `knx-server`), `xtask check-layering`, `xtask check-headers` (file counts
 unchanged — no new source files), `cargo deny check`, `npx tsc --noEmit`,
 `npx vitest run` — all exit 0.
+## T28 — five findings from running the thing by hand (2026-09-19)
+
+Five defects the test suite could not have found, because all five are
+about what the application feels like rather than what it computes. Found
+by the maintainer using it; each one confirmed in source before it was
+touched.
+
+**F1 — the File menu stayed open.** It is a native `<details>`, and
+nothing closed it after an entry was activated. Both halves are fixed by
+two handlers rather than ten: one `onClick` on `.file-menu-content`, which
+closes the menu for any activation that bubbles to it — including the
+three entries whose buttons belong to child components `App` never sees
+the `onClick` of — and one document-level `pointerdown` listener that
+closes it when the click lands anywhere else. The container handler reads
+`e.target.closest("button")`, so it does not care whether the click came
+from a pointer or from `Enter` on a focused entry. One explicit opt-out,
+`data-menu-stays-open`, is worn by `ProjectDiffPanel`'s Compare button and
+by the report it renders *inside* the menu: closing the menu on that click
+would hide the answer the click asked for. The `pointerdown` listener
+needs no `.fs-picker` carve-out of the kind `App.tsx`'s F1 help handler
+has, because it only ever sets `details.open`, and the picker is not
+inside the menu.
+
+**F2 — the file picker's dialog was unbounded.** `.fs-picker` had
+`min-width: 24rem` and no ceiling on either axis; a flat
+`.fs-picker { min-width: 0 }` further down the file had been quietly
+overriding the floor for some time. It now takes
+`width: min(30rem, calc(100vw - 2rem))` with a matching `max-width`,
+`align-self: flex-start` so it is as tall as its content instead of
+stretching to its own cap, and `max-height: min(70vh, calc(100dvh - 4rem))`
+as that cap. `.fs-picker-list` became the scroll owner
+(`flex: 1 1 auto; min-height: 0`) and wraps long names
+(`overflow-wrap: anywhere`) rather than truncating them — an ellipsis
+hides the part of a path that tells two backups apart. The stray
+`min-width: 0` is gone, with a comment where it stood.
+
+**F3 — the left column's three blocks had fixed heights.** New
+`PaneSplitter.tsx`: a sibling of `ResizablePane`, not a generalisation of
+it. `ResizablePane` *is* a pane — it renders the `<aside>`, owns its
+width, and hangs its resizer off one edge of itself; the new component is
+only a separator placed between two siblings that already exist, owning no
+layout and no state. Folding them together would have produced a component
+that renders a wrapper on one axis and nothing on the other. What is
+shared is the interaction vocabulary, copied key for key: `role="separator"`,
+`aria-orientation`, `aria-valuemin`/`max`/`now`, `tabIndex={0}`, arrows in
+16 px steps with `Home`/`End`, and a pointer drag held by pointer capture.
+Two of them sit in the left column, the explorer between them taking the
+slack; every block keeps a 72 px floor and a 480 px ceiling. Until the
+first interaction the value is `null` and the splitter *measures* its
+target in a layout effect, so `aria-valuenow` is honest from the first
+render and no constant has to guess how tall five buttons are in the
+active language. Both hide below 650 px, beside the existing
+`.pane-resizer`.
+
+**F4 — there was no way to quit.** A Quit entry, rendered only where it
+means something: `canQuit()` is `filePicker.ts`'s `isTauri()` and nothing
+else, because a browser tab cannot close itself. It calls
+`getCurrentWindow().close()`, which needs exactly one new permission,
+`core:window:allow-close`, scoped to the `main` window;
+`tauri-plugin-process` was rejected as a Rust crate, an npm package and a
+plugin registration in exchange for a broader capability. With unsaved
+work — `can_undo`, the only dirty signal the server publishes — it asks
+first, and offers Cancel or "Quit without saving" and deliberately no
+third button. Both imprecisions are recorded as KNOWN_LIMITATIONS.md §103.
+
+**F5 — there was no About.** New `AboutDialog.tsx` on the shared
+`Overlay`: the application's name, the build's version, the licence
+(AGPL-3.0-or-later), and the two sentences this project has to keep saying
+out loud — that KNXBench is independent, not certified by the KNX
+Association and not affiliated with it, and that ETS is that association's
+trademark. No compatibility claim of any kind, in either language. The
+version is fetched from a new `GET /api/version`, backed by a new
+`knx_server::version_string()` that `version_line()` now composes from, so
+the two can never disagree about which build this is. The route sits in
+`lib.rs` beside `/healthz` rather than in `routes.rs`: it answers for the
+process, not for the open project, and it works with nothing loaded —
+which matters, because About is reachable from the welcome screen.
+
+**Tests.** 651 → 674 web tests across four files (`App.test.tsx` +8,
+`PaneSplitter.test.tsx` +9 new, `AboutDialog.test.tsx` +5 new,
+`FsPicker.test.tsx` +1), plus a new Rust integration test
+`http_version_route.rs` (+2) and one more unit test in `lib.rs`. Every one
+of them was mutation-tested — the covered line broken, the failure counted,
+the line restored — and one of them failed that check and was rewritten:
+the clamp test asserted `aria-valuenow`, which the component clamps for
+display, so a splitter that handed its *parent* an out-of-range height
+passed. It now also reads the height the parent actually applied.
+`FsPicker.test.tsx` and `AboutDialog.test.tsx` assert against `styles.css`
+and against `de.ts` directly, for the same reason `motionGuard.test.ts`
+does: happy-dom applies no author stylesheet, and the catalogues are
+checked for matching keys, never for matching meaning.

@@ -64,11 +64,22 @@ const apiMock = vi.hoisted(() => ({
   // promptly calls `.then`.
   catalogManufacturers: vi.fn().mockResolvedValue([]),
   catalogItems: vi.fn().mockResolvedValue([]),
+  // T28/F5: `AboutDialog` asks the server which build this is the moment
+  // it mounts, rather than reading a constant the frontend would have to
+  // remember to bump.
+  serverVersion: vi.fn().mockResolvedValue({ version: "0.0.0-test" }),
 }));
 
 const filePickerMock = vi.hoisted(() => ({
   pickOpenPath: vi.fn(),
   pickSavePath: vi.fn(),
+  // T28/F4: `quit.ts`'s `canQuit()` is `isTauri()` and nothing else, and
+  // `App` asks it on every render to decide whether the File menu carries
+  // a Quit item. This suite replaces `./filePicker` wholesale, so the
+  // export has to be here or every render in the file throws. `false` is
+  // the default because these tests are a browser, not the desktop shell;
+  // the T28 block below flips it for the two tests that care.
+  isTauri: vi.fn(() => false),
 }));
 
 vi.mock("./api", () => ({
@@ -79,6 +90,12 @@ vi.mock("./api", () => ({
 }));
 
 vi.mock("./filePicker", () => ({ ...filePickerMock }));
+
+// T28/F4: `quit.ts` imports this lazily, so only the tests that actually
+// press Quit ever reach it — but the mock has to be declared up here all
+// the same, and a real `getCurrentWindow()` outside the shell throws.
+const tauriWindowMock = vi.hoisted(() => ({ close: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => tauriWindowMock }));
 
 import App from "./App";
 
@@ -722,6 +739,9 @@ describe("App — the File menu by keyboard alone", () => {
       "Import group addresses (CSV)…",
       "Export documentation…",
       "Compare with…",
+      // T28/F5. No "Quit" after it: `isTauri()` is mocked `false` here,
+      // and a browser tab cannot close itself.
+      "About KNXBench…",
     ]);
     expect(entries.every((b) => b.tabIndex >= 0)).toBe(true);
     // An ETS import has no `.knxdb` path yet, so only the .knxproj export is
@@ -1712,5 +1732,199 @@ describe("App — in-application help (T23)", () => {
       "utf8",
     );
     expect(app).toContain('document.querySelector(".fs-picker")');
+  });
+});
+
+// T28. Five findings from a hand-run of the application, four of them in
+// the workbench chrome and one in the File menu's manners. Each test here
+// covers one of them; the picker's size lives in `FsPicker.test.tsx` and
+// About's wording in `AboutDialog.test.tsx`, next to the code they pin.
+describe("App — the File menu's manners, the stacked splitters, Quit and About (T28)", () => {
+  async function openMenu() {
+    const summary = host!.querySelector<HTMLElement>(".file-menu summary")!;
+    await act(async () => summary.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    return host!.querySelector<HTMLDetailsElement>(".file-menu")!;
+  }
+
+  async function openProject(tree: ProjectTree = baseTree()) {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(tree);
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    return root;
+  }
+
+  // F1, first half. The menu is a native `<details>`: clicking an entry
+  // runs the entry and leaves the menu hanging open over the workspace.
+  it("closes on an item activation, including one whose button belongs to a child component", async () => {
+    // `DocumentationExportButton` owns this button; `App` never sees its
+    // `onClick`, which is why the close lives on the container and not on
+    // each entry. A `null` path makes the click a no-op after that.
+    filePickerMock.pickSavePath.mockResolvedValue(null);
+    const root = await openProject();
+
+    const menu = await openMenu();
+    expect(menu.open).toBe(true);
+    await act(async () => {
+      findButton("Export documentation…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(menu.open).toBe(false);
+
+    await act(async () => root.unmount());
+  });
+
+  // The same half, reached by keyboard. happy-dom implements no
+  // activation behaviour — Enter on a focused button produces no click at
+  // all — so this dispatches what a real browser dispatches on Enter: a
+  // click whose `detail` is 0 because no pointer was involved. The
+  // handler must not be reading coordinates or button numbers.
+  it("closes on a keyboard activation, which arrives as a click with no pointer behind it", async () => {
+    const root = await openProject();
+
+    const menu = await openMenu();
+    const about = findButton("About KNXBench…");
+    about.focus();
+    await act(async () => {
+      about.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 }));
+    });
+    expect(menu.open).toBe(false);
+    expect(host!.querySelector(".about-dialog")).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  // F1, second half: clicking anywhere else on the page dismisses it, the
+  // way every other menu on the platform behaves.
+  it("closes on a pointer-down outside itself and survives one inside", async () => {
+    const root = await openProject();
+    const menu = await openMenu();
+
+    await act(async () => {
+      menu.querySelector("summary")!.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+    expect(menu.open).toBe(true);
+
+    await act(async () => {
+      document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+    expect(menu.open).toBe(false);
+
+    await act(async () => root.unmount());
+  });
+
+  // The one entry that must survive its own activation: `Compare with…`
+  // renders its report *inside* the menu, so closing on that click would
+  // hide the answer the click asked for. `data-menu-stays-open` is the
+  // opt-out, and this pins that it is honoured for both the button and
+  // the report's own Close button.
+  it("keeps the menu open for the entries that render their result inside it", async () => {
+    apiMock.diffProject.mockResolvedValue({ infoChanges: [], installations: [] });
+    const root = await openProject();
+    const menu = await openMenu();
+
+    await act(async () => {
+      findButton("Compare with…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(menu.open).toBe(true);
+    const panel = host!.querySelector<HTMLElement>(".project-diff-panel")!;
+    expect(panel).not.toBeNull();
+
+    await act(async () => {
+      panel.querySelector("button")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(menu.open).toBe(true);
+
+    await act(async () => root.unmount());
+  });
+
+  // F3. Two separators between the three stacked blocks of the left
+  // column, each one operable by keyboard as well as by pointer —
+  // `PaneSplitter.test.tsx` drives the interaction; this pins that `App`
+  // mounts them, labels them from the catalogue, and does not put them on
+  // the welcome screen, where there is nothing to resize.
+  it("puts a labelled separator between each pair of stacked blocks, once a project is open", async () => {
+    const root = await renderApp();
+    expect(host!.querySelectorAll(".pane-splitter").length).toBe(0);
+
+    await act(async () => {
+      filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+      apiMock.importProject.mockResolvedValue(baseTree());
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    const splitters = [...host!.querySelectorAll<HTMLElement>(".workbench-pane-left .pane-splitter")];
+    expect(splitters.length).toBe(2);
+    expect(splitters.map((s) => s.getAttribute("aria-label"))).toEqual([
+      enMessages["workbench.resizeNavigation"],
+      enMessages["workbench.resizeDiagnostics"],
+    ]);
+    for (const splitter of splitters) {
+      expect(splitter.getAttribute("role")).toBe("separator");
+      expect(splitter.getAttribute("aria-orientation")).toBe("horizontal");
+      expect(splitter.tabIndex).toBe(0);
+    }
+
+    await act(async () => root.unmount());
+  });
+
+  // F4. A browser tab cannot close itself, so the entry only exists where
+  // it means something. `canQuit()` is `filePicker.ts`'s `isTauri()`,
+  // which this suite already mocks.
+  it("offers Quit only inside the desktop shell", async () => {
+    const withoutShell = await openProject();
+    await openMenu();
+    expect(host!.querySelector(".file-menu-quit")).toBeNull();
+    await act(async () => withoutShell.unmount());
+    host!.remove();
+
+    filePickerMock.isTauri.mockReturnValue(true);
+    const withShell = await openProject();
+    await openMenu();
+    expect(host!.querySelector<HTMLElement>(".file-menu-quit")?.textContent)
+      .toBe(enMessages["toolbar.quit"]);
+
+    await act(async () => withShell.unmount());
+    filePickerMock.isTauri.mockReturnValue(false);
+  });
+
+  it("asks before quitting with unsaved work, and closes the window once it is told to", async () => {
+    filePickerMock.isTauri.mockReturnValue(true);
+    // `can_undo` is the only dirty signal the server offers (see
+    // `domain.rs`'s `new_project_impl`), and it is the one the
+    // unsaved-changes guard on the welcome screen already uses.
+    const root = await openProject({ ...baseTree(), can_undo: true });
+    await openMenu();
+
+    await act(async () => {
+      findButton(enMessages["toolbar.quit"]).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelector(".quit-confirm")).not.toBeNull();
+    expect(tauriWindowMock.close).not.toHaveBeenCalled();
+
+    await act(async () => {
+      host!.querySelector(".quit-confirm-discard")!
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
+
+    await act(async () => root.unmount());
+    filePickerMock.isTauri.mockReturnValue(false);
+  });
+
+  it("quits straight away when there is nothing to lose", async () => {
+    filePickerMock.isTauri.mockReturnValue(true);
+    const root = await openProject();
+    await openMenu();
+
+    await act(async () => {
+      findButton(enMessages["toolbar.quit"]).dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelector(".quit-confirm")).toBeNull();
+    expect(tauriWindowMock.close).toHaveBeenCalledTimes(1);
+
+    await act(async () => root.unmount());
+    filePickerMock.isTauri.mockReturnValue(false);
   });
 });

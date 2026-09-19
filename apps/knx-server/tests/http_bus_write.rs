@@ -231,6 +231,51 @@ async fn write_with_an_explicit_dpt_sends_the_encoded_value_through_the_open_tun
     ));
 }
 
+// ---------------------------------------------------------------------------
+// Task 27 — `decodedEcho` decodes the bytes the tunnel actually received,
+// not `body.value`. Every DPT-1-1 codec pair round-trips (see
+// `apps/knx-server/src/bus.rs`'s `decode_single` and the task report), so
+// this asserts the one outcome that pairing can ever produce for a boolean:
+// `kind: "value"`, the same `DPST-1-1` reference and `knx_core::decode`'s
+// own `"on"` rendering of the `Short(1)` this write put on the wire — not a
+// verbatim echo of the request's own `"on"` string, which would prove
+// nothing about the codec. A dedicated "decode failure survives as 200"
+// test does not appear here: the report explains why no shipped DPT's
+// `encode`/`decode` pair can be driven to disagree through the public API
+// (every asymmetric-looking case this task checked turned out to be
+// guarded identically on both sides), so a fabricated failure would assert
+// nothing real.
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn write_response_echoes_the_decoded_form_of_the_bytes_actually_sent() {
+    let (tunnel, handle) = fake_tunnel();
+    let state = state_with_project_and_connector(
+        project_with_write_dpt_outcomes(),
+        FakeConnector::succeeding(tunnel),
+    );
+    let app = knx_server::app(Arc::new(state), None);
+    start_session(&app).await;
+
+    let response = call(
+        &app,
+        "POST",
+        "/api/bus/write",
+        Some(json!({ "destination": "0/0/1", "dpt": "DPST-1-1", "value": "on" })),
+    )
+    .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_json(response).await;
+    assert_eq!(body["decodedEcho"]["kind"], "value");
+    assert_eq!(body["decodedEcho"]["dpt"], "DPST-1-1");
+    assert_eq!(body["decodedEcho"]["text"], "on");
+    assert!(body["decodedEcho"]["error"].is_null());
+
+    // Same wire bytes the send assertions above already checked — the
+    // decode ran against exactly this, not against the request's `"on"`.
+    assert_eq!(handle.sent_calls().len(), 1);
+}
+
 /// Same as above, but relying on the session's cached project resolution
 /// instead of an explicit `dpt` — mirrors `resolve_write_value`'s
 /// `--project` path.

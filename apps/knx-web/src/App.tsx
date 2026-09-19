@@ -35,6 +35,20 @@ import { pickStartupToast, useToasts } from "./toast";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
 import DocumentationExportButton from "./DocumentationExportButton";
 import ProjectDiffPanel from "./ProjectDiffPanel";
+import LoadProgressBanner from "./LoadProgressBanner";
+import { localFailure, ownsOperation } from "./loadProgress";
+
+// How often the browser asks the server what a running load is doing
+// (ADR-0023). Fast enough that a phase lasting a second is still seen,
+// slow enough that a poll costs nothing next to the import it is watching.
+const LOAD_POLL_INTERVAL_MS = 250;
+
+// The banner names the file, never the path the user picked it from —
+// same rule the server's snapshot follows, for the same reason.
+function fileNameOf(path: string): string {
+  const name = path.split(/[\\/]/).pop();
+  return name && name.length > 0 ? name : path;
+}
 
 // `ExportWarningDto` (apps/knx-server/src/routes.rs) has no `tag` attribute,
 // so serde serializes it externally tagged: `{ "unsigned": { "detail":
@@ -98,6 +112,35 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   // fresh `.knxproj` while `store_path` still points at a different
   // `.knxdb` would let a subsequent Save overwrite the wrong file).
   const [hasStorePath, setHasStorePath] = useState(false);
+  // The one project load that can be in flight, ADR-0023's whole client
+  // side. `loadSource` doubles as the banner's visibility: it is set the
+  // moment a file is picked and cleared only by a load that succeeded, so
+  // a failure leaves the banner up saying which phase it died in.
+  const [loadSource, setLoadSource] = useState<string | null>(null);
+  const [loadSnapshot, setLoadSnapshot] = useState<api.LoadProgressSnapshot | null>(null);
+  const [loading, setLoading] = useState(false);
+  // The duplicate guard is a ref rather than `loading`: two clicks in the
+  // same tick would both read the same stale state value, and the second
+  // one would reach the server for a `409` it never needed to earn.
+  const loadingRef = useRef(false);
+  // ADR-0023's client half of ownership (fix round 3, F9): the opaque
+  // token this load generates for itself before its POST, so `ownsOperation`
+  // has an exact fact to compare against instead of an id-and-source
+  // heuristic. A ref, not state: the poll must read the current value, not
+  // the one captured when its effect was created.
+  const loadClientTokenRef = useRef<string>("");
+  // Which load is current, bumped the instant one ends (fix round 6,
+  // F-C). Ownership answers "whose operation is this?"; this answers the
+  // other half, "is that load still the one on screen?". The poll
+  // interval is still armed while `runLoad`'s catch awaits its final
+  // snapshot, and the effect's `cancelled` latch closes later still —
+  // it is set by React's cleanup, not synchronously by `finally` — so a
+  // poll resolving in between used to write a `running` snapshot over a
+  // failure that was already on screen, and polling then stopped with
+  // the banner frozen on a phase that was over. Captured before the
+  // await, compared after: a generation that moved means the answer is
+  // about a load nobody is watching any more.
+  const loadGenerationRef = useRef(0);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -411,34 +454,114 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   function newProjectCreated(newTree: ProjectTree) {
     resetTree(newTree);
     setHasStorePath(false);
+    // The banner outlives a failed load on purpose, but only until that
+    // load stops being the last thing that happened (fix round 6, F-D):
+    // "Could not load villa.knxproj" pinned above a project started from
+    // scratch describes nothing on screen.
+    setLoadSource(null);
+    setLoadSnapshot(null);
     setNewProjectOpen(false);
     setView("overview");
     setLogOpen(false);
     setMonitorOpen(false);
   }
 
-  async function pickProject() {
-    const path = await pickOpenPath(etsProjectFilter);
-    if (!path) return;
+  // Both ways a project enters the application, in one place: the same
+  // duplicate guard, the same banner, the same polling. `storePath` is the
+  // only thing that differs — an ETS import has no `.knxdb` location yet.
+  async function runLoad(
+    path: string,
+    load: (p: string, clientToken: string) => Promise<ProjectTree>,
+    storePath: boolean,
+  ) {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     clearErrors();
+    setLoadSource(fileNameOf(path));
+    setLoadSnapshot(null);
+    // The one fact `ownsOperation` needs: an id nobody else could send,
+    // generated before the POST so every snapshot from here on — the
+    // poll's and the post-failure fetch's alike — can be judged against
+    // it (ADR-0023 fix round 3, F9).
+    loadClientTokenRef.current = crypto.randomUUID();
+    setLoading(true);
     try {
-      resetTree(await api.importProject(path));
-      setHasStorePath(false); // ETS import has no `.knxdb` location yet
+      resetTree(await load(path, loadClientTokenRef.current));
+      setHasStorePath(storePath);
+      setLoadSource(null);
+      setLoadSnapshot(null);
     } catch (e) {
       reportError(e);
+      // The rejection is already on screen as a toast; the snapshot adds
+      // the one thing it cannot, which phase was running when it failed.
+      // Fetched once, after the fact — the poll below has stopped by now.
+      //
+      // Accepted only when it is *our* operation and it says `failed`.
+      // Anything else — a stranger's operation behind a `409`, the
+      // previous load's snapshot behind a pre-flight rejection, no
+      // snapshot at all behind an unreachable server, or our own
+      // operation reporting `succeeded` after its response was lost — is
+      // replaced by a local failure carrying the error the POST actually
+      // threw. A load that is over must never leave a bar moving.
+      const message = api.errorMessage(e);
+      const final = await api.loadProgress().catch(() => null);
+      const ours = final?.status === "failed" && ownsOperation({ clientToken: loadClientTokenRef.current }, final);
+      setLoadSnapshot((previous) => (ours && final ? final : localFailure(previous, message)));
+    } finally {
+      // Synchronously, before anything React does: from here on every
+      // poll still in flight belongs to a load that is over (F-C).
+      loadGenerationRef.current += 1;
+      setLoading(false);
+      loadingRef.current = false;
     }
   }
 
+  // A poll that fails is not a load that failed — the POST is the only
+  // thing that decides that — so a rejected snapshot fetch is swallowed
+  // rather than turned into an error the user cannot act on. Two filters
+  // must both pass: `running`, because anything else belongs to an
+  // operation that is already over, and ownership, because a `running`
+  // operation can still be somebody else's — the `409` case, where our
+  // POST is refused precisely *because* another operation is in flight.
+  useEffect(() => {
+    if (!loading) return;
+    let cancelled = false;
+    async function poll() {
+      // The generation this poll was fired for. `cancelled` alone cannot
+      // carry this: it is closed by the cleanup below, which React runs
+      // only once it commits `loading: false` — a whole microtask queue
+      // after `runLoad` has finished writing its failure (F-C).
+      const generation = loadGenerationRef.current;
+      try {
+        const snapshot = await api.loadProgress();
+        if (cancelled || generation !== loadGenerationRef.current) return;
+        if (snapshot?.status !== "running") return;
+        if (!ownsOperation({ clientToken: loadClientTokenRef.current }, snapshot)) return;
+        setLoadSnapshot(snapshot);
+      } catch {
+        /* see above */
+      }
+    }
+    void poll(); // first poll immediately, not after the first interval tick
+    const id = setInterval(() => void poll(), LOAD_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [loading]);
+
+  async function pickProject() {
+    if (loadingRef.current) return;
+    const path = await pickOpenPath(etsProjectFilter);
+    if (!path) return;
+    await runLoad(path, api.importProject, false);
+  }
+
   async function openNativeProject() {
+    if (loadingRef.current) return;
     const path = await pickOpenPath(knxdbFilter);
     if (!path) return;
-    clearErrors();
-    try {
-      resetTree(await api.openProject(path));
-      setHasStorePath(true);
-    } catch (e) {
-      reportError(e);
-    }
+    await runLoad(path, api.openProject, true);
   }
 
   async function saveProjectAs() {
@@ -525,8 +648,8 @@ function App({ manifestVersion = packageVersion }: AppProps) {
           <summary>{t("workbench.file")} <span aria-hidden="true">⌄</span></summary>
           <div className="file-menu-content">
       <button onClick={startNewProject}>{t("toolbar.newProject")}</button>
-      <button onClick={pickProject}>{t("toolbar.openProject")}</button>
-      <button onClick={openNativeProject}>{t("toolbar.openNativeProject")}</button>
+      <button onClick={pickProject} disabled={loading}>{t("toolbar.openProject")}</button>
+      <button onClick={openNativeProject} disabled={loading}>{t("toolbar.openNativeProject")}</button>
       <button onClick={saveProjectAs} disabled={!tree}>
         {t("toolbar.saveAs")}
       </button>
@@ -572,6 +695,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
         {tree && (tree.errors > 0 || tree.warnings > 0) && <button className="import-notice" onClick={() => { setView("overview"); setLogOpen(false); setMonitorOpen(false); }}>{t("workbench.importNotices", { errors: tree.errors, warnings: tree.warnings })}</button>}
         <button aria-expanded={inspectorOpen} onClick={() => setInspectorOpen(!inspectorOpen)}>{t("workbench.properties")}<WorkbenchIcon name="panel" /></button>
       </div>
+      {loadSource && <LoadProgressBanner source={loadSource} snapshot={loadSnapshot} />}
       <div className="workspace workbench-body">
         {navigationOpen && <ResizablePane label={t("workbench.navigation")} side="left" initialWidth={250} min={200} max={480}>
           <nav className="workbench-navigation" aria-label={t("workbench.navigation")}>
@@ -593,7 +717,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
               multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate}
               addressActions={<GroupAddressCsvButtons tree={tree} onTreeUpdate={handleTreeUpdate} onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />}
               onSelect={selectEntity} onCatalog={(lineId) => setCatalogTarget({ lineId })} />
-          ) : <section className="welcome-workspace"><span className="eyebrow">KNX-compatible · Linux-first</span><h1>{t("workbench.welcome")}</h1><p>{t("workbench.openHint")}</p><div><button className="primary-action" onClick={startNewProject}>{t("toolbar.newProject")}</button><button onClick={pickProject}>{t("toolbar.openProject")}</button><button onClick={openNativeProject}>{t("toolbar.openNativeProject")}</button></div></section>}
+          ) : <section className="welcome-workspace"><span className="eyebrow">KNX-compatible · Linux-first</span><h1>{t("workbench.welcome")}</h1><p>{t("workbench.openHint")}</p><div><button className="primary-action" onClick={startNewProject}>{t("toolbar.newProject")}</button><button onClick={pickProject} disabled={loading}>{t("toolbar.openProject")}</button><button onClick={openNativeProject} disabled={loading}>{t("toolbar.openNativeProject")}</button></div></section>}
           {tree && selection?.kind === "device" && deviceDetail && !logOpen && !monitorOpen && <DeviceWorkspace key={deviceDetail.id} detail={deviceDetail} tree={tree} onApplied={handleTreeUpdate} />}
         </div>
         {inspectorOpen && !logOpen && !monitorOpen && <ResizablePane label={t("workbench.properties")} side="right" initialWidth={360} min={280} max={700}>

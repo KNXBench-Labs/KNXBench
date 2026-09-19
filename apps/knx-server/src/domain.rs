@@ -22,6 +22,7 @@ use knx_app::{AppError, ImportOptions};
 use knx_projection::ProjectTree;
 
 use crate::bus::{BusSession, GatewayConnector, RealConnector};
+use crate::load_progress::{LoadHandle, LoadOperations, LoadPhase};
 use crate::session_log::{self, LogEntry, SessionLog, Severity};
 
 pub struct AppState {
@@ -96,6 +97,12 @@ pub struct AppState {
     /// `start`, before a `BusSession` exists to guard it, and this counter
     /// has no other state to stay consistent with.
     pub next_bus_session_id: std::sync::atomic::AtomicU64,
+    /// The single project load this server run may have in flight, and
+    /// the snapshot `GET /api/project/load-progress` answers with
+    /// (ADR-0023). `Arc`, not a plain field: a [`LoadHandle`] outlives the
+    /// request that created it — the work runs on a blocking thread the
+    /// client is free to stop waiting for.
+    pub load_operations: std::sync::Arc<LoadOperations>,
     /// Root directory web-originated file access is confined to:
     /// `fs_routes.rs`'s `/api/fs/*` routes entirely, plus any *relative*
     /// path a `/api/project/*` route is given (`crate::paths`). Absolute
@@ -122,6 +129,7 @@ impl AppState {
             connector: Box::new(RealConnector::default()),
             bus_session: tokio::sync::Mutex::new(None),
             next_bus_session_id: std::sync::atomic::AtomicU64::new(1),
+            load_operations: std::sync::Arc::new(LoadOperations::default()),
             data_dir,
         }
     }
@@ -166,6 +174,7 @@ type ImportedOpaqueData = (
 fn import_and_project(
     path: &Path,
     product_db: Option<&knx_productdb::Connection>,
+    progress: &LoadHandle,
 ) -> Result<
     (
         ProjectTree,
@@ -176,7 +185,9 @@ fn import_and_project(
     AppError,
 > {
     let conn = knx_store::open_and_migrate_in_memory()?;
-    let imported = knx_app::import_ets_project_with(path, &conn, ImportOptions { product_db })?;
+    let imported =
+        knx_app::import_ets_project_observed(path, &conn, ImportOptions { product_db }, progress)?;
+    progress.phase(LoadPhase::BuildProjectTree);
     let mut tree = knx_projection::build_project_tree(&imported.project);
     apply_report_counts(&mut tree, &imported.report);
     // The opaque/manifest rows the import just wrote live only in `conn`,
@@ -199,7 +210,33 @@ fn import_and_project(
 /// from, and this path exists specifically for a server-free golden test
 /// whose counts must stay deterministic.
 pub fn open_project_impl(path: &Path) -> Result<ProjectTree, AppError> {
-    import_and_project(path, None).map(|(tree, ..)| tree)
+    let progress = detached_progress(crate::load_progress::LoadKind::Import, path);
+    let outcome = import_and_project(path, None, &progress).map(|(tree, ..)| tree);
+    match &outcome {
+        Ok(_) => progress.succeed(),
+        Err(e) => progress.fail(e.to_string()),
+    }
+    outcome
+}
+
+/// A progress handle for a caller with nobody watching. Entry points that
+/// have no `AppState` — the golden-test import, the native open behind it,
+/// the right-hand side of a diff — still owe the pipeline an observer, so
+/// they get one wired to a registry no route can see. The handle keeps the
+/// registry alive and drops it with itself.
+pub(crate) fn detached_progress(kind: crate::load_progress::LoadKind, path: &Path) -> LoadHandle {
+    std::sync::Arc::new(LoadOperations::default())
+        .begin(kind, file_name_of(path), None)
+        .expect("a fresh registry has no operation in flight")
+}
+
+/// The file name a snapshot names its source by — never the full path:
+/// the browser renders this, and a path says more about the machine than
+/// a progress line needs to.
+pub(crate) fn file_name_of(path: &Path) -> String {
+    path.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| path.to_string_lossy().to_string())
 }
 
 /// Imports `path`, replaces `state`'s project, and resets undo history and
@@ -209,12 +246,16 @@ pub fn open_project_impl(path: &Path) -> Result<ProjectTree, AppError> {
 /// use, unlike `knx import --product-db` on the CLI). Also carries the
 /// import's opaque passthrough + manufacturer manifest into `state.opaque`/
 /// `state.manufacturer_refs`, so a later Save doesn't silently drop them.
-pub fn open_project(state: &AppState, path: &Path) -> Result<ProjectTree, String> {
+pub fn open_project(
+    state: &AppState,
+    path: &Path,
+    progress: &LoadHandle,
+) -> Result<ProjectTree, String> {
     let guard = state
         .product_db
         .as_ref()
         .map(|m| m.lock().expect("state mutex poisoned"));
-    let imported = import_and_project(path, guard.as_deref()).map_err(|e| e.to_string());
+    let imported = import_and_project(path, guard.as_deref(), progress).map_err(|e| e.to_string());
     drop(guard);
     let (tree, project, (opaque, manufacturer_refs), report) = match imported {
         Ok(v) => v,
@@ -296,11 +337,21 @@ pub fn save_project_as_impl(
 /// just after an ETS import.
 fn load_native(
     path: &Path,
+    progress: &LoadHandle,
 ) -> Result<(ProjectTree, knx_core::Project, ImportedOpaqueData), String> {
+    // The five phases a native open really has (ADR-0023): the store open
+    // (which also runs any pending migration), the normalized read, the
+    // two passthrough reads, and the projection. Each is announced before
+    // its own work, so the label names what is running.
+    progress.phase(LoadPhase::OpenStore);
     let conn = knx_store::open_and_migrate(path).map_err(|e| e.to_string())?;
+    progress.phase(LoadPhase::LoadStoredProject);
     let project = knx_store::load_project(&conn).map_err(|e| e.to_string())?;
+    progress.phase(LoadPhase::LoadOpaque);
     let opaque = knx_store::load_opaque(&conn).map_err(|e| e.to_string())?;
+    progress.phase(LoadPhase::LoadManufacturerRefs);
     let manufacturer_refs = knx_store::load_manufacturer_refs(&conn).map_err(|e| e.to_string())?;
+    progress.phase(LoadPhase::BuildProjectTree);
     let tree = knx_projection::build_project_tree(&project);
     Ok((tree, project, (opaque, manufacturer_refs)))
 }
@@ -310,13 +361,23 @@ fn load_native(
 /// reinterpreted from an external format — so `tree.errors`/`tree.warnings`
 /// stay at their default zero.
 pub fn open_native_project_impl(path: &Path) -> Result<ProjectTree, String> {
-    load_native(path).map(|(tree, ..)| tree)
+    let progress = detached_progress(crate::load_progress::LoadKind::Open, path);
+    let outcome = load_native(path, &progress).map(|(tree, ..)| tree);
+    match &outcome {
+        Ok(_) => progress.succeed(),
+        Err(e) => progress.fail(e.clone()),
+    }
+    outcome
 }
 
 /// Loads a `.knxdb` file at `path`, replaces `state`'s project, and points
 /// `store_path` at it — what the `/api/project/open` route calls.
-pub fn open_native_project(state: &AppState, path: &Path) -> Result<ProjectTree, String> {
-    let loaded = load_native(path);
+pub fn open_native_project(
+    state: &AppState,
+    path: &Path,
+    progress: &LoadHandle,
+) -> Result<ProjectTree, String> {
+    let loaded = load_native(path, progress);
     let (tree, project, (opaque, manufacturer_refs)) = match loaded {
         Ok(v) => v,
         Err(e) => {
@@ -798,7 +859,10 @@ pub fn diff_project_impl(state: &AppState, path: &Path) -> Result<knx_diff::Proj
     if !path.exists() {
         return Err(format!("{} does not exist", path.display()));
     }
-    let (_, right, _) = load_native(path)?;
+    // The right-hand side is read for comparison only and never becomes
+    // the open project, so its stages go to a detached handle rather than
+    // onto the banner of whatever the user has open.
+    let (_, right, _) = load_native(path, &detached_progress(crate::LoadKind::Open, path))?;
     Ok(knx_diff::diff_projects(left, &right))
 }
 
@@ -3437,6 +3501,59 @@ mod tests {
         assert_eq!(suffix, "TAIL");
     }
 
+    // Fix round 1, finding F4. The import path's stage order is asserted
+    // twice over (`knx-etsproj`'s own recorder and
+    // `crates/knx-app/tests/load_progress.rs`); the native open's five
+    // phases were wired by inspection only. A label naming the wrong work
+    // is exactly as misleading on this path as on the other one.
+    #[test]
+    fn a_native_open_reports_its_five_phases_in_the_order_it_does_them() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("villa.knxdb");
+        let project = knx_core::Project::new(knx_core::Language("en".into()));
+        save_project_as_impl(&db_path, &project, &[], &[]).unwrap();
+
+        let operations = std::sync::Arc::new(crate::load_progress::LoadOperations::default());
+        let handle = operations
+            .begin(crate::LoadKind::Open, "villa.knxdb", None)
+            .expect("a fresh registry has no operation in flight");
+        load_native(&db_path, &handle).unwrap();
+        handle.succeed();
+
+        assert_eq!(
+            operations.recorded_phases(),
+            vec![
+                "openStore",
+                "loadStoredProject",
+                "loadOpaque",
+                "loadManufacturerRefs",
+                "buildProjectTree",
+            ]
+        );
+    }
+
+    // The same path, one step further: a `.knxdb` that is not a store at
+    // all fails in the phase that opens it, and the phase name says so
+    // rather than blaming the last step that happened to be announced.
+    #[test]
+    fn a_native_open_that_cannot_open_the_store_fails_in_that_phase() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("not-a-store.knxdb");
+        std::fs::write(&db_path, b"this is not SQLite").unwrap();
+
+        let operations = std::sync::Arc::new(crate::load_progress::LoadOperations::default());
+        let handle = operations
+            .begin(crate::LoadKind::Open, "not-a-store.knxdb", None)
+            .expect("a fresh registry has no operation in flight");
+        let error = load_native(&db_path, &handle).unwrap_err();
+        handle.fail(error);
+
+        assert_eq!(operations.recorded_phases(), vec!["openStore"]);
+        let snapshot = operations.snapshot().unwrap();
+        assert_eq!(snapshot.phase.as_str(), "openStore");
+        assert_eq!(snapshot.status, crate::load_progress::LoadStatus::Failed);
+    }
+
     #[test]
     fn opening_a_project_through_a_wired_product_db_enriches_more_than_without() {
         if !reference_project_path().exists() {
@@ -3461,7 +3578,12 @@ mod tests {
             .unwrap();
         }
 
-        let (_, without, _, _) = import_and_project(&reference_project_path(), None).unwrap();
+        let (_, without, _, _) = import_and_project(
+            &reference_project_path(),
+            None,
+            &detached_progress(crate::LoadKind::Import, &reference_project_path()),
+        )
+        .unwrap();
         let without_filled = without
             .devices
             .com_objects()
@@ -3473,7 +3595,12 @@ mod tests {
             product_db: Some(Mutex::new(products)),
             ..AppState::default()
         };
-        open_project(&state, &reference_project_path()).unwrap();
+        open_project(
+            &state,
+            &reference_project_path(),
+            &detached_progress(crate::LoadKind::Import, &reference_project_path()),
+        )
+        .unwrap();
         let project = state.project.lock().unwrap();
         let project = project.as_ref().unwrap();
         let with_filled = project
@@ -3730,7 +3857,14 @@ mod tests {
         let state = AppState::default();
         push_sentinel(&state);
 
-        let result = open_project(&state, Path::new("/does/not/exist.knxproj"));
+        let result = open_project(
+            &state,
+            Path::new("/does/not/exist.knxproj"),
+            &detached_progress(
+                crate::LoadKind::Import,
+                Path::new("/does/not/exist.knxproj"),
+            ),
+        );
         assert!(result.is_err());
 
         let entries = state.session_log.lock().unwrap().entries().to_vec();
@@ -3753,7 +3887,11 @@ mod tests {
         let state = AppState::default();
         push_sentinel(&state);
 
-        let result = open_project(&state, &reference_project_path());
+        let result = open_project(
+            &state,
+            &reference_project_path(),
+            &detached_progress(crate::LoadKind::Import, &reference_project_path()),
+        );
         assert!(result.is_ok());
 
         let entries = state.session_log.lock().unwrap().entries().to_vec();

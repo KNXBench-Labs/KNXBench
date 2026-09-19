@@ -170,9 +170,14 @@ zero — verified per document by its own footer, not assumed.
    recorded as an expected outcome, not a procedure failure — see task C1.
 5. **CP §3.5.4 step 05's cross-reference points at nothing.** CP §3.5.4, p. 57,
    step 05 reads *"refer to the routines of 'Unload Device' in 3.5.1.3"* — but
-   CP §3.5.1.3, p. 40, is titled *"Memory architecture"*, and the string
-   `Unload Device` occurs exactly once in the entire document: inside this
-   same dangling reference.
+   CP §3.5.1.3, p. 40, is titled *"Memory architecture"*, and the
+   capitalized string `Unload Device` occurs exactly once in the entire
+   document, case-sensitive: inside this same dangling reference. A
+   case-insensitive search also matches CP §3.5.2 Nr. 05, p. 42, whose row
+   label is the unrelated, lowercase `Unload device` — the name of that
+   procedure's own unload step, not a second reference to this one. Recorded
+   here so a future check does not rediscover that occurrence and "correct"
+   this entry.
 6. **RES §4.23.2.4.1, p. 297, names a Load Control value as if it were a Load
    State.** It reads *"continue with further access only after load state has
    changed to LoadCompleted"*, but Table 92 (the Load State Machine's state

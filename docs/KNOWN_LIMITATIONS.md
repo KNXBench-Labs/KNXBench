@@ -3076,21 +3076,34 @@ ways, all deliberate and all recorded here per that design's own §7:
    in `.ai/logs/2026-09-16_codex_group_monitor_reverify.md`.
 
    **Re-verified independently 2026-09-16 → 2026-09-19 (Task 16, second
-   pass).** A separate session against the same real gateway ran the
-   production `POST /api/bus/monitor/start` → poll → `POST /api/bus/monitor/
-   stop` path for 2040 seconds (34 minutes) with the same real schema-23
-   `Unser Zuhause` project open, well past the earlier two- and one-minute
-   runs. Result: 1299 telegrams from 20 source addresses to 61 group
-   destinations, `droppedCount = 0`, all 1299 destination names resolved
-   against the project (201 `GroupValueRead`/201 `GroupValueResponse` pairs,
-   897 `GroupValueWrite`), and 209 values decoded through their DPT against
-   889 left `unresolved` — expected under §61's thirty-main-type coverage,
-   not a defect of this task. This also exercised, for the first time,
-   the item-4 single-session guard against a live gateway rather than only
-   against `FakeConnector` in unit tests: a second `POST /api/bus/monitor/
-   start` issued to the *same* server process while the first tunnel was
-   open was refused with `409` and the existing session's id, exactly as
-   item 4 describes. A related, previously undocumented fact surfaced by
+   pass, a restatement against new measurement — the run surfaced no
+   defect, so nothing here needed fixing).** The measured session was not
+   started fresh by this task: it was already running, against the same
+   real gateway with the real schema-23 `Unser Zuhause` project open, for
+   roughly 30 minutes before this task picked it up mid-flight, polled it,
+   and issued the stop. From first telegram to stop, the session had been
+   open for 2040 seconds (34 minutes), well past the earlier two- and
+   one-minute runs. Result: 1299 telegrams from 20 source addresses to 61
+   group destinations, `droppedCount = 0`, all 1299 destination names
+   resolved against the project (201 `GroupValueRead`/201
+   `GroupValueResponse` pairs carrying no value to decode, 897
+   `GroupValueWrite`), and 209 of the 1098 value-bearing telegrams (897 +
+   201) decoded through their DPT. The other 889 came back `Unresolved`
+   — traced to `GroupAddressContext::decode` (`apps/knx-server/src/
+   bus.rs`): that variant fires when `self.dpts.get(&ga.raw())` is `None`
+   or `GroupAddressDpt::None`, i.e. the project declares no DPT for that
+   group address at all. It is not a main-type gap: an address using a
+   main type outside §61's implemented thirty would decode through
+   `decode_single` into `DecodedValue::Error`, a different kind, and none
+   appeared in this run. So roughly 81% of the addressed group addresses
+   in this real project simply carry no declared DPT — a fact about this
+   project's data, not about §61's codec coverage, and §61 is not touched
+   by this entry. This also exercised, for the first time, the item-4
+   single-session guard against a live gateway rather than only against
+   `FakeConnector` in unit tests: a second `POST /api/bus/monitor/start`
+   issued to the *same* server process while the first tunnel was open was
+   refused with `409` and the existing session's id, exactly as item 4
+   describes. A related, previously undocumented fact surfaced by
    accident: a *second, independent* `knx-server` process attempting its
    own tunnel to the same physical gateway while the first tunnel was open
    was refused by the gateway itself — KNXnet/IP `CONNECT_RESPONSE` status
@@ -3102,12 +3115,16 @@ ways, all deliberate and all recorded here per that design's own §7:
    response, management request, scan, or `/api/bus/write` call was made in
    either session; the gateway address is deliberately not stored here.
    Of §62's original four headline claims (tunnelling-only, single-session,
-   client-filtered, "never verified against a real gateway"), all four now
-   have real-gateway evidence behind them, not just source-reading: the
-   first three architecturally (this run touched no routing code, hit the
-   documented `409`, and the poll route still takes only `since`), the
-   fourth by these two dated runs. What remains unverified is unchanged:
-   routing, transmit behavior, reconnect after a mid-session failure, other
+   client-filtered, "never verified against a real gateway"), two now have
+   live evidence from this pass specifically: single-session, from the
+   `409` above, and "never verified", now false twice over (2026-09-16 and
+   2026-09-19). The other two — tunnelling-only and client-filtered —
+   remain confirmed by code inspection, not by this run: it touched no
+   routing code and the poll route still takes only `since`, but it never
+   tried to exercise routing or server-side filtering, so it is consistent
+   with those claims rather than a live test of them. What remains
+   unverified is unchanged: routing, transmit behavior, reconnect after a
+   mid-session failure, other
    gateway models, and sessions longer than 34 minutes.
 10. **No KNX certification or ETS-parity claim.** This is a monitor/write
     table, not a certified diagnostic tool, and not a claim of matching

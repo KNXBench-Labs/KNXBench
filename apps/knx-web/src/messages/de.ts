@@ -940,4 +940,28 @@ export const messages: Record<MessageKey, string> = {
   "help.tip.busGateway.label": "Was als Gateway einzutragen ist",
   "help.tip.busGateway.text":
     "Adresse und Port eines KNXnet/IP-Gateways, etwa 192.0.2.1:3671. Nur Tunneling — diese Anwendung sucht das Netz nicht nach einem Gateway ab.",
+
+  "workbench.resizeNavigation": "Höhe des Navigationsblocks",
+  "workbench.resizeDiagnostics": "Höhe des Diagnoseblocks",
+
+  "toolbar.quit": "Beenden",
+  "toolbar.about": "Über KNXBench…",
+
+  "quit.title": "Nicht gespeicherte Änderungen",
+  "quit.message":
+    "Dieses Projekt hat Änderungen, die noch in keiner Datei stehen. Wer jetzt beendet, wirft sie weg.",
+  "quit.hint":
+    "Brechen Sie ab, speichern Sie mit „Speichern“ oder „Speichern unter…“, und beenden Sie danach.",
+  "quit.cancel": "Abbrechen",
+  "quit.discard": "Ohne Speichern beenden",
+
+  "about.title": "Über KNXBench",
+  "about.version": "Version",
+  "about.versionUnknown": "unbekannt — der Server hat nicht geantwortet",
+  "about.licence": "Lizenz",
+  "about.licenceValue": "AGPL-3.0-or-later",
+  "about.independence":
+    "KNXBench ist ein unabhängiges Projekt. Es ist von der KNX Association nicht zertifiziert und steht mit ihr in keiner Verbindung.",
+  "about.trademark": "ETS ist eine Marke der KNX Association.",
+  "about.close": "Schließen",
 };

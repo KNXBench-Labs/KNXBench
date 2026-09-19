@@ -172,7 +172,13 @@ export default function ProjectDiffPanel(props: {
 
   return (
     <>
-      <button ref={compareRef} onClick={compare} disabled={!tree}>
+      {/* T28/F1: the File menu closes on any item activation that reaches
+          its container, and this is the one item that must not trigger
+          that — the report below renders *inside* the menu, so closing it
+          would hide the answer to the click that asked for it. The
+          attribute is the opt-out `App.tsx`'s `handleFileMenuActivation`
+          looks for; it does nothing anywhere else this panel is used. */}
+      <button ref={compareRef} onClick={compare} disabled={!tree} data-menu-stays-open="true">
         {t("projectDiff.compareButton")}
       </button>
       {open && report && (
@@ -182,6 +188,10 @@ export default function ProjectDiffPanel(props: {
           tabIndex={-1}
           role="group"
           aria-label={t("projectDiff.title")}
+          // Covers this panel's own Close button, by the same argument as
+          // the Compare button above: dismissing the report is not a
+          // reason to dismiss the menu holding it.
+          data-menu-stays-open="true"
           onKeyDown={(e) => {
             if (e.key !== "Escape") return;
             e.stopPropagation();

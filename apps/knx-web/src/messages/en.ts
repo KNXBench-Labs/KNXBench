@@ -1102,6 +1102,50 @@ export const messages = {
     "KNXBench is an independent project. It is not certified by the KNX Association and is not affiliated with it.",
   "about.trademark": "ETS is a trademark of the KNX Association.",
   "about.close": "Close",
+
+  // T29 — the debug report. The dialog is translated; `report.md` and the
+  // GitHub issue body are not (they are server-generated English, read by
+  // whoever picks the issue up).
+  "debugReport.button": "Debug report…",
+  "debugReport.title": "Debug report",
+  "debugReport.intro":
+    "Collects what is useful for diagnosing a problem into one zip file on this computer. Nothing is sent anywhere: the file is written where you choose it, and the GitHub button only opens a prefilled issue page in your browser for you to read before you post it.",
+  "debugReport.descriptionLabel": "What happened?",
+  "debugReport.descriptionPlaceholder": "What you did, what you expected, what happened instead.",
+  "debugReport.descriptionHint":
+    "Goes into the report in your own words. Everything else below is collected automatically.",
+  "debugReport.filterName": "Zip archive",
+  "debugReport.include.log.label": "Session log",
+  "debugReport.include.log.hint":
+    "The entries from the Log tab, with IP addresses removed. Import problems are logged by name, so this file can contain KNX group addresses and the names of imported elements.",
+  "debugReport.include.projectSummary.label": "Project statistics",
+  "debugReport.include.projectSummary.hint":
+    "How many devices, lines and group addresses the open project has. Counts only — no names, no addresses.",
+  "debugReport.include.busTelegrams.label": "Bus monitor telegrams",
+  "debugReport.include.busTelegrams.hint":
+    "The telegrams currently in the monitor buffer. These keep the individual and group addresses of your devices.",
+  "debugReport.contentsTitle": "What the file will contain",
+  "debugReport.contents.report": "report.md — your description, the versions and the environment.",
+  "debugReport.contents.environment": "environment.json — the same facts in machine-readable form.",
+  "debugReport.contents.log":
+    "log.json — this session's log entries; may name KNX addresses and imported elements.",
+  "debugReport.contents.projectSummary": "project-summary.json — counts describing the open project.",
+  "debugReport.contents.busTelegrams": "bus-telegrams.json — the bus monitor buffer.",
+  "debugReport.privacyRedacted":
+    "IP addresses, your home directory and this computer's name are replaced by placeholders in report.md, environment.json and log.json. KNX addresses and names taken from your project are not replaced anywhere.",
+  "debugReport.privacyTelegrams":
+    "bus-telegrams.json keeps the individual and group addresses of your installation and, where the open project knows them, the names of the group addresses — \u201cKitchen ceiling light\u201d. Without those a telegram dump says nothing, which is why they stay. Include the file only if you are willing to share them.",
+  "debugReport.save": "Save zip…",
+  "debugReport.openIssue": "Open a GitHub issue…",
+  "debugReport.close": "Close",
+  "debugReport.busy": "Collecting…",
+  "debugReport.saved.one": "Debug report saved, {count} file.",
+  "debugReport.saved.other": "Debug report saved, {count} files.",
+  "debugReport.issueOpened":
+    "A prefilled issue was opened in your browser. Nothing has been posted — read it, attach the zip, then submit it yourself.",
+  "debugReport.issueTruncated":
+    "A prefilled issue was opened in your browser. The report was too long for a link and has been shortened — please save the zip as well and attach it.",
+  "debugReport.issueTitle": "Bug report from KNXBench",
 } as const;
 
 export type Messages = typeof messages;

@@ -34,7 +34,7 @@ tower-http = { workspace = true, features = ["fs"] }
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
+zip.workspace = true
 
 [dev-dependencies]
-zip.workspace = true
 knx-testsupport.workspace = true

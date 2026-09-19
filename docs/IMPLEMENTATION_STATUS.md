@@ -6886,3 +6886,165 @@ by a test that fails without them.
 Round 1's refusal of the prescribed window widening stands; the re-review
 reproduced the non-discrimination independently. Limitation **105** is
 unchanged and still not fixed here.
+
+
+## 2026-09-19 — T29 the debug report (branch `debug-report`)
+
+A user who has just watched something go wrong now has somewhere to put it.
+New `POST /api/debug-report` (`apps/knx-server/src/debug_report_routes.rs`)
+builds a bundle and, when given a path, writes it as a zip;
+`apps/knx-web/src/DebugReportButton.tsx` is the File-menu entry and dialog
+that drives it.
+
+**What leaves the machine: nothing, unless the user sends it.** The zip is
+written locally, always — there is no upload in this application, no
+telemetry, and no anonymous usage statistics. The GitHub button builds a
+`https://github.com/KNXBench-Labs/KNXBench/issues/new?title=…&body=…` URL
+(`apps/knx-web/src/githubIssue.ts`), opens it in the browser and stops:
+no token, no credential storage, no `POST` from the application. That path
+calls the route with `path: null`, which builds the bundle in memory and
+writes nothing — hence `written` in the response, so the UI never infers
+"saved" from "did not throw".
+
+**Bundle.** `report.md` and `environment.json` always; `log.json` (on by
+default), `project-summary.json` and `bus-telegrams.json` (both off) on
+request. The manifest is derived from what was built rather than from what
+was asked for — the three opt-in artifacts are `Option<Value>` in
+`BundleInput`, so a flag cannot drift from its payload. `project-summary.
+json` is counts only (installations, areas, lines, devices, com objects,
+group ranges/addresses, building parts, parameters, import error/warning
+tallies, schema versions, group-address style, whether a `.knxdb` path is
+set) — deliberately no "where did this project come from" field, because
+nothing in `AppState` records that and adding one would be a change to the
+state model wearing a debug report's clothes; `etsSchemaVersion` is the
+honest stand-in.
+
+**Redaction** (`apps/knx-server/src/debug_report.rs`) is by pattern class,
+never by a list of known values: any IPv4 dotted quad, any IPv6 literal
+(validated with `std::net::Ipv6Addr`), the `HOME` prefix, the hostname read
+from `/proc/sys/kernel/hostname`. It covers `report.md`, `environment.json`
+and `log.json`; `bus-telegrams.json` keeps its KNX addresses, and the dialog
+says so in the user's language rather than leaving them to assume otherwise
+(`docs/KNOWN_LIMITATIONS.md` §106). Two boundary rules earn their keep: a
+candidate run whose neighbour is `[A-Za-z0-9_]` is rejected, without which
+`knx_core::Project` parses as an IPv6 address and every Rust path in the log
+is destroyed; and a dotted run is scanned for a valid four-group window
+rather than required to split into exactly four groups (fix round 2), which
+is what leaves `1/2/3`, `1.1.220` and `0.1.0-alpha.1` alone while still
+catching a quad glued to an extra digit-and-dot group.
+
+`zip` moved from `knx-server`'s dev-dependencies to its dependencies; no new
+crate was added (the redaction scanners are hand-written rather than pulling
+in `regex` for two grammars).
+
+**Tests.** 22 unit tests in `debug_report.rs`, 6 in
+`apps/knx-server/tests/http_debug_report.rs` (fix round: 26 and 7), 7 in
+`apps/knx-web/src/githubIssue.test.ts`, 9 in
+`apps/knx-web/src/DebugReportButton.test.tsx`; `App.test.tsx`'s File-menu
+tab-order list gained the new entry. Every one was mutation-checked. Two
+mutations initially survived and forced better tests: dropping the
+`input.log.is_some()` guard so the manifest advertised a file the bundle did
+not hold (now caught by a test that compares `environment.json`'s `files`
+array and `report.md`'s contents list against the built files for all eight
+flag combinations), and slicing the issue body by UTF-16 code units instead
+of code points (now caught by sweeping 300 limits rather than testing one,
+since only about a quarter of limits land a cut between surrogate halves).
+Web tests 669, up from 653 — the 7 and 9 new cases above.
+
+Gates: `cargo fmt --check`, `cargo clippy --workspace --all-targets -D
+warnings`, `cargo test --workspace --no-fail-fast`, `xtask check-layering`,
+`xtask check-headers` (152 with a header, 167 without, ceiling 168 — every
+new file carries one, the free slot is untouched), `cargo deny check`,
+`npx tsc --noEmit`, `npx vitest run` — all exit 0.
+
+### Fix round 1 (review findings)
+
+**The redaction pass missed an address followed by a dot.** The IPv4 scan
+class includes `.`, so `192.168.1.1.` at the end of a sentence scanned as a
+five-group run, failed the four-group test and was left in `report.md` — and
+`report.md` is the body of the prefilled GitHub issue, so the leak reached
+the browser. A candidate run is now trimmed of leading and trailing dots
+before it is validated, and the boundary rule is applied to the trimmed core
+rather than to the greedy run, so `v1.2.3.4.` is still protected by the `v`
+in front of it. The same restructuring gave the IPv6 pass a leading-colon
+retry, which catches `peer:2001:db8::1`, and stopped it eating the sentence
+colon in `fe80::1: connection refused`.
+
+**The wording now matches what the code does.** `log.json` is on by default
+and `session_log.rs` writes group addresses and imported element names into
+its messages verbatim, so "with addresses removed" was untrue and framing
+`bus-telegrams.json` as "the exception" implied the opposite of the truth.
+The catalogues now say "with IP addresses removed", state that KNX addresses
+and project names are never replaced anywhere, and name the group address
+names (`destinationName`) that the telegram file carries alongside the
+addresses. `KNOWN_LIMITATIONS.md` §106 says the same and adds the two
+knowable failure modes inside the four classes (an IPv6 literal glued to a
+word with no separator; the home prefix matched with a right-hand boundary
+only, so `/home/knxbench-old` is over-redacted while `/home/andrea` is now left
+alone).
+
+**Narrower export, honest tests.** `pub mod session_log` became
+`mod session_log; pub use session_log::{LogEntry, Severity};` — the wide form
+additionally exported the import-report converters, dragging `knx-etsproj`
+and `knx-csv` into this crate's public surface for no test's benefit. A
+count assertion that passed at zero (a tempdir the handler never received)
+was deleted; `a_write_target_outside_the_data_directory_is_refused` was
+renamed to say that it tests a *relative* escape, since absolute paths
+outside the data directory are accepted by design.
+
+**`bus-telegrams.json` finally has a test.** The most privacy-sensitive file
+in the bundle had no end-to-end coverage at all. A fake tunnel now feeds two
+telegrams into a real session, and the test reads the file out of the written
+zip and asserts its contents: sequence number, source, destination,
+`destinationName`, service, decoded kind, DPT and text. Two unit tests next
+to `telegram_json` cover all four `DecodedValue` arms and the absent case.
+
+Server tests 26 + 7 + 2 for this feature; web tests unchanged at 669. All
+eight gates exit 0 again.
+
+### Fix round 2 (review findings)
+
+**A quad glued to a fifth group still leaked.** Fix round 1 trimmed the
+leading and trailing dots off a scanned run before validating it, which
+closed a sentence-final address (`192.168.1.1.`). It trims dots, not digits,
+so a typo'd fifth octet or a glued extra group — `192.168.1.1.5`,
+`5.192.168.1.1`, `1.2.3.4.5.6.7.8` — still split into more than four groups
+and still failed the "exactly four" test unchanged. `redact_ipv4` now slides
+a four-group window across a run's dot-separated groups, left to right,
+taking the first valid quad and resuming right after it, so a run can yield
+more than one hit (`1.2.3.4.5.6.7.8` now redacts both halves). `scan_and_replace`
+changed to match: its `verdict` closure returns every hit in a run,
+non-overlapping and in order, instead of at most one; `redact_ipv6` wraps its
+unchanged single-hit `ipv6_hit` in an iterator to fit.
+
+The boundary rule and the group-shape validator did not need to change: a
+window's neighbours inside a run are always `.`, which is not a token
+character, so `v1.2.3.4.` and `see 0.1.0-alpha.1.` stay protected by the
+letter or missing fourth group exactly as before, and `1/2/3`, `1.1.220` are
+untouched because `/` and a three-group run never offer a four-group window
+at all.
+
+**The trade-off this leaves.** A bare, unlabelled five-or-more-part number
+that is genuinely a version string rather than an address (`1.2.3.4.5` with
+nothing glued to its front) is over-redacted the same way a real address
+would be — shape alone cannot tell them apart, and this fix picks the side
+that protects the user's data over the side that protects a stranger's
+version number. Documented as the third residue in `docs/KNOWN_LIMITATIONS.md`
+§106; this project's own version string never takes that shape, so nothing
+this application prints is affected.
+
+Three new unit tests pin the fix, including one that requires the literal
+address text to be entirely absent from the output rather than merely
+compared against one hand-picked rendering (the scan takes the leftmost
+valid window, which for `5.192.168.1.1` is `5.192.168.1`, not the more
+"obvious" `192.168.1.1` — either is a correct answer to "did the address
+survive?"). Mutation check: reverting `redact_ipv4` to the round-1
+trim-and-validate-the-whole-run logic fails all three new tests at once,
+`cargo test` exit 101.
+
+Server tests 31 (was 28) for this file; web tests unchanged. All eight gates
+exit 0 again. The round-1 record's mutation count for M19 (boundary check
+deleted) was checked against `docs/IMPLEMENTATION_STATUS.md` and
+`docs/KNOWN_LIMITATIONS.md` for a repeated "two tests" claim; neither
+document repeats that count, so there is nothing to correct here — the
+number lives only in the run's own transcript outside `docs/`.

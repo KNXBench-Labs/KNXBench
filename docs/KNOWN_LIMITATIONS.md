@@ -5720,3 +5720,78 @@ from its caller, the Transport Layer control paths in
 `crates/knx-net/src/commissioning.rs` pass `SYSTEM`/true, and a cEMI
 encoding test pins the Ctrl1 octet of each of the four control frames
 against the clauses above.
+
+
+## 106. The debug report redacts four pattern classes, and nothing else
+
+**Limitation.** The debug-report bundle (T29,
+`apps/knx-server/src/debug_report.rs`) replaces exactly four things in
+`report.md`, `environment.json` and `log.json`: any IPv4 dotted quad, any
+IPv6 literal, the user's home-directory prefix, and the machine's hostname.
+Anything else identifying that reaches those files travels with them — a MAC
+address, a device serial number, a project file name sitting outside the home
+directory, a hostname the machine does not report, or whatever the user types
+into the description field beyond those four shapes.
+
+**KNX addresses are not one of the four classes.** `log.json` is on by
+default and can name group addresses and imported element names, because
+`session_log.rs` puts `conflict.group_address`, `unknown.name` and
+`unknown.sample` into its messages verbatim. That is deliberate: a debug log
+stripped of the address the conflict is about cannot diagnose the conflict.
+The dialog says so in the user's language — "with IP addresses removed", not
+"with addresses removed" — and the privacy paragraph states plainly that KNX
+addresses and project names are never replaced anywhere.
+
+**Three knowable failure modes inside the four classes.** An IPv6 literal that
+follows a word character with no separator at all (`peer2001:db8::1`) is not
+redacted: the boundary rule that keeps `knx_core::Project` from being read as
+a compressed address cannot tell that case from a Rust path. One separating
+colon *is* handled (`peer:2001:db8::1`), two are not (`peer::2001:db8::1`
+reads as a path). And the home-directory prefix is matched textually with a
+word-boundary check on its right-hand side only, so `/home/knxbench-old` is
+still rewritten to `~-old` when `$HOME` is `/home/knxbench` — over-redaction
+that garbles a path rather than a leak, and the far more common
+`/home/andrea` case is left alone.
+
+A third is the mirror image of the second fix round's IPv4 change. The scan
+now slides a four-group window across a whole run of digits and dots rather
+than requiring the run to split into exactly four groups, which is what
+closes a typo'd fifth octet or a glued extra group (`192.168.1.1.5`,
+`5.192.168.1.1`) that used to survive intact. But a bare, unlabelled number
+with five or more dot-separated parts is not distinguishable from an address
+by shape alone, and a genuine version string in that shape (`1.2.3.4.5` with
+nothing in front of it) is over-redacted the same way a real address would
+be caught — this pass picks the side that protects the user's data. A
+version string glued to a leading letter (`v1.2.3.4`) is unaffected: the
+boundary rule still refuses it. This project's own version string never
+takes the bare five-part shape (`0.1.0-alpha.1[+g<sha>]` has three digit
+groups before the first non-digit), so the residue does not touch anything
+this application prints; it would only bite a third party's version string
+quoted verbatim into the report with no letter in front of it.
+
+**Cause.** Deliberate, and scoped that way by the brief: redaction is by
+pattern class rather than by a list of known values, and each class has to be
+a shape that can be recognised without guessing. A dotted quad and an IPv6
+literal have grammars; "an identifier that matters to this user" does not. A
+broader filter would either miss things anyway or start mangling ordinary
+text — the IPv6 pass already has to refuse `knx_core::Project`, which a
+parser will happily read as a compressed address. Two classes also have a
+knowable failure mode: `hostname()` reads `/proc/sys/kernel/hostname`,
+`/etc/hostname` and then the environment, and a process where none of those
+answer simply redacts one class fewer; `HOME` unset does the same for paths.
+
+**Consequence.** The bundle is safer than an unfiltered log but is not
+anonymous, and nothing in the product claims it is. The dialog names the
+three redacted files, says that KNX addresses and project names survive in
+all of them, and names what `bus-telegrams.json` carries: the individual and
+group addresses of the installation plus the group address names the open
+project knows for them ("Kitchen ceiling light"). Without those a telegram
+dump says nothing, which is why they stay and why the file is opt-in. The
+zip is written locally and shown to the user before anything is shared. The
+GitHub path opens a prefilled issue page in the browser and stops there: no
+token, no credential, no `POST` from the application, and no upload anywhere.
+
+**Lifted when.** Nothing here is waiting on a fix. If a further class is ever
+worth adding — MAC addresses are the obvious candidate — it goes in as
+another shape-recognising pass next to the existing four, with the same
+requirement that it name what it removes rather than silently blanking text.

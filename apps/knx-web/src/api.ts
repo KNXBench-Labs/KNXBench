@@ -618,6 +618,51 @@ export function getSessionLog(): Promise<LogEntry[]> {
 }
 
 // ---------------------------------------------------------------------
+// `POST /api/debug-report` (T29). Hand-written to match
+// `apps/knx-server/src/debug_report_routes.rs`'s camelCase DTOs, same
+// convention as `LogEntry` above.
+//
+// Nothing here uploads anything: the route builds a bundle, optionally
+// writes it to a path the user picked, and returns it. `path: null` is the
+// preview the GitHub-issue button uses — it needs `reportMarkdown` and has
+// no business creating a file nobody asked for, which is why `written`
+// exists rather than being inferred from "the call did not throw".
+// ---------------------------------------------------------------------
+
+export interface DebugReportRequest {
+  path: string | null;
+  description: string;
+  includeLog: boolean;
+  includeProjectSummary: boolean;
+  includeBusTelegrams: boolean;
+  client: {
+    appVersion: string;
+    shell: string;
+    uiLanguage: string;
+    theme: string;
+  };
+}
+
+export interface DebugReportFile {
+  name: string;
+  bytes: number;
+}
+
+export interface DebugReport {
+  written: boolean;
+  path: string | null;
+  files: DebugReportFile[];
+  reportMarkdown: string;
+}
+
+export function createDebugReport(body: DebugReportRequest): Promise<DebugReport> {
+  return request("/api/debug-report", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+// ---------------------------------------------------------------------
 // `POST /api/project/diff` (T14) DTOs (`apps/knx-server/src/routes.rs`,
 // search for "diff"). `knx_diff::*` has no `ts-rs` binding (the crate
 // deliberately does not derive `Serialize` — its own module doc), so

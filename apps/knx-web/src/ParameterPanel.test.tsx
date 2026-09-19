@@ -258,8 +258,8 @@ describe("ParameterPanel", () => {
         {
           scope: null,
           kind: "unresolvedParamRef",
-          message: "A restriction field's value fell outside its option list.",
-          detail: "ValueNotInOptions { field: \"P2\" }",
+          message: "A choice's controlling parameter could not be found.",
+          detail: "UnresolvedParamRef { field: \"P2\" }",
         },
       ],
     };
@@ -442,10 +442,31 @@ describe("ParameterPanel", () => {
     expect(host!.textContent).not.toContain(
       "A choice did not match any of its options.",
     );
-    // `.detail` (D26's raw diagnostic debug string) is developer-facing
-    // and never goes through translation — see `api.ts`'s doc comment on
-    // `ParameterDiagnostic.detail`.
+    // Fix round 1 (Q3): `.detail` is rendered nowhere in the banner, so
+    // `host!.textContent` never contains it whether or not translation
+    // exists — that assertion held before this task and would hold under
+    // any mutation of the translation path, which makes it evidence of
+    // nothing. `.detail` reaches the user through exactly one door, the
+    // "copy details" button's `copyDetail` handler (`ParameterPanel.tsx`);
+    // asserting on that handler's clipboard payload is the real claim
+    // `KNOWN_LIMITATIONS.md` cites this test for.
     expect(host!.textContent).not.toContain("NoBranchMatched");
+
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    const copyButton = host!.querySelector<HTMLButtonElement>(
+      ".parameter-diagnostics-banner button",
+    )!;
+    await act(async () => {
+      copyButton.click();
+    });
+    // The clipboard payload is D26's raw diagnostic debug string,
+    // untranslated, byte for byte — see `api.ts`'s doc comment on
+    // `ParameterDiagnostic.detail`.
+    expect(writeText).toHaveBeenCalledWith("NoBranchMatched { choose_node: 4821 }");
 
     root.unmount();
   });

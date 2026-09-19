@@ -425,7 +425,7 @@ Two tracks, tracked as **T25** and **T26** in
    reason given below. Full user-facing format documentation:
    [LANGUAGE_PACKS.md](LANGUAGE_PACKS.md). Full accounting of the task
    breakdown and residues: `GAP_ANALYSIS_ETS.md`'s Tier 6 T25 entry and
-   [KNOWN_LIMITATIONS.md §66](KNOWN_LIMITATIONS.md#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack)/[§67](KNOWN_LIMITATIONS.md#67-a-rejected-language-packs-own-reason-is-shown-untranslated-inside-a-translated-sentence).
+   [KNOWN_LIMITATIONS.md §66](KNOWN_LIMITATIONS.md#66-server-composed-prose-and-the-documentation-export-are-not-translated-by-any-ui-language-or-pack--partially-resolved-2026-09-14-t14)/[§67](KNOWN_LIMITATIONS.md#67-a-rejected-language-packs-own-reason-was-shown-untranslated-inside-a-translated-sentence--resolved-2026-09-14-t14).
 2. **KNX data (T26).** `knx_core::string_table` (`Language`,
    `LocalizedString`, `StringTable` with a `default_language` fallback)
    and `knx-productdb`'s `translation` table already exist and are

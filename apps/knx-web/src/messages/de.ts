@@ -319,7 +319,7 @@ export const messages: Record<MessageKey, string> = {
   "parameters.diagnostic.duplicateModuleScopedValue":
     "Zwei gespeicherte Werte beziehen sich auf denselben modulgebundenen Parameter; der spätere wird ignoriert.",
   "parameters.diagnostic.duplicateModuleId":
-    "Zwei oder mehr Abschnitte dieses Programms deklarieren dieselbe Modul-ID; seine Felder sind schreibgeschützt.",
+    "Zwei oder mehr Abschnitte dieses Programms deklarieren dieselbe Modul-ID; dessen Felder sind schreibgeschützt.",
   "parameters.diagnostic.noModuleInstanceMatch":
     "Keine importierte Modulinstanz passt zu diesem Modul; seine Felder sind schreibgeschützt.",
   "parameters.diagnostic.ambiguousModuleInstance":

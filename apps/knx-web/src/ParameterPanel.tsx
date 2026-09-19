@@ -192,6 +192,9 @@ const PARAMETER_DIAGNOSTIC_MESSAGE_KEYS: Record<ParameterDiagnosticKind, Transla
   moduleExpansionBudgetExhausted: "parameters.diagnostic.moduleExpansionBudgetExhausted",
   missingValue: "parameters.diagnostic.missingValue",
   moduleWithoutId: "parameters.diagnostic.moduleWithoutId",
+  moduleArgumentNotBound: "parameters.diagnostic.moduleArgumentNotBound",
+  unsupportedModuleArgumentKind: "parameters.diagnostic.unsupportedModuleArgumentKind",
+  unresolvedTextPlaceholder: "parameters.diagnostic.unresolvedTextPlaceholder",
 };
 
 function describeParameterDiagnosticMessage(t: Translate, diagnostic: ParameterDiagnostic): string {

@@ -343,6 +343,12 @@ export const messages: Record<MessageKey, string> = {
   "parameters.diagnostic.missingValue": "Der steuernde Parameter einer Auswahl hat keinen Wert.",
   "parameters.diagnostic.moduleWithoutId":
     "Eine Modulinstanz hat keine Kennung und kann keinen gespeicherten Werten zugeordnet werden.",
+  "parameters.diagnostic.moduleArgumentNotBound":
+    "Ein Modulargument konnte nicht der Deklaration des Moduls zugeordnet werden und wurde ignoriert.",
+  "parameters.diagnostic.unsupportedModuleArgumentKind":
+    "Ein Modulargument verwendet eine Art, die diese Version nicht interpretiert, und wurde ignoriert.",
+  "parameters.diagnostic.unresolvedTextPlaceholder":
+    "Ein Textplatzhalter hatte kein passendes Modulargument und wurde unverändert belassen.",
 
   "parameters.title": "Parameter",
   "parameters.loading": "Parameter werden geladen…",

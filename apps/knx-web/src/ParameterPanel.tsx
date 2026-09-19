@@ -4,6 +4,7 @@ import * as api from "./api";
 import type {
   ModuleScope,
   ParameterDiagnostic,
+  ParameterDiagnosticKind,
   ParameterField,
   ParameterPanel as ParameterPanelDto,
   ParameterSection,
@@ -11,7 +12,7 @@ import type {
 } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useProductLanguage } from "./productLanguage";
-import { useTranslate, type Translate } from "./i18n";
+import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
 
 // T18 slice 3, task 4 (design docs/superpowers/specs/2026-09-11-parameter-editor-design.md).
 // Fetches `GET /api/device/{id}/parameters` on every device selection —
@@ -161,6 +162,46 @@ function sameScope(a: ModuleScope | null, b: ModuleScope | null): boolean {
   return a.moduleNode === b.moduleNode && a.moduleId === b.moduleId && a.moduleDefId === b.moduleDefId;
 }
 
+// KNOWN_LIMITATIONS.md §66: `ParameterDiagnostic.message` used to be
+// server-composed English prose rendered verbatim regardless of UI
+// language. `ParameterDiagnosticKindDto` (`apps/knx-server/src/routes.rs`)
+// gives every one of the nineteen possible messages a closed, stable tag
+// with no dynamic payload of its own (every id/count they'd want to name
+// lives in `.detail` instead) — so, unlike `CatalogBrowser.tsx`'s
+// `describeCreationDiagnostic`, this is a plain lookup, not a
+// per-`kind` sentence assembled from structured fields. `.detail` stays
+// untouched by this function on purpose: it is always English, by design
+// (see `ParameterDiagnostic.detail`'s own doc comment in `api.ts`).
+const PARAMETER_DIAGNOSTIC_MESSAGE_KEYS: Record<ParameterDiagnosticKind, TranslatableKey> = {
+  parametersUnreadable: "parameters.diagnostic.parametersUnreadable",
+  duplicateUnscopedValue: "parameters.diagnostic.duplicateUnscopedValue",
+  duplicateModuleScopedValue: "parameters.diagnostic.duplicateModuleScopedValue",
+  duplicateModuleId: "parameters.diagnostic.duplicateModuleId",
+  noModuleInstanceMatch: "parameters.diagnostic.noModuleInstanceMatch",
+  ambiguousModuleInstance: "parameters.diagnostic.ambiguousModuleInstance",
+  malformedModuleInstanceId: "parameters.diagnostic.malformedModuleInstanceId",
+  noBranchMatched: "parameters.diagnostic.noBranchMatched",
+  unparsableTest: "parameters.diagnostic.unparsableTest",
+  unresolvedParamRef: "parameters.diagnostic.unresolvedParamRef",
+  nonNumericValue: "parameters.diagnostic.nonNumericValue",
+  unexpectedTypeNoneShape: "parameters.diagnostic.unexpectedTypeNoneShape",
+  unrecognizedNode: "parameters.diagnostic.unrecognizedNode",
+  moduleDefNotFound: "parameters.diagnostic.moduleDefNotFound",
+  moduleCycleDetected: "parameters.diagnostic.moduleCycleDetected",
+  moduleNestingTooDeep: "parameters.diagnostic.moduleNestingTooDeep",
+  moduleExpansionBudgetExhausted: "parameters.diagnostic.moduleExpansionBudgetExhausted",
+  missingValue: "parameters.diagnostic.missingValue",
+  moduleWithoutId: "parameters.diagnostic.moduleWithoutId",
+  moduleArgumentNotBound: "parameters.diagnostic.moduleArgumentNotBound",
+  unsupportedModuleArgumentKind: "parameters.diagnostic.unsupportedModuleArgumentKind",
+  unresolvedTextPlaceholder: "parameters.diagnostic.unresolvedTextPlaceholder",
+};
+
+function describeParameterDiagnosticMessage(t: Translate, diagnostic: ParameterDiagnostic): string {
+  const key = PARAMETER_DIAGNOSTIC_MESSAGE_KEYS[diagnostic.kind];
+  return key ? t(key) : diagnostic.message;
+}
+
 // One collapsible group per `ParameterSectionDto` — the top-level
 // (`scope: null`) section and one per module instantiation (D23: "12
 // instantiations are 12 results," never collapsed back into one list).
@@ -182,11 +223,12 @@ function ParameterSectionView(props: {
   return (
     <details className="parameter-section" open>
       <summary>{sectionLabel(t, section.scope)}</summary>
-      {/* Server-composed prose, shown verbatim (KNOWN_LIMITATIONS §66) —
-          not run through `t()`. */}
+      {/* KNOWN_LIMITATIONS.md §66: the headline is translated via
+          `d.kind`; `d.detail` (not shown here at all) stays English by
+          design — see `ParameterDiagnostic.detail`'s doc comment. */}
       {ownDiagnostics.map((d, i) => (
         <p key={i} className="inspector-description">
-          {d.message}
+          {describeParameterDiagnosticMessage(t, d)}
         </p>
       ))}
       <div className="parameter-fields">
@@ -241,7 +283,7 @@ function DiagnosticsBanner(props: { diagnostics: ParameterDiagnostic[] }) {
       <ul>
         {diagnostics.map((d, i) => (
           <li key={i}>
-            {d.message}
+            {describeParameterDiagnosticMessage(t, d)}
             <button onClick={() => copyDetail(d.detail)}>{t("parameters.copyDetails")}</button>
           </li>
         ))}

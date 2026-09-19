@@ -61,6 +61,7 @@ export const messages: Record<MessageKey, string> = {
     "Projektdokumentation exportiert, {count} Warnungen — siehe Protokoll.",
 
   "toast.dismiss": "Schließen",
+  "toast.error.messageIsEnglish": "Diese Meldung ist der unveränderte Text des Servers, auf Englisch.",
 
   "toast.error.notAsPlanned": "Nun, das lief nicht wie geplant: {msg}",
   "toast.error.busObjects": "Der Bus legt Widerspruch ein: {msg}",
@@ -311,6 +312,45 @@ export const messages: Record<MessageKey, string> = {
   "parameters.diagnosticsCount.other":
     "{count} Probleme beim Auswerten der Parameter dieses Geräts gefunden",
   "parameters.copyDetails": "Details kopieren",
+
+  "parameters.diagnostic.parametersUnreadable":
+    "Einige deklarierte Parameter konnten nicht aus der Produktdatenbank gelesen werden und werden nicht angezeigt.",
+  "parameters.diagnostic.duplicateUnscopedValue":
+    "Zwei gespeicherte Werte beziehen sich auf denselben Parameter; der spätere wird ignoriert.",
+  "parameters.diagnostic.duplicateModuleScopedValue":
+    "Zwei gespeicherte Werte beziehen sich auf denselben modulgebundenen Parameter; der spätere wird ignoriert.",
+  "parameters.diagnostic.duplicateModuleId":
+    "Zwei oder mehr Abschnitte dieses Programms deklarieren dieselbe Modul-ID; die Felder dieses Moduls sind schreibgeschützt.",
+  "parameters.diagnostic.noModuleInstanceMatch":
+    "Keine importierte Modulinstanz passt zu diesem Modul; seine Felder sind schreibgeschützt.",
+  "parameters.diagnostic.ambiguousModuleInstance":
+    "Zwei oder mehr importierte Modulinstanzen teilen sich dieses Modul; seine Felder sind schreibgeschützt.",
+  "parameters.diagnostic.malformedModuleInstanceId":
+    "Die Kennung einer importierten Modulinstanz hat eine unerwartete Form; die Felder dieses Moduls sind schreibgeschützt.",
+  "parameters.diagnostic.noBranchMatched": "Eine Auswahl passte auf keine ihrer Optionen.",
+  "parameters.diagnostic.unparsableTest": "Die Bedingung einer Auswahl konnte nicht verstanden werden.",
+  "parameters.diagnostic.unresolvedParamRef":
+    "Der steuernde Parameter einer Auswahl konnte nicht gefunden werden.",
+  "parameters.diagnostic.nonNumericValue": "Der steuernde Wert einer Auswahl war keine gültige Zahl.",
+  "parameters.diagnostic.unexpectedTypeNoneShape": "Eine ungewöhnliche Auswahlstruktur wurde übersprungen.",
+  "parameters.diagnostic.unrecognizedNode": "Ein nicht erkanntes Programmelement wurde übersprungen.",
+  "parameters.diagnostic.moduleDefNotFound": "Ein Modul konnte in diesem Programm nicht gefunden werden.",
+  "parameters.diagnostic.moduleCycleDetected":
+    "Ein Modul verweist zurück auf eines seiner eigenen umschließenden Module und wurde nicht expandiert.",
+  "parameters.diagnostic.moduleNestingTooDeep":
+    "Ein Modul ist tiefer verschachtelt, als dieses Programm expandiert.",
+  "parameters.diagnostic.moduleExpansionBudgetExhausted":
+    "Die Module dieses Programms sind zu zahlreich, um vollständig expandiert zu werden; der Rest wurde übersprungen.",
+  "parameters.diagnostic.missingValue": "Der steuernde Parameter einer Auswahl hat keinen Wert.",
+  "parameters.diagnostic.moduleWithoutId":
+    "Eine Modulinstanz hat keine Kennung und kann keinen gespeicherten Werten zugeordnet werden.",
+  "parameters.diagnostic.moduleArgumentNotBound":
+    "Ein Modulargument konnte nicht der Deklaration des Moduls zugeordnet werden und wurde ignoriert.",
+  "parameters.diagnostic.unsupportedModuleArgumentKind":
+    "Ein Modulargument verwendet eine Art, die diese Version nicht interpretiert, und wurde ignoriert.",
+  "parameters.diagnostic.unresolvedTextPlaceholder":
+    "Ein Textplatzhalter hatte kein passendes Modulargument und wurde unverändert belassen.",
+
   "parameters.title": "Parameter",
   "parameters.loading": "Parameter werden geladen…",
   "parameters.noProgram":
@@ -347,6 +387,8 @@ export const messages: Record<MessageKey, string> = {
   "logPanel.severity.info": "Info",
   "logPanel.emptyNoEntries": "Noch keine Protokolleinträge.",
   "logPanel.emptyFiltered": "Keine Protokolleinträge entsprechen den aktuellen Filtern.",
+  "logPanel.entryTextIsEnglish":
+    "Meldung, Ort und Detail sind der unveränderte Text des Servers, auf Englisch.",
 
   "busMonitor.title": "Bus-Monitor",
   "busMonitor.eyebrow": "KNXnet/IP · Tunneling",
@@ -470,6 +512,24 @@ export const messages: Record<MessageKey, string> = {
     "Für diese Sprache liegen auf diesem System keine Pluraldaten vor; Pluraltexte verwenden immer die allgemeine Form.",
   "languagePack.importReport.shadowedByBuiltIn":
     "Das Tag dieses Pakets (\"{tag}\") entspricht einer eingebauten Sprache und käme nie zum Einsatz — \"tag\" ändern, bevor es aktiviert oder weitergegeben wird.",
+
+  "languagePack.rejection.notObject": "Ein Sprachpaket muss ein JSON-Objekt sein.",
+  "languagePack.rejection.formatVersionMissing": "\"formatVersion\" ist erforderlich und muss eine Zahl sein.",
+  "languagePack.rejection.tagMissing": "\"tag\" ist erforderlich und muss eine nicht leere Zeichenkette sein.",
+  "languagePack.rejection.tagMalformed":
+    "\"tag\" (\"{tag}\") ist kein wohlgeformtes BCP-47-Tag, z. B. \"nl-NL\", \"tlh\" (Klingonisch), \"bar\" (Bairisch) oder \"art-x-sindarin\" (ein privates Tag für alles nicht Registrierte).",
+  "languagePack.rejection.nameMissing": "\"name\" ist erforderlich und muss eine nicht leere Zeichenkette sein.",
+  "languagePack.rejection.messagesMissing":
+    "\"messages\" ist erforderlich und muss ein Objekt sein, das Schlüssel auf Zeichenketten abbildet.",
+  "languagePack.rejection.messageValueNotString":
+    "\"messages.{key}\" muss eine Zeichenkette sein, ist aber {valueType}.",
+  "languagePack.rejection.englishNameNotString": "\"englishName\" muss, falls vorhanden, eine Zeichenkette sein.",
+  "languagePack.rejection.basedOnNotString": "\"basedOn\" muss, falls vorhanden, eine Zeichenkette sein.",
+  "languagePack.rejection.packVersionNotString": "\"packVersion\" muss, falls vorhanden, eine Zeichenkette sein.",
+  "languagePack.rejection.pluralCategoriesInvalid":
+    "\"pluralCategories\" muss, falls vorhanden, ein Array aus Zeichenketten sein.",
+  "languagePack.rejection.storageFailure":
+    "Die Änderung konnte nicht gespeichert werden: der Speicher des Browsers hat den Schreibvorgang abgelehnt ({detail}).",
 
   "projectDiff.compareButton": "Vergleichen mit…",
   "projectDiff.compareFilterName": "KNXBench-Projekt",

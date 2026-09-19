@@ -2054,51 +2054,91 @@ pub fn redo_impl(state: &AppState) -> Result<knx_projection::ProjectTree, String
 
 // --- Parameter editor (T18 slice 3 task 3, design D20-D26) -----------
 
-/// A `Diagnostic`'s fixed, hand-authored sentence (design D26) — no
+/// A `Diagnostic`'s machine-readable tag (KNOWN_LIMITATIONS.md §66) paired
+/// with its fixed, hand-authored English sentence (design D26) — no
 /// `node_id`, no internal identifiers, just what a device-panel user
 /// needs to know. The `Debug` form still reaches the wire, unabridged, as
-/// `ParameterDiagnosticDto::detail`.
-fn diagnostic_message(diagnostic: &knx_productdb::dynamic::Diagnostic) -> &'static str {
+/// `ParameterDiagnosticDto::detail`; only the tag and the English sentence
+/// come from here.
+fn diagnostic_kind_and_message(
+    diagnostic: &knx_productdb::dynamic::Diagnostic,
+) -> (crate::routes::ParameterDiagnosticKindDto, &'static str) {
+    use crate::routes::ParameterDiagnosticKindDto as Kind;
     use knx_productdb::dynamic::Diagnostic;
     match diagnostic {
-        Diagnostic::NoBranchMatched { .. } => "A choice did not match any of its options.",
-        Diagnostic::UnparsableTest { .. } => "A choice's condition could not be understood.",
-        Diagnostic::UnresolvedParamRef { .. } => {
-            "A choice's controlling parameter could not be found."
-        }
-        Diagnostic::NonNumericValue { .. } => {
-            "A choice's controlling value was not a valid number."
-        }
-        Diagnostic::UnexpectedTypeNoneShape { .. } => "An unusual choice structure was skipped.",
-        Diagnostic::UnrecognizedNode { .. } => "An unrecognized program element was skipped.",
-        Diagnostic::ModuleDefNotFound { .. } => "A module could not be found in this program.",
-        Diagnostic::ModuleCycleDetected { .. } => {
-            "A module refers back to one of its own enclosing modules and was not expanded."
-        }
-        Diagnostic::ModuleNestingTooDeep { .. } => {
-            "A module is nested deeper than this program will expand."
-        }
+        Diagnostic::NoBranchMatched { .. } => (
+            Kind::NoBranchMatched,
+            "A choice did not match any of its options.",
+        ),
+        Diagnostic::UnparsableTest { .. } => (
+            Kind::UnparsableTest,
+            "A choice's condition could not be understood.",
+        ),
+        Diagnostic::UnresolvedParamRef { .. } => (
+            Kind::UnresolvedParamRef,
+            "A choice's controlling parameter could not be found.",
+        ),
+        Diagnostic::NonNumericValue { .. } => (
+            Kind::NonNumericValue,
+            "A choice's controlling value was not a valid number.",
+        ),
+        Diagnostic::UnexpectedTypeNoneShape { .. } => (
+            Kind::UnexpectedTypeNoneShape,
+            "An unusual choice structure was skipped.",
+        ),
+        Diagnostic::UnrecognizedNode { .. } => (
+            Kind::UnrecognizedNode,
+            "An unrecognized program element was skipped.",
+        ),
+        Diagnostic::ModuleDefNotFound { .. } => (
+            Kind::ModuleDefNotFound,
+            "A module could not be found in this program.",
+        ),
+        Diagnostic::ModuleCycleDetected { .. } => (
+            Kind::ModuleCycleDetected,
+            "A module refers back to one of its own enclosing modules and was not expanded.",
+        ),
+        Diagnostic::ModuleNestingTooDeep { .. } => (
+            Kind::ModuleNestingTooDeep,
+            "A module is nested deeper than this program will expand.",
+        ),
         Diagnostic::ModuleExpansionBudgetExhausted { .. } => {
             // Fix round 2: this one diagnostic variant now covers two
             // distinct budgets (module-expansion count and total
             // activated-ref count, see the type's own doc comment) —
             // the wording stays generic on purpose so it reads sensibly
             // for either.
-            "This program's modules are too numerous to fully expand; the rest were skipped."
+            (
+                Kind::ModuleExpansionBudgetExhausted,
+                "This program's modules are too numerous to fully expand; the rest were skipped.",
+            )
         }
-        Diagnostic::MissingValue { .. } => "A choice's controlling parameter has no value.",
-        Diagnostic::ModuleWithoutId { .. } => {
-            "A module instance has no identifier and cannot be matched to stored values."
-        }
-        Diagnostic::ModuleArgumentNotBound { .. } => {
-            "A module argument could not be matched to the module's declaration and was ignored."
-        }
-        Diagnostic::UnsupportedModuleArgumentKind { .. } => {
-            "A module argument uses a kind this build does not interpret and was ignored."
-        }
-        Diagnostic::UnresolvedTextPlaceholder { .. } => {
-            "A text placeholder had no matching module argument and was left as written."
-        }
+        Diagnostic::MissingValue { .. } => (
+            Kind::MissingValue,
+            "A choice's controlling parameter has no value.",
+        ),
+        Diagnostic::ModuleWithoutId { .. } => (
+            Kind::ModuleWithoutId,
+            "A module instance has no identifier and cannot be matched to stored values.",
+        ),
+        // Fix round 1 (merge): main's module-argument work (T12) added
+        // these three variants against the pre-T14 `diagnostic_message`,
+        // which returned a bare string. Folded into the Kind-tagged shape
+        // here so they get the same §66 translation path as everything
+        // else in this match, instead of staying English-only by accident
+        // of merge order.
+        Diagnostic::ModuleArgumentNotBound { .. } => (
+            Kind::ModuleArgumentNotBound,
+            "A module argument could not be matched to the module's declaration and was ignored.",
+        ),
+        Diagnostic::UnsupportedModuleArgumentKind { .. } => (
+            Kind::UnsupportedModuleArgumentKind,
+            "A module argument uses a kind this build does not interpret and was ignored.",
+        ),
+        Diagnostic::UnresolvedTextPlaceholder { .. } => (
+            Kind::UnresolvedTextPlaceholder,
+            "A text placeholder had no matching module argument and was left as written.",
+        ),
     }
 }
 
@@ -2376,6 +2416,7 @@ fn assemble_parameter_panel(
         let dropped = ref_ids.len().saturating_sub(views.len());
         diagnostics.push(crate::routes::ParameterDiagnosticDto {
             scope: None,
+            kind: crate::routes::ParameterDiagnosticKindDto::ParametersUnreadable,
             message:
                 "Some declared parameters could not be read from the product database and are not shown."
                     .to_string(),
@@ -2403,6 +2444,7 @@ fn assemble_parameter_panel(
             if let Some(previous_raw) = supplied.get(&ets_id) {
                 diagnostics.push(crate::routes::ParameterDiagnosticDto {
                     scope: None,
+                    kind: crate::routes::ParameterDiagnosticKindDto::DuplicateUnscopedValue,
                     message:
                         "Two stored values target the same parameter; the later one is ignored."
                             .to_string(),
@@ -2484,6 +2526,7 @@ fn assemble_parameter_panel(
             });
             diagnostics.push(crate::routes::ParameterDiagnosticDto {
                 scope: scope_dto,
+                kind: crate::routes::ParameterDiagnosticKindDto::DuplicateModuleScopedValue,
                 message:
                     "Two stored values target the same module-scoped parameter; the later one is ignored."
                         .to_string(),
@@ -2589,6 +2632,7 @@ fn assemble_parameter_panel(
                 {
                     diagnostics.push(crate::routes::ParameterDiagnosticDto {
                         scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
+                        kind: crate::routes::ParameterDiagnosticKindDto::DuplicateModuleId,
                         message:
                             "Two or more sections in this program declare the same module id; its fields are read-only."
                                 .to_string(),
@@ -2603,6 +2647,7 @@ fn assemble_parameter_panel(
                     MiAuthority::NoMatch => {
                         diagnostics.push(crate::routes::ParameterDiagnosticDto {
                             scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
+                            kind: crate::routes::ParameterDiagnosticKindDto::NoModuleInstanceMatch,
                             message:
                                 "No imported module instance matches this module; its fields are read-only."
                                     .to_string(),
@@ -2618,6 +2663,7 @@ fn assemble_parameter_panel(
                     } => {
                         diagnostics.push(crate::routes::ParameterDiagnosticDto {
                             scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
+                            kind: crate::routes::ParameterDiagnosticKindDto::AmbiguousModuleInstance,
                             message:
                                 "Two or more imported module instances share this module; its fields are read-only."
                                     .to_string(),
@@ -2634,6 +2680,7 @@ fn assemble_parameter_panel(
                     } => {
                         diagnostics.push(crate::routes::ParameterDiagnosticDto {
                             scope: section.scope.as_ref().map(|s| module_scope_dto(s)),
+                            kind: crate::routes::ParameterDiagnosticKindDto::MalformedModuleInstanceId,
                             message:
                                 "An imported module instance's identifier has an unexpected shape; this module's fields are read-only."
                                     .to_string(),
@@ -2721,9 +2768,11 @@ fn assemble_parameter_panel(
 
     // D26: every `Activation` diagnostic, mapped 1:1, in order.
     for scoped in &activation.diagnostics {
+        let (kind, message) = diagnostic_kind_and_message(&scoped.diagnostic);
         diagnostics.push(crate::routes::ParameterDiagnosticDto {
             scope: scoped.scope.as_ref().map(|s| module_scope_dto(s)),
-            message: diagnostic_message(&scoped.diagnostic).to_string(),
+            kind,
+            message: message.to_string(),
             detail: format!("{:?}", scoped.diagnostic),
         });
     }
@@ -3715,5 +3764,157 @@ mod tests {
         let last = entries.last().expect("at least the final import notice");
         assert_eq!(last.source, "import");
         assert_eq!(last.severity, Severity::Info);
+    }
+
+    // Fix round 1 (Q2): `diagnostic_kind_and_message`'s fifteen literals
+    // (twelve at fix round 1, plus three more folded in by this round's
+    // merge of main's T12 module-argument work) and `messages/en.ts`'s
+    // `parameters.diagnostic.*` entries for the same fifteen kinds are two
+    // independent sources of the same English
+    // sentence, and nothing before this test asserted they had to agree.
+    // This pins this file's half of that pair: every string below is
+    // copied verbatim from `apps/knx-web/src/messages/en.ts` (as of this
+    // fix round), so an edit to either side that isn't mirrored on the
+    // other fails here, on this side, immediately. It does not and
+    // cannot fail on a divergence introduced by editing `en.ts` alone —
+    // that half has no Rust test to run against it — but a `git blame`
+    // on this test block is now the pointer from here to there.
+    #[test]
+    fn diagnostic_kind_and_message_matches_the_english_catalogue() {
+        use crate::routes::ParameterDiagnosticKindDto as Kind;
+        use knx_productdb::dynamic::Diagnostic;
+
+        let cases: Vec<(Diagnostic, Kind, &str)> = vec![
+            (
+                Diagnostic::NoBranchMatched {
+                    choose_node: 1,
+                    param_ref: None,
+                    observed_value: "x".to_string(),
+                },
+                Kind::NoBranchMatched,
+                "A choice did not match any of its options.",
+            ),
+            (
+                Diagnostic::UnparsableTest {
+                    when_node: 1,
+                    raw: "x".to_string(),
+                },
+                Kind::UnparsableTest,
+                "A choice's condition could not be understood.",
+            ),
+            (
+                Diagnostic::UnresolvedParamRef {
+                    choose_node: 1,
+                    param_ref: None,
+                },
+                Kind::UnresolvedParamRef,
+                "A choice's controlling parameter could not be found.",
+            ),
+            (
+                Diagnostic::NonNumericValue {
+                    choose_node: 1,
+                    param_ref: None,
+                    raw: "x".to_string(),
+                },
+                Kind::NonNumericValue,
+                "A choice's controlling value was not a valid number.",
+            ),
+            (
+                Diagnostic::UnexpectedTypeNoneShape { choose_node: 1 },
+                Kind::UnexpectedTypeNoneShape,
+                "An unusual choice structure was skipped.",
+            ),
+            (
+                Diagnostic::UnrecognizedNode {
+                    node_id: 1,
+                    kind: "x".to_string(),
+                },
+                Kind::UnrecognizedNode,
+                "An unrecognized program element was skipped.",
+            ),
+            (
+                Diagnostic::ModuleDefNotFound {
+                    node_id: 1,
+                    ref_id: None,
+                },
+                Kind::ModuleDefNotFound,
+                "A module could not be found in this program.",
+            ),
+            (
+                Diagnostic::ModuleCycleDetected {
+                    node_id: 1,
+                    ref_id: None,
+                },
+                Kind::ModuleCycleDetected,
+                "A module refers back to one of its own enclosing modules and was not expanded.",
+            ),
+            (
+                Diagnostic::ModuleNestingTooDeep {
+                    node_id: 1,
+                    ref_id: None,
+                    depth: 9,
+                },
+                Kind::ModuleNestingTooDeep,
+                "A module is nested deeper than this program will expand.",
+            ),
+            (
+                Diagnostic::ModuleExpansionBudgetExhausted {
+                    node_id: 1,
+                    ref_id: None,
+                    budget: 9,
+                },
+                Kind::ModuleExpansionBudgetExhausted,
+                "This program's modules are too numerous to fully expand; the rest were skipped.",
+            ),
+            (
+                Diagnostic::MissingValue {
+                    choose_node: 1,
+                    param_ref: None,
+                },
+                Kind::MissingValue,
+                "A choice's controlling parameter has no value.",
+            ),
+            (
+                Diagnostic::ModuleWithoutId { node_id: 1 },
+                Kind::ModuleWithoutId,
+                "A module instance has no identifier and cannot be matched to stored values.",
+            ),
+            (
+                Diagnostic::ModuleArgumentNotBound {
+                    node_id: 1,
+                    ref_id: None,
+                },
+                Kind::ModuleArgumentNotBound,
+                "A module argument could not be matched to the module's declaration and was ignored.",
+            ),
+            (
+                Diagnostic::UnsupportedModuleArgumentKind {
+                    node_id: 1,
+                    kind: "x".to_string(),
+                },
+                Kind::UnsupportedModuleArgumentKind,
+                "A module argument uses a kind this build does not interpret and was ignored.",
+            ),
+            (
+                Diagnostic::UnresolvedTextPlaceholder {
+                    node_id: 1,
+                    name: "x".to_string(),
+                },
+                Kind::UnresolvedTextPlaceholder,
+                "A text placeholder had no matching module argument and was left as written.",
+            ),
+        ];
+
+        for (diagnostic, expected_kind, expected_message) in cases {
+            let (kind, message) = diagnostic_kind_and_message(&diagnostic);
+            assert_eq!(
+                kind, expected_kind,
+                "diagnostic_kind_and_message returned the wrong kind for {diagnostic:?}"
+            );
+            assert_eq!(
+                message, expected_message,
+                "diagnostic_kind_and_message drifted from messages/en.ts for {diagnostic:?}"
+            );
+        }
     }
 }

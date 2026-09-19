@@ -11,6 +11,7 @@ import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  BCP47_SHAPE_HINT,
   LANGUAGE_PACKS_STORAGE_KEY,
   type LanguagePack,
   exportEnglishTemplate,
@@ -25,6 +26,7 @@ import {
   resetLanguagePacksForTests,
   useLanguagePacks,
 } from "./languagePack";
+import { messages as enMessages } from "./messages/en";
 
 afterEach(() => {
   window.localStorage.removeItem(LANGUAGE_PACKS_STORAGE_KEY);
@@ -119,6 +121,118 @@ describe("parseLanguagePack", () => {
       expect(result.error).toMatch(/tag/i);
       expect(result.error).toMatch(/BCP 47/i);
     }
+  });
+
+  // KNOWN_LIMITATIONS.md §67's fix: every rejection now carries a
+  // structured `reason` alongside the English `error` prose, so a caller
+  // (`SettingsPanel.tsx`) can translate it instead of rendering `error`
+  // verbatim. One assertion per validation rule, checked here at the
+  // `parseLanguagePack` level; §67 itself (translated *inside* a
+  // translated sentence, in German) is `SettingsPanel.test.tsx`'s job.
+  it("every rejection carries a structured reason, not just English prose", () => {
+    // Fix round 1 (Q1): every branch below asserts `.ok === false` before
+    // reading `.reason` — without that guard, a `parseLanguagePack` that
+    // wrongly returned `{ ok: true, ... }` would skip every `if (!x.ok)`
+    // block and the test would still report a pass. Re-run with
+    // `parseLanguagePack` short-circuited to always return `{ ok: true }`
+    // to see it fail instead: it does, on the first assertion.
+    const notObject = parseLanguagePack("not an object");
+    expect(notObject.ok).toBe(false);
+    if (!notObject.ok) expect(notObject.reason).toEqual({ kind: "notObject" });
+
+    const noFormatVersion = parseLanguagePack({ tag: "nl-NL", name: "X", messages: {} });
+    expect(noFormatVersion.ok).toBe(false);
+    if (!noFormatVersion.ok) expect(noFormatVersion.reason).toEqual({ kind: "formatVersionMissing" });
+
+    const noTag = parseLanguagePack({ formatVersion: 1, name: "X", messages: {} });
+    expect(noTag.ok).toBe(false);
+    if (!noTag.ok) expect(noTag.reason).toEqual({ kind: "tagMissing" });
+
+    const badTag = parseLanguagePack({
+      formatVersion: 1,
+      tag: "xx-not-a-language",
+      name: "X",
+      messages: {},
+    });
+    expect(badTag.ok).toBe(false);
+    if (!badTag.ok) expect(badTag.reason).toEqual({ kind: "tagMalformed", tag: "xx-not-a-language" });
+
+    const noName = parseLanguagePack({ formatVersion: 1, tag: "nl-NL", messages: {} });
+    expect(noName.ok).toBe(false);
+    if (!noName.ok) expect(noName.reason).toEqual({ kind: "nameMissing" });
+
+    const noMessages = parseLanguagePack({ formatVersion: 1, tag: "nl-NL", name: "X" });
+    expect(noMessages.ok).toBe(false);
+    if (!noMessages.ok) expect(noMessages.reason).toEqual({ kind: "messagesMissing" });
+
+    const badMessageValue = parseLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "X",
+      messages: { "toolbar.save": 42 },
+    });
+    expect(badMessageValue.ok).toBe(false);
+    if (!badMessageValue.ok) {
+      expect(badMessageValue.reason).toEqual({
+        kind: "messageValueNotString",
+        key: "toolbar.save",
+        valueType: "number",
+      });
+    }
+
+    const badEnglishName = parseLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "X",
+      messages: {},
+      englishName: 42,
+    });
+    expect(badEnglishName.ok).toBe(false);
+    if (!badEnglishName.ok) expect(badEnglishName.reason).toEqual({ kind: "englishNameNotString" });
+
+    const badBasedOn = parseLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "X",
+      messages: {},
+      basedOn: 42,
+    });
+    expect(badBasedOn.ok).toBe(false);
+    if (!badBasedOn.ok) expect(badBasedOn.reason).toEqual({ kind: "basedOnNotString" });
+
+    const badPackVersion = parseLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "X",
+      messages: {},
+      packVersion: 42,
+    });
+    expect(badPackVersion.ok).toBe(false);
+    if (!badPackVersion.ok) expect(badPackVersion.reason).toEqual({ kind: "packVersionNotString" });
+
+    const badPluralCategories = parseLanguagePack({
+      formatVersion: 1,
+      tag: "nl-NL",
+      name: "X",
+      messages: {},
+      pluralCategories: [1, 2],
+    });
+    expect(badPluralCategories.ok).toBe(false);
+    if (!badPluralCategories.ok) {
+      expect(badPluralCategories.reason).toEqual({ kind: "pluralCategoriesInvalid" });
+    }
+  });
+
+  // Fix round 1 (Q2): `messages/en.ts`'s "languagePack.rejection.tagMalformed"
+  // hard-codes the same sentence `rejectionReasonMessage` builds from
+  // `BCP47_SHAPE_HINT` (both describe what a well-formed BCP 47 tag looks
+  // like, for a user whose imported tag failed the check) — two sources
+  // of one English truth, nothing pinning them together before this
+  // test. It asserts the catalogue entry still contains the constant
+  // verbatim, so an edit to one without the other fails here instead of
+  // silently drifting apart in front of a user.
+  it("the catalogue's tagMalformed hint stays in sync with BCP47_SHAPE_HINT", () => {
+    expect(enMessages["languagePack.rejection.tagMalformed"]).toContain(BCP47_SHAPE_HINT);
   });
 
   it("rejects a non-string message value", () => {
@@ -276,7 +390,10 @@ describe("a persist() failure is rolled back, not smuggled in later", () => {
 
     const result = importLanguagePack(dutchPack());
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/storage/i);
+    if (!result.ok) {
+      expect(result.error).toMatch(/storage/i);
+      expect(result.reason.kind).toBe("storageFailure");
+    }
     expect(listLanguagePacks()).toEqual([]);
     expect(getLanguagePack("nl-NL")).toBeUndefined();
 

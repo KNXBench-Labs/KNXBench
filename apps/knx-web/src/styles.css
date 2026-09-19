@@ -139,6 +139,17 @@ main {
   box-shadow: 0 4px 24px var(--knx-overlay-shadow);
 }
 
+.toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.toast-hint {
+  font-size: 0.75rem;
+  opacity: 0.75;
+}
+
 .toast button {
   background: none;
   border: none;
@@ -661,6 +672,12 @@ main {
 .log-panel-empty {
   color: var(--knx-muted);
   font-style: italic;
+}
+
+.log-panel-hint {
+  font-size: 0.8rem;
+  color: var(--knx-muted);
+  margin: 0.15rem 0 0.5rem;
 }
 
 .log-panel-list {

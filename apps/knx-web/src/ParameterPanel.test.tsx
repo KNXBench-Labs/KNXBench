@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ParameterPanel as ParameterPanelDto } from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests } from "./productLanguage";
+import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
 
 // T3 fix round 1, item 6: every `ParameterPanelDto` fixture now needs a
 // `tree` field. `null` is correct for a GET-only fixture (the server only
@@ -36,6 +37,8 @@ afterEach(() => {
   vi.clearAllMocks();
   window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
   resetProductLanguageForTests();
+  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetUiLanguageForTests();
 });
 
 // Two sections (top-level + one module instantiation, D23), one stale
@@ -94,6 +97,7 @@ const fixture: ParameterPanelDto = {
   diagnostics: [
     {
       scope: null,
+      kind: "noBranchMatched",
       message: "A choice did not match any of its options.",
       detail: "NoBranchMatched { choose_node: 4821 }",
     },
@@ -253,8 +257,9 @@ describe("ParameterPanel", () => {
         fixture.diagnostics[0],
         {
           scope: null,
-          message: "A restriction field's value fell outside its option list.",
-          detail: "ValueNotInOptions { field: \"P2\" }",
+          kind: "unresolvedParamRef",
+          message: "A choice's controlling parameter could not be found.",
+          detail: "UnresolvedParamRef { field: \"P2\" }",
         },
       ],
     };
@@ -399,6 +404,7 @@ describe("ParameterPanel", () => {
         ...fixture.diagnostics,
         {
           scope: { moduleNode: 7, moduleId: null, moduleDefId: "MD-1" },
+          kind: "noModuleInstanceMatch",
           message: reason,
           detail: "No imported ModuleInstance's RefId matches module 'M-7' (D39 rule 2, zero matches).",
         },
@@ -413,6 +419,54 @@ describe("ParameterPanel", () => {
     expect(sections[0].textContent).not.toContain(reason);
     // The module-scoped section (matching scope) must.
     expect(sections[1].textContent).toContain(reason);
+
+    root.unmount();
+  });
+
+  // KNOWN_LIMITATIONS.md §66: `ParameterDiagnostic.message` used to be a
+  // fixed English sentence composed server-side and rendered verbatim.
+  // It's now a `kind` tag translated client-side through
+  // `describeParameterDiagnosticMessage` (`ParameterPanel.tsx`), the same
+  // discriminated-union pattern §67 used for a rejected language pack's
+  // own reason. This test proves the banner headline follows the active
+  // UI language while `.detail` — developer-facing, carries raw Rust
+  // debug formatting — stays English on purpose.
+  it("§66: a diagnostic's message is translated with the UI language; its detail stays English", async () => {
+    window.localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, "de");
+    apiMock.deviceParameters.mockResolvedValue(fixture);
+    const root = await renderPanel();
+
+    expect(host!.textContent).toContain(
+      "Eine Auswahl passte auf keine ihrer Optionen.",
+    );
+    expect(host!.textContent).not.toContain(
+      "A choice did not match any of its options.",
+    );
+    // Fix round 1 (Q3): `.detail` is rendered nowhere in the banner, so
+    // `host!.textContent` never contains it whether or not translation
+    // exists — that assertion held before this task and would hold under
+    // any mutation of the translation path, which makes it evidence of
+    // nothing. `.detail` reaches the user through exactly one door, the
+    // "copy details" button's `copyDetail` handler (`ParameterPanel.tsx`);
+    // asserting on that handler's clipboard payload is the real claim
+    // `KNOWN_LIMITATIONS.md` cites this test for.
+    expect(host!.textContent).not.toContain("NoBranchMatched");
+
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    const copyButton = host!.querySelector<HTMLButtonElement>(
+      ".parameter-diagnostics-banner button",
+    )!;
+    await act(async () => {
+      copyButton.click();
+    });
+    // The clipboard payload is D26's raw diagnostic debug string,
+    // untranslated, byte for byte — see `api.ts`'s doc comment on
+    // `ParameterDiagnostic.detail`.
+    expect(writeText).toHaveBeenCalledWith("NoBranchMatched { choose_node: 4821 }");
 
     root.unmount();
   });

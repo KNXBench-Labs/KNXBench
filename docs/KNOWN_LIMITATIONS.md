@@ -3104,6 +3104,61 @@ ways, all deliberate and all recorded here per that design's own §7:
    path on one gateway model, not for routing, transmit behavior, reconnect,
    another gateway, or long-running stability. The exact procedure is recorded
    in `.ai/logs/2026-09-16_codex_group_monitor_reverify.md`.
+
+   **Re-verified independently 2026-09-16 → 2026-09-19 (Task 16, second
+   pass, a restatement against new measurement — the run surfaced no
+   defect, so nothing here needed fixing).** The measured session was not
+   started fresh by this task: it was already running, against the same
+   real gateway with the real schema-23 `Unser Zuhause` project open, for
+   roughly 30 minutes before this task picked it up mid-flight, polled it,
+   and issued the stop. From first telegram to stop, the session had been
+   open for 2040 seconds (34 minutes), well past the earlier two- and
+   one-minute runs. Result: 1299 telegrams from 20 source addresses to 61
+   group destinations, `droppedCount = 0`, all 1299 destination names
+   resolved against the project (201 `GroupValueRead` carrying no
+   value to decode, against 201 `GroupValueResponse` and 897
+   `GroupValueWrite` that do), and 209 of the 1098 value-bearing telegrams (897 +
+   201) decoded through their DPT. The other 889 came back `Unresolved`
+   — traced to `GroupAddressContext::decode` (`apps/knx-server/src/
+   bus.rs`): that variant fires when `self.dpts.get(&ga.raw())` is `None`
+   or `GroupAddressDpt::None`, i.e. the project declares no DPT for that
+   group address at all. It is not a main-type gap: an address using a
+   main type outside §61's implemented thirty would decode through
+   `decode_single` into `DecodedValue::Error`, a different kind, and none
+   appeared in this run. So roughly 81% of the value-bearing
+   telegrams in this run were addressed to group addresses carrying no
+   declared DPT — a share of telegrams, not of addresses: 61 destinations
+   produced those 1098 telegrams, and no address-level count was measured,
+   so nothing here says what fraction of the project's group addresses
+   lack a DPT. A fact about this project's data either way, not about
+   §61's codec coverage, and §61 is not touched by this entry. This also exercised, for the first time, the item-4
+   single-session guard against a live gateway rather than only against
+   `FakeConnector` in unit tests: a second `POST /api/bus/monitor/start`
+   issued to the *same* server process while the first tunnel was open was
+   refused with `409` and the existing session's id, exactly as item 4
+   describes. A related, previously undocumented fact surfaced by
+   accident: a *second, independent* `knx-server` process attempting its
+   own tunnel to the same physical gateway while the first tunnel was open
+   was refused by the gateway itself — KNXnet/IP `CONNECT_RESPONSE` status
+   `0x24` (`E_NO_MORE_CONNECTIONS`) — before our own single-session guard
+   ever ran. The gateway used for this verification accepts exactly one
+   concurrent tunnel connection; two separate `knx-server` instances (or a
+   `knx-server` and a `knx-cli bus monitor` run) pointed at it will collide
+   at the hardware, not just inside this application. No group read, write,
+   response, management request, scan, or `/api/bus/write` call was made in
+   either session; the gateway address is deliberately not stored here.
+   Of §62's original four headline claims (tunnelling-only, single-session,
+   client-filtered, "never verified against a real gateway"), two now have
+   live evidence from this pass specifically: single-session, from the
+   `409` above, and "never verified", now false twice over (2026-09-16 and
+   2026-09-19). The other two — tunnelling-only and client-filtered —
+   remain confirmed by code inspection, not by this run: it touched no
+   routing code and the poll route still takes only `since`, but it never
+   tried to exercise routing or server-side filtering, so it is consistent
+   with those claims rather than a live test of them. What remains
+   unverified is unchanged: routing, transmit behavior, reconnect after a
+   mid-session failure, other
+   gateway models, and sessions longer than 34 minutes.
 10. **No KNX certification or ETS-parity claim.** This is a monitor/write
     table, not a certified diagnostic tool, and not a claim of matching
     ETS's Group Monitor feature-for-feature — see item 6 above for
@@ -3162,10 +3217,11 @@ during review, after the design document was written.
 **Impact.** A user gets a live, DPT-decoded telegram table and a
 send-from-the-table form for one tunnelled gateway at a time, with a
 client-side text/service filter. The passive receive and project-resolution
-path now has one bounded real-installation observation, but the send form still
-has only fake-tunnel coverage. This remains neither a certified diagnostic
-tool nor ETS's Group Monitor and — for a very long browser session — is not
-bounded in memory the way the server side already is.
+path now has bounded real-installation observations from two dates, the
+longer one running 34 minutes, but the send form still has only fake-tunnel
+coverage. This remains neither a certified diagnostic tool nor ETS's Group
+Monitor and — for a very long browser session — is not bounded in memory
+the way the server side already is.
 
 **Lifted when.** Future slices add routing support, auto-reconnect, live DPT
 re-resolution, multi-session support, server-side filtering, a client-side row

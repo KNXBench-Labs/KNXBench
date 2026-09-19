@@ -11,7 +11,11 @@
 //! 2. The bundle itself: which files it holds for a given set of opt-ins,
 //!    what each one contains, and how it becomes a zip on disk.
 //!
-//! Redaction covers `report.md`, `environment.json` and `log.json`. It does
+//! Redaction covers `report.md`, `environment.json` and `log.json` — and
+//! covers the four pattern classes above, not KNX addresses: `log.json`
+//! records import conflicts by group address and by element name, which is
+//! the only thing that makes a conflict diagnosable, and the dialog says so
+//! rather than implying the file is anonymous. It does
 //! **not** cover `bus-telegrams.json` — the KNX individual and group
 //! addresses in that file are the entire debugging content of it, which is
 //! precisely why it is opt-in, off by default, and labelled in the dialog as
@@ -77,7 +81,7 @@ impl Redactor {
     pub(crate) fn apply(&self, text: &str) -> String {
         let mut out = text.to_string();
         if let Some(home) = &self.home {
-            out = out.replace(home.as_str(), "~");
+            out = replace_home(&out, home);
         }
         if let Some(hostname) = &self.hostname {
             out = replace_hostname(&out, hostname);
@@ -116,6 +120,16 @@ fn hostname() -> Option<String> {
         .filter(|name| !name.is_empty())
 }
 
+/// One decided replacement: the byte range *inside* the candidate run that
+/// really is a literal, and what takes its place. The range matters because
+/// a run is greedy — a sentence-final `10.0.0.5.` arrives with the full stop
+/// attached, and only the part in front of it is an address.
+struct Hit {
+    start: usize,
+    end: usize,
+    placeholder: &'static str,
+}
+
 /// True when `c` may sit *inside* a host or address token, and therefore
 /// means a candidate run that touches it is part of a longer word rather
 /// than a standalone literal. This is what keeps `knx_core::Project` and
@@ -148,7 +162,26 @@ fn redact_ipv4(text: &str) -> String {
     scan_and_replace(
         text,
         |c| c.is_ascii_digit() || c == '.',
-        |run| is_dotted_quad(run).then_some(IPV4_PLACEHOLDER),
+        |run| {
+            // A run is greedy over `.`, so a sentence-final address arrives
+            // here as `10.0.0.5.` and one after an ellipsis as `...10.0.0.5`
+            // — five groups either way, and a quad test applied to the whole
+            // run says no and leaks the address. Strip the dots that cannot
+            // belong to a quad and judge the core. The boundary rule then
+            // applies to that core rather than to the run, which is what
+            // still protects `v1.2.3.4.`: the `v` sits directly in front of
+            // the trimmed core too.
+            let start = run.len() - run.trim_start_matches('.').len();
+            let end = run.trim_end_matches('.').len();
+            if start >= end {
+                return None;
+            }
+            is_dotted_quad(&run[start..end]).then_some(Hit {
+                start,
+                end,
+                placeholder: IPV4_PLACEHOLDER,
+            })
+        },
     )
 }
 
@@ -166,32 +199,53 @@ fn is_dotted_quad(run: &str) -> bool {
 /// parser rather than a hand-written grammar — the standard library already
 /// knows every compressed and full form there is, and a second opinion here
 /// would only be a worse one.
+fn redact_ipv6(text: &str) -> String {
+    scan_and_replace(text, |c| c.is_ascii_hexdigit() || c == ':', ipv6_hit)
+}
+
+/// Finds the address inside one candidate run, trying four sub-runs in a
+/// fixed order: the whole run, the run without a trailing `:`, the run
+/// without a single leading `:`, and the run without both.
 ///
 /// The trailing-colon retry catches the residue of the IPv4 pass: once
 /// `::ffff:192.0.2.1` has become `::ffff:[redacted-ipv4]`, the run left
 /// behind is `::ffff:`, which no parser accepts and which is still an
-/// address prefix worth removing.
-fn redact_ipv6(text: &str) -> String {
-    scan_and_replace(
-        text,
-        |c| c.is_ascii_hexdigit() || c == ':',
-        |run| {
-            if !run.contains(':') {
-                return None;
+/// address prefix worth removing. It also keeps the punctuation of
+/// `fe80::1: connection refused`, where the second colon belongs to the
+/// sentence and not to the address.
+///
+/// The leading-colon retry catches an address glued to the word in front of
+/// it — `peer:2001:db8::1`, where the run starts at the separating colon and
+/// the boundary rule would otherwise see the `r` of `peer` and refuse. One
+/// colon only, deliberately: a run that starts with `::` after a word
+/// character is a Rust path (`knx_core::Project`), and handing that to the
+/// parser is exactly the mistake the boundary rule exists to prevent.
+fn ipv6_hit(run: &str) -> Option<Hit> {
+    let leading = usize::from(run.starts_with(':'));
+    let trailing = usize::from(run.ends_with(':'));
+    for start in [0, leading] {
+        for end in [run.len(), run.len() - trailing] {
+            if start >= end {
+                continue;
             }
-            if run.parse::<std::net::Ipv6Addr>().is_ok() {
-                return Some(IPV6_PLACEHOLDER);
+            let candidate = &run[start..end];
+            if candidate.contains(':') && candidate.parse::<std::net::Ipv6Addr>().is_ok() {
+                return Some(Hit {
+                    start,
+                    end,
+                    placeholder: IPV6_PLACEHOLDER,
+                });
             }
-            let trimmed = run.strip_suffix(':')?;
-            (trimmed.contains(':') && trimmed.parse::<std::net::Ipv6Addr>().is_ok())
-                .then_some(IPV6_PLACEHOLDER)
-        },
-    )
+        }
+    }
+    None
 }
 
 /// Walks `text` once, hands every maximal run of `in_class` characters to
-/// `verdict`, and substitutes the placeholder it returns. A run whose
-/// neighbours are word characters is skipped outright — see [`boundary_ok`].
+/// `verdict`, and substitutes the placeholder it returns over the range it
+/// names. A hit whose neighbours are word characters is dropped — see
+/// [`boundary_ok`], which is checked against the hit rather than against the
+/// greedy run around it.
 ///
 /// ASCII-only by construction: every character class used here is ASCII, so
 /// byte indices and character indices agree inside a run, and a multi-byte
@@ -200,7 +254,7 @@ fn redact_ipv6(text: &str) -> String {
 fn scan_and_replace(
     text: &str,
     in_class: impl Fn(char) -> bool,
-    verdict: impl Fn(&str) -> Option<&'static str>,
+    verdict: impl Fn(&str) -> Option<Hit>,
 ) -> String {
     let bytes = text.as_bytes();
     let mut out = String::with_capacity(text.len());
@@ -215,15 +269,42 @@ fn scan_and_replace(
         while i < bytes.len() && bytes[i].is_ascii() && in_class(bytes[i] as char) {
             i += 1;
         }
-        if !boundary_ok(bytes, start, i) {
-            continue;
-        }
         let run = &text[start..i];
-        if let Some(placeholder) = verdict(run) {
-            out.push_str(&text[copied..start]);
-            out.push_str(placeholder);
-            copied = i;
+        if let Some(hit) = verdict(run) {
+            let (from, to) = (start + hit.start, start + hit.end);
+            if !boundary_ok(bytes, from, to) {
+                continue;
+            }
+            out.push_str(&text[copied..from]);
+            out.push_str(hit.placeholder);
+            copied = to;
         }
+    }
+    out.push_str(&text[copied..]);
+    out
+}
+
+/// Replaces the home directory prefix with `~`, but only where the path
+/// really ends there. A plain substring replace turns
+/// `/home/andrea/secret.knxproj` into `~a/secret.knxproj` when `$HOME` is
+/// `/home/knxbench` — over-redaction rather than a leak, but it garbles a path
+/// a maintainer has to read. A following word character means a different
+/// directory whose name merely starts the same way.
+fn replace_home(text: &str, home: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out = String::with_capacity(text.len());
+    let mut copied = 0usize;
+    let mut from = 0usize;
+    while let Some(offset) = text[from..].find(home) {
+        let start = from + offset;
+        let end = start + home.len();
+        let glued = bytes.get(end).is_some_and(|b| is_token_char(*b as char));
+        if !glued {
+            out.push_str(&text[copied..start]);
+            out.push('~');
+            copied = end;
+        }
+        from = end.max(start + 1);
     }
     out.push_str(&text[copied..]);
     out
@@ -560,6 +641,53 @@ mod tests {
     }
 
     #[test]
+    fn a_dotted_quad_next_to_a_dot_is_still_an_address() {
+        // Every line here leaked before the run was trimmed: the scan class
+        // includes `.`, so a sentence-final address is a five-group run and
+        // a four-group test says "not an address" about the address.
+        let r = plain();
+        let probes = [
+            ("gateway is 192.168.1.1.", "gateway is {P}."),
+            ("at 10.0.0.5. It failed", "at {P}. It failed"),
+            ("...192.168.1.1", "...{P}"),
+            ("{\"note\":\"host 10.1.2.3.\"}", "{\"note\":\"host {P}.\"}"),
+            // The control: parentheses were never in the scan class, so this
+            // one worked all along and must keep working.
+            ("(192.168.1.1)", "({P})"),
+        ];
+        // Every probe is checked before anything is asserted, so a
+        // regression reports all the shapes it broke, not merely the first.
+        let leaks: Vec<String> = probes
+            .iter()
+            .filter(|(input, want)| r.apply(input) != want.replace("{P}", IPV4_PLACEHOLDER))
+            .map(|(input, _)| format!("{input:?} -> {:?}", r.apply(input)))
+            .collect();
+        assert!(leaks.is_empty(), "not redacted: {leaks:#?}");
+    }
+
+    #[test]
+    fn a_version_tag_with_a_trailing_dot_is_still_not_an_address() {
+        // The trimming above must not cost the boundary rule its teeth.
+        let r = plain();
+        assert_eq!(r.apply("v1.2.3.4."), "v1.2.3.4.");
+        assert_eq!(r.apply("see 0.1.0-alpha.1."), "see 0.1.0-alpha.1.");
+    }
+
+    #[test]
+    fn an_ipv6_literal_glued_to_the_word_in_front_of_it_is_still_redacted() {
+        let r = plain();
+        assert_eq!(
+            r.apply("peer:2001:db8::1 left"),
+            format!("peer:{IPV6_PLACEHOLDER} left")
+        );
+        // The sentence colon belongs to the sentence, not to the address.
+        assert_eq!(
+            r.apply("fe80::1: connection refused"),
+            format!("{IPV6_PLACEHOLDER}: connection refused")
+        );
+    }
+
+    #[test]
     fn ipv6_literals_are_redacted_in_every_form_that_appears_in_practice() {
         let r = plain();
         for address in ["::1", "fe80::1", "2001:db8::1", "2001:db8:0:0:0:0:2:1"] {
@@ -617,6 +745,16 @@ mod tests {
         );
         let slash = Redactor::new(Some("/".into()), None);
         assert_eq!(slash.apply("/a/b/c"), "/a/b/c");
+    }
+
+    #[test]
+    fn a_sibling_home_directory_is_not_half_rewritten() {
+        let r = Redactor::new(Some("/home/knxbench".into()), None);
+        assert_eq!(
+            r.apply("/home/andrea/secret.knxproj"),
+            "/home/andrea/secret.knxproj"
+        );
+        assert_eq!(r.apply("saved in /home/knxbench."), "saved in ~.");
     }
 
     #[test]

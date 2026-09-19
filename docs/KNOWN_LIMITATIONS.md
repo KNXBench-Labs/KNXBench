@@ -5615,6 +5615,26 @@ address, a device serial number, a project file name sitting outside the home
 directory, a hostname the machine does not report, or whatever the user types
 into the description field beyond those four shapes.
 
+**KNX addresses are not one of the four classes.** `log.json` is on by
+default and can name group addresses and imported element names, because
+`session_log.rs` puts `conflict.group_address`, `unknown.name` and
+`unknown.sample` into its messages verbatim. That is deliberate: a debug log
+stripped of the address the conflict is about cannot diagnose the conflict.
+The dialog says so in the user's language — "with IP addresses removed", not
+"with addresses removed" — and the privacy paragraph states plainly that KNX
+addresses and project names are never replaced anywhere.
+
+**Two knowable failure modes inside the four classes.** An IPv6 literal that
+follows a word character with no separator at all (`peer2001:db8::1`) is not
+redacted: the boundary rule that keeps `knx_core::Project` from being read as
+a compressed address cannot tell that case from a Rust path. One separating
+colon *is* handled (`peer:2001:db8::1`), two are not (`peer::2001:db8::1`
+reads as a path). And the home-directory prefix is matched textually with a
+word-boundary check on its right-hand side only, so `/home/knxbench-old` is
+still rewritten to `~-old` when `$HOME` is `/home/knxbench` — over-redaction
+that garbles a path rather than a leak, and the far more common
+`/home/andrea` case is left alone.
+
 **Cause.** Deliberate, and scoped that way by the brief: redaction is by
 pattern class rather than by a list of known values, and each class has to be
 a shape that can be recognised without guessing. A dotted quad and an IPv6
@@ -5628,12 +5648,14 @@ answer simply redacts one class fewer; `HOME` unset does the same for paths.
 
 **Consequence.** The bundle is safer than an unfiltered log but is not
 anonymous, and nothing in the product claims it is. The dialog names the
-three redacted files and says which file is deliberately not redacted
-(`bus-telegrams.json` keeps the KNX individual and group addresses of the
-installation — without them its telegrams say nothing), and the zip is
-written locally and shown to the user before anything is shared. The GitHub
-path opens a prefilled issue page in the browser and stops there: no token,
-no credential, no `POST` from the application, and no upload anywhere.
+three redacted files, says that KNX addresses and project names survive in
+all of them, and names what `bus-telegrams.json` carries: the individual and
+group addresses of the installation plus the group address names the open
+project knows for them ("Kitchen ceiling light"). Without those a telegram
+dump says nothing, which is why they stay and why the file is opt-in. The
+zip is written locally and shown to the user before anything is shared. The
+GitHub path opens a prefilled issue page in the browser and stops there: no
+token, no credential, no `POST` from the application, and no upload anywhere.
 
 **Lifted when.** Nothing here is waiting on a fix. If a further class is ever
 worth adding — MAC addresses are the obvious candidate — it goes in as

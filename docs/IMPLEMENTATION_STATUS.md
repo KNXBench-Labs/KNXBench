@@ -6663,7 +6663,7 @@ crate was added (the redaction scanners are hand-written rather than pulling
 in `regex` for two grammars).
 
 **Tests.** 22 unit tests in `debug_report.rs`, 6 in
-`apps/knx-server/tests/http_debug_report.rs`, 7 in
+`apps/knx-server/tests/http_debug_report.rs` (fix round: 26 and 7), 7 in
 `apps/knx-web/src/githubIssue.test.ts`, 9 in
 `apps/knx-web/src/DebugReportButton.test.tsx`; `App.test.tsx`'s File-menu
 tab-order list gained the new entry. Every one was mutation-checked. Two
@@ -6674,10 +6674,56 @@ array and `report.md`'s contents list against the built files for all eight
 flag combinations), and slicing the issue body by UTF-16 code units instead
 of code points (now caught by sweeping 300 limits rather than testing one,
 since only about a quarter of limits land a cut between surrogate halves).
-Web tests 669, up from 660.
+Web tests 669, up from 653 — the 7 and 9 new cases above.
 
 Gates: `cargo fmt --check`, `cargo clippy --workspace --all-targets -D
 warnings`, `cargo test --workspace --no-fail-fast`, `xtask check-layering`,
 `xtask check-headers` (152 with a header, 167 without, ceiling 168 — every
 new file carries one, the free slot is untouched), `cargo deny check`,
 `npx tsc --noEmit`, `npx vitest run` — all exit 0.
+
+### Fix round 1 (review findings)
+
+**The redaction pass missed an address followed by a dot.** The IPv4 scan
+class includes `.`, so `192.168.1.1.` at the end of a sentence scanned as a
+five-group run, failed the four-group test and was left in `report.md` — and
+`report.md` is the body of the prefilled GitHub issue, so the leak reached
+the browser. A candidate run is now trimmed of leading and trailing dots
+before it is validated, and the boundary rule is applied to the trimmed core
+rather than to the greedy run, so `v1.2.3.4.` is still protected by the `v`
+in front of it. The same restructuring gave the IPv6 pass a leading-colon
+retry, which catches `peer:2001:db8::1`, and stopped it eating the sentence
+colon in `fe80::1: connection refused`.
+
+**The wording now matches what the code does.** `log.json` is on by default
+and `session_log.rs` writes group addresses and imported element names into
+its messages verbatim, so "with addresses removed" was untrue and framing
+`bus-telegrams.json` as "the exception" implied the opposite of the truth.
+The catalogues now say "with IP addresses removed", state that KNX addresses
+and project names are never replaced anywhere, and name the group address
+names (`destinationName`) that the telegram file carries alongside the
+addresses. `KNOWN_LIMITATIONS.md` §104 says the same and adds the two
+knowable failure modes inside the four classes (an IPv6 literal glued to a
+word with no separator; the home prefix matched with a right-hand boundary
+only, so `/home/knxbench-old` is over-redacted while `/home/andrea` is now left
+alone).
+
+**Narrower export, honest tests.** `pub mod session_log` became
+`mod session_log; pub use session_log::{LogEntry, Severity};` — the wide form
+additionally exported the import-report converters, dragging `knx-etsproj`
+and `knx-csv` into this crate's public surface for no test's benefit. A
+count assertion that passed at zero (a tempdir the handler never received)
+was deleted; `a_write_target_outside_the_data_directory_is_refused` was
+renamed to say that it tests a *relative* escape, since absolute paths
+outside the data directory are accepted by design.
+
+**`bus-telegrams.json` finally has a test.** The most privacy-sensitive file
+in the bundle had no end-to-end coverage at all. A fake tunnel now feeds two
+telegrams into a real session, and the test reads the file out of the written
+zip and asserts its contents: sequence number, source, destination,
+`destinationName`, service, decoded kind, DPT and text. Two unit tests next
+to `telegram_json` cover all four `DecodedValue` arms and the absent case.
+
+Server tests 26 + 7 + 2 for this feature; web tests unchanged at 669. All
+eight gates exit 0 again.
+

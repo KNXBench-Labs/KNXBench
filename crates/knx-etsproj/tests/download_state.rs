@@ -1,8 +1,4 @@
-//! C14: ETS's differential-download state (`LoadedImage`, `CheckSums`,
-//! `DownloadCounter` on `DeviceInstance`, `Project Schema23 v01.00.00.pdf`
-//! p. 44) survives import byte-exact, is named in the import report rather
-//! than only counted, and is correctly absent when the source project never
-//! carries it (the common case, since all three are optional).
+//! C14: ETS's differential-download state survives import byte-exact and is named in the report.
 
 use std::io::{Cursor, Write};
 

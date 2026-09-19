@@ -86,3 +86,62 @@ export function phaseMessageKey(phase: string): MessageKey | null {
 export function isRunning(snapshot: LoadProgressSnapshot | null): boolean {
   return snapshot?.status === "running";
 }
+
+/**
+ * How a poller decides a snapshot belongs to the load it started.
+ *
+ * The POST that starts a load does not return the operation id, so the
+ * client establishes it in two steps: read the counter *before* asking
+ * for a new operation (`baseline`), then adopt the first running
+ * operation whose id is higher (`adopted`). Everything ADR-0023 promises
+ * about the id rests on this pair.
+ */
+export interface LoadOwnership {
+  /**
+   * The highest operation id that existed before this load started, `0`
+   * when the server had never loaded anything, and `null` when that
+   * pre-flight read failed — in which case nothing can be attributed to
+   * this load at all, which is the honest answer rather than a guess.
+   */
+  baseline: number | null;
+  /** The id this load adopted, once a poll identified one. */
+  adopted: number | null;
+}
+
+/**
+ * Whether `snapshot` describes the caller's own load.
+ *
+ * Before adoption the test is "newer than anything that predates us";
+ * after it, equality, because the id is never reused. A snapshot that
+ * fails this is somebody else's operation or a finished earlier one, and
+ * rendering it would put another load's phase under our file name.
+ */
+export function ownsOperation(ownership: LoadOwnership, snapshot: LoadProgressSnapshot | null): boolean {
+  if (!snapshot) return false;
+  if (ownership.adopted !== null) return snapshot.operationId === ownership.adopted;
+  if (ownership.baseline === null) return false;
+  return snapshot.operationId > ownership.baseline;
+}
+
+/**
+ * A failed snapshot for a load that died without the server reporting one
+ * it will admit to: a rejection before any operation began, a `409`, an
+ * unreachable server, or a lost response to a load that actually
+ * succeeded.
+ *
+ * It keeps the last phase this load genuinely observed — `starting` when
+ * there was none — and invents nothing else. `operationId` is `0`, an id
+ * the server never issues, because there may be no operation to name.
+ */
+export function localFailure(previous: LoadProgressSnapshot | null, error: string): LoadProgressSnapshot {
+  return {
+    operationId: previous?.operationId ?? 0,
+    kind: previous?.kind ?? "import",
+    source: previous?.source ?? "",
+    phase: previous?.phase ?? "starting",
+    completed: null,
+    total: null,
+    status: "failed",
+    error,
+  };
+}

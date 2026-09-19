@@ -5228,6 +5228,15 @@ import — the project is loaded server-side — but does have to reload to see
 it. Nothing is silently discarded, and the snapshot says plainly which
 operation finished and whether it failed.
 
+**Narrowed, 2026-09-19 (T37 fix round 1).** The client now owns its
+operation id (ADR-0023, "the client half of the id"), so a lost response
+no longer leaves a banner claiming the load is still running: the final
+snapshot is accepted only when it is this load's *and* says `failed`, and
+our own operation reporting `succeeded` to a client that never received
+the tree is reported as the failure it is for that client. The staleness
+itself is unchanged — the page still has no project and still needs a
+reload — because there is still no route that hands out the current tree.
+
 **Lifted when.** A `GET /api/project` exists and the frontend falls back to
 it when a poll reports an operation it did not see finish.
 

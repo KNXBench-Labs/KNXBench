@@ -54,7 +54,9 @@ export function openProject(path: string): Promise<ProjectTree> {
  */
 export interface LoadProgressSnapshot {
   /** Monotonic per server run, never reused — how a poller tells "still
-   * the load I started" from "somebody else's, already finished". */
+   * the load I started" from "somebody else's, already finished".
+   * `loadProgress.ts`'s `ownsOperation` is that test; `App.tsx` reads the
+   * id once before starting a load and adopts the first higher one. */
   operationId: number;
   kind: "import" | "open";
   /** The file name, never the full path. */

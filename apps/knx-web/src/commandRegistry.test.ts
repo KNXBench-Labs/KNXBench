@@ -41,6 +41,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openBusMonitor: () => {},
     openSettings: () => {},
     openCompanion: () => {},
+    openHelp: () => {},
     ...overrides,
   };
 }
@@ -101,10 +102,10 @@ describe("command enablement", () => {
     expect(called).toBe(true);
   });
 
-  it("lists all twelve commands in palette order, with an unconditionally enabled first entry", () => {
+  it("lists all thirteen commands in palette order, with an unconditionally enabled first entry", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
       "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "search",
-      "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window",
+      "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window", "open-help",
     ]);
     expect(COMMANDS[0].isEnabled(noopCtx({ tree: null }))).toBe(true);
   });

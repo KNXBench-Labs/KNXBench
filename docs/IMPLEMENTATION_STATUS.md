@@ -6340,3 +6340,55 @@ Everything about it is arranged so that it cannot become the thing that finally 
 A text line that swaps every 1 800 ms is motion, so it answers to the same two switches as the bar's shuttle: `prefers-reduced-motion: reduce` and the application's own "Motion: off". Under either it freezes on its first entry rather than vanishing — the people who asked for calm get a joke that holds still, not one less thing on screen. No new `--knx-` token (ADR-0022): the line is `--knx-muted`, one step smaller than the phase, italic.
 
 Tests: `loadFlavour.test.ts` (15 — catalogue coverage in both languages, no German line left identical to its English one, a pinned order from a constant-zero source, a clamp against a stub returning exactly 1, and the reduced-motion predicate) and seven new `LoadProgressBanner.test.tsx` cases (the phase is still present and still outside the flavour line, `aria-hidden` and `aria-live="off"`, a pinned three-step sequence, a rotation that leaves `aria-valuenow`, the count, the width and `data-indeterminate` byte-identical, no flavour line on a failed banner *and* `vi.getTimerCount()` back to 0, the same on unmount, and a frozen line under "Motion: off"). Web tests 567 → 589. New limitation §98: at 114 ms a release load shows exactly one of the fifty messages, so the list is a reward for slow loads and large projects and nobody should expect to watch it cycle.
+
+## 2026-09-19 — T23 in-application help (branch `t28-help`)
+
+The application can now explain itself without a browser tab open next to
+it. Design first: **ADR-0024** answers the four questions `ROADMAP.md` left
+open, and was committed before a line of the implementation existed.
+
+Two mechanisms, with a rule for which is which. `HelpTip.tsx` is a small
+focusable `?` next to one control: one or two sentences, a `role="tooltip"`
+bubble that is *permanently* in the DOM and *permanently* the trigger's
+`aria-describedby` target, opened on focus as well as on pointer enter, and
+dismissed by Escape — but only when it is open, so a closed tip lets Escape
+through to whatever dialog surrounds it. It sits in three places today: the
+communication-object flag row (`Inspector.tsx`), the group-address filter
+(`GroupAddressTable.tsx`), and the bus monitor's gateway field
+(`BusMonitorPanel.tsx`). `HelpPanel.tsx` is the other half: a modal built on
+the existing `Overlay`, ten topics, a topic list marked with
+`aria-current="page"`, and the prose in a focusable region labelled by its
+own heading. It opens on `F1`, from a new toolbar button, and from the
+`open-help` palette command (the registry is now thirteen entries).
+
+`help.ts` holds everything about help that is not a component: the topic
+table, the paragraph key lists, `opensHelp` (plain `F1` only — a modified
+F1 belongs to the browser or the desktop and is left alone) and
+`helpTipAnimates`, which mirrors `loadFlavour.ts`'s `flavourRotates`
+including its "a runtime without `matchMedia` never asked for less motion"
+default. Topic and paragraph key lists are `satisfies readonly MessageKey[]`,
+so a typo'd help key is a compile error rather than an empty paragraph.
+
+All help prose lives in `messages/en.ts` and `messages/de.ts` under `help.*`
+— 50 keys, German written to read as German rather than as translated
+English. Four concept topics (buildings, topology, group addresses,
+com-object flags) carry a shared closing note saying they describe how
+KNXBench uses the concept and not how the KNX Standard defines it. Two help
+strings mention certification or compatibility and both are denials; a test
+pins the exact key list allowed to mention either in either language, so a
+new sentence touching those words fails the suite and has to be read by a
+human before it ships.
+
+What no test can check is whether a help sentence is *true*, and ADR-0024
+says so outright. Every factual claim in the current prose was checked
+against the code that implements it (address bit widths, the group-address
+styles, flag letters, the bus layer being tunnelling-only with no discovery
+and no routing) before it was written down.
+
+Web tests 591 → 640 across 50 files; `check-headers` unchanged at 167 absent
+against a ceiling of 168, with all six new files carrying an ADR-0018 header.
+Closes **D12**'s help half; the end-user *manual* half stays open by
+decision, since ADR-0024 rules that `docs/` never ships to users. New
+limitation **§99**: help prose lives in the message catalogue one paragraph
+per key, which buys a compile-time translation check and costs translation
+tooling.

@@ -141,6 +141,11 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   // await, compared after: a generation that moved means the answer is
   // about a load nobody is watching any more.
   const loadGenerationRef = useRef(0);
+  // Purely decorative, and kept well away from `loadGenerationRef` above:
+  // this one only makes the banner a new element per load, so its flavour
+  // line reshuffles instead of carrying the previous load's order and
+  // position into the next one. Nothing reads it but React's `key`.
+  const [loadKey, setLoadKey] = useState(0);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -479,6 +484,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
     clearErrors();
     setLoadSource(fileNameOf(path));
     setLoadSnapshot(null);
+    setLoadKey((k) => k + 1);
     // The one fact `ownsOperation` needs: an id nobody else could send,
     // generated before the POST so every snapshot from here on — the
     // poll's and the post-failure fetch's alike — can be judged against
@@ -695,7 +701,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
         {tree && (tree.errors > 0 || tree.warnings > 0) && <button className="import-notice" onClick={() => { setView("overview"); setLogOpen(false); setMonitorOpen(false); }}>{t("workbench.importNotices", { errors: tree.errors, warnings: tree.warnings })}</button>}
         <button aria-expanded={inspectorOpen} onClick={() => setInspectorOpen(!inspectorOpen)}>{t("workbench.properties")}<WorkbenchIcon name="panel" /></button>
       </div>
-      {loadSource && <LoadProgressBanner source={loadSource} snapshot={loadSnapshot} />}
+      {loadSource && <LoadProgressBanner key={loadKey} source={loadSource} snapshot={loadSnapshot} />}
       <div className="workspace workbench-body">
         {navigationOpen && <ResizablePane label={t("workbench.navigation")} side="left" initialWidth={250} min={200} max={480}>
           <nav className="workbench-navigation" aria-label={t("workbench.navigation")}>

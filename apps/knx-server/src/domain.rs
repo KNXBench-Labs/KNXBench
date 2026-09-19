@@ -226,7 +226,7 @@ pub fn open_project_impl(path: &Path) -> Result<ProjectTree, AppError> {
 /// registry alive and drops it with itself.
 pub(crate) fn detached_progress(kind: crate::load_progress::LoadKind, path: &Path) -> LoadHandle {
     std::sync::Arc::new(LoadOperations::default())
-        .begin(kind, file_name_of(path))
+        .begin(kind, file_name_of(path), None)
         .expect("a fresh registry has no operation in flight")
 }
 
@@ -3515,7 +3515,7 @@ mod tests {
 
         let operations = std::sync::Arc::new(crate::load_progress::LoadOperations::default());
         let handle = operations
-            .begin(crate::LoadKind::Open, "villa.knxdb")
+            .begin(crate::LoadKind::Open, "villa.knxdb", None)
             .expect("a fresh registry has no operation in flight");
         load_native(&db_path, &handle).unwrap();
         handle.succeed();
@@ -3543,7 +3543,7 @@ mod tests {
 
         let operations = std::sync::Arc::new(crate::load_progress::LoadOperations::default());
         let handle = operations
-            .begin(crate::LoadKind::Open, "not-a-store.knxdb")
+            .begin(crate::LoadKind::Open, "not-a-store.knxdb", None)
             .expect("a fresh registry has no operation in flight");
         let error = load_native(&db_path, &handle).unwrap_err();
         handle.fail(error);

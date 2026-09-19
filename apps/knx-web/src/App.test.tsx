@@ -68,6 +68,13 @@ vi.mock("./filePicker", () => ({ ...filePickerMock }));
 
 import App from "./App";
 
+// F9's client half: every load generates its own token via
+// `crypto.randomUUID()` before the POST. Pinning it to a fixed value
+// here lets each test below say, plainly, which snapshots are ours and
+// which belong to a stranger.
+const OWN_CLIENT_TOKEN = "11111111-1111-1111-1111-111111111111";
+vi.spyOn(crypto, "randomUUID").mockReturnValue(OWN_CLIENT_TOKEN);
+
 let host: HTMLDivElement | undefined;
 
 afterEach(() => {
@@ -78,8 +85,8 @@ afterEach(() => {
   apiMock.productLanguages.mockResolvedValue([]);
   apiMock.deviceParameters.mockResolvedValue({ programId: null, sections: [], stale: [], diagnostics: [] });
   // `clearAllMocks` keeps implementations, including a queued
-  // `mockResolvedValueOnce`, so the load tests below would otherwise
-  // hand their pre-flight answer to whoever runs next.
+  // `mockResolvedValueOnce`, so the §93 test's first-snapshot answer
+  // would otherwise leak to whoever runs next.
   apiMock.loadProgress.mockReset();
   apiMock.loadProgress.mockResolvedValue(null);
   window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
@@ -865,12 +872,9 @@ describe("App — project load progress", () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
     let finish: (tree: ProjectTree) => void = () => {};
     apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((resolve) => { finish = resolve; }));
-    // The pre-flight read ADR-0023's client contract starts with: this
-    // server has loaded nothing, so every operation id is ours.
-    apiMock.loadProgress.mockResolvedValueOnce(null);
     apiMock.loadProgress.mockResolvedValue({
       operationId: 1, kind: "import", source: "villa.knxproj", phase: "parseTopology",
-      completed: null, total: null, status: "running", error: null,
+      completed: null, total: null, status: "running", error: null, clientToken: OWN_CLIENT_TOKEN,
     });
     const root = await renderApp();
 
@@ -902,10 +906,10 @@ describe("App — project load progress", () => {
   it("keeps the banner after a failure, naming the phase the load died in", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
     apiMock.importProject.mockRejectedValue(new Error("invalid Zip archive"));
-    apiMock.loadProgress.mockResolvedValueOnce(null);
     apiMock.loadProgress.mockResolvedValue({
       operationId: 1, kind: "import", source: "villa.knxproj", phase: "openContainer",
       completed: null, total: null, status: "failed", error: "invalid Zip archive",
+      clientToken: OWN_CLIENT_TOKEN,
     });
     const root = await renderApp();
 
@@ -959,6 +963,7 @@ describe("App — a failed load never renders a running banner", () => {
     apiMock.loadProgress.mockResolvedValue({
       operationId: 3, kind: "open", source: "older.knxdb", phase: "buildProjectTree",
       completed: null, total: null, status: "succeeded", error: null,
+      clientToken: "99999999-9999-9999-9999-999999999999",
     });
     apiMock.importProject.mockRejectedValue(new Error("path is outside the data directory"));
     const root = await renderApp();
@@ -972,8 +977,8 @@ describe("App — a failed load never renders a running banner", () => {
 
   it("probe B: an unreachable server leaves a failure, not a permanent 'Starting…'", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
-    // Nothing answers: not the pre-flight read, not the poll, not the
-    // snapshot fetched after the POST died.
+    // Nothing answers: not the poll, not the snapshot fetched after the
+    // POST died.
     apiMock.loadProgress.mockRejectedValue(new Error("Failed to fetch"));
     apiMock.importProject.mockRejectedValue(new Error("Failed to fetch"));
     const root = await renderApp();
@@ -988,11 +993,12 @@ describe("App — a failed load never renders a running banner", () => {
   it("probe C: a 409 shows our failure, never the holder's operation", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
     // Another client holds the slot: its operation is genuinely running,
-    // and it is genuinely not ours. It predates our attempt, so the
-    // baseline read at the start of the load rules it out by id.
+    // and it is genuinely not ours — it carries a token this load never
+    // generated.
     apiMock.loadProgress.mockResolvedValue({
       operationId: 7, kind: "open", source: "someone-elses.knxdb", phase: "loadStoredProject",
       completed: null, total: null, status: "running", error: null,
+      clientToken: "77777777-7777-7777-7777-777777777777",
     });
     apiMock.importProject.mockRejectedValue(new Error("a project load is already running (operation 7)"));
     const root = await renderApp();
@@ -1006,15 +1012,14 @@ describe("App — a failed load never renders a running banner", () => {
 
   it("a lost response to a load that succeeded still reports a failure (§93)", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
-    apiMock.loadProgress.mockResolvedValueOnce(null); // pre-flight: nothing loaded yet
     apiMock.loadProgress.mockResolvedValueOnce({
       operationId: 1, kind: "import", source: "villa.knxproj", phase: "parseTopology",
-      completed: null, total: null, status: "running", error: null,
+      completed: null, total: null, status: "running", error: null, clientToken: OWN_CLIENT_TOKEN,
     });
     // The operation finished on the server; only its answer was lost.
     apiMock.loadProgress.mockResolvedValue({
       operationId: 1, kind: "import", source: "villa.knxproj", phase: "buildProjectTree",
-      completed: null, total: null, status: "succeeded", error: null,
+      completed: null, total: null, status: "succeeded", error: null, clientToken: OWN_CLIENT_TOKEN,
     });
     let fail: (error: Error) => void = () => {};
     apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
@@ -1037,20 +1042,20 @@ describe("App — a failed load never renders a running banner", () => {
     await act(async () => root.unmount());
   });
 
-  // Fix round 2, F8: a foreign operation that starts *after* our baseline
-  // read but before our POST is refused. Unlike probe C, the pre-flight
-  // read here sees nothing (baseline 0), so the id-greater-than-baseline
-  // test alone cannot distinguish "our own operation" from "somebody
-  // else's that merely started later" — `ownsOperation` also needs the
-  // snapshot's `source` to match the file this load submitted.
-  it("a foreign operation starting after our baseline is not ours (F8)", async () => {
+  // Fix round 2, F8 (re-review "probe D"; carried forward under the fix
+  // round 3 token model). A foreign operation starts before our own POST
+  // is refused. Rounds 1 and 2 needed a baseline read and a `source`
+  // match to rule this out and still missed the same-basename case (F9);
+  // under the token, `ownsOperation` needs nothing but the id this load
+  // never sent to the stranger's operation — no pre-flight read at all.
+  it("a foreign operation starting before our POST is refused is not ours (F8)", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
     let fail: (error: Error) => void = () => {};
     apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
-    apiMock.loadProgress.mockResolvedValueOnce(null); // baseline: nothing has ever loaded
     apiMock.loadProgress.mockResolvedValue({
       operationId: 2, kind: "open", source: "someone-elses.knxdb", phase: "loadStoredProject",
       completed: null, total: null, status: "running", error: null,
+      clientToken: "22222222-2222-2222-2222-222222222222",
     });
     const root = await renderApp();
 
@@ -1069,6 +1074,42 @@ describe("App — a failed load never renders a running banner", () => {
     });
 
     expectFailedBanner(["Reading the stored project", "someone-elses.knxdb"]);
+    await act(async () => root.unmount());
+  });
+
+  // F9: three straight rounds of a server-side heuristic (no filter, an
+  // id-only filter, an id-and-source filter) all had the same blind spot
+  // — two clients loading files with the same base name from different
+  // directories. This is that exact scenario: the stranger's operation
+  // fails first, under the same file name we are loading, and the banner
+  // must still show *our* error, never theirs.
+  it("F9: a same-basename stranger's failure is never rendered as ours", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    let fail: (error: Error) => void = () => {};
+    apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
+    apiMock.loadProgress.mockResolvedValue({
+      operationId: 9,
+      kind: "import",
+      source: "villa.knxproj",
+      phase: "openContainer",
+      completed: null,
+      total: null,
+      status: "failed",
+      error: "disk on the other machine is full",
+      clientToken: "33333333-3333-3333-3333-333333333333",
+    });
+    const root = await renderApp();
+
+    await clickOpen();
+
+    // The stranger's operation is already sitting there, failed, under
+    // the same source name, by the time our own POST is refused.
+    await act(async () => {
+      fail(new Error("a project load is already running (operation 9)"));
+    });
+
+    expectFailedBanner(["disk on the other machine is full"]);
+    expect(host!.querySelector(".load-progress")!.textContent).toContain("already running");
     await act(async () => root.unmount());
   });
 });

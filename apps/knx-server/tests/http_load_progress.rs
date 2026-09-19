@@ -93,6 +93,55 @@ async fn a_finished_import_leaves_a_succeeded_snapshot_naming_its_source() {
     );
 }
 
+// Fix round 3, F9: the client token replaces the id-and-source heuristic
+// entirely, so its round trip through the actual HTTP body is the one
+// thing that must work — everything `ownsOperation` does downstream rests
+// on the server echoing back exactly what the client sent.
+#[tokio::test]
+async fn a_client_token_sent_on_import_is_echoed_in_every_snapshot() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = knx_testsupport::write_minimal_knxproj(dir.path());
+    let state = state();
+
+    let response = knx_server::app(state.clone(), None)
+        .oneshot(post(
+            "/api/project/import",
+            json!({ "path": path.to_string_lossy(), "clientToken": "11111111-1111-1111-1111-111111111111" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let snapshot = progress(&state).await;
+    assert_eq!(
+        snapshot["clientToken"], "11111111-1111-1111-1111-111111111111",
+        "the token this client sent must come back verbatim, not a server-invented id"
+    );
+}
+
+#[tokio::test]
+async fn a_load_started_with_no_client_token_names_its_owner_as_null() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = knx_testsupport::write_minimal_knxproj(dir.path());
+    let state = state();
+
+    let response = knx_server::app(state.clone(), None)
+        .oneshot(post(
+            "/api/project/import",
+            json!({ "path": path.to_string_lossy() }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let snapshot = progress(&state).await;
+    assert_eq!(
+        snapshot["clientToken"],
+        Value::Null,
+        "an operation nobody sent a token for belongs to nobody, not to a guess"
+    );
+}
+
 #[tokio::test]
 async fn a_failed_import_is_reported_as_failed_and_leaves_the_open_project_alone() {
     let state = state();
@@ -152,6 +201,7 @@ async fn a_second_load_while_one_is_running_is_refused_with_409() {
         .begin(
             knx_server::LoadKind::Import,
             "something-slow.knxproj".to_string(),
+            None,
         )
         .expect("a fresh registry has no operation in flight");
 

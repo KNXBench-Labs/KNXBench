@@ -10,6 +10,15 @@
 //! what is happening. And a percentage appears only where a real
 //! completed/total exists; [`LoadSnapshot`] carries no timestamp at all,
 //! so no caller downstream can quietly derive a bar from the clock.
+//!
+//! The client half of ownership (fix round 3, F9) is an opaque token the
+//! caller generates and this module only ever stores and echoes back —
+//! never inspects, never compares to anything itself. Three rounds of a
+//! server-side heuristic (an id-only test, then an id-and-source test)
+//! each let one client's poll adopt another client's operation; an exact
+//! token the server never invents ends that class of bug rather than
+//! narrowing it again. `None` — no token sent — is stored as `None` and
+//! matches nothing: that operation belongs to nobody, on purpose.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -121,6 +130,11 @@ pub struct LoadSnapshot {
     pub status: LoadStatus,
     /// Set exactly when `status` is [`LoadStatus::Failed`].
     pub error: Option<String>,
+    /// The opaque token the caller that started this operation generated
+    /// for it, or `None` when it sent none. Stored verbatim and compared
+    /// by nobody in this crate — the caller's own equality check on the
+    /// echoed value is the entire ownership test (fix round 3, F9).
+    pub client_token: Option<String>,
 }
 
 /// A second load while one is running. The caller turns this into a `409`
@@ -151,10 +165,15 @@ impl LoadOperations {
     /// Claims the single load slot. Fails if one is already running —
     /// whoever holds it is named in the error so the caller can say which
     /// operation is in the way.
+    ///
+    /// `client_token` is stored verbatim and returned in every snapshot of
+    /// this operation; this module never reads it back. `None` means the
+    /// caller sent none, which is stored as `None` rather than guessed at.
     pub fn begin(
         self: &Arc<Self>,
         kind: LoadKind,
         source: impl Into<String>,
+        client_token: Option<String>,
     ) -> Result<LoadHandle, AlreadyRunning> {
         let mut current = self.current.lock().expect("load progress mutex poisoned");
         if let Some(running) = current.as_ref().filter(|s| s.status == LoadStatus::Running) {
@@ -175,6 +194,7 @@ impl LoadOperations {
             total: None,
             status: LoadStatus::Running,
             error: None,
+            client_token,
         });
         Ok(LoadHandle {
             operations: Arc::clone(self),
@@ -319,12 +339,37 @@ mod tests {
         assert_eq!(operations().snapshot(), None);
     }
 
+    // Fix round 3, F9: the whole replacement for the id-and-source
+    // heuristic is that this module stores the caller's token and hands
+    // it back unexamined. Pin both halves — an operation started with a
+    // token echoes it, and one started without carries `None` rather than
+    // this module inventing something to put there.
+    #[test]
+    fn a_client_token_is_stored_and_echoed_verbatim() {
+        let ops = operations();
+        ops.begin(LoadKind::Import, "a.knxproj", Some("token-a".to_string()))
+            .unwrap();
+
+        assert_eq!(
+            ops.snapshot().unwrap().client_token.as_deref(),
+            Some("token-a")
+        );
+    }
+
+    #[test]
+    fn an_operation_started_with_no_token_carries_none_not_a_guess() {
+        let ops = operations();
+        ops.begin(LoadKind::Import, "a.knxproj", None).unwrap();
+
+        assert_eq!(ops.snapshot().unwrap().client_token, None);
+    }
+
     #[test]
     fn a_second_load_while_one_runs_is_refused_and_names_the_one_in_the_way() {
         let ops = operations();
-        let first = ops.begin(LoadKind::Import, "a.knxproj").unwrap();
+        let first = ops.begin(LoadKind::Import, "a.knxproj", None).unwrap();
 
-        let refused = ops.begin(LoadKind::Open, "b.knxdb").unwrap_err();
+        let refused = ops.begin(LoadKind::Open, "b.knxdb", None).unwrap_err();
 
         assert_eq!(
             refused,
@@ -338,11 +383,11 @@ mod tests {
     #[test]
     fn a_finished_operation_releases_the_slot_and_the_next_id_is_never_reused() {
         let ops = operations();
-        let first = ops.begin(LoadKind::Import, "a.knxproj").unwrap();
+        let first = ops.begin(LoadKind::Import, "a.knxproj", None).unwrap();
         first.succeed();
         drop(first);
 
-        let second = ops.begin(LoadKind::Open, "b.knxdb").unwrap();
+        let second = ops.begin(LoadKind::Open, "b.knxdb", None).unwrap();
 
         assert_eq!(second.operation_id(), 2);
         let snapshot = ops.snapshot().unwrap();
@@ -353,7 +398,7 @@ mod tests {
     #[test]
     fn a_failure_is_retained_with_its_message_for_whoever_polls_next() {
         let ops = operations();
-        let handle = ops.begin(LoadKind::Import, "broken.knxproj").unwrap();
+        let handle = ops.begin(LoadKind::Import, "broken.knxproj", None).unwrap();
         handle.phase(LoadStage::Parse(ImportStage::OpenContainer));
         handle.fail("not a zip archive");
         drop(handle);
@@ -371,19 +416,19 @@ mod tests {
     #[test]
     fn a_handle_dropped_without_an_outcome_fails_rather_than_holding_the_slot() {
         let ops = operations();
-        drop(ops.begin(LoadKind::Import, "a.knxproj").unwrap());
+        drop(ops.begin(LoadKind::Import, "a.knxproj", None).unwrap());
 
         let snapshot = ops.snapshot().unwrap();
         assert_eq!(snapshot.status, LoadStatus::Failed);
         assert!(snapshot.error.is_some());
         // And the slot is free again, which is the point of the Drop impl.
-        assert!(ops.begin(LoadKind::Open, "b.knxdb").is_ok());
+        assert!(ops.begin(LoadKind::Open, "b.knxdb", None).is_ok());
     }
 
     #[test]
     fn entering_a_phase_clears_the_previous_phases_item_count() {
         let ops = operations();
-        let handle = ops.begin(LoadKind::Import, "a.knxproj").unwrap();
+        let handle = ops.begin(LoadKind::Import, "a.knxproj", None).unwrap();
 
         handle.phase(LoadStage::Parse(ImportStage::CollectContainerEntries));
         handle.items(36, 36);
@@ -403,9 +448,9 @@ mod tests {
     #[test]
     fn a_superseded_handle_cannot_overwrite_the_operation_that_replaced_it() {
         let ops = operations();
-        let stale = ops.begin(LoadKind::Import, "a.knxproj").unwrap();
+        let stale = ops.begin(LoadKind::Import, "a.knxproj", None).unwrap();
         stale.succeed();
-        let current = ops.begin(LoadKind::Open, "b.knxdb").unwrap();
+        let current = ops.begin(LoadKind::Open, "b.knxdb", None).unwrap();
         current.phase(LoadPhase::LoadStoredProject);
 
         stale.phase(LoadStage::PersistOpaque);

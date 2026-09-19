@@ -8,6 +8,9 @@
 // opening it renders `LogPanel` regardless of whether a project is open —
 // while, with a project open, the tab still swaps into the same
 // `.workspace` slot Inspector/Dashboard use, exactly as before.
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -55,6 +58,12 @@ const apiMock = vi.hoisted(() => ({
   // that has loaded nothing, and the answer every test here wants except
   // the two that drive a load on purpose.
   loadProgress: vi.fn().mockResolvedValue(null),
+  // `CatalogBrowser` fires both of these on mount. The help tests below
+  // open it for real (it is the third dialog F1 has to replace), and an
+  // unconfigured `vi.fn()` returns `undefined`, on which the component
+  // promptly calls `.then`.
+  catalogManufacturers: vi.fn().mockResolvedValue([]),
+  catalogItems: vi.fn().mockResolvedValue([]),
 }));
 
 const filePickerMock = vi.hoisted(() => ({
@@ -1607,5 +1616,77 @@ describe("App — in-application help (T23)", () => {
     expect(event.defaultPrevented).toBe(false);
 
     await act(async () => root.unmount());
+  });
+
+  // The third dialog the branch closes. Unlike Settings and New project
+  // this one is a real fetcher, which is why the api mock above grew two
+  // catalogue entries.
+  it("replaces the catalog browser too", async () => {
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton(enMessages["workbench.catalog"]).click();
+    });
+    await act(async () => {});
+    expect(host!.querySelector(".catalog-install")).not.toBeNull();
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelector(".catalog-install")).toBeNull();
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await act(async () => root.unmount());
+  });
+
+  // The one overlay `App` must *not* replace, because it is the one it
+  // cannot close: `filePicker.ts` mounts `FsPicker` on a React root of
+  // its own, so clearing App's state would leave a live modal buried
+  // under help with no way back. The guard reads the document, not React
+  // state, so the contract can be stated the same way — a `.fs-picker`
+  // node exists, therefore F1 does nothing.
+  //
+  // This suite mocks `./filePicker` wholesale (see the top of the file),
+  // so the real picker never mounts here and the node has to be put up
+  // by hand. That makes this half of the pin blind to a rename of the
+  // class, which is what the source assertion below is for.
+  it("keeps out of the way while the file picker is up", async () => {
+    const root = await renderApp();
+    const picker = document.createElement("div");
+    picker.className = "fs-picker";
+    document.body.appendChild(picker);
+
+    try {
+      await pressKey({ key: "F1" });
+
+      expect(helpPanel()).toBeNull();
+    } finally {
+      picker.remove();
+    }
+
+    // …and once it is gone, F1 works again — otherwise a guard that
+    // simply always returned would pass the assertion above.
+    await pressKey({ key: "F1" });
+    expect(helpPanel()).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  // The other half: the selector in `App.tsx` and the class in
+  // `FsPicker.tsx` are one contract written in two files, and nothing in
+  // a mocked suite connects them. Renaming the class would leave the DOM
+  // test above green and the guard dead.
+  it("still names the class the file picker actually renders", () => {
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "FsPicker.tsx"),
+      "utf8",
+    );
+    expect(source).toContain('<Overlay className="fs-picker"');
+
+    const app = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "App.tsx"),
+      "utf8",
+    );
+    expect(app).toContain('document.querySelector(".fs-picker")');
   });
 });

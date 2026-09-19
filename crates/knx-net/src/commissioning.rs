@@ -1852,6 +1852,17 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                         if reestablishment_may_be_retried(&err)
                             && silence_is_permitted(last_state) =>
                     {
+                        // Cleared, and not merely left alone. [`Self::connect`]
+                        // populates `self.connection` before it authorises and
+                        // before it asserts Verify Mode, so a failure in either
+                        // returns `Err` with a half-established connection still
+                        // in the field — and a device that T_ACKs and withholds
+                        // the answer, which is exactly the device NOTE 86
+                        // describes, fails in precisely that way. Left in place,
+                        // the next iteration would see `Some(_)`, skip the retry
+                        // this arm just promised, and poll a connection that
+                        // never finished coming up.
+                        self.connection = None;
                         false
                     }
                     Err(err) => return Err(err),
@@ -2135,6 +2146,13 @@ fn silence_is_permitted(last_state: Option<LoadState>) -> bool {
 /// the device answering something wrong. A refused property, a mismatched
 /// read-back or a Verify Mode the device would not take are faults the
 /// caller has to see, and they are absent from this list on purpose.
+///
+/// The list is not, however, every way a re-establishment can fail.
+/// [`SessionError::Lagged`] is a local broadcast-buffer overrun — this
+/// client fell behind its own event stream — and is deliberately excluded:
+/// it is not evidence that the device was silent, so retrying it would
+/// paper over a client-side fault with a device-side excuse. It was fatal
+/// here before C19 and it stays fatal.
 fn reestablishment_may_be_retried(err: &SessionError) -> bool {
     matches!(
         err,
@@ -2751,7 +2769,14 @@ mod tests {
 
         async fn wait_out(config: SimulatorConfig) -> (SimulatedDevice, u32, bool, usize, usize) {
             let device = SimulatedDevice::with_config(config);
-            device.preset_load_state(ObjectIndex::APPLICATION_PROGRAM, LoadState::LoadCompleting);
+            // Settling by answered reads rather than by elapsed time: the
+            // first read the device answers reports `LoadCompleting`, which
+            // is what earns the wait its Table 94 permission to tolerate
+            // silence, and the next one it answers reports `Loaded`. A read
+            // that goes quiet spends nothing, so no assertion below depends
+            // on how long a quiet poll took.
+            device.preset_load_state(ObjectIndex::APPLICATION_PROGRAM, LoadState::Loaded);
+            device.preset_load_completing_polls(ObjectIndex::APPLICATION_PROGRAM, 1);
             let mut session = ManagementSession::read_only(
                 &device,
                 device.address(),
@@ -2799,31 +2824,19 @@ mod tests {
             (device, reconnects, still_connected, connects, disconnects)
         }
 
-        // `settle_load_state_after` is measured from the first load-state
-        // read. 25 ms is after read #1 (which happens at ~0 ms and must
-        // still report LoadCompleting) and before the poll that follows the
-        // quiet one (at ≥ 50 ms in the acknowledged case, ≥ 200 ms in the
-        // unacknowledged one, since a quiet poll costs at least one whole
-        // 50 ms `response_timeout`).
-        let settling = SimulatorConfig {
-            settle_load_state_after: Some(Duration::from_millis(25)),
-            settled_load_state: LoadState::Loaded,
-            ..SimulatorConfig::default()
-        };
-
         // Busy, not gone: one transmission, a T_ACK, no answer.
         let (busy, reconnects, still_connected, connects, disconnects) =
             wait_out(SimulatorConfig {
                 unanswered_load_state_reads: Some(FIRST_QUIET_READ..FIRST_QUIET_READ + 1),
-                ..settling.clone()
+                ..SimulatorConfig::default()
             })
             .await;
         assert_eq!(
             busy.load_state_reads(),
             3,
-            "the acknowledged silence is not repeated — repeating an \
-             acknowledged request would be a second request — so the quiet \
-             poll costs one read, not four"
+            "read #1 answers, read #2 goes quiet, read #3 answers the \
+             settled state — the loop keeps polling through a silence it is \
+             allowed to tolerate"
         );
         assert!(
             still_connected,
@@ -2846,7 +2859,7 @@ mod tests {
                 unacknowledged_load_state_reads: Some(
                     FIRST_QUIET_READ..FIRST_QUIET_READ + u32::from(MAX_TRANSMISSIONS),
                 ),
-                ..settling
+                ..SimulatorConfig::default()
             })
             .await;
         assert_eq!(
@@ -2875,6 +2888,138 @@ mod tests {
             disconnects, 1,
             "action A6 sends T_DISCONNECT_REQ_PDU before the state goes \
              CLOSED"
+        );
+    }
+
+    /// C19's discriminator, pinned on its own: an acknowledged request is
+    /// never repeated.
+    ///
+    /// This is the whole difference between
+    /// [`SessionError::NoAnswer`] and [`SessionError::ConnectionReleased`].
+    /// `[D]` TL's action `A8` (§5.3, p. 20) stops the acknowledge timer when
+    /// the `T_ACK` arrives, so `ACKNOWLEDGE_TIME_OUT_ind` — TL §5.2's `E18`,
+    /// p. 19 — can never fire for this request, the connection never reaches
+    /// `A6`, and repeating the frame would put a second request on the wire
+    /// rather than a retransmission of the first.
+    ///
+    /// The wait-loop test below cannot see this: there, a repetition and the
+    /// next poll are both simply the next read, and the counts come out the
+    /// same either way. Here the window swallows every answer, so a
+    /// repetition has nowhere to hide.
+    #[tokio::test]
+    async fn an_acknowledged_request_is_never_repeated() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            // Every read is acknowledged and none is answered.
+            unanswered_load_state_reads: Some(1..u32::MAX),
+            ..SimulatorConfig::default()
+        });
+        let mut session = read_only(&device);
+        session.connect().await.expect("connect");
+        let err = session
+            .read_load_state(ObjectIndex::APPLICATION_PROGRAM)
+            .await
+            .expect_err("the device acknowledges and never answers");
+        match err {
+            SessionError::NoAnswer { attempts, .. } => assert_eq!(
+                attempts, 1,
+                "TL action A8 stopped the acknowledge timer: there is \
+                 nothing here to repeat"
+            ),
+            other => panic!(
+                "an acknowledged request keeps its connection and reports \
+                 NoAnswer, got {other}"
+            ),
+        }
+        assert_eq!(
+            device.load_state_reads(),
+            1,
+            "one transmission, not a ladder of four: repeating an \
+             acknowledged request would send a second request"
+        );
+        assert!(
+            session.connection().is_some(),
+            "RES §4.23.2.4.1: the T_ACK is the MaS responding, and that \
+             connection is kept alive"
+        );
+    }
+
+    /// C19 fix round: a re-establishment that fails is not a device fault.
+    ///
+    /// `[D]` RES §4.23.2.4.1: *"If a before established TL-connection breaks
+    /// down, the MaC shall try to re-establish the connection
+    /// **periodically** during the maximum transition time"*, and NOTE 86
+    /// says who is at the other end: *"A device may be offline during state
+    /// LoadCompleting. A running TL-connection may be lost..."* An offline
+    /// device does not answer `T_Connect` either, so treating one refused
+    /// re-establishment as fatal would end the wait at the first attempt
+    /// instead of at the deadline.
+    ///
+    /// Before C19 this path was unreachable: an exhausted read left its
+    /// stale connection in the field and nothing was ever re-established.
+    /// The device here goes away for good, so the only correct ending is
+    /// the deadline's, carrying the last state that was actually read.
+    #[tokio::test]
+    async fn a_failed_re_establishment_is_retried_until_the_deadline() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            // Read #2 breaks the connection down, and every T_Connect after
+            // the session's first one goes unanswered: the device is gone.
+            drop_connection_on_load_state_read: Some(2),
+            unanswered_connects: Some(2..u32::MAX),
+            ..SimulatorConfig::default()
+        });
+        device.preset_load_state(ObjectIndex::APPLICATION_PROGRAM, LoadState::Loaded);
+        device.preset_load_completing_polls(ObjectIndex::APPLICATION_PROGRAM, 1);
+        let mut session = ManagementSession::read_only(
+            &device,
+            device.address(),
+            AuthorisationPlan::Skip,
+            SessionTiming {
+                // Room for several failed re-establishments at 50 ms each,
+                // so that "periodically" has something to be periodic over.
+                max_transition: Duration::from_millis(300),
+                ..fast()
+            },
+        )
+        .expect("the simulated device is contactable");
+        session.connect().await.expect("connect");
+        let outcomes = permitted_outcomes(
+            LoadState::Loading,
+            Stimulus::Event(LoadEvent::LoadCompleted),
+            None,
+        );
+        let err = tokio::time::timeout(
+            Duration::from_secs(10),
+            session.wait_for_load_state(
+                ObjectIndex::APPLICATION_PROGRAM,
+                LoadEvent::LoadCompleted,
+                LoadState::Loading,
+                &outcomes,
+            ),
+        )
+        .await
+        .expect("the wait must terminate, not spin")
+        .expect_err("the device never comes back");
+        match err {
+            SessionError::TransitionTimedOut { last_state, .. } => assert_eq!(
+                last_state,
+                Some(LoadState::LoadCompleting),
+                "the deadline reports the last state that was read, not the \
+                 failure of the attempt that came after it"
+            ),
+            other => panic!(
+                "RES §4.23.2.4.1 asks for periodic re-establishment, so a \
+                 refused attempt is not the answer to this wait: got {other}"
+            ),
+        }
+        assert!(
+            session.reconnects() >= 3,
+            "periodically means more than once: {} attempts were made",
+            session.reconnects()
+        );
+        assert!(
+            session.connection().is_none(),
+            "a re-establishment that failed leaves no connection behind, \
+             half-established or otherwise"
         );
     }
 

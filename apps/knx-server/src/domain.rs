@@ -339,7 +339,7 @@ fn load_native(
     path: &Path,
     progress: &LoadHandle,
 ) -> Result<(ProjectTree, knx_core::Project, ImportedOpaqueData), String> {
-    // The four phases a native open really has (ADR-0023): the store open
+    // The five phases a native open really has (ADR-0023): the store open
     // (which also runs any pending migration), the normalized read, the
     // two passthrough reads, and the projection. Each is announced before
     // its own work, so the label names what is running.

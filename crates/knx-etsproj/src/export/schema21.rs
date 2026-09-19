@@ -37,8 +37,10 @@
 //! and why:** `crate::known`'s tables list several attributes with no
 //! dedicated `SourceDevice`/`SourceLine` field (`DeviceInstance`'s
 //! `Comment`/`SerialNumber`/`IsActivityCalculated`/`LastUsedAPDULength`/
-//! `ReadMaxAPDULength`/`Puid`; `Segment`'s own `Id`/`Number`/`Puid`; `Puid`
-//! generally, on every element that carries it). `map.rs` (Task 6) folds
+//! `ReadMaxAPDULength`/`Puid`/`LoadedImage`/`CheckSums`/`DownloadCounter`
+//! (the last three, C14: ETS's differential-download state, `Project
+//! Schema23 v01.00.00.pdf` p. 44); `Segment`'s own `Id`/`Number`/`Puid`;
+//! `Puid` generally, on every element that carries it). `map.rs` (Task 6) folds
 //! all of these into one project-wide `Vec<RetainedAttribute>`, keyed only
 //! by their schema-shaped xpath (e.g. every device's `Comment` collapses to
 //! the single key `(".../DeviceInstance", "Comment")`) — the same
@@ -539,11 +541,11 @@ fn write_device_v21(
     attrs.push("Hardware2ProgramRefId", device.program_ref.clone());
     attrs.opt("Description", &device.description);
     // `Comment`/`SerialNumber`/`IsActivityCalculated`/`LastUsedAPDULength`/
-    // `ReadMaxAPDULength`/`Puid` are deliberately not written — see the
-    // module doc's granularity note. No `CompletionStatus`/`Broken`/
-    // `IsCommunicationObjectVisibilityCalculated` either: genuinely absent
-    // from `crate::known::SCHEMA_21`'s own attribute list, not merely
-    // unmapped.
+    // `ReadMaxAPDULength`/`Puid`/`LoadedImage`/`CheckSums`/`DownloadCounter`
+    // are deliberately not written — see the module doc's granularity note.
+    // No `CompletionStatus`/`Broken`/`IsCommunicationObjectVisibilityCalculated`
+    // either: genuinely absent from `crate::known::SCHEMA_21`'s own
+    // attribute list, not merely unmapped.
     push_bool_tf(
         &mut attrs,
         "ApplicationProgramLoaded",

@@ -290,6 +290,14 @@ pub const SCHEMA_11: KnownSchema = KnownSchema {
 /// `ReadMaxAPDULength`/`Puid` are new; `CompletionStatus`,
 /// `IsCommunicationObjectVisibilityCalculated` and `Broken` are gone
 /// (measured against `KV v2.5 - demo.knxproj`, all 4 devices).
+///
+/// `LoadedImage`, `CheckSums` and `DownloadCounter` (C14) are documented,
+/// not measured: `Project Schema23 v01.00.00.pdf`, p. 44, lists all three as
+/// optional `DeviceInstance` attributes holding ETS's differential-download
+/// state from the device's last download. None of the three reference
+/// projects (schema 11, 21 or 23) happens to carry them — ETS only writes
+/// them after a real download, and the reference projects were exported
+/// without one — so there is no local measurement to cite, only the spec.
 const DEVICE_INSTANCE_ATTRS_21: &[&str] = &[
     "Id",
     "Name",
@@ -310,6 +318,9 @@ const DEVICE_INSTANCE_ATTRS_21: &[&str] = &[
     "LastUsedAPDULength",
     "ReadMaxAPDULength",
     "Puid",
+    "LoadedImage",
+    "CheckSums",
+    "DownloadCounter",
 ];
 /// `ComObjectInstanceRef`'s attribute list at schema ≥21. Measured (RESEARCH
 /// §3.4): every instance in the reference project carries only `RefId`,

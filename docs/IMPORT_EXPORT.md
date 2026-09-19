@@ -179,7 +179,7 @@ Contents (RESEARCH §7) [V], now with `OpaqueKind`, since the code exists:
 | `*.signature` | RSA signatures over manufacturer and project data | `Signature` |
 | `knx_master.xml` | DPT/product master catalogue | `MasterData` |
 | Any other container entry not regenerated on export | Copied through unchanged | `ContainerEntry` |
-| A known-but-not-modelled attribute (`Installation/@BCUKey`, `@SplitType`, `ProjectInformation`'s tool-state attributes) | Name and value, matched back onto its element by `(xpath, name)` on export | `RetainedAttribute` |
+| A known-but-not-modelled attribute (`Installation/@BCUKey`, `@SplitType`, `ProjectInformation`'s tool-state attributes; `DeviceInstance`'s `LoadedImage`/`CheckSums`/`DownloadCounter`, ETS's differential-download state, `Project Schema23 v01.00.00.pdf` p. 44) | Name and value, matched back onto its element by `(xpath, name)` on export where a per-instance xpath exists (see `KNOWN_LIMITATIONS.md` #34 for where it does not yet) | `RetainedAttribute` |
 | An unrecognized element, or a known-but-not-modelled element (`BusAccess`) | Raw bytes, tag included | `RetainedElement` |
 
 **Fidelity by construct**, the promised column — modeled in the domain
@@ -239,6 +239,16 @@ and why. `errors` is likewise not the raw `SourceProblem`/`MapProblem` enums
 Stage 4/5 use internally: each is flattened to `{stage, severity, xpath,
 detail}` so the report stays trivially serializable without coupling its
 JSON shape to those enums' exact variants.
+
+**Amendment (C14): `OpaqueSummary` also carries `xpath` and `name`.**
+Without them, every `RetainedAttribute`/`RetainedElement` row reads
+`reason: "known or unknown attribute the model does not carry"` and nothing
+else — a preserved `LoadedImage` is indistinguishable from a preserved
+`Comment`. Both are cheap (short strings, not the bytes the Session 3
+amendment above was written to keep out) and both were already on the
+underlying `OpaqueEntry`; they were just not copied into the summary. Empty
+for a whole-file entry or a manufacturer file, same as on `OpaqueEntry`
+itself.
 
 `counts` carries read and mapped figures per entity type, so that a discrepancy
 is visible as a number rather than as a suspicion.

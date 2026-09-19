@@ -1415,3 +1415,95 @@ describe("App — a load's banner and its polling both end with the load", () =>
     }
   });
 });
+
+// T23 / ADR-0024. Help is the one feature whose whole point is being
+// findable by someone who does not know the application, so all three
+// ways in are pinned: the key, the toolbar button, and the palette row.
+describe("App — in-application help (T23)", () => {
+  const helpPanel = () => host!.querySelector(".help-panel");
+
+  async function pressKey(init: KeyboardEventInit) {
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, ...init }));
+    });
+  }
+
+  it("opens the help panel on F1 with no project open", async () => {
+    const root = await renderApp();
+    expect(helpPanel()).toBeNull();
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelector("#help-panel-title")?.textContent).toBe(enMessages["help.title"]);
+
+    await act(async () => root.unmount());
+  });
+
+  // The other half of `opensHelp`: a modified F1 belongs to the browser
+  // and to the desktop, and taking it would be this application helping
+  // itself to a key it was never given.
+  it.each(["ctrlKey", "metaKey", "altKey", "shiftKey"] as const)(
+    "leaves F1 held with %s alone",
+    async (modifier) => {
+      const root = await renderApp();
+
+      await pressKey({ key: "F1", [modifier]: true });
+
+      expect(helpPanel()).toBeNull();
+
+      await act(async () => root.unmount());
+    },
+  );
+
+  it("opens the help panel from the toolbar button", async () => {
+    const root = await renderApp();
+    const button = Array.from(host!.querySelectorAll("button")).find(
+      (b) => b.getAttribute("aria-label") === enMessages["toolbar.help"],
+    );
+    expect(button).toBeDefined();
+
+    await act(async () => {
+      button!.click();
+    });
+
+    expect(helpPanel()).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  // The palette row exists for people who never learn F1. Without this the
+  // registry entry could be wired to nothing and every other gate would
+  // still be green.
+  it("opens the help panel from the command palette", async () => {
+    const root = await renderApp();
+
+    await pressKey({ key: "P", ctrlKey: true, shiftKey: true });
+    const row = Array.from(host!.querySelectorAll<HTMLElement>('li[role="option"]')).find(
+      (li) => li.querySelector("span")?.textContent === enMessages["toolbar.help"],
+    );
+    expect(row).toBeDefined();
+
+    await act(async () => {
+      row!.click();
+    });
+
+    expect(helpPanel()).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  it("closes the command palette when F1 opens help over it", async () => {
+    const root = await renderApp();
+
+    await pressKey({ key: "P", ctrlKey: true, shiftKey: true });
+    expect(host!.querySelector(".command-palette-panel, .search-panel")).not.toBeNull();
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await act(async () => root.unmount());
+  });
+});

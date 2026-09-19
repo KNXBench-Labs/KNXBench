@@ -708,6 +708,17 @@ mod tests {
     }
 
     #[test]
+    fn a_four_digit_group_is_never_an_octet() {
+        // `0255` parses as 255 and would pass the range check on its own;
+        // only the length bound rejects it. Without that bound the window
+        // slides one group to the left and redacts a different four bytes
+        // than the ones that are actually an address — so the bound needs
+        // a test of its own, not just the range check's.
+        let r = plain();
+        assert_eq!(r.apply("0255.192.168.1.1"), "0255.[redacted-ipv4]");
+    }
+
+    #[test]
     fn a_dotted_quad_glued_to_an_extra_digit_and_dot_group_is_still_an_address() {
         // Trimming the run's leading and trailing dots closed the
         // sentence-final case, but it trims dots, not digits: a typo'd

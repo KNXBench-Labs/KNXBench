@@ -92,6 +92,12 @@ export default function LogPanel(props: { tree: ProjectTree | null; refreshKey: 
           ))}
         </div>
       </header>
+      {/* §66/§67 disclosure (fix round 2, B4): message/location/detail below
+          are the server's own text and are never translated — stated here,
+          where the reader actually meets them, not just in
+          KNOWN_LIMITATIONS.md. Shown whenever there is at least one entry
+          to disclose about, independent of the severity filter above. */}
+      {entries.length > 0 && <p className="log-panel-hint">{t("logPanel.entryTextIsEnglish")}</p>}
       {error && <span className="field-error">{error}</span>}
       {entries.length === 0 ? (
         <p className="log-panel-empty">{t("logPanel.emptyNoEntries")}</p>

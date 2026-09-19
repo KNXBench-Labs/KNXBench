@@ -257,10 +257,65 @@ pub(crate) struct StaleParameterDto {
     pub(crate) raw: String,
 }
 
+/// Every distinct `ParameterDiagnosticDto.message` this build can produce,
+/// as a closed, machine-readable tag alongside the English prose —
+/// KNOWN_LIMITATIONS.md §66's translated surface, the same
+/// `CreationDiagnostic`/`CreationDiagnosticDto` idea (`tag = "kind"`
+/// above) applied here. Unlike `CreationDiagnostic`, none of these
+/// twenty-two messages interpolate a dynamic value — every id, count and
+/// name they'd want to name already lives in `.detail` instead (design
+/// D26) — so a bare tag is enough; there is no per-variant payload to
+/// carry. `apps/knx-web/src/ParameterPanel.tsx`'s
+/// `describeParameterDiagnosticMessage` maps each tag to its own
+/// catalogue key and falls back to `.message` verbatim for a `kind` a
+/// future server variant introduces before that frontend build knows
+/// about it — the same fallback `describeCreationDiagnostic` uses.
+#[derive(serde::Serialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) enum ParameterDiagnosticKindDto {
+    /// `parameter_views`'s inner joins dropped a declared parameter.
+    ParametersUnreadable,
+    /// Two stored values target the same unscoped parameter.
+    DuplicateUnscopedValue,
+    /// Two stored values target the same module-scoped parameter.
+    DuplicateModuleScopedValue,
+    /// Two sections in one program declare the same module id (a
+    /// malformed program).
+    DuplicateModuleId,
+    /// No imported `ModuleInstance` matches this module (D39 rule 2).
+    NoModuleInstanceMatch,
+    /// More than one imported `ModuleInstance` claims this module (D40).
+    AmbiguousModuleInstance,
+    /// An imported `ModuleInstance`'s id does not decompose as expected
+    /// (D39 rule 3).
+    MalformedModuleInstanceId,
+    /// The remaining fifteen tags mirror `knx_productdb::dynamic::Diagnostic`'s
+    /// own variants 1:1 (see `diagnostic_kind_and_message` in `domain.rs`).
+    NoBranchMatched,
+    UnparsableTest,
+    UnresolvedParamRef,
+    NonNumericValue,
+    UnexpectedTypeNoneShape,
+    UnrecognizedNode,
+    ModuleDefNotFound,
+    ModuleCycleDetected,
+    ModuleNestingTooDeep,
+    ModuleExpansionBudgetExhausted,
+    MissingValue,
+    ModuleWithoutId,
+    /// Added by T12's module-argument work (main), merged into this
+    /// Kind-tagged shape during T14's fix round 1 merge — see
+    /// `diagnostic_kind_and_message`'s own comment on this trio.
+    ModuleArgumentNotBound,
+    UnsupportedModuleArgumentKind,
+    UnresolvedTextPlaceholder,
+}
+
 #[derive(serde::Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParameterDiagnosticDto {
     pub(crate) scope: Option<ModuleScopeDto>,
+    pub(crate) kind: ParameterDiagnosticKindDto,
     pub(crate) message: String,
     pub(crate) detail: String,
 }

@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { LogEntry } from "./api";
+import { messages as enMessages } from "./messages/en";
 
 const apiMock = vi.hoisted(() => ({
   getSessionLog: vi.fn().mockResolvedValue([]),
@@ -55,6 +56,21 @@ describe("LogPanel", () => {
   it("shows the empty state when there are no entries", async () => {
     const root = await renderPanel(baseTree());
     expect(host!.textContent).toContain("No log entries yet.");
+    root.unmount();
+  });
+
+  it("shows the fix-round-2 (B4) English-text disclosure once at least one entry exists, and not before", async () => {
+    apiMock.getSessionLog.mockResolvedValue([]);
+    const root = await renderPanel(baseTree());
+    expect(host!.textContent).not.toContain(enMessages["logPanel.entryTextIsEnglish"]);
+
+    apiMock.getSessionLog.mockResolvedValue([entry({ message: "opened project" })]);
+    const newTree = baseTree();
+    await act(async () => {
+      root.render(<LogPanel tree={newTree} refreshKey={0} />);
+    });
+    expect(host!.textContent).toContain(enMessages["logPanel.entryTextIsEnglish"]);
+
     root.unmount();
   });
 

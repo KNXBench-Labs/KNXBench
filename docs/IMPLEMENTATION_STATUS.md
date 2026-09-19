@@ -6472,3 +6472,97 @@ puts the node in the document itself, and a second assertion reads both
 selector are one contract written in two files and nothing in a mocked
 suite connects them — and `setCatalogTarget(null)`, the third of the three
 dialogs the original blocker named. Web tests 648 → 651.
+
+## 2026-09-19 — C4: the transport counted to three, and the Standard asked for four
+
+TL §3, p. 15 permits up to 3 repetitions of `T_DATA_CONNECTED_REQ_PDU`
+after the original send, i.e. 4 transmissions total, before the local
+Transport Layer gives up (TL §4, p. 16: `max_rep_count 3; maximum of
+T_Connect.req repetitions`). `crates/knx-net/src/commissioning.rs`'s
+`exchange_inner` counted the original send as `attempts = 1` and bailed at
+`attempts >= MAX_REP_COUNT` (3), which is only 2 repetitions — 3
+transmissions, one short. A device that would have answered the third
+repeat was abandoned as `SessionError::NoAnswer` a transmission early. Fixed
+by adding `MAX_TRANSMISSIONS: u8 = MAX_REP_COUNT + 1` next to
+`MAX_REP_COUNT` in scope, with a doc comment citing TL §3/§4, and comparing
+`attempts` against the new constant instead of the old one — `MAX_REP_COUNT`
+itself is untouched and still correctly names the Standard's repetition
+count; the bug was purely in how the transmission cap read it. Two new
+tests pin the transmission count as a literal `4` rather than the constant
+(`a_connected_exchange_makes_exactly_four_transmissions_before_giving_up`,
+`an_answer_on_the_fourth_transmission_is_accepted`), because a test that
+compares against the same constant it is meant to check cannot catch that
+constant being wrong — the pre-existing silent-device test did exactly
+that, and kept passing under mutation for exactly that reason.
+
+Mutation-tested per the task brief: capping `MAX_TRANSMISSIONS` back down to
+3 fails both new tests (the fourth-transmission and the exactly-four-count
+one); capping it up to 5 fails the exactly-four-count test. See the C4/C5
+dispatch report for the exact panic text of each. No
+`docs/KNOWN_LIMITATIONS.md` entry: this is a closed spec-conformance fix
+with no residual deviation left over the wire. Out of scope, unchanged: the
+low-level frame acknowledge mechanics of `T_DATA_CONNECTED` itself.
+
+## 2026-09-19 — C5: the load-state wait gave up right on the deadline, one attempt early
+
+RES §4.23.2.4.1, p. 297: *"If a before established TL-connection
+breaks down, the MaC shall try to re-establish the connection periodically
+during the maximum transition time and once more when the maximum
+transition time has passed."* `wait_for_load_state` reconnected inside its
+poll loop citing this clause, but returned `TransitionTimedOut` the instant
+`started.elapsed() >= max_transition`, skipping the one attempt the clause
+asks for past the deadline. Fixed with a single `made_the_one_more_attempt`
+flag: crossing the deadline sets the flag and lets the loop run one more
+full iteration (reconnect included) before the next deadline check actually
+returns the error — so the extra attempt happens exactly once, never zero
+and never in a loop. Two new tests exercise both directions directly
+against the private `wait_for_load_state` method: one where the simulator
+only settles into the target load state after `max_transition` has passed
+and the call still succeeds
+(`a_late_answer_past_the_deadline_still_succeeds`), and one bounded by an
+outer `tokio::time::timeout` proving a device that never settles gets
+exactly one attempt past the deadline, not an infinite retry
+(`a_device_that_never_settles_gets_exactly_one_attempt_past_the_deadline`).
+
+Mutation-tested per the task brief: removing the post-deadline attempt
+(returning immediately on the first deadline crossing) fails the late-answer
+test; letting the post-deadline branch loop instead of firing once fails
+the not-twice test, bounded by its own inner `tokio::time::timeout` rather
+than by an unbounded hang. See the C4/C5 dispatch report for the exact
+panic text of each. No `docs/KNOWN_LIMITATIONS.md` entry: this is a closed
+spec-conformance fix with no residual deviation left in the state machine.
+Out of scope, unchanged: every other clause of RES §4.23.2.4.1 not
+concerning the count of post-deadline attempts.
+
+**Review fix round (2026-09-19), five changes to what shipped above:** (1)
+the "not-twice" claim two paragraphs up was true in intent but not in what
+the test actually enforced — its only assertion was the outer
+`tokio::time::timeout`, and a reviewer's three-line mutation (the flag
+widened to a `u8` counter, exit condition `>= 2`) still passed the whole
+suite, because two attempts at a 2 ms `poll_interval` are as fast as one.
+`a_device_that_never_settles_gets_exactly_one_attempt_past_the_deadline` now
+sets `max_transition: Duration::ZERO`, so the deadline is already crossed on
+the very first read, and asserts `device.load_state_reads() == 2` — read #1
+crosses the (zeroed) deadline, read #2 is the one attempt past it, and a
+mutant granting a second one produces an unmistakable read #3. This is what
+makes the sentence above true rather than merely intended. (2) The comment
+on the unconditional-grant branch now states RES §4.23.2.4.1's leading
+condition — *"if a before established TL-connection breaks down"* — and
+marks the fact that this code grants the extra attempt even when the
+connection never dropped as an `[A]` project extension, the way
+`programming_delay` already does; the behaviour is unchanged; only the
+comment was overclaiming what the clause itself authorises. (3) A
+`docs/KNOWN_LIMITATIONS.md` entry **is** owed after all, not for a
+conformance deviation but for a latency characteristic: entry #101 quantifies
+how much the one extra attempt (now a full loop body, not a bare poll) plus
+C4's widened retry ladder can push a call past its `max_transition` budget.
+(4) `a_silent_device_is_reported_as_silence_and_not_as_a_diagnosis`'s
+`assert_eq!(attempts, MAX_TRANSMISSIONS, …)` was comparing the observed
+count against the same constant the production code compares against —
+vacuous; dropped, leaving that test's actual subject, the message text,
+asserted alone. (5) `SimulatorConfig::settle_load_state_after` measured
+from device construction (`State::created`, since removed) rather than from
+the first `PID_LOAD_STATE_CONTROL` read, an invisible coupling that made
+`a_late_answer_past_the_deadline_still_succeeds` depend on the gap between
+constructing the device and starting to poll it; it now measures from
+`State::first_load_state_read`, set on the first such read.

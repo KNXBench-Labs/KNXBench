@@ -21,6 +21,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use knx_core::commissioning::load_control::LoadControlSubtype;
 use knx_core::commissioning::load_state::{LoadEvent, LoadState};
@@ -90,6 +91,15 @@ pub struct SimulatorConfig {
     /// first row: the client must report a time-out and must not report a
     /// cause it did not observe.
     pub silent: bool,
+    /// Drop this many `T_DATA_CONNECTED` transmissions — no `T_ACK`, no
+    /// answer, as if lost in transit — before answering normally.
+    ///
+    /// The narrow, temporary cousin of [`SimulatorConfig::silent`], for
+    /// C4's TL §3, p. 15 retry count: a permanently silent device proves
+    /// the client eventually gives up, this one proves the client's retry
+    /// still gets an answer through on a transmission that would have been
+    /// one too many for the pre-fix cap.
+    pub silent_for_first_numbered_data_frames: u32,
     /// Accept `PID_DEVICE_CONTROL` bit 2 and honour it. When false the
     /// device keeps the bit clear, which is what PROF footnote 8 requires
     /// of a device that does not implement Verify Mode.
@@ -177,6 +187,23 @@ pub struct SimulatorConfig {
     /// programs and every other index refuses the write the way `[D]`
     /// AL §3.4.4.2, p. 66, says an unlisted property is refused.
     pub application_program_objects: HashSet<u8>,
+    /// Once this much wall-clock time has passed since the *first*
+    /// `PID_LOAD_STATE_CONTROL` read arrived, later reads of it answer
+    /// [`SimulatorConfig::settled_load_state`] instead of whatever
+    /// [`SimulatedDevice::preset_load_state`] put there. Measured from the
+    /// first read rather than from device construction, so a test's outcome
+    /// does not depend on the gap between building the device and starting
+    /// to poll it.
+    ///
+    /// C5's deterministic way of building a device that only settles once
+    /// `max_transition` is already spent: a test sets this comfortably past
+    /// the session's `max_transition` and can then tell, from whether
+    /// `wait_for_load_state` ever sees the settled value, whether its
+    /// RES §4.23.2.4.1 "once more" attempt actually happens.
+    pub settle_load_state_after: Option<Duration>,
+    /// The state [`SimulatorConfig::settle_load_state_after`] settles to.
+    /// Meaningless while that field is `None`.
+    pub settled_load_state: LoadState,
 }
 
 /// The step of the §7.2 inner loop a simulated interruption strikes at.
@@ -278,6 +305,7 @@ impl Default for SimulatorConfig {
     fn default() -> Self {
         Self {
             silent: false,
+            silent_for_first_numbered_data_frames: 0,
             verify_mode_supported: true,
             drop_load_state_writes: false,
             reference_always_zero: false,
@@ -300,6 +328,8 @@ impl Default for SimulatorConfig {
             allocation_fails_once_for: None,
             interrupt_at: None,
             application_program_objects: HashSet::new(),
+            settle_load_state_after: None,
+            settled_load_state: LoadState::Unloaded,
         }
     }
 }
@@ -357,6 +387,12 @@ pub enum Seen {
 
 #[derive(Debug)]
 struct State {
+    /// When the first `PID_LOAD_STATE_CONTROL` read arrived, for
+    /// [`SimulatorConfig::settle_load_state_after`] to measure against.
+    /// Measuring from device construction instead would make a test's
+    /// outcome depend on the gap between building the device and its first
+    /// poll — invisible and untested.
+    first_load_state_read: Option<Instant>,
     connected: bool,
     /// Whether the one connection drop the configuration asks for has
     /// happened. Once, not on every frame afterwards: a connection that
@@ -365,6 +401,11 @@ struct State {
     dropped: bool,
     /// How many reads of `PID_LOAD_STATE_CONTROL` have arrived.
     load_state_reads: u32,
+    /// How many `T_DATA_CONNECTED` transmissions have arrived, counting
+    /// every retransmission of the same sequence number — what
+    /// [`SimulatorConfig::silent_for_first_numbered_data_frames`] counts
+    /// against.
+    numbered_data_frames: u32,
     level: u8,
     verify_mode: bool,
     send_seq: u8,
@@ -433,9 +474,11 @@ impl SimulatedDevice {
         memory.insert(0x0060, u8::from(config.programming_mode));
 
         let state = State {
+            first_load_state_read: None,
             connected: false,
             dropped: false,
             load_state_reads: 0,
+            numbered_data_frames: 0,
             level: config.free_access_level,
             verify_mode: false,
             send_seq: 0,
@@ -541,6 +584,13 @@ impl SimulatedDevice {
         self.lock().verify_mode
     }
 
+    /// How many `PID_LOAD_STATE_CONTROL` reads have arrived, so a test can
+    /// pin an exact attempt count instead of trusting an outer time-out to
+    /// notice an extra one.
+    pub fn load_state_reads(&self) -> u32 {
+        self.lock().load_state_reads
+    }
+
     /// Tears the connection down from the device's side, as a real one does
     /// after 6 s of silence.
     pub fn break_connection(&self) {
@@ -596,6 +646,16 @@ impl SimulatedDevice {
         let mut state = self.lock();
         match property_id {
             PID_LOAD_STATE_CONTROL => {
+                if let Some(delay) = self.config.settle_load_state_after {
+                    // Set moments ago, in `handle`, by this very read if it
+                    // is the first one — never `None` here.
+                    let first_read = state
+                        .first_load_state_read
+                        .expect("a load-state read is in progress");
+                    if first_read.elapsed() >= delay {
+                        return Some(vec![self.config.settled_load_state.octet()]);
+                    }
+                }
                 let current = state
                     .load
                     .get(&object_index)
@@ -734,6 +794,7 @@ impl SimulatedDevice {
             );
             if is_load_state_read {
                 state.load_state_reads += 1;
+                state.first_load_state_read.get_or_insert_with(Instant::now);
             }
             let by_read = is_load_state_read
                 && self.config.drop_connection_on_load_state_read == Some(state.load_state_reads);
@@ -785,6 +846,17 @@ impl SimulatedDevice {
                 if self.config.silent {
                     // Not even a T_ACK: silence in §11.3 means silence.
                     self.record(&service);
+                    return;
+                }
+                let still_dropping = {
+                    let mut state = self.lock();
+                    state.numbered_data_frames += 1;
+                    state.numbered_data_frames <= self.config.silent_for_first_numbered_data_frames
+                };
+                if still_dropping {
+                    // A transmission lost in transit: no T_ACK, no answer,
+                    // nothing recorded — the client's own retry is what is
+                    // under test here, not this drop.
                     return;
                 }
                 self.emit(Tpci::Ack { seq }, ApplicationService::NoApplicationPdu);

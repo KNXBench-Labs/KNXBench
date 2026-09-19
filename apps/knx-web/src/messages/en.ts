@@ -977,7 +977,7 @@ export const messages = {
   "toolbar.help": "Help (F1)",
   "help.title": "Help",
   "help.intro":
-    "What the parts of this window do, and what the KNX terms behind them mean. F1 opens this from anywhere.",
+    "What the parts of this window do, and what the KNX terms behind them mean. F1 opens this from anywhere in the main window; the separate diagnostics window carries no help of its own.",
   "help.topics": "Topics",
   "help.close": "Close",
   "help.standardNote":
@@ -1023,7 +1023,7 @@ export const messages = {
 
   "help.topic.comObjectFlags.title": "Communication object flags",
   "help.topic.comObjectFlags.p1":
-    "A communication object is one input or output of a device's application program. Linking it to a group address is what puts the device on that address. Five flags decide what it may do there, shown as R, W, T, U and C in the Properties inspector.",
+    "A communication object is one input or output of a device's application program. Linking it to a group address is what puts the device on that address. KNXBench models five flags for it — shown as R, W, T, U and C in the Properties inspector — and together they decide what the object may do there.",
   "help.topic.comObjectFlags.p2":
     "C, communication, is the master switch: with it off the object takes no part in bus traffic and the other four have nothing to act on. R, read, lets the object answer a read request with its current value. W, write, lets an incoming telegram change that value.",
   "help.topic.comObjectFlags.p3":
@@ -1033,7 +1033,7 @@ export const messages = {
   "help.topic.busMonitor.p1":
     "The bus monitor watches live traffic through a KNXnet/IP gateway. Type the gateway's address and port, connect, and telegrams appear as they arrive. Watching and sending are separate: the table only displays, and sending a telegram is its own deliberate action.",
   "help.topic.busMonitor.p2":
-    "Tunnelling is the only transport. KNXBench does not search the network for gateways and does not join a routing multicast group, which is why the address has to be typed in.",
+    "Tunnelling is the only transport. This window does not search the network for gateways and does not join a routing multicast group, which is why the address has to be typed in.",
   "help.topic.busMonitor.p3":
     "Telegrams are decoded against the project that is open. If that project changes while a session runs, the monitor says so instead of silently re-labelling what it decoded earlier — the notice means the decoded column is the older project's answer.",
 
@@ -1043,7 +1043,7 @@ export const messages = {
   "help.topic.importExport.p2":
     "Data this application does not model is not thrown away. It is either kept as it was read or listed as unsupported, and it turns up in the import report rather than vanishing between the file and the project.",
   "help.topic.importExport.p3":
-    "“Export to .knxproj…” writes an ETS-shaped file from the current project. Whether a real ETS installation reopens that file has not been tested, and no ETS compatibility is claimed in either direction. Group addresses also go in and out as CSV, and “Export documentation…” writes a readable description of the project.",
+    "“Export to .knxproj…” writes an ETS-shaped file from the current project, and stays greyed out until the project itself has been saved to a file. Whether a real ETS installation reopens that file has not been tested, and no ETS compatibility is claimed in either direction. Group addresses also go in and out as CSV, and “Export documentation…” writes a readable description of the project.",
 
   "help.topic.keyboard.title": "Keyboard",
   "help.topic.keyboard.p1":
@@ -1057,7 +1057,7 @@ export const messages = {
   "help.topic.limits.p1":
     "KNXBench is an independent application. It is not made by, endorsed by or certified by the KNX Association, and it is not ETS. Where it reads or writes an ETS file it does so on its own reading of that file.",
   "help.topic.limits.p2":
-    "KNX Secure is not supported. A password-protected project cannot be opened from this window — there is nowhere to type the password. Programming devices over the bus is not offered here either: the bus features are watching traffic and sending single telegrams.",
+    "KNX Secure is not supported. A password-protected project cannot be opened from this window — there is nowhere to type the password. Programming devices over the bus is not offered here either: the bus features are watching traffic and sending single telegrams. KNX's sixth communication-object flag, Read-on-Init (I), is not part of the project model: product data carrying it is read, but the flag is neither shown nor editable.",
   "help.topic.limits.p3":
     "What is here is tested, but a test suite is not a site survey. Before trusting this application about an installation, check what it tells you against the installation itself.",
 
@@ -1066,7 +1066,7 @@ export const messages = {
     "R, W, T, U and C decide what this object may do on the bus. C is the master switch — with it off, the other four do nothing. F1 has the full explanation.",
   "help.tip.addressTable.label": "What this table shows",
   "help.tip.addressTable.text":
-    "Every group address in the project, with its datapoint type and the communication objects linked to it. The box filters by address or by name. F1 explains what a group address is.",
+    "Every group address in the project, with its datapoint type and the communication objects linked to it. The box filters by address, by name or by datapoint type. F1 explains what a group address is.",
   "help.tip.busGateway.label": "What to enter as the gateway",
   "help.tip.busGateway.text":
     "The address and port of a KNXnet/IP gateway, such as 192.0.2.1:3671. Tunnelling only — this application does not search the network for one.",

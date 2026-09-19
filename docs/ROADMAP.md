@@ -773,7 +773,6 @@ new document written for users, which nobody has written. The measured
 counts in the paragraphs below are the pre-T23 state, kept as written; the
 same command gives 9 / 41 / 5 today.
 
-
 **Deliberately last.** Added 2026-09-10 by explicit request: an in-app
 help system — hover explanations, contextual help, an actual manual —
 scheduled at the end of everything rather than folded into the UI cycles

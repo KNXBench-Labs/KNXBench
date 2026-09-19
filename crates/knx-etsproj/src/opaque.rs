@@ -100,6 +100,12 @@ pub fn collect_container_entries(
 /// counts entries *walked*, including the regenerated ones skipped below —
 /// those are the entries the loop is done with, and a counter that skipped
 /// them would stall short of its own total.
+///
+/// Each entry is reported *after* its own work, never before (fix round 6,
+/// finding F-E): announcing entry 38 of 38 while entry 38 is still being
+/// read shows a finished count over unfinished work, which is the one
+/// thing ADR-0023 asks a progress indicator never to do. `knx-app`'s
+/// manufacturer-file ingest already counted this way; now both do.
 pub fn collect_container_entries_observed(
     container: &mut Container,
     regenerated: &[&str],
@@ -113,34 +119,36 @@ pub fn collect_container_entries_observed(
         manufacturer: Vec::new(),
     };
     for path in paths {
+        // A regenerated entry is work the loop is done with the moment it
+        // recognizes it — there is nothing to read, so the count below is
+        // still reporting something finished.
+        if !regenerated.iter().any(|r| r.eq_ignore_ascii_case(&path)) {
+            let bytes = container.read(&path)?;
+            let sha256 = sha256_hex(&bytes);
+            let kind = classify(&path);
+            match kind {
+                OpaqueKind::ManufacturerData | OpaqueKind::Baggage => {
+                    out.manufacturer.push(ManufacturerFile {
+                        source_path: path,
+                        bytes,
+                        sha256,
+                        kind,
+                    });
+                }
+                _ => {
+                    out.opaque.push(OpaqueEntry {
+                        source_path: path,
+                        xpath: String::new(),
+                        kind,
+                        name: String::new(),
+                        bytes,
+                        sha256,
+                    });
+                }
+            }
+        }
         walked += 1;
         observer.items(walked, total);
-        if regenerated.iter().any(|r| r.eq_ignore_ascii_case(&path)) {
-            continue;
-        }
-        let bytes = container.read(&path)?;
-        let sha256 = sha256_hex(&bytes);
-        let kind = classify(&path);
-        match kind {
-            OpaqueKind::ManufacturerData | OpaqueKind::Baggage => {
-                out.manufacturer.push(ManufacturerFile {
-                    source_path: path,
-                    bytes,
-                    sha256,
-                    kind,
-                });
-            }
-            _ => {
-                out.opaque.push(OpaqueEntry {
-                    source_path: path,
-                    xpath: String::new(),
-                    kind,
-                    name: String::new(),
-                    bytes,
-                    sha256,
-                });
-            }
-        }
     }
     Ok(out)
 }

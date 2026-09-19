@@ -173,11 +173,21 @@ zero — verified per document by its own footer, not assumed.
    CP §3.5.1.3, p. 40, is titled *"Memory architecture"*, and the
    capitalized string `Unload Device` occurs exactly once in the entire
    document, case-sensitive: inside this same dangling reference. A
-   case-insensitive search also matches CP §3.5.2 Nr. 05, p. 42, whose row
-   label is the unrelated, lowercase `Unload device` — the name of that
-   procedure's own unload step, not a second reference to this one. Recorded
-   here so a future check does not rediscover that occurrence and "correct"
-   this entry.
+   case-insensitive search for `unload device` instead matches exactly two
+   places, neither of them the reference itself: CP §3.5.2 Nr. 05, p. 42,
+   whose row label is the unrelated, lowercase `Unload device` — that
+   procedure's own unload step — and CP §3.5.4 Nr. 05, p. 57, whose own row
+   label is likewise the lowercase `Unload device`, on the very page that
+   carries the dangling reference, naming step 05 itself rather than
+   referencing anything. The quoted capitalized reference does not turn up
+   in a naive text extraction at all: the source PDF's two-column table
+   layout wraps the cell across a line break as `'Unload` / *(other
+   columns' text)* / `Device' in 3.5.1.3)`, so `Unload Device` never appears
+   as a contiguous string to grep for — confirmed against
+   `03_05_03 Configuration Procedures v02.01.01 AS.pdf` with
+   `pdftotext -layout`. Recorded here so a future check does not rediscover
+   either lowercase occurrence, or the invisible-to-grep reference itself,
+   and "correct" this entry.
 6. **RES §4.23.2.4.1, p. 297, names a Load Control value as if it were a Load
    State.** It reads *"continue with further access only after load state has
    changed to LoadCompleted"*, but Table 92 (the Load State Machine's state

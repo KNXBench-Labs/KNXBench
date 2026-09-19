@@ -55,6 +55,27 @@
   `PID_RUN_STATE_CONTROL` extended to all six columns, and an invented
   Polling-Master/File-Server object pair removed from `RESEARCH.md`. **The gap
   count is unchanged at six**, and no phase-3 permission was widened or narrowed.
+- **Revision, 2026-09-19 (task C1, `knx-net`):** §7.2 step 5 as first written
+  here treats *"Set the version"* as unconditional for every loadable part,
+  because CP §3.5.2 phrases steps 06-10 as one shared routine. It is not: RES
+  Table 90 (p. 288) and Table 91 (p. 290) list `PID_PROGRAM_VERSION` for
+  Application Program 1 and 2, and RES Table 77 (p. 238), Table 80 (p. 249)
+  and Table 85 (p. 270) do not list it for the Group Address Table, the
+  Association Table or the Group Object Table. `crates/knx-net/src/
+  commissioning/download.rs` now carries that distinction as `PartKind` (the
+  five loadable Interface Objects, CP's own row order) and
+  `PartKind::has_program_version()`; `LoadablePart::new` refuses an
+  application-program part built with no version, and `load_one_part`
+  attempts the write unconditionally only for those two kinds, treating a
+  table's refusal as `VersionOutcome::Refused` rather than a procedure
+  failure. `crates/knx-net/src/commissioning/simulator.rs`'s
+  `SimulatorConfig::application_program_objects` is the same fact, stated
+  from the device's side, so the simulator can refuse the write for an
+  object index nothing registered as one of the two application programs.
+  See `docs/KNOWN_LIMITATIONS.md` for the one contradiction this task ships
+  against provisionally (CP §3.5.3's table variants ask for the write anyway)
+  and for the parked mismatch between this behaviour and `knx-core`'s
+  declarative procedure model (F8, deferred to task C11).
 
 ## 1. The rules this document obeys
 
@@ -1104,7 +1125,12 @@ specific; on TP1 it does not apply.
 4. **Write the data** by direct memory access, choosing the service per §6.5's
    `BaseAddress + length` rule, in chunks per §6.4.
 5. **Set the version.**
-   `MaC: PropertyWrite(ID_ApplicationProgram_2, PID_PROGRAM_VERSION)`.
+   `MaC: PropertyWrite(ID_ApplicationProgram_2, PID_PROGRAM_VERSION)`. Written
+   as step 06's own text, for Application Program 2; steps 08-10 (the Group
+   Object Table, Address Table and Association Table) carry no such write in
+   CP §3.5.2 at all, which matches RES Table 77/80/85 not listing the
+   property for those three objects. See the 2026-09-19 (task C1) revision
+   above for where the implementation carries that distinction.
 6. **Complete.** `MaC: Set ApplicationProgram_2.LoadControl = LoadComplete` →
    `MaS: Set ApplicationProgram_2.LoadState = Loaded`, waited for per §5.5.
 7. **Store the checksum.** *"Read Property Memory Control Block and save CRC

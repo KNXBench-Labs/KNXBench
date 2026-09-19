@@ -667,8 +667,16 @@ load-control-subtype mapping for 13 of the 25 `knx_master.xml` kinds — note th
 payload *layouts* **are** documented, which narrows the earlier claim, and that a
 wrong subtype drives the Load State Machine to `Error` rather than returning an
 error; `GAP-T30-03` what an `EtsDownloadPlugin` DLL does (compiled code; not
-documentable from either base); `GAP-T30-04` the "differential download algorithm"
-named by `03_05_03` §3.5.3; `GAP-T30-07` the unquantified "delay for programming
+documentable from either base); `GAP-T30-04` the "differential download
+algorithm" named by `03_05_03` §3.5.3, p. 46 — **narrowed 2026-09-19**: the
+trigger, goal, required client-side state and consistency argument are
+documented in three further places (`03_01_02 Glossary` p. 9, RES §4.2.27.1.2
+p. 39, `Project Schema23` `DeviceInstance` attributes p. 44); only the
+diffing/chunk-selection strategy remains absent, and the Glossary's own "may
+for instance" marks that as implementation-defined rather than unspecified —
+see design spec §12 item 4 and
+[COMPATIBILITY.md §6](COMPATIBILITY.md#6-knx-standard-errata--printed-text-this-project-deliberately-does-not-follow)
+for the related printed-text notes; `GAP-T30-07` the unquantified "delay for programming
 the memory in the device" of `03_05_02` §3.16 and four sibling procedures — chased
 to the footnote's own reference (`03_07_02 Datapoint Types`), which yields only
 `DPT_Time_Delay` 20.013's 26 coarse labels and no formula, so the gap survives;
@@ -5203,3 +5211,43 @@ finds is a finding rather than a fix. Fully, never by testing alone — a
 download that has been observed to succeed on one manufacturer's device is
 evidence about that device. This entry narrows with each observed device
 and does not close.
+
+## 95. Seven places where the KNX Standard's printed text must not be followed literally
+
+**Limitation.** None — this is a pointer, not a cost. `03_05_03 Configuration
+Procedures` ("CP") and `03_05_01 Resources` ("RES") contain seven places where
+the printed text either contradicts itself or contradicts its own surrounding
+rows, and the commissioning code in `crates/knx-core/src/commissioning` and
+`crates/knx-net/src/commissioning` deliberately does not follow the literal
+text there. The full list, each item carrying its clause and its PDF page —
+three of the table-variant load procedures reading Application Program 2's
+Memory Control Block where every neighbouring row reads its own; a Group
+Object Table step filed under the Address Table's load row (and repeated for
+AP1 and GOT); a `LoadCompleted` event listed inside an unload wait, where RES
+Table 94 marks that transition optional rather than a step of unloading; CP
+§3.5.2 and §3.5.3 giving opposite answers on whether `PID_PROGRAM_VERSION` is
+written to the three table objects (task C1 handles the code side); a
+cross-reference to a section that does not contain what it is sent to find;
+RES §4.23.2.4.1 naming a Load Control *value* (`LoadCompleted`, `02h`) as if
+it were the terminal Load *state* (`Loaded`, per Table 92); and three
+mutually incompatible part-unload/load orderings across CP §3.5.2 and
+§3.5.4 — lives in
+[COMPATIBILITY.md §6](COMPATIBILITY.md#6-knx-standard-errata--printed-text-this-project-deliberately-does-not-follow),
+next to the other compatibility claims and their evidence, rather than here.
+
+**Cause.** A specification this size is not internally consistent by default,
+and Configuration Procedures in particular reads like several authors' work
+stitched together — the disagreements above are exactly the shape that
+produces (misplaced rows, a stale cross-reference, a state/value name
+collision), not the shape a single careless reading would produce.
+
+**Impact.** None on a user. Every item above was already the code's actual
+behaviour before this entry existed; what changed 2026-09-19 is that the
+divergence is now written down next to its clause, so a future reviewer
+comparing this code to the printed Standard finds the explanation instead of
+mistaking correct behaviour for a bug.
+
+**Lifted when.** It already is; this entry (and its cross-reference) is the
+lifting. It would only need revisiting if a later KNX Standard erratum or
+edition corrects one of the seven clauses, at which point the corresponding
+list item names which one no longer applies.

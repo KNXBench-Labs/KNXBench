@@ -3335,7 +3335,14 @@ mean different things in different files.
 3. `GAP-T30-03` — what an `EtsDownloadPlugin`/`Baggage` DLL does (compiled code;
    not documentable from either knowledge base);
 4. `GAP-T30-04` — the *"differential download algorithm"* named in `03_05_03`
-   §3.5.3;
+   §3.5.3, p. 46 — **narrowed 2026-09-19**: the trigger, goal, required
+   client-side state and consistency argument are documented across three
+   more sources (`03_01_02 Glossary` p. 9, RES §4.2.27.1.2 p. 39, `Project
+   Schema23` `DeviceInstance` attributes p. 44); only the diffing/
+   chunk-selection strategy is genuinely absent, and the Glossary's own *"may
+   for instance"* marks that absence as implementation-defined — a licence,
+   not a gap (design spec §12 item 4;
+   `docs/spec-audits/2026-09-19-cp-3_5_3-partial-download.md` Q1);
 5. `GAP-T30-07` — the unquantified *"delay for programming the memory in the
    device"* (`03_05_02` §3.16 and four sibling procedures). The footnote does name
    a reference — *"The delay time depends on the Management Server and on the

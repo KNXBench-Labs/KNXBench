@@ -3781,15 +3781,17 @@ mod tests {
     // on this test block is now the pointer from here to there.
     #[test]
     fn diagnostic_kind_and_message_matches_the_english_catalogue() {
+        use crate::routes::ParameterDiagnosticKindDto as Kind;
         use knx_productdb::dynamic::Diagnostic;
 
-        let cases: Vec<(Diagnostic, &str)> = vec![
+        let cases: Vec<(Diagnostic, Kind, &str)> = vec![
             (
                 Diagnostic::NoBranchMatched {
                     choose_node: 1,
                     param_ref: None,
                     observed_value: "x".to_string(),
                 },
+                Kind::NoBranchMatched,
                 "A choice did not match any of its options.",
             ),
             (
@@ -3797,6 +3799,7 @@ mod tests {
                     when_node: 1,
                     raw: "x".to_string(),
                 },
+                Kind::UnparsableTest,
                 "A choice's condition could not be understood.",
             ),
             (
@@ -3804,6 +3807,7 @@ mod tests {
                     choose_node: 1,
                     param_ref: None,
                 },
+                Kind::UnresolvedParamRef,
                 "A choice's controlling parameter could not be found.",
             ),
             (
@@ -3812,10 +3816,12 @@ mod tests {
                     param_ref: None,
                     raw: "x".to_string(),
                 },
+                Kind::NonNumericValue,
                 "A choice's controlling value was not a valid number.",
             ),
             (
                 Diagnostic::UnexpectedTypeNoneShape { choose_node: 1 },
+                Kind::UnexpectedTypeNoneShape,
                 "An unusual choice structure was skipped.",
             ),
             (
@@ -3823,6 +3829,7 @@ mod tests {
                     node_id: 1,
                     kind: "x".to_string(),
                 },
+                Kind::UnrecognizedNode,
                 "An unrecognized program element was skipped.",
             ),
             (
@@ -3830,6 +3837,7 @@ mod tests {
                     node_id: 1,
                     ref_id: None,
                 },
+                Kind::ModuleDefNotFound,
                 "A module could not be found in this program.",
             ),
             (
@@ -3837,6 +3845,7 @@ mod tests {
                     node_id: 1,
                     ref_id: None,
                 },
+                Kind::ModuleCycleDetected,
                 "A module refers back to one of its own enclosing modules and was not expanded.",
             ),
             (
@@ -3845,6 +3854,7 @@ mod tests {
                     ref_id: None,
                     depth: 9,
                 },
+                Kind::ModuleNestingTooDeep,
                 "A module is nested deeper than this program will expand.",
             ),
             (
@@ -3853,6 +3863,7 @@ mod tests {
                     ref_id: None,
                     budget: 9,
                 },
+                Kind::ModuleExpansionBudgetExhausted,
                 "This program's modules are too numerous to fully expand; the rest were skipped.",
             ),
             (
@@ -3860,10 +3871,12 @@ mod tests {
                     choose_node: 1,
                     param_ref: None,
                 },
+                Kind::MissingValue,
                 "A choice's controlling parameter has no value.",
             ),
             (
                 Diagnostic::ModuleWithoutId { node_id: 1 },
+                Kind::ModuleWithoutId,
                 "A module instance has no identifier and cannot be matched to stored values.",
             ),
             (
@@ -3871,6 +3884,7 @@ mod tests {
                     node_id: 1,
                     ref_id: None,
                 },
+                Kind::ModuleArgumentNotBound,
                 "A module argument could not be matched to the module's declaration and was ignored.",
             ),
             (
@@ -3878,6 +3892,7 @@ mod tests {
                     node_id: 1,
                     kind: "x".to_string(),
                 },
+                Kind::UnsupportedModuleArgumentKind,
                 "A module argument uses a kind this build does not interpret and was ignored.",
             ),
             (
@@ -3885,12 +3900,17 @@ mod tests {
                     node_id: 1,
                     name: "x".to_string(),
                 },
+                Kind::UnresolvedTextPlaceholder,
                 "A text placeholder had no matching module argument and was left as written.",
             ),
         ];
 
-        for (diagnostic, expected_message) in cases {
-            let (_, message) = diagnostic_kind_and_message(&diagnostic);
+        for (diagnostic, expected_kind, expected_message) in cases {
+            let (kind, message) = diagnostic_kind_and_message(&diagnostic);
+            assert_eq!(
+                kind, expected_kind,
+                "diagnostic_kind_and_message returned the wrong kind for {diagnostic:?}"
+            );
             assert_eq!(
                 message, expected_message,
                 "diagnostic_kind_and_message drifted from messages/en.ts for {diagnostic:?}"

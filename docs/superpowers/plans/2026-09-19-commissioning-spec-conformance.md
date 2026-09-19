@@ -681,7 +681,10 @@ C1 ∥ C2 ∥ C3 ∥ C4 ∥ C5 ∥ C6 ∥ C7        (tier 1, all independent)
         ↓          ↓
       C8 ∥ C9 ∥ C10                      (C8←C1, C9←C2, C10 independent)
         ↓
-      C11 → C12                          (five variants, five numberings)
+      C11 → C12                          (five variants, five numberings;
+                                          C12 also depends on C10 — it
+                                          renumbers the very step C10
+                                          rewrites)
         ↓
    C13 ∥ C14                             (counter and import state)
         ↓
@@ -691,3 +694,15 @@ C1 ∥ C2 ∥ C3 ∥ C4 ∥ C5 ∥ C6 ∥ C7        (tier 1, all independent)
 
 C1 first, always: it is the only entry here that fails on real hardware, and its
 simulator half is what makes every later test mean anything.
+
+**Amended 2026-09-19 by the pre-flight conflict scan.** Two findings changed the
+plan rather than a task:
+
+1. `PartKind` (C1) must carry **five** variants — `ApplicationProgram2`,
+   `ApplicationProgram1`, `GroupObjectTable`, `GroupAddressTable`,
+   `AssociationTable` — in that declaration order, because that is the
+   normative download order and C8 validates against it, C11 names its five
+   step lists by it and C12 selects on it. C1's own fact lives on a
+   `has_program_version()` method rather than on the discriminant.
+2. C12 depends on C10 as well as C11: C10 rewrites the access-key step that
+   C12 renumbers per variant, and the two cannot run side by side.

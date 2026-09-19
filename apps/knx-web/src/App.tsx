@@ -215,9 +215,22 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (opensHelp(e)) {
+        // F1 is the browser's help key as well as ours, so it has to be
+        // taken before anything else looks at it.
         e.preventDefault();
+        // Two `aria-modal` dialogs at once is undefined for assistive
+        // technology, and `Overlay`'s backdrop is fixed and full-viewport,
+        // so the one rendered later simply buries the other. Help
+        // therefore *replaces* every overlay this component owns rather
+        // than stacking on one — and stays away entirely while the file
+        // picker is up, because that one mounts its own React root
+        // (`filePicker.ts`) and cannot be closed from here.
+        if (document.querySelector(".fs-picker")) return;
         setSearchOpen(false);
         setPaletteOpen(false);
+        setSettingsOpen(false);
+        setNewProjectOpen(false);
+        setCatalogTarget(null);
         setHelpOpen(true);
         return;
       }
@@ -775,8 +788,8 @@ function App({ manifestVersion = packageVersion }: AppProps) {
 }
 
 // Cycle 13's ThemeToggle drew its sun/moon/monitor icons the same way:
-// hand-written inline SVG, no icon library. This gear is that convention's
-// one new member.
+// hand-written inline SVG, no icon library. The question mark and the gear
+// below it are that convention's two newest members.
 function QuestionIcon() {
   return (
     <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">

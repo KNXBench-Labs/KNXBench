@@ -27,8 +27,12 @@ export default function HelpTip(props: { labelKey: MessageKey; textKey: MessageK
   // `aria-describedby` points at it permanently. That is the whole
   // accessibility argument for this component over a `title`: a screen
   // reader gets the description when focus lands on the trigger, with no
-  // hover to simulate and no visibility state to guess at. Visibility is
-  // therefore purely a sighted-user concern and lives in CSS.
+  // hover to simulate. It only holds because the hidden state is
+  // `opacity: 0` — `display: none` or `visibility: hidden` would drop the
+  // bubble out of the accessibility tree, and the description would then
+  // exist only if this component's state update beat the screen reader's
+  // lookup. `styles.css` says so at the rule, and `help.test.ts` fails if
+  // either declaration comes back.
   function handleKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
     if (e.key !== "Escape" || !open) return;
     // Only while this tip is actually showing. An unconditional stop would

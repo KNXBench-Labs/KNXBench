@@ -222,7 +222,7 @@ describe("BusMonitorPanel", () => {
       expect(host!.textContent).toContain("1/2/3");
       expect(host!.querySelector(".bus-monitor-gap-notice")!.textContent).toContain("2");
       expect(host!.textContent).toContain("Disconnect");
-      expect(host!.querySelector(".bus-monitor-connect button")!.textContent).toBe("Disconnect");
+      expect(host!.querySelector(".bus-monitor-connect > button")!.textContent).toBe("Disconnect");
 
       // The reattach poll already delivered the first batch of rows — the
       // per-session polling effect must not immediately re-poll with a

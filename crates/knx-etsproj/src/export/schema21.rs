@@ -87,8 +87,8 @@ use knx_core::{
 
 use super::schema11::{
     building_part_type_str, close, empty, group_address_style_str, open, push_override_dpt,
-    push_override_text, retained_attrs, retained_elements, write_group_range, xml_err, Attrs,
-    RetainedAttrs, EXPORTER_NAME, EXPORTER_VERSION,
+    push_override_text, reject_unranged_group_addresses, retained_attrs, retained_elements,
+    write_group_range, xml_err, Attrs, RetainedAttrs, EXPORTER_NAME, EXPORTER_VERSION,
 };
 use super::ExportError;
 use crate::opaque::OpaqueEntry;
@@ -100,6 +100,7 @@ pub fn write_installation_xml_v21(
     if project.info.project_id.is_empty() {
         return Err(ExportError::MissingProjectId);
     }
+    reject_unranged_group_addresses(project)?;
     let retained = retained_attrs(opaque);
     let elements = retained_elements(opaque);
 
@@ -728,6 +729,20 @@ fn write_space(
 mod tests {
     use super::*;
     use crate::testutil::{all_entries, reference_kv_schema21_path};
+
+    #[test]
+    fn schema_21_refuses_to_silently_drop_an_unranged_group_address() {
+        let project = super::super::schema11::project_with_unranged_group_address(21);
+
+        assert_eq!(
+            write_installation_xml_v21(&project, &[]).unwrap_err(),
+            ExportError::UnrangedGroupAddress {
+                installation_id: knx_core::InstallationId(3),
+                group_address_id: knx_core::GroupAddressId(7),
+                address: knx_core::GroupAddress::from_raw(2305),
+            }
+        );
+    }
 
     /// The schema-21 counterpart of `tests/roundtrip.rs`'s
     /// `roundtrip_model_is_semantically_equal`: goes through the real public

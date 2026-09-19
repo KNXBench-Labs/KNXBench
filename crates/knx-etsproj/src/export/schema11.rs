@@ -48,6 +48,11 @@ pub enum ExportError {
     Xml(String),
     MissingProjectId,
     UnsupportedSchemaVersion(u32),
+    UnrangedGroupAddress {
+        installation_id: knx_core::InstallationId,
+        group_address_id: knx_core::GroupAddressId,
+        address: knx_core::GroupAddress,
+    },
 }
 
 impl std::fmt::Display for ExportError {
@@ -60,17 +65,79 @@ impl std::fmt::Display for ExportError {
             ExportError::UnsupportedSchemaVersion(v) => {
                 write!(f, "no schema-{v} writer implemented")
             }
+            ExportError::UnrangedGroupAddress {
+                installation_id,
+                group_address_id,
+                address,
+            } => write!(
+                f,
+                "installation {installation_id} contains group address {group_address_id} \
+                 (raw {}) without a group range; exporting would omit it",
+                address.raw()
+            ),
         }
     }
 }
 
 impl std::error::Error for ExportError {}
 
+pub(crate) fn reject_unranged_group_addresses(project: &Project) -> Result<(), ExportError> {
+    for installation in &project.installations {
+        if let Some(address) = installation
+            .group_addresses
+            .iter()
+            .find(|address| address.range.is_none())
+        {
+            return Err(ExportError::UnrangedGroupAddress {
+                installation_id: installation.id,
+                group_address_id: address.id,
+                address: address.address,
+            });
+        }
+    }
+    Ok(())
+}
+
 /// The tool identity this exporter writes into `KNX/@CreatedBy`/
 /// `@ToolVersion` — see the module doc comment for why this is not the
 /// original ETS tool identity.
 pub(crate) const EXPORTER_NAME: &str = "knx-etsproj";
 pub(crate) const EXPORTER_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[cfg(test)]
+pub(crate) fn project_with_unranged_group_address(schema: u32) -> Project {
+    let mut project = Project::new(knx_core::Language("en".into()));
+    project.info.project_id = "P-TEST".into();
+    project.info.ets_schema_version = schema;
+    project.installations.push(knx_core::Installation {
+        id: knx_core::InstallationId(3),
+        name: "Test installation".into(),
+        default_line: None,
+        multicast_address: None,
+        completion: CompletionStatus::FinishedDesign,
+        topology: knx_core::Topology {
+            areas: vec![],
+            lines: vec![],
+            unassigned: vec![],
+        },
+        buildings: vec![],
+        group_ranges: vec![],
+        group_addresses: vec![GroupAddressEntry {
+            id: knx_core::GroupAddressId(7),
+            source: knx_core::SourceRef {
+                path: "synthetic".into(),
+                ets_id: "KB-GA-7".into(),
+            },
+            name: "Unranged".into(),
+            address: knx_core::GroupAddress::from_raw(2305),
+            central: false,
+            unfiltered: false,
+            range: None,
+        }],
+        parameters: vec![],
+    });
+    project
+}
 
 /// Known-but-not-modeled attributes, keyed by the schema-shaped
 /// `(xpath, name)` [`crate::known`] itself uses.
@@ -329,6 +396,7 @@ pub fn write_installation_xml(
     if project.info.project_id.is_empty() {
         return Err(ExportError::MissingProjectId);
     }
+    reject_unranged_group_addresses(project)?;
     let retained = retained_attrs(opaque);
     let elements = retained_elements(opaque);
 
@@ -840,6 +908,20 @@ mod tests {
     use crate::parse::parse_installation;
     use crate::testutil::reference_ets4_path;
     use knx_core::{provenance::Resolved, Layer};
+
+    #[test]
+    fn schema_11_refuses_to_silently_drop_an_unranged_group_address() {
+        let project = project_with_unranged_group_address(11);
+
+        assert_eq!(
+            write_installation_xml(&project, &[]).unwrap_err(),
+            ExportError::UnrangedGroupAddress {
+                installation_id: knx_core::InstallationId(3),
+                group_address_id: knx_core::GroupAddressId(7),
+                address: knx_core::GroupAddress::from_raw(2305),
+            }
+        );
+    }
 
     #[test]
     fn an_exported_installation_is_well_formed_and_carries_the_namespace() {

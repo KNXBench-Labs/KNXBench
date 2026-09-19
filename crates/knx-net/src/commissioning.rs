@@ -57,7 +57,9 @@ use tokio::sync::broadcast;
 
 use crate::cemi::{ApplicationService, CemiError, Destination, LDataMessageKind, Tpci};
 use crate::client::{BusError, TunnelEvent};
-use crate::management::{ManagementTransport, ACKNOWLEDGE_TIMEOUT, MAX_REP_COUNT};
+use crate::management::{
+    ManagementTransport, ACKNOWLEDGE_TIMEOUT, CONNECTION_TIMEOUT, MAX_REP_COUNT,
+};
 
 /// The timings a session runs on, all of them injectable so that a test of
 /// the §5.5 wait loop does not take thirty seconds to fail.
@@ -67,6 +69,13 @@ use crate::management::{ManagementTransport, ACKNOWLEDGE_TIMEOUT, MAX_REP_COUNT}
 /// reason to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SessionTiming {
+    /// How long to wait for the matching positive `L_Data.con` after
+    /// `T_Connect` was accepted by the KNXnet/IP gateway.
+    ///
+    /// `[D]` **TL** clause 4: connection time-out 6 s. A
+    /// `TUNNELLING_ACK` alone only confirms gateway acceptance; it does not
+    /// prove that the device-side Transport Layer connection progressed.
+    pub connection_timeout: Duration,
     /// How long to wait for one answer.
     ///
     /// `[D]` **TL** clause 4 via RESEARCH §8.5 and spec §11.1: the
@@ -98,6 +107,7 @@ pub struct SessionTiming {
 impl Default for SessionTiming {
     fn default() -> Self {
         Self {
+            connection_timeout: CONNECTION_TIMEOUT,
             response_timeout: ACKNOWLEDGE_TIMEOUT,
             poll_interval: Duration::from_secs(3),
             max_transition: Duration::from_secs(30),
@@ -183,8 +193,15 @@ pub enum SessionError {
         /// What was in flight.
         during: &'static str,
     },
-    /// Nothing answered within [`SessionTiming::response_timeout`], after
-    /// `max_rep_count` repetitions.
+    /// The matching `L_Data.con` reported that `T_Connect` failed on the
+    /// bus. Unlike silence, this is an explicit negative confirmation.
+    ConnectRejected {
+        /// Device whose Transport Layer connection was rejected.
+        target: IndividualAddress,
+    },
+    /// Nothing answered within the operation's applicable timeout. Connected
+    /// requests use [`SessionTiming::response_timeout`] and `max_rep_count`;
+    /// `T_Connect` uses [`SessionTiming::connection_timeout`] once.
     ///
     /// For a memory write this is spec §9.2's first row and stays
     /// ambiguous: a lost frame and a protected region are the same silence.
@@ -376,6 +393,10 @@ impl fmt::Display for SessionError {
             SessionError::ConnectionLost { during } => {
                 write!(f, "the connection was broken down during {during}")
             }
+            SessionError::ConnectRejected { target } => write!(
+                f,
+                "the bus rejected the Transport Layer connection to {target}"
+            ),
             SessionError::NoAnswer {
                 waiting_for,
                 each,
@@ -945,8 +966,61 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// performs authorise-then-set-Verify-Mode as one unit"*. Called again
     /// after a drop, and doing both again is the point — §14 items 5 and 15.
     pub async fn connect(&mut self) -> Result<(), SessionError> {
+        let mut events = self.transport.subscribe();
         self.send(Tpci::Connect, ApplicationService::NoApplicationPdu)
             .await?;
+        let deadline = tokio::time::Instant::now() + self.timing.connection_timeout;
+        loop {
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            if remaining.is_zero() {
+                return Err(SessionError::NoAnswer {
+                    waiting_for: "to positive L_Data.con for T_Connect",
+                    each: self.timing.connection_timeout,
+                    attempts: 1,
+                });
+            }
+            match tokio::time::timeout(remaining, events.recv()).await {
+                Ok(Ok(TunnelEvent::Telegram(frame)))
+                    if frame.source == self.transport.assigned_address()
+                        && frame.destination == Destination::Individual(self.target.address())
+                        && frame.transport == Tpci::Connect
+                        && frame.service == ApplicationService::NoApplicationPdu =>
+                {
+                    match frame.kind {
+                        LDataMessageKind::Confirmation { error: false } => break,
+                        LDataMessageKind::Confirmation { error: true } => {
+                            return Err(SessionError::ConnectRejected {
+                                target: self.target.address(),
+                            });
+                        }
+                        LDataMessageKind::Request | LDataMessageKind::Indication => continue,
+                    }
+                }
+                Ok(Ok(TunnelEvent::Telegram(_))) => continue,
+                Ok(Ok(TunnelEvent::Closed)) => {
+                    return Err(SessionError::ConnectionLost {
+                        during: "T_Connect confirmation",
+                    });
+                }
+                Ok(Err(broadcast::error::RecvError::Lagged(_))) => {
+                    return Err(SessionError::Lagged {
+                        waiting_for: "positive L_Data.con for T_Connect",
+                    });
+                }
+                Ok(Err(broadcast::error::RecvError::Closed)) => {
+                    return Err(SessionError::ConnectionLost {
+                        during: "T_Connect confirmation",
+                    });
+                }
+                Err(_) => {
+                    return Err(SessionError::NoAnswer {
+                        waiting_for: "to positive L_Data.con for T_Connect",
+                        each: self.timing.connection_timeout,
+                        attempts: 1,
+                    });
+                }
+            }
+        }
         self.send_seq = 0;
         self.connection = Some(ConnectionState {
             authorisation: self.plan.initial_authorisation(),
@@ -1848,6 +1922,7 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
 mod tests {
     use super::simulator::{Seen, SimulatedDevice, SimulatorConfig};
     use super::*;
+    use crate::cemi::LDataFrame;
     use knx_core::commissioning::authorisation::AccessKey;
     use knx_core::commissioning::programming_mode::CURR_PROG_MODE_ADDRESS;
 
@@ -1856,6 +1931,7 @@ mod tests {
     /// the loop has the right shape.
     fn fast() -> SessionTiming {
         SessionTiming {
+            connection_timeout: Duration::from_millis(50),
             response_timeout: Duration::from_millis(50),
             poll_interval: Duration::from_millis(1),
             max_transition: Duration::from_millis(40),
@@ -1928,6 +2004,149 @@ mod tests {
         ) -> Result<(), BusError> {
             self.0.send_frame(destination, transport, service).await
         }
+    }
+
+    struct ConnectConfirmationTransport {
+        assigned: IndividualAddress,
+        events: broadcast::Sender<TunnelEvent>,
+    }
+
+    impl ConnectConfirmationTransport {
+        fn new(assigned: IndividualAddress) -> Self {
+            let (events, _) = broadcast::channel(16);
+            Self { assigned, events }
+        }
+
+        fn confirm_connect_with_error(&self, target: IndividualAddress, error: bool) {
+            let _ = self.events.send(TunnelEvent::Telegram(LDataFrame {
+                kind: LDataMessageKind::Confirmation { error },
+                source: self.assigned,
+                destination: Destination::Individual(target),
+                transport: Tpci::Connect,
+                service: ApplicationService::NoApplicationPdu,
+            }));
+        }
+
+        fn confirm_connect(&self, target: IndividualAddress) {
+            self.confirm_connect_with_error(target, false);
+        }
+    }
+
+    impl ManagementTransport for ConnectConfirmationTransport {
+        fn assigned_address(&self) -> IndividualAddress {
+            self.assigned
+        }
+
+        fn subscribe(&self) -> broadcast::Receiver<TunnelEvent> {
+            self.events.subscribe()
+        }
+
+        async fn send_frame(
+            &self,
+            _destination: Destination,
+            _transport: Tpci,
+            _service: ApplicationService,
+        ) -> Result<(), BusError> {
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn connect_waits_for_the_matching_current_target_confirmation() {
+        let assigned = addr(1, 1, 249);
+        let stale_target = addr(1, 1, 1);
+        let current_target = addr(1, 1, 2);
+        let transport = ConnectConfirmationTransport::new(assigned);
+        let mut session = ManagementSession::read_only(
+            &transport,
+            current_target,
+            AuthorisationPlan::Skip,
+            fast(),
+        )
+        .expect("build read-only session");
+        let mut connecting = Box::pin(session.connect());
+
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), &mut connecting)
+                .await
+                .is_err(),
+            "gateway acceptance alone must not establish the device connection"
+        );
+
+        transport.confirm_connect(stale_target);
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), &mut connecting)
+                .await
+                .is_err(),
+            "a late confirmation for the previous target must be ignored"
+        );
+
+        transport.confirm_connect(current_target);
+        tokio::time::timeout(Duration::from_millis(10), connecting)
+            .await
+            .expect("matching confirmation should complete promptly")
+            .expect("matching positive confirmation establishes the session");
+    }
+
+    #[tokio::test]
+    async fn connect_uses_the_transport_layer_connection_timeout() {
+        let transport = ConnectConfirmationTransport::new(addr(1, 1, 249));
+        let timing = fast();
+        let mut session = ManagementSession::read_only(
+            &transport,
+            addr(1, 1, 2),
+            AuthorisationPlan::Skip,
+            timing,
+        )
+        .expect("build read-only session");
+
+        let error = session
+            .connect()
+            .await
+            .expect_err("no matching L_Data.con must not establish a session");
+        assert!(matches!(
+            error,
+            SessionError::NoAnswer {
+                waiting_for: "to positive L_Data.con for T_Connect",
+                each,
+                attempts: 1,
+            } if each == timing.connection_timeout
+        ));
+        assert!(session.connection().is_none());
+    }
+
+    #[tokio::test]
+    async fn connect_stops_immediately_on_a_matching_negative_confirmation() {
+        let target = addr(1, 1, 2);
+        let transport = ConnectConfirmationTransport::new(addr(1, 1, 249));
+        let mut session =
+            ManagementSession::read_only(&transport, target, AuthorisationPlan::Skip, fast())
+                .expect("build read-only session");
+        let mut connecting = Box::pin(session.connect());
+        assert!(
+            tokio::time::timeout(Duration::from_millis(1), &mut connecting)
+                .await
+                .is_err(),
+            "connect must be waiting before the confirmation arrives"
+        );
+
+        transport.confirm_connect_with_error(target, true);
+        let result = tokio::time::timeout(Duration::from_millis(10), connecting)
+            .await
+            .expect("a negative confirmation is a final result, not a timeout");
+        assert!(matches!(
+            result,
+            Err(SessionError::ConnectRejected { target: rejected }) if rejected == target
+        ));
+    }
+
+    #[test]
+    fn default_connection_timeout_is_the_transport_layer_six_seconds() {
+        assert_eq!(
+            SessionTiming::default().connection_timeout,
+            CONNECTION_TIMEOUT
+        );
+        assert_eq!(CONNECTION_TIMEOUT, Duration::from_secs(6));
     }
 
     // ------------------------------------------------------- the refusals

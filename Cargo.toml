@@ -46,6 +46,13 @@ tauri = "2.11"
 tauri-build = "2.6"
 tauri-plugin-dialog = "2.7"
 zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+# Decompresses a ZipCrypto entry's compressed data once knx-secure has
+# stripped its encryption layer (Container::open_with_password): the zip
+# crate's own compression handling is fused to its own crypto handling,
+# so a hand-rolled decrypt path needs its own decompressor. Already in
+# the dependency tree transitively via zip's `deflate-flate2-zlib-rs`
+# feature; this just names it directly instead of relying on that.
+flate2 = "1"
 quick-xml = "0.42"
 csv = "1"
 sha2 = "0.10"
@@ -54,6 +61,7 @@ base64 = "0.22"
 socket2 = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+yaml-rust2 = { version = "0.13", default-features = false }
 ts-rs = "12"
 axum = "0.8"
 tokio = "1"

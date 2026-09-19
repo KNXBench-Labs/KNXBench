@@ -6655,8 +6655,10 @@ says so in the user's language rather than leaving them to assume otherwise
 (`docs/KNOWN_LIMITATIONS.md` §104). Two boundary rules earn their keep: a
 candidate run whose neighbour is `[A-Za-z0-9_]` is rejected, without which
 `knx_core::Project` parses as an IPv6 address and every Rust path in the log
-is destroyed; and a dotted run must have exactly four groups, which is what
-leaves `1/2/3`, `1.1.220` and `0.1.0-alpha.1` alone.
+is destroyed; and a dotted run is scanned for a valid four-group window
+rather than required to split into exactly four groups (fix round 2), which
+is what leaves `1/2/3`, `1.1.220` and `0.1.0-alpha.1` alone while still
+catching a quad glued to an extra digit-and-dot group.
 
 `zip` moved from `knx-server`'s dev-dependencies to its dependencies; no new
 crate was added (the redaction scanners are hand-written rather than pulling
@@ -6726,4 +6728,51 @@ to `telegram_json` cover all four `DecodedValue` arms and the absent case.
 
 Server tests 26 + 7 + 2 for this feature; web tests unchanged at 669. All
 eight gates exit 0 again.
+
+### Fix round 2 (review findings)
+
+**A quad glued to a fifth group still leaked.** Fix round 1 trimmed the
+leading and trailing dots off a scanned run before validating it, which
+closed a sentence-final address (`192.168.1.1.`). It trims dots, not digits,
+so a typo'd fifth octet or a glued extra group — `192.168.1.1.5`,
+`5.192.168.1.1`, `1.2.3.4.5.6.7.8` — still split into more than four groups
+and still failed the "exactly four" test unchanged. `redact_ipv4` now slides
+a four-group window across a run's dot-separated groups, left to right,
+taking the first valid quad and resuming right after it, so a run can yield
+more than one hit (`1.2.3.4.5.6.7.8` now redacts both halves). `scan_and_replace`
+changed to match: its `verdict` closure returns every hit in a run,
+non-overlapping and in order, instead of at most one; `redact_ipv6` wraps its
+unchanged single-hit `ipv6_hit` in an iterator to fit.
+
+The boundary rule and the group-shape validator did not need to change: a
+window's neighbours inside a run are always `.`, which is not a token
+character, so `v1.2.3.4.` and `see 0.1.0-alpha.1.` stay protected by the
+letter or missing fourth group exactly as before, and `1/2/3`, `1.1.220` are
+untouched because `/` and a three-group run never offer a four-group window
+at all.
+
+**The trade-off this leaves.** A bare, unlabelled five-or-more-part number
+that is genuinely a version string rather than an address (`1.2.3.4.5` with
+nothing glued to its front) is over-redacted the same way a real address
+would be — shape alone cannot tell them apart, and this fix picks the side
+that protects the user's data over the side that protects a stranger's
+version number. Documented as the third residue in `docs/KNOWN_LIMITATIONS.md`
+§104; this project's own version string never takes that shape, so nothing
+this application prints is affected.
+
+Three new unit tests pin the fix, including one that requires the literal
+address text to be entirely absent from the output rather than merely
+compared against one hand-picked rendering (the scan takes the leftmost
+valid window, which for `5.192.168.1.1` is `5.192.168.1`, not the more
+"obvious" `192.168.1.1` — either is a correct answer to "did the address
+survive?"). Mutation check: reverting `redact_ipv4` to the round-1
+trim-and-validate-the-whole-run logic fails all three new tests at once,
+`cargo test` exit 101.
+
+Server tests 31 (was 28) for this file; web tests unchanged. All eight gates
+exit 0 again. The round-1 record's mutation count for M19 (boundary check
+deleted) was checked against `docs/IMPLEMENTATION_STATUS.md` and
+`docs/KNOWN_LIMITATIONS.md` for a repeated "two tests" claim; neither
+document repeats that count, so there is nothing to correct here — the
+number lives only in the run's own transcript outside `docs/`.
 

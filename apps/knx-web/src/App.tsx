@@ -1,5 +1,5 @@
 /** Root component wiring project state, panels, and toolbars into the KNX Web UI shell. */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { version as packageVersion } from "../package.json";
 import { pickOpenPath, pickSavePath } from "./filePicker";
 import * as api from "./api";
@@ -10,6 +10,7 @@ import ProjectExplorer from "./ProjectExplorer";
 import BulkActionToolbar from "./BulkActionToolbar";
 import { useMultiSelection } from "./multiSelection";
 import ResizablePane from "./ResizablePane";
+import PaneSplitter from "./PaneSplitter";
 import WorkbenchIcon from "./WorkbenchIcon";
 import StructureWorkspace, { type StructureView } from "./StructureWorkspace";
 import CatalogBrowser from "./CatalogBrowser";
@@ -38,12 +39,23 @@ import ProjectDiffPanel from "./ProjectDiffPanel";
 import LoadProgressBanner from "./LoadProgressBanner";
 import { localFailure, ownsOperation } from "./loadProgress";
 import HelpPanel from "./HelpPanel";
+import AboutDialog from "./AboutDialog";
+import Overlay from "./Overlay";
+import { canQuit, quitApp } from "./quit";
 import { opensHelp } from "./help";
 
 // How often the browser asks the server what a running load is doing
 // (ADR-0023). Fast enough that a phase lasting a second is still seen,
 // slow enough that a poll costs nothing next to the import it is watching.
 const LOAD_POLL_INTERVAL_MS = 250;
+
+// F3. The left column's two fixed blocks may be dragged between roughly
+// two rows and most of a tall column; the project explorer between them
+// takes whatever is left, which is the point of the exercise. `MIN` is
+// "one row plus its padding, still recognisably a list"; `MAX` exists so
+// a slip of the hand cannot hide the explorer entirely.
+const STACK_BLOCK_MIN_PX = 72;
+const STACK_BLOCK_MAX_PX = 480;
 
 // The banner names the file, never the path the user picked it from —
 // same rule the server's snapshot follows, for the same reason.
@@ -156,6 +168,24 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  // F4. Only ever true inside the Tauri shell, and only with edits the
+  // command stack can still undo — see `quitRequested` below for why that
+  // is the dirty signal.
+  const [quitConfirmOpen, setQuitConfirmOpen] = useState(false);
+  // F1. The native `<details>` the File menu is. React does not own its
+  // `open` attribute (nothing here re-renders when the user clicks the
+  // summary), so closing it means writing that attribute, exactly as the
+  // `Escape` handler on the element already does.
+  const fileMenuRef = useRef<HTMLDetailsElement | null>(null);
+  // F3. `null` means "whatever the content needs", which is the height
+  // these two blocks have always had; a number means the user has moved
+  // the separator. `PaneSplitter` measures the element to report an honest
+  // `aria-valuenow` while the value is still `null`.
+  const [navHeight, setNavHeight] = useState<number | null>(null);
+  const [diagnosticsHeight, setDiagnosticsHeight] = useState<number | null>(null);
+  const navBlockRef = useRef<HTMLElement | null>(null);
+  const diagnosticsBlockRef = useRef<HTMLElement | null>(null);
   const [view, setView] = useState<"overview" | StructureView>("overview");
   const [buildingScope, setBuildingScope] = useState<number | null>(null);
   // The group-address view's counterpart of `buildingScope`: which range
@@ -260,6 +290,27 @@ function App({ manifestVersion = packageVersion }: AppProps) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
+
+  // F1, second half. A native `<details>` closes on `Escape` and on a
+  // second click of its summary, and on nothing else — clicking the
+  // workbench behind an open File menu leaves it hanging over the
+  // workspace. This is deliberately `pointerdown` rather than `click`: the
+  // menu should be gone by the time whatever was clicked reacts, and a
+  // drag that starts outside the menu counts as leaving it.
+  //
+  // Unlike the F1 handler above, this one needs no `.fs-picker` carve-out.
+  // The picker mounts outside the menu, so a pointer landing in it closes
+  // the menu — which is exactly right, and closes nothing the picker owns.
+  useEffect(() => {
+    function handlePointerDown(e: PointerEvent) {
+      const menu = fileMenuRef.current;
+      if (!menu?.open) return;
+      if (e.target instanceof Node && menu.contains(e.target)) return;
+      menu.open = false;
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, []);
 
   // The editing window is the only place that ever sees a `ProjectTree`
   // (there is no `GET` route that returns one — a tree only ever arrives as
@@ -653,6 +704,42 @@ function App({ manifestVersion = packageVersion }: AppProps) {
     }
   }
 
+  // F1, first half. One handler on the menu's container rather than an
+  // `onClick` per item: three of the items are child components whose
+  // buttons this file does not own (`GroupAddressCsvButtons`,
+  // `DocumentationExportButton`, `ProjectDiffPanel`), so a per-button
+  // approach would be incomplete the day one of them grows a fourth
+  // button. Keyboard activation needs no separate path — `Enter` and
+  // `Space` on a `<button>` dispatch a real `click` that bubbles here just
+  // like a mouse one.
+  //
+  // The one opt-out is `data-menu-stays-open`, and exactly one item wears
+  // it: `ProjectDiffPanel`'s Compare button renders its report *inside*
+  // this menu, so closing the menu on that click would hide the very
+  // thing the click asked for.
+  function handleFileMenuActivation(e: ReactMouseEvent<HTMLDivElement>) {
+    if (!(e.target instanceof Element)) return;
+    const activated = e.target.closest("button");
+    if (!activated || !e.currentTarget.contains(activated)) return;
+    if (activated.closest("[data-menu-stays-open]")) return;
+    const menu = fileMenuRef.current;
+    if (menu) menu.open = false;
+  }
+
+  // F4. `can_undo` is the dirty signal, and it is the server's own: there
+  // is no dirty flag in `AppState` either, so `new_project_impl` refuses a
+  // new project on exactly this condition (see its doc comment). It
+  // over-reports after a save — the stack still has history — and that is
+  // the direction to err in when the alternative is a project that goes
+  // quietly into the bin.
+  function quitRequested() {
+    if (tree?.can_undo) {
+      setQuitConfirmOpen(true);
+      return;
+    }
+    void quitApp();
+  }
+
   const ctx: CommandContext = {
     tree,
     newProject: startNewProject,
@@ -674,9 +761,9 @@ function App({ manifestVersion = packageVersion }: AppProps) {
     <main className="workbench">
       <header className="workbench-toolbar">
         <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><span className="brand-mark">K</span><strong>KNXBench</strong></a>
-        <details className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
+        <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
           <summary>{t("workbench.file")} <span aria-hidden="true">⌄</span></summary>
-          <div className="file-menu-content">
+          <div className="file-menu-content" onClick={handleFileMenuActivation}>
       <button onClick={startNewProject}>{t("toolbar.newProject")}</button>
       <button onClick={pickProject} disabled={loading}>{t("toolbar.openProject")}</button>
       <button onClick={openNativeProject} disabled={loading}>{t("toolbar.openNativeProject")}</button>
@@ -700,6 +787,11 @@ function App({ manifestVersion = packageVersion }: AppProps) {
         onClearErrors={clearErrors}
       />
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
+      <button onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</button>
+      {/* F4: present only in the desktop shell. A browser tab cannot close
+          itself, so in the web build this item would be a button that
+          does nothing — see `quit.ts`. */}
+      {canQuit() && <button className="file-menu-quit" onClick={quitRequested}>{t("toolbar.quit")}</button>}
 
           </div>
         </details>
@@ -729,12 +821,18 @@ function App({ manifestVersion = packageVersion }: AppProps) {
       {loadSource && <LoadProgressBanner key={loadKey} source={loadSource} snapshot={loadSnapshot} />}
       <div className="workspace workbench-body">
         {navigationOpen && <ResizablePane label={t("workbench.navigation")} side="left" initialWidth={250} min={200} max={480}>
-          <nav className="workbench-navigation" aria-label={t("workbench.navigation")}>
+          <nav ref={navBlockRef} className="workbench-navigation" aria-label={t("workbench.navigation")} style={{ height: navHeight ?? undefined }}>
             {(["overview", "buildings", "topology", "addresses"] as const).map((item) => <button key={item} aria-current={!logOpen && !monitorOpen && view === item ? "page" : undefined} onClick={() => { setView(item); setLogOpen(false); setMonitorOpen(false); }}><WorkbenchIcon name={item} />{t(`workbench.${item}`)}</button>)}
             <button onClick={() => setCatalogTarget({ lineId: selection?.kind === "line" ? selection.id : null })}><WorkbenchIcon name="catalog" />{t("workbench.catalog")}</button>
           </nav>
+          {/* F3: the two horizontal separators exist only alongside the
+              block they hand space to. Without a project there is no
+              explorer between these three, so there is nothing to
+              redistribute and no separator to offer. */}
+          {tree && <PaneSplitter label={t("workbench.resizeNavigation")} target={navBlockRef} resizes="above" value={navHeight} onChange={setNavHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
           {tree && <ProjectExplorer tree={tree} selection={selection} onSelect={selectEntity} onTreeUpdate={handleTreeUpdate} multiSelection={multiSelection} onItemClick={onItemClick} />}
-          <nav className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")}>
+          {tree && <PaneSplitter label={t("workbench.resizeDiagnostics")} target={diagnosticsBlockRef} resizes="below" value={diagnosticsHeight} onChange={setDiagnosticsHeight} min={STACK_BLOCK_MIN_PX} max={STACK_BLOCK_MAX_PX} />}
+          <nav ref={diagnosticsBlockRef} className="workbench-navigation diagnostic-navigation" aria-label={t("toolbar.busMonitor")} style={{ height: diagnosticsHeight ?? undefined }}>
             <button aria-current={monitorOpen ? "page" : undefined} onClick={() => { setLogOpen(false); setMonitorOpen((open) => !open); }}><WorkbenchIcon name="monitor" />{t("toolbar.busMonitor")}</button>
             <button aria-current={logOpen ? "page" : undefined} onClick={() => { setMonitorOpen(false); setLogOpen((open) => !open); }}><WorkbenchIcon name="log" />{t("toolbar.log")}</button>
             <button className="companion-open" onClick={() => void openCompanion()}><WorkbenchIcon name="panel" />{t("companion.open")}</button>
@@ -765,6 +863,25 @@ function App({ manifestVersion = packageVersion }: AppProps) {
       )}
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
       {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
+      {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
+      {quitConfirmOpen && (
+        <Overlay labelledBy="quit-confirm-title" className="quit-confirm" onClose={() => setQuitConfirmOpen(false)}>
+          <h2 id="quit-confirm-title">{t("quit.title")}</h2>
+          <p>{t("quit.message")}</p>
+          <p className="quit-confirm-hint">{t("quit.hint")}</p>
+          {/* Cancel comes first so `Overlay`'s initial focus lands on it:
+              the safe answer is the one already under the finger. There is
+              deliberately no "save and quit" button — `saveProject`
+              swallows its own failures into a toast and returns nothing,
+              so this dialog could not tell a save that worked from one
+              that did not, and quitting on the strength of that guess is
+              the exact failure it exists to prevent. */}
+          <footer className="quit-confirm-footer">
+            <button type="button" onClick={() => setQuitConfirmOpen(false)}>{t("quit.cancel")}</button>
+            <button type="button" className="quit-confirm-discard" onClick={() => void quitApp()}>{t("quit.discard")}</button>
+          </footer>
+        </Overlay>
+      )}
       {settingsOpen && (
         <SettingsPanel
           appearance={appearance}

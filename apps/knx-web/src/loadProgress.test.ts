@@ -80,35 +80,80 @@ describe("phaseMessageKey", () => {
 // this the banner cannot tell its own load from the previous one or from
 // another client's, which is what F1 was.
 describe("ownsOperation", () => {
+  const ours = "villa.knxproj";
+
   it("adopts an operation newer than everything that predates the load", () => {
-    expect(ownsOperation({ baseline: 3, adopted: null }, snapshot({ operationId: 4 }))).toBe(true);
-    expect(ownsOperation({ baseline: 0, adopted: null }, snapshot({ operationId: 1 }))).toBe(true);
+    expect(ownsOperation({ baseline: 3, expectedSource: ours, adopted: null }, snapshot({ operationId: 4 }))).toBe(
+      true,
+    );
+    expect(ownsOperation({ baseline: 0, expectedSource: ours, adopted: null }, snapshot({ operationId: 1 }))).toBe(
+      true,
+    );
   });
 
   it("disowns the operation that was already there", () => {
     // Probe A and probe C in one line: a finished earlier load and a
     // stranger's running one both carry an id the baseline already knew.
-    expect(ownsOperation({ baseline: 3, adopted: null }, snapshot({ operationId: 3 }))).toBe(false);
-    expect(ownsOperation({ baseline: 7, adopted: null }, snapshot({ operationId: 7 }))).toBe(false);
-    expect(ownsOperation({ baseline: 7, adopted: null }, snapshot({ operationId: 2 }))).toBe(false);
+    expect(ownsOperation({ baseline: 3, expectedSource: ours, adopted: null }, snapshot({ operationId: 3 }))).toBe(
+      false,
+    );
+    expect(ownsOperation({ baseline: 7, expectedSource: ours, adopted: null }, snapshot({ operationId: 7 }))).toBe(
+      false,
+    );
+    expect(ownsOperation({ baseline: 7, expectedSource: ours, adopted: null }, snapshot({ operationId: 2 }))).toBe(
+      false,
+    );
+  });
+
+  // Round 2, F8: an id newer than the baseline is not enough by itself — a
+  // foreign operation that starts *after* our baseline read clears that
+  // test too. `source` is the second fact that keeps it from being
+  // adopted. The residual this does not close: two clients loading files
+  // with the same base name in the same window are still indistinguishable.
+  it("does not adopt a newer id whose source is somebody else's file", () => {
+    expect(
+      ownsOperation(
+        { baseline: 0, expectedSource: ours, adopted: null },
+        snapshot({ operationId: 2, source: "someone-elses.knxdb" }),
+      ),
+    ).toBe(false);
   });
 
   it("owns exactly one id once it has adopted one", () => {
-    expect(ownsOperation({ baseline: 0, adopted: 5 }, snapshot({ operationId: 5 }))).toBe(true);
+    expect(ownsOperation({ baseline: 0, expectedSource: ours, adopted: 5 }, snapshot({ operationId: 5 }))).toBe(
+      true,
+    );
     // A later operation cannot take the banner over, even though it
     // would clear the baseline test.
-    expect(ownsOperation({ baseline: 0, adopted: 5 }, snapshot({ operationId: 6 }))).toBe(false);
+    expect(ownsOperation({ baseline: 0, expectedSource: ours, adopted: 5 }, snapshot({ operationId: 6 }))).toBe(
+      false,
+    );
+  });
+
+  // After adoption the id is the only thing that decides it — source plays
+  // no further part, unchanged from before this round.
+  it("ignores source once an id has been adopted", () => {
+    expect(
+      ownsOperation(
+        { baseline: 0, expectedSource: ours, adopted: 5 },
+        snapshot({ operationId: 5, source: "someone-elses.knxdb" }),
+      ),
+    ).toBe(true);
   });
 
   it("owns nothing when the baseline could not be read", () => {
     // Probe B: the pre-flight read failed, so no id can be attributed to
     // this load. "Starting…" is less informative and a great deal truer.
-    expect(ownsOperation({ baseline: null, adopted: null }, snapshot({ operationId: 1 }))).toBe(false);
-    expect(ownsOperation({ baseline: null, adopted: null }, snapshot({ operationId: 99 }))).toBe(false);
+    expect(ownsOperation({ baseline: null, expectedSource: ours, adopted: null }, snapshot({ operationId: 1 }))).toBe(
+      false,
+    );
+    expect(
+      ownsOperation({ baseline: null, expectedSource: ours, adopted: null }, snapshot({ operationId: 99 })),
+    ).toBe(false);
   });
 
   it("owns nothing when there is no snapshot", () => {
-    expect(ownsOperation({ baseline: 0, adopted: null }, null)).toBe(false);
+    expect(ownsOperation({ baseline: 0, expectedSource: ours, adopted: null }, null)).toBe(false);
   });
 });
 

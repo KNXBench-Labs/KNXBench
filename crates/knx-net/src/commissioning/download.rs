@@ -68,27 +68,44 @@ pub struct LoadablePart {
     stored_mcb: Option<Vec<u8>>,
 }
 
-/// Which of RES's two `PID_PROGRAM_VERSION` answers a loadable part's
-/// object follows.
+/// Which of the five loadable Interface Objects a part's object is.
 ///
-/// `[C1]` RES Table 90, p. 288 (Application Program 1) and Table 91, p. 290
-/// (Application Program 2) give the object `PID_PROGRAM_VERSION`. RES
-/// Table 77, p. 238 (Group Address Table), Table 80, p. 249 (Association
-/// Table) and Table 85, p. 270 (Group Object Table) do not. `load_one_part`
-/// uses this to decide whether the version write is unconditional or merely
-/// attempted, and the simulator's [`super::simulator::SimulatorConfig::
-/// application_program_objects`] is the same fact stated the other way
-/// round.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The five, and this declaration order, are the normative download order:
+/// row position in CP §3.5.2 Nr. 06-10 (the complete-download procedure)
+/// and in CP §3.5.3 AP2 Nr. 08-12 (the partial-download variants) both list
+/// Application Program 2, Application Program 1, the Group Object Table,
+/// the Group Address Table and the Association Table in exactly this
+/// sequence. `[C8]` will validate a plan against that order; this type only
+/// names the five, it does not yet enforce it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PartKind {
-    /// Application Program 1 or Application Program 2. RES Table 90,
-    /// p. 288, or Table 91, p. 290, makes `PID_PROGRAM_VERSION` mandatory
-    /// here.
-    ApplicationProgram,
-    /// The Group Address Table, the Association Table or the Group Object
-    /// Table. RES Table 77, p. 238; Table 80, p. 249; Table 85, p. 270 —
-    /// none of the three lists `PID_PROGRAM_VERSION`.
-    Table,
+    /// RES Table 91, p. 290.
+    ApplicationProgram2,
+    /// RES Table 90, p. 288.
+    ApplicationProgram1,
+    /// RES Table 85, p. 270.
+    GroupObjectTable,
+    /// RES Table 77, p. 238.
+    GroupAddressTable,
+    /// RES Table 80, p. 249.
+    AssociationTable,
+}
+
+impl PartKind {
+    /// Whether RES gives this part's object `PID_PROGRAM_VERSION`.
+    ///
+    /// `[C1]` True for the two application programs: RES Table 90, p. 288
+    /// (Application Program 1) and Table 91, p. 290 (Application Program 2)
+    /// both list the property. False for the three tables: RES Table 77,
+    /// p. 238 (Group Address Table), Table 80, p. 249 (Association Table)
+    /// and Table 85, p. 270 (Group Object Table) do not. `load_one_part`
+    /// uses this to decide whether the version write is unconditional or
+    /// merely attempted, and the simulator's [`super::simulator::
+    /// SimulatorConfig::application_program_objects`] is the same fact
+    /// stated the other way round.
+    pub const fn has_program_version(self) -> bool {
+        matches!(self, Self::ApplicationProgram1 | Self::ApplicationProgram2)
+    }
 }
 
 impl LoadablePart {
@@ -96,9 +113,9 @@ impl LoadablePart {
     ///
     /// An empty payload is refused here rather than at the first chunk: spec
     /// §9.3 requires the whole payload of every part to exist before the first
-    /// event is written, because the device cannot be put back. An
-    /// [`PartKind::ApplicationProgram`] part with no version is refused the
-    /// same way: RES Table 90 (p. 288) / Table 91 (p. 290) make
+    /// event is written, because the device cannot be put back. A part whose
+    /// [`PartKind::has_program_version`] is true and has no version is
+    /// refused the same way: RES Table 90 (p. 288) / Table 91 (p. 290) make
     /// `PID_PROGRAM_VERSION` mandatory for it, so a plan missing one would
     /// only find out in `Loading`.
     pub fn new(
@@ -111,7 +128,7 @@ impl LoadablePart {
         if data.is_empty() {
             return Err(PlanError::EmptyPart { object_index });
         }
-        if kind == PartKind::ApplicationProgram && version.is_empty() {
+        if kind.has_program_version() && version.is_empty() {
             return Err(PlanError::MissingVersion { object_index });
         }
         Ok(Self {
@@ -237,10 +254,11 @@ pub enum PlanError {
         /// The index claimed twice.
         object_index: ObjectIndex,
     },
-    /// A [`PartKind::ApplicationProgram`] part with no version. RES
-    /// Table 90 (p. 288) / Table 91 (p. 290) make `PID_PROGRAM_VERSION`
-    /// mandatory for these two objects, so a plan missing it is refused
-    /// before the first write rather than found out about in `Loading`.
+    /// An [`PartKind::ApplicationProgram1`] or [`PartKind::ApplicationProgram2`]
+    /// part with no version. RES Table 90 (p. 288) / Table 91 (p. 290) make
+    /// `PID_PROGRAM_VERSION` mandatory for these two objects, so a plan
+    /// missing it is refused before the first write rather than found out
+    /// about in `Loading`.
     MissingVersion {
         /// The offending part.
         object_index: ObjectIndex,
@@ -323,16 +341,16 @@ impl fmt::Display for CrcComparison {
 /// What happened to the `PID_PROGRAM_VERSION` write for one part (`[C1]`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VersionOutcome {
-    /// The part carried no version, which is only valid for
-    /// [`PartKind::Table`]: `LoadablePart::new` refuses an
-    /// [`PartKind::ApplicationProgram`] part with none. CP §3.5.2's table
-    /// steps 08/09/10 (pp. 43-44) ask for no such write, so a plan built for
-    /// that procedure can leave a table's version empty to match it exactly.
+    /// The part carried no version, which is only valid for a part whose
+    /// [`PartKind::has_program_version`] is false: `LoadablePart::new`
+    /// refuses an empty version otherwise. CP §3.5.2's table steps 08/09/10
+    /// (pp. 43-44) ask for no such write, so a plan built for that procedure
+    /// can leave a table's version empty to match it exactly.
     NotAttempted,
     /// The device accepted the write and read the octets back.
     Written(Vec<u8>),
-    /// The device refused. Expected, and not a procedure failure, for
-    /// [`PartKind::Table`]: RES Table 77 (p. 238), Table 80 (p. 249) and
+    /// The device refused. Expected, and not a procedure failure, for the
+    /// three table kinds: RES Table 77 (p. 238), Table 80 (p. 249) and
     /// Table 85 (p. 270) do not list `PID_PROGRAM_VERSION` for the Group
     /// Address Table, the Association Table or the Group Object Table.
     /// CP §3.5.3's three table variants ask for the write anyway
@@ -897,7 +915,7 @@ async fn load_one_part<T: ManagementTransport>(
             .await
         {
             Ok(read_back) => VersionOutcome::Written(read_back),
-            Err(SessionError::PropertyRefused { .. }) if part.kind == PartKind::Table => {
+            Err(SessionError::PropertyRefused { .. }) if !part.kind.has_program_version() => {
                 VersionOutcome::Refused
             }
             Err(err) => return Err(err.into()),
@@ -1031,8 +1049,13 @@ mod tests {
 
     fn two_parts() -> DownloadPlan {
         plan(vec![
-            part(3, "Application Program 2", 20, PartKind::ApplicationProgram),
-            part(1, "Address Table", 9, PartKind::Table),
+            part(
+                3,
+                "Application Program 2",
+                20,
+                PartKind::ApplicationProgram2,
+            ),
+            part(1, "Address Table", 9, PartKind::GroupAddressTable),
         ])
     }
 
@@ -1114,7 +1137,7 @@ mod tests {
                 3,
                 "Application Program 2",
                 4,
-                PartKind::ApplicationProgram,
+                PartKind::ApplicationProgram2,
             )],
         )
         .expect("a usable plan");
@@ -1292,9 +1315,14 @@ mod tests {
             ..SimulatorConfig::default()
         });
         let parts = plan(vec![
-            part(3, "Application Program 2", 16, PartKind::ApplicationProgram),
-            part(1, "Address Table", 8, PartKind::Table),
-            part(2, "Association Table", 6, PartKind::Table),
+            part(
+                3,
+                "Application Program 2",
+                16,
+                PartKind::ApplicationProgram2,
+            ),
+            part(1, "Address Table", 8, PartKind::GroupAddressTable),
+            part(2, "Association Table", 6, PartKind::AssociationTable),
         ]);
         let mut session = writer(&device, WriteScope::Download);
         let report = Downloader::new(&mut session, parts)
@@ -1334,9 +1362,14 @@ mod tests {
         let device = ap2_device();
         let stored = device.mcb(ObjectIndex::new(3));
         let parts = plan(vec![
-            part(3, "Application Program 2", 12, PartKind::ApplicationProgram)
-                .with_stored_mcb(stored),
-            part(1, "Address Table", 5, PartKind::Table),
+            part(
+                3,
+                "Application Program 2",
+                12,
+                PartKind::ApplicationProgram2,
+            )
+            .with_stored_mcb(stored),
+            part(1, "Address Table", 5, PartKind::GroupAddressTable),
         ]);
         let mut session = writer(&device, WriteScope::Download);
         let report = Downloader::new(&mut session, parts)
@@ -1365,7 +1398,7 @@ mod tests {
             3,
             "Application Program 2",
             6,
-            PartKind::ApplicationProgram,
+            PartKind::ApplicationProgram2,
         )
         .with_stored_mcb(vec![0xDE, 0xAD])]);
         let mut session = writer(&device, WriteScope::Download);
@@ -1383,7 +1416,7 @@ mod tests {
                 3,
                 "Application Program 2",
                 6,
-                PartKind::ApplicationProgram,
+                PartKind::ApplicationProgram2,
             )]),
         )
         .partial_download(ObjectIndex::new(3))
@@ -1462,7 +1495,7 @@ mod tests {
                 3,
                 "Application Program 2",
                 6,
-                PartKind::ApplicationProgram,
+                PartKind::ApplicationProgram2,
             )]),
         )
         .complete_download()
@@ -1510,7 +1543,7 @@ mod tests {
                 3,
                 "Application Program 2",
                 0x1_0000,
-                PartKind::ApplicationProgram,
+                PartKind::ApplicationProgram2,
             )]),
         )
         .complete_download()
@@ -1538,7 +1571,7 @@ mod tests {
             "Application Program 2",
             Vec::new(),
             vec![],
-            PartKind::ApplicationProgram,
+            PartKind::ApplicationProgram2,
         );
         assert!(matches!(empty, Err(PlanError::EmptyPart { .. })));
 
@@ -1547,7 +1580,7 @@ mod tests {
             "Application Program 2",
             vec![0x01],
             Vec::new(),
-            PartKind::ApplicationProgram,
+            PartKind::ApplicationProgram2,
         );
         assert!(
             matches!(no_version, Err(PlanError::MissingVersion { .. })),
@@ -1557,8 +1590,8 @@ mod tests {
         let duplicate = DownloadPlan::new(
             SIMULATED_MANUFACTURER,
             vec![
-                part(3, "one", 4, PartKind::Table),
-                part(3, "the same object", 4, PartKind::Table),
+                part(3, "one", 4, PartKind::GroupAddressTable),
+                part(3, "the same object", 4, PartKind::GroupAddressTable),
             ],
         );
         assert!(matches!(duplicate, Err(PlanError::DuplicatePart { .. })));
@@ -1597,7 +1630,12 @@ mod tests {
         // of them, so the simulator refuses the version write the way RES
         // Table 80, p. 249, says a real device would.
         let device = SimulatedDevice::new();
-        let parts = plan(vec![part(2, "Association Table", 6, PartKind::Table)]);
+        let parts = plan(vec![part(
+            2,
+            "Association Table",
+            6,
+            PartKind::AssociationTable,
+        )]);
         let mut session = writer(&device, WriteScope::Download);
         let report = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(2))

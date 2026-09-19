@@ -12,6 +12,7 @@ import {
   subscribeContextChanges,
 } from "./busContext";
 import { useTranslate } from "./i18n";
+import HelpTip from "./HelpTip";
 
 // The identity of the one session this panel can ever be attached to
 // (`AppState.bus_session` holds at most one — D3/D6). Deliberately not
@@ -502,6 +503,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
               {t("busMonitor.connect")}
             </button>
           )}
+          <HelpTip labelKey="help.tip.busGateway.label" textKey="help.tip.busGateway.text" />
         </div>
       </header>
       {connectError && <span className="field-error">{connectError}</span>}

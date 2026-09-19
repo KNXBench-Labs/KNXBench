@@ -16,6 +16,7 @@ import {
   rangeWithDescendants,
 } from "./groupAddressView";
 import { useTranslate } from "./i18n";
+import HelpTip from "./HelpTip";
 
 // The real address table the workbench's group-address view was missing:
 // the tree branch already carried ranges, DPTs and link directions, while
@@ -148,6 +149,7 @@ export default function GroupAddressTable(props: {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        <HelpTip labelKey="help.tip.addressTable.label" textKey="help.tip.addressTable.text" />
       </div>
       <div className="workspace-table-wrap">
         <table className="workspace-table address-table">

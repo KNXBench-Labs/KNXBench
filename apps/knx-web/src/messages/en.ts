@@ -966,6 +966,110 @@ export const messages = {
   "loadProgress.flavour.48": "Making room for the building structure",
   "loadProgress.flavour.49": "Filing the unknown attributes carefully",
   "loadProgress.flavour.50": "Persuading the project to open",
+
+  // T23 (ADR-0024). The help system's entire vocabulary: the panel's own
+  // chrome, one title plus n paragraph keys per topic in `help.ts`'s
+  // `HELP_TOPICS`, the shared closing note four concept topics opt into,
+  // and a label/text pair per `HelpTip` placement. One key is one
+  // paragraph of plain text — no markup, ever, since nothing renders
+  // these as HTML and a translated string that did would be an injection
+  // hole with a friendly name.
+  "toolbar.help": "Help (F1)",
+  "help.title": "Help",
+  "help.intro":
+    "What the parts of this window do, and what the KNX terms behind them mean. F1 opens this from anywhere.",
+  "help.topics": "Topics",
+  "help.close": "Close",
+  "help.standardNote":
+    "This explains how KNXBench uses the concept, not how the KNX Standard defines it — the Standard remains the authority.",
+
+  "help.topic.gettingStarted.title": "Getting started",
+  "help.topic.gettingStarted.p1":
+    "KNXBench opens two kinds of file. Its own format, a .knxdb project, is what “Open (.knxdb)…” reads and what Save writes. An ETS project export, a .knxproj file, is read by “Open project…” and converted into a KNXBench project on the way in.",
+  "help.topic.gettingStarted.p2":
+    "Importing never writes back to the file you imported. The .knxproj is read and left alone; what you get is a project in memory, and it only reaches disk when you save it as a .knxdb.",
+  "help.topic.gettingStarted.p3":
+    "With no file to start from, “New project…” creates an empty project with a name, a project language and a group address style, and you build the structure from the tree on the left.",
+
+  "help.topic.workbench.title": "The window",
+  "help.topic.workbench.p1":
+    "Three regions. On the left, the navigation pane with the views and the project tree. In the middle, whichever view you picked. On the right, the Properties inspector, which shows and edits whatever is selected.",
+  "help.topic.workbench.p2":
+    "The four views are Overview, Buildings, Topology and Group addresses. Overview summarises the project and shows what the last import complained about. Buildings and Topology are two different orders over the same devices. Group addresses is the table of addresses and their links.",
+  "help.topic.workbench.p3":
+    "Both side panes collapse with the buttons above them and resize by dragging their inner edge. The product catalog opens from the navigation pane and adds devices from an installed manufacturer database.",
+
+  "help.topic.buildings.title": "Buildings, floors and rooms",
+  "help.topic.buildings.p1":
+    "The building structure says where a device physically is — a building, its floors, the rooms on them, the distribution boards inside. It exists so a device can be found by walking the site instead of by remembering its address.",
+  "help.topic.buildings.p2":
+    "Here it is a tree of named parts that contain one another, not a drawing: no coordinates, no floor plans, no positions. A device belongs to at most one building part at a time, and moving it changes nothing about its wiring.",
+
+  "help.topic.topology.title": "Areas, lines and devices",
+  "help.topic.topology.p1":
+    "The topology says how a device is wired: areas hold lines, lines hold devices. A device's individual address is written area.line.device and is its identity on the bus.",
+  "help.topic.topology.p2":
+    "The three parts are not equally wide. Area runs 0–15, line runs 0–15, device runs 0–255. An address outside those ranges is refused rather than quietly truncated.",
+  "help.topic.topology.p3":
+    "An individual address is unique within a project: two devices cannot hold the same one. The Topology view is where you see which line a device sits on, and where you move it to another.",
+
+  "help.topic.groupAddresses.title": "Group addresses",
+  "help.topic.groupAddresses.p1":
+    "A group address is not a device. It names one piece of shared state — a light's on/off, a blind's position, a room's setpoint — that any number of devices may send to or listen for. Devices reach each other only through group addresses.",
+  "help.topic.groupAddresses.p2":
+    "Underneath it is a single 16-bit number. How it is written is a project-wide choice: three level (main/middle/sub), two level (main/sub), or free, which is just the number. Restyling a project changes the text and never the address.",
+  "help.topic.groupAddresses.p3":
+    "A group address also carries a datapoint type, which says how to read the bytes on the wire — 1.001 is a switch, 5.001 a percentage. The Group addresses view shows the type it has, marks the ones that have none, and marks the ones whose links disagree about it.",
+
+  "help.topic.comObjectFlags.title": "Communication object flags",
+  "help.topic.comObjectFlags.p1":
+    "A communication object is one input or output of a device's application program. Linking it to a group address is what puts the device on that address. Five flags decide what it may do there, shown as R, W, T, U and C in the Properties inspector.",
+  "help.topic.comObjectFlags.p2":
+    "C, communication, is the master switch: with it off the object takes no part in bus traffic and the other four have nothing to act on. R, read, lets the object answer a read request with its current value. W, write, lets an incoming telegram change that value.",
+  "help.topic.comObjectFlags.p3":
+    "T, transmit, lets the object send by itself when its value changes — the flag that makes a sensor a sender. U, update, lets it adopt a value it sees in another device's read response. KNXBench stores the five as you set them; it does not judge which combination suits your device.",
+
+  "help.topic.busMonitor.title": "Bus monitor",
+  "help.topic.busMonitor.p1":
+    "The bus monitor watches live traffic through a KNXnet/IP gateway. Type the gateway's address and port, connect, and telegrams appear as they arrive. Watching and sending are separate: the table only displays, and sending a telegram is its own deliberate action.",
+  "help.topic.busMonitor.p2":
+    "Tunnelling is the only transport. KNXBench does not search the network for gateways and does not join a routing multicast group, which is why the address has to be typed in.",
+  "help.topic.busMonitor.p3":
+    "Telegrams are decoded against the project that is open. If that project changes while a session runs, the monitor says so instead of silently re-labelling what it decoded earlier — the notice means the decoded column is the older project's answer.",
+
+  "help.topic.importExport.title": "Import and export",
+  "help.topic.importExport.p1":
+    "An import reports what it found: errors, warnings, and anything it could not map. Overview shows the counts and the Log lists them. They are worth reading — otherwise an import with nothing to say and an import you never looked at are the same picture.",
+  "help.topic.importExport.p2":
+    "Data this application does not model is not thrown away. It is either kept as it was read or listed as unsupported, and it turns up in the import report rather than vanishing between the file and the project.",
+  "help.topic.importExport.p3":
+    "“Export to .knxproj…” writes an ETS-shaped file from the current project. Whether a real ETS installation reopens that file has not been tested, and no ETS compatibility is claimed in either direction. Group addresses also go in and out as CSV, and “Export documentation…” writes a readable description of the project.",
+
+  "help.topic.keyboard.title": "Keyboard",
+  "help.topic.keyboard.p1":
+    "Ctrl+K opens Search across the project. Ctrl+Shift+P opens the command palette, which lists what is available right now together with each shortcut. F1 opens this help. Plain F1 only — a modified F1 is left to the browser and the desktop.",
+  "help.topic.keyboard.p2":
+    "Ctrl+Z undoes and Ctrl+Shift+Z redoes, on the project rather than on the text you are typing: inside an input, a dialog or the project tree's rename field, the field's own undo applies instead.",
+  "help.topic.keyboard.p3":
+    "Escape closes what is on top — an open help tip first, then the dialog around it. While a dialog is open Tab cycles inside it and cannot leave, and closing it returns focus to whatever opened it.",
+
+  "help.topic.limits.title": "What this does not do",
+  "help.topic.limits.p1":
+    "KNXBench is an independent application. It is not made by, endorsed by or certified by the KNX Association, and it is not ETS. Where it reads or writes an ETS file it does so on its own reading of that file.",
+  "help.topic.limits.p2":
+    "KNX Secure is not supported. A password-protected project cannot be opened from this window — there is nowhere to type the password. Programming devices over the bus is not offered here either: the bus features are watching traffic and sending single telegrams.",
+  "help.topic.limits.p3":
+    "What is here is tested, but a test suite is not a site survey. Before trusting this application about an installation, check what it tells you against the installation itself.",
+
+  "help.tip.comFlags.label": "What the communication object flags mean",
+  "help.tip.comFlags.text":
+    "R, W, T, U and C decide what this object may do on the bus. C is the master switch — with it off, the other four do nothing. F1 has the full explanation.",
+  "help.tip.addressTable.label": "What this table shows",
+  "help.tip.addressTable.text":
+    "Every group address in the project, with its datapoint type and the communication objects linked to it. The box filters by address or by name. F1 explains what a group address is.",
+  "help.tip.busGateway.label": "What to enter as the gateway",
+  "help.tip.busGateway.text":
+    "The address and port of a KNXnet/IP gateway, such as 192.0.2.1:3671. Tunnelling only — this application does not search the network for one.",
 } as const;
 
 export type Messages = typeof messages;

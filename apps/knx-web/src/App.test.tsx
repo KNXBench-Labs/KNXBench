@@ -8,6 +8,9 @@
 // opening it renders `LogPanel` regardless of whether a project is open —
 // while, with a project open, the tab still swaps into the same
 // `.workspace` slot Inspector/Dashboard use, exactly as before.
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -55,6 +58,12 @@ const apiMock = vi.hoisted(() => ({
   // that has loaded nothing, and the answer every test here wants except
   // the two that drive a load on purpose.
   loadProgress: vi.fn().mockResolvedValue(null),
+  // `CatalogBrowser` fires both of these on mount. The help tests below
+  // open it for real (it is the third dialog F1 has to replace), and an
+  // unconfigured `vi.fn()` returns `undefined`, on which the component
+  // promptly calls `.then`.
+  catalogManufacturers: vi.fn().mockResolvedValue([]),
+  catalogItems: vi.fn().mockResolvedValue([]),
 }));
 
 const filePickerMock = vi.hoisted(() => ({
@@ -1413,5 +1422,295 @@ describe("App — a load's banner and its polling both end with the load", () =>
     } finally {
       dice.mockRestore();
     }
+  });
+});
+
+// T23 / ADR-0024. Help is the one feature whose whole point is being
+// findable by someone who does not know the application, so all three
+// ways in are pinned: the key, the toolbar button, and the palette row.
+describe("App — in-application help (T23)", () => {
+  const helpPanel = () => host!.querySelector(".help-panel");
+
+  async function pressKey(init: KeyboardEventInit) {
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, ...init }));
+    });
+  }
+
+  it("opens the help panel on F1 with no project open", async () => {
+    const root = await renderApp();
+    expect(helpPanel()).toBeNull();
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelector("#help-panel-title")?.textContent).toBe(enMessages["help.title"]);
+
+    await act(async () => root.unmount());
+  });
+
+  // The other half of `opensHelp`: a modified F1 belongs to the browser
+  // and to the desktop, and taking it would be this application helping
+  // itself to a key it was never given.
+  it.each(["ctrlKey", "metaKey", "altKey", "shiftKey"] as const)(
+    "leaves F1 held with %s alone",
+    async (modifier) => {
+      const root = await renderApp();
+
+      await pressKey({ key: "F1", [modifier]: true });
+
+      expect(helpPanel()).toBeNull();
+
+      await act(async () => root.unmount());
+    },
+  );
+
+  it("opens the help panel from the toolbar button", async () => {
+    const root = await renderApp();
+    const button = Array.from(host!.querySelectorAll("button")).find(
+      (b) => b.getAttribute("aria-label") === enMessages["toolbar.help"],
+    );
+    expect(button).toBeDefined();
+
+    await act(async () => {
+      button!.click();
+    });
+
+    expect(helpPanel()).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  // The palette row exists for people who never learn F1. Without this the
+  // registry entry could be wired to nothing and every other gate would
+  // still be green.
+  it("opens the help panel from the command palette", async () => {
+    const root = await renderApp();
+
+    await pressKey({ key: "P", ctrlKey: true, shiftKey: true });
+    const row = Array.from(host!.querySelectorAll<HTMLElement>('li[role="option"]')).find(
+      (li) => li.querySelector("span")?.textContent === enMessages["toolbar.help"],
+    );
+    expect(row).toBeDefined();
+
+    await act(async () => {
+      row!.click();
+    });
+
+    expect(helpPanel()).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  it("closes the command palette when F1 opens help over it", async () => {
+    const root = await renderApp();
+
+    await pressKey({ key: "P", ctrlKey: true, shiftKey: true });
+    expect(host!.querySelector(".command-palette-panel, .search-panel")).not.toBeNull();
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await act(async () => root.unmount());
+  });
+
+  // The invariant above, for every overlay this component owns rather than
+  // for the one that happened to be tested first. Two `aria-modal` dialogs
+  // at once is undefined for assistive technology, and since every
+  // `.search-overlay` is `position: fixed; z-index: 10`, the loser is not
+  // merely stacked — it is buried under an opaque full-viewport backdrop
+  // with the keyboard focus inside it.
+  it("replaces the settings dialog rather than stacking help on top of it", async () => {
+    const root = await renderApp();
+
+    const gear = Array.from(host!.querySelectorAll("button")).find(
+      (b) => b.getAttribute("aria-label") === enMessages["toolbar.settings"],
+    );
+    await act(async () => {
+      gear!.click();
+    });
+    expect(host!.querySelector(".settings-panel")).not.toBeNull();
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelector(".settings-panel")).toBeNull();
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await act(async () => root.unmount());
+  });
+
+  // Pins the other setter in the same branch: the search overlay is the
+  // one F1 was originally written to close, and deleting that line alone
+  // left the whole suite green.
+  it("replaces the search overlay as well", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(baseTree());
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+
+    await pressKey({ key: "k", ctrlKey: true });
+    expect(host!.querySelector(".search-panel")).not.toBeNull();
+    expect(helpPanel()).toBeNull();
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await act(async () => root.unmount());
+  });
+
+  it("replaces the new-project dialog too", async () => {
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("New project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await act(async () => root.unmount());
+  });
+
+  // F1 belongs to the browser as well: Firefox and Chrome open their own
+  // help on it. Without `preventDefault` the user gets two help systems,
+  // one of which is about the wrong product.
+  it("takes F1 away from the browser", async () => {
+    const root = await renderApp();
+
+    const event = new KeyboardEvent("keydown", { key: "F1", bubbles: true, cancelable: true });
+    await act(async () => {
+      window.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(helpPanel()).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  // A modified F1 is not ours, so it must reach the browser untouched.
+  it("leaves a modified F1 to whoever wants it", async () => {
+    const root = await renderApp();
+
+    const event = new KeyboardEvent("keydown", {
+      key: "F1",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    await act(async () => {
+      window.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(false);
+
+    await act(async () => root.unmount());
+  });
+
+  // The third dialog the branch closes. Unlike Settings and New project
+  // this one is a real fetcher, which is why the api mock above grew two
+  // catalogue entries.
+  it("replaces the catalog browser too", async () => {
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton(enMessages["workbench.catalog"]).click();
+    });
+    await act(async () => {});
+    expect(host!.querySelector(".catalog-install")).not.toBeNull();
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelector(".catalog-install")).toBeNull();
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await act(async () => root.unmount());
+  });
+
+  // The one overlay `App` must *not* replace, because it is the one it
+  // cannot close: `filePicker.ts` mounts `FsPicker` on a React root of
+  // its own, so clearing App's state would leave a live modal buried
+  // under help with no way back. The guard reads the document, not React
+  // state, so the contract can be stated the same way — a `.fs-picker`
+  // node exists, therefore F1 does nothing.
+  //
+  // This suite mocks `./filePicker` wholesale (see the top of the file),
+  // so the real picker never mounts here and the node has to be put up
+  // by hand. That makes this half of the pin blind to a rename of the
+  // class, which is what the source assertion below is for.
+  it("keeps out of the way while the file picker is up", async () => {
+    const root = await renderApp();
+    const picker = document.createElement("div");
+    picker.className = "fs-picker";
+    document.body.appendChild(picker);
+
+    try {
+      await pressKey({ key: "F1" });
+
+      expect(helpPanel()).toBeNull();
+    } finally {
+      picker.remove();
+    }
+
+    // …and once it is gone, F1 works again — otherwise a guard that
+    // simply always returned would pass the assertion above.
+    await pressKey({ key: "F1" });
+    expect(helpPanel()).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  // Returns everything from `start` up to the `>` that ends the JSX
+  // opening tag, ignoring any `>` inside a `{...}` prop expression.
+  function openingTag(source: string, start: string): string {
+    const from = source.indexOf(start);
+    expect(from, `${start} not found`).toBeGreaterThanOrEqual(0);
+    let depth = 0;
+    for (let i = from; i < source.length; i += 1) {
+      const c = source[i];
+      if (c === "{") depth += 1;
+      else if (c === "}") depth -= 1;
+      else if (c === ">" && depth === 0) return source.slice(from, i);
+    }
+    throw new Error(`unterminated ${start}`);
+  }
+
+  // The other half: the selector in `App.tsx` and the class in
+  // `FsPicker.tsx` are one contract written in two files, and nothing in
+  // a mocked suite connects them. Renaming the class would leave the DOM
+  // test above green and the guard dead.
+  it("still names the class the file picker actually renders", () => {
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "FsPicker.tsx"),
+      "utf8",
+    );
+    // Matched anywhere inside the opening tag rather than as two tokens
+    // that must touch: `FsPicker.tsx` is the one `Overlay` call site in
+    // the codebase that writes `className` before the label, so a pass
+    // that makes it match its siblings would move the prop, change
+    // nothing at runtime, and has no business failing this test. A
+    // rename still fails it. The scan ends at the `>` that closes the
+    // tag, counting the braces of the prop expressions so the arrow in
+    // `onClose={() => …}` is not mistaken for it.
+    const tag = openingTag(source, "<Overlay");
+    expect(tag).toContain('className="fs-picker"');
+
+    const app = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "App.tsx"),
+      "utf8",
+    );
+    expect(app).toContain('document.querySelector(".fs-picker")');
   });
 });

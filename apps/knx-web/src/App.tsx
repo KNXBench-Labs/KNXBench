@@ -37,6 +37,8 @@ import DocumentationExportButton from "./DocumentationExportButton";
 import ProjectDiffPanel from "./ProjectDiffPanel";
 import LoadProgressBanner from "./LoadProgressBanner";
 import { localFailure, ownsOperation } from "./loadProgress";
+import HelpPanel from "./HelpPanel";
+import { opensHelp } from "./help";
 
 // How often the browser asks the server what a running load is doing
 // (ADR-0023). Fast enough that a phase lasting a second is still seen,
@@ -153,6 +155,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   const [logOpen, setLogOpen] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [view, setView] = useState<"overview" | StructureView>("overview");
   const [buildingScope, setBuildingScope] = useState<number | null>(null);
   // The group-address view's counterpart of `buildingScope`: which range
@@ -211,6 +214,26 @@ function App({ manifestVersion = packageVersion }: AppProps) {
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      if (opensHelp(e)) {
+        // F1 is the browser's help key as well as ours, so it has to be
+        // taken before anything else looks at it.
+        e.preventDefault();
+        // Two `aria-modal` dialogs at once is undefined for assistive
+        // technology, and `Overlay`'s backdrop is fixed and full-viewport,
+        // so the one rendered later simply buries the other. Help
+        // therefore *replaces* every overlay this component owns rather
+        // than stacking on one — and stays away entirely while the file
+        // picker is up, because that one mounts its own React root
+        // (`filePicker.ts`) and cannot be closed from here.
+        if (document.querySelector(".fs-picker")) return;
+        setSearchOpen(false);
+        setPaletteOpen(false);
+        setSettingsOpen(false);
+        setNewProjectOpen(false);
+        setCatalogTarget(null);
+        setHelpOpen(true);
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         if (tree) {
@@ -644,6 +667,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
     openBusMonitor: () => { setLogOpen(false); setMonitorOpen(true); },
     openSettings: () => setSettingsOpen(true),
     openCompanion: () => void openCompanion(),
+    openHelp: () => setHelpOpen(true),
   };
 
   return (
@@ -686,6 +710,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
         <button className="workbench-search" onClick={() => tree && setSearchOpen(true)} disabled={!tree}>{t("toolbar.search")}<kbd>Ctrl K</kbd></button>
         <button className="command-entry" onClick={() => setPaletteOpen(true)}>{t("toolbar.commands")}</button>
         <button className="primary-action" onClick={saveProject} disabled={!tree}>{t("toolbar.save")}</button>
+        <button onClick={() => setHelpOpen(true)} title={t("toolbar.help")} aria-label={t("toolbar.help")}><QuestionIcon /></button>
         <button onClick={() => setSettingsOpen(true)} title={t("toolbar.settings")} aria-label={t("toolbar.settings")}><GearIcon /></button>
       </header>
       <div className="workbench-panel-controls">
@@ -739,6 +764,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
         <Search tree={tree} onSelect={selectEntity} onClose={() => setSearchOpen(false)} />
       )}
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
+      {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
       {settingsOpen && (
         <SettingsPanel
           appearance={appearance}
@@ -762,8 +788,24 @@ function App({ manifestVersion = packageVersion }: AppProps) {
 }
 
 // Cycle 13's ThemeToggle drew its sun/moon/monitor icons the same way:
-// hand-written inline SVG, no icon library. This gear is that convention's
-// one new member.
+// hand-written inline SVG, no icon library. The question mark and the gear
+// below it are that convention's two newest members.
+function QuestionIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+      <circle cx="8" cy="8" r="6.4" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M6.2 6.1a1.9 1.9 0 1 1 2.5 1.8c-.5.2-.8.6-.8 1.1v.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <circle cx="8" cy="11.6" r="0.85" fill="currentColor" />
+    </svg>
+  );
+}
+
 function GearIcon() {
   return (
     <svg

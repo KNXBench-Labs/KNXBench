@@ -16,6 +16,7 @@ export interface CommandContext {
   openBusMonitor: () => void;
   openSettings: () => void;
   openCompanion: () => void;
+  openHelp: () => void;
 }
 
 /**
@@ -142,6 +143,16 @@ export const COMMANDS: PaletteCommand[] = [
     isEnabled: () => true,
     run: (ctx) => ctx.openCompanion(),
   },
+  // Last, and enabled with nothing loaded. F1 is the shortcut people who
+  // already know it will use; this row is for everyone else, and it is
+  // the reason `shortcutHint` says F1 at all (ADR-0024).
+  {
+    id: "open-help",
+    labelKey: "toolbar.help",
+    shortcutHint: "F1",
+    isEnabled: () => true,
+    run: (ctx) => ctx.openHelp(),
+  },
 ];
 
 /**
@@ -151,7 +162,7 @@ export const COMMANDS: PaletteCommand[] = [
  * into this shape before calling here; see its `resolvedCommands`). Unlike
  * `matchEntries` (search overlay), an empty query returns every command —
  * the palette is a browsable list on open, not a search-only box — and
- * there is no ranking: ten static entries need no scoring algorithm.
+ * there is no ranking: thirteen static entries need no scoring algorithm.
  */
 export function filterCommands(
   commands: ResolvedPaletteCommand[],

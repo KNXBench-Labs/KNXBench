@@ -6652,7 +6652,7 @@ never by a list of known values: any IPv4 dotted quad, any IPv6 literal
 from `/proc/sys/kernel/hostname`. It covers `report.md`, `environment.json`
 and `log.json`; `bus-telegrams.json` keeps its KNX addresses, and the dialog
 says so in the user's language rather than leaving them to assume otherwise
-(`docs/KNOWN_LIMITATIONS.md` §104). Two boundary rules earn their keep: a
+(`docs/KNOWN_LIMITATIONS.md` §106). Two boundary rules earn their keep: a
 candidate run whose neighbour is `[A-Za-z0-9_]` is rejected, without which
 `knx_core::Project` parses as an IPv6 address and every Rust path in the log
 is destroyed; and a dotted run is scanned for a valid four-group window
@@ -6704,7 +6704,7 @@ its messages verbatim, so "with addresses removed" was untrue and framing
 The catalogues now say "with IP addresses removed", state that KNX addresses
 and project names are never replaced anywhere, and name the group address
 names (`destinationName`) that the telegram file carries alongside the
-addresses. `KNOWN_LIMITATIONS.md` §104 says the same and adds the two
+addresses. `KNOWN_LIMITATIONS.md` §106 says the same and adds the two
 knowable failure modes inside the four classes (an IPv6 literal glued to a
 word with no separator; the home prefix matched with a right-hand boundary
 only, so `/home/knxbench-old` is over-redacted while `/home/andrea` is now left
@@ -6757,7 +6757,7 @@ nothing glued to its front) is over-redacted the same way a real address
 would be — shape alone cannot tell them apart, and this fix picks the side
 that protects the user's data over the side that protects a stranger's
 version number. Documented as the third residue in `docs/KNOWN_LIMITATIONS.md`
-§104; this project's own version string never takes that shape, so nothing
+§106; this project's own version string never takes that shape, so nothing
 this application prints is affected.
 
 Three new unit tests pin the fix, including one that requires the literal

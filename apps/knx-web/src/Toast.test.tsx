@@ -1,4 +1,4 @@
-/** Tests for ToastStack's dismiss handler and the error-only English-text disclosure (fix round 2, B4). */
+/** Tests for ToastStack's dismiss handler and the error-only English-text disclosure. */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";

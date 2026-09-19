@@ -49,6 +49,21 @@ describe("shuffleFlavourKeys", () => {
     expect(order[49]).toBe("loadProgress.flavour.01");
   });
 
+  // The other half of the pair `App.test.tsx` leans on: it pins
+  // `Math.random` to 0 for one load and to a value just under 1 for the
+  // next, and reads the two opening lines off the banner. Both facts
+  // belong here, at the level that owns the arithmetic. A correct,
+  // behaviour-preserving rewrite of the shuffle — forward iteration, a
+  // different clamp — could leave that App test red with nothing actually
+  // broken; this test is where it would be diagnosed.
+  it("leaves the order untouched when every draw picks the candidate in place", () => {
+    // A draw just under 1 selects `j === i`, so every swap is a no-op and
+    // the permutation is the identity. `Math.random` never returns 1;
+    // this is as close as a real source gets.
+    expect(shuffleFlavourKeys(() => 0.9999999)).toEqual([...FLAVOUR_KEYS]);
+    expect(shuffleFlavourKeys(() => 0.9999999)[0]).toBe("loadProgress.flavour.01");
+  });
+
   it("gives two different sources two different orders", () => {
     let n = 0;
     const scripted = shuffleFlavourKeys(() => [0.5, 0.25, 0.9, 0, 0.75][n++ % 5]);

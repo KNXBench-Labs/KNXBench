@@ -406,7 +406,7 @@ the engine offers fuel/instruction limits.
 invisibly — a field rename is a runtime failure in someone's script months later.
 
 **The specific problem here:** [V] every interesting script would reach `Project` and
-`Command`. `Project`'s six fields are **all `pub`** (`crates/knx-core/src/project.rs:181-187`),
+`Command`. `Project`'s six fields are **all `pub`** (`crates/knx-core/src/project.rs:181-186`),
 so a binding that hands a script a mutable project hands it the ability to bypass the
 command layer entirely — see §4. And per §3.4, bindings are precisely the case where the
 licence analysis stops favouring the script author.
@@ -622,7 +622,7 @@ Around that sit two more integrity mechanisms:
 
 ### The hole in the wall
 
-[V] `crates/knx-core/src/project.rs:181-187` — `Project`'s six fields (`schema_version`,
+[V] `crates/knx-core/src/project.rs:181-186` — `Project`'s six fields (`schema_version`,
 `strings`, `info`, `installations`, `devices`, `ids`) are **all `pub`**. So is
 `ProjectInfo`'s entire field set.
 

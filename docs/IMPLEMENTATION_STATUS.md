@@ -7085,7 +7085,7 @@ the 31-variant `Command` enum has no serialisable form for any out-of-process
 or WebAssembly boundary to carry.
 
 The data-integrity finding is the one worth remembering: `Project`'s six
-fields are all `pub` (`crates/knx-core/src/project.rs:181-187`), so "all mutations
+fields are all `pub` (`crates/knx-core/src/project.rs:181-186`), so "all mutations
 go through `Command`" is a convention held by review rather than an invariant
 held by the type system — fine inside one workspace, quite different when
 `&mut Project` is handed to a stranger. And `Layer` has five variants, none of

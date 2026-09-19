@@ -207,7 +207,7 @@ pub fn individual_address_write() -> Procedure {
                  continues either way (MP §2.3 exception handling, p. 15, 'to 2.'). The \
                  Disconnect case is reported to the operator as a finding rather than \
                  forced into a stop, because the Standard's own p. 14 body text and its \
-                 p. 15 'to 1.' exception disagree about it — see KNOWN_LIMITATIONS §107",
+                 p. 15 'to 1.' exception disagree about it — see KNOWN_LIMITATIONS §108",
                 StepEffect::Read,
             ),
             step(

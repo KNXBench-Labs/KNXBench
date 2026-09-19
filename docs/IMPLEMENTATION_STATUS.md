@@ -7079,7 +7079,7 @@ Management Client shall continue with the Management Procedure in every
 case."* This project implements the exception text (more specific, later in
 reading order, and the only reading under which the guard is reachable at
 all) and surfaces the occupancy to the operator as a finding rather than a
-silent stop. Recorded as `docs/KNOWN_LIMITATIONS.md` §107; nothing here is
+silent stop. Recorded as `docs/KNOWN_LIMITATIONS.md` §108; nothing here is
 waiting on a fix, the clause is what disagrees with itself.
 
 All three page citations (MP §2.2 p. 12, MP §2.3 p. 14, MP §2.3 p. 15) and

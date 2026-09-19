@@ -2520,23 +2520,33 @@ gateway model's tunnelling receive and project-resolution path; routing,
 transmit behavior, reconnect, other gateway models, and long sessions remain
 unverified. Full accounting: [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence).
 
-**Task 16, second pass (2026-09-19), branch `group-monitor-reverify`.**
-Re-ran the same production path against the same gateway and project for
-2040 seconds (34 minutes) — roughly nineteen times the earlier long run.
-Result: 1299 telegrams from 20 sources to 61 destinations, 100% of
-destination names resolved, 209 values decoded through their DPT, zero
-drops. This pass also drove the app's own single-session guard against a
-live gateway rather than only `FakeConnector`: a second `start` on the same
-server process returned `409` naming the existing session, exactly as
-designed. A second, independent `knx-server` process attempting its own
-tunnel to the same gateway while the first was open was refused by the
-gateway itself — KNXnet/IP status `0x24`, `E_NO_MORE_CONNECTIONS` — a
-previously undocumented hardware constraint, not a bug in this application.
-No group read/write/response, management request, scan, or `/api/bus/write`
-call was made. This closes the "never verified against a real gateway"
-half of §62's four headline claims with a second, longer, independent data
-point; it does not touch routing, transmit, reconnect, or other gateway
-models. Full accounting: [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence).
+**Task 16, second pass (2026-09-19), branch `group-monitor-reverify`, a
+restatement against new measurement, not a fix — nothing this pass found
+needed fixing.** The measured session had not been started by this task:
+it was already open against the real gateway and the real project roughly
+30 minutes before this task picked it up, polled it, and stopped it. From
+first telegram to stop the session had run 2040 seconds (34 minutes) —
+roughly nineteen times the earlier 107-second real-project run. Result:
+1299 telegrams from 20 sources to 61 destinations, 100% of destination
+names resolved, zero drops, and 209 of the 1098 value-bearing telegrams
+decoded through their DPT — the other 889 came back `Unresolved` because
+the project declares no DPT for those group addresses, not because of any
+main-type gap (see the fuller trace to `bus.rs`'s `decode` in
+`KNOWN_LIMITATIONS.md` §62). This pass also drove the app's own
+single-session guard against a live gateway rather than only
+`FakeConnector`: a second `start` on the same server process returned
+`409` naming the existing session, exactly as designed. A second,
+independent `knx-server` process attempting its own tunnel to the same
+gateway while the first was open was refused by the gateway itself —
+KNXnet/IP status `0x24`, `E_NO_MORE_CONNECTIONS` — a previously
+undocumented hardware constraint, not a bug in this application. No group
+read/write/response, management request, scan, or `/api/bus/write` call
+was made. Of §62's four headline claims, this pass adds live evidence for
+two — single-session (the `409` above) and "never verified" (now false
+twice over); tunnelling-only and client-filtered remain confirmed by code
+inspection only, since this run never exercised routing or server-side
+filtering. It does not touch routing, transmit, reconnect, or other
+gateway models. Full accounting: [KNOWN_LIMITATIONS.md §62](KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence).
 
 **T27, in-app motion control (2026-09-12), branch `t27-motion-control`.**
 Restores the user-facing motion setting cycle 13's theme rewrite deleted

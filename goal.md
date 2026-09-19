@@ -290,8 +290,10 @@ them, and do not quietly fold pieces of them into another task.
   reference project open, destination names resolved 100% of the time and
   values decoded through their DPT where the project declared one.
   The 2026-09-19 pass also confirmed the single-session `409` guard live
-  and found the gateway itself allows only one concurrent tunnel — a new,
-  previously undocumented hardware fact. No bus read, write, response,
+  and found that this one gateway refuses a second concurrent tunnel
+  (KNXnet/IP `0x24`, `E_NO_MORE_CONNECTIONS`) before the app's own guard
+  even runs — a new, previously undocumented fact about this device, not a
+  property of every gateway. No bus read, write, response,
   management request, or scan was sent in any session. Tunnelling-only,
   single-session, client-side filtering, no auto-reconnect, and unverified
   transmit behavior/reconnect/other-gateway-models remain.

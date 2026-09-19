@@ -3115,9 +3115,9 @@ ways, all deliberate and all recorded here per that design's own §7:
    open for 2040 seconds (34 minutes), well past the earlier two- and
    one-minute runs. Result: 1299 telegrams from 20 source addresses to 61
    group destinations, `droppedCount = 0`, all 1299 destination names
-   resolved against the project (201 `GroupValueRead`/201
-   `GroupValueResponse` pairs carrying no value to decode, 897
-   `GroupValueWrite`), and 209 of the 1098 value-bearing telegrams (897 +
+   resolved against the project (201 `GroupValueRead` carrying no
+   value to decode, against 201 `GroupValueResponse` and 897
+   `GroupValueWrite` that do), and 209 of the 1098 value-bearing telegrams (897 +
    201) decoded through their DPT. The other 889 came back `Unresolved`
    — traced to `GroupAddressContext::decode` (`apps/knx-server/src/
    bus.rs`): that variant fires when `self.dpts.get(&ga.raw())` is `None`
@@ -3125,10 +3125,13 @@ ways, all deliberate and all recorded here per that design's own §7:
    group address at all. It is not a main-type gap: an address using a
    main type outside §61's implemented thirty would decode through
    `decode_single` into `DecodedValue::Error`, a different kind, and none
-   appeared in this run. So roughly 81% of the addressed group addresses
-   in this real project simply carry no declared DPT — a fact about this
-   project's data, not about §61's codec coverage, and §61 is not touched
-   by this entry. This also exercised, for the first time, the item-4
+   appeared in this run. So roughly 81% of the value-bearing
+   telegrams in this run were addressed to group addresses carrying no
+   declared DPT — a share of telegrams, not of addresses: 61 destinations
+   produced those 1098 telegrams, and no address-level count was measured,
+   so nothing here says what fraction of the project's group addresses
+   lack a DPT. A fact about this project's data either way, not about
+   §61's codec coverage, and §61 is not touched by this entry. This also exercised, for the first time, the item-4
    single-session guard against a live gateway rather than only against
    `FakeConnector` in unit tests: a second `POST /api/bus/monitor/start`
    issued to the *same* server process while the first tunnel was open was

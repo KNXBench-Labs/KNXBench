@@ -1176,6 +1176,23 @@ mod tests {
             VersionOutcome::Written(_)
         ));
         assert_eq!(report.parts[1].version, VersionOutcome::NotAttempted);
+        // `[C1]` F7: the outcome alone doesn't pin the step-5 label a future
+        // edit could collapse back to one unconditional string; assert the
+        // two recorded titles by their exact text, not `.contains("version")`
+        // (which both would satisfy).
+        let step_5_titles: Vec<&str> = report
+            .steps
+            .iter()
+            .filter(|step| step.kind == ProcedureKind::LoadOnePart && step.number == 5)
+            .map(|step| step.title)
+            .collect();
+        assert_eq!(
+            step_5_titles,
+            vec![
+                "set the version",
+                "no version to set (CP §3.5.2 Nr. 09/10, p. 44, lists none here)",
+            ]
+        );
 
         // §7.1 step 05: everything is unloaded before anything is loaded.
         let events = load_state_writes(&device);

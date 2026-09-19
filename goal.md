@@ -337,7 +337,49 @@ it keeps losing to larger work, which is exactly why they are listed here:
 5. `style_from_str` falls back silently to `ThreeLevel`.
 6. `api.setParameterValue` has a publish hole — one edit path does not
    publish, and never has.
-7. Task 6's screenshots need regenerating.
+7. Task 6's screenshots need regenerating — closed by Task 18, which
+   regenerates them anyway.
+
+From the pre-merge whole-branch review of the theme system, 2026-09-19. The
+review returned MERGE with no blocking findings; these are what it found on
+the way, and the first three were each proved by a mutation that left the
+suite green:
+
+8. `apps/knx-web/src/themeTokens.ts:155,164` — the theme/component token
+   boundary only inspects depth-0 blocks, so a theme block nested inside a
+   `@media` query escapes it silently, including one that overrides the user's
+   motion setting. That is the failure ADR-0022 names as its reason to exist.
+   Fold in the second finding while there: `themeTokens.test.ts:82` reads one
+   hard-coded stylesheet path, so a second `.css` file would sit outside the
+   rule entirely.
+9. `apps/knx-web/src/theme.ts:10` — `system`'s `hasAccentVariations` is the one
+   registry entry nothing checks; setting it to `false` disables the accent
+   control for the default theme and passes all 49 tests. Derive it from
+   `resolveThemeId`.
+10. `apps/knx-web/src/SettingsPanel.tsx:322` — the disabled accent select
+    neither looks disabled (the author rule at `styles.css:1188` beats the UA
+    `select:disabled` rule by origin) nor explains itself to assistive
+    technology (the select's `aria-label` overrides the wrapping label, and the
+    hint is not wired with `aria-describedby`).
+11. `apps/knx-web/index.html:8` — a document with no `data-theme` attribute now
+    renders as Times New Roman on transparent. Unreachable today; the
+    zero-cost hardening is to write `data-theme="porcelain"` into the markup
+    and let the bootstrap overwrite it.
+12. `apps/knx-web/src/themeTokens.ts:192` — the token regex `[a-z0-9-]+`
+    mis-parses a camelCase token into two misleading failures instead of
+    rejecting it as an illegal name.
+13. `themeTokens.ts:74-125` duplicates `motionGuard.test.ts:35-95` — two
+    hand-rolled CSS scanners now coexist. `parseRules` is the better one but
+    does not expose the ancestor selector chain the motion guard needs.
+14. The unenforced contrast invariant is recorded in ADR-0022 and
+    `IMPLEMENTATION_STATUS.md` but not in `docs/KNOWN_LIMITATIONS.md`, where
+    the other 92 numbered limitations live.
+15. `xtask/src/headers.rs:206` — `ABSENT_CEILING` is 168 against a count of
+    167. Worth noting for the ratchet's own sake: the same command reports
+    `167 without / 15 skipped` in a worktree and `168 without / 30 skipped` in
+    main, because the generated-file skip set depends on what build output
+    happens to be on disk. The "zero slack" rule is less deterministic than it
+    assumes.
 
 ---
 

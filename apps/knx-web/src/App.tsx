@@ -129,6 +129,18 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   // heuristic. A ref, not state: the poll must read the current value, not
   // the one captured when its effect was created.
   const loadClientTokenRef = useRef<string>("");
+  // Which load is current, bumped the instant one ends (fix round 6,
+  // F-C). Ownership answers "whose operation is this?"; this answers the
+  // other half, "is that load still the one on screen?". The poll
+  // interval is still armed while `runLoad`'s catch awaits its final
+  // snapshot, and the effect's `cancelled` latch closes later still —
+  // it is set by React's cleanup, not synchronously by `finally` — so a
+  // poll resolving in between used to write a `running` snapshot over a
+  // failure that was already on screen, and polling then stopped with
+  // the banner frozen on a phase that was over. Captured before the
+  // await, compared after: a generation that moved means the answer is
+  // about a load nobody is watching any more.
+  const loadGenerationRef = useRef(0);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -442,6 +454,12 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   function newProjectCreated(newTree: ProjectTree) {
     resetTree(newTree);
     setHasStorePath(false);
+    // The banner outlives a failed load on purpose, but only until that
+    // load stops being the last thing that happened (fix round 6, F-D):
+    // "Could not load villa.knxproj" pinned above a project started from
+    // scratch describes nothing on screen.
+    setLoadSource(null);
+    setLoadSnapshot(null);
     setNewProjectOpen(false);
     setView("overview");
     setLogOpen(false);
@@ -490,6 +508,9 @@ function App({ manifestVersion = packageVersion }: AppProps) {
       const ours = final?.status === "failed" && ownsOperation({ clientToken: loadClientTokenRef.current }, final);
       setLoadSnapshot((previous) => (ours && final ? final : localFailure(previous, message)));
     } finally {
+      // Synchronously, before anything React does: from here on every
+      // poll still in flight belongs to a load that is over (F-C).
+      loadGenerationRef.current += 1;
       setLoading(false);
       loadingRef.current = false;
     }
@@ -506,9 +527,15 @@ function App({ manifestVersion = packageVersion }: AppProps) {
     if (!loading) return;
     let cancelled = false;
     async function poll() {
+      // The generation this poll was fired for. `cancelled` alone cannot
+      // carry this: it is closed by the cleanup below, which React runs
+      // only once it commits `loading: false` — a whole microtask queue
+      // after `runLoad` has finished writing its failure (F-C).
+      const generation = loadGenerationRef.current;
       try {
         const snapshot = await api.loadProgress();
-        if (cancelled || snapshot?.status !== "running") return;
+        if (cancelled || generation !== loadGenerationRef.current) return;
+        if (snapshot?.status !== "running") return;
         if (!ownsOperation({ clientToken: loadClientTokenRef.current }, snapshot)) return;
         setLoadSnapshot(snapshot);
       } catch {

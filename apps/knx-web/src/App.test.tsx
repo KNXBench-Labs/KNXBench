@@ -1135,4 +1135,226 @@ describe("App — a failed load never renders a running banner", () => {
     expect(host!.querySelector(".load-progress")!.textContent).toContain("already running");
     await act(async () => root.unmount());
   });
+
+  // Fix round 6, F-C. The poll interval is still armed while `runLoad`'s
+  // catch awaits its final snapshot, and the `cancelled` latch is closed
+  // later still, by React's effect cleanup. A poll whose fetch lands in
+  // between passed every filter — not cancelled, `running`, ours — and
+  // painted a running phase straight over the failure that had just been
+  // written. Polling then stopped for good, so the banner froze on a
+  // phase with a moving shuttle for the rest of the session: the exact
+  // lie this feature exists to prevent, reachable whenever the POST dies
+  // at transport level while the server's operation carries on.
+  it("F-C: a poll landing after the failure is written never repaints it as running", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    let fail: (error: Error) => void = () => {};
+    apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
+    // The first poll's fetch is held open on purpose: it answers only
+    // once the failure is on screen, which is the window the defect
+    // lived in.
+    let answerFirstPoll: (snapshot: unknown) => void = () => {};
+    apiMock.loadProgress.mockReturnValueOnce(new Promise((resolve) => { answerFirstPoll = resolve; }));
+    // The snapshot the catch fetches after the POST dies: the connection
+    // is gone, so this one does not answer either.
+    apiMock.loadProgress.mockRejectedValue(new Error("connection closed"));
+    const root = await renderApp();
+
+    await clickOpen();
+
+    await act(async () => {
+      fail(new Error("connection closed"));
+      // Let the catch run to its end — final snapshot fetch, failure
+      // write, `setLoading(false)` — without letting React commit any of
+      // it. The effect cleanup has not run, so `cancelled` is still
+      // false, which is precisely the state the stale poll needs.
+      for (let i = 0; i < 6; i += 1) await Promise.resolve();
+      answerFirstPoll({
+        operationId: 1, kind: "import", source: "villa.knxproj", phase: "parseTopology",
+        completed: null, total: null, status: "running", error: null, clientToken: OWN_CLIENT_TOKEN,
+      });
+      for (let i = 0; i < 6; i += 1) await Promise.resolve();
+    });
+
+    expectFailedBanner(["Parsing the topology"]);
+    expect(host!.querySelector(".load-progress")!.textContent).toContain("connection closed");
+    await act(async () => root.unmount());
+  });
+});
+
+// Fix round 6, F-A and F-B: two rules the banner has always followed and
+// nothing ever checked. A reviewer neutralised `clearInterval` and deleted
+// `runLoad`'s `setLoadSnapshot(null)`, one at a time, and the whole suite
+// stayed green through both.
+describe("App — a load's banner and its polling both end with the load", () => {
+  // `LOAD_POLL_INTERVAL_MS` from App.tsx, which does not export it. A
+  // test that advanced by less than the real interval would see no polls
+  // at all and pass for the wrong reason, so this has to match.
+  const POLL_INTERVAL_MS = 250;
+
+  function runningSnapshot() {
+    return {
+      operationId: 1, kind: "import", source: "villa.knxproj", phase: "parseTopology",
+      completed: null, total: null, status: "running", error: null, clientToken: OWN_CLIENT_TOKEN,
+    };
+  }
+
+  function failedSnapshot() {
+    return {
+      operationId: 1, kind: "import", source: "villa.knxproj", phase: "openContainer",
+      completed: null, total: null, status: "failed", error: "invalid Zip archive",
+      clientToken: OWN_CLIENT_TOKEN,
+    };
+  }
+
+  async function clickOpen() {
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+  }
+
+  async function letTheIntervalTick(times: number) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * times);
+    });
+  }
+
+  // The count only means something if it was rising in the first place:
+  // every test below waits for the interval to fire at least once while
+  // the load is genuinely in flight before asking whether it stopped.
+  async function pollsWhileRunning(): Promise<number> {
+    await letTheIntervalTick(3);
+    const calls = apiMock.loadProgress.mock.calls.length;
+    expect(calls, "the interval must be polling while the load runs").toBeGreaterThan(1);
+    return calls;
+  }
+
+  it("F-A: stops polling once the load succeeds", async () => {
+    vi.useFakeTimers();
+    try {
+      filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+      let finish: (tree: ProjectTree) => void = () => {};
+      apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((resolve) => { finish = resolve; }));
+      apiMock.loadProgress.mockResolvedValue(runningSnapshot());
+      const root = await renderApp();
+
+      await clickOpen();
+      await pollsWhileRunning();
+
+      await act(async () => { finish(baseTree()); });
+      const atTheEnd = apiMock.loadProgress.mock.calls.length;
+      await letTheIntervalTick(10);
+
+      expect(apiMock.loadProgress.mock.calls.length).toBe(atTheEnd);
+      await act(async () => root.unmount());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("F-A: stops polling once the load fails", async () => {
+    vi.useFakeTimers();
+    try {
+      filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+      let fail: (error: Error) => void = () => {};
+      apiMock.importProject.mockReturnValue(new Promise<ProjectTree>((_, reject) => { fail = reject; }));
+      apiMock.loadProgress.mockResolvedValue(runningSnapshot());
+      const root = await renderApp();
+
+      await clickOpen();
+      await pollsWhileRunning();
+
+      // The catch fetches one last snapshot of its own, so the count is
+      // read after the failure has fully settled rather than before.
+      apiMock.loadProgress.mockResolvedValue(failedSnapshot());
+      await act(async () => { fail(new Error("invalid Zip archive")); });
+      const atTheEnd = apiMock.loadProgress.mock.calls.length;
+      await letTheIntervalTick(10);
+
+      expect(host!.querySelector(".load-progress")!.getAttribute("data-failed")).toBe("true");
+      expect(apiMock.loadProgress.mock.calls.length).toBe(atTheEnd);
+      await act(async () => root.unmount());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("F-A: stops polling when the app unmounts mid-load", async () => {
+    vi.useFakeTimers();
+    try {
+      filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+      apiMock.importProject.mockReturnValue(new Promise<ProjectTree>(() => {}));
+      apiMock.loadProgress.mockResolvedValue(runningSnapshot());
+      const root = await renderApp();
+
+      await clickOpen();
+      await pollsWhileRunning();
+
+      await act(async () => root.unmount());
+      const atTheEnd = apiMock.loadProgress.mock.calls.length;
+      await letTheIntervalTick(10);
+
+      expect(apiMock.loadProgress.mock.calls.length).toBe(atTheEnd);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // F-B: `runLoad` clears the snapshot before its POST. Without that one
+  // line the second load opens reading "Could not load B — Failed during:
+  // <A's phase>", with A's error underneath it, and keeps that text until
+  // B's first poll answers — which for a B that fails early is never.
+  it("F-B: a second load carries none of the first load's phase or error", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValueOnce("/home/knxbench/projects/villa.knxproj");
+    apiMock.importProject.mockRejectedValueOnce(new Error("invalid Zip archive"));
+    apiMock.loadProgress.mockResolvedValue(failedSnapshot());
+    const root = await renderApp();
+
+    await clickOpen();
+    const failure = host!.querySelector(".load-progress")!;
+    expect(failure.getAttribute("data-failed")).toBe("true");
+    expect(failure.textContent).toContain("Opening the archive");
+
+    // The user picks a second file. Neither its POST nor its first poll
+    // ever answers, so everything the banner says about it now, it says
+    // with no snapshot of its own.
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/cottage.knxproj");
+    apiMock.importProject.mockReturnValue(new Promise<ProjectTree>(() => {}));
+    apiMock.loadProgress.mockReturnValue(new Promise(() => {}));
+
+    await clickOpen();
+
+    const banner = host!.querySelector(".load-progress")!;
+    expect(banner.textContent).toContain("cottage.knxproj");
+    expect(banner.getAttribute("data-failed")).toBeNull();
+    expect(banner.textContent, "the second load inherits no phase").not.toContain("Opening the archive");
+    expect(banner.textContent, "nor an error").not.toContain("invalid Zip archive");
+    expect(banner.textContent, "nor the first file's name").not.toContain("villa.knxproj");
+
+    await act(async () => root.unmount());
+  });
+
+  // F-D: `loadSource` is written in exactly two places, and neither of
+  // them is the from-scratch path — so a failed import's banner used to
+  // sit under the toolbar above a brand-new, entirely unrelated project
+  // for the rest of the session.
+  it("F-D: starting a project from scratch takes the failed load's banner with it", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxproj");
+    apiMock.importProject.mockRejectedValue(new Error("invalid Zip archive"));
+    apiMock.loadProgress.mockResolvedValue(failedSnapshot());
+    apiMock.newProject.mockResolvedValue(baseTree());
+    const root = await renderApp();
+
+    await clickOpen();
+    expect(host!.querySelector(".load-progress")).not.toBeNull();
+
+    await act(async () => {
+      findButton("New project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {
+      host!.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(host!.querySelector(".load-progress")).toBeNull();
+    await act(async () => root.unmount());
+  });
 });

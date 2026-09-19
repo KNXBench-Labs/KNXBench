@@ -117,6 +117,33 @@ describe("ownsOperation", () => {
   it("owns nothing when there is no snapshot", () => {
     expect(ownsOperation({ clientToken: ours }, null)).toBe(false);
   });
+
+  // Fix round 4, F12. The three cases below are the ones the validity
+  // guard exists for, and the only ones that can fail if it is deleted:
+  // every other case above passes a real token on both sides, where plain
+  // equality already answers correctly. "Absent" has three spellings on
+  // this wire — `null`, a missing field, and `""` — and none of them may
+  // ever match another absence.
+  it("owns nothing when neither side has a token", () => {
+    // A server build that omits `clientToken` altogether sends
+    // `undefined`, which is not `null`; a client whose token ref was
+    // never filled reads the same. `undefined === undefined` is exactly
+    // the accidental match the old null check could not stop.
+    const missing = snapshot();
+    delete (missing as Partial<LoadProgressSnapshot>).clientToken;
+    expect(ownsOperation({ clientToken: undefined as unknown as string }, missing)).toBe(false);
+  });
+
+  it("owns nothing when this load never generated a token of its own", () => {
+    // `runLoad`'s ref defaults to `""` before `crypto.randomUUID()` runs.
+    // An empty string is not an id, on either side of the comparison.
+    expect(ownsOperation({ clientToken: "" }, snapshot({ clientToken: "" }))).toBe(false);
+    expect(ownsOperation({ clientToken: "" }, snapshot({ clientToken: ours }))).toBe(false);
+  });
+
+  it("owns nothing when the operation's token is empty rather than absent", () => {
+    expect(ownsOperation({ clientToken: ours }, snapshot({ clientToken: "" }))).toBe(false);
+  });
 });
 
 describe("localFailure", () => {

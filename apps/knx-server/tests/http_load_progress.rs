@@ -119,6 +119,80 @@ async fn a_client_token_sent_on_import_is_echoed_in_every_snapshot() {
     );
 }
 
+// Fix round 4, F11: the same round trip for `/api/project/open`, which
+// had none. Deleting `clientToken` from the open POST body left `tsc` and
+// the whole vitest suite green while the banner went blind for every
+// native `.knxdb` — the import path was tested, the open path was
+// assumed, and that asymmetry is the exact shape the earlier rounds kept
+// walking into. A `.knxdb` is built here through the routes the UI uses
+// (new, then save-as) rather than a fixture, so nothing about the file
+// format is being asserted by accident.
+#[tokio::test]
+async fn a_client_token_sent_on_the_native_open_is_echoed_in_every_snapshot() {
+    let dir = tempfile::tempdir().unwrap();
+    let db_path = dir.path().join("villa.knxdb");
+    let state = state();
+
+    let created = knx_server::app(state.clone(), None)
+        .oneshot(post("/api/project/new", json!({})))
+        .await
+        .unwrap();
+    assert_eq!(created.status(), StatusCode::OK);
+    let saved = knx_server::app(state.clone(), None)
+        .oneshot(post(
+            "/api/project/save-as",
+            json!({ "path": db_path.to_string_lossy() }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(saved.status(), StatusCode::OK);
+
+    let response = knx_server::app(state.clone(), None)
+        .oneshot(post(
+            "/api/project/open",
+            json!({ "path": db_path.to_string_lossy(), "clientToken": "22222222-2222-2222-2222-222222222222" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let snapshot = progress(&state).await;
+    assert_eq!(snapshot["kind"], "open");
+    assert_eq!(snapshot["source"], "villa.knxdb");
+    assert_eq!(snapshot["status"], "succeeded");
+    assert_eq!(
+        snapshot["clientToken"], "22222222-2222-2222-2222-222222222222",
+        "the open route must carry the token as faithfully as the import \
+         route does, or the banner is blind for every .knxdb"
+    );
+}
+
+// Fix round 4, F13: the failure path's token, at HTTP level. A client
+// that lost the POST's response learns its load failed only from the
+// snapshot — and only if it can tell the snapshot is *its own*, which is
+// the one moment the token is doing real work.
+#[tokio::test]
+async fn a_failed_load_still_echoes_the_token_that_started_it() {
+    let state = state();
+
+    let response = knx_server::app(state.clone(), None)
+        .oneshot(post(
+            "/api/project/import",
+            json!({ "path": "/does/not/exist.knxproj", "clientToken": "33333333-3333-3333-3333-333333333333" }),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+    let snapshot = progress(&state).await;
+    assert_eq!(snapshot["status"], "failed");
+    assert_eq!(
+        snapshot["clientToken"], "33333333-3333-3333-3333-333333333333",
+        "a failed operation keeps its owner: the alternative is a client \
+         that cannot claim the error it caused"
+    );
+}
+
 #[tokio::test]
 async fn a_load_started_with_no_client_token_names_its_owner_as_null() {
     let dir = tempfile::tempdir().unwrap();

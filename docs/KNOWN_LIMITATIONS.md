@@ -5512,43 +5512,28 @@ is too long for a panel, not a signal that the catalogue needs a parser.
 doubles — whichever comes first. Either is enough evidence to design a help
 store properly; neither has happened.
 
-## 103. Quit closes the main window, and "unsaved" is inferred from the undo stack
+## 103. "Unsaved" is inferred from the undo stack, not a real dirty flag
 
-**Limitation.** The File menu's Quit entry (T28/F5, desktop shell only) calls
-`getCurrentWindow().close()` on the main window. That is not the same as
-ending the process. If the diagnostics companion window is open, closing the
-main window leaves the companion — and the application — running, with no
-main window to quit from. The guard in front of it has its own imprecision:
+**Limitation.** The File menu's Quit entry (T28/F4, desktop shell only) guards
+itself with an unsaved-changes check before it lets the window close.
 KNXBench has no dirty flag, so "there is unsaved work" is read off
 `ProjectTree.can_undo`, which stays `true` after a save.
 
-**Cause.** Two separate trades. The window close was chosen over
-`tauri-plugin-process`'s `exit()` because the plugin would have added a Rust
-crate, an npm package and a plugin registration to obtain a *broader*
-capability — `core:window:allow-close`, scoped to the `main` window, is the
-narrowest permission that can end a session at all, and the capability file
-has been built one narrow permission at a time since the shell existed. The
-dirty signal is inherited: `can_undo` is the only mutation signal the server
-publishes, it is already what the welcome screen's unsaved-changes guard
-uses, and `domain.rs`'s `new_project_impl` documents the over-refusal as
-deliberate. Adding a real dirty flag means a server-side change to every
-mutating route, which is a task of its own and not a UI finding's business.
+**Cause.** `can_undo` is the only mutation signal the server publishes, it is
+already what the welcome screen's unsaved-changes guard uses, and
+`domain.rs`'s `new_project_impl` documents the over-refusal as deliberate.
+Adding a real dirty flag means a server-side change to every mutating route,
+which is a task of its own and not a UI finding's business.
 
-**Consequence.** (a) A user with the diagnostics companion open can quit the
-main window and be left with a stray window and a live process; the companion
-has its own close button, so nothing is unreachable, but the Quit entry did
-not do what its label promises. (b) Anyone who saves and then quits is asked
-about unsaved changes that no longer exist — a false alarm, in the safe
-direction. The dialog offers Cancel and "Quit without saving" only, with no
-"Save and quit": `saveProject` swallows its own failures into a toast and
-returns nothing, so a save-then-quit path could close the window over a save
-that silently failed, which is the exact accident this dialog exists to stop.
+**Consequence.** Anyone who saves and then quits is asked about unsaved
+changes that no longer exist — a false alarm, in the safe direction. The
+dialog offers Cancel and "Quit without saving" only, with no "Save and quit":
+`saveProject` swallows its own failures into a toast and returns nothing, so
+a save-then-quit path could close the window over a save that silently
+failed, which is the exact accident this dialog exists to stop.
 
-**Not a data-loss risk.** Both imprecisions err towards keeping the user's
-work: an extra window stays open, and an extra question gets asked. Neither
-discards anything.
+**Not a data-loss risk.** The imprecision errs towards keeping the user's
+work: an extra question gets asked, nothing is discarded.
 
-**Lifted when.** The server grows a real dirty flag (then the guard becomes
-exact), or the desktop shell grows a genuine application-quit path that
-accounts for every window (then the entry does what it says). Neither is
-scheduled.
+**Lifted when.** The server grows a real dirty flag; then the guard becomes
+exact. Not scheduled.

@@ -395,6 +395,15 @@ async fn install_catalog_package(
 #[derive(Deserialize)]
 pub(crate) struct PathBody {
     pub(crate) path: String,
+    /// The opaque per-load id `loadProgress.ts` generates with
+    /// `crypto.randomUUID()` (ADR-0023 fix round 3, F9) — read only by
+    /// `import_project` and `open_native_project`, which hand it to
+    /// `tracked_load` so it lands on the operation and comes back in
+    /// every snapshot. Every other handler sharing this body type ignores
+    /// it, and an omitted field defaults to `None` rather than failing to
+    /// deserialize.
+    #[serde(default, rename = "clientToken")]
+    pub(crate) client_token: Option<String>,
 }
 
 /// The `LoadSnapshot` on the wire. Hand-written rather than derived on
@@ -408,6 +417,12 @@ pub(crate) struct PathBody {
 /// timestamp field and there will not be one: ADR-0023 forbids progress
 /// derived from elapsed time, and a client that cannot see the clock
 /// cannot be tempted by it.
+///
+/// `client_token` is the id the client sent when it started this
+/// operation (ADR-0023 fix round 3, F9), echoed verbatim, or `null` when
+/// none was sent. `ownsOperation()` in `loadProgress.ts` is exact equality
+/// against it — the whole of this round's ownership test, replacing the
+/// three-round id/source heuristic it retires.
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct LoadProgressDto {
@@ -419,6 +434,7 @@ struct LoadProgressDto {
     total: Option<u64>,
     status: &'static str,
     error: Option<String>,
+    client_token: Option<String>,
 }
 
 impl From<crate::LoadSnapshot> for LoadProgressDto {
@@ -432,6 +448,7 @@ impl From<crate::LoadSnapshot> for LoadProgressDto {
             total: snapshot.total,
             status: snapshot.status.as_str(),
             error: snapshot.error,
+            client_token: snapshot.client_token,
         }
     }
 }
@@ -475,6 +492,7 @@ async fn tracked_load(
     state: SharedState,
     kind: crate::LoadKind,
     path: std::path::PathBuf,
+    client_token: Option<String>,
     work: fn(
         &crate::AppState,
         &std::path::Path,
@@ -483,7 +501,7 @@ async fn tracked_load(
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let handle = state
         .load_operations
-        .begin(kind, domain::file_name_of(&path))
+        .begin(kind, domain::file_name_of(&path), client_token)
         .map_err(already_running)?;
     tokio::task::spawn_blocking(move || {
         let outcome = work(&state, &path, &handle);
@@ -504,7 +522,14 @@ async fn import_project(
     Json(body): Json<PathBody>,
 ) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
     let path = resolve_project_path(&state.data_dir, &body.path)?;
-    tracked_load(state, crate::LoadKind::Import, path, domain::open_project).await
+    tracked_load(
+        state,
+        crate::LoadKind::Import,
+        path,
+        body.client_token,
+        domain::open_project,
+    )
+    .await
 }
 
 /// Every field optional, so `POST /api/project/new` with `{}` is a valid
@@ -605,6 +630,7 @@ async fn open_native_project(
         state,
         crate::LoadKind::Open,
         path,
+        body.client_token,
         domain::open_native_project,
     )
     .await

@@ -24,6 +24,7 @@ function snapshot(overrides: Partial<LoadProgressSnapshot> = {}): LoadProgressSn
     total: null,
     status: "running",
     error: null,
+    clientToken: "own-token",
     ...overrides,
   };
 }
@@ -73,6 +74,22 @@ describe("LoadProgressBanner", () => {
     expect(bar().getAttribute("aria-valuenow")).toBe("25");
     expect(host!.querySelector(".load-progress-bar")!.getAttribute("style")).toContain("width: 25%");
     expect(host!.textContent).toContain("9 of 36");
+    root.unmount();
+  });
+
+  // Round 1 (F10) put `aria-live="off"` on the progressbar and on the
+  // count paragraph, so only the phase in the `role="status"` region gets
+  // announced — a screen reader given the bar or the count directly would
+  // read every one of a 38-entry count as its own event. The re-review
+  // removed both attributes and every other test here stayed green, which
+  // is exactly the failure mode an assertion exists to catch.
+  it("silences the progressbar and the count from their own aria-live (F10)", async () => {
+    const root = await render(
+      "villa.knxproj",
+      snapshot({ phase: "collectContainerEntries", completed: 9, total: 36 }),
+    );
+    expect(bar().getAttribute("aria-live")).toBe("off");
+    expect(host!.querySelector(".load-progress-count")!.getAttribute("aria-live")).toBe("off");
     root.unmount();
   });
 

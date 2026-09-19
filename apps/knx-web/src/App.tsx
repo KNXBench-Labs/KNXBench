@@ -123,17 +123,12 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   // same tick would both read the same stale state value, and the second
   // one would reach the server for a `409` it never needed to earn.
   const loadingRef = useRef(false);
-  // ADR-0023's client half of the operation id. `loadBaselineRef` is the
-  // counter as it stood just before this load asked for an operation;
-  // `loadSourceRef` is the file name that load submitted, the second fact
-  // `ownsOperation` needs before it will adopt an id (round 2, F8: a
-  // foreign operation starting after the baseline read still clears the
-  // id-only test); `loadOperationRef` is the id it adopted once a poll
-  // produced one. Refs, not state: the poll must read the current values,
-  // not the ones captured when its effect was created.
-  const loadBaselineRef = useRef<number | null>(null);
-  const loadSourceRef = useRef<string>("");
-  const loadOperationRef = useRef<number | null>(null);
+  // ADR-0023's client half of ownership (fix round 3, F9): the opaque
+  // token this load generates for itself before its POST, so `ownsOperation`
+  // has an exact fact to compare against instead of an id-and-source
+  // heuristic. A ref, not state: the poll must read the current value, not
+  // the one captured when its effect was created.
+  const loadClientTokenRef = useRef<string>("");
   const [selection, setSelection] = useState<Selection | null>(null);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -456,27 +451,24 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   // Both ways a project enters the application, in one place: the same
   // duplicate guard, the same banner, the same polling. `storePath` is the
   // only thing that differs — an ETS import has no `.knxdb` location yet.
-  async function runLoad(path: string, load: (p: string) => Promise<ProjectTree>, storePath: boolean) {
+  async function runLoad(
+    path: string,
+    load: (p: string, clientToken: string) => Promise<ProjectTree>,
+    storePath: boolean,
+  ) {
     if (loadingRef.current) return;
     loadingRef.current = true;
     clearErrors();
-    loadSourceRef.current = fileNameOf(path);
-    setLoadSource(loadSourceRef.current);
+    setLoadSource(fileNameOf(path));
     setLoadSnapshot(null);
-    // Read the operation counter before asking for a new operation. Every
-    // snapshot from here on is judged against it, so a finished earlier
-    // load or another client's operation can never be rendered under this
-    // file's name. A failed read leaves the baseline `null`, and then
-    // nothing at all is adopted: "Starting…" until the POST answers is
-    // less informative than a phase name and a great deal truer.
-    loadOperationRef.current = null;
-    loadBaselineRef.current = await api
-      .loadProgress()
-      .then((snapshot) => snapshot?.operationId ?? 0)
-      .catch(() => null);
+    // The one fact `ownsOperation` needs: an id nobody else could send,
+    // generated before the POST so every snapshot from here on — the
+    // poll's and the post-failure fetch's alike — can be judged against
+    // it (ADR-0023 fix round 3, F9).
+    loadClientTokenRef.current = crypto.randomUUID();
     setLoading(true);
     try {
-      resetTree(await load(path));
+      resetTree(await load(path, loadClientTokenRef.current));
       setHasStorePath(storePath);
       setLoadSource(null);
       setLoadSnapshot(null);
@@ -495,12 +487,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
       // threw. A load that is over must never leave a bar moving.
       const message = api.errorMessage(e);
       const final = await api.loadProgress().catch(() => null);
-      const ours =
-        final?.status === "failed" &&
-        ownsOperation(
-          { baseline: loadBaselineRef.current, expectedSource: loadSourceRef.current, adopted: loadOperationRef.current },
-          final,
-        );
+      const ours = final?.status === "failed" && ownsOperation({ clientToken: loadClientTokenRef.current }, final);
       setLoadSnapshot((previous) => (ours && final ? final : localFailure(previous, message)));
     } finally {
       setLoading(false);
@@ -522,17 +509,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
       try {
         const snapshot = await api.loadProgress();
         if (cancelled || snapshot?.status !== "running") return;
-        if (
-          !ownsOperation(
-            { baseline: loadBaselineRef.current, expectedSource: loadSourceRef.current, adopted: loadOperationRef.current },
-            snapshot,
-          )
-        ) {
-          return;
-        }
-        // First sighting wins: from here on this load answers to exactly
-        // one id, and a later operation cannot take the banner over.
-        loadOperationRef.current = snapshot.operationId;
+        if (!ownsOperation({ clientToken: loadClientTokenRef.current }, snapshot)) return;
         setLoadSnapshot(snapshot);
       } catch {
         /* see above */

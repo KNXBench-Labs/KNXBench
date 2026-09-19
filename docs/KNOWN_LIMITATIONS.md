@@ -5237,6 +5237,30 @@ the tree is reported as the failure it is for that client. The staleness
 itself is unchanged — the page still has no project and still needs a
 reload — because there is still no route that hands out the current tree.
 
+**Narrowed further, 2026-09-19 (T37 fix round 2, F8).** Round 1's ownership
+test was id-only: a foreign operation that started *after* the client's
+pre-flight baseline read but *before* its own POST was refused could carry
+a higher id than the baseline and be adopted anyway. Round 2 added a
+`source` check — the polled snapshot also had to name the same file this
+load submitted — which closed that particular race but left an
+acknowledged residual: two clients loading files with the same base name
+from different directories, inside the same baseline-to-adoption window,
+were still indistinguishable by id-and-source alone. The banner could show
+a stranger's phase, or a stranger's failure, under a file name that merely
+happened to match.
+
+**Closed, 2026-09-19 (T37 fix round 3, F9).** The id-and-source heuristic
+is deleted, not patched again: the client now generates an opaque token
+with `crypto.randomUUID()` before its POST, sends it as `clientToken`, and
+the server echoes it verbatim on every snapshot of that operation.
+Ownership is exact equality on that token — no baseline read, no id
+comparison, no `source` comparison, and therefore no window for a
+same-named stranger to fall into, regardless of directory or timing. This
+closes round 2's residual gap entirely; it does not touch the limitation
+itself, which is unchanged: there is still no `GET /api/project`, so a
+browser that loses its own POST's response still has nothing to re-fetch
+the tree from and still needs a reload.
+
 **Lifted when.** A `GET /api/project` exists and the frontend falls back to
 it when a poll reports an operation it did not see finish.
 

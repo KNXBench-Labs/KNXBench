@@ -18,6 +18,7 @@ function snapshot(overrides: Partial<LoadProgressSnapshot> = {}): LoadProgressSn
     total: null,
     status: "running",
     error: null,
+    clientToken: "own-token",
     ...overrides,
   };
 }
@@ -76,84 +77,45 @@ describe("phaseMessageKey", () => {
   });
 });
 
-// The client half of ADR-0023's operation id (fix round 1, F2). Without
-// this the banner cannot tell its own load from the previous one or from
-// another client's, which is what F1 was.
+// The client half of ADR-0023's ownership test (fix round 3, F9). Three
+// rounds of a server-side heuristic — no filter, an id-only filter, an
+// id-and-source filter — each let one client's poll adopt another
+// client's operation. This replaces all of it with exact equality on an
+// opaque token the client generates for itself.
 describe("ownsOperation", () => {
-  const ours = "villa.knxproj";
+  const ours = "own-token";
 
-  it("adopts an operation newer than everything that predates the load", () => {
-    expect(ownsOperation({ baseline: 3, expectedSource: ours, adopted: null }, snapshot({ operationId: 4 }))).toBe(
-      true,
-    );
-    expect(ownsOperation({ baseline: 0, expectedSource: ours, adopted: null }, snapshot({ operationId: 1 }))).toBe(
-      true,
-    );
+  it("owns a snapshot carrying exactly this load's token", () => {
+    expect(ownsOperation({ clientToken: ours }, snapshot({ clientToken: ours }))).toBe(true);
   });
 
-  it("disowns the operation that was already there", () => {
-    // Probe A and probe C in one line: a finished earlier load and a
-    // stranger's running one both carry an id the baseline already knew.
-    expect(ownsOperation({ baseline: 3, expectedSource: ours, adopted: null }, snapshot({ operationId: 3 }))).toBe(
-      false,
-    );
-    expect(ownsOperation({ baseline: 7, expectedSource: ours, adopted: null }, snapshot({ operationId: 7 }))).toBe(
-      false,
-    );
-    expect(ownsOperation({ baseline: 7, expectedSource: ours, adopted: null }, snapshot({ operationId: 2 }))).toBe(
-      false,
-    );
+  it("disowns a snapshot carrying a different token", () => {
+    expect(ownsOperation({ clientToken: ours }, snapshot({ clientToken: "someone-elses-token" }))).toBe(false);
   });
 
-  // Round 2, F8: an id newer than the baseline is not enough by itself — a
-  // foreign operation that starts *after* our baseline read clears that
-  // test too. `source` is the second fact that keeps it from being
-  // adopted. The residual this does not close: two clients loading files
-  // with the same base name in the same window are still indistinguishable.
-  it("does not adopt a newer id whose source is somebody else's file", () => {
+  // F9's exact failure: two clients loading files with the same base name
+  // from different directories both land in the same baseline-to-adoption
+  // window the old heuristic could not see past. The token makes that
+  // window irrelevant — a snapshot is never ours because of *when* it
+  // appeared or *what* it is named, only because of the id it carries.
+  it("disowns a same-basename stranger's operation even mid-window", () => {
     expect(
       ownsOperation(
-        { baseline: 0, expectedSource: ours, adopted: null },
-        snapshot({ operationId: 2, source: "someone-elses.knxdb" }),
+        { clientToken: ours },
+        snapshot({ operationId: 9, source: "villa.knxproj", clientToken: "strangers-token" }),
       ),
     ).toBe(false);
   });
 
-  it("owns exactly one id once it has adopted one", () => {
-    expect(ownsOperation({ baseline: 0, expectedSource: ours, adopted: 5 }, snapshot({ operationId: 5 }))).toBe(
-      true,
-    );
-    // A later operation cannot take the banner over, even though it
-    // would clear the baseline test.
-    expect(ownsOperation({ baseline: 0, expectedSource: ours, adopted: 5 }, snapshot({ operationId: 6 }))).toBe(
-      false,
-    );
-  });
-
-  // After adoption the id is the only thing that decides it — source plays
-  // no further part, unchanged from before this round.
-  it("ignores source once an id has been adopted", () => {
-    expect(
-      ownsOperation(
-        { baseline: 0, expectedSource: ours, adopted: 5 },
-        snapshot({ operationId: 5, source: "someone-elses.knxdb" }),
-      ),
-    ).toBe(true);
-  });
-
-  it("owns nothing when the baseline could not be read", () => {
-    // Probe B: the pre-flight read failed, so no id can be attributed to
-    // this load. "Starting…" is less informative and a great deal truer.
-    expect(ownsOperation({ baseline: null, expectedSource: ours, adopted: null }, snapshot({ operationId: 1 }))).toBe(
-      false,
-    );
-    expect(
-      ownsOperation({ baseline: null, expectedSource: ours, adopted: null }, snapshot({ operationId: 99 })),
-    ).toBe(false);
+  it("owns nothing when the operation carries no token at all", () => {
+    // An operation nobody sent a token for belongs to nobody — not to
+    // whoever happens to be polling, which would be the old heuristic's
+    // mistake wearing a new name.
+    expect(ownsOperation({ clientToken: ours }, snapshot({ clientToken: null }))).toBe(false);
   });
 
   it("owns nothing when there is no snapshot", () => {
-    expect(ownsOperation({ baseline: 0, expectedSource: ours, adopted: null }, null)).toBe(false);
+    expect(ownsOperation({ clientToken: ours }, null)).toBe(false);
   });
 });
 

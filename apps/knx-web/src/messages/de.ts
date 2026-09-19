@@ -622,6 +622,7 @@ export const messages: Record<MessageKey, string> = {
   "groupAddressCsv.importSummaryIgnoredColumns.other": "{count} Spalten ignoriert",
   "groupAddressCsv.importSummarySeeLog": "— siehe Log.",
   "appearance.accent": "Akzentfarbe",
+  "appearance.accentUnavailable": "Dieses Theme behält seinen eigenen Akzent; die Akzenteinstellung hat hier keine Wirkung.",
   "appearance.density": "Dichte",
   "appearance.violet": "Violett",
   "appearance.mint": "Mint",

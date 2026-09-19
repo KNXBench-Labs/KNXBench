@@ -6,9 +6,11 @@ Status: Accepted
 
 ## Context
 
-`apps/knx-web/src/styles.css` carried three themes and 28 `--knx-*` custom
-properties with no rule saying which of them a theme is responsible for. The
-result was visible in the stylesheet before this ADR was written:
+`apps/knx-web/src/styles.css` carried three themes and 31 `--knx-*` custom
+properties declared in total (26 once the five that turned out to belong to
+the component layer are set aside), with no rule saying which of them a
+theme is responsible for. The result was visible in the stylesheet before
+this ADR was written:
 
 - The light palette was defined **by negation** —
   `:root:not([data-theme="bitcoin-defi"])` — and so were all four accent
@@ -17,7 +19,7 @@ result was visible in the stylesheet before this ADR was written:
   without anyone declaring it.
 - `--knx-on-accent` existed in two themes out of three. The third compensated
   with a hard-coded `color: #ffffff` on every button: white on `#f7931a`, a
-  contrast ratio of about 2.2:1.
+  contrast ratio of about 2.3:1.
 - Graphite, the dark theme, inherited the light theme's shadows
   (`0 1px 2px #1721390a` over a `#171b22` canvas), which is a shadow nobody
   can see.

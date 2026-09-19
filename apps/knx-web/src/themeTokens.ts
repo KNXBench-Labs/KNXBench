@@ -152,7 +152,7 @@ function selectorParts(selector: string): string[] {
 export function themeBlocks(rules: readonly CssRule[]): ThemeBlock[] {
   const blocks: ThemeBlock[] = [];
   for (const rule of rules) {
-    const match = THEME_BASE_SELECTOR.exec(rule.selector);
+    const match = rule.depth === 0 ? THEME_BASE_SELECTOR.exec(rule.selector) : null;
     if (match) blocks.push({ id: match[1], rule });
   }
   return blocks;
@@ -161,7 +161,7 @@ export function themeBlocks(rules: readonly CssRule[]): ThemeBlock[] {
 export function themeVariationBlocks(rules: readonly CssRule[]): ThemeVariationBlock[] {
   const blocks: ThemeVariationBlock[] = [];
   for (const rule of rules) {
-    const match = THEME_VARIATION_SELECTOR.exec(rule.selector);
+    const match = rule.depth === 0 ? THEME_VARIATION_SELECTOR.exec(rule.selector) : null;
     if (match) blocks.push({ id: match[1], accent: match[2], rule });
   }
   return blocks;
@@ -230,6 +230,6 @@ export function blockTokens(rule: CssRule): string[] {
 export function blockPlainProperties(rule: CssRule): string[] {
   return rule.declarations
     .map((declaration) => declaration.property)
-    .filter((property) => !property.startsWith("--"))
+    .filter((property) => !property.startsWith("--knx-"))
     .sort();
 }

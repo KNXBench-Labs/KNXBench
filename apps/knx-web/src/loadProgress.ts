@@ -108,14 +108,23 @@ export interface LoadOwnership {
  * Whether `snapshot` describes the caller's own load.
  *
  * Exact equality against `clientToken`, nothing else — no id, no source,
- * no notion of "adopting" an operation over time. A `null` or mismatched
- * token is never ours, including a snapshot from an operation nobody sent
- * a token for: that operation belongs to nobody, and rendering it under
+ * no notion of "adopting" an operation over time. A mismatched token is
+ * never ours, and neither is a snapshot from an operation nobody sent a
+ * token for: that operation belongs to nobody, and rendering it under
  * this load's file name would be exactly the mistake this token exists to
  * end.
+ *
+ * The guard is positive — the echoed token must *be* a non-empty string —
+ * rather than `!== null` (fix round 4, F12). A server build that omits
+ * the field, or an older one that spells "none" as an empty string, sends
+ * something that is not `null` and would otherwise sail past; paired with
+ * a client that never generated a token of its own, `undefined ===
+ * undefined` would hand a stranger's operation straight back. Two values
+ * that are both absent are not the same load, they are two absences.
  */
 export function ownsOperation(ownership: LoadOwnership, snapshot: LoadProgressSnapshot | null): boolean {
-  return snapshot !== null && snapshot.clientToken !== null && snapshot.clientToken === ownership.clientToken;
+  const token = snapshot?.clientToken;
+  return typeof token === "string" && token !== "" && token === ownership.clientToken;
 }
 
 /**

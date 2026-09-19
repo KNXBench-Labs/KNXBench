@@ -71,12 +71,17 @@ same-named stranger to fall into.
 
 A missing token belongs to nobody. An operation started with no
 `clientToken` (an older caller, or none sent) carries `null` in every
-snapshot, and `ownsOperation` never matches `null` against anything —
-including another load that also sent no token. The banner for such a
-load simply stays on `starting` until its own POST answers; that is less
-informative than naming a phase, and exactly as true as the feature's
-core rule requires. There is no baseline read before the POST any more —
-nothing to compute one from, and nothing it would be used for.
+snapshot, and `ownsOperation` never matches an absent token against
+anything — including another load that also sent no token. The guard is
+stated positively (fix round 4, F12): the echoed value must *be* a
+non-empty string before it is compared at all, because "absent" has three
+spellings on this wire — `null`, a field a future server build omits
+(`undefined`), and `""` — and a `!== null` test lets two of them through.
+Two absences are not a match, they are two absences. The banner for such
+a load simply stays on `starting` until its own POST answers; that is
+less informative than naming a phase, and exactly as true as the
+feature's core rule requires. There is no baseline read before the POST
+any more — nothing to compute one from, and nothing it would be used for.
 
 When a load ends in an error, the client accepts the final snapshot only
 if it is its own **and** says `failed`. Every other case — no snapshot, a
@@ -221,9 +226,15 @@ verbatim, and no token stored as `None`, never a guess);
 `apps/knx-server/tests/http_load_progress.rs` covers the route, the
 `409`, that a failed load leaves the previously open project in place,
 and that `clientToken` round-trips through the HTTP layer in both
-directions; `apps/knx-web/src/loadProgress.test.ts` covers `ownsOperation`
+directions — on the import route, on the native open route, and on a
+load that fails (fix round 4, F11 and F13: the open route had no such
+test, so dropping the token from that one POST body passed every gate);
+`apps/knx-web/src/api.test.ts` asserts both POST bodies actually carry
+the token; `apps/knx-web/src/loadProgress.test.ts` covers `ownsOperation`
 as exact token equality (including the same-basename case fix round 3
-closed) and `LoadProgressBanner.test.tsx` covers determinate vs
+closed, and the absent/empty tokens on either side that fix round 4's
+positive guard refuses) and `LoadProgressBanner.test.tsx` covers
+determinate vs
 indeterminate rendering, the `aria-live` announcement and the failure
 state; `App.test.tsx` covers duplicate prevention in the UI and that a
 same-basename stranger's failure is never rendered as the local client's

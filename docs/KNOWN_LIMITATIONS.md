@@ -5310,3 +5310,99 @@ mistaking correct behaviour for a bug.
 lifting. It would only need revisiting if a later KNX Standard erratum or
 edition corrects one of the seven clauses, at which point the corresponding
 list item names which one no longer applies.
+
+## 96. A browser that loses the import response cannot get the project back without reloading
+
+**Limitation.** ADR-0023 makes a project load an operation the server owns:
+`POST /api/project/import` (or `/open`) runs on a blocking task that
+finishes whether or not the client is still listening, and
+`GET /api/project/load-progress` reports what it is doing. A client that
+loses the POST's response — a closed tab, a dropped connection, a reverse
+proxy timing the request out — therefore learns from the next poll that the
+load *succeeded*, and still has no `ProjectTree` to render. There is no
+`GET /api/project`, so nothing can re-fetch the tree it missed. The only
+recovery is to reload the page, which re-renders from a server whose
+project is already the new one.
+
+**Cause.** The `ProjectTree` is returned by the POST and nowhere else. That
+was harmless while the request *was* the operation; making the operation
+outlive the request is what created the gap. Adding a read route for the
+open project is a small change and a deliberate non-goal of T37, which
+changed no existing response shape.
+
+**Consequence.** A user who closes the tab mid-import does not lose the
+import — the project is loaded server-side — but does have to reload to see
+it. Nothing is silently discarded, and the snapshot says plainly which
+operation finished and whether it failed.
+
+**Narrowed, 2026-09-19 (T37 fix round 1).** The client now owns its
+operation id (ADR-0023, "the client half of the id"), so a lost response
+no longer leaves a banner claiming the load is still running: the final
+snapshot is accepted only when it is this load's *and* says `failed`, and
+our own operation reporting `succeeded` to a client that never received
+the tree is reported as the failure it is for that client. The staleness
+itself is unchanged — the page still has no project and still needs a
+reload — because there is still no route that hands out the current tree.
+
+**Narrowed further, 2026-09-19 (T37 fix round 2, F8).** Round 1's ownership
+test was id-only: a foreign operation that started *after* the client's
+pre-flight baseline read but *before* its own POST was refused could carry
+a higher id than the baseline and be adopted anyway. Round 2 added a
+`source` check — the polled snapshot also had to name the same file this
+load submitted — which closed that particular race but left an
+acknowledged residual: two clients loading files with the same base name
+from different directories, inside the same baseline-to-adoption window,
+were still indistinguishable by id-and-source alone. The banner could show
+a stranger's phase, or a stranger's failure, under a file name that merely
+happened to match.
+
+**Closed, 2026-09-19 (T37 fix round 3, F9).** The id-and-source heuristic
+is deleted, not patched again: the client now generates an opaque token
+with `crypto.randomUUID()` before its POST, sends it as `clientToken`, and
+the server echoes it verbatim on every snapshot of that operation.
+Ownership is exact equality on that token — no baseline read, no id
+comparison, no `source` comparison, and therefore no window for a
+same-named stranger to fall into, regardless of directory or timing. This
+closes round 2's residual gap entirely; it does not touch the limitation
+itself, which is unchanged: there is still no `GET /api/project`, so a
+browser that loses its own POST's response still has nothing to re-fetch
+the tree from and still needs a reload.
+
+**One more hole in the same wall, 2026-09-19 (T37 fix round 6, F-C).**
+Ownership answered *whose* operation a snapshot describes, never whether
+the load watching it was still running. A POST dying at transport level —
+the same dropped connection this entry is about — left the poll interval
+armed across the `await` in `runLoad`'s catch, and the effect's `cancelled`
+latch is closed by React's cleanup rather than by `finally`, so a poll
+resolving in between passed every filter and painted a `running` phase over
+the failure. Polling then stopped, and the banner stayed on that phase, with
+a moving shuttle, for the rest of the session. A generation counter bumped
+in `finally` and compared by every poll across its own fetch closes it. The
+limitation itself is still unchanged: no route hands out the current tree.
+
+**Lifted when.** A `GET /api/project` exists and the frontend falls back to
+it when a poll reports an operation it did not see finish.
+
+## 97. Progress is a phase label far more often than it is a percentage
+
+**Limitation.** Of the seventeen phases a load reports, exactly two carry a
+`completed`/`total` pair: reading the container entries the exporter cannot
+regenerate, and ingesting manufacturer files. Every other phase — including
+`parseTopology`, which is the longest one in the maintainer's reference
+project — shows an indeterminate indicator and its name. The bar does not
+fill smoothly from 0 % to 100 %, because for most of a load there is no
+honest number to fill it with.
+
+**Cause.** A percentage needs a total that is known before the work starts.
+Topology parsing is a streaming XML pass with no element count in hand;
+enrichment visits whatever the product database happens to resolve. The
+alternatives — elapsed time, compressed size, the phase ordinal — are all
+forbidden by ADR-0023 for the same reason: they would report something
+other than progress while looking exactly like progress.
+
+**Consequence.** Users see "Parsing the topology" with a moving indicator
+rather than "43 %". This is the intended trade, not an unfinished feature.
+
+**Lifted when.** A phase gains a total that is genuinely known in advance —
+counting topology elements in a cheap first pass would be one way, and
+would have to pay for itself in measured time before it is worth it.

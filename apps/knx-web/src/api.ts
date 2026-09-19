@@ -33,12 +33,64 @@ function requestError(status: number, message: string): Error {
   return error;
 }
 
-export function importProject(path: string): Promise<ProjectTree> {
-  return request("/api/project/import", { method: "POST", body: JSON.stringify({ path }) });
+/**
+ * `clientToken` is the opaque per-load id `App.tsx`'s `runLoad` generates
+ * with `crypto.randomUUID()` (ADR-0023 fix round 3, F9). The server stores
+ * it on the operation and echoes it in every `LoadProgressSnapshot`;
+ * `loadProgress.ts`'s `ownsOperation` is exact equality against it, not a
+ * fact this module derives.
+ */
+export function importProject(path: string, clientToken: string): Promise<ProjectTree> {
+  return request("/api/project/import", {
+    method: "POST",
+    body: JSON.stringify({ path, clientToken }),
+  });
 }
 
-export function openProject(path: string): Promise<ProjectTree> {
-  return request("/api/project/open", { method: "POST", body: JSON.stringify({ path }) });
+export function openProject(path: string, clientToken: string): Promise<ProjectTree> {
+  return request("/api/project/open", {
+    method: "POST",
+    body: JSON.stringify({ path, clientToken }),
+  });
+}
+
+/**
+ * What the server is doing inside the one `importProject`/`openProject`
+ * call that is still in flight — `GET /api/project/load-progress`, the
+ * whole of ADR-0023's transport.
+ *
+ * `completed`/`total` are both `null` for every phase that has no real
+ * count to report, which is most of them; the two that do are counting
+ * things they have already finished, never predicting. Nothing here is
+ * derived from elapsed time, and the snapshot deliberately carries no
+ * timestamp for a caller to be tempted by.
+ */
+export interface LoadProgressSnapshot {
+  /** Monotonic per server run, never reused. Not how a poller tells its
+   * own load apart from anyone else's — see `clientToken` for that; this
+   * is purely a server-side sequence number. */
+  operationId: number;
+  kind: "import" | "open";
+  /** The file name, never the full path. */
+  source: string;
+  /** A wire phase name (`loadProgress.ts`'s `LOAD_PHASES`). */
+  phase: string;
+  completed: number | null;
+  total: number | null;
+  status: "running" | "succeeded" | "failed";
+  /** Set only when `status` is `"failed"` — the same message the POST
+   * rejected with, kept for a client that lost that response. */
+  error: string | null;
+  /** The `clientToken` this operation was started with, or `null` when
+   * none was sent. `loadProgress.ts`'s `ownsOperation` is exact equality
+   * between this and the token `runLoad` generated for its own load
+   * (ADR-0023 fix round 3, F9) — the entire ownership test. */
+  clientToken: string | null;
+}
+
+/** `null` when this server run has never loaded anything. */
+export function loadProgress(): Promise<LoadProgressSnapshot | null> {
+  return request("/api/project/load-progress");
 }
 
 /**

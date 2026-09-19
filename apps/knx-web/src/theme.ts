@@ -1,14 +1,18 @@
 /** The registry of selectable themes, and where the choice is persisted and read back. */
 import { useEffect, useState } from "react";
 
-export interface ThemeDef { id: string; name: string; }
+/** `hasAccentVariations` is whether styles.css declares any
+ * `[data-accent="…"]` variation for this theme (ADR-0022: three of five
+ * treat the accent as identity and declare none). `themeTokens.test.ts`
+ * checks this flag against the stylesheet so it cannot go stale. */
+export interface ThemeDef { id: string; name: string; hasAccentVariations: boolean; }
 export const THEMES: readonly ThemeDef[] = [
-  { id: "system", name: "System" },
-  { id: "porcelain", name: "Porcelain" },
-  { id: "graphite", name: "Graphite" },
-  { id: "cupertino", name: "Cupertino" },
-  { id: "neon-grid", name: "Neon Grid" },
-  { id: "bitcoin-defi", name: "Bitcoin DeFi" },
+  { id: "system", name: "System", hasAccentVariations: true },
+  { id: "porcelain", name: "Porcelain", hasAccentVariations: true },
+  { id: "graphite", name: "Graphite", hasAccentVariations: true },
+  { id: "cupertino", name: "Cupertino", hasAccentVariations: false },
+  { id: "neon-grid", name: "Neon Grid", hasAccentVariations: false },
+  { id: "bitcoin-defi", name: "Bitcoin DeFi", hasAccentVariations: false },
 ];
 const STORAGE_KEY = "knx-desktop:theme";
 

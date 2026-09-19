@@ -732,6 +732,7 @@ export const messages = {
   "groupAddressCsv.importSummaryIgnoredColumns.other": "{count} columns ignored",
   "groupAddressCsv.importSummarySeeLog": "— see Log.",
   "appearance.accent": "Accent color",
+  "appearance.accentUnavailable": "This theme keeps its own accent; the accent setting has no effect here.",
   "appearance.density": "Density",
   "appearance.violet": "Violet",
   "appearance.mint": "Mint",

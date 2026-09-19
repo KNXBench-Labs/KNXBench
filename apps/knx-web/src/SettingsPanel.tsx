@@ -229,6 +229,12 @@ export default function SettingsPanel(props: {
   const packs = useLanguagePacks();
   const [importOutcome, setImportOutcome] = useState<ImportOutcome | null>(null);
 
+  // Cupertino, Neon Grid and Bitcoin DeFi treat the accent as identity and
+  // declare no `[data-accent="…"]` variations (ADR-0022) — the control
+  // below would silently do nothing for them, so it is disabled instead.
+  const activeTheme = themes.find((theme) => theme.id === activeThemeId);
+  const accentUnavailable = activeTheme !== undefined && !activeTheme.hasAccentVariations;
+
   async function handleImportFile(file: File) {
     let raw: unknown;
     try {
@@ -313,9 +319,13 @@ export default function SettingsPanel(props: {
         <label className="settings-field">
           <span className="settings-field-label">{t("appearance.accent")}</span>
           <select aria-label={t("appearance.accent")} value={props.appearance.accent}
+            disabled={accentUnavailable}
             onChange={(e) => props.appearance!.setAccent(e.target.value as typeof ACCENTS[number])}>
             {ACCENTS.map((accent) => <option key={accent} value={accent}>{t(`appearance.${accent}`)}</option>)}
           </select>
+          {accentUnavailable && (
+            <span className="settings-field-hint">{t("appearance.accentUnavailable")}</span>
+          )}
         </label>
         <label className="settings-field">
           <span className="settings-field-label">{t("appearance.density")}</span>

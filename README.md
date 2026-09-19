@@ -66,10 +66,18 @@ The server has **no authentication**. Run it only on a trusted network; use a
 firewall or an authenticated reverse proxy before exposing it anywhere less
 friendly than your LAN.
 
-To run the Docker smoke test (build, boot, health check, and project import):
+To run the Docker smoke test (build, boot, health check, and native
+save/reopen cycle):
 
 ```bash
 apps/knx-server/scripts/smoke-test.sh
+```
+
+To additionally import a local ETS project through the running image:
+
+```bash
+KNXBENCH_REFERENCE_PROJECT="/path/to/reference.knxproj" \
+  apps/knx-server/scripts/smoke-test.sh
 ```
 
 ### Update a running Docker installation
@@ -104,15 +112,49 @@ npm ci
 cargo tauri dev
 ```
 
-Create a release bundle with:
+Build the Linux AppImage locally with the same bundle command that the release
+workflow uses:
 
 ```bash
+cd /path/to/KNXBench
+npm ci --prefix apps/knx-web
 cd apps/knx-desktop
-cargo tauri build
+NO_STRIP=1 APPIMAGE_EXTRACT_AND_RUN=1 cargo tauri build --bundles appimage --ci
 ```
 
 The desktop shell starts the same `knx-server` core used by Docker; the React
 frontend always talks HTTP rather than directly to storage or import code.
+
+### Linux AppImage
+
+The AppImage is the first Linux desktop package ([ADR 0021](docs/adr/0021-appimage-is-the-first-linux-package.md)).
+After downloading the current alpha artifact, make it executable and start it:
+
+```bash
+appimage='KNXBench_0.1.0-alpha.1_amd64.AppImage'
+chmod +x "$appimage"
+"./$appimage"
+```
+
+The GitHub Actions `Linux AppImage` workflow is configured to build and upload
+an Actions artifact for a manual run. A pushed `v*` tag is configured to create
+or update a GitHub release with that artifact. The workflow has not been run by
+this project yet; use a published release only after it exists and verify its
+file identity from that release.
+
+One local artifact was built and launched on Arch Linux through XWayland. Its
+tested boundary is x86_64 Linux with compatible glibc, GTK 3, and WebKitGTK
+4.1; it is not a portability result for other distributions or display stacks.
+The desktop stores its application data under
+`$XDG_DATA_HOME/com.knxbench.knxbench-labs/projects` (usually
+`~/.local/share/com.knxbench.knxbench-labs/projects`).
+
+There is no automatic updater, package signature, ARM64 build, or native
+package-manager integration in this alpha. To update, close KNXBench and
+replace the AppImage file manually. To remove the application, delete that
+file; delete the application-data directory separately only if its stored
+projects are no longer needed. The AppImage does not install or update host
+GTK/WebKitGTK dependencies.
 
 ## CLI
 
@@ -184,4 +226,10 @@ from. See [ADR-0018](docs/adr/0018-program-versions-and-file-headers.md).
 
 ## License
 
-AGPL-3.0-or-later.
+KNXBench is free software licensed under the
+[GNU Affero General Public License version 3 or later](LICENSE).
+
+The licence permits private and commercial use, modification, and
+redistribution under its terms. Modified versions made available to users over
+a network must also offer those users the corresponding source code as required
+by the AGPL.

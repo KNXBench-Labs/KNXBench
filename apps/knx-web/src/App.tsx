@@ -125,10 +125,14 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   const loadingRef = useRef(false);
   // ADR-0023's client half of the operation id. `loadBaselineRef` is the
   // counter as it stood just before this load asked for an operation;
-  // `loadOperationRef` is the id it adopted once a poll produced one.
-  // Refs, not state: the poll must read the current values, not the ones
-  // captured when its effect was created.
+  // `loadSourceRef` is the file name that load submitted, the second fact
+  // `ownsOperation` needs before it will adopt an id (round 2, F8: a
+  // foreign operation starting after the baseline read still clears the
+  // id-only test); `loadOperationRef` is the id it adopted once a poll
+  // produced one. Refs, not state: the poll must read the current values,
+  // not the ones captured when its effect was created.
   const loadBaselineRef = useRef<number | null>(null);
+  const loadSourceRef = useRef<string>("");
   const loadOperationRef = useRef<number | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [deviceDetail, setDeviceDetail] = useState<DeviceDetail | null>(null);
@@ -456,7 +460,8 @@ function App({ manifestVersion = packageVersion }: AppProps) {
     if (loadingRef.current) return;
     loadingRef.current = true;
     clearErrors();
-    setLoadSource(fileNameOf(path));
+    loadSourceRef.current = fileNameOf(path);
+    setLoadSource(loadSourceRef.current);
     setLoadSnapshot(null);
     // Read the operation counter before asking for a new operation. Every
     // snapshot from here on is judged against it, so a finished earlier
@@ -492,7 +497,10 @@ function App({ manifestVersion = packageVersion }: AppProps) {
       const final = await api.loadProgress().catch(() => null);
       const ours =
         final?.status === "failed" &&
-        ownsOperation({ baseline: loadBaselineRef.current, adopted: loadOperationRef.current }, final);
+        ownsOperation(
+          { baseline: loadBaselineRef.current, expectedSource: loadSourceRef.current, adopted: loadOperationRef.current },
+          final,
+        );
       setLoadSnapshot((previous) => (ours && final ? final : localFailure(previous, message)));
     } finally {
       setLoading(false);
@@ -514,7 +522,14 @@ function App({ manifestVersion = packageVersion }: AppProps) {
       try {
         const snapshot = await api.loadProgress();
         if (cancelled || snapshot?.status !== "running") return;
-        if (!ownsOperation({ baseline: loadBaselineRef.current, adopted: loadOperationRef.current }, snapshot)) return;
+        if (
+          !ownsOperation(
+            { baseline: loadBaselineRef.current, expectedSource: loadSourceRef.current, adopted: loadOperationRef.current },
+            snapshot,
+          )
+        ) {
+          return;
+        }
         // First sighting wins: from here on this load answers to exactly
         // one id, and a later operation cannot take the banner over.
         loadOperationRef.current = snapshot.operationId;

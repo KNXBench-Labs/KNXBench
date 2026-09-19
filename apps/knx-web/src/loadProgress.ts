@@ -91,10 +91,12 @@ export function isRunning(snapshot: LoadProgressSnapshot | null): boolean {
  * How a poller decides a snapshot belongs to the load it started.
  *
  * The POST that starts a load does not return the operation id, so the
- * client establishes it in two steps: read the counter *before* asking
- * for a new operation (`baseline`), then adopt the first running
- * operation whose id is higher (`adopted`). Everything ADR-0023 promises
- * about the id rests on this pair.
+ * client establishes it from two facts about its own request: read the
+ * counter *before* asking for a new operation (`baseline`), and know the
+ * file name it is loading (`expectedSource`, the same `fileNameOf(path)`
+ * the server itself stores in `source` — see `routes.rs`). Adoption
+ * requires both; once a poll has adopted an id, `adopted` alone decides
+ * from then on. Everything ADR-0023 promises about the id rests on this.
  */
 export interface LoadOwnership {
   /**
@@ -104,6 +106,14 @@ export interface LoadOwnership {
    * this load at all, which is the honest answer rather than a guess.
    */
   baseline: number | null;
+  /**
+   * The file name this load submitted (`fileNameOf(path)`), compared
+   * against the candidate snapshot's `source` before adoption. A foreign
+   * operation that starts after our baseline read still clears the id
+   * test on its own — this is the second fact that keeps it from being
+   * adopted anyway.
+   */
+  expectedSource: string;
   /** The id this load adopted, once a poll identified one. */
   adopted: number | null;
 }
@@ -111,16 +121,22 @@ export interface LoadOwnership {
 /**
  * Whether `snapshot` describes the caller's own load.
  *
- * Before adoption the test is "newer than anything that predates us";
- * after it, equality, because the id is never reused. A snapshot that
- * fails this is somebody else's operation or a finished earlier one, and
- * rendering it would put another load's phase under our file name.
+ * Before adoption the test is "newer than anything that predates us, and
+ * loading the file we asked for"; after it, equality on the id alone,
+ * because the id is never reused. A snapshot that fails this is somebody
+ * else's operation or a finished earlier one, and rendering it would put
+ * another load's phase under our file name.
+ *
+ * Residual, stated plainly: two clients loading files with the same base
+ * name inside the same baseline-to-adoption window are still
+ * indistinguishable by this function. `source` narrows the id-only test
+ * from round 1; it does not make the id unambiguous.
  */
 export function ownsOperation(ownership: LoadOwnership, snapshot: LoadProgressSnapshot | null): boolean {
   if (!snapshot) return false;
   if (ownership.adopted !== null) return snapshot.operationId === ownership.adopted;
   if (ownership.baseline === null) return false;
-  return snapshot.operationId > ownership.baseline;
+  return snapshot.operationId > ownership.baseline && snapshot.source === ownership.expectedSource;
 }
 
 /**

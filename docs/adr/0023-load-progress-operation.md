@@ -55,23 +55,36 @@ open while one is running is refused with `409 Conflict`, not queued.
 
 **The client half of the id.** The POST does not return the operation id —
 its body is the project tree, unchanged — so the browser establishes
-ownership in two steps, implemented in `App.tsx`'s `runLoad` and the
-helpers in `loadProgress.ts`:
+ownership from two facts about its own request, implemented in `App.tsx`'s
+`runLoad` and the helpers in `loadProgress.ts`:
 
 1. **Baseline.** Before asking for a new operation, read the current
    snapshot once. Its `operationId` (or `0` when there is none) is the
    highest id that *predates* this load.
-2. **Adoption.** The first polled snapshot that is `running` **and** has an
-   id greater than the baseline is this load's own. Its id is remembered,
-   and from then on only that exact id is accepted — the id is never
-   reused, so equality is exact.
+2. **Adoption.** The first polled snapshot that is `running`, has an id
+   greater than the baseline, **and** whose `source` equals the file name
+   this load submitted (`fileNameOf(path)`, the same function the server
+   applies to fill `source` — `routes.rs`) is this load's own. Its id is
+   remembered, and from then on only that exact id is accepted — the id
+   is never reused, so equality is exact and `source` plays no further
+   part.
 
-Anything failing both tests belongs to somebody else: a finished earlier
-load, or the operation whose existence is the reason our POST was refused
-with `409`. It is never rendered. If the baseline read itself fails,
-nothing is adopted at all for that load: the banner says `starting` until
-the POST answers, which is less informative and a great deal truer than
-naming a stranger's phase.
+The `source` check was added in fix round 2 (finding F8): the id-only test
+adopted a foreign operation whenever that operation happened to start
+*after* the baseline read but *before* our POST was refused — a `409` case
+the baseline cannot see, because the foreign id is genuinely higher. It
+narrows the window, it does not close it: **two clients loading files
+with the same base name inside the same baseline-to-adoption window are
+still indistinguishable.** The banner would show the stranger's phase
+under a file name that happens to match. This is a real, acknowledged gap
+in a single-user desktop tool's protocol, not a fixed one.
+
+Anything failing both id and source tests belongs to somebody else: a
+finished earlier load, or the operation whose existence is the reason our
+POST was refused with `409`. It is never rendered. If the baseline read
+itself fails, nothing is adopted at all for that load: the banner says
+`starting` until the POST answers, which is less informative and a great
+deal truer than naming a stranger's phase.
 
 When a load ends in an error, the client accepts the final snapshot only
 if it is its own **and** says `failed`. Every other case — no snapshot, a

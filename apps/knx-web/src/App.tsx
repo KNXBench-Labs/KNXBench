@@ -253,8 +253,8 @@ function App({ manifestVersion = packageVersion }: AppProps) {
   // nothing out of here.
   async function openCompanion() {
     const result = await openCompanionWindow(window.location.href);
-    if (result === "blocked") pushError(t("companion.blocked"));
-    else if (result === "failed") pushError(t("companion.failed"));
+    if (result === "blocked") pushError(t("companion.blocked"), { serverText: false });
+    else if (result === "failed") pushError(t("companion.failed"), { serverText: false });
   }
 
   function resetTree(newTree: ProjectTree) {

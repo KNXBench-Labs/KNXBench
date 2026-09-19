@@ -187,10 +187,13 @@ pub struct SimulatorConfig {
     /// programs and every other index refuses the write the way `[D]`
     /// AL §3.4.4.2, p. 66, says an unlisted property is refused.
     pub application_program_objects: HashSet<u8>,
-    /// Once this much wall-clock time has passed since the device was
-    /// constructed, `PID_LOAD_STATE_CONTROL` answers
+    /// Once this much wall-clock time has passed since the *first*
+    /// `PID_LOAD_STATE_CONTROL` read arrived, later reads of it answer
     /// [`SimulatorConfig::settled_load_state`] instead of whatever
-    /// [`SimulatedDevice::preset_load_state`] put there.
+    /// [`SimulatedDevice::preset_load_state`] put there. Measured from the
+    /// first read rather than from device construction, so a test's outcome
+    /// does not depend on the gap between building the device and starting
+    /// to poll it.
     ///
     /// C5's deterministic way of building a device that only settles once
     /// `max_transition` is already spent: a test sets this comfortably past
@@ -384,9 +387,12 @@ pub enum Seen {
 
 #[derive(Debug)]
 struct State {
-    /// When the device was constructed, for
+    /// When the first `PID_LOAD_STATE_CONTROL` read arrived, for
     /// [`SimulatorConfig::settle_load_state_after`] to measure against.
-    created: Instant,
+    /// Measuring from device construction instead would make a test's
+    /// outcome depend on the gap between building the device and its first
+    /// poll — invisible and untested.
+    first_load_state_read: Option<Instant>,
     connected: bool,
     /// Whether the one connection drop the configuration asks for has
     /// happened. Once, not on every frame afterwards: a connection that
@@ -468,7 +474,7 @@ impl SimulatedDevice {
         memory.insert(0x0060, u8::from(config.programming_mode));
 
         let state = State {
-            created: Instant::now(),
+            first_load_state_read: None,
             connected: false,
             dropped: false,
             load_state_reads: 0,
@@ -578,6 +584,13 @@ impl SimulatedDevice {
         self.lock().verify_mode
     }
 
+    /// How many `PID_LOAD_STATE_CONTROL` reads have arrived, so a test can
+    /// pin an exact attempt count instead of trusting an outer time-out to
+    /// notice an extra one.
+    pub fn load_state_reads(&self) -> u32 {
+        self.lock().load_state_reads
+    }
+
     /// Tears the connection down from the device's side, as a real one does
     /// after 6 s of silence.
     pub fn break_connection(&self) {
@@ -634,7 +647,12 @@ impl SimulatedDevice {
         match property_id {
             PID_LOAD_STATE_CONTROL => {
                 if let Some(delay) = self.config.settle_load_state_after {
-                    if state.created.elapsed() >= delay {
+                    // Set moments ago, in `handle`, by this very read if it
+                    // is the first one — never `None` here.
+                    let first_read = state
+                        .first_load_state_read
+                        .expect("a load-state read is in progress");
+                    if first_read.elapsed() >= delay {
                         return Some(vec![self.config.settled_load_state.octet()]);
                     }
                 }
@@ -776,6 +794,7 @@ impl SimulatedDevice {
             );
             if is_load_state_read {
                 state.load_state_reads += 1;
+                state.first_load_state_read.get_or_insert_with(Instant::now);
             }
             let by_read = is_load_state_read
                 && self.config.drop_connection_on_load_state_read == Some(state.load_state_reads);

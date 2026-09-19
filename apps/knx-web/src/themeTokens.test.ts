@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ACCENTS } from "./appearance";
-import { THEMES } from "./theme";
+import { THEMES, loadThemeId, resolveThemeId } from "./theme";
+import type { ThemeBlock } from "./themeTokens";
 import {
   COMPONENT_LAYER_TOKENS,
   THEME_BLOCK_PLAIN_PROPERTIES,
@@ -70,12 +71,28 @@ describe("requiredThemeTokens", () => {
   });
 });
 
+describe("blockPlainProperties", () => {
+  it("catches a non-knx custom property, not just knx tokens and color-scheme", () => {
+    const rules = parseRules(':root[data-theme="x"] { --foo: red; color-scheme: light; }\n');
+    expect(blockPlainProperties(rules[0])).toEqual(["--foo", "color-scheme"]);
+  });
+});
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const css = readFileSync(join(HERE, "styles.css"), "utf-8");
 const rules = parseRules(css);
 const required = requiredThemeTokens(css);
 const blocks = themeBlocks(rules);
 const paletteThemeIds = THEMES.filter((theme) => theme.id !== "system").map((theme) => theme.id);
+
+/** The one `:root[data-theme="<id>"]` block for `id`, or a named failure
+ * instead of `blocks.find(...)!`'s `TypeError` when a registered theme has
+ * none. */
+function requireBlock(id: string): ThemeBlock {
+  const block = blocks.find((candidate) => candidate.id === id);
+  expect(block, `no :root[data-theme="${id}"] block in styles.css`).toBeDefined();
+  return block!;
+}
 
 describe("the theme layer of styles.css", () => {
   it("has exactly one block per theme in the registry", () => {
@@ -90,15 +107,14 @@ describe("the theme layer of styles.css", () => {
   // back to something tasteful — it inherits whatever the previous rule
   // happened to leave behind, which is how a half-themed palette ships.
   it.each(paletteThemeIds)("theme %s defines every token in the boundary", (id) => {
-    const block = blocks.find((candidate) => candidate.id === id);
-    expect(block, `no :root[data-theme="${id}"] block in styles.css`).toBeDefined();
-    const defined = new Set(blockTokens(block!.rule));
+    const block = requireBlock(id);
+    const defined = new Set(blockTokens(block.rule));
     const missing = required.filter((token) => !defined.has(token));
     expect(missing, `theme "${id}" is missing ${missing.length} token(s)`).toEqual([]);
   });
 
   it.each(paletteThemeIds)("theme %s sets no token a user setting owns", (id) => {
-    const block = blocks.find((candidate) => candidate.id === id)!;
+    const block = requireBlock(id);
     const trespassing = blockTokens(block.rule).filter((token) =>
       COMPONENT_LAYER_TOKENS.includes(token),
     );
@@ -109,7 +125,7 @@ describe("the theme layer of styles.css", () => {
   });
 
   it.each(paletteThemeIds)("theme %s declares color-scheme and nothing else plain", (id) => {
-    const block = blocks.find((candidate) => candidate.id === id)!;
+    const block = requireBlock(id);
     expect(blockPlainProperties(block.rule)).toEqual([...THEME_BLOCK_PLAIN_PROPERTIES]);
   });
 
@@ -148,14 +164,26 @@ describe("accent variations", () => {
       expect(blockPlainProperties(variation.rule)).toEqual([]);
     }
   });
+
+  it("theme.ts's hasAccentVariations agrees with what styles.css declares", () => {
+    const themesWithBlocks = new Set(variations.map((variation) => variation.id));
+    for (const theme of THEMES.filter((candidate) => candidate.id !== "system")) {
+      expect(
+        theme.hasAccentVariations,
+        `THEMES["${theme.id}"].hasAccentVariations disagrees with styles.css`,
+      ).toBe(themesWithBlocks.has(theme.id));
+    }
+  });
 });
 
 describe("index.html's pre-mount bootstrap", () => {
   // It cannot import theme.ts (it runs before any module loads), so the id
-  // list is duplicated there. A drift shows up as a flash of the wrong
-  // theme, or as a stored theme silently resolving back to the default.
+  // list, the legacy migration and the system default are all duplicated
+  // there. A drift shows up as a flash of the wrong theme, or as a stored
+  // theme silently resolving back to the default.
+  const html = readFileSync(join(HERE, "..", "index.html"), "utf-8");
+
   it("lists exactly the registry's palette themes, in the same order", () => {
-    const html = readFileSync(join(HERE, "..", "index.html"), "utf-8");
     const match = /var knownThemes = \[([^\]]*)\]/.exec(html);
     expect(match, "index.html no longer declares `var knownThemes = [...]`").not.toBeNull();
     const listed = match![1]
@@ -163,5 +191,22 @@ describe("index.html's pre-mount bootstrap", () => {
       .map((entry) => entry.trim().replace(/^"|"$/g, ""))
       .filter((entry) => entry !== "");
     expect(listed).toEqual(paletteThemeIds);
+  });
+
+  it("migrates the legacy \"light\"/\"dark\" values the same way loadThemeId does", () => {
+    const light = /if\s*\(t === "light"\)\s*t = "([a-z0-9-]+)"/.exec(html);
+    const dark = /if\s*\(t === "dark"\)\s*t = "([a-z0-9-]+)"/.exec(html);
+    expect(light, 'index.html no longer migrates the legacy "light" value').not.toBeNull();
+    expect(dark, 'index.html no longer migrates the legacy "dark" value').not.toBeNull();
+    expect(light![1]).toBe(loadThemeId({ getItem: () => "light" }));
+    expect(dark![1]).toBe(loadThemeId({ getItem: () => "dark" }));
+  });
+
+  it("falls back to the same system default resolveThemeId does", () => {
+    const match = /matches \? "([a-z0-9-]+)" : "([a-z0-9-]+)"/.exec(html);
+    expect(match, "index.html no longer resolves the system default inline").not.toBeNull();
+    const [, darkDefault, lightDefault] = match!;
+    expect(darkDefault).toBe(resolveThemeId("system", true));
+    expect(lightDefault).toBe(resolveThemeId("system", false));
   });
 });

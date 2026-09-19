@@ -115,9 +115,11 @@ impl LoadablePart {
     /// §9.3 requires the whole payload of every part to exist before the first
     /// event is written, because the device cannot be put back. A part whose
     /// [`PartKind::has_program_version`] is true and has no version is
-    /// refused the same way: RES Table 90 (p. 288) / Table 91 (p. 290) make
-    /// `PID_PROGRAM_VERSION` mandatory for it, so a plan missing one would
-    /// only find out in `Loading`.
+    /// refused the same way: RES Table 90 (p. 288) / Table 91 (p. 290) list
+    /// `PID_PROGRAM_VERSION` for it, CP §3.5.2 Nr. 06/07 (p. 43) requires the
+    /// write, and a plan with no version to write cannot execute that step —
+    /// whether the property is itself mandatory is Volume 6 Annex A's
+    /// question, not decided here (see C18).
     pub fn new(
         object_index: ObjectIndex,
         name: impl Into<String>,
@@ -255,10 +257,13 @@ pub enum PlanError {
         object_index: ObjectIndex,
     },
     /// An [`PartKind::ApplicationProgram1`] or [`PartKind::ApplicationProgram2`]
-    /// part with no version. RES Table 90 (p. 288) / Table 91 (p. 290) make
-    /// `PID_PROGRAM_VERSION` mandatory for these two objects, so a plan
-    /// missing it is refused before the first write rather than found out
-    /// about in `Loading`.
+    /// part with no version. RES Table 90 (p. 288) / Table 91 (p. 290) list
+    /// `PID_PROGRAM_VERSION` for these two objects and CP §3.5.2 Nr. 06/07
+    /// (p. 43) requires the write, so a plan with nothing to write there
+    /// cannot execute that step; a plan missing it is refused before the
+    /// first write rather than found out about in `Loading`. Whether the
+    /// property is itself mandatory is Volume 6 Annex A's question, not
+    /// decided here (see C18).
     MissingVersion {
         /// The offending part.
         object_index: ObjectIndex,
@@ -283,8 +288,8 @@ impl fmt::Display for PlanError {
             ),
             PlanError::MissingVersion { object_index } => write!(
                 f,
-                "the application program at {object_index} has no version to write, and RES \
-                 Table 90/91 make PID_PROGRAM_VERSION mandatory for it"
+                "the application program at {object_index} has no version to write, and CP \
+                 §3.5.2 Nr. 06/07 requires that write (RES Table 90/91 list the property there)"
             ),
         }
     }
@@ -357,7 +362,23 @@ pub enum VersionOutcome {
     /// (pp. 51-52, 54, 56); no clause reconciling the two was found by the
     /// audit behind this task (see C18). Both readings leave the part
     /// `Loaded`.
+    ///
+    /// `[D]` AL §3.4.4.2 answers `nr_of_elem = 0` both when *"Interface
+    /// Object or Property doesn't exist"* and when *"the requester does not
+    /// have the required access rights"* — one shape, two causes. This
+    /// variant cannot and does not distinguish them; it only records that
+    /// the write did not take effect.
     Refused,
+}
+
+impl fmt::Display for VersionOutcome {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            VersionOutcome::NotAttempted => f.write_str("no version write attempted"),
+            VersionOutcome::Written(data) => write!(f, "version written: {data:02x?}"),
+            VersionOutcome::Refused => f.write_str("version write refused"),
+        }
+    }
 }
 
 /// What happened to one loadable part.
@@ -892,16 +913,29 @@ async fn load_one_part<T: ManagementTransport>(
         .write_memory_region(base_address, &part.data, limit)
         .await?;
 
-    record(report, kind, 5, "set the version");
-    // `[C1]` RES Table 90, p. 288, and Table 91, p. 290, make this write
-    // mandatory for the two application programs; `LoadablePart::new`
-    // already refused an `ApplicationProgram` part with no version, so this
+    // `[C1]` RES Table 90, p. 288, and Table 91, p. 290, list
+    // `PID_PROGRAM_VERSION` for the two application programs, and CP §3.5.2
+    // Nr. 06/07, p. 43, requires this write for them; `LoadablePart::new`
+    // already refused an application-program part with no version, so this
     // branch always attempts it and any refusal is a genuine procedure
-    // failure there. RES Table 77, p. 238; Table 80, p. 249; Table 85,
-    // p. 270 do not list the property for the three tables, so a plan may
-    // leave a table's version empty (nothing attempted) or supply one
-    // anyway to match CP §3.5.3's table variants (pp. 51-52, 54, 56) — in
-    // which case a refusal is recorded, not propagated as an error.
+    // failure there. Whether the property is itself mandatory there is
+    // Volume 6 Annex A's question, not decided here (see C18). RES Table 77,
+    // p. 238; Table 80, p. 249; Table 85, p. 270 do not list the property
+    // for the three tables, so a plan may leave a table's version empty
+    // (nothing attempted, matching CP §3.5.2 Nr. 08-10, pp. 43-44, which
+    // asks for no such write) or supply one anyway to match CP §3.5.3's
+    // table variants (pp. 51-52, 54, 56) — in which case a refusal is
+    // recorded, not propagated as an error.
+    record(
+        report,
+        kind,
+        5,
+        if part.version.is_empty() {
+            "no version to set (CP §3.5.2 Nr. 09/10, p. 44, lists none here)"
+        } else {
+            "set the version"
+        },
+    );
     let version = if part.version.is_empty() {
         VersionOutcome::NotAttempted
     } else {
@@ -915,7 +949,10 @@ async fn load_one_part<T: ManagementTransport>(
             .await
         {
             Ok(read_back) => VersionOutcome::Written(read_back),
-            Err(SessionError::PropertyRefused { .. }) if !part.kind.has_program_version() => {
+            Err(SessionError::PropertyRefused {
+                object_index: refused_index,
+                property_id: PID_PROGRAM_VERSION,
+            }) if refused_index == object_index && !part.kind.has_program_version() => {
                 VersionOutcome::Refused
             }
             Err(err) => return Err(err.into()),
@@ -1033,18 +1070,39 @@ mod tests {
             .expect("a part with a payload and, for an application program, a version")
     }
 
+    /// A table part with no version to write, the shape CP §3.5.2 Nr. 08-10
+    /// (pp. 43-44) actually asks for: it lists no `PID_PROGRAM_VERSION`
+    /// write at all, unlike CP §3.5.3's table variants.
+    fn table_part_with_no_version(
+        index: u8,
+        name: &str,
+        length: usize,
+        kind: PartKind,
+    ) -> LoadablePart {
+        let data = (0..length).map(|octet| octet as u8 ^ index).collect();
+        LoadablePart::new(ObjectIndex::new(index), name, data, Vec::new(), kind)
+            .expect("a table part with a payload and, correctly, no version")
+    }
+
     fn plan(parts: Vec<LoadablePart>) -> DownloadPlan {
         DownloadPlan::new(SIMULATED_MANUFACTURER, parts).expect("a usable plan")
     }
 
-    /// A device with `AP2_OBJECT` registered as an application program, so
-    /// that fixtures built from [`two_parts`] and friends can write its
-    /// version without the tolerant `[C1]` path being what makes them pass.
-    fn ap2_device() -> SimulatedDevice {
+    /// A device with `AP2_OBJECT` registered as an application program, on
+    /// top of whatever else a test needs to configure, so that fixtures
+    /// built from [`two_parts`] and friends can write its version without
+    /// the tolerant `[C1]` path being what makes them pass. The single
+    /// construction path for that registration, so no call site repeats
+    /// the `HashSet` literal.
+    fn ap2_device_with(config: SimulatorConfig) -> SimulatedDevice {
         SimulatedDevice::with_config(SimulatorConfig {
             application_program_objects: [AP2_OBJECT].into_iter().collect(),
-            ..SimulatorConfig::default()
+            ..config
         })
+    }
+
+    fn ap2_device() -> SimulatedDevice {
+        ap2_device_with(SimulatorConfig::default())
     }
 
     fn two_parts() -> DownloadPlan {
@@ -1055,7 +1113,7 @@ mod tests {
                 20,
                 PartKind::ApplicationProgram2,
             ),
-            part(1, "Address Table", 9, PartKind::GroupAddressTable),
+            table_part_with_no_version(1, "Address Table", 9, PartKind::GroupAddressTable),
         ])
     }
 
@@ -1110,6 +1168,14 @@ mod tests {
             .parts
             .iter()
             .all(|outcome| outcome.crc == CrcComparison::NotCompared));
+        // `[C1]` CP §3.5.2 Nr. 06/07 (p. 43) writes the version for the
+        // application program; Nr. 09 (p. 44) lists no such write for the
+        // Address Table, so this plan's table part carries none.
+        assert!(matches!(
+            report.parts[0].version,
+            VersionOutcome::Written(_)
+        ));
+        assert_eq!(report.parts[1].version, VersionOutcome::NotAttempted);
 
         // §7.1 step 05: everything is unloaded before anything is loaded.
         let events = load_state_writes(&device);
@@ -1198,9 +1264,8 @@ mod tests {
     #[tokio::test]
     async fn an_interruption_at_every_step_of_the_inner_loop_is_recovered() {
         for step in Interruption::ALL {
-            let device = SimulatedDevice::with_config(SimulatorConfig {
+            let device = ap2_device_with(SimulatorConfig {
                 interrupt_at: Some(step),
-                application_program_objects: [AP2_OBJECT].into_iter().collect(),
                 ..SimulatorConfig::default()
             });
 
@@ -1309,9 +1374,8 @@ mod tests {
     /// download into very nearly a full one.
     #[tokio::test]
     async fn a_failed_allocation_escalates_to_every_following_segment() {
-        let device = SimulatedDevice::with_config(SimulatorConfig {
+        let device = ap2_device_with(SimulatorConfig {
             allocation_fails_once_for: Some(3),
-            application_program_objects: [AP2_OBJECT].into_iter().collect(),
             ..SimulatorConfig::default()
         });
         let parts = plan(vec![
@@ -1483,9 +1547,8 @@ mod tests {
     /// sequencer produces it without a fallback anywhere in sight.
     #[tokio::test]
     async fn the_0300_mask_allocates_with_subtype_0a() {
-        let device = SimulatedDevice::with_config(SimulatorConfig {
+        let device = ap2_device_with(SimulatorConfig {
             mask_version: MASK_0300.0,
-            application_program_objects: [AP2_OBJECT].into_iter().collect(),
             ..SimulatorConfig::default()
         });
         let mut session = writer(&device, WriteScope::Download);
@@ -1584,7 +1647,8 @@ mod tests {
         );
         assert!(
             matches!(no_version, Err(PlanError::MissingVersion { .. })),
-            "RES Table 90, p. 288 / Table 91, p. 290 make the version mandatory"
+            "RES Table 90, p. 288 / Table 91, p. 290 list the version, and CP §3.5.2 \
+             Nr. 06/07, p. 43, requires the write"
         );
 
         let duplicate = DownloadPlan::new(

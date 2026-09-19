@@ -161,14 +161,92 @@ mod tests {
         // The fixture has six entries; `0.xml` and `Project.xml` are
         // regenerated on export, so four are read back here — and the
         // count reported is the count that came out, not a prediction.
-        let (last_completed, total) = items
-            .last()
+        // The whole sequence, not just where it ended up: a counter that
+        // skipped an entry, reported one twice or announced its total
+        // early would land on (6, 6) all the same.
+        let counts: Vec<(u64, u64)> = items
+            .iter()
             .map(|(_, completed, total)| (*completed, *total))
-            .expect("the entry-collection stage reported at least once");
-        assert_eq!(total, 6, "every entry in the archive is walked");
-        assert_eq!(last_completed, 6);
+            .collect();
+        assert_eq!(
+            counts,
+            vec![(1, 6), (2, 6), (3, 6), (4, 6), (5, 6), (6, 6)],
+            "every entry in the archive is walked, once, in order"
+        );
         let whole_files = outcome.opaque.iter().filter(|e| e.xpath.is_empty()).count();
         assert_eq!(whole_files + outcome.manufacturer.len(), 4);
+    }
+
+    /// The sequence above is the same under either convention — reporting
+    /// an entry before reading it counts 1..6 exactly like reporting it
+    /// after. What separates them is an entry that cannot be read: the
+    /// count may only name work that is done, so the entry the collector
+    /// dies on must never have been reported as complete (ADR-0023, fix
+    /// round 6 finding F-E). Everywhere else on this branch a displayed
+    /// number follows its work; this was the one place it led.
+    #[test]
+    fn a_counted_entry_is_only_reported_once_its_work_is_done() {
+        /// Bare counter: this exercises `collect_container_entries_observed`
+        /// directly, so there is no enclosing stage for `Recorder` to
+        /// attribute the counts to.
+        #[derive(Default)]
+        struct Counts(Mutex<Vec<(u64, u64)>>);
+
+        impl ImportObserver for Counts {
+            fn stage(&self, _stage: ImportStage) {}
+
+            fn items(&self, completed: u64, total: u64) {
+                self.0.lock().unwrap().push((completed, total));
+            }
+        }
+
+        let mut container = crate::Container::open(zip_with_a_broken_last_entry())
+            .expect("the inventory is intact; only the third entry's bytes are not");
+        assert_eq!(container.entries().len(), 3);
+        let counts = Counts::default();
+        let error = crate::opaque::collect_container_entries_observed(&mut container, &[], &counts)
+            .expect_err("the third entry's bytes do not match its CRC");
+
+        assert!(
+            format!("{error}").contains("third.xml"),
+            "the read dies on the third entry, not somewhere else: {error}"
+        );
+        assert_eq!(
+            *counts.0.lock().unwrap(),
+            vec![(1, 3), (2, 3)],
+            "the entry the collector never finished reading is not counted as done"
+        );
+    }
+
+    /// Three stored entries, with one byte of the *third* entry's body
+    /// flipped after the archive was written, so its stored CRC-32 no
+    /// longer matches its bytes. Headers and central directory are
+    /// untouched: the container opens, `entries()` reports three, and the
+    /// archive only falls apart when that entry is actually read — which
+    /// is exactly the moment the test above is about.
+    fn zip_with_a_broken_last_entry() -> Vec<u8> {
+        use std::io::{Cursor, Write};
+        const THIRD_BODY: &[u8] = b"<third-entry/>";
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored);
+        for (name, body) in [
+            ("first.xml", b"<first-entry/>".as_slice()),
+            ("second.xml", b"<second-entry/>".as_slice()),
+            ("third.xml", THIRD_BODY),
+        ] {
+            writer.start_file(name, options).expect("zip entry");
+            writer.write_all(body).expect("zip entry body");
+        }
+        let mut bytes = writer.finish().expect("zip central directory").into_inner();
+        // Stored, not deflated, so the body sits in the file verbatim and
+        // appears exactly once.
+        let at = bytes
+            .windows(THIRD_BODY.len())
+            .position(|w| w == THIRD_BODY)
+            .expect("a stored entry's body is its bytes");
+        bytes[at] = b'!';
+        bytes
     }
 
     #[test]

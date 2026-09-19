@@ -620,6 +620,50 @@ gate set.
 
 ---
 
+## Task 25 — visible progress while loading a project (branch `t37-load-progress`)
+
+Closes `goal.md` §3's **T37**, which this plan originally omitted. Added
+2026-09-19 on the user's ruling: schedule it after Task 18, before Task 23.
+**Runs after `theme-system` has merged** — both own `apps/knx-web/src/App.tsx`.
+
+Both project-entry paths are silent while work is in progress: `App.tsx`
+awaits a single response from `POST /api/project/import` for ETS `.knxproj`
+files, or `POST /api/project/open` for native `.knxdb` files. A large import
+and a stalled request look identical to the user.
+
+**Design before implementation.** The progress transport and the operation
+lifecycle are a design decision, not an implementation detail: decide how a
+stage reaches the browser (the existing request/response shape, an event
+stream, or polling), where the operation's identity lives, and what happens
+to an operation whose client disconnects. Write that decision down in
+`docs/` — an ADR if it changes the HTTP surface, which it probably does.
+
+Then build one coherent loading-operation model spanning the owning backend
+stages and the frontend:
+
+- Show the operation and its truthful current phase. Import stages follow the
+  actual external-data pipeline; native open reports store open/migration,
+  normalized load and projection as applicable.
+- Use a percentage **only** where a real completed/total measurement exists.
+  Otherwise show indeterminate progress with a phase label. Never synthesize
+  progress from elapsed time — a fabricated bar is the same defect class as a
+  test that cannot fail.
+- Prevent duplicate open/import actions while one is running.
+- Announce phase changes via `aria-live`.
+- Retain the old project until the replacement is fully ready, and retain it
+  on failure while reporting the error.
+- Cancellation is out of scope unless the design proves it cannot publish
+  partial state.
+
+**Acceptance:** the design document exists and is referenced from the
+implementation; backend tests prove the real stages arrive in order; frontend
+tests cover determinate and indeterminate rendering, duplicate prevention,
+success and failure; one real large-project run verifies the feedback is
+visible for the operation's whole duration, with the measured duration in the
+report. Full Rust gate set plus `npx tsc --noEmit` and `npx vitest run`.
+
+---
+
 ## Deliberately not in this plan
 
 - `goal.md` §4: T19 KNX Secure, T20 `Functions`, T22 multi-user — deferred by
@@ -630,9 +674,9 @@ gate set.
 - `goal.md` §9: `.vd2`, `.knxprod` schemes 12-19/21/22, ETS reimport, mobile,
   multi-OS — durable non-goals or out of scope for this run.
 - The project logo — the user is handling it separately.
-- **The licence** (`goal.md` §1) — blocked on the user. Asked at the start of
-  the run. When the answer arrives: update the workspace `license` field, add
-  the `LICENSE` file, close `docs/KNOWN_LIMITATIONS.md` §10, and confirm
-  `cargo deny check`'s licence rules still pass.
+- **The licence** (`goal.md` §1) — **resolved 2026-09-16, outside this run.**
+  The user chose `AGPL-3.0-or-later`; Codex added the canonical `LICENSE`,
+  the workspace SPDX expression, and the §10 closure, and `cargo deny check`
+  passes. Nothing is left here — do not re-ask the question.
 - `goal.md` §6 item 7 (Task 6's screenshots need regenerating) — folded into
   Task 18, which regenerates screenshots anyway.

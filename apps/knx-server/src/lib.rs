@@ -12,6 +12,8 @@ mod bus;
 pub use bus::*;
 
 mod bus_routes;
+mod debug_report;
+mod debug_report_routes;
 mod domain;
 pub use domain::*;
 
@@ -22,6 +24,11 @@ pub use load_progress::*;
 mod paths;
 mod routes;
 mod session_log;
+/// Exported so an integration test can seed a log entry directly. The two
+/// types and nothing else: the module also holds `SessionLog`'s internals
+/// and the import-report converters, which would drag `knx-etsproj` and
+/// `knx-csv` into this crate's public surface for no test's benefit.
+pub use session_log::{LogEntry, Severity};
 
 pub type SharedState = Arc<AppState>;
 
@@ -83,6 +90,7 @@ pub fn app(state: SharedState, static_dir: Option<PathBuf>) -> Router {
         .merge(routes::project_routes())
         .merge(fs_routes::fs_routes())
         .merge(bus_routes::bus_routes())
+        .merge(debug_report_routes::debug_report_routes())
         .route("/healthz", get(|| async { "ok" }))
         // Deliberately not in `routes::project_routes()`: this answers for
         // the build, not for the open project, and it works with no

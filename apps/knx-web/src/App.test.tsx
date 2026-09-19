@@ -739,6 +739,7 @@ describe("App — the File menu by keyboard alone", () => {
       "Import group addresses (CSV)…",
       "Export documentation…",
       "Compare with…",
+      "Debug report…",
       // T28/F5. No "Quit" after it: `isTauri()` is mocked `false` here,
       // and a browser tab cannot close itself.
       "About KNXBench…",

@@ -35,6 +35,7 @@ import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
 import DocumentationExportButton from "./DocumentationExportButton";
+import DebugReportButton from "./DebugReportButton";
 import ProjectDiffPanel from "./ProjectDiffPanel";
 import LoadProgressBanner from "./LoadProgressBanner";
 import { localFailure, ownsOperation } from "./loadProgress";
@@ -787,6 +788,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
         onClearErrors={clearErrors}
       />
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
+      <DebugReportButton onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />
       <button onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</button>
       {/* F4: present only in the desktop shell. A browser tab cannot close
           itself, so in the web build this item would be a button that

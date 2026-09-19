@@ -7285,3 +7285,90 @@ the crate has no consumer there. `check-headers` is unchanged (158/167,
 ceiling 168): no new source file, `download.rs` already carried its header.
 Out of scope, unchanged: `PID_GROUP_RESPONSER_TABLE`, the unload-address
 step and procedure-level retries, per the task's own explicit non-tasks.
+
+## 2026-09-20 — C11: CP §3.5.3's other four partial downloads stop being invisible
+
+`procedure.rs:393-396` modelled exactly one of CP §3.5.3's five
+partial-download variants — "application program 2," steps 01-14 — and
+called it *the* partial-download procedure. CP §3.5.3 actually gives one
+step list per loadable part, each numbered from 01 on its own, and they are
+not the same shape: four of the five add a Nr. 07 escalation branch that
+unloads and reloads every following segment in the download order when
+Nr. 06's allocation fails, but the Association Table variant — the last
+segment in that order — has nothing following it, so its Nr. 07 is
+"Modifying access keys" and its Nr. 08 is "Disconnect," the same tail every
+other variant carries, just without an escalation block in front of it (CP
+§3.5.3, p. 56). A report or a UI reading only `procedure.rs`'s one variant
+would describe every partial download as the fourteen-step AP2 shape, which
+is wrong for the other four eighty percent of the time.
+
+Added `PartialDownloadVariant` in
+`crates/knx-core/src/commissioning/partial_download_variant.rs`: all five
+step lists as pure data, each returning a full `Procedure` via
+`ProcedureKind::PartialDownload` so it renders exactly like every other
+cited procedure, plus `escalation_targets()` and `jump_target()` giving each
+variant's Nr. 07 target list and Nr. 06 jump number directly rather than
+making a caller re-derive them from step text. Declaration order follows
+`PartKind`'s `Ord` (`[C8]`) — Application Program 2, Application Program 1,
+Group Object Table, Group Address Table, Association Table — which is the
+same order CP §3.5.2 Nr. 06-10 and CP §3.5.3 AP2 Nr. 08-12 both give by row
+position, so the escalation lists reuse an order already fixed elsewhere
+instead of inventing a second one. `procedure.rs`'s existing
+`partial_download()` (the one `knx-net`'s sequencer walks) is untouched:
+this task is explicitly pure data, no sequencer changes, no executor.
+
+The brief's acceptance table (step counts 14/13/12/11/8; escalation targets
+per variant; jump targets 13/12/11/10/none) was checked against
+`03_05_03 Configuration Procedures v02.01.01 AS.pdf` pp. 44-56 directly —
+all five variants' step tables read in full, not just the three page
+numbers the brief names as starting points. The pages agreed with the
+brief's table exactly; no discrepancy found in either direction.
+
+Seven new tests in the new module: every variant numbers its steps from one
+without gaps; the full acceptance table, table-driven, all five variants at
+once; the Association Table variant specifically has no escalation at
+Nr. 07 (checks the title is `"modify access keys"`, not merely that it
+avoids containing "escalat", and that step 8 is `"disconnect"`); the
+*other* four specifically do escalate at Nr. 07 (the contrast case, so a
+suite that never escalates anywhere could not pass by accident); every
+variant ends with disconnect as its final, self-numbering step; every
+variant's escalation targets are in the download order, not merely a
+matching set; and no step claims the unspecified differential-download
+algorithm CP §3.5.3 itself declines to specify (spec §7.4, §12) — the same
+guard `procedure.rs` already keeps for the one variant it models.
+
+Mutation-tested three times against the committed tree (`18a283d`),
+restored via `git checkout --` after each, `git status` clean afterward:
+(a) gave the Association Table variant's Nr. 07 the four other variants'
+escalation title — exit 101, `the_association_table_variant_has_no_escalation_at_nr_07`
+fails on `left: "on failed allocation, escalate", right: "modify access keys"`;
+(b) shifted Application Program 2's jump target from 13 to 14 — exit 101,
+`the_five_variants_match_cp_3_5_3s_table` fails on `ApplicationProgram2 Nr.
+06 jump target, left: Some(14), right: Some(13)`; (c) truncated Application
+Program 2's step list by removing its Nr. 14 disconnect — exit 101, two
+tests fail: `every_variant_ends_with_disconnect_as_its_last_step`
+(`left: "modify access keys", right: "disconnect"`) and
+`the_five_variants_match_cp_3_5_3s_table` (`ApplicationProgram2 should have
+14 steps ... left: 13, right: 14`).
+
+This task's own two explicit non-tasks were checked against
+`docs/KNOWN_LIMITATIONS.md` and found genuinely unrecorded, so both are now
+entries rather than silent gaps: §110, `PID_GROUP_RESPONSER_TABLE` staying
+unimplemented on every medium this project targets (RES §4.16.8.2.5 makes
+implementing it on TP1/RF/IP a Standard violation, not merely unnecessary);
+§111, CP §3.5.4 step 07 (the individual-address unload) staying
+unimplemented, a deliberate refusal rather than an oversight — making a
+device unaddressable is not a side effect this application accepts from a
+scripted procedure.
+
+Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets
+-j 2 -- -D warnings`, `cargo test --workspace --no-fail-fast -j 2` (1761
+tests across 88 test binaries in the workspace, 0 failed), `cargo run -p
+xtask -- check-layering`,
+`cargo run -p xtask -- check-headers` and `cargo deny check` all exit 0;
+`npx tsc --noEmit` and `npx vitest run` in `apps/knx-web` (54 files, 692
+tests) exit 0 too, though no web file was touched — the crate has no
+consumer there. `check-headers`: 159/167 (ceiling 168, one better than
+before — the new file carries its own ADR-0018 header). Out of scope,
+unchanged: `procedure.rs`'s single-variant `partial_download()`, `knx-net`'s
+sequencer and `Downloader`, and the two explicit non-tasks named above.

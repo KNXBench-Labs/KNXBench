@@ -1506,4 +1506,106 @@ describe("App — in-application help (T23)", () => {
 
     await act(async () => root.unmount());
   });
+
+  // The invariant above, for every overlay this component owns rather than
+  // for the one that happened to be tested first. Two `aria-modal` dialogs
+  // at once is undefined for assistive technology, and since every
+  // `.search-overlay` is `position: fixed; z-index: 10`, the loser is not
+  // merely stacked — it is buried under an opaque full-viewport backdrop
+  // with the keyboard focus inside it.
+  it("replaces the settings dialog rather than stacking help on top of it", async () => {
+    const root = await renderApp();
+
+    const gear = Array.from(host!.querySelectorAll("button")).find(
+      (b) => b.getAttribute("aria-label") === enMessages["toolbar.settings"],
+    );
+    await act(async () => {
+      gear!.click();
+    });
+    expect(host!.querySelector(".settings-panel")).not.toBeNull();
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelector(".settings-panel")).toBeNull();
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await act(async () => root.unmount());
+  });
+
+  // Pins the other setter in the same branch: the search overlay is the
+  // one F1 was originally written to close, and deleting that line alone
+  // left the whole suite green.
+  it("replaces the search overlay as well", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
+    apiMock.importProject.mockResolvedValue(baseTree());
+    const root = await renderApp();
+    await act(async () => {
+      findButton("Open project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await act(async () => {});
+
+    await pressKey({ key: "k", ctrlKey: true });
+    expect(host!.querySelector(".search-panel")).not.toBeNull();
+    expect(helpPanel()).toBeNull();
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await act(async () => root.unmount());
+  });
+
+  it("replaces the new-project dialog too", async () => {
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("New project…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await pressKey({ key: "F1" });
+
+    expect(helpPanel()).not.toBeNull();
+    expect(host!.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+
+    await act(async () => root.unmount());
+  });
+
+  // F1 belongs to the browser as well: Firefox and Chrome open their own
+  // help on it. Without `preventDefault` the user gets two help systems,
+  // one of which is about the wrong product.
+  it("takes F1 away from the browser", async () => {
+    const root = await renderApp();
+
+    const event = new KeyboardEvent("keydown", { key: "F1", bubbles: true, cancelable: true });
+    await act(async () => {
+      window.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(helpPanel()).not.toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  // A modified F1 is not ours, so it must reach the browser untouched.
+  it("leaves a modified F1 to whoever wants it", async () => {
+    const root = await renderApp();
+
+    const event = new KeyboardEvent("keydown", {
+      key: "F1",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    await act(async () => {
+      window.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(false);
+
+    await act(async () => root.unmount());
+  });
 });

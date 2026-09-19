@@ -1,4 +1,7 @@
 /** Tests the help system's rules: which key opens it, when it moves, and what a topic holds. */
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_HELP_TOPIC_ID,
@@ -118,24 +121,68 @@ describe("HELP_TOPICS", () => {
   // that a new help string mentioning either fails here and has to be
   // read by someone before it ships. Both current mentions are denials.
   const VETTED_CLAIM_KEYS = ["help.topic.importExport.p3", "help.topic.limits.p1"];
+  // Both languages' words over both catalogues, not one each: an English
+  // sentence landing in `de.ts` is exactly what a hurried edit produces,
+  // and a per-language pattern would wave it through.
+  const CLAIM_WORDS = /certifi|compatib|zertifiz|kompatib/i;
 
-  it("mentions certification or compatibility only in the vetted English keys", () => {
-    const found = Object.entries(enMessages)
+  const claimKeys = (catalogue: Record<string, string>) =>
+    Object.entries(catalogue)
       .filter(([k]) => k.startsWith("help."))
-      .filter(([, v]) => /certifi|compatib/i.test(v))
+      .filter(([, v]) => CLAIM_WORDS.test(v))
       .map(([k]) => k)
       .sort();
-    expect(found).toEqual([...VETTED_CLAIM_KEYS].sort());
+
+  it("mentions certification or compatibility only in the vetted English keys", () => {
+    expect(claimKeys(enMessages)).toEqual([...VETTED_CLAIM_KEYS].sort());
     expect(enMessages["help.topic.limits.p1"]).toMatch(/not made by, endorsed by or certified by/);
   });
 
   it("mentions certification or compatibility only in the vetted German keys", () => {
-    const found = Object.entries(deMessages)
-      .filter(([k]) => k.startsWith("help."))
-      .filter(([, v]) => /zertifiz|kompatib/i.test(v))
-      .map(([k]) => k)
-      .sort();
-    expect(found).toEqual([...VETTED_CLAIM_KEYS].sort());
+    expect(claimKeys(deMessages)).toEqual([...VETTED_CLAIM_KEYS].sort());
     expect(deMessages["help.topic.limits.p1"]).toMatch(/weder unterstützt noch zertifiziert/);
+  });
+});
+
+// The tip's behaviour is split across two languages: `HelpTip.tsx` decides
+// which classes are on the bubble, and `styles.css` decides what those
+// classes mean. Tests that only assert the class name pass happily while the
+// rule behind it is deleted — measured, not feared: removing
+// `:not(.is-still)` and removing the `.is-open` rule each left all 640
+// tests green. `motionGuard.test.ts` cannot see either, since both
+// mutations keep the declaration inside the reduced-motion block and keep
+// its duration in a custom property. So this reads the stylesheet, the
+// same way that guard does.
+describe("the help tip's half of the contract that lives in styles.css", () => {
+  const css = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "styles.css"),
+    "utf8",
+  );
+  const rule = (selector: string): string => {
+    const at = css.indexOf(selector + " {");
+    expect(at, `no rule for ${selector}`).toBeGreaterThan(-1);
+    return css.slice(at + selector.length + 2, css.indexOf("}", at));
+  };
+
+  it("makes the open bubble visible, which is the only thing `is-open` does", () => {
+    expect(rule(".help-tip-bubble.is-open")).toContain("opacity: 1");
+  });
+
+  it("hides the closed bubble without taking it out of the accessibility tree", () => {
+    const closed = rule(".help-tip-bubble");
+    expect(closed).toContain("opacity: 0");
+    expect(closed).toContain("pointer-events: none");
+    // ADR-0024 decision 1: both of these would remove the element from the
+    // accessibility tree, and `aria-describedby` would resolve to nothing
+    // while the bubble is closed.
+    expect(closed).not.toContain("visibility: hidden");
+    expect(closed).not.toContain("display: none");
+  });
+
+  it("exempts a bubble marked still from the transition", () => {
+    // `helpTipAnimates` returning false puts `is-still` on the bubble; if
+    // no rule keys off that class, the JS half of the motion setting is
+    // decoration.
+    expect(css).toContain(".help-tip-bubble:not(.is-still) { transition:");
   });
 });

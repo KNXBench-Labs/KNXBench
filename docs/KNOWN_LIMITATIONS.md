@@ -3245,9 +3245,11 @@ answered and built.
 
 ## 64. `Languages` blocks outside an application program are discarded on import
 
-**Resolved for ingestion (2026-09-12, T32); still unread at most
-surfaces.** The heading is kept verbatim because five documents link to
-its anchor; read the status here, not in the title.
+**Resolved for ingestion (2026-09-12, T32); reading closed for every
+entity family this project's corpus has found a `Master`-scope
+translation for (2026-09-14, T13) — the residue below is what is left.**
+The heading is kept verbatim because five documents link to its anchor;
+read the status here, not in the title.
 
 **Ingested now.** `translation` was widened in schema v4 to `(scope,
 scope_id, language, ref_id, attribute_name)`
@@ -3365,15 +3367,65 @@ unavailable until a later slice gives those constructs their own
 tables — tracked here, not silently narrowed out of this section's
 claim.
 
+**Closed, 2026-09-14 (T13, branch `d10-language-data`).** The residue
+above is what this slice closes: `FunctionType`, `FunctionPoint` and
+`SpaceUsage` each get a table now (`function_type`, `function_point`,
+`space_usage`; schema v9 → v10, `migrate_v9_to_v10`), filled by
+`parse/master.rs`'s `ingest_master_data` the same `INSERT OR IGNORE` way
+`datapoint_type` already was. `query.rs` gained `function_types`/
+`function_type`, `function_points` (scoped to one `function_type_id`)
+and `space_usages`/`space_usage`, each overlaying `text` from a
+`Master`-scope translation through the same `master_text_overlay` every
+other Master reader here already used — that function never filtered by
+`RefId` prefix, so the translations these three families needed were
+already sitting in `translation` since T32; only the join target was
+missing. A v9 database is backfilled the same way a v3 one was for T32:
+its `knx_master.xml` blob is replayed through `ingest_master_data` inside
+the migration (`a_v9_database_backfills_function_and_space_usage_rows_and_their_translations`,
+`migration.rs`), so a database that already existed before this slice
+does not stay short these three tables' worth of data. An end-to-end
+test through `install_package`
+(`hardware_and_master_scope_translations_survive_install_with_their_text_intact`,
+`tests/standalone_packages.rs`) reads a planted `Hardware`-scope and a
+planted `Master`-scope translation's actual text back out of `translation`
+after a real package install, not merely a row count. Neither reader
+gained an HTTP route or a UI element — surfacing stops exactly where
+`datapoint_types` already stopped (no route in
+`apps/knx-server/src/routes.rs`), per this project's "surface only as far
+as existing machinery already reaches" rule; a caller inside the backend
+can call these functions today, nothing outside it can yet.
+
+**Residue restated, not claimed closed.** Three things this slice does
+not touch, stated plainly rather than left implicit: first, the other
+eight `MasterData` child sections `parse/master.rs`'s own module doc
+names (`DatapointRoles`, `InterfaceObjectTypes`,
+`InterfaceObjectProperties`, `PropertyDataTypes`, `MediumTypes`,
+`MaskVersions`, `FunctionalBlocks`, `ProductLanguages`) stay unparsed;
+none of them carried a `Master`-scope translation in any of the five
+sampled packages, but that is a corpus observation, not a schema
+guarantee, and a package that did translate one would have that
+translation's row sit in `translation` unread by anything, exactly as
+`FunctionType`/`SpaceUsage` did before this slice. Second, the
+`function_type`/`function_point`/`space_usage` tables inherit
+`datapoint_type`'s uncounted-collision gap outright — see §86's residue,
+extended 2026-09-14 to name them — a second package's `knx_master.xml`
+drops its restated rows with nothing recording that it happened. Third,
+`apps/knx-web` still sends no bare primary-language tag (§37's own open
+item, unchanged by this slice): the backend-side locale-prefix matching
+these new readers reuse has had a caller-reachable surface since D10
+slice 1, and still has none from the frontend.
+
 **Lifted when.** Ingestion: lifted 2026-09-12 (T32, branch
 `t32-shared-translations`). The `Hardware`-scope half of the reading
 residue: lifted 2026-09-13 (T16, branch `t16-device-product`). The
 `Master`-scope residue for `datapoint_type`, translation-count
 reporting, and backend locale-prefix matching: lifted 2026-09-13 (D10
 slice 1, branch `d10-master-translations`). `FunctionType`/
-`FunctionPoint`/`SpaceUsage` have no table at all and stay open under
-**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and under §37's
-own "still open" list. Not scheduled.
+`FunctionPoint`/`SpaceUsage`: lifted 2026-09-14 (T13, branch
+`d10-language-data`). This section's own residue (other `MasterData`
+sections, collision counting, frontend locale tags) stays open; see
+**D10** in [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) and §37's own
+"still open" list. Not scheduled.
 
 ## 65. `--version` names a commit, never a working tree
 
@@ -4445,6 +4497,27 @@ the retained declaration. This needs a deliberate schema migration and remains
 separate from the now-complete same-file detection for every `first_winner`
 caller.
 
+**Residue grows, 2026-09-14 (T13, branch `d10-language-data`).**
+`function_type`, `function_point` and `space_usage` (new tables, schema
+v9 → v10, closing §64's own residue) are filled by `parse/master.rs` the
+same bare `INSERT OR IGNORE` way `datapoint_type` already was — no
+`source_sha256` column, no occurrence counter, same restated-whole-catalogue
+collision shape a second `knx_master.xml` produces. Not measured
+separately against the corpus the way `datapoint_type` was above; the
+shape of the gap is identical, so it is stated rather than re-argued. A
+future fix for `datapoint_type`'s residue should cover these three tables
+in the same pass rather than leaving them a second time. The same three
+element families also inherit `datapoint_type`'s other silent-discard
+shape: a `FunctionType`, `FunctionPoint` or `SpaceUsage` with no `@Id`
+attribute at all binds `NULL` into a `TEXT PRIMARY KEY` column, and
+`INSERT OR IGNORE` drops that row with no error, no counter and no
+`ingest_unknown` entry — exactly as an id-less `DatapointType` already
+did before this slice, and not a new gap this slice introduces, only one
+it extends to three more tables. An id-less `FunctionType` compounds the
+loss: it orphans every `FunctionPoint` nested inside it too, and those
+are then silently dropped a second time by the parentless-`FunctionPoint`
+guard at `parse/master.rs:213` (T13 fix round 2).
+
 ---
 
 ## 87. A parse fix does not reach rows that were already ingested, and only a migration can go back for them
@@ -4616,6 +4689,35 @@ own name so nobody mistakes it for an invariant.
 use to actually rank two spellings by recency (a schema/edition attribute
 would do it) — at which point "last ingested" could become "provably newer",
 and this section would describe that instead.
+
+**A second scan order, not covered above (2026-09-14, T13 fix round 2).**
+Everything above is about first *ingest* order. The v9→v10 backfill
+(`backfill_function_and_space_data`, `migration.rs`) replays this same
+last-writer-wins `Manufacturer` write over every blob a database already
+holds, ordered by `source_file.rowid` — the order distinct blobs were
+first *written* to that table, which is not always the order they were
+first *ingested*. `store_source_file` (`blob.rs`) returns `false` without
+inserting a row when a blob's sha256 is already on record, but
+`install_package` (`package.rs`) calls `ingest_master_data` on that blob
+regardless, so a master blob installed by two different packages is
+ingested twice but occupies one rowid — the backfill then replays it once,
+at its *first* install's position, which can differ from its *last*
+install's position (the one whose names actually won under last-writer-wins
+at real install time). Measured **[V]**: installed Weinzierl 730 ETS4, then
+MDT KP AMI/AMS 03, then the Weinzierl archive repacked with one XML comment
+appended to `M-00C5/Catalog.xml` (package hash differs, `knx_master.xml`
+byte-identical to the first install). Rolled back to `user_version = 9`,
+dropped the three v10 tables, reopened through `open_and_migrate`: **21 of
+799** manufacturer display names changed relative to the pre-rollback
+database — `M-0002` from `ABB` to `ABB AG - STOTZ-KONTAKT`, `M-0007` from
+`Busch-Jaeger Elektro` to `ABB AG - BUSCH-JAEGER`, `M-000A` from
+`INSTA ELEKTRO` to `Insta GmbH`; `translation`, `datapoint_type` and
+`ingest_unknown` counts were unchanged. `ORDER BY rowid` is still the right
+order to hold — it is the only order `source_file` actually records — but
+it reproduces first-install's own answer only when no master blob in the
+database was ever installed by more than one package; the third install
+above was constructed specifically to violate that, to make the residual
+measurable rather than asserted.
 
 ## 89. Five documented `Space/@Type` values are coarsened to `BuildingPart` on import
 

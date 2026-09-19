@@ -53,6 +53,34 @@ reason: a client that polls across two operations must be able to tell
 from the id alone that it is looking at a new one). A second import or
 open while one is running is refused with `409 Conflict`, not queued.
 
+**The client half of the id.** The POST does not return the operation id —
+its body is the project tree, unchanged — so the browser establishes
+ownership in two steps, implemented in `App.tsx`'s `runLoad` and the
+helpers in `loadProgress.ts`:
+
+1. **Baseline.** Before asking for a new operation, read the current
+   snapshot once. Its `operationId` (or `0` when there is none) is the
+   highest id that *predates* this load.
+2. **Adoption.** The first polled snapshot that is `running` **and** has an
+   id greater than the baseline is this load's own. Its id is remembered,
+   and from then on only that exact id is accepted — the id is never
+   reused, so equality is exact.
+
+Anything failing both tests belongs to somebody else: a finished earlier
+load, or the operation whose existence is the reason our POST was refused
+with `409`. It is never rendered. If the baseline read itself fails,
+nothing is adopted at all for that load: the banner says `starting` until
+the POST answers, which is less informative and a great deal truer than
+naming a stranger's phase.
+
+When a load ends in an error, the client accepts the final snapshot only
+if it is its own **and** says `failed`. Every other case — no snapshot, a
+foreign one, or its own reporting `succeeded` because only the response
+was lost — becomes a locally constructed failed snapshot carrying the
+error the POST threw, on the last phase this load actually observed. A
+load that is over must never leave an indicator moving; that is the same
+honesty rule as the percentage one, applied to the failure path.
+
 **The transport is polling.** `GET /api/project/load-progress` returns the
 current operation's snapshot, or `null` when this server run has never
 loaded anything:
@@ -83,6 +111,7 @@ store and projection steps it drives itself — onto one wire vocabulary in
 
 | wire phase | emitted by |
 | --- | --- |
+| `starting` | `knx-server`, at `begin` — the operation exists, nothing has reported yet |
 | `openContainer`, `detectSchema`, `parseTopology`, `parseProjectInfo`, `validate`, `map`, `inferDatapointTypes`, `collectContainerEntries` | `knx-etsproj` |
 | `ingestManufacturerData`, `ingestMasterData`, `enrichFromProductDatabase`, `persistOpaque` | `knx-app` |
 | `openStore`, `loadStoredProject`, `loadOpaque`, `loadManufacturerRefs`, `buildProjectTree` | `knx-server` |

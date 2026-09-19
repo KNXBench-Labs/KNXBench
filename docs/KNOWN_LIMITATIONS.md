@@ -5261,6 +5261,18 @@ itself, which is unchanged: there is still no `GET /api/project`, so a
 browser that loses its own POST's response still has nothing to re-fetch
 the tree from and still needs a reload.
 
+**One more hole in the same wall, 2026-09-19 (T37 fix round 6, F-C).**
+Ownership answered *whose* operation a snapshot describes, never whether
+the load watching it was still running. A POST dying at transport level —
+the same dropped connection this entry is about — left the poll interval
+armed across the `await` in `runLoad`'s catch, and the effect's `cancelled`
+latch is closed by React's cleanup rather than by `finally`, so a poll
+resolving in between passed every filter and painted a `running` phase over
+the failure. Polling then stopped, and the banner stayed on that phase, with
+a moving shuttle, for the rest of the session. A generation counter bumped
+in `finally` and compared by every poll across its own fetch closes it. The
+limitation itself is still unchanged: no route hands out the current tree.
+
 **Lifted when.** A `GET /api/project` exists and the frontend falls back to
 it when a poll reports an operation it did not see finish.
 

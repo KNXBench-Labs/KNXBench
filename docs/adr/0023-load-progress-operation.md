@@ -91,6 +91,20 @@ error the POST threw, on the last phase this load actually observed. A
 load that is over must never leave an indicator moving; that is the same
 honesty rule as the percentage one, applied to the failure path.
 
+**Ownership is not the whole answer: a snapshot must also be about the load
+still on screen.** Fix round 6 (finding F-C) adds a generation counter next
+to the token. The poll interval stays armed while `runLoad`'s catch awaits
+its final snapshot, and the effect's `cancelled` latch is closed by React's
+cleanup rather than synchronously by `finally` — so a poll resolving in
+that window was still not cancelled, still `running` and still genuinely
+ours, and wrote its phase over the failure that had just been painted.
+Polling then stopped, freezing the banner on a phase that was over with a
+shuttle still moving. `runLoad`'s `finally` bumps the generation before it
+touches any state; every poll captures it before its fetch and compares
+after, and refuses to write when it has moved. Reachable whenever the POST
+dies at transport level — a dropped connection, a proxy timeout — while
+the server's operation carries on.
+
 **The transport is polling.** `GET /api/project/load-progress` returns the
 current operation's snapshot, or `null` when this server run has never
 loaded anything:
@@ -138,8 +152,11 @@ the loop starts: collecting container entries (total = archive entries not
 regenerated) and ingesting manufacturer files (total =
 `ImportOutcome::manufacturer.len()`). Those two phases carry `completed`
 and `total`; every other phase carries `null` for both and the UI shows an
-indeterminate indicator with the phase label. Elapsed time is never a
-progress source, and the snapshot has no timestamp for anyone downstream
+indeterminate indicator with the phase label. Both count *after* the
+item's own work, never before (fix round 6, F-E): "38 of 38" while the
+thirty-eighth entry is still being read is a finished number over
+unfinished work, the same lie as a clock-driven bar in a smaller font.
+Elapsed time is never a progress source, and the snapshot has no timestamp for anyone downstream
 to be tempted by. Neither is the *phase ordinal* published as a fraction:
 "stage 6 of 17" looks like a measurement but the stages have wildly unequal
 durations, so a bar driven by it would move at a lie's pace.

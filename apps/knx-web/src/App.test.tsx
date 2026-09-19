@@ -21,6 +21,10 @@ import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   importProject: vi.fn(),
+  // F14: `openNativeProject`'s own function, distinct from `importProject`
+  // above — the "shows the banner" test below pins that the `.knxdb`
+  // button reaches this one and not its ETS-import sibling.
+  openProject: vi.fn(),
   // The welcome screen's third button (the from-scratch launcher) calls
   // this through `NewProjectDialog`; every other test here renders that
   // dialog not at all, so an unconfigured `vi.fn()` is enough for them.
@@ -899,6 +903,25 @@ describe("App — project load progress", () => {
       finish(baseTree());
     });
     expect(host!.querySelector(".load-progress")).toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  // F14: the native `.knxdb` button binds to `openNativeProject`, which
+  // must call `api.openProject` — a mutation swapping it for
+  // `api.importProject` (the ETS-import path `pickProject` uses) passed
+  // every other gate, because nothing here ever clicked this button.
+  it("opens a .knxdb file through api.openProject, not api.importProject", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/home/knxbench/projects/villa.knxdb");
+    apiMock.openProject.mockResolvedValue(baseTree());
+    const root = await renderApp();
+
+    await act(async () => {
+      findButton("Open (.knxdb)…").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(apiMock.openProject).toHaveBeenCalledTimes(1);
+    expect(apiMock.importProject).not.toHaveBeenCalled();
 
     await act(async () => root.unmount());
   });

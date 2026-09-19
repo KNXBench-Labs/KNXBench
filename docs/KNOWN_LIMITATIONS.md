@@ -5670,7 +5670,8 @@ reason other than the connection failing to come up — a refused property, a
 mismatched read-back, a Verify Mode the device will not take — is still
 returned to the caller unchanged (`reestablishment_may_be_retried` in
 `crates/knx-net/src/commissioning.rs` lists exactly the four
-connection-shaped errors it swallows).
+connection-shaped errors it swallows, and since C19's second fix round each
+of the four has a test that fails when it is removed from that list).
 
 **Lifted when.** A measurement on real hardware says the reconnect cost
 matters. The cheaper alternative — keeping a released connection and hoping

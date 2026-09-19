@@ -96,7 +96,8 @@ brief's candidate seams one at a time against it:
 
 ### 1.1 Import and export format adapters — would have to be invented
 
-[V] `crates/knx-app/src/lib.rs` is 412 lines across four files and re-exports two
+[V] `crates/knx-app` is 412 lines across four files (`lib.rs` itself is 19);
+    it re-exports two
 functions by name:
 
 ```rust
@@ -405,7 +406,7 @@ the engine offers fuel/instruction limits.
 invisibly — a field rename is a runtime failure in someone's script months later.
 
 **The specific problem here:** [V] every interesting script would reach `Project` and
-`Command`. `Project`'s six fields are **all `pub`** (`crates/knx-core/src/project.rs:180`),
+`Command`. `Project`'s six fields are **all `pub`** (`crates/knx-core/src/project.rs:181-187`),
 so a binding that hands a script a mutable project hands it the ability to bypass the
 command layer entirely — see §4. And per §3.4, bindings are precisely the case where the
 licence analysis stops favouring the script author.
@@ -621,7 +622,7 @@ Around that sit two more integrity mechanisms:
 
 ### The hole in the wall
 
-[V] `crates/knx-core/src/project.rs:180` — `Project`'s six fields (`schema_version`,
+[V] `crates/knx-core/src/project.rs:181-187` — `Project`'s six fields (`schema_version`,
 `strings`, `info`, `installations`, `devices`, `ids`) are **all `pub`**. So is
 `ProjectInfo`'s entire field set.
 

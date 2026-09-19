@@ -31,7 +31,7 @@ fake.
 
 There is no importer trait, no exporter trait, no report template trait and
 no registration function on the frontend's command registry.
-`crates/knx-app/src/lib.rs` is 412 lines and re-exports
+`crates/knx-app` is 412 lines across four files, and its `lib.rs` re-exports
 `import_ets_project` and `export_ets_project` **by name**;
 `apps/knx-web/src/commandRegistry.ts`'s `COMMANDS` is a module-level array
 literal with no `register`. A plugin API here would not be *exposed*. It
@@ -53,7 +53,7 @@ WebAssembly boundary to carry.
 
 **Data integrity, which decides it.** `Command::apply` returns its own
 inverse, calls the validators in `validation.rs`, and feeds `CommandStack`
-for undo and redo. But `crates/knx-core/src/project.rs:180` declares all
+for undo and redo. But `crates/knx-core/src/project.rs:181-187` declares all
 six of `Project`'s fields `pub`. "All mutations go through `Command`" is a
 convention held by review, not an invariant held by the type system — fine
 inside one workspace with one test suite, and a different proposition when

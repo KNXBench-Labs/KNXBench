@@ -646,6 +646,7 @@ out-of-process helper over a documented protocol, and its named falsifying
 experiment is to write a *second* implementation of one seam as an ordinary
 workspace crate first — if a shared trait falls out of that without
 contorting the first implementation, ADR-0025 should be revised.
+
 ## Session 6 — KNXnet/IP
 
 **Goal.** Talk to the bus.

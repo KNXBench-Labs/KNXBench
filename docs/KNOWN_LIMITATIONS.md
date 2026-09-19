@@ -5878,7 +5878,7 @@ to write a *second* implementation of one seam as an ordinary workspace crate
 and see whether a shared trait falls out of it — if one does, this entry and
 its ADR are wrong and should be revised.
 
-## 108. Two loadable parts of the same `PartKind` have no defined relative order, so `DownloadPlan::new` refuses them both
+## 109. Two loadable parts of the same `PartKind` have no defined relative order, so `DownloadPlan::new` refuses them both
 
 **Limitation.** `[C8]` `DownloadPlan::new`
 (`crates/knx-net/src/commissioning/download.rs`) now enforces the download

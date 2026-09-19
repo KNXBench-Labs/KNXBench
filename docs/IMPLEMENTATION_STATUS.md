@@ -7150,7 +7150,7 @@ the first time a part's kind is not strictly greater than its predecessor's.
 `<=` rather than `<`: a plan may skip kinds (a partial download need not
 carry all five), but two parts of the same kind have no row in either
 table to place them against, so equality is refused rather than guessed at
-(see `docs/KNOWN_LIMITATIONS.md` §108). `PartKind` gained `Hash` so it can
+(see `docs/KNOWN_LIMITATIONS.md` §109). `PartKind` gained `Hash` so it can
 sit inside `PlanError`, which already derived it via its `ObjectIndex`
 fields. The error's `Display` text and the new doc comments are careful to
 say *download order*, not *memory layout* — the two are different claims in

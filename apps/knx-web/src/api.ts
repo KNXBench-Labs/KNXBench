@@ -940,9 +940,17 @@ export interface BusMonitorTelegramsResponse {
 // alongside its three siblings since all four routes share this file's
 // provenance comment and none of the other three has anywhere better to
 // live either.
+//
+// `decodedEcho` (task 27) reuses `BusDecodedValue` — `WriteResponse`'s
+// field is that same DTO on the wire (`decoded_echo: DecodedValueDto` in
+// Rust) — decoded from the bytes the write actually sent, never from the
+// request's own `value`, so it always carries `kind: "value" | "error"`
+// in practice (the DPT this route decodes against is always already
+// resolved by the time it runs, never `"unresolved"`/`"conflict"`).
 export interface BusWriteResponse {
   encodedPayload: string;
   service: "GroupValueWrite";
+  decodedEcho: BusDecodedValue;
 }
 
 export function startBusMonitor(gateway: string): Promise<BusMonitorStartResponse> {

@@ -34,8 +34,8 @@ use knx_core::{GroupAddress, GroupAddressDpt, GroupAddressStyle};
 use knx_net::{ApplicationService, Destination};
 
 use crate::bus::{
-    self, BusSession, BusSessionError, DecodedValue, GroupAddressContext, SessionStatus,
-    TelegramRow,
+    self, decode_single, BusSession, BusSessionError, DecodedValue, GroupAddressContext,
+    SessionStatus, TelegramRow,
 };
 use crate::errors::ApiError;
 use crate::SharedState;
@@ -354,11 +354,31 @@ struct WriteRequest {
     value: String,
 }
 
+/// `decodedEcho` (task 27, requested mid-run: payloads should show the
+/// actual data, not only bytes, and the confirmation line was the one
+/// surface still missing it — `apps/knx-web/src/BusMonitorPanel.tsx`'s
+/// Decoded column already covers the monitor). Reuses [`DecodedValueDto`]
+/// as-is rather than a dedicated struct: [`decode_single`] only ever
+/// returns its `Value`/`Error` variants here (the DPT this route decodes
+/// against is always already resolved — never `Unresolved`/`Conflict`),
+/// and that shape already carries exactly `dpt`, `text` and an optional
+/// `error`, so a second struct would just be this one with two unused
+/// variants deleted.
+///
+/// Decoded from `value` — the bytes [`knx_core::encode`] actually produced
+/// and [`BusSession::send`] put on the wire — never from `body.value`.
+/// Echoing the request's own input back would prove nothing about the
+/// codec; decoding the wire bytes is what actually demonstrates a
+/// round trip. A decode failure here does not fail the request: the
+/// telegram already reached the bus by the time this runs, so the
+/// response stays `200` and [`decode_single`]'s `DecodedValue::Error`
+/// carries the mismatch as text instead — see [`DecodedValueDto::from`].
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct WriteResponse {
     encoded_payload: String,
     service: &'static str,
+    decoded_echo: DecodedValueDto,
 }
 
 async fn write_value(
@@ -431,5 +451,6 @@ async fn write_value(
     Ok(Json(WriteResponse {
         encoded_payload: bus::format_group_value_payload(&value),
         service: "GroupValueWrite",
+        decoded_echo: DecodedValueDto::from(&decode_single(dpt, &value)),
     }))
 }

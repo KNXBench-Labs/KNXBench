@@ -681,6 +681,7 @@ export const messages = {
   "busCompose.send": "Send",
   "busCompose.liveAction": "Sends to the connected bus. Project Undo cannot reverse this action.",
   "busCompose.sent": "Sent {service}: {payload}",
+  "busCompose.sentDecoded": "Decoded: {text}",
   "busCompose.contextStaleMessage":
     "The project changed after this bus session started — the DPT would be resolved against the old snapshot, so sending is locked. Reconnect first.",
 

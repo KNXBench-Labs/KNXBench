@@ -584,6 +584,7 @@ export const messages: Record<MessageKey, string> = {
   "busCompose.send": "Senden",
   "busCompose.liveAction": "Sendet auf den verbundenen Bus. Projekt-Rückgängig kann diese Aktion nicht zurücknehmen.",
   "busCompose.sent": "Gesendet {service}: {payload}",
+  "busCompose.sentDecoded": "Dekodiert: {text}",
   "busCompose.contextStaleMessage":
     "Das Projekt hat sich nach dem Start dieser Bus-Sitzung geändert — der DPT würde gegen den alten Stand aufgelöst, deshalb ist Senden gesperrt. Zuerst neu verbinden.",
 

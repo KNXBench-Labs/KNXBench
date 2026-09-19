@@ -62,11 +62,19 @@ pub struct EntityCount {
     pub mapped: u32,
 }
 
-/// Bytes are not repeated in the report; the store holds them.
+/// Bytes are not repeated in the report; the store holds them. `xpath` and
+/// `name` are, though (C14): a `RetainedAttribute`/`RetainedElement` entry
+/// with an empty `reason` of "known or unknown attribute the model does not
+/// carry" is unreadable without them — a preserved `LoadedImage` that the
+/// report cannot distinguish from a preserved `Comment` is only half
+/// reported. Both are empty for a whole container entry or a manufacturer
+/// file, same as on [`crate::opaque::OpaqueEntry`] itself.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct OpaqueSummary {
     pub source_path: String,
+    pub xpath: String,
     pub kind: String,
+    pub name: String,
     pub size: u64,
     pub sha256: String,
     pub reason: String,
@@ -264,7 +272,9 @@ fn opaque_kind_reason(kind: crate::opaque::OpaqueKind) -> &'static str {
 fn opaque_summary(e: &OpaqueEntry) -> OpaqueSummary {
     OpaqueSummary {
         source_path: e.source_path.clone(),
+        xpath: e.xpath.clone(),
         kind: format!("{:?}", e.kind),
+        name: e.name.clone(),
         size: e.bytes.len() as u64,
         sha256: e.sha256.clone(),
         reason: opaque_kind_reason(e.kind).to_string(),
@@ -274,7 +284,9 @@ fn opaque_summary(e: &OpaqueEntry) -> OpaqueSummary {
 fn manufacturer_summary(m: &ManufacturerFile) -> OpaqueSummary {
     OpaqueSummary {
         source_path: m.source_path.clone(),
+        xpath: String::new(),
         kind: format!("{:?}", m.kind),
+        name: String::new(),
         size: m.bytes.len() as u64,
         sha256: m.sha256.clone(),
         reason: opaque_kind_reason(m.kind).to_string(),

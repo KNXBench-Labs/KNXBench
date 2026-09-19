@@ -3074,6 +3074,41 @@ ways, all deliberate and all recorded here per that design's own §7:
    path on one gateway model, not for routing, transmit behavior, reconnect,
    another gateway, or long-running stability. The exact procedure is recorded
    in `.ai/logs/2026-09-16_codex_group_monitor_reverify.md`.
+
+   **Re-verified independently 2026-09-16 → 2026-09-19 (Task 16, second
+   pass).** A separate session against the same real gateway ran the
+   production `POST /api/bus/monitor/start` → poll → `POST /api/bus/monitor/
+   stop` path for 2040 seconds (34 minutes) with the same real schema-23
+   `Unser Zuhause` project open, well past the earlier two- and one-minute
+   runs. Result: 1299 telegrams from 20 source addresses to 61 group
+   destinations, `droppedCount = 0`, all 1299 destination names resolved
+   against the project (201 `GroupValueRead`/201 `GroupValueResponse` pairs,
+   897 `GroupValueWrite`), and 209 values decoded through their DPT against
+   889 left `unresolved` — expected under §61's thirty-main-type coverage,
+   not a defect of this task. This also exercised, for the first time,
+   the item-4 single-session guard against a live gateway rather than only
+   against `FakeConnector` in unit tests: a second `POST /api/bus/monitor/
+   start` issued to the *same* server process while the first tunnel was
+   open was refused with `409` and the existing session's id, exactly as
+   item 4 describes. A related, previously undocumented fact surfaced by
+   accident: a *second, independent* `knx-server` process attempting its
+   own tunnel to the same physical gateway while the first tunnel was open
+   was refused by the gateway itself — KNXnet/IP `CONNECT_RESPONSE` status
+   `0x24` (`E_NO_MORE_CONNECTIONS`) — before our own single-session guard
+   ever ran. The gateway used for this verification accepts exactly one
+   concurrent tunnel connection; two separate `knx-server` instances (or a
+   `knx-server` and a `knx-cli bus monitor` run) pointed at it will collide
+   at the hardware, not just inside this application. No group read, write,
+   response, management request, scan, or `/api/bus/write` call was made in
+   either session; the gateway address is deliberately not stored here.
+   Of §62's original four headline claims (tunnelling-only, single-session,
+   client-filtered, "never verified against a real gateway"), all four now
+   have real-gateway evidence behind them, not just source-reading: the
+   first three architecturally (this run touched no routing code, hit the
+   documented `409`, and the poll route still takes only `since`), the
+   fourth by these two dated runs. What remains unverified is unchanged:
+   routing, transmit behavior, reconnect after a mid-session failure, other
+   gateway models, and sessions longer than 34 minutes.
 10. **No KNX certification or ETS-parity claim.** This is a monitor/write
     table, not a certified diagnostic tool, and not a claim of matching
     ETS's Group Monitor feature-for-feature — see item 6 above for
@@ -3132,10 +3167,11 @@ during review, after the design document was written.
 **Impact.** A user gets a live, DPT-decoded telegram table and a
 send-from-the-table form for one tunnelled gateway at a time, with a
 client-side text/service filter. The passive receive and project-resolution
-path now has one bounded real-installation observation, but the send form still
-has only fake-tunnel coverage. This remains neither a certified diagnostic
-tool nor ETS's Group Monitor and — for a very long browser session — is not
-bounded in memory the way the server side already is.
+path now has bounded real-installation observations from two dates, the
+longer one running 34 minutes, but the send form still has only fake-tunnel
+coverage. This remains neither a certified diagnostic tool nor ETS's Group
+Monitor and — for a very long browser session — is not bounded in memory
+the way the server side already is.
 
 **Lifted when.** Future slices add routing support, auto-reconnect, live DPT
 re-resolution, multi-session support, server-side filtering, a client-side row

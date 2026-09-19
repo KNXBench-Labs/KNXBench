@@ -139,6 +139,12 @@ pub struct AlreadyRunning {
 pub struct LoadOperations {
     current: Mutex<Option<LoadSnapshot>>,
     next_id: AtomicU64,
+    /// Every phase the current operation has entered, in order. Test-only:
+    /// a snapshot holds one phase at a time, which is all a polling client
+    /// needs and not enough to assert an *order* on. Nothing in a release
+    /// build allocates this.
+    #[cfg(test)]
+    phases: Mutex<Vec<&'static str>>,
 }
 
 impl LoadOperations {
@@ -174,6 +180,30 @@ impl LoadOperations {
             operations: Arc::clone(self),
             operation_id,
         })
+    }
+
+    /// The phases the current operation reported, in the order it entered
+    /// them. See the field's comment for why this is test-only.
+    #[cfg(test)]
+    pub fn recorded_phases(&self) -> Vec<&'static str> {
+        self.phases
+            .lock()
+            .expect("phase log mutex poisoned")
+            .clone()
+    }
+
+    #[cfg(test)]
+    fn record_phase(&self, operation_id: u64, phase: LoadPhase) {
+        let current = self.current.lock().expect("load progress mutex poisoned");
+        if current
+            .as_ref()
+            .is_some_and(|s| s.operation_id == operation_id)
+        {
+            self.phases
+                .lock()
+                .expect("phase log mutex poisoned")
+                .push(phase.as_str());
+        }
     }
 
     /// The current operation, running or finished, or `None` when this
@@ -221,6 +251,8 @@ impl LoadHandle {
             snapshot.completed = None;
             snapshot.total = None;
         });
+        #[cfg(test)]
+        self.operations.record_phase(self.operation_id, phase);
     }
 
     /// Reports `completed` of `total` real items within the current phase.

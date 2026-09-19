@@ -3501,6 +3501,59 @@ mod tests {
         assert_eq!(suffix, "TAIL");
     }
 
+    // Fix round 1, finding F4. The import path's stage order is asserted
+    // twice over (`knx-etsproj`'s own recorder and
+    // `crates/knx-app/tests/load_progress.rs`); the native open's five
+    // phases were wired by inspection only. A label naming the wrong work
+    // is exactly as misleading on this path as on the other one.
+    #[test]
+    fn a_native_open_reports_its_five_phases_in_the_order_it_does_them() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("villa.knxdb");
+        let project = knx_core::Project::new(knx_core::Language("en".into()));
+        save_project_as_impl(&db_path, &project, &[], &[]).unwrap();
+
+        let operations = std::sync::Arc::new(crate::load_progress::LoadOperations::default());
+        let handle = operations
+            .begin(crate::LoadKind::Open, "villa.knxdb")
+            .expect("a fresh registry has no operation in flight");
+        load_native(&db_path, &handle).unwrap();
+        handle.succeed();
+
+        assert_eq!(
+            operations.recorded_phases(),
+            vec![
+                "openStore",
+                "loadStoredProject",
+                "loadOpaque",
+                "loadManufacturerRefs",
+                "buildProjectTree",
+            ]
+        );
+    }
+
+    // The same path, one step further: a `.knxdb` that is not a store at
+    // all fails in the phase that opens it, and the phase name says so
+    // rather than blaming the last step that happened to be announced.
+    #[test]
+    fn a_native_open_that_cannot_open_the_store_fails_in_that_phase() {
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("not-a-store.knxdb");
+        std::fs::write(&db_path, b"this is not SQLite").unwrap();
+
+        let operations = std::sync::Arc::new(crate::load_progress::LoadOperations::default());
+        let handle = operations
+            .begin(crate::LoadKind::Open, "not-a-store.knxdb")
+            .expect("a fresh registry has no operation in flight");
+        let error = load_native(&db_path, &handle).unwrap_err();
+        handle.fail(error);
+
+        assert_eq!(operations.recorded_phases(), vec!["openStore"]);
+        let snapshot = operations.snapshot().unwrap();
+        assert_eq!(snapshot.phase.as_str(), "openStore");
+        assert_eq!(snapshot.status, crate::load_progress::LoadStatus::Failed);
+    }
+
     #[test]
     fn opening_a_project_through_a_wired_product_db_enriches_more_than_without() {
         if !reference_project_path().exists() {

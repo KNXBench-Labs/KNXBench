@@ -16,7 +16,7 @@ import {
   removeLanguagePack,
   useLanguagePacks,
 } from "./languagePack";
-import type { LanguagePackImportReport } from "./languagePack";
+import type { LanguagePackImportReport, LanguagePackRejectionReason } from "./languagePack";
 
 /** Whether `tag` is one of the compiled-in catalogues — the shadowing trap
  * `languagePack.ts`'s `exportEnglishTemplate` doc comment warns about
@@ -27,9 +27,66 @@ function isShadowedByBuiltIn(tag: string): boolean {
   return (AVAILABLE_UI_LANGUAGES as readonly string[]).includes(tag);
 }
 
+/** `LanguagePackRejectionReason` plus the one rejection that never reaches
+ * `languagePack.ts` at all — the uploaded file failing `JSON.parse` before
+ * `importLanguagePack` is ever called. Handled by the same
+ * `describeRejectionReason` switch below so both paths compose the same
+ * translated "Import rejected: …" sentence, closing KNOWN_LIMITATIONS.md
+ * §67. */
+type ImportRejection = LanguagePackRejectionReason | { kind: "invalidJson" };
+
 type ImportOutcome =
   | { ok: true; report: LanguagePackImportReport }
-  | { ok: false; error: string; hint?: { oldTag: string; modernTag: string } };
+  | { ok: false; error: string; reason: ImportRejection; hint?: { oldTag: string; modernTag: string } };
+
+/**
+ * Composes the reason clause of `languagePack.importReport.rejected`
+ * ("Import rejected: {reason}") in the active UI language, mirroring
+ * `CatalogBrowser.tsx`'s `describeCreationDiagnostic` for
+ * `CreationDiagnostic` — one catalogue key per `reason.kind` instead of
+ * rendering `languagePack.ts`'s English `error` string verbatim, which is
+ * exactly what KNOWN_LIMITATIONS.md §67 used to describe: a translated
+ * sentence with an untranslated English clause sitting inside it. The
+ * `default` falls back to `fallbackError` (the untranslated `.error` this
+ * build's `reason` was derived from) purely as a belt-and-braces measure —
+ * every `kind` this build can produce is handled above it, so it should
+ * never actually run, the same reasoning as that function's own fallback.
+ */
+function describeRejectionReason(t: Translate, reason: ImportRejection, fallbackError: string): string {
+  switch (reason.kind) {
+    case "invalidJson":
+      return t("languagePack.importReport.invalidJson");
+    case "notObject":
+      return t("languagePack.rejection.notObject");
+    case "formatVersionMissing":
+      return t("languagePack.rejection.formatVersionMissing");
+    case "tagMissing":
+      return t("languagePack.rejection.tagMissing");
+    case "tagMalformed":
+      return t("languagePack.rejection.tagMalformed", { tag: reason.tag });
+    case "nameMissing":
+      return t("languagePack.rejection.nameMissing");
+    case "messagesMissing":
+      return t("languagePack.rejection.messagesMissing");
+    case "messageValueNotString":
+      return t("languagePack.rejection.messageValueNotString", {
+        key: reason.key,
+        valueType: reason.valueType,
+      });
+    case "englishNameNotString":
+      return t("languagePack.rejection.englishNameNotString");
+    case "basedOnNotString":
+      return t("languagePack.rejection.basedOnNotString");
+    case "packVersionNotString":
+      return t("languagePack.rejection.packVersionNotString");
+    case "pluralCategoriesInvalid":
+      return t("languagePack.rejection.pluralCategoriesInvalid");
+    case "storageFailure":
+      return t("languagePack.rejection.storageFailure", { detail: reason.detail });
+    default:
+      return fallbackError;
+  }
+}
 
 /** Triggers a browser "save this file" flow for `data`, JSON-encoded. The
  * only DOM-touching part of export — kept to one tiny function so the
@@ -55,7 +112,11 @@ function ImportReport(props: { t: Translate; outcome: ImportOutcome }) {
   if (!outcome.ok) {
     return (
       <div className="language-pack-report" role="status">
-        <p className="field-error">{t("languagePack.importReport.rejected", { reason: outcome.error })}</p>
+        <p className="field-error">
+          {t("languagePack.importReport.rejected", {
+            reason: describeRejectionReason(t, outcome.reason, outcome.error),
+          })}
+        </p>
         {outcome.hint && (
           <p>
             {t("languagePack.importReport.grandfatheredHint", {
@@ -173,7 +234,11 @@ export default function SettingsPanel(props: {
     try {
       raw = JSON.parse(await file.text());
     } catch {
-      setImportOutcome({ ok: false, error: t("languagePack.importReport.invalidJson") });
+      setImportOutcome({
+        ok: false,
+        error: t("languagePack.importReport.invalidJson"),
+        reason: { kind: "invalidJson" },
+      });
       return;
     }
 
@@ -188,6 +253,7 @@ export default function SettingsPanel(props: {
     setImportOutcome({
       ok: false,
       error: result.error,
+      reason: result.reason,
       hint: modernTag !== undefined ? { oldTag: rawTag as string, modernTag } : undefined,
     });
   }

@@ -970,9 +970,58 @@ export interface StaleParameter {
   raw: string;
 }
 
+/**
+ * Every `kind` `ParameterDiagnosticKindDto` (`apps/knx-server/src/routes.rs`)
+ * can serialize, mirrored here by hand the same way `CreationDiagnostic`'s
+ * `kind` union is (no ts-rs binding for this DTO). None of these carry a
+ * dynamic value of their own — see that Rust type's doc comment — so
+ * `ParameterPanel.tsx`'s `describeParameterDiagnosticMessage` only ever
+ * needs the tag itself, never a payload field.
+ */
+export type ParameterDiagnosticKind =
+  | "parametersUnreadable"
+  | "duplicateUnscopedValue"
+  | "duplicateModuleScopedValue"
+  | "duplicateModuleId"
+  | "noModuleInstanceMatch"
+  | "ambiguousModuleInstance"
+  | "malformedModuleInstanceId"
+  | "noBranchMatched"
+  | "unparsableTest"
+  | "unresolvedParamRef"
+  | "nonNumericValue"
+  | "unexpectedTypeNoneShape"
+  | "unrecognizedNode"
+  | "moduleDefNotFound"
+  | "moduleCycleDetected"
+  | "moduleNestingTooDeep"
+  | "moduleExpansionBudgetExhausted"
+  | "missingValue"
+  | "moduleWithoutId"
+  | "moduleArgumentNotBound"
+  | "unsupportedModuleArgumentKind"
+  | "unresolvedTextPlaceholder";
+
 export interface ParameterDiagnostic {
   scope: ModuleScope | null;
+  /** Same trust boundary as `CreationDiagnostic.kind` (D4 exception,
+   * `CatalogBrowser.tsx`): this type is a promise about the wire shape
+   * this build's server sends, not something TS enforces at the network
+   * boundary. A future server release adding a twenty-third diagnostic would
+   * hand an older frontend a `kind` outside this union at runtime; that
+   * frontend's `describeParameterDiagnosticMessage` falls back to
+   * `message` verbatim (English) rather than rendering nothing. */
+  kind: ParameterDiagnosticKind;
+  /** KNOWN_LIMITATIONS.md §66: the banner headline, now translatable —
+   * `ParameterPanel.tsx` renders it through `describeParameterDiagnosticMessage`,
+   * not verbatim. This field is the untranslated fallback for an
+   * unrecognised `kind` only. */
   message: string;
+  /** Always English, deliberately: carries the dynamic ids/counts a
+   * translated sentence would have nowhere to put, and exists for
+   * copy-pasting into a bug report (the "Copy details" button), not for
+   * reading in the active UI language — see KNOWN_LIMITATIONS.md §66's
+   * boundary rule. */
   detail: string;
 }
 

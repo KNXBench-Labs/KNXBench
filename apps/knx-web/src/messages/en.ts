@@ -77,6 +77,12 @@ export const messages = {
   "documentationExport.summaryWithWarnings.other": "Project documentation exported, {count} warnings — see Log.",
 
   "toast.dismiss": "Dismiss",
+  // §67's shape (a translated sentence quoting an untranslated reason)
+  // closed for language-pack rejection; this is the same shape here,
+  // left standing on purpose (KNOWN_LIMITATIONS.md §66) — disclosed
+  // rather than silently presented as a translation gap. Rendered once
+  // per error toast, next to the `{msg}` it explains.
+  "toast.error.messageIsEnglish": "This message is the server's own text, in English.",
 
   "toast.error.notAsPlanned": "Well, that didn't go as planned: {msg}",
   "toast.error.busObjects": "The bus objects: {msg}",
@@ -320,6 +326,52 @@ export const messages = {
   "parameters.diagnosticsCount.one": "{count} issue found while evaluating this device's parameters",
   "parameters.diagnosticsCount.other": "{count} issues found while evaluating this device's parameters",
   "parameters.copyDetails": "Copy details",
+
+  // KNOWN_LIMITATIONS.md §66: one key per `ParameterDiagnosticKindDto`
+  // variant (`apps/knx-server/src/routes.rs`) — the banner/section
+  // headline text `ParameterPanel.tsx`'s `describeParameterDiagnosticMessage`
+  // picks between. This is prose read in the normal course of using the
+  // parameter editor, so it is translatable; the corresponding
+  // `.detail` string never appears here and stays English (see
+  // `ParameterDiagnostic.detail`'s doc comment in `api.ts`) — it exists
+  // for a bug report, not for reading in German.
+  "parameters.diagnostic.parametersUnreadable":
+    "Some declared parameters could not be read from the product database and are not shown.",
+  "parameters.diagnostic.duplicateUnscopedValue":
+    "Two stored values target the same parameter; the later one is ignored.",
+  "parameters.diagnostic.duplicateModuleScopedValue":
+    "Two stored values target the same module-scoped parameter; the later one is ignored.",
+  "parameters.diagnostic.duplicateModuleId":
+    "Two or more sections in this program declare the same module id; its fields are read-only.",
+  "parameters.diagnostic.noModuleInstanceMatch":
+    "No imported module instance matches this module; its fields are read-only.",
+  "parameters.diagnostic.ambiguousModuleInstance":
+    "Two or more imported module instances share this module; its fields are read-only.",
+  "parameters.diagnostic.malformedModuleInstanceId":
+    "An imported module instance's identifier has an unexpected shape; this module's fields are read-only.",
+  "parameters.diagnostic.noBranchMatched": "A choice did not match any of its options.",
+  "parameters.diagnostic.unparsableTest": "A choice's condition could not be understood.",
+  "parameters.diagnostic.unresolvedParamRef": "A choice's controlling parameter could not be found.",
+  "parameters.diagnostic.nonNumericValue": "A choice's controlling value was not a valid number.",
+  "parameters.diagnostic.unexpectedTypeNoneShape": "An unusual choice structure was skipped.",
+  "parameters.diagnostic.unrecognizedNode": "An unrecognized program element was skipped.",
+  "parameters.diagnostic.moduleDefNotFound": "A module could not be found in this program.",
+  "parameters.diagnostic.moduleCycleDetected":
+    "A module refers back to one of its own enclosing modules and was not expanded.",
+  "parameters.diagnostic.moduleNestingTooDeep":
+    "A module is nested deeper than this program will expand.",
+  "parameters.diagnostic.moduleExpansionBudgetExhausted":
+    "This program's modules are too numerous to fully expand; the rest were skipped.",
+  "parameters.diagnostic.missingValue": "A choice's controlling parameter has no value.",
+  "parameters.diagnostic.moduleWithoutId":
+    "A module instance has no identifier and cannot be matched to stored values.",
+  "parameters.diagnostic.moduleArgumentNotBound":
+    "A module argument could not be matched to the module's declaration and was ignored.",
+  "parameters.diagnostic.unsupportedModuleArgumentKind":
+    "A module argument uses a kind this build does not interpret and was ignored.",
+  "parameters.diagnostic.unresolvedTextPlaceholder":
+    "A text placeholder had no matching module argument and was left as written.",
+
   "parameters.title": "Parameters",
   "parameters.loading": "Loading parameters…",
   "parameters.noProgram":
@@ -367,6 +419,9 @@ export const messages = {
   "logPanel.severity.info": "Info",
   "logPanel.emptyNoEntries": "No log entries yet.",
   "logPanel.emptyFiltered": "No log entries match the current filters.",
+  // Same §66/§67 disclosure as `toast.error.messageIsEnglish`, for this
+  // panel's own untranslated fields.
+  "logPanel.entryTextIsEnglish": "Message, location and detail are the server's own text, in English.",
 
   "busMonitor.title": "Bus monitor",
   "busMonitor.eyebrow": "KNXnet/IP · Tunnelling",
@@ -515,6 +570,31 @@ export const messages = {
     "Plural forms have no data for this language on this system; plural text always uses the general form.",
   "languagePack.importReport.shadowedByBuiltIn":
     'This pack\'s tag ("{tag}") matches a built-in language and will never be used — edit "tag" before activating or sharing it.',
+
+  // §67's fix: one key per `LanguagePackRejectionReason.kind`
+  // (`languagePack.ts`), so `SettingsPanel.tsx`'s `describeRejectionReason`
+  // can compose the "Import rejected: …" sentence above entirely in the
+  // active UI language — the rejection reason used to be a raw English
+  // string dropped into an otherwise-translated sentence. Deliberately
+  // one key per validation rule rather than one generic "invalid pack"
+  // key, so a translator (and a user reading their own mistake) gets the
+  // specific field name every time, same as the English original did.
+  "languagePack.rejection.notObject": "A language pack must be a JSON object.",
+  "languagePack.rejection.formatVersionMissing": '"formatVersion" is required and must be a number.',
+  "languagePack.rejection.tagMissing": '"tag" is required and must be a non-empty string.',
+  "languagePack.rejection.tagMalformed":
+    '"tag" ("{tag}") is not a well-formed BCP 47 tag, e.g. "nl-NL", "tlh" (Klingon), "bar" (Bavarian), or "art-x-sindarin" (a private-use tag for anything unregistered).',
+  "languagePack.rejection.nameMissing": '"name" is required and must be a non-empty string.',
+  "languagePack.rejection.messagesMissing":
+    '"messages" is required and must be an object mapping keys to strings.',
+  "languagePack.rejection.messageValueNotString": '"messages.{key}" must be a string, got {valueType}.',
+  "languagePack.rejection.englishNameNotString": '"englishName" must be a string when present.',
+  "languagePack.rejection.basedOnNotString": '"basedOn" must be a string when present.',
+  "languagePack.rejection.packVersionNotString": '"packVersion" must be a string when present.',
+  "languagePack.rejection.pluralCategoriesInvalid":
+    '"pluralCategories" must be an array of strings when present.',
+  "languagePack.rejection.storageFailure":
+    "Could not save the change: the browser's storage rejected the write ({detail}).",
 
   // `ProjectDiffPanel.tsx`. `projectDiff.entityStatus.*` doubles as both the
   // per-table count word ("1 {status}") and the whole-installation status

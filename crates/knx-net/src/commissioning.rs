@@ -3125,9 +3125,10 @@ mod tests {
         assert_eq!(observed, LoadState::Loaded);
         assert!(
             device.verify_mode(),
-            "the wait polled on to the end holding a connection whose Verify \
-             Mode step never ran: the device says bit 2 is clear while the \
-             session says it is connected"
+            "the device says Verify Mode's bit 2 is clear while the session \
+             says it is connected. Either the wait polled on holding a \
+             connection whose Verify Mode step never ran, or the write \
+             itself is broken — the Verify Mode tests below tell them apart"
         );
         assert_eq!(
             session.verify_mode(),

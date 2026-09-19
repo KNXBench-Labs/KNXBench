@@ -5838,7 +5838,7 @@ carry.
 
 Data integrity is the part that would be hardest to fix rather than merely
 tedious. `Project`'s six fields are all `pub`
-(`crates/knx-core/src/project.rs:181-187`), so the rule that every mutation goes
+(`crates/knx-core/src/project.rs:181-186`), so the rule that every mutation goes
 through `Command::apply` — with its validation, its typed errors and its
 inverse for undo — is held by review, not by the type system. `Layer`
 ([ADR-0004](adr/0004-provenance-model.md)) has five variants and none of them

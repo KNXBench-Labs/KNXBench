@@ -127,6 +127,17 @@ started, which is a statement about evidence, not about intent.
   and CLAUDE.md's "only implement protocol behaviour that is technically
   verified" applies with full force here.
 
+**Specification conformance backlog, added 2026-09-19.** Two read-only audits
+read the Standard's PDFs directly — CP §3.5.3's five partial-download variants,
+and CP §3.5.2/§3.5.4, `recovery()`, MP §2.3 and the full timing table. Their
+reports are `docs/spec-audits/2026-09-19-cp-3_5_3-partial-download.md` and
+`docs/spec-audits/2026-09-19-cp-3_5_2-3_5_4-mp-2_3.md`; the 18 tasks they
+produced, each carrying its clause and page, are
+`docs/superpowers/plans/2026-09-19-commissioning-spec-conformance.md`. None of
+them opens a socket. Start at C1: it is the only defect there that fails on
+real hardware — `PID_PROGRAM_VERSION` written to three objects RES does not
+give it — and the simulator is currently permissive enough to hide it.
+
 ### T18 — Parameter interpretation and editor, remaining slices
 
 Four slices shipped through 2026-09-12; the goal-completion run closed

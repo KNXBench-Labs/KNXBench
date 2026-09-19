@@ -5973,3 +5973,66 @@ states a relative order for two same-kind objects, or a real product
 database entry is found that requires more than one object of the same
 `PartKind` in a single download — at which point the order for that case
 can be added deliberately, cited, and tested, rather than inferred here.
+
+## 110. `PID_GROUP_RESPONSER_TABLE` stays unimplemented on every medium
+
+**Limitation.** `[C11]` CP §3.5.3's Application Program 2, Application
+Program 1 and Group Object Table variants each carry a step that writes the
+Group Address Table segment and, within it, a group responser table via
+`PID_GROUP_RESPONSER_TABLE` — footnoted in each case as PL110-only (CP
+§3.5.3 footnotes 7, 9 and 10, pp. 44, 47, 52). RES §4.16.8.2.5, p. 239 is
+explicit both ways: *"This Property is mandatory for PL110 devices. For all
+other media this Property shall not be implemented."* This project targets
+TP1, RF and IP; it does not implement `PID_GROUP_RESPONSER_TABLE`, and the
+three affected step lists in `crates/knx-core/src/commissioning/
+partial_download_variant.rs` say so inline rather than modelling the
+property's write as if it applied everywhere.
+
+**Cause.** Deliberate scope decision, not a gap found by accident. RES's own
+text makes implementing this property on TP1/RF/IP a Standard violation, not
+merely unnecessary, so "not yet done" would be the wrong description.
+
+**Impact.** None on TP1, RF or IP — the medium this project's simulator and
+every product fixture seen so far use. A plan that targets a genuine PL110
+device must be *declined* outright rather than run with this half of CP
+§3.5.3 AP2 Nr. 11 (and its GOT/AP1 siblings) silently missing: an operator
+who thinks a PL110 download finished would otherwise be wrong about a
+Standard-mandated property no code here ever touched. No such decline
+exists in the sequencer yet, because no PL110 support exists yet for it to
+guard; this entry is the refusal recorded ahead of the code, per CLAUDE.md's
+"never silently discard information."
+
+**Lifted when.** PL110 support is scoped as its own task, at which point
+`PID_GROUP_RESPONSER_TABLE` gets a real implementation and this entry
+becomes a completed cross-reference instead of a limitation, or a plan
+targeting a PL110 device grows an explicit decline in the sequencer and this
+entry's "no decline exists yet" clause is struck.
+
+## 111. CP §3.5.4 step 07 (unload the individual address) stays unimplemented
+
+**Limitation.** `[C11]` CP §3.5.4's Individual Address unload procedure has
+a step that unloads the individual address itself, which — per its own
+mechanism, a broadcast write via the device's `PID_LOAD_STATE_CONTROL` — is
+the one write that removes the property a Management Client would need to
+address that same device again afterward. This project does not implement
+that step: nothing in `crates/knx-core/src/commissioning` or
+`crates/knx-net/src/commissioning` issues it, and none of the five variants
+this task adds walks it either.
+
+**Cause.** Deliberate refusal, not an oversight. Making a device
+unaddressable by the tool that is supposed to be commissioning it is not a
+failure mode this application accepts as a side effect of a scripted
+procedure — task C6 is what makes the *name* of "unload" honest about the
+other four parts it does cover, rather than silently implying a fifth.
+
+**Impact.** None on the parts this project unloads (individual address
+excluded). A caller asking for CP §3.5.4's full procedure by that name would
+get the four parts other than the individual address; there is no code path
+that would remove a device's address without an operator taking a
+separate, explicit action outside this procedure.
+
+**Lifted when.** A concrete, reviewed use case needs this project to make a
+device unaddressable on purpose (a factory-reset-style workflow, say), at
+which point step 07 gets its own guarded implementation, cited against CP
+§3.5.4, rather than riding in as one more step of a procedure named for
+something else.

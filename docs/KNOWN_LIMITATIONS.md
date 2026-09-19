@@ -3551,25 +3551,31 @@ panel's own diagnostic headline — now follows the `CreationDiagnostic`
 pattern this section's own "Lifted when" paragraph named as the way
 across this boundary. `ParameterDiagnosticDto`
 (`apps/knx-server/src/routes.rs`) gained a `kind` field
-(`ParameterDiagnosticKindDto`, one variant per `Diagnostic` case in
-`apps/knx-server/src/domain.rs`); `diagnostic_kind_and_message` now
-returns `(kind, message)` instead of just `message`, and all eight
-`ParameterDiagnosticDto` construction sites carry it. `.message` itself
-is unchanged text — still English, still composed server-side — but it
-is now redundant: `ParameterPanel.tsx`'s
+(`ParameterDiagnosticKindDto`, 22 variants — 15 of them mirror, one for
+one, the 15 cases of `pub enum Diagnostic`
+(`crates/knx-productdb/src/dynamic/evaluate.rs:756`); the other 7 —
+`ParametersUnreadable` through `MalformedModuleInstanceId` — have no
+`Diagnostic` counterpart at all and are constructed directly in
+`apps/knx-server/src/domain.rs`, where the read fails before a
+`Diagnostic` could even be produced); `diagnostic_kind_and_message` now
+returns `(kind, message)` instead of just `message` for the 15 mirrored
+cases, and all eight `ParameterDiagnosticDto` construction sites carry
+a `kind`. `.message` itself is unchanged text — still English, still
+composed server-side — but it is now redundant: `ParameterPanel.tsx`'s
 `describeParameterDiagnosticMessage` looks `kind` up in
-`PARAMETER_DIAGNOSTIC_MESSAGE_KEYS` (19 entries, one per
+`PARAMETER_DIAGNOSTIC_MESSAGE_KEYS` (22 entries, one per
 `parameters.diagnostic.*` catalogue key in `messages/en.ts`/`de.ts`) and
 renders the catalogue's translation, falling back to the raw `.message`
 only for a `kind` this build's frontend doesn't recognise — the same
 "trust the wire shape, degrade to English for the unknown case"
 contract `CreationDiagnostic.kind` already documents. This was cheap
-specifically because every one of the 19 messages is a fixed sentence
+specifically because every one of the 22 messages is a fixed sentence
 with no interpolated value of its own (`ParametersUnreadable` through
-`ModuleWithoutId` in `domain.rs`); every dynamic value — ids, node
-numbers, counts — already lived in `.detail`, never in `.message`, so
-tagging the closed set cost one enum and a lookup table, not a
-server-side templating layer. Test:
+`UnresolvedTextPlaceholder`, spanning both `domain.rs`'s own
+construction sites and its `diagnostic_kind_and_message` match); every
+dynamic value — ids, node numbers, counts — already lived in `.detail`,
+never in `.message`, so tagging the closed set cost one enum and a
+lookup table, not a server-side templating layer. Test:
 `apps/knx-web/src/ParameterPanel.test.tsx`, "§66: a diagnostic's message
 is translated with the UI language; its detail stays English".
 

@@ -6054,8 +6054,9 @@ decisions D47–D51 in
 `ModuleDefArgType_t` lists it as a facet and `Value_t` gives it one
 sentence — *"A module allocator refId as string"* — and that is the entire
 published account of it. **[V]** `OriginalData/` in full: **0** occurrences
-across every readable archive member (3 members unreadable, all encrypted
-contents of the one out-of-scope `.vd2`, counted rather than quietly
+across every readable archive member (4 members unreadable, all encrypted
+contents of out-of-scope legacy archives — 3 in the one `.vd2`, 1 in the
+`.vd4` the corpus gained on 2026-09-16 — counted rather than quietly
 excluded). **[V]** `knx_spec_kb_programming.sqlite` (2,207 facts, 27 PDFs)
 and `knx_spec_kb_full179_clean.sqlite` (16,536 facts, 177 PDFs), searched
 across `content`, `title`, `keywords`, `evidenceText`: **0** each; the only

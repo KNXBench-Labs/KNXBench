@@ -3367,10 +3367,12 @@ fn corpus_argument_measurement_task_12() {
     let mut members_scanned = 0usize;
     // Encrypted members cannot be searched. They are counted, not ignored:
     // a measurement that quietly skipped part of its own population would
-    // be an estimate wearing a `[V]` badge. All three sit inside the one
-    // `.vd2` archive, a format ruled out of scope for this project
-    // outright, so the number is a caveat on the measurement rather than a
-    // gap in the feature — and `.vd2` predates `ModuleDef` entirely.
+    // be an estimate wearing a `[V]` badge. All four sit inside legacy
+    // archives this project rules out of scope: three in the one `.vd2`
+    // (`progra~1/ets2v12/...`), one in the `.vd4` added to the corpus on
+    // 2026-09-16 (`ets/präsmit kl/ets.vd_`). So the number is a caveat on
+    // the measurement rather than a gap in the feature — both formats
+    // predate `ModuleDef` entirely.
     let mut members_unreadable = 0usize;
     for entry in std::fs::read_dir(&root).unwrap() {
         let path = entry.unwrap().path();
@@ -3401,9 +3403,9 @@ fn corpus_argument_measurement_task_12() {
         "the corpus directory exists but yielded no archive members to scan"
     );
     assert_eq!(
-        members_unreadable, 3,
-        "the three encrypted members of the one `.vd2` archive, named here rather \
-         than quietly dropped from the denominator"
+        members_unreadable, 4,
+        "the encrypted members of the `.vd2` (3) and the `.vd4` (1), named here \
+         rather than quietly dropped from the denominator"
     );
     assert_eq!(
         allocator_ref_hits, 0,
@@ -3514,5 +3516,93 @@ fn corpus_argument_measurement_task_12() {
             argument_diagnostics.is_empty(),
             "{program_id}: argument diagnostics on real corpus data: {argument_diagnostics:?}"
         );
+    }
+}
+
+/// The renumber, checked where it can actually fail: a database standing at
+/// v10 — the version T13's `migrate_v9_to_v10` leaves behind — is carried to
+/// v11 by `migrate_v10_to_v11` running on its own, with no reinstall and no
+/// earlier migration to lean on. Task 12's migration used to be v9->v10 and
+/// now queues behind T13's; a migration that is never reached in sequence
+/// still passes every unit test of its own body, which is exactly the
+/// failure this test exists to rule out. T13's own tables are asserted to
+/// survive the step, because "the other branch's v10 work is still there"
+/// is the other half of the same question.
+#[test]
+fn a_v10_database_gains_its_arguments_from_the_stored_blob_alone() {
+    let (dir, conn) = db();
+    knx_productdb::ingest_file(&conn, "M-00FC/A.xml", ARGUMENT_PROGRAM.as_bytes()).unwrap();
+    let pid = "M-00FC_A-1000-10-C071";
+
+    let before: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM module_def_argument WHERE program_id = ?1",
+            [pid],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(
+        before > 0,
+        "sanity: the declarations are stored before the rollback"
+    );
+
+    // Roll back to precisely what a v10 database looks like: task 12's
+    // table dropped and its column removed, every table v10 itself brought
+    // — T13's `function_type`, `function_point`, `space_usage` among them —
+    // left standing, and the stored blob untouched.
+    conn.execute_batch(
+        "DROP TABLE module_def_argument;
+         ALTER TABLE dynamic_node DROP COLUMN value;
+         PRAGMA user_version = 10;",
+    )
+    .unwrap();
+    drop(conn);
+
+    let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    assert_eq!(
+        conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        knx_productdb::CURRENT_PRODUCTDB_VERSION,
+        "the single remaining step lands on the current version"
+    );
+
+    let after: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM module_def_argument WHERE program_id = ?1",
+            [pid],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(
+        after, before,
+        "every declaration came back from the blob, not from a reinstall"
+    );
+
+    let values: Vec<String> = conn
+        .prepare(
+            "SELECT value FROM dynamic_node
+             WHERE program_id = ?1 AND module_def_id = '' AND kind IN ('NumericArg','TextArg')
+             ORDER BY node_id",
+        )
+        .unwrap()
+        .query_map([pid], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(
+        values,
+        vec!["32", "A", "7", "164", "B", "7"],
+        "the re-derived binding values are the file's own, in file order"
+    );
+
+    for table in ["function_type", "function_point", "space_usage"] {
+        let present: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?1",
+                [table],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(present, 1, "v10's `{table}` survives the v11 step");
     }
 }

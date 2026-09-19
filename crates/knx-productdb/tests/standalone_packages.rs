@@ -1006,10 +1006,11 @@ fn a_v6_corpus_database_gets_its_linkable_back_from_its_own_blobs() {
             stmt.execute([source_sha256]).unwrap();
         }
         drop(stmt);
-        // v10's own DDL has to go with the version number: this test
+        // v11's own DDL has to go with the version number: this test
         // rewinds `user_version` without rewinding the schema, which was
-        // free while v7-v9 added no structure at all and stopped being
-        // free the moment v10 added a table and a column.
+        // free while v7-v10 added no structure the module-argument slice
+        // needs and stopped being free the moment v11 added a table and a
+        // column.
         conn.execute_batch(
             "DROP TABLE module_def_argument;
              ALTER TABLE dynamic_node DROP COLUMN value;",

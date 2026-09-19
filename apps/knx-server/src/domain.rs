@@ -2090,6 +2090,15 @@ fn diagnostic_message(diagnostic: &knx_productdb::dynamic::Diagnostic) -> &'stat
         Diagnostic::ModuleWithoutId { .. } => {
             "A module instance has no identifier and cannot be matched to stored values."
         }
+        Diagnostic::ModuleArgumentNotBound { .. } => {
+            "A module argument could not be matched to the module's declaration and was ignored."
+        }
+        Diagnostic::UnsupportedModuleArgumentKind { .. } => {
+            "A module argument uses a kind this build does not interpret and was ignored."
+        }
+        Diagnostic::UnresolvedTextPlaceholder { .. } => {
+            "A text placeholder had no matching module argument and was left as written."
+        }
     }
 }
 

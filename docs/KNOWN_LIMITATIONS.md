@@ -3567,7 +3567,14 @@ arbitrary/unbounded — and why (still open, not scheduled):**
   session, the textbook case of "log text nobody reads in German" this
   task's brief named explicitly. Only the row's *severity* label
   (`SEVERITY_LABEL_KEYS`) is UI chrome and was already translated before
-  this task.
+  this task. **Fix round 2 (B4):** this is §67's shape again — German
+  chrome over an English message, with nothing telling the reader it is
+  deliberate — so the panel now says so where the reader actually is,
+  not just here: a translated `logPanel.entryTextIsEnglish` line
+  (`"Message, location and detail are the server's own text, in
+  English."`) renders under the header whenever there is at least one
+  entry. Disclosure only; `entry.message`/`location`/`detail` are
+  exactly as untranslated as before.
 - API error strings surfaced in toasts (`api.errorMessage`,
   `toast.ts`'s `humorizeError`, `BusMonitorPanel.tsx`'s
   `stopSummary.warning` fed by `BusSessionSummary::drain_panic` in
@@ -3580,7 +3587,11 @@ arbitrary/unbounded — and why (still open, not scheduled):**
   cross-cutting rewrite well beyond one task, explicitly out of scope
   per this task's brief ("do not perform unrelated refactors"). The
   wrapper sentence around the message is already translated
-  (`toast.error.*`); only the substituted server text is not.
+  (`toast.error.*`); only the substituted server text is not. **Fix
+  round 2 (B4):** every error toast now says so — a translated
+  `toast.error.messageIsEnglish` line (`"This message is the server's
+  own text, in English."`) renders under the wrapper sentence, `{msg}`
+  and all. Disclosure only; the substituted text itself is unchanged.
 
 **Ruled out under the third bucket — user-facing and enumerable, but
 the component cannot reach a catalogue — and why (still open, not

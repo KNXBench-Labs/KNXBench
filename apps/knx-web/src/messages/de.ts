@@ -61,6 +61,7 @@ export const messages: Record<MessageKey, string> = {
     "Projektdokumentation exportiert, {count} Warnungen — siehe Protokoll.",
 
   "toast.dismiss": "Schließen",
+  "toast.error.messageIsEnglish": "Diese Meldung ist der unveränderte Text des Servers, auf Englisch.",
 
   "toast.error.notAsPlanned": "Nun, das lief nicht wie geplant: {msg}",
   "toast.error.busObjects": "Der Bus legt Widerspruch ein: {msg}",
@@ -386,6 +387,8 @@ export const messages: Record<MessageKey, string> = {
   "logPanel.severity.info": "Info",
   "logPanel.emptyNoEntries": "Noch keine Protokolleinträge.",
   "logPanel.emptyFiltered": "Keine Protokolleinträge entsprechen den aktuellen Filtern.",
+  "logPanel.entryTextIsEnglish":
+    "Meldung, Ort und Detail sind der unveränderte Text des Servers, auf Englisch.",
 
   "busMonitor.title": "Bus-Monitor",
   "busMonitor.eyebrow": "KNXnet/IP · Tunneling",

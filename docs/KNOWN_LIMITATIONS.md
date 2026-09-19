@@ -5436,7 +5436,7 @@ freezes on its first entry rather than disappearing.
 
 **Lifted when.** Nothing lifts this. It is what the feature is.
 
-## 99. Help prose lives in the message catalogue, one paragraph per key
+## 100. Help prose lives in the message catalogue, one paragraph per key
 
 **Limitation.** T23's help text (ADR-0024) is stored the same way every other
 user-facing string is: as entries in `apps/knx-web/src/messages/en.ts` and

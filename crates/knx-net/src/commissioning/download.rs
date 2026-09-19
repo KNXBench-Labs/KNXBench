@@ -674,9 +674,13 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
             Err(DownloadError::Session(SessionError::AllocationFailed { .. })) => {
                 record(&mut report, kind, 7, "on failed allocation, escalate");
                 report.escalated_from = Some(object_index);
-                // *"Unload all the following segments"* — and this part with
-                // them: its own allocation just failed while it sat in
-                // Loading, and §7.6 says only an unload frees that.
+                // *"Unload all the following segments"* — CP §3.5.3 Nr. 07's
+                // own escalation instruction, not a re-allocation retry: a
+                // re-allocation also frees the previous memory and would
+                // keep this part at its original base address (CP §3.5.1.2,
+                // §7.6), but Nr. 07 is what the clause prescribes once
+                // allocation has failed, so this part is unloaded along
+                // with the ones after it rather than merely re-allocated.
                 for part in &self.plan.parts[position..] {
                     self.session
                         .write_load_event(part.object_index, LoadEvent::Unload)
@@ -751,7 +755,10 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
         Ok(report)
     }
 
-    /// Spec §9.1, recovery after an interrupted download.
+    /// KNXBench design spec §9.1, recovery after an interrupted download —
+    /// no Standard equivalent. The Standard's own position is MP §3.1, p. 68:
+    /// *"if an error is detected, the download shall be interrupted and an
+    /// error-message shall be raised"* — no recovery procedure of its own.
     ///
     /// The order of the first two reads is load-bearing: `PID_ERROR_CODE` is
     /// read for every part *before* anything is unloaded, because `[D]`
@@ -759,12 +766,13 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
     /// therefore destroy the only evidence of what went wrong.
     ///
     /// Step 5 re-runs the loading half of §7.1 for **every** part, including
-    /// parts that read `Loaded`. That is the clause's own wording — *"Re-run
-    /// the complete download of §7.1 from step 06"* — and it is also the safer
-    /// reading: after an interrupted download the parts that survived may be
-    /// the *old* project's parts, and a device holding some old tables and
-    /// some new ones is consistent with nothing. The cost is real and is
-    /// stated in §9.3: a part that reads `Loaded` is invalidated on the way.
+    /// parts that read `Loaded`. That is this design spec's own wording — not
+    /// the Standard's — *"Re-run the complete download of §7.1 from step 06"*
+    /// — and it is also the safer reading: after an interrupted download the
+    /// parts that survived may be the *old* project's parts, and a device
+    /// holding some old tables and some new ones is consistent with nothing.
+    /// The cost is real and is stated in §9.3: a part that reads `Loaded` is
+    /// invalidated on the way.
     pub async fn recover(&mut self) -> Result<DownloadReport, DownloadError> {
         let kind = ProcedureKind::Recovery;
         let mut report = DownloadReport::new(kind);

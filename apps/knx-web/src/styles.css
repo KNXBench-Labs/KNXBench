@@ -1536,6 +1536,12 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    sits still at a third of the track — still not claiming a position. */
 .load-progress-bar[data-indeterminate="true"] { width: 34%; }
 .load-progress-count { margin: 0; color: var(--knx-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* The flavour line. Built from tokens that already exist (ADR-0022): it is
+   the muted colour, one step smaller than the phase, and italic so it reads
+   as an aside rather than as a second phase label. No transition here on
+   purpose — the line swaps outright, and what stops it swapping is the
+   timer in `LoadProgressBanner`, which CSS could not reach anyway. */
+.load-progress-flavour { margin: 0; color: var(--knx-muted); font-size: 11px; font-style: italic; opacity: 0.85; }
 .load-progress-error { margin: 0; color: var(--knx-error-color); font-size: 12px; overflow-wrap: anywhere; }
 @keyframes knx-load-shuttle {
   from { transform: translateX(-100%); }

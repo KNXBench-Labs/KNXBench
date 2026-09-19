@@ -261,3 +261,68 @@ fn telegram_json(row: &crate::bus::TelegramRow) -> Value {
         }),
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bus::{DecodedValue, TelegramRow};
+
+    fn row(decoded: Option<DecodedValue>) -> TelegramRow {
+        TelegramRow {
+            seq: 7,
+            timestamp: "2026-09-19T14:03:05Z".into(),
+            source: "1.1.9".into(),
+            destination: "1/1/1".into(),
+            destination_name: Some("Kitchen ceiling light".into()),
+            service: "GroupValueWrite".into(),
+            raw_payload: Some("01".into()),
+            decoded,
+        }
+    }
+
+    /// The four decode outcomes each have their own shape, and the bundle
+    /// keeps them apart: a maintainer reading the file has to be able to
+    /// tell "the value was 21.5 °C" from "nobody could say what it was".
+    #[test]
+    fn every_decode_outcome_keeps_its_own_shape_in_the_bundle() {
+        assert_eq!(
+            telegram_json(&row(Some(DecodedValue::Value {
+                dpt: "DPST-9-1".into(),
+                text: "21.5 °C".into(),
+            })))["decoded"],
+            json!({ "kind": "value", "dpt": "DPST-9-1", "text": "21.5 °C" })
+        );
+        assert_eq!(
+            telegram_json(&row(Some(DecodedValue::Unresolved {
+                text: "no DPT resolved for this group address".into(),
+            })))["decoded"],
+            json!({ "kind": "unresolved", "text": "no DPT resolved for this group address" })
+        );
+        assert_eq!(
+            telegram_json(&row(Some(DecodedValue::Conflict {
+                text: "two candidate datapoint types".into(),
+            })))["decoded"],
+            json!({ "kind": "conflict", "text": "two candidate datapoint types" })
+        );
+        assert_eq!(
+            telegram_json(&row(Some(DecodedValue::Error {
+                text: "raw 0x01".into(),
+                error: "payload too short".into(),
+            })))["decoded"],
+            json!({ "kind": "error", "text": "raw 0x01", "error": "payload too short" })
+        );
+        assert_eq!(telegram_json(&row(None))["decoded"], Value::Null);
+    }
+
+    #[test]
+    fn a_telegram_keeps_every_field_the_monitor_recorded() {
+        let value = telegram_json(&row(None));
+        assert_eq!(value["seq"], json!(7));
+        assert_eq!(value["timestamp"], json!("2026-09-19T14:03:05Z"));
+        assert_eq!(value["source"], json!("1.1.9"));
+        assert_eq!(value["destination"], json!("1/1/1"));
+        assert_eq!(value["destinationName"], json!("Kitchen ceiling light"));
+        assert_eq!(value["service"], json!("GroupValueWrite"));
+        assert_eq!(value["rawPayload"], json!("01"));
+    }
+}

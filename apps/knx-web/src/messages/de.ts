@@ -955,7 +955,8 @@ export const messages: Record<MessageKey, string> = {
     "Kommt in Ihren eigenen Worten in den Bericht. Alles Weitere unten wird automatisch gesammelt.",
   "debugReport.filterName": "Zip-Archiv",
   "debugReport.include.log.label": "Sitzungsprotokoll",
-  "debugReport.include.log.hint": "Die Einträge aus dem Reiter „Log“, ohne Adressen.",
+  "debugReport.include.log.hint":
+    "Die Einträge aus dem Reiter „Log“, ohne IP-Adressen. Importprobleme werden namentlich protokolliert, deshalb kann diese Datei KNX-Gruppenadressen und Namen importierter Elemente enthalten.",
   "debugReport.include.projectSummary.label": "Projektstatistik",
   "debugReport.include.projectSummary.hint":
     "Wie viele Geräte, Linien und Gruppenadressen das geöffnete Projekt hat. Nur Anzahlen — keine Namen, keine Adressen.",
@@ -965,13 +966,14 @@ export const messages: Record<MessageKey, string> = {
   "debugReport.contentsTitle": "Was in der Datei stehen wird",
   "debugReport.contents.report": "report.md — Ihre Beschreibung, die Versionen und die Umgebung.",
   "debugReport.contents.environment": "environment.json — dieselben Angaben maschinenlesbar.",
-  "debugReport.contents.log": "log.json — die Protokolleinträge dieser Sitzung.",
+  "debugReport.contents.log":
+    "log.json — die Protokolleinträge dieser Sitzung; kann KNX-Adressen und importierte Elemente benennen.",
   "debugReport.contents.projectSummary": "project-summary.json — Anzahlen zum geöffneten Projekt.",
   "debugReport.contents.busTelegrams": "bus-telegrams.json — der Puffer des Busmonitors.",
   "debugReport.privacyRedacted":
-    "IP-Adressen, Ihr Home-Verzeichnis und der Name dieses Rechners werden in report.md, environment.json und log.json durch Platzhalter ersetzt.",
+    "IP-Adressen, Ihr Home-Verzeichnis und der Name dieses Rechners werden in report.md, environment.json und log.json durch Platzhalter ersetzt. KNX-Adressen und Namen aus Ihrem Projekt werden nirgends ersetzt.",
   "debugReport.privacyTelegrams":
-    "bus-telegrams.json ist die Ausnahme: die Datei behält die physikalischen und Gruppenadressen Ihrer Anlage, denn ohne sie sagen die Telegramme nichts aus. Nehmen Sie sie nur auf, wenn Sie das weitergeben wollen.",
+    "bus-telegrams.json behält die physikalischen und Gruppenadressen Ihrer Anlage und, soweit das geöffnete Projekt sie kennt, die Namen der Gruppenadressen — „Küche Deckenlicht“. Ohne diese Angaben sagt ein Telegrammmitschnitt nichts aus, deshalb bleiben sie stehen. Nehmen Sie die Datei nur auf, wenn Sie das weitergeben wollen.",
   "debugReport.save": "Zip speichern…",
   "debugReport.openIssue": "GitHub-Issue öffnen…",
   "debugReport.close": "Schließen",

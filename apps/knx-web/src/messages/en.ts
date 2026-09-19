@@ -1085,7 +1085,8 @@ export const messages = {
     "Goes into the report in your own words. Everything else below is collected automatically.",
   "debugReport.filterName": "Zip archive",
   "debugReport.include.log.label": "Session log",
-  "debugReport.include.log.hint": "The entries from the Log tab, with addresses removed.",
+  "debugReport.include.log.hint":
+    "The entries from the Log tab, with IP addresses removed. Import problems are logged by name, so this file can contain KNX group addresses and the names of imported elements.",
   "debugReport.include.projectSummary.label": "Project statistics",
   "debugReport.include.projectSummary.hint":
     "How many devices, lines and group addresses the open project has. Counts only — no names, no addresses.",
@@ -1095,13 +1096,14 @@ export const messages = {
   "debugReport.contentsTitle": "What the file will contain",
   "debugReport.contents.report": "report.md — your description, the versions and the environment.",
   "debugReport.contents.environment": "environment.json — the same facts in machine-readable form.",
-  "debugReport.contents.log": "log.json — this session's log entries.",
+  "debugReport.contents.log":
+    "log.json — this session's log entries; may name KNX addresses and imported elements.",
   "debugReport.contents.projectSummary": "project-summary.json — counts describing the open project.",
   "debugReport.contents.busTelegrams": "bus-telegrams.json — the bus monitor buffer.",
   "debugReport.privacyRedacted":
-    "IP addresses, your home directory and this computer's name are replaced by placeholders in report.md, environment.json and log.json.",
+    "IP addresses, your home directory and this computer's name are replaced by placeholders in report.md, environment.json and log.json. KNX addresses and names taken from your project are not replaced anywhere.",
   "debugReport.privacyTelegrams":
-    "bus-telegrams.json is the exception: it keeps the KNX individual and group addresses of your installation, because without them the telegrams say nothing. Include it only if you are willing to share that.",
+    "bus-telegrams.json keeps the individual and group addresses of your installation and, where the open project knows them, the names of the group addresses — \u201cKitchen ceiling light\u201d. Without those a telegram dump says nothing, which is why they stay. Include the file only if you are willing to share them.",
   "debugReport.save": "Save zip…",
   "debugReport.openIssue": "Open a GitHub issue…",
   "debugReport.close": "Close",

@@ -20,6 +20,7 @@
 //! whatsoever about what a physical device does with it.
 
 use std::collections::{HashMap, HashSet};
+use std::ops::Range;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -81,6 +82,29 @@ fn load_event_from_octet(octet: u8) -> Option<LoadEvent> {
         .find(|event| event.octet() == octet)
 }
 
+/// Whether `service` is a read of `wanted` and `number` falls inside
+/// `window`.
+///
+/// `number` is the caller's own transmission counter, already incremented
+/// for this frame, and it counts every retransmission separately — so a
+/// window `MAX_TRANSMISSIONS` wide is exactly one of the client's ladders
+/// and not that many requests.
+fn numbered_read_in(
+    service: &ApplicationService,
+    wanted: u8,
+    number: u32,
+    window: &Option<Range<u32>>,
+) -> bool {
+    let Some(window) = window else {
+        return false;
+    };
+    let is_wanted_read = matches!(
+        service,
+        ApplicationService::PropertyValueRead { property_id, .. } if *property_id == wanted
+    );
+    is_wanted_read && window.contains(&number)
+}
+
 /// How the simulated device is to misbehave.
 ///
 /// [`Default`] is a device that works: everything else in this struct is a
@@ -129,7 +153,81 @@ pub struct SimulatorConfig {
     pub load_completing_polls: u8,
     /// Answer nothing while in `LoadCompleting`, which RES Table 94's
     /// footnote permits and spec §5.5 requires the client to tolerate.
+    ///
+    /// The T_ACK still goes out: this device is busy at the application
+    /// layer and alive at the Transport Layer, which is RES §4.23.2.4.1's
+    /// *"If the MaS responds during state LoadCompleting, an established
+    /// TL-connection is kept alive"*.
     pub silent_in_load_completing: bool,
+    /// Withhold the *answer* to the `PID_LOAD_STATE_CONTROL` reads numbered
+    /// in this half-open range, counting every transmission separately and
+    /// from one. The T_ACK still goes out.
+    ///
+    /// The device this models is busy, not gone: RES §4.23.2.4.1's *"If the
+    /// MaS responds during state LoadCompleting, an established
+    /// TL-connection is kept alive"*. Numbered rather than state-gated so
+    /// that a test can say which poll goes quiet without depending on how
+    /// long anything took.
+    pub unanswered_load_state_reads: Option<Range<u32>>,
+    /// Acknowledge *nothing* for the `PID_LOAD_STATE_CONTROL` reads numbered
+    /// in this half-open range — no T_ACK, no answer — counted the same way.
+    ///
+    /// The device this models is offline, which RES §4.23.2.4.1's NOTE 86
+    /// expects: *"A device may be offline during state LoadCompleting. A
+    /// running TL-connection may be lost..."* A window four wide is one
+    /// whole `MAX_TRANSMISSIONS` ladder, so the client's repetitions run out
+    /// and TL's action A6 has to release the connection.
+    pub unacknowledged_load_state_reads: Option<Range<u32>>,
+    /// Withhold the *answer* to the `PID_DEVICE_CONTROL` reads numbered in
+    /// this half-open range, counting every transmission separately and from
+    /// one. The T_ACK still goes out.
+    ///
+    /// The read this addresses is the first frame of
+    /// [`ManagementSession::connect`]'s Verify Mode step, which runs *after*
+    /// the `T_Connect` confirmation has already put a connection in the
+    /// session's hands. A device that acknowledges it and withholds the
+    /// answer is the same busy-not-gone device
+    /// [`SimulatorConfig::unanswered_load_state_reads`] models, met at the
+    /// one moment where the client holds a connection it has not finished
+    /// building.
+    ///
+    /// [`ManagementSession::connect`]: crate::commissioning::ManagementSession::connect
+    pub unanswered_device_control_reads: Option<Range<u32>>,
+    /// Break the connection down once, on the *n*-th read of
+    /// `PID_DEVICE_CONTROL`, counting from one.
+    ///
+    /// The `PID_DEVICE_CONTROL` twin of
+    /// [`SimulatorConfig::drop_connection_on_load_state_read`], and the only
+    /// way to make a *re-establishment* — rather than a poll — end in
+    /// [`SessionError::ConnectionLost`]: the frame arrives inside
+    /// `connect()`, so the error comes back from the re-establishment
+    /// itself.
+    ///
+    /// [`SessionError::ConnectionLost`]: crate::commissioning::SessionError::ConnectionLost
+    pub drop_connection_on_device_control_read: Option<u32>,
+    /// Answer the `T_Connect` frames numbered in this half-open range with a
+    /// *negative* `L_Data.con`, counting from one — no recorded
+    /// [`Seen::Connect`] and no connection, because a frame the Data Link
+    /// Layer reports as unacknowledged never reached the device.
+    ///
+    /// `[D]` TL §3.7 sends `T_Connect` with `ack_request` set, so the
+    /// confirmation carries whether the addressed device acknowledged it at
+    /// layer 2. A device that is absent, protected or simply busy on the
+    /// segment produces the negative one, and the client reports it as
+    /// [`SessionError::ConnectRejected`].
+    ///
+    /// [`SessionError::ConnectRejected`]: crate::commissioning::SessionError::ConnectRejected
+    pub rejected_connects: Option<Range<u32>>,
+    /// Answer nothing at all to the `T_Connect` frames numbered in this
+    /// half-open range, counting from one — no `L_Data.con`, no recorded
+    /// [`Seen::Connect`], no connection.
+    ///
+    /// The device this models is the one RES §4.23.2.4.1's NOTE 86 has in
+    /// mind for the whole of its *"periodically"* clause: *"A device may be
+    /// offline during state LoadCompleting."* An offline device does not
+    /// answer a re-establishment attempt either, so a client that treats one
+    /// refused attempt as fatal never waits out the transition at all.
+    pub unanswered_connects: Option<Range<u32>>,
     /// `PID_MAX_APDU_LENGTH` of the Device Object, if it has one.
     pub max_apdu_length: Option<u16>,
     /// `PID_MAX_APDU_LENGTH` of the Router Object, if it has one. Spec
@@ -315,6 +413,12 @@ impl Default for SimulatorConfig {
             error_code: 2,
             load_completing_polls: 0,
             silent_in_load_completing: false,
+            unanswered_load_state_reads: None,
+            unacknowledged_load_state_reads: None,
+            unanswered_device_control_reads: None,
+            drop_connection_on_device_control_read: None,
+            rejected_connects: None,
+            unanswered_connects: None,
             max_apdu_length: Some(15),
             router_max_apdu_length: None,
             free_access_level: 0,
@@ -401,6 +505,12 @@ struct State {
     dropped: bool,
     /// How many reads of `PID_LOAD_STATE_CONTROL` have arrived.
     load_state_reads: u32,
+    /// How many reads of `PID_DEVICE_CONTROL` have arrived, counted the same
+    /// way: one per transmission, not one per connection.
+    device_control_reads: u32,
+    /// How many `T_Connect` frames have arrived, answered or not — what
+    /// [`SimulatorConfig::unanswered_connects`] counts against.
+    connects: u32,
     /// How many `T_DATA_CONNECTED` transmissions have arrived, counting
     /// every retransmission of the same sequence number — what
     /// [`SimulatorConfig::silent_for_first_numbered_data_frames`] counts
@@ -478,6 +588,8 @@ impl SimulatedDevice {
             connected: false,
             dropped: false,
             load_state_reads: 0,
+            device_control_reads: 0,
+            connects: 0,
             numbered_data_frames: 0,
             level: config.free_access_level,
             verify_mode: false,
@@ -512,6 +624,19 @@ impl SimulatedDevice {
     /// a test of one transition does not have to drive every earlier one.
     pub fn preset_load_state(&self, object_index: ObjectIndex, state: LoadState) {
         self.lock().load.insert(object_index.octet(), state);
+    }
+
+    /// Puts a `LoadCompleting` countdown in place without a download
+    /// having produced it: the next `count` *answered* load-state reads
+    /// report `LoadCompleting`, and the one after that reports whatever
+    /// [`SimulatedDevice::preset_load_state`] left behind.
+    ///
+    /// A counter rather than a clock, so a test that needs a state to
+    /// settle can say *after how many reads* instead of *after how long*.
+    /// Reads the device does not answer do not count, which is the point:
+    /// a quiet poll must not be able to spend the countdown.
+    pub fn preset_load_completing_polls(&self, object_index: ObjectIndex, count: u8) {
+        self.lock().completing.insert(object_index.octet(), count);
     }
 
     /// Puts octets in the device's memory.
@@ -591,6 +716,13 @@ impl SimulatedDevice {
         self.lock().load_state_reads
     }
 
+    /// How many `PID_DEVICE_CONTROL` reads have arrived — one per
+    /// `connect()` that got as far as its Verify Mode step, which is what
+    /// makes a re-established connection countable from the device's side.
+    pub fn device_control_reads(&self) -> u32 {
+        self.lock().device_control_reads
+    }
+
     /// Tears the connection down from the device's side, as a real one does
     /// after 6 s of silence.
     pub fn break_connection(&self) {
@@ -616,9 +748,9 @@ impl SimulatedDevice {
         }));
     }
 
-    fn emit_connect_confirmation(&self) {
+    fn emit_connect_confirmation(&self, error: bool) {
         let _ = self.events.send(TunnelEvent::Telegram(LDataFrame {
-            kind: LDataMessageKind::Confirmation { error: false },
+            kind: LDataMessageKind::Confirmation { error },
             source: self.client,
             destination: Destination::Individual(self.address),
             transport: Tpci::Connect,
@@ -796,13 +928,33 @@ impl SimulatedDevice {
                 state.load_state_reads += 1;
                 state.first_load_state_read.get_or_insert_with(Instant::now);
             }
+            let is_device_control_read = matches!(
+                service,
+                ApplicationService::PropertyValueRead {
+                    property_id: PID_DEVICE_CONTROL,
+                    ..
+                }
+            );
+            if is_device_control_read {
+                state.device_control_reads += 1;
+            }
             let by_read = is_load_state_read
                 && self.config.drop_connection_on_load_state_read == Some(state.load_state_reads);
+            // The same trigger one property along, and the only one that
+            // fires inside `connect()`: the Verify Mode read is the first
+            // frame the client sends on a connection it has just been
+            // confirmed.
+            let by_device_control_read = is_device_control_read
+                && self.config.drop_connection_on_device_control_read
+                    == Some(state.device_control_reads);
             let by_step = self
                 .config
                 .interrupt_at
                 .is_some_and(|step| step.strikes(&service));
-            if (by_count || by_read || by_step) && state.connected && !state.dropped {
+            if (by_count || by_read || by_device_control_read || by_step)
+                && state.connected
+                && !state.dropped
+            {
                 state.connected = false;
                 state.dropped = true;
                 state.verify_mode = false;
@@ -846,6 +998,13 @@ impl SimulatedDevice {
                 if self.config.silent {
                     // Not even a T_ACK: silence in §11.3 means silence.
                     self.record(&service);
+                    return;
+                }
+                if self.load_state_read_in(&service, &self.config.unacknowledged_load_state_reads) {
+                    // An offline device acknowledges nothing and remembers
+                    // nothing, so this one does not record the frame either.
+                    // The client's four transmissions and the release that
+                    // follows them are what the test is watching.
                     return;
                 }
                 let still_dropping = {
@@ -917,7 +1076,46 @@ impl SimulatedDevice {
         self.lock().seen.push(entry);
     }
 
+    /// Whether this frame is a `PID_LOAD_STATE_CONTROL` read whose number
+    /// falls inside `window`.
+    ///
+    /// The number is `State::load_state_reads`, which `handle` has already
+    /// incremented for this frame, and which counts every transmission —
+    /// so a window four wide is exactly one of the client's
+    /// `MAX_TRANSMISSIONS` ladders and not four polls.
+    fn load_state_read_in(
+        &self,
+        service: &ApplicationService,
+        window: &Option<Range<u32>>,
+    ) -> bool {
+        let number = self.lock().load_state_reads;
+        numbered_read_in(service, PID_LOAD_STATE_CONTROL, number, window)
+    }
+
+    /// The same question about `PID_DEVICE_CONTROL`, whose counter `handle`
+    /// has likewise already incremented for this frame.
+    fn device_control_read_in(
+        &self,
+        service: &ApplicationService,
+        window: &Option<Range<u32>>,
+    ) -> bool {
+        let number = self.lock().device_control_reads;
+        numbered_read_in(service, PID_DEVICE_CONTROL, number, window)
+    }
+
     fn answer(&self, service: ApplicationService) {
+        if self.load_state_read_in(&service, &self.config.unanswered_load_state_reads) {
+            // The T_ACK went out from `handle` moments ago; only the
+            // application answer is withheld. A device that is busy rather
+            // than gone.
+            return;
+        }
+        if self.device_control_read_in(&service, &self.config.unanswered_device_control_reads) {
+            // Likewise acknowledged and unanswered, one property along. The
+            // read is not performed either: a device that never answered did
+            // not change anything on the way.
+            return;
+        }
         match service {
             ApplicationService::AuthorizeRequest { key } => {
                 let key = u32::from_be_bytes(key);
@@ -1143,7 +1341,34 @@ impl ManagementTransport for SimulatedDevice {
             return Ok(());
         }
         if transport == Tpci::Connect {
-            self.emit_connect_confirmation();
+            let attempt = {
+                let mut state = self.lock();
+                state.connects += 1;
+                state.connects
+            };
+            if self
+                .config
+                .unanswered_connects
+                .as_ref()
+                .is_some_and(|window| window.contains(&attempt))
+            {
+                // An offline device answers nothing and remembers nothing,
+                // so neither the confirmation nor `handle` happens here.
+                return Ok(());
+            }
+            if self
+                .config
+                .rejected_connects
+                .as_ref()
+                .is_some_and(|window| window.contains(&attempt))
+            {
+                // The confirmation comes back, and it says no. A frame the
+                // Data Link Layer could not get acknowledged never reached
+                // the device, so `handle` does not run for it either.
+                self.emit_connect_confirmation(true);
+                return Ok(());
+            }
+            self.emit_connect_confirmation(false);
         }
         self.handle(transport, service);
         Ok(())

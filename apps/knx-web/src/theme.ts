@@ -1,3 +1,4 @@
+/** The registry of selectable themes, and where the choice is persisted and read back. */
 import { useEffect, useState } from "react";
 
 export interface ThemeDef { id: string; name: string; }
@@ -5,6 +6,8 @@ export const THEMES: readonly ThemeDef[] = [
   { id: "system", name: "System" },
   { id: "porcelain", name: "Porcelain" },
   { id: "graphite", name: "Graphite" },
+  { id: "cupertino", name: "Cupertino" },
+  { id: "neon-grid", name: "Neon Grid" },
   { id: "bitcoin-defi", name: "Bitcoin DeFi" },
 ];
 const STORAGE_KEY = "knx-desktop:theme";

@@ -6472,3 +6472,52 @@ puts the node in the document itself, and a second assertion reads both
 selector are one contract written in two files and nothing in a mocked
 suite connects them — and `setCatalogTarget(null)`, the third of the three
 dialogs the original blocker named. Web tests 648 → 651.
+
+## 2026-09-19 — Write confirmation echoes the decoded value, not just bytes (branch `write-echo-decoded`)
+
+Requested mid-run: payloads should show actual data "unter anderem im Bus
+Monitor" — the monitor already decoded every row (`bus.rs`'s
+`GroupAddressContext::decode`/`decode_single`), but `POST /api/bus/write`'s
+response, and therefore `BusComposeForm.tsx`'s post-send confirmation line,
+only ever showed the encoded bytes. `WriteResponse` gains `decodedEcho`,
+built by decoding — with `decode_single`, made `pub(crate)` for this one
+in-crate call site — the exact `GroupValue` `knx_core::encode` produced and
+`BusSession::send` put on the wire, against the same already-resolved DPT
+the encode used. Never the request's own `value` string: echoing typed input
+back would prove nothing about the codec, only decoding the wire bytes
+demonstrates a round trip. Reuses `DecodedValueDto` rather than a dedicated
+struct — at this call site `decode_single` only ever returns its
+`Value`/`Error` variants (the DPT is always pre-resolved here, never
+`Unresolved`/`Conflict`), so a second struct would be this one with two
+variants deleted. A decode failure does not fail the request: the telegram
+already reached the bus by the time decode runs, so the response stays
+`200` and the mismatch travels as `decodedEcho.error` text. `api.ts`'s
+`BusWriteResponse` and the compose form's confirmation line (new message
+pair `busCompose.sentDecoded` / German `Dekodiert:`, matching
+`busMonitor.column.decoded`) both follow.
+
+Investigated roughly fifteen DPT codec pairs in `crates/knx-core/src/dpt/
+codec.rs` (main types 1, 5, 6, 9, 10, 11, 15, 16, 19, 20, 21/22/27/30, 24,
+28) looking for one where `encode` accepts a value `decode` then rejects,
+to exercise the failure branch through the public API rather than only at
+the unit level. Found none: every validation that could produce such an
+asymmetry is either skipped identically on both sides (main 20's
+deliberately permissive "no per-subtype enumeration check") or enforced by
+a function both directions call (`char_set_is_ascii`, `mode3_code_is_
+assigned`). The codec is symmetric by construction, so no server test
+asserts the failure path through a real write — see `docs/
+KNOWN_LIMITATIONS.md` §102. The one server test added instead
+(`write_response_echoes_the_decoded_form_of_the_bytes_actually_sent`)
+covers the success path with a DPST-1-1 write and was watched to fail
+(`left: "off", right: "on"`, i.e. the boolean the mock tunnel actually
+received) before the handler wiring existed. Three web tests (one revised,
+two new — a same-looking DPST-1-1 case and a DPST-9-1 case where the
+decoded text visibly differs from the typed input) were watched to fail
+together when the confirmation line's decoded-echo render was removed, then
+restored to pass. Web tests 651 → 653.
+
+Gates: `cargo fmt --check`, `cargo clippy --workspace --all-targets -D
+warnings`, `cargo test --workspace` (cross-verified directly for
+`knx-server`), `xtask check-layering`, `xtask check-headers` (file counts
+unchanged — no new source files), `cargo deny check`, `npx tsc --noEmit`,
+`npx vitest run` — all exit 0.

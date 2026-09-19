@@ -224,18 +224,58 @@ pub enum SessionError {
         /// Device whose Transport Layer connection was rejected.
         target: IndividualAddress,
     },
-    /// Nothing answered within the operation's applicable timeout. Connected
-    /// requests use [`SessionTiming::response_timeout`] and `max_rep_count`;
-    /// `T_Connect` uses [`SessionTiming::connection_timeout`] once.
+    /// Nothing answered within the operation's applicable timeout, and the
+    /// Transport Layer connection — if there was one — is still open.
+    ///
+    /// Reached two ways. A connected request that was acknowledged at the
+    /// Transport Layer but never answered at the application layer: the
+    /// T_ACK stopped the acknowledge timer, so TL's give-up clause never
+    /// fires and the connection stays in `OPEN_IDLE`. And `T_Connect`
+    /// itself, which waits [`SessionTiming::connection_timeout`] once and
+    /// has no connection to lose.
     ///
     /// For a memory write this is spec §9.2's first row and stays
     /// ambiguous: a lost frame and a protected region are the same silence.
+    ///
+    /// The unacknowledged case is [`SessionError::ConnectionReleased`]
+    /// instead, and that distinction is the whole point of the two
+    /// variants: a caller must be able to tell a slow device from one that
+    /// stopped being connected four transmissions ago.
     NoAnswer {
         /// What was being waited for.
         waiting_for: &'static str,
         /// How long each attempt waited.
         each: Duration,
         /// How many attempts were made.
+        attempts: u8,
+    },
+    /// Every transmission of a connected request went unacknowledged, so the
+    /// Transport Layer connection was released and this session no longer
+    /// holds one.
+    ///
+    /// `[D]` TL §3.9, p. 15, the sentence after the one
+    /// `MAX_TRANSMISSIONS` cites: *"If it fails, the local Transport Layer
+    /// shall pass a T_Disconnect.ind primitive to the local user indicating
+    /// that the connection is released (state = CLOSED)."*
+    ///
+    /// `[D]` The state machine says the same in arithmetic. TL §5.2, p. 19
+    /// defines event `E18` as `ACKNOWLEDGE_TIME_OUT_ind (rep_count >=
+    /// max_rep_count)`; TL §5.4.1's transition table, p. 22, maps `E18` in
+    /// `OPEN_WAIT` to state `CLOSED` with action `A6`; and `A6`, TL §5.3,
+    /// p. 19, is *"Send a N_Data_Individual.req with T_DISCONNECT_REQ_PDU
+    /// [...] Send a T_Disconnect.ind to the user."* TL §5.5.3.6, p. 35
+    /// draws the same `A6` for the `T_NAK_PDU` route to the same condition.
+    ///
+    /// Distinct from [`SessionError::ConnectionLost`], which is the far end
+    /// tearing the connection down, and from [`SessionError::NoAnswer`],
+    /// which leaves a live connection behind.
+    ConnectionReleased {
+        /// What was being waited for.
+        waiting_for: &'static str,
+        /// How long each transmission waited for its T_ACK.
+        each: Duration,
+        /// How many transmissions went out. Always `MAX_TRANSMISSIONS`,
+        /// and reported rather than implied so that a test can pin it.
         attempts: u8,
     },
     /// The event channel dropped frames, so the answer may have been one of
@@ -431,6 +471,19 @@ impl fmt::Display for SessionError {
                 "no answer to {waiting_for} after {attempts} attempt(s) of {each:?}; \
                  this is a lost frame, a protected or absent target, or a device that \
                  is not listening, and the wire does not distinguish them"
+            ),
+            SessionError::ConnectionReleased {
+                waiting_for,
+                each,
+                attempts,
+            } => write!(
+                f,
+                "no T_ACK for {waiting_for} after {attempts} transmission(s) of \
+                 {each:?}, so the Transport Layer connection was released and is \
+                 now CLOSED (TL §3.9); this is a lost frame, a protected or absent \
+                 target, or a device that is not listening, and the wire does not \
+                 distinguish them — but nothing further may be sent on this \
+                 connection until it is opened again"
             ),
             SessionError::Lagged { waiting_for } => write!(
                 f,
@@ -970,8 +1023,37 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             // `[D]` TL clause 4: repeat up to `max_rep_count` times, and
             // only while the frame has not been acknowledged — a repeat of
             // an acknowledged request would be a second request.
-            if acknowledged || attempts >= MAX_TRANSMISSIONS {
+            //
+            // The two ways out of this loop are not the same event, and
+            // conflating them was C19's defect. A T_ACK arrived: action A8
+            // (TL §5.3, p. 20) stopped the acknowledge timer, so
+            // `ACKNOWLEDGE_TIME_OUT_ind` never fires, the state machine
+            // sits in `OPEN_IDLE`, and the connection survives a silence
+            // that belongs to the application layer.
+            if acknowledged {
                 return Err(SessionError::NoAnswer {
+                    waiting_for,
+                    each: self.timing.response_timeout,
+                    attempts,
+                });
+            }
+            if attempts >= MAX_TRANSMISSIONS {
+                // No T_ACK for any of them: this is TL §5.2's `E18`,
+                // `ACKNOWLEDGE_TIME_OUT_ind (rep_count >= max_rep_count)`
+                // (p. 19), whose cell in the §5.4.1 transition table
+                // (p. 22) is `OPEN_WAIT → CLOSED` under action `A6` —
+                // *"Send a N_Data_Individual.req with
+                // T_DISCONNECT_REQ_PDU [...] Send a T_Disconnect.ind to the
+                // user"* (§5.3, p. 19). TL §3.9's prose (p. 15) is the same
+                // instruction in words: *"the connection is released (state
+                // = CLOSED)"*.
+                //
+                // [`Self::disconnect`] *is* A6's two halves — the
+                // `T_DISCONNECT_REQ_PDU` and the local state change — and
+                // is best-effort by the same clause that makes A6's send
+                // unconfirmed.
+                self.disconnect().await;
+                return Err(SessionError::ConnectionReleased {
                     waiting_for,
                     each: self.timing.response_timeout,
                     attempts,
@@ -1722,6 +1804,18 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// Verify Mode, because [`Self::connect`] does both — accepts
     /// `LoadCompleting` as still working, and accepts a device that does not
     /// answer *while* in a state RES Table 94 permits silence in.
+    ///
+    /// "Does not answer" is two different devices, and since C19 they are
+    /// handled as two. One acknowledges the read and withholds the answer:
+    /// its connection is alive, RES §4.23.2.4.1's *"an established
+    /// TL-connection is kept alive"*, and the next poll goes out on it. The
+    /// other acknowledges nothing: its connection was released by TL's
+    /// action A6 after [`MAX_TRANSMISSIONS`] transmissions, RES's
+    /// *"otherwise, the TL-connection will close after TL-timeout"*, and the
+    /// next poll must open a new one first. Polling a released connection —
+    /// which is what this loop used to do — asks a peer that has forgotten
+    /// the connection exists, and what comes back is undefined rather than
+    /// merely absent.
     async fn wait_for_load_state(
         &mut self,
         object_index: ObjectIndex,
@@ -1736,11 +1830,45 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         // "once more" mean once.
         let mut made_the_one_more_attempt = false;
         loop {
-            if self.connection.is_none() {
-                self.reconnect().await?;
-            }
-            match self.read_load_state(object_index).await {
-                Ok(state) => {
+            let connected = match self.connection {
+                Some(_) => true,
+                None => match self.reconnect().await {
+                    Ok(()) => true,
+                    // `[D]` RES §4.23.2.4.1: *"the MaC shall try to
+                    // re-establish the connection **periodically** during
+                    // the maximum transition time"* — periodically, so one
+                    // failed attempt is a reason to wait and try again, not
+                    // a reason to stop. RES §4.23.2.4.1's NOTE 86 names the
+                    // device this covers: *"A device may be offline during
+                    // state LoadCompleting."* An offline device does not
+                    // answer T_Connect either, and before C19 that never
+                    // came up here, because an exhausted read left a stale
+                    // connection in place and no re-establishment was ever
+                    // attempted. Bounded by the deadline below, which turns
+                    // a device that never comes back into
+                    // `TransitionTimedOut` carrying the last state read —
+                    // the same report it produced before.
+                    Err(err)
+                        if reestablishment_may_be_retried(&err)
+                            && silence_is_permitted(last_state) =>
+                    {
+                        false
+                    }
+                    Err(err) => return Err(err),
+                },
+            };
+            // Only when there is something to read on. A tolerated failed
+            // re-establishment skips straight to the deadline check and the
+            // sleep, rather than asking a `None` connection for a state and
+            // collecting a `NotConnected` this loop would then have to
+            // pretend to understand.
+            let read = match connected {
+                true => self.read_load_state(object_index).await.map(Some),
+                false => Ok(None),
+            };
+            match read {
+                Ok(None) => {}
+                Ok(Some(state)) => {
                     last_state = Some(state);
                     if outcomes.is_settled(state) {
                         return Ok(state);
@@ -1767,12 +1895,33 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                     // carry on polling.
                     self.connection = None;
                 }
-                Err(SessionError::NoAnswer { .. })
-                    if last_state.map(LoadState::may_be_silent).unwrap_or(false) =>
-                {
+                Err(SessionError::NoAnswer { .. }) if silence_is_permitted(last_state) => {
                     // `[D]` RES Table 94's footnote: a device in
                     // LoadCompleting may legitimately not answer. Silence
                     // here is not failure (spec §5.5, §9.2 row 2).
+                    //
+                    // Since C19 this arm means one thing only: the device
+                    // acknowledged the read at the Transport Layer and
+                    // withheld the answer. `[D]` RES §4.23.2.4.1: *"If the
+                    // MaS responds during state LoadCompleting, an
+                    // established TL-connection is kept alive"* — the T_ACK
+                    // is that response, so the connection stays and the next
+                    // poll goes out on it with no reconnect.
+                }
+                Err(SessionError::ConnectionReleased { .. })
+                    if silence_is_permitted(last_state) =>
+                {
+                    // The other half of the same RES sentence: *"otherwise,
+                    // the TL-connection will close after TL-timeout"*
+                    // (§4.23.2.4.1, p. 297). Nothing answered at all, so
+                    // `exchange_inner` ran TL's action A6 and the connection
+                    // is CLOSED. Tolerated exactly as the silence above is —
+                    // NOTE 86 expects an offline device here — but the next
+                    // poll may not use the connection that no longer exists,
+                    // so the loop re-establishes it first. Set explicitly
+                    // rather than relied upon, so this arm does not depend on
+                    // what the layer below it did with the field.
+                    self.connection = None;
                 }
                 Err(err) => return Err(err),
             }
@@ -1968,6 +2117,32 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         }
         Ok(())
     }
+}
+
+/// Whether the last state the device reported is one RES Table 94 permits it
+/// to fall silent in.
+///
+/// `None` — nothing read yet on this wait — is not permission: a device that
+/// has never answered has not earned the benefit of the doubt.
+fn silence_is_permitted(last_state: Option<LoadState>) -> bool {
+    last_state.map(LoadState::may_be_silent).unwrap_or(false)
+}
+
+/// Whether a failed re-establishment is one RES §4.23.2.4.1's
+/// *"periodically"* asks to try again, rather than a device fault to report.
+///
+/// Every variant here is the connection failing to come up; nothing here is
+/// the device answering something wrong. A refused property, a mismatched
+/// read-back or a Verify Mode the device would not take are faults the
+/// caller has to see, and they are absent from this list on purpose.
+fn reestablishment_may_be_retried(err: &SessionError) -> bool {
+    matches!(
+        err,
+        SessionError::NoAnswer { .. }
+            | SessionError::ConnectionReleased { .. }
+            | SessionError::ConnectRejected { .. }
+            | SessionError::ConnectionLost { .. }
+    )
 }
 
 #[cfg(test)]
@@ -2426,14 +2601,18 @@ mod tests {
             .await
             .expect_err("a silent device cannot answer");
         match &error {
-            SessionError::NoAnswer { .. } => {
+            // C19 moved this outcome from `NoAnswer` to
+            // `ConnectionReleased`: nothing acknowledged, so TL's action A6
+            // applies. The subject of this test is unchanged — the message
+            // must still refuse to name a cause it did not observe.
+            SessionError::ConnectionReleased { .. } => {
                 // The transmission count has its own test, against the
                 // literal 4, below — comparing it here against
                 // `MAX_TRANSMISSIONS` would just check the production code
                 // against itself. This test's subject is the message.
                 assert!(error.to_string().contains("does not distinguish"));
             }
-            other => panic!("expected a time-out, got {other}"),
+            other => panic!("expected a released connection, got {other}"),
         }
     }
 
@@ -2456,10 +2635,10 @@ mod tests {
             .await
             .expect_err("a silent device cannot answer");
         match error {
-            SessionError::NoAnswer { attempts, .. } => {
+            SessionError::ConnectionReleased { attempts, .. } => {
                 assert_eq!(attempts, 4, "the original send plus 3 repetitions");
             }
-            other => panic!("expected a time-out, got {other}"),
+            other => panic!("expected a released connection, got {other}"),
         }
     }
 
@@ -2484,6 +2663,218 @@ mod tests {
             state,
             LoadState::Unloaded,
             "the device answers normally once it stops dropping frames"
+        );
+    }
+
+    /// C19, TL §3.9, p. 15: *"If it fails, the local Transport Layer shall
+    /// pass a T_Disconnect.ind primitive to the local user indicating that
+    /// the connection is released (state = CLOSED)."* The state machine
+    /// spells out the mechanism — `E18` (§5.2, p. 19) in `OPEN_WAIT` is
+    /// `CLOSED` under action `A6` (§5.4.1's table, p. 22), and `A6` (§5.3,
+    /// p. 19) sends `T_DISCONNECT_REQ_PDU` first.
+    ///
+    /// Three things are asserted, because the fix has three halves and a
+    /// test that checked only the error variant would pass against code
+    /// that renamed the error and kept the stale connection.
+    #[tokio::test]
+    async fn exhausting_the_repetitions_releases_the_connection() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            silent: true,
+            ..SimulatorConfig::default()
+        });
+        let mut session = read_only(&device);
+        session.connect().await.expect("T_Connect needs no answer");
+        assert!(
+            session.connection().is_some(),
+            "the connection has to exist before this test can watch it go"
+        );
+
+        let error = session
+            .read_load_state(ObjectIndex::APPLICATION_PROGRAM)
+            .await
+            .expect_err("a silent device cannot answer");
+
+        match error {
+            SessionError::ConnectionReleased { attempts, .. } => {
+                assert_eq!(attempts, 4, "the original send plus 3 repetitions");
+            }
+            other => panic!("expected a released connection, got {other}"),
+        }
+        assert!(
+            session.connection().is_none(),
+            "TL §3.9: state = CLOSED. A session that kept its connection here \
+             would send its next request to a peer that has forgotten the \
+             connection exists"
+        );
+        assert_eq!(
+            device
+                .seen()
+                .iter()
+                .filter(|entry| matches!(entry, Seen::Disconnect))
+                .count(),
+            1,
+            "action A6's first line is the T_DISCONNECT_REQ_PDU, and a local \
+             state change on its own is not A6"
+        );
+        assert_eq!(
+            session.reconnects(),
+            0,
+            "releasing is not reconnecting: nothing here asked for a new \
+             connection"
+        );
+    }
+
+    /// C19: the two silences are not the same silence, and the wait loop
+    /// has to treat them differently.
+    ///
+    /// A device that T_ACKs the poll and withholds the answer is RES
+    /// §4.23.2.4.1's *"If the MaS responds during state LoadCompleting, an
+    /// established TL-connection is kept alive"* — one transmission, no
+    /// release, no reconnect. A device that acknowledges nothing is the
+    /// same clause's *"otherwise, the TL-connection will close after
+    /// TL-timeout"*, with NOTE 86 naming the cause: *"A device may be
+    /// offline during state LoadCompleting."* — four transmissions, action
+    /// A6, and a connection the loop must re-establish before it polls
+    /// again.
+    ///
+    /// Both halves run the same wait against the same states and differ
+    /// only in whether the T_ACK comes back, so the assertions below are a
+    /// difference and not two unrelated measurements. Neither asserts on
+    /// elapsed time: the counts are what the Standard constrains.
+    #[tokio::test]
+    async fn the_wait_loop_tells_a_released_connection_from_a_silent_device() {
+        /// The reads of one poll that goes quiet, numbered from one and
+        /// counting every transmission. Read #1 is the first poll, which
+        /// must answer so that the loop has a state Table 94 permits
+        /// silence in; the quiet poll is next.
+        const FIRST_QUIET_READ: u32 = 2;
+
+        async fn wait_out(config: SimulatorConfig) -> (SimulatedDevice, u32, bool, usize, usize) {
+            let device = SimulatedDevice::with_config(config);
+            device.preset_load_state(ObjectIndex::APPLICATION_PROGRAM, LoadState::LoadCompleting);
+            let mut session = ManagementSession::read_only(
+                &device,
+                device.address(),
+                AuthorisationPlan::Skip,
+                SessionTiming {
+                    // Long enough that the deadline plays no part: this test
+                    // is about what the loop does with a silence, not about
+                    // when it gives up on one.
+                    max_transition: Duration::from_secs(30),
+                    ..fast()
+                },
+            )
+            .expect("the simulated device is contactable");
+            session.connect().await.expect("connect");
+            let outcomes = permitted_outcomes(
+                LoadState::Loading,
+                Stimulus::Event(LoadEvent::LoadCompleted),
+                None,
+            );
+            let observed = tokio::time::timeout(
+                Duration::from_secs(5),
+                session.wait_for_load_state(
+                    ObjectIndex::APPLICATION_PROGRAM,
+                    LoadEvent::LoadCompleted,
+                    LoadState::Loading,
+                    &outcomes,
+                ),
+            )
+            .await
+            .expect("the wait must terminate, not spin")
+            .expect("the device settles once it stops going quiet");
+            assert_eq!(observed, LoadState::Loaded);
+            let connects = device
+                .seen()
+                .iter()
+                .filter(|entry| matches!(entry, Seen::Connect))
+                .count();
+            let disconnects = device
+                .seen()
+                .iter()
+                .filter(|entry| matches!(entry, Seen::Disconnect))
+                .count();
+            let reconnects = session.reconnects();
+            let still_connected = session.connection().is_some();
+            (device, reconnects, still_connected, connects, disconnects)
+        }
+
+        // `settle_load_state_after` is measured from the first load-state
+        // read. 25 ms is after read #1 (which happens at ~0 ms and must
+        // still report LoadCompleting) and before the poll that follows the
+        // quiet one (at ≥ 50 ms in the acknowledged case, ≥ 200 ms in the
+        // unacknowledged one, since a quiet poll costs at least one whole
+        // 50 ms `response_timeout`).
+        let settling = SimulatorConfig {
+            settle_load_state_after: Some(Duration::from_millis(25)),
+            settled_load_state: LoadState::Loaded,
+            ..SimulatorConfig::default()
+        };
+
+        // Busy, not gone: one transmission, a T_ACK, no answer.
+        let (busy, reconnects, still_connected, connects, disconnects) =
+            wait_out(SimulatorConfig {
+                unanswered_load_state_reads: Some(FIRST_QUIET_READ..FIRST_QUIET_READ + 1),
+                ..settling.clone()
+            })
+            .await;
+        assert_eq!(
+            busy.load_state_reads(),
+            3,
+            "the acknowledged silence is not repeated — repeating an \
+             acknowledged request would be a second request — so the quiet \
+             poll costs one read, not four"
+        );
+        assert!(
+            still_connected,
+            "the T_ACK is the MaS responding, and RES §4.23.2.4.1 keeps that \
+             connection alive"
+        );
+        assert_eq!(
+            reconnects, 0,
+            "nothing was released, so nothing was reopened"
+        );
+        assert_eq!(connects, 1, "the original T_Connect and no other");
+        assert_eq!(
+            disconnects, 0,
+            "a connection that was never released is never torn down"
+        );
+
+        // Offline: four transmissions, no T_ACK, action A6.
+        let (offline, reconnects, still_connected, connects, disconnects) =
+            wait_out(SimulatorConfig {
+                unacknowledged_load_state_reads: Some(
+                    FIRST_QUIET_READ..FIRST_QUIET_READ + u32::from(MAX_TRANSMISSIONS),
+                ),
+                ..settling
+            })
+            .await;
+        assert_eq!(
+            offline.load_state_reads(),
+            1 + u32::from(MAX_TRANSMISSIONS) + 1,
+            "read #1 answers, reads #2–#5 are the full ladder of an \
+             unacknowledged request, read #6 is the poll after the \
+             re-established connection"
+        );
+        assert!(
+            still_connected,
+            "the loop re-established the connection it had to release, and \
+             returned holding a live one"
+        );
+        assert_eq!(
+            reconnects, 1,
+            "RES §4.23.2.4.1: re-establish and carry on polling — exactly \
+             once, because the device answers after that"
+        );
+        assert_eq!(
+            connects, 2,
+            "the original T_Connect and the one that replaced the released \
+             connection"
+        );
+        assert_eq!(
+            disconnects, 1,
+            "action A6 sends T_DISCONNECT_REQ_PDU before the state goes \
+             CLOSED"
         );
     }
 

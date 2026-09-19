@@ -6705,3 +6705,82 @@ passed. It now also reads the height the parent actually applied.
 and against `de.ts` directly, for the same reason `motionGuard.test.ts`
 does: happy-dom applies no author stylesheet, and the catalogues are
 checked for matching keys, never for matching meaning.
+
+## 2026-09-19 — C19: the repetitions ran out and the connection stayed open anyway
+
+TL §3.9, p. 15, the sentence immediately after the one `MAX_TRANSMISSIONS`
+already cites: *"If it fails, the local Transport Layer shall pass a
+T_Disconnect.ind primitive to the local user indicating that the connection
+is released (state = CLOSED)."* `exchange_inner` did the repetitions and
+skipped the release: it returned `SessionError::NoAnswer` and left
+`self.connection` populated, so every subsequent exchange went out on a
+connection the peer had, by the Standard, already forgotten. What came back
+was undefined rather than merely absent, and no caller could tell a slow
+device from one that closed the connection four transmissions ago.
+
+Citations verified in the PDFs at offset 0 before they were written into
+comments, and one of the brief's was wrong. TL §5.5.3.6 is on **p. 35**, not
+p. 34 — and it is the `T_NAK_PDU` route to the give-up condition, not the
+acknowledge time-out this code actually hits. The clause that governs a
+time-out is the state machine's, in three pieces: event `E18`
+(`ACKNOWLEDGE_TIME_OUT_ind (rep_count >= max_rep_count)`, §5.2, p. 19), its
+cell in the Style 1 transition table (`OPEN_WAIT` → `CLOSED`, action `A6`,
+§5.4.1, p. 22), and `A6` itself (*"Send a N_Data_Individual.req with
+T_DISCONNECT_REQ_PDU [...] Send a T_Disconnect.ind to the user"*, §5.3,
+p. 19). Those are the citations in the code; §5.5.3.6 p. 35 is named as the
+parallel `T_NAK` diagram and nothing more. RES §4.23.2.4.1, p. 297
+(*"otherwise, the TL-connection will close after TL-timeout"*) and its
+NOTE 86 verified unchanged.
+
+**The fix, three parts.** (1) `exchange_inner`'s give-up condition split in
+two. `acknowledged` — a T_ACK arrived and the application answer did not —
+keeps returning `NoAnswer` and keeps the connection, because action `A8`
+stopped the acknowledge timer and `E18` never fires. `attempts >=
+MAX_TRANSMISSIONS` with nothing acknowledged runs `A6` (`self.disconnect()`
+*is* its two halves) and returns the new
+`SessionError::ConnectionReleased { waiting_for, each, attempts }`. (2)
+`wait_for_load_state`'s silence swallow split the same way: the acknowledged
+silence keeps polling the live connection (RES: *"If the MaS responds during
+state LoadCompleting, an established TL-connection is kept alive"*), the
+released one clears the connection so the loop re-establishes before the next
+poll. (3) A failed re-establishment inside the wait is no longer fatal while
+the device's last state is one Table 94 permits silence in — RES asks for
+*"periodically"*, and before C19 the question never arose, because an
+exhausted read left a stale connection in place and nothing was ever
+re-established. Only the four connection-shaped errors are tolerated
+(`reestablishment_may_be_retried`); a refused property or a mismatched
+read-back from `connect()` still reaches the caller. The deadline still
+bounds the whole thing, so a device that never comes back still ends in
+`TransitionTimedOut` carrying the last state read — the same report as
+before.
+
+**No caller depended on the connection surviving a `NoAnswer`.** Checked
+before the behaviour was changed, as the brief asked: `SessionError` is
+matched in `commissioning.rs` and `commissioning/download.rs` only
+(`BusSessionError` in `knx-server` is an unrelated type), every download step
+propagates with `?`, and the single site that continues past a `NoAnswer` is
+`wait_for_load_state`'s swallow — the one this task fixes.
+
+Two tests, both mutation-checked. `exhausting_the_repetitions_releases_the_connection`
+asserts the variant, `attempts == 4`, `session.connection().is_none()`, one
+`Seen::Disconnect` on the device (A6's `T_DISCONNECT_REQ_PDU`, so a local
+state change alone is not enough), and `reconnects() == 0`. Deleting the
+`self.disconnect().await` fails it on the `connection().is_none()` assertion.
+`the_wait_loop_tells_a_released_connection_from_a_silent_device` runs the
+same wait twice against the same states, differing only in whether the T_ACK
+comes back, and asserts counts rather than elapsed time: the acknowledged
+silence costs one read, no reconnect, one `Seen::Connect`, no
+`Seen::Disconnect`; the unacknowledged one costs six reads (1 + a full
+four-transmission ladder + the poll after the re-established connection), one
+reconnect, two `Seen::Connect`, one `Seen::Disconnect`. Merging the two
+error paths back into one — the pre-C19 shape — fails it on `reconnects`.
+Two new `SimulatorConfig` knobs make the halves say which device they are:
+`unanswered_load_state_reads` (T_ACK, no answer) and
+`unacknowledged_load_state_reads` (nothing at all), both numbered windows
+over `PID_LOAD_STATE_CONTROL` reads counting every transmission, so neither
+test depends on how long anything took.
+
+`docs/KNOWN_LIMITATIONS.md` entry **104**: the release is correct and costs a
+full reconnect per quiet poll against a device that went offline in
+`LoadCompleting`. Latency and bus traffic, not correctness, and it compounds
+with entry 101's accounting of the same loop.

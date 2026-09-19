@@ -6421,3 +6421,10 @@ are absent from *this window*, not from `knx-net`, which ships both; the
 address filter also matches datapoint types; `.knxproj` export is greyed out
 until the project has a file; and F1 reaches help from the main window only,
 not from the diagnostics companion. Web tests 640 → 648.
+**Fix round 2 (2026-09-19, same branch).** The two lines of the F1 branch
+that a mutation could still delete for free are now pinned: the
+`.fs-picker` guard — this suite mocks `./filePicker` wholesale, so the test
+puts the node in the document itself and a second assertion reads
+`FsPicker.tsx` so the rendered class and the queried selector cannot drift
+apart — and `setCatalogTarget(null)`, the third of the three dialogs the
+original blocker named. Web tests 648 → 651.

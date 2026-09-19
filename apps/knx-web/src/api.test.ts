@@ -19,14 +19,14 @@ describe("api", () => {
     vi.unstubAllGlobals();
   });
 
-  it("importProject posts the path and returns the parsed tree", async () => {
+  it("importProject posts the path and client token, and returns the parsed tree", async () => {
     mockFetchOnce({ installations: [] });
-    const tree = await api.importProject("/x.knxproj");
+    const tree = await api.importProject("/x.knxproj", "a-client-token");
     expect(tree).toEqual({ installations: [] });
     const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe("/api/project/import");
     expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body as string)).toEqual({ path: "/x.knxproj" });
+    expect(JSON.parse(init.body as string)).toEqual({ path: "/x.knxproj", clientToken: "a-client-token" });
   });
 
   it("newProject posts the camelCase creation body, discardChanges spelled out", async () => {

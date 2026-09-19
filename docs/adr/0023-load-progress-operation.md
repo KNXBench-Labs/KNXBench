@@ -53,38 +53,30 @@ reason: a client that polls across two operations must be able to tell
 from the id alone that it is looking at a new one). A second import or
 open while one is running is refused with `409 Conflict`, not queued.
 
-**The client half of the id.** The POST does not return the operation id —
-its body is the project tree, unchanged — so the browser establishes
-ownership from two facts about its own request, implemented in `App.tsx`'s
-`runLoad` and the helpers in `loadProgress.ts`:
+**The client half: an opaque token, not a guess.** The POST does not
+return the operation id, so something has to establish ownership from the
+client side. Three rounds tried to infer it from facts the server already
+had — no filter, an id-only filter, an id-and-`source` filter — and each
+one let one client's poll adopt another client's operation under some
+timing or naming coincidence the previous round had not thought of. Fix
+round 3 (finding F9) deletes the inference entirely: before its POST,
+`App.tsx`'s `runLoad` generates an opaque token with `crypto.randomUUID()`
+and sends it as `clientToken` in the POST body of both
+`/api/project/import` and `/api/project/open`. The server stores it
+verbatim on the operation (`LoadSnapshot.client_token`) and echoes it in
+every snapshot the client polls. `loadProgress.ts`'s `ownsOperation` is
+exact equality between that field and the token the load generated for
+itself — one rule, no fallback branch, no window of any width for a
+same-named stranger to fall into.
 
-1. **Baseline.** Before asking for a new operation, read the current
-   snapshot once. Its `operationId` (or `0` when there is none) is the
-   highest id that *predates* this load.
-2. **Adoption.** The first polled snapshot that is `running`, has an id
-   greater than the baseline, **and** whose `source` equals the file name
-   this load submitted (`fileNameOf(path)`, the same function the server
-   applies to fill `source` — `routes.rs`) is this load's own. Its id is
-   remembered, and from then on only that exact id is accepted — the id
-   is never reused, so equality is exact and `source` plays no further
-   part.
-
-The `source` check was added in fix round 2 (finding F8): the id-only test
-adopted a foreign operation whenever that operation happened to start
-*after* the baseline read but *before* our POST was refused — a `409` case
-the baseline cannot see, because the foreign id is genuinely higher. It
-narrows the window, it does not close it: **two clients loading files
-with the same base name inside the same baseline-to-adoption window are
-still indistinguishable.** The banner would show the stranger's phase
-under a file name that happens to match. This is a real, acknowledged gap
-in a single-user desktop tool's protocol, not a fixed one.
-
-Anything failing both id and source tests belongs to somebody else: a
-finished earlier load, or the operation whose existence is the reason our
-POST was refused with `409`. It is never rendered. If the baseline read
-itself fails, nothing is adopted at all for that load: the banner says
-`starting` until the POST answers, which is less informative and a great
-deal truer than naming a stranger's phase.
+A missing token belongs to nobody. An operation started with no
+`clientToken` (an older caller, or none sent) carries `null` in every
+snapshot, and `ownsOperation` never matches `null` against anything —
+including another load that also sent no token. The banner for such a
+load simply stays on `starting` until its own POST answers; that is less
+informative than naming a phase, and exactly as true as the feature's
+core rule requires. There is no baseline read before the POST any more —
+nothing to compute one from, and nothing it would be used for.
 
 When a load ends in an error, the client accepts the final snapshot only
 if it is its own **and** says `failed`. Every other case — no snapshot, a
@@ -101,7 +93,8 @@ loaded anything:
 ```json
 { "operationId": 1, "kind": "import", "source": "Unser Zuhause.knxproj",
   "phase": "parseTopology", "completed": null, "total": null,
-  "status": "running", "error": null }
+  "status": "running", "error": null,
+  "clientToken": "3fa8b1d2-...-c9e4" }
 ```
 
 `status` is `running`, `succeeded` or `failed`; `error` is set only when
@@ -110,10 +103,15 @@ duration** — see the percentage rule.
 
 **The POST keeps its shape.** `/api/project/import` and `/api/project/open`
 still answer with the `ProjectTree` (or an error), unchanged for every
-existing caller including `knx-cli` and the Tauri shell. The work moves to
-`tokio::task::spawn_blocking`, which it should always have been on: an
-import is seconds of CPU on a runtime worker thread, and a blocked worker
-is what would have made a progress poll arrive late.
+existing caller including `knx-cli` and the Tauri shell. Their request body
+(`PathBody`) gains one optional field, `clientToken`, read only by these
+two handlers; every other route sharing `PathBody` ignores it, and a
+caller that never sends it (`knx-cli`, the Tauri shell) simply starts an
+operation nobody can claim by token — harmless, since nothing but a
+browser polls. The work moves to `tokio::task::spawn_blocking`, which it
+should always have been on: an import is seconds of CPU on a runtime
+worker thread, and a blocked worker is what would have made a progress
+poll arrive late.
 
 **The phases come from the pipeline, not from the HTTP layer.**
 `knx-etsproj` gains `ImportStage`/`ImportObserver` (its own vocabulary, no
@@ -218,12 +216,18 @@ stages and asserts the exact order; `crates/knx-app/tests/load_progress.rs`
 does the same across both crates and asserts the determinate counts are a
 real count, not a guess; `apps/knx-server/src/load_progress.rs` covers the
 lifecycle (duplicate refusal, failure retention, id monotonicity, the
-phase change that clears a stale item count); `apps/knx-server/tests/
-http_load_progress.rs` covers the route, the `409`, and that a failed load
-leaves the previously open project in place;
-`apps/knx-web/src/loadProgress.test.ts` and `LoadProgressBanner.test.tsx`
-cover determinate vs indeterminate rendering, the `aria-live` announcement
-and the failure state; `App.test.tsx` covers duplicate prevention in the UI.
+phase change that clears a stale item count, a token stored and echoed
+verbatim, and no token stored as `None`, never a guess);
+`apps/knx-server/tests/http_load_progress.rs` covers the route, the
+`409`, that a failed load leaves the previously open project in place,
+and that `clientToken` round-trips through the HTTP layer in both
+directions; `apps/knx-web/src/loadProgress.test.ts` covers `ownsOperation`
+as exact token equality (including the same-basename case fix round 3
+closed) and `LoadProgressBanner.test.tsx` covers determinate vs
+indeterminate rendering, the `aria-live` announcement and the failure
+state; `App.test.tsx` covers duplicate prevention in the UI and that a
+same-basename stranger's failure is never rendered as the local client's
+own.
 
 Not covered: nothing proves a phase label is *accurate* — that the string
 `parseTopology` is emitted where topology is parsed is a claim review

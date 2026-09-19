@@ -33,12 +33,25 @@ function requestError(status: number, message: string): Error {
   return error;
 }
 
-export function importProject(path: string): Promise<ProjectTree> {
-  return request("/api/project/import", { method: "POST", body: JSON.stringify({ path }) });
+/**
+ * `clientToken` is the opaque per-load id `App.tsx`'s `runLoad` generates
+ * with `crypto.randomUUID()` (ADR-0023 fix round 3, F9). The server stores
+ * it on the operation and echoes it in every `LoadProgressSnapshot`;
+ * `loadProgress.ts`'s `ownsOperation` is exact equality against it, not a
+ * fact this module derives.
+ */
+export function importProject(path: string, clientToken: string): Promise<ProjectTree> {
+  return request("/api/project/import", {
+    method: "POST",
+    body: JSON.stringify({ path, clientToken }),
+  });
 }
 
-export function openProject(path: string): Promise<ProjectTree> {
-  return request("/api/project/open", { method: "POST", body: JSON.stringify({ path }) });
+export function openProject(path: string, clientToken: string): Promise<ProjectTree> {
+  return request("/api/project/open", {
+    method: "POST",
+    body: JSON.stringify({ path, clientToken }),
+  });
 }
 
 /**
@@ -53,10 +66,9 @@ export function openProject(path: string): Promise<ProjectTree> {
  * timestamp for a caller to be tempted by.
  */
 export interface LoadProgressSnapshot {
-  /** Monotonic per server run, never reused — how a poller tells "still
-   * the load I started" from "somebody else's, already finished".
-   * `loadProgress.ts`'s `ownsOperation` is that test; `App.tsx` reads the
-   * id once before starting a load and adopts the first higher one. */
+  /** Monotonic per server run, never reused. Not how a poller tells its
+   * own load apart from anyone else's — see `clientToken` for that; this
+   * is purely a server-side sequence number. */
   operationId: number;
   kind: "import" | "open";
   /** The file name, never the full path. */
@@ -69,6 +81,11 @@ export interface LoadProgressSnapshot {
   /** Set only when `status` is `"failed"` — the same message the POST
    * rejected with, kept for a client that lost that response. */
   error: string | null;
+  /** The `clientToken` this operation was started with, or `null` when
+   * none was sent. `loadProgress.ts`'s `ownsOperation` is exact equality
+   * between this and the token `runLoad` generated for its own load
+   * (ADR-0023 fix round 3, F9) — the entire ownership test. */
+  clientToken: string | null;
 }
 
 /** `null` when this server run has never loaded anything. */

@@ -171,7 +171,7 @@ impl fmt::Display for ProcedureKind {
             ProcedureKind::CompleteDownload => "complete download",
             ProcedureKind::LoadOnePart => "load one loadable part",
             ProcedureKind::PartialDownload => "partial download",
-            ProcedureKind::Unload => "unload",
+            ProcedureKind::Unload => "unload the download (individual address kept)",
             ProcedureKind::Recovery => "recovery after an interrupted download",
         })
     }
@@ -199,17 +199,23 @@ pub fn individual_address_write() -> Procedure {
         steps: vec![
             step(
                 1,
-                "check the new address is free",
-                "connect to IA_new and read Device Descriptor Type 0; any answer means \
-                 the address is occupied and the procedure stops",
+                "check whether the new address is occupied",
+                "connect to IA_new and read Device Descriptor Type 0; a response — or an \
+                 A_Disconnect-PDU in its place — only stops the procedure if IA_new is \
+                 held by a different device. If it is held by the device that step 2 \
+                 later finds in Programming Mode, or by no device at all, the procedure \
+                 continues either way (MP §2.3 exception handling, p. 15, 'to 2.'). The \
+                 Disconnect case is reported to the operator as a finding rather than \
+                 forced into a stop, because the Standard's own p. 14 body text and its \
+                 p. 15 'to 1.' exception disagree about it — see KNOWN_LIMITATIONS §108",
                 StepEffect::Read,
             ),
             step(
                 2,
                 "count devices in programming mode",
-                "broadcast A_IndividualAddress_Read, wait out the full 3 s time-out, \
-                 count distinct source addresses and not frames; continue only at \
-                 exactly one",
+                "broadcast A_IndividualAddress_Read, wait out the full 1 s time-out (MP \
+                 §2.3, p. 14), count distinct source addresses and not frames; continue \
+                 only at exactly one",
                 StepEffect::Read,
             ),
             step(
@@ -549,7 +555,7 @@ pub fn unload() -> Procedure {
 pub fn recovery() -> Procedure {
     Procedure {
         kind: ProcedureKind::Recovery,
-        source: "spec §9.1",
+        source: "KNXBench design spec §9.1 — no Standard equivalent",
         steps: vec![
             step(
                 1,
@@ -597,6 +603,7 @@ pub fn recovery() -> Procedure {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::commissioning::programming_mode::INDIVIDUAL_ADDRESS_READ_TIMEOUT;
 
     /// Spec §11.2's procedure model: the step lists match the clauses' own
     /// numbering and order.
@@ -756,6 +763,64 @@ mod tests {
             .contains("distinct source addresses"));
     }
 
+    /// C3(a): MP §2.3 step 2's own remark column says *"time-out: 1 s"*,
+    /// which is not the same time-out as MP §2.2's 3 s — a different
+    /// procedure this text must not borrow from.
+    #[test]
+    fn the_programming_mode_count_waits_out_one_second_not_three() {
+        let procedure = individual_address_write();
+        let step_two = &procedure.steps[1];
+        assert!(
+            step_two.detail.contains("1 s"),
+            "step 2 must cite MP §2.3's own 1 s time-out: {}",
+            step_two.detail
+        );
+        // Tied to the other procedure's constant, not to the literal "3 s":
+        // the mistake being guarded against is borrowing MP §2.2's time-out,
+        // so the guard has to move if that time-out ever does.
+        let borrowed = format!("{} s", INDIVIDUAL_ADDRESS_READ_TIMEOUT.as_secs());
+        assert!(
+            !step_two.detail.contains(&borrowed),
+            "step 2 must not carry MP §2.2's {borrowed} time-out: {}",
+            step_two.detail
+        );
+    }
+
+    /// C3(b): MP §2.3 exception handling (p. 15, "to 2.") makes an answer at
+    /// IA_new stop the procedure only when a *different* device holds it.
+    /// The same device, once found in Programming Mode, or no device at
+    /// all, both continue — which is what makes step 3's `IA_new !=
+    /// IA_current` re-assignment guard reachable in the first place.
+    #[test]
+    fn occupancy_only_stops_the_procedure_for_a_different_device() {
+        let procedure = individual_address_write();
+        let step_one = &procedure.steps[0];
+        assert!(
+            step_one.detail.contains("different device"),
+            "step 1 must distinguish a different device's occupancy from the \
+             re-assignment case: {}",
+            step_one.detail
+        );
+        assert!(
+            !step_one.detail.contains("any answer means"),
+            "step 1 must not treat every answer as an unconditional stop: {}",
+            step_one.detail
+        );
+        // MP §2.3 "to 2." has three outcomes, and dropping either of the two
+        // continuing ones is the same defect as the flat stop this replaced:
+        // a device re-programmed to the address it already holds is legal.
+        assert!(
+            step_one.detail.to_lowercase().contains("programming mode"),
+            "step 1 must keep the same-device-in-programming-mode case: {}",
+            step_one.detail
+        );
+        assert!(
+            step_one.detail.contains("no device at all"),
+            "step 1 must keep the nobody-answers case: {}",
+            step_one.detail
+        );
+    }
+
     #[test]
     fn each_procedure_that_writes_names_the_scope_it_needs() {
         assert_eq!(
@@ -775,5 +840,44 @@ mod tests {
         assert!(text.contains("CP §3.5.2"), "{text}");
         assert!(text.contains("01 connect"), "{text}");
         assert!(text.contains("[write]"), "{text}");
+    }
+
+    /// C6(a): the Standard prescribes no recovery procedure at all (MP §3.1,
+    /// p. 68's general exception handling is its whole position on the
+    /// matter), so `recovery()`'s source must not read as a Standard clause.
+    #[test]
+    fn the_recovery_source_names_itself_not_the_standard() {
+        let procedure = recovery();
+        assert!(
+            procedure.source.contains("KNXBench design spec"),
+            "recovery()'s source must own up to being this project's \
+             invention: {}",
+            procedure.source
+        );
+        assert!(
+            procedure.source.contains("no Standard equivalent"),
+            "recovery()'s source must say the Standard has no such \
+             procedure: {}",
+            procedure.source
+        );
+    }
+
+    /// C6(b): CP §3.5.4 steps 01-06 unload a device's application, not its
+    /// individual address (step 07, which frees the address, is
+    /// deliberately not implemented). The reported name must say so, or an
+    /// operator reads "unload complete" for a device that still holds its
+    /// address.
+    #[test]
+    fn the_unload_procedure_name_does_not_claim_to_free_the_address() {
+        let name = ProcedureKind::Unload.to_string();
+        assert_ne!(
+            name, "unload",
+            "the unqualified word reads as an address unload to an operator \
+             who has not read CP §3.5.4"
+        );
+        assert!(
+            name.contains("address"),
+            "the name must say the individual address is unaffected: {name}"
+        );
     }
 }

@@ -1672,6 +1672,21 @@ describe("App — in-application help (T23)", () => {
     await act(async () => root.unmount());
   });
 
+  // Returns everything from `start` up to the `>` that ends the JSX
+  // opening tag, ignoring any `>` inside a `{...}` prop expression.
+  function openingTag(source: string, start: string): string {
+    const from = source.indexOf(start);
+    expect(from, `${start} not found`).toBeGreaterThanOrEqual(0);
+    let depth = 0;
+    for (let i = from; i < source.length; i += 1) {
+      const c = source[i];
+      if (c === "{") depth += 1;
+      else if (c === "}") depth -= 1;
+      else if (c === ">" && depth === 0) return source.slice(from, i);
+    }
+    throw new Error(`unterminated ${start}`);
+  }
+
   // The other half: the selector in `App.tsx` and the class in
   // `FsPicker.tsx` are one contract written in two files, and nothing in
   // a mocked suite connects them. Renaming the class would leave the DOM
@@ -1681,7 +1696,16 @@ describe("App — in-application help (T23)", () => {
       join(dirname(fileURLToPath(import.meta.url)), "FsPicker.tsx"),
       "utf8",
     );
-    expect(source).toContain('<Overlay className="fs-picker"');
+    // Matched anywhere inside the opening tag rather than as two tokens
+    // that must touch: `FsPicker.tsx` is the one `Overlay` call site in
+    // the codebase that writes `className` before the label, so a pass
+    // that makes it match its siblings would move the prop, change
+    // nothing at runtime, and has no business failing this test. A
+    // rename still fails it. The scan ends at the `>` that closes the
+    // tag, counting the braces of the prop expressions so the arrow in
+    // `onClose={() => …}` is not mistaken for it.
+    const tag = openingTag(source, "<Overlay");
+    expect(tag).toContain('className="fs-picker"');
 
     const app = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), "App.tsx"),

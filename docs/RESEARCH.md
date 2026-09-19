@@ -1066,6 +1066,58 @@ this task adds is exercised, in this corpus, only by synthetic unit
 tests — a documented, not hidden, gap between capability and corpus
 evidence.
 
+**Addendum (goal.md T18, task 12, 2026-09-14) — module *arguments*
+measured, and `AllocatorRef` searched for and not found.** Q6 recorded the
+`Module`/`ModuleDef` structure; this pass counted what the bindings inside
+it actually say, over every `ApplicationProgram` member of every archive
+installed under `OriginalData/`:
+
+| Where | `Module` | `NumericArg` | `TextArg` | `AllocatorRef` | `Argument` decls |
+|---|---|---|---|---|---|
+| `ProductDatabases/` | 86 | 172 | 86 | **0** | 36 |
+| `DemoProjects/` | 32 | 96 | 0 | **0** | 12 |
+
+All **[V]**, this run. Every one of the 118 `Module` elements carries at
+least one binding — arguments are not a corner of the format, they are how
+a modular product is written. The 36 product-database declarations are all
+MDT `M-0083` (12× `ParamOffsBase` `Allocates="132"`, 12× `ObjNumberBase`
+`Allocates="20"`, 12× `ChNo` `Type="Text"`); the 12 demo-project ones are
+all KV25 `M-00FA` (`argCH`/`argObj`/`argPar`). **No declaration anywhere
+spells `Type="Numeric"` explicitly** — numeric is the absent case, which is
+why the reader treats a missing `@Type` as numeric rather than as unknown.
+
+Where an argument is actually *consumed*, corpus-wide **[V]**:
+`Memory/@BaseOffset` → a numeric argument id, **705**;
+`ComObject/@BaseNumber` → a numeric argument id, **157**; `{{Name}}`
+placeholders in text, **978**, of which **978 resolve to an
+`Argument/@Name` declared by the enclosing `ModuleDef` and 0 do not** (775
+of them reached through `TranslationElement/@RefId`, 203 direct). A
+separate, larger family of **948** purely numeric `{{<digits>}}`
+placeholders resolves to nothing in any file and belongs to
+`TextParameterRefId`, not to this mechanism. Only **24** placeholders sit
+where the `Dynamic` evaluator can reach them — inside a `ModuleDef`'s own
+stored tree — and those 24 are what T18 task 12 interprets.
+
+**`AllocatorRef` is unattested, and these are the bases that were
+searched.** **[D]** `Project Schema23 v01.00.00` §1.1.2.38
+`ModuleDefArgType_t` names the facet (`Numeric`, `Text`, `AllocatorRef`)
+and `Value_t` describes it in one line — *"TypeAllocatorRefId — A module
+allocator refId as string"* — with no rule for what an allocator does.
+Beyond that: `OriginalData/` in full (`.knxprod` and `.knxproj`, element
+and attribute spellings, every readable archive member) → **0**, with the
+only 3 unreadable members being the encrypted contents of the single
+`.vd2`, a format already out of scope;
+`knx_spec_kb_programming.sqlite` (2,207 facts over 27 programming PDFs with
+figures) → **0**; `knx_spec_kb_full179_clean.sqlite` (16,536 facts over 177
+PDFs, text only) → **0** — both searched across `content`, `title`,
+`keywords` and `evidenceText`. The only `Allocator` hits in either base are
+"heat cost allocator", in DPT documents. It therefore stays unimplemented
+and is *reported* (`UnsupportedModuleArgumentKind`) rather than guessed at.
+`crates/knx-productdb/tests/dynamic_tree.rs`'s
+`corpus_argument_measurement_task_12` re-measures the corpus half of this
+on every test run, so the zero above is an assertion, not a memory.
+
+
 ---
 
 ## 5. `knx_master.xml`

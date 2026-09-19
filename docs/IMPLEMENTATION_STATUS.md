@@ -6340,3 +6340,47 @@ Everything about it is arranged so that it cannot become the thing that finally 
 A text line that swaps every 1 800 ms is motion, so it answers to the same two switches as the bar's shuttle: `prefers-reduced-motion: reduce` and the application's own "Motion: off". Under either it freezes on its first entry rather than vanishing — the people who asked for calm get a joke that holds still, not one less thing on screen. No new `--knx-` token (ADR-0022): the line is `--knx-muted`, one step smaller than the phase, italic.
 
 Tests: `loadFlavour.test.ts` (15 — catalogue coverage in both languages, no German line left identical to its English one, a pinned order from a constant-zero source, a clamp against a stub returning exactly 1, and the reduced-motion predicate) and seven new `LoadProgressBanner.test.tsx` cases (the phase is still present and still outside the flavour line, `aria-hidden` and `aria-live="off"`, a pinned three-step sequence, a rotation that leaves `aria-valuenow`, the count, the width and `data-indeterminate` byte-identical, no flavour line on a failed banner *and* `vi.getTimerCount()` back to 0, the same on unmount, and a frozen line under "Motion: off"). Web tests 567 → 589. New limitation §98: at 114 ms a release load shows exactly one of the fifty messages, so the list is a reward for slow loads and large projects and nobody should expect to watch it cycle.
+
+## 2026-09-19 — C2: the Memory Control Block is specified, and now only its CRC gets compared
+
+RES §4.2.27, Table 12, p. 39 (`PID_MCB_TABLE`) lays out the eight-octet
+Memory Control Block element as Segment Size 1 (4 octets), CRC Control Byte
+(1 octet), Read Access 1 / Write Access 1 (one shared octet as two 4-bit
+nibbles), CRC (2 octets) — a layout two comments falsely called "not
+specified in either knowledge base": `crates/knx-net/src/commissioning.rs`'s
+`read_memory_control_block` doc and `crates/knx-net/src/commissioning/
+simulator.rs`'s `DEFAULT_MCB` doc. Both now cite Table 12 instead. A new
+`crates/knx-core/src/commissioning/mcb.rs` gives the layout a typed home:
+`MemoryControlBlock::parse`/`to_octets` round-trip all eight octets, and
+`protected_memory_may_change()` reads the CRC Control Byte's bit 0 (RES
+§4.2.27.1.1, Table 13, p. 39: *"1: Contents of protected memory area may
+change"*). `crates/knx-net/src/commissioning/download.rs`'s CRC comparison
+(CP §3.5.3, between steps 3 and 4) used to `==` all eight raw octets —
+wrong three ways: Segment Size (octets 0-3) legitimately differs on every
+partial download because allocation runs before the comparison, the access
+nibbles (octet 5) have nothing to do with data integrity, and bit 0 was
+never read at all. `compare_mcb()` now parses both sides and compares only
+the CRC field; a new `CrcComparison::MayHaveChanged` outcome fires when the
+*current* read's bit 0 is set, regardless of whether the CRC octets match —
+the device is saying its own CRC cannot be trusted, so a coincidental match
+proves nothing. `DEFAULT_MCB`'s CRC Control Byte octet changed `0xAB` →
+`0xAA` in the same pass: under the corrected field layout `0xAB`'s bit 0 was
+set, which made the simulator's "device that works" default falsely claim
+its protected memory might have changed. Six new tests in `download.rs`
+(two through `Downloader::partial_download`, four direct against
+`compare_mcb`) cover a changed segment size with a matching CRC reporting
+`Matched`, bit 0 outranking a matching CRC *and* a differing one, and
+unparseable octets on either side falling back to `Differed` rather than
+an unproven match; three
+more in `mcb.rs` cover the round-trip and the bit-0 accessor. The task's own
+ambiguity note (Read Access 1 and Write Access 1 "share octet 5" with a
+supposed third "Nr. of elements" field) does not match the source PDF: a
+rendered crop of RES p. 39 shows "Nr. of elements" as a merged header cell
+spanning the whole row, i.e. the array-level caption for
+`PDT_GENERIC_08[]`, not a sixth field — `mcb.rs` documents this correction
+in place. Which nibble of octet 5 is Read Access 1 versus Write Access 1 is
+not stated by clause or bit number anywhere in Table 12 or Table 13; this
+project picked the table's left-to-right column order and recorded the
+choice as inferred, not cited — `KNOWN_LIMITATIONS.md` #99. Explicitly out
+of scope, per the task brief: `PID_GROUP_RESPONSER_TABLE`, CP §3.5.4 step 07
+(unload individual address), and any procedure-level retry loop.

@@ -1365,9 +1365,10 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
 
     /// `PID_MCB_TABLE`, whose CRC spec §7.2 step 7 stores and §7.4 compares.
     ///
-    /// Returned as octets: the Memory Control Block's internal layout is not
-    /// specified in either knowledge base (spec §12), so this crate carries
-    /// it and does not pretend to parse it.
+    /// Returned as raw octets, not [`knx_core::commissioning::mcb::MemoryControlBlock`]:
+    /// the layout is RES §4.2.27, Table 12, p. 39, but a protocol session
+    /// reads a property, it does not decide what the caller does with the
+    /// bytes. `download.rs` parses them where the CRC comparison happens.
     pub async fn read_memory_control_block(
         &mut self,
         object_index: ObjectIndex,

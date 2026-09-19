@@ -53,11 +53,11 @@ const ALLOCATION_BASE: u32 = 0x4000;
 /// The Memory Control Block octets an object answers when nothing has put
 /// others there.
 ///
-/// Eight octets with two of them standing in for a CRC. The layout is *not*
-/// a claim: spec §12 records that the MCB's internal structure is not in
-/// either knowledge base, so the client carries these octets and compares
-/// them whole, which is all §7.4 asks of it.
-const DEFAULT_MCB: [u8; 8] = [0x00, 0x00, 0x10, 0x00, 0xAB, 0xCD, 0x00, 0x00];
+/// Laid out per RES §4.2.27, Table 12, p. 39: Segment Size 1 `0x00001000`,
+/// CRC Control Byte `0xAA` (bit 0 clear — "CRC is always valid", RES
+/// §4.2.27.1.1, Table 13, p. 39, the default a "device that works" gives),
+/// Read Access 1 / Write Access 1 nibbles `0xC`/`0xD`, CRC `0x0000`.
+const DEFAULT_MCB: [u8; 8] = [0x00, 0x00, 0x10, 0x00, 0xAA, 0xCD, 0x00, 0x00];
 
 /// Every `Additional Load Control` subtype, so the simulator can tell an
 /// allocation from a task record without a second table of octets.

@@ -675,7 +675,7 @@ p. 39, `Project Schema23` `DeviceInstance` attributes p. 44); only the
 diffing/chunk-selection strategy remains absent, and the Glossary's own "may
 for instance" marks that as implementation-defined rather than unspecified —
 see design spec §12 item 4 and
-[COMPATIBILITY.md §6](COMPATIBILITY.md#6-knx-standard-errata--printed-text-this-project-deliberately-does-not-follow)
+[COMPATIBILITY.md §7](COMPATIBILITY.md#7-knx-standard-errata--printed-text-this-project-deliberately-does-not-follow)
 for the related printed-text notes; `GAP-T30-07` the unquantified "delay for programming
 the memory in the device" of `03_05_02` §3.16 and four sibling procedures — chased
 to the footnote's own reference (`03_07_02 Datapoint Types`), which yields only
@@ -5271,27 +5271,31 @@ refusal.
 direction between the two crates for this concept, and updates
 `procedure::load_one_part()`'s step 5 to match whatever it decides.
 
-## 95. Seven places where the KNX Standard's printed text must not be followed literally
+## 95. Six places where the KNX Standard's printed text must not be followed literally
 
 **Limitation.** None — this is a pointer, not a cost. `03_05_03 Configuration
-Procedures` ("CP") and `03_05_01 Resources` ("RES") contain seven places where
+Procedures` ("CP") and `03_05_01 Resources` ("RES") contain six places where
 the printed text either contradicts itself or contradicts its own surrounding
 rows, and the commissioning code in `crates/knx-core/src/commissioning` and
 `crates/knx-net/src/commissioning` deliberately does not follow the literal
-text there. The full list, each item carrying its clause and its PDF page —
-three of the table-variant load procedures reading Application Program 2's
-Memory Control Block where every neighbouring row reads its own; a Group
-Object Table step filed under the Address Table's load row (and repeated for
-AP1 and GOT); a `LoadCompleted` event listed inside an unload wait, where RES
-Table 94 marks that transition optional rather than a step of unloading; CP
-§3.5.2 and §3.5.3 giving opposite answers on whether `PID_PROGRAM_VERSION` is
-written to the three table objects (task C1 handles the code side); a
-cross-reference to a section that does not contain what it is sent to find;
-RES §4.23.2.4.1 naming a Load Control *value* (`LoadCompleted`, `02h`) as if
-it were the terminal Load *state* (`Loaded`, per Table 92); and three
-mutually incompatible part-unload/load orderings across CP §3.5.2 and
-§3.5.4 — lives in
-[COMPATIBILITY.md §6](COMPATIBILITY.md#6-knx-standard-errata--printed-text-this-project-deliberately-does-not-follow),
+text there. A seventh candidate — CP §3.5.2 and §3.5.3 seemingly giving
+opposite answers on whether `PID_PROGRAM_VERSION` is written to the three
+table objects — turned out on task C18's audit of Volume 6 Profiles to be a
+legitimate use of a Property Annex A marks optional there, not errata; it is
+recorded as a resolved specification question in
+[COMPATIBILITY.md §6](COMPATIBILITY.md#6-specification-questions-resolved-against-the-standard-not-errata)
+instead of here. The full list of the remaining six, each item carrying its
+clause and its PDF page — three of the table-variant load procedures reading
+Application Program 2's Memory Control Block where every neighbouring row
+reads its own; a Group Object Table step filed under the Address Table's
+load row (and repeated for AP1 and GOT); a `LoadCompleted` event listed
+inside an unload wait, where RES Table 94 marks that transition optional
+rather than a step of unloading; a cross-reference to a section that does
+not contain what it is sent to find; RES §4.23.2.4.1 naming a Load Control
+*value* (`LoadCompleted`, `02h`) as if it were the terminal Load *state*
+(`Loaded`, per Table 92); and three mutually incompatible part-unload/load
+orderings across CP §3.5.2 and §3.5.4 — lives in
+[COMPATIBILITY.md §7](COMPATIBILITY.md#7-knx-standard-errata--printed-text-this-project-deliberately-does-not-follow),
 next to the other compatibility claims and their evidence, rather than here.
 
 **Cause.** A specification this size is not internally consistent by default,
@@ -5308,7 +5312,7 @@ mistaking correct behaviour for a bug.
 
 **Lifted when.** It already is; this entry (and its cross-reference) is the
 lifting. It would only need revisiting if a later KNX Standard erratum or
-edition corrects one of the seven clauses, at which point the corresponding
+edition corrects one of the six clauses, at which point the corresponding
 list item names which one no longer applies.
 
 ## 96. A browser that loses the import response cannot get the project back without reloading

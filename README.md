@@ -195,6 +195,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo run -p xtask -- check-layering
 cargo run -p xtask -- check-headers
+cargo run -p xtask -- check-anchors
 
 cd apps/knx-web
 npm ci
@@ -213,6 +214,13 @@ files without one is a ratchet that may only go down, so new files get a
 header and old ones are not swept. Every program carries its own SemVer version;
 `knx --version` and `knx-server --version` add the commit they were built
 from. See [ADR-0018](docs/adr/0018-program-versions-and-file-headers.md).
+
+`check-anchors` walks `docs/` and the repo-root markdown files, slugs every
+heading the way GitHub's renderer would, and fails loudly with `file:line`
+and a nearest-match suggestion for any in-repo anchor link whose target
+does not resolve — a heading rename needs a back-compat `<a id="…">`
+alias for its old slug, and a moved file needs every link that points at
+it updated.
 
 ## Further reading
 

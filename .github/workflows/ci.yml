@@ -69,6 +69,9 @@ jobs:
       - name: Header gate
         run: cargo run -p xtask -- check-headers
 
+      - name: Anchor gate
+        run: cargo run -p xtask -- check-anchors
+
   deny:
     name: License and advisory gate
     runs-on: ubuntu-latest

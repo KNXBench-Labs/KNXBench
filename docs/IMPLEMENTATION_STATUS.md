@@ -8488,8 +8488,8 @@ The repository's top-ranked non-commissioning risk —
 `K1` in [LIMITATION_TRIAGE.md](LIMITATION_TRIAGE.md) — is closed in the only
 shape that does not also close the Docker target: the server gains real
 password authentication, and refuses to bind anything but `127.0.0.1`
-without it. The reasoning, the costs and the six things it deliberately does
-not give are in
+without it. The reasoning, the costs and the seven things it deliberately
+does not give are in
 [ADR-0026](adr/0026-server-authentication-or-loopback.md).
 
 **Three new modules in `apps/knx-server`.** `auth_password.rs` is the
@@ -8504,6 +8504,19 @@ parser, `resolve_auth` (the environment-to-configuration decision, as a pure
 function), `bind_address` (likewise) and the `require_session` middleware.
 `auth_routes.rs` is `POST /api/auth/login`, `POST /api/auth/logout` and
 `GET /api/auth/status`.
+
+**Guessing costs what it is supposed to cost.** Login attempts are
+serialised on a single `tokio` semaphore permit held across verification
+*and* the penalty sleep, so the widening `250 ms × min(failures, 8)` delay
+limits the rate of guesses instead of being a tax each parallel request pays
+privately — and no more than one PBKDF2 derivation is ever on the blocking
+pool for a login. The gate is async, and no `std` lock is held across any
+wait, so a queue of guesses cannot slow a session check or reach the project
+state at all. A password shorter than twelve characters earns a startup
+complaint from both `--hash-password` and `KNX_AUTH_PASSWORD`, and nothing is
+refused: NIST SP 800-63B §5.1.1.2 puts the floor at eight for a rate-limited
+verifier where a compromise costs one account, and this credential is the
+only one there is.
 
 **The router split.** `app(state, static_dir)` keeps its signature — 25
 integration test files and the Tauri shell call it — and now delegates to a
@@ -8530,17 +8543,19 @@ names all four directly. `cargo deny check` has nothing new to consider. No
 `axum-extra`, no `cookie`, no `tower-sessions`, no `subtle` — the cookie
 parser is nine lines and the constant-time compare is six.
 
-**Tests.** `apps/knx-server/tests/http_auth.rs` is 16 integration tests:
+**Tests.** `apps/knx-server/tests/http_auth.rs` is 17 integration tests:
 cookie attributes on success, no cookie on failure, a 401 with the usual
 `{"error": ...}` body for one representative route per guarded group
 (`project`, `fs`, `bus`, `debug_report`, `version`), `/healthz` and the three
 auth routes staying open, a valid cookie reaching a real handler, logout
 invalidating, an expired session, a forged cookie, an unknown `/api/` path
-still answering 404, and `app()` behaving exactly as before. 23 more unit
-tests — 16 in `auth.rs`, 7 in `auth_password.rs` — cover the hash grammar and its eleven malformed
+still answering 404, two concurrent failed logins proving to be serialised
+rather than overlapped, and `app()` behaving exactly as before. 26 more unit
+tests — 19 in `auth.rs`, 7 in `auth_password.rs` — cover the hash grammar and its eleven malformed
 spellings, the near-miss rejection, the session store's expiry and sweep, the
-widening failure delay, the cookie parser, and every branch of `resolve_auth`.
-`knx-server`'s library test count moved from 105 to 128 and its integration
+widening failure delay, the single-permit login gate, the short-password
+complaint, the cookie parser, and every branch of `resolve_auth`.
+`knx-server`'s library test count moved from 105 to 131 and its integration
 suite gained a file — checked against
 [§119](KNOWN_LIMITATIONS.md#119-on-this-machines-ntfs3-mount-cargo-has-rebuilt-from-a-stale-fingerprint--a-green-gate-is-not-evidence-by-itself),
 because a green gate on this mount is not evidence on its own. Exactly one

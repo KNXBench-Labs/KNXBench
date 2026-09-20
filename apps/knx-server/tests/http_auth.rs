@@ -364,3 +364,37 @@ async fn the_bind_address_follows_the_password_and_nothing_else() {
     assert!(knx_server::bind_address(false).is_loopback());
     assert!(knx_server::bind_address(true).is_unspecified());
 }
+
+/// Two wrong passwords at once must cost what two wrong passwords cost in
+/// sequence. Fired in parallel against an ungated login they would sleep
+/// through the same penalty together — the delay would be a tax each
+/// request pays privately, not a limit on how fast guesses can be made —
+/// and both PBKDF2 derivations would land on the blocking pool at once.
+///
+/// Only a lower bound is asserted, because that is the direction the bug
+/// lies in. With a 150 ms base delay the penalties are 150 ms and 300 ms:
+/// serialised they sum to 450 ms, overlapped they finish in about 300 ms.
+#[tokio::test]
+async fn concurrent_failed_logins_are_serialised() {
+    let delay = Duration::from_millis(150);
+    let app = knx_server::app_with_auth(
+        Arc::new(knx_server::AppState::default()),
+        None,
+        guarded_config().with_failure_delay(delay),
+    );
+
+    let started = std::time::Instant::now();
+    let (first, second) = tokio::join!(
+        login(&app, "not the password"),
+        login(&app, "also not the password")
+    );
+    let elapsed = started.elapsed();
+
+    assert_eq!(first.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(second.status(), StatusCode::UNAUTHORIZED);
+    assert!(
+        elapsed >= delay * 2 + delay / 2,
+        "two concurrent failed logins took {elapsed:?}, which is short enough \
+         that they overlapped"
+    );
+}

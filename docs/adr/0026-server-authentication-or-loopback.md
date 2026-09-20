@@ -112,7 +112,17 @@ silently accepted.
 `constant_time_eq` with its own test, and no `subtle` dependency for six
 lines. It compares lengths first — both operands are fixed-width digests,
 so their length is public — and then accumulates the difference across the
-whole buffer with no early exit and no branch on the data.
+whole buffer with no early exit and no branch on the data, inspecting the
+accumulator through `std::hint::black_box`.
+
+That is best-effort and the code says so. Rust guarantees nothing about
+keeping a loop branch-free, and `black_box` is a hint rather than a
+barrier; only inline assembly or a crate built for this would be more than
+discouragement. It is proportionate here because of what is being
+compared: both operands are PBKDF2 outputs over a salt the caller cannot
+choose, so an attacker cannot steer the bytes and has nothing to learn
+from where they first differ. A codebase where that stops being true
+should take the dependency.
 
 **5. `--hash-password` reads from stdin, never argv.** `knx-server
 --hash-password` reads one line from standard input and prints the stored
@@ -170,16 +180,32 @@ instead of collecting a 401 from a guard it never reached a route behind.
 **Brute force is answered with delay, not lockout.** Every failed login
 increments a process-wide counter and the handler sleeps
 `250 ms × min(failures, 8)` before answering — up to two seconds per
-attempt, ruinous for a script and merely irritating for the operator who
+attempt, tedious for a script and merely irritating for the operator who
 mistyped. The counter resets on success. There is deliberately no lockout:
 locking out the only operator of a single-operator server is a denial of
 service against its owner, which is a worse outcome than the guessing it
-prevents. The counter is returned from the state rather than slept on
-inside it, so no lock is ever held across the delay — otherwise the
+prevents.
+
+A delay only costs an attacker anything if attempts cannot overlap, so
+logins are serialised: one `tokio` semaphore permit, held across
+verification *and* the stall. Without it the penalty is a private tax each
+request pays concurrently — a hundred parallel guesses would sleep through
+the same two seconds together and still land a hundred PBKDF2 derivations
+on the blocking pool at once. With it, guessing proceeds at one attempt
+per penalty, which is the rate the delay was meant to set, and the CPU
+cost is bounded at one derivation at a time. The failure counter is
+returned from the state rather than slept on inside it, and the semaphore
+is an async one, so no `std` lock is held across any wait — otherwise the
 penalty path would be a lock convoy whose rate an attacker controls.
-PBKDF2 verification runs on `spawn_blocking` for the same reason: half a
-second of solid CPU on an async worker would stall every other request on
-the runtime, which is a free denial-of-service lever.
+PBKDF2 verification runs on `spawn_blocking` because half a second of
+solid CPU on an async worker would stall every other request on the
+runtime; the login gate does not help there, since the runtime being
+starved is not the thing it guards.
+
+None of this turns a weak password into a strong one. Two seconds per
+attempt is a meaningful cost against a dictionary and no cost at all
+against a four-character password, which is why one shorter than twelve
+characters earns a complaint at startup — see *Consequences*.
 
 ## What this does not give
 
@@ -288,6 +314,17 @@ knx-server` also grew about seven seconds, spent by the single test that
 pays the real 600 000-iteration work factor rather than the thousand
 iterations the rest of the suite uses; a default nothing exercises is a
 default nobody can trust.
+
+**Uneasy, out loud.** A password shorter than twelve characters earns a
+startup complaint — from `--hash-password` and from `KNX_AUTH_PASSWORD`
+alike — and nothing is rejected. NIST SP 800-63B §5.1.1.2 puts the floor
+for a memorised secret at eight characters where a verifier rate-limits
+and a compromise costs one account; this credential is the only one there
+is, it opens a file browser and a KNX bus, and it is on the network from
+the moment it exists, so the complaint starts above the floor. It is a
+complaint rather than a refusal because a server that will not start is a
+worse failure than a server that says it is worried, and because the
+deployer, not this file, knows what the port is reachable from.
 
 **Enforced by.** `bind_address` is pure and tested in both directions, and
 is the only expression of a listening address in `main.rs`. The route

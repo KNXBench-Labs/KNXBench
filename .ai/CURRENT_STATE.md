@@ -1,4 +1,12 @@
 - **Last Agent:** Codex
+- **Timestamp:** 2026-09-20 16:27 CEST
+- **Completed:** Read-only status audit for the user's question about remaining KNXBench tasks. Confirmed `main` and `origin/main` are synchronized at `df287d0`; there are no additional worktrees and the checkout was clean before this required handover update. Reconciled the current roadmap, completion goal, implementation status, gap analysis and known limitations. The principal open delivery items are T30 phase-3 real-hardware write verification (requires separate explicit operation-specific authorization and a safe target), T37 truthful project open/import progress, the remaining user-manual half of T28/D12, and explicitly scoped compatibility/capability residue such as the eighteen 200-series DPT main types and module-instance limitations. Deferred items such as KNX Secure, multi-user editing and post-v1 floor-plan work remain deliberately unscheduled; numbered known limitations are not automatically backlog commitments.
+- **Pending/Next Steps:** Choose the next authorized slice. T37 is the strongest self-contained implementation candidate without hardware or external samples. Do not perform a real KNX write without explicit operation-specific user approval; never contact the excluded alarm-panel address recorded in the private operational context.
+- **Notes for Claude:** No product code or documentation changed and no tests ran because this was a read-only status query. Only this mandatory handover entry modifies the checkout.
+
+---
+
+- **Last Agent:** Codex
 - **Timestamp:** 2026-09-18 13:03 CEST
 - **Completed:** Aktuellen Versionsstand read-only geprüft. Produktversion ist konsistent `0.1.0-alpha.1` in allen 15 Rust-Paketen sowie Web-Manifest und Lockfile; Tauri übernimmt die Desktop-Version bewusst aus seinem Cargo-Manifest. `main` und `origin/main` stehen beide auf Merge-Commit `599593d5586af5ec26128e9027f473cc2fc56772` (`merge: fix T30 R20 connection confirmation`, 2026-09-18 10:47 CEST). Es existiert kein Git-Release-Tag. Der Hauptcheckout enthält außer dieser vorgeschriebenen Handover-Datei keine lokale Änderung. Keine Produktdatei geändert und keine Tests ausgeführt, da es sich ausschließlich um eine Versionsabfrage handelte.
 - **Pending/Next Steps:** Für die reine Versionsabfrage bleibt nichts offen. Die laufenden separaten Worktrees `d10-language-data`, `d10-server-prose` und `t18-module-arguments` sind noch nicht Bestandteil von `main`.

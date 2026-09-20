@@ -4357,6 +4357,39 @@ mod tests {
         );
     }
 
+    /// MP §3.7.1.1.3: *"The Application Layer of the Management Server
+    /// shall not confirm the A_Restart-service if a Basic Restart is
+    /// called."* [`Seen`] only logs what the device received, so this
+    /// checks what it sent instead — a simulator wrongly wired to answer
+    /// every restart, not just Master Reset, would still pass every other
+    /// test here, since `restart_basic` only waits for the T_ACK and would
+    /// never notice an extra, unsolicited answer arriving behind it.
+    #[tokio::test]
+    async fn restart_basic_gets_no_application_layer_answer() {
+        let device = SimulatedDevice::new();
+        let mut session = writer(&device, WriteScope::Restart);
+        session.connect().await.expect("connect");
+
+        let mut events = ManagementTransport::subscribe(&device);
+        session.restart_basic().await.expect("basic restart");
+
+        let mut answered = false;
+        while let Ok(event) = events.try_recv() {
+            if let TunnelEvent::Telegram(frame) = event {
+                if matches!(
+                    frame.service,
+                    ApplicationService::Restart { response: true, .. }
+                ) {
+                    answered = true;
+                }
+            }
+        }
+        assert!(
+            !answered,
+            "a Basic Restart must not receive an A_Restart_Response"
+        );
+    }
+
     /// MP §3.7.3 exception (5), p. 90: the mandatory 6 s wait applies only
     /// to the post-restart path. A mutation that deleted the `sleep` in
     /// `disconnect_after_restart`, or one that moved

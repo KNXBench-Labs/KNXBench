@@ -97,6 +97,33 @@ export function parseRules(css: string): CssRule[] {
     buffer = "";
     bufferStarted = false;
   };
+  /**
+   * Hands whatever is in the buffer to the innermost open block, if it
+   * looks like a declaration.
+   *
+   * Called at `;` **and** at `}`. The `}` call is not a nicety: CSS makes
+   * the semicolon after the last declaration optional, so `.a { color:
+   * red }` is valid, shipping-legal, browser-honoured CSS and the single
+   * most common shape for a one-declaration rule. A parser that flushes
+   * only on `;` cannot see that declaration at all — and since the theme
+   * boundary, the colour-literal rule and the motion guard all read this
+   * one parser, the blind spot was load-bearing for three guards at once.
+   * One deleted character put ADR-0022's opening failure (`color:
+   * #ffffff` at 2.3:1) back in the stylesheet with the suite green.
+   */
+  const flushDeclaration = () => {
+    const statement = buffer.trim();
+    const colon = statement.indexOf(":");
+    const owner = open[open.length - 1];
+    if (owner && colon > 0) {
+      owner.declarations.push({
+        property: statement.slice(0, colon).trim(),
+        value: statement.slice(colon + 1).trim().replace(/\s+/g, " "),
+        line: bufferLine,
+      });
+    }
+    resetBuffer();
+  };
 
   for (const ch of source) {
     if (ch === "{") {
@@ -113,22 +140,12 @@ export function parseRules(css: string): CssRule[] {
       continue;
     }
     if (ch === "}") {
+      flushDeclaration();
       open.pop();
-      resetBuffer();
       continue;
     }
     if (ch === ";") {
-      const statement = buffer.trim();
-      const colon = statement.indexOf(":");
-      const owner = open[open.length - 1];
-      if (owner && colon > 0) {
-        owner.declarations.push({
-          property: statement.slice(0, colon).trim(),
-          value: statement.slice(colon + 1).trim().replace(/\s+/g, " "),
-          line: bufferLine,
-        });
-      }
-      resetBuffer();
+      flushDeclaration();
       continue;
     }
     startBuffer(ch);
@@ -157,10 +174,55 @@ function selectorParts(selector: string): string[] {
   return selector.split(",").map((part) => part.trim()).filter((part) => part !== "");
 }
 
+/**
+ * Lowercases the two attribute *names* this module judges on.
+ *
+ * Attribute names in a selector are ASCII case-insensitive, so
+ * `:root[DATA-THEME="porcelain"]` selects exactly what
+ * `:root[data-theme="porcelain"]` selects. The *values* of `data-*`
+ * attributes are not case-insensitive, so the theme id and the accent name
+ * are deliberately left alone: `"Porcelain"` really is a different theme
+ * from `"porcelain"`, and one the registry does not know. Without this the
+ * guard recognised a spelling rather than a shape, and the uppercase
+ * spelling passed every check in the file.
+ */
+function normaliseAttributeNames(selector: string): string {
+  return selector.replace(
+    /\[(data-theme|data-accent)(?=[\]=~|^$*])/gi,
+    (_match, name: string) => `[${name.toLowerCase()}`,
+  );
+}
+
+/**
+ * The one normalised selector this rule is, or `null` if it is a list.
+ *
+ * A selector *list* is never a theme block, however legal each of its
+ * parts: ADR-0022 requires every theme to carry its own complete palette
+ * ("duplication is the price of the guarantee"), so
+ * `:root[data-theme="a"], :root[data-theme="b"] { … }` is two themes
+ * sharing one block. Answering `null` here is what keeps the four
+ * classifiers agreeing — `themeBlocks`, `themeVariationBlocks`,
+ * `isThemeLayerRule` and `themeSelectorViolations` all ask this one
+ * question now. They used not to: the violation check ran per comma-part
+ * and the other three matched the whole collapsed selector, so a list of
+ * two individually legal theme selectors was a third shape, belonging to
+ * neither set and guarded by nothing.
+ */
+function soleThemeSelector(selector: string): string | null {
+  const parts = selectorParts(selector);
+  return parts.length === 1 ? normaliseAttributeNames(parts[0]) : null;
+}
+
+/** Whether a selector mentions the `data-theme` attribute, in any case. */
+function mentionsTheme(selector: string): boolean {
+  return /data-theme/i.test(selector);
+}
+
 export function themeBlocks(rules: readonly CssRule[]): ThemeBlock[] {
   const blocks: ThemeBlock[] = [];
   for (const rule of rules) {
-    const match = rule.depth === 0 ? THEME_BASE_SELECTOR.exec(rule.selector) : null;
+    const sole = rule.depth === 0 ? soleThemeSelector(rule.selector) : null;
+    const match = sole === null ? null : THEME_BASE_SELECTOR.exec(sole);
     if (match) blocks.push({ id: match[1], rule });
   }
   return blocks;
@@ -169,25 +231,29 @@ export function themeBlocks(rules: readonly CssRule[]): ThemeBlock[] {
 export function themeVariationBlocks(rules: readonly CssRule[]): ThemeVariationBlock[] {
   const blocks: ThemeVariationBlock[] = [];
   for (const rule of rules) {
-    const match = rule.depth === 0 ? THEME_VARIATION_SELECTOR.exec(rule.selector) : null;
+    const sole = rule.depth === 0 ? soleThemeSelector(rule.selector) : null;
+    const match = sole === null ? null : THEME_VARIATION_SELECTOR.exec(sole);
     if (match) blocks.push({ id: match[1], accent: match[2], rule });
   }
   return blocks;
 }
 
-/** Whether a single selector part is one of the boundary's two legal shapes. */
-function isLegalThemeSelector(part: string): boolean {
-  return THEME_BASE_SELECTOR.test(part) || THEME_VARIATION_SELECTOR.test(part);
+/** Whether a whole selector is one of the boundary's two legal shapes. */
+function isLegalThemeSelector(selector: string): boolean {
+  const sole = soleThemeSelector(selector);
+  return sole !== null && (THEME_BASE_SELECTOR.test(sole) || THEME_VARIATION_SELECTOR.test(sole));
 }
 
 /**
  * Every selector that mentions `data-theme` in a shape the boundary does
  * not allow. Two shapes are allowed and no others: the base block and the
- * accent variation, **written at the top level**. Everything else — a theme
- * styling an element (`[data-theme="x"] body::before`), the
- * accent-by-negation trap (`:root:not([data-theme="x"])`, which silently
- * swept every future theme into one palette), or a legal-looking theme
- * block nested inside an `@media` query — is reported here.
+ * accent variation, each **alone in its selector** and **written at the
+ * top level**. Everything else — a theme styling an element
+ * (`[data-theme="x"] body::before`), the accent-by-negation trap
+ * (`:root:not([data-theme="x"])`, which silently swept every future theme
+ * into one palette), a legal-looking theme block nested inside an `@media`
+ * query, or two themes comma-joined into one shared block — is reported
+ * here.
  *
  * The nesting clause is the point of `ancestors`. `themeBlocks()` only
  * collects depth-0 blocks, so a theme block inside `@media` used to be
@@ -198,11 +264,8 @@ function isLegalThemeSelector(part: string): boolean {
  * rule nested *inside* a theme selector.
  */
 export function themeSelectorViolations(rules: readonly CssRule[]): CssRule[] {
-  const mentionsTheme = (selector: string) =>
-    selectorParts(selector).some((part) => part.includes("data-theme"));
   return rules.filter((rule) => {
-    const parts = selectorParts(rule.selector);
-    if (parts.some((part) => part.includes("data-theme") && !isLegalThemeSelector(part))) return true;
+    if (mentionsTheme(rule.selector) && !isLegalThemeSelector(rule.selector)) return true;
     if (rule.depth !== 0 && mentionsTheme(rule.selector)) return true;
     return rule.ancestors.some(mentionsTheme);
   });
@@ -284,6 +347,13 @@ export function blockPlainProperties(rule: CssRule): string[] {
  * The two keywords that are colour values and yet carry no palette
  * decision: `transparent` paints nothing and `currentColor` defers to
  * whatever `color` a theme token already set. Both are allowed anywhere.
+ *
+ * Both are also in `NAMED_COLOURS` below, which is what makes this
+ * exemption load-bearing rather than decorative. It was neither, once: the
+ * set sat above a `NAMED_COLOURS` that did not contain either word, so the
+ * `continue` could be deleted with the whole suite still green. It read as
+ * enforcement and enforced nothing. Listing them in both places means the
+ * skip is the only reason `border: 1px solid transparent` passes.
  */
 const COLOURLESS_KEYWORDS = new Set(["transparent", "currentcolor"]);
 
@@ -298,16 +368,18 @@ const HEX_COLOUR = /#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b/i;
 /**
  * The CSS named colours. Spelled out rather than approximated, because
  * `color: red` is exactly the literal this rule exists to stop and no
- * shorter test catches it. `transparent` and `currentcolor` are handled by
- * `COLOURLESS_KEYWORDS` above and so are absent here.
+ * shorter test catches it. `transparent` and `currentcolor` are colour
+ * keywords too and are listed here with the rest; `COLOURLESS_KEYWORDS`
+ * above is what lets them through, and it is the only thing that does.
  */
 const NAMED_COLOURS = new Set([
   "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque",
   "black", "blanchedalmond", "blue", "blueviolet", "brown", "burlywood",
   "cadetblue", "chartreuse", "chocolate", "coral", "cornflowerblue", "cornsilk",
-  "crimson", "cyan", "darkblue", "darkcyan", "darkgoldenrod", "darkgray",
-  "darkgreen", "darkgrey", "darkkhaki", "darkmagenta", "darkolivegreen",
-  "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen",
+  "crimson", "currentcolor", "cyan", "darkblue", "darkcyan",
+  "darkgoldenrod", "darkgray", "darkgreen", "darkgrey", "darkkhaki",
+  "darkmagenta", "darkolivegreen", "darkorange", "darkorchid", "darkred",
+  "darksalmon", "darkseagreen",
   "darkslateblue", "darkslategray", "darkslategrey", "darkturquoise",
   "darkviolet", "deeppink", "deepskyblue", "dimgray", "dimgrey", "dodgerblue",
   "firebrick", "floralwhite", "forestgreen", "fuchsia", "gainsboro",
@@ -327,8 +399,8 @@ const NAMED_COLOURS = new Set([
   "rosybrown", "royalblue", "saddlebrown", "salmon", "sandybrown", "seagreen",
   "seashell", "sienna", "silver", "skyblue", "slateblue", "slategray",
   "slategrey", "snow", "springgreen", "steelblue", "tan", "teal", "thistle",
-  "tomato", "turquoise", "violet", "wheat", "white", "whitesmoke", "yellow",
-  "yellowgreen",
+  "tomato", "transparent", "turquoise", "violet", "wheat", "white",
+  "whitesmoke", "yellow", "yellowgreen",
 ]);
 
 /** One literal colour found where ADR-0022 says a `var()` belongs. */
@@ -341,19 +413,42 @@ export interface ColourLiteral {
   literal: string;
 }
 
-/** Strips every `url(...)` from a value: a data URI is base64, not a colour. */
+/**
+ * Strips every `url(...)` from a value: a filename is not a palette
+ * decision. `url("images/red-logo.png")` is the case that needs this — the
+ * word scan below would otherwise read `red` out of the filename and
+ * report a literal colour nobody wrote.
+ */
 function withoutUrls(value: string): string {
   return value.replace(/url\([^)]*\)/gi, " ");
 }
 
+/**
+ * Strips custom property *names*. `var(--knx-teal-surface)` names a token;
+ * it does not paint teal, and the word scan below cannot tell the
+ * difference. A `var()` fallback — `var(--knx-x, red)` — survives this,
+ * because that one really is a literal in the component layer.
+ */
+function withoutCustomPropertyNames(value: string): string {
+  return value.replace(/--[\w-]+/g, " ");
+}
+
 /** The literal colour in `value`, or `null`. */
 function findColourLiteral(value: string): string | null {
-  const text = withoutUrls(value);
+  const text = withoutCustomPropertyNames(withoutUrls(value));
   const hex = HEX_COLOUR.exec(text);
   if (hex) return hex[0];
   const fn = COLOUR_FUNCTION.exec(text);
   if (fn) return `${fn[1]}()`;
-  for (const word of text.toLowerCase().match(/[a-z][a-z0-9]*(?!\()/g) ?? []) {
+  // The word scan, with the function names taken out afterwards rather
+  // than by a lookahead. `/[a-z][a-z0-9]*(?!\()/` looks like it skips
+  // `tanh(`, and does not: when the lookahead fails the engine gives back
+  // one character and matches `tan` — a named colour — so
+  // `width: calc(tanh(1) * 1px)` was reported as painting tan.
+  const lower = text.toLowerCase();
+  for (const match of lower.matchAll(/[a-z][a-z0-9]*/g)) {
+    const word = match[0];
+    if (lower[match.index + word.length] === "(") continue;
     if (COLOURLESS_KEYWORDS.has(word)) continue;
     if (NAMED_COLOURS.has(word)) return word;
   }

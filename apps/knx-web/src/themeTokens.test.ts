@@ -44,6 +44,26 @@ describe("parseRules", () => {
     expect(rules[0].declarations[0].value).toBe("auto, 48px 48px");
   });
 
+  // The semicolon before `}` is optional in CSS, and a parser that flushes
+  // only on `;` cannot see the declaration at all. Every guard in this app
+  // reads this one parser, so `.evil { color: #ff00aa }` — legal,
+  // browser-honoured, and ADR-0022's opening failure — used to pass the
+  // whole suite. One deleted character was the entire exploit.
+  it("sees a final declaration written without its semicolon", () => {
+    const rules = parseRules(".a {\n  color: red\n}\n");
+    expect(rules[0].declarations).toEqual([{ property: "color", value: "red", line: 2 }]);
+  });
+
+  it("sees the last of several when only the last loses its semicolon", () => {
+    const rules = parseRules(".a { padding: 2px; color: red }\n");
+    expect(rules[0].declarations.map((d) => d.property)).toEqual(["padding", "color"]);
+  });
+
+  it("invents no declaration when a block closes on nothing", () => {
+    const rules = parseRules("@media print {\n  .a { color: red; }\n}\n.b {}\n");
+    expect(rules.map((r) => r.declarations.length)).toEqual([0, 1, 0]);
+  });
+
   it("carries the enclosing selector chain, outermost first", () => {
     const rules = parseRules("@media print {\n  @supports (display: grid) {\n    .a { color: red; }\n  }\n}\n");
     expect(rules.map((r) => r.ancestors)).toEqual([
@@ -105,6 +125,50 @@ describe("themeSelectorViolations", () => {
     const rules = parseRules(':root[data-theme="x"] {\n  .card { background: red; }\n}\n');
     expect(themeSelectorViolations(rules).map((r) => r.selector)).toEqual([".card"]);
   });
+
+  // The third shape: a comma-joined list of two individually legal theme
+  // selectors. The violation check used to run per comma-part and the
+  // three classifiers below matched the whole collapsed selector, so this
+  // belonged to neither set — not a violation, not a theme block, not a
+  // theme-layer rule — and could override the user's motion setting for
+  // two themes at once. ADR-0022 forbids the sharing outright: every theme
+  // carries its own complete palette.
+  it("catches two themes comma-joined into one shared block", () => {
+    const rules = parseRules(
+      ':root[data-theme="x"], :root[data-theme="y"] {\n' +
+        "  --knx-transition-duration: 900ms;\n" +
+        "}\n",
+    );
+    expect(themeBlocks(rules)).toEqual([]);
+    expect(themeVariationBlocks(rules)).toEqual([]);
+    expect(rules.some(isThemeLayerRule)).toBe(false);
+    expect(themeSelectorViolations(rules)).toHaveLength(1);
+  });
+
+  // Attribute *names* in a selector are ASCII case-insensitive, so this
+  // selects exactly what the lowercase spelling selects. A guard that
+  // matches one spelling recognises a spelling, not a shape.
+  it("is not fooled by an uppercase attribute name", () => {
+    const rules = parseRules(':root[DATA-THEME="x"] { --knx-transition-duration: 900ms; }\n');
+    expect(themeBlocks(rules).map((block) => block.id)).toEqual(["x"]);
+    expect(themeSelectorViolations(rules)).toEqual([]);
+  });
+
+  it("holds an uppercase accent variation to the same shape", () => {
+    const rules = parseRules(':root[DATA-THEME="x"][Data-Accent="mint"] { --knx-accent: green; }\n');
+    expect(themeVariationBlocks(rules)).toEqual([
+      expect.objectContaining({ id: "x", accent: "mint" }),
+    ]);
+    expect(themeSelectorViolations(rules)).toEqual([]);
+  });
+
+  // The attribute *value* is not case-insensitive: "Porcelain" is a theme
+  // id the registry has never heard of, and must stay a violation.
+  it("still rejects an uppercase theme id, which really is a different value", () => {
+    const rules = parseRules(':root[data-theme="Porcelain"] { --knx-accent: green; }\n');
+    expect(themeBlocks(rules)).toEqual([]);
+    expect(themeSelectorViolations(rules)).toHaveLength(1);
+  });
 });
 
 describe("illegalTokenNames", () => {
@@ -151,6 +215,14 @@ describe("componentColourLiterals", () => {
     expect(rules.every(isThemeLayerRule)).toBe(true);
   });
 
+  // The shape the semicolon-blind parser hid: ADR-0022's own opening
+  // failure, `color: #ffffff` on a `#f7931a` button at 2.3:1, walking back
+  // into the stylesheet through a missing character.
+  it("catches a hex literal in a rule written without its final semicolon", () => {
+    const rules = parseRules(".evil { color: #ff00aa }\n");
+    expect(componentColourLiterals(rules).map((f) => f.literal)).toEqual(["#ff00aa"]);
+  });
+
   it("allows transparent, currentColor, var() and anything inside url()", () => {
     const rules = parseRules(
       ".a { border: 1px solid transparent; }\n" +
@@ -159,6 +231,44 @@ describe("componentColourLiterals", () => {
         '.d { background-image: url("data:image/svg+xml;base64,YWJjZGVm"); }\n',
     );
     expect(componentColourLiterals(rules)).toEqual([]);
+  });
+
+  // The data-URI fixture above never reaches `withoutUrls()` — its
+  // `;base64` splits the declaration in `parseRules` first — so the whole
+  // url() exemption could be deleted with the suite still green. This is
+  // the fixture that reaches it: a filename that happens to contain a
+  // colour word, which is exactly the false positive the exemption exists
+  // to prevent.
+  it("does not read a colour out of a filename", () => {
+    const rules = parseRules('.logo { background-image: url("images/red-logo.png"); }\n');
+    expect(componentColourLiterals(rules)).toEqual([]);
+  });
+
+  // Two ways to be told a math function paints tan. `tan()` is a CSS
+  // function whose name really is a named colour, and skipping function
+  // names is what saves it. `tanh()` used not to be saved by that skip at
+  // all: `/[a-z][a-z0-9]*(?!\()/` looks like it refuses a name followed by
+  // `(`, and instead gives back one character when the lookahead fails,
+  // handing over `tan`. Nothing dangerous — a false positive either way —
+  // just a baffling failure for whoever writes the first one.
+  it("does not read the colour tan out of tan() or tanh()", () => {
+    const rules = parseRules(
+      ".a { width: calc(tan(1rad) * 1px); }\n.b { width: calc(tanh(1) * 1px); }\n",
+    );
+    expect(componentColourLiterals(rules)).toEqual([]);
+  });
+
+  // A custom property *name* is not a paint decision, and the word scan
+  // cannot tell one from a value. A token named for a colour would
+  // otherwise fail the guard for its own name.
+  it("does not read a colour out of a token's name", () => {
+    const rules = parseRules(".a { color: var(--knx-teal-surface); }\n");
+    expect(componentColourLiterals(rules)).toEqual([]);
+  });
+
+  it("still reads a var() fallback, which really is a literal", () => {
+    const rules = parseRules(".a { color: var(--knx-teal-surface, red); }\n");
+    expect(componentColourLiterals(rules).map((f) => f.literal)).toEqual(["red"]);
   });
 
   it("reports where the literal is, not just that there is one", () => {

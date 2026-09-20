@@ -24,6 +24,13 @@ const PALETTE_THEMES: readonly ThemeDef[] = [
  * Hard-coding it was the one registry entry nothing checked; a hand-typed
  * `false` there disabled the accent control for the default theme and the
  * whole suite stayed green.
+ *
+ * `every` rather than `some` is the conservative reading — offer the
+ * control only when it works in both directions — and it is deliberately
+ * unpinned: both palettes `system` resolves to happen to vary by accent
+ * today, so swapping the two leaves every test passing. The day a
+ * light/dark pair disagrees, this line decides something, and the test
+ * that should have been written first will have to be written then.
  */
 const systemHasAccentVariations = [resolveThemeId("system", false), resolveThemeId("system", true)]
   .map((id) => PALETTE_THEMES.find((theme) => theme.id === id))

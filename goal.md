@@ -128,12 +128,15 @@ explicitly. Carry it into the model, the projection and the flag UI alongside
 the other five, or — if there is a real reason it cannot be a peer of the
 others — record that reason with evidence instead.
 
-### 2.3 §34 — schema-≥21 export drops known, unmapped attributes
+### 2.3 §34 — schema-≥21 export drops known, unmapped attributes — WITHDRAWN
 
-A named, known loss on the export side. Establish exactly which attributes,
-whether the opaque-passthrough store (ADR-0006) can carry them, and close what
-is closable. Whatever remains must be reported to the user as export warnings
-rather than living only in a limitation entry.
+**Withdrawn by the user on 2026-09-20: export back to `.knxproj` is out of
+scope for good.** Import stays; once a project is imported, it lives in
+KNXBench's own format and never goes back. The export side of §34 therefore has
+nothing to protect, and the retained-attribute machinery built for it no longer
+has a consumer. See §6's ruling. The import-side work this task also carried —
+schema-≥21 communication-object flags reaching the model instead of being
+parsed and dropped — stands on its own and is kept.
 
 ### 2.4 §12 — three remaining gaps in manufacturer-data resolution
 
@@ -290,6 +293,28 @@ the application from a tool someone would use daily.
   (export-only columns never applied on import), §41 (German-locale Excel
   surprises). §38's ETS interoperability stays an untested assumption and is
   not a task.
+
+### Export to `.knxproj` — withdrawn 2026-09-20
+
+The user's ruling: *"drop export zu ets. das brauchen wir nicht. einmal
+importiert bleibt es beim KNXBench file format."*
+
+KNXBench reads `.knxproj` and never writes it. The direction of travel is
+one-way by design: a project is imported once, and from then on KNXBench's own
+storage is the only format that matters. This retires, in one stroke, the whole
+class of problems that came from pretending a round trip was a goal — retained
+attributes keyed so they land back on the right element, export warnings for
+what could not be reconstructed, `CreatedBy`/`ToolVersion` residue, and
+ADR-0015's untested question of whether ETS would accept what we wrote.
+
+Import keeps every obligation it had. Nothing about this ruling weakens the
+rule that import must not silently discard information: what the opaque store
+preserves, it still preserves, and what import cannot map is still reported.
+The store's passthrough (ADR-0006) keeps its value as *evidence of what the
+source file said* — it simply no longer feeds an exporter.
+
+Out of scope from here: `.knxproj` writing in any schema, ETS re-import
+compatibility, and round-trip parity of any kind.
 
 ---
 

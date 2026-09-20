@@ -233,6 +233,42 @@ describe("signing in", () => {
     expect(loginPanel()).toBeNull();
   });
 
+  it("submits on Enter in the password field", async () => {
+    apiMock.authStatus.mockResolvedValue({ required: true, authenticated: false });
+    apiMock.login.mockResolvedValue({ authenticated: true });
+    await mount();
+
+    await typePassword("typed then Enter");
+    // What a browser does when Enter is pressed in a single-field form: it
+    // asks the form to submit, which is why the button is `type="submit"`
+    // inside a real `<form>` rather than a click handler on a `<div>`.
+    await act(async () => host!.querySelector<HTMLFormElement>(".login-form")!.requestSubmit());
+
+    expect(apiMock.login.mock.calls).toEqual([["typed then Enter"]]);
+    expect(loginPanel()).toBeNull();
+  });
+
+  it("names the notice as the dialog's description so it is actually read", async () => {
+    apiMock.authStatus.mockResolvedValue({ required: true, authenticated: true });
+    await mount();
+    await act(async () => notifySessionExpired());
+
+    // A live region announces mutations, and this one is present in the
+    // dialog's first paint; without `aria-describedby` the warning that the
+    // server may have forgotten the project reaches nobody.
+    const panel = host!.querySelector(".login-panel")!;
+    const describedBy = panel.getAttribute("aria-describedby");
+    expect(describedBy).toBe("login-notice");
+    expect(host!.querySelector(`#${describedBy}`)?.textContent).toBe(en["login.expiredNotice"]);
+  });
+
+  it("describes nothing when there is no notice to describe", async () => {
+    apiMock.authStatus.mockResolvedValue({ required: true, authenticated: false });
+    await mount();
+
+    expect(host!.querySelector(".login-panel")!.hasAttribute("aria-describedby")).toBe(false);
+  });
+
   it("never puts the password in a URL", async () => {
     apiMock.authStatus.mockResolvedValue({ required: true, authenticated: false });
     apiMock.login.mockResolvedValue({ authenticated: true });
@@ -286,6 +322,10 @@ describe("a session that ends mid-flight", () => {
     await act(async () => notifySessionExpired());
 
     expect(loginPanel()).not.toBeNull();
+    // And it says "sign in", not "your session ended". The status call
+    // never answered, so this tab has never held a session; claiming one
+    // expired would be inventing a history for the user's first visit.
+    expect(host!.querySelector(".login-notice")).toBeNull();
   });
 
   it("does not stack a second reason on a screen that is already up", async () => {

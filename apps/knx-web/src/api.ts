@@ -17,11 +17,16 @@ const AUTH_PATH_PREFIX = "/api/auth/";
 
 /**
  * The one place the frontend learns that the server wants a session.
- * Every `/api/` call funnels through `request()` (the single exception,
- * `installProductPackage`, calls this helper by hand for the same reason),
- * so hanging the notification here means no call site has to remember it.
+ *
+ * Most `/api/` calls funnel through `request()`, which calls this itself.
+ * The two that cannot — `installProductPackage`, which needs a streaming
+ * body, and `FsPicker.tsx`'s two helpers, which need `FormData` and a raw
+ * `Response` — call it by hand, which is why it is exported. Every route
+ * they touch sits behind the same `route_layer` as the rest (ADR-0026), so
+ * a `fetch` that skips this helper is a 401 that reaches nobody and a modal
+ * the user cannot get out of.
  */
-function noteRefusal(path: string, status: number): void {
+export function noteRefusal(path: string, status: number): void {
   if (status === 401 && !path.startsWith(AUTH_PATH_PREFIX)) {
     notifySessionExpired();
   }

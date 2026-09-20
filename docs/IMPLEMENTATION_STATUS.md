@@ -8610,10 +8610,16 @@ server that *restarted* has forgotten the project — is stated in
 `login.expiredNotice` in `en.ts` and `de.ts` instead of being papered over.
 
 **`api.ts`.** Gains `authStatus()`, `login(password)` and `logout()`, and a
-six-line `noteRefusal(path, status)` called from the two places that build an
-error from a response — `request()` and `installProductPackage`, the latter
-switching from a bare `new Error` to the shared `requestError` so it carries a
-status at all. Paths under `/api/auth/` are excluded: a rejected login is not
+six-line `noteRefusal(path, status)`, exported, called from every place that
+builds an error out of a response: `request()`, `installProductPackage` — which
+switched from a bare `new Error` to the shared `requestError` so it carries a
+status at all — and `FsPicker.tsx`'s `listDir`/`uploadFile`, which hold their
+own `fetch` because one builds a query string and the other a `FormData` body.
+The picker was missed in the first round and found in review: `/api/fs/*` is
+behind the same `route_layer` as everything else, so an idled-out session
+painted the words `authentication required` inside a modal file browser the
+user then could not leave — at the first thing a returning user touches, File
+→ Open. Paths under `/api/auth/` are excluded: a rejected login is not
 an expired session, and publishing one would make the gate re-lock itself on
 every wrong password.
 
@@ -8640,8 +8646,8 @@ an explicit `.login-submit:disabled` border.
 
 **Accessibility.** The panel is `role="dialog" aria-modal="true"` labelled by
 its heading; the error is `role="alert"` and is wired to the field through
-`aria-invalid` and `aria-describedby`, the pattern the parameter panel already
-uses; the expiry and sign-out notices are `role="status"`; the startup check
+`aria-invalid` and `aria-describedby`, the pattern `BusComposeForm.tsx` and the
+app-wide `role="alert"` on `.field-error` already use; the expiry and sign-out notices are `role="status"`; the startup check
 is an announced `role="status"` line rather than a blank screen. Focus returns
 to the password field with its contents selected after a rejection.
 
@@ -8650,9 +8656,27 @@ is a compile error, since `de.ts` is typed `Record<MessageKey, string>`. The
 logout control is rendered only when `session.required` is true, so a desktop
 shell and an unauthenticated server show no trace of a session model.
 
-**Tests.** 14 in `AuthGate.test.tsx`, 7 added to `api.test.ts` (including that
+**Tests.** 17 in `AuthGate.test.tsx`, 7 added to `api.test.ts` (including that
 a login's own 401 publishes no expiry and an ordinary 401 publishes exactly
-one), 3 added to `App.test.tsx` for the logout control's three states, and one
-line added to `DiagnosticsCompanion.test.tsx`'s pinned import graph, which
-correctly noticed `session.ts` arriving through `api.ts`. Frontend suite: 55
-files, 763 tests.
+one), 3 added to `App.test.tsx` for the logout control's three states, 2 added
+to `FsPicker.test.tsx` (a 401 publishes an expiry and closes the picker; a 403
+does neither), and one line added to `DiagnosticsCompanion.test.tsx`'s pinned
+import graph, which correctly noticed `session.ts` arriving through `api.ts`.
+Frontend suite: 55 files, 768 tests.
+
+**Fix round 1, after review.** Five of the seven findings were in this
+frontend and are fixed: the `/api/fs/*` gap above; the picker closing itself
+on an expiry, since it mounts outside the gate's `inert` wrapper and would
+otherwise keep a focus trap armed underneath the login screen; the expiry
+notice named by `aria-describedby` so a live region born with its content is
+actually announced; the lock reason after a fail-open, which said "your
+session ended" to a user whose session had never begun and now says "sign in";
+and an Enter-to-submit test that was claimed and missing. The other two were
+prose: a miscited accessibility precedent, and an ADR sentence calling the
+opaque cover "private" when it is private to the room and not to the document.
+The one finding left standing is recorded and not fixed — a controlled
+password input reflects its value to the content attribute, so the plaintext
+is in `document.body.innerHTML` while a rejected attempt is on screen. That is
+true of every React application with a controlled password field, and the
+select-on-failure behaviour it enables is worth more than the DOM hygiene it
+costs.

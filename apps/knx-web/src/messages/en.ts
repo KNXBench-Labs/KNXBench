@@ -476,6 +476,12 @@ export const messages = {
   "catalog.installReport.unknownCount": "{count} unknown",
   "catalog.installReport.conflictsCount.one": "{count} conflict",
   "catalog.installReport.conflictsCount.other": "{count} conflicts",
+  // §85: a `.signature` member is stored, never verified. Say so where a
+  // person actually reads it, not just in a bug tracker.
+  "catalog.installReport.unverifiedSignature.one":
+    "{count} signature member stored, not verified — this application cannot check it.",
+  "catalog.installReport.unverifiedSignature.other":
+    "{count} signature members stored, not verified — this application cannot check them.",
   "catalog.allManufacturers": "All manufacturers",
   "catalog.searchPlaceholder": "Search catalog items…",
   "catalog.noMatches": "No matches.",

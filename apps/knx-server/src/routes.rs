@@ -116,6 +116,20 @@ struct CatalogInstallMemberDto {
     size: u64,
 }
 
+/// `knx_productdb`'s `"Signature"` role names what a `.signature` member
+/// *is*, not that anything checked it — nothing in this codebase verifies
+/// one (KNOWN_LIMITATIONS.md §85). The stored `package_member.role` column
+/// stays exactly `"Signature"` so the domain layer and its tests keep a
+/// stable, unqualified identifier; this function only qualifies the text
+/// at the one boundary a human — or a future UI — actually reads it from.
+fn display_role(role: String) -> String {
+    if role == "Signature" {
+        "Signature (stored, not verified)".to_string()
+    } else {
+        role
+    }
+}
+
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct CatalogTranslationCountsDto {
@@ -153,7 +167,7 @@ impl From<knx_productdb::InstallReport> for CatalogInstallReportDto {
                 .into_iter()
                 .map(|member| CatalogInstallMemberDto {
                     path: member.path,
-                    role: member.role,
+                    role: display_role(member.role),
                     sha256: member.sha256,
                     size: member.size,
                 })

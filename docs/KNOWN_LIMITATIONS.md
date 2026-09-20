@@ -830,7 +830,7 @@ simulator.rs`, including `ManagementSession`'s presence-detection gap
 (design spec §13 R20), which C15/C16's occupancy handling now works around
 rather than trusts. (C14 delivered the same run's differential-download
 data preservation in `knx-etsproj`/`knx-server` instead — see
-[§34](#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes) and the `KV v2.5` fixture. C17, a stopgap against advertising an
+[§34](#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes--resolved-2026-09-20) and the `KV v2.5` fixture. C17, a stopgap against advertising an
 unimplemented procedure, was ruled obsolete once C16 shipped the real
 execution path it existed to guard.) None of this has been run against a
 real device — see [§92](#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device).
@@ -1993,10 +1993,7 @@ membership at all for a group a re-read microseconds later showed held by
 five sockets. One `read(2)` into a buffer large enough for the file is one
 pass of the iterator, and one consistent answer: 0 failures in 150 runs.
 
-## 34. Schema-≥21 export drops a handful of known-but-unmapped, per-device/per-line attributes
-
-<!-- Heading text, and therefore the anchor, deliberately unchanged: other
-     sections link to it. The limitation below is resolved. -->
+## 34. Schema-≥21 export drops a handful of known-but-unmapped, per-device/per-line attributes — RESOLVED (2026-09-20)
 
 **Resolved (2026-09-20).** Retained attributes are keyed by the element's
 own ETS id rather than by a schema-shaped path, and both exporters write

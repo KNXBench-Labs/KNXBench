@@ -37,3 +37,6 @@ monitor_bus.py
 # Server-Laufzeitverzeichnis: Uploads, erzeugte Reports, lokale DB.
 # Enthaelt echte Projektdateien. Nichts davon gehoert ins Repo.
 data/
+
+# Statusarchive: Momentaufnahmen, kein Quellcode
+Backup/

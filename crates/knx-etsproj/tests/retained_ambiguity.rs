@@ -275,3 +275,132 @@ const ONE_BUS_ACCESS: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
     </Installations>
   </Project>
 </KNX>"#;
+
+/// A file that breaks the one assumption the Unique/Ambiguous rule rests
+/// on: two `DeviceInstance` elements sharing an `@Id`, only the first of
+/// them carrying a `Comment`. ETS does not write such a file; nothing
+/// stops one existing.
+const DUPLICATE_DEVICE_ID: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/21" CreatedBy="ETS6" ToolVersion="ETS 6.1.0">
+  <Project Id="P-0001">
+    <Installations>
+      <Installation Name="T" DefaultLine="P-0001-0_L-2">
+        <Topology>
+          <Area Id="P-0001-0_A-1" Address="1">
+            <Line Id="P-0001-0_L-2" Address="1">
+              <Segment Id="P-0001-0_L-2_S-1" Number="0" MediumTypeRefId="MT-0">
+                <DeviceInstance Id="P-0001-0_DI-1" Name="D1" ProductRefId="M-0001_H-1_P-1"
+                                Hardware2ProgramRefId="M-0001_H-1_HP-1" Address="1"
+                                Comment="only on the first" />
+                <DeviceInstance Id="P-0001-0_DI-1" Name="D2" ProductRefId="M-0001_H-1_P-1"
+                                Hardware2ProgramRefId="M-0001_H-1_HP-1" Address="2" />
+              </Segment>
+            </Line>
+          </Area>
+        </Topology>
+      </Installation>
+    </Installations>
+  </Project>
+</KNX>"#;
+
+/// **Pinned, not approved.** Two elements sharing one ETS `@Id` collapse
+/// into one retained key, and because only one of them carried the
+/// `Comment`, the store sees one value, calls it unambiguous, and writes it
+/// onto both copies — a retained value on an element that never had it.
+///
+/// The rule cannot catch this on its own: ambiguity is derived from the
+/// values in the store, and one value looks the same whether it came from
+/// one element or from the only one of two that bothered to carry it.
+/// Carrying an element-instance count instead would mean carrying it
+/// through the opaque store, i.e. a stored-project format change, for a
+/// shape no ETS file has (see `crate::xpath`'s module doc).
+///
+/// Note what this test also shows: the far larger damage is upstream of
+/// the retained store. Both exported devices come back as the *second*
+/// device — same `Name`, same `Address` — because the model is keyed by
+/// ETS id too, so the first device's own identity is gone before export
+/// ever runs. A duplicate `@Id` is an import-validation problem (T06);
+/// fixing it here would leave the bigger half of the corruption in place.
+#[test]
+fn a_duplicate_ets_id_puts_a_retained_value_on_both_copies() {
+    let (xml, _warnings) = round_trip(DUPLICATE_DEVICE_ID);
+    assert_eq!(
+        xml.matches("<DeviceInstance ").count(),
+        2,
+        "the export writes one element per modeled device:\n{xml}"
+    );
+    assert_eq!(
+        xml.matches(r#"Comment="only on the first""#).count(),
+        2,
+        "pinning today's behaviour: the retained Comment lands on both \
+         copies. If this count drops to 1, the element-instance count \
+         arrived after all and this test should become an assertion that \
+         nothing is written at all:\n{xml}"
+    );
+    assert_eq!(
+        xml.matches(r#"Name="D1""#).count(),
+        0,
+        "pinning the upstream collapse: the first device's own name does \
+         not survive the model's id table either:\n{xml}"
+    );
+}
+
+/// The same asymmetry one element up, in the shape that *is* reachable
+/// from a well-formed ETS file: two `Segment`s under one `Line`, only one
+/// of them carrying a `Puid`. The exporter synthesizes a single `Segment`
+/// per line — the merge of both — and the lone `Puid` is written onto it.
+///
+/// Pinned rather than celebrated. Nothing here can tell which segment the
+/// value belongs to; what saves it from being wrong is that the element it
+/// lands on is not a third party but the merge of the two candidates, the
+/// same merge the parser already performed on `MediumTypeRefId` and the
+/// domain-address attributes. When both segments carry the attribute, the
+/// values differ and the rule drops both — the test above.
+#[test]
+fn an_asymmetric_segment_attribute_lands_on_the_merged_segment() {
+    let (xml, warnings) = round_trip(ONE_SIDED_SEGMENT_PUID);
+    assert_eq!(
+        xml.matches("<Segment ").count(),
+        1,
+        "one segment per line is what the writer synthesizes:\n{xml}"
+    );
+    assert!(
+        xml.contains(r#"Puid="101""#),
+        "pinning today's behaviour: a value only one of the two segments \
+         carried is written onto the merged segment:\n{xml}"
+    );
+    assert!(
+        !warnings.iter().any(|w| matches!(
+            w,
+            ExportWarning::RetainedAttributeNotExported { element, attribute, .. }
+                if element == "Segment" && attribute == "Puid"
+        )),
+        "and nothing warns about it, because from the store's side it was \
+         never ambiguous: {warnings:?}"
+    );
+}
+
+/// `TWO_SEGMENTS` with the second segment's `Puid` taken away.
+const ONE_SIDED_SEGMENT_PUID: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/21" CreatedBy="ETS6" ToolVersion="ETS 6.1.0">
+  <Project Id="P-0001">
+    <Installations>
+      <Installation Name="T" DefaultLine="P-0001-0_L-2">
+        <Topology>
+          <Area Id="P-0001-0_A-1" Address="1">
+            <Line Id="P-0001-0_L-2" Address="1">
+              <Segment Id="P-0001-0_L-2_S-1" Number="0" MediumTypeRefId="MT-0" Puid="101">
+                <DeviceInstance Id="P-0001-0_DI-1" Name="D1" ProductRefId="M-0001_H-1_P-1"
+                                Hardware2ProgramRefId="M-0001_H-1_HP-1" Address="1" />
+              </Segment>
+              <Segment Id="P-0001-0_L-2_S-2" Number="1" MediumTypeRefId="MT-0">
+                <DeviceInstance Id="P-0001-0_DI-2" Name="D2" ProductRefId="M-0001_H-1_P-1"
+                                Hardware2ProgramRefId="M-0001_H-1_HP-1" Address="2" />
+              </Segment>
+            </Line>
+          </Area>
+        </Topology>
+      </Installation>
+    </Installations>
+  </Project>
+</KNX>"#;

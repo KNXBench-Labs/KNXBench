@@ -52,7 +52,9 @@
 //! names it. `KNOWN_LIMITATIONS.md` §34's
 //! ruling stands unchanged: between writing nothing and writing something
 //! actively wrong, this writer writes nothing. The difference is that the
-//! rule now applies to the rare case instead of to every attribute.
+//! rule now applies to the rare case instead of to every attribute. What
+//! that rule assumes — and what a *single* value under a shared key does
+//! instead — is spelled out in `crate::xpath`'s module doc.
 //!
 //! Booleans: measured directly against `KV v2.5 - demo.knxproj`,
 //! `DeviceInstance`'s loaded-state flags spell `"true"`/`"false"`, not

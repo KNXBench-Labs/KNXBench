@@ -835,6 +835,164 @@ mod tests {
         assert_eq!(count, 0);
     }
 
+    /// A migration only ever runs over old data that has rows in it, so a
+    /// test over an empty old database exercises the schema change and
+    /// nothing else. This one writes a real project — device, communication
+    /// object, a stated dpt and a stated flag — into a genuine v7 file,
+    /// migrates it, and reads the project back. ADR-0027's claim that "an
+    /// already-persisted project with no `com_object_program_default` rows
+    /// behaves exactly as before" is this assertion and nothing more.
+    #[test]
+    fn a_populated_pre_v9_project_survives_the_v9_migration_unchanged() {
+        use knx_core::{
+            ComObjectInstance, ComObjectInstanceId, DeviceId, DptRef, Layer, Override, Resolved,
+            ResolvedFlags,
+        };
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v7-populated.sqlite");
+        std::fs::copy(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v7-empty.sqlite"),
+            &path,
+        )
+        .unwrap();
+
+        let saved = {
+            // Same trick `a_pre_v7_com_object_reads_its_sixth_flag_as_absent_
+            // not_false` uses one screen down: write through today's writer,
+            // then take the file back to the old shape by hand. `save_project`
+            // clears `com_object_program_default` unconditionally and so
+            // cannot run against a file that lacks the table, and a v7 build's
+            // writer is not available to a v9 build to borrow.
+            let conn = open_and_migrate(&path).unwrap();
+
+            let mut project = knx_core::Project::new(knx_core::Language("en".into()));
+            project.installations.push(knx_core::Installation {
+                id: knx_core::InstallationId(0),
+                name: "I".into(),
+                default_line: None,
+                multicast_address: None,
+                completion: knx_core::CompletionStatus::FinishedDesign,
+                topology: knx_core::Topology {
+                    areas: vec![],
+                    lines: vec![],
+                    unassigned: vec![DeviceId(1)],
+                },
+                buildings: vec![],
+                group_ranges: vec![],
+                group_addresses: vec![],
+                parameters: vec![],
+            });
+            project.devices.insert(knx_core::DeviceInstance {
+                id: DeviceId(1),
+                source: knx_core::SourceRef {
+                    path: "P-0001/0.xml".into(),
+                    ets_id: "A-1".into(),
+                },
+                name: "A pre-v9 device".into(),
+                description: None,
+                address: None,
+                product_ref: "P".into(),
+                program_ref: "H".into(),
+                commissioning: knx_core::CommissioningState::default(),
+                visibility_calculated: true,
+                com_objects: vec![ComObjectInstanceId(5)],
+                binary_data: vec![],
+            });
+            project.devices.insert_com_object(ComObjectInstance {
+                id: ComObjectInstanceId(5),
+                source: knx_core::SourceRef {
+                    path: "P-0001/0.xml".into(),
+                    ets_id: "A-1_O-1_R-1".into(),
+                },
+                device: DeviceId(1),
+                number: 3,
+                text: Override::Empty,
+                description: Override::Absent,
+                dpt: Override::Value(Resolved {
+                    value: DptRef {
+                        main: 9,
+                        sub: Some(1),
+                    },
+                    layer: Layer::Instance,
+                }),
+                flags: ResolvedFlags {
+                    communication: Override::Value(Resolved {
+                        value: true,
+                        layer: Layer::Instance,
+                    }),
+                    ..ResolvedFlags::none()
+                },
+                size: None,
+                is_active: true,
+                links: vec![],
+                module_instance: None,
+            });
+            crate::project::save_project(&conn, &project).unwrap();
+
+            // Back to a genuine v7 shape: v8 is a no-DDL placeholder and v9's
+            // only change is this table, so dropping it and rewinding
+            // `user_version` leaves exactly the file a v7 build would have
+            // written for this project.
+            conn.execute_batch("DROP TABLE com_object_program_default;")
+                .unwrap();
+            conn.pragma_update(None, "user_version", 7i64).unwrap();
+            project
+        };
+
+        {
+            let conn = Connection::open(&path).unwrap();
+            let version: i64 = conn
+                .query_row("PRAGMA user_version", [], |r| r.get(0))
+                .unwrap();
+            assert_eq!(version, 7, "the file under test must be a v7 file");
+            let devices: i64 = conn
+                .query_row("SELECT COUNT(*) FROM device", [], |r| r.get(0))
+                .unwrap();
+            assert_eq!(devices, 1, "and a populated one, which is the whole point");
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(version, 9);
+
+        let loaded = crate::project::load_project(&conn).unwrap();
+        assert_eq!(
+            loaded, saved,
+            "a v7 project must come back out of a v9 database exactly as it went in"
+        );
+
+        // The values, named individually, so a failure says which one moved
+        // rather than dumping two whole projects at the reader.
+        let com = loaded.devices.com_object(ComObjectInstanceId(5)).unwrap();
+        assert_eq!(com.number, 3);
+        assert_eq!(com.text, Override::Empty, "Empty is not Absent, still");
+        assert_eq!(
+            com.dpt.value().map(|r| r.value),
+            Some(DptRef {
+                main: 9,
+                sub: Some(1)
+            })
+        );
+        assert_eq!(com.dpt.value().map(|r| r.layer), Some(Layer::Instance));
+        assert_eq!(com.flags.communication.value().map(|r| r.value), Some(true));
+
+        // And the new table is there, empty, having invented nothing for the
+        // `Empty` text slot it would have been entitled to guess about.
+        let defaults: i64 = conn
+            .query_row("SELECT COUNT(*) FROM com_object_program_default", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(defaults, 0);
+        assert!(loaded
+            .devices
+            .program_defaults(ComObjectInstanceId(5))
+            .is_none());
+    }
+
     /// The point of schema 7, stated as an assertion: a communication object
     /// written by a pre-v7 build says nothing at all about Read-on-Init, and
     /// after the migration it still says nothing. "Not stated" is not

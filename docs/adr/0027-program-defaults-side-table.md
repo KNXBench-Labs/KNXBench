@@ -94,7 +94,11 @@ device stripped of everything enrichment lifted for it.
 
 `program_defaults` is additive and inert by default — an already-persisted
 project with no `com_object_program_default` rows behaves exactly as
-before, and a project with none needed writes none.
+before, and a project with none needed writes none. The first half is
+asserted by
+`migration::tests::a_populated_pre_v9_project_survives_the_v9_migration_unchanged`,
+which migrates a v7 file holding a real device and communication object
+and reads the project back out of the v9 database unchanged.
 
 Nothing here surfaces a program default in `apps/knx-web` yet; that is a
 UI decision (which field, which affordance, whether "empty" and "program

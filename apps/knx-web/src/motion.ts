@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { settingsStorage, useSettingsRevision } from "./settingsStore";
 
 export interface MotionLevelDef {
   id: string;
@@ -26,8 +27,10 @@ export const MOTION_STYLES: readonly MotionStyleDef[] = [
 
 const DEFAULT_MOTION_LEVEL_ID = "standard";
 const DEFAULT_MOTION_STYLE_ID = "apple";
-const LEVEL_STORAGE_KEY = "knx-desktop:motion-level";
-const STYLE_STORAGE_KEY = "knx-desktop:motion-style";
+// Keys inside the settings document the server keeps, not `localStorage`
+// keys: `settingsStorage` is what resolves them against the record.
+const LEVEL_STORAGE_KEY = "motionLevel";
+const STYLE_STORAGE_KEY = "motionStyle";
 
 function isMotionLevelId(id: string): boolean {
   return MOTION_LEVELS.some((l) => l.id === id);
@@ -78,17 +81,25 @@ export function useMotion(): {
   style: string;
   setStyle: (id: string) => void;
 } {
-  const [level, setLevel] = useState<string>(() => loadMotionLevel(window.localStorage));
-  const [style, setStyle] = useState<string>(() => loadMotionStyle(window.localStorage));
+  const revision = useSettingsRevision();
+  const [level, setLevel] = useState<string>(() => loadMotionLevel(settingsStorage));
+  const [style, setStyle] = useState<string>(() => loadMotionStyle(settingsStorage));
+
+  // The record can land after this mounted on the cached document; the
+  // saves below write nothing when a re-read changes nothing.
+  useEffect(() => {
+    setLevel(loadMotionLevel(settingsStorage));
+    setStyle(loadMotionStyle(settingsStorage));
+  }, [revision]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-motion-level", level);
-    saveMotionLevel(window.localStorage, level);
+    saveMotionLevel(settingsStorage, level);
   }, [level]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-motion-style", style);
-    saveMotionStyle(window.localStorage, style);
+    saveMotionStyle(settingsStorage, style);
   }, [style]);
 
   return { level, setLevel, style, setStyle };

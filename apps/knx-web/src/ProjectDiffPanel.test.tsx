@@ -23,6 +23,7 @@ vi.mock("./api", () => ({
 vi.mock("./filePicker", () => ({ ...filePickerMock }));
 
 import ProjectDiffPanel from "./ProjectDiffPanel";
+import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
 
@@ -30,7 +31,7 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
-  window.localStorage.removeItem("knx-desktop:ui-language");
+  resetSettingsForTests();
   resetUiLanguageForTests();
 });
 
@@ -323,7 +324,7 @@ describe("ProjectDiffPanel", () => {
   // changed" sentences under the German catalogue, for both the
   // project-info line and the per-installation info line.
   it("renders both plural branches of the field-changed sentences correctly in German", async () => {
-    saveUiLanguage(window.localStorage, "de");
+    saveUiLanguage(settingsStorage, "de");
     resetUiLanguageForTests();
 
     filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/compare.knxdb");

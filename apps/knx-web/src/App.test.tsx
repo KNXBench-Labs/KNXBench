@@ -21,7 +21,7 @@ import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { LogEntry } from "./api";
 import { messages as enMessages } from "./messages/en";
 import { PRODUCT_LANGUAGE_STORAGE_KEY, resetProductLanguageForTests, useProductLanguage } from "./productLanguage";
-import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
+import { resetUiLanguageForTests } from "./uiLanguage";
 
 const apiMock = vi.hoisted(() => ({
   importProject: vi.fn(),
@@ -99,6 +99,7 @@ vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => tauriWindowMo
 
 import App from "./App";
 import type { SessionControls } from "./session";
+import { resetSettingsForTests, setSetting } from "./settingsStore";
 
 // F9's client half: every load generates its own token via
 // `crypto.randomUUID()` before the POST. Pinning it to a fixed value
@@ -121,9 +122,9 @@ afterEach(() => {
   // would otherwise leak to whoever runs next.
   apiMock.loadProgress.mockReset();
   apiMock.loadProgress.mockResolvedValue(null);
-  window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   resetProductLanguageForTests();
-  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   document.documentElement.removeAttribute("lang");
   document.title = "";
   resetUiLanguageForTests();
@@ -387,7 +388,7 @@ describe("App — device-detail fetch carries the product language (T33)", () =>
   });
 
   it("carries the stored language once a device is selected", async () => {
-    window.localStorage.setItem(PRODUCT_LANGUAGE_STORAGE_KEY, "de-DE");
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de-DE");
     const root = await openProjectWithDevice();
 
     await act(async () => {

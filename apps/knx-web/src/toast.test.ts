@@ -16,10 +16,11 @@ import { messages as enMessages } from "./messages/en";
 import { messages as deMessages } from "./messages/de";
 import { translateFor } from "./i18n";
 import type { TranslatableKey } from "./i18n";
-import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 
 afterEach(() => {
-  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   resetUiLanguageForTests();
 });
 
@@ -101,14 +102,14 @@ describe("humorizeError", () => {
 // `HOLIDAYS`/`ERROR_WRAPPERS` arrays, not a synthetic fixture.
 describe("toast copy honors the active UI language", () => {
   it("resolves a default holiday message in German once the UI language is German", () => {
-    saveUiLanguage(window.localStorage, "de");
+    saveUiLanguage(settingsStorage, "de");
     resetUiLanguageForTests();
     const date = new Date(2026, 0, 1, 12, 0); // New Year's Day
     expect(pickStartupToast(date, () => 0)).toBe(deMessages["toast.holiday.newYear.groupAddresses"]);
   });
 
   it("resolves a default error wrapper in German once the UI language is German", () => {
-    saveUiLanguage(window.localStorage, "de");
+    saveUiLanguage(settingsStorage, "de");
     resetUiLanguageForTests();
     expect(humorizeError("Duplicate group address", () => 0)).toBe(
       deMessages["toast.error.notAsPlanned"].replace("{msg}", "Duplicate group address"),

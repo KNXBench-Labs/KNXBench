@@ -16,6 +16,8 @@ import { useTranslate } from "./i18n";
 import type { ProductLanguage } from "./api";
 import { exportEnglishTemplate, importLanguagePack, resetLanguagePacksForTests } from "./languagePack";
 import type { LanguagePack } from "./languagePack";
+import { getSetting } from "./settingsStore";
+import { resetSettingsForTests } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
 
@@ -23,6 +25,7 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   window.localStorage.clear();
+  resetSettingsForTests();
   document.documentElement.removeAttribute("data-motion-level");
   document.documentElement.removeAttribute("data-motion-style");
   document.documentElement.removeAttribute("lang");
@@ -212,7 +215,7 @@ describe("SettingsPanel", () => {
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
-    expect(window.localStorage.getItem("knx-desktop:product-language")).toBe("de-DE");
+    expect(getSetting("productLanguage")).toBe("de-DE");
 
     root.unmount();
   });
@@ -268,7 +271,7 @@ describe("SettingsPanel", () => {
     expect(select.value).toBe("de");
     expect(reader.textContent).toBe("Speichern");
     expect(document.documentElement.getAttribute("lang")).toBe("de");
-    expect(window.localStorage.getItem("knx-desktop:ui-language")).toBe("de");
+    expect(getSetting("uiLanguage")).toBe("de");
 
     root.unmount();
   });
@@ -345,7 +348,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
       select.value = "nl-NL";
       select.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    expect(window.localStorage.getItem("knx-desktop:ui-language")).toBe("nl-NL");
+    expect(getSetting("uiLanguage")).toBe("nl-NL");
 
     const removeButton = host!.querySelector<HTMLButtonElement>(
       '[aria-label="Remove Nederlands"]',
@@ -354,7 +357,7 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
       removeButton.click();
     });
 
-    expect(window.localStorage.getItem("knx-desktop:ui-language")).toBe("nl-NL");
+    expect(getSetting("uiLanguage")).toBe("nl-NL");
 
     root.unmount();
   });

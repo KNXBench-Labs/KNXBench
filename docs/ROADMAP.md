@@ -785,8 +785,8 @@ below, is the half that is not.
 delivered.** T30 phase 1 (spec/design work,
 [the design spec](superpowers/specs/2026-09-13-commissioning-download-design.md))
 and phase 2 (protocol implementation against a device simulator, no
-hardware attached) are largely done: nine follow-up tasks (C1-C13, C15,
-C16, C18, C19) implemented all six commissioning procedures —
+hardware attached) are largely done: seventeen follow-up tasks (C1-C13,
+C15, C16, C18, C19) implemented all six commissioning procedures —
 individual-address write, complete download, load-one-part, partial
 download, unload, recovery — in `crates/knx-core/src/commissioning/` and
 `crates/knx-net/src/commissioning/`, each verified end to end against

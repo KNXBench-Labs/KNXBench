@@ -81,8 +81,8 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 
 ## K3 — mittel (51)
 
-| § | Thema |
-| --- | --- |
+| § | Thema | Warum K3 |
+| --- | --- | --- |
 | 9 | Projektdateien nicht diffbar (SQLite) |
 | 14 | Default-Sprache des Projekts ist ein Platzhalter |
 | 15 | Unparsbare Werte überleben nur auf `Override`-Feldern |
@@ -137,8 +137,8 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 
 ## K4 — niedrig (11)
 
-| § | Thema |
-| --- | --- |
+| § | Thema | Warum K4 |
+| --- | --- | --- |
 | 42 | `command_sync.rs`' Moduldoku überzeichnet die eigene Rolle |
 | 43 | Animationen ohne In-App-Schalter, nur OS-Präferenz |
 | 65 | `--version` nennt einen Commit, nie einen Arbeitsstand |

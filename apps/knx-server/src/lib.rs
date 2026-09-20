@@ -36,6 +36,12 @@ pub use load_progress::*;
 mod paths;
 mod routes;
 mod session_log;
+mod settings;
+/// Exported so `apps/knx-desktop` and integration tests can name the file
+/// and the version without re-deriving either. The file's *shape* stays
+/// private: everything outside this crate talks to it over `/api/settings`.
+pub use settings::{CURRENT_SCHEMA_VERSION, SETTINGS_FILE_NAME};
+mod settings_routes;
 /// Exported so an integration test can seed a log entry directly. The two
 /// types and nothing else: the module also holds `SessionLog`'s internals
 /// and the import-report converters, which would drag `knx-etsproj` and
@@ -133,6 +139,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(fs_routes::fs_routes())
         .merge(bus_routes::bus_routes())
         .merge(debug_report_routes::debug_report_routes())
+        .merge(settings_routes::settings_routes())
         // Deliberately not in `routes::project_routes()`: this answers for
         // the build, not for the open project, and it works with no
         // project loaded at all. It is guarded all the same — a build

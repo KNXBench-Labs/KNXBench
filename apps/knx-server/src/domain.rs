@@ -111,6 +111,12 @@ pub struct AppState {
     /// design. Irrelevant to every function in this file: the route layer
     /// has already resolved the path by the time it calls in here.
     pub data_dir: PathBuf,
+    /// Serializes the read-modify-write of `settings.json`
+    /// (`crate::settings`). It guards a file, not a value, which is why it
+    /// holds nothing: two windows changing two different preferences at
+    /// the same instant would otherwise both write back the document they
+    /// read, and the later write would silently drop the earlier one.
+    pub settings_lock: Mutex<()>,
 }
 
 impl AppState {
@@ -132,6 +138,7 @@ impl AppState {
             next_bus_session_id: std::sync::atomic::AtomicU64::new(1),
             load_operations: std::sync::Arc::new(LoadOperations::default()),
             data_dir,
+            settings_lock: Mutex::new(()),
         }
     }
 }

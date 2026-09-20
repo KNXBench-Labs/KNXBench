@@ -1581,7 +1581,7 @@ mod tests {
             programming_delay: Duration::from_millis(0),
             restart_basic_t1: Duration::from_millis(1),
             restart_responsive_again: Duration::from_millis(5),
-            post_restart_disconnect_wait: Duration::from_millis(6),
+            post_restart_disconnect_wait: Duration::from_millis(60),
         }
     }
 

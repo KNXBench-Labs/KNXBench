@@ -7793,7 +7793,8 @@ commissioning.rs`) gains `restart_basic()` (unconfirmed Basic Restart,
 T_ACK is the whole confirmation, MP §3.7.1.1.1/§3.7.1.1.3) and
 `restart_master_reset(erase_code, channel_number)` (confirmed, decodes the
 device's `A_Restart_Response` into a new `MasterResetResponse { error_code,
-process_time }`, AL §3.3.7 Figure 41 / MP §3.7.1.2.2, pp. 80-81). Both
+process_time }`, AL §3.4.2.2 "A_Restart-service", Figure 41, p. 52 / MP
+§3.7.1.2.2, pp. 80-81). Both
 route through the new private `disconnect_after_restart()`, which sends
 this session's own `T_Disconnect` and then unconditionally waits
 `SessionTiming::post_restart_disconnect_wait` — MP §3.7.3 exception (5),

@@ -1,13 +1,15 @@
 //! CP §3.5.3's five partial-download variants, transcribed whole as pure step-list data.
 //!
 //! `commissioning::procedure::partial_download()` models exactly one of the five — the
-//! "application program 2" variant, CP §3.5.3, pp. 44-47 — because that is the only shape
-//! `knx-net`'s sequencer walks today. CP §3.5.3 itself gives five, one per part that can be
-//! the target of a partial download, and each numbers its own steps from 01 rather than
-//! sharing the first one's numbering. This module transcribes all five, per spec §11.2's "a
-//! procedure model, not a script," so that a report can be read against whichever of the five
-//! clauses actually applies. `[C11]` Nothing here is wired to a sequencer or an executor: it
-//! exists to be checked against the table below, not to be run.
+//! "application program 2" variant, CP §3.5.3, pp. 44-47 — as a citable [`Procedure`] value
+//! for a report to show whole. CP §3.5.3 itself gives five, one per part that can be the
+//! target of a partial download, and each numbers its own steps from 01 rather than sharing
+//! the first one's numbering. This module transcribes all five, per spec §11.2's "a procedure
+//! model, not a script," so that a report can be read against whichever of the five clauses
+//! actually applies. `[C12]` `knx-net`'s `Downloader::partial_download` is the sequencer that
+//! consults this module: it looks up the target part's variant here and takes every outer
+//! step number, every escalation target and the jump target from it rather than carrying a
+//! second, hand-maintained copy of the same numbering.
 //!
 //! Every variant's Nr. 05 unloads the part being replaced, and its Nr. 06 loads it again via
 //! the inner loop of CP §3.5.2 §7.2 with CP §3.5.3's own CRC comparison added. Four of the

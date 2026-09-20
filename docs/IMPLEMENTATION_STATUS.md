@@ -7494,3 +7494,88 @@ Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets
 and `cargo deny check` all exit 0. No web file touched, so `npx tsc
 --noEmit` / `npx vitest run` were not run. `check-headers` is unchanged
 (158/167, ceiling 168): no new source file.
+
+## 2026-09-20 — C12: the sequencer starts reading C11's numbering instead of guessing
+
+C11 gave every one of CP §3.5.3's five partial-download variants its own
+`Procedure` in `crates/knx-core/src/commissioning/partial_download_variant.rs`,
+step numbers and all, but `knx-net`'s `Downloader::partial_download` — the
+function that actually walks a partial download and writes its trace —
+never looked at it. It kept its own pre-C11 literals (5, 6, 7, 13, 14) and
+used them for every part regardless of kind, which is CP §3.5.3's AP2
+numbering wearing every other variant's clothes. Two further defects rode
+along: an escalated reload (CP §3.5.3 AP2 Nr. 09-12, p. 46) recorded no
+outer step at all, folded silently into the untraced `ProcedureKind::
+LoadOnePart` loop, so a report of an escalated download couldn't show that
+Nr. 09-12 ever ran; and the Association Table variant — the last part in
+the download order, with no Nr. 07 to escalate to (CP §3.5.3, p. 56) — had
+its failed allocation retried anyway, because nothing distinguished "no
+escalation defined" from "escalation defined, not taken yet."
+
+`partial_download()` now resolves the target part's `PartKind` to a
+`PartialDownloadVariant` via a new `variant_for` helper (matching the two
+enums' shared declaration order, `[C8]`) and takes every outer step number,
+the escalation title, and every reload title from that variant's own
+`Procedure` — no second, hand-maintained copy of the numbering. Escalated
+reloads are now recorded as outer `PartialDownload` steps under their true
+clause number, computed from each follower's ordinal distance past the
+target (`part.kind() as usize - target_order - 1`) rather than assumed
+contiguous, so a shortened plan that skips a kind still cites the number
+the clause actually gives the kind it keeps, not a renumbered stand-in.
+The Association Table's failed allocation now falls straight through to
+`Err` whenever `variant.escalation_targets()` is empty — which for that
+variant it always is — instead of entering the escalation arm at all.
+
+Three new tests in `crates/knx-net/src/commissioning/download.rs`:
+`escalated_reloads_09_to_12_appear_as_numbered_outer_steps` (a full five-part
+plan, escalating from Application Program 2, asserts the complete
+`[1,3,2,4,5,6,7,8,9,10,11,12,13,14]` trace and `parts.len() == 5`);
+`each_variant_cites_its_own_outer_step_numbers` (table-driven, all five
+variants, single-part plans, each variant's exact happy-path numbering);
+and `the_last_segments_allocation_failure_is_terminal_not_escalated` (single-
+part Association Table plan, allocation fails once, asserts `Err` plus
+exactly one `AdditionalLoadControls` write and one `Unload` write via
+`load_state_writes` — proof no retry ran, since a device that only fails
+once would make a buggy retry succeed and hide the defect). The pre-existing
+`a_failed_allocation_escalates_to_every_following_segment` had its expected
+numbering corrected from `[...,7,13,14]` to `[...,7,8,11,12,13,14]`: it had
+been asserting the bug's own output.
+
+Mutation-tested four times against the committed tree (`589a884`), each
+reverted with `git checkout --` and `git status` clean afterward: (a) gave
+`variant_for` the Association Table kind Application Program 2's variant —
+exit 101, two tests fail, `each_variant_cites_its_own_outer_step_numbers`
+(`left: [1, 3, 2, 4, 5, 6, 13, 14], right: [1, 3, 2, 4, 5, 6, 7, 8]`) and
+`the_last_segments_allocation_failure_is_terminal_not_escalated` (panics on
+the guard that says the Association Table has no Nr. 07); (b) deleted the
+`record(...)` call inside the escalated-reload loop, putting the reloads
+back under `LoadOnePart` unnoticed — exit 101,
+`a_failed_allocation_escalates_to_every_following_segment` and
+`escalated_reloads_09_to_12_appear_as_numbered_outer_steps` both fail,
+missing steps 11/12 and 9-12 respectively; (c) removed the
+`if !variant.escalation_targets().is_empty()` guard, restoring the
+Association Table's escalation branch — exit 101,
+`the_last_segments_allocation_failure_is_terminal_not_escalated` fails,
+report shows `escalated_from: Some(...)` and a second load attempt where
+none should exist; (d) self-invented: replaced the ordinal-distance
+calculation with a plain sequential counter over the loop, which numbers
+reloads correctly only when a plan carries every following kind — exit 101,
+`a_failed_allocation_escalates_to_every_following_segment` fails on its
+shortened plan (skips Application Program 1 and the Group Object Table),
+citing `9, 10` where the clause requires `11, 12`.
+
+`docs/KNOWN_LIMITATIONS.md` gets §113: an escalation only reloads the
+segments present in `self.plan.parts[position..]`, so a plan that omits a
+following kind reloads fewer segments than CP §3.5.3's full table lists —
+not a new gap, but worth recording now that the numbering is correct enough
+for the omission to be noticeable rather than baked into wrong numbers
+already. Out of scope, unchanged: `PID_GROUP_RESPONSER_TABLE` and CP
+§3.5.4 step 07 (both §110/§111, C11), `A_Key_Write` (§112, C10), and any
+procedure-level retry loop — this task added none.
+
+Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets
+-j 2 -- -D warnings`, `cargo test --workspace --no-fail-fast -j 2`,
+`cargo run -p xtask -- check-layering`, `cargo run -p xtask -- check-headers`
+and `cargo deny check` all exit 0. No web file touched, so `npx tsc
+--noEmit` / `npx vitest run` were not run. `check-headers` is unchanged
+(159/167, ceiling 168): no new source file.

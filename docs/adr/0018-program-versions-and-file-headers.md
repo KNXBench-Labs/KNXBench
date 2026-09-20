@@ -297,7 +297,7 @@ pre-convention module doc without inventing a tag like `//! @header`.
   whatever was uncommitted at build time, and this ADR tells them so. In
   the two cases where it could have been *wrong* rather than incomplete —
   a packed branch ref, a tree inside a foreign repository — it is now
-  silent instead ([KNOWN_LIMITATIONS.md §65](../KNOWN_LIMITATIONS.md#65-version-names-a-commit-never-a-working-tree)).
+  silent instead ([KNOWN_LIMITATIONS.md §65](../KNOWN_LIMITATIONS.md#65---version-names-a-commit-never-a-working-tree)).
 - Enforced: `check-headers` in CI, grammar and ratchet both; the
   `--version` tests in both binaries, including that the manifest stays a
   pre-release; cargo's own SemVer parsing on every manifest. Not enforced,

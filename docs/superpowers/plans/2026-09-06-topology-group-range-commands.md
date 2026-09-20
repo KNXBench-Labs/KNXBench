@@ -3457,7 +3457,7 @@ pointer to what shipped and what's still open:
   `knx-core` commands with `apps/knx-server` routes; no frontend UI yet.
 - **T5. Group-range CRUD commands.** **Done** (2026-09-06, backend only).
   `CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange` land; the
-  export-drop bug ([KNOWN_LIMITATIONS.md §21](KNOWN_LIMITATIONS.md#21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved))
+  export-drop bug ([KNOWN_LIMITATIONS.md §21](../../KNOWN_LIMITATIONS.md#21-a-ui-created-group-address-without-a-range-is-still-dropped-on-export--partially-resolved))
   is only partially closed — see that entry for why `range_id` stays
   optional until a UI exists to pick one.
 - **T6. Group-link editing command.** **Done** (2026-09-06, backend

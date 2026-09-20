@@ -4,7 +4,7 @@
 - **Status:** design, ready for implementation
 - **Closes:** the parameter half of **T26** in
   [GAP_ANALYSIS_ETS.md](../../GAP_ANALYSIS_ETS.md)'s Tier 6; downgrades
-  [KNOWN_LIMITATIONS.md §37](../../KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only)
+  [KNOWN_LIMITATIONS.md §37](../../KNOWN_LIMITATIONS.md#37-imported-translations-are-stored-but-never-read-and-the-ui-is-english-only--partially-resolved-2026-09-12)
   from "never read" to "read at one surface". Gap **D10** stays open: its
   UI-chrome half is T25 and is not touched here.
 - **Scope:** `crates/knx-productdb`, `apps/knx-server`, `apps/knx-web`.

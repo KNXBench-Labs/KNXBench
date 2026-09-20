@@ -30,7 +30,7 @@ import { THEMES, useThemeId } from "./theme";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
 import { useProductLanguage } from "./productLanguage";
 import type { ProductLanguage } from "./api";
-import { useTranslate, type Translate } from "./i18n";
+import { useTranslate } from "./i18n";
 import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
@@ -66,33 +66,6 @@ function fileNameOf(path: string): string {
   return name && name.length > 0 ? name : path;
 }
 
-// `ExportWarningDto` (apps/knx-server/src/routes.rs) has no `tag` attribute,
-// so serde serializes it externally tagged: `{ "unsigned": { "detail":
-// "..." } }`, `{ "missingManufacturerData": { "sourcePath": "...", "sha256":
-// "..." } }`, etc — one key, whose value is the variant's fields. Unwrap
-// that single key, use `detail` if the variant has one, else fall back to
-// stringifying the inner value (covers `ManufacturerDataFromProductDb`'s
-// `entries`/`StaleSignature`'s `sourcePath`/`MissingManufacturerData`'s
-// `sourcePath`+`sha256`, none of which carry a `detail` field).
-function describeExportWarning(w: unknown, t: Translate): string {
-  if (typeof w === "object" && w !== null) {
-    const [variant, value] = Object.entries(w)[0] ?? [];
-    if (typeof value === "object" && value !== null) {
-      if ("detail" in value) return String((value as { detail: unknown }).detail);
-      // The one variant with a sentence of its own: `comObjects` is a bare
-      // count, and `readOnInitNotExported: {"comObjects":1}` is not a
-      // sentence anybody should have to read.
-      if (variant === "readOnInitNotExported" && "comObjects" in value) {
-        return t("app.exportWarning.readOnInitNotExported", {
-          count: Number((value as { comObjects: unknown }).comObjects),
-        });
-      }
-      return `${variant}: ${JSON.stringify(value)}`;
-    }
-  }
-  return JSON.stringify(w);
-}
-
 type AppProps = {
   manifestVersion?: string;
   /**
@@ -118,6 +91,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
   // `const` would call `t()` exactly once at import time and freeze the
   // filter name in whatever language happened to be active then — the same
   // trap `commandRegistry.ts`'s `COMMANDS` had before task 3's fix.
+  // Open only: KNXBench reads `.knxproj` and never writes one (ADR-0028).
   const etsProjectFilter = [{ name: t("app.filterName.etsProject"), extensions: ["knxproj"] }];
   const knxdbFilter = [{ name: t("app.filterName.knxDesktopProject"), extensions: ["knxdb"] }];
   const [tree, setTree] = useState<ProjectTree | null>(null);
@@ -683,26 +657,6 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     }
   }
 
-  async function exportProject() {
-    const path = await pickSavePath(etsProjectFilter, "project.knxproj");
-    if (!path) return;
-    clearErrors();
-    try {
-      const { warnings } = await api.exportProject(path);
-      if (warnings.length > 0) {
-        // `pushError` is single-slot (each call evicts the previous error
-        // toast — see toast.ts's own doc comment), so N separate calls in a
-        // loop would only ever leave the last warning visible. Export
-        // warnings are commonly plural (one `MissingManufacturerData` per
-        // unresolved manufacturer reference, see knx-app's export code), so
-        // all of them are joined into a single toast instead.
-        pushError(warnings.map((w) => describeExportWarning(w, t)).join(" | "));
-      }
-    } catch (e) {
-      reportError(e);
-    }
-  }
-
   async function undo() {
     clearErrors();
     try {
@@ -786,9 +740,6 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
       <button onClick={openNativeProject} disabled={loading}>{t("toolbar.openNativeProject")}</button>
       <button onClick={saveProjectAs} disabled={!tree}>
         {t("toolbar.saveAs")}
-      </button>
-      <button onClick={exportProject} disabled={!tree || !hasStorePath}>
-        {t("toolbar.exportProject")}
       </button>
       <GroupAddressCsvButtons
         tree={tree}

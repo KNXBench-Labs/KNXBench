@@ -119,8 +119,11 @@ describe("HELP_TOPICS", () => {
   // can check that a sentence is *true* — ADR-0024 says so outright — but
   // it can pin which keys are allowed to touch those two words at all, so
   // that a new help string mentioning either fails here and has to be
-  // read by someone before it ships. Both current mentions are denials.
-  const VETTED_CLAIM_KEYS = ["help.topic.importExport.p3", "help.topic.limits.p1"];
+  // read by someone before it ships. The one current mention is a denial.
+  // `help.topic.importExport.p3` used to be the second: it explained the
+  // `.knxproj` export and disclaimed ETS compatibility for it. ADR-0028
+  // withdrew the export, so the claim it had to deny no longer exists.
+  const VETTED_CLAIM_KEYS = ["help.topic.limits.p1"];
   // Both languages' words over both catalogues, not one each: an English
   // sentence landing in `de.ts` is exactly what a hurried edit produces,
   // and a per-language pattern would wave it through.

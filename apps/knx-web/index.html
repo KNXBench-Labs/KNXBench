@@ -13,32 +13,47 @@
     <title>KNXBench</title>
     <script>
       (function () {
-        function read(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
+        // The record is the settings file on the server (see
+        // src/settingsStore.ts); a round trip to it cannot happen before the
+        // first paint, so this reads the cache that module mirrors it into.
+        // The second argument is where the same preference lived before
+        // there was a file, so the first load after an upgrade still paints
+        // the right theme — settingsStore.ts hands those keys to the server
+        // and removes them, and this fallback goes quiet on its own.
+        var cached = {};
+        try {
+          var rawCache = localStorage.getItem("knx-desktop:settings-cache");
+          if (rawCache) cached = JSON.parse(rawCache).settings || {};
+        } catch (_) { cached = {}; }
+        function read(key, legacyKey) {
+          if (typeof cached[key] === "string") return cached[key];
+          try { return localStorage.getItem(legacyKey); } catch (_) { return null; }
+        }
         // Keep this id list in sync with THEMES in src/theme.ts — duplicated
         // here because this script runs before any module loads, so it cannot
         // import from theme.ts. themeTokens.test.ts fails if the two drift.
         var knownThemes = ["porcelain", "graphite", "cupertino", "neon-grid", "bitcoin-defi"];
-        var t = read("knx-desktop:theme");
+        var t = read("theme", "knx-desktop:theme");
         if (t === "light") t = "porcelain";
         if (t === "dark") t = "graphite";
         if (knownThemes.indexOf(t) === -1)
           t = matchMedia("(prefers-color-scheme: dark)").matches ? "graphite" : "porcelain";
         document.documentElement.dataset.theme = t;
-        var accent = read("knx-desktop:accent");
+        var accent = read("accent", "knx-desktop:accent");
         document.documentElement.dataset.accent = ["violet", "mint", "blue", "amber", "rose"].indexOf(accent) === -1 ? "violet" : accent;
-        document.documentElement.dataset.density = read("knx-desktop:density") === "comfortable" ? "comfortable" : "compact";
+        document.documentElement.dataset.density = read("density", "knx-desktop:density") === "comfortable" ? "comfortable" : "compact";
 
         // Keep this id list in sync with MOTION_LEVELS/MOTION_STYLES in
         // src/motion.ts — duplicated here because this script runs before
         // any module loads, so it cannot import from motion.ts.
-        var level = read("knx-desktop:motion-level");
+        var level = read("motionLevel", "knx-desktop:motion-level");
         var knownLevels = ["off", "subtle", "standard"];
         document.documentElement.setAttribute(
           "data-motion-level",
           knownLevels.indexOf(level) !== -1 ? level : "standard",
         );
 
-        var style = read("knx-desktop:motion-style");
+        var style = read("motionStyle", "knx-desktop:motion-style");
         var knownStyles = ["apple", "glitch"];
         document.documentElement.setAttribute(
           "data-motion-style",

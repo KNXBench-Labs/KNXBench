@@ -27,9 +27,10 @@ import {
   useLanguagePacks,
 } from "./languagePack";
 import { messages as enMessages } from "./messages/en";
+import { getSetting, resetSettingsForTests } from "./settingsStore";
 
 afterEach(() => {
-  window.localStorage.removeItem(LANGUAGE_PACKS_STORAGE_KEY);
+  resetSettingsForTests();
   resetLanguagePacksForTests();
 });
 
@@ -406,10 +407,7 @@ describe("a persist() failure is rolled back, not smuggled in later", () => {
     expect(second.ok).toBe(true);
     expect(listLanguagePacks().map((p) => p.tag)).toEqual(["fr-FR"]);
 
-    const stored = JSON.parse(window.localStorage.getItem(LANGUAGE_PACKS_STORAGE_KEY) ?? "{}") as Record<
-      string,
-      unknown
-    >;
+    const stored = (getSetting(LANGUAGE_PACKS_STORAGE_KEY) ?? {}) as Record<string, unknown>;
     expect(stored["nl-NL"]).toBeUndefined();
   });
 
@@ -439,10 +437,7 @@ describe("a persist() failure is rolled back, not smuggled in later", () => {
     // failed.
     const second = importLanguagePack(dutchPack({ tag: "fr-FR", name: "Français" }));
     expect(second.ok).toBe(true);
-    const stored = JSON.parse(window.localStorage.getItem(LANGUAGE_PACKS_STORAGE_KEY) ?? "{}") as Record<
-      string,
-      unknown
-    >;
+    const stored = (getSetting(LANGUAGE_PACKS_STORAGE_KEY) ?? {}) as Record<string, unknown>;
     expect(stored["nl-NL"]).toBeDefined();
   });
 });

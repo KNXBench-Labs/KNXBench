@@ -18,9 +18,10 @@ import {
   saveUiLanguage,
   useUiLanguage,
 } from "./uiLanguage";
+import { resetSettingsForTests } from "./settingsStore";
 
 afterEach(() => {
-  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   document.documentElement.removeAttribute("lang");
   resetUiLanguageForTests();
 });

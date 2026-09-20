@@ -48,7 +48,7 @@ describe("loadMotionLevel / saveMotionLevel", () => {
   it("stores the exact key and value", () => {
     const storage = fakeStorage();
     saveMotionLevel(storage, "off");
-    expect(storage.setItem).toHaveBeenCalledWith("knx-desktop:motion-level", "off");
+    expect(storage.setItem).toHaveBeenCalledWith("motionLevel", "off");
   });
 
   it("falls back to standard when nothing is stored", () => {
@@ -60,11 +60,11 @@ describe("loadMotionLevel / saveMotionLevel", () => {
   });
 
   it("falls back to standard for an empty string", () => {
-    expect(loadMotionLevel(fakeStorage({ "knx-desktop:motion-level": "" }))).toBe("standard");
+    expect(loadMotionLevel(fakeStorage({ "motionLevel": "" }))).toBe("standard");
   });
 
   it("falls back to standard for an unknown id", () => {
-    expect(loadMotionLevel(fakeStorage({ "knx-desktop:motion-level": "turbo" }))).toBe("standard");
+    expect(loadMotionLevel(fakeStorage({ "motionLevel": "turbo" }))).toBe("standard");
   });
 });
 
@@ -78,7 +78,7 @@ describe("loadMotionStyle / saveMotionStyle", () => {
   it("stores the exact key and value", () => {
     const storage = fakeStorage();
     saveMotionStyle(storage, "apple");
-    expect(storage.setItem).toHaveBeenCalledWith("knx-desktop:motion-style", "apple");
+    expect(storage.setItem).toHaveBeenCalledWith("motionStyle", "apple");
   });
 
   it("falls back to apple when nothing is stored", () => {
@@ -90,10 +90,10 @@ describe("loadMotionStyle / saveMotionStyle", () => {
   });
 
   it("falls back to apple for an empty string", () => {
-    expect(loadMotionStyle(fakeStorage({ "knx-desktop:motion-style": "" }))).toBe("apple");
+    expect(loadMotionStyle(fakeStorage({ "motionStyle": "" }))).toBe("apple");
   });
 
   it("falls back to apple for an unknown id", () => {
-    expect(loadMotionStyle(fakeStorage({ "knx-desktop:motion-style": "neon" }))).toBe("apple");
+    expect(loadMotionStyle(fakeStorage({ "motionStyle": "neon" }))).toBe("apple");
   });
 });

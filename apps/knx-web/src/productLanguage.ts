@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from "react";
+import { settingsStorage, subscribeToSettings } from "./settingsStore";
 
-export const PRODUCT_LANGUAGE_STORAGE_KEY = "knx-desktop:product-language";
+/** The key inside the settings document the server keeps, not a
+ * `localStorage` key — `settingsStorage` resolves it against the record. */
+export const PRODUCT_LANGUAGE_STORAGE_KEY = "productLanguage";
 
 // The store behind `useProductLanguage()`. A product-data language is read
 // by two independent call sites (`App.tsx`'s Settings select and
@@ -24,7 +27,7 @@ const subscribers = new Set<() => void>();
 
 function getSnapshot(): string | null {
   if (cached === undefined) {
-    cached = loadProductLanguage(window.localStorage);
+    cached = loadProductLanguage(settingsStorage);
   }
   return cached;
 }
@@ -35,7 +38,7 @@ function subscribe(onStoreChange: () => void): () => void {
 }
 
 function setStoredProductLanguage(language: string | null): void {
-  saveProductLanguage(window.localStorage, language);
+  saveProductLanguage(settingsStorage, language);
   cached = language;
   for (const onStoreChange of subscribers) onStoreChange();
 }
@@ -101,3 +104,11 @@ export function useProductLanguage(): [string | null, (language: string | null) 
   const language = useSyncExternalStore(subscribe, getSnapshot);
   return [language, setStoredProductLanguage];
 }
+
+// Same invalidation as `uiLanguage.ts`: the record can change under this
+// cache, and re-reading on demand is cheaper and less wrong than trying to
+// predict which write touched which key.
+subscribeToSettings(() => {
+  cached = undefined;
+  for (const onStoreChange of subscribers) onStoreChange();
+});

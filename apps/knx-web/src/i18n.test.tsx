@@ -9,16 +9,15 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatTemplate, resolveFromCatalog, translateFor, useTranslate } from "./i18n";
-import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests, useUiLanguage } from "./uiLanguage";
+import { resetUiLanguageForTests, useUiLanguage } from "./uiLanguage";
 import {
-  LANGUAGE_PACKS_STORAGE_KEY,
   importLanguagePack,
   resetLanguagePacksForTests,
 } from "./languagePack";
+import { resetSettingsForTests } from "./settingsStore";
 
 afterEach(() => {
-  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
-  window.localStorage.removeItem(LANGUAGE_PACKS_STORAGE_KEY);
+  resetSettingsForTests();
   resetUiLanguageForTests();
   resetLanguagePacksForTests();
 });
@@ -68,7 +67,7 @@ describe("translateFor", () => {
     expect(translateFor("nl-NL", "toolbar.save")).toBe("Opslaan");
 
     resetLanguagePacksForTests();
-    window.localStorage.removeItem(LANGUAGE_PACKS_STORAGE_KEY);
+    resetSettingsForTests();
     expect(translateFor("nl-NL", "toolbar.save")).toBe("Save");
   });
 

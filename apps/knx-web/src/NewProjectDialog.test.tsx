@@ -23,6 +23,8 @@ vi.mock("./api", () => ({
 }));
 
 import NewProjectDialog from "./NewProjectDialog";
+import { settingsStorage } from "./settingsStore";
+import { resetSettingsForTests } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
 
@@ -31,6 +33,7 @@ afterEach(() => {
   host = undefined;
   vi.clearAllMocks();
   window.localStorage.clear();
+  resetSettingsForTests();
   resetUiLanguageForTests();
 });
 
@@ -153,7 +156,7 @@ describe("NewProjectDialog", () => {
   });
 
   it("seeds the project language from the active UI language", async () => {
-    saveUiLanguage(window.localStorage, "de");
+    saveUiLanguage(settingsStorage, "de");
     resetUiLanguageForTests();
     const { root } = await renderDialog();
 

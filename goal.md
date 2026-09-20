@@ -233,6 +233,22 @@ items, which is why they are listed:
   palettes were measured by hand; the sixth will not be. ADR-0022's contrast
   invariant wants a gate, not a paragraph.
 
+### 3.6 KNXnet/IP interface discovery is CLI-only
+
+`crates/knx-net/src/discovery.rs` encodes `SEARCH_REQUEST` and decodes
+`SEARCH_RESPONSE`, and `knx bus discover` uses it. The application does not:
+`apps/knx-server/src/bus_routes.rs` exposes four bus endpoints and none of them
+is discovery, so `BusMonitorPanel`'s gateway field is a bare text input that the
+user has to fill from memory.
+
+Give the application the discovery the CLI already has. Two halves: a server
+endpoint over the existing `client.discover()`, and a UI that runs it once when
+the application starts and offers a button to run it again. Found interfaces
+become choices for the gateway field rather than something to retype. A machine
+with no interface on the network, or one where multicast does not leave the
+container, must degrade to today's manual entry without an error wall — that is
+the common case on a developer's laptop, not an exception.
+
 ---
 
 ## 4. Priority 3 — reporting, diff and CSV residue

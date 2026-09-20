@@ -34,7 +34,7 @@ pub use commissioning::mutation::{WriteAuthorisation, WriteScope};
 pub use commissioning::{
     CommissioningState, CompletionStatus, DeviceLoadStates, LoadDisagreement, LoadPart,
 };
-pub use device::{BinaryDataRef, ComObjectInstance, DeviceInstance};
+pub use device::{BinaryDataRef, ComObjectInstance, DeviceInstance, ProgramDefaults};
 pub use devices::Devices;
 pub use dpt::{
     decode, encode, group_address_dpt_from, resolve_group_address_dpt,

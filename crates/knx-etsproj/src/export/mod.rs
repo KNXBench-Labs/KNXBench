@@ -10,7 +10,7 @@ pub use schema11::{write_installation_xml, write_project_xml, ExportError};
 
 use std::io::{Cursor, Write};
 
-use knx_core::Project;
+use knx_core::{Override, Project};
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
 
@@ -37,6 +37,26 @@ pub enum ExportWarning {
     /// this says which one — never a silently incomplete archive. Raised
     /// by `knx-app` (Task 14), which is the layer that knows the manifest.
     MissingManufacturerData { source_path: String, sha256: String },
+    /// Read-on-Init is switched *on* at instance level in this project, and
+    /// the written container does not carry it. No `.knxproj` measured here
+    /// spells `ReadOnInitFlag` on a `ComObjectInstanceRef` — 2533
+    /// occurrences across the local corpus, every one of them on an
+    /// application program's `ComObject` — so writing one would mean
+    /// inventing an attribute position ETS may well reject. The flag stays
+    /// in KNXBench's own project file; this says out loud which objects
+    /// leave it behind (KNOWN_LIMITATIONS §117).
+    ///
+    /// Counts only values that are `true`. A `false` at an exported layer
+    /// re-resolves to `false` from the product database — every one of those
+    /// 2533 program-level occurrences reads `"Disabled"` — so the exported
+    /// container and the project agree about it, and warning about it would
+    /// mean a warning nobody can clear: switching the flag on and off again
+    /// leaves `Value(false)` behind, and no "clear to inherited" gesture
+    /// exists in the UI. The narrow case this does not cover — a user `false`
+    /// against an application program that states `Enabled`, never yet
+    /// measured — is written down in KNOWN_LIMITATIONS §117 instead of being
+    /// announced on every export forever.
+    ReadOnInitNotExported { com_objects: usize },
 }
 
 /// Writes `project` and every opaque entry back out as a `.knxproj` ZIP
@@ -70,6 +90,23 @@ pub fn export_knxproj(
             write_project_xml(project, opaque)?,
         )
     };
+    // `r.value` on purpose: see `ExportWarning::ReadOnInitNotExported`. An
+    // exported-layer `false` survives the round trip through the product
+    // database, so warning about it would only produce an unclearable
+    // warning.
+    let unexportable_read_on_init = project
+        .devices
+        .com_objects()
+        .filter(|com| {
+            matches!(com.flags.read_on_init, Override::Value(ref r) if r.layer.is_exported() && r.value)
+        })
+        .count();
+    if unexportable_read_on_init > 0 {
+        warnings.push(ExportWarning::ReadOnInitNotExported {
+            com_objects: unexportable_read_on_init,
+        });
+    }
+
     let project_id = &project.info.project_id;
     let installation_path = format!("{project_id}/0.xml");
     // ETS itself spells this entry `Project.xml` at schema 11 (ETS4) but

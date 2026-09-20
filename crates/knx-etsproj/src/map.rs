@@ -727,6 +727,14 @@ fn map_com_object(
         transmit: override_bool(&com.transmit_flag, &xpath, problems),
         update: override_bool(&com.update_flag, &xpath, problems),
         communication: override_bool(&com.communication_flag, &xpath, problems),
+        // Deliberately absent. `ReadOnInitFlag` is measured 2533 times in
+        // the local corpus, every one of them on an application program's
+        // `ComObject` element and none on a `ComObjectInstanceRef` — not in
+        // the ETS4 project, not in the ETS 6.3.0 one, not in the KV demo.
+        // Guessing an instance-level attribute name would be worse than the
+        // documented gap (KNOWN_LIMITATIONS §117), so the flag arrives from
+        // the product database instead.
+        read_on_init: Override::Absent,
     };
 
     let mut links = Vec::new();

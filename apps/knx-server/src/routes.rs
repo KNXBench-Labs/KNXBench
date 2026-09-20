@@ -660,6 +660,7 @@ enum ExportWarningDto {
     StaleSignature { source_path: String },
     ManufacturerDataFromProductDb { entries: usize },
     MissingManufacturerData { source_path: String, sha256: String },
+    ReadOnInitNotExported { com_objects: usize },
 }
 
 impl From<knx_etsproj::export::ExportWarning> for ExportWarningDto {
@@ -678,6 +679,7 @@ impl From<knx_etsproj::export::ExportWarning> for ExportWarningDto {
                 source_path,
                 sha256,
             },
+            W::ReadOnInitNotExported { com_objects } => Self::ReadOnInitNotExported { com_objects },
         }
     }
 }
@@ -1447,6 +1449,7 @@ struct ComObjectFieldsDto {
     transmit: Option<bool>,
     update: Option<bool>,
     communication: Option<bool>,
+    read_on_init: Option<bool>,
     links: Vec<ComObjectLinkDto>,
     module_instance: Option<String>,
 }
@@ -1462,6 +1465,7 @@ impl From<&knx_diff::ComObjectFields> for ComObjectFieldsDto {
             transmit: fields.transmit,
             update: fields.update,
             communication: fields.communication,
+            read_on_init: fields.read_on_init,
             links: fields
                 .links
                 .iter()

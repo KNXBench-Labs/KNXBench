@@ -33,6 +33,13 @@ description_layer: string | null, is_active: boolean,
  */
 read: boolean, write: boolean, transmit: boolean, update: boolean, communication: boolean, 
 /**
+ * Read-on-Init, the sixth flag (§117). Flattened to `false` when no
+ * layer stated it, exactly like its five neighbours — the projection
+ * is the read model, not the place where "absent" and "false" are told
+ * apart.
+ */
+read_on_init: boolean, 
+/**
  * The `GroupLink`s already on this communication object —
  * `knx_core::Command::LinkComObject`/`UnlinkComObject` (2026-09-06)
  * had no projection field to read or drive from until this cycle.

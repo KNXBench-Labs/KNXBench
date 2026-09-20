@@ -7329,3 +7329,81 @@ justifying comment; `DownloadPlan::new` (C8, in review on another branch)
 was not touched. No `docs/KNOWN_LIMITATIONS.md` entry: the fix is spec-stated
 from the two cited tables, not inferred, and nothing about it is left
 unsupported.
+
+## C10 — access keys now say "none required" instead of nothing at all
+
+CP §3.5.2 Nr. 11, p. 44, and CP §3.5.3 AP2 Nr. 13, p. 47, both read *"Set
+access keys as required"* — a step `DownloadPlan` had no field to disagree
+with. Whether a plan needed no keys or needed keys that got silently
+skipped, the report read the same. Four call sites carried this: the two
+that execute (`Downloader::complete_download` and `::partial_download`,
+`crates/knx-net/src/commissioning/download.rs`) and the two that only
+describe the step for documentation/dry-run
+(`crates/knx-core/src/commissioning/procedure.rs`'s `complete_download()`
+and `partial_download()`).
+
+Added `AccessKeyDeclaration` (`crates/knx-core/src/commissioning/
+authorisation.rs`), built on the existing `AccessKey` (AL §3.5.7's
+four-octet key) and a new `AccessKeyAssignment` pairing one to an
+`AccessLevel`: `NoneRequired` (the default, and the state every plan built
+before this field existed was silently already in) or
+`Required(Vec<AccessKeyAssignment>)`, the latter refusing to be constructed
+empty (`AccessKeyDeclaration::required` returns `EmptyAccessKeyDeclaration`
+otherwise — a `Required` with nothing in it is just `NoneRequired` wearing
+a disguise). `DownloadPlan` gained `with_access_keys` and an `access_keys`
+accessor.
+
+Both executable call sites now go through one function, `modify_access_keys`
+(`download.rs`), so CP §3.5.2 Nr. 11 and CP §3.5.3 AP2 Nr. 13 cannot drift
+apart in wording: `NoneRequired` records "modify access keys (declared: none
+required)" and returns `Ok`; `Required` records "modify access keys
+(declared: refused, not implemented)" and returns the new
+`DownloadError::AccessKeysNotSupported { declared }`, stopping the procedure
+before the disconnect step — `A_Key_Write` has no encoder
+(`crates/knx-net/src/cemi.rs`'s `key_write_has_an_apci_but_no_encoder`,
+spec §10.7), so a plan asking for it is refused rather than reported done
+with nothing done. The two declarative step lists in `knx-core`'s
+`procedure.rs` had their step 11/13 detail text rewritten to name the same
+mechanism, and step 13 was reclassified from `StepEffect::Write` to
+`StepEffect::Guard` to match step 11: a step that either does nothing or
+refuses is a guard, not a write.
+
+New tests: `modify_access_keys_reports_declared_none_and_refused_differently`
+(calls the helper directly, no simulator needed, and asserts the two
+branches' recorded titles differ), `a_plan_declaring_no_access_keys_reports_
+step_11_as_declared_none`, `a_plan_declaring_access_keys_is_refused_at_
+step_11`, and `both_call_sites_report_the_same_declaration_for_the_same_plan`
+(complete and partial download report Nr. 11 and Nr. 13 identically for the
+same plan), all in `crates/knx-net/src/commissioning/download.rs`; three new
+tests in `crates/knx-core/src/commissioning/authorisation.rs` cover the
+default, the empty-`Required` refusal, and that `AccessKeyAssignment` never
+prints its key, matching `AccessKey`'s own redaction.
+
+Mutation-tested, both required by the task, each reverted with `git checkout
+--` after the fix was committed: (a) making the `Required` arm's recorded
+title match the `NoneRequired` one word-for-word fails
+`modify_access_keys_reports_declared_none_and_refused_differently` at exit
+101 — `left: "modify access keys (declared: none required)"`, `right:
+"modify access keys (declared: none required)"`, i.e. the assertion that the
+two must differ; (b) replacing the `Required` arm's
+`Err(DownloadError::AccessKeysNotSupported { .. })` with `Ok(())` fails two
+tests at exit 101: `a_plan_declaring_access_keys_is_refused_at_step_11`
+("a plan declaring access keys must not silently complete", with the full
+`DownloadReport` printed showing the procedure ran clean through to
+"disconnect") and the same differently-worded test as (a), since a silently
+successful refusal also records the "refused" title on a report that no
+longer errors.
+
+`docs/KNOWN_LIMITATIONS.md` gets §112 (§110 and §111 landed from C11 while
+this branch was in flight, for `PID_GROUP_RESPONSER_TABLE` and the unload-
+address step — unrelated defects, renumbered around rather than duplicated):
+a plan declaring keys is refused outright, not carried out, until
+`A_Key_Write` has an encoder. Out of scope, per the task's own explicit
+non-tasks and unchanged here: implementing `A_Key_Write` itself.
+
+Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets
+-j 2 -- -D warnings`, `cargo test --workspace --no-fail-fast -j 2`,
+`cargo run -p xtask -- check-layering`, `cargo run -p xtask -- check-headers`
+and `cargo deny check` all exit 0. No web file touched, so `npx tsc
+--noEmit` / `npx vitest run` were not run. `check-headers` is unchanged
+(158/167, ceiling 168): no new source file.

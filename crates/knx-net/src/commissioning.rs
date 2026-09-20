@@ -23,6 +23,7 @@
 //! the answer.
 
 pub mod download;
+pub mod individual_address_write;
 pub mod simulator;
 
 use std::convert::Infallible;
@@ -45,7 +46,7 @@ use knx_core::commissioning::memory::{
 };
 use knx_core::commissioning::mutation::{TargetKind, WriteAuthorisation, WriteScope};
 use knx_core::commissioning::programming_mode::{
-    prog_mode_write, ProgModeWrite, CURR_PROG_MODE_ADDRESS,
+    prog_mode_write, ProgModeWrite, ProgrammingModeResponders, CURR_PROG_MODE_ADDRESS,
 };
 use knx_core::commissioning::properties::{
     verify_mode_active, with_verify_mode, ObjectIndex, PID_DEVICE_CONTROL, PID_DOWNLOAD_COUNTER,
@@ -55,7 +56,9 @@ use knx_core::commissioning::properties::{
 use knx_core::{ContactableAddress, ExcludedAddress, GroupValue, IndividualAddress};
 use tokio::sync::broadcast;
 
-use crate::cemi::{ApplicationService, CemiError, Destination, LDataMessageKind, Tpci};
+use crate::cemi::{
+    ApplicationService, CemiError, Destination, LDataMessageKind, Tpci, BROADCAST_DESTINATION,
+};
 use crate::client::{BusError, TunnelEvent};
 use crate::management::{
     ManagementTransport, ACKNOWLEDGE_TIMEOUT, CONNECTION_TIMEOUT, MAX_REP_COUNT,
@@ -160,6 +163,16 @@ pub struct SessionTiming {
     /// ([`ManagementSession::restart_basic`],
     /// [`ManagementSession::restart_master_reset`]) uses this field.
     pub post_restart_disconnect_wait: Duration,
+    /// How long `NM_IndividualAddress_Write` step 2 waits out a broadcast
+    /// `A_IndividualAddress_Read` before counting who answered.
+    ///
+    /// MP §2.3, p. 14: *"wait 1 second"* — a different figure from, and not
+    /// to be confused with, the 3 s
+    /// [`knx_core::commissioning::programming_mode::INDIVIDUAL_ADDRESS_READ_TIMEOUT`]
+    /// used by MP §2.2's plain programming-mode scan. The wait is never cut
+    /// short by an early answer: a second responder may still be on the
+    /// bus, and the step's whole job is counting all of them.
+    pub programming_mode_broadcast_timeout: Duration,
 }
 
 impl Default for SessionTiming {
@@ -173,6 +186,7 @@ impl Default for SessionTiming {
             restart_basic_t1: Duration::from_secs(1),
             restart_responsive_again: Duration::from_secs(5),
             post_restart_disconnect_wait: Duration::from_secs(6),
+            programming_mode_broadcast_timeout: Duration::from_secs(1),
         }
     }
 }
@@ -1268,6 +1282,89 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         self.connection = None;
     }
 
+    /// `NM_IndividualAddress_Write` steps 2 and 3's connectionless
+    /// broadcast `A_IndividualAddress_Read`: send once, then count every
+    /// distinct answering address over the full `timeout`.
+    ///
+    /// MP §2.3, p. 14: *"the Management Client shall ... wait 1 second"*.
+    /// The wait is never cut short by an early answer — this loop keeps
+    /// listening for the entire `timeout` regardless of how soon the
+    /// first (or the only) response arrives, because a second responder
+    /// may still be on the bus and the step's whole job is finding out.
+    /// Ending early on the first answer would turn "exactly one
+    /// responder" into "at least one responded quickly", which is a
+    /// different, weaker claim than the one MP §2.3's stop/continue
+    /// decision needs.
+    pub async fn broadcast_individual_address_read(
+        &self,
+        timeout: Duration,
+    ) -> Result<ProgrammingModeResponders, SessionError> {
+        let mut events = self.transport.subscribe();
+        self.transport
+            .send_frame(
+                BROADCAST_DESTINATION,
+                Tpci::UnnumberedData,
+                ApplicationService::IndividualAddressRead,
+            )
+            .await
+            .map_err(SessionError::Transport)?;
+        let mut responders = ProgrammingModeResponders::new();
+        let deadline = tokio::time::Instant::now() + timeout;
+        loop {
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            if remaining.is_zero() {
+                break;
+            }
+            match tokio::time::timeout(remaining, events.recv()).await {
+                Ok(Ok(TunnelEvent::Telegram(frame))) => {
+                    if frame.kind == LDataMessageKind::Indication
+                        && frame.service == ApplicationService::IndividualAddressResponse
+                    {
+                        responders.observe(frame.source);
+                    }
+                }
+                Ok(Ok(TunnelEvent::Closed)) => {
+                    return Err(SessionError::ConnectionLost {
+                        during: "A_IndividualAddress_Response (broadcast)",
+                    });
+                }
+                Ok(Err(broadcast::error::RecvError::Lagged(_))) => {
+                    return Err(SessionError::Lagged {
+                        waiting_for: "A_IndividualAddress_Response (broadcast)",
+                    });
+                }
+                Ok(Err(broadcast::error::RecvError::Closed)) => {
+                    return Err(SessionError::ConnectionLost {
+                        during: "A_IndividualAddress_Response (broadcast)",
+                    });
+                }
+                Err(_) => break,
+            }
+        }
+        Ok(responders.complete())
+    }
+
+    /// `NM_IndividualAddress_Write` step 3's authorised broadcast
+    /// `A_IndividualAddress_Write`.
+    ///
+    /// Unconfirmed at the application layer — a broadcast write gets no
+    /// `T_ACK` and no answer, so sending is all this method does. Step 4's
+    /// connect-and-verify, not this call's return value, is what proves
+    /// the write landed (MP §2.3, p. 14, "to 4.").
+    pub async fn broadcast_individual_address_write(&self) -> Result<(), SessionError> {
+        self.authorise_write(WriteScope::IndividualAddressProgramming)?;
+        self.transport
+            .send_frame(
+                BROADCAST_DESTINATION,
+                Tpci::UnnumberedData,
+                ApplicationService::IndividualAddressWrite {
+                    address: self.target.address(),
+                },
+            )
+            .await
+            .map_err(SessionError::Transport)
+    }
+
     /// MP §3.5.1 `DMP_Authorize_RCo`, plus §10.4's extension when it was
     /// opted into.
     async fn authorise(&mut self) -> Result<(), SessionError> {
@@ -1569,6 +1666,29 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             [high, low] => Ok(MaskVersion(u16::from_be_bytes([high, low]))),
             _ => Err(SessionError::MalformedDescriptor { got: data.len() }),
         }
+    }
+
+    /// `NM_IndividualAddress_Write` step 1's occupancy probe: Device
+    /// Descriptor Type 0, accepting whatever `descriptor_type` and
+    /// `device_descriptor` the answer carries.
+    ///
+    /// MP §2.3 exception a), p. 15: *"The Management Client shall accept
+    /// any value of descriptor_type, also values <>0, and any value of
+    /// device_descriptor."* [`Self::read_mask_version`] cannot serve this
+    /// step: it discards a response whose `descriptor_type` is not 0,
+    /// which would misreport an occupied `IA_new` as free merely because
+    /// the occupant answered honestly with a descriptor type this session
+    /// did not ask about.
+    pub async fn probe_device_descriptor(&mut self) -> Result<(), SessionError> {
+        self.exchange(
+            ApplicationService::DeviceDescriptorRead { descriptor_type: 0 },
+            "A_DeviceDescriptor_Response",
+            |service| match service {
+                ApplicationService::DeviceDescriptorResponse { .. } => Some(()),
+                _ => None,
+            },
+        )
+        .await
     }
 
     /// `PID_TABLE_REFERENCE`, the base address spec §7.2 step 3 reads back.
@@ -2448,6 +2568,7 @@ mod tests {
             restart_basic_t1: Duration::from_millis(1),
             restart_responsive_again: Duration::from_millis(5),
             post_restart_disconnect_wait: Duration::from_millis(60),
+            programming_mode_broadcast_timeout: Duration::from_millis(20),
         }
     }
 

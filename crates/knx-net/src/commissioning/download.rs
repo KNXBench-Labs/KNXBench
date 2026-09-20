@@ -47,6 +47,7 @@ use knx_core::commissioning::load_state::{LoadEvent, LoadState, MaskVersion};
 use knx_core::commissioning::mcb::MemoryControlBlock;
 use knx_core::commissioning::memory::WriteLimit;
 use knx_core::commissioning::mutation::WriteScope;
+use knx_core::commissioning::partial_download_variant::PartialDownloadVariant;
 use knx_core::commissioning::procedure::ProcedureKind;
 use knx_core::commissioning::properties::{ObjectIndex, PID_PROGRAM_VERSION};
 
@@ -727,16 +728,30 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
         Ok(report)
     }
 
-    /// CP §3.5.3's first variant, *"Partial Download of the 'application
-    /// program 2'"*, numbered 01 to 14: unload one part, reload one part, and
-    /// escalate to the following segments if its allocation fails.
+    /// CP §3.5.3's five partial-download variants (`[C11]`
+    /// `partial_download_variant.rs`, transcribed pp. 44-56): unload one
+    /// part, reload one part, and — for four of the five — escalate to the
+    /// following segments if its allocation fails.
     ///
-    /// The escalation is the clause's own: *"⇒ Continue at Nr. 07"*, which is
-    /// *"unload all the following segments"* and reload them in ascending
-    /// order. A partial download can therefore turn into something very close
-    /// to a full one while it is running, and the report says so
-    /// ([`DownloadReport::escalated_from`]) rather than reporting a tidier
-    /// story than what happened.
+    /// `[C12]` The step numbers this method records come from the target
+    /// part's own [`PartialDownloadVariant`], not from one literal numbering
+    /// shared by all five: CP §3.5.3 numbers each of the five variants from
+    /// 01 independently (`partial_download_variant.rs`'s own header), so the
+    /// Association Table variant's tail sits at Nr. 07/08 while Application
+    /// Program 2's sits at Nr. 13/14, and citing the wrong one is citing a
+    /// step number that means something else in that clause.
+    ///
+    /// The escalation, where a variant has one, is the clause's own: *"⇒
+    /// Continue at Nr. 07"*, which is *"unload all the following segments"*
+    /// and reload them in ascending order. A partial download can therefore
+    /// turn into something very close to a full one while it is running, and
+    /// the report says so ([`DownloadReport::escalated_from`]) rather than
+    /// reporting a tidier story than what happened. The Association Table
+    /// variant is the one exception: CP §3.5.3, p. 56 gives its Nr. 06 no
+    /// *"⇒ Continue"* and no escalation branch at all — *"if [Base Address]
+    /// is zero then allocation was not successful. This causes an error
+    /// message of the MaC to the Installer."* — so a failed allocation there
+    /// is reported as a plain procedure failure, not retried.
     pub async fn partial_download(
         &mut self,
         object_index: ObjectIndex,
@@ -746,15 +761,26 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
             .plan
             .position_of(object_index)
             .ok_or(DownloadError::UnknownPart { object_index })?;
+        let variant = variant_for(self.plan.parts[position].kind());
+        let procedure = variant.procedure();
         let mut report = DownloadReport::new(kind);
         let (mask, limit) = open(self.session, &self.plan, kind, &mut report).await?;
 
-        record(&mut report, kind, 5, "unload only the part being replaced");
+        // Indices into `procedure.steps` below are fixed across all five
+        // variants: the opening four (indices 0-3) plus unload/allocate
+        // (4-5) are identical in shape everywhere, and only the Association
+        // Table variant lacks indices 6-7 (the escalation announcement and
+        // the target's own reload) — which is exactly the branch this
+        // method never takes for it (`escalation_targets().is_empty()`
+        // below).
+        let unload_step = &procedure.steps[4];
+        record(&mut report, kind, unload_step.number, unload_step.title);
         self.session
             .write_load_event(object_index, LoadEvent::Unload)
             .await?;
 
-        record(&mut report, kind, 6, "allocate and compare the CRC");
+        let allocate_step = &procedure.steps[5];
+        record(&mut report, kind, allocate_step.number, allocate_step.title);
         let attempt = load_one_part(
             self.session,
             &self.plan.parts[position],
@@ -768,8 +794,11 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
 
         match attempt {
             Ok(outcome) => report.parts.push(outcome),
-            Err(DownloadError::Session(SessionError::AllocationFailed { .. })) => {
-                record(&mut report, kind, 7, "on failed allocation, escalate");
+            Err(DownloadError::Session(SessionError::AllocationFailed { .. }))
+                if !variant.escalation_targets().is_empty() =>
+            {
+                let escalate_step = &procedure.steps[6];
+                record(&mut report, kind, escalate_step.number, escalate_step.title);
                 report.escalated_from = Some(object_index);
                 // *"Unload all the following segments"* — CP §3.5.3 Nr. 07's
                 // own escalation instruction, not a re-allocation retry: a
@@ -787,20 +816,53 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
                 // *target* part after escalation, and it carries the same
                 // full "Compare CRC checksum" block as Nr. 06, p. 46 — Nr.
                 // 08's text is Nr. 06's, word for word, down to the
-                // `PID_MCB` read. Nr. 09-12, p. 47, reload the segments that
-                // merely followed the target and never carry that block; they
-                // only "Read and save CRC checksum" at the end, which this
-                // module already records as `CrcComparison::NotCompared`
-                // rather than a comparison. So only the first part reloaded
-                // here — the target itself — compares; the rest do not.
-                for (offset, part) in self.plan.parts[position..].iter().enumerate() {
+                // `PID_MCB` read. This is the only reload in the escalation
+                // that compares.
+                let reload_target_step = &procedure.steps[7];
+                record(
+                    &mut report,
+                    kind,
+                    reload_target_step.number,
+                    reload_target_step.title,
+                );
+                let outcome = load_one_part(
+                    self.session,
+                    &self.plan.parts[position],
+                    mask,
+                    self.plan.allocation_mode,
+                    limit,
+                    true,
+                    &mut report,
+                )
+                .await?;
+                report.parts.push(outcome);
+
+                // `[C12]` Nr. 09-12, p. 47, reload the segments that merely
+                // followed the target, one numbered outer step each — the
+                // defect this fixes is exactly these steps going missing
+                // from the trace (this module's own rule, stated twice:
+                // `[C11]`'s header and Nr. 07's comment above). Each
+                // follower's step number is looked up by its position in
+                // the fixed download order relative to the target
+                // (`PartKind`'s declaration order, `[C8]`), not by counting
+                // this plan's own (possibly shorter) part list — a plan that
+                // skips a kind still cites the clause's real number for the
+                // kind it does carry, never a renumbered one. They carry no
+                // CRC comparison block (`compare_crc = false`): they only
+                // "Read and save CRC checksum" at the end, which this module
+                // already records as [`CrcComparison::NotCompared`].
+                let target_order = self.plan.parts[position].kind() as usize;
+                for part in &self.plan.parts[position + 1..] {
+                    let steps_after_target = part.kind() as usize - target_order - 1;
+                    let reload_step = &procedure.steps[8 + steps_after_target];
+                    record(&mut report, kind, reload_step.number, reload_step.title);
                     let outcome = load_one_part(
                         self.session,
                         part,
                         mask,
                         self.plan.allocation_mode,
                         limit,
-                        offset == 0,
+                        false,
                         &mut report,
                     )
                     .await?;
@@ -810,14 +872,28 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
             Err(err) => return Err(err),
         }
 
-        // Nr. 06 of this variant ends *"⇒ Continue at Nr. 13"*, so the
-        // access keys and the disconnect are 13 and 14 and not 8 and 9.
-        // CP §3.5.3 AP2 Nr. 13, p. 47, is the same *"Set access keys as
-        // required"* text as CP §3.5.2 Nr. 11, so the same declaration and
-        // the same refusal apply (C10): [`modify_access_keys`] is what makes
-        // both call sites report it identically.
-        modify_access_keys(&mut report, kind, 13, &self.plan.access_keys)?;
-        record(&mut report, kind, 14, "disconnect");
+        // A successful Nr. 06 (or, on the escalation path, the reloads
+        // above) continues at [`PartialDownloadVariant::jump_target`], one
+        // before the last step of the variant's own list — CP §3.5.3 AP2
+        // Nr. 13, p. 47, is the same *"Set access keys as required"* text as
+        // CP §3.5.2 Nr. 11, so the same declaration and the same refusal
+        // apply (C10): [`modify_access_keys`] is what makes both call sites
+        // report it identically.
+        let total_steps = procedure.steps.len();
+        let access_keys_step = &procedure.steps[total_steps - 2];
+        modify_access_keys(
+            &mut report,
+            kind,
+            access_keys_step.number,
+            &self.plan.access_keys,
+        )?;
+        let disconnect_step = &procedure.steps[total_steps - 1];
+        record(
+            &mut report,
+            kind,
+            disconnect_step.number,
+            disconnect_step.title,
+        );
         self.session.disconnect().await;
         Ok(report)
     }
@@ -951,6 +1027,22 @@ fn record(report: &mut DownloadReport, kind: ProcedureKind, number: u8, title: &
         number,
         title,
     });
+}
+
+/// Which of CP §3.5.3's five partial-download variants (`[C11]`) a part's
+/// `PartKind` corresponds to, so [`Downloader::partial_download`] can look up
+/// that variant's own step numbering instead of hard-coding one variant's
+/// numbers for every part. The two enums declare their five cases in the
+/// same order for the same reason (`PartKind`'s own doc comment, `[C8]`), so
+/// this is a name correspondence, not a second copy of any step data.
+const fn variant_for(kind: PartKind) -> PartialDownloadVariant {
+    match kind {
+        PartKind::ApplicationProgram2 => PartialDownloadVariant::ApplicationProgram2,
+        PartKind::ApplicationProgram1 => PartialDownloadVariant::ApplicationProgram1,
+        PartKind::GroupObjectTable => PartialDownloadVariant::GroupObjectTable,
+        PartKind::GroupAddressTable => PartialDownloadVariant::GroupAddressTable,
+        PartKind::AssociationTable => PartialDownloadVariant::AssociationTable,
+    }
 }
 
 /// CP §3.5.2 Nr. 11, p. 44, and CP §3.5.3 AP2 Nr. 13, p. 47 (C10): the
@@ -1754,11 +1846,18 @@ mod tests {
             .expect("the escalation completes the download it turned into");
 
         assert_eq!(report.escalated_from, Some(ObjectIndex::new(3)));
+        // `[C12]` This plan skips Application Program 1 and the Group
+        // Object Table (a partial download need not carry all five,
+        // `[C8]`), so the escalation only reloads the Group Address Table
+        // and the Association Table — but their step numbers are still the
+        // AP2 variant's own Nr. 11 and Nr. 12 (`partial_download_variant.rs`,
+        // pp. 46-47), not a renumbering down to 09 and 10 for the two that
+        // happen to be present here.
         assert_eq!(
             report.outer_step_numbers(),
-            vec![1, 3, 2, 4, 5, 6, 7, 13, 14],
-            "steps 08 to 12 are the escalation's own reloads, recorded under \
-             ProcedureKind::LoadOnePart rather than out here: {:?}",
+            vec![1, 3, 2, 4, 5, 6, 7, 8, 11, 12, 13, 14],
+            "steps 08, 11 and 12 are the escalation's own reloads, now recorded as \
+             numbered outer steps instead of vanishing into ProcedureKind::LoadOnePart: {:?}",
             report.steps
         );
         // The failed attempt plus three successful loads.
@@ -1774,6 +1873,203 @@ mod tests {
                 "object {index} is not Loaded after the escalation"
             );
         }
+    }
+
+    /// `[C12]` acceptance: a full plan carrying all five parts, escalating
+    /// from the first, must show every one of the escalation's reloads
+    /// (Nr. 08-12, CP §3.5.3 AP2, pp. 46-47) as its own numbered outer step
+    /// — none of them silently missing, the rule this module states twice
+    /// (`partial_download_variant.rs`'s header and the Nr. 07 comment in
+    /// `Downloader::partial_download`).
+    #[tokio::test]
+    async fn escalated_reloads_09_to_12_appear_as_numbered_outer_steps() {
+        const AP1_OBJECT: u8 = 4;
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            application_program_objects: [AP2_OBJECT, AP1_OBJECT].into_iter().collect(),
+            allocation_fails_once_for: Some(AP2_OBJECT),
+            ..SimulatorConfig::default()
+        });
+        let parts = plan(vec![
+            part(
+                AP2_OBJECT,
+                "Application Program 2",
+                8,
+                PartKind::ApplicationProgram2,
+            ),
+            part(
+                AP1_OBJECT,
+                "Application Program 1",
+                8,
+                PartKind::ApplicationProgram1,
+            ),
+            table_part_with_no_version(5, "Group Object Table", 8, PartKind::GroupObjectTable),
+            table_part_with_no_version(1, "Group Address Table", 8, PartKind::GroupAddressTable),
+            table_part_with_no_version(2, "Association Table", 8, PartKind::AssociationTable),
+        ]);
+        let mut session = writer(&device, WriteScope::Download);
+        let report = Downloader::new(&mut session, parts)
+            .partial_download(ObjectIndex::new(AP2_OBJECT))
+            .await
+            .expect("the escalation completes the download it turned into");
+
+        assert_eq!(report.escalated_from, Some(ObjectIndex::new(AP2_OBJECT)));
+        assert_eq!(
+            report.outer_step_numbers(),
+            vec![1, 3, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+            "steps 09-12 are Nr. 07's own escalated reloads (Application Program 1, the \
+             Group Object Table, the Group Address Table, the Association Table, in that \
+             order) — a gap here is indistinguishable from a step that never ran: {:?}",
+            report.steps
+        );
+        assert_eq!(
+            report.parts.len(),
+            5,
+            "the target plus the four escalated reloads"
+        );
+    }
+
+    /// `[C12]` acceptance: each of the five variants cites its own step
+    /// numbers on the happy path (no escalation) — not one numbering
+    /// borrowed from Application Program 2 for all five. Every case here
+    /// comes straight from `PartialDownloadVariant`'s own table
+    /// (`partial_download_variant.rs`), transcribed from CP §3.5.3, pp.
+    /// 44-56.
+    #[tokio::test]
+    async fn each_variant_cites_its_own_outer_step_numbers() {
+        struct Case {
+            kind: PartKind,
+            object: u8,
+            expected: &'static [u8],
+        }
+        let cases = [
+            Case {
+                kind: PartKind::ApplicationProgram2,
+                object: 3,
+                expected: &[1, 3, 2, 4, 5, 6, 13, 14],
+            },
+            Case {
+                kind: PartKind::ApplicationProgram1,
+                object: 3,
+                expected: &[1, 3, 2, 4, 5, 6, 12, 13],
+            },
+            Case {
+                kind: PartKind::GroupObjectTable,
+                object: 5,
+                expected: &[1, 3, 2, 4, 5, 6, 11, 12],
+            },
+            Case {
+                kind: PartKind::GroupAddressTable,
+                object: 1,
+                expected: &[1, 3, 2, 4, 5, 6, 10, 11],
+            },
+            Case {
+                kind: PartKind::AssociationTable,
+                object: 2,
+                expected: &[1, 3, 2, 4, 5, 6, 7, 8],
+            },
+        ];
+
+        for case in cases {
+            let is_application_program = matches!(
+                case.kind,
+                PartKind::ApplicationProgram1 | PartKind::ApplicationProgram2
+            );
+            let device = if is_application_program {
+                SimulatedDevice::with_config(SimulatorConfig {
+                    application_program_objects: [case.object].into_iter().collect(),
+                    ..SimulatorConfig::default()
+                })
+            } else {
+                SimulatedDevice::new()
+            };
+            let one_part = if is_application_program {
+                part(case.object, "the part under test", 8, case.kind)
+            } else {
+                table_part_with_no_version(case.object, "the part under test", 8, case.kind)
+            };
+            let parts = plan(vec![one_part]);
+            let mut session = writer(&device, WriteScope::Download);
+            let report = Downloader::new(&mut session, parts)
+                .partial_download(ObjectIndex::new(case.object))
+                .await
+                .unwrap_or_else(|err| panic!("{:?} partial download failed: {err}", case.kind));
+            assert_eq!(
+                report.outer_step_numbers(),
+                case.expected,
+                "{:?} cited the wrong outer step numbers",
+                case.kind
+            );
+        }
+    }
+
+    /// `[C12]` acceptance: CP §3.5.3, Association Table variant, p. 56, gives
+    /// its Nr. 06 no *"⇒ Continue"* and no escalation branch — *"if [Base
+    /// Address] is zero then allocation was not successful. This causes an
+    /// error message of the MaC to the Installer."* A failed allocation here
+    /// must be reported as a plain procedure failure, not retried.
+    ///
+    /// [`SimulatorConfig::allocation_fails_once_for`] fails only the
+    /// *first* allocation attempt for an object; a second attempt for the
+    /// same object succeeds. So a downloader that (wrongly) unloads and
+    /// retries here would get a *successful* second attempt and return
+    /// `Ok` with `escalated_from` set on a variant CP §3.5.3 gives no
+    /// escalation to. Seeing exactly one allocation attempt and exactly one
+    /// unload of this object is what proves that never happened — the
+    /// `DownloadReport` this run would have produced, had it succeeded,
+    /// could only ever have `escalated_from == None`.
+    #[tokio::test]
+    async fn the_last_segments_allocation_failure_is_terminal_not_escalated() {
+        const ASSOCIATION_TABLE_OBJECT: u8 = 2;
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            allocation_fails_once_for: Some(ASSOCIATION_TABLE_OBJECT),
+            ..SimulatorConfig::default()
+        });
+        let parts = plan(vec![table_part_with_no_version(
+            ASSOCIATION_TABLE_OBJECT,
+            "Association Table",
+            6,
+            PartKind::AssociationTable,
+        )]);
+        let mut session = writer(&device, WriteScope::Download);
+        let error = Downloader::new(&mut session, parts)
+            .partial_download(ObjectIndex::new(ASSOCIATION_TABLE_OBJECT))
+            .await
+            .expect_err(
+                "the Association Table variant has no Nr. 07 escalation (CP §3.5.3, p. 56); \
+                 a retry that happened to succeed on a device that only fails once would hide \
+                 that this defect ever existed",
+            );
+        assert!(
+            matches!(
+                error,
+                DownloadError::Session(SessionError::AllocationFailed { .. })
+            ),
+            "got {error}"
+        );
+
+        let writes = load_state_writes(&device);
+        let allocation_attempts = writes
+            .iter()
+            .filter(|(object_index, event)| {
+                *object_index == ASSOCIATION_TABLE_OBJECT
+                    && *event == LoadEvent::AdditionalLoadControls.octet()
+            })
+            .count();
+        assert_eq!(
+            allocation_attempts, 1,
+            "no retry: CP §3.5.3, p. 56 gives this variant nothing to retry through"
+        );
+        let unloads = writes
+            .iter()
+            .filter(|(object_index, event)| {
+                *object_index == ASSOCIATION_TABLE_OBJECT && *event == LoadEvent::Unload.octet()
+            })
+            .count();
+        assert_eq!(
+            unloads, 1,
+            "the escalation branch's own unload (CP §3.5.3 Nr. 07) never runs for a \
+             variant with no Nr. 07"
+        );
     }
 
     /// `[C9]` acceptance: CP §3.5.3 AP2 variant Nr. 08, p. 46, is the target

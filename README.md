@@ -47,24 +47,66 @@ publishes **external port 8484** while the container listens on `8080`.
 
 ```bash
 docker build -t knxbench-server -f apps/knx-server/Dockerfile .
+KNX_AUTH_PASSWORD_HASH="$(docker run --rm -i knxbench-server --hash-password <<<'your password')"
 docker run -d --name knxbench -p 8484:8080 \
+  -e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH" \
   -v "$(pwd)/data:/data" knxbench-server
 curl -sf http://127.0.0.1:8484/healthz
 ```
 
-Open <http://127.0.0.1:8484>. The mounted `data/` directory keeps native
-projects across container restarts—because losing an electrical installation
-to an ephemeral container is a particularly expensive kind of automation.
+Open <http://127.0.0.1:8484> and log in with that password. The mounted
+`data/` directory keeps native projects across container restarts—because
+losing an electrical installation to an ephemeral container is a particularly
+expensive kind of automation.
 
 The image accepts:
 
 - `KNX_PORT` — internal listening port; defaults to `8080`.
 - `KNX_DATA_DIR` — project storage directory; defaults to `/data`.
 - `KNX_STATIC_DIR` — frontend bundle location; set by the image.
+- `KNX_AUTH_PASSWORD_HASH` — the login credential, as printed by
+  `knx-server --hash-password`. **This is the one that makes the container
+  reachable at all.**
+- `KNX_AUTH_PASSWORD` — a plaintext password, hashed at startup. Convenient
+  for a quick `docker run -e`, and weaker: the value is readable in
+  `/proc/<pid>/environ`, in `docker inspect` and in your shell history. If
+  both are set, the hash wins and the server says so.
+- `KNX_AUTH_COOKIE_SECURE` — set it to `1` when the server is reached over
+  HTTPS, so the session cookie is marked `Secure`. Leave it unset on plain
+  HTTP, where a `Secure` cookie would never be sent back at all.
 
-The server has **no authentication**. Run it only on a trusted network; use a
-firewall or an authenticated reverse proxy before exposing it anywhere less
-friendly than your LAN.
+The hash string contains `$` characters, and `docker compose` interpolates
+those in `.env` files and in `compose.yml`: paste a hash there with every
+`$` doubled to `$$`, or Compose hands the container a truncated credential
+and nothing you type will ever log in. `docker run -e` does not interpolate
+and needs no doubling.
+
+### Authentication, and what happens without it
+
+`knx-server` will not serve an unauthenticated API to the network. With no
+password configured it binds `127.0.0.1` instead of `0.0.0.0` and prints a
+loud line saying why—which inside a container means `-p 8484:8080` publishes
+a port nothing is listening on, and the health check above fails. That is the
+intended failure: the alternative was handing your project, your `/api/fs/*`
+file browser and your KNX bus routes to whoever found the port first.
+
+`--hash-password` reads the password from standard input, never from an
+argument, because `ps` shows every process's arguments to every user on the
+machine:
+
+```bash
+knx-server --hash-password <<<'your password'
+# $pbkdf2-sha256$i=600000$...$...
+```
+
+What the login does **not** give you: TLS, user accounts, roles, or an audit
+trail. There is one shared password, and everyone who has it can do
+everything, including writing to the bus. Put a TLS-terminating reverse proxy
+in front of anything that matters—over plain HTTP the password and the session
+cookie both cross the network in the clear. See
+[ADR-0026](docs/adr/0026-server-authentication-or-loopback.md) and
+[KNOWN_LIMITATIONS.md §22](docs/KNOWN_LIMITATIONS.md#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback)
+for the full list of what is and is not defended.
 
 To run the Docker smoke test (build, boot, health check, and native
 save/reopen cycle):
@@ -91,6 +133,7 @@ docker build -t knxbench-server -f apps/knx-server/Dockerfile .
 docker stop knxbench
 docker rm knxbench
 docker run -d --name knxbench -p 8484:8080 \
+  -e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH" \
   -v "$(pwd)/data:/data" knxbench-server
 curl -sf http://127.0.0.1:8484/healthz
 ```

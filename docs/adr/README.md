@@ -37,3 +37,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0023](0023-load-progress-operation.md) | A project load is one server-side operation, and the browser polls its phase | Accepted | 2026-09-19 |
 | [0024](0024-in-application-help.md) | Help is a tip and a panel, its text is an ordinary catalogue key, and `docs/` never ships | Accepted | 2026-09-19 |
 | [0025](0025-extension-is-data-not-code.md) | Extension is data, not code — the plugin API stays unwritten | Accepted | 2026-09-20 |
+| [0026](0026-server-authentication-or-loopback.md) | `knx-server` authenticates, or it binds loopback and nothing else | Accepted | 2026-09-20 |

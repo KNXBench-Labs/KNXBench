@@ -590,7 +590,7 @@ pub enum DownloadError {
     },
     /// CP §3.5.2 Nr. 11 / CP §3.5.3 AP2 Nr. 13 (C10): the plan declared one
     /// or more access-key assignments, but `A_Key_Write` has no encoder
-    /// (`cemi.rs`'s `key_write_has_an_apci_but_no_encoder`, spec §10.7).
+    /// (`cemi.rs`'s `key_write_has_an_apci_but_no_encoder`, design spec §10.7).
     /// Everything up to this step has already been written; only the key
     /// modification itself is refused, so the device is left on its
     /// current key rather than the plan's silently.
@@ -645,7 +645,7 @@ impl fmt::Display for DownloadError {
             DownloadError::AccessKeysNotSupported { declared } => write!(
                 f,
                 "the plan declares {declared} access-key assignment(s) at CP §3.5.2 Nr. 11 / \
-                 CP §3.5.3 AP2 Nr. 13, but `A_Key_Write` has no encoder yet (spec §10.7); the \
+                 CP §3.5.3 AP2 Nr. 13, but `A_Key_Write` has no encoder yet (design spec §10.7); the \
                  device is left on its current key rather than have this step reported done \
                  when it was not"
             ),
@@ -720,7 +720,7 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
         // CP §3.5.2 Nr. 11, p. 44: *"Set access keys as required"*. The plan
         // says what "as required" means (C10); a plan declaring none is
         // reported as empty and a plan declaring some is refused here,
-        // because `A_Key_Write` has no encoder (spec §10.7).
+        // because `A_Key_Write` has no encoder (design spec §10.7).
         modify_access_keys(&mut report, kind, 11, &self.plan.access_keys)?;
         record(&mut report, kind, 12, "disconnect");
         self.session.disconnect().await;
@@ -963,7 +963,7 @@ fn record(report: &mut DownloadReport, kind: ProcedureKind, number: u8, title: &
 /// read identically whether the plan needed nothing or needed something
 /// that got silently skipped. A plan declaring
 /// [`AccessKeyDeclaration::Required`] is recorded as refused and the
-/// procedure stops there: `A_Key_Write` has no encoder yet (spec §10.7,
+/// procedure stops there: `A_Key_Write` has no encoder yet (design spec §10.7,
 /// `cemi.rs`'s `key_write_has_an_apci_but_no_encoder`), so this project
 /// cannot carry out what the plan is asking for, and does not pretend to.
 fn modify_access_keys(
@@ -1526,7 +1526,7 @@ mod tests {
 
     /// C10's acceptance criterion: a plan declaring keys is refused, not
     /// silently completed. `A_Key_Write` has no encoder
-    /// (`cemi.rs`'s `key_write_has_an_apci_but_no_encoder`, spec §10.7).
+    /// (`cemi.rs`'s `key_write_has_an_apci_but_no_encoder`, design spec §10.7).
     #[tokio::test]
     async fn a_plan_declaring_access_keys_is_refused_at_step_11() {
         let device = ap2_device();

@@ -7529,11 +7529,20 @@ citation to replace its "no reconciling clause found" note with, next time
 that file is touched.
 
 **Q3. Does Volume 6 Annex A add a System-B-mandatory step or Property that
-CP §3.5.2/§3.5.4's existing step lists miss?** No. Every Property those two
-procedures read or write on Device Object, Address Table Object and
-Association Table Object carries a mandatory-existence symbol for System B
-in Annex A's tables (A.2.1 p. 137, A.2.4 p. 143, A.2.5 p. 145); nothing is
-marked `x` (not allowed) or absent in a way that would make an existing step
+CP §3.5.2/§3.5.4's existing step lists miss?** No. Volume 6 Annex A §A.2.2
+(Interface Objects, p. 137 — not §A.2.1 "General", corrected in fix round 1)
+marks Device Object, Address Table Object and Association Table Object all
+`M` for System B. Of the Properties those two procedures read or write on
+them, three carry a mandatory-existence symbol for System B in Annex A's
+per-object tables (A.2.4 p. 143, A.2.5 p. 145): `PID_LOAD_STATE_CONTROL`,
+`PID_TABLE_REFERENCE`, `PID_MANUFACTURER_ID`. **Correction, fix round 1
+(2026-09-20):** `PID_MCB_TABLE` is the fourth, and it is `(3/3)` there — the
+parenthesised *optional*-existence family (Table 3 legend, p. 134), not
+mandatory as first reported; the original `pdftotext -layout` extraction had
+merged Annex A's extra per-system unlabelled column into the mask columns
+(see `RESEARCH.md` §8.9), corrected by rendering the page as an image. This
+does not change the answer: optional is not forbidden, nothing is marked
+`x` (not allowed) or absent in a way that would make an existing step
 impossible, and nothing new is added.
 
 **Diff check.** RES p. 320's `PID_DOWNLOAD_COUNTER` heading (Coupler Model

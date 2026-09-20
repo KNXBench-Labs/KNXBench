@@ -161,7 +161,7 @@ mod tests {
     }
 
     #[test]
-    fn program_defaults_is_absent_until_set_and_cleared_by_removal() {
+    fn program_defaults_is_absent_until_set_and_an_empty_value_clears_it() {
         use crate::device::ProgramDefaults;
         use crate::dpt::DptRef;
         use crate::ids::ComObjectInstanceId;
@@ -191,6 +191,63 @@ mod tests {
         // pointless placeholder.
         d.set_program_defaults(id, ProgramDefaults::default());
         assert!(d.program_defaults(id).is_none());
+    }
+
+    /// ADR-0027 promises `remove_com_object` cleans up both maps. This is
+    /// that promise, asserted: drop the cleanup line in
+    /// `remove_com_object` and this test goes red. The sibling test above
+    /// covers `set_program_defaults`, which is a different code path and
+    /// cannot stand in for this one.
+    #[test]
+    fn removing_a_com_object_takes_its_program_defaults_with_it() {
+        use crate::device::{ComObjectInstance, ProgramDefaults};
+        use crate::dpt::DptRef;
+        use crate::flags::ResolvedFlags;
+        use crate::ids::ComObjectInstanceId;
+        use crate::provenance::{Layer, Override, Resolved};
+
+        let mut d = Devices::new();
+        let id = ComObjectInstanceId(42);
+        d.insert_com_object(ComObjectInstance {
+            id,
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: "t".into(),
+            },
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Empty,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        });
+        d.set_program_defaults(
+            id,
+            ProgramDefaults {
+                text: None,
+                description: None,
+                dpt: Some(Resolved {
+                    value: DptRef {
+                        main: 5,
+                        sub: Some(1),
+                    },
+                    layer: Layer::Program,
+                }),
+            },
+        );
+        assert!(d.program_defaults(id).is_some());
+
+        let removed = d.remove_com_object(id);
+        assert!(removed.is_some(), "the com object itself is returned");
+        assert!(
+            d.program_defaults(id).is_none(),
+            "a removed com object must not leave its program defaults \
+             behind for the next id that happens to reuse the slot"
+        );
     }
 
     #[test]

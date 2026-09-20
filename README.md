@@ -1,286 +1,129 @@
 # KNXBench
 
-KNXBench is a modern, Linux-first KNX engineering application: an independent,
-open alternative to ETS for working with KNX projects. It has its own Rust
-domain core, `.knxproj` parser, SQLite project format, product database, and
-KNXnet/IP implementation. No ETS internals were harmed—or imitated—in its
-construction.
+**A Linux-first, KNX-compatible engineering application — an independent, open alternative
+to ETS for working with KNX projects.**
 
-The project is **KNX-compatible**, not KNX-certified and not a claim of full
-ETS compatibility. Correctness and preserving project data come before shiny
-buttons; fortunately, it has some of those too.
+![status: alpha](https://img.shields.io/badge/status-alpha-orange)
+![version 0.1.0-alpha.1](https://img.shields.io/badge/version-0.1.0--alpha.1-blue)
+![license AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-green)
 
-## What it does
+> **Warning**
+>
+> KNXBench is **alpha software under active development**. Every program reports
+> `0.1.0-alpha.1`, there is no git tag, and no release has ever been published. It is
+> useful and it is tested, but it is still moving. Keep backups.
 
-- Imports supported ETS `.knxproj` archives and reports warnings and errors.
-- Saves and reopens projects in the native, versioned `.knxdb` SQLite format.
-- Lets you inspect and edit topology, buildings, devices, individual and group
-  addresses, group links, communication-object DPTs, and descriptions.
-- Provides undo/redo, search, command palette, dashboard, project explorer,
-  inspector, and a themed React UI.
-- Ingests manufacturer data from supported project archives and enriches device
-  communication objects from the local product database.
-- Offers a CLI and KNXnet/IP discovery, tunnelling, routing, monitoring, and
-  group-value sending for supported plain KNXnet/IP installations.
+![KNXBench showing the group address table of an imported ETS project, with the project tree on the left and the properties inspector on the right](docs/assets/screenshots/porcelain-group-addresses.png)
 
-The current implementation status and compatibility evidence live in
-[Implementation status](docs/IMPLEMENTATION_STATUS.md),
-[Compatibility](docs/COMPATIBILITY.md), and
-[Known limitations](docs/KNOWN_LIMITATIONS.md).
+*The group address table after importing an ETS demo project: address, name, range,
+datapoint type and link counts, with a filter box and CSV import/export. Porcelain theme.*
 
-## Deliberate boundaries
+## Why this exists
 
-KNXBench v1 is a project editor, not a replacement for every ETS workflow.
-Device parameter editing, commissioning/download, KNX IP Secure, and direct
-encrypted `.knxprod` imports are out of scope. `.knxproj` export is an
-interoperability convenience; the supported lossless working format is native
-`.knxdb`.
+I moved to Linux and went looking for a KNX application that felt native there. I did not
+find one — ETS is a capable product and also a Windows program, and the usual workarounds
+get old quickly. So I started an AI assistant and began building one instead. Several
+hundred euros and a few million tokens later, KNXBench had its first working alpha.
 
-Some ETS schemas and vendor-specific data are only supported where real,
-independent test material exists. Unsupported data is retained or reported
-where technically possible—silence is not a compatibility strategy.
+In hindsight: I must have been drunk.
 
-## Quick start: web/Docker
+## What it can do today
 
-The web deployment serves both the API and frontend. The example deliberately
-publishes **external port 8484** while the container listens on `8080`.
+- Import supported ETS `.knxproj` archives, with a report of warnings, errors and anything
+  it could not model. Unknown data is preserved verbatim, never silently dropped.
+- Save and reopen projects in its own versioned `.knxdb` SQLite format.
+- Inspect and edit topology, buildings, devices, individual and group addresses, group
+  links, communication-object datapoint types and flags, and top-level device parameters.
+- Undo/redo, search, a command palette, a project explorer, an inspector, themes and a
+  German/English interface.
+- Build up a product database from manufacturer data found in project archives or from
+  standalone `.knxprod` packages, and enrich device communication objects from it.
+- Export `.knxproj`, group-address CSV, a self-contained HTML project document, and a diff
+  between two projects.
+- Watch a live KNX bus over KNXnet/IP tunneling, and send group values from the CLI or the
+  bus panel.
+
+Not available, and not claimed: commissioning or device download to real hardware, KNX IP
+Secure, and anything resembling certification or full ETS compatibility. The wording here
+is **KNX-compatible**, deliberately. See
+[Implementation status](docs/manual/implementation-status.md) and
+[Known issues](docs/manual/known-issues.md) for the honest current picture.
+
+## Quick start
+
+Build the image, run it with a password, and open it in a browser:
 
 ```bash
 docker build -t knxbench-server -f apps/knx-server/Dockerfile .
-KNX_AUTH_PASSWORD_HASH="$(docker run --rm -i knxbench-server --hash-password <<<'your password')"
 docker run -d --name knxbench -p 8484:8080 \
-  -e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH" \
+  -e KNX_AUTH_PASSWORD='pick something long and boring' \
   -v "$(pwd)/data:/data" knxbench-server
 curl -sf http://127.0.0.1:8484/healthz
 ```
 
-Open <http://127.0.0.1:8484> and log in with that password. The mounted
-`data/` directory keeps native projects across container restarts—because
-losing an electrical installation to an ephemeral container is a particularly
-expensive kind of automation.
+Then open <http://127.0.0.1:8484> and sign in with that password. Your projects live in
+`data/` on the host, so they survive container restarts.
 
-The image accepts:
+The password is not decoration: `knx-server` refuses to serve an unguarded API to the
+network, so without a credential it binds loopback only — which inside a container is the
+*container's* loopback, unreachable through a published port. It is still one shared
+password with no accounts, no roles and no TLS, so put a TLS-terminating reverse proxy in
+front of anything that matters.
 
-- `KNX_PORT` — internal listening port; defaults to `8080`.
-- `KNX_DATA_DIR` — project storage directory; defaults to `/data`.
-- `KNX_STATIC_DIR` — frontend bundle location; set by the image.
-- `KNX_AUTH_PASSWORD_HASH` — the login credential, as printed by
-  `knx-server --hash-password`. **This is the one that makes the container
-  reachable at all.**
-- `KNX_AUTH_PASSWORD` — a plaintext password, hashed at startup. Convenient
-  for a quick `docker run -e`, and weaker: the value is readable in
-  `/proc/<pid>/environ`, in `docker inspect` and in your shell history. If
-  both are set, the hash wins and the server says so.
-- `KNX_AUTH_COOKIE_SECURE` — set it to `1` when the server is reached over
-  HTTPS, so the session cookie is marked `Secure`. Leave it unset on plain
-  HTTP, where a `Secure` cookie would never be sent back at all.
+The full deployment picture, including the reverse-proxy option and the full environment
+variable table, is in
+[Web and Docker deployment](docs/manual/user-guide/11-web-and-docker.md).
 
-The hash string contains `$` characters, and `docker compose` interpolates
-those in `.env` files and in `compose.yml`: paste a hash there with every
-`$` doubled to `$$`, or Compose hands the container a truncated credential
-and nothing you type will ever log in. `docker run -e` does not interpolate
-and needs no doubling.
+## Installing it
 
-### Authentication, and what happens without it
+| How | Where |
+| --- | --- |
+| Linux AppImage | [Installation §a](docs/manual/getting-started/04-installation.md#a-linux-appimage) — no published release yet, so this means building one |
+| Docker / web | [Installation §b](docs/manual/getting-started/04-installation.md#b-docker--web) |
+| From source | [Installation §c](docs/manual/getting-started/04-installation.md#c-from-source), and [Building from source](docs/manual/development/02-building-from-source.md) for the developer version |
+| Host packages KNXBench needs | [Linux setup](docs/manual/getting-started/05-linux-setup.md) |
+| The `knx` command line | [The command line](docs/manual/user-guide/10-command-line.md) |
 
-`knx-server` will not serve an unauthenticated API to the network. With no
-password configured it binds `127.0.0.1` instead of `0.0.0.0` and prints a
-loud line saying why—which inside a container means `-p 8484:8080` publishes
-a port nothing is listening on, and the health check above fails. That is the
-intended failure: the alternative was handing your project, your `/api/fs/*`
-file browser and your KNX bus routes to whoever found the port first.
+## Documentation
 
-`--hash-password` reads the password from standard input, never from an
-argument, because `ps` shows every process's arguments to every user on the
-machine:
+The manual is the place to start. It explains KNX itself where that is needed, and does not
+assume you have used ETS.
 
-```bash
-knx-server --hash-password <<<'your password'
-# $pbkdf2-sha256$i=600000$...$...
-```
+- **[The KNXBench manual](docs/manual/README.md)** — installation, a KNX primer, the user
+  guide, reference and troubleshooting
+- [Implementation status](docs/manual/implementation-status.md) — what works, what is
+  partial, what is planned
+- [Known issues](docs/manual/known-issues.md) — what does not work yet, in plain words
+- [Ideas and roadmap](docs/manual/ideas-and-roadmap.md) — where this is going
+- [Contributing](docs/manual/development/01-contributing.md) — bug reports, quality gates,
+  conventions
+- [Architecture tour](docs/manual/development/03-architecture-tour.md) — a readable map of
+  the code
 
-What the login does **not** give you: TLS, user accounts, roles, or an audit
-trail. There is one shared password, and everyone who has it can do
-everything, including writing to the bus. Put a TLS-terminating reverse proxy
-in front of anything that matters—over plain HTTP the password and the session
-cookie both cross the network in the clear. See
-[ADR-0026](docs/adr/0026-server-authentication-or-loopback.md) and
-[KNOWN_LIMITATIONS.md §22](docs/KNOWN_LIMITATIONS.md#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback)
-for the full list of what is and is not defended.
+The project's own engineering record — [Architecture](docs/ARCHITECTURE.md),
+[Data model](docs/DATA_MODEL.md), [Import and export](docs/IMPORT_EXPORT.md),
+[Compatibility](docs/COMPATIBILITY.md), [Known limitations](docs/KNOWN_LIMITATIONS.md),
+[Roadmap](docs/ROADMAP.md) and the [architecture decision records](docs/adr/README.md) —
+sits underneath the manual and is denser on purpose.
 
-To run the Docker smoke test (build, boot, health check, and native
-save/reopen cycle):
-
-```bash
-apps/knx-server/scripts/smoke-test.sh
-```
-
-To additionally import a local ETS project through the running image:
-
-```bash
-KNXBENCH_REFERENCE_PROJECT="/path/to/reference.knxproj" \
-  apps/knx-server/scripts/smoke-test.sh
-```
-
-### Update a running Docker installation
-
-The commands above name the container `knxbench`. To update an existing
-installation, build the new image, replace only that container, then start it
-again with the same port and data mount:
-
-```bash
-docker build -t knxbench-server -f apps/knx-server/Dockerfile .
-docker stop knxbench
-docker rm knxbench
-docker run -d --name knxbench -p 8484:8080 \
-  -e KNX_AUTH_PASSWORD_HASH="$KNX_AUTH_PASSWORD_HASH" \
-  -v "$(pwd)/data:/data" knxbench-server
-curl -sf http://127.0.0.1:8484/healthz
-```
-
-`docker rm knxbench` removes the old container, not the `data/` directory or
-its mounted projects. If the running container has a different name, find it
-first with `docker ps` and substitute that name. A small ritual, but much less
-exciting than discovering that the container was called `sleepy_babbage`.
-
-## Native desktop app
-
-Prerequisites: the Rust toolchain specified by `rust-toolchain.toml`, Node.js
-22.12 or later, and the Linux packages required by Tauri/WebKit.
-
-```bash
-cargo install tauri-cli --version "^2" --locked  # once
-cd apps/knx-desktop
-npm ci
-cargo tauri dev
-```
-
-Build the Linux AppImage locally with the same bundle command that the release
-workflow uses:
-
-```bash
-cd /path/to/KNXBench
-npm ci --prefix apps/knx-web
-cd apps/knx-desktop
-NO_STRIP=1 APPIMAGE_EXTRACT_AND_RUN=1 cargo tauri build --bundles appimage --ci
-```
-
-The desktop shell starts the same `knx-server` core used by Docker; the React
-frontend always talks HTTP rather than directly to storage or import code.
-
-### Linux AppImage
-
-The AppImage is the first Linux desktop package ([ADR 0021](docs/adr/0021-appimage-is-the-first-linux-package.md)).
-After downloading the current alpha artifact, make it executable and start it:
-
-```bash
-appimage='KNXBench_0.1.0-alpha.1_amd64.AppImage'
-chmod +x "$appimage"
-"./$appimage"
-```
-
-The GitHub Actions `Linux AppImage` workflow is configured to build and upload
-an Actions artifact for a manual run. A pushed `v*` tag is configured to create
-or update a GitHub release with that artifact. The workflow has not been run by
-this project yet; use a published release only after it exists and verify its
-file identity from that release.
-
-One local artifact was built and launched on Arch Linux through XWayland. Its
-tested boundary is x86_64 Linux with compatible glibc, GTK 3, and WebKitGTK
-4.1; it is not a portability result for other distributions or display stacks.
-The desktop stores its application data under
-`$XDG_DATA_HOME/com.knxbench.knxbench-labs/projects` (usually
-`~/.local/share/com.knxbench.knxbench-labs/projects`).
-
-There is no automatic updater, package signature, ARM64 build, or native
-package-manager integration in this alpha. To update, close KNXBench and
-replace the AppImage file manually. To remove the application, delete that
-file; delete the application-data directory separately only if its stored
-projects are no longer needed. The AppImage does not install or update host
-GTK/WebKitGTK dependencies.
-
-## CLI
-
-The `knx` binary supports project import, product-database management, and
-plain KNXnet/IP operations.
-
-```bash
-# Import a project and persist it as a native database.
-cargo run -p knx-cli -- import path/to/project.knxproj --store project.knxdb
-
-# Inspect available commands and options.
-cargo run -p knx-cli -- --help
-```
-
-Live bus operations require a compatible, reachable gateway. Use them with the
-same care you would use around a live distribution board: test first, then
-send.
-
-`knx bus discover` needs IP multicast to reach the KNX gateway; the `knx`
-CLI is not part of the `knx-server` Docker image above, but if you run it
-inside any container of your own (a dev container, CI, or a custom image),
-Docker's default bridge network will not carry that multicast traffic —
-run the container with `--network host` (Linux-only) instead. See
-[KNOWN_LIMITATIONS.md §79](docs/KNOWN_LIMITATIONS.md#79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry).
-
-## Development and verification
-
-The workspace contains Rust crates for the domain, storage, import/export,
-product data, projections, networking, and applications. The architecture is
-documented in [Architecture](docs/ARCHITECTURE.md), the domain in
-[Data model](docs/DATA_MODEL.md), and durable choices in [ADRs](docs/adr/).
-
-Run the relevant checks before contributing:
-
-```bash
-cargo fmt --all --check
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
-cargo run -p xtask -- check-layering
-cargo run -p xtask -- check-headers
-cargo run -p xtask -- check-anchors
-
-cd apps/knx-web
-npm ci
-npm test
-npm run build
-```
-
-`check-layering` protects the important seams: the domain remains independent
-of UI, SQL, XML, and networking frameworks; project import, storage, and
-product data remain separately owned.
-
-`check-headers` keeps the first-line convention honest: a source file's
-first line is one sentence saying what the file is for (`//! ...` in Rust,
-`/** ... */` in TypeScript), checked wherever one exists; the number of
-files without one is a ratchet that may only go down, so new files get a
-header and old ones are not swept. Every program carries its own SemVer version;
-`knx --version` and `knx-server --version` add the commit they were built
-from. See [ADR-0018](docs/adr/0018-program-versions-and-file-headers.md).
-
-`check-anchors` walks `docs/` and the repo-root markdown files, slugs every
-heading the way GitHub's renderer would, and fails loudly with `file:line`
-and a nearest-match suggestion for any in-repo anchor link whose target
-does not resolve — a heading rename needs a back-compat `<a id="…">`
-alias for its old slug, and a moved file needs every link that points at
-it updated.
-
-## Further reading
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [Data model](docs/DATA_MODEL.md)
-- [Import and export](docs/IMPORT_EXPORT.md)
-- [Compatibility](docs/COMPATIBILITY.md)
-- [Known limitations](docs/KNOWN_LIMITATIONS.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Architecture decision records](docs/adr/README.md)
+Found a bug, or something the manual gets wrong? The
+[issue tracker](https://github.com/KNXBench-Labs/KNXBench/issues) is the only place
+anything happens. KNXBench can prefill an issue for you: **File → Debug report**.
 
 ## License
 
 KNXBench is free software licensed under the
 [GNU Affero General Public License version 3 or later](LICENSE).
 
-The licence permits private and commercial use, modification, and
-redistribution under its terms. Modified versions made available to users over
-a network must also offer those users the corresponding source code as required
-by the AGPL.
+The license permits private and commercial use, modification, and redistribution under its
+terms. Modified versions made available to users over a network must also offer those users
+the corresponding source code as required by the AGPL.
+
+## Before you point it at anything expensive
+
+This is one person's alpha, developed in the open and changing weekly. Imports have been
+tested against real project files, and there are still 119 documented limitations to prove
+the point. Treat it the way you would treat any pre-1.0 engineering tool: read
+[Known issues](docs/manual/known-issues.md) first, and keep a backup of every project you
+would be unhappy to lose. A KNX project is a map of a building somebody paid for. Projects
+worth keeping deserve a backup.

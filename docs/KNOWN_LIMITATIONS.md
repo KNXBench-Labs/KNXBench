@@ -1784,7 +1784,7 @@ wrong conclusion from its own evidence.
 `IP_ADD_MEMBERSHIP` joined on `INADDR_ANY` and `IP_MULTICAST_IF` was never
 set, so the kernel picked the outgoing interface from the routing table. On
 the machine this was developed on that is `multicast 224.0.23.12 dev eno1
-src KNX_LAN_HOST` — the physical LAN interface, on the same /16 as the
+src <redacted>` — the physical LAN interface, on the same /16 as the
 installation's KNXnet/IP gateway. Every `cargo test --workspace` therefore
 put one real KNXnet/IP `ROUTING_INDICATION` on that network: a
 `GroupValueWrite(1)` to group address `1/2/3`, source individual address

@@ -534,6 +534,11 @@ pub enum Seen {
     Connect,
     /// A `T_Disconnect`.
     Disconnect,
+    /// A broadcast `A_IndividualAddress_Read` (MP §2.3 steps 2 and 3): kept
+    /// as its own count so a test can prove the mandatory re-verification
+    /// immediately before the write actually sent a second one, rather
+    /// than trusting the write to have happened at all.
+    IndividualAddressReadBroadcast,
     /// An `A_Authorize_Request`, and the key it carried.
     Authorize(u32),
     /// A property read.
@@ -822,6 +827,15 @@ impl SimulatedDevice {
             .count()
     }
 
+    /// How many broadcast `A_IndividualAddress_Read` frames arrived.
+    pub fn individual_address_read_broadcasts(&self) -> usize {
+        self.lock()
+            .seen
+            .iter()
+            .filter(|entry| matches!(entry, Seen::IndividualAddressReadBroadcast))
+            .count()
+    }
+
     /// Whether Verify Mode is on as far as the device is concerned.
     pub fn verify_mode(&self) -> bool {
         self.lock().verify_mode
@@ -1055,7 +1069,11 @@ impl SimulatedDevice {
         }
         match service {
             ApplicationService::IndividualAddressRead => {
-                let own_address = self.lock().address;
+                let own_address = {
+                    let mut state = self.lock();
+                    state.seen.push(Seen::IndividualAddressReadBroadcast);
+                    state.address
+                };
                 if self.config.programming_mode {
                     self.emit_from(
                         own_address,

@@ -6113,3 +6113,42 @@ oversight).
 partial-download plan with every segment CP §3.5.3 says an escalation may
 need, sourced from the device's actual Interface Object list rather than
 left to each call site to remember.
+
+## 114. The Download Counter refusal is CP §3.12.5's Coupler Model 2.0 rule, applied without a Coupler Model 2.0 procedure
+
+**Limitation.** `[C13]` `Downloader::partial_download`
+(`crates/knx-net/src/commissioning/download.rs`) now reads
+`PID_DOWNLOAD_COUNTER` from the Device Object before its first write and
+refuses the partial download — returning `DownloadError::
+DownloadCounterChanged` or `DownloadError::DownloadCounterUnavailable`
+rather than proceeding — for two of `DownloadCounterCheck`'s five outcomes.
+The refusal-on-change consequence is CP §3.12.5, p. 100, which is written
+for Coupler Model 2.0's own download procedure (CP §3.12.4, Filter Table
+and Router Object, neither of which this project implements as a distinct
+procedure); the refusal-on-absence consequence is RES §5.3.2.2, p. 320,
+System B's own rule. This module applies both consequences to the one
+generic CP §3.5.3 five-variant procedure it actually runs, for every part
+kind, rather than building a second, Coupler-Model-2.0-specific download
+procedure that CP §3.12 alone would otherwise call for.
+
+**Cause.** Nothing in this codebase distinguishes a System B device from a
+Coupler Model 2.0 device at plan-building time (masks 07B0h/17B0h vs.
+2920h, `[C13]`'s own research), and CP §3.5.3 itself, the clause this
+sequencer transcribes step-for-step, "imposes nothing" about the Download
+Counter at all — the obligation is bolted on from two other clauses that
+were each written with a different procedure in mind. Building a genuine
+second procedure for Filter Table/Router Object downloads was not this
+task's job; refusing an unsafe partial download was.
+
+**Impact.** A target this project cannot yet tell is Coupler Model 2.0 gets
+System B's advisory-turned-refusal behaviour instead of Coupler Model 2.0's
+own procedure; the practical effect — a stale or absent Download Counter
+stops a partial download and falls back to a complete one — is the same
+either clause's device would need, but a real Coupler Model 2.0 Filter
+Table download (CP §3.12.4's own steps, which this project has never
+implemented) is not being run under the name CP §3.12 gives it.
+
+**Lifted when.** A device-profile model exists that can tell a Coupler
+Model 2.0 target from a System B one at plan-building time, and CP
+§3.12.4's Filter Table/Router Object procedure is implemented as its own
+`Procedure`, distinct from the CP §3.5.3 one this module runs today.

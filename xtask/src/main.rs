@@ -3,6 +3,7 @@
 //! These are architectural rules that would otherwise erode silently, so they
 //! run in CI rather than living in a document.
 
+mod anchors;
 mod appimage;
 mod headers;
 mod layering;
@@ -11,13 +12,14 @@ use std::path::Path;
 use std::process::ExitCode;
 
 const AVAILABLE_TASKS: &str =
-    "check-layering, check-headers, check-appimage, freeze-fixture <path>";
+    "check-layering, check-headers, check-anchors, check-appimage, freeze-fixture <path>";
 
 fn main() -> ExitCode {
     let task = std::env::args().nth(1);
     match task.as_deref() {
         Some("check-layering") => check_layering(),
         Some("check-headers") => check_headers(),
+        Some("check-anchors") => check_anchors(),
         Some("check-appimage") => check_appimage(),
         Some("freeze-fixture") => freeze_fixture(std::env::args().nth(2)),
         Some(other) => {
@@ -255,6 +257,69 @@ fn check_headers() -> ExitCode {
          header is fine, up to the ceiling; a header that does not follow the grammar is \
          not.",
         headers::MAX_WIDTH
+    );
+    ExitCode::FAILURE
+}
+
+/// Walks `docs/**/*.md` plus the repo-root markdown files and fails on any
+/// in-repo `[text](path#anchor)` or `[text](#anchor)` link whose anchor does
+/// not resolve — either the target file does not exist, or it exists but
+/// carries no heading slug and no `<a id="…">` alias matching the anchor.
+/// A dead anchor used to survive an entire doc-cleanup branch unnoticed
+/// (see the fix-round history around ADR-0018 and `KNOWN_LIMITATIONS.md`);
+/// this is the check that makes that a compile-time, not a review-time,
+/// discovery from now on.
+fn check_anchors() -> ExitCode {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("xtask lives one level below the workspace root");
+    let report = match anchors::scan(root) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("{e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    if report.dead.is_empty() {
+        println!(
+            "anchors ok: {} links checked across {} markdown files, none dead",
+            report.links_checked, report.files_scanned
+        );
+        return ExitCode::SUCCESS;
+    }
+
+    for dead in &report.dead {
+        match &dead.kind {
+            anchors::DeadKind::MissingFile => {
+                eprintln!(
+                    "dead anchor: {}:{}: `{}` — target file does not exist",
+                    dead.file.display(),
+                    dead.line,
+                    dead.raw_link
+                );
+            }
+            anchors::DeadKind::MissingAnchor { suggestion } => {
+                let hint = match suggestion {
+                    Some(s) => format!(" (nearest live anchor: `{s}`)"),
+                    None => String::new(),
+                };
+                eprintln!(
+                    "dead anchor: {}:{}: `{}` — no matching heading or `<a id>`{hint}",
+                    dead.file.display(),
+                    dead.line,
+                    dead.raw_link
+                );
+            }
+        }
+    }
+    eprintln!(
+        "\n{} of {} links across {} markdown files are dead. A heading rename needs a \
+         back-compat `<a id=\"…\">` alias for its old slug (see `docs/KNOWN_LIMITATIONS.md`'s \
+         own convention), and a moved file needs every link that points at it updated.",
+        report.dead.len(),
+        report.links_checked,
+        report.files_scanned
     );
     ExitCode::FAILURE
 }

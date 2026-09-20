@@ -113,19 +113,75 @@ Compatibility is not a document the user has to find. Every import produces an
 Nothing is dropped without appearing in one of these three lists or in the
 opaque store. If it is, that is an importer bug.
 
-## 6. KNX Standard errata — printed text this project deliberately does not follow
+## 6. Specification questions resolved against the Standard, not errata
+
+Findings that settle an apparent gap or contradiction by reading further in
+the Standard, rather than by concluding the printed text is wrong and
+choosing not to follow it — the opposite of §7's list below, which is why
+these live here instead of there.
+
+**Q1 (task C18, blocks task C13). Must a System B device implement
+`PID_DOWNLOAD_COUNTER` at all before a Partial Download is attempted?** No —
+its availability is conditional, and the Standard states the consequence of
+its absence explicitly rather than leaving it undefined. RES §4.2.30.1,
+p. 41, defines `PID_DOWNLOAD_COUNTER` (`DPT_Value_2_Ucount`, 7.010) as part
+of the Coupler Model 2.0's Partial Download support; RES p. 320, in the same
+model's Network Management chapter, adds the operative sentence: *"If
+PID_DOWNLOAD_COUNTER is not available for the part to be downloaded, then
+the MaC shall not perform a Partial Download."* That is a normative
+instruction, not an inference — task C13 implements against it directly:
+read the Property before attempting a partial download, and fall back to a
+full download whenever it is absent or unreadable, rather than treating its
+absence as an error.
+
+**Q2 (task C18, settles task C1's tolerant branch). Is CP §3.5.3's
+`PID_PROGRAM_VERSION` write to the Group Address/Association/Group Object
+Table objects errata, or Standard-permitted?** Permitted, not errata. CP
+§3.5.3's Group Address Table variant Nr. 06, p. 54, and Association Table
+variant Nr. 06, p. 56 (the Group Object Table variant likewise, pp. 51-52),
+each instruct `PropertyWrite(..., PID_PROGRAM_VERSION)` on the table object
+itself, while CP §3.5.2's own table steps 08/09/10, pp. 43-44, list no such
+write for the same objects, and RES's own per-object property tables are
+silent on it too: Table 77 (Group Address Table, p. 238), Table 80
+(Association Table, p. 249) and Table 85 (Group Object Table, p. 270) do not
+list `PID_PROGRAM_VERSION` among the object's properties; only Table 90
+(Application Program 1, p. 288) and Table 91 (Application Program 2, p. 290)
+do. That silence is not a prohibition: RES §4.2.13.1.3, p. 34, says outright
+that *"the use of Program Version is Profile dependent"* and its *"mandatory
+- or optional access rights"* are *"specified in [17]"* (Volume 6 Profiles)
+— RES's own Realisation-Type tables were never meant to be the last word on
+this Property. Volume 6 Profiles Annex A §A.1.1, p. 133, states the general
+rule: *"any Interface Object or any Property in an Interface Object that is
+not listed is optional."* Annex A's own per-object tables (A.2.4 Group
+Address Table Object, p. 143; A.2.5 Association Table Object, p. 145; A.2.8
+Group Object Table Object, p. 149) also do not list PID 13 for any Profile,
+System B (masks 07B0h/17B0h) included — so under Annex A's own rule,
+`PID_PROGRAM_VERSION` is *optional* on these three object types, not
+forbidden. CP §3.5.3's writes are therefore a legitimate use of an optional
+Property, and CP §3.5.2's silence is simply the minimal (mandatory-only)
+path. The code's behaviour already matches this finding without needing a
+change: the write is attempted and a device-side refusal is recorded as an
+expected outcome, not a procedure failure (`VersionOutcome::Refused`,
+`crates/knx-net/src/commissioning/download.rs`) — see task C1, confirmed by
+task C18's audit of `06 Profiles v02.01.01.pdf`
+([spec-audits/2026-09-19-cp-3_5_3-partial-download.md](spec-audits/2026-09-19-cp-3_5_3-partial-download.md)).
+
+## 7. KNX Standard errata — printed text this project deliberately does not follow
 
 A specification is not automatically self-consistent just because it is
 official. Reading the commissioning procedures of `03_05_03 Configuration
 Procedures` ("CP") and `03_05_01 Resources` ("RES") against the code in
 `crates/knx-core/src/commissioning` and `crates/knx-net/src/commissioning`
-turned up seven places where the printed text is internally inconsistent, or
-says something the code deliberately does not do. None of these is a defect
-report against the KNX Association — a published standard this size having a
-handful of transcription slips is unremarkable. What would be a defect is
-leaving them unwritten: an undocumented divergence from a published
-specification reads exactly like a bug to the next person who opens the PDF
-beside this code and finds a difference. This list is that person's answer.
+turned up six places where the printed text is internally inconsistent, or
+says something the code deliberately does not do — a seventh candidate
+(CP §3.5.2/§3.5.3's apparent disagreement on `PID_PROGRAM_VERSION`) turned
+out to be Standard-permitted rather than errata and lives in §6 above
+instead. None of the six below is a defect report against the KNX
+Association — a published standard this size having a handful of
+transcription slips is unremarkable. What would be a defect is leaving them
+unwritten: an undocumented divergence from a published specification reads
+exactly like a bug to the next person who opens the PDF beside this code and
+finds a difference. This list is that person's answer.
 
 All page numbers below are PDF page numbers of the cited document, offset
 zero — verified per document by its own footer, not assumed.
@@ -154,21 +210,7 @@ zero — verified per document by its own footer, not assumed.
    Machine is `Unloaded` is, per RES Table 94, p. 296, `R: Unloaded /
    O: Error` — not a step of unloading anything. The code's unload wait does
    not treat an incoming `LoadCompleted` as expected input.
-4. **CP §3.5.2 and CP §3.5.3 disagree on whether `PID_PROGRAM_VERSION` is
-   written to the three table objects at all.** CP §3.5.3's Group Address
-   Table variant Nr. 06, p. 54, and Association Table variant Nr. 06, p. 56
-   (the Group Object Table variant likewise, pp. 51-52), each instruct
-   `PropertyWrite(..., PID_PROGRAM_VERSION)` on the table object itself. CP
-   §3.5.2's own table steps 08/09/10, pp. 43-44, list no such write for the
-   same objects. RES's own property tables side with §3.5.2: Table 77 (Group
-   Address Table, p. 238), Table 80 (Association Table, p. 249) and Table 85
-   (Group Object Table, p. 270) do not list `PID_PROGRAM_VERSION` among the
-   object's properties at all; only Table 90 (Application Program 1, p. 288)
-   and Table 91 (Application Program 2, p. 290) do. Both readings of the
-   contradiction are handled without picking a winner: the write is attempted
-   and a device-side refusal of a property RES never granted the object is
-   recorded as an expected outcome, not a procedure failure — see task C1.
-5. **CP §3.5.4 step 05's cross-reference points at nothing.** CP §3.5.4, p. 57,
+4. **CP §3.5.4 step 05's cross-reference points at nothing.** CP §3.5.4, p. 57,
    step 05 reads *"refer to the routines of 'Unload Device' in 3.5.1.3"* — but
    CP §3.5.1.3, p. 40, is titled *"Memory architecture"*, and the
    capitalized string `Unload Device` occurs exactly once in the entire
@@ -188,7 +230,7 @@ zero — verified per document by its own footer, not assumed.
    `pdftotext -layout`. Recorded here so a future check does not rediscover
    either lowercase occurrence, or the invisible-to-grep reference itself,
    and "correct" this entry.
-6. **RES §4.23.2.4.1, p. 297, names a Load Control value as if it were a Load
+5. **RES §4.23.2.4.1, p. 297, names a Load Control value as if it were a Load
    State.** It reads *"continue with further access only after load state has
    changed to LoadCompleted"*, but Table 92 (the Load State Machine's state
    list) names the terminal state `Loaded`; `LoadCompleting` is the
@@ -196,7 +238,7 @@ zero — verified per document by its own footer, not assumed.
    Control *value* a client writes to request the transition, never a state a
    device reports back. The code polls for `Loaded`, matching Table 92, not
    the clause's own wording.
-7. **CP §3.5.2, §3.5.3 and §3.5.4 each unload and load the five parts in a
+6. **CP §3.5.2, §3.5.3 and §3.5.4 each unload and load the five parts in a
    different order, and cannot all three be matched by one implementation.**
    CP §3.5.2 step 05, p. 42, unloads Application Program 2, Application
    Program 1, Group Object Table, Association Table, Address Table. CP §3.5.4
@@ -212,9 +254,9 @@ zero — verified per document by its own footer, not assumed.
    fixed order for all three procedures.
 
 Nothing above authorises implementing or claiming behaviour the KNX Standard
-does not specify — see §1's wording policy. It records seven places where
+does not specify — see §1's wording policy. It records six places where
 following the printed text *literally* would either duplicate a transcription
 error or contradict another clause of the same Standard, and where the actual
 behaviour was chosen instead.
-[KNOWN_LIMITATIONS.md §95](KNOWN_LIMITATIONS.md#95-seven-places-where-the-knx-standards-printed-text-must-not-be-followed-literally)
+[KNOWN_LIMITATIONS.md §95](KNOWN_LIMITATIONS.md#95-six-places-where-the-knx-standards-printed-text-must-not-be-followed-literally)
 points here.

@@ -7579,3 +7579,75 @@ Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets
 and `cargo deny check` all exit 0. No web file touched, so `npx tsc
 --noEmit` / `npx vitest run` were not run. `check-headers` is unchanged
 (159/167, ceiling 168): no new source file.
+
+## C18 — audit `06 Profiles v02.01.01.pdf` for System B, closing three
+questions two earlier audits left open
+
+Read-only research task, no `.rs` file touched, no bus/hardware access.
+Both `docs/spec-audits/2026-09-19-cp-3_5_3-partial-download.md` and
+`docs/spec-audits/2026-09-19-cp-3_5_2-3_5_4-mp-2_3.md` had each left one
+question pointing at Volume 6 Profiles, Annex A, unopened by either. This
+task opened it.
+
+**Q1 (blocks C13). Must a System B device implement `PID_DOWNLOAD_COUNTER`
+at all?** No. Volume 6 Annex A §A.1.1, p. 133, is explicit that any
+Interface Object or Property not listed in the specification below it is
+optional; Annex A's Device Object table (A.2.3, pp. 138-140) does not list
+`PID_DOWNLOAD_COUNTER` for any Profile, System B (masks 07B0h, 17B0h)
+included. C13's implementer: treat a System B device with no
+`PID_DOWNLOAD_COUNTER` as legitimate, not broken — decline a Partial
+Download for the affected part and fall back to a complete one, which is
+what RES §5.3.2.2, p. 320, already tells the MaC to do for the Coupler Model
+2.0 case it does define.
+
+**Q2 (settles C1's tolerant branch). Is CP §3.5.3's `PID_PROGRAM_VERSION`
+write to the Group Address/Association/Group Object Table objects errata,
+or Standard-permitted?** Permitted, not errata. RES §4.2.13.1.3, p. 34,
+defers the Property's per-object applicability to CP and Volume 6 Profiles
+by name; Volume 6 Annex A's own per-object tables (A.2.4, A.2.5, A.2.8, pp.
+143/145/149) don't list it for these three object types either — which, per
+§A.1.1, makes it optional there, not forbidden. `crates/knx-net/src/
+commissioning/download.rs`'s existing `VersionOutcome::Refused` handling
+(task C1) already treats a refusal as an expected outcome; this audit
+confirms that was the right call and gives the doc comment at `:459` a
+citation to replace its "no reconciling clause found" note with, next time
+that file is touched.
+
+**Q3. Does Volume 6 Annex A add a System-B-mandatory step or Property that
+CP §3.5.2/§3.5.4's existing step lists miss?** No. Volume 6 Annex A §A.2.2
+(Interface Objects, p. 137 — not §A.2.1 "General", corrected in fix round 1)
+marks Device Object, Address Table Object and Association Table Object all
+`M` for System B. Of the Properties those two procedures read or write on
+them, three carry a mandatory-existence symbol for System B in Annex A's
+per-object tables (A.2.4 p. 143, A.2.5 p. 145): `PID_LOAD_STATE_CONTROL`,
+`PID_TABLE_REFERENCE`, `PID_MANUFACTURER_ID`. **Correction, fix round 1
+(2026-09-20):** `PID_MCB_TABLE` is the fourth, and it is `(3/3)` there — the
+parenthesised *optional*-existence family (Table 3 legend, p. 134), not
+mandatory as first reported; the original `pdftotext -layout` extraction had
+merged Annex A's extra per-system unlabelled column into the mask columns
+(see `RESEARCH.md` §8.9), corrected by rendering the page as an image. This
+does not change the answer: optional is not forbidden, nothing is marked
+`x` (not allowed) or absent in a way that would make an existing step
+impossible, and nothing new is added.
+
+**Diff check.** RES p. 320's `PID_DOWNLOAD_COUNTER` heading (Coupler Model
+2.0, Network Management chapter) is not a duplicate definition of p. 41's —
+it defers to it explicitly and adds two coupler-specific normative sentences
+about Partial Download eligibility. No contradiction.
+
+Findings written to both spec-audit files' "Open questions" sections (marked
+`Answered, 2026-09-19 (task C18)`) with full clause+page+quote citations,
+`docs/spec-audits/2026-09-19-cp-3_5_2-3_5_4-mp-2_3.md`'s task table (task J
+struck through, done), and the `PID_PROGRAM_VERSION` entry in
+`docs/COMPATIBILITY.md` §6, which is rewritten from "contradiction handled
+without picking a winner" to a resolved finding citing Volume 6 — and, in
+the fix round, moved there out of the errata list it no longer belonged in. No ADR: none of this changes an
+architectural decision already made — it corroborates one (C1's tolerant
+`Refused` handling) and unblocks one still pending (C13). No
+`KNOWN_LIMITATIONS.md` entry: nothing here is a KNXBench limitation, only a
+spec-reading clarification.
+
+Gates run, all three applicable to a docs-only change: `cargo fmt --all --
+-- check`, `cargo run -p xtask -- check-headers`, `cargo run -p xtask --
+check-layering`. `cargo clippy`, `cargo test`, `cargo deny check` and the web
+gates were not run — no `.rs` or web file touched.

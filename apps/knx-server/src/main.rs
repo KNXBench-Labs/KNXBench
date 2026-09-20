@@ -85,6 +85,12 @@ fn hash_password_from_stdin() {
         eprintln!("knx-server: refusing to hash an empty password");
         std::process::exit(2);
     }
+    // On stderr, so the hash on stdout stays a hash: this is routinely
+    // captured into a variable or a file, and a warning mixed into it
+    // would produce a credential nothing can verify.
+    if let Some(complaint) = knx_server::short_password_notice(password) {
+        eprintln!("knx-server: {complaint}");
+    }
     match knx_server::hash_password(password) {
         Ok(hash) => println!("{hash}"),
         Err(e) => {

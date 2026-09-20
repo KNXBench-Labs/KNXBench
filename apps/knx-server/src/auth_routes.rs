@@ -65,10 +65,19 @@ async fn login(
         ));
     };
 
+    // One attempt at a time, for the whole of this attempt. Held across
+    // both the derivation and the penalty sleep, so parallel guesses queue
+    // instead of overlapping: without it the delay would be something each
+    // request pays privately and none of them waits for, and a hundred
+    // concurrent guesses would put a hundred PBKDF2 derivations on the
+    // blocking pool at once. The permit is dropped when this function
+    // returns, on every path.
+    let _attempt = auth.begin_attempt().await;
+
     // PBKDF2 at the configured work factor is hundreds of milliseconds of
     // solid CPU. Run on the async worker it would stall every other
-    // request on this runtime for that long — which is also a free
-    // denial-of-service lever for whoever is guessing the password.
+    // request on this runtime for that long — and the gate above would not
+    // help, because the runtime it starves is not the one it guards.
     let password = request.password;
     let verified = tokio::task::spawn_blocking(move || credential.verify(&password))
         .await

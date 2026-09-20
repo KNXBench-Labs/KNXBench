@@ -1,5 +1,13 @@
-//! The declared semantic-equality relation (ADR-0007, IMPORT_EXPORT §9):
-//! what "the roundtrip didn't change anything" means in this repository.
+//! The declared semantic-equality relation: what "these two imports
+//! produced the same project" means in this repository.
+//!
+//! Written for the round-trip fidelity check of ADR-0007, which ADR-0028
+//! superseded when `.knxproj` writing was withdrawn on 2026-09-20. It has
+//! no caller today. Kept because the relation itself is about the *model*,
+//! not about the exporter: comparing two imports of the same file, or an
+//! import before and after a parser change, is the same question, and the
+//! declared type is the only place this repository writes down which fields
+//! that question covers.
 //!
 //! `semantic_view` keys every entity by its `SourceRef::ets_id`, sorts
 //! every collection by that key (or, for a communication object, by its
@@ -111,11 +119,10 @@ pub struct SemanticComObject {
     pub dpt: Option<String>,
     /// Read, write, transmit, update, communication, in that order.
     ///
-    /// Five, not six, and deliberately so: this type mirrors what export
-    /// writes, and export writes no `ReadOnInitFlag` on a
-    /// `ComObjectInstanceRef` because no measured project file carries one
-    /// (KNOWN_LIMITATIONS §117). A sixth slot here would compare a value
-    /// that is never in either file.
+    /// Five, not six, and deliberately so: no measured `.knxproj` states
+    /// `ReadOnInitFlag` on a `ComObjectInstanceRef` (KNOWN_LIMITATIONS
+    /// §117), so a sixth slot here would compare a value that is never in
+    /// either file.
     pub flags: [Option<bool>; 5],
     /// `(group address ets_id, direction)`, sorted.
     pub links: Vec<(String, Direction)>,
@@ -362,9 +369,10 @@ fn direction_rank(d: Direction) -> u8 {
 
 /// `Override::Absent` -> `None`, `Override::Empty` -> `Some("")`,
 /// `Override::Malformed` -> its raw text; a `Value` renders only if its
-/// layer is exported — matching exactly what a roundtrip through
-/// `export_knxproj` actually writes, since that is what this comparison
-/// exists to check.
+/// layer is one a `.knxproj` file itself states
+/// (`Layer::is_exported`) — a value enriched from the product database is
+/// not something the source file said, so it does not take part in a
+/// comparison of what two imports read.
 fn semantic_text(o: &Override<Text>, strings: &StringTable) -> Option<String> {
     match o {
         Override::Absent => None,

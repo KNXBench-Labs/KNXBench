@@ -20,7 +20,6 @@ pub fn project_routes() -> Router<SharedState> {
         .route("/api/project/open", post(open_native_project))
         .route("/api/project/save", post(save_project))
         .route("/api/project/save-as", post(save_project_as))
-        .route("/api/project/export", post(export_project))
         .route(
             "/api/project/group-address-style",
             post(set_group_address_style),
@@ -407,7 +406,7 @@ pub(crate) struct PathBody {
 }
 
 /// The `LoadSnapshot` on the wire. Hand-written rather than derived on
-/// the domain type for the same reason `ExportWarningDto` is: the enums
+/// the domain type, for the usual reason: the enums
 /// live in a module that has no business knowing JSON exists, and their
 /// wire spellings are already `as_str()` — one vocabulary shared with
 /// `knx-etsproj` and `knx-app`, not a second one restated here.
@@ -648,113 +647,6 @@ async fn save_project_as(
     domain::save_project_as(&state, &path).map_err(ApiError::internal)
 }
 
-/// `ExportWarning` does not derive `Serialize` (it lives in `knx-etsproj`,
-/// which has no reason to know about JSON) — same conversion shape as
-/// `CreationDiagnosticDto` below, converted explicitly at the HTTP
-/// boundary rather than reaching into `knx-etsproj` to add a derive that
-/// would only ever be used here.
-#[derive(serde::Serialize)]
-#[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
-enum ExportWarningDto {
-    Unsigned {
-        detail: String,
-    },
-    StaleSignature {
-        source_path: String,
-    },
-    ManufacturerDataFromProductDb {
-        entries: usize,
-    },
-    MissingManufacturerData {
-        source_path: String,
-        sha256: String,
-    },
-    ReadOnInitNotExported {
-        com_objects: usize,
-    },
-    /// Both carry a rendered `detail`, which is what the frontend's
-    /// `describeExportWarning` falls back to for any variant it does not
-    /// know by name — so these two reach the UI without a line of frontend
-    /// change (KNOWN_LIMITATIONS §34).
-    RetainedAttributeNotExported {
-        element: String,
-        attribute: String,
-        instances: usize,
-        detail: String,
-    },
-    RetainedElementNotExported {
-        element: String,
-        instances: usize,
-        detail: String,
-    },
-}
-
-impl From<knx_etsproj::export::ExportWarning> for ExportWarningDto {
-    fn from(value: knx_etsproj::export::ExportWarning) -> Self {
-        use knx_etsproj::export::ExportWarning as W;
-        match value {
-            W::Unsigned { detail } => Self::Unsigned { detail },
-            W::StaleSignature { source_path } => Self::StaleSignature { source_path },
-            W::ManufacturerDataFromProductDb { entries } => {
-                Self::ManufacturerDataFromProductDb { entries }
-            }
-            W::MissingManufacturerData {
-                source_path,
-                sha256,
-            } => Self::MissingManufacturerData {
-                source_path,
-                sha256,
-            },
-            W::ReadOnInitNotExported { com_objects } => Self::ReadOnInitNotExported { com_objects },
-            W::RetainedAttributeNotExported {
-                element,
-                attribute,
-                instances,
-                detail,
-            } => Self::RetainedAttributeNotExported {
-                element,
-                attribute,
-                instances,
-                detail,
-            },
-            W::RetainedElementNotExported {
-                element,
-                instances,
-                detail,
-            } => Self::RetainedElementNotExported {
-                element,
-                instances,
-                detail,
-            },
-        }
-    }
-}
-
-#[derive(serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ExportReportDto {
-    warnings: Vec<ExportWarningDto>,
-}
-
-/// Unlike `save`/`save_project_as` (whose failures are filesystem/store
-/// problems -> `internal`, see `errors.rs`'s own doc comment), export's one
-/// realistic failure mode reachable from the UI is "no store path yet" —
-/// a caller-fixable precondition ("save as .knxdb first"), not an
-/// environment problem, so this maps to `bad_request` like the rest of the
-/// project-editing routes.
-async fn export_project(
-    State(state): State<SharedState>,
-    Json(body): Json<PathBody>,
-) -> Result<Json<ExportReportDto>, ApiError> {
-    let path = resolve_new_project_path(&state.data_dir, &body.path)?;
-    domain::export_project(&state, &path)
-        .map(|outcome| ExportReportDto {
-            warnings: outcome.warnings.into_iter().map(Into::into).collect(),
-        })
-        .map(Json)
-        .map_err(ApiError::bad_request)
-}
-
 async fn device_detail(
     State(state): State<SharedState>,
     AxumPath(id): AxumPath<u32>,
@@ -896,8 +788,8 @@ async fn delete_group_address(
 }
 
 /// `CsvProblem` (`knx-csv`) does not derive `Serialize` — it knows nothing
-/// of JSON — so it gets the same explicit at-the-boundary conversion
-/// `ExportWarningDto` above uses. Doubles as both an import-side problem
+/// of JSON — so it gets an explicit at-the-boundary conversion, like every
+/// other domain type that reaches the wire. Doubles as both an import-side problem
 /// and an export-side warning: `write.rs`'s own doc comment already
 /// reuses `CsvProblem` for both rather than duplicating the shape, and
 /// there is no reason for the DTO to duplicate it either.
@@ -928,7 +820,8 @@ struct CsvExportReportDto {
 /// Writes the live project's group addresses to `body.path` as "KNXBench
 /// group-address CSV v1" — see `crates/knx-csv` for the format, and its
 /// own module docs for why it is never called "ETS CSV". `path` is a fresh
-/// write target, resolved exactly like `/api/project/export`'s.
+/// write target, resolved by `resolve_new_project_path` like every other
+/// route that writes a file the user named.
 async fn export_group_addresses_csv(
     State(state): State<SharedState>,
     Json(body): Json<PathBody>,
@@ -945,7 +838,7 @@ async fn export_group_addresses_csv(
 /// `ReportWarning` (`knx-report`) does not derive `Serialize` — that crate
 /// has no `serde` dependency at all, deliberately (see its own module
 /// docs) — so it gets the same explicit at-the-boundary conversion
-/// `CsvProblemDto`/`ExportWarningDto` above use.
+/// `CsvProblemDto` above uses.
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct DocumentationWarningDto {

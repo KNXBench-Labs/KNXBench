@@ -343,19 +343,59 @@ nothing** — if KNXBench imports an ETS project carrying these three attributes
 they are silently dropped, which the data-integrity rule forbids.
 
 **Q2. Whether a System B device must have `PID_DOWNLOAD_COUNTER` at all.**
-RES §4.2.30.1 (p. 41) is conditional and defers the ruling to Volume 6
-Profiles, Annex A, which was not opened.
+**Answered, 2026-09-19 (task C18, `06 Profiles v02.01.01.pdf` opened).** No.
+Volume 6 Annex A §A.1.1, p. 133: *"In the specification below, any Interface
+Object or any Property in an Interface Object that is not listed is
+optional."* Annex A's Device Object property table, A.2.3, pp. 138-140,
+lists PIDs 1, 2, 8, 9, 11, 12, 14-19, 21, 25, 51-58, 62-63, 65-66, 70-73,
+75-81, 83, 85-86 for every mask including System B's 07B0h and 17B0h —
+`PID_DOWNLOAD_COUNTER` (PID 30) is not among them, for any Profile, not just
+System B. Absence there is the general rule's "optional", not an oversight:
+the same table lists plenty of other optional Properties in parenthesised
+`(m/n)`-family symbols; PID 30 is absent entirely, meaning "may or may not be
+implemented", which matches RES §4.2.30.1's own conditional wording ("a
+device that has a Download Counter shall..."). C13 must not treat a missing
+`PID_DOWNLOAD_COUNTER` on a System B device as a fault; RES §4.2.30's own
+Coupler Model 2.0 variant (p. 320) already tells the client what to do about
+it: *"If PID_DOWNLOAD_COUNTER is not available for the part to be
+downloaded, then the MaC shall not perform a Partial Download."* — decline
+the partial download and fall back to a complete one, not refuse to talk to
+the device.
 
 **Q3. Why §3.5.3's table variants write `PID_PROGRAM_VERSION` to objects RES
-Tables 77/80/85 do not define it on.** No reconciling clause found. Two
-readings survive: the CP rows are errata (likely, given Gap 11's pattern), or
-RES's per-object tables are non-exhaustive and Volume 6 Annex A permits it.
-The same Volume 6 Annex A read closes Q2 and Q3. Until then Gap 5's fix should
-be *tolerant*: write on AP1/AP2, and on the three tables treat a refusal as
-expected rather than fatal.
+Tables 77/80/85 do not define it on.** **Answered, 2026-09-19 (task C18).**
+Not errata — the second reading holds: RES's own text sends the reader
+elsewhere before Tables 77/80/85 are reached. RES §4.2.13.1.3, p. 34,
+"Usage by the MaS": *"The use of Program Version is Profile dependent:
+please refer to the Configuration Procedures in [10] for the use of Program
+Version for each Profile. The mandatory - or optional access rights to
+Program Version are as well Profile dependent and are specified in [17]."*
+`[10]` is Configuration Procedures (CP itself); `[17]` is Volume 6 Profiles.
+RES is explicit that Tables 77/80/85 (each object's own Realisation-Type
+property list) are not the authority on whether `PID_PROGRAM_VERSION`
+applies to that object — CP and Volume 6 are. Volume 6 Annex A's own
+per-object tables (A.2.4 Group Address Table Object, p. 143; A.2.5
+Association Table Object, p. 145; A.2.8 Group Object Table Object, p. 149)
+likewise do not list PID 13 for any Profile, System B included — which,
+under §A.1.1's general rule, makes it *optional* on those three object
+types, not forbidden. CP §3.5.3's writes are a legitimate exercise of an
+optional property, consistently with `VersionOutcome::Refused` already
+being modelled as an expected, non-fatal outcome in `download.rs` rather
+than a procedure failure. This closes the "no clause reconciling the two was
+found" note at `crates/knx-net/src/commissioning/download.rs:459` — a future
+task touching that file may cite this finding there instead of C18's report.
 
 **Q4.** `03_05_01` repeats the `PID_DOWNLOAD_COUNTER` heading on p. 320; not
-diffed against the p. 41 definition. Low risk, unchecked.
+diffed against the p. 41 definition. **Answered, 2026-09-19 (task C18).** No
+contradiction. RES §5.3.2.2, p. 320 (Coupler Model 2.0's Network Management
+variant) opens with *"Support by the MaS (device): Please refer to the
+common specification of PID_DOWNLOAD_COUNTER in 4.2.30."* — it defers to,
+rather than restates, the p. 41 definition, then adds two coupler-specific
+normative sentences under "Support by the MaC (ETS)": the MaC shall verify
+the counter before a Partial Download, and shall not perform one if the
+counter "is not available for the part to be downloaded" — the same
+disclosure Q2's answer above draws on. The two clauses describe one property
+at two levels of genericity; neither says something the other contradicts.
 
 ## Recommended task split (the auditor's, not yet ruled on)
 

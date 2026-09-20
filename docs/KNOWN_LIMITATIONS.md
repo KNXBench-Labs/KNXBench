@@ -1809,9 +1809,9 @@ halves.
 `RoutingSocketOptions::LOOPBACK_ONLY`, which sets `IP_MULTICAST_IF` to
 `127.0.0.1`, joins on `127.0.0.1`, sets `IP_MULTICAST_TTL` to 0 and
 `IP_MULTICAST_LOOP` to `true`. Two independent mechanisms keep the datagram
-on the machine: the kernel never consults the routing table, and a
-multicast datagram with TTL 0 is not transmitted on any link even if it
-did. `loopback_only_options_actually_reach_the_socket` reads all three
+on the machine: the outgoing interface is named explicitly rather than
+looked up in the routing table, and a multicast datagram with TTL 0 is not
+transmitted on any link even if that first mechanism failed. `loopback_only_options_actually_reach_the_socket` reads all three
 options back off the live socket, so a future change that quietly reverts
 to the production options fails a test instead of resuming transmission.
 Measured on this host and in a bare `unshare -rn` namespace holding only
@@ -1826,10 +1826,25 @@ behaviour described above, which is the correct default for a real
 installation. `production_routing_socket_options_leave_the_network_to_the_kernel`
 guards that constant.
 
+**The skip also stopped hiding regressions.** The "Impact" paragraph above
+warned that a real regression could pass silently, because the test could
+not tell "this sandbox has no multicast loopback" from "`RoutingClient` is
+broken". Measured, not suspected: deleting the `send_to` call from
+`RoutingClient::send` outright left the test *passing* (it timed out and
+skipped). The timeout arm now calls `loopback_multicast_is_deliverable()`
+first — two plain `socket2`/`tokio` sockets, no `RoutingClient` involved,
+pinned the same way on `239.0.2.1` — and fails instead of skipping when
+those two do reach each other. With that in place the same deleted
+`send_to` fails the test. `the_loopback_probe_agrees_with_an_actual_loopback_round_trip`
+asserts the probe and the real round trip always reach the same verdict,
+so the probe cannot quietly start answering "not deliverable" for
+everybody.
+
 **What of the original limitation survives.** The narrow version: a sandbox
 that delivers no multicast whatsoever, even on `lo`, still takes the skip
 path, and a green `cargo test` there still proves nothing about the round
-trip. That is now the only case the skip covers, rather than every case.
+trip. That is now the only case the skip covers, and it is now a measured
+property of the machine rather than an assumption.
 
 ## 34. Schema-≥21 export drops a handful of known-but-unmapped, per-device/per-line attributes
 

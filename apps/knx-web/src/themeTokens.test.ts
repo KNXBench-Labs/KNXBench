@@ -73,6 +73,60 @@ describe("parseRules", () => {
     ]);
     expect(rules.map((r) => r.depth)).toEqual([0, 1, 2]);
   });
+
+  // `.sb::before { content: "red}"; }` is legal, shipping CSS: the `}` is
+  // ordinary text inside a string. A scanner with no string awareness ends
+  // the block right there, flushes whatever the buffer holds as a phantom
+  // declaration (`content` = `"red`, missing its closing quote), and
+  // reports a colour that was never painted. `url("a}b.png")` truncates
+  // the same way. Both need the whole value intact, brace included.
+  it("keeps a brace inside a double-quoted string out of the block count", () => {
+    const rules = parseRules('.sb::before { content: "red}"; }\n');
+    expect(rules).toHaveLength(1);
+    expect(rules[0].declarations).toEqual([
+      { property: "content", value: '"red}"', line: 1 },
+    ]);
+  });
+
+  it("keeps a brace inside a url()'s quoted string out of the block count", () => {
+    const rules = parseRules('.a { background: url("a}b.png"); }\n');
+    expect(rules[0].declarations).toEqual([
+      { property: "background", value: 'url("a}b.png")', line: 1 },
+    ]);
+  });
+
+  // The mutation in the other direction: string-awareness must not turn
+  // into "never sees a closing brace again". A real `}` outside any string
+  // still ends its block, and the next rule still starts its own.
+  it("still closes a block on a real } once its string has ended", () => {
+    const rules = parseRules('.a { content: "ok"; }\n.b { color: red; }\n');
+    expect(rules.map((r) => r.selector)).toEqual([".a", ".b"]);
+    expect(rules[0].declarations).toEqual([{ property: "content", value: '"ok"', line: 1 }]);
+    expect(rules[1].declarations).toEqual([{ property: "color", value: "red", line: 2 }]);
+  });
+
+  // A backslash escapes the next character even inside a string, so an
+  // escaped quote does not end it early. Without this, `"a\"b"` would close
+  // after two characters and leave `b";` dangling as the start of the next
+  // "declaration".
+  it("does not end a string on an escaped quote", () => {
+    const rules = parseRules('.a { content: "a\\"b"; }\n');
+    expect(rules[0].declarations).toEqual([
+      { property: "content", value: '"a\\"b"', line: 1 },
+    ]);
+  });
+
+  // Browsers close an open block at EOF; a stylesheet is not required to
+  // end its last rule with `}`. `flushDeclaration()` after the scanning
+  // loop is what makes that declaration visible instead of silently
+  // dropped along with the buffer holding it.
+  it("still flushes the last declaration of a block left open at EOF", () => {
+    const rules = parseRules(".eof { color: #ff00aa");
+    expect(rules).toHaveLength(1);
+    expect(rules[0].declarations).toEqual([
+      { property: "color", value: "#ff00aa", line: 1 },
+    ]);
+  });
 });
 
 describe("themeSelectorViolations", () => {
@@ -169,6 +223,35 @@ describe("themeSelectorViolations", () => {
     expect(themeBlocks(rules)).toEqual([]);
     expect(themeSelectorViolations(rules)).toHaveLength(1);
   });
+
+  // `mentionsTheme`'s `/i` flag is what lets these three still be seen at
+  // all: it is called on the raw selector text directly, not on the
+  // normalised one `isLegalThemeSelector` checks. Swap it for a
+  // case-sensitive `selector.includes("data-theme")` and every fixture
+  // below stops mentioning theme as far as this file is concerned — not
+  // "wrongly classified", simply invisible, which is a worse failure than
+  // any of the illegal shapes above. Each fixture below carries no colour
+  // and no duration literal on purpose, so a regression here fails for
+  // this reason and not because some other guard also happens to catch the
+  // shape.
+  it("still catches an uppercase theme selector styling an element", () => {
+    const rules = parseRules(':root[DATA-THEME="porcelain"] body::before { content: ""; }\n');
+    expect(themeSelectorViolations(rules)).toHaveLength(1);
+  });
+
+  it("still catches the uppercase accent-by-negation trap", () => {
+    const rules = parseRules(':root:not([DATA-THEME="porcelain"]) { display: block; }\n');
+    expect(themeSelectorViolations(rules)).toHaveLength(1);
+  });
+
+  it("still catches an uppercase theme block nested inside a media query", () => {
+    const rules = parseRules(
+      "@media print {\n" +
+        '  :root[DATA-THEME="porcelain"] { display: none; }\n' +
+        "}\n",
+    );
+    expect(themeSelectorViolations(rules)).toHaveLength(1);
+  });
 });
 
 describe("illegalTokenNames", () => {
@@ -233,14 +316,32 @@ describe("componentColourLiterals", () => {
     expect(componentColourLiterals(rules)).toEqual([]);
   });
 
-  // The data-URI fixture above never reaches `withoutUrls()` — its
-  // `;base64` splits the declaration in `parseRules` first — so the whole
-  // url() exemption could be deleted with the suite still green. This is
-  // the fixture that reaches it: a filename that happens to contain a
-  // colour word, which is exactly the false positive the exemption exists
-  // to prevent.
+  // Before `parseRules` learned string awareness, the data-URI fixture
+  // above never reached `withoutUrls()` at all — its `;base64` split the
+  // declaration in two before the value was even assembled — so the whole
+  // url() exemption could be deleted with the suite still green. Now that
+  // the semicolon inside the quoted string survives intact, that fixture
+  // does reach it, but this is the fixture that actually needs it: a
+  // filename that happens to contain a colour word, which is exactly the
+  // false positive the exemption exists to prevent.
   it("does not read a colour out of a filename", () => {
     const rules = parseRules('.logo { background-image: url("images/red-logo.png"); }\n');
+    expect(componentColourLiterals(rules)).toEqual([]);
+  });
+
+  // `content: "red}"` is a string, not a colour — the same reasoning as
+  // the filename above, one property over. This is also the fixture that
+  // pins the phantom-declaration fix: before `parseRules` learned string
+  // awareness, the `}` inside the quotes ended the block early and left
+  // `content` holding the unterminated value `"red`, which this same guard
+  // reported as a literal colour for the wrong reason entirely.
+  it("does not read a colour out of a quoted string containing a brace", () => {
+    const rules = parseRules('.sb::before { content: "red}"; }\n');
+    expect(componentColourLiterals(rules)).toEqual([]);
+  });
+
+  it("does not read a colour out of a url()'s quoted string containing a brace", () => {
+    const rules = parseRules('.a { background: url("a}b.png"); }\n');
     expect(componentColourLiterals(rules)).toEqual([]);
   });
 

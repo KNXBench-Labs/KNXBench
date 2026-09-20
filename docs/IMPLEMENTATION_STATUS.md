@@ -8189,10 +8189,11 @@ T37, which is a measurement of a moment rather than an invariant). Its
 text also records the literal-colour guard's own blind spot — the CSS
 system colour keywords (`Canvas`, `AccentColor`, `ButtonBorder`) are
 colour values, are not in the named-colour list, and are exactly as
-theme-blind as `#ff00aa`. `LIMITATION_TRIAGE.md` classifies it K3 and its
-derived counts are set for 120 entries, 119 classified, K3 at 53 — which
-assumes the parallel `ntfs3` entry at §119 lands too. ADR-0022's
-enforcement section gains both new gaps and a real anchor into §120.
+theme-blind as `#ff00aa`. `LIMITATION_TRIAGE.md` classifies it K3; on this
+branch its derived counts are 118 entries, 117 classified, K3 at 52.
+Merging with main's §119 (`ntfs3`, K4) will bump those to 119 / 118 / K3 52
+/ K4 12 — the controller's job, not this branch's. ADR-0022's enforcement
+section gains both new gaps and a real anchor into §120.
 
 Recorded, not fixed: the motion guard's `styles.css` assertion still reads
 one hard-coded path (so do `help.test.ts` and `diagnosticShell.test.ts`),

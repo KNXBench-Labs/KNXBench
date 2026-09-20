@@ -1,10 +1,10 @@
 # Limitierungen nach Kritikalität
 
-Sortierung der 120 Einträge aus [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)
+Sortierung der 118 Einträge aus [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)
 (`grep -c '^## [0-9]' docs/KNOWN_LIMITATIONS.md`), Stand 2026-09-20. Diese Datei
 ordnet nur — sie ersetzt keinen Eintrag und enthält keine neuen Fakten.
 Maßgeblich bleibt der Volltext dort. §105 ist absichtlich nicht eingestuft
-(siehe unten); die restlichen 119 sind es.
+(siehe unten); die restlichen 117 sind es.
 
 Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 
@@ -79,7 +79,7 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | 71 | Vor Store-Schema 6 importierte Projekte haben keine Modul-Instanz-Ids | Nicht beschreibbar ohne Neuimport. |
 | 16 | Tauri v2 hängt unter Linux an archivierten GTK3-Bindings | `cargo deny` meldet es; Abhängigkeit ohne Wartung. |
 
-## K3 — mittel (53)
+## K3 — mittel (52)
 
 | § | Thema | Warum K3 |
 | --- | --- | --- |

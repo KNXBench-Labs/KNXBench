@@ -7553,9 +7553,10 @@ about Partial Download eligibility. No contradiction.
 Findings written to both spec-audit files' "Open questions" sections (marked
 `Answered, 2026-09-19 (task C18)`) with full clause+page+quote citations,
 `docs/spec-audits/2026-09-19-cp-3_5_2-3_5_4-mp-2_3.md`'s task table (task J
-struck through, done), and `docs/COMPATIBILITY.md` §6 item 4, which is
-rewritten from "contradiction handled without picking a winner" to a
-resolved finding citing Volume 6. No ADR: none of this changes an
+struck through, done), and the `PID_PROGRAM_VERSION` entry in
+`docs/COMPATIBILITY.md` §6, which is rewritten from "contradiction handled
+without picking a winner" to a resolved finding citing Volume 6 — and, in
+the fix round, moved there out of the errata list it no longer belonged in. No ADR: none of this changes an
 architectural decision already made — it corroborates one (C1's tolerant
 `Refused` handling) and unblocks one still pending (C13). No
 `KNOWN_LIMITATIONS.md` entry: nothing here is a KNXBench limitation, only a

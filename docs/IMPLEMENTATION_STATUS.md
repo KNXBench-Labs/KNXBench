@@ -8442,10 +8442,27 @@ had recorded it as T23, which is the topology/group-range UI that closed on
 `ROADMAP.md`, `GAP_ANALYSIS_ETS.md` and `adr/0024-in-application-help.md`;
 the eighteen remaining T23 mentions all really are the topology work.
 
-**The third is not ours to close.** A `git log --all -S` search for the
-installation's gateway address finds it in eight commits, every one of them
-an ancestor of the pushed `origin/main`. (The address is not repeated here;
-the document that records a leak should not extend it.) The working tree is clean — three
+**The third was closed the same day, 2026-09-20, on the maintainer's
+instruction.** A `git log --all -S` search for the installation's gateway
+address had found it in eight commits, every one an ancestor of the pushed
+`origin/main`. Before rewriting anything, a blob-level sweep of all 3625
+historical blobs was run instead of a grep for the one remembered literal;
+it turned up two further real addresses that nobody had been looking for — a
+second host on the same LAN and a Docker bridge address — alongside a dozen
+documentation examples that are nobody's machine. One `git-filter-repo` pass
+with `--replace-text` and `--replace-message` (commit messages carried them
+too) mapped the three real ones to `KNX_GATEWAY`, `KNX_LAN_HOST` and
+`DOCKER_HOST_ADDR`. The HEAD tree hash is byte-identical before and after,
+so no binary in the tree changed; 1178 commits were force-pushed, and
+`origin` carries only `main`.
+
+One residue remains, and it is not fixable by rewriting: GitHub still serves
+the pre-rewrite commits by their 40-character SHA — verified by asking for
+one after the force-push, which is a more useful test than assuming. Only
+deleting and recreating the remote removes them, which is the maintainer's
+call on an otherwise private repository with no issues, pull requests, forks
+or stars attached to it. Backup bundle:
+`KNXBench-backups/knxbench-pre-third-pass-20260920-154050.bundle`. The working tree is clean — three
 separate commits removed the last of it — but history is not, and the only
 two ways out are a second history rewrite of a published branch or an
 explicit decision to accept it. That is the maintainer's call, and it is

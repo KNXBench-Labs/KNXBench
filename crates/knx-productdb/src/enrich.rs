@@ -261,6 +261,11 @@ pub fn apply(
             view.communication.as_deref(),
             view.communication_layer,
         ),
+        (
+            &mut com.flags.read_on_init,
+            view.read_on_init.as_deref(),
+            view.read_on_init_layer,
+        ),
     ] {
         // "Enabled"/"Disabled" are the only two values the source uses;
         // anything else stays absent rather than becoming a guessed false.
@@ -318,7 +323,7 @@ mod tests {
   MaskVersion="MV-0701"><Static>
 <ComObjectTable>
   <ComObject Id="A-1_O-1" Number="1" Text="Schalten" ObjectSize="1 Bit"
-             DatapointType="DPST-1-1" WriteFlag="Enabled" />
+             DatapointType="DPST-1-1" WriteFlag="Enabled" ReadOnInitFlag="Enabled" />
   <ComObject Id="A-1_O-2" Number="2" Text="Wert" ObjectSize="2 Bytes" />
 </ComObjectTable>
 <ComObjectRefs>
@@ -399,6 +404,25 @@ mod tests {
             }
             other => panic!("expected a program-layer text, got {other:?}"),
         }
+    }
+
+    /// §117: the sixth flag now crosses the crate boundary instead of
+    /// being parsed, stored and quietly forgotten.
+    #[test]
+    fn an_absent_read_on_init_flag_is_filled_at_the_program_layer() {
+        let (_dir, conn) = db();
+        let mut p = project_with("A-1_O-1_R-1", Override::Absent);
+        enrich(&mut p, &conn).unwrap();
+        let com = p
+            .devices
+            .com_object(knx_core::ComObjectInstanceId(1))
+            .unwrap();
+        let resolved = com.flags.read_on_init.value().expect("read_on_init filled");
+        assert!(resolved.value);
+        assert_eq!(resolved.layer, Layer::Program);
+        // The program states no `CommunicationFlag`, so the fifth stays
+        // absent — "not stated" never becomes "stated false".
+        assert!(!com.flags.communication.is_present());
     }
 
     #[test]

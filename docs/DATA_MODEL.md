@@ -92,14 +92,19 @@ ApplicationProgram/.../ComObjectRef    per-variant override: Text, FunctionText,
                                        ObjectSize, DatapointType, flags, Tag
         ↓ overridden by
 0.xml  ComObjectInstanceRef            per-device override: Text, Description,
-                                       DatapointType, all five flags, IsActive
+                                       DatapointType, five of the six flags,
+                                       IsActive
 ```
 
 Measured override frequencies in the reference project: `DatapointType` 758×
 (of which 497 are the empty string and 261 carry a value — see the amendment
 above), `Description` 691×, `Text` 121×, `ReadFlag` 39×, `UpdateFlag` 30×,
 `TransmitFlag` 27×, `WriteFlag` 18×, `CommunicationFlag` 8× — against 907
-communication object instances in total.
+communication object instances in total. `ReadOnInitFlag`, the sixth flag,
+occurs 0× at instance level — in this project and in both others measured
+(KNOWN_LIMITATIONS §117). It is a program-layer attribute in every file
+sampled here, which is why the instance row above names five and
+`ResolvedFlags` still models six.
 
 758 of 907 instances carry a `DatapointType` attribute at instance level at
 all (149 do not). An importer that reads only the application program is
@@ -228,7 +233,7 @@ pub struct ComObjectInstance {
     pub text: Override<Text>,
     pub description: Override<Text>,
     pub dpt: Override<DptRef>,
-    pub flags: ResolvedFlags,              // five independent Override<bool>
+    pub flags: ResolvedFlags,              // six independent Override<bool>
     pub size: Option<Resolved<ObjectSize>>,
     pub is_active: bool,
     pub links: Vec<GroupLink>,

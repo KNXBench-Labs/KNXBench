@@ -3,7 +3,7 @@
 //! onto `ComObjectInstance` (Task 11, DATA_MODEL §3).
 //!
 //! Flags are stored as the source's own `"Enabled"`/`"Disabled"` strings,
-//! matching RESEARCH §3's amendment that schema 11 spells these five flags
+//! matching RESEARCH §3's amendment that schema 11 spells these six flags
 //! differently from every other boolean. The conversion to `bool` happens
 //! once, in enrichment, where `knx-core`'s types are in scope.
 

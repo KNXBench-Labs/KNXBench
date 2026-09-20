@@ -30,7 +30,7 @@ import { THEMES, useThemeId } from "./theme";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
 import { useProductLanguage } from "./productLanguage";
 import type { ProductLanguage } from "./api";
-import { useTranslate } from "./i18n";
+import { useTranslate, type Translate } from "./i18n";
 import ToastStack from "./Toast";
 import { pickStartupToast, useToasts } from "./toast";
 import GroupAddressCsvButtons from "./GroupAddressCsvButtons";
@@ -73,11 +73,19 @@ function fileNameOf(path: string): string {
 // stringifying the inner value (covers `ManufacturerDataFromProductDb`'s
 // `entries`/`StaleSignature`'s `sourcePath`/`MissingManufacturerData`'s
 // `sourcePath`+`sha256`, none of which carry a `detail` field).
-function describeExportWarning(w: unknown): string {
+function describeExportWarning(w: unknown, t: Translate): string {
   if (typeof w === "object" && w !== null) {
     const [variant, value] = Object.entries(w)[0] ?? [];
     if (typeof value === "object" && value !== null) {
       if ("detail" in value) return String((value as { detail: unknown }).detail);
+      // The one variant with a sentence of its own: `comObjects` is a bare
+      // count, and `readOnInitNotExported: {"comObjects":1}` is not a
+      // sentence anybody should have to read.
+      if (variant === "readOnInitNotExported" && "comObjects" in value) {
+        return t("app.exportWarning.readOnInitNotExported", {
+          count: Number((value as { comObjects: unknown }).comObjects),
+        });
+      }
       return `${variant}: ${JSON.stringify(value)}`;
     }
   }
@@ -680,7 +688,7 @@ function App({ manifestVersion = packageVersion }: AppProps) {
         // warnings are commonly plural (one `MissingManufacturerData` per
         // unresolved manufacturer reference, see knx-app's export code), so
         // all of them are joined into a single toast instead.
-        pushError(warnings.map(describeExportWarning).join(" | "));
+        pushError(warnings.map((w) => describeExportWarning(w, t)).join(" | "));
       }
     } catch (e) {
       reportError(e);

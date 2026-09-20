@@ -552,6 +552,11 @@ pub struct ComObjectNode {
     pub transmit: bool,
     pub update: bool,
     pub communication: bool,
+    /// Read-on-Init, the sixth flag (§117). Flattened to `false` when no
+    /// layer stated it, exactly like its five neighbours — the projection
+    /// is the read model, not the place where "absent" and "false" are told
+    /// apart.
+    pub read_on_init: bool,
     /// The `GroupLink`s already on this communication object —
     /// `knx_core::Command::LinkComObject`/`UnlinkComObject` (2026-09-06)
     /// had no projection field to read or drive from until this cycle.
@@ -640,6 +645,7 @@ fn build_com_object_node(com: &knx_core::ComObjectInstance, project: &Project) -
         transmit: flag(&com.flags.transmit),
         update: flag(&com.flags.update),
         communication: flag(&com.flags.communication),
+        read_on_init: flag(&com.flags.read_on_init),
         links: com
             .links
             .iter()

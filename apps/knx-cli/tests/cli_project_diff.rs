@@ -129,6 +129,7 @@ fn project_with_device_com_object_read_flag(com_read_flag_present: bool) -> Proj
             transmit: Override::Absent,
             update: Override::Absent,
             communication: Override::Absent,
+            read_on_init: Override::Absent,
         },
         size: None,
         is_active: true,

@@ -100,6 +100,13 @@ pub struct ComObjectView {
     pub update_layer: ValueLayer,
     pub communication: Option<String>,
     pub communication_layer: ValueLayer,
+    /// `ReadOnInitFlag` — the sixth flag. Measured in the local corpus only
+    /// on `ComObject` (2533 rows, all `"Disabled"`), never on
+    /// `ComObjectRef`; the `ProgramRef` column exists anyway because the
+    /// package format allows the override even where no shipped package has
+    /// used it yet.
+    pub read_on_init: Option<String>,
+    pub read_on_init_layer: ValueLayer,
 }
 
 pub fn resolve_program(
@@ -147,6 +154,7 @@ struct RawRow {
     co_transmit: Option<String>,
     co_update: Option<String>,
     co_communication: Option<String>,
+    co_read_on_init: Option<String>,
     cor_text: Option<String>,
     cor_function_text: Option<String>,
     cor_visible_description: Option<String>,
@@ -158,6 +166,7 @@ struct RawRow {
     cor_transmit: Option<String>,
     cor_update: Option<String>,
     cor_communication: Option<String>,
+    cor_read_on_init: Option<String>,
 }
 
 /// `pick()`, plus whether the value it returned came out of the
@@ -251,9 +260,11 @@ pub fn com_object_views(
                     co.text, co.function_text, co.visible_description, co.object_size,
                     co.priority, co.dpt_list, co.read_flag, co.write_flag,
                     co.transmit_flag, co.update_flag, co.communication_flag,
+                    co.read_on_init_flag,
                     cor.text, cor.function_text, cor.visible_description, cor.object_size,
                     cor.priority, cor.dpt_list, cor.read_flag, cor.write_flag,
-                    cor.transmit_flag, cor.update_flag, cor.communication_flag
+                    cor.transmit_flag, cor.update_flag, cor.communication_flag,
+                    cor.read_on_init_flag
              FROM com_object_ref cor
              JOIN com_object co
                ON co.program_id = cor.program_id AND co.id = cor.com_object_id
@@ -279,17 +290,19 @@ pub fn com_object_views(
                     co_transmit: r.get(11)?,
                     co_update: r.get(12)?,
                     co_communication: r.get(13)?,
-                    cor_text: r.get(14)?,
-                    cor_function_text: r.get(15)?,
-                    cor_visible_description: r.get(16)?,
-                    cor_object_size: r.get(17)?,
-                    cor_priority: r.get(18)?,
-                    cor_dpt_list: r.get(19)?,
-                    cor_read: r.get(20)?,
-                    cor_write: r.get(21)?,
-                    cor_transmit: r.get(22)?,
-                    cor_update: r.get(23)?,
-                    cor_communication: r.get(24)?,
+                    co_read_on_init: r.get(14)?,
+                    cor_text: r.get(15)?,
+                    cor_function_text: r.get(16)?,
+                    cor_visible_description: r.get(17)?,
+                    cor_object_size: r.get(18)?,
+                    cor_priority: r.get(19)?,
+                    cor_dpt_list: r.get(20)?,
+                    cor_read: r.get(21)?,
+                    cor_write: r.get(22)?,
+                    cor_transmit: r.get(23)?,
+                    cor_update: r.get(24)?,
+                    cor_communication: r.get(25)?,
+                    cor_read_on_init: r.get(26)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -342,6 +355,7 @@ pub fn com_object_views(
         let (update, update_layer) = pick(raw.co_update, raw.cor_update);
         let (communication, communication_layer) =
             pick(raw.co_communication, raw.cor_communication);
+        let (read_on_init, read_on_init_layer) = pick(raw.co_read_on_init, raw.cor_read_on_init);
         let priority = raw.cor_priority.or(raw.co_priority);
 
         views.insert(
@@ -372,6 +386,8 @@ pub fn com_object_views(
                 update_layer,
                 communication,
                 communication_layer,
+                read_on_init,
+                read_on_init_layer,
             },
         );
     }
@@ -394,7 +410,7 @@ pub fn com_object_views(
 /// `ValueLayer` keeps meaning only "which structural layer supplied the
 /// value", never also "which language did". Only `text`, `function_text`
 /// and `visible_description` are ever overlaid — `object_size`, `priority`,
-/// `dpt_list`, `number` and the four flags are values, not display text,
+/// `dpt_list`, `number` and the six flags are values, not display text,
 /// and translating them would corrupt stored project data the moment
 /// someone switched languages, exactly as `Value` stays untranslated in
 /// `translation_overlay`'s own doc comment.

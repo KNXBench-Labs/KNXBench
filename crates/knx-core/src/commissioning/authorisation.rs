@@ -285,7 +285,7 @@ impl fmt::Debug for AccessKeyAssignment {
 /// cases. This type is that field.
 ///
 /// `A_Key_Write` has no encoder (`cemi.rs`'s
-/// `key_write_has_an_apci_but_no_encoder`, spec §10.7), so a plan that
+/// `key_write_has_an_apci_but_no_encoder`, design spec §10.7), so a plan that
 /// declares [`AccessKeyDeclaration::Required`] cannot be carried out; the
 /// download sequencer refuses it with a named error instead of reporting
 /// Nr. 11/13 as done.

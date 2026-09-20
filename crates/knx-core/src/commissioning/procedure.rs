@@ -320,7 +320,7 @@ pub fn complete_download() -> Procedure {
                  says what 'as required' means for a given plan: declaring \
                  none leaves this step reported and empty, and declaring \
                  any is refused before it runs, because `A_Key_Write` has \
-                 no encoder (§10.7)",
+                 no encoder (design spec §10.7)",
                 StepEffect::Guard,
             ),
             step(
@@ -494,7 +494,7 @@ pub fn partial_download() -> Procedure {
                  says what 'as required' means for a given plan: declaring \
                  none leaves this step reported and empty, and declaring \
                  any is refused before it runs, because `A_Key_Write` has \
-                 no encoder (§10.7)",
+                 no encoder (design spec §10.7)",
                 StepEffect::Guard,
             ),
             step(

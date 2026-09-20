@@ -1219,7 +1219,7 @@ impl ApplicationService {
                 if *response { " response" } else { "" }
             )),
             // The key itself is never rendered: a bus monitor is the
-            // last place a device key should be readable (spec §10.7).
+            // last place a device key should be readable (design spec §10.7).
             ApplicationService::AuthorizeRequest { .. } => Some("key=<redacted>".to_string()),
             ApplicationService::AuthorizeResponse { level } => Some(format!("level={level}")),
             ApplicationService::PropertyValueRead {
@@ -2500,7 +2500,7 @@ mod tests {
     }
 
     /// A bus monitor is the last place a device key should be readable
-    /// (spec §10.7), so the summary redacts it — while still naming the
+    /// (design spec §10.7), so the summary redacts it — while still naming the
     /// service, because a hidden authorisation attempt is worse.
     #[test]
     fn an_authorize_request_never_renders_its_key() {

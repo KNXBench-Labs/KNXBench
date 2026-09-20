@@ -589,7 +589,7 @@ object number, name, DPT and direction; plus addresses inside no range) —
 Devices (name, individual address, description, commissioning state, and
 the raw `product_ref`/`program_ref` identifiers, each device's
 communication objects with number, name, description, DPT, the resolved
-layer, the five flags, active state and links, plus any orphaned
+layer, the six flags, active state and links, plus any orphaned
 communication object) — "What this report does not contain".
 
 **A group address has no datapoint type of its own.** The DPT belongs to

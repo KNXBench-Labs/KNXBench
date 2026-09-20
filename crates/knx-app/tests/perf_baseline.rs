@@ -332,6 +332,7 @@ fn build_devices_and_topology(
                         value: true,
                         layer: Layer::Instance,
                     }),
+                    read_on_init: Override::Absent,
                 },
                 size: None,
                 is_active: true,

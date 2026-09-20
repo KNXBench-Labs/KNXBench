@@ -1286,8 +1286,9 @@ pub fn set_com_object_description_impl(
 }
 
 /// Parses the wire-format flag name (`"Read"`, `"Write"`, `"Transmit"`,
-/// `"Update"`, `"Communication"` — `ComFlagKind`'s own `Debug` form) the
-/// same way `parse_direction` parses `"Send"`/`"Receive"` for group links.
+/// `"Update"`, `"Communication"`, `"ReadOnInit"` — `ComFlagKind`'s own
+/// `Debug` form) the same way `parse_direction` parses `"Send"`/`"Receive"`
+/// for group links.
 fn parse_com_flag_kind(flag: &str) -> Result<knx_core::ComFlagKind, String> {
     match flag {
         "Read" => Ok(knx_core::ComFlagKind::Read),
@@ -1295,8 +1296,9 @@ fn parse_com_flag_kind(flag: &str) -> Result<knx_core::ComFlagKind, String> {
         "Transmit" => Ok(knx_core::ComFlagKind::Transmit),
         "Update" => Ok(knx_core::ComFlagKind::Update),
         "Communication" => Ok(knx_core::ComFlagKind::Communication),
+        "ReadOnInit" => Ok(knx_core::ComFlagKind::ReadOnInit),
         other => Err(format!(
-            "unknown com-object flag '{other}', expected one of Read/Write/Transmit/Update/Communication"
+            "unknown com-object flag '{other}', expected one of Read/Write/Transmit/Update/Communication/ReadOnInit"
         )),
     }
 }

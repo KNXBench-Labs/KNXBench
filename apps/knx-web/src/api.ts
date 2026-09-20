@@ -218,7 +218,13 @@ export function setComObjectDescription(
   });
 }
 
-export type ComFlagName = "Read" | "Write" | "Transmit" | "Update" | "Communication";
+export type ComFlagName =
+  | "Read"
+  | "Write"
+  | "Transmit"
+  | "Update"
+  | "Communication"
+  | "ReadOnInit";
 
 export function setComObjectFlag(
   comObjectId: number,
@@ -844,6 +850,7 @@ export interface ComObjectFields {
   transmit: boolean | null;
   update: boolean | null;
   communication: boolean | null;
+  readOnInit: boolean | null;
   links: ComObjectLink[];
   moduleInstance: string | null;
 }

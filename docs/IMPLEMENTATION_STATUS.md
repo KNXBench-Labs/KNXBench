@@ -8442,9 +8442,10 @@ had recorded it as T23, which is the topology/group-range UI that closed on
 `ROADMAP.md`, `GAP_ANALYSIS_ETS.md` and `adr/0024-in-application-help.md`;
 the eighteen remaining T23 mentions all really are the topology work.
 
-**The third is not ours to close.** `git log --all -S'KNX_GATEWAY'` finds
-the installation's gateway address in eight commits, every one of them an
-ancestor of the pushed `origin/main`. The working tree is clean — three
+**The third is not ours to close.** A `git log --all -S` search for the
+installation's gateway address finds it in eight commits, every one of them
+an ancestor of the pushed `origin/main`. (The address is not repeated here;
+the document that records a leak should not extend it.) The working tree is clean — three
 separate commits removed the last of it — but history is not, and the only
 two ways out are a second history rewrite of a published branch or an
 explicit decision to accept it. That is the maintainer's call, and it is

@@ -1,10 +1,13 @@
-//! Reading and writing `.knxproj`: ZIP container, schema detection, tolerant
-//! XML parsing, mapping to and from `knx-core`, and the import report.
+//! Reading `.knxproj`: ZIP container, schema detection, tolerant XML
+//! parsing, mapping into `knx-core`, and the import report.
+//!
+//! One direction only. Writing `.knxproj` was withdrawn on 2026-09-20
+//! (ADR-0028): a project is imported once and lives in KNXBench's own
+//! `.knxdb` format from then on.
 
 pub mod compare;
 pub mod container;
 pub mod detect;
-pub mod export;
 pub mod infer;
 pub mod known;
 pub mod map;
@@ -34,8 +37,8 @@ pub use source::{
 };
 
 /// The result of a successful [`import_knxproj`]: the mapped project, every
-/// opaque entry export needs to write back unchanged, and the human-facing
-/// report summarizing all of it.
+/// opaque entry preserved byte-exact as evidence of what the source file
+/// said (ADR-0006), and the human-facing report summarizing all of it.
 pub struct ImportOutcome {
     pub project: knx_core::Project,
     pub opaque: Vec<opaque::OpaqueEntry>,
@@ -121,8 +124,8 @@ pub fn import_knxproj_observed(
 /// order: detect the schema version, parse both `0.xml` and `Project.xml`
 /// against its known-element table, validate the parsed document,
 /// map it into `knx_core::Project`, infer group address datapoint types,
-/// collect every container entry the exporter would otherwise have to
-/// regenerate, and fold all of it into one [`report::ImportReport`].
+/// collect every container entry the domain model has no home for, and
+/// fold all of it into one [`report::ImportReport`].
 pub fn import_knxproj_bytes(
     bytes: Vec<u8>,
     file_name: &str,
@@ -218,8 +221,8 @@ pub fn import_knxproj_bytes_observed(
     // `SourceLine/@BusAccess` is known but deliberately not modeled (Task
     // 6), so it is not among the genuinely-unknown elements in
     // `retained_elements` above — it is captured per-`SourceLine` instead.
-    // Export needs it back regardless of which of the two buckets it came
-    // from, so both are walked into the same opaque entry list here.
+    // The report has to name it regardless of which of the two buckets it
+    // came from, so both are walked into the same opaque entry list here.
     for installation in &parsed.document.installations {
         for area in &installation.areas {
             for line in &area.lines {
@@ -231,7 +234,8 @@ pub fn import_knxproj_bytes_observed(
                     // `BusAccess` elements into one entry ([`xpath`]). The
                     // element's position within the line (directly under it at
                     // schema 11, inside `Segment` at schema ≥21) is preserved
-                    // by keeping whatever followed `/Line` in the parser's path.
+                    // by keeping whatever followed `/Line` in the parser's
+                    // path, so the report can say where the bytes came from.
                     let mut rekeyed = bus_access.clone();
                     let suffix = bus_access
                         .xpath
@@ -247,9 +251,9 @@ pub fn import_knxproj_bytes_observed(
     // Schema ≥21's `ModuleInstances`/`GroupObjectTree`/`Security` are known
     // but deliberately not modeled beyond raw retention (the plan's Global
     // Constraints — neither has a `knx_core` field), exactly like
-    // `BusAccess` above, except per-device rather than per-line: a project
-    // xpath fixed regardless of which device it came from would be wrong
-    // the moment a project has more than one device (the same failure mode
+    // `BusAccess` above, except per-device rather than per-line: a key
+    // fixed regardless of which device it came from would name the wrong
+    // device the moment a project has more than one (the same failure mode
     // `BusAccess`'s own fixed xpath would have for more than one line), so
     // each device's own `@Id` is folded into the xpath here. Schema 11
     // devices never set any of the three fields, so this loop is a no-op

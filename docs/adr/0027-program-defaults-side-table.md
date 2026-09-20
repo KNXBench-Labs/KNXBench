@@ -84,7 +84,14 @@ lookup id itself, duplicating logic `enrich()` already has.
 ## Consequences
 
 `Devices` now owns two maps instead of one for communication-object data;
-`remove_com_object` must (and does) clean up both, tested directly.
+`remove_com_object` must (and does) clean up both. That cleanup is pinned
+by `devices::tests::removing_a_com_object_takes_its_program_defaults_with_it`,
+which fails if the cleanup line is removed. Because the map lives beside
+`ComObjectInstance` rather than inside it, `Command::DeleteDevice` also has
+to carry the entries it destroys into its inverse explicitly
+(`Command::CreateDevice::program_defaults`), or an undo would hand back a
+device stripped of everything enrichment lifted for it.
+
 `program_defaults` is additive and inert by default — an already-persisted
 project with no `com_object_program_default` rows behaves exactly as
 before, and a project with none needed writes none.

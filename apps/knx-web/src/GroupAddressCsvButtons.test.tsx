@@ -92,14 +92,14 @@ describe("GroupAddressCsvButtons", () => {
     expect(apiMock.exportGroupAddressesCsv).not.toHaveBeenCalled();
     expect(onSummary).not.toHaveBeenCalled();
     expect(onError).not.toHaveBeenCalled();
-    // Matches `App.tsx`'s `exportProject`: a cancelled dialog returns
+    // Matches `App.tsx`'s own save handler: a cancelled dialog returns
     // before `clearErrors()` runs at all, same as it never reaches the
     // route call above.
     expect(onClearErrors).not.toHaveBeenCalled();
     root.unmount();
   });
 
-  it("clears a prior error toast before running the export, like the neighbouring exportProject handler does", async () => {
+  it("clears a prior error toast before running the export, the way every file-writing handler does", async () => {
     filePickerMock.pickSavePath.mockResolvedValueOnce("/data/group-addresses.csv");
     apiMock.exportGroupAddressesCsv.mockResolvedValueOnce({ warnings: [] });
     const { root, onClearErrors, onSummary } = await renderButtons();
@@ -162,7 +162,7 @@ describe("GroupAddressCsvButtons", () => {
     root.unmount();
   });
 
-  it("clears a prior error toast before running the import, like the neighbouring exportProject handler does", async () => {
+  it("clears a prior error toast before running the import, the way every file-writing handler does", async () => {
     filePickerMock.pickOpenPath.mockResolvedValueOnce("/data/in.csv");
     apiMock.importGroupAddressesCsv.mockResolvedValueOnce({
       tree: { installations: [] } as unknown as ProjectTree,

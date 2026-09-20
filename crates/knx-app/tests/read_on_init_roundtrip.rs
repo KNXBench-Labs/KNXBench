@@ -206,3 +206,42 @@ fn a_program_layer_read_on_init_flag_raises_no_export_warning() {
         knx_etsproj::export::ExportWarning::ReadOnInitNotExported { .. }
     )));
 }
+
+#[test]
+fn switching_read_on_init_off_again_leaves_no_permanent_export_warning() {
+    // The unclearable-warning case: a user turns I on, thinks better of it,
+    // turns it off. That leaves `Value(false)` at `Layer::UserEdit` — there
+    // is no "clear to inherited" gesture in the UI — and every measured
+    // program-level `ReadOnInitFlag` reads `"Disabled"`, so a re-import
+    // resolves the same `false` back. Nothing is lost, so nothing is
+    // reported; otherwise the export report would carry a complaint the
+    // user has no way to answer.
+    let mut p = project();
+    let mut stack = CommandStack::new();
+    for value in [true, false] {
+        stack
+            .do_command(
+                &mut p,
+                Command::SetComObjectFlag {
+                    com_object: ComObjectInstanceId(1),
+                    flag: ComFlagKind::ReadOnInit,
+                    value,
+                },
+            )
+            .unwrap();
+    }
+    let com = p.devices.com_object(ComObjectInstanceId(1)).unwrap();
+    let resolved = com.flags.read_on_init.value().expect("still stated");
+    assert!(!resolved.value);
+    assert_eq!(resolved.layer, Layer::UserEdit);
+
+    let outcome = knx_etsproj::export::export_knxproj(&p, &[]).unwrap();
+    assert!(
+        !outcome.warnings.iter().any(|w| matches!(
+            w,
+            knx_etsproj::export::ExportWarning::ReadOnInitNotExported { .. }
+        )),
+        "an off switch is not a loss: {:?}",
+        outcome.warnings
+    );
+}

@@ -789,9 +789,12 @@ mod tests {
         .unwrap();
         let conn = Connection::open(&path).unwrap();
         conn.pragma_update(None, "foreign_keys", "OFF").unwrap();
-        // A v6-shaped object: five flags' worth of vocabulary available, one
-        // of them stated, and no `read_on_init` row because no v6 build
-        // could write one.
+        // A v6-shaped object: five flags' worth of vocabulary available and
+        // one of them stated. The insert goes through today's writer, which
+        // knows the sixth attribute, so the `read_on_init` row is deleted
+        // again below — a real v6 file has no such row at all, and a row
+        // saying `absent` would let the test pass without ever exercising
+        // the missing-row path it exists to prove.
         let flags = ResolvedFlags {
             communication: Override::Value(Resolved {
                 value: false,
@@ -822,9 +825,36 @@ mod tests {
             },
         )
         .unwrap();
+        // Back to a genuine v6 shape: the attribute vocabulary of a v6
+        // build is the five flags, so the sixth row must not be there.
+        let deleted = conn
+            .execute(
+                "DELETE FROM com_object_override WHERE attr = 'read_on_init'",
+                [],
+            )
+            .unwrap();
+        assert_eq!(deleted, 1, "the writer under test wrote the row we remove");
+        let remaining: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM com_object_override WHERE attr = 'read_on_init'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(remaining, 0);
         drop(conn);
 
         let conn = open_and_migrate(&path).unwrap();
+        // The migration invents nothing: still no row, and the loader turns
+        // a missing row into `Absent` rather than a stated `false`.
+        let rows: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM com_object_override WHERE attr = 'read_on_init'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(rows, 0, "v6 -> v7 must not backfill the sixth flag");
         let com = crate::devices::load_com_object_instance(&conn, ComObjectInstanceId(1)).unwrap();
         assert_eq!(com.flags.read_on_init, Override::Absent);
         // The flag that *was* stated false stays stated false — absence and

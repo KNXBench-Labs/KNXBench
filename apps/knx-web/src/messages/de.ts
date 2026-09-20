@@ -559,6 +559,11 @@ export const messages: Record<MessageKey, string> = {
   "app.filterName.etsProject": "ETS-Projekt",
   "app.filterName.knxDesktopProject": "knx-desktop-Projekt",
 
+  "app.exportWarning.readOnInitNotExported.one":
+    "Bei {count} Kommunikationsobjekt ist Lesen bei Initialisierung (I) eingeschaltet. Keine vermessene ETS-Projektdatei gibt dieses Flag je Objekt an, deshalb trägt die exportierte .knxproj es nicht mit.",
+  "app.exportWarning.readOnInitNotExported.other":
+    "Bei {count} Kommunikationsobjekten ist Lesen bei Initialisierung (I) eingeschaltet. Keine vermessene ETS-Projektdatei gibt dieses Flag je Objekt an, deshalb trägt die exportierte .knxproj es nicht mit.",
+
   "documentationExport.filterName": "HTML-Dokument",
 
   "bulkAction.deviceLabel.one": "{count} Gerät ausgewählt",
@@ -929,7 +934,7 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.limits.p1":
     "KNXBench ist eine unabhängige Anwendung. Sie stammt nicht von der KNX Association, ist von ihr weder unterstützt noch zertifiziert, und sie ist nicht die ETS. Wo sie eine ETS-Datei liest oder schreibt, tut sie das nach eigener Lesart dieser Datei.",
   "help.topic.limits.p2":
-    "KNX Secure wird nicht unterstützt. Ein kennwortgeschütztes Projekt lässt sich aus diesem Fenster nicht öffnen — es gibt keine Stelle, an der das Kennwort einzugeben wäre. Geräte über den Bus zu programmieren, ist hier ebenfalls nicht vorgesehen: die Busfunktionen sind Mitlesen und das Senden einzelner Telegramme. Read-on-Init (I) gehört jetzt zum Projektmodell und lässt sich ändern; eine Lücke bleibt: keine vermessene ETS-Projektdatei gibt dieses Flag je Kommunikationsobjekt an, deshalb bleibt eine Änderung daran beim Export einer .knxproj zurück — der Exportbericht sagt es ausdrücklich.",
+    "KNX Secure wird nicht unterstützt. Ein kennwortgeschütztes Projekt lässt sich aus diesem Fenster nicht öffnen — es gibt keine Stelle, an der das Kennwort einzugeben wäre. Geräte über den Bus zu programmieren, ist hier ebenfalls nicht vorgesehen: die Busfunktionen sind Mitlesen und das Senden einzelner Telegramme. Read-on-Init (I) gehört jetzt zum Projektmodell und lässt sich ändern; eine Lücke bleibt: keine vermessene ETS-Projektdatei gibt dieses Flag je Kommunikationsobjekt an, deshalb trägt eine exportierte .knxproj es nicht mit. Der Exportbericht nennt die Objekte, bei denen es eingeschaltet ist — der Fall, in dem ein erneuter Import mit einem anderen Wert zurückkäme.",
   "help.topic.limits.p3":
     "Was vorhanden ist, ist getestet, aber eine Testsuite ist keine Begehung. Bevor Sie sich in einer Anlage auf diese Anwendung verlassen, gleichen Sie ab, was sie Ihnen sagt, mit dem, was die Anlage tut.",
 

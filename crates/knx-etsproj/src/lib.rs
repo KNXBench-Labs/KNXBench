@@ -380,8 +380,10 @@ mod import_tests {
         // Not a re-export of the KV reference project — a genuinely
         // different installation (Session 7 evidence). Schema 23 imports
         // successfully (Task 3/7's known-element table and mapper already
-        // cover it) but is not claimed round-trip-clean the way schema 21
-        // is: see `report::build`'s schema-23 `unsupported` entry.
+        // cover it), but its module handling is inferred from the schema-21
+        // sample rather than independently evidenced: see `report::build`'s
+        // schema-23 `unsupported` entry. The name predates ADR-0028, when
+        // there was still a round trip to make a claim about.
         let out = import_knxproj(&reference_ets6_path()).unwrap();
         assert_eq!(out.report.source.schema_version, 23);
     }

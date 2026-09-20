@@ -30,7 +30,8 @@ In hindsight: I must have been drunk.
 ## What it can do today
 
 - Import supported ETS `.knxproj` archives, with a report of warnings, errors and anything
-  it could not model. Unknown data is preserved verbatim, never silently dropped.
+  it could not model. Unknown data is preserved verbatim, never silently dropped. Import is
+  one-way: KNXBench reads `.knxproj` and never writes one.
 - Save and reopen projects in its own versioned `.knxdb` SQLite format.
 - Inspect and edit topology, buildings, devices, individual and group addresses, group
   links, communication-object datapoint types and flags, and top-level device parameters.
@@ -38,13 +39,14 @@ In hindsight: I must have been drunk.
   German/English interface.
 - Build up a product database from manufacturer data found in project archives or from
   standalone `.knxprod` packages, and enrich device communication objects from it.
-- Export `.knxproj`, group-address CSV, a self-contained HTML project document, and a diff
-  between two projects.
+- Export a group-address CSV, a self-contained HTML project document, and a diff between
+  two projects.
 - Watch a live KNX bus over KNXnet/IP tunneling, and send group values from the CLI or the
   bus panel.
 
-Not available, and not claimed: commissioning or device download to real hardware, KNX IP
-Secure, and anything resembling certification or full ETS compatibility. The wording here
+Not available, and not claimed: writing a `.knxproj` (withdrawn 2026-09-20 — once imported,
+a project stays in KNXBench's own format), commissioning or device download to real
+hardware, KNX IP Secure, and anything resembling certification or full ETS compatibility. The wording here
 is **KNX-compatible**, deliberately. See
 [Implementation status](docs/manual/implementation-status.md) and
 [Known issues](docs/manual/known-issues.md) for the honest current picture.

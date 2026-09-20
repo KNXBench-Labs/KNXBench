@@ -41,6 +41,13 @@ The File menu in the web build. The desktop build adds one more item at the bott
 **Quit** — a browser tab cannot close itself, so that entry only exists where it can
 actually work.
 
+> **Note**
+>
+> The screenshot above was taken before 2026-09-20 and still shows an **Export to
+> .knxproj…** item. That item has been removed
+> ([ADR-0028](../../adr/0028-no-knxproj-export.md)); the menu you see has one entry
+> fewer. The image will be retaken the next time the screenshot set is refreshed.
+
 ## The strip below the header
 
 A thin bar carries the two pane toggles: **Navigation** on the left, **Properties** on
@@ -167,11 +174,17 @@ each command's shortcut where it has one, which makes it a decent way to learn t
 
 **Help** (`F1`, or the `?` button) is ten short topics about this window and the KNX
 terms behind it: Getting started, The window, Buildings floors and rooms, Areas lines
-and devices, Group addresses, Communication object flags, Bus monitor, Import and
-export, Keyboard, and What this does not do.
+and devices, Group addresses, Communication object flags, Bus monitor, Import,
+Keyboard, and What this does not do.
 
 ![The help panel with its ten topics listed and the "Getting started" topic
 open](../../assets/screenshots/porcelain-help-panel.png)
+
+> **Note**
+>
+> The eighth topic was called "Import and export" when this screenshot was taken. It is
+> called "Import" now, because there is no `.knxproj` export any more
+> ([ADR-0028](../../adr/0028-no-knxproj-export.md)).
 
 The help panel is deliberately short. It answers "what is this thing on my screen",
 not "how does KNX work" — that part is this manual's job, starting at

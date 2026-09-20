@@ -30,14 +30,14 @@ from KNXBench's own native `.knxdb` file format, covered separately below.
 | 12 | ETS 4 | 🟡 Partial or experimental | Documented in the schema family, no real sample imported yet — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
 | 13, 14 | ETS 5, up to 5.6 | 🟡 Partial or experimental | Same: documented, unverified — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
 | 20 | ETS 5.7 | 🟡 Partial or experimental | A standalone scheme-20 `.knxprod` *product package* installs and is verified; a full scheme-20 `.knxproj` *project* has not been imported — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
-| 21 | ETS 5.7+ | ✅ Implemented | The KNX Association's own demo project imports and re-exports with zero unknown constructs — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
+| 21 | ETS 5.7+ | ✅ Implemented | The KNX Association's own demo project imports with zero unknown constructs — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 | 22 | ETS 6.0–6.2 | 🟡 Partial or experimental | Documented only, no sample — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
 | 23 | ETS 6.3.7959.0 | 🟡 Partial or experimental | An ETS6 re-export of the schema-11 reference project imports; module-based application programs are inferred from the schema-21 sample, not independently evidenced at schema 23 — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 
 > **Note**
 >
-> "Verified" for schema 21 means round-trip tested against one real sample project. It
-> does not mean every project ever produced by that ETS version will import cleanly —
+> "Verified" for schema 21 means one real sample project imports with measured counts.
+> It does not mean every project ever produced by that ETS version will import cleanly —
 > see [Working with projects](../user-guide/02-projects.md) for what an import report
 > tells you when something in your own file falls outside that.
 
@@ -45,11 +45,14 @@ from KNXBench's own native `.knxdb` file format, covered separately below.
 
 | Capability | Status | Evidence |
 | --- | --- | --- |
-| Writing schema 11 the importer reads back to a semantically equal model | ✅ Implemented | Round-trip test on the reference project — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
-| Writing schema 21, re-imports to an equal domain model | ✅ Implemented | Round-trip test on the KV v2.5 demo project — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
-| Every opaque byte surviving a round trip unchanged | ✅ Implemented | Content-hash comparison on 38 container entries — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
-| Re-import of a KNXBench export by real ETS software | 🚧 In progress | Never tried against a real ETS installation — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
-| A signed export | ❌ Not implemented | Every export KNXBench produces is unsigned — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
+| Writing a `.knxproj` in any schema version | ❌ Not implemented, deliberately | Withdrawn on 2026-09-20 with the writer, the CLI subcommand, the HTTP route and the button — [ADR-0028](../../adr/0028-no-knxproj-export.md), [COMPATIBILITY.md §4](../../COMPATIBILITY.md#4-not-supported) |
+
+> **Note**
+>
+> This section used to list four shipped export capabilities and two open ones. None of
+> them exist any more. KNXBench reads a `.knxproj` and never writes one; a project that
+> has been imported stays in `.knxdb`. The group-address CSV and the HTML project
+> documentation below are KNXBench's own formats and are unaffected.
 
 ## Password-protected projects
 

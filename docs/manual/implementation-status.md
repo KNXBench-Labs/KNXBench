@@ -48,7 +48,7 @@ gives five, with the measured counts behind them.
 | `.knxproj` at schema 11 (ETS4) and schema 21 | ✅ Implemented | Measured counts on real files — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
 | `.knxproj` at schemes 12–14, 20, 22, 23 | 🟡 Partial or experimental | Either documented but never sampled, or sampled in one direction only — [Supported and unsupported](reference/02-supported-and-unsupported.md) |
 | Import report with errors, warnings, unsupported constructs and conflicts | ✅ Implemented | Also available as JSON from the command line |
-| Preserving unknown attributes, elements and whole container members untouched | ✅ Implemented | 38 container entries compared by content hash across a round trip |
+| Preserving unknown attributes, elements and whole container members untouched | ✅ Implemented | 38 container entries stored with the content hash they arrived with |
 | ZipCrypto-protected projects (ETS4/ETS5) | 🟡 Partial or experimental | Implemented and tested against synthetic fixtures only |
 | AES-protected projects (ETS6) | ❌ Not implemented | Refused by name — [§13](../KNOWN_LIMITATIONS.md#13-password-protected-projects-zipcrypto-ets4ets5-is-decrypted-aes-ets6-is-still-refused) |
 | Importing part of a project into an existing one | ❌ Not implemented | Import is whole-file — [`docs/GAP_ANALYSIS_ETS.md`](../GAP_ANALYSIS_ETS.md), row C3 |
@@ -57,11 +57,11 @@ gives five, with the measured counts behind them.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Writing schema 11 and schema 21 containers that re-import to an equal model | ✅ Implemented | Round-trip tests on two real projects |
-| Byte-identical re-export of an imported file | ❌ Not implemented | Deliberately semantic, not byte-exact — [§4](../KNOWN_LIMITATIONS.md#4-round-trips-are-semantic-not-byte-exact) |
-| Acceptance of a KNXBench export by a real ETS installation | 🚧 In progress | Never tried; no ETS installation is available here — [§5](../KNOWN_LIMITATIONS.md#5-exports-are-unsigned-and-ets-acceptance-is-untested) |
-| Signing an exported container | ❌ Not implemented | Every export is unsigned and says so in its warnings |
-| Reporting what an export could not carry | ✅ Implemented | Unsigned, stale signature, missing manufacturer data and un-exportable Read on init are each named |
+| Writing a `.knxproj` at any schema version | ❌ Not implemented, deliberately | Withdrawn on 2026-09-20 with the writer, the `knx export` subcommand, the HTTP route and the button — [ADR-0028](../adr/0028-no-knxproj-export.md) |
+
+Import is one-way. This table used to have five rows describing a writer that shipped
+between 2026-09-10 and 2026-09-20; none of it exists now, and neither do the warnings it
+raised. A project that has been imported stays in `.knxdb`.
 
 ## Product databases
 
@@ -102,7 +102,7 @@ gives five, with the measured counts behind them.
 | Viewing every communication object of a device, with its resolved values and their provenance | ✅ Implemented | [Devices and products](user-guide/05-devices-and-products.md) |
 | Editing the datapoint type and the description | ✅ Implemented | Both are undoable commands |
 | All six communication flags, including Read on init (`I`) | ✅ Implemented | Stored, resolved through the product-data layers, undoable |
-| Exporting Read on init into a `.knxproj` | ❌ Not implemented | No measured ETS file states it per object; the export warns instead — [§117](../KNOWN_LIMITATIONS.md#117-read_on_init_flag-is-parsed-and-stored-then-discarded-before-it-reaches-knx-core) |
+| Exporting Read on init into a `.knxproj` | ❌ Not applicable since 2026-09-20 | There is no `.knxproj` export at all — [ADR-0028](../adr/0028-no-knxproj-export.md). The flag is stored and undoable in `.knxdb`; the warning that used to announce its loss is gone with the exporter — [§117](../KNOWN_LIMITATIONS.md#117-read_on_init_flag-is-parsed-and-stored-then-discarded-before-it-reaches-knx-core) |
 | Linking and unlinking a communication object to a group address, with a send/receive direction | ✅ Implemented | [Working with group addresses](user-guide/04-group-addresses.md) |
 
 ## Parameters
@@ -149,7 +149,7 @@ gives five, with the measured counts behind them.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| `knx import`, `knx export` | ✅ Implemented | With `--report-json` for the full import report — [Command line](user-guide/10-command-line.md) |
+| `knx import` | ✅ Implemented | With `--report-json` for the full import report — [Command line](user-guide/10-command-line.md). `knx export` was removed on 2026-09-20 — [ADR-0028](../adr/0028-no-knxproj-export.md) |
 | `knx ga-export`, `knx ga-import` (with `--dry-run`) | ✅ Implemented | — |
 | `knx doc-export`, `knx diff` | ✅ Implemented | — |
 | `knx products list / ingest / show / verify` | ✅ Implemented | `ingest` accepts a `.knxproj` or a `.knxprod`; a `.vd2` argument is listed but always refused |

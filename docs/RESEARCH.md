@@ -3714,7 +3714,7 @@ Open question for a later session: can we read secured runtime keys directly out
 | R6 | GPL-2.0 contamination via `xknxproject` | Medium | Test-only dependency, enforced by CI. |
 | R7 | Product database size/performance (22 MB for 12 programs) | Medium | Indexed, cached, versioned product DB layer; never re-parse per open. |
 | R8 | Secret leakage once KNX Secure is supported | High | Isolated key subsystem, excluded from exports/logs by default. |
-| R9 | Writing an unsigned `.knxproj` may be rejected by ETS on re-import | Medium | Test explicitly. If rejected, our export is a one-way documentation format and must say so. |
+| R9 | Writing an unsigned `.knxproj` may be rejected by ETS on re-import | Medium | **Closed as not applicable (2026-09-20).** The test was never run, and now has no subject: [ADR-0028](adr/0028-no-knxproj-export.md) withdrew `.knxproj` writing entirely, so KNXBench produces no file for ETS to reject. |
 | R10 | Commissioning/device-download procedures might be undocumented outside ETS internals | High | **Partly done (2026-09-11).** The R5 research spike ran — see §8.4. The generic download/unload/reset/memory-write procedures and the Load State Machine are Standard-normative and now cited in full; "Differential Download" is a formal Glossary term. This closes the research risk on the *generic* procedure; it does not build a downloader, it does not verify anything against real hardware, and the product-specific `Legacy*` compatibility-flag matrix and vendor `Baggage` DLL involvement (R5 above) remain genuinely undocumented in this corpus — see §8.4 Q4/Q9. |
 
 ---

@@ -101,9 +101,14 @@ brief's candidate seams one at a time against it:
 functions by name:
 
 ```rust
-pub use export::export_ets_project;
 pub use import::{import_ets_project, import_ets_project_observed, import_ets_project_with, …};
 ```
+
+(When this study was written the list above also began with `pub use
+export::export_ets_project;`. `.knxproj` writing was withdrawn on 2026-09-20
+— [ADR-0028](adr/0028-no-knxproj-export.md) — which removes an export seam
+rather than adding one, so the finding below is now truer than when it was
+measured.)
 
 There is no `Importer` trait, no `Exporter` trait, no format enum and no registry. The
 `.knxproj` reader (`crates/knx-etsproj`, 12 310 lines), the group-address CSV
@@ -615,10 +620,11 @@ Around that sit two more integrity mechanisms:
   the enum, the persistence schema and its migration chain would all have to grow a sixth
   variant.
 * [V] **Opaque passthrough** ([ADR-0006](adr/0006-opaque-passthrough-store.md),
-  [ADR-0007](adr/0007-roundtrip-fidelity.md)). Unparsed constructs are preserved verbatim
-  so that export can put them back. A plugin that rewrote a project without carrying that
-  store would break roundtrip fidelity **silently** — no validator catches it, because it
-  is an absence.
+  [ADR-0007](adr/0007-roundtrip-fidelity.md), superseded by
+  [ADR-0028](adr/0028-no-knxproj-export.md)). Unparsed constructs are preserved verbatim.
+  Until 2026-09-20 that was so export could put them back; now it is evidence of what the
+  source file said. A plugin that rewrote a project without carrying that store would drop
+  that evidence **silently** — no validator catches it, because it is an absence.
 
 ### The hole in the wall
 

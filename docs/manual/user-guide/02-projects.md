@@ -8,8 +8,8 @@ anything else:
 - **`.knxdb`** is KNXBench's own project file. It is a SQLite database, it is the
   working format, and it is the only format that keeps everything KNXBench knows about
   your project.
-- **`.knxproj`** is the ETS project archive. KNXBench reads it, and can write it, but
-  it is an exchange format here, not the place your work lives.
+- **`.knxproj`** is the ETS project archive. KNXBench reads it and never writes one.
+  It is the way a project gets *in*; once imported, your work lives in `.knxdb`.
 
 Everything in this chapter is reachable from the **File** menu, and most of it also
 from the command palette (`Ctrl+Shift+P`).
@@ -174,28 +174,27 @@ browser tab cannot close itself — so nothing intercepts a closed tab.
 > Closing the browser tab of the web build does not warn you about unsaved edits. Save
 > before you close it.
 
-## Exporting to `.knxproj`
+## There is no `.knxproj` export
 
-**Export to .knxproj…** writes an ETS-shaped archive from the current project. It stays
-grayed out until the project has been saved to a file: the exporter reads from the
-stored project, so there has to be one.
+Until 2026-09-20 there was an **Export to .knxproj…** item in the File menu. It is
+gone, together with the code behind it, and it is not coming back:
+[ADR-0028](../../adr/0028-no-knxproj-export.md) records the decision. Import is
+one-way. Once a project has been read into KNXBench, it stays in `.knxdb`.
 
-Two honest caveats, both of which the application tells you itself:
+If you have a screenshot, a script or a habit that expects that item, this is what
+changed and what to use instead:
 
-- **Every export is unsigned.** ETS project files carry a signature; KNXBench does not
-  produce one. Whether a real ETS installation opens an unsigned third-party
-  `.knxproj` has never been tested here. The export always raises this as a warning,
-  so you will see it on screen every time.
-- **`.knxdb` is the format that keeps everything.** The decision to stop treating "ETS
-  re-imports our file" as a goal is written down in
-  [ADR-0015](../../adr/0015-native-output-drops-ets-reimport-goal.md). Export
-  `.knxproj` to hand data to someone else; keep working in `.knxdb`.
+| You want to | Do this instead |
+| --- | --- |
+| Keep working on the project | Save to `.knxdb` — it keeps everything KNXBench knows |
+| Hand group addresses to another tool | **Export group addresses (CSV)…** — [Working with group addresses](04-group-addresses.md) |
+| Hand someone a readable account of the project | **Export documentation…** — [Documentation export and project comparison](08-reports-and-diff.md) |
+| Give a colleague the original ETS file | Give them the `.knxproj` you imported; KNXBench never modified it |
 
-One case fails rather than warns: a group address that sits in no group range cannot
-be written to a `.knxproj`, because the ETS schema has nowhere to put it. The export
-stops and names the address. The same project saves to `.knxdb` without complaint —
-the native format has no such restriction. Give the address a range, or export a
-different way. [Working with group addresses](04-group-addresses.md) explains ranges.
+The short reason: an exported archive was unsigned, no real ETS installation was ever
+available here to test whether ETS would accept it, and maintaining a writer nobody
+could verify cost more than it returned. A file KNXBench cannot promise ETS will open
+is not a file KNXBench should write.
 
 ## The rest of the File menu
 

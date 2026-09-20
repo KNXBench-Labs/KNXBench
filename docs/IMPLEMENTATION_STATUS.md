@@ -109,7 +109,7 @@ against the dangling link. Fixing it means deciding cascade-delete vs.
 block-the-delete vs. something else in `command.rs`'s own design,
 deliberately not done in this cycle.
 
-**`knx-etsproj` holds the full six-stage import/export pipeline**: the ZIP
+**`knx-etsproj` holds the full six-stage import pipeline**: the ZIP
 container (`container.rs`, with a 64 MB per-entry size guard), schema
 detection (`detect.rs`), the tolerant streaming parser for both `0.xml`
 and `Project.xml` (`parse/`, `known.rs`'s schema-11 table), attribute value
@@ -118,11 +118,13 @@ mapper into `knx_core::Project` (`map.rs`), datapoint-type inference
 (`infer.rs`), the opaque-entry collector (`opaque.rs` — now handing
 manufacturer files out separately as `ManufacturerFile`, Session 4 Task
 12), the import report (`report.rs`), orchestration
-(`import_knxproj`/`import_knxproj_bytes` in `lib.rs`), schema-11 XML
-writers and container export (`export/`), and the declared
-semantic-equality comparison (`compare.rs`). 89 tests in the crate (68
-unit, plus the golden, oracle, roundtrip and malformed-input integration
-suites).
+(`import_knxproj`/`import_knxproj_bytes` in `lib.rs`), and the declared
+semantic-equality comparison (`compare.rs`). The XML writers and container
+export that used to live in `export/` were deleted on 2026-09-20
+([ADR-0028](adr/0028-no-knxproj-export.md)); `xpath.rs`, written for them,
+stays because the import report uses its instance-exact keys to say where a
+retained value came from. The test count and suite list moved with that
+deletion — see the T27 entry at the end of this document for the figures.
 
 **`knx-productdb` is no longer an empty crate.** It owns its own SQLite
 migration chain (`migration.rs`, v1) and parser, and depends on neither
@@ -138,15 +140,15 @@ application program into `Override::Absent` slots only (`enrich.rs`,
 plus the golden ingest of the reference project's manufacturer data, the
 `xknxproject` oracle comparison, and the malformed-input suite).
 
-**`knx-app` holds both the import and export services**
-(`import.rs`: `import_ets_project`/`import_ets_project_with`;
-`export.rs`: `export_ets_project`) — the one crate that sees
-`knx-etsproj`, `knx-store` and `knx-productdb` together, enforced by
-`check-layering`. `ImportOptions { product_db }` decides whether
-manufacturer data routes through the shared product database (ingested
-and enriched) or falls back to the project's own opaque store exactly as
-Session 3 wrote it — both paths tested, including byte-identical export
-either way. 7 tests.
+**`knx-app` holds the import service**
+(`import.rs`: `import_ets_project`/`import_ets_project_with`) — the one
+crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together,
+enforced by `check-layering`. Its companion `export.rs`
+(`export_ets_project`) was deleted on 2026-09-20
+([ADR-0028](adr/0028-no-knxproj-export.md)). `ImportOptions { product_db }`
+decides whether manufacturer data routes through the shared product
+database (ingested and enriched) or falls back to the project's own opaque
+store exactly as Session 3 wrote it — both paths tested.
 
 **`apps/knx-cli`'s `import` subcommand gains `--product-db <path>` /
 `--no-product-db`**, defaulting to `$XDG_DATA_HOME/knx/products.sqlite`
@@ -440,10 +442,10 @@ across the workspace (up from 314), plus 64 `vitest` tests in
 | `Cargo.toml`, `rust-toolchain.toml` | Workspace root; toolchain pinned to Rust 1.98.0. |
 | `crates/knx-core/` | Domain model per [DATA_MODEL.md](DATA_MODEL.md), sections 1–9 and 11. No IO. |
 | `crates/knx-store/` | SQLite schema-version migration chain through v5 (`migration.rs`), the opaque passthrough table (`opaque.rs`), the manufacturer manifest table (`manifest.rs`, Session 4), full `knx_core::Project` entity persistence (`project.rs`, `strings.rs`, `topology.rs`, `building.rs`, `devices.rs`, `group.rs`, `parameter.rs`, `command_sync.rs` — Session 5 cycle 2), and four frozen fixtures. |
-| `crates/knx-etsproj/` | The full six-stage `.knxproj` import/export pipeline — see the Session 3 paragraph above. Hands manufacturer files out separately from opaque entries (Session 4). No dependency on `knx-store`. |
+| `crates/knx-etsproj/` | The full six-stage `.knxproj` import pipeline — see the Session 3 paragraph above. Import only since 2026-09-20 ([ADR-0028](adr/0028-no-knxproj-export.md)). Hands manufacturer files out separately from opaque entries (Session 4). No dependency on `knx-store`. |
 | `crates/knx-productdb/` | The shared product database: own SQLite migration chain, streaming manufacturer-XML ingest, and enrichment of `ComObjectInstance` — see the Session 4 paragraph above. No dependency on `knx-etsproj` or `knx-store`. |
 | `crates/knx-projection/` | Pure `Project` → `ProjectTree` projection with `ts-rs` TypeScript bindings, including `GroupAddressNode` on `InstallationNode` (Session 5 cycle 5) — see the Session 5 paragraph above. No dependency beyond `knx-core`; the fourth `check-layering` root. |
-| `crates/knx-app/` | The import and export services (`import.rs`, `export.rs`) — the one crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together. |
+| `crates/knx-app/` | The import service (`import.rs`) — the one crate that sees `knx-etsproj`, `knx-store` and `knx-productdb` together. `export.rs` was deleted on 2026-09-20 ([ADR-0028](adr/0028-no-knxproj-export.md)). |
 | `crates/knx-net/` | Empty crate with its responsibility stated in a doc comment. |
 | `crates/knx-secure/` | Was an empty crate with its responsibility stated in a doc comment; gained its first code in A6 (2026-09-13, see the dated entry at the end of this document): the `.knxproj` ZIP-password derivation, `pbkdf2`/`sha2`/`base64` as its first real dependencies. Gained its second body of code in T15 (2026-09-14): `zipcrypto.rs`, PKWARE Traditional Encryption, read-only — `knx-etsproj` now depends on this crate for `Container::open_with_password`. Still holds no KNX Secure runtime-key handling (the bus-level protocol), which is what the crate's name is actually reserved for. |
 | `apps/knx-cli/` | Headless entry point, binary `knx`. `import` subcommand (Session 3, `--product-db`/`--no-product-db` added Session 4) and `products` subcommand (Session 4); prints its version otherwise. |
@@ -455,7 +457,7 @@ across the workspace (up from 314), plus 64 `vitest` tests in
 | `.github/workflows/ci.yml` | CI: Tauri Linux prerequisites and Node.js setup (Session 5), formatting, clippy with `-D warnings`, tests, `knx-web`'s own `npm test` (Vitest, Session 5 cycle 5; path updated from `knx-desktop` to `knx-web` with the web/Docker deployment target), the layering gate, `cargo deny check`, and a check that `knx-projection`'s `ts-rs` bindings under `apps/knx-web/src/bindings` are not stale (Session 5; path likewise updated). A separate Docker artifact job runs `apps/knx-server/scripts/smoke-test.sh` on every push and pull request, building the shipped image and exercising health plus native persistence without private fixtures. |
 | `docs/ARCHITECTURE.md` | Layering, workspace layout, enforced rules, core approach, UI boundary, KNXnet/IP, key material, test strategy. |
 | `docs/DATA_MODEL.md` | The target domain model, per section marked implemented / planned / retained-but-uninterpreted. |
-| `docs/IMPORT_EXPORT.md` | The six-stage pipeline, container handling, tolerant parsing, opaque store, import report, export rules, roundtrip guarantees. |
+| `docs/IMPORT_EXPORT.md` | The six-stage pipeline, container handling, tolerant parsing, opaque store, import report, import fidelity, and the two exports that are not `.knxproj` (group-address CSV, project documentation). |
 | `docs/COMPATIBILITY.md` | What is verified, what is expected but unverified, what is not supported — every verified row now names the test that verifies it. |
 | `docs/KNOWN_LIMITATIONS.md` | Twenty-five limitations with cause, impact and the condition that would lift each. |
 | `docs/ROADMAP.md` | Sessions 2–7 with deliverables and entry conditions. |

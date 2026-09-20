@@ -5,6 +5,14 @@ The contract Session 3 implements. Evidence markers follow
 against source code, **[D]** documented elsewhere but not verified here, **[A]**
 assumption.
 
+**`.knxproj` is read-only.** KNXBench imports it and never writes it
+([ADR-0028](adr/0028-no-knxproj-export.md), 2026-09-20); the project then
+lives in KNXBench's own `.knxdb` store. The "export" in this document's
+title is the group-address CSV (section 11) and the project documentation
+(section 12), neither of which is an ETS format. Being able to read a
+`.knxproj` is not the same as being able to replace ETS, and nothing here
+claims otherwise.
+
 ## 1. Pipeline
 
 Six stages. Each has its own error type, and no stage knows the next one.
@@ -164,9 +172,12 @@ A table in the project file (`opaque_entry`, `knx-store` schema version 2):
 
 `xpath`/`name` extend the four-column shape this section originally
 sketched: an opaque entry is not always a whole file — a retained attribute
-needs to say which element it belongs to and what it was called, so export
-can put it back on the right element rather than just somewhere in the
-archive. Both are empty for a whole container entry.
+needs to say which element it belongs to and what it was called, so the
+import report can name *where in the source file* the preserved value was
+found rather than just pointing at the archive. Both are empty for a whole
+container entry. (The keys were written for a writer that replayed them;
+the writer is gone since [ADR-0028](adr/0028-no-knxproj-export.md), the
+keys are not — locating the evidence is the point now.)
 
 Contents (RESEARCH §7) [V], now with `OpaqueKind`, since the code exists:
 
@@ -178,8 +189,8 @@ Contents (RESEARCH §7) [V], now with `OpaqueKind`, since the code exists:
 | `<P>/ExtraData/*.rbg`, `*.azp` | ISO-8859 CSV with CRLF, legacy ETS3-era plug-in data | `ExtraData` |
 | `*.signature` | RSA signatures over manufacturer and project data | `Signature` |
 | `knx_master.xml` | DPT/product master catalogue | `MasterData` |
-| Any other container entry not regenerated on export | Copied through unchanged | `ContainerEntry` |
-| A known-but-not-modelled attribute (`Installation/@BCUKey`, `@SplitType`, `ProjectInformation`'s tool-state attributes; `DeviceInstance`'s `LoadedImage`/`CheckSums`/`DownloadCounter`, ETS's differential-download state, `Project Schema23 v01.00.00.pdf` p. 44) | Name and value, keyed by the element's own ETS id (`knx_etsproj::xpath`) so export puts it back on the element it came from; where two source elements share one key the value is dropped and an export warning says so (`KNOWN_LIMITATIONS.md` [#34](KNOWN_LIMITATIONS.md#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes--resolved-2026-09-20)) | `RetainedAttribute` |
+| Any other container entry | Copied through unchanged | `ContainerEntry` |
+| A known-but-not-modelled attribute (`Installation/@BCUKey`, `@SplitType`, `ProjectInformation`'s tool-state attributes; `DeviceInstance`'s `LoadedImage`/`CheckSums`/`DownloadCounter`, ETS's differential-download state, `Project Schema23 v01.00.00.pdf` p. 44) | Name and value, keyed by the element's own ETS id (`knx_etsproj::xpath`), one key per source element instance, so the report can say which element the value came from | `RetainedAttribute` |
 | An unrecognized element, or a known-but-not-modelled element (`BusAccess`) | Raw bytes, tag included | `RetainedElement` |
 
 **Fidelity by construct**, the promised column — modeled in the domain
@@ -202,8 +213,11 @@ Three rules, without exception:
 
 1. **Never execute.** Vendor DLLs are bytes we copy. They are never loaded.
 2. **Never interpret.** Opaque content has no meaning inside our model.
-3. **Write back unchanged.** Export reproduces the stored bytes exactly, and
-   the SHA-256 proves it.
+3. **Never alter.** The stored bytes are the source's bytes, and the
+   SHA-256 proves it. Nothing in KNXBench rewrites them — since
+   [ADR-0028](adr/0028-no-knxproj-export.md) nothing writes them back out
+   at all, so they are evidence of what the source file said and nothing
+   else.
 
 The vendor plug-in binaries are the concrete reason full ETS compatibility is
 not achievable and is never claimed: part of some devices' configuration
@@ -260,12 +274,12 @@ anywhere in this pipeline.
 
 **Unparsable values.** A present attribute whose value the importer cannot
 parse is kept, not dropped. On a field modelled as `Override<T>` the raw
-text is held in `Override::Malformed` (ADR-0010's amendment) and written
-back verbatim on export, so a file that arrives with an unreadable value
-leaves with the same one. A field modelled as a bare value or an `Option`
-has nowhere to keep the raw text, so it falls back to the type's default
-with the problem reported — the loss is visible in the report, never
-silent.
+text is held in `Override::Malformed` (ADR-0010's amendment), so the exact
+text the file carried stays visible in the project and in diagnostics
+instead of being replaced by a guess. A field modelled as a bare value or
+an `Option` has nowhere to keep the raw text, so it falls back to the
+type's default with the problem reported — the loss is visible in the
+report, never silent.
 
 ### 6.1 CLI exit codes
 
@@ -288,8 +302,8 @@ A group address may carry no datapoint type of its own — 194 of 514 in the
 reference project (RESEARCH §6.1) [V]. Where one can be derived from the
 communication objects linked to it, the derived value is used for display and
 is marked `Layer::Inferred`. Inferred values are shown as inferred in the UI
-and are **never exported**: writing them back would silently promote our guess
-into the user's project.
+and stay distinguishable from what the file actually said: a guess is never
+allowed to lose its label and pass itself off as the user's own data.
 
 Where several linked objects declare **different** datapoint types on one group
 address, that is a `Conflict`. The group address keeps no datapoint type, the
@@ -297,86 +311,76 @@ conflict appears in the report, and the UI shows it. There is no silent
 majority vote and no first-wins rule — the disagreement is information, and
 resolving it is the user's decision.
 
-## 8. Export
+## 8. Writing `.knxproj` — withdrawn 2026-09-20
 
-Export writes:
+KNXBench reads `.knxproj` and does not write one. A project is imported
+once and lives in KNXBench's own `.knxdb` store (ADR-0003) from then on.
 
-- every value whose layer is `Instance` or `UserEdit`
-  ([ADR-0004](adr/0004-provenance-model.md));
-- every opaque entry, byte-identical;
-- nothing derived from the product database, and nothing marked `Inferred`.
+The writer existed: `knx-etsproj::export` produced schema-11 and schema-21
+documents, replayed retained attributes and elements from the opaque store,
+and reported through `ExportWarning` what it could not put back. It was
+deleted on 2026-09-20 by [ADR-0028](adr/0028-no-knxproj-export.md), with the
+CLI subcommand, the HTTP route and the toolbar button that reached it. No
+library function, no CLI subcommand, no HTTP route and no UI control writes
+a `.knxproj` any more.
 
-**Every export is unsigned.** Signatures are RSA over manufacturer and project
-data and cannot be regenerated without KNX signing keys (RESEARCH §7) [V].
+Import is unaffected — nothing about what KNXBench *understands* when it
+reads a file changed. The opaque store, the retained keys, the schema-≥21
+communication-object flag resolution and every import report entry stay
+exactly as they were.
 
-Whether ETS re-imports an unsigned file written by a third-party tool is
-**untested** (risk R9). The export path states this to the user at export time,
-and keeps stating it until someone has verified it against a real ETS
-installation. No claim of ETS interoperability is made on the strength of the
-file being well-formed.
+The other exports are not `.knxproj` writing and are untouched: group-address
+CSV exchange (section 11), project documentation export (section 12), the
+debug report and the project diff.
 
-A group address without a group range is not silently discarded. Both the
-schema-11 and schema-21 writers return `ExportError::UnrangedGroupAddress`,
-because the verified writer shape emits addresses only inside `GroupRange` and
-KNXBench has no evidenced faithful external representation for a range-less
-address. Native `.knxdb` persistence continues to preserve it.
+**Consequence for the user.** There is no supported path from KNXBench back
+into ETS. Anyone who needs one keeps their original `.knxproj` — KNXBench
+reads it without consuming or modifying it.
 
-## 9. Roundtrip fidelity
+## 9. Import fidelity — what reading a file has to preserve
 
-Byte equality is not attempted and is never claimed (risk R4). Three testable
-guarantees replace it, each of which becomes a named test in Session 3:
+Round-trip fidelity as ADR-0007 defined it (import → export → import,
+opaque hashes equal across a write, every export unsigned) described an
+operation that no longer exists. What survives is the half that was always
+about reading:
 
-| # | Guarantee | Test |
+| # | Guarantee | Where it is tested |
 | --- | --- | --- |
-| 1 | **Semantic equality** — import → export → import yields a model equal to the first, under a comparison relation with ordering normalized and internal IDs excluded | `roundtrip_model_is_semantically_equal` |
-| 2 | **Opaque equality** — every opaque entry returns with the same SHA-256 | `roundtrip_opaque_bytes_are_hash_identical` |
-| 3 | **Unsigned** — every export is unsigned, and says so | `export_is_unsigned_and_reports_it` |
+| 1 | **Nothing is silently discarded.** Anything the model cannot represent is either an opaque entry or a report entry, and a value that is neither is a bug in the importer | the import test suites in `crates/knx-etsproj/tests/` |
+| 2 | **Opaque bytes are the source's bytes.** Every opaque entry is stored with the SHA-256 it arrived with, whole-file or retained attribute | `crates/knx-etsproj/tests/opaque*.rs`, `download_state.rs` |
+| 3 | **Retained values keep their address.** Each retained attribute is keyed to the single source element instance it came from (`knx_etsproj::xpath`), so the report can say where it was | `download_state_attributes_are_preserved_and_reported_by_name` |
 
-The comparison relation of guarantee 1 is declared as `SemanticProject` in
-`knx-etsproj/src/compare.rs` (`semantic_view`, `describe_difference`) — it
-is part of the contract, not an implementation detail, and a change to it
-is a change to what fidelity means here.
+Byte equality of anything KNXBench produces is not attempted and is never
+claimed (risk R4), which is now trivially true: KNXBench produces no
+`.knxproj` at all. Risk R9 — whether ETS re-imports an unsigned
+third-party file — is closed as not applicable for the same reason.
 
-**A fourth check, convergence, was added during Session 3 implementation:**
-`a_second_roundtrip_changes_nothing_further` asserts that exporting the
-*re-imported* project a second time produces the same container-entry names
-and the same `0.xml` bytes as the first export. Not one of the three
-declared guarantees (it follows from them, rather than adding a new
-dimension of fidelity), but worth stating explicitly: a pipeline that keeps
-normalizing something differently on every pass would satisfy guarantees
-1–3 on each individual roundtrip while still not being a roundtrip in the
-ordinary sense of the word.
+`SemanticProject` in `knx-etsproj/src/compare.rs` (`semantic_view`,
+`describe_difference`) still declares what "these two imports produced the
+same project" means. It has no caller since the round-trip test was deleted;
+it is kept because the relation is about the model, not about the writer.
 
-See [ADR-0007](adr/0007-roundtrip-fidelity.md).
+See [ADR-0028](adr/0028-no-knxproj-export.md), which supersedes
+[ADR-0007](adr/0007-roundtrip-fidelity.md).
 
-### 9.1 Attribute-level fidelity, measured
+### 9.1 Attribute-level fidelity, as last measured
 
-The three guarantees above are about the model and the opaque bytes. They
-say nothing about the `.knxproj` a user exports and opens elsewhere, so
-that is measured separately:
-`crates/knx-etsproj/tests/retained_v21_measurement.rs` imports each corpus
-project, exports it, and compares every element of both documents keyed by
-its ancestors' own ids — counting attributes that went in and did not come
-out, and attributes that came out holding a different value.
+Until 2026-09-20 `crates/knx-etsproj/tests/retained_v21_measurement.rs`
+imported each corpus project, exported it, and compared both documents
+element by element, counting attributes that went in and did not come out.
+The test went with the exporter. Its final result is recorded here because
+it is the sharpest statement of how much of a source file the importer
+actually holds on to:
 
-As of 2026-09-20 the ETS4 (schema 11) project loses nothing; the KV
-(schema 21) and ETS 6.3.0 (schema 23) projects lose only
-`Installation/@Name` and `@DefaultLine`, both empty strings in the source,
-which the domain model cannot tell apart from absent. Values that change:
-`KNX/@CreatedBy` and `@ToolVersion`, deliberately, because this
-application is not ETS; and `DeviceInstance/@LastDownload`/`@LastModified`,
-reformatted to fewer fractional-second digits by the trip through a typed
-timestamp.
+> ETS4 (schema 11) lost nothing. KV (schema 21) and ETS 6.3.0 (schema 23)
+> lost only `Installation/@Name` and `@DefaultLine`, both empty strings in
+> the source, which the domain model cannot tell apart from absent.
 
-Anything an export cannot put back is reported as an `ExportWarning` —
-`RetainedAttributeNotExported` for an attribute, `RetainedElementNotExported`
-for a whole element — one warning per `(element, attribute)` class with the
-number of instances behind it, carrying a rendered `detail` sentence that
-says which of three things happened: the writer had nowhere to put it, the
-value's owning element could not be identified, or the project wrote a
-different value than the import preserved. These travel the same route to
-the UI as import diagnostics, through `ExportWarningDto` in
-`apps/knx-server`.
+That is a measurement of the import side seen through a writer, not a
+promise about any file KNXBench produces, and no equivalent measurement
+exists now that there is no second document to compare against. The
+empty-string gap is a real import-side limitation and is recorded as such
+in `KNOWN_LIMITATIONS.md`.
 
 ## 10. Product database ingest
 
@@ -410,20 +414,19 @@ project's own opaque store as `OpaqueKind::MasterData`.
 with, independent of whether the product database that supplied the bytes
 is still around. `M-xxxx.signature` entries are the one exception and stay
 in the project's own opaque store: they sign a container state, not a
-product, so their export path is unchanged.
+product, so they are kept with the project rather than with the products.
 
-**Export.** `knx-app`'s `export_ets_project` loads the manifest, fetches
-each file back out of the product database by its SHA-256
-(`knx_productdb::load_source_file`), and reassembles the full
-`OpaqueEntry` list `knx_etsproj::export::export_knxproj` needs — whose own
-signature does not change. A manifest entry the database cannot supply
-produces `ExportWarning::MissingManufacturerData { source_path, sha256 }`
-naming exactly which file, and the container is written without it rather
-than silently incomplete
-(`a_project_opens_and_names_its_gap_when_the_product_database_is_gone`).
-`export_is_byte_identical_with_and_without_the_product_database` is the
-proof that routing manufacturer data through the shared database changes
-nothing about what gets written back.
+**Resolving the manifest.** The manifest is what makes the split
+recoverable: each entry's SHA-256 fetches the original bytes back out of
+the product database (`knx_productdb::load_source_file`), so a project can
+still say what it was imported with. A manifest entry the database cannot
+supply is a named gap, not a silent one — the project still opens and the
+missing file is reported by `source_path` and `sha256`
+(`a_project_names_its_manufacturer_gap_when_the_product_database_is_gone`,
+`crates/knx-app/tests/product_db.rs`). Before 2026-09-20 this path also fed
+the `.knxproj` writer; the writer is gone (ADR-0028) and the manifest is
+not, because knowing the provenance of a device's application program is an
+import property.
 
 **Degradation.** `--no-product-db` (or `ImportOptions { product_db: None
 }`) runs the Session 3 path unchanged: manufacturer bytes go into the
@@ -553,7 +556,7 @@ operations.
 
 **Surfaces.** Server: `POST /api/group-addresses/csv-export` and
 `POST /api/group-addresses/csv-import` (`apps/knx-server`), both path-based
-like the existing `.knxproj` export/import routes, and both logging to the
+like the project import route, and both logging to the
 T11 session log. CLI: `knx ga-export <store.knxdb> <out.csv>` and
 `knx ga-import <store.knxdb> <in.csv> [--dry-run]` (`apps/knx-cli`) —
 `--dry-run` runs the identical plan and prints a byte-identical report body
@@ -649,14 +652,14 @@ already has one.
 
 **Surfaces.** Server: `POST /api/project/documentation-export {path}` →
 `{warnings}` (`apps/knx-server/src/routes.rs`), writing through the same
-`resolve_new_project_path` helper the `.knxproj` and CSV exports use, and
+`resolve_new_project_path` helper the CSV export uses, and
 logging one T11 session-log entry per warning under `source: "doc-export"`
 without resetting the log. CLI: `knx doc-export <store.knxdb> <out.html>`
 (`apps/knx-cli`), printing a summary and every warning, exiting `1` only
 when no file could be produced at all (a report with warnings is still a
 complete, correct report, so there is no separate warning exit code). Web:
 an "Export documentation…" button (`DocumentationExportButton.tsx`) in the
-same toolbar row as the `.knxproj` and CSV export controls.
+same toolbar row as the CSV export controls.
 
 Not implemented, and recorded here rather than only in
 `KNOWN_LIMITATIONS.md`: PDF generation without a browser; an in-application

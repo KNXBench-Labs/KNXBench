@@ -174,7 +174,8 @@ projects are the same, it prints `no differences found`.
 
 It answers the questions you actually ask about a project over time: which devices
 appeared, which group addresses were renamed, whether a colleague's copy still matches
-yours, and whether an import-then-export round trip preserved what you expected.
+yours, and what a re-import of an updated ETS file changed against the project you
+already had.
 
 The limits are worth knowing before you rely on it:
 

@@ -18,7 +18,7 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0004](0004-provenance-model.md) | Provenance and override-chain model | Accepted | 2026-09-02 |
 | [0005](0005-separate-product-database.md) | Separate, shared product database | Accepted | 2026-09-02 |
 | [0006](0006-opaque-passthrough-store.md) | Opaque passthrough store | Accepted | 2026-09-02 |
-| [0007](0007-roundtrip-fidelity.md) | Roundtrip fidelity definition | Accepted | 2026-09-02 |
+| [0007](0007-roundtrip-fidelity.md) | Roundtrip fidelity definition | Superseded by [ADR-0028](0028-no-knxproj-export.md) | 2026-09-02 |
 | [0008](0008-key-material-isolation.md) | Key material isolation | Accepted | 2026-09-02 |
 | [0009](0009-ui-boundary.md) | UI boundary via generated projections | Accepted | 2026-09-02 |
 | [0010](0010-per-attribute-override-representation.md) | Overrides are represented per attribute with an explicit empty state | Accepted | 2026-09-02 |
@@ -26,7 +26,7 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0012](0012-enrichment-into-absent-slots.md) | Enrichment fills only `Override::Absent` slots | Accepted | 2026-09-03 |
 | [0013](0013-module-instance-representation.md) | `ModuleInstance` is a first-class entity; its arguments stay uninterpreted | Accepted | 2026-09-06 |
 | [0014](0014-group-object-tree-authoritative-source.md) | `GroupObjectTree` is the authoritative communication-object list for schema ≥ 21 | Accepted | 2026-09-06 |
-| [0015](0015-native-output-drops-ets-reimport-goal.md) | Native output format drops the ETS-reimport goal | Accepted | 2026-09-08 |
+| [0015](0015-native-output-drops-ets-reimport-goal.md) | Native output format drops the ETS-reimport goal | Superseded by [ADR-0028](0028-no-knxproj-export.md) | 2026-09-08 |
 | [0016](0016-dpt-codec-in-knx-core.md) | The DPT codec lives in `knx-core`, and `GroupValue` moves down into it | Accepted | 2026-09-11 |
 | [0017](0017-knx-server-depends-on-knx-net.md) | `knx-server` depends on `knx-net` directly, no crate interposed | Accepted | 2026-09-11 |
 | [0018](0018-program-versions-and-file-headers.md) | Programs carry SemVer pre-release versions; files carry a one-sentence header and no version | Accepted | 2026-09-12 |
@@ -38,3 +38,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0024](0024-in-application-help.md) | Help is a tip and a panel, its text is an ordinary catalogue key, and `docs/` never ships | Accepted | 2026-09-19 |
 | [0025](0025-extension-is-data-not-code.md) | Extension is data, not code — the plugin API stays unwritten | Accepted | 2026-09-20 |
 | [0026](0026-server-authentication-or-loopback.md) | `knx-server` authenticates, or it binds loopback and nothing else | Accepted | 2026-09-20 |
+| [0028](0028-no-knxproj-export.md) | KNXBench reads `.knxproj` and never writes one | Accepted | 2026-09-20 |

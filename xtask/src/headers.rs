@@ -206,8 +206,11 @@ fn check_sentence(line: &str, text: &str) -> Header {
 /// on 2026-09-20 to the 167 the tree actually measures — the ratchet had
 /// been sitting one slot above reality since a file gained a header
 /// without the constant following it down, which is exactly the slack that
-/// lets the next headerless file in for free.
-pub const ABSENT_CEILING: usize = 167;
+/// lets the next headerless file in for free. Lowered again later the same
+/// day, to 162: deleting the `.knxproj` writer (ADR-0028) took five
+/// headerless files with it, and a ratchet that does not follow a deletion
+/// down is the same slack by another route.
+pub const ABSENT_CEILING: usize = 162;
 
 /// The ratchet's verdict on a report: the message to print if it trips,
 /// `None` if the count is at or below [`ABSENT_CEILING`].

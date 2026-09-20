@@ -1,8 +1,12 @@
-/** Tests for SettingsPanel's theme/motion/language controls and language-pack import/export UI. */
+/** Tests for SettingsPanel's theme/motion/language/accent controls and language-pack UI. */
 // @vitest-environment happy-dom
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { parseRules } from "./themeTokens";
 import SettingsPanel from "./SettingsPanel";
 import { THEMES } from "./theme";
 import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
@@ -604,5 +608,128 @@ describe("SettingsPanel — language packs (T25 task 7)", () => {
     expect(host!.textContent).toContain("shadowed by the built-in English catalogue");
 
     root.unmount();
+  });
+});
+
+/**
+ * The accent control under a theme that declares no `[data-accent="…"]`
+ * variations (ADR-0022: Cupertino, Neon Grid and Bitcoin DeFi treat the
+ * accent as identity). The control is disabled there, and a disabled
+ * control that neither looks disabled nor says why is just a control that
+ * ignores you.
+ */
+describe("SettingsPanel's accent control", () => {
+  function AccentHarness(props: { activeThemeId: string }) {
+    return (
+      <SettingsPanel
+        appearance={{
+          accent: "violet",
+          density: "compact",
+          setAccent: vi.fn(),
+          setDensity: vi.fn(),
+        }}
+        themes={THEMES}
+        activeThemeId={props.activeThemeId}
+        onSelectTheme={vi.fn()}
+        motionStyles={MOTION_STYLES}
+        activeMotionStyle="apple"
+        onSelectMotionStyle={vi.fn()}
+        motionLevels={MOTION_LEVELS}
+        activeMotionLevel="standard"
+        onSelectMotionLevel={vi.fn()}
+        productLanguages={[]}
+        activeProductLanguage={null}
+        onSelectProductLanguage={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+  }
+
+  async function renderWithTheme(activeThemeId: string) {
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(<AccentHarness activeThemeId={activeThemeId} />);
+    });
+    const select = host!.querySelector<HTMLSelectElement>('select[aria-label="Accent color"]')!;
+    return { root, select };
+  }
+
+  it("is enabled under System, which resolves to a palette that varies by accent", async () => {
+    const { root, select } = await renderWithTheme("system");
+
+    expect(select.disabled).toBe(false);
+    expect(select.getAttribute("aria-describedby")).toBeNull();
+    expect(host!.textContent).not.toContain("keeps its own accent");
+
+    root.unmount();
+  });
+
+  it("is enabled under a palette that declares accent variations", async () => {
+    const { root, select } = await renderWithTheme("porcelain");
+
+    expect(select.disabled).toBe(false);
+
+    root.unmount();
+  });
+
+  it("is disabled under a theme whose accent is its identity", async () => {
+    const { root, select } = await renderWithTheme("neon-grid");
+
+    expect(select.disabled).toBe(true);
+
+    root.unmount();
+  });
+
+  // Without this, the sentence explaining the disabled control is on
+  // screen and nowhere else: a screen reader announces the select as
+  // "unavailable" and stops, and the user is left guessing.
+  it("points aria-describedby at the sentence explaining why, when disabled", async () => {
+    const { root, select } = await renderWithTheme("cupertino");
+
+    const describedBy = select.getAttribute("aria-describedby");
+    expect(describedBy, "the disabled accent select explains itself to nobody").not.toBeNull();
+    const hint = host!.ownerDocument.getElementById(describedBy!);
+    expect(hint, `aria-describedby="${describedBy}" points at no element`).not.toBeNull();
+    expect(hint!.textContent).toBe(
+      "This theme keeps its own accent; the accent setting has no effect here.",
+    );
+
+    root.unmount();
+  });
+});
+
+/**
+ * The other half of the same finding, which no DOM assertion can reach:
+ * the disabled accent select has to *look* disabled. The UA stylesheet's
+ * own `select:disabled` greying is user-agent origin, so every author rule
+ * in `styles.css` beats it — `input, select { color: var(--knx-foreground);
+ * background: var(--knx-surface) }` did exactly that, and the disabled
+ * dropdown rendered identically to a working one.
+ *
+ * This reads the stylesheet rather than a computed style: the cascade
+ * question is "does an author rule for `:disabled` exist at all", and a
+ * happy-dom computed style would answer a different, weaker question.
+ */
+describe("styles.css's disabled-field treatment", () => {
+  const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "styles.css"), "utf-8");
+  const disabledRules = parseRules(css).filter((rule) =>
+    rule.selector.split(",").some((part) => /(^|\s)select:disabled\b/.test(part.trim())),
+  );
+
+  it("has an author rule for select:disabled", () => {
+    expect(
+      disabledRules.length,
+      "no author rule targets select:disabled, so the UA's greying loses to `input, select`",
+    ).toBeGreaterThan(0);
+  });
+
+  it("makes it visibly and behaviourally distinct, the same way button:disabled does", () => {
+    const declared = new Set(
+      disabledRules.flatMap((rule) => rule.declarations.map((d) => d.property)),
+    );
+    expect([...declared], "a disabled field must read as disabled").toContain("opacity");
+    expect([...declared]).toContain("cursor");
   });
 });

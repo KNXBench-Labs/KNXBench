@@ -27,6 +27,10 @@ function isShadowedByBuiltIn(tag: string): boolean {
   return (AVAILABLE_UI_LANGUAGES as readonly string[]).includes(tag);
 }
 
+/** Ties the accent select to the sentence explaining why it is disabled.
+ * The panel is a singleton overlay, so a constant id is safe. */
+const ACCENT_HINT_ID = "settings-accent-unavailable-hint";
+
 /** `LanguagePackRejectionReason` plus the one rejection that never reaches
  * `languagePack.ts` at all — the uploaded file failing `JSON.parse` before
  * `importLanguagePack` is ever called. Handled by the same
@@ -318,13 +322,22 @@ export default function SettingsPanel(props: {
       {props.appearance && <>
         <label className="settings-field">
           <span className="settings-field-label">{t("appearance.accent")}</span>
+          {/* `aria-describedby` rather than nothing: a disabled control
+              announces "unavailable" and stops, so without this the reason
+              — which is on screen, right below it — reaches a sighted user
+              and nobody else. The `aria-label` stays because the hint lives
+              inside the wrapping `<label>`, whose text content would
+              otherwise become part of the accessible *name*. */}
           <select aria-label={t("appearance.accent")} value={props.appearance.accent}
             disabled={accentUnavailable}
+            aria-describedby={accentUnavailable ? ACCENT_HINT_ID : undefined}
             onChange={(e) => props.appearance!.setAccent(e.target.value as typeof ACCENTS[number])}>
             {ACCENTS.map((accent) => <option key={accent} value={accent}>{t(`appearance.${accent}`)}</option>)}
           </select>
           {accentUnavailable && (
-            <span className="settings-field-hint">{t("appearance.accentUnavailable")}</span>
+            <span className="settings-field-hint" id={ACCENT_HINT_ID}>
+              {t("appearance.accentUnavailable")}
+            </span>
           )}
         </label>
         <label className="settings-field">

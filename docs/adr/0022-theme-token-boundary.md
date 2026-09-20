@@ -126,7 +126,55 @@ element rule; no token declared and never read; accent variations limited to
 the accent pair of a registered theme and a registered accent; and
 `index.html`'s duplicated bootstrap id list identical to `THEMES`.
 
+Four gaps in that enforcement were found by the pre-merge review of
+2026-09-19 and closed afterwards, each with a test that fails against the
+unfixed behaviour:
+
+- **Nesting.** The checks above collected depth-0 blocks only, so a theme
+  block written inside an `@media` query was neither held to the boundary
+  nor reported — including one redefining `--knx-transition-duration`, the
+  exact override this ADR exists to prevent. `parseRules` now carries each
+  rule's ancestor chain, and a theme selector that is nested, or any rule
+  nested inside one, is a violation. (Nesting was the only direction this
+  bullet closed; the sibling direction is the selector-list gap below.)
+- **The component layer's literal colours.** The boundary proves a theme
+  block is complete; nothing proved a component rule goes through the
+  tokens at all. A `color: #ff00aa` in a component rule passed the whole
+  suite. `componentColourLiterals()` now rejects hex literals, colour
+  functions and named colours outside the theme layer; `transparent`,
+  `currentColor` and `url()` contents pass. The stylesheet needed no
+  allow-list — it had no such literal already.
+- **One stylesheet.** The test read a single hard-coded path, so a second
+  `.css` file would have sat outside this ADR entirely. It now walks
+  `apps/knx-web` for every `.css` file and fails if it finds none.
+- **Token names.** `var(--knx-fooBar)` was truncated to `--knx-foo` and
+  handed on as a real token, failing every theme for a token nobody wrote.
+  Names are read whole and illegal ones rejected by name.
+
+Two more came out of the whole-branch review of 2026-09-20, both in what
+those new guards could not see rather than in what they claimed:
+
+- **The optional semicolon.** CSS lets the last declaration in a block go
+  without one, and `parseRules` flushed only on `;`, so `.evil { color:
+  #ff00aa }` — valid, browser-honoured CSS — was invisible to all three
+  guards at once, this ADR's opening failure included. `parseRules` now
+  flushes at `}` as well.
+- **The selector list, and the spelling of an attribute name.** The
+  violation check ran per comma-part while the three classifiers matched
+  the whole collapsed selector, so `:root[data-theme="a"],
+  :root[data-theme="b"] { … }` was a third shape belonging to neither
+  set — two themes sharing one block, which is the sharing Consequences
+  above gives up on purpose ("themes no longer share values …
+  duplication is the price of the guarantee"), reintroduced through a
+  comma. And because attribute *names* in a selector are ASCII
+  case-insensitive while `data-*` *values* are not,
+  `:root[DATA-THEME="a"]` selected a theme that no check recognised. All
+  four functions now ask one question, over the whole selector, with the
+  attribute name folded to lowercase and the theme id left alone.
+
 Not covered: nothing checks that a palette is *legible*. Contrast ratios were
 chosen by hand and no automated check enforces them. A contrast test over the
 theme layer is the obvious next tightening, and `themeTokens.ts` already
-parses everything such a test would need.
+parses everything such a test would need. Recorded, with the system colour
+keywords the literal-colour guard also lets past, as
+[KNOWN_LIMITATIONS.md §120](../KNOWN_LIMITATIONS.md#120-nothing-checks-that-a-theme-is-legible).

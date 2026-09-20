@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { parseRules } from "./themeTokens";
 
 /**
  * The roadmap's standing rule: every animation this application ships must
@@ -26,71 +27,38 @@ const LITERAL_DURATION = /(^|[^-\w])\d+(\.\d+)?m?s\b/;
 const REDUCED_MOTION_MEDIA = /^@media\s*\(\s*prefers-reduced-motion\s*:\s*no-preference\s*\)$/;
 
 /**
- * Walks stylesheet text by brace counting (no CSS parser) and reports every
- * `transition:`/`animation:` declaration that is not both:
+ * Reports every `transition:`/`animation:` declaration that is not both:
  *
  * 1. nested inside a `@media (prefers-reduced-motion: no-preference)` block, and
  * 2. driven by `var(--knx-transition-duration)` rather than a literal duration.
+ *
+ * The stylesheet walking is `themeTokens.ts`'s `parseRules`, not a second
+ * hand-rolled brace counter. This file used to carry its own — the same
+ * algorithm, comment stripping and all, differing only in that it tracked
+ * the enclosing selector chain, which is what question 1 asks about.
+ * `parseRules` now carries that chain as `rule.ancestors`, so there is one
+ * CSS scanner in this app and both guards are wrong or right together.
  */
 export function checkMotionDeclarations(css: string): MotionGuardFinding[] {
-  // Blank out comment bodies (keep newlines) so braces/semicolons inside
-  // comments can't confuse the brace counter.
-  const stripped = css.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "));
-
   const findings: MotionGuardFinding[] = [];
-  const blockStack: string[] = [];
-  let line = 1;
-  let buffer = "";
-  let bufferStartLine = 1;
-  let bufferHasContent = false;
-
-  const flushDeclaration = () => {
-    const stmt = buffer.trim();
-    if (MOTION_PROPERTY.test(stmt)) {
-      const insideNoPreference = blockStack.some((header) => REDUCED_MOTION_MEDIA.test(header));
+  for (const rule of parseRules(css)) {
+    const insideNoPreference = [...rule.ancestors, rule.selector].some((header) =>
+      REDUCED_MOTION_MEDIA.test(header),
+    );
+    for (const declaration of rule.declarations) {
+      const stmt = `${declaration.property}: ${declaration.value}`;
+      if (!MOTION_PROPERTY.test(stmt)) continue;
       const usesVar = stmt.includes("var(--knx-transition-duration)");
       const hasLiteral = LITERAL_DURATION.test(stmt);
-      if (!insideNoPreference || !usesVar || hasLiteral) {
-        const reason = !insideNoPreference
-          ? "not inside a @media (prefers-reduced-motion: no-preference) block"
-          : hasLiteral
-            ? "uses a literal duration instead of var(--knx-transition-duration)"
-            : "does not drive its duration from var(--knx-transition-duration)";
-        findings.push({ line: bufferStartLine, text: stmt.split("\n")[0].trim(), reason });
-      }
+      if (insideNoPreference && usesVar && !hasLiteral) continue;
+      const reason = !insideNoPreference
+        ? "not inside a @media (prefers-reduced-motion: no-preference) block"
+        : hasLiteral
+          ? "uses a literal duration instead of var(--knx-transition-duration)"
+          : "does not drive its duration from var(--knx-transition-duration)";
+      findings.push({ line: declaration.line, text: stmt, reason });
     }
-  };
-
-  for (let i = 0; i < stripped.length; i++) {
-    const ch = stripped[i];
-    if (ch === "\n") {
-      line++;
-    }
-    if (ch === "{") {
-      blockStack.push(buffer.trim().replace(/\s+/g, " "));
-      buffer = "";
-      bufferHasContent = false;
-      continue;
-    }
-    if (ch === "}") {
-      blockStack.pop();
-      buffer = "";
-      bufferHasContent = false;
-      continue;
-    }
-    if (ch === ";") {
-      flushDeclaration();
-      buffer = "";
-      bufferHasContent = false;
-      continue;
-    }
-    if (!bufferHasContent && ch.trim() !== "") {
-      bufferStartLine = line;
-      bufferHasContent = true;
-    }
-    buffer += ch;
   }
-
   return findings;
 }
 
@@ -107,6 +75,47 @@ describe("checkMotionDeclarations", () => {
     const findings = checkMotionDeclarations(css);
     expect(findings).toHaveLength(1);
     expect(findings[0].reason).toMatch(/literal duration/);
+  });
+
+  // The ancestor chain, not just the immediate parent: the guard's own
+  // question is whether *any* enclosing block is the reduced-motion media
+  // query, and a rule set two levels down is the case that tells a chain
+  // apart from a parent pointer.
+  it("accepts a declaration guarded two levels up, and flags its unguarded sibling", () => {
+    const css = [
+      "@media (prefers-reduced-motion: no-preference) {",
+      "  @supports (display: grid) {",
+      "    .deep {",
+      "      transition: transform var(--knx-transition-duration) var(--knx-motion-easing);",
+      "    }",
+      "  }",
+      "}",
+      "@supports (display: grid) {",
+      "  .shallow {",
+      "    transition: transform var(--knx-transition-duration) var(--knx-motion-easing);",
+      "  }",
+      "}",
+    ].join("\n");
+    const findings = checkMotionDeclarations(css);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].text).toBe(
+      "transition: transform var(--knx-transition-duration) var(--knx-motion-easing)",
+    );
+    expect(findings[0].line).toBe(10);
+    expect(findings[0].reason).toMatch(/prefers-reduced-motion/);
+  });
+
+  // Shared blind spot, shared fix: the semicolon before `}` is optional,
+  // and while `parseRules` flushed only on `;` this declaration was
+  // invisible to the guard — a literal 200ms the motion control cannot
+  // touch, inside the one block where the guard is supposed to be
+  // strictest, passing quietly.
+  it("flags a literal duration written without its final semicolon", () => {
+    const css = `@media (prefers-reduced-motion: no-preference) {\n  .m {\n    transition: opacity 200ms ease\n  }\n}\n`;
+    const findings = checkMotionDeclarations(css);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].reason).toMatch(/literal duration/);
+    expect(findings[0].line).toBe(3);
   });
 
   it("passes a fully compliant declaration", () => {
@@ -133,6 +142,15 @@ describe("checkMotionDeclarations", () => {
   });
 });
 
+// One hard-coded path, on purpose, and it is the weakest thing in this
+// file. `themeTokens.test.ts` walks for every `.css` file precisely
+// because a second stylesheet would otherwise sit outside ADR-0022, and
+// the same argument applies verbatim here: the roadmap's standing rule is
+// that *every* animation this application ships is switchable off, and a
+// second stylesheet would get boundary coverage from that walk and no
+// motion coverage at all. `help.test.ts` and `diagnosticShell.test.ts`
+// read the same single path for their own reasons. Recorded rather than
+// built — the walk belongs in one shared helper, not in a third copy.
 describe("styles.css", () => {
   it("has no unguarded transition/animation declarations", () => {
     const stylesheetPath = join(dirname(fileURLToPath(import.meta.url)), "styles.css");

@@ -6673,3 +6673,55 @@ Pointing `build.target-dir`/`CARGO_TARGET_DIR` at a non-`ntfs3` path would
 address the build outputs but not the source fingerprints. **No build
 configuration was changed in this round** — this entry records the hazard
 and the workaround, and the choice is the maintainer's.
+
+## 120. Nothing checks that a theme is legible
+
+**Limitation.** `apps/knx-web/src/styles.css` ships five palettes, and
+[ADR-0022](adr/0022-theme-token-boundary.md) holds every one of them to a
+derived token boundary: `themeTokens.test.ts` fails the suite if a theme
+misses a token, sets one a user setting owns, declares a plain property
+other than `color-scheme`, defines itself by negation, nests itself inside
+a media query, shares a block with another theme through a comma, or
+writes a literal colour into the component layer. It
+checks that a palette is *complete*. It checks nothing about whether a
+palette can be read. No test computes a contrast ratio, so a sixth theme
+could declare all 27 tokens, pass every check in the file, and render grey
+text on a grey background.
+
+The literal-colour half of that guard has a blind spot of its own, in the
+same direction. The CSS system colour keywords are colour values and are
+not in its named-colour list, so `color: Canvas`, `color: AccentColor` and
+`border: 1px solid ButtonBorder` pass — and they are exactly as
+theme-blind as `#ff00aa`, because they resolve from the operating system
+rather than from any `--knx-*` token. Recorded rather than fixed: the
+keyword list is long, overlaps nothing in the stylesheet today, and adding
+it is a change to one `Set` on the day someone writes the first one.
+
+**Cause.** Contrast is a property of a *pair* of tokens, and the boundary
+is a property of one token at a time. Enforcing it needs three things the
+project does not have: a CSS colour parser covering every notation a theme
+block may use (`#rrggbb`, `color-mix()`, the `oklch()` a future palette
+would want), a relative-luminance implementation, and — the hard part — a
+declaration of which foreground/background pairs actually meet on screen,
+which is a fact about the component layer's rules, not about the theme
+blocks. The five current palettes were measured by hand in a real browser
+during T37: every foreground/background and on-accent/accent pair is at or
+above 4.5:1 (IMPLEMENTATION_STATUS.md, T37). That is a measurement of a
+moment, not an invariant.
+
+**Impact.** Nobody is harmed today — the shipped palettes were measured and
+pass. The cost is borne by the next theme: its author gets a precise,
+automatic answer about token completeness and no answer at all about
+legibility, which is the property a user actually notices. ADR-0022's own
+Context section opens with exactly this failure having already happened
+once: `bitcoin-defi` hard-coded `color: #ffffff` on a `#f7931a` button, a
+ratio of about 2.3:1, and shipped.
+
+**Lifted when.** A test computes the contrast ratio of each theme block's
+foreground/background and on-accent/accent pairs and fails below 4.5:1.
+`themeTokens.ts` already parses everything such a test would read — the
+missing pieces are a colour parser and the pair list. ADR-0022 names this
+as the obvious next tightening; it is recorded here rather than attempted,
+because a half-built contrast check that silently skips the notations it
+cannot parse is worse than none: it would report a clean run over palettes
+it never examined.

@@ -412,7 +412,7 @@ pub fn load_one_part() -> Procedure {
 /// [`StepEffect::Guard`] — the very reclassification C10 made for this
 /// module's own (now deleted) copy. The step writes nothing;
 /// `A_Key_Write` has no encoder and any plan that declares access keys is
-/// refused before this step runs. `partial_download_variant.rs` is fixed
+/// refused at this step. `partial_download_variant.rs` is fixed
 /// to `Guard` in the same commit as this delegation, for all five
 /// variants, not just this one — the two copies disagreed on more than
 /// wording.
@@ -603,6 +603,34 @@ mod tests {
         }
     }
 
+    /// The reclassification above was pinned against `partial_download()`, which is
+    /// only ever [`super::partial_download_variant::PartialDownloadVariant::ApplicationProgram2`]
+    /// (see `partial_download`'s own doc comment). That left the other four variants'
+    /// access-key steps unguarded by any test in this module: `partial_download_variant.rs`'s
+    /// own test module makes zero `StepEffect` assertions. Every variant shares the same
+    /// classification, so check every one of them here, directly, rather than trusting
+    /// that whichever variant `partial_download()` happens to delegate to stands in for
+    /// the rest.
+    #[test]
+    fn no_partial_download_variants_access_key_step_counts_as_a_write() {
+        use super::super::partial_download_variant::PartialDownloadVariant;
+
+        for variant in PartialDownloadVariant::ALL {
+            let procedure = variant.procedure();
+            let step = procedure
+                .steps
+                .iter()
+                .find(|step| step.title == "modify access keys")
+                .unwrap_or_else(|| panic!("{variant:?} carries the access-key step"));
+            assert_eq!(
+                step.effect,
+                StepEffect::Guard,
+                "{variant:?}: step {} writes nothing until A_Key_Write exists",
+                step.number
+            );
+        }
+    }
+
     #[test]
     fn the_first_destructive_step_of_a_complete_download_is_the_unload() {
         let procedure = complete_download();
@@ -688,6 +716,25 @@ mod tests {
             .detail
             .to_lowercase()
             .contains("differential download algorithm is")));
+    }
+
+    /// The assertion above matches "then reload them in that order", which four of the
+    /// five `PartialDownloadVariant`s share verbatim (only `AssociationTable` has no
+    /// escalation step at all). It would keep passing if `partial_download()` were
+    /// changed to delegate to `GroupObjectTable`, `GroupAddressTable` or
+    /// `ApplicationProgram1` instead of `ApplicationProgram2` — nothing else in this
+    /// module's tests pins the specific variant. `source()` is unique per variant, so
+    /// compare against it directly.
+    #[test]
+    fn partial_download_delegates_to_application_program_2_specifically() {
+        use super::super::partial_download_variant::PartialDownloadVariant;
+
+        let procedure = partial_download();
+        assert_eq!(
+            procedure.source,
+            PartialDownloadVariant::ApplicationProgram2.source(),
+            "partial_download() silently changed which variant it delegates to"
+        );
     }
 
     #[test]

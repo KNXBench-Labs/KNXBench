@@ -1512,7 +1512,7 @@ fn compare_mcb(stored: Option<&[u8]>, current_octets: &[u8]) -> CrcComparison {
 
 /// The allocation payload the device's mask profiles, or a refusal.
 ///
-/// Design design spec §7.3 rule 2: *"There is no fallback between allocation styles.
+/// Design spec §7.3 rule 2: *"There is no fallback between allocation styles.
 /// Pick by mask, or refuse."* The refusal path is
 /// [`AllocationSubtypeError::MaskNotProfiled`], from `allocation_subtype_for`:
 /// a mask whose PROF Table 7 row was not transcribed has no style to pick, and

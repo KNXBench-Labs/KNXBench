@@ -8456,13 +8456,25 @@ too) mapped the three real ones to `KNX_GATEWAY`, `KNX_LAN_HOST` and
 so no binary in the tree changed; 1178 commits were force-pushed, and
 `origin` carries only `main`.
 
-One residue remains, and it is not fixable by rewriting: GitHub still serves
-the pre-rewrite commits by their 40-character SHA — verified by asking for
-one after the force-push, which is a more useful test than assuming. Only
-deleting and recreating the remote removes them, which is the maintainer's
-call on an otherwise private repository with no issues, pull requests, forks
-or stars attached to it. Backup bundle:
-`KNXBench-backups/knxbench-pre-third-pass-20260920-154050.bundle`. The working tree is clean — three
+The rewrite alone did not finish the job, and this is worth remembering the
+next time someone assumes a force-push deletes anything: GitHub kept serving
+the pre-rewrite commits by their 40-character SHA afterwards, which was
+verified by asking for one rather than assumed. On the maintainer's
+instruction the remote was therefore deleted and recreated the same day —
+private repository, no issues, pull requests, forks, stars, secrets,
+variables, releases or tags attached, so nothing was lost but the objects
+that were the point. Four pre-rewrite SHAs were then re-requested and all
+four came back `No commit found`; the new repository's `createdAt` and
+`pushedAt` are ten seconds apart. Backup bundles, both verified:
+`KNXBench-backups/knxbench-pre-third-pass-20260920-154050.bundle` (before)
+and `knxbench-post-rewrite-20260920-163214.bundle` (after).
+
+**T30 phase 3 is out of scope for v1.0.0** by the same day's decision: no
+write to real hardware until dedicated test hardware exists. The read-only
+phases stay as they are. This is recorded in the roadmap's open-questions
+table with its lift condition, and the lift condition is not a blanket
+permission — the first write still needs its own explicit go-ahead for that
+specific operation. The working tree is clean — three
 separate commits removed the last of it — but history is not, and the only
 two ways out are a second history rewrite of a published branch or an
 explicit decision to accept it. That is the maintainer's call, and it is

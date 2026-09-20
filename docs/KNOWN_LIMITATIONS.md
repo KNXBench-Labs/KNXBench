@@ -818,26 +818,41 @@ the protocol facts §8.7 established:
   nine because they are the already-approved range from spec §2.2, not
   because the broader-inventory redaction policy changed.
 
-**Lifted when.** Research no longer blocks this, and T30 phase 3's read-only
-pass has now run once (above) without exhausting what it could check. What
-remains, in the order it can be done: the parsing addition described (and
-deliberately not built) in RESEARCH §8.6.5 (its `bool_flag` prerequisite is
-done); T30 phase 2 — implement the specification above against a device
-simulator, with no hardware attached, including the exhaustive
-transition-table tests the specification lists; fixing or working around
-`ManagementSession`'s presence-detection gap (design spec §13 R20) before any
-write path relies on it; a second phase-3 pass covering the properties
-§14 names and this one did not; and only then any write at all, on a device
-we can afford to destroy, on a line isolated from anything that matters, and
-only with a fresh explicit go-ahead naming the device and the operation.
-Per-flag semantics would be closed by the MT6 XSD
-`KNX-Project-Schema-v23.xsd` (KNX-member distribution, updates via
-`gitlab.knx.org`) or by differential testing against ETS. Products setting flags
-the implementation cannot interpret, and products carrying an
-`EtsDownloadPlugin`, must be **refused** rather than guessed at — refusing is
-safe. Architecturally nothing blocks it today: load procedures, memory layout
-and mask data already live in the product database, and `knx-net` already
-carries every frame the specification needs.
+**Updated, 2026-09-20.** T30 phase 2 is no longer future work: C1 through
+C13, C15, C16, C18 and C19 (nine of the ten C10-C19 numbers merged since this
+section was last revised, plus earlier C1-C9) implemented all six
+`ProcedureKind` procedures — individual-address write, complete download,
+load-one-part, partial download, unload, recovery — in
+`crates/knx-core/src/commissioning/` and `crates/knx-net/src/commissioning/`,
+each driven end to end against `crates/knx-net/src/commissioning/
+simulator.rs`, including `ManagementSession`'s presence-detection gap
+(design spec §13 R20), which C15/C16's occupancy handling now works around
+rather than trusts. (C14 delivered the same run's differential-download
+data preservation in `knx-etsproj`/`knx-server` instead — see
+[§34](#34-schema-21-export-drops-a-handful-of-known-but-unmapped-perdeviceperline-attributes) and the `KV v2.5` fixture. C17, a stopgap against advertising an
+unimplemented procedure, was ruled obsolete once C16 shipped the real
+execution path it existed to guard.) None of this has been run against a
+real device — see [§92](#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device).
+
+**Lifted when.** Research no longer blocks this, phase 2's simulator-driven
+implementation is substantially delivered (above), and T30 phase 3's
+read-only pass has now run twice (2026-09-14 and 2026-09-18, both above)
+without exhausting what it could check. What remains, in the order it can be
+done: a second phase-3 pass covering the properties §14 names and the two
+read-only passes did not; the parsing addition described (and deliberately
+not built) in RESEARCH §8.6.5 (its `bool_flag` prerequisite is done); and
+only then any write at all, on a device we can afford to destroy, on a line
+isolated from anything that matters, and only with a fresh explicit
+go-ahead naming the device and the operation. Per-flag semantics would be
+closed by the MT6 XSD `KNX-Project-Schema-v23.xsd` (KNX-member distribution,
+updates via `gitlab.knx.org`) or by differential testing against ETS.
+Products setting flags the implementation cannot interpret, and products
+carrying an `EtsDownloadPlugin`, must be **refused** rather than guessed at
+— refusing is safe. Architecturally nothing blocks the first real write
+today except the go-ahead itself: load procedures, memory layout and mask
+data already live in the product database, `knx-net` already carries every
+frame the specification needs, and phase 2's simulator coverage is what
+that first write would be checked against before and after.
 
 ## 8. KNX Secure is not implemented
 
@@ -5676,6 +5691,15 @@ returned to the caller unchanged (`reestablishment_may_be_retried` in
 `crates/knx-net/src/commissioning.rs` lists exactly the four
 connection-shaped errors it swallows, and since C19's second fix round each
 of the four has a test that fails when it is removed from that list).
+`SessionError::Lagged` — raised when a session falls behind the event
+broadcast channel it reads from (`crates/knx-net/src/commissioning.rs`) — is
+the deliberate fifth case `reestablishment_may_be_retried` does not match:
+falling behind a broadcast channel says nothing about whether the Transport
+Layer connection itself is still there, so retrying on it would be a guess.
+That exclusion is reasoned about in the match arm's shape, not tested; no
+test in `commissioning.rs` constructs a `Lagged` error at all, so nothing
+would fail today if a future edit folded it into the retryable set by
+mistake.
 
 **Lifted when.** A measurement on real hardware says the reconnect cost
 matters. The cheaper alternative — keeping a released connection and hoping
@@ -6340,3 +6364,76 @@ claim: *"if negative A_Connect.Lcon ⇒ IA_new is not occupied"* and *"If no
 A_DeviceDescriptor_Response-PDU is received after time-out ⇒ IA_new is not
 occupied"*. Both now follow the text, and the two `Occupancy` variants
 invented to hold them are gone.
+
+## 117. `read_on_init_flag` is parsed and stored, then discarded before it reaches `knx-core`
+
+**Limitation.** KNX's sixth communication-object flag, Read-on-Init, is
+parsed from `.knxprod`/`.knxproj` XML in `crates/knx-productdb`
+(`read_on_init_flag` in `src/migration.rs` and `src/parse/comobject.rs`) and
+stored in `knx-productdb`'s own schema. It goes no further:
+`grep -rn read_on_init_flag crates/` finds it in exactly those two files, in
+one crate. `knx-core`'s communication-object model
+(`crates/knx-core/src/`) has fields for Communication, Read, Write,
+Transmit and Update — five of the six standard flags — and no sixth. When a
+product carries the flag, this project reads it, keeps it in the product
+database, and then drops it at the boundary where product data becomes
+project data; nothing downstream — export, the GUI, a diagnostic report —
+can see it again.
+
+**Cause.** `knx-core`'s communication-object type predates the discovery
+that the product database's own parser carried a sixth flag; adding it to
+one crate and not propagating it to the other was never a decision, just an
+omission nobody closed afterward.
+
+**Impact.** Data integrity, not merely display: a device whose object
+initialises its group-address value from the bus on startup looks, once
+imported, identical to one that does not. Nothing about this is silent in
+the ordinary sense — `apps/knx-web`'s help topic on limits already
+discloses it in prose (`messages/en.ts`'s `help.topic.limits.p2`: "KNX's
+sixth communication-object flag, Read-on-Init (I), is not part of the
+project model") — but disclosure in a help panel is not the same as the
+value surviving import, and no export can re-emit a flag the project model
+never held.
+
+**Lifted when.** `knx-core`'s communication-object type gains a sixth
+field and every consumer of the five-flag set — the GUI's flag row, the
+command layer, export — is updated together, so the flag is modelled
+rather than merely parsed. Nobody has scheduled this; it sits alongside
+`docs/DATA_MODEL.md`'s communication-object section as an acknowledged gap
+rather than a task with a number.
+
+## 118. A succeeded project load announces nothing to a screen reader
+
+**Limitation.** `apps/knx-web`'s `LoadProgressBanner.tsx` is a
+`role="status" aria-live="polite"` region, mounted for the duration of a
+project load and removed once the load finishes. `App.tsx`'s load-handling
+path (`setLoadSource(null); setLoadSnapshot(null);` on success) simply
+unmounts it; there is no success toast and nothing else takes its place.
+Removing a live region announces nothing — assistive technology has no
+text to read once the element it was watching is gone. The failure path is
+different: `reportError(e)` raises a toast (which is itself announced) and
+the banner stays mounted showing its `failed: true` terminal state, which
+`LoadProgressBanner.tsx` does mark for announcement. So a screen-reader
+user hears about a load that fails and hears nothing at all about one that
+succeeds, other than whatever the now-populated Project Explorer happens to
+expose to a subsequent read.
+
+**Cause.** The banner's `aria-live="off"` on its own progress bar, count
+and flavour-message sub-elements is deliberate — ADR-0023 and this
+project's own history record over-announcing a fast-moving progress bar as
+a worse experience than under-announcing it — but that design decision
+covers the loading phase only. Nobody designed the success case
+separately; it inherited "say nothing" from the sub-elements' own
+`aria-live="off"` by falling through the same unmount path rather than by
+an explicit choice.
+
+**Impact.** A sighted user sees the Project Explorer populate and reads
+that as success implicitly. A screen-reader user gets no equivalent
+signal — success and "I haven't started loading yet" are indistinguishable
+by ear.
+
+**Lifted when.** A one-line success announcement — a toast, or a final
+`aria-live="polite"` update on the banner before it unmounts — is added
+for the succeeded terminal state, mirroring the `failed` state's existing
+treatment. Small, UI-only, and not attempted here: this is a documentation
+task, and the finding is recorded rather than fixed.

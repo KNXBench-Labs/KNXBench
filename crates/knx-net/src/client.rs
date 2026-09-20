@@ -517,9 +517,68 @@ pub struct RoutingClient {
     group: SocketAddrV4,
 }
 
+/// How a `RoutingClient`'s socket is attached to the network: which
+/// interface its datagrams leave by, whether the host gets a copy, and how
+/// many hops they may travel. Every non-test caller gets `PRODUCTION`,
+/// which is the behaviour this type was extracted from, unchanged; the
+/// in-process tests below get `LOOPBACK_ONLY` so that a plain
+/// `cargo test` cannot put a `ROUTING_INDICATION` on a real installation's
+/// LAN (KNOWN_LIMITATIONS.md §33).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct RoutingSocketOptions {
+    /// `IP_MULTICAST_IF`, and the interface `IP_ADD_MEMBERSHIP` joins on.
+    /// `Ipv4Addr::UNSPECIFIED` leaves both to the kernel's routing table —
+    /// the only correct default for a real installation, whose gateway is
+    /// reached over whichever interface the route points at.
+    interface: Ipv4Addr,
+    /// `IP_MULTICAST_LOOP`: whether this host also receives what this
+    /// socket sends.
+    loop_back: bool,
+    /// `IP_MULTICAST_TTL`. `None` leaves the kernel default of 1; `Some(0)`
+    /// means the datagram is never put on a wire at all.
+    ttl: Option<u32>,
+}
+
+impl RoutingSocketOptions {
+    /// The real thing: kernel-chosen interface, no loopback copy (our own
+    /// sends must not surface in our own `subscribe()` — design spec's
+    /// Architecture section), default TTL.
+    const PRODUCTION: Self = Self {
+        interface: Ipv4Addr::UNSPECIFIED,
+        loop_back: false,
+        ttl: None,
+    };
+
+    /// Tests only. Two independent locks keep the datagram on this
+    /// machine: `IP_MULTICAST_IF` names `lo`, so the kernel never consults
+    /// the routing table (which on a developer's machine resolves
+    /// `224.0.23.12` to the physical LAN interface), and TTL 0 means the
+    /// packet is not transmitted on any link even if that first lock were
+    /// wrong. `loop_back` is `true` — the opposite of production, and the
+    /// one deliberate deviation — because it is the portable way to get
+    /// local delivery; the round-trip test uses two separate clients, so
+    /// the sender seeing its own frame changes nothing it asserts.
+    #[cfg(test)]
+    const LOOPBACK_ONLY: Self = Self {
+        interface: Ipv4Addr::LOCALHOST,
+        loop_back: true,
+        ttl: Some(0),
+    };
+}
+
 impl RoutingClient {
     async fn connect(own_address: IndividualAddress) -> Result<Self, BusError> {
-        Self::connect_to_group(own_address, *ROUTING_MULTICAST.ip()).await
+        Self::connect_with(own_address, RoutingSocketOptions::PRODUCTION).await
+    }
+
+    /// `connect()` with the socket options spelled out, so a test can join
+    /// the *standard* group — the thing `connect()` is there to get right —
+    /// without the datagrams leaving the machine.
+    async fn connect_with(
+        own_address: IndividualAddress,
+        options: RoutingSocketOptions,
+    ) -> Result<Self, BusError> {
+        Self::connect_to_group_with(own_address, *ROUTING_MULTICAST.ip(), options).await
     }
 
     /// `connect()`'s actual implementation, generalized over the group —
@@ -531,6 +590,17 @@ impl RoutingClient {
     async fn connect_to_group(
         own_address: IndividualAddress,
         group: Ipv4Addr,
+    ) -> Result<Self, BusError> {
+        Self::connect_to_group_with(own_address, group, RoutingSocketOptions::PRODUCTION).await
+    }
+
+    /// `connect_to_group()` with the socket options spelled out — see
+    /// `RoutingSocketOptions`. Private, and the only caller that passes
+    /// anything but `PRODUCTION` is this module's own test section.
+    async fn connect_to_group_with(
+        own_address: IndividualAddress,
+        group: Ipv4Addr,
+        options: RoutingSocketOptions,
     ) -> Result<Self, BusError> {
         if !group.is_multicast() {
             return Err(BusError::NotMulticast(group));
@@ -547,16 +617,32 @@ impl RoutingClient {
             .bind(&std::net::SocketAddr::from((Ipv4Addr::UNSPECIFIED, group.port())).into())
             .map_err(BusError::Io)?;
         socket2_socket.set_nonblocking(true).map_err(BusError::Io)?;
+        // Both of these are skipped for `PRODUCTION`, which asks for the
+        // kernel's own defaults (`IP_MULTICAST_IF` = `INADDR_ANY`, TTL 1):
+        // not making the syscall at all is the clearest possible proof
+        // that production behaviour is untouched.
+        if !options.interface.is_unspecified() {
+            socket2_socket
+                .set_multicast_if_v4(&options.interface)
+                .map_err(BusError::Io)?;
+        }
+        if let Some(ttl) = options.ttl {
+            socket2_socket
+                .set_multicast_ttl_v4(ttl)
+                .map_err(BusError::Io)?;
+        }
         let std_socket: std::net::UdpSocket = socket2_socket.into();
         let socket = UdpSocket::from_std(std_socket).map_err(BusError::Io)?;
 
         socket
-            .join_multicast_v4(*group.ip(), Ipv4Addr::UNSPECIFIED)
+            .join_multicast_v4(*group.ip(), options.interface)
             .map_err(BusError::Io)?;
-        // Without this, our own sends would loop back through this same
-        // socket and appear in `subscribe()` as if another device sent
-        // them (design spec's Architecture section).
-        socket.set_multicast_loop_v4(false).map_err(BusError::Io)?;
+        // `false` in production: without it, our own sends would loop back
+        // through this same socket and appear in `subscribe()` as if
+        // another device sent them (design spec's Architecture section).
+        socket
+            .set_multicast_loop_v4(options.loop_back)
+            .map_err(BusError::Io)?;
 
         let (tx, _rx) = broadcast::channel(64);
         let state = Arc::new(RoutingState {
@@ -1146,6 +1232,13 @@ mod tests {
     /// multicast rather than a protocol exchange with a specific peer.
     /// Skipped (not failed) if this sandbox has no multicast route on
     /// loopback at all, same policy as the discovery test above it.
+    ///
+    /// Goes through `RoutingClient::connect_with` rather than
+    /// `KnxNetIpClient::connect_routing` for one reason only:
+    /// `RoutingSocketOptions::LOOPBACK_ONLY`. With production's options
+    /// this test sent a real `GroupValueWrite` to `1/2/3` out of whatever
+    /// interface the routing table pointed at — on a KNX engineer's
+    /// machine, the one the installation is on (KNOWN_LIMITATIONS.md §33).
     #[tokio::test]
     async fn routing_client_sends_and_receives_a_group_value_write() {
         use crate::cemi::{ApplicationService, Destination, GroupValue};
@@ -1154,20 +1247,24 @@ mod tests {
         let sender_address = IndividualAddress::new(1, 1, 1).unwrap();
         let receiver_address = IndividualAddress::new(1, 1, 2).unwrap();
 
-        let sender = match KnxNetIpClient::new().connect_routing(sender_address).await {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!(
-                    "skipping routing_client_sends_and_receives_a_group_value_write: \
-                     could not join the routing multicast group in this sandbox: {e}"
-                );
-                return;
-            }
-        };
-        let receiver = KnxNetIpClient::new()
-            .connect_routing(receiver_address)
-            .await
-            .expect("second RoutingClient should join the same group fine (SO_REUSEADDR)");
+        let sender =
+            match RoutingClient::connect_with(sender_address, RoutingSocketOptions::LOOPBACK_ONLY)
+                .await
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!(
+                        "skipping routing_client_sends_and_receives_a_group_value_write: \
+                     could not join the routing multicast group on loopback \
+                     in this sandbox: {e}"
+                    );
+                    return;
+                }
+            };
+        let receiver =
+            RoutingClient::connect_with(receiver_address, RoutingSocketOptions::LOOPBACK_ONLY)
+                .await
+                .expect("second RoutingClient should join the same group fine (SO_REUSEADDR)");
         let mut telegrams = receiver.subscribe();
 
         let group_address = GroupAddress::parse("1/2/3", GroupAddressStyle::ThreeLevel).unwrap();
@@ -1180,11 +1277,12 @@ mod tests {
             .expect("send over loopback multicast should succeed");
 
         // Some sandboxes accept `IP_ADD_MEMBERSHIP`/`sendto()` without error
-        // yet never actually deliver the datagram locally (verified here by
-        // hand with plain Python sockets, forcing `IP_MULTICAST_IF` to
-        // 127.0.0.1: join and send both succeed, nothing arrives) — a
-        // stricter, no-route-at-all failure than the ones `connect_routing`
-        // above can detect. Treat that the same way: skip, don't fail.
+        // yet never actually deliver the datagram locally — a stricter,
+        // no-route-at-all failure than the ones `connect_with` above can
+        // detect. Treat that the same way: skip, don't fail. (With
+        // `LOOPBACK_ONLY` it does deliver on an ordinary Linux host and in
+        // a bare `unshare -rn` namespace, both measured; this arm is for
+        // the sandbox that manages neither.)
         let received = match tokio::time::timeout(Duration::from_secs(5), telegrams.recv()).await {
             Ok(Ok(telegram)) => telegram,
             Ok(Err(_)) => panic!("broadcast channel closed unexpectedly"),
@@ -1213,26 +1311,32 @@ mod tests {
     /// `ROUTING_BUSY` datagram through the receive loop — that path is
     /// exercised by `merge_busy_deadline_keeps_the_later_of_the_two` above,
     /// so this test's job is only to confirm `send()` actually honours the
-    /// deadline once set. Only needs `connect_routing` to succeed (to reach
-    /// a real `send()`); delivery is irrelevant, so unlike the round-trip
+    /// deadline once set. Only needs the connect to succeed (to reach a
+    /// real `send()`); delivery is irrelevant, so unlike the round-trip
     /// test above this one only skips if joining the multicast group itself
-    /// fails.
+    /// fails. `LOOPBACK_ONLY` for the same reason as the test above: this
+    /// one reaches a real `send()`, and a real `send()` with production's
+    /// options is a real telegram on a real LAN.
     #[tokio::test]
     async fn routing_client_send_waits_out_a_routing_busy_deadline() {
         use crate::cemi::{ApplicationService, Destination, GroupValue};
         use knx_core::{GroupAddress, GroupAddressStyle, IndividualAddress};
 
         let own_address = IndividualAddress::new(1, 1, 3).unwrap();
-        let client = match KnxNetIpClient::new().connect_routing(own_address).await {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!(
-                    "skipping routing_client_send_waits_out_a_routing_busy_deadline: \
-                     could not join the routing multicast group in this sandbox: {e}"
-                );
-                return;
-            }
-        };
+        let client =
+            match RoutingClient::connect_with(own_address, RoutingSocketOptions::LOOPBACK_ONLY)
+                .await
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!(
+                        "skipping routing_client_send_waits_out_a_routing_busy_deadline: \
+                     could not join the routing multicast group on loopback \
+                     in this sandbox: {e}"
+                    );
+                    return;
+                }
+            };
         let wait = Duration::from_millis(150);
         *client.state.busy_until.lock().await = Some(tokio::time::Instant::now() + wait);
 
@@ -1295,12 +1399,19 @@ mod tests {
     /// never observed on a real installation. Unlike the round-trip tests
     /// above, this does not skip: a validation bug would show up as
     /// `Err(NotMulticast(_))` regardless of sandbox networking, so there is
-    /// nothing here for a sandbox limitation to hide.
+    /// nothing here for a sandbox limitation to hide. `LOOPBACK_ONLY`
+    /// because validation passing means the socket really is created and
+    /// really does join — on loopback, where no installation is listening.
     #[tokio::test]
     async fn connect_routing_to_group_accepts_an_administratively_scoped_address() {
         let own_address = IndividualAddress::new(1, 1, 4).unwrap();
         let group = Ipv4Addr::new(239, 0, 2, 1);
-        let result = RoutingClient::connect_to_group(own_address, group).await;
+        let result = RoutingClient::connect_to_group_with(
+            own_address,
+            group,
+            RoutingSocketOptions::LOOPBACK_ONLY,
+        )
+        .await;
         assert!(
             !matches!(result, Err(BusError::NotMulticast(_))),
             "a genuine multicast address must not fail validation"
@@ -1313,22 +1424,33 @@ mod tests {
     /// default silently drifts from the constant the rest of the module
     /// uses. Skips, rather than fails, if this sandbox has no multicast
     /// route at all, same policy as the round-trip test above.
+    ///
+    /// `connect_with` is `connect()`'s body with the socket options as a
+    /// parameter, so the group this asserts on is still the one
+    /// `connect()` picks; what it no longer covers is the one-line
+    /// `KnxNetIpClient::connect_routing` -> `RoutingClient::connect`
+    /// delegation, which cannot be exercised without joining the real
+    /// group on the real interface.
     #[tokio::test]
     async fn connect_routing_joins_the_standard_group_by_default() {
         let own_address = IndividualAddress::new(1, 1, 4).unwrap();
-        let client = match KnxNetIpClient::new().connect_routing(own_address).await {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!(
-                    "skipping connect_routing_joins_the_standard_group_by_default: \
-                     could not join the routing multicast group in this sandbox: {e}"
-                );
-                return;
-            }
-        };
+        let client =
+            match RoutingClient::connect_with(own_address, RoutingSocketOptions::LOOPBACK_ONLY)
+                .await
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!(
+                        "skipping connect_routing_joins_the_standard_group_by_default: \
+                     could not join the routing multicast group on loopback \
+                     in this sandbox: {e}"
+                    );
+                    return;
+                }
+            };
         assert_eq!(
             client.group, ROUTING_MULTICAST,
-            "connect_routing() without an override must still join the standard group"
+            "connect() without an override must still join the standard group"
         );
     }
 
@@ -1339,12 +1461,18 @@ mod tests {
     async fn connect_routing_to_group_joins_the_given_group_not_the_default() {
         let own_address = IndividualAddress::new(1, 1, 4).unwrap();
         let group = Ipv4Addr::new(239, 0, 2, 1);
-        let client = match RoutingClient::connect_to_group(own_address, group).await {
+        let client = match RoutingClient::connect_to_group_with(
+            own_address,
+            group,
+            RoutingSocketOptions::LOOPBACK_ONLY,
+        )
+        .await
+        {
             Ok(c) => c,
             Err(e) => {
                 eprintln!(
                     "skipping connect_routing_to_group_joins_the_given_group_not_the_default: \
-                     could not join {group} in this sandbox: {e}"
+                     could not join {group} on loopback in this sandbox: {e}"
                 );
                 return;
             }
@@ -1354,6 +1482,74 @@ mod tests {
             SocketAddrV4::new(group, ROUTING_MULTICAST.port())
         );
         assert_ne!(client.group, ROUTING_MULTICAST);
+    }
+
+    /// The options every real caller gets must stay the kernel's own
+    /// defaults: a routing client that pinned itself to `lo`, or refused
+    /// to leave the host, would be useless on a real installation. No
+    /// socket involved — this is a guard on the constant itself, so it
+    /// cannot skip.
+    #[test]
+    fn production_routing_socket_options_leave_the_network_to_the_kernel() {
+        let production = RoutingSocketOptions::PRODUCTION;
+        assert!(
+            production.interface.is_unspecified(),
+            "production must let the routing table pick the outgoing interface"
+        );
+        assert!(
+            !production.loop_back,
+            "production must not deliver our own sends back into our own subscribe()"
+        );
+        assert_eq!(
+            production.ttl, None,
+            "production must leave IP_MULTICAST_TTL at the kernel default, not force one"
+        );
+    }
+
+    /// The regression guard for KNOWN_LIMITATIONS.md §33: asks the kernel
+    /// what the test socket is actually set to, rather than trusting that
+    /// asking for `LOOPBACK_ONLY` had any effect. If someone routes these
+    /// tests back through `PRODUCTION`, or `set_multicast_if_v4` stops
+    /// being called, this fails instead of quietly resuming transmission
+    /// on the LAN interface.
+    #[tokio::test]
+    async fn loopback_only_options_actually_reach_the_socket() {
+        let own_address = IndividualAddress::new(1, 1, 4).unwrap();
+        let client =
+            match RoutingClient::connect_with(own_address, RoutingSocketOptions::LOOPBACK_ONLY)
+                .await
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!(
+                        "skipping loopback_only_options_actually_reach_the_socket: \
+                     could not join the routing multicast group on loopback \
+                     in this sandbox: {e}"
+                    );
+                    return;
+                }
+            };
+        let socket = socket2::SockRef::from(&client.state.socket);
+        assert_eq!(
+            socket
+                .multicast_if_v4()
+                .expect("IP_MULTICAST_IF should be readable"),
+            Ipv4Addr::LOCALHOST,
+            "test sockets must send via lo, never via whatever the routing table picks"
+        );
+        assert_eq!(
+            socket
+                .multicast_ttl_v4()
+                .expect("IP_MULTICAST_TTL should be readable"),
+            0,
+            "TTL 0 is the second lock: the datagram may not be put on any link"
+        );
+        assert!(
+            socket
+                .multicast_loop_v4()
+                .expect("IP_MULTICAST_LOOP should be readable"),
+            "local delivery is the whole point of a loopback-only round-trip test"
+        );
     }
 
     /// Finding 6 (T17 fix round 2): `decode_failure_count()` is public,

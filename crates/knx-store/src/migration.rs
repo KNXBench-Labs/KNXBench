@@ -828,11 +828,9 @@ mod tests {
         // table both land; the table exists and, migrating from empty, is
         // itself empty — a migration invents no rows.
         let count: i64 = conn
-            .query_row(
-                "SELECT COUNT(*) FROM com_object_program_default",
-                [],
-                |r| r.get(0),
-            )
+            .query_row("SELECT COUNT(*) FROM com_object_program_default", [], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(count, 0);
     }

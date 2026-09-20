@@ -1,10 +1,10 @@
 # Limitierungen nach Kritikalität
 
-Sortierung der 117 Einträge aus [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)
+Sortierung der 118 Einträge aus [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)
 (`grep -c '^## [0-9]' docs/KNOWN_LIMITATIONS.md`), Stand 2026-09-20. Diese Datei
 ordnet nur — sie ersetzt keinen Eintrag und enthält keine neuen Fakten.
 Maßgeblich bleibt der Volltext dort. §105 ist absichtlich nicht eingestuft
-(siehe unten); die restlichen 116 sind es.
+(siehe unten); die restlichen 117 sind es.
 
 Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 
@@ -135,7 +135,7 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | 116 | `NM_IndividualAddress_Write` wiederholt nicht für den Bediener, liest eine Transport-Layer-Freigabe als MP §2.3 es nicht ausdrücklich sagt | Beide Abweichungen ändern keine Stopp/Weiter-Entscheidung des Standards. |
 | 118 | Erfolgreicher Projekt-Load meldet sich Screenreadern nicht | Nur der Erfolgsfall fehlt; `failed` wird bereits angesagt. |
 
-## K4 — niedrig (11)
+## K4 — niedrig (12)
 
 | § | Thema | Warum K4 |
 | --- | --- | --- |
@@ -150,6 +150,7 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | 110 | `PID_GROUP_RESPONSER_TABLE` bleibt auf jedem Medium unimplementiert | Bewusst — PL110-only laut RES, dieses Projekt zielt auf TP1/RF/IP. |
 | 111 | CP §3.5.4 Schritt 07 (Individualadresse entladen) bleibt unimplementiert | Bewusste Weigerung: das Werkzeug soll das eigene Zielgerät nicht unadressierbar machen. |
 | 115 | `MasterResetResponse::recovery_wait`/`SessionTiming::restart_basic_t1` berechnen Wartezeiten, die niemand abwartet | Toter Code ohne heutigen Aufrufer. |
+| 119 | Auf diesem `ntfs3`-Mount hat `cargo` schon einmal aus einem veralteten Fingerprint neu gebaut — ein grüner Gate-Lauf ist allein kein Beweis | Trifft die Entwicklungsmaschine, nicht das ausgelieferte Produkt; kostet keinem Nutzer Daten. Workaround (`touch`/`cargo clean`) bekannt und dokumentiert — einmal hat der blinde Fleck aber exakt das produziert, was §33 verhindern soll, also nicht rein kosmetisch, sondern Interna mit Zähnen. |
 
 ## Erledigt, steht als Historie drin (17)
 

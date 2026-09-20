@@ -392,119 +392,32 @@ pub fn load_one_part() -> Procedure {
 }
 
 /// §7.4, CP §3.5.3's first variant, *"Partial Download of the 'application
-/// program 2'"*, whose rows are numbered 01 to 14. Same shape as §7.1 with one
-/// insertion and one branch, and the branch escalates to a larger download
-/// rather than aborting.
+/// program 2'"*, whose rows are numbered 01 to 14.
 ///
-/// The clause's Nr. 06 ends *"⇒ Continue at Nr. 13"*, so on the happy path
-/// rows 07 to 12 are skipped and the procedure lands on the access keys and
-/// the disconnect. They are transcribed anyway: they are the escalation's
-/// destination, and a number missing from this list is a number the sequencer
-/// could invent.
+/// Delegates to [`PartialDownloadVariant::ApplicationProgram2`]
+/// (`partial_download_variant.rs`), which transcribes all five CP §3.5.3
+/// variants against the clause directly. This function used to carry its
+/// own second copy of the same fourteen steps — reachable only from this
+/// module's own tests, never from `knx-net`'s `Downloader::partial_download`,
+/// which has consulted `PartialDownloadVariant` since `[C12]` — so the two
+/// copies had nothing keeping them in agreement with each other. One of them
+/// had to go; this one kept its name and its place in [`ProcedureKind::ALL`]
+/// so every kind still has exactly one step list, and it is now the same
+/// list `knx-net` actually runs.
+///
+/// Deleting the duplicate did not just remove dead prose: this module's
+/// own `neither_access_key_step_counts_as_a_write` test failed the moment
+/// the swap landed, because all five `PartialDownloadVariant`s classified
+/// their "modify access keys" step as [`StepEffect::Write`], not
+/// [`StepEffect::Guard`] — the very reclassification C10 made for this
+/// module's own (now deleted) copy. The step writes nothing;
+/// `A_Key_Write` has no encoder and any plan that declares access keys is
+/// refused before this step runs. `partial_download_variant.rs` is fixed
+/// to `Guard` in the same commit as this delegation, for all five
+/// variants, not just this one — the two copies disagreed on more than
+/// wording.
 pub fn partial_download() -> Procedure {
-    Procedure {
-        kind: ProcedureKind::PartialDownload,
-        source: "CP §3.5.3 'application program 2', steps 01-14",
-        steps: vec![
-            step(
-                1,
-                "connect",
-                "connection-oriented connect via the bus",
-                StepEffect::Connection,
-            ),
-            step(
-                2,
-                "verify the device version",
-                "read Device Descriptor Type 0",
-                StepEffect::Read,
-            ),
-            step(
-                3,
-                "get access rights",
-                "authorise per MP §3.5.1",
-                StepEffect::Read,
-            ),
-            step(
-                4,
-                "check the manufacturer ID",
-                "compare against DeviceObject.PID_MANUFACTURER_ID",
-                StepEffect::Guard,
-            ),
-            step(
-                5,
-                "unload only the part being replaced",
-                "LoadControl = Unload on that part alone, not on everything",
-                StepEffect::Write,
-            ),
-            step(
-                6,
-                "allocate and compare the CRC",
-                "after the PID_REFERENCE read-back, read PID_MCB and compare against \
-                 the stored CRC; a match means the part is unchanged and may be \
-                 skipped — it does not mean a differential download is performed, \
-                 because that algorithm is not specified anywhere (GAP-T30-04)",
-                StepEffect::Write,
-            ),
-            step(
-                7,
-                "on failed allocation, escalate",
-                "CP §3.5.3's own recovery is to continue at Nr. 07: unload the \
-                 following segments and reload them in ascending order, which turns a \
-                 partial download into a full one mid-flight",
-                StepEffect::Write,
-            ),
-            step(
-                8,
-                "load the part",
-                "the inner loop of §7.2, run again after the escalation's unload; on \
-                 the happy path Nr. 06 already did this and jumped past here",
-                StepEffect::Write,
-            ),
-            step(
-                9,
-                "load Application Program 1",
-                "one of the four following segments the escalation reloads in \
-                 ascending order; the clause says to apply Nr. 06's routines to it",
-                StepEffect::Write,
-            ),
-            step(
-                10,
-                "load the Group Object Table",
-                "the second following segment, same routines",
-                StepEffect::Write,
-            ),
-            step(
-                11,
-                "load the Address Table",
-                "the third following segment; its PL110-only group responder table \
-                 write is out of scope for phase 2",
-                StepEffect::Write,
-            ),
-            step(
-                12,
-                "load the Association Table",
-                "the last following segment, same routines",
-                StepEffect::Write,
-            ),
-            step(
-                13,
-                "modify access keys",
-                "CP §3.5.3 AP2 Nr. 13, p. 47: 'set access keys as required'. \
-                 `DownloadPlan::with_access_keys` (C10) is the field that \
-                 says what 'as required' means for a given plan: declaring \
-                 none leaves this step reported and empty, and declaring \
-                 any is refused before it runs, because `A_Key_Write` has \
-                 no encoder (design spec §10.7)",
-                StepEffect::Guard,
-            ),
-            step(
-                14,
-                "disconnect",
-                "disconnect via the bus",
-                StepEffect::Connection,
-            ),
-        ],
-    }
+    super::partial_download_variant::PartialDownloadVariant::ApplicationProgram2.procedure()
 }
 
 /// §7.5, CP §3.5.4, steps 01–06 only.
@@ -763,12 +676,18 @@ mod tests {
             .iter()
             .find(|step| step.title.contains("escalate"))
             .expect("CP §3.5.3's failed-allocation branch must be modelled");
-        assert!(escalation.detail.contains("continue at Nr. 07"));
-        // And it must not claim the unspecified algorithm.
-        assert!(procedure
-            .steps
-            .iter()
-            .any(|step| step.detail.contains("GAP-T30-04")));
+        // `partial_download()` delegates to `PartialDownloadVariant::ApplicationProgram2`
+        // (C12); its escalation step describes the same CP §3.5.3 recovery — reload the
+        // following segments in ascending order — in that variant's own words rather
+        // than this module's now-retired ones.
+        assert!(escalation.detail.contains("then reload them in that order"));
+        // And it must not claim the unspecified differential-download algorithm; see
+        // also `nothing_claims_to_implement_differential_download` below, which checks
+        // every `ProcedureKind`, not just this one.
+        assert!(!procedure.steps.iter().any(|step| step
+            .detail
+            .to_lowercase()
+            .contains("differential download algorithm is")));
     }
 
     #[test]

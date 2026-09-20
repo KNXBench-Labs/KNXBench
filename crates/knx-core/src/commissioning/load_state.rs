@@ -2,7 +2,7 @@
 //!
 //! Read and write use *different* encodings of the same property, so
 //! [`LoadState`] and [`LoadEvent`] are separate enums rather than one enum
-//! with a direction flag (spec §5.1, §11.2). The transition table of
+//! with a direction flag (design spec §5.1, §11.2). The transition table of
 //! §5.4 is data here, not scattered `if`s, and it answers exactly one
 //! question: is the state a device reports after an event a legal
 //! outcome of that event?
@@ -11,7 +11,7 @@ use std::fmt;
 
 /// A load state, as read from `PID_LOAD_STATE_CONTROL` (PID 5).
 ///
-/// Values and remarks are `[D]` RES Table 92 (spec §5.2). `Unloading` and
+/// Values and remarks are `[D]` RES Table 92 (design spec §5.2). `Unloading` and
 /// `LoadCompleting` are optional states: a conforming device may never
 /// show them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -123,7 +123,7 @@ impl fmt::Display for UnknownLoadState {
 
 /// A load event, as written to `PID_LOAD_STATE_CONTROL` (PID 5).
 ///
-/// Values and reactions are `[D]` RES Table 93 (spec §5.3).
+/// Values and reactions are `[D]` RES Table 93 (design spec §5.3).
 /// `Device Restart` is in the transition table but is not an event that
 /// can be written to this property, so it is [`Stimulus::Restart`]
 /// instead.
@@ -147,7 +147,7 @@ pub enum LoadEvent {
 
 impl LoadEvent {
     /// The event octet, which is octet 0 of the ten-octet payload of
-    /// spec §7.3.
+    /// design spec §7.3.
     pub fn octet(self) -> u8 {
         match self {
             LoadEvent::NoOperation => 0x00,
@@ -206,7 +206,7 @@ impl fmt::Display for Stimulus {
 ///
 /// It exists here for one reason: `[D, corpus]` PROF §5.3 footnote a
 /// forbids the `Loaded` → `Error` alternative for mask `0912h` couplers
-/// (spec §5.4). A profile that is silent about a cell leaves RES Table 94
+/// (design spec §5.4). A profile that is silent about a cell leaves RES Table 94
 /// as it is, so the permitted-outcome set is **narrowed** per mask and
 /// never widened.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -286,7 +286,7 @@ impl PermittedOutcomes {
     }
 }
 
-/// RES Table 94, reproduced (spec §5.4), narrowed per mask version where
+/// RES Table 94, reproduced (design spec §5.4), narrowed per mask version where
 /// a profile removes an alternative.
 ///
 /// `mask` is `None` when the device's mask version is not yet known —
@@ -416,7 +416,7 @@ fn narrow_for_mask(
 }
 
 /// Whether any event other than `Unload` can move a part out of `Error`.
-/// The answer is no, and spec §5.4 says the consequence out loud: *"A
+/// The answer is no, and design spec §5.4 says the consequence out loud: *"A
 /// retry loop that re-sends Start Loading after an error will loop
 /// forever; recovery is unload, then start again."* Exposed as a function
 /// so a caller can assert it rather than remember it.

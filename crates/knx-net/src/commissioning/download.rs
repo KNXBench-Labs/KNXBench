@@ -2,7 +2,7 @@
 //!
 //! Spec §11.2 asks for *"a procedure model, not a script"*, and `knx-core`'s
 //! `commissioning::procedure` is that model: the step lists of CP §3.5.2,
-//! CP §3.5.3, CP §3.5.4 and spec §9.1, in the Standard's own numbering. This
+//! CP §3.5.3, CP §3.5.4 and design spec §9.1, in the Standard's own numbering. This
 //! module is what walks them against a real (well, simulated) device, and it
 //! records which numbered step produced which frame so that a report and the
 //! clause can be read side by side.
@@ -26,7 +26,7 @@
 //!
 //! * CP §3.5.2 numbers `Connect` 01, `Read Device Descriptor Type 0` 02 and
 //!   `Authorize` 03. This session authorises as part of connecting, because
-//!   spec §10.3 binds authorisation and Verify Mode to the connection rather
+//!   design spec §10.3 binds authorisation and Verify Mode to the connection rather
 //!   than to the operation, so the descriptor read lands *after* the
 //!   authorisation rather than before it. The trace records 01, 03, 02 in that
 //!   order rather than pretending otherwise.
@@ -58,7 +58,7 @@ use crate::management::ManagementTransport;
 ///
 /// `[A]` The pairing of a part with an object index is this project's, not the
 /// Standard's: CP §3.5.2 names its five parts (Application Program 2 and 1,
-/// Group Object Table, Address Table, Association Table) and spec §3.2 records
+/// Group Object Table, Address Table, Association Table) and design spec §3.2 records
 /// that the index they live at comes from product data. So the caller says
 /// which index, and this type carries it without claiming to have derived it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -149,7 +149,7 @@ impl LoadablePart {
     }
 
     /// The Memory Control Block a previous download stored for this part,
-    /// which is the input CP §3.5.3's CRC comparison needs (spec §7.2 step 7).
+    /// which is the input CP §3.5.3's CRC comparison needs (design spec §7.2 step 7).
     pub fn with_stored_mcb(mut self, mcb: Vec<u8>) -> Self {
         self.stored_mcb = Some(mcb);
         self
@@ -266,7 +266,7 @@ impl DownloadPlan {
     }
 
     /// The Router Object to consult for `PID_MAX_APDU_LENGTH` when the Device
-    /// Object has no such property — which, per spec §6.4, means 12 octets and
+    /// Object has no such property — which, per design spec §6.4, means 12 octets and
     /// not the value found there.
     pub fn with_router_object(mut self, router_object: ObjectIndex) -> Self {
         self.router_object = Some(router_object);
@@ -368,7 +368,7 @@ impl fmt::Display for PlanError {
             PlanError::EmptyPart { object_index } => write!(
                 f,
                 "the part at {object_index} has no payload, and a download that cannot \
-                 finish must not start (spec §9.3)"
+                 finish must not start (design spec §9.3)"
             ),
             PlanError::DuplicatePart { object_index } => write!(
                 f,
@@ -420,7 +420,7 @@ impl fmt::Display for StepRecord {
 /// eight octets `PID_MCB_TABLE` answers with. Note what is *not* here: a
 /// "differential download" outcome. The clause says *"If the CRC matches,
 /// then MaC shall use differential download algorithm"* and that algorithm
-/// is not specified in either knowledge base (spec §7.4, §12). So the
+/// is not specified in either knowledge base (design spec §7.4, §12). So the
 /// comparison is performed, reported, and not acted on.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CrcComparison {
@@ -636,7 +636,7 @@ pub struct PartOutcome {
     /// The base address `PID_TABLE_REFERENCE` handed back, which is never
     /// zero: zero is a failure and is reported as one.
     pub base_address: u32,
-    /// How many chunks the payload went out in (spec §6.4).
+    /// How many chunks the payload went out in (design spec §6.4).
     pub chunks: usize,
     /// The state the Load State Machine settled in.
     pub state: LoadState,
@@ -645,7 +645,7 @@ pub struct PartOutcome {
     /// What happened to the `PID_PROGRAM_VERSION` write (`[C1]`).
     pub version: VersionOutcome,
     /// The Memory Control Block read after the load, whose CRC the next
-    /// partial download will compare (spec §7.2 step 7).
+    /// partial download will compare (design spec §7.2 step 7).
     pub mcb: Vec<u8>,
 }
 
@@ -717,7 +717,7 @@ pub enum DownloadError {
     /// The plan itself was not usable.
     Plan(PlanError),
     /// The device's mask has no allocation subtype this phase can build, or
-    /// the one it profiles is not applicable (spec §7.3 design rules 1 to 3).
+    /// the one it profiles is not applicable (design spec §7.3 design rules 1 to 3).
     Allocation(AllocationSubtypeError),
     /// CP §3.5.2 step 04's guard: the device is not from the manufacturer the
     /// application was built for. Nothing has been written at this point, and
@@ -734,7 +734,7 @@ pub enum DownloadError {
         /// The index asked about.
         object_index: ObjectIndex,
     },
-    /// The confirmation step of spec §9.1 found a part that is still not
+    /// The confirmation step of design spec §9.1 found a part that is still not
     /// `Loaded`. Reported, not retried.
     NotRecovered {
         /// Which part.
@@ -818,7 +818,7 @@ impl fmt::Display for DownloadError {
             } => write!(
                 f,
                 "recovery left {object_index} in {state} rather than Loaded, which is a \
-                 failed recovery and is not retried in a loop (spec §9.1 step 6)"
+                 failed recovery and is not retried in a loop (design spec §9.1 step 6)"
             ),
             DownloadError::AccessKeysNotSupported { declared } => write!(
                 f,
@@ -869,7 +869,7 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
     ///
     /// Step 05 unloads every part *before* step 06 loads the first one, which
     /// is the clause's own order and means the device passes through a state
-    /// with no valid configuration at all (spec §7.1, §9.3). That window is
+    /// with no valid configuration at all (design spec §7.1, §9.3). That window is
     /// the reason §13 rates this procedure the way it does; it is not an
     /// implementation choice that could be tightened.
     pub async fn complete_download(&mut self) -> Result<DownloadReport, DownloadError> {
@@ -1098,7 +1098,7 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
     /// Step 07 of that clause —
     /// `SerialNumber_IndividualAddress_Write(FFFFh)` by broadcast — is not
     /// implemented and not reachable from here. It makes a device
-    /// unaddressable by design (spec §7.5, §13), and this phase builds the six
+    /// unaddressable by design (design spec §7.5, §13), and this phase builds the six
     /// steps before it and stops.
     pub async fn unload(&mut self) -> Result<DownloadReport, DownloadError> {
         let kind = ProcedureKind::Unload;
@@ -1296,7 +1296,7 @@ async fn open<T: ManagementTransport>(
 ) -> Result<(MaskVersion, WriteLimit), DownloadError> {
     record(report, kind, 1, "connect");
     // One call, two numbered steps: `connect()` authorises as it connects
-    // (spec §10.3), so Nr. 03 happens here rather than after Nr. 02.
+    // (design spec §10.3), so Nr. 03 happens here rather than after Nr. 02.
     session.connect().await?;
     record(report, kind, 3, "get access rights");
 
@@ -1377,7 +1377,7 @@ async fn check_download_counter<T: ManagementTransport>(
 /// Table 93 says the data is then *"undefined"* — so the octets a matching CRC
 /// was computed over are no longer there to keep. The algorithm the clause
 /// names for that case, *"differential download"*, is not specified anywhere in
-/// either knowledge base (spec §7.4, §12).
+/// either knowledge base (design spec §7.4, §12).
 async fn load_one_part<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     part: &LoadablePart,
@@ -1512,7 +1512,7 @@ fn compare_mcb(stored: Option<&[u8]>, current_octets: &[u8]) -> CrcComparison {
 
 /// The allocation payload the device's mask profiles, or a refusal.
 ///
-/// Design spec §7.3 rule 2: *"There is no fallback between allocation styles.
+/// Design design spec §7.3 rule 2: *"There is no fallback between allocation styles.
 /// Pick by mask, or refuse."* The refusal path is
 /// [`AllocationSubtypeError::MaskNotProfiled`], from `allocation_subtype_for`:
 /// a mask whose PROF Table 7 row was not transcribed has no style to pick, and
@@ -2679,7 +2679,7 @@ mod tests {
     /// A CRC that matches is reported and is *not* used to skip the write:
     /// step 05 has already unloaded the part, so `[D]` RES Table 93 has
     /// declared the data undefined, and the algorithm CP §3.5.3 names for
-    /// this case is not specified anywhere (spec §7.4, §12).
+    /// this case is not specified anywhere (design spec §7.4, §12).
     #[tokio::test]
     async fn a_matching_crc_is_reported_and_the_data_is_written_anyway() {
         let device = ap2_device_with(SimulatorConfig {

@@ -77,8 +77,8 @@ export default function GroupAddressCsvButtons(props: {
   async function exportCsv() {
     const path = await pickSavePath(csvFilter, "group-addresses.csv");
     if (!path) return;
-    // Sequenced exactly like `App.tsx`'s neighbouring `exportProject`
-    // handler: clear any leftover error toast from an earlier, unrelated
+    // Sequenced exactly like `App.tsx`'s own save/import handlers: clear
+    // any leftover error toast from an earlier, unrelated
     // failure before this operation runs, not after — so a stale error
     // never sits on screen through a subsequent success.
     onClearErrors();

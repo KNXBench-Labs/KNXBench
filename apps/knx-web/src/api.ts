@@ -193,16 +193,6 @@ export function saveProjectAs(path: string): Promise<void> {
   return request("/api/project/save-as", { method: "POST", body: JSON.stringify({ path }) });
 }
 
-// `warnings: unknown[]` is deliberate — the frontend only needs the count and
-// a stringified form of each warning for a toast (see App.tsx's
-// `exportProject` handler); it does not need a typed binding for the
-// server's `ExportWarningDto` (apps/knx-server/src/routes.rs) the way
-// `ProjectTree`/`DeviceDetail` have `ts-rs` bindings, since nothing renders
-// a warning's individual fields yet.
-export function exportProject(path: string): Promise<{ warnings: unknown[] }> {
-  return request("/api/project/export", { method: "POST", body: JSON.stringify({ path }) });
-}
-
 // `language` picks which stored translation row `com_objects[].name`/
 // `.description` come back as (T33) — same convention as
 // `deviceParameters` below, via the same `languageQuery` helper, so the
@@ -614,7 +604,8 @@ export interface CsvExportReport {
 // "KNXBench group-address CSV v1" (crates/knx-csv, design
 // docs/superpowers/specs/2026-09-10-csv-group-address-exchange-design.md)
 // — a format this project defines and owns, not an ETS export. `path` is a
-// fresh write target resolved server-side exactly like `exportProject`'s.
+// fresh write target resolved server-side, like every route that writes a
+// file the user named.
 export function exportGroupAddressesCsv(path: string): Promise<CsvExportReport> {
   return request("/api/group-addresses/csv-export", {
     method: "POST",

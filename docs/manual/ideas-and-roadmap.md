@@ -27,8 +27,9 @@ all.
 The full inventory is [Implementation status](implementation-status.md), with
 finer-grained format detail in
 [Supported and unsupported](reference/02-supported-and-unsupported.md). In
-one paragraph: KNXBench imports and exports ETS project files at the two
-schemas it has real samples for, keeps everything it does not understand
+one paragraph: KNXBench imports ETS project files at the two schemas it has
+real samples for (and, since 2026-09-20, writes none —
+[ADR-0028](../adr/0028-no-knxproj-export.md)), keeps everything it does not understand
 rather than dropping it, stores projects in its own SQLite format with full
 undo, ingests product databases, edits topology, buildings, group addresses,
 communication objects, links and parameters, exports HTML documentation,

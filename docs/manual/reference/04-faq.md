@@ -36,24 +36,26 @@ reading before you commit anything important to it.
 **What happens to data KNXBench doesn't understand?**
 
 It is kept, not thrown away. Unknown XML elements and attributes from a `.knxproj` import
-are stored byte-for-byte in an opaque table, counted, and reported; they come back out
-unchanged on export. Where something can't be preserved opaquely — an unsupported
+are stored byte-for-byte in an opaque table, counted, and reported, so the import report
+can tell you exactly what the file said that KNXBench could not interpret. Where
+something can't be preserved opaquely — an unsupported
 feature, a conflict — KNXBench reports it instead of guessing. See
 [The import report](../user-guide/02-projects.md#the-import-report).
 
-**Can I open a file KNXBench exported back in ETS?**
+**Can I write a `.knxproj` out of KNXBench and open it in ETS?**
 
-Untested, and the manual says so rather than guessing. KNXBench's `.knxproj` export
-round-trips through its own importer without loss, but it has never been tried against a
-real ETS installation. Treat `.knxproj` export as an interoperability convenience, not a
-proven ETS-compatible path.
+No. There was an exporter; it was withdrawn on 2026-09-20
+([ADR-0028](../../adr/0028-no-knxproj-export.md)). It produced unsigned containers that
+no real ETS installation had ever been asked to open, and maintaining a writer nobody
+could verify was not worth what it returned. Import is one-way: a project that has been
+read into KNXBench stays in `.knxdb`.
 
 **Which file format should I actually keep?**
 
-The native `.knxdb` file. It's KNXBench's own versioned SQLite format, and it's the
-lossless working format the whole application is built around. `.knxproj` export exists
-for handing a project to something that expects ETS's format, not as a substitute for
-keeping a `.knxdb`.
+The native `.knxdb` file. It's KNXBench's own versioned SQLite format, it's the lossless
+working format the whole application is built around, and since there is no `.knxproj`
+export it is also the only format KNXBench writes a project to. Keep the `.knxproj` you
+imported as well — KNXBench never modifies it.
 
 **Does KNXBench run on Windows or macOS?**
 

@@ -72,19 +72,14 @@ imported house.knxproj
 than dropping it. The counts of unsupported features, unknown constructs, errors and
 warnings are the ones worth reading; `--report-json` gives you the detail behind them.
 
-### `knx export` — write an ETS project
+### `knx export` — removed on 2026-09-20
 
-```bash
-knx export house.knxdb house-export.knxproj
-```
-
-Writes an ETS-shaped `.knxproj` archive from a KNXBench project. Takes the same
-`--product-db` and `--no-product-db` flags as `import`. Warnings go to standard error.
-
-> **Warning**
->
-> Whether a real ETS installation opens the resulting file has not been verified, and
-> no ETS compatibility is claimed in either direction. Keep the original file.
+There was a `knx export <store.knxdb> <out.knxproj>` subcommand. It is gone, along with
+the `.knxproj` writer behind it — see
+[ADR-0028](../../adr/0028-no-knxproj-export.md). A script that calls it now fails with
+an unknown-subcommand error rather than quietly producing nothing, which is the better
+of the two ways to find out. `knx ga-export` and `knx doc-export` below are unaffected;
+neither writes an ETS format.
 
 ### `knx ga-export` — group addresses to CSV
 

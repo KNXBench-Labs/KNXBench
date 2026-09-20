@@ -88,8 +88,8 @@ Presence detection needs something to send to. In the project explorer:
    middle range inside it.
 2. Under **Group Addresses**, type the address, a name, and select the range.
 
-The range is not cosmetic. A group address that belongs to no range cannot be written
-to a `.knxproj` file later, and the export will say so instead of guessing one.
+The range is not cosmetic: a range is where the address belongs in the project's own
+structure, and the group-address views and the CSV export both read it.
 
 See [Working with group addresses](04-group-addresses.md).
 
@@ -141,13 +141,16 @@ Three exits, for three different purposes:
 
 | You want | Use |
 | --- | --- |
-| A file for ETS or a colleague | **File → Export to .knxproj…** |
+| To keep the project | **File → Save** — the `.knxdb` keeps everything |
 | A list of group addresses for a spreadsheet | **Export group addresses (CSV)…** |
 | Something to read, print or archive | The documentation export |
 
-The `.knxproj` export is an interoperability convenience, not the master copy: it is
-always written unsigned, and re-importing it into ETS is not a goal this project
-commits to. Keep the `.knxdb`.
+There is no `.knxproj` export. It existed until 2026-09-20 and was withdrawn
+([ADR-0028](../../adr/0028-no-knxproj-export.md)): the archives it wrote were unsigned,
+no real ETS installation was ever available here to confirm they opened, and a file
+KNXBench cannot promise ETS will read is not one it should write. Import is one-way;
+keep the `.knxdb`, and keep the `.knxproj` you imported if a colleague needs ETS's own
+format.
 
 For the documentation export and for comparing two projects, see
 [Documentation export and project comparison](08-reports-and-diff.md).

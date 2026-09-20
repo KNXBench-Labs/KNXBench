@@ -62,13 +62,14 @@ The full statement of the rules is in
 communication objects, building parts, datapoint types and the DPT codec, plus validation.
 Its distinguishing feature is provenance: a value is not just a value but a
 `Resolved<T> { value, layer }` that remembers which layer it came from — the product's
-`ComObject`, the reference, the instance, or a user edit. An exporter that does not know
-where a value came from cannot decide whether to write it back
+`ComObject`, the reference, the instance, or a user edit. A tool that does not know where
+a value came from cannot tell an inherited default from a decision someone made
 ([ADR-0004](../../adr/0004-provenance-model.md),
 [ADR-0010](../../adr/0010-per-attribute-override-representation.md)). Details in
 [`DATA_MODEL.md`](../../DATA_MODEL.md).
 
-**`knx-app` — the application services.** Import and export orchestration, and the command
+**`knx-app` — the application services.** Import orchestration (there is no `.knxproj`
+export since [ADR-0028](../../adr/0028-no-knxproj-export.md)), and the command
 pattern: every mutation is a `Command` that applies to a `Project` and returns its inverse.
 Undo and redo are a stack of those inverses. Validation lives here, not in the UI and not
 in the store — a duplicate individual address is rejected in one place, whichever client
@@ -134,8 +135,9 @@ Four things are worth noticing.
 **Nothing is discarded.** XML that the model does not understand is not dropped and not
 guessed at; it is stored verbatim in the opaque passthrough store, keyed by its source
 path, and counted in the import report
-([ADR-0006](../../adr/0006-opaque-passthrough-store.md)). That is what makes an export able
-to write back a file containing constructs KNXBench never modeled. The full treatment is in
+([ADR-0006](../../adr/0006-opaque-passthrough-store.md)). Until 2026-09-20 that was what
+let an export write back constructs KNXBench never modeled; with the writer gone, it is
+evidence of what the source file said. The full treatment is in
 [`IMPORT_EXPORT.md`](../../IMPORT_EXPORT.md).
 
 **The parse is tolerant, the report is not.** Unknown constructs, unresolved references and

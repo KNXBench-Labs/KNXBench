@@ -38,9 +38,10 @@ pub struct AppState {
     /// `save_project_as` writes it back into the target `.knxdb` — without
     /// this, a server-side ETS import followed by Save As silently produced
     /// a `.knxdb` with empty opaque/manifest tables, since the import-time
-    /// connection was never the same one Save touched (see final review of
-    /// the export-UI plan, finding B1). `None` for a fresh, never-imported
-    /// project.
+    /// connection was never the same one Save touched (finding B1 of the
+    /// since-withdrawn export-UI plan). `None` for a fresh, never-imported
+    /// project. The bytes are evidence of what the source file said
+    /// (ADR-0006), which the import report and diagnostics read back.
     pub opaque: Mutex<Vec<knx_store::StoredOpaqueEntry>>,
     pub manufacturer_refs: Mutex<Vec<knx_store::ManufacturerRef>>,
     /// Every applied command's inverse, for undo/redo. Reset to empty on
@@ -313,9 +314,9 @@ pub fn open_project(
 /// overwriting whatever it held. `opaque`/`manufacturer_refs` are written
 /// alongside it — empty slices are a harmless no-op insert, so a native
 /// (`.knxdb`-only) project with nothing to carry costs nothing extra. This
-/// is what makes a server-side ETS-import → Save-As → Export round trip
-/// keep its opaque passthrough and manufacturer manifest data instead of
-/// silently exporting an empty one (final review finding B1).
+/// is what makes a server-side ETS-import → Save-As keep its opaque
+/// passthrough and manufacturer manifest data instead of silently saving
+/// an empty one (final review finding B1).
 pub fn save_project_as_impl(
     path: &Path,
     project: &knx_core::Project,
@@ -443,10 +444,9 @@ pub struct UnsavedChanges;
 /// (`command.rs:906-916`), which `topology.rs:44-45` calls "valid project
 /// state, not an error". So no area and no line are required to place a
 /// device, and none is invented here. `info.project_id` is seeded because
-/// `knx-etsproj`'s exporter rejects an empty one
-/// (`export/schema11.rs:329`, `export/schema21.rs:100`) and no command in
-/// `knx-core` can set it afterwards — an unseeded from-scratch project
-/// could never be exported at all.
+/// no command in `knx-core` can set it afterwards, and an unnamed project
+/// id is a hole in the provenance the import model otherwise always
+/// carries.
 ///
 /// Names are the caller's, never this layer's invention: an absent name
 /// leaves the installation unnamed, exactly what the ETS mapper produces
@@ -561,15 +561,15 @@ pub fn new_project_impl(
 /// caller can say otherwise.
 const DEFAULT_NEW_PROJECT_LANGUAGE: &str = "en";
 
-/// Shaped like the project ids observed in the reference exports
-/// (`P-0512`, `P-03DE`), which the exporter also uses as the ZIP directory
-/// name (`knx-etsproj/src/export/mod.rs:73-74`). Only has to be unique
-/// inside one project file, so a constant is enough.
+/// Shaped like the project ids observed in the reference `.knxproj` files
+/// (`P-0512`, `P-03DE`), which is also the name of the directory they sit
+/// in inside the container. Only has to be unique inside one project file,
+/// so a constant is enough.
 const NEW_PROJECT_ID: &str = "P-0001";
 
 /// Pushes one info entry on `Ok`, one error entry on `Err` — shared by
 /// every operation that reports outcomes to the session log
-/// (`save_project`/`save_project_as`/`export_project`/`undo_impl`/
+/// (`save_project`/`save_project_as`/`undo_impl`/
 /// `redo_impl`/`apply`/`create_device_impl`), none of which ever reset the
 /// log (see `session_log.rs`'s own doc comment). `detail`, when given,
 /// carries extra context the caller doesn't want duplicated into
@@ -658,70 +658,6 @@ pub fn save_project(state: &AppState) -> Result<(), String> {
         save_project_as_impl(&path, project, &opaque, &manufacturer_refs)
     })();
     log_outcome(state, "save", "saved".to_string(), None, &result);
-    result
-}
-
-/// Exports the live in-memory project to a `.knxproj` file at `path`.
-/// Requires `store_path` already set (i.e. the project has been saved or
-/// opened as `.knxdb` at least once) — a workflow guarantee that the user
-/// has committed the current state to disk before exporting, not a data
-/// source: the opaque passthrough table and manufacturer manifest
-/// `export_ets_project` needs come from `state.opaque`/
-/// `state.manufacturer_refs` (the same live, in-memory copies every save
-/// path writes through), copied into a throwaway in-memory `.knxdb` for
-/// `export_ets_project`'s `Connection`-shaped interface. Earlier this
-/// re-opened `store_path` off disk instead, which (see
-/// `KNOWN_LIMITATIONS.md` #18) can lag the in-memory project — reading
-/// live state instead removes that staleness risk for this data, even
-/// though #18's broader "`store_path` names the wrong project" gap remains
-/// for `save_project` itself. The project content itself comes from
-/// `state.project` (live, possibly edited since the last save), not from
-/// re-loading the `.knxdb` file.
-pub fn export_project(
-    state: &AppState,
-    path: &Path,
-) -> Result<knx_etsproj::export::ExportOutcome, String> {
-    let result = (|| -> Result<knx_etsproj::export::ExportOutcome, String> {
-        {
-            let store_path = state.store_path.lock().expect("state mutex poisoned");
-            if store_path.is_none() {
-                return Err(
-                    "save the project as .knxdb first — export reads passthrough data from the saved store"
-                        .to_string(),
-                );
-            }
-        }
-        let opaque = state.opaque.lock().expect("state mutex poisoned");
-        let manufacturer_refs = state
-            .manufacturer_refs
-            .lock()
-            .expect("state mutex poisoned");
-        let conn = knx_store::open_and_migrate_in_memory().map_err(|e| e.to_string())?;
-        knx_store::insert_opaque(&conn, &opaque).map_err(|e| e.to_string())?;
-        knx_store::insert_manufacturer_refs(&conn, &manufacturer_refs)
-            .map_err(|e| e.to_string())?;
-        drop(opaque);
-        drop(manufacturer_refs);
-
-        let project = state.project.lock().expect("state mutex poisoned");
-        let project = project.as_ref().ok_or("no project open")?;
-        let product_db_guard = state
-            .product_db
-            .as_ref()
-            .map(|m| m.lock().expect("state mutex poisoned"));
-        let outcome = knx_app::export_ets_project(project, &conn, product_db_guard.as_deref())
-            .map_err(|e| e.to_string())?;
-        drop(product_db_guard);
-        std::fs::write(path, &outcome.bytes).map_err(|e| e.to_string())?;
-        Ok(outcome)
-    })();
-    log_outcome(
-        state,
-        "export",
-        format!("exported to {}", path.display()),
-        None,
-        &result,
-    );
     result
 }
 
@@ -1338,8 +1274,9 @@ pub fn set_group_address_style_impl(
 /// project's own `GroupAddressStyle`. `entry.source` gets a synthetic,
 /// stable id (`KB-GA-<id>`) instead of the empty string this used to
 /// write — a UI-created entity has no ETS origin to preserve, but an
-/// empty `ets_id` produced an invalid, colliding `Id=""` attribute if it
-/// ever reached export (KNOWN_LIMITATIONS.md #21). `range_id` stays
+/// empty `ets_id` collides with every other one, which the provenance
+/// model (ADR-0004) depends on being distinct (KNOWN_LIMITATIONS.md #21).
+/// `range_id` stays
 /// optional: forcing every UI-created address into a range needs a range
 /// *picker* in the UI, which does not exist yet (Sub-Project 2) — until
 /// then, a `None` range keeps behaving exactly as before, and a `Some`
@@ -2875,16 +2812,11 @@ pub(crate) fn parameter_panel_impl(
 /// (`#x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] |
 /// [#x10000-#x10FFFF]`) — one no XML 1.0 document can represent at all,
 /// escaped or not (a lone Unicode surrogate can never occur here: `char`
-/// already excludes it). Verified directly against this workspace's own
-/// exporter, `quick_xml` 0.42.0 (the version this workspace's `Cargo.lock`
-/// pins): `BytesStart::push_attribute` writes such a character straight
-/// through, unescaped, rather than rejecting it — so
-/// `crates/knx-etsproj/src/export/schema21.rs`'s `p.push("Value",
-/// param.raw.clone())` — and `crates/knx-etsproj/src/export/schema11.rs`'s
-/// identical line, same call, same shape, a different schema version's
-/// exporter making the identical assumption — would silently hand a value
-/// this validator let through to a writer that turns it into a
-/// not-well-formed `.knxproj`.
+/// already excludes it). Such a value is unrepresentable in the markup
+/// this project's documentation export writes, and was unrepresentable in
+/// the `.knxproj` it was read from — accepting one would mean storing a
+/// parameter value that no document can ever state again. Rejected at the
+/// edit, which is the only place one can enter.
 /// T18 slice 5's own addition, applied below to every kind that can carry
 /// free-form text; `Number`/`Restriction` never need it (already
 /// numeric/enum-only) and `None` is never writable at all.

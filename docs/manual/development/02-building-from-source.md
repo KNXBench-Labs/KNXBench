@@ -41,9 +41,9 @@ which gate enforces it.
 | Crate | What it is for |
 | --- | --- |
 | `crates/knx-core` | The domain model: addresses, entities, the DPT codec, validation. No IO, no XML, no SQL, no UI. |
-| `crates/knx-app` | Application services: import and export orchestration, commands, undo/redo, search, reports. |
+| `crates/knx-app` | Application services: import orchestration, commands, undo/redo, search, reports. |
 | `crates/knx-store` | The native `.knxdb` SQLite project format, its migration chain, and the opaque passthrough store. |
-| `crates/knx-etsproj` | `.knxproj` reading and writing: ZIP container, schema detection, tolerant XML parsing, mapping, import report. |
+| `crates/knx-etsproj` | `.knxproj` reading: ZIP container, schema detection, tolerant XML parsing, mapping, import report. Reading only — the writer was removed on 2026-09-20 ([ADR-0028](../../adr/0028-no-knxproj-export.md)). |
 | `crates/knx-productdb` | The product database: its own SQLite file, its own migration chain, `.knxprod` package installation, enrichment. |
 | `crates/knx-projection` | Pure display projections, exported to TypeScript with `ts-rs`. Depends on `knx-core` only. |
 | `crates/knx-csv` | Reader and writer for "KNXBench group-address CSV v1", a format this project defines and owns. |

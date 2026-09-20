@@ -1,8 +1,8 @@
 //! The headless `knx` command-line entry point.
 //!
 //! Keeping a real CLI alongside the desktop application is what forces the
-//! core to stay free of user-interface dependencies and makes import,
-//! roundtrip and regression tests runnable in CI without a display.
+//! core to stay free of user-interface dependencies and makes import and
+//! regression tests runnable in CI without a display.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -12,7 +12,6 @@ mod scan;
 const USAGE: &str =
     "usage: knx import <file.knxproj> [--store <path.knxdb>] [--report-json <path.json>]\n\
      \x20                  [--product-db <path>] [--no-product-db]\n\
-     \x20     knx export <store.knxdb> <out.knxproj> [--product-db <path>] [--no-product-db]\n\
      \x20     knx ga-export <store.knxdb> <out.csv>\n\
      \x20     knx ga-import <store.knxdb> <in.csv> [--dry-run]\n\
      \x20     knx doc-export <store.knxdb> <out.html>\n\
@@ -64,7 +63,6 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("import") => run_import(&args[1..]),
-        Some("export") => run_export(&args[1..]),
         Some("ga-export") => run_ga_export(&args[1..]),
         Some("ga-import") => run_ga_import(&args[1..]),
         Some("doc-export") => run_doc_export(&args[1..]),
@@ -253,7 +251,7 @@ fn run_import(args: &[String]) -> ExitCode {
         }
     };
 
-    // Save the project to the store so it can be loaded back later (e.g., for export).
+    // Save the project to the store so it can be loaded back later.
     if let Err(e) = knx_store::save_project(&conn, &imported.project) {
         eprintln!("failed to save project to store: {e}");
         return ExitCode::FAILURE;
@@ -336,118 +334,6 @@ fn print_summary(file: &str, imported: &knx_app::ImportedProject) {
             enrichment.issues.len()
         );
     }
-}
-
-struct ExportArgs {
-    store: String,
-    output: String,
-    product_db: Option<String>,
-    no_product_db: bool,
-}
-
-fn parse_export_args(args: &[String]) -> Result<ExportArgs, String> {
-    let mut store = None;
-    let mut output = None;
-    let mut product_db = None;
-    let mut no_product_db = false;
-    let mut i = 0;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--product-db" => {
-                i += 1;
-                product_db = Some(take_value(args, i, "--product-db")?);
-            }
-            "--no-product-db" => {
-                no_product_db = true;
-            }
-            other if other.starts_with("--") => {
-                return Err(format!("unknown flag: {other}"));
-            }
-            other if store.is_none() => store = Some(other.to_string()),
-            other if output.is_none() => output = Some(other.to_string()),
-            other => return Err(format!("unexpected extra argument: {other}")),
-        }
-        i += 1;
-    }
-    if product_db.is_some() && no_product_db {
-        return Err("--product-db and --no-product-db cannot both be given".to_string());
-    }
-    let store = store.ok_or_else(|| "missing <store.knxdb>".to_string())?;
-    let output = output.ok_or_else(|| "missing <out.knxproj>".to_string())?;
-    Ok(ExportArgs {
-        store,
-        output,
-        product_db,
-        no_product_db,
-    })
-}
-
-fn run_export(args: &[String]) -> ExitCode {
-    let parsed = match parse_export_args(args) {
-        Ok(parsed) => parsed,
-        Err(e) => {
-            eprintln!("{e}\n{USAGE}");
-            return ExitCode::FAILURE;
-        }
-    };
-
-    let conn = match knx_store::open_and_migrate(&PathBuf::from(&parsed.store)) {
-        Ok(conn) => conn,
-        Err(e) => {
-            eprintln!("failed to open store at {}: {e}", parsed.store);
-            return ExitCode::FAILURE;
-        }
-    };
-
-    let project = match knx_store::project::load_project(&conn) {
-        Ok(project) => project,
-        Err(e) => {
-            eprintln!("failed to load project from store: {e}");
-            return ExitCode::FAILURE;
-        }
-    };
-
-    // `--no-product-db` runs without external product database, using only
-    // what is stored in the project itself (the fallback from Session 3).
-    let products_conn = if parsed.no_product_db {
-        None
-    } else {
-        let path = match resolve_product_db_path(parsed.product_db.as_deref()) {
-            Ok(path) => path,
-            Err(e) => {
-                eprintln!("{e}\n{USAGE}");
-                return ExitCode::FAILURE;
-            }
-        };
-        match knx_productdb::open_and_migrate(&path) {
-            Ok(conn) => Some(conn),
-            Err(e) => {
-                eprintln!("failed to open product database at {}: {e}", path.display());
-                return ExitCode::FAILURE;
-            }
-        }
-    };
-
-    let outcome = match knx_app::export_ets_project(&project, &conn, products_conn.as_ref()) {
-        Ok(outcome) => outcome,
-        Err(e) => {
-            eprintln!("export failed: {e}");
-            return ExitCode::FAILURE;
-        }
-    };
-
-    // Print every warning to stderr.
-    for warning in &outcome.warnings {
-        eprintln!("warning: {:?}", warning);
-    }
-
-    // Write the exported bytes to the output file.
-    if let Err(e) = std::fs::write(&parsed.output, &outcome.bytes) {
-        eprintln!("failed to write export to {}: {e}", parsed.output);
-        return ExitCode::FAILURE;
-    }
-
-    ExitCode::SUCCESS
 }
 
 struct GaExportArgs {

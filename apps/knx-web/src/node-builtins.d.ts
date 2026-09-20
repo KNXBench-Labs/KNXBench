@@ -1,7 +1,10 @@
 // Minimal ambient declarations for the handful of Node builtins used by
-// test files that read project sources from disk (`motionGuard.test.ts`,
-// and `DiagnosticsCompanion.test.tsx`, which walks an import graph and so
-// also needs to ask whether a resolved path exists).
+// test files that read project sources from disk. Ten of them do now —
+// `grep -rl 'from "node:' src/` is the list, and it has outgrown every
+// attempt to name its members here. The two that shape what is declared
+// below: `DiagnosticsCompanion.test.tsx` walks an import graph and so has
+// to ask whether a resolved path exists, and `themeTokens.test.ts` walks
+// for `.css` files and so needs directory entries.
 //
 // Why this file exists instead of `@types/node`: this package's build is
 // `tsc && vite build` with `include: ["src"]`, so the test files are type
@@ -18,6 +21,12 @@
 declare module "node:fs" {
   export function readFileSync(path: string, encoding: "utf-8" | "utf8"): string;
   export function existsSync(path: string): boolean;
+  /** Only the `withFileTypes` shape is declared — `themeTokens.test.ts`
+   * walks for `.css` files and needs to tell a directory from a file. */
+  export function readdirSync(
+    path: string,
+    options: { withFileTypes: true },
+  ): { name: string; isDirectory(): boolean }[];
 }
 
 declare module "node:url" {
@@ -27,4 +36,5 @@ declare module "node:url" {
 declare module "node:path" {
   export function dirname(path: string): string;
   export function join(...paths: string[]): string;
+  export function relative(from: string, to: string): string;
 }

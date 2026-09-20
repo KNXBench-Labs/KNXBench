@@ -6,13 +6,39 @@ import { useEffect, useState } from "react";
  * treat the accent as identity and declare none). `themeTokens.test.ts`
  * checks this flag against the stylesheet so it cannot go stale. */
 export interface ThemeDef { id: string; name: string; hasAccentVariations: boolean; }
-export const THEMES: readonly ThemeDef[] = [
-  { id: "system", name: "System", hasAccentVariations: true },
+
+/** The palettes: one `:root[data-theme="<id>"]` block each in styles.css. */
+const PALETTE_THEMES: readonly ThemeDef[] = [
   { id: "porcelain", name: "Porcelain", hasAccentVariations: true },
   { id: "graphite", name: "Graphite", hasAccentVariations: true },
   { id: "cupertino", name: "Cupertino", hasAccentVariations: false },
   { id: "neon-grid", name: "Neon Grid", hasAccentVariations: false },
   { id: "bitcoin-defi", name: "Bitcoin DeFi", hasAccentVariations: false },
+];
+
+/**
+ * `system` is not a palette — it is whichever palette `resolveThemeId`
+ * picks from the OS preference, and that can flip under the user mid-session.
+ * So its accent flag is *derived*: the accent control is offered under
+ * `system` only when every palette it can resolve to varies by accent.
+ * Hard-coding it was the one registry entry nothing checked; a hand-typed
+ * `false` there disabled the accent control for the default theme and the
+ * whole suite stayed green.
+ *
+ * `every` rather than `some` is the conservative reading — offer the
+ * control only when it works in both directions — and it is deliberately
+ * unpinned: both palettes `system` resolves to happen to vary by accent
+ * today, so swapping the two leaves every test passing. The day a
+ * light/dark pair disagrees, this line decides something, and the test
+ * that should have been written first will have to be written then.
+ */
+const systemHasAccentVariations = [resolveThemeId("system", false), resolveThemeId("system", true)]
+  .map((id) => PALETTE_THEMES.find((theme) => theme.id === id))
+  .every((theme) => theme?.hasAccentVariations === true);
+
+export const THEMES: readonly ThemeDef[] = [
+  { id: "system", name: "System", hasAccentVariations: systemHasAccentVariations },
+  ...PALETTE_THEMES,
 ];
 const STORAGE_KEY = "knx-desktop:theme";
 

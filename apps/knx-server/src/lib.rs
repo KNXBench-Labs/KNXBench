@@ -8,6 +8,18 @@ use axum::{Json, Router};
 use serde::Serialize;
 use tower_http::services::ServeDir;
 
+mod auth;
+pub use auth::{
+    bind_address, resolve_auth, short_password_notice, AuthConfig, AuthSetup, DEFAULT_IDLE_TIMEOUT,
+    SESSION_COOKIE,
+};
+
+mod auth_password;
+pub use auth_password::{
+    constant_time_eq, hash_password, hash_password_with_iterations, DEFAULT_ITERATIONS,
+};
+
+mod auth_routes;
 mod bus;
 pub use bus::*;
 
@@ -80,22 +92,52 @@ struct VersionDto {
     version: String,
 }
 
-/// Builds the full router: `/healthz` (and, from later tasks, `/api/*`),
-/// plus — if `static_dir` is given — the built frontend served from `/`
-/// as a fallback. `static_dir` is `None` for API-only test builds and the
-/// Tauri dev branch, `Some(..)` for the standalone binary and the Tauri
-/// release branch.
+/// Builds the full router with authentication disabled: `/healthz`,
+/// `/api/*`, plus — if `static_dir` is given — the built frontend served
+/// from `/` as a fallback. `static_dir` is `None` for API-only test builds
+/// and the Tauri dev branch, `Some(..)` for the standalone binary and the
+/// Tauri release branch.
+///
+/// The signature is load-bearing: the Tauri shell
+/// (`apps/knx-desktop/src-tauri/src/lib.rs`) and every integration test in
+/// this crate call it, and ADR-0026 keeps the desktop deliberately
+/// login-free — it is one user, talking to a router inside their own
+/// process, over a socket nobody else can reach. [`app_with_auth`] is the
+/// door the standalone binary uses.
 pub fn app(state: SharedState, static_dir: Option<PathBuf>) -> Router {
-    let api = Router::new()
+    app_with_auth(state, static_dir, AuthConfig::disabled())
+}
+
+/// [`app`], with a say in whether any of it is guarded.
+///
+/// Three groups, and the split between them is the whole security model:
+///
+/// * **Guarded** — everything under `/api/` that is not an auth route.
+///   One `route_layer` over the merged group rather than a check per
+///   handler, so a route added tomorrow is guarded by construction.
+/// * **Open, and correct to be** — `/healthz`, because a liveness probe
+///   that needs a password is not a liveness probe; an orchestrator has
+///   no session and would restart a perfectly healthy container forever.
+/// * **Open, because they are how you stop being unauthenticated** —
+///   `/api/auth/login`, `/logout` and `/status`, plus the static frontend
+///   assets, which are the login screen.
+///
+/// With `auth` disabled, the guard is a passthrough and the auth routes
+/// still answer: `/api/auth/status` reporting `required: false` is how the
+/// frontend knows not to show a login screen at all.
+pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: AuthConfig) -> Router {
+    let auth = std::sync::Arc::new(auth::AuthState::new(auth));
+
+    let guarded = Router::new()
         .merge(routes::project_routes())
         .merge(fs_routes::fs_routes())
         .merge(bus_routes::bus_routes())
         .merge(debug_report_routes::debug_report_routes())
-        .route("/healthz", get(|| async { "ok" }))
         // Deliberately not in `routes::project_routes()`: this answers for
         // the build, not for the open project, and it works with no
-        // project loaded at all. It lives beside `/healthz` for the same
-        // reason — both are facts about the process.
+        // project loaded at all. It is guarded all the same — a build
+        // identifier is a small thing to hand a stranger, but it is still
+        // a thing, and the exception list is short on purpose.
         .route(
             "/api/version",
             get(|| async {
@@ -104,7 +146,18 @@ pub fn app(state: SharedState, static_dir: Option<PathBuf>) -> Router {
                 })
             }),
         )
+        // `route_layer`, not `layer`: an unmatched path must keep falling
+        // through to the static fallback with a 404, not collect a 401
+        // from a guard it never reached a route behind.
+        .route_layer(axum::middleware::from_fn_with_state(
+            auth.clone(),
+            auth::require_session,
+        ))
         .with_state(state);
+
+    let api = guarded
+        .route("/healthz", get(|| async { "ok" }))
+        .merge(auth_routes::auth_routes().with_state(auth));
 
     match static_dir {
         Some(dir) => api.fallback_service(ServeDir::new(dir)),

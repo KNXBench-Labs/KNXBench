@@ -5423,9 +5423,10 @@ Gates for fix round 1, all judged by exit status and all 0: `cargo fmt
 `cargo test --workspace --no-fail-fast`, `xtask check-layering`, `xtask
 check-headers`, `cargo deny check`, `npx tsc --noEmit`, and `npx vitest
 run`. Exact totals recorded in
-`.superpowers/sdd/2026-09-13-goal-completion/task-4-fixround-1-report.md`,
-not reproduced here since they belong to a single point in time on a
-branch, not a durable project fact.
+the task-4 fix-round report of that run, which was pruned with the rest of
+the finished run's per-task paperwork on 2026-09-20 and survives only in the
+status archive under `Backup/`. Not reproduced here since the totals belong to
+a single point in time on a branch, not a durable project fact.
 
 ## 2026-09-14: Task 6 — a performance baseline, so future slowness has a witness
 

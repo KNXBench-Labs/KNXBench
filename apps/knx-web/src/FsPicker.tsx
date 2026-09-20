@@ -5,8 +5,10 @@
 //! `await` it exactly like @tauri-apps/plugin-dialog's open()/save().
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { noteRefusal } from "./api";
 import { useTranslate } from "./i18n";
 import Overlay from "./Overlay";
+import { subscribeSessionExpired } from "./session";
 
 interface Entry {
   name: string;
@@ -24,9 +26,19 @@ function matchesFilter(name: string, filters: Filter[]): boolean {
   return filters.some((f) => f.extensions.some((e) => e.toLowerCase() === ext));
 }
 
+// Both helpers below hold their own `fetch` — one needs a query string it
+// builds itself, the other a `FormData` body `request()` would JSON-encode
+// — so both must report a refusal by hand. `/api/fs/*` is behind the same
+// guard as everything else (ADR-0026); without this, an expired session
+// showed up as the word "authentication required" printed inside a file
+// browser the user then could not leave.
 async function listDir(path: string): Promise<Entry[]> {
-  const res = await fetch(`/api/fs/list?path=${encodeURIComponent(path)}`);
-  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? res.statusText);
+  const url = `/api/fs/list?path=${encodeURIComponent(path)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    noteRefusal("/api/fs/list", res.status);
+    throw new Error((await res.json().catch(() => null))?.error ?? res.statusText);
+  }
   return res.json();
 }
 
@@ -34,7 +46,10 @@ async function uploadFile(file: File): Promise<string> {
   const form = new FormData();
   form.append("file", file);
   const res = await fetch("/api/fs/upload", { method: "POST", body: form });
-  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? res.statusText);
+  if (!res.ok) {
+    noteRefusal("/api/fs/upload", res.status);
+    throw new Error((await res.json().catch(() => null))?.error ?? res.statusText);
+  }
   return (await res.json()).path as string;
 }
 
@@ -122,11 +137,23 @@ function openDialog(mode: "open" | "save", filters: Filter[], defaultName?: stri
     const host = document.createElement("div");
     document.body.appendChild(host);
     const root = createRoot(host);
+    let unsubscribe = () => {};
     function close(path: string | null) {
+      unsubscribe();
       root.unmount();
       host.remove();
       resolve(path);
     }
+    // This modal is mounted on its own root, a sibling of `#root` rather
+    // than a descendant of `AuthGate`'s `.auth-gate-app`, so the `inert`
+    // the gate puts on the workbench does not reach it: a 401 arriving
+    // while the picker is open would raise the login screen over a dialog
+    // that still held the focus trap. Closing it is the better of the two
+    // answers — the user's next act is typing a password, and a file
+    // listing fetched before the session ended is stale anyway. The caller
+    // sees the same `null` it gets from Cancel, which every call site
+    // already handles.
+    unsubscribe = subscribeSessionExpired(() => close(null));
     root.render(<Modal mode={mode} filters={filters} defaultName={defaultName} onResolve={close} />);
   });
 }

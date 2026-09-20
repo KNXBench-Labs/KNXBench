@@ -715,7 +715,7 @@ describe("App — the File menu by keyboard alone", () => {
     return summary;
   }
 
-  it("opens from the keyboard, exposes every file/export entry in the tab order, and Escape returns focus", async () => {
+  it("opens from the keyboard, exposes every file entry in the tab order, and Escape returns focus", async () => {
     filePickerMock.pickOpenPath.mockResolvedValue("/tmp/project.knxproj");
     apiMock.importProject.mockResolvedValue(baseTree());
     const root = await renderApp();
@@ -735,7 +735,6 @@ describe("App — the File menu by keyboard alone", () => {
       "Open project…",
       "Open (.knxdb)…",
       "Save As…",
-      "Export to .knxproj…",
       "Export group addresses (CSV)…",
       "Import group addresses (CSV)…",
       "Export documentation…",
@@ -746,11 +745,10 @@ describe("App — the File menu by keyboard alone", () => {
       "About KNXBench…",
     ]);
     expect(entries.every((b) => b.tabIndex >= 0)).toBe(true);
-    // An ETS import has no `.knxdb` path yet, so only the .knxproj export is
-    // legitimately disabled — nothing else is keyboard-dead.
-    expect(entries.filter((b) => b.disabled).map((b) => b.textContent)).toEqual([
-      "Export to .knxproj…",
-    ]);
+    // Nothing in the menu is keyboard-dead: every entry here works on a
+    // freshly imported project. (The one that used to be disabled without a
+    // `.knxdb` path was the `.knxproj` export, withdrawn by ADR-0028.)
+    expect(entries.filter((b) => b.disabled).map((b) => b.textContent)).toEqual([]);
 
     await act(async () => {
       entries[0].dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));

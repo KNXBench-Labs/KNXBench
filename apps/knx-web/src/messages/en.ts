@@ -44,7 +44,6 @@ export const messages = {
   "toolbar.openNativeProject": "Open (.knxdb)…",
   "toolbar.save": "Save",
   "toolbar.saveAs": "Save As…",
-  "toolbar.exportProject": "Export to .knxproj…",
   "toolbar.undo": "Undo",
   "toolbar.redo": "Redo",
   "toolbar.search": "Search… (Ctrl+K)",
@@ -631,19 +630,13 @@ export const messages = {
   // `App.tsx` (task 5, controller correction): the addendum that sent
   // `filePicker.ts`/`GroupAddressCsvButtons.tsx` into scope mislocated
   // these two strings — they actually live here, as a module-level const
-  // (`pickProject`'s own inline filter) and as `EXPORT_FILTER`
-  // (`exportProject`). Both are resolved at call time now, same reasoning
-  // as `commandRegistry.ts`'s `COMMANDS` in task 3: a module-level
-  // `t()` call would freeze the first language forever.
+  // (`pickProject`'s own inline filter). Both are resolved at call time
+  // now, same reasoning as `commandRegistry.ts`'s `COMMANDS` in task 3: a
+  // module-level `t()` call would freeze the first language forever.
+  // The ETS filter is an *open* filter now: KNXBench reads `.knxproj` and
+  // never writes one (ADR-0028).
   "app.filterName.etsProject": "ETS project",
   "app.filterName.knxDesktopProject": "knx-desktop project",
-
-  // Read-on-Init is the one export warning with no `detail` string from
-  // the server, so its sentence lives here (see `describeExportWarning`).
-  "app.exportWarning.readOnInitNotExported.one":
-    "{count} communication object has Read on init (I) switched on. No measured ETS project file states that flag per object, so the exported .knxproj does not carry it.",
-  "app.exportWarning.readOnInitNotExported.other":
-    "{count} communication objects have Read on init (I) switched on. No measured ETS project file states that flag per object, so the exported .knxproj does not carry it.",
 
   // `DocumentationExportButton.tsx` (task 5, controller correction) —
   // same mislocated string, same fix: the filter name moves from a
@@ -994,7 +987,7 @@ export const messages = {
 
   "help.topic.gettingStarted.title": "Getting started",
   "help.topic.gettingStarted.p1":
-    "KNXBench opens two kinds of file. Its own format, a .knxdb project, is what “Open (.knxdb)…” reads and what Save writes. An ETS project export, a .knxproj file, is read by “Open project…” and converted into a KNXBench project on the way in.",
+    "KNXBench opens two kinds of file. Its own format, a .knxdb project, is what “Open (.knxdb)…” reads and what Save writes. An ETS project export, a .knxproj file, is read by “Open project…” and converted into a KNXBench project on the way in — once. From then on the project lives as a .knxdb; KNXBench does not write .knxproj files.",
   "help.topic.gettingStarted.p2":
     "Importing never writes back to the file you imported. The .knxproj is read and left alone; what you get is a project in memory, and it only reaches disk when you save it as a .knxdb.",
   "help.topic.gettingStarted.p3":
@@ -1046,13 +1039,13 @@ export const messages = {
   "help.topic.busMonitor.p3":
     "Telegrams are decoded against the project that is open. If that project changes while a session runs, the monitor says so instead of silently re-labelling what it decoded earlier — the notice means the decoded column is the older project's answer.",
 
-  "help.topic.importExport.title": "Import and export",
+  "help.topic.importExport.title": "Import",
   "help.topic.importExport.p1":
     "An import reports what it found: errors, warnings, and anything it could not map. Overview shows the counts and the Log lists them. They are worth reading — otherwise an import with nothing to say and an import you never looked at are the same picture.",
   "help.topic.importExport.p2":
     "Data this application does not model is not thrown away. It is either kept as it was read or listed as unsupported, and it turns up in the import report rather than vanishing between the file and the project.",
   "help.topic.importExport.p3":
-    "“Export to .knxproj…” writes an ETS-shaped file from the current project, and stays greyed out until the project itself has been saved to a file. Whether a real ETS installation reopens that file has not been tested, and no ETS compatibility is claimed in either direction. Group addresses also go in and out as CSV, and “Export documentation…” writes a readable description of the project.",
+    "Import runs one way. KNXBench reads a .knxproj and never writes one, so there is no route back to ETS through a project file — the project you work on is a .knxdb from the first save onwards. What does leave the application: group addresses go in and out as CSV, and “Export documentation…” writes a readable description of the project.",
 
   "help.topic.keyboard.title": "Keyboard",
   "help.topic.keyboard.p1":
@@ -1064,9 +1057,9 @@ export const messages = {
 
   "help.topic.limits.title": "What this does not do",
   "help.topic.limits.p1":
-    "KNXBench is an independent application. It is not made by, endorsed by or certified by the KNX Association, and it is not ETS. Where it reads or writes an ETS file it does so on its own reading of that file.",
+    "KNXBench is an independent application. It is not made by, endorsed by or certified by the KNX Association, and it is not ETS. Where it reads an ETS file it does so on its own reading of that file.",
   "help.topic.limits.p2":
-    "KNX Secure is not supported. A password-protected project cannot be opened from this window — there is nowhere to type the password. Programming devices over the bus is not offered here either: the bus features are watching traffic and sending single telegrams. Read-on-Init (I) is now part of the project model and editable, with one gap left: no measured ETS project file states that flag per communication object, so an exported .knxproj does not carry it. The export report names the objects where it is switched on — the case where a re-import would come back with a different value.",
+    "KNX Secure is not supported. A password-protected project cannot be opened from this window — there is nowhere to type the password. Programming devices over the bus is not offered here either: the bus features are watching traffic and sending single telegrams. There is no way back to ETS: KNXBench reads a .knxproj and never writes one, so a project imported here cannot be handed back as an ETS project file.",
   "help.topic.limits.p3":
     "What is here is tested, but a test suite is not a site survey. Before trusting this application about an installation, check what it tells you against the installation itself.",
 

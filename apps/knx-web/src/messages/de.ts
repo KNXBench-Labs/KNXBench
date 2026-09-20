@@ -20,7 +20,6 @@ export const messages: Record<MessageKey, string> = {
   "toolbar.openNativeProject": "Öffnen (.knxdb)…",
   "toolbar.save": "Speichern",
   "toolbar.saveAs": "Speichern unter…",
-  "toolbar.exportProject": "Nach .knxproj exportieren…",
   "toolbar.undo": "Rückgängig",
   "toolbar.redo": "Wiederholen",
   "toolbar.search": "Suchen… (Strg+K)",
@@ -559,11 +558,6 @@ export const messages: Record<MessageKey, string> = {
   "app.filterName.etsProject": "ETS-Projekt",
   "app.filterName.knxDesktopProject": "knx-desktop-Projekt",
 
-  "app.exportWarning.readOnInitNotExported.one":
-    "Bei {count} Kommunikationsobjekt ist Lesen bei Initialisierung (I) eingeschaltet. Keine vermessene ETS-Projektdatei gibt dieses Flag je Objekt an, deshalb trägt die exportierte .knxproj es nicht mit.",
-  "app.exportWarning.readOnInitNotExported.other":
-    "Bei {count} Kommunikationsobjekten ist Lesen bei Initialisierung (I) eingeschaltet. Keine vermessene ETS-Projektdatei gibt dieses Flag je Objekt an, deshalb trägt die exportierte .knxproj es nicht mit.",
-
   "documentationExport.filterName": "HTML-Dokument",
 
   "bulkAction.deviceLabel.one": "{count} Gerät ausgewählt",
@@ -862,7 +856,7 @@ export const messages: Record<MessageKey, string> = {
 
   "help.topic.gettingStarted.title": "Erste Schritte",
   "help.topic.gettingStarted.p1":
-    "KNXBench öffnet zwei Arten von Datei. Das eigene Format, ein .knxdb-Projekt, liest „Öffnen (.knxdb)…“ und schreibt „Speichern“. Einen ETS-Projektexport, eine .knxproj-Datei, liest „Projekt öffnen…“ und wandelt sie beim Einlesen in ein KNXBench-Projekt um.",
+    "KNXBench öffnet zwei Arten von Datei. Das eigene Format, ein .knxdb-Projekt, liest „Öffnen (.knxdb)…“ und schreibt „Speichern“. Einen ETS-Projektexport, eine .knxproj-Datei, liest „Projekt öffnen…“ und wandelt sie beim Einlesen in ein KNXBench-Projekt um — einmal. Danach lebt das Projekt als .knxdb weiter; KNXBench schreibt keine .knxproj-Dateien.",
   "help.topic.gettingStarted.p2":
     "Ein Import schreibt nie in die importierte Datei zurück. Die .knxproj wird gelesen und bleibt unangetastet; was entsteht, ist ein Projekt im Arbeitsspeicher, und auf die Festplatte kommt es erst, wenn Sie es als .knxdb speichern.",
   "help.topic.gettingStarted.p3":
@@ -914,13 +908,13 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.busMonitor.p3":
     "Telegramme werden gegen das geöffnete Projekt decodiert. Ändert sich dieses Projekt während einer laufenden Sitzung, sagt der Monitor das, statt bereits Decodiertes klammheimlich umzubeschriften — der Hinweis bedeutet, dass die decodierte Spalte die Antwort des älteren Projektstands ist.",
 
-  "help.topic.importExport.title": "Import und Export",
+  "help.topic.importExport.title": "Import",
   "help.topic.importExport.p1":
     "Ein Import berichtet, was er vorgefunden hat: Fehler, Warnungen und alles, was er nicht zuordnen konnte. Die Übersicht zeigt die Zahlen, das Protokoll führt sie einzeln auf. Beides lohnt sich zu lesen — sonst sehen ein Import ohne Befund und ein Import, in den niemand geschaut hat, gleich aus.",
   "help.topic.importExport.p2":
     "Daten, die diese Anwendung nicht abbildet, werden nicht weggeworfen. Sie werden entweder unverändert aufbewahrt oder als nicht unterstützt aufgeführt und tauchen im Importbericht auf, statt zwischen Datei und Projekt zu verschwinden.",
   "help.topic.importExport.p3":
-    "„Nach .knxproj exportieren…“ schreibt aus dem aktuellen Projekt eine Datei in ETS-Form und bleibt ausgegraut, solange das Projekt selbst noch nicht in einer Datei gespeichert ist. Ob eine echte ETS-Installation diese Datei wieder öffnet, ist nicht geprüft, und es wird in keine Richtung ETS-Kompatibilität behauptet. Gruppenadressen lassen sich zusätzlich als CSV ein- und ausgeben, und „Dokumentation exportieren…“ schreibt eine lesbare Beschreibung des Projekts.",
+    "Der Import läuft nur in eine Richtung. KNXBench liest eine .knxproj und schreibt nie eine, es gibt also keinen Weg über eine Projektdatei zurück zur ETS — ab dem ersten Speichern ist das Projekt eine .knxdb. Was die Anwendung dennoch verlässt: Gruppenadressen lassen sich als CSV ein- und ausgeben, und „Dokumentation exportieren…“ schreibt eine lesbare Beschreibung des Projekts.",
 
   "help.topic.keyboard.title": "Tastatur",
   "help.topic.keyboard.p1":
@@ -932,9 +926,9 @@ export const messages: Record<MessageKey, string> = {
 
   "help.topic.limits.title": "Was diese Anwendung nicht tut",
   "help.topic.limits.p1":
-    "KNXBench ist eine unabhängige Anwendung. Sie stammt nicht von der KNX Association, ist von ihr weder unterstützt noch zertifiziert, und sie ist nicht die ETS. Wo sie eine ETS-Datei liest oder schreibt, tut sie das nach eigener Lesart dieser Datei.",
+    "KNXBench ist eine unabhängige Anwendung. Sie stammt nicht von der KNX Association, ist von ihr weder unterstützt noch zertifiziert, und sie ist nicht die ETS. Wo sie eine ETS-Datei liest, tut sie das nach eigener Lesart dieser Datei.",
   "help.topic.limits.p2":
-    "KNX Secure wird nicht unterstützt. Ein kennwortgeschütztes Projekt lässt sich aus diesem Fenster nicht öffnen — es gibt keine Stelle, an der das Kennwort einzugeben wäre. Geräte über den Bus zu programmieren, ist hier ebenfalls nicht vorgesehen: die Busfunktionen sind Mitlesen und das Senden einzelner Telegramme. Read-on-Init (I) gehört jetzt zum Projektmodell und lässt sich ändern; eine Lücke bleibt: keine vermessene ETS-Projektdatei gibt dieses Flag je Kommunikationsobjekt an, deshalb trägt eine exportierte .knxproj es nicht mit. Der Exportbericht nennt die Objekte, bei denen es eingeschaltet ist — der Fall, in dem ein erneuter Import mit einem anderen Wert zurückkäme.",
+    "KNX Secure wird nicht unterstützt. Ein kennwortgeschütztes Projekt lässt sich aus diesem Fenster nicht öffnen — es gibt keine Stelle, an der das Kennwort einzugeben wäre. Geräte über den Bus zu programmieren, ist hier ebenfalls nicht vorgesehen: die Busfunktionen sind Mitlesen und das Senden einzelner Telegramme. Zurück zur ETS führt kein Weg: KNXBench liest eine .knxproj und schreibt nie eine, ein hier importiertes Projekt lässt sich also nicht wieder als ETS-Projektdatei herausgeben.",
   "help.topic.limits.p3":
     "Was vorhanden ist, ist getestet, aber eine Testsuite ist keine Begehung. Bevor Sie sich in einer Anlage auf diese Anwendung verlassen, gleichen Sie ab, was sie Ihnen sagt, mit dem, was die Anlage tut.",
 

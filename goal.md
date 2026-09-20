@@ -294,6 +294,23 @@ the application from a tool someone would use daily.
   surprises). §38's ETS interoperability stays an untested assumption and is
   not a task.
 
+### 3.8 Settings live in `localStorage` with no version and no migration
+
+Eight preferences — theme, accent, density, motion level, motion style, UI
+language, language packs, product language — are `knx-desktop:` keys in the
+browser's `localStorage`, written one key at a time with no schema version
+anywhere. Three more keys in the same namespace (`project-context`,
+`bus-session-context`, `context-changed`) are session state, not settings, and
+should not be confused with them.
+
+Give settings a real home: one versioned file in the server's `data_dir`
+(`apps/knx-server/src/paths.rs` already owns that directory and its containment
+rule), JSON, with a schema version and a migration chain the way project
+storage has one. A newer application version must be able to read an older
+settings file and say what it changed; an older application must refuse a newer
+file rather than silently discarding what it does not understand.
+
+
 ### Export to `.knxproj` — withdrawn 2026-09-20
 
 The user's ruling: *"drop export zu ets. das brauchen wir nicht. einmal

@@ -253,6 +253,10 @@ pub enum Attr {
     Transmit,
     Update,
     Communication,
+    /// Schema 7 (§117). Absent from every pre-v7 project file, which is
+    /// exactly right: no row means `Override::Absent`, never
+    /// `Override::Value(false)`.
+    ReadOnInit,
 }
 
 pub fn attr_to_str(a: Attr) -> &'static str {
@@ -265,6 +269,7 @@ pub fn attr_to_str(a: Attr) -> &'static str {
         Attr::Transmit => "transmit",
         Attr::Update => "update",
         Attr::Communication => "communication",
+        Attr::ReadOnInit => "read_on_init",
     }
 }
 
@@ -592,6 +597,12 @@ pub fn upsert_com_object_instance(
         Attr::Communication,
         encode_bool(&com.flags.communication),
     )?;
+    write_override_row(
+        conn,
+        com.id,
+        Attr::ReadOnInit,
+        encode_bool(&com.flags.read_on_init),
+    )?;
     Ok(())
 }
 
@@ -612,6 +623,7 @@ fn apply_override(
         "transmit" => com.flags.transmit = decode_bool(state, value, layer),
         "update" => com.flags.update = decode_bool(state, value, layer),
         "communication" => com.flags.communication = decode_bool(state, value, layer),
+        "read_on_init" => com.flags.read_on_init = decode_bool(state, value, layer),
         other => return Err(StoreError::UnknownOverrideAttr(other.to_string())),
     }
     Ok(())
@@ -1062,6 +1074,10 @@ mod tests {
                 communication: Override::Value(Resolved {
                     value: false,
                     layer: Layer::Program,
+                }),
+                read_on_init: Override::Value(Resolved {
+                    value: true,
+                    layer: Layer::ProgramRef,
                 }),
             },
             size: Some(Resolved {

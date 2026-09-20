@@ -234,7 +234,10 @@ impl Attrs {
 /// `ReadFlag`/`WriteFlag`/`TransmitFlag`/`UpdateFlag`/`CommunicationFlag`
 /// spell their booleans `"Enabled"`/`"Disabled"` on schema 11 — measured,
 /// RESEARCH §3.3's amendment — never `"1"`/`"0"`, which is every other
-/// schema-11 boolean attribute's spelling.
+/// schema-11 boolean attribute's spelling. The sixth flag, Read-on-Init,
+/// is never written through here: no measured `ComObjectInstanceRef`
+/// carries it, and `ExportWarning::ReadOnInitNotExported` reports the loss
+/// instead of guessing an attribute name (KNOWN_LIMITATIONS §117).
 pub(crate) fn push_override_flag(attrs: &mut Attrs, name: &str, o: &Override<bool>) {
     match o {
         Override::Absent => {}

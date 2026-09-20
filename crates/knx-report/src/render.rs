@@ -671,7 +671,7 @@ fn render_com_objects_table(
         return;
     }
     out.push_str(
-        "<table><tr><th>Number</th><th>Name</th><th>Description</th><th>DPT</th><th>Active</th><th>R</th><th>W</th><th>T</th><th>U</th><th>C</th><th>Links</th></tr>",
+        "<table><tr><th>Number</th><th>Name</th><th>Description</th><th>DPT</th><th>Active</th><th>R</th><th>W</th><th>T</th><th>U</th><th>C</th><th>I</th><th>Links</th></tr>",
     );
     for com in coms {
         write!(out, "<tr><td>{}</td>", com.number).unwrap();
@@ -706,6 +706,7 @@ fn render_com_objects_table(
             com.transmit,
             com.update,
             com.communication,
+            com.read_on_init,
         ] {
             write!(out, "<td>{}</td>", if flag { "\u{2713}" } else { "" }).unwrap();
         }
@@ -732,7 +733,7 @@ fn render_com_objects_table(
             for field in fields {
                 write!(
                     out,
-                    "<tr class=\"warning\"><td colspan=\"11\">Unparseable source value kept \
+                    "<tr class=\"warning\"><td colspan=\"12\">Unparseable source value kept \
                      verbatim in field <strong>{}</strong>: {}</td></tr>",
                     escape_text(field.field),
                     escape_text(&field.raw)

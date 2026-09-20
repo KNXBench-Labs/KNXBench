@@ -8579,3 +8579,75 @@ is unchanged — one password is not a user model, and a session identifies a
 browser rather than a person; its one sentence claiming no middleware reads a
 cookie was corrected, and its three stale line citations with it. No KNX bus
 traffic was generated at any point.
+## 2026-09-20 — T02: the sixth communication-object flag (branch `t02-read-on-init`)
+
+`KNOWN_LIMITATIONS.md` §117 is closed. Read-on-Init — KNX's sixth
+communication-object flag, parsed by `knx-productdb` since Session 4 and
+dropped at the `knx-core` boundary ever since — is now modelled, persisted,
+projected, editable and reported like the other five.
+
+**Domain.** `ComFlags`, `ResolvedFlags` and `ComFlagKind` each gained a
+`read_on_init` member (`crates/knx-core/src/flags.rs`). Because
+`Command::SetComObjectFlag` was already generic over `ComFlagKind`, set,
+undo and redo came for free — verified rather than assumed
+(`setting_read_on_init_undoes_and_redoes_like_any_other_flag`).
+
+**Product database.** `ComObjectView` carries `read_on_init` and
+`read_on_init_layer`, resolved through the same `pick()` the other
+attributes use (`ComObject` → `ComObjectRef`), and `enrich.rs` merges it
+into `ResolvedFlags` at `Layer::Program`/`Layer::ProgramRef`. That merge
+loop is where the value used to go missing.
+
+**Persistence: schema 7, no DDL.** `com_object_override` is keyed by
+`(com_object_instance_id, attr)`, so the sixth flag is a new `attr` string
+(`"read_on_init"`) and not a new column. `migrate_v6_to_v7` is therefore
+deliberately empty; the version still moved, because a v7 project may carry
+rows a pre-v7 build would meet as `StoreError::UnknownOverrideAttr`, and
+with the version moved it stops at `MigrationError::FutureSchemaVersion`
+and says why. A pre-v7 project is **not** backfilled: its sixth flag reads
+as `Override::Absent`, never `Override::Value(false)`
+(`a_pre_v7_com_object_reads_its_sixth_flag_as_absent_not_false`,
+`the_frozen_v6_fixture_migrates_forward_to_v7`, plus a frozen
+`fixtures/v6-empty.sqlite`).
+
+**Import/export: a measured gap, reported rather than guessed.**
+`ReadOnInitFlag` occurs 2533 times in the local corpus, every one of them on
+an application program's `ComObject` element — never on a `ComObjectRef`,
+never on a `ComObjectInstanceRef` in any of the three demo projects (ETS4
+schema 11, ETS 6.3.0 schema 23, KV schema 21). So `map_com_object` leaves
+the field `Override::Absent` and neither exporter writes an instance-level
+attribute this project has never seen ETS write. What the exporter does
+instead is speak up: `ExportWarning::ReadOnInitNotExported { com_objects }`
+counts the communication objects whose project-layer Read-on-Init is
+switched *on* and which the written `.knxproj` cannot hold. A product-layer
+value raises nothing — it was never the project's to export. Nor does an
+exported-layer `false`: every measured program-level occurrence of the
+attribute reads `"Disabled"`, so a `false` resolves back to `false` on
+re-import, and warning about it would leave an unclearable complaint behind
+whenever a user switched the flag on and off again (the Inspector has no
+"clear to inherited" gesture). KNOWN_LIMITATIONS §117 records the one case
+that rule does not cover.
+
+**Everything downstream.** `knx-diff` (`ComObjectFields::read_on_init`, in
+`com_object_changed_fields`), `knx-projection` (`ComObjectNode`, with the
+`ComObjectNode.ts` binding regenerated), `apps/knx-server`
+(`ComObjectFieldsDto`, `ExportWarningDto`, `parse_com_flag_kind` accepting
+`"ReadOnInit"`), `knx-report` (a sixth `I` column in the communication
+object table), and `apps/knx-web` (a sixth checkbox labelled `I` in
+`ComObjectFlagsRow`, `ComFlagName` extended, catalogue keys in `en.ts` and
+`de.ts`). `help.topic.limits.p2` told users in prose that the flag "is not
+part of the project model"; it now says what is true in both languages,
+including the export gap that remains.
+
+**Round-trip acceptance.** `crates/knx-app/tests/read_on_init_roundtrip.rs`
+builds a product whose program states `ReadOnInitFlag="Enabled"`, enriches a
+project from it, saves, reloads, and asserts the flag is still there at
+`Layer::Program`; a second test asserts the export warning fires for a
+user-set value; a third asserts it does not fire for a product-layer one.
+Before the domain change the whole file failed to compile — no
+`ResolvedFlags::read_on_init`, no `ComFlagKind::ReadOnInit` — which is the
+RED this task needed.
+
+**Not done, deliberately.** No UI test covers the flag row: none covered the
+existing five either, and building the first `ComObjectNode` fixture in the
+web test suite is a larger job than this task should smuggle in.

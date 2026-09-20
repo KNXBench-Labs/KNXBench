@@ -982,7 +982,8 @@ and `Hardware2ProgramRefId` now resolve: the shared product database
 ([ADR-0005](adr/0005-separate-product-database.md),
 [ADR-0011](adr/0011-product-database-storage.md)) ingests `<M-xxxx>/*`
 once, keyed by content hash, and `knx_productdb::enrich` fills a
-communication object's `text`, `description`, `dpt`, five flags and `size`
+communication object's `text`, `description`, `dpt`, all six flags and
+`size`
 from the application program wherever the instance itself left the slot
 `Absent` (IMPORT_EXPORT §10). `ComObjectInstance` values now carry
 `Program`/`ProgramRef` in addition to `Instance` where the source project
@@ -6645,6 +6646,76 @@ command layer, export — is updated together, so the flag is modelled
 rather than merely parsed. Nobody has scheduled this; it sits alongside
 `docs/DATA_MODEL.md`'s communication-object section as an acknowledged gap
 rather than a task with a number.
+
+**Closed, 2026-09-20 (T02, branch `t02-read-on-init`).** The sixth flag is
+now a peer of the other five, end to end. `ComFlags`, `ResolvedFlags` and
+`ComFlagKind` each gained a `read_on_init` member, so
+`Command::SetComObjectFlag` edits, undoes and redoes it through the same
+generic path the other five already used. `knx-productdb`'s `ComObjectView`
+carries `read_on_init`/`read_on_init_layer` through the same `pick()`
+three-layer resolution as every other attribute, and `enrich.rs` merges it
+into the project model at `Layer::Program`/`Layer::ProgramRef` — the
+handoff that used to drop it. Persistence needed no DDL: `com_object_override`
+is keyed by `(com_object_instance_id, attr)`, so the flag is a new `attr`
+string (`"read_on_init"`) and nothing else. The store version still moved
+to 7 (`migrate_v6_to_v7`, deliberately empty), because a v7 project may
+carry rows a pre-v7 build would meet as `StoreError::UnknownOverrideAttr`;
+with the version moved, that build stops at
+`MigrationError::FutureSchemaVersion` and says why. A pre-v7 project is not
+backfilled: its sixth flag reads as `Override::Absent`, never
+`Override::Value(false)` — "not stated" and "stated false" stay different
+facts (`a_pre_v7_com_object_reads_its_sixth_flag_as_absent_not_false`).
+`knx-diff`, `knx-projection`, `apps/knx-server`'s DTOs and
+`parse_com_flag_kind`, `knx-report`'s object table (a sixth `I` column) and
+`apps/knx-web`'s flag row (a sixth checkbox, labelled `I`, wired to
+`"ReadOnInit"`) all carry it. `help.topic.limits.p2`, which said in prose
+that the flag "is not part of the project model", says something true again
+in both languages.
+
+**Residue: no instance-level attribute to import or export.** The name
+`ReadOnInitFlag` is measured 2533 times in the local corpus and every
+single occurrence is on an application program's `ComObject` element —
+never on a `ComObjectRef`, and never on a `ComObjectInstanceRef` in any
+project file. That holds across all three demo projects: the ETS4
+schema-11 project (907 `ComObjectInstanceRef` elements, carrying `ReadFlag`
+39×, `UpdateFlag` 30×, `TransmitFlag` 27×, `WriteFlag` 18×,
+`CommunicationFlag` 8×, `ReadOnInitFlag` 0×), the ETS 6.3.0 schema-23
+project (691 elements, same five attributes, same zero), and the KV
+schema-21 demo (26 elements, no flag attributes at all). So ETS, as
+measured here, does not write a per-instance Read-on-Init attribute, and
+this application does not invent one: `map_com_object` leaves the field
+`Override::Absent`, and neither exporter writes it. What the exporter does
+instead of dropping it quietly is say so —
+`ExportWarning::ReadOnInitNotExported { com_objects }` names how many
+communication objects carry a project-layer Read-on-Init that the written
+`.knxproj` cannot hold. A product-layer value raises no warning, because it
+was never the project's to export. Should a real ETS file ever turn up with
+the attribute on a `ComObjectInstanceRef`, the tolerant parser records it
+as an unknown attribute (§34's machinery) and this entry gets its evidence;
+guessing ahead of that evidence would be worse than the gap.
+
+**The warning counts `true` only, and why.** `ExportWarning::ReadOnInitNotExported`
+fires for an exported-layer `Override::Value(true)` and stays silent for an
+exported-layer `Override::Value(false)`. The reason is that a `false` is not
+a loss in any case measured here: every one of those 2533 program-level
+`ReadOnInitFlag` occurrences reads `"Disabled"`, so a re-import resolves the
+flag back to `false` from the product database and the container and the
+project agree. Counting it would produce a warning nobody can clear — the
+Inspector's flag row has no "clear to inherited" gesture, so a user who
+switches I on and then off again is left with `Value(false)` at
+`Layer::UserEdit` for good, and would see the same complaint on every export
+forever. The case this does not cover: a user `false` against an application
+program that states `Enabled`. No such program has been measured, and if one
+turns up the counting rule needs the product-layer value to compare against,
+which the exporter does not have today. Recorded here rather than papered
+over.
+
+**Supersedes ADR-0010's five-flag prose.** `docs/adr/0010-per-attribute-override-representation.md`
+describes `ResolvedFlags` as a five-flag structure. That was accurate when it
+was written and the ADR is left as it stands — a decision record is history,
+not documentation — but the structure has six fields as of this entry, and
+the ADR's reasoning (one `Override` per attribute, absence distinct from a
+stated value) is exactly what made the sixth field a one-line addition.
 
 ## 118. A succeeded project load announces nothing to a screen reader
 

@@ -1,13 +1,15 @@
 //! Schema-version migration chain, keyed off SQLite's `user_version` pragma
 //! (ADR-0003). Migrations run in order; there is no version-skipping path
-//! and no downgrade. The chain now runs v0 -> v6: the `schema_meta` marker
+//! and no downgrade. The chain now runs v0 -> v7: the `schema_meta` marker
 //! table (v1), the opaque passthrough table (v2), the manufacturer manifest
 //! (v3), every `knx_core::Project` entity table (v4 — `project_info`
 //! through `parameter_instance`, written and read by `project.rs`'s
 //! `save_project`/`load_project`), `ModuleInstance` persistence (v5 —
 //! ADR-0013, the schema-≥21 modular-application-program entity) and the
 //! retained `ModuleInstance/@Id` (v6 — D38, `module_instance.
-//! instance_ets_id`). Each version has a frozen fixture under `fixtures/`
+//! instance_ets_id`) and the Read-on-Init flag's own `com_object_override`
+//! attribute (v7 — §117, a version bump with no DDL; see
+//! `migrate_v6_to_v7`). Each version has a frozen fixture under `fixtures/`
 //! that the tests below migrate forward.
 
 use std::fmt;
@@ -16,7 +18,7 @@ use std::path::Path;
 use rusqlite::Connection;
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 6;
+pub const CURRENT_SCHEMA_VERSION: i64 = 7;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -355,6 +357,28 @@ fn migrate_v5_to_v6(conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v6 -> v7: the sixth communication-object flag, Read-on-Init
+/// (KNOWN_LIMITATIONS §117). Deliberately empty of DDL, and that is the
+/// whole point of writing it down.
+///
+/// `com_object_override` is keyed by `(com_object_instance_id, attr)`, one
+/// row per stated attribute, so a new flag needs no new column — it needs a
+/// new `attr` string, `"read_on_init"`. What the version bump buys is the
+/// two directions of the boundary:
+///
+/// * **Forward.** A pre-v7 project has no `read_on_init` rows, and no row
+///   decodes as `Override::Absent`. Nothing is backfilled: an old project
+///   never said "this object does not read on init", it said nothing at
+///   all, and the two are different facts. Writing `false` here would be the
+///   same silent invention §117 exists to stop.
+/// * **Backward.** A v7 project *may* carry `read_on_init` rows, which a
+///   pre-v7 build would meet as `StoreError::UnknownOverrideAttr` — a
+///   cryptic failure deep in the load. With the version moved, that build
+///   stops at `MigrationError::FutureSchemaVersion` instead and says so.
+fn migrate_v6_to_v7(_conn: &Connection) -> Result<(), MigrationError> {
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// Ordered chain; index `i` migrates `user_version` `i` to `i + 1`.
@@ -366,6 +390,7 @@ fn migrations() -> Vec<Migration> {
         migrate_v3_to_v4,
         migrate_v4_to_v5,
         migrate_v5_to_v6,
+        migrate_v6_to_v7,
     ]
 }
 
@@ -567,10 +592,10 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // `open_and_migrate` always runs the full chain, so a fresh file
-        // lands on `CURRENT_SCHEMA_VERSION` (now 6), not v3 — the manifest
+        // lands on `CURRENT_SCHEMA_VERSION` (now 7), not v3 — the manifest
         // table introduced at v3 is what this test actually verifies, and it
         // still exists and is empty at v5.
-        assert_eq!(v, 6);
+        assert_eq!(v, 7);
         assert_eq!(
             crate::manifest::load_manufacturer_refs(&conn).unwrap(),
             vec![]
@@ -591,8 +616,8 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // See the comment on the test above: the chain runs all the way to
-        // `CURRENT_SCHEMA_VERSION` (now 6), not just to v3.
-        assert_eq!(v, 6);
+        // `CURRENT_SCHEMA_VERSION` (now 7), not just to v3.
+        assert_eq!(v, 7);
         // The v2 opaque table survives the migration with its data intact.
         assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
     }
@@ -605,9 +630,9 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // As with the tests above, a fresh file always lands on
-        // `CURRENT_SCHEMA_VERSION` (now 6) — the v4 entity tables checked
+        // `CURRENT_SCHEMA_VERSION` (now 7) — the v4 entity tables checked
         // below still exist and are empty at v5.
-        assert_eq!(v, 6);
+        assert_eq!(v, 7);
         for table in [
             "project_info",
             "id_allocators",
@@ -657,9 +682,9 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // See the comment on `the_frozen_v2_fixture_migrates_forward_to_v3`:
-        // the chain runs all the way to `CURRENT_SCHEMA_VERSION` (now 6), not
+        // the chain runs all the way to `CURRENT_SCHEMA_VERSION` (now 7), not
         // just to v4.
-        assert_eq!(v, 6);
+        assert_eq!(v, 7);
         assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
     }
 
@@ -680,9 +705,9 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // See the comment on `the_frozen_v3_fixture_migrates_forward_to_v4`:
-        // the chain runs all the way to `CURRENT_SCHEMA_VERSION` (now 6),
+        // the chain runs all the way to `CURRENT_SCHEMA_VERSION` (now 7),
         // not just to v5.
-        assert_eq!(v, 6);
+        assert_eq!(v, 7);
     }
 
     #[test]
@@ -701,7 +726,7 @@ mod tests {
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 6);
+        assert_eq!(v, 7);
         // `module_instance` carries no rows in the empty fixture, so the
         // "existing rows default to ''" claim is checked directly against
         // the column definition ETS never populated.
@@ -714,6 +739,131 @@ mod tests {
             .unwrap();
         assert_eq!(notnull, 1);
         assert_eq!(dflt_value, "''");
+    }
+
+    #[test]
+    fn the_frozen_v6_fixture_migrates_forward_to_v7() {
+        // Copied, not opened in place: a migration test must not mutate its
+        // fixture — `open_and_migrate` would otherwise rewrite the committed
+        // v6 file on disk to v7.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v6.sqlite");
+        std::fs::copy(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v6-empty.sqlite"),
+            &path,
+        )
+        .unwrap();
+        let conn = open_and_migrate(&path).unwrap();
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(v, 7);
+        // v7 adds no DDL — `com_object_override` is keyed by attribute name,
+        // so the sixth flag needed a new `attr` string and nothing else.
+        // What the migration must not do is invent rows, so the table is
+        // still empty.
+        let overrides: i64 = conn
+            .query_row("SELECT COUNT(*) FROM com_object_override", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(overrides, 0);
+    }
+
+    /// The point of schema 7, stated as an assertion: a communication object
+    /// written by a pre-v7 build says nothing at all about Read-on-Init, and
+    /// after the migration it still says nothing. "Not stated" is not
+    /// "stated false", and a migration that backfilled `false` would be the
+    /// same data loss §117 exists to end.
+    #[test]
+    fn a_pre_v7_com_object_reads_its_sixth_flag_as_absent_not_false() {
+        use knx_core::{
+            ComObjectInstance, ComObjectInstanceId, DeviceId, Layer, Override, Resolved,
+            ResolvedFlags,
+        };
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v6.sqlite");
+        std::fs::copy(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v6-empty.sqlite"),
+            &path,
+        )
+        .unwrap();
+        let conn = Connection::open(&path).unwrap();
+        conn.pragma_update(None, "foreign_keys", "OFF").unwrap();
+        // A v6-shaped object: five flags' worth of vocabulary available and
+        // one of them stated. The insert goes through today's writer, which
+        // knows the sixth attribute, so the `read_on_init` row is deleted
+        // again below — a real v6 file has no such row at all, and a row
+        // saying `absent` would let the test pass without ever exercising
+        // the missing-row path it exists to prove.
+        let flags = ResolvedFlags {
+            communication: Override::Value(Resolved {
+                value: false,
+                layer: Layer::Instance,
+            }),
+            ..ResolvedFlags::none()
+        };
+        crate::devices::upsert_com_object_instance(
+            &conn,
+            DeviceId(1),
+            0,
+            &ComObjectInstance {
+                id: ComObjectInstanceId(1),
+                source: knx_core::SourceRef {
+                    path: "P-0001/0.xml".into(),
+                    ets_id: "A-1_O-1_R-1".into(),
+                },
+                device: DeviceId(1),
+                number: 1,
+                text: Override::Absent,
+                description: Override::Absent,
+                dpt: Override::Absent,
+                flags,
+                size: None,
+                is_active: true,
+                links: vec![],
+                module_instance: None,
+            },
+        )
+        .unwrap();
+        // Back to a genuine v6 shape: the attribute vocabulary of a v6
+        // build is the five flags, so the sixth row must not be there.
+        let deleted = conn
+            .execute(
+                "DELETE FROM com_object_override WHERE attr = 'read_on_init'",
+                [],
+            )
+            .unwrap();
+        assert_eq!(deleted, 1, "the writer under test wrote the row we remove");
+        let remaining: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM com_object_override WHERE attr = 'read_on_init'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(remaining, 0);
+        drop(conn);
+
+        let conn = open_and_migrate(&path).unwrap();
+        // The migration invents nothing: still no row, and the loader turns
+        // a missing row into `Absent` rather than a stated `false`.
+        let rows: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM com_object_override WHERE attr = 'read_on_init'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(rows, 0, "v6 -> v7 must not backfill the sixth flag");
+        let com = crate::devices::load_com_object_instance(&conn, ComObjectInstanceId(1)).unwrap();
+        assert_eq!(com.flags.read_on_init, Override::Absent);
+        // The flag that *was* stated false stays stated false — absence and
+        // a stated `false` are still two different facts after the
+        // migration.
+        assert_eq!(
+            com.flags.communication.value().map(|r| r.value),
+            Some(false)
+        );
     }
 
     /// Proves the migration's `DEFAULT ''` actually backfills a row that
@@ -740,7 +890,7 @@ mod tests {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 6);
+        assert_eq!(version, 7);
         let instance_ets_id: String = conn
             .query_row(
                 "SELECT instance_ets_id FROM module_instance WHERE id = 1",
@@ -772,7 +922,7 @@ mod tests {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 6); // `migrate` always runs to CURRENT_SCHEMA_VERSION, not just to v5
+        assert_eq!(version, 7); // `migrate` always runs to CURRENT_SCHEMA_VERSION, not just to v5
         conn.execute("INSERT INTO module_instance (id, device_id, position, source_path, source_ets_id, repeat_index) VALUES (1, 0, 0, 't', 't', '6x1')", []).unwrap_err(); // device_id FK: no device(0) exists, expected to fail — proves the FK/table exist
         conn.query_row(
             "SELECT module_instance_id FROM com_object_instance LIMIT 0",

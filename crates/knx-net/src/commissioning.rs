@@ -218,12 +218,12 @@ pub const ERASE_CODE_CONFIRMED_RESTART: u8 = 0x01;
 
 /// The device's answer to a Master Reset request.
 ///
-/// AL §3.3.7 Figure 41, decoded from an `A_Restart_Response-PDU`'s data
-/// octets: the Error Code, then Process Time as a big-endian
-/// `DPT_TimePeriodSec` (DPT 7.005, MP §3.7.1.2.2, pp. 80-81). A Basic
-/// Restart has no such response — spec §8.1's confirmation there is the
-/// Transport Layer acknowledge alone — so this type exists only for the
-/// Master Reset half of `A_Restart`.
+/// AL §3.4.2.2 "A_Restart-service", Figure 41, p. 52, decoded from an
+/// `A_Restart_Response-PDU`'s data octets: the Error Code, then Process
+/// Time as a big-endian `DPT_TimePeriodSec` (DPT 7.005, MP §3.7.1.2.2, pp.
+/// 80-81). A Basic Restart has no such response — AL §3.4.2.2, p. 52's own
+/// confirmation there is the Transport Layer acknowledge alone — so this
+/// type exists only for the Master Reset half of `A_Restart`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MasterResetResponse {
     /// `00h` on success; MP §3.7.3's exception handling names the other
@@ -251,9 +251,9 @@ impl MasterResetResponse {
     }
 }
 
-/// Decodes an `A_Restart_Response-PDU`'s data octets (AL §3.3.7 Figure 41):
-/// one Error Code octet, then a big-endian `DPT_TimePeriodSec` Process
-/// Time.
+/// Decodes an `A_Restart_Response-PDU`'s data octets (AL §3.4.2.2, Figure
+/// 41, p. 52): one Error Code octet, then a big-endian `DPT_TimePeriodSec`
+/// Process Time.
 fn decode_master_reset_response(data: &[u8]) -> Result<MasterResetResponse, SessionError> {
     match *data {
         [error_code, hi, lo] => Ok(MasterResetResponse {
@@ -494,7 +494,7 @@ pub enum SessionError {
     },
     /// An `A_Restart_Response-PDU` for a Master Reset carried something
     /// other than the Error Code octet and the two-octet Process Time
-    /// AL §3.3.7 Figure 41 gives it (MP §3.7.1.2.2, pp. 80-81).
+    /// AL §3.4.2.2, Figure 41, p. 52 gives it (MP §3.7.1.2.2, pp. 80-81).
     MalformedRestartResponse {
         /// How many octets the response carried.
         got: usize,
@@ -2181,13 +2181,13 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         Ok(decision)
     }
 
-    /// `A_Restart`, Basic Restart (spec §8; MP §3.7.1.1.1): unconfirmed at
-    /// the Application Layer, so what this call proves is only that the
-    /// Transport Layer accepted the request — MP §3.7.1.1.3: *"The
-    /// Application Layer of the Management Server shall not confirm the
-    /// A_Restart-service if a Basic Restart is called."* MP §2.3 step 4,
-    /// p. 15 is exactly this call, immediately followed by aborting the
-    /// client-side connection, which is what happens here via
+    /// `A_Restart`, Basic Restart (design spec §8; MP §3.7.1.1.1, p. 78):
+    /// unconfirmed at the Application Layer, so what this call proves is
+    /// only that the Transport Layer accepted the request — MP §3.7.1.1.3,
+    /// p. 80: *"The Application Layer of the Management Server shall not
+    /// confirm the A_Restart-service if a Basic Restart is called."* MP
+    /// §2.3 step 4, p. 15 is exactly this call, immediately followed by
+    /// aborting the client-side connection, which is what happens here via
     /// [`Self::disconnect_after_restart`].
     ///
     /// A caller that must know whether the device actually restarted
@@ -2197,24 +2197,31 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// — this method does not reconnect, because after a restart the
     /// device is met with a fresh connection, which is a new session's
     /// job, not this one's.
+    ///
+    /// MP §3.7.3 exception (5), p. 90 does not condition the mandatory
+    /// disconnect-and-wait on the request having been acknowledged: a lost
+    /// `T_ACK` still means an `A_Restart-PDU` went out, so
+    /// [`Self::disconnect_after_restart`] runs whether the wait below for
+    /// it succeeds or times out.
     pub async fn restart_basic(&mut self) -> Result<(), SessionError> {
         self.authorise_write(WriteScope::Restart)?;
-        self.send_acknowledged(
-            ApplicationService::Restart {
-                response: false,
-                restart_type: 0,
-                data: Vec::new(),
-            },
-            "T_ACK for A_Restart (Basic Restart)",
-        )
-        .await?;
+        let outcome = self
+            .send_acknowledged(
+                ApplicationService::Restart {
+                    response: false,
+                    restart_type: 0,
+                    data: Vec::new(),
+                },
+                "T_ACK for A_Restart (Basic Restart)",
+            )
+            .await;
         self.disconnect_after_restart().await;
-        Ok(())
+        outcome
     }
 
-    /// `A_Restart`, Master Reset (spec §8; MP §3.7.1.2.1): confirmed, so
-    /// unlike [`Self::restart_basic`] this returns what the device
-    /// actually reported.
+    /// `A_Restart`, Master Reset (design spec §8; MP §3.7.1.2.1, p. 80):
+    /// confirmed, so unlike [`Self::restart_basic`] this returns what the
+    /// device actually reported.
     ///
     /// `erase_code` and `channel_number` are passed through uninterpreted,
     /// per cemi.rs's own refusal to guess which octets belong to which
@@ -2230,13 +2237,20 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// out before the device started resetting anything, whatever
     /// `error_code` says. [`MasterResetResponse::recovery_wait`] is the
     /// timing this response feeds into next.
+    ///
+    /// MP §3.7.3 exception (5), p. 90 is not conditioned on the server
+    /// answering: a lost `A_Restart_Response-PDU` or one that fails to
+    /// decode is still a device that may now be resetting, so
+    /// [`Self::disconnect_after_restart`] runs on every path out of this
+    /// method — success, a timed-out `exchange`, or a malformed response —
+    /// before the error (or answer) is handed back to the caller.
     pub async fn restart_master_reset(
         &mut self,
         erase_code: u8,
         channel_number: u8,
     ) -> Result<MasterResetResponse, SessionError> {
         self.authorise_write(WriteScope::Restart)?;
-        let data = self
+        let outcome = self
             .exchange(
                 ApplicationService::Restart {
                     response: false,
@@ -2253,23 +2267,36 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                     _ => None,
                 },
             )
-            .await?;
-        let response = decode_master_reset_response(&data)?;
+            .await
+            .and_then(|data| decode_master_reset_response(&data));
         self.disconnect_after_restart().await;
-        Ok(response)
+        outcome
     }
 
-    /// MP §3.7.3 exception (5), p. 90: after any `A_Restart`, this session
-    /// sends its own `T_Disconnect` regardless of whether the device sends
-    /// one — *"the Management Server (device) may or may not break down
-    /// the Transport Layer connection… nevertheless an explicit
-    /// DM_Disconnect procedure shall follow"* — and then does not return
-    /// until [`SessionTiming::post_restart_disconnect_wait`] has fully
-    /// elapsed, *"regardless of whether or not a T_Disconnect-PDU is
-    /// received"*: a device that disconnects early does not shorten this
-    /// wait, because the two sides' T_Disconnects can cross on the wire
-    /// with no way to tell which is which — *"the configuration shall not
-    /// be continued while this time-out has not elapsed"*.
+    /// MP §3.7.3, p. 88, "Use": *"After reception of the A_Restart-PDU this
+    /// Transport Layer connection breaks down with the execution of the
+    /// A_Restart service; nevertheless an explicit DM_Disconnect procedure
+    /// shall follow."* This session's own `T_Disconnect` is that DM_Disconnect
+    /// step, sent unconditionally — MP §3.7.3 exception (5), p. 90:
+    /// *"Regardless of whether or not a T_Disconnect-PDU is received from
+    /// the Management Server, the Management Client shall issue a
+    /// T_Disconnect-PDU to the Management Server"*, because, per the same
+    /// exception, *"the recommended T_Disconnect-PDU from the Management
+    /// Server may or may not be sent on the bus"* in the first place.
+    ///
+    /// Having sent it, this method then does not return until
+    /// [`SessionTiming::post_restart_disconnect_wait`] has fully elapsed —
+    /// MP §3.7.3 exception (5), p. 90 again: *"The Management Client shall
+    /// wait for a possible T_Disconnect-PDU for 6 seconds"*, and *"at first
+    /// after this time-out has elapsed, the Management Client shall
+    /// continue the possible further configuration of the Management
+    /// Server: the configuration shall not be continued while this
+    /// time-out has not elapsed."* NOTE 16, p. 90 explains why the wait is
+    /// unconditional rather than ending the moment a `T_Disconnect-PDU`
+    /// arrives: a subsequent `T_Connect-PDU` from this client and the
+    /// awaited `T_Disconnect-PDU` from the device *"may miss each other on
+    /// the network"*, leaving both sides' Transport Layer state machines
+    /// unable to agree on what happened.
     ///
     /// [`Self::disconnect`] is this method's ordinary, patience-free
     /// cousin and stays that way for every other caller: this is the one
@@ -2411,9 +2438,16 @@ mod tests {
             poll_interval: Duration::from_millis(1),
             max_transition: Duration::from_millis(40),
             programming_delay: Duration::from_millis(0),
+            // Deliberately far apart, not scaled-down copies of the real
+            // 1 s / 5 s / 6 s: a fix round found that 5 ms vs 6 ms sits
+            // below measurement noise on a loaded machine (connect/send/ack
+            // overhead alone can clear 1 ms), so a test binding the wrong
+            // field to the wrong constant went undetected. `check-headers`
+            // and friends don't care about wall-clock time here, so there
+            // is no cost to a wide margin.
             restart_basic_t1: Duration::from_millis(1),
             restart_responsive_again: Duration::from_millis(5),
-            post_restart_disconnect_wait: Duration::from_millis(6),
+            post_restart_disconnect_wait: Duration::from_millis(60),
         }
     }
 
@@ -4328,9 +4362,9 @@ mod tests {
 
     // ------------------------------------------------------------ restart
 
-    /// MP §3.7.1.1.1/§3.7.1.1.3: Basic Restart is unconfirmed at the
-    /// Application Layer, so the T_ACK `restart_basic` waits for is the
-    /// whole of the confirmation, and the device sees `restart_type: 0`
+    /// MP §3.7.1.1.1, p. 78/§3.7.1.1.3, p. 80: Basic Restart is unconfirmed
+    /// at the Application Layer, so the T_ACK `restart_basic` waits for is
+    /// the whole of the confirmation, and the device sees `restart_type: 0`
     /// with no erase code or channel number attached.
     #[tokio::test]
     async fn restart_basic_sends_the_unconfirmed_request() {
@@ -4357,8 +4391,8 @@ mod tests {
         );
     }
 
-    /// MP §3.7.1.1.3: *"The Application Layer of the Management Server
-    /// shall not confirm the A_Restart-service if a Basic Restart is
+    /// MP §3.7.1.1.3, p. 80: *"The Application Layer of the Management
+    /// Server shall not confirm the A_Restart-service if a Basic Restart is
     /// called."* [`Seen`] only logs what the device received, so this
     /// checks what it sent instead — a simulator wrongly wired to answer
     /// every restart, not just Master Reset, would still pass every other
@@ -4426,6 +4460,100 @@ mod tests {
         );
     }
 
+    /// MP §3.7.3 exception (5), p. 90, applies to *both* Restart types under
+    /// `DM_Restart_RCo` — the timing test above only ever drove
+    /// `restart_basic`, so a Master Reset call that skipped the wait
+    /// entirely would have passed the whole suite. This is that same
+    /// obligation, checked on the other path.
+    #[tokio::test]
+    async fn master_reset_also_waits_out_the_disconnect_timeout() {
+        let timing = fast();
+        let device = SimulatedDevice::new();
+        let mut session = writer(&device, WriteScope::Restart);
+        session.connect().await.expect("connect");
+
+        let started = tokio::time::Instant::now();
+        session
+            .restart_master_reset(ERASE_CODE_CONFIRMED_RESTART, 0)
+            .await
+            .expect("the simulator answers a Master Reset request");
+        let elapsed = started.elapsed();
+
+        assert!(
+            elapsed >= timing.post_restart_disconnect_wait,
+            "MP §3.7.3 exception (5), p. 90: restart_master_reset must not \
+             return before the post-restart wait fully elapses, took {elapsed:?}"
+        );
+    }
+
+    /// MP §3.7.3 exception (5), p. 90's wait is unconditional on the
+    /// *outcome* of the request, not just on which restart type asked for
+    /// it. A device that answers with a malformed `A_Restart_Response`
+    /// still gets the mandatory wait — `decode_master_reset_response`
+    /// failing is not a reason to skip it, and the old `?`-early-return
+    /// shape would have.
+    #[tokio::test]
+    async fn master_reset_waits_out_the_disconnect_timeout_even_on_a_malformed_response() {
+        let timing = fast();
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            restart_response_malformed: true,
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Restart);
+        session.connect().await.expect("connect");
+
+        let started = tokio::time::Instant::now();
+        let outcome = session
+            .restart_master_reset(ERASE_CODE_CONFIRMED_RESTART, 0)
+            .await;
+        let elapsed = started.elapsed();
+
+        assert!(
+            matches!(outcome, Err(SessionError::MalformedRestartResponse { .. })),
+            "a two-octet answer must be rejected, got {outcome:?}"
+        );
+        assert!(
+            elapsed >= timing.post_restart_disconnect_wait,
+            "the mandatory wait must run even when decoding the response \
+             fails, took {elapsed:?}"
+        );
+    }
+
+    /// The same unconditional wait, on the path where the request never
+    /// gets an answer at all: `exchange()` exhausts TL clause 4's retries,
+    /// releases the connection itself (action A6) and returns
+    /// [`SessionError::ConnectionReleased`] — a second, later reason not to
+    /// call the mandatory wait, and the old `?`-early-return shape would
+    /// have skipped it here too.
+    #[tokio::test]
+    async fn master_reset_waits_out_the_disconnect_timeout_even_on_exchange_timeout() {
+        let timing = fast();
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            restart_unanswered: true,
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Restart);
+        session.connect().await.expect("connect");
+
+        let started = tokio::time::Instant::now();
+        let outcome = session
+            .restart_master_reset(ERASE_CODE_CONFIRMED_RESTART, 0)
+            .await;
+        let elapsed = started.elapsed();
+
+        assert!(
+            matches!(outcome, Err(SessionError::ConnectionReleased { .. })),
+            "a device that never acknowledges the request must exhaust \
+             TL's retries, got {outcome:?}"
+        );
+        let min_exchange_timeout = timing.response_timeout * u32::from(MAX_TRANSMISSIONS);
+        assert!(
+            elapsed >= min_exchange_timeout + timing.post_restart_disconnect_wait,
+            "the mandatory wait must run on top of the exchange timeout \
+             itself, not be absorbed by it or skipped, took {elapsed:?}"
+        );
+    }
+
     /// MP §3.7.1.2.1: Master Reset carries an Erase Code and a Channel
     /// Number the device must see, and returns whatever
     /// `A_Restart_Response` the device answered with — here, the simulator's
@@ -4444,8 +4572,10 @@ mod tests {
         let mut session = writer(&device, WriteScope::Restart);
         session.connect().await.expect("connect");
 
+        // Table 4 (MP p. 82) fixes Channel Number at `00h` for this Erase
+        // Code; `0` is the only legal pairing, not a placeholder.
         let response = session
-            .restart_master_reset(ERASE_CODE_CONFIRMED_RESTART, 3)
+            .restart_master_reset(ERASE_CODE_CONFIRMED_RESTART, 0)
             .await
             .expect("the simulator answers a Master Reset request");
 
@@ -4462,10 +4592,44 @@ mod tests {
                     response: false,
                     restart_type: 1,
                     data
-                } if data.as_slice() == [ERASE_CODE_CONFIRMED_RESTART, 3]
+                } if data.as_slice() == [ERASE_CODE_CONFIRMED_RESTART, 0]
             )),
             "the device must see the Erase Code and Channel Number: {:?}",
             device.seen()
+        );
+    }
+
+    /// MP §3.7.3 exception (4), p. 90, with Table 4 (MP p. 82): Erase Code
+    /// `01h` (Confirmed Restart) fixes Channel Number at `00h`; any other
+    /// Channel Number paired with it is an invalid pairing, and the
+    /// Standard's answer is Error Code `03h` ("Invalid Channel Number") —
+    /// not this device's configured happy-path answer, which a naive
+    /// pass-through simulator would otherwise hand back regardless.
+    #[tokio::test]
+    async fn restart_master_reset_rejects_an_invalid_channel_number() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            restart_error_code: 0x22,
+            restart_process_time: Duration::from_secs(9),
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Restart);
+        session.connect().await.expect("connect");
+
+        let response = session
+            .restart_master_reset(ERASE_CODE_CONFIRMED_RESTART, 3)
+            .await
+            .expect("the simulator still answers, just with a rejection");
+
+        assert_eq!(
+            response.error_code, 0x03,
+            "MP §3.7.3 exception (4), p. 90: an invalid Channel Number \
+             pairing must be reported as Error Code 03h, not the device's \
+             happy-path configuration"
+        );
+        assert_eq!(
+            response.process_time,
+            Duration::ZERO,
+            "a rejected pairing has nothing to time"
         );
     }
 
@@ -4493,8 +4657,8 @@ mod tests {
         );
     }
 
-    /// AL §3.3.7 Figure 41: exactly three octets or the response is
-    /// malformed, not silently truncated or zero-padded.
+    /// AL §3.4.2.2, Figure 41, p. 52: exactly three octets or the response
+    /// is malformed, not silently truncated or zero-padded.
     #[test]
     fn decode_master_reset_response_rejects_anything_but_three_octets() {
         assert!(matches!(

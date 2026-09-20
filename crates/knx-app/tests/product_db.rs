@@ -72,40 +72,7 @@ fn a_second_import_into_the_same_product_db_skips_every_file() {
 }
 
 #[test]
-fn export_is_byte_identical_with_and_without_the_product_database() {
-    if !reference_project_path().exists() {
-        eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
-        return;
-    }
-    // The proof that routing manufacturer data through the product
-    // database changes nothing about what we write back (spec §9).
-    let dir = tempfile::tempdir().unwrap();
-    let with_store = knx_store::open_and_migrate(&dir.path().join("with.knxdb")).unwrap();
-    let without_store = knx_store::open_and_migrate(&dir.path().join("without.knxdb")).unwrap();
-    let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
-
-    let with = knx_app::import_ets_project_with(
-        &reference_project_path(),
-        &with_store,
-        knx_app::ImportOptions {
-            product_db: Some(&products),
-        },
-    )
-    .unwrap();
-    let without = knx_app::import_ets_project_with(
-        &reference_project_path(),
-        &without_store,
-        knx_app::ImportOptions { product_db: None },
-    )
-    .unwrap();
-
-    let a = knx_app::export_ets_project(&with.project, &with_store, Some(&products)).unwrap();
-    let b = knx_app::export_ets_project(&without.project, &without_store, None).unwrap();
-    assert_eq!(a.bytes, b.bytes);
-}
-
-#[test]
-fn a_project_opens_and_names_its_gap_when_the_product_database_is_gone() {
+fn a_project_names_its_manufacturer_gap_when_the_product_database_is_gone() {
     if !reference_project_path().exists() {
         eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
         return;
@@ -126,34 +93,21 @@ fn a_project_opens_and_names_its_gap_when_the_product_database_is_gone() {
     }
     std::fs::remove_file(&products_path).unwrap();
 
-    // Exporting without the product database: every manifest entry is
-    // named as missing, and the export still happens.
-    let outcome = knx_app::export_ets_project(
-        &knx_app::import_ets_project_with(
-            &reference_project_path(),
-            &knx_store::open_and_migrate(&dir.path().join("q.knxdb")).unwrap(),
-            knx_app::ImportOptions { product_db: None },
-        )
-        .unwrap()
-        .project,
-        &store,
-        None,
-    )
-    .unwrap();
-
-    let missing = outcome
-        .warnings
-        .iter()
-        .filter(|w| {
-            matches!(
-                w,
-                knx_etsproj::export::ExportWarning::MissingManufacturerData { .. }
-            )
-        })
-        .count();
-    assert_eq!(
-        missing,
-        knx_store::load_manufacturer_refs(&store).unwrap().len()
-    );
-    assert!(!outcome.bytes.is_empty());
+    // The manifest is what makes the gap nameable: every manufacturer file
+    // the project carried is still listed by path and content hash, so a
+    // build with no product database can say exactly which files it cannot
+    // reach rather than reporting a smaller project (CLAUDE.md: never
+    // silently discard information).
+    let manifest = knx_store::load_manufacturer_refs(&store).unwrap();
+    assert!(!manifest.is_empty());
+    let fresh = knx_productdb::open_and_migrate(&dir.path().join("empty.sqlite")).unwrap();
+    for reference in &manifest {
+        assert!(!reference.source_path.is_empty());
+        assert!(
+            knx_productdb::load_source_file(&fresh, &reference.sha256)
+                .unwrap()
+                .is_none(),
+            "an empty product database resolves nothing, so every manifest entry is a named gap"
+        );
+    }
 }

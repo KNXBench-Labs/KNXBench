@@ -14,11 +14,12 @@ alternative to ETS rather than a reimplementation of it.
 `.knxproj`; inspect and edit group addresses, links, building structure,
 topology, device names and individual addresses; save to the native
 `.knxdb` format; and monitor the live bus against the open project.
-`.knxproj` export exists as an interop convenience, but per
-[ADR-0015](adr/0015-native-output-drops-ets-reimport-goal.md) it is no
-longer a goal for the exported file to be re-importable by ETS.
+`.knxproj` is read-only: KNXBench imports it and never writes it
+([ADR-0028](adr/0028-no-knxproj-export.md), 2026-09-20, superseding
+ADR-0015's decision to keep the exporter). Once imported, a project lives
+in `.knxdb` and nothing carries it back to ETS.
 
-Four things are explicitly out of v1:
+Five things are explicitly out of v1:
 
 | Excluded | Reason |
 | --- | --- |
@@ -26,6 +27,7 @@ Four things are explicitly out of v1:
 | Commissioning and device download | RESEARCH §8.3/§8.4 — the generic load/unload/reset/memory-write procedures are now documented (R5 spike, §8.4), but a product-specific `Legacy*` compatibility-flag matrix, vendor DLLs and bricking risk on real hardware remain. **Not a permanent exclusion**: the user ruled 2026-09-11 that this is required ([KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)) |
 | KNX Secure | RESEARCH §9 — no sample material to verify against; the subsystem exists but stays empty |
 | Direct `.knxprod` import for master data scheme ≥ 12 | RESEARCH §10 — the encryption layer is unresolved |
+| Writing `.knxproj` | User ruling 2026-09-20, [ADR-0028](adr/0028-no-knxproj-export.md) — import is one-way; the exporter, its CLI subcommand, its HTTP route and its UI control were deleted rather than frozen |
 
 User-facing wording is **"KNX-compatible"**. Never "KNX certified", never "full
 ETS compatibility" (RESEARCH §7, §10).
@@ -48,8 +50,7 @@ change must never propagate into the domain model.
 
 A headless CLI exists alongside the desktop application, and it is first-class,
 not a by-product. It is what keeps the core honest about UI independence, and
-it makes import, roundtrip and regression tests runnable in CI without a
-display.
+it makes import and regression tests runnable in CI without a display.
 
 ## 3. Workspace layout
 
@@ -209,7 +210,8 @@ Provenance is not optional decoration. A communication object's effective
 properties resolve through three layers — `ComObject`, `ComObjectRef`,
 `ComObjectInstanceRef` — and 758 of 907 instances in the reference project
 override the datapoint type at instance level (RESEARCH §3.2). Without knowing
-which layer a value came from, an exporter cannot decide what to write back.
+which layer a value came from, nothing can tell the user's own decision apart
+from what a product database supplied or what this application guessed.
 The type is `Resolved<T> { value, layer }`, and it is in `knx-core` from the
 first commit (ADR-0004).
 
@@ -233,8 +235,9 @@ Commands are where validation lives — a duplicate individual address, a group
 address outside its `GroupRange`, a link to a deleted object. Not in the UI,
 and not in the store.
 
-Any command that changes a `Resolved<T>` sets its layer to `UserEdit`, so the
-exporter knows what to write with no separate bookkeeping to keep in sync.
+Any command that changes a `Resolved<T>` sets its layer to `UserEdit`, so a
+user's own edit is distinguishable from an imported or inferred value with no
+separate bookkeeping to keep in sync.
 
 `knx-store` writes inside a SQLite transaction, incrementally at entity
 granularity. A crash leaves either the old state or the new one, never a
@@ -312,8 +315,8 @@ Secure, IP Secure, keyring) — that part of the crate's purpose remains
 unimplemented (`KNOWN_LIMITATIONS.md §8`).
 
 The rules are in force from now on. Key material never enters the `Project`
-model, never enters an `ImportReport`, never enters an export, never enters a
-log, and is omitted by default from diagnostic dumps (RESEARCH §9). Both
+model, never enters an `ImportReport`, never enters any file this application
+writes, never enters a log, and is omitted by default from diagnostic dumps (RESEARCH §9). Both
 halves of that are enforced mechanically rather than by convention: `cargo
 run -p xtask -- check-layering` fails the build if `knx-secure` ever gains a
 dependency path to `knx-core` (so no type path can carry a key into the
@@ -344,10 +347,10 @@ Seven levels. Two of them exist today; the rest arrive with the code they test.
 
 | Level | Content | Status |
 | --- | --- | --- |
-| Unit | Addresses, DPT parsing, override resolution, validation rules | Started — `Layer::is_exported` |
+| Unit | Addresses, DPT parsing, override resolution, validation rules | Started — `Layer::is_exported`, which since ADR-0028 means "this value is the project's own, not inferred", and gates what the CSV and documentation exports write |
 | Golden | Import of the reference project against the entity counts from RESEARCH §3: 36 devices including the unassigned one, 514 group addresses, 907 `ComObjectInstanceRef`, 1390 parameter values, 569 send and 27 receive links. Session 4 adds its own golden ingest of the same project's manufacturer data (4 manufacturers, 24 source files, 12 application programs, 5,630 `com_object_ref` rows, 48,190 translations since T32, 2026-09-12 — 48,057 program-scope plus 109 catalog and 24 hardware — `crates/knx-productdb/tests/golden_reference_products.rs`) | Session 3, extended Session 4 |
 | Oracle | Comparison against `xknxproject` output where it is not known to be lossy; every deviation must be explained. Session 4 adds a communication-object text/DPT comparison against `project_dump.json`, read as a committed output file per ADR-0002, never a dependency | Session 3, extended Session 4 |
-| Roundtrip | The three roundtrip guarantees defined in [IMPORT_EXPORT.md](IMPORT_EXPORT.md), now including `export_is_byte_identical_with_and_without_the_product_database` (`crates/knx-app/tests/product_db.rs`) | Session 3, extended Session 4 |
+| Roundtrip | Retired 2026-09-20 with the `.knxproj` writer ([ADR-0028](adr/0028-no-knxproj-export.md)) — there is no second half of a trip to compare against. What replaces it is the import-fidelity statement in [IMPORT_EXPORT.md](IMPORT_EXPORT.md) §9, tested by the import suites, and the CSV export/re-plan round trip in `crates/knx-app/tests/csv_roundtrip.rs`, which is a KNXBench format and not an ETS one | Session 3, retired Session 7 |
 | Migration | Every schema version has a frozen fixture that must keep loading — `knx-store` through v3, `knx-productdb`'s own v1 through v3 (v2→v3 additionally backfills `dynamic_node` rows into existing databases from their stored blobs, T18 slice 1) | Session 2, extended Session 4 and T18 |
 | Malformed input | Broken ZIP, truncated XML, unknown schema, duplicate IDs, invalid addresses, dangling references, password-protected without a password. Session 4 adds `crates/knx-productdb/tests/malformed_input.rs`: a truncated program, an empty file, 10,000 levels of nesting, an id collision across two different content hashes | Session 3, extended Session 4 |
 | Licence and layering | The dependency graph reaches no GPL crate; `knx-core` stays IO-free | Done — `cargo deny check`, `cargo run -p xtask -- check-layering` |

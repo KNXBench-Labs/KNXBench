@@ -1,7 +1,7 @@
 # ADR 0007: Roundtrip fidelity definition
 
 Date: 2026-09-02
-Status: Accepted
+Status: Superseded by ADR-0028
 Session: 1
 
 ## Context
@@ -42,3 +42,12 @@ finished.
 
 The export path must tell the user the result is unsigned, and keep saying so
 until risk R9 is settled by an actual test against ETS.
+
+## Superseded
+
+Superseded by [ADR-0028](0028-no-knxproj-export.md) on 2026-09-20. `.knxproj`
+writing was withdrawn, so a round trip has no second half: there is nothing to
+re-import, no opaque hash to compare across a write, and no unsigned file to
+warn about. The refusal to claim byte-exactness or untested ETS compatibility
+outlives this record and is repeated in ADR-0028. What import must preserve is
+stated directly in `docs/IMPORT_EXPORT.md`.

@@ -47,7 +47,7 @@ describes every area, line, device, group address and parameter value you intend
 installation to have. You edit that file at your desk, review it, and only then push the
 result to the devices (a step called commissioning, which is a later chapter's problem,
 not this one). KNXBench's own working format for that file is `.knxdb`; it can also read
-and write the `.knxproj` format that ETS itself uses. Chapter
+the `.knxproj` format that ETS itself uses, though it never writes one. Chapter
 [Projects: create, open, import, save, export](../user-guide/02-projects.md) covers the
 practical side.
 
@@ -56,10 +56,11 @@ practical side.
 ETS is the KNX Association's own engineering software, and for a long time it has been
 the only serious way to build a KNX project. It works. It is also Windows-only, and
 that's the entire reason KNXBench exists — not a grudge against ETS, just a Linux user
-who got tired of a virtual machine. KNXBench reads and writes the same `.knxproj` project
-format ETS uses, but it is its own independent implementation: its own parser, its own
-data model, its own product database. It is **KNX-compatible**; it does not claim to be
-KNX-certified, and it does not claim full ETS compatibility.
+who got tired of a virtual machine. KNXBench reads the same `.knxproj` project format ETS
+uses — reads it only, and never writes one — and it is its own independent
+implementation: its own parser, its own data model, its own product database. It is
+**KNX-compatible**; it does not claim to be KNX-certified, it does not claim full ETS
+compatibility, and being able to read an ETS file is not the same as replacing ETS.
 
 > **Note**
 >

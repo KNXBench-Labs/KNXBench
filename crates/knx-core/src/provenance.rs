@@ -23,11 +23,15 @@ pub enum Layer {
 }
 
 impl Layer {
-    /// Whether a value carrying this layer is written back to the project file
-    /// on export.
+    /// Whether a value carrying this layer is the project's own, rather than
+    /// something supplied or guessed on its behalf.
     ///
     /// Program-level values belong to the product database and inferred values
-    /// are ours, not the user's; neither is exported.
+    /// are ours, not the user's; neither counts. The name is older than its
+    /// remaining callers — `knx-diff` and `knx-etsproj::compare` use it to
+    /// decide what is worth comparing, and the CSV and documentation exports
+    /// use it to decide what is worth writing. `.knxproj` writing, which
+    /// named it, was withdrawn (ADR-0028).
     pub fn is_exported(self) -> bool {
         matches!(self, Layer::Instance | Layer::UserEdit)
     }

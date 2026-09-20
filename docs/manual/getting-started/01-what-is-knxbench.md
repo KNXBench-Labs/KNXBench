@@ -32,8 +32,9 @@ a virtual machine just for one program.
   and editable.
 - **Stores projects natively.** KNXBench saves and reopens projects in its
   own `.knxdb` format — a versioned SQLite file that is the supported,
-  lossless working format. `.knxproj` export exists too, mainly for handing a
-  project back to something that expects ETS's format.
+  lossless working format, and the only format KNXBench writes a project to.
+  Import is one-way: there is no `.knxproj` export
+  ([ADR-0028](../../adr/0028-no-knxproj-export.md)).
 - **Ships a product database.** Manufacturer, product, and application
   program data can be installed from `.knxprod` packages or ingested from an
   imported project, and used to enrich a device's communication objects. See

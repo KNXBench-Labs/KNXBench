@@ -4434,7 +4434,10 @@ mod tests {
     #[tokio::test]
     async fn restart_master_reset_carries_erase_code_and_decodes_the_response() {
         let device = SimulatedDevice::with_config(SimulatorConfig {
-            restart_error_code: 0,
+            // Deliberately non-zero and non-default, so a mutation that
+            // hardcoded a successful `error_code` would fail this test
+            // instead of coincidentally matching it.
+            restart_error_code: 0x22,
             restart_process_time: Duration::from_secs(9),
             ..SimulatorConfig::default()
         });
@@ -4446,7 +4449,7 @@ mod tests {
             .await
             .expect("the simulator answers a Master Reset request");
 
-        assert_eq!(response.error_code, 0);
+        assert_eq!(response.error_code, 0x22);
         assert_eq!(
             response.process_time,
             Duration::from_secs(9),

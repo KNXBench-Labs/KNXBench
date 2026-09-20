@@ -261,3 +261,46 @@ fn gap3_ambiguous_dpt_the_107_issues_and_the_22_that_actually_block_a_fill() {
     assert_eq!(devices.len(), 11);
     assert_eq!(refs.len(), 51);
 }
+
+/// Gap 2, closed: every `Empty` slot the two tests above found a program
+/// value behind (122 dpt, 82 description) now actually carries that value
+/// in `Devices::program_defaults`, over the real corpus rather than a
+/// hand-built fixture — this is the test that failed before this
+/// session's `enrich::apply` change (`program_defaults` did not exist)
+/// and passes after it.
+#[test]
+fn gap2_closed_program_defaults_populated_for_every_liftable_empty_slot() {
+    let Some((imported, _products)) = import() else {
+        return;
+    };
+    let project = &imported.project;
+
+    let (mut dpt_lifted, mut desc_lifted) = (0usize, 0usize);
+    for device in project.devices.iter() {
+        for &com_id in &device.com_objects {
+            let Some(com) = project.devices.com_object(com_id) else {
+                continue;
+            };
+            let defaults = project.devices.program_defaults(com_id);
+            if matches!(com.dpt, Override::Empty) && defaults.is_some_and(|d| d.dpt.is_some()) {
+                dpt_lifted += 1;
+            }
+            if matches!(com.description, Override::Empty)
+                && defaults.is_some_and(|d| d.description.is_some())
+            {
+                desc_lifted += 1;
+            }
+            // The slot itself never moves off `Empty` — the whole point of
+            // a side table instead of writing into `Override<T>`.
+            if defaults.is_some() {
+                assert!(
+                    matches!(com.dpt, Override::Empty)
+                        || matches!(com.description, Override::Empty),
+                    "program_defaults only exists for a com object with an Empty slot behind it"
+                );
+            }
+        }
+    }
+    assert_eq!(dpt_lifted, 122, "matches the liftable count measured above");
+    assert_eq!(desc_lifted, 82, "matches the liftable count measured above");
+}

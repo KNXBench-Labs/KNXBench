@@ -187,6 +187,11 @@ pub struct DownloadPlan {
     /// Defaults to [`AccessKeyDeclaration::NoneRequired`], which is the
     /// state every plan built before this field existed was silently in.
     access_keys: AccessKeyDeclaration,
+    /// The `PID_DOWNLOAD_COUNTER` this MaC stored after the preceding
+    /// configuration (`[C13]`, CP §3.12.4, p. 99), read from the Device
+    /// Object and therefore per-plan rather than per-part. `None` — the
+    /// default — is not "unchanged"; see [`DownloadCounterCheck::NoStoredCounter`].
+    stored_download_counter: Option<u16>,
 }
 
 impl DownloadPlan {
@@ -247,6 +252,7 @@ impl DownloadPlan {
             allocation_mode: AllocationMode::default(),
             router_object: None,
             access_keys: AccessKeyDeclaration::default(),
+            stored_download_counter: None,
         })
     }
 
@@ -273,6 +279,16 @@ impl DownloadPlan {
     /// done there.
     pub fn with_access_keys(mut self, declaration: AccessKeyDeclaration) -> Self {
         self.access_keys = declaration;
+        self
+    }
+
+    /// The `PID_DOWNLOAD_COUNTER` this MaC read and stored after the
+    /// preceding configuration (`[C13]`, CP §3.12.4, p. 99). Left at the
+    /// default `None` reports [`DownloadCounterCheck::NoStoredCounter`]
+    /// rather than [`DownloadCounterCheck::Unchanged`] — a plan that never
+    /// calls this has no baseline, not a baseline that happens to match.
+    pub fn with_stored_download_counter(mut self, counter: u16) -> Self {
+        self.stored_download_counter = Some(counter);
         self
     }
 
@@ -442,6 +458,131 @@ impl fmt::Display for CrcComparison {
     }
 }
 
+/// What CP §3.12.4/3.12.5's and RES §5.3.2.2's Download Counter check found
+/// before a partial download (`[C13]`), read from `PID_DOWNLOAD_COUNTER` in
+/// the Device Object — never a part's own object.
+///
+/// CP §3.5.3 itself — the five variants this module actually sequences —
+/// imposes nothing about the Download Counter. Both clauses that do are
+/// Coupler Model 2.0's own: CP §3.12.4/3.12.5, pp. 99-100, is that model's
+/// Filter Table/Router Object download procedure, and RES §5.3.2.2, p. 320,
+/// sits in RES §5.3 *"Resources for Coupler Model 2.0"* — the only place in
+/// the whole of RES clause 5, *"Resources for Couplers"*, that says *"shall
+/// not perform a Partial Download"*. There is no System B clause requiring
+/// either behaviour. RES §4.2.30 sits in clause 4, *"Device Resources"*,
+/// common to every device; it defines the property generically, and its
+/// §4.2.30.3 advisory — *"should firstly read … may conclude"* — is not a
+/// refusal obligation for anyone.
+///
+/// This module applies both Coupler Model 2.0 consequences to the one
+/// generic CP §3.5.3 procedure it runs, for every part kind, regardless of
+/// which device profile the target actually is (`[C18]`'s masks 07B0h and
+/// 17B0h are System B, not Coupler Model 2.0). That is this project's own
+/// conservative ruling — without a comparable counter the MaC cannot
+/// establish the device is untouched since the last configuration, and
+/// data integrity outranks convenience here — not compliance with a
+/// Standard obligation that covers System B. Known Limitation §114 spells
+/// out what this means in practice: a conformant System B device, which
+/// Volume 6 Annex A never requires to carry this property (`[C18]`), is
+/// refused every partial download and always gets a complete one.
+///
+/// The *changed* comparison is sound reading the Device Object's own
+/// instance alone: RES §4.2.30.3, p. 42, is explicit that an unchanged
+/// Device Object instance lets the client conclude no other instance
+/// changed either. The *absent* refusal is not backed the same way —
+/// RES §5.3.2.2, p. 320, says *"of the part to be downloaded"*, and
+/// RES §4.2.30.1, p. 41, allows a downloadable part its own Download
+/// Counter instance distinct from the Device Object's, or none at all.
+/// Checking only the Device Object instance for absence is this module's
+/// own simplification, not per-part RES §5.3.2.2 compliance — recorded in
+/// §114 rather than implemented as a per-part lookup, because it errs
+/// toward refusing more often, which is the safe direction.
+///
+/// `Downloader::partial_download` performs this check once per call,
+/// before its first write, and refuses to proceed for two of the five
+/// variants below — this is deliberately not shaped like [`CrcComparison`],
+/// whose every variant lets the download continue: a stale checksum is
+/// merely reported, `[C1]`'s `VersionOutcome::Refused` is tolerated, but a
+/// stale or missing Download Counter stops the procedure.
+///
+/// The type keeps *absent* and *changed* apart on purpose: both currently
+/// refuse the same way, but they are not the same fact. A device that never
+/// had the property is conformant (Volume 6 Annex A, `[C18]`); one that had
+/// it and now disagrees with this MaC's own record may have been touched by
+/// someone else. Collapsing the two would report the second as the first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DownloadCounterCheck {
+    /// This procedure does not perform the check. `complete_download`,
+    /// `unload` and `recover` replace or discard the part outright, so
+    /// there is no partial download here for a stale counter to refuse.
+    NotChecked,
+    /// The plan carried no previously stored Download Counter for this
+    /// device (`DownloadPlan::with_stored_download_counter` was never
+    /// called). CP §3.12.4, p. 99, puts storing it on this application, not
+    /// on the device — *"The MaC shall store the read value of the Download
+    /// Counter in its repository"* — so a plan with nothing stored has a
+    /// gap in this MaC's own bookkeeping, not one of the three outcomes the
+    /// Standard itself describes. The current value is still read and
+    /// carried here, and the partial download proceeds: refusing on a gap
+    /// this application created, rather than one the device reported, would
+    /// be inventing a fourth spec obligation instead of keeping to the
+    /// three RES and CP actually state.
+    NoStoredCounter(u16),
+    /// Present and equal to the value stored after the preceding
+    /// configuration. RES §4.2.30.3, p. 42: unchanged means the client "may
+    /// conclude that no further instance of `PID_DOWNLOAD_COUNTER` … has
+    /// changed value" either — the partial download proceeds.
+    Unchanged(u16),
+    /// Present but different from the stored value. CP §3.12.5, p. 100:
+    /// *"If the read value of the Download Counter differs from the value
+    /// that the MaC stored after the preceding configuration, then the MaC
+    /// shall not continue with a partial download, but instead perform a
+    /// complete download."*
+    Changed {
+        /// What this MaC had on record.
+        stored: u16,
+        /// What the device answers now.
+        current: u16,
+    },
+    /// `PID_DOWNLOAD_COUNTER` is not implemented on this device at all —
+    /// optional under Volume 6 Profiles Annex A, not a defect (`[C18]`).
+    /// RES §5.3.2.2, p. 320: *"If PID_DOWNLOAD_COUNTER is not available for
+    /// the part to be downloaded, then the MaC shall not perform a Partial
+    /// Download."*
+    Absent,
+}
+
+impl DownloadCounterCheck {
+    /// Whether this outcome is one of CP §3.12.5's or RES §5.3.2.2's two
+    /// refusals: [`Self::Changed`] and [`Self::Absent`] both stop
+    /// `partial_download` before its first write, for their own clause and
+    /// page each — see this type's own doc comment for why they stay two
+    /// variants rather than one.
+    pub fn refuses_partial_download(self) -> bool {
+        matches!(self, Self::Changed { .. } | Self::Absent)
+    }
+}
+
+impl fmt::Display for DownloadCounterCheck {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DownloadCounterCheck::NotChecked => f.write_str("not checked"),
+            DownloadCounterCheck::NoStoredCounter(current) => write!(
+                f,
+                "no stored Download Counter to compare against; the device answers {current}"
+            ),
+            DownloadCounterCheck::Unchanged(value) => {
+                write!(f, "unchanged at {value}")
+            }
+            DownloadCounterCheck::Changed { stored, current } => write!(
+                f,
+                "changed from {stored} to {current} since the preceding configuration"
+            ),
+            DownloadCounterCheck::Absent => f.write_str("not implemented on this device"),
+        }
+    }
+}
+
 /// What happened to the `PID_PROGRAM_VERSION` write for one part (`[C1]`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VersionOutcome {
@@ -458,9 +599,15 @@ pub enum VersionOutcome {
     /// Table 85 (p. 270) do not list `PID_PROGRAM_VERSION` for the Group
     /// Address Table, the Association Table or the Group Object Table.
     /// CP §3.5.3's three table variants ask for the write anyway
-    /// (pp. 51-52, 54, 56); no clause reconciling the two was found by the
-    /// audit behind this task (see C18). Both readings leave the part
-    /// `Loaded`.
+    /// (pp. 51-52, 54, 56). `[C18]` found the clause reconciling the two:
+    /// RES §4.2.13.1.3, p. 34, defers per-object applicability to *"the
+    /// Configuration Procedures in \[10\]"* — RES's reference list has
+    /// `[10]` as Chapter 3/5/3, this project's own CP — *"and …
+    /// \[17\]"* — Volume 6 Profiles — for "the mandatory - or optional
+    /// access rights to Program Version", and Volume 6 Annex A makes the
+    /// property optional rather than forbidden on the three tables, not
+    /// mandatory the way CP §3.5.3 alone would suggest. Both readings leave
+    /// the part `Loaded`.
     ///
     /// `[D]` AL §3.4.4.2, p. 66, answers `nr_of_elem = 0` both when
     /// *"Interface Object or Property doesn't exist"* and when *"the
@@ -521,6 +668,11 @@ pub struct DownloadReport {
     /// The parts the recovery procedure had to unload because they were not
     /// `Loaded`.
     pub unloaded: Vec<ObjectIndex>,
+    /// What CP §3.12.4/3.12.5's and RES §4.2.30.3's Download Counter check
+    /// found before this procedure ran (`[C13]`). [`DownloadCounterCheck::NotChecked`]
+    /// for every procedure except `partial_download`, which is the only one
+    /// CP §3.12.5's refusal applies to.
+    pub download_counter: DownloadCounterCheck,
 }
 
 impl DownloadReport {
@@ -530,6 +682,7 @@ impl DownloadReport {
             steps: Vec::new(),
             parts: Vec::new(),
             error_codes: Vec::new(),
+            download_counter: DownloadCounterCheck::NotChecked,
             escalated_from: None,
             unloaded: Vec::new(),
         }
@@ -599,6 +752,30 @@ pub enum DownloadError {
         /// How many levels the plan wanted (re)keyed.
         declared: usize,
     },
+    /// `PID_DOWNLOAD_COUNTER` disagrees with the value this plan stored after
+    /// the preceding configuration (`[C13]`). Nothing has been written yet —
+    /// `partial_download` checks this before its unload step — so recovering
+    /// is a plain `complete_download` call, not a `recover()`.
+    ///
+    /// CP §3.12.5, p. 100: *"If the read value of the Download Counter
+    /// differs from the value that the MaC stored after the preceding
+    /// configuration, then the MaC shall not continue with a partial
+    /// download, but instead perform a complete download as specified in
+    /// 3.12.4."*
+    DownloadCounterChanged {
+        /// What this MaC had on record.
+        stored: u16,
+        /// What the device answers now.
+        current: u16,
+    },
+    /// `PID_DOWNLOAD_COUNTER` is not implemented on this device at all.
+    /// Nothing has been written yet, for the same reason as
+    /// [`Self::DownloadCounterChanged`].
+    ///
+    /// RES §5.3.2.2, p. 320: *"If PID_DOWNLOAD_COUNTER is not available for
+    /// the part to be downloaded, then the MaC shall not perform a Partial
+    /// Download."*
+    DownloadCounterUnavailable,
 }
 
 impl std::error::Error for DownloadError {}
@@ -649,6 +826,17 @@ impl fmt::Display for DownloadError {
                  CP §3.5.3 AP2 Nr. 13, but `A_Key_Write` has no encoder yet (design spec §10.7); the \
                  device is left on its current key rather than have this step reported done \
                  when it was not"
+            ),
+            DownloadError::DownloadCounterChanged { stored, current } => write!(
+                f,
+                "the download counter changed from {stored} to {current} since the preceding \
+                 configuration, so the MaC shall not continue with a partial download, but \
+                 instead perform a complete download as specified in 3.12.4 (CP §3.12.5, p. 100)"
+            ),
+            DownloadError::DownloadCounterUnavailable => write!(
+                f,
+                "PID_DOWNLOAD_COUNTER is not available for the part to be downloaded, so the \
+                 MaC shall not perform a Partial Download (RES §5.3.2.2, p. 320)"
             ),
         }
     }
@@ -765,6 +953,7 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
         let procedure = variant.procedure();
         let mut report = DownloadReport::new(kind);
         let (mask, limit) = open(self.session, &self.plan, kind, &mut report).await?;
+        check_download_counter(self.session, &self.plan, &mut report).await?;
 
         // Indices into `procedure.steps` below are fixed across all five
         // variants: the opening four (indices 0-3) plus unload/allocate
@@ -1128,6 +1317,55 @@ async fn open<T: ManagementTransport>(
         });
     }
     Ok((mask, limit))
+}
+
+/// CP §3.12.4/3.12.5's and RES §5.3.2.2's Download Counter check (`[C13]`),
+/// run once by [`Downloader::partial_download`], after [`open`] and before
+/// its first write. Reads `PID_DOWNLOAD_COUNTER` from the Device Object,
+/// never from the part being loaded — see [`DownloadCounterCheck`]'s own
+/// doc comment for which half of that simplification is backed by a clause
+/// and which is this module's own.
+///
+/// A `PropertyRefused` read is [`DownloadCounterCheck::Absent`], nothing
+/// else is: a timeout or a disconnect during the read is not a conformant
+/// device without the property, and stays whatever `SessionError` it was
+/// via `?`. The decision to refuse is routed through
+/// [`DownloadCounterCheck::refuses_partial_download`] rather than matched
+/// again here, so the two stay in agreement by construction.
+///
+/// `report.download_counter` is set only for the two outcomes that let the
+/// caller continue ([`DownloadCounterCheck::Unchanged`] and
+/// [`DownloadCounterCheck::NoStoredCounter`]): `partial_download` never
+/// returns `report` on `Err`, so a refusal is reported through the
+/// returned [`DownloadError`] alone, and a value written here for either
+/// refusal would be a write nobody can ever read.
+async fn check_download_counter<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+    plan: &DownloadPlan,
+    report: &mut DownloadReport,
+) -> Result<(), DownloadError> {
+    let check = match session.read_download_counter().await {
+        Ok(current) => match plan.stored_download_counter {
+            None => DownloadCounterCheck::NoStoredCounter(current),
+            Some(stored) if stored == current => DownloadCounterCheck::Unchanged(current),
+            Some(stored) => DownloadCounterCheck::Changed { stored, current },
+        },
+        Err(SessionError::PropertyRefused { .. }) => DownloadCounterCheck::Absent,
+        Err(err) => return Err(err.into()),
+    };
+    if check.refuses_partial_download() {
+        return Err(match check {
+            DownloadCounterCheck::Changed { stored, current } => {
+                DownloadError::DownloadCounterChanged { stored, current }
+            }
+            DownloadCounterCheck::Absent => DownloadError::DownloadCounterUnavailable,
+            // `refuses_partial_download` returns `true` for exactly these
+            // two variants; see its own doc comment.
+            _ => unreachable!("refuses_partial_download() only allows Changed and Absent here"),
+        });
+    }
+    report.download_counter = check;
+    Ok(())
 }
 
 /// §7.2, the inner loop, for one part.
@@ -1668,15 +1906,21 @@ mod tests {
             .expect("step 11 exists")
             .title;
 
-        let partial_device = ap2_device();
+        let partial_device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(1),
+            ..SimulatorConfig::default()
+        });
         let mut partial_session = writer(&partial_device, WriteScope::Download);
         // A first complete download so the partial download below has
         // something stored to escalate from is not needed here: the happy
         // path (no allocation failure) reaches Nr. 13 directly.
-        let partial_report = Downloader::new(&mut partial_session, two_parts())
-            .partial_download(ObjectIndex::new(3))
-            .await
-            .expect("a plan declaring nothing completes");
+        let partial_report = Downloader::new(
+            &mut partial_session,
+            two_parts().with_stored_download_counter(1),
+        )
+        .partial_download(ObjectIndex::new(3))
+        .await
+        .expect("a plan declaring nothing completes");
         let partial_title = partial_report
             .steps
             .iter()
@@ -1685,6 +1929,222 @@ mod tests {
             .title;
 
         assert_eq!(complete_title, partial_title, "the wording must not drift");
+    }
+
+    /// C13 fix round 1, finding 5: `Display` is what a report actually
+    /// shows a user, and nothing pinned its wording to each variant before
+    /// this — deleting an arm's distinct text was as invisible as deleting
+    /// `refuses_partial_download`'s.
+    #[test]
+    fn download_counter_check_display_text_is_specific_to_each_outcome() {
+        assert_eq!(DownloadCounterCheck::NotChecked.to_string(), "not checked");
+        assert_eq!(
+            DownloadCounterCheck::NoStoredCounter(9).to_string(),
+            "no stored Download Counter to compare against; the device answers 9"
+        );
+        assert_eq!(
+            DownloadCounterCheck::Unchanged(4).to_string(),
+            "unchanged at 4"
+        );
+        assert_eq!(
+            DownloadCounterCheck::Changed {
+                stored: 4,
+                current: 9
+            }
+            .to_string(),
+            "changed from 4 to 9 since the preceding configuration"
+        );
+        assert_eq!(
+            DownloadCounterCheck::Absent.to_string(),
+            "not implemented on this device"
+        );
+    }
+
+    /// RES §4.2.30.3, p. 42: unchanged is the case where the partial
+    /// download proceeds, and `[C13]`'s [`DownloadCounterCheck::Unchanged`]
+    /// is what the report says so.
+    #[tokio::test]
+    async fn a_partial_download_proceeds_when_the_download_counter_is_unchanged() {
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(7),
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Download);
+        let report = Downloader::new(&mut session, two_parts().with_stored_download_counter(7))
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect("an unchanged download counter does not refuse the download");
+
+        assert_eq!(report.download_counter, DownloadCounterCheck::Unchanged(7));
+    }
+
+    /// A plan with nothing stored is a gap in this application's own
+    /// bookkeeping, not one of RES/CP's three outcomes — see
+    /// [`DownloadCounterCheck::NoStoredCounter`]'s own doc comment for why
+    /// this proceeds rather than refuses.
+    #[tokio::test]
+    async fn a_partial_download_proceeds_when_no_download_counter_was_stored() {
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(3),
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Download);
+        let report = Downloader::new(&mut session, two_parts())
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect("a plan with nothing stored is not the same as a plan finding a mismatch");
+
+        assert_eq!(
+            report.download_counter,
+            DownloadCounterCheck::NoStoredCounter(3)
+        );
+    }
+
+    /// CP §3.12.5, p. 100: a changed Download Counter refuses the partial
+    /// download outright — before its first write, matching CP §3.5.2 step
+    /// 04's own "nothing written yet" guard shape (`[C10]`'s
+    /// `a_read_only_session_cannot_be_sequenced_into_writing` above).
+    #[tokio::test]
+    async fn a_partial_download_refuses_when_the_download_counter_changed() {
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(9),
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Download);
+        let error = Downloader::new(&mut session, two_parts().with_stored_download_counter(4))
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect_err("a changed download counter must refuse a partial download");
+
+        assert!(
+            matches!(
+                error,
+                DownloadError::DownloadCounterChanged {
+                    stored: 4,
+                    current: 9,
+                }
+            ),
+            "got {error}"
+        );
+        assert!(!device.memory_was_written());
+        assert!(load_state_writes(&device).is_empty());
+    }
+
+    /// RES §5.3.2.2, p. 320: an absent Download Counter refuses the partial
+    /// download the same way a changed one does, even though the device is
+    /// fully conformant (Volume 6 Profiles Annex A, `[C18]`) — absence is
+    /// not a malformed read.
+    #[tokio::test]
+    async fn a_partial_download_refuses_when_the_download_counter_is_absent() {
+        let device = ap2_device(); // SimulatorConfig::download_counter defaults to None.
+        let mut session = writer(&device, WriteScope::Download);
+        let error = Downloader::new(&mut session, two_parts().with_stored_download_counter(1))
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect_err("a device with no download counter must refuse a partial download");
+
+        assert!(
+            matches!(error, DownloadError::DownloadCounterUnavailable),
+            "got {error}"
+        );
+        assert!(!device.memory_was_written());
+        assert!(load_state_writes(&device).is_empty());
+    }
+
+    /// C13 fix round 1, finding 2: RES §4.2.30.2, p. 41, has the device
+    /// increment the counter on every modification, so a difference of
+    /// exactly one is the ordinary "changed" case, not the boundary of a
+    /// tolerance. Nothing here treats `stored + 1` as close enough.
+    #[tokio::test]
+    async fn a_partial_download_refuses_when_the_download_counter_differs_by_exactly_one() {
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(5),
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Download);
+        let error = Downloader::new(&mut session, two_parts().with_stored_download_counter(4))
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect_err("a counter one higher than stored is still a change, not a match");
+
+        assert!(
+            matches!(
+                error,
+                DownloadError::DownloadCounterChanged {
+                    stored: 4,
+                    current: 5,
+                }
+            ),
+            "got {error}"
+        );
+        assert!(!device.memory_was_written());
+        assert!(load_state_writes(&device).is_empty());
+    }
+
+    /// C13 fix round 1, finding 3: only `SessionError::PropertyRefused`
+    /// means "this device has no Download Counter". A disconnect while
+    /// reading it is a comms fault, not a conformant device, and must not
+    /// be folded into [`DownloadCounterCheck::Absent`] /
+    /// [`DownloadError::DownloadCounterUnavailable`].
+    #[tokio::test]
+    async fn a_download_counter_read_that_loses_the_connection_is_not_reported_as_absent() {
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(5),
+            drop_connection_on_download_counter_read: true,
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Download);
+        let error = Downloader::new(&mut session, two_parts().with_stored_download_counter(4))
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect_err("a lost connection is not a successful read of anything");
+
+        assert!(
+            matches!(
+                error,
+                DownloadError::Session(SessionError::ConnectionLost { .. })
+            ),
+            "got {error}, not the underlying comms fault"
+        );
+        // C13 re-review, invented mutation: the error above says only that
+        // *a* read lost the connection. `open()` reads the mask version and
+        // `PID_MANUFACTURER_ID` before `check_download_counter` runs, so a
+        // simulator guard that dropped on any property read would produce
+        // the same error from a much earlier frame. A dropped frame is never
+        // recorded, so the manufacturer-ID read appearing in the log is the
+        // proof that the connection was still alive when the download
+        // counter was asked for.
+        let seen = device.seen();
+        assert!(
+            seen.iter().any(|entry| matches!(
+                entry,
+                Seen::PropertyRead {
+                    property_id: knx_core::commissioning::properties::PID_MANUFACTURER_ID,
+                    ..
+                }
+            )),
+            "the drop fired before the download-counter read: {seen:?}"
+        );
+        assert!(!device.memory_was_written());
+        assert!(load_state_writes(&device).is_empty());
+    }
+
+    /// [`DownloadCounterCheck::NotChecked`] is the default a fresh
+    /// [`DownloadReport`] starts at, and `complete_download` never replaces
+    /// it: CP §3.12.5's refusal is specific to a *partial* download.
+    #[tokio::test]
+    async fn a_complete_download_never_checks_the_download_counter() {
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(5),
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Download);
+        let report = Downloader::new(&mut session, two_parts().with_stored_download_counter(1))
+            .complete_download()
+            .await
+            .expect("a complete download does not consult the download counter at all");
+
+        assert_eq!(report.download_counter, DownloadCounterCheck::NotChecked);
     }
 
     /// §2.3 again, one layer up: a sequencer is not a second door. A session
@@ -1833,6 +2293,7 @@ mod tests {
     async fn a_failed_allocation_escalates_to_every_following_segment() {
         let device = ap2_device_with(SimulatorConfig {
             allocation_fails_once_for: Some(3),
+            download_counter: Some(1),
             ..SimulatorConfig::default()
         });
         let parts = plan(vec![
@@ -1844,7 +2305,8 @@ mod tests {
             ),
             part(1, "Address Table", 8, PartKind::GroupAddressTable),
             part(2, "Association Table", 6, PartKind::AssociationTable),
-        ]);
+        ])
+        .with_stored_download_counter(1);
         let mut session = writer(&device, WriteScope::Download);
         let report = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(3))
@@ -1893,6 +2355,7 @@ mod tests {
         let device = SimulatedDevice::with_config(SimulatorConfig {
             application_program_objects: [AP2_OBJECT, AP1_OBJECT].into_iter().collect(),
             allocation_fails_once_for: Some(AP2_OBJECT),
+            download_counter: Some(1),
             ..SimulatorConfig::default()
         });
         let parts = plan(vec![
@@ -1911,7 +2374,8 @@ mod tests {
             table_part_with_no_version(5, "Group Object Table", 8, PartKind::GroupObjectTable),
             table_part_with_no_version(1, "Group Address Table", 8, PartKind::GroupAddressTable),
             table_part_with_no_version(2, "Association Table", 8, PartKind::AssociationTable),
-        ]);
+        ])
+        .with_stored_download_counter(1);
         let mut session = writer(&device, WriteScope::Download);
         let report = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(AP2_OBJECT))
@@ -1983,17 +2447,21 @@ mod tests {
             let device = if is_application_program {
                 SimulatedDevice::with_config(SimulatorConfig {
                     application_program_objects: [case.object].into_iter().collect(),
+                    download_counter: Some(1),
                     ..SimulatorConfig::default()
                 })
             } else {
-                SimulatedDevice::new()
+                SimulatedDevice::with_config(SimulatorConfig {
+                    download_counter: Some(1),
+                    ..SimulatorConfig::default()
+                })
             };
             let one_part = if is_application_program {
                 part(case.object, "the part under test", 8, case.kind)
             } else {
                 table_part_with_no_version(case.object, "the part under test", 8, case.kind)
             };
-            let parts = plan(vec![one_part]);
+            let parts = plan(vec![one_part]).with_stored_download_counter(1);
             let mut session = writer(&device, WriteScope::Download);
             let report = Downloader::new(&mut session, parts)
                 .partial_download(ObjectIndex::new(case.object))
@@ -2028,6 +2496,7 @@ mod tests {
         const ASSOCIATION_TABLE_OBJECT: u8 = 2;
         let device = SimulatedDevice::with_config(SimulatorConfig {
             allocation_fails_once_for: Some(ASSOCIATION_TABLE_OBJECT),
+            download_counter: Some(1),
             ..SimulatorConfig::default()
         });
         let parts = plan(vec![table_part_with_no_version(
@@ -2035,7 +2504,8 @@ mod tests {
             "Association Table",
             6,
             PartKind::AssociationTable,
-        )]);
+        )])
+        .with_stored_download_counter(1);
         let mut session = writer(&device, WriteScope::Download);
         let error = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(ASSOCIATION_TABLE_OBJECT))
@@ -2098,6 +2568,7 @@ mod tests {
         const GROUP_ADDRESS_TABLE_OBJECT: u8 = 1;
         let device = SimulatedDevice::with_config(SimulatorConfig {
             allocation_fails_once_for: Some(GROUP_ADDRESS_TABLE_OBJECT),
+            download_counter: Some(1),
             ..SimulatorConfig::default()
         });
         let parts = plan(vec![table_part_with_no_version(
@@ -2105,7 +2576,8 @@ mod tests {
             "Group Address Table",
             6,
             PartKind::GroupAddressTable,
-        )]);
+        )])
+        .with_stored_download_counter(1);
         let mut session = writer(&device, WriteScope::Download);
         let report = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(GROUP_ADDRESS_TABLE_OBJECT))
@@ -2154,6 +2626,7 @@ mod tests {
     async fn an_escalated_reload_compares_the_crc_for_the_target_part_only() {
         let device = ap2_device_with(SimulatorConfig {
             allocation_fails_once_for: Some(3),
+            download_counter: Some(1),
             ..SimulatorConfig::default()
         });
         let stored = device.mcb(ObjectIndex::new(3));
@@ -2167,7 +2640,8 @@ mod tests {
             .with_stored_mcb(stored),
             part(1, "Address Table", 8, PartKind::GroupAddressTable),
             part(2, "Association Table", 6, PartKind::AssociationTable),
-        ]);
+        ])
+        .with_stored_download_counter(1);
         let mut session = writer(&device, WriteScope::Download);
         let report = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(3))
@@ -2204,7 +2678,10 @@ mod tests {
     /// this case is not specified anywhere (spec §7.4, §12).
     #[tokio::test]
     async fn a_matching_crc_is_reported_and_the_data_is_written_anyway() {
-        let device = ap2_device();
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(1),
+            ..SimulatorConfig::default()
+        });
         let stored = device.mcb(ObjectIndex::new(3));
         let parts = plan(vec![
             part(
@@ -2215,7 +2692,8 @@ mod tests {
             )
             .with_stored_mcb(stored),
             part(1, "Address Table", 5, PartKind::GroupAddressTable),
-        ]);
+        ])
+        .with_stored_download_counter(1);
         let mut session = writer(&device, WriteScope::Download);
         let report = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(3))
@@ -2238,14 +2716,18 @@ mod tests {
     /// The ordinary case, and the one where the plan has nothing to compare.
     #[tokio::test]
     async fn a_crc_either_differs_or_was_never_stored() {
-        let device = ap2_device();
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(1),
+            ..SimulatorConfig::default()
+        });
         let parts = plan(vec![part(
             3,
             "Application Program 2",
             6,
             PartKind::ApplicationProgram2,
         )
-        .with_stored_mcb(vec![0xDE, 0xAD])]);
+        .with_stored_mcb(vec![0xDE, 0xAD])])
+        .with_stored_download_counter(1);
         let mut session = writer(&device, WriteScope::Download);
         let differed = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(3))
@@ -2253,7 +2735,10 @@ mod tests {
             .expect("a partial download of one part");
         assert_eq!(differed.parts[0].crc, CrcComparison::Differed);
 
-        let device = ap2_device();
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(1),
+            ..SimulatorConfig::default()
+        });
         let mut session = writer(&device, WriteScope::Download);
         let unknown = Downloader::new(
             &mut session,
@@ -2262,7 +2747,8 @@ mod tests {
                 "Application Program 2",
                 6,
                 PartKind::ApplicationProgram2,
-            )]),
+            )])
+            .with_stored_download_counter(1),
         )
         .partial_download(ObjectIndex::new(3))
         .await
@@ -2277,7 +2763,10 @@ mod tests {
     /// partial download — that must not turn into `Differed`.
     #[tokio::test]
     async fn a_changed_segment_size_with_the_same_crc_still_matches() {
-        let device = ap2_device();
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(1),
+            ..SimulatorConfig::default()
+        });
         let stored = MemoryControlBlock {
             segment_size: 12,
             crc_control_byte: 0,
@@ -2305,7 +2794,8 @@ mod tests {
             40,
             PartKind::ApplicationProgram2,
         )
-        .with_stored_mcb(stored.to_vec())]);
+        .with_stored_mcb(stored.to_vec())])
+        .with_stored_download_counter(1);
         let mut session = writer(&device, WriteScope::Download);
         let report = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(3))
@@ -2320,7 +2810,10 @@ mod tests {
     /// comparison cannot be trusted.
     #[tokio::test]
     async fn crc_control_byte_bit_0_set_reports_may_have_changed_regardless_of_the_crc() {
-        let device = ap2_device();
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(1),
+            ..SimulatorConfig::default()
+        });
         let stored = MemoryControlBlock {
             segment_size: 4,
             crc_control_byte: 0,
@@ -2344,7 +2837,8 @@ mod tests {
             4,
             PartKind::ApplicationProgram2,
         )
-        .with_stored_mcb(stored.to_vec())]);
+        .with_stored_mcb(stored.to_vec())])
+        .with_stored_download_counter(1);
         let mut session = writer(&device, WriteScope::Download);
         let report = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(3))
@@ -2793,13 +3287,17 @@ mod tests {
         // No `application_program_objects` registered: object 2 is not one
         // of them, so the simulator refuses the version write the way RES
         // Table 80, p. 249, says a real device would.
-        let device = SimulatedDevice::new();
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            download_counter: Some(1),
+            ..SimulatorConfig::default()
+        });
         let parts = plan(vec![part(
             2,
             "Association Table",
             6,
             PartKind::AssociationTable,
-        )]);
+        )])
+        .with_stored_download_counter(1);
         let mut session = writer(&device, WriteScope::Download);
         let report = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(2))
@@ -2878,13 +3376,17 @@ mod tests {
         // simulator refuses the version write for this application-program
         // part the same way it would refuse one for a table, and the two
         // must not be confused by the arm that tolerates the table's case.
-        let device = SimulatedDevice::new();
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            download_counter: Some(1),
+            ..SimulatorConfig::default()
+        });
         let parts = plan(vec![part(
             3,
             "Application Program 2",
             4,
             PartKind::ApplicationProgram2,
-        )]);
+        )])
+        .with_stored_download_counter(1);
         let mut session = writer(&device, WriteScope::Download);
         let error = Downloader::new(&mut session, parts)
             .partial_download(ObjectIndex::new(3))

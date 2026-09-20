@@ -953,6 +953,27 @@ export const messages: Record<MessageKey, string> = {
 
   "toolbar.quit": "Beenden",
   "toolbar.about": "Über KNXBench…",
+  "toolbar.logout": "Abmelden",
+
+  // T01b / ADR-0026 — der Anmeldebildschirm. Der Eyebrow ist in beiden
+  // Katalogen gleich gemeint wie `language.en`/`language.de`: „KNX-compatible“
+  // ist die Formulierung, die dieses Projekt überall führt, und wird nicht
+  // übersetzt, weil sie eine Aussage über Kompatibilität ist und keine
+  // Werbezeile.
+  "login.eyebrow": "KNX-compatible · Linux-first",
+  "login.intro":
+    "Dieser Server ist passwortgeschützt. Geben Sie das Passwort ein, um weiterzuarbeiten.",
+  "login.password": "Passwort",
+  "login.submit": "Anmelden",
+  "login.pending": "Wird angemeldet…",
+  "login.rejected": "Dieses Passwort wurde nicht akzeptiert.",
+  "login.checking": "Der Server wird gefragt, ob er ein Passwort verlangt…",
+  "login.expiredNotice":
+    "Ihre Sitzung ist beendet — entweder durch Zeitablauf oder weil der Server neu gestartet wurde. Melden Sie sich erneut an, um weiterzuarbeiten; was auf dem Bildschirm steht, ist erhalten geblieben. Wurde der Server allerdings neu gestartet, ist seine Kopie des Projekts weg und Sie müssen es erneut öffnen.",
+  "login.signedOutNotice":
+    "Sie sind abgemeldet. Nach erneuter Anmeldung steht die Arbeitsfläche wieder genauso da, wie Sie sie verlassen haben.",
+  "login.footnote":
+    "Ein Passwort für den ganzen Server, festgelegt beim Start. Benutzerkonten gibt es noch nicht.",
 
   "quit.title": "Nicht gespeicherte Änderungen",
   "quit.message":

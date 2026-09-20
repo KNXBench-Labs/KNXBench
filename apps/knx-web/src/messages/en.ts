@@ -1089,6 +1089,30 @@ export const messages = {
 
   "toolbar.quit": "Quit",
   "toolbar.about": "About KNXBench…",
+  // T01b / ADR-0026. Shown only where a session exists — never on the
+  // desktop shell, never on a server started without a password.
+  "toolbar.logout": "Log out",
+
+  // T01b / ADR-0026 — the login screen. It says "this server", not "your
+  // account": there are no accounts, only one shared password, and
+  // pretending otherwise would be a promise the server does not keep.
+  "login.eyebrow": "KNX-compatible · Linux-first",
+  "login.intro": "This server is password-protected. Enter the password to carry on.",
+  "login.password": "Password",
+  "login.submit": "Sign in",
+  "login.pending": "Signing in…",
+  "login.rejected": "That password was not accepted.",
+  "login.checking": "Asking the server whether it wants a password…",
+  // The honest half of "preserve unsaved work". What is on screen behind
+  // this panel is kept, because the workbench was never unmounted — but the
+  // project itself lives in the server's memory, and a server that was
+  // restarted has forgotten it. This sentence says both.
+  "login.expiredNotice":
+    "Your session ended — it either idled out or the server was restarted. Sign in again to carry on; what is on screen has been kept, but if the server was restarted its copy of the project is gone and you will have to open it again.",
+  "login.signedOutNotice":
+    "You are logged out. Sign in again and the workbench comes back exactly as you left it.",
+  "login.footnote":
+    "One password for the whole server, set when it was started. There are no user accounts yet.",
 
   "quit.title": "Unsaved changes",
   "quit.message":

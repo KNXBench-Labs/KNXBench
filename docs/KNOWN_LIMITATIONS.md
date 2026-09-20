@@ -1918,8 +1918,9 @@ delivery on `lo` goes through the device path regardless. `LOOPBACK_ONLY`
 keeps `loop_back: true` because it is the portable way to ask, not because
 anything here depends on it.
 
-**One flaky test, introduced by this fix and now closed.** Turning
-`IP_MULTICAST_LOOP` on made local delivery real for the first time, and a
+**One flaky test, introduced by this fix and now closed.** Pinning
+`IP_MULTICAST_IF` to `lo` — not turning `IP_MULTICAST_LOOP` on, which is
+inert here, per above — made local delivery real for the first time, and a
 UDP socket bound to the wildcard address is handed every multicast datagram
 the host accepts on its port — the membership decides what the *host*
 accepts, not which socket gets a copy. Three tests send on

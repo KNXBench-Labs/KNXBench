@@ -8214,7 +8214,7 @@ namespace on a `dummy0` interface, Linux 7.2.5: ten sends at
 forwards L2 by MAC and never reads the IP TTL, so a TTL-0
 `ROUTING_INDICATION` would reach every other port in the group, a KNXnet/IP
 router included; only an IP *router* declines to forward it. **There is one
-lock, `IP_MULTICAST_IF`.** Corrected at all three sites that claimed
+lock, `IP_MULTICAST_IF`.** Corrected at all five sites that claimed
 otherwise — `RoutingSocketOptions`' `ttl` field and `LOOPBACK_ONLY` doc
 comments, the `loopback_only_options_actually_reach_the_socket` assertion
 message, KNOWN_LIMITATIONS.md §33 and this file's B1 entry above. §33's
@@ -8224,11 +8224,12 @@ correction beneath it. §33 matters here specifically because it exists
 support, and a reader who believes there are two locks will one day weaken
 the one that holds.
 
-**The fix had introduced a ~3 % flaky test.** Turning `IP_MULTICAST_LOOP`
-on made local delivery real for the first time, and a UDP socket bound to
-the wildcard address is handed every multicast datagram the host accepts on
-its port — group membership decides what the *host* accepts, not which
-socket gets a copy. Three tests send on `224.0.23.12:3671` concurrently
+**The fix had introduced a ~3 % flaky test.** Pinning `IP_MULTICAST_IF` to `lo`
+— not turning `IP_MULTICAST_LOOP` on, which measured inert on this kernel —
+made local delivery real for the first time, and a UDP socket bound to the
+wildcard address is handed every multicast datagram the host accepts on its
+port — group membership decides what the *host* accepts, not which socket gets
+a copy. Three tests send on `224.0.23.12:3671` concurrently
 (`1.1.1`, `1.1.5`, `1.1.3`), so `telegrams.recv()` returned whichever
 arrived first. Measured: 2 failures in 100 runs of `client::tests::`, every
 one `1.1.5` surfacing in `1.1.1`'s receiver. Separate groups would not have

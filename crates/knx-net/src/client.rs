@@ -1378,15 +1378,24 @@ mod tests {
     /// the *host* accepts, not which socket gets a copy. The harness runs
     /// those tests concurrently, so a bare `telegrams.recv()` returns
     /// whichever telegram arrived first, from whichever test. That is new
-    /// as of B1: before `LOOPBACK_ONLY` turned `IP_MULTICAST_LOOP` on,
+    /// as of B1: before `LOOPBACK_ONLY` pinned `IP_MULTICAST_IF` to `lo`,
     /// nothing was ever delivered locally and the collision could not
-    /// happen. Measured with the bare `recv()`: 2 failures in 100 runs of
-    /// `client::tests::`, every one of them `1.1.5` — the probe-agreement
-    /// test's sender — surfacing in `1.1.1`'s receiver.
+    /// happen — `IP_MULTICAST_LOOP` turning on at the same time is not the
+    /// reason; measured inert on this kernel, a socket pair with it read
+    /// back as 0 still delivers. Measured with the bare `recv()`: 2 failures
+    /// in 100 runs of `client::tests::`, every one of them `1.1.5` — the
+    /// probe-agreement test's sender — surfacing in `1.1.1`'s receiver.
     ///
     /// Separate multicast groups would *not* have fixed it, for the same
     /// reason: a wildcard-bound socket receives datagrams for groups it
     /// never joined, as long as some socket on the host joined them.
+    ///
+    /// Filters on source address alone, not on any per-run identifier, so a
+    /// second concurrent copy of this test binary could satisfy a wait with
+    /// a foreign process's identical `1.1.1`/`1.1.5` frame. Harmless as
+    /// written, but any future mutation proof that deletes a send must run
+    /// with exactly one copy of the suite live, or it will pass for the
+    /// wrong reason.
     async fn recv_from_source(
         telegrams: &mut broadcast::Receiver<LDataFrame>,
         source: IndividualAddress,
@@ -1397,8 +1406,16 @@ mod tests {
             let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
             match tokio::time::timeout(remaining, telegrams.recv()).await {
                 Ok(Ok(telegram)) if telegram.source == source => return Some(telegram),
-                // Another test's telegram, or a lag skip: keep waiting.
-                Ok(Ok(_)) | Ok(Err(broadcast::error::RecvError::Lagged(_))) => {}
+                // Another test's telegram: keep waiting.
+                Ok(Ok(_)) => {}
+                // Capacity 64 measured sufficient for three concurrent senders,
+                // 0/300 runs — a lag here is not this test's business as usual,
+                // and folding it into "keep waiting" would let it masquerade as
+                // the timeout arm's "no datagram arrived" if it dropped the one
+                // telegram this call is waiting for. Name it instead.
+                Ok(Err(broadcast::error::RecvError::Lagged(skipped))) => {
+                    panic!("broadcast receiver lagged, dropping {skipped} telegram(s) while waiting for {source}")
+                }
                 Ok(Err(broadcast::error::RecvError::Closed)) => {
                     panic!("broadcast channel closed unexpectedly")
                 }
@@ -1805,20 +1822,34 @@ mod tests {
     /// every one a snapshot with no membership at all for a group a re-read
     /// microseconds later showed held by five sockets. One read is one pass
     /// of the iterator, so one consistent answer.
+    ///
+    /// A `seq_file` hands back at most one kernel page per `read(2)`, no
+    /// matter how large the caller's buffer is — a 64 KiB buffer proves
+    /// nothing about a file that grows past 4 KiB. Measured with 800
+    /// memberships: the file was 26521 bytes and the first read returned
+    /// 4081, comfortably clear of the buffer's own size. The only real test
+    /// is a second `read(2)` on the same fd: EOF (`0`) means the first read
+    /// really was the whole file, anything else means it was cut at a page
+    /// boundary. Measured: `0` at genuine EOF, `4092` on a truncated file.
+    /// Truncation is treated as "cannot be sure", the same skip path an
+    /// unreadable file already takes — a wrong answer here is worse than a
+    /// skipped test.
     fn read_proc_net_igmp() -> std::io::Result<String> {
         use std::io::Read;
 
-        // Far more than the ~40 bytes per interface plus ~40 per membership
-        // this file costs; a short read here would look like "no membership"
-        // and is exactly the failure being fixed.
+        let mut file = std::fs::File::open("/proc/net/igmp")?;
         let mut buf = vec![0u8; 64 * 1024];
-        let filled = std::fs::File::open("/proc/net/igmp")?.read(&mut buf)?;
-        assert!(
-            filled < buf.len(),
-            "/proc/net/igmp filled the whole {} byte buffer — it may have been truncated",
-            buf.len()
-        );
+        let filled = file.read(&mut buf)?;
         buf.truncate(filled);
+
+        let mut probe = [0u8; 1];
+        if file.read(&mut probe)? != 0 {
+            return Err(std::io::Error::other(
+                "/proc/net/igmp did not fit in one seq_file read(2); \
+                 the snapshot is truncated and cannot be trusted",
+            ));
+        }
+
         String::from_utf8(buf).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
     }
 

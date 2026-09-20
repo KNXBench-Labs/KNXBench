@@ -1,4 +1,4 @@
-//! Builds the one `(xpath, name)` key shape that ties a retained attribute to the single element instance it was read from, so the importer, the opaque store and both exporters agree where a preserved value belongs.
+//! The one place that spells a retained value's key, one key per source element instance.
 //!
 //! A key here is the element's schema-shaped path plus its own ETS id:
 //! `".../Segment/DeviceInstance[@Id='P-0001-0_DI-1']"`. Three properties

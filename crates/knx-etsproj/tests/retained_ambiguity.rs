@@ -1,4 +1,4 @@
-//! Proves the anti-corruption rule of `KNOWN_LIMITATIONS.md` §34: when two source elements collapse into one retained key, the export omits the attribute and warns rather than guessing which element it belonged to.
+//! An ambiguous retained attribute is dropped and warned about, never guessed at (§34).
 
 use std::io::{Cursor, Write};
 

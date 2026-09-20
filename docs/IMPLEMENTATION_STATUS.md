@@ -8651,3 +8651,67 @@ RED this task needed.
 **Not done, deliberately.** No UI test covers the flag row: none covered the
 existing five either, and building the first `ComObjectNode` fixture in the
 web test suite is a larger job than this task should smuggle in.
+
+## 2026-09-20 — T03: retained attributes learn which element they came from (branch `t03-schema21-export`)
+
+**The defect.** `KNOWN_LIMITATIONS.md` §34: retained known-but-unmapped
+attributes were keyed by a schema-shaped xpath, so every device's `Comment`,
+`Puid` and `SerialNumber` collapsed into one bucket. The schema-≥21 exporter
+wrote none of them back, which was the correct choice given the key: writing
+one device's hardware serial onto the other three would have been corruption
+rather than loss.
+
+**Measured first.** `crates/knx-etsproj/tests/retained_v21_measurement.rs`
+imports each corpus project, exports it again, and compares both documents
+element by element, keyed by each element's ancestors' own ids. The starting
+numbers, for the record: schema 11 lost nothing; KV (21) lost 11 attribute
+classes; ETS 6.3.0 (23) lost 22, including 514 group-address `Puid`s, 119
+communication-object flags, six `BinaryData` elements and 35
+`Space/DeviceInstanceRef` elements — and wrote `GroupAddress/@Central` and
+`@Unfiltered` back as `"0"` regardless of the source, which is the worse
+kind of defect.
+
+**The fix.** A new `knx_etsproj::xpath` module is the only place that spells
+a retained key, because three writers had already drifted into three
+incompatible formulas for the same device path (one of them missing
+`/Segment`, which is how `ChannelId` broke). `map.rs` re-keys every retained
+attribute onto the element's own ETS id; `export/retained.rs` owns the store,
+its ambiguity rule and its warnings; both exporters call `fill_retained` on
+every element they write.
+
+**Also closed on the way, all on the export boundary:**
+
+- `map_com_object_v21` no longer hardcodes `ResolvedFlags::none()`. The five
+  flag attributes were parsed and discarded with no retained fallback; the
+  ETS 6.3.0 project carries 119 of them. ADR-0014's comment excusing the drop
+  cited only the KV project, which has none — both were checked this time.
+- `write_com_object` receives `retained` and calls `fill_retained` like every
+  other element writer (§117's promise held on import and broke on export).
+- `BusAccess` was keyed per project, so a second line would have been handed
+  the first line's gateway; it is keyed per line now, at schema 11 too.
+- `GroupAddress/@Central` and `@Unfiltered` are modelled at 21 and 23.
+- `Segment`, `Space/DeviceInstanceRef`, `IsActivityCalculated` and the whole
+  `BinaryData` subtree survive the round trip.
+
+**Where it ended up.** ETS4 loses nothing. KV and ETS 6.3.0 lose
+`Installation/@Name` and `@DefaultLine` — empty strings in the source, which
+the domain model cannot distinguish from absent. Four attributes change
+value: the two `KNX` attributes this application rewrites on purpose, and two
+device timestamps that lose trailing fractional zeroes.
+
+**The rule, kept.** Where an element has no identity of its own — two
+`Segment`s under one `Line` — the value is dropped and
+`ExportWarning::RetainedAttributeNotExported` names it, with the instance
+count. `crates/knx-etsproj/tests/retained_ambiguity.rs` proves it: neither
+segment's `Puid` is written, the warning says why, and the unambiguous
+neighbours still come back.
+
+**Reaching the user.** `ExportWarningDto` in `apps/knx-server` gained the two
+retained variants. Both carry a rendered `detail`, which is exactly what
+`describeExportWarning` in `App.tsx` falls back to for a variant it does not
+know by name, so the warnings reach the UI without a line of frontend change
+— deliberate, since a concurrent task owns `App.tsx` this session.
+
+**Not done.** No store migration was needed, so schema 8 stays unclaimed.
+`docs/LIMITATION_TRIAGE.md` is untouched on purpose; a later task recounts
+it mechanically.

@@ -4633,6 +4633,79 @@ mod tests {
         );
     }
 
+    /// The other half of Table 4 (MP p. 82), and the reason the simulator's
+    /// rejection arm is scoped to one Erase Code rather than to any: Erase
+    /// Code `02h` (Factory Reset) does not fix the Channel Number at all —
+    /// *"≠ 00h: Only the Resources of the Channel with this given Channel
+    /// Number shall be reset."* A non-zero Channel Number there is a
+    /// perfectly ordinary request, so it must come back with the device's
+    /// own answer and not MP §3.7.3 exception (4)'s Error Code `03h`.
+    /// Without this test, widening the rejection to every Erase Code goes
+    /// unnoticed (C15 re-review, invented mutation).
+    #[tokio::test]
+    async fn a_non_zero_channel_number_is_legal_for_an_erase_code_that_does_not_fix_it() {
+        /// Table 4, MP p. 82: Factory Reset, one of the four Erase Codes
+        /// whose Channel Number is free rather than fixed at `00h`.
+        const ERASE_CODE_FACTORY_RESET: u8 = 0x02;
+
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            restart_error_code: 0x22,
+            restart_process_time: Duration::from_secs(9),
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Restart);
+        session.connect().await.expect("connect");
+
+        let response = session
+            .restart_master_reset(ERASE_CODE_FACTORY_RESET, 3)
+            .await
+            .expect("a legal pairing is answered like any other");
+
+        assert_eq!(
+            response.error_code, 0x22,
+            "Table 4, MP p. 82: Erase Code 02h leaves the Channel Number \
+             free, so Channel 3 must reach the device's own answer rather \
+             than exception (4)'s Error Code 03h"
+        );
+        assert_eq!(
+            response.process_time,
+            Duration::from_secs(9),
+            "a legal pairing keeps the device's Process Time too"
+        );
+    }
+
+    /// MP §3.7.3 exception (5), p. 90 is not conditioned on the request
+    /// being acknowledged either: a lost `T_ACK` still means an
+    /// `A_Restart-PDU` went out. [`ManagementSession::restart_basic`] was
+    /// restructured to wait on that path as well, and this is the test that
+    /// makes the restructuring load-bearing — without it, putting the `?`
+    /// back on `send_acknowledged` passes the suite.
+    #[tokio::test]
+    async fn restart_basic_waits_out_the_disconnect_timeout_even_when_the_ack_is_lost() {
+        let timing = fast();
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            restart_unanswered: true,
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Restart);
+        session.connect().await.expect("connect");
+
+        let started = tokio::time::Instant::now();
+        let outcome = session.restart_basic().await;
+        let elapsed = started.elapsed();
+
+        assert!(
+            matches!(outcome, Err(SessionError::ConnectionReleased { .. })),
+            "a device that never acknowledges must exhaust TL's retries, got {outcome:?}"
+        );
+        let min_exchange_timeout = timing.response_timeout * u32::from(MAX_TRANSMISSIONS);
+        assert!(
+            elapsed >= min_exchange_timeout + timing.post_restart_disconnect_wait,
+            "the mandatory wait must run on top of the lost-T_ACK timeout, \
+             not be skipped by it, took {elapsed:?}"
+        );
+    }
+
     /// MP §3.7.1.2.2, p. 81: *"the process time is thus a minimal time for
     /// the MaC to wait, not a maximal time"* — a device that reports less
     /// than the standard floor does not get to shorten the wait, and one

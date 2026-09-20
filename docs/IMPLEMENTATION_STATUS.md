@@ -8845,3 +8845,64 @@ xtask -- check-layering`, `cargo run -p xtask -- check-headers`, `cargo
 run -p xtask -- check-anchors` and `cargo deny check` all pass — exit
 status only, per §119, this `ntfs3` mount has lied about a green gate
 before.
+
+## 2026-09-20 — T04 fix round 1: the side table gets wired into the two paths every other piece of project state already respects (branch `t04-productdb-gaps`)
+
+Review of the work above approved spec compliance in full and requested
+changes on quality. Three gaps, all latent today because nothing outside
+`knx-core`, `knx-store` and `knx-productdb` reads `program_defaults` yet —
+which is exactly why they were worth closing before a reader exists.
+
+**Undo restores the whole device again.** `Command::DeleteDevice` dropped
+each communication object's `program_defaults` entry (correct on the
+forward path, via `remove_com_object`) and its inverse carried none of
+them, so an undo produced a device that looked whole and was not; a save
+afterwards made that permanent with nothing on screen to say so.
+`Command::CreateDevice` gains a `program_defaults:
+Vec<(ComObjectInstanceId, ProgramDefaults)>` field, empty for a genuine
+creation and populated when the command is an inverse. A com object that
+had no defaults contributes no entry, so undo cannot invent an
+empty-but-present record either. The comment in
+`apps/knx-server/src/domain.rs::create_device_impl` claiming the inverse
+"captures the enriched state for redo" was true of the `Override<T>` slots
+and false of the side table; it now names both halves.
+
+**A stale default can be cleared.** `knx_productdb::enrich::apply` reached
+`set_program_defaults` only when it had something to write, so a second
+pass over a com object whose program no longer states the attribute left
+the old value in place, attributed to a program that had stopped saying
+it. The guard now also fires when an entry already exists;
+`set_program_defaults` removes on empty, as it always did.
+
+**Two test claims are now true.** ADR-0027's Consequences section asserted
+that `remove_com_object`'s cleanup was "tested directly"; the test named
+`..._cleared_by_removal` never called it, and deleting the cleanup line
+left the workspace green. That test is renamed to
+`program_defaults_is_absent_until_set_and_an_empty_value_clears_it` (it
+covers `set_program_defaults`, a different path), and a real one —
+`removing_a_com_object_takes_its_program_defaults_with_it` — was added and
+falsified by deleting the cleanup line. The v9 migration test ran over an
+empty v7 fixture, which exercises the DDL and nothing else; a populated
+one now migrates a v7 file holding a real device and communication object
+and reads the project back with `assert_eq!(loaded, saved)`. ADR-0027
+names both tests instead of asserting they exist.
+
+**Nits.** `EnrichmentReport::com_objects_enriched` gains the doc comment
+its widened meaning needed — it now counts an object whose only change was
+a side-table lift, so the CLI's "N communication object(s) enriched" reads
+higher than a pre-ADR-0027 build's would. The corpus guard in
+`enrichment_gap_measurement.rs` uses `knx_testsupport::corpus_available()`
+instead of its own `exists()` check.
+
+**Out of scope by ruling, not by oversight.** §12's dated heading keeps its
+anchor style (`check-anchors` is green at 212 links across 138 files, and
+§34/§35 set the same precedent). Gap 3's `AmbiguousDpt` surfacing stays
+deferred; the blocker in §12 is unchanged and still accurate.
+
+**Tests.** `crates/knx-core`: +3 (two `command.rs` undo/redo tests for the
+side table, one `devices.rs` removal-cleanup test).
+`crates/knx-productdb`: +1 (`a_second_apply_pass_clears_a_default_the_
+program_no_longer_states`). `crates/knx-store`: +1
+(`a_populated_pre_v9_project_survives_the_v9_migration_unchanged`). Every
+one was verified to fail with its fix reverted. Store schema stays at 9.
+All gates pass by exit status, §119 acknowledged.

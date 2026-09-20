@@ -2,7 +2,9 @@
 
 Welcome to the KNXBench manual. KNXBench is a Linux-first KNX engineering application: you
 can import an ETS project, look at the topology, the buildings, the devices and the group
-addresses, edit them, export them again, and watch the bus while it happens.
+addresses, edit them, export the group addresses as CSV or the whole project as a readable
+document, and watch the bus while it happens. Import is one-way: KNXBench reads a
+`.knxproj` and never writes one.
 
 This manual is written as a small book. If you are new here, start at chapter 1 and follow
 the **Next** links at the bottom of each page. If you already know what you are looking for,

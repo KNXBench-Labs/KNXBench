@@ -21,7 +21,6 @@ vi.mock("./messages/de", () => {
     "toolbar.openNativeProject": "Öffnen (.knxdb)…",
     // "toolbar.save" deliberately omitted.
     "toolbar.saveAs": "Speichern unter…",
-    "toolbar.exportProject": "Nach .knxproj exportieren…",
     "toolbar.undo": "Rückgängig",
     "toolbar.redo": "Wiederholen",
     "toolbar.search": "Suchen… (Strg+K)",

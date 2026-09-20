@@ -1,7 +1,7 @@
 # ADR 0015: Native output format drops the ETS-reimport goal
 
 Date: 2026-09-08
-Status: Accepted
+Status: Superseded by ADR-0028
 Session: 7 (planning input for future sessions)
 
 ## Context
@@ -68,3 +68,13 @@ is unaffected — that is a separate, still-required capability.
 Any future "what should our export look like" design question defaults to
 "what serves our own format and our own users" rather than "what does ETS's
 schema require."
+
+## Superseded
+
+Superseded by [ADR-0028](0028-no-knxproj-export.md) on 2026-09-20. This ADR
+dropped ETS re-import as a *goal* while deliberately keeping the exporter,
+under "Alternatives considered": *"Remove the existing `.knxproj` exporter.
+Rejected."* That is the part that changed — the user ruled the writer out
+entirely, and it has been deleted. Everything else here still holds: the
+native SQLite format is the one output artifact, and `.knxproj` import remains
+fully supported.

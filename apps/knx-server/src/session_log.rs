@@ -6,7 +6,7 @@
 //!
 //! `reset()` only ever runs where `domain.rs` replaces the whole project
 //! (`open_project`/`open_native_project` on success) — everything else
-//! (save/export/edit/undo/redo, and any failed load) only ever appends, so a
+//! (save/edit/undo/redo, and any failed load) only ever appends, so a
 //! failed operation never erases the trail that explains what state the
 //! project is actually in.
 //!
@@ -36,7 +36,7 @@ pub struct LogEntry {
     /// RFC3339, `chrono::Utc::now().to_rfc3339()`.
     pub timestamp: String,
     pub severity: Severity,
-    /// e.g. "import", "open", "save", "export", "undo", "redo", or the
+    /// e.g. "import", "open", "save", "csv-export", "undo", "redo", or the
     /// command's own name for an edit.
     pub source: String,
     pub message: String,

@@ -6439,18 +6439,28 @@ for the succeeded terminal state, mirroring the `failed` state's existing
 treatment. Small, UI-only, and not attempted here: this is a documentation
 task, and the finding is recorded rather than fixed.
 
-## 119. Nothing checks that a theme is legible
+## 120. Nothing checks that a theme is legible
 
 **Limitation.** `apps/knx-web/src/styles.css` ships five palettes, and
 [ADR-0022](adr/0022-theme-token-boundary.md) holds every one of them to a
 derived token boundary: `themeTokens.test.ts` fails the suite if a theme
 misses a token, sets one a user setting owns, declares a plain property
 other than `color-scheme`, defines itself by negation, nests itself inside
-a media query, or writes a literal colour into the component layer. It
+a media query, shares a block with another theme through a comma, or
+writes a literal colour into the component layer. It
 checks that a palette is *complete*. It checks nothing about whether a
 palette can be read. No test computes a contrast ratio, so a sixth theme
 could declare all 27 tokens, pass every check in the file, and render grey
 text on a grey background.
+
+The literal-colour half of that guard has a blind spot of its own, in the
+same direction. The CSS system colour keywords are colour values and are
+not in its named-colour list, so `color: Canvas`, `color: AccentColor` and
+`border: 1px solid ButtonBorder` pass — and they are exactly as
+theme-blind as `#ff00aa`, because they resolve from the operating system
+rather than from any `--knx-*` token. Recorded rather than fixed: the
+keyword list is long, overlaps nothing in the stylesheet today, and adding
+it is a change to one `Set` on the day someone writes the first one.
 
 **Cause.** Contrast is a property of a *pair* of tokens, and the boundary
 is a property of one token at a time. Enforcing it needs three things the

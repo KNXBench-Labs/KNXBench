@@ -1283,8 +1283,10 @@ input, select, textarea {
    for a theme whose accent is part of its identity) looked exactly like a
    working one. This matches `button:disabled`'s treatment on purpose —
    same opacity, same cursor, same muted ink — so "you cannot use this"
-   reads the same everywhere. The `:disabled` specificity (0,1,1) also puts
-   it above `.settings-field select`, which is where the accent one lives. */
+   reads the same everywhere. Nothing here has to out-specify
+   `.settings-field select`, where the accent one lives: that rule is also
+   (0,1,1) and would win on source order, but it sets only `width` and
+   `box-sizing` and so collides with none of the three properties below. */
 input:disabled, select:disabled, textarea:disabled {
   color: var(--knx-muted);
   opacity: 0.6;

@@ -13,10 +13,15 @@ type Key = (String, String);
 enum Value {
     /// Exactly one source element produced this key.
     Unique(String),
-    /// Several did — their identities collapsed into the same key, so which
-    /// element any of the values belongs to is no longer recoverable. Never
+    /// Several source elements gave this key *differing* values, so which
+    /// element any of them belongs to is no longer recoverable. Never
     /// written back: `KNOWN_LIMITATIONS.md` §34's ruling is that corruption
     /// is worse than loss, and writing one of them would be a coin flip.
+    ///
+    /// Note what this does *not* catch: several elements agreeing on one
+    /// value, or only one of them carrying the attribute at all, both look
+    /// unique from here and are written. [`crate::xpath`]'s module doc
+    /// names the two assumptions that make that the right answer.
     Ambiguous { instances: usize },
 }
 

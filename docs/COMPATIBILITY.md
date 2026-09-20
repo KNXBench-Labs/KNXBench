@@ -155,19 +155,37 @@ zero — verified per document by its own footer, not assumed.
    O: Error` — not a step of unloading anything. The code's unload wait does
    not treat an incoming `LoadCompleted` as expected input.
 4. **CP §3.5.2 and CP §3.5.3 disagree on whether `PID_PROGRAM_VERSION` is
-   written to the three table objects at all.** CP §3.5.3's Group Address
-   Table variant Nr. 06, p. 54, and Association Table variant Nr. 06, p. 56
-   (the Group Object Table variant likewise, pp. 51-52), each instruct
-   `PropertyWrite(..., PID_PROGRAM_VERSION)` on the table object itself. CP
-   §3.5.2's own table steps 08/09/10, pp. 43-44, list no such write for the
-   same objects. RES's own property tables side with §3.5.2: Table 77 (Group
-   Address Table, p. 238), Table 80 (Association Table, p. 249) and Table 85
-   (Group Object Table, p. 270) do not list `PID_PROGRAM_VERSION` among the
-   object's properties at all; only Table 90 (Application Program 1, p. 288)
-   and Table 91 (Application Program 2, p. 290) do. Both readings of the
-   contradiction are handled without picking a winner: the write is attempted
-   and a device-side refusal of a property RES never granted the object is
-   recorded as an expected outcome, not a procedure failure — see task C1.
+   written to the three table objects at all — resolved, not a contradiction.**
+   CP §3.5.3's Group Address Table variant Nr. 06, p. 54, and Association
+   Table variant Nr. 06, p. 56 (the Group Object Table variant likewise,
+   pp. 51-52), each instruct `PropertyWrite(..., PID_PROGRAM_VERSION)` on the
+   table object itself. CP §3.5.2's own table steps 08/09/10, pp. 43-44, list
+   no such write for the same objects. RES's own per-object property tables
+   are silent on it too: Table 77 (Group Address Table, p. 238), Table 80
+   (Association Table, p. 249) and Table 85 (Group Object Table, p. 270) do
+   not list `PID_PROGRAM_VERSION` among the object's properties; only
+   Table 90 (Application Program 1, p. 288) and Table 91 (Application
+   Program 2, p. 290) do. That silence is not a prohibition: RES §4.2.13.1.3,
+   p. 34, says outright that *"the use of Program Version is Profile
+   dependent"* and its *"mandatory - or optional access rights"* are
+   *"specified in [17]"* (Volume 6 Profiles) — RES's own Realisation-Type
+   tables were never meant to be the last word on this Property. Volume 6
+   Profiles Annex A §A.1.1, p. 133, states the general rule: *"any Interface
+   Object or any Property in an Interface Object that is not listed is
+   optional."* Annex A's own per-object tables (A.2.4 Group Address Table
+   Object, p. 143; A.2.5 Association Table Object, p. 145; A.2.8 Group Object
+   Table Object, p. 149) also do not list PID 13 for any Profile, System B
+   (masks 07B0h/17B0h) included — so under Annex A's own rule,
+   `PID_PROGRAM_VERSION` is *optional* on these three object types, not
+   forbidden. CP §3.5.3's writes are therefore a legitimate use of an
+   optional Property, not errata to be corrected, and CP §3.5.2's silence is
+   simply the minimal (mandatory-only) path. The code's behaviour already
+   matches this finding without needing a change: the write is attempted and
+   a device-side refusal is recorded as an expected outcome, not a procedure
+   failure (`VersionOutcome::Refused`, `crates/knx-net/src/commissioning/
+   download.rs`) — see task C1, confirmed by task C18's audit of
+   `06 Profiles v02.01.01.pdf`
+   ([spec-audits/2026-09-19-cp-3_5_3-partial-download.md](spec-audits/2026-09-19-cp-3_5_3-partial-download.md)).
 5. **CP §3.5.4 step 05's cross-reference points at nothing.** CP §3.5.4, p. 57,
    step 05 reads *"refer to the routines of 'Unload Device' in 3.5.1.3"* — but
    CP §3.5.1.3, p. 40, is titled *"Memory architecture"*, and the

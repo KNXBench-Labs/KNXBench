@@ -28,6 +28,7 @@ vi.mock("./api", () => ({
 }));
 
 import ParameterPanel from "./ParameterPanel";
+import { resetSettingsForTests, setSetting } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
 
@@ -35,9 +36,9 @@ afterEach(() => {
   host?.remove();
   host = undefined;
   vi.clearAllMocks();
-  window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   resetProductLanguageForTests();
-  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   resetUiLanguageForTests();
 });
 
@@ -223,7 +224,7 @@ describe("ParameterPanel", () => {
   });
 
   it("sends the active product language when loading the panel", async () => {
-    window.localStorage.setItem(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
     apiMock.deviceParameters.mockResolvedValue(fixture);
     const root = await renderPanel();
 
@@ -233,7 +234,7 @@ describe("ParameterPanel", () => {
   });
 
   it("sends the active product language when writing a value", async () => {
-    window.localStorage.setItem(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
+    setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
     apiMock.deviceParameters.mockResolvedValue(fixture);
     apiMock.setParameterValue.mockResolvedValue(fixture);
     const root = await renderPanel();
@@ -432,7 +433,7 @@ describe("ParameterPanel", () => {
   // UI language while `.detail` — developer-facing, carries raw Rust
   // debug formatting — stays English on purpose.
   it("§66: a diagnostic's message is translated with the UI language; its detail stays English", async () => {
-    window.localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, "de");
+    setSetting(UI_LANGUAGE_STORAGE_KEY, "de");
     apiMock.deviceParameters.mockResolvedValue(fixture);
     const root = await renderPanel();
 

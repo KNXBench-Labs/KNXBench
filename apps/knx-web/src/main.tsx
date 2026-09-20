@@ -1,10 +1,11 @@
 /** Mounts the single React root as either the editing workspace or the diagnostics companion. */
-import { StrictMode } from "react";
+import { StrictMode, useEffect, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import AuthGate from "./AuthGate";
 import DiagnosticsCompanion from "./DiagnosticsCompanion";
 import { isCompanionView } from "./diagnosticsWindow";
+import { initSettings } from "./settingsStore";
 import "@fontsource/space-grotesk/400.css";
 import "@fontsource/space-grotesk/500.css";
 import "@fontsource/space-grotesk/600.css";
@@ -29,10 +30,29 @@ const companion = isCompanionView(window.location.search);
 // rather than a panel quietly failing to poll. The role decision stays here,
 // inside the gate's children function, so `AuthGate` imports neither of
 // them and the companion's bundle keeps its distance from the editor.
+/**
+ * Reads the settings file once the session exists — `/api/settings` is
+ * guarded like every other `/api/` route, so this cannot run outside the
+ * gate. Renders its children immediately rather than waiting: the
+ * preference hooks start on the cache `index.html` already painted from
+ * and re-read when the record lands, which is a correction nobody sees
+ * rather than a blank screen everybody does.
+ */
+function SettingsBootstrap({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    void initSettings();
+  }, []);
+  return <>{children}</>;
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthGate>
-      {(session) => (companion ? <DiagnosticsCompanion /> : <App session={session} />)}
+      {(session) => (
+        <SettingsBootstrap>
+          {companion ? <DiagnosticsCompanion /> : <App session={session} />}
+        </SettingsBootstrap>
+      )}
     </AuthGate>
   </StrictMode>,
 );

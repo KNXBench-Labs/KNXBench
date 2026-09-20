@@ -6210,3 +6210,44 @@ for them; and CP §3.12.4's Filter Table/Router Object procedure is
 implemented as its own `Procedure`, distinct from the CP §3.5.3 one this
 module runs today. Per-part Download Counter instance mapping, for the
 second simplification above, can be lifted independently of either.
+
+## 115. `MasterResetResponse::recovery_wait` computes a duration nobody waits on yet
+
+**Limitation.** `[C15]` `ManagementSession::restart_master_reset`
+(`crates/knx-net/src/commissioning.rs`) sends the confirmed Master Reset
+and decodes the device's `A_Restart_Response` into a `MasterResetResponse`,
+whose `recovery_wait` method correctly computes MP §3.7.1.2.2, p. 81's
+floor — the greater of the reported Process Time and this session's own
+`SessionTiming::restart_responsive_again` — because *"the process time is
+thus a minimal time for the MaC to wait, not a maximal time."* Nothing in
+this crate calls `recovery_wait` and then waits: `restart_master_reset`
+returns the response immediately, and MP §3.7.1.2.2, p. 81's own next
+clause — *"call the failed service one last time"* after the Process Time
+expires, before declaring the Configuration Procedure failed — has no
+call site. There is, at the time of writing, no Configuration Procedure in
+this project that runs a service, hits a failure, restarts the device to
+recover, and then needs to retry that same service once the device is
+responsive again; MP §2.3's own restart step (step 4) restarts the device
+as the *last* thing a procedure does, with nothing afterwards to retry.
+
+**Cause.** Building a generic "wait, then call this one more time" retry
+combinator with no real caller to attach it to would be exactly the kind
+of speculative abstraction this project's own engineering rules warn
+against, and an untested combinator is also exactly the kind of
+unverifiable behavioural claim this commissioning plan keeps finding and
+removing elsewhere. `recovery_wait` was written as a small, directly
+tested pure function instead, so that the arithmetic MP §3.7.1.2.2
+requires is proven correct today, and wiring it to an actual retry becomes
+a caller's problem once a caller exists.
+
+**Impact.** A future Configuration Procedure that restarts a device via
+Master Reset mid-procedure and needs to resume afterwards must call
+`recovery_wait`, sleep for the returned duration itself, and perform its
+own "one last time" retry — none of that happens automatically today. The
+timing value itself is correct and tested (`recovery_wait_never_goes_
+below_the_configured_floor`); only the waiting and the retry are absent.
+
+**Lifted when.** A Configuration Procedure exists in this project whose
+recovery from a Master Reset needs more than "restart, then let a fresh
+session reconnect" — at which point that procedure's own retry loop, not
+a speculative one built ahead of it, calls `recovery_wait` and acts on it.

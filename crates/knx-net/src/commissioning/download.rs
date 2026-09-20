@@ -2106,6 +2106,25 @@ mod tests {
             ),
             "got {error}, not the underlying comms fault"
         );
+        // C13 re-review, invented mutation: the error above says only that
+        // *a* read lost the connection. `open()` reads the mask version and
+        // `PID_MANUFACTURER_ID` before `check_download_counter` runs, so a
+        // simulator guard that dropped on any property read would produce
+        // the same error from a much earlier frame. A dropped frame is never
+        // recorded, so the manufacturer-ID read appearing in the log is the
+        // proof that the connection was still alive when the download
+        // counter was asked for.
+        let seen = device.seen();
+        assert!(
+            seen.iter().any(|entry| matches!(
+                entry,
+                Seen::PropertyRead {
+                    property_id: knx_core::commissioning::properties::PID_MANUFACTURER_ID,
+                    ..
+                }
+            )),
+            "the drop fired before the download-counter read: {seen:?}"
+        );
         assert!(!device.memory_was_written());
         assert!(load_state_writes(&device).is_empty());
     }

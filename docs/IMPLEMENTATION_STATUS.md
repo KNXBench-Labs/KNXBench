@@ -7868,18 +7868,29 @@ construction:
   alongside the three broadcast primitives below, in the same
   `commissioning.rs`): Device Descriptor Type 0, accepting whatever
   `descriptor_type` the answer carries — MP §2.3 exception a), p. 15.
-  Occupancy is one of four `Occupancy` variants (`NotOccupied`,
-  `OccupiedWithResponse`, `OccupiedWithoutDescriptor` for a `T_Disconnect`
-  or a silent descriptor read, `OccupiedWithRejectedConnect` for a
-  negative `T_Connect` confirmation — the last two are not in MP §2.3's
-  text at all, which only describes a successful connect followed by
-  either a response or a `T_Disconnect`).
+  Occupancy is one of three `Occupancy` variants, each of them MP §2.3
+  p. 14's own verdict and none of them this project's invention:
+  `NotOccupied` for a negative `A_Connect.Lcon` (*"if negative
+  A_Connect.Lcon ⇒ IA_new is not occupied"*) and equally for a descriptor
+  read that times out on an open connection (*"If no
+  A_DeviceDescriptor_Response-PDU is received after time-out ⇒ IA_new is
+  not occupied"*); `OccupiedWithResponse` for an answer; and
+  `OccupiedAfterDisconnect` for a `T_Disconnect` in the answer's place
+  (*"if A_Disconnect-PDU is received then IA_new shall be regarded as
+  occupied"*, with p. 15's "to 1." explaining which devices behave that
+  way and insisting the procedure continue regardless).
 * **Step 2** broadcasts `A_IndividualAddress_Read`
   (`ManagementSession::broadcast_individual_address_read`, new) and waits
   out the full `programming_mode_broadcast_timeout` (new `SessionTiming`
-  field, 1 s default — MP §2.3, p. 14's own time-out, distinct from MP
-  §2.2's 3 s), counting distinct sources via the existing
-  `ProgrammingModeResponders`/`single_responder()`.
+  field, 1 s default — p. 14's marginal note *"time-out: 1 s"*, distinct
+  from MP §2.2's 3 s), counting distinct sources via the existing
+  `ProgrammingModeResponders`/`single_responder()`. The obligation is
+  p. 15 "to 2.": *"The Management Client shall always wait until the
+  time-out has elapsed. It shall collect all the responses during this
+  time-out."* Structurally enforced — the loop's only exit that reaches
+  `ProgrammingModeResponders::complete()`, the sole constructor of a
+  witness, is the one where the deadline has passed — and measured, by
+  `the_programming_mode_broadcast_waits_out_the_whole_window`.
 * Occupancy and the step-2 witness are compared by address, not by which
   signal produced the occupancy finding: `KNOWN_LIMITATIONS.md` §108's
   "to 2." ruling — the procedure stops with
@@ -7888,7 +7899,11 @@ construction:
   witness's; continues, and skips step 3's write, when they match; the
   earlier draft of this entry that gated the stop on `Occupancy` alone
   would have refused the legal same-device re-assignment case.
-* **Step 3** re-verifies the count immediately before writing (a second
+* **Step 3** puts the witness's current address through
+  `ContactableAddress::new` — the device being renamed is the one holding
+  the programming button, not `new_address`, and its address arrives from
+  the bus, so spec §2.1's exclusion guard has to meet it here or nowhere
+  — then re-verifies the count immediately before writing (a second
   `broadcast_individual_address_read`, `IndividualAddressWriteError::
   RecountBeforeWrite` on failure — procedure.rs's own words, "programming
   mode may have switched itself off") and, only if `IA_new` still differs
@@ -7897,37 +7912,69 @@ construction:
   authorised under `WriteScope::IndividualAddressProgramming`).
 * **Step 4** opens a fully authorised connection to `IA_new`, reads the
   Device Descriptor (`read_mask_version`, existing), and calls C15's
-  `restart_basic()`, which disconnects on every path out by itself — no
-  explicit disconnect call needed here.
+  `restart_basic()`. p. 15's closing line, *"Abort the connection of the
+  client side Transport Layer."*, is unconditional: `restart_basic()`
+  disconnects on every path out by itself, and the connect-and-verify
+  half is wrapped so that its failure path disconnects too. That is the
+  path p. 15 "to 4." is about — *"If no A_DeviceDescriptor_Response-PDU
+  is received, than the programming of the Individual Address may have
+  failed, or the system (Router) is not configured correctly"* — and
+  precisely the one where a leaked connection would block the next
+  attempt.
+
+`IndividualAddressWriteError::Session` carries `step: u8` and the partial
+`IndividualAddressWriteReport` alongside the `SessionError`. Without the
+step number a caller cannot tell "to 4."'s advice apart from a step-1
+transport error; without the report, an `Err` threw away step 1's
+occupancy finding, which §108 undertakes to put in front of the operator.
 
 The simulator (`crates/knx-net/src/commissioning/simulator.rs`) gains what
-step 1 through 3 need: `State.address` moves out of `SimulatedDevice`
+step 1 through 4 need: `State.address` moves out of `SimulatedDevice`
 proper so a broadcast `A_IndividualAddress_Write` can rename the device
 mid-test and step 4 still reaches it; `SimulatorConfig.
 other_programming_mode_devices` lets one `SimulatedDevice` speak for
 synthetic extra Programming Mode responders it is not itself, so a
-two-responder count is testable without a second simulated device; and
-`SimulatorConfig.device_descriptor_read_gets_disconnect` sends a
-`T_Disconnect` instead of the usual descriptor answer, modelling MP
-§2.3's own body-text-vs-exception-text contradiction. A new `Destination`
-constant, `BROADCAST_DESTINATION` (`cemi.rs`, group address `0/0/0`),
-names the destination both the client and the simulator's new
-`handle_broadcast` use.
+two-responder count is testable without a second simulated device;
+`device_descriptor_read_gets_disconnect` sends a `T_Disconnect` instead of
+the usual descriptor answer; `device_descriptor_read_unanswered`
+acknowledges the read at the Transport Layer and then says nothing, which
+is the only shape in which a missing step-4 disconnect is observable; and
+`unrelated_traffic_during_broadcast` puts one foreign telegram and its
+`L_Data.con` into the counting window, so the counting loop's frame filter
+is held down by a test rather than by the absence of traffic. A
+`Destination` constant, `BROADCAST_DESTINATION` (`cemi.rs`, group address
+`0/0/0`), names the destination both the client and the simulator's
+`handle_broadcast` use; because both read the same constant, its value is
+pinned against the Standard in `cemi.rs`'s own
+`broadcast_destination_is_group_address_zero` — TL clause 2, Figure 3,
+p. 6 of 38, *"T_Data_Broadcast-PDU (destination_address = 0)"*.
 
-Six new tests in `individual_address_write.rs`: the ordinary write; the
+Ten tests in `individual_address_write.rs`: the ordinary write; the
 re-assignment case (address unchanged, no broadcast write sent); a
 different device's occupancy stopping the procedure with the witness
 address attached; zero and two Programming Mode responders both stopping
-at step 2; and a `T_Disconnect` at step 1 that does *not* stop the
-procedure by itself, reaching (and then failing at) step 4 instead, which
-is what proves steps 2 and 3 were not the ones that stopped it. Not
-tested: `RecountBeforeWrite` actually firing — `SimulatorConfig` is
-immutable for a device's lifetime, so a test cannot flip Programming Mode
-off between step 2's count and step 3's recount without a new,
-independent simulator capability; that is left for whichever task next
-needs a mid-run reconfigurable simulator, rather than built speculatively
-here. Recorded, along with the two `Occupancy` variants MP §2.3's text
-does not describe, as `docs/KNOWN_LIMITATIONS.md` §116.
+at step 2; a `T_Disconnect` at step 1 that does *not* stop the procedure
+by itself, reaching (and then failing at) step 4 instead; a refused
+`T_Connect` at step 1 read as a free address, with the fixture arranged so
+that reading it as "occupied" aborts rather than merely mislabels; an
+acknowledged-but-unanswered descriptor read read as a free address, which
+is also the fixture that counts step 1's and step 4's disconnects; an
+unacknowledged one read as occupied; and a Programming Mode witness on the
+project exclusion list refused at step 3 before a single frame goes out.
+Two more in `commissioning.rs` pin the counting window's wall-clock length
+and its frame filter. Not tested: `RecountBeforeWrite` actually firing —
+`SimulatorConfig` is immutable for a device's lifetime, so a test cannot
+flip Programming Mode off between step 2's count and step 3's recount
+without a new, independent simulator capability; that is left for whichever
+task next needs a mid-run reconfigurable simulator, rather than built
+speculatively here.
+
+Two documented divergences from MP §2.3, both in
+`docs/KNOWN_LIMITATIONS.md` §116: step 2's `repeat … end repeat` is not a
+loop here (a single broadcast, and a count returned to the operator, who
+is the only actor who can change it by pressing a button), and a Transport
+Layer release with nothing acknowledged is read as an `A_Disconnect-PDU`
+the Standard never says was received.
 
 `ProcedureKind::ALL`'s `IndividualAddressWrite` entry now has an execution
 path; C17 (gate an advertised-but-unimplemented procedure) is obsolete for

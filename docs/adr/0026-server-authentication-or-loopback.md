@@ -343,3 +343,42 @@ cannot tell two operators apart, because both hold the same password.
 no claim that this server is safe to expose to the internet. It is safe to
 expose to a network you have thought about, over a transport you have
 secured yourself.
+
+## Amendment, 2026-09-20 — the frontend half (T01b)
+
+The decision above is unchanged. This records how `apps/knx-web` meets it,
+because the server's 401 is only half a login.
+
+**The gate is a wrapper, not a route.** `AuthGate.tsx` asks
+`GET /api/auth/status` once on mount and branches three ways: not required —
+render the application and never mention sessions; required and already
+authenticated — same, plus a logout control; required and not authenticated —
+render `LoginScreen.tsx`. If the status request itself fails, the gate **fails
+open** and renders the application: a server that did not answer is not a
+server that refused, and conjuring a password prompt onto the desktop shell
+because a fetch failed would be a worse lie than letting the next real 401
+close the gate.
+
+**Mid-session 401 does not unmount the workbench.** `api.ts` publishes one
+event when any non-auth request comes back 401, through `session.ts` — a
+`Set` of callbacks, no React, so `api.ts` stays framework-free. The gate
+answers by covering the screen with the login panel while leaving the
+application mounted behind it, `inert` so the hidden workbench is unreachable
+by tab, pointer or screen reader. This is the only way to preserve unsaved
+work, because no endpoint hands a loaded project back to a fresh mount. The
+cover is opaque rather than translucent, so a deliberate logout is also
+private. What it cannot preserve is a *restarted* server's copy of the
+project, and the expiry notice says so in both languages rather than implying
+a completeness it does not have.
+
+**The password is never echoed.** It travels in a POST body, is cleared from
+state before the application renders, and appears in no URL, log or error
+message; a rejected attempt shows a fixed translated string, not the server's.
+Submit is disabled while a request is in flight — the server serialises login
+attempts behind a single permit and delays failures on purpose, and a client
+that lets a user queue guesses turns that delay into a queue of pending
+requests.
+
+**Not claimed.** This is a session gate on a single shared password, not a
+user model. The logout control is absent entirely when authentication is off,
+because a control that logs nobody out of nothing is worse than no control.

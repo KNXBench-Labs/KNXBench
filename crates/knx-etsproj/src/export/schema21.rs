@@ -29,39 +29,30 @@
 //! spliced back in verbatim from `opaque`'s `RetainedElement` entries, at
 //! the disambiguated per-device xpath `lib.rs`'s import loop gives them
 //! (`.../DeviceInstance[@Id='<id>']/<ElementName>`) — a fixed,
-//! non-disambiguated xpath (as `BusAccess` uses) would silently overwrite
-//! one device's blob with another's the moment a project has more than one
-//! device, which every real schema-≥21 sample does.
+//! non-disambiguated xpath would silently overwrite one device's blob with
+//! another's the moment a project has more than one device, which every
+//! real schema-≥21 sample does. `BusAccess` used to be keyed that way, per
+//! project rather than per line; it is now keyed by its own `Segment`'s
+//! line, for the same reason.
 //!
-//! **Known-but-unmapped attributes that are *not* reconstructed on export,
-//! and why:** `crate::known`'s tables list several attributes with no
-//! dedicated `SourceDevice`/`SourceLine` field (`DeviceInstance`'s
-//! `Comment`/`SerialNumber`/`IsActivityCalculated`/`LastUsedAPDULength`/
-//! `ReadMaxAPDULength`/`Puid`/`LoadedImage`/`CheckSums`/`DownloadCounter`
-//! (the last three, C14: ETS's differential-download state, `Project
-//! Schema23 v01.00.00.pdf` p. 44); `Segment`'s own `Id`/`Number`/`Puid`;
-//! `Puid` generally, on every element that carries it). `map.rs` (Task 6) folds
-//! all of these into one project-wide `Vec<RetainedAttribute>`, keyed only
-//! by their schema-shaped xpath (e.g. every device's `Comment` collapses to
-//! the single key `(".../DeviceInstance", "Comment")`) — the same
-//! granularity `schema11.rs`'s own module doc already documents and
-//! accepts for `Installation/@BCUKey`-style attributes. For an attribute
-//! that only ever occurs once per project (`ProjectInformation`'s
-//! `Comment`/`Guid`/`LastUsedPuid`/`ProjectType`; `Installation`'s
-//! `BCUKey`/`IPRoutingLatencyTolerance`, assuming one installation) that
-//! granularity loses nothing. For one that occurs once *per device* or
-//! *per line* — confirmed against `KV v2.5 - demo.knxproj`: all 4 devices
-//! carry a distinct `SerialNumber` and `Puid` — reconstructing it from that
-//! single collapsed key would splice one device's real hardware serial
-//! number onto every other device, a silent *corruption*, not a loss.
-//! Between writing nothing and writing something actively wrong, this
-//! writer always writes nothing for these; see `KNOWN_LIMITATIONS.md` for
-//! the tracked gap and the fix it needs (per-instance xpaths in Task 6's
-//! parser, out of this task's scope). `ComObjectInstanceRef/@ChannelId` is
-//! the one known-but-unmapped attribute this writer *does* reconstruct,
-//! because its retained xpath already embeds both the owning device's and
-//! the object's own id (`map_com_object_v21`'s own xpath, unchanged here),
-//! making it unambiguous even across many devices.
+//! **Known-but-unmapped attributes are reconstructed per element
+//! instance.** `crate::known`'s tables list attributes with no dedicated
+//! `SourceDevice`/`SourceLine` field (`DeviceInstance`'s `Comment`,
+//! `SerialNumber`, `LastUsedAPDULength`, `ReadMaxAPDULength`, `Puid`, and
+//! the differential-download state `LoadedImage`/`CheckSums`/
+//! `DownloadCounter` — C14, `Project Schema23 v01.00.00.pdf` p. 44;
+//! `Segment`'s own `Id`/`Number`/`Puid`; `Puid` generally). `map.rs` keys
+//! every one of them by the element's own ETS id (`crate::xpath`), so this
+//! writer puts each value back on the element it came from, and one
+//! device's real hardware serial number can no longer land on another's.
+//!
+//! Where a key still holds more than one distinct value — two `Segment`s
+//! under one `Line`, say, since `knx_core` has lines and not segments —
+//! the value is dropped and `ExportWarning::RetainedAttributeNotExported`
+//! names it. `KNOWN_LIMITATIONS.md` §34's
+//! ruling stands unchanged: between writing nothing and writing something
+//! actively wrong, this writer writes nothing. The difference is that the
+//! rule now applies to the rare case instead of to every attribute.
 //!
 //! Booleans: measured directly against `KV v2.5 - demo.knxproj`,
 //! `DeviceInstance`'s loaded-state flags spell `"true"`/`"false"`, not
@@ -102,11 +93,7 @@ pub fn write_installation_xml_v21(
     project: &Project,
     opaque: &[OpaqueEntry],
 ) -> Result<Vec<u8>, ExportError> {
-    write_installation_xml_v21_with(
-        project,
-        &retained_attrs(opaque),
-        &retained_elements(opaque),
-    )
+    write_installation_xml_v21_with(project, &retained_attrs(opaque), &retained_elements(opaque))
 }
 
 pub(crate) fn write_installation_xml_v21_with(
@@ -162,11 +149,7 @@ pub fn write_project_xml_v21(
     project: &Project,
     opaque: &[OpaqueEntry],
 ) -> Result<Vec<u8>, ExportError> {
-    write_project_xml_v21_with(
-        project,
-        &retained_attrs(opaque),
-        &retained_elements(opaque),
-    )
+    write_project_xml_v21_with(project, &retained_attrs(opaque), &retained_elements(opaque))
 }
 
 pub(crate) fn write_project_xml_v21_with(
@@ -426,14 +409,7 @@ fn write_area_v21(
 
     for &line_id in &area.lines {
         if let Some(line) = topology.line(line_id) {
-            write_line_v21(
-                writer,
-                project,
-                line,
-                retained,
-                elements,
-                short_ga,
-            )?;
+            write_line_v21(writer, project, line, retained, elements, short_ga)?;
         }
     }
 

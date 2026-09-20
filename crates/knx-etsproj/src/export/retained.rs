@@ -1,4 +1,4 @@
-//! Holds the attributes an import preserved but the domain model does not carry, hands each one back to the element it came from, and turns whatever could not be written into an export warning instead of a silence.
+//! The retained attributes and elements an export puts back, keyed per element instance.
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -286,15 +286,17 @@ impl RetainedElements {
         }
         classes
             .into_iter()
-            .map(|(element, instances)| ExportWarning::RetainedElementNotExported {
-                detail: format!(
-                    "`<{element}>` ({instances} element(s)) was preserved verbatim on \
+            .map(
+                |(element, instances)| ExportWarning::RetainedElementNotExported {
+                    detail: format!(
+                        "`<{element}>` ({instances} element(s)) was preserved verbatim on \
                      import but this writer has nowhere to put it back; the XML is \
                      still preserved byte-exact in the project's opaque store"
-                ),
-                element,
-                instances,
-            })
+                    ),
+                    element,
+                    instances,
+                },
+            )
             .collect()
     }
 }

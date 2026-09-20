@@ -19,7 +19,7 @@ in scope.
 | 4 | Manufacturer database | **Done** — see [IMPORT_EXPORT.md §10](IMPORT_EXPORT.md), [ADR-0011](adr/0011-product-database-storage.md), [ADR-0012](adr/0012-enrichment-into-absent-slots.md) |
 | 5 | UI / UX | **Done** — cycle 1 (shell, projection, Project Explorer), cycle 2 (`knx-store` entity persistence, [design spec](superpowers/specs/2026-09-03-knx-entity-persistence-design.md)), cycle 3 (`knx-desktop` save/load wiring), cycle 4 (device selection, properties inspector, undo/redo, [design spec](superpowers/specs/2026-09-04-selection-inspector-design.md)), cycle 5 (`Ctrl+K` search across devices, group addresses, building parts, [design spec](superpowers/specs/2026-09-04-search-design.md)), cycle 6 (`Ctrl+Shift+P` command palette, [design spec](superpowers/specs/2026-09-04-command-palette-design.md)), cycle 7 (System/Light/Dark theme toggle, [design spec](superpowers/specs/2026-09-04-dark-light-mode-design.md)), cycle 8 (project status dashboard, [design spec](superpowers/specs/2026-09-04-dashboard-design.md)), cycle 9 (group address create/delete: a "Group Addresses" tree branch with inline create, a Delete button on the group-address inspector, duplicate-address and still-linked-on-delete validation in `knx-core`) — CLAUDE.md's full UI/UX deliverable list complete as of cycle 9 — and cycle 10 (a toast notification stack replacing the old persistent error banner, humor-wrapped error text, and a one-shot holiday/late-night startup toast, [design spec](superpowers/specs/2026-09-05-toast-easter-eggs-design.md)) and cycle 11 (user-customizable theme tokens — accent/background/surface/text — plus a three-level motion setting, layered on top of the cycle 7 theme toggle, via a new `ThemePanel.tsx`) and cycle 12 (device and communication-object descriptions are now editable, not just displayed: `Command::SetDeviceDescription` and `Command::SetComObjectDescription`/`RestoreComObjectDescription` clone the `SetIndividualAddress`/`SetComObjectDpt` command-layer pattern exactly, wired through `knx-store::command_sync`, `knx-server`'s `/api/device-description` and `/api/com-object-description` routes, and two new `Inspector.tsx` fields; `ComObjectNode` also gains `description`/`description_layer` so a communication object's description — modelled and persisted since Session 5 cycle 2 but never shown — is finally visible at all. An ETS feature audit done alongside this found no other silently-missing field: `GroupAddress`/`GroupRange`/`BuildingPart` genuinely carry no `Description` attribute in the one schema-11 project this project's evidence comes from — see [KNOWN_LIMITATIONS.md #1](KNOWN_LIMITATIONS.md#1-single-sample-bias), not a bug here) and cycle 13 (a named, selectable theme replacing cycle 7's System/Light/Dark cycle and cycle 11's four-token palette override outright — a complete visual package, not a per-user tweak layered on a light/dark base — with "Bitcoin DeFi" as the first theme and today's default, [design spec](superpowers/specs/2026-09-08-bitcoin-defi-theme-design.md)): `theme.ts` rewritten from a cycling function into a `ThemeDef`/`THEMES` registry (`loadThemeId`/`saveThemeId`/`useThemeId`); `palette.ts`, `palette.test.ts`, and `ThemePanel.tsx` deleted outright; `ThemeToggle.tsx` replaced by `ThemeSwitcher.tsx`, a `<select>` built against the registry (itself deleted 2026-09-12 by T27, its `<select>` moved into a new `SettingsPanel.tsx` — see the T27 entry below); `index.html` now always sets `data-theme` (Bitcoin DeFi is dark-only by design, no more "system"/unthemed state) and silently falls back cycle 7's old stored values to the new default; self-hosted `@fontsource` fonts and a Google Fonts `<link>` both load Space Grotesk/Inter/JetBrains Mono; and a full `styles.css` restyle — a 24-custom-property design-token layer plus component recipes app-wide (pill gradient/glow buttons, glass-morphism overlays, mono/gold technical text, gradient-text Dashboard heading, card hover-lift, fading grid-pattern background) done, see [ROADMAP.md](ROADMAP.md) |
 | 6 | KNXnet/IP | Cycles 1-5 shipped (tunnelling, sending, discovery, routing, connection management/diagnostics). KNX IP Secure scoped, then shelved indefinitely (2026-09-06) — see [ROADMAP.md](ROADMAP.md), [KNOWN_LIMITATIONS.md §26](KNOWN_LIMITATIONS.md) |
-| 7 | Integration & hardening | In progress (cycles 1-2) — see below |
+| 7 | Integration & hardening | Fixtures/performance/packaging/licence done; commissioning (T30) simulator-verified, real-device write still blocked — see below |
 
 **The repository is a buildable Cargo workspace with twelve crates** (eleven
 library crates plus the dev-only `knx-testsupport`).
@@ -795,8 +795,20 @@ attempted this cycle (see [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md)).
 `knx-store`'s `.knxdb` migration chain (v1→v4) was verified, not touched —
 already complete. The `AGPL-3.0-or-later` licence decision was finalized and
 the canonical `LICENSE` file added on 2026-09-16. The deterministic large-project
-performance benchmark and x86_64 AppImage were also delivered, so Session 7 is
-complete as of 2026-09-17.
+performance benchmark and x86_64 AppImage were also delivered by 2026-09-17 —
+that closes the fixture/performance/packaging/licence quarter of Session 7,
+but not the whole of it. **Commissioning (T30) is Session 7's remaining open
+deliverable.** Phase 2 (protocol implementation against a device simulator)
+went from "generic procedures documented, nothing implemented" to
+simulator-verified individual-address write, complete/partial/one-part
+download, unload and recovery over eighteen tasks merged 2026-09-19/20 (see
+the C1-C19 entries below and
+[KNOWN_LIMITATIONS.md §92](KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device)).
+Phase 3 (real hardware) has run read-only twice (2026-09-14, 2026-09-18); no
+write has reached a real device. Session 7 stays open on that one point —
+see [ROADMAP.md](ROADMAP.md)'s Session 7 section and
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) row E1, both updated 2026-09-20 to
+say the same thing this paragraph does.
 
 Session 6's KNX IP Secure was scoped after cycle 4 (routing), then shelved
 indefinitely (2026-09-06, not just deferred to "a later cycle") — plain
@@ -7990,3 +8002,126 @@ Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace
 check-headers` and `cargo deny check` all exit 0. `check-headers`: 160
 files with a well-formed header (up from 159), 167 without (ceiling 168)
 — one new source file, header included from the start.
+
+## 2026-09-20 — T24: the four documents are read to agree with each other, checked, and one of them is caught lying by omission
+
+Documentation reconciliation. `IMPLEMENTATION_STATUS.md`, `ROADMAP.md`,
+`GAP_ANALYSIS_ETS.md` and `KNOWN_LIMITATIONS.md` had drifted since C10-C19
+merged: all four still described commissioning as either nonexistent or
+vaguely "in progress," while nine of the ten planned C-tasks (C17 ruled
+obsolete before implementation, C14 landing in `knx-etsproj`/`knx-server`
+rather than the `commissioning` module paths the other eight touch) had
+already shipped a simulator-verified individual-address write, three
+download shapes, an unload path and post-failure recovery. Every count in
+this entry was re-measured against the working tree, not copied from
+another document.
+
+`GAP_ANALYSIS_ETS.md` row E1 ("No commissioning at all") is rewritten to
+"Simulator-verified, not hardware-verified": what runs end to end, where
+it lives, and the fact that no real device has ever received a write from
+this project. `ROADMAP.md`'s Session 7 section stops claiming completion
+outright and instead splits it: fixture, performance, packaging and
+licence deliverables are done; commissioning (T30) is simulator-verified
+only, phase 3 (real-hardware write) still blocked. `IMPLEMENTATION_STATUS.md`'s
+own Session 7 table row and "Next session" section are brought into line
+with the same split. None of the three documents now claims more than the
+code and the two read-only hardware passes (2026-09-14, 2026-09-18)
+actually support.
+
+`KNOWN_LIMITATIONS.md` gains two entries: §117 (`read_on_init_flag` parsed
+in `knx-productdb` and discarded before reaching `knx-core`'s five-flag
+communication-object model — `grep -rn read_on_init_flag crates/` finds it
+nowhere past the parse boundary) and §118 (a succeeded project load
+announces nothing to a screen reader — `LoadProgressBanner.tsx`'s
+`aria-live="polite"` banner and its `aria-live="off"` sub-elements only
+fire on the failure path per ADR-0023; the success path unmounts in
+silence). §104 (Download Counter poll latency) gets a follow-up paragraph
+on `SessionError::Lagged`: excluded from `reestablishment_may_be_retried`'s
+four retryable cases by design, but no test in `commissioning.rs`
+constructs one, so the exclusion is reasoned about, not exercised. §7's
+stale cross-reference (a heading that never existed) is corrected to
+point at §34, and its own text is brought up to date with the same E1
+rewrite. Heading numbering re-checked after the additions:
+`grep -c "^## [0-9]" docs/KNOWN_LIMITATIONS.md` → 117, headings run 1-118
+with only the deliberate §94 gap, zero duplicates (the duplicate `## 115.`
+from an earlier session stays fixed).
+
+`LIMITATION_TRIAGE.md`'s "102 Einträge" header was stale by fifteen. Real
+count re-measured with the same `grep -c` command above; every newly
+classifiable entry since the last triage pass (§104, §106-§118, less §105)
+given a severity grounded in its own KNOWN_LIMITATIONS text rather than a
+guess — §104 lands K3, not the K2 an earlier draft of this entry guessed,
+because its own Impact line says "latency and bus traffic, not
+correctness." §105 (Ctrl1 priority) is left off the severity table on
+purpose: its own text says "unknown on real hardware and untested," which
+is not an obvious rating to assign, and the brief for this task said to
+list such entries rather than invent one. K1/K2/K3/K4 bucket counts
+(7/30/51/11 = 99) plus 17 "Erledigt" plus the one deliberately untriaged
+entry now sum to exactly 117.
+
+`ideas.md`'s "Schema 21/23 vollständiger Import-Support" entry overclaimed:
+schema 23's module handling is inferred from the schema, not independently
+evidenced against a sample that exercises it, and schema 23 carries no
+roundtrip claim at all, unlike schema 21 (roundtrip-verified against
+`KV v2.5 - demo.knxproj`). Corrected wording distinguishes the two schemas
+and cross-references `KNOWN_LIMITATIONS.md` §12 (schema-23 manufacturer-data
+ingestion, tracked separately). `ideas.md` is gitignored and lives only in
+the main checkout, which this task does not touch; the corrected text is
+recorded here and in this task's own report instead of committed.
+
+Two findings from C12 were in scope to fix, not just document. F-C12-1:
+`commissioning::procedure::partial_download()` carried its own
+hand-transcribed copy of the fourteen-step AP2 procedure, reachable only
+from that module's own tests — `knx-net`'s `Downloader::partial_download`
+has consulted `PartialDownloadVariant` since C12 and never called this
+function. Nothing kept the two copies in agreement. Fixed by delegation
+rather than deletion: `partial_download()` now returns
+`PartialDownloadVariant::ApplicationProgram2.procedure()`, so
+`ProcedureKind::ALL` keeps exactly one step list per kind, and it is now
+the same list `knx-net` runs. The delegation immediately failed two of
+this module's own tests, and for a reason worth keeping: all five
+`PartialDownloadVariant`s classified their "modify access keys" step as
+`StepEffect::Write`, not the `StepEffect::Guard` C10 assigned this same
+step in the now-deleted duplicate — the step writes nothing, since
+`A_Key_Write` has no encoder and a plan that declares access keys is
+refused before the step runs. `partial_download_variant.rs` is corrected
+to `Guard` for all five variants (this bug was live in `knx-net`'s actual
+execution path, not just in the deleted duplicate — the duplicate had
+been the only place the correct classification survived). The second
+failing test checked wording specific to the deleted duplicate
+("continue at Nr. 07", a `GAP-T30-04` tracking tag); its substance — the
+escalation reloads segments in ascending order, and nothing claims the
+unspecified differential-download algorithm — is intact in
+`PartialDownloadVariant`'s own wording and its own
+`nothing_claims_the_unspecified_differential_download_algorithm` test, so
+the procedure.rs test was reworded to check that wording instead of
+demanding the retired phrasing back. F-C12-2: bare `spec §N` citations
+(this
+project's own house style is `design spec §N` for citations to
+`docs/superpowers/specs/2026-09-13-commissioning-download-design.md`, kept
+distinct from KNX Standard citations, which use MP/CP/RES/TL/DPT-AS
+labels) were fixed in the nine `commissioning`-module source files across
+`knx-core` and `knx-net` — `error_code.rs`, `load_control.rs`,
+`load_state.rs`, `memory.rs`, `partial_download_variant.rs`,
+`properties.rs`, `download.rs`, `individual_address_write.rs`,
+`simulator.rs`. Repo-wide (all `.rs`/`.md` files, both crates and docs),
+correctly-prefixed lookbehind counts: before the fix, 134 correct against
+215 bare; after, 194 correct against 155 bare — a drop of exactly 60,
+matching the fix's scope. The remaining 155 bare citations outside the
+nine touched files are an explicit repo-wide decision for later, not
+addressed here.
+
+Also recorded, not fixed: `Project`'s six fields are all `pub` (already
+covered by §107, no new entry needed); `check-headers`'s "generated files
+skipped" counter is a function of `target/`'s build state at the moment
+the gate runs, not of the diff under review, so two runs of this task's
+own gates in a row can legitimately report different totals without
+either being wrong.
+
+Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace
+--all-targets -j 2 -- -D warnings`, `cargo test --workspace --no-fail-fast
+-j 2`, `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
+check-headers` and `cargo deny check` all exit 0 (see this task's own
+report for the full table). Licence re-verified unchanged:
+`Cargo.toml`'s `license = "AGPL-3.0-or-later"`, `LICENSE` present (GNU
+AGPL v3 text, 661 lines), `cargo deny check`'s licence rule set passes.

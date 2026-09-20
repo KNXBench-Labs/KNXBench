@@ -801,8 +801,10 @@ but not the whole of it. **Commissioning (T30) is Session 7's remaining open
 deliverable.** Phase 2 (protocol implementation against a device simulator)
 went from "generic procedures documented, nothing implemented" to
 simulator-verified individual-address write, complete/partial/one-part
-download, unload and recovery over eighteen tasks merged 2026-09-19/20 (see
-the C1-C19 entries below and
+download, unload and recovery over eighteen tasks merged 2026-09-19/20 —
+seventeen (C1-C13, C15, C16, C18, C19) implementing the six procedures
+directly, C14 landing differential-download data preservation in
+`knx-etsproj`/`knx-server` instead (see the C1-C19 entries below and
 [KNOWN_LIMITATIONS.md §92](KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device)).
 Phase 3 (real hardware) has run read-only twice (2026-09-14, 2026-09-18); no
 write has reached a real device. Session 7 stays open on that one point —
@@ -8084,7 +8086,7 @@ this module's own tests, and for a reason worth keeping: all five
 `StepEffect::Write`, not the `StepEffect::Guard` C10 assigned this same
 step in the now-deleted duplicate — the step writes nothing, since
 `A_Key_Write` has no encoder and a plan that declares access keys is
-refused before the step runs. `partial_download_variant.rs` is corrected
+refused at the step. `partial_download_variant.rs` is corrected
 to `Guard` for all five variants (this bug was live in `knx-net`'s actual
 execution path, not just in the deleted duplicate — the duplicate had
 been the only place the correct classification survived). The second

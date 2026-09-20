@@ -86,6 +86,11 @@ import 185.351 ms, open 230.286 ms, projection 23.018 ms, and 41 searches in
 19.510 ms. These are single-run observations on the development machine, not
 portable performance guarantees.
 
+**Correction, 2026-09-20.** The above was believed true on 2026-09-17. The
+T24 documentation reconciliation found commissioning (T30) simulator-verified
+only, not complete, so Session 7 as a whole is not complete either — see
+[ROADMAP.md](docs/ROADMAP.md)'s Session 7 verdict for the current status.
+
 Linux packaging was delivered on 2026-09-17 as the first x86_64 AppImage,
 following [ADR 0021](docs/adr/0021-appimage-is-the-first-linux-package.md).
 The local Arch Linux/XWayland artifact was built, inspected, and launched;

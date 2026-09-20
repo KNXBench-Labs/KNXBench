@@ -16,7 +16,11 @@ use crate::string_table::{Language, StringTable};
 /// The schema version this build of the domain model writes. Mirrored into
 /// SQLite's `user_version` pragma by `knx-store`; there is no
 /// version-skipping migration path and no downgrade (ADR-0003).
-pub const CURRENT_SCHEMA_VERSION: u32 = 7;
+///
+/// 8 belongs to the schema->=21 export path (a concurrent branch at the time
+/// of writing); 9 is `com_object_program_default` (ADR-0012 gap 2,
+/// ADR-0027). Must always equal `knx_store::migration::CURRENT_SCHEMA_VERSION`.
+pub const CURRENT_SCHEMA_VERSION: u32 = 9;
 
 /// Synthetic, project-unique id counters. Ids start at 1; 0 is never
 /// allocated, which leaves it free for tests to use as an obviously-fake id.

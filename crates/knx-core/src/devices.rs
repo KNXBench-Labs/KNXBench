@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::device::{ComObjectInstance, DeviceInstance};
+use crate::device::{ComObjectInstance, DeviceInstance, ProgramDefaults};
 use crate::ids::{ComObjectInstanceId, DeviceId, ModuleInstanceId};
 use crate::module::ModuleInstance;
 
@@ -13,6 +13,13 @@ pub struct Devices {
     by_id: BTreeMap<DeviceId, DeviceInstance>,
     com_objects: BTreeMap<ComObjectInstanceId, ComObjectInstance>,
     module_instances: BTreeMap<ModuleInstanceId, ModuleInstance>,
+    /// Populated only by `knx_productdb::enrich`, and only for a
+    /// communication object carrying at least one `Override::Empty` slot
+    /// with a resolvable program value behind it (ADR-0012 gap 2,
+    /// ADR-0027). Absence means "nothing to show", not "not enriched yet" —
+    /// callers distinguish those two, if they need to, via
+    /// `EnrichmentReport`.
+    program_defaults: BTreeMap<ComObjectInstanceId, ProgramDefaults>,
 }
 
 impl Devices {
@@ -45,6 +52,7 @@ impl Devices {
     }
 
     pub fn remove_com_object(&mut self, id: ComObjectInstanceId) -> Option<ComObjectInstance> {
+        self.program_defaults.remove(&id);
         self.com_objects.remove(&id)
     }
 
@@ -63,6 +71,25 @@ impl Devices {
     /// exists.
     pub fn com_objects(&self) -> impl Iterator<Item = &ComObjectInstance> {
         self.com_objects.values()
+    }
+
+    /// The program-layer defaults lifted for a communication object with
+    /// at least one `Override::Empty` slot (ADR-0012 gap 2, ADR-0027).
+    /// `None` for every com object `knx_productdb::enrich` had nothing to
+    /// add for — which is most of them.
+    pub fn program_defaults(&self, id: ComObjectInstanceId) -> Option<&ProgramDefaults> {
+        self.program_defaults.get(&id)
+    }
+
+    /// Replaces the program defaults recorded for `id`. An empty
+    /// `ProgramDefaults` (see `ProgramDefaults::is_empty`) removes the entry
+    /// instead of keeping a pointless placeholder around.
+    pub fn set_program_defaults(&mut self, id: ComObjectInstanceId, defaults: ProgramDefaults) {
+        if defaults.is_empty() {
+            self.program_defaults.remove(&id);
+        } else {
+            self.program_defaults.insert(id, defaults);
+        }
     }
 
     pub fn insert_module_instance(&mut self, m: ModuleInstance) {
@@ -131,6 +158,39 @@ mod tests {
         });
         let ids: Vec<_> = d.com_objects().map(|c| c.id).collect();
         assert_eq!(ids, vec![ComObjectInstanceId(7)]);
+    }
+
+    #[test]
+    fn program_defaults_is_absent_until_set_and_cleared_by_removal() {
+        use crate::device::ProgramDefaults;
+        use crate::dpt::DptRef;
+        use crate::ids::ComObjectInstanceId;
+        use crate::provenance::{Layer, Resolved};
+
+        let mut d = Devices::new();
+        let id = ComObjectInstanceId(1);
+        assert!(d.program_defaults(id).is_none());
+
+        d.set_program_defaults(
+            id,
+            ProgramDefaults {
+                text: None,
+                description: None,
+                dpt: Some(Resolved {
+                    value: DptRef {
+                        main: 1,
+                        sub: Some(1),
+                    },
+                    layer: Layer::Program,
+                }),
+            },
+        );
+        assert!(d.program_defaults(id).is_some());
+
+        // An empty ProgramDefaults clears rather than lingering as a
+        // pointless placeholder.
+        d.set_program_defaults(id, ProgramDefaults::default());
+        assert!(d.program_defaults(id).is_none());
     }
 
     #[test]

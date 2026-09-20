@@ -4,7 +4,7 @@
 //! "application program 2" variant, CP §3.5.3, pp. 44-47 — as a citable [`Procedure`] value
 //! for a report to show whole. CP §3.5.3 itself gives five, one per part that can be the
 //! target of a partial download, and each numbers its own steps from 01 rather than sharing
-//! the first one's numbering. This module transcribes all five, per spec §11.2's "a procedure
+//! the first one's numbering. This module transcribes all five, per design spec §11.2's "a procedure
 //! model, not a script," so that a report can be read against whichever of the five clauses
 //! actually applies. `[C12]` `knx-net`'s `Downloader::partial_download` is the sequencer that
 //! consults this module: it looks up the target part's variant here and takes every outer
@@ -252,8 +252,8 @@ fn application_program_2() -> Vec<ProcedureStep> {
         step(
             13,
             "modify access keys",
-            "set access keys as required; A_Key_Write is out of scope for phase 2 (spec §10.7)",
-            StepEffect::Write,
+            "set access keys as required; A_Key_Write is out of scope for phase 2 (design spec §10.7)",
+            StepEffect::Guard,
         ),
         step(
             14,
@@ -318,8 +318,8 @@ fn application_program_1() -> Vec<ProcedureStep> {
         step(
             12,
             "modify access keys",
-            "set access keys as required; A_Key_Write is out of scope for phase 2 (spec §10.7)",
-            StepEffect::Write,
+            "set access keys as required; A_Key_Write is out of scope for phase 2 (design spec §10.7)",
+            StepEffect::Guard,
         ),
         step(
             13,
@@ -379,8 +379,8 @@ fn group_object_table() -> Vec<ProcedureStep> {
         step(
             11,
             "modify access keys",
-            "set access keys as required; A_Key_Write is out of scope for phase 2 (spec §10.7)",
-            StepEffect::Write,
+            "set access keys as required; A_Key_Write is out of scope for phase 2 (design spec §10.7)",
+            StepEffect::Guard,
         ),
         step(
             12,
@@ -431,8 +431,8 @@ fn group_address_table() -> Vec<ProcedureStep> {
         step(
             10,
             "modify access keys",
-            "set access keys as required; A_Key_Write is out of scope for phase 2 (spec §10.7)",
-            StepEffect::Write,
+            "set access keys as required; A_Key_Write is out of scope for phase 2 (design spec §10.7)",
+            StepEffect::Guard,
         ),
         step(
             11,
@@ -471,8 +471,8 @@ fn association_table() -> Vec<ProcedureStep> {
         step(
             7,
             "modify access keys",
-            "set access keys as required; A_Key_Write is out of scope for phase 2 (spec §10.7)",
-            StepEffect::Write,
+            "set access keys as required; A_Key_Write is out of scope for phase 2 (design spec §10.7)",
+            StepEffect::Guard,
         ),
         step(
             8,
@@ -489,7 +489,7 @@ mod tests {
     use super::*;
 
     /// Every variant numbers its steps from one without gaps, same as every other cited
-    /// procedure in this crate (spec §11.2).
+    /// procedure in this crate (design spec §11.2).
     #[test]
     fn every_variant_numbers_its_steps_from_one_without_gaps() {
         for variant in PartialDownloadVariant::ALL {
@@ -705,7 +705,7 @@ mod tests {
     }
 
     /// Nothing here claims the unspecified differential-download algorithm CP §3.5.3's own
-    /// text names (spec §7.4, §12) — the same guard `procedure.rs` keeps for the one variant
+    /// text names (design spec §7.4, §12) — the same guard `procedure.rs` keeps for the one variant
     /// it already models.
     #[test]
     fn nothing_claims_the_unspecified_differential_download_algorithm() {

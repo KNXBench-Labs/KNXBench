@@ -304,7 +304,7 @@ pub async fn individual_address_write<T: ManagementTransport>(
     // not the address anything has checked so far: `programming_authorisation`
     // names `new_address`, the address being handed *out*, and the occupant
     // of `new_address` is a third party again. The witness's current address
-    // reaches the exclusion guard here and nowhere else — spec §2.1 puts the
+    // reaches the exclusion guard here and nowhere else — design spec §2.1 puts the
     // guard at the lowest layer that knows what an individual address is,
     // and step 2's witness is the first moment this procedure knows one.
     let witness_target = ContactableAddress::new(witness.current_address())

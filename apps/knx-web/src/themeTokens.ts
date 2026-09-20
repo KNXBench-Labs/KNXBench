@@ -125,7 +125,39 @@ export function parseRules(css: string): CssRule[] {
     resetBuffer();
   };
 
+  // `quote` tracks whether the scan is inside a `"..."` or `'...'` string;
+  // `escapeNext` tracks a backslash inside one. Both are CSS string syntax,
+  // not block syntax: `.a { content: "x}y"; }` is one declaration whose
+  // value contains a brace, and a scanner that does not know it is inside a
+  // string reads that brace as the end of `.a`, flushes whatever the buffer
+  // holds as a phantom declaration, and reports it under the wrong rule
+  // entirely. `url("a}b.png")` breaks the same way. A newline still counts
+  // towards `line` inside a string — CSS strings may not usually contain a
+  // literal newline, but an escaped one is legal, and losing the count here
+  // would misreport every line after it.
+  let quote: string | null = null;
+  let escapeNext = false;
+
   for (const ch of source) {
+    if (quote) {
+      startBuffer(ch);
+      buffer += ch;
+      if (ch === "\n") line++;
+      if (escapeNext) {
+        escapeNext = false;
+      } else if (ch === "\\") {
+        escapeNext = true;
+      } else if (ch === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      startBuffer(ch);
+      buffer += ch;
+      continue;
+    }
     if (ch === "{") {
       const rule: CssRule = {
         selector: buffer.trim().replace(/\s+/g, " "),
@@ -152,6 +184,15 @@ export function parseRules(css: string): CssRule[] {
     buffer += ch;
     if (ch === "\n") line++;
   }
+
+  // A block that is still open when the source ends had no closing `}` —
+  // `.eof { color: #ff00aa` with the file ending right there — and a
+  // browser closes it at EOF regardless, so that declaration really does
+  // paint. Without this the last declaration of an unclosed final block was
+  // sitting in `buffer`, never flushed, and invisible to every guard that
+  // reads `rules`. Same family as the `}`-flush round 1 added, one position
+  // later: EOF is a block boundary too.
+  flushDeclaration();
 
   return rules;
 }
@@ -433,9 +474,21 @@ function withoutCustomPropertyNames(value: string): string {
   return value.replace(/--[\w-]+/g, " ");
 }
 
+/**
+ * Strips quoted string literals: `content: "red}"` paints nothing — the
+ * string is text, not a colour, in exactly the way `url("a}b.png")` is a
+ * filename and not one. Now that `parseRules` keeps a quoted value whole
+ * instead of truncating it at the first `}`, the word scan below would
+ * otherwise read a real named colour out of arbitrary displayed text, or a
+ * quoted font name, and report a literal nobody painted with.
+ */
+function withoutQuotedStrings(value: string): string {
+  return value.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, " ");
+}
+
 /** The literal colour in `value`, or `null`. */
 function findColourLiteral(value: string): string | null {
-  const text = withoutCustomPropertyNames(withoutUrls(value));
+  const text = withoutCustomPropertyNames(withoutQuotedStrings(withoutUrls(value)));
   const hex = HEX_COLOUR.exec(text);
   if (hex) return hex[0];
   const fn = COLOUR_FUNCTION.exec(text);

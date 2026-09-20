@@ -20,16 +20,28 @@
 //! produced it — `KNOWN_LIMITATIONS.md` §108: MP §2.3's "to 2." exception
 //! stops the procedure only when `IA_new` is held by a device *other than*
 //! the one step 2 finds in Programming Mode, and that comparison applies
-//! uniformly whether occupancy was learned from a
-//! `DeviceDescriptorResponse`, a `T_Disconnect`, or a rejected `T_Connect` —
-//! none of which carry the occupant's identity by themselves. Only the
-//! Programming Mode witness's own reported address answers "whose is it".
+//! whether occupancy was learned from an `A_DeviceDescriptor_Response-PDU`
+//! or from a `T_Disconnect` in its place — neither of which carries the
+//! occupant's identity by itself. Only the Programming Mode witness's own
+//! reported address answers "whose is it".
+//!
+//! **Step 2's `repeat` is not implemented as a loop.** MP §2.3, p. 14 reads
+//! *"2. wait until device is in Programming Mode: repeat until one
+//! A_IndividualAddress_Response-PDU is received … end repeat"*, and p. 13
+//! says the same in prose: *"The procedure shall wait until exactly one
+//! device is in Programming Mode."* This function broadcasts once and, on
+//! nobody or on several, returns [`IndividualAddressWriteError::Count`] to
+//! its caller instead of re-broadcasting. What the Standard's loop waits
+//! for is a human walking to a device and pressing a button, which is not
+//! a wait a library may impose on the thread that called it; this run also
+//! forbids procedure-level retry loops outright. Written up as
+//! `KNOWN_LIMITATIONS.md` §116.
 
 use knx_core::commissioning::authorisation::AuthorisationPlan;
 use knx_core::commissioning::mutation::WriteAuthorisation;
 use knx_core::commissioning::procedure::ProcedureKind;
 use knx_core::commissioning::programming_mode::ProgrammingModeCountError;
-use knx_core::IndividualAddress;
+use knx_core::{ContactableAddress, IndividualAddress};
 
 use super::download::StepRecord;
 use super::{ManagementSession, SessionError, SessionTiming};
@@ -37,31 +49,46 @@ use crate::management::ManagementTransport;
 
 /// How step 1 found `IA_new` occupied, if it did.
 ///
-/// Three of the four variants stop the procedure under exactly the same
-/// condition — none of the three occupied signals identifies the occupant,
-/// so all three are resolved the same way, by comparing against step 2's
+/// Every verdict here is MP §2.3, p. 14's own; none is this module's
+/// invention. The two occupied variants stop the procedure under exactly
+/// the same condition — neither occupied signal identifies the occupant, so
+/// both are resolved the same way, by comparing against step 2's
 /// Programming Mode witness (`KNOWN_LIMITATIONS.md` §108). The distinction
-/// is kept here only so a report can tell an operator which one actually
-/// happened on the wire.
+/// is kept only so a report can tell an operator which one happened on the
+/// wire.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Occupancy {
-    /// Nothing answered `T_Connect` at all: no device is at `IA_new`.
+    /// Nobody is at `IA_new`.
+    ///
+    /// Two signals, one verdict, both spelled out on p. 14. A negative
+    /// confirmation for `T_Connect`: *"if negative A_Connect.Lcon ⇒ IA_new
+    /// is not occupied; end procedure."* — the ordinary case on real
+    /// hardware, because a free address produces no Layer-2 acknowledge.
+    /// And an open connection on which the Device Descriptor read simply
+    /// times out: *"If no A_DeviceDescriptor_Response-PDU is received
+    /// after time-out ⇒ IA_new is not occupied"*.
     NotOccupied,
-    /// A device answered the Device Descriptor read.
+    /// A device answered the Device Descriptor read. p. 14: *"If the
+    /// Management Client receives an A_DeviceDescriptor_Response-PDU it
+    /// shall conclude that the Individual Address IA_new is occupied."*
     OccupiedWithResponse,
-    /// The connection opened, but no Device Descriptor answer ever came
-    /// back — either a `T_Disconnect` arrived instead (MP §2.3, p. 14 body
-    /// text vs. p. 15 "to 1." — this project follows the exception text;
-    /// see `KNOWN_LIMITATIONS.md` §108), or the descriptor read simply
-    /// timed out, a case MP §2.3's text does not describe at all. Both are
-    /// folded together here because both prove exactly the same thing —
-    /// something answered `T_Connect` — and neither says anything more.
-    OccupiedWithoutDescriptor,
-    /// `T_Connect` itself got a negative confirmation, so no connection
-    /// ever opened. Not in MP §2.3's text either, but a rejection still
-    /// proves a device answered at the Data Link Layer, so it is treated as
-    /// occupied rather than silently folded into "nobody's there".
-    OccupiedWithRejectedConnect,
+    /// The connection did not survive the Device Descriptor read: a
+    /// `T_Disconnect` arrived in its place, or the Transport Layer
+    /// released the connection because nothing acknowledged it.
+    ///
+    /// p. 14: *"if A_Disconnect-PDU is received then IA_new shall be
+    /// regarded as occupied; end procedure."* p. 15, "to 1.", says why:
+    /// *"a device with this Individual Address exists but it may either
+    /// already have another Transport Layer connection open and not accept
+    /// any further Transport Layer connections, or does not support
+    /// connection oriented communication mode."* — and, in the same
+    /// breath, that this is not a reason to stop: *"The Management Client
+    /// shall continue with the Management Procedure in every case."*
+    ///
+    /// The Transport-Layer-release half is this module's reading, not a
+    /// quotation: the Standard names only a *received* `A_Disconnect-PDU`.
+    /// See `KNOWN_LIMITATIONS.md` §116.
+    OccupiedAfterDisconnect,
 }
 
 impl Occupancy {
@@ -104,7 +131,24 @@ fn record(report: &mut IndividualAddressWriteReport, number: u8, title: &'static
 #[derive(Debug)]
 pub enum IndividualAddressWriteError {
     /// The session refused, or the device did.
-    Session(SessionError),
+    Session {
+        /// Which of MP §2.3's four numbered steps was running. The clause
+        /// gives its steps different meanings when they fail — "to 4.",
+        /// p. 15, reads *"If no A_DeviceDescriptor_Response-PDU is
+        /// received, than the programming of the Individual Address may
+        /// have failed, or the system (Router) is not configured
+        /// correctly"*, which is advice about a step 4 failure and
+        /// nonsense about a step 1 one — so a caller that cannot tell them
+        /// apart cannot act on the clause.
+        step: u8,
+        /// Everything the procedure had established before it stopped,
+        /// including step 1's occupancy finding, which
+        /// `KNOWN_LIMITATIONS.md` §108 undertakes to surface to the
+        /// operator whether or not the procedure went on to succeed.
+        report: IndividualAddressWriteReport,
+        /// What went wrong.
+        source: SessionError,
+    },
     /// Step 1 found `IA_new` occupied by a device other than the one step 2
     /// found in Programming Mode (MP §2.3 "to 2.", p. 15).
     OccupiedByAnotherDevice {
@@ -125,16 +169,31 @@ pub enum IndividualAddressWriteError {
 
 impl std::error::Error for IndividualAddressWriteError {}
 
-impl From<SessionError> for IndividualAddressWriteError {
-    fn from(err: SessionError) -> Self {
-        IndividualAddressWriteError::Session(err)
+/// Wraps a [`SessionError`] with the step it came from and the report as it
+/// stood.
+///
+/// Deliberately not a `From<SessionError>` impl: the step number is not
+/// derivable from the error, so an implicit `?` conversion would have to
+/// invent one. Every call site names its own step, which is the only place
+/// that knows it.
+fn at_step(
+    step: u8,
+    report: &IndividualAddressWriteReport,
+    source: SessionError,
+) -> IndividualAddressWriteError {
+    IndividualAddressWriteError::Session {
+        step,
+        report: report.clone(),
+        source,
     }
 }
 
 impl std::fmt::Display for IndividualAddressWriteError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            IndividualAddressWriteError::Session(err) => write!(f, "{err}"),
+            IndividualAddressWriteError::Session { step, source, .. } => {
+                write!(f, "MP §2.3 step {step}: {source}")
+            }
             IndividualAddressWriteError::OccupiedByAnotherDevice {
                 witness_address, ..
             } => write!(
@@ -178,23 +237,35 @@ pub async fn individual_address_write<T: ManagementTransport>(
     // ---- Step 1: is IA_new occupied? ----
     record(&mut report, 1, "check whether the new address is occupied");
     let mut probe =
-        ManagementSession::read_only(transport, new_address, AuthorisationPlan::Skip, timing)?;
+        ManagementSession::read_only(transport, new_address, AuthorisationPlan::Skip, timing)
+            .map_err(|err| at_step(1, &report, err))?;
     let occupancy = match probe.connect().await {
         Ok(()) => match probe.probe_device_descriptor().await {
             Ok(()) => Occupancy::OccupiedWithResponse,
-            Err(
-                SessionError::ConnectionLost { .. }
-                | SessionError::NoAnswer { .. }
-                | SessionError::ConnectionReleased { .. },
-            ) => Occupancy::OccupiedWithoutDescriptor,
+            // The connection went away in place of an answer. p. 14: *"if
+            // A_Disconnect-PDU is received then IA_new shall be regarded
+            // as occupied"*.
+            Err(SessionError::ConnectionLost { .. } | SessionError::ConnectionReleased { .. }) => {
+                Occupancy::OccupiedAfterDisconnect
+            }
+            // The connection is still open and nothing came. p. 14: *"If
+            // no A_DeviceDescriptor_Response-PDU is received after
+            // time-out ⇒ IA_new is not occupied"*.
+            Err(SessionError::NoAnswer { .. }) => Occupancy::NotOccupied,
             Err(err) => {
                 probe.disconnect().await;
-                return Err(err.into());
+                return Err(at_step(1, &report, err));
             }
         },
-        Err(SessionError::ConnectRejected { .. }) => Occupancy::OccupiedWithRejectedConnect,
-        Err(SessionError::NoAnswer { .. }) => Occupancy::NotOccupied,
-        Err(err) => return Err(err.into()),
+        // p. 14, the clause's own first line: *"if negative A_Connect.Lcon
+        // ⇒ IA_new is not occupied"*. A free address earns no Layer-2
+        // acknowledge, which is exactly what produces the negative
+        // confirmation, so this is the ordinary case and not an exception.
+        // Silence is the same verdict for the same reason.
+        Err(SessionError::ConnectRejected { .. } | SessionError::NoAnswer { .. }) => {
+            Occupancy::NotOccupied
+        }
+        Err(err) => return Err(at_step(1, &report, err)),
     };
     probe.disconnect().await;
     report.occupancy = occupancy;
@@ -206,10 +277,16 @@ pub async fn individual_address_write<T: ManagementTransport>(
         AuthorisationPlan::Skip,
         timing,
         programming_authorisation,
-    )?;
+    )
+    .map_err(|err| at_step(2, &report, err))?;
     let responders = counting
         .broadcast_individual_address_read(timing.programming_mode_broadcast_timeout)
-        .await?;
+        .await
+        .map_err(|err| at_step(2, &report, err))?;
+    // Nobody, or several, ends the call here rather than re-broadcasting:
+    // MP §2.3's `repeat … end repeat` waits for a human, and this function
+    // does not own one. See the module docs and `KNOWN_LIMITATIONS.md`
+    // §116.
     let witness = responders
         .single_responder()
         .map_err(IndividualAddressWriteError::Count)?;
@@ -223,18 +300,36 @@ pub async fn individual_address_write<T: ManagementTransport>(
 
     // ---- Step 3: write the new address, only if it is not already there ----
     record(&mut report, 3, "write the new address");
-    if new_address != witness.current_address() {
+    // The device this step mutates is the one in Programming Mode, which is
+    // not the address anything has checked so far: `programming_authorisation`
+    // names `new_address`, the address being handed *out*, and the occupant
+    // of `new_address` is a third party again. The witness's current address
+    // reaches the exclusion guard here and nowhere else — spec §2.1 puts the
+    // guard at the lowest layer that knows what an individual address is,
+    // and step 2's witness is the first moment this procedure knows one.
+    let witness_target = ContactableAddress::new(witness.current_address())
+        .map_err(|excluded| at_step(3, &report, SessionError::Excluded(excluded)))?;
+    if new_address != witness_target.address() {
         // "re-verify step 2 immediately before, because programming mode
         // may have switched itself off" — procedure.rs's own words for this
         // step.
         let recount = counting
             .broadcast_individual_address_read(timing.programming_mode_broadcast_timeout)
-            .await?;
+            .await
+            .map_err(|err| at_step(3, &report, err))?;
         let rewitness = recount
             .single_responder()
             .map_err(IndividualAddressWriteError::RecountBeforeWrite)?;
-        if new_address != rewitness.current_address() {
-            counting.broadcast_individual_address_write().await?;
+        // The re-verification may have found somebody else entirely, so
+        // its answer goes through the same guard rather than inheriting
+        // the first one's clearance.
+        let rewitness_target = ContactableAddress::new(rewitness.current_address())
+            .map_err(|excluded| at_step(3, &report, SessionError::Excluded(excluded)))?;
+        if new_address != rewitness_target.address() {
+            counting
+                .broadcast_individual_address_write()
+                .await
+                .map_err(|err| at_step(3, &report, err))?;
             report.wrote = true;
         }
     }
@@ -242,12 +337,37 @@ pub async fn individual_address_write<T: ManagementTransport>(
     // ---- Step 4: connect to the new address, verify, and restart ----
     record(&mut report, 4, "verify and restart");
     let mut finishing =
-        ManagementSession::authorised(transport, plan, timing, restart_authorisation)?;
-    finishing.connect().await?;
-    finishing.read_mask_version().await?;
-    finishing.restart_basic().await?;
+        ManagementSession::authorised(transport, plan, timing, restart_authorisation)
+            .map_err(|err| at_step(4, &report, err))?;
+    if let Err(err) = verify_before_restart(&mut finishing).await {
+        // MP §2.3, p. 15, the last line of the sequence: *"Abort the
+        // connection of the client side Transport Layer."* It is not
+        // conditioned on the verification having succeeded, and a failed
+        // step 4 is precisely when a leaked connection hurts — "to 4."
+        // sends the operator off to check the Routers, and the device is
+        // left holding a connection that stops the next attempt from
+        // opening one. [`ManagementSession::restart_basic`] does its own
+        // disconnecting on every path out, so this is the only exit that
+        // needed the help.
+        finishing.disconnect().await;
+        return Err(at_step(4, &report, err));
+    }
+    finishing
+        .restart_basic()
+        .await
+        .map_err(|err| at_step(4, &report, err))?;
 
     Ok(report)
+}
+
+/// Step 4's half that runs under an open connection, so that its caller has
+/// exactly one failure path to disconnect on.
+async fn verify_before_restart<T: ManagementTransport>(
+    session: &mut ManagementSession<'_, T>,
+) -> Result<(), SessionError> {
+    session.connect().await?;
+    session.read_mask_version().await?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -257,6 +377,7 @@ mod tests {
     use super::*;
     use knx_core::commissioning::mutation::WriteScope;
     use knx_core::commissioning::programming_mode::ProgrammingModeCountError;
+    use knx_core::{ExcludedAddress, EXCLUDED_INDIVIDUAL_ADDRESSES};
     use std::time::Duration;
 
     /// The cited timings with the waiting taken out: this module tests the
@@ -415,6 +536,204 @@ mod tests {
         }
     }
 
+    /// MP §2.3, p. 14, the clause's very first decision: *"if negative
+    /// A_Connect.Lcon ⇒ IA_new is not occupied"*. On real hardware this is
+    /// the ordinary case, not an exception — a free address acknowledges
+    /// nothing at Layer 2, and it is the missing acknowledge that makes
+    /// the confirmation negative.
+    ///
+    /// The fixture keeps the device sitting at `IA_new` while refusing
+    /// step 1's connect, so that reading the refusal as "occupied" is
+    /// visible in more than the report: the Programming Mode witness is a
+    /// different address, which would turn this run into
+    /// `OccupiedByAnotherDevice` and stop the procedure that the Standard
+    /// says should continue.
+    #[tokio::test]
+    async fn a_rejected_connect_at_step_one_means_the_address_is_free() {
+        let other = addr(1, 1, 40);
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: false,
+            other_programming_mode_devices: vec![other],
+            // Step 1's connect only. Step 4 needs a working one.
+            rejected_connects: Some(1..2),
+            ..Default::default()
+        });
+        let new_address = device.address();
+        let (programming, restart) = authorisations(new_address);
+
+        let report = individual_address_write(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            new_address,
+            programming,
+            restart,
+        )
+        .await
+        .expect("a refused T_Connect is a free address, not an occupied one");
+
+        assert_eq!(report.occupancy, Occupancy::NotOccupied);
+        assert!(
+            report.wrote,
+            "the witness is at {other} and IA_new is {new_address}: step 3 has work to do"
+        );
+    }
+
+    /// MP §2.3, p. 14: *"If no A_DeviceDescriptor_Response-PDU is received
+    /// after time-out ⇒ IA_new is not occupied"* — and, at step 4, p. 15:
+    /// *"Abort the connection of the client side Transport Layer."*
+    ///
+    /// One fixture for both, because one fixture produces both: a device
+    /// that acknowledges the Device Descriptor read and then says nothing
+    /// leaves the Transport Layer connection open, which is the only state
+    /// in which a missing disconnect is observable at all. Step 1 and step
+    /// 4 therefore each owe the device a `T_Disconnect`, and the count is
+    /// the assertion.
+    #[tokio::test]
+    async fn a_silent_descriptor_read_is_free_and_step_four_still_disconnects() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: true,
+            device_descriptor_read_unanswered: true,
+            ..Default::default()
+        });
+        let new_address = device.address();
+        let (programming, restart) = authorisations(new_address);
+
+        let err = individual_address_write(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            new_address,
+            programming,
+            restart,
+        )
+        .await
+        .expect_err("step 4's verification never gets its answer either");
+
+        match err {
+            IndividualAddressWriteError::Session {
+                step,
+                report,
+                source,
+            } => {
+                assert_eq!(step, 4, "MP §2.3 \"to 4.\" is advice about step 4 only");
+                assert!(
+                    matches!(source, SessionError::NoAnswer { .. }),
+                    "an acknowledged request that goes unanswered leaves the \
+                     connection open: {source:?}"
+                );
+                // §108's promise: the occupancy finding reaches the
+                // operator whether or not the procedure finished.
+                assert_eq!(report.occupancy, Occupancy::NotOccupied);
+                assert!(!report.wrote);
+                assert_eq!(report.steps.len(), 4);
+            }
+            other => panic!("expected a step-4 session failure, got {other:?}"),
+        }
+
+        let disconnects = device
+            .seen()
+            .iter()
+            .filter(|entry| matches!(entry, Seen::Disconnect))
+            .count();
+        assert_eq!(
+            disconnects,
+            2,
+            "step 1 and step 4 each abort their own connection: {:?}",
+            device.seen()
+        );
+    }
+
+    /// MP §2.3, p. 14: *"if A_Disconnect-PDU is received then IA_new shall
+    /// be regarded as occupied"*, reached here the other way — the device
+    /// acknowledges nothing, so this client's own Transport Layer releases
+    /// the connection (TL §5.4.1's `A6`). The verdict is the same and the
+    /// distinction is written up in `KNOWN_LIMITATIONS.md` §116.
+    #[tokio::test]
+    async fn an_unacknowledged_descriptor_read_at_step_one_is_occupied() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: true,
+            silent: true,
+            ..Default::default()
+        });
+        let new_address = device.address();
+        let (programming, restart) = authorisations(new_address);
+
+        let err = individual_address_write(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            new_address,
+            programming,
+            restart,
+        )
+        .await
+        .expect_err("a device that acknowledges nothing fails step 4 as well");
+
+        match err {
+            IndividualAddressWriteError::Session { step, report, .. } => {
+                assert_eq!(step, 4);
+                assert_eq!(report.occupancy, Occupancy::OccupiedAfterDisconnect);
+                assert!(!report.wrote, "the responder already holds IA_new");
+            }
+            other => panic!("expected a step-4 session failure, got {other:?}"),
+        }
+    }
+
+    /// Spec §2.1: the device about to be renamed goes through
+    /// [`ContactableAddress`] like everything else this crate can reach.
+    ///
+    /// `programming_authorisation` cannot catch this — it names
+    /// `new_address`, the address being handed out, and the guard it ran
+    /// was about that. The device actually being mutated is whoever is
+    /// holding the programming button, and its address arrives from the
+    /// bus, unchecked, at step 2.
+    ///
+    /// No frame is ever sent to the excluded address here: the simulator
+    /// speaks its `A_IndividualAddress_Response` on its behalf, which is
+    /// what a real bus would do without being asked, and step 3 refuses
+    /// before anything leaves.
+    #[tokio::test]
+    async fn refuses_to_rename_a_device_on_the_exclusion_list() {
+        let excluded = EXCLUDED_INDIVIDUAL_ADDRESSES[0];
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: false,
+            other_programming_mode_devices: vec![excluded],
+            ..Default::default()
+        });
+        let new_address = addr(1, 1, 30);
+        assert_ne!(device.address(), new_address);
+        let (programming, restart) = authorisations(new_address);
+
+        let err = individual_address_write(
+            &device,
+            AuthorisationPlan::Skip,
+            fast(),
+            new_address,
+            programming,
+            restart,
+        )
+        .await
+        .expect_err("the witness is on the exclusion list");
+
+        match err {
+            IndividualAddressWriteError::Session {
+                step,
+                source: SessionError::Excluded(ExcludedAddress(refused)),
+                ..
+            } => {
+                assert_eq!(step, 3, "the refusal belongs to the write step");
+                assert_eq!(refused, excluded);
+            }
+            other => panic!("expected a step-3 exclusion refusal, got {other:?}"),
+        }
+        assert_eq!(
+            device.individual_address_read_broadcasts(),
+            1,
+            "step 3 must refuse before it re-verifies, let alone writes"
+        );
+    }
+
     /// MP §2.3 step 2: nobody in Programming Mode is nothing to write to.
     #[tokio::test]
     async fn stops_when_nobody_is_in_programming_mode() {
@@ -478,11 +797,13 @@ mod tests {
         }
     }
 
-    /// `KNOWN_LIMITATIONS.md` §108: a `T_Disconnect` in place of the Device
-    /// Descriptor answer does not by itself stop the procedure — it
-    /// continues past step 1 and step 2 exactly as a normal response would,
-    /// reaching step 4 (which then fails for the same underlying reason,
-    /// proving steps 2 and 3 were not the ones that stopped it).
+    /// MP §2.3, p. 15, "to 1.": *"The Management Client shall continue with
+    /// the Management Procedure in every case."* A `T_Disconnect` in place
+    /// of the Device Descriptor answer is an occupancy finding and not a
+    /// stop — the procedure continues past step 1 and step 2 exactly as a
+    /// normal response would, reaching step 4 (which then fails for the
+    /// same underlying reason, proving steps 2 and 3 were not the ones that
+    /// stopped it). `KNOWN_LIMITATIONS.md` §108.
     #[tokio::test]
     async fn a_disconnect_at_step_one_does_not_stop_the_procedure_by_itself() {
         let device = SimulatedDevice::with_config(SimulatorConfig {
@@ -505,7 +826,18 @@ mod tests {
         .expect_err("this fixture also disconnects step 4's descriptor read");
 
         match err {
-            IndividualAddressWriteError::Session(SessionError::ConnectionLost { .. }) => {}
+            IndividualAddressWriteError::Session {
+                step,
+                report,
+                source: SessionError::ConnectionLost { .. },
+            } => {
+                assert_eq!(
+                    step, 4,
+                    "steps 2 and 3 must not have been the ones that stopped it"
+                );
+                assert_eq!(report.occupancy, Occupancy::OccupiedAfterDisconnect);
+                assert!(!report.wrote, "the responder already holds IA_new");
+            }
             other => {
                 panic!("expected step 4 to be the one that failed, not an early stop: {other:?}")
             }

@@ -1953,6 +1953,10 @@ pub fn create_device_impl(
     let cmd = knx_core::Command::CreateDevice {
         device,
         com_objects,
+        // A genuine creation, not an undo: nothing has been enriched yet,
+        // so there are no program defaults to restore. The enrichment pass
+        // below is what puts the first ones there.
+        program_defaults: Vec::new(),
         line: line_id.map(knx_core::LineId),
     };
     // Captured before `do_command` consumes `cmd` below — same convention
@@ -1973,9 +1977,11 @@ pub fn create_device_impl(
     // Step 3 (design doc §3.3): seed enrichment once, same mapping
     // `knx_productdb::enrich()` uses on import, not pushed onto the undo
     // stack — undoing `CreateDevice` removes the device regardless of
-    // which slots got filled, and `DeleteDevice`'s own inverse captures
-    // the enriched state for redo (Task 1). `issues` (ambiguous DPT
-    // lists) are returned as creation diagnostics.
+    // which slots got filled. `DeleteDevice`'s inverse carries both halves
+    // of the enriched state back: the filled `Override<T>` slots travel
+    // inside `ComObjectInstance`, the ADR-0027 side-table entries travel
+    // in `CreateDevice::program_defaults`. `issues` (ambiguous DPT lists)
+    // are returned as creation diagnostics.
     let mut issues = Vec::new();
     for (com_id, ref_id, view) in &enrich_inputs {
         knx_productdb::enrich::apply(project, *com_id, ref_id, view, &mut issues);

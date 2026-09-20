@@ -3,6 +3,7 @@
 //! this module packs its output together with every opaque container entry
 //! into a fresh ZIP archive (Task 19).
 
+pub mod retained;
 pub mod schema11;
 pub mod schema21;
 
@@ -57,6 +58,34 @@ pub enum ExportWarning {
     /// measured — is written down in KNOWN_LIMITATIONS §117 instead of being
     /// announced on every export forever.
     ReadOnInitNotExported { com_objects: usize },
+    /// An attribute this importer preserved but never modeled did not make
+    /// it back into the written container. One warning per `(element,
+    /// attribute)` class, with the number of element instances behind it —
+    /// 514 group addresses that all lost their `Puid` is one fact, not 514
+    /// warnings. `detail` says which of the three reasons applies: the
+    /// writer has nowhere to put the attribute back, or the value's owning
+    /// element could not be identified (`KNOWN_LIMITATIONS.md` §34: never
+    /// write a value onto an element it did not come from), or the project
+    /// itself wrote a different value than the one the import preserved.
+    ///
+    /// Nothing announced here is *lost*: every one of these values is still
+    /// in the project's opaque store, byte-exact (ADR-0006), and named in
+    /// the import report. What this says is that the `.knxproj` file just
+    /// written does not carry it.
+    RetainedAttributeNotExported {
+        element: String,
+        attribute: String,
+        instances: usize,
+        detail: String,
+    },
+    /// The same fact about a whole element rather than one attribute: an
+    /// import preserved the XML verbatim (ADR-0006) because the domain model
+    /// has no home for it, and this writer had nowhere to put it back.
+    RetainedElementNotExported {
+        element: String,
+        instances: usize,
+        detail: String,
+    },
 }
 
 /// Writes `project` and every opaque entry back out as a `.knxproj` ZIP
@@ -79,17 +108,24 @@ pub fn export_knxproj(
             .to_string(),
     }];
 
+    // One store for both documents: a key `Project.xml` puts back must not
+    // be reported as dropped by `0.xml`, and the residue below is the union
+    // of what neither of them managed to write.
+    let retained = retained::RetainedAttrs::from_opaque(opaque);
+    let elements = retained::RetainedElements::from_opaque(opaque);
     let (installation_xml, project_xml) = if project.info.ets_schema_version >= 21 {
         (
-            schema21::write_installation_xml_v21(project, opaque)?,
-            schema21::write_project_xml_v21(project, opaque)?,
+            schema21::write_installation_xml_v21_with(project, &retained, &elements)?,
+            schema21::write_project_xml_v21_with(project, &retained, &elements)?,
         )
     } else {
         (
-            write_installation_xml(project, opaque)?,
-            write_project_xml(project, opaque)?,
+            schema11::write_installation_xml_with(project, &retained, &elements)?,
+            schema11::write_project_xml_with(project, &retained, &elements)?,
         )
     };
+    warnings.extend(retained.residue());
+    warnings.extend(elements.residue());
     // `r.value` on purpose: see `ExportWarning::ReadOnInitNotExported`. An
     // exported-layer `false` survives the round trip through the product
     // database, so warning about it would only produce an unclearable

@@ -627,7 +627,9 @@ fn attach_leaf_string(frames: &mut [Frame], parent_name: &str, local: &str, valu
             Some(Frame::ComObject(c)) => c.receives.push(value),
             _ => unreachable!("Receive outside a ComObjectInstanceRef frame"),
         },
-        ("BuildingPart", "DeviceInstanceRef") => match frames.last_mut() {
+        // `Space` is schema ≥21's spelling of `BuildingPart` (module doc);
+        // both carry the same device-to-room assignment.
+        ("BuildingPart" | "Space", "DeviceInstanceRef") => match frames.last_mut() {
             Some(Frame::BuildingPart(b)) => b.device_refs.push(value),
             _ => unreachable!("DeviceInstanceRef outside a BuildingPart frame"),
         },
@@ -732,6 +734,7 @@ fn build_frame(
         "BinaryData" => Frame::BinaryDataRef(SourceBinaryDataRef {
             id: bag.require("Id", xpath)?,
             name: bag.take("Name"),
+            other: Vec::new(),
         }),
         "BuildingPart" | "Space" => Frame::BuildingPart(SourceBuildingPart {
             id: bag.require("Id", xpath)?,
@@ -792,15 +795,16 @@ fn attach_other(
         Frame::BuildingPart(v) => &mut v.other,
         Frame::GroupRange(v) => &mut v.other,
         Frame::GroupAddress(v) => &mut v.other,
-        // `SourceParameterInstance`, `SourceBinaryDataRef`, `SourceArgument`
-        // and `SourceModuleInstance` have no `other` field: every attribute
-        // any of the four's known-element table entry lists is already
-        // modeled, and each is a small enough leaf that adding a catch-all
-        // bucket for a case that has never yet occurred is not worth it.
-        Frame::Parameter(_)
-        | Frame::BinaryDataRef(_)
-        | Frame::Argument(_)
-        | Frame::ModuleInstance(_) => return frame,
+        // `BinaryData`'s leaf form does carry more than `Id`/`Name` at
+        // schema ≥21 (`DoNotCopy`, measured on the ETS 6.3.0 reference
+        // project), so it keeps what it is not asked about.
+        Frame::BinaryDataRef(v) => &mut v.other,
+        // `SourceParameterInstance`, `SourceArgument` and
+        // `SourceModuleInstance` have no `other` field: every attribute any
+        // of the three's known-element table entry lists is already modeled,
+        // and each is a small enough leaf that adding a catch-all bucket for
+        // a case that has never yet occurred is not worth it.
+        Frame::Parameter(_) | Frame::Argument(_) | Frame::ModuleInstance(_) => return frame,
     };
     other.extend(unknown);
     other.extend(leftover);

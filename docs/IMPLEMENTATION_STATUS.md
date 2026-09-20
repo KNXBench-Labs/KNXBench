@@ -8579,3 +8579,80 @@ is unchanged — one password is not a user model, and a session identifies a
 browser rather than a person; its one sentence claiming no middleware reads a
 cookie was corrected, and its three stale line citations with it. No KNX bus
 traffic was generated at any point.
+
+## 2026-09-20 — T01b: the frontend learns that the server asks for a password (branch `t01b-login-ui`, ADR-0026 amendment)
+
+[T01](#2026-09-20--t01-knx-server-grows-a-login-or-stops-leaving-loopback-branch-t01-server-auth-adr-0026)
+left `apps/knx-web` answering a 401 with whatever a failed fetch happens to
+look like. It now has a login screen, a startup gate and one place that
+notices a session ending. No Rust was touched; `apps/knx-server`'s auth code
+is unchanged.
+
+**Four new files in `apps/knx-web/src`.** `session.ts` is the seam: a
+`SessionControls` interface (`required`, `logout`) and a subscriber set for
+"the session ended", framework-free so `api.ts` never imports React and
+`AuthGate` never imports every API caller. `LoginScreen.tsx` is the panel —
+one password field, a real `<label>` rather than a placeholder,
+`autoComplete="current-password"`, autofocus on mount, Enter submits, and a
+submit button disabled while empty or in flight. `AuthGate.tsx` is the
+startup branch and the 401 recovery. `AuthGate.test.tsx` is 14 tests.
+
+**The one interesting decision: a mid-session 401 does not unmount the
+application.** There is no `GET /api/project`, so a fresh mount cannot get a
+loaded project back; unmounting would strand it in server memory with no way
+to put it on screen. The gate therefore renders the login screen as an opaque
+full-viewport cover and leaves the application mounted behind it, wrapped in a
+`display: contents` element carrying React 19's `inert` so the hidden
+workbench takes no focus, no click and no screen-reader cursor. A test asserts
+this directly: a stub application increments a mount counter, and the counter
+is unchanged across a 401 and a successful re-login. The honest residue — a
+server that *restarted* has forgotten the project — is stated in
+`login.expiredNotice` in `en.ts` and `de.ts` instead of being papered over.
+
+**`api.ts`.** Gains `authStatus()`, `login(password)` and `logout()`, and a
+six-line `noteRefusal(path, status)` called from the two places that build an
+error from a response — `request()` and `installProductPackage`, the latter
+switching from a bare `new Error` to the shared `requestError` so it carries a
+status at all. Paths under `/api/auth/` are excluded: a rejected login is not
+an expired session, and publishing one would make the gate re-lock itself on
+every wrong password.
+
+**The password is never echoed.** It exists in component state and in one
+POST body, is cleared before the application renders, and appears in no URL,
+no log and no error text; a 401 from `login` shows a fixed translated string
+rather than the server's words. Tests assert the absence from the request URL
+and the presence in the body.
+
+**Design, in five themes and two motion styles.** The panel uses only
+`--knx-*` tokens ([ADR-0022](adr/0022-theme-token-boundary.md)) — surface,
+`--knx-shadow-raised`, a 3px `--knx-gradient-primary` hairline across the top,
+the wordmark on `--knx-gradient-display`, and the same `::before` backdrop
+technique as `body`, so porcelain reads flat and neutral, neon-grid gets its
+grid and its cyan-to-magenta hairline, and bitcoin-defi its orange glow. The
+entrance animation lives inside `@media (prefers-reduced-motion:
+no-preference)` and is driven by `var(--knx-transition-duration)
+var(--knx-motion-easing)`, so it obeys the motion level and both motion styles
+and passes `motionGuard.test.ts` unmodified. Verified by screenshot in all
+five themes plus the error and expiry states. One real bug came out of that
+pass: the app-wide `button:disabled` rule outranks `.login-submit` on
+specificity and left the disabled button as unbordered dead text, fixed with
+an explicit `.login-submit:disabled` border.
+
+**Accessibility.** The panel is `role="dialog" aria-modal="true"` labelled by
+its heading; the error is `role="alert"` and is wired to the field through
+`aria-invalid` and `aria-describedby`, the pattern the parameter panel already
+uses; the expiry and sign-out notices are `role="status"`; the startup check
+is an announced `role="status"` line rather than a blank screen. Focus returns
+to the password field with its contents selected after a rejection.
+
+**Strings.** Eleven new keys in `en.ts`, all eleven in `de.ts` — a missing one
+is a compile error, since `de.ts` is typed `Record<MessageKey, string>`. The
+logout control is rendered only when `session.required` is true, so a desktop
+shell and an unauthenticated server show no trace of a session model.
+
+**Tests.** 14 in `AuthGate.test.tsx`, 7 added to `api.test.ts` (including that
+a login's own 401 publishes no expiry and an ordinary 401 publishes exactly
+one), 3 added to `App.test.tsx` for the logout control's three states, and one
+line added to `DiagnosticsCompanion.test.tsx`'s pinned import graph, which
+correctly noticed `session.ts` arriving through `api.ts`. Frontend suite: 55
+files, 763 tests.

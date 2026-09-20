@@ -98,6 +98,7 @@ const tauriWindowMock = vi.hoisted(() => ({ close: vi.fn().mockResolvedValue(und
 vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => tauriWindowMock }));
 
 import App from "./App";
+import type { SessionControls } from "./session";
 
 // F9's client half: every load generates its own token via
 // `crypto.randomUUID()` before the POST. Pinning it to a fixed value
@@ -182,12 +183,12 @@ function entry(overrides: Partial<LogEntry>): LogEntry {
   };
 }
 
-async function renderApp(manifestVersion?: string) {
+async function renderApp(manifestVersion?: string, session?: SessionControls) {
   host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   await act(async () => {
-    root.render(<App manifestVersion={manifestVersion} />);
+    root.render(<App manifestVersion={manifestVersion} session={session} />);
   });
   return root;
 }
@@ -1927,5 +1928,55 @@ describe("App — the File menu's manners, the stacked splitters, Quit and About
 
     await act(async () => root.unmount());
     filePickerMock.isTauri.mockReturnValue(false);
+  });
+});
+
+// T01b / ADR-0026. The logout control is the only thing `App` learns from
+// the auth gate, and the only interesting thing about it is when it is
+// absent: a server started without a password, and the desktop shell,
+// both report `required: false` and must show no way to end a session that
+// does not exist.
+describe("App — the logout control (T01b)", () => {
+  async function openMenu() {
+    const summary = host!.querySelector<HTMLElement>(".file-menu summary")!;
+    await act(async () => summary.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+  }
+
+  it("offers no logout when the gate reports no session at all", async () => {
+    const root = await renderApp(undefined, { required: false, logout: vi.fn() });
+    await openMenu();
+
+    expect(host!.querySelector(".file-menu-logout")).toBeNull();
+    expect(host!.textContent).not.toContain(enMessages["toolbar.logout"]);
+
+    await act(async () => root.unmount());
+  });
+
+  it("offers no logout when nothing told it about a session", async () => {
+    // How the desktop shell and every existing test render `App`: no
+    // `session` prop at all.
+    const root = await renderApp();
+    await openMenu();
+
+    expect(host!.querySelector(".file-menu-logout")).toBeNull();
+
+    await act(async () => root.unmount());
+  });
+
+  it("offers logout, and calls it, when a session exists", async () => {
+    const logout = vi.fn();
+    const root = await renderApp(undefined, { required: true, logout });
+    await openMenu();
+
+    const entry = host!.querySelector<HTMLButtonElement>(".file-menu-logout")!;
+    expect(entry.textContent).toBe(enMessages["toolbar.logout"]);
+
+    await act(async () => entry.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(logout).toHaveBeenCalledTimes(1);
+    // F1's menu manners apply to this entry like any other: it closes the
+    // menu behind it.
+    expect(host!.querySelector<HTMLDetailsElement>(".file-menu")!.open).toBe(false);
+
+    await act(async () => root.unmount());
   });
 });

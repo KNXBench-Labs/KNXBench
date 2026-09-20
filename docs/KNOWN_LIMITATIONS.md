@@ -1411,31 +1411,80 @@ creation boundary. This preserves native `.knxdb` projects and imported oddities
 without inventing a range or changing existing authoring semantics; only the
 lossy external export is refused until the user assigns a range.
 
-## 22. The web/Docker deployment target has no authentication
+<a id="22-the-webdocker-deployment-target-has-no-authentication"></a>
 
-**Limitation.** `apps/knx-server` serves its HTTP API and the frontend
-with no login, session, or authorization layer of any kind — anyone who
-can reach the container's port can open, edit, and save the project.
+## 22. `knx-server` authenticates with one password, or refuses to leave loopback
 
-**Cause.** A deliberate scope decision recorded in
-[the design spec](superpowers/specs/2026-09-05-web-docker-deployment-design.md):
-the stated use case is a self-hosted container on a trusted LAN, not
-internet exposure, and auth is not free to bolt on afterward for a
-stateful, single-project server — retrofitting it later is a separate
-design, not an oversight to patch incrementally.
+**Resolved 2026-09-20** ([ADR-0026](adr/0026-server-authentication-or-loopback.md)).
+The heading and the anchor above are kept so existing links still resolve;
+what follows is what is true now, including the parts of the old
+limitation that survived.
 
-**Impact.** The container must not be exposed to the internet or to an
-untrusted network. Nothing in `knx-server` itself enforces that boundary;
-it is a deployment-time responsibility (firewalling, a reverse proxy with
-its own auth, or simply staying LAN-only), not something the application
-checks or warns about.
+**What exists.** `apps/knx-server` has a password login, an in-memory
+session table and one middleware layer over every route under `/api/`.
+`POST /api/auth/login` takes `{"password": "..."}` and sets an
+`HttpOnly; SameSite=Strict; Path=/` session cookie; `POST /api/auth/logout`
+invalidates it; `GET /api/auth/status` reports `{"required", "authenticated"}`
+so a frontend knows whether a login screen belongs on the screen at all.
+The credential is PBKDF2-HMAC-SHA256 at 600 000 iterations (OWASP's 2023
+floor) over a 16-byte random salt, stored in a self-describing PHC-style
+string, and verified in constant time. Sessions time out after 12 hours
+idle, refreshed on use, and do not survive a restart.
 
-**Lifted when.** A deliberate decision to add an auth layer is made, with
-its own design covering session/multi-user implications for the
-single-`Mutex`-guarded-project state model this server already has.
+**The rule that makes it mandatory.** Authentication is optional at the
+type level — `knx_server::app()` still builds an unguarded router, which
+is what the Tauri desktop shell uses and why the desktop deliberately has
+no login — but the standalone binary will not put an unguarded router on
+the network. `bind_address(auth_required)` returns `0.0.0.0` with a
+password configured and `127.0.0.1` without one, and it is the only
+expression of a listening address in `main.rs`. An operator who sets
+neither `KNX_AUTH_PASSWORD_HASH` nor `KNX_AUTH_PASSWORD` gets a loopback-
+only server and an unmissable startup line saying so.
 
-See [§63](#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all)
-for exactly what that missing session/multi-user isolation costs today.
+**Unauthenticated by design, and only these:** `/healthz` (a liveness
+probe that needs a password is not a liveness probe), the static frontend
+assets (they are the login screen), and the three `/api/auth/*` routes
+above. Everything else under `/api/` — including `/api/version`, the
+KNX bus routes, and `/api/fs/*`, which browses the host filesystem under
+`KNX_DATA_DIR` (confined there by `paths::resolve_in_data_dir`, not by the
+login) and was the sharpest edge of this limitation — answers `401` with the usual
+`{"error": ...}` body to a caller with no valid session.
+
+**What is still a limitation, and belongs to the deployer.**
+
+- **No TLS.** Unchanged from the original entry. Over plain HTTP the
+  password crosses the network in the clear in the login body, and the
+  session cookie crosses it in the clear on every later request. A
+  compromised host on the same LAN can read and replay that cookie. Put a
+  TLS-terminating reverse proxy in front of anything that matters, and set
+  `KNX_AUTH_COOKIE_SECURE=1` when you do — the cookie is not marked
+  `Secure` by default, because on plain HTTP a `Secure` cookie is simply
+  never sent back.
+- **One password, no accounts, no roles, no audit trail.** Anyone holding
+  the password can do everything, including writing to the KNX bus.
+  Nothing records who did what, because there is no "who". Authentication
+  here is not multi-user support: see
+  [§63](#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all),
+  which is unchanged — two browsers with valid sessions still share one
+  project and one undo stack.
+- **Brute-force resistance is a delay, not a lockout, and it resets on
+  restart.** A failed login costs the caller 250 ms × the number of
+  failures since the last success, capped at two seconds. The counter is
+  in memory and process-wide. A lockout is deliberately absent: locking
+  out the only operator of a single-operator server is a denial of service
+  against its owner.
+- **`KNX_AUTH_PASSWORD` is the weaker configuration.** A plaintext
+  password in the environment is readable in `/proc/<pid>/environ`, in
+  `docker inspect` and in shell history. `knx-server --hash-password`
+  reads a password from stdin and prints a hash for
+  `KNX_AUTH_PASSWORD_HASH`; that is the configuration to prefer. The
+  server says as much at startup when it sees the plaintext form.
+- **No CSRF tokens.** `SameSite=Strict` on the session cookie is the whole
+  defence. It is a browser behaviour, not a server-side check.
+
+**Not claimed.** This is not a statement that the server is safe to expose
+to the internet. It is safe to expose to a network you have thought about,
+over a transport you have secured yourself.
 
 ## 23. `/api/project/download` buffers the whole `.knxdb` file in memory
 
@@ -3443,14 +3492,17 @@ real-installation evidence for transmit behavior and longer-running stability.
 exactly one project in one process-wide `AppState`, constructed once and
 shared by every connected browser for the life of the process:
 `Arc::new(knx_server::AppState::new(data_dir))`
-(`apps/knx-server/src/main.rs:29`), `pub type SharedState = Arc<AppState>`
-(`apps/knx-server/src/lib.rs:23`), handed to the router with
-`.with_state(state)` (`apps/knx-server/src/lib.rs:63`). There is no
-per-session or per-connection state, and no route or middleware reads any
-cookie, token, or other identity out of a request to tell one caller from
-another (consistent with [§22](#22-the-webdocker-deployment-target-has-no-authentication):
-a deployment with no authentication is also one that cannot tell two users
-apart). Verified concrete consequences:
+(`apps/knx-server/src/main.rs:54`), `pub type SharedState = Arc<AppState>`
+(`apps/knx-server/src/lib.rs:42`), handed to the router with
+`.with_state(state)` (`apps/knx-server/src/lib.rs:153`). There is no
+per-session and no per-connection project state. Since 2026-09-20 a
+middleware *does* read a session cookie out of a request
+([§22](#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback),
+[ADR-0026](adr/0026-server-authentication-or-loopback.md)) — but every
+valid session was opened with the same single password, so a session
+identifies a browser rather than a person, and nothing downstream of the
+guard ever sees which session a request arrived on. The server still
+cannot tell two operators apart. Verified concrete consequences:
 
 1. **A second client's undo can undo the first client's command.**
    `command_stack: Mutex<knx_core::CommandStack>`
@@ -3518,10 +3570,12 @@ client can ever reach it.
 **Cause.** `knx-server`'s state model (one project, one `Mutex`-guarded
 `AppState`) was built for a single open project per process, the
 assumption the desktop app started from; the web/Docker deployment (see
-[§22](#22-the-webdocker-deployment-target-has-no-authentication)'s design
-spec) reused it as-is. Session isolation, locking, or merge logic were
-never added, and without any client identity to isolate sessions by,
-none of that was reachable without first deciding on authentication.
+[§22](#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback)'s
+original design spec) reused it as-is. Session isolation, locking, or merge
+logic were never added. ADR-0026 has since added authentication, which was
+the prerequisite named here — but deliberately as one shared password with
+no user model, so it supplies a session without supplying an identity, and
+this limitation is exactly as true after it as before.
 
 **Impact.** A `knx-server` deployment reached by more than one person at
 once has no conflict detection, merge, or locking: one person's undo can

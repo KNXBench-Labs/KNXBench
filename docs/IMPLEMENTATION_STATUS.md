@@ -8480,3 +8480,87 @@ separate commits removed the last of it — but history is not, and the only
 two ways out are a second history rewrite of a published branch or an
 explicit decision to accept it. That is the maintainer's call, and it is
 recorded here rather than made.
+
+## 2026-09-20 — T01: `knx-server` grows a login, or stops leaving loopback (branch `t01-server-auth`, ADR-0026)
+
+The repository's top-ranked non-commissioning risk —
+[KNOWN_LIMITATIONS.md §22](KNOWN_LIMITATIONS.md#22-knx-server-authenticates-with-one-password-or-refuses-to-leave-loopback),
+`K1` in [LIMITATION_TRIAGE.md](LIMITATION_TRIAGE.md) — is closed in the only
+shape that does not also close the Docker target: the server gains real
+password authentication, and refuses to bind anything but `127.0.0.1`
+without it. The reasoning, the costs and the six things it deliberately does
+not give are in
+[ADR-0026](adr/0026-server-authentication-or-loopback.md).
+
+**Three new modules in `apps/knx-server`.** `auth_password.rs` is the
+credential: PBKDF2-HMAC-SHA256 at 600 000 iterations (OWASP's 2023 floor for
+the construction) over a 16-byte random salt, 32 bytes out, stored in a
+self-describing PHC-style string `$pbkdf2-sha256$i=600000$<b64salt>$<b64hash>`
+with PHC's unpadded base64, and compared by a hand-written `constant_time_eq`
+that has its own test. `auth.rs` holds `AuthConfig` (the switch, plus cookie
+`Secure`, idle timeout and failure delay), `AuthState` (an in-memory
+token-to-expiry map and a process-wide failure counter), the `Cookie` header
+parser, `resolve_auth` (the environment-to-configuration decision, as a pure
+function), `bind_address` (likewise) and the `require_session` middleware.
+`auth_routes.rs` is `POST /api/auth/login`, `POST /api/auth/logout` and
+`GET /api/auth/status`.
+
+**The router split.** `app(state, static_dir)` keeps its signature — 25
+integration test files and the Tauri shell call it — and now delegates to a
+new `app_with_auth(state, static_dir, auth)` with authentication disabled.
+The desktop shell therefore has no login and that is deliberate: it is one
+operator talking to a router inside their own process over a loopback socket.
+Everything under `/api/` sits behind one `route_layer`, including
+`/api/version`; the exceptions are `/healthz`, the static assets and the three
+auth routes. `route_layer` rather than `layer`, so an unmatched path still
+falls through to a 404 instead of collecting a 401.
+
+**The bind guard.** `main.rs` reads `KNX_AUTH_PASSWORD_HASH`,
+`KNX_AUTH_PASSWORD` and `KNX_AUTH_COOKIE_SECURE` — the only place in the
+workspace that touches them — hands them to `resolve_auth`, prints the
+notices it comes back with, and binds `bind_address(auth_required)`. There is
+no other expression of a listening address. A new `--hash-password` flag
+reads a password from stdin (never argv: `ps` is public) and prints its stored
+form.
+
+**Dependencies: one new edge, no new crate.** `pbkdf2`, `sha2` and `base64`
+were already workspace dependencies (`knx-secure` uses the same three), and
+`getrandom` was already resolved via `tempfile` and `uuid`; `knx-server` now
+names all four directly. `cargo deny check` has nothing new to consider. No
+`axum-extra`, no `cookie`, no `tower-sessions`, no `subtle` — the cookie
+parser is nine lines and the constant-time compare is six.
+
+**Tests.** `apps/knx-server/tests/http_auth.rs` is 16 integration tests:
+cookie attributes on success, no cookie on failure, a 401 with the usual
+`{"error": ...}` body for one representative route per guarded group
+(`project`, `fs`, `bus`, `debug_report`, `version`), `/healthz` and the three
+auth routes staying open, a valid cookie reaching a real handler, logout
+invalidating, an expired session, a forged cookie, an unknown `/api/` path
+still answering 404, and `app()` behaving exactly as before. 23 more unit
+tests — 16 in `auth.rs`, 7 in `auth_password.rs` — cover the hash grammar and its eleven malformed
+spellings, the near-miss rejection, the session store's expiry and sweep, the
+widening failure delay, the cookie parser, and every branch of `resolve_auth`.
+`knx-server`'s library test count moved from 105 to 128 and its integration
+suite gained a file — checked against
+[§119](KNOWN_LIMITATIONS.md#119-on-this-machines-ntfs3-mount-cargo-has-rebuilt-from-a-stale-fingerprint--a-green-gate-is-not-evidence-by-itself),
+because a green gate on this mount is not evidence on its own. Exactly one
+test pays the real 600 000-iteration work factor (about seven seconds in an
+unoptimised build); the rest use a thousand, which is why
+`hash_password_with_iterations` is public and documented as such.
+
+**Deployment documentation.** `README.md`'s web/Docker section gains the three
+environment variables, the `--hash-password` recipe, and an explicit warning
+that an unconfigured container binds loopback inside its own namespace and so
+publishes a port nothing is listening on — the intended failure.
+`apps/knx-server/scripts/smoke-test.sh` now produces a hash with the image
+itself, starts the container with it, asserts that `/api/version` answers 401
+without a session and 200 with one, and carries the cookie through the
+save/reopen cycle.
+
+**Out of scope, and still true.** The frontend login screen in
+`apps/knx-web` is a separate task; no TypeScript was touched here.
+[§63](KNOWN_LIMITATIONS.md#63-knx-server-has-no-multi-userconcurrent-edit-support--one-shared-project-one-shared-undo-stack-no-conflict-detection-at-all)
+is unchanged — one password is not a user model, and a session identifies a
+browser rather than a person; its one sentence claiming no middleware reads a
+cookie was corrected, and its three stale line citations with it. No KNX bus
+traffic was generated at any point.

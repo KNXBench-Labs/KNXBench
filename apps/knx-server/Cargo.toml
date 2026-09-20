@@ -33,6 +33,17 @@ tower = { workspace = true, features = ["util"] }
 tower-http = { workspace = true, features = ["fs"] }
 serde.workspace = true
 serde_json.workspace = true
+# The login credential: PBKDF2-HMAC-SHA256 over a random salt, stored in a
+# PHC-style string (ADR-0026). All three are already workspace
+# dependencies — `knx-secure` uses the same trio for `.knxkeys` — so
+# authentication cost this workspace no new third-party code.
+pbkdf2.workspace = true
+sha2.workspace = true
+base64.workspace = true
+# Session tokens, straight from the operating system's CSPRNG. Already in
+# the resolved graph via `tempfile`; naming it directly buys a documented
+# source of randomness instead of a hand-rolled one.
+getrandom.workspace = true
 tempfile.workspace = true
 zip.workspace = true
 

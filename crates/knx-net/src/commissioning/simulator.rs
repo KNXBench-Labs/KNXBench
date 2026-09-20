@@ -29,9 +29,9 @@ use knx_core::commissioning::load_state::{LoadEvent, LoadState};
 use knx_core::commissioning::memory::MemoryService;
 use knx_core::commissioning::mutation::TargetKind;
 use knx_core::commissioning::properties::{
-    verify_mode_active, ObjectIndex, PID_DEVICE_CONTROL, PID_ERROR_CODE, PID_LOAD_STATE_CONTROL,
-    PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH, PID_MCB_TABLE, PID_PROGRAM_VERSION,
-    PID_TABLE_REFERENCE,
+    verify_mode_active, ObjectIndex, PID_DEVICE_CONTROL, PID_DOWNLOAD_COUNTER, PID_ERROR_CODE,
+    PID_LOAD_STATE_CONTROL, PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH, PID_MCB_TABLE,
+    PID_PROGRAM_VERSION, PID_TABLE_REFERENCE,
 };
 use knx_core::IndividualAddress;
 use tokio::sync::broadcast;
@@ -285,6 +285,13 @@ pub struct SimulatorConfig {
     /// programs and every other index refuses the write the way `[D]`
     /// AL §3.4.4.2, p. 66, says an unlisted property is refused.
     pub application_program_objects: HashSet<u8>,
+    /// `PID_DOWNLOAD_COUNTER` of the Device Object, if this simulated device
+    /// has one at all. `None` — the default — models a device that omits
+    /// it, which Volume 6 Profiles Annex A permits (`[C13]`, `[C18]`): RES
+    /// §4.2.30.1, p. 41, only requires the property "if the device has any
+    /// Download Counter", and the annex's Device Object tables (pp.
+    /// 138-140) list PID 30 for none of them.
+    pub download_counter: Option<u16>,
     /// Once this much wall-clock time has passed since the *first*
     /// `PID_LOAD_STATE_CONTROL` read arrived, later reads of it answer
     /// [`SimulatorConfig::settled_load_state`] instead of whatever
@@ -432,6 +439,7 @@ impl Default for SimulatorConfig {
             allocation_fails_once_for: None,
             interrupt_at: None,
             application_program_objects: HashSet::new(),
+            download_counter: None,
             settle_load_state_after: None,
             settled_load_state: LoadState::Unloaded,
         }
@@ -578,6 +586,9 @@ impl SimulatedDevice {
         }
         if let Some(length) = config.router_max_apdu_length {
             properties.insert((6, PID_MAX_APDU_LENGTH), length.to_be_bytes().to_vec());
+        }
+        if let Some(counter) = config.download_counter {
+            properties.insert((0, PID_DOWNLOAD_COUNTER), counter.to_be_bytes().to_vec());
         }
 
         let mut memory = HashMap::new();

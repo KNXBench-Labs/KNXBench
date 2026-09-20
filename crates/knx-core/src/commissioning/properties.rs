@@ -72,6 +72,19 @@ pub const PID_ERROR_CODE: u8 = 28;
 /// object is addressed.
 pub const PID_OBJECT_INDEX: u8 = 29;
 
+/// `PID_DOWNLOAD_COUNTER`, RES §4.2.30, p. 41: `PDT_UNSIGNED_INT`,
+/// `DPT_Value_2_Ucount` (7.010) — a two-octet unsigned counter.
+///
+/// `[D]` `03_07_03 Standardized Identifier Tables` row
+/// `| 30: | PID_DOWNLOAD_COUNTER |`, and CP §3.12.4, p. 99: *"Read the
+/// download counter."* RES §4.2.30.1, p. 41 makes it global and read-only
+/// but stops short of mandatory: *"A device that has a Download Counter
+/// shall at least have `PID_DOWNLOAD_COUNTER` in the Device Object"* —
+/// conditioned on having one at all. Whether a System B device must have
+/// one is Volume 6 Profiles Annex A's question, answered `[C18]`:
+/// optional, not mandatory (pp. 138-140 omit PID 30 for every profile).
+pub const PID_DOWNLOAD_COUNTER: u8 = 30;
+
 /// `PID_MAX_APDU_LENGTH`, read from the Device Object only (spec §6.4).
 ///
 /// `[D]` RES §4.3.7.
@@ -222,6 +235,7 @@ mod tests {
         assert_eq!(PID_MCB_TABLE, 27);
         assert_eq!(PID_ERROR_CODE, 28);
         assert_eq!(PID_OBJECT_INDEX, 29);
+        assert_eq!(PID_DOWNLOAD_COUNTER, 30);
         assert_eq!(PID_MAX_APDU_LENGTH, 56);
         assert_eq!(PID_HARDWARE_TYPE, 78);
     }

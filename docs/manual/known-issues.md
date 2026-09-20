@@ -157,7 +157,7 @@ published, and the version number is not a promise that anything is finished.
   documented gaps remain elsewhere.
 - **Consequence:** a device may show an identifier where you expect a
   product name.
-- **Details:** [§12 manufacturer data resolution](../KNOWN_LIMITATIONS.md#12-manufacturer-data-resolution--lifted-for-communication-objects-three-gaps-remain)
+- **Details:** [§12 manufacturer data resolution](../KNOWN_LIMITATIONS.md#12-manufacturer-data-resolution--one-of-three-gaps-closed-2026-09-20)
 
 ### Three module limits in application programs
 

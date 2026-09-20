@@ -9033,3 +9033,83 @@ rules require. The export-only limitation entries — §4, §5, §21, §34, and
 §117's amendment — are closed with the reason "export withdrawn 2026-09-20"
 and kept, unedited, underneath that closure. A superseded record is still a
 record.
+
+## 2026-09-20 — T05: §85's `.signature` member stays unread, and now says so where it's read (branch `t05-signature-check`)
+
+`install_package` (`crates/knx-productdb/src/package.rs`) has always
+stored a `.signature` package member with `role = 'Signature'` and never
+checked it against anything — §85 already established that fully. This
+task's job was to settle whether verification is definable at all, and to
+stop the one role string that could be misread as a passed check.
+
+**Searched before concluding anything.** Both of this project's queryable
+KNX spec knowledge bases (`knx-spec-kb/scripts/05_knowledge_base_v1.py
+--query`, SQLite, curated facts with per-fact evidence) were queried —
+`knx_spec_kb_programming.sqlite` (27 programming-scoped PDFs plus figures)
+and `knx_spec_kb_full179_clean.sqlite` (177 PDFs, text only) — with
+sixteen search terms (`digital signature`, `package signature`,
+`manufacturer key`, `public key`, `certificate`, `code signing`,
+`knxprod`, `signing key`, `key distribution`, `product database
+signature`, `.signature`, `RSA`, `detached signature`, `signature file`,
+`registration signature`, `manufacturer signing`, `product package
+integrity`). Every hit that came back belongs to a different security
+domain — KNXnet/IP Secure session keys and device X.509 certificates
+(`LDevID`/`IDevID`), not manufacturer package signing — or is unrelated
+noise (an MT3→MT4 conversion note, an AES-CBC-MAC mode name). Notably,
+`registration signature` returned zero hits in the full base even though
+the concept is real and documented (Project Schema23, the Certification
+Manual) — that content exists in the corpus's raw Markdown but was never
+extracted into the knowledge base's curated fact table, a gap in the
+extraction rather than evidence the Standard is silent. §85 is rewritten
+to record all of this, keeping its `[V]`/`[D]`/`[A]` discipline and not
+upgrading the RSA-1024 byte-count inference to a fact. Conclusion:
+verification is not implementable — the `.signature` file's own format
+and the manufacturer's public key are both outside what this project can
+reach, and the accessible corpus's only same-named concept
+("registration signature") is a different thing, an XML-attribute
+content checksum, not a detached cryptographic signature.
+
+**The stored role stays `"Signature"`; what a person reads does not.**
+`package_member.role` and `PackageMember.role` are untouched — other code
+and `signature_members_are_stored_verbatim_and_never_verified` key on the
+exact string, and it is the domain layer's honest name for what the
+member *is*. The fix sits at the one place a human reads it:
+`apps/knx-server/src/routes.rs`'s `CatalogInstallReportDto` conversion
+now renders a `"Signature"`-role member as `"Signature (stored, not
+verified)"` via a new `display_role` helper, and
+`apps/knx-web/src/CatalogBrowser.tsx`'s install report gains a second,
+conditional line — `catalog.installReport.unverifiedSignature`, a
+plural-aware key in both `en.ts` and `de.ts` — naming the count of such
+members whenever an install report contains one. (Today's `CatalogBrowser`
+never rendered per-member roles individually; the summary paragraph was
+counts only, so nothing currently displayed an unqualified `Signature`.
+The fix covers the JSON contract two other places already treat as
+display-only — cited in §85 itself — and makes the disclosure explicit
+rather than relying on a table that does not exist yet to never be
+misread.)
+
+**`hardware.rs`'s `RegistrationSignature`** gets one sentence in §85, not
+a second implementation: stored into `hardware2program.registration_signature`,
+read back by no query, DTO, or UI anywhere in this codebase, and — unlike
+the package `.signature` — its defining document (Project Schema23) *is*
+in the accessible corpus, so what verifying it would take is at least
+namable (parse the registration-relevant XML subset, recompute by
+whatever checksum algorithm ETS/the Manufacturer Tool uses, compare) even
+though that algorithm itself was not found. Still a dead end today, just
+a differently-shaped one.
+
+**Tests.** `apps/knx-server/tests/http_product_install.rs`: +1
+(`a_signature_members_role_is_qualified_as_unverified_in_the_install_report`).
+`apps/knx-web/src/CatalogBrowser.test.tsx`: +1 (`flags an install report
+containing a signature member as unverified`), plus one existing test
+extended with a negative assertion (`not.toContain("stored, not
+verified")` when no signature member is present). No `knx-productdb`
+test changed — `signature_members_are_stored_verbatim_and_never_verified`
+still pins the unqualified stored value, which is correct and unchanged.
+
+**Docs.** §85 rewritten in place, heading and anchor unchanged
+(`xtask check-anchors` green). Fixed two anchor links in
+`docs/manual/known-issues.md` that had gone stale from earlier,
+already-merged heading renames of §12 and §34 — pre-existing breakage,
+unrelated to this task, caught only because `check-anchors` is a gate.
+`docs/LIMITATION_TRIAGE.md` not touched, per instruction.

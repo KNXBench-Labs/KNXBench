@@ -437,6 +437,10 @@ export const messages: Record<MessageKey, string> = {
   "catalog.installReport.unknownCount": "{count} unbekannt",
   "catalog.installReport.conflictsCount.one": "{count} Konflikt",
   "catalog.installReport.conflictsCount.other": "{count} Konflikte",
+  "catalog.installReport.unverifiedSignature.one":
+    "{count} Signatur-Element gespeichert, nicht geprüft — diese Anwendung kann es nicht prüfen.",
+  "catalog.installReport.unverifiedSignature.other":
+    "{count} Signatur-Elemente gespeichert, nicht geprüft — diese Anwendung kann sie nicht prüfen.",
   "catalog.allManufacturers": "Alle Hersteller",
   "catalog.searchPlaceholder": "Katalogeinträge durchsuchen…",
   "catalog.noMatches": "Keine Treffer.",

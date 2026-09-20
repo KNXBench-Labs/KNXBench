@@ -36,6 +36,7 @@
 
 use std::fmt;
 
+use knx_core::commissioning::authorisation::AccessKeyDeclaration;
 use knx_core::commissioning::error_code::SystemErrorClass;
 use knx_core::commissioning::load_control::{
     allocation_subtype_for, data_relative_allocation, relative_allocation, require_subtype,
@@ -181,6 +182,10 @@ pub struct DownloadPlan {
     parts: Vec<LoadablePart>,
     allocation_mode: AllocationMode,
     router_object: Option<ObjectIndex>,
+    /// What CP §3.5.2 Nr. 11 / CP §3.5.3 AP2 Nr. 13 should do (C10).
+    /// Defaults to [`AccessKeyDeclaration::NoneRequired`], which is the
+    /// state every plan built before this field existed was silently in.
+    access_keys: AccessKeyDeclaration,
 }
 
 impl DownloadPlan {
@@ -240,6 +245,7 @@ impl DownloadPlan {
             parts,
             allocation_mode: AllocationMode::default(),
             router_object: None,
+            access_keys: AccessKeyDeclaration::default(),
         })
     }
 
@@ -260,9 +266,23 @@ impl DownloadPlan {
         self
     }
 
+    /// Declares what CP §3.5.2 Nr. 11 / CP §3.5.3 AP2 Nr. 13 must do for
+    /// this plan (C10). Left at the default
+    /// [`AccessKeyDeclaration::NoneRequired`] when the plan needs nothing
+    /// done there.
+    pub fn with_access_keys(mut self, declaration: AccessKeyDeclaration) -> Self {
+        self.access_keys = declaration;
+        self
+    }
+
     /// The parts, in load order.
     pub fn parts(&self) -> &[LoadablePart] {
         &self.parts
+    }
+
+    /// What this plan declares about the access-key step (C10).
+    pub fn access_keys(&self) -> &AccessKeyDeclaration {
+        &self.access_keys
     }
 
     fn position_of(&self, object_index: ObjectIndex) -> Option<usize> {
@@ -568,6 +588,16 @@ pub enum DownloadError {
         /// What it reads instead.
         state: LoadState,
     },
+    /// CP §3.5.2 Nr. 11 / CP §3.5.3 AP2 Nr. 13 (C10): the plan declared one
+    /// or more access-key assignments, but `A_Key_Write` has no encoder
+    /// (`cemi.rs`'s `key_write_has_an_apci_but_no_encoder`, design spec §10.7).
+    /// Everything up to this step has already been written; only the key
+    /// modification itself is refused, so the device is left on its
+    /// current key rather than the plan's silently.
+    AccessKeysNotSupported {
+        /// How many levels the plan wanted (re)keyed.
+        declared: usize,
+    },
 }
 
 impl std::error::Error for DownloadError {}
@@ -611,6 +641,13 @@ impl fmt::Display for DownloadError {
                 f,
                 "recovery left {object_index} in {state} rather than Loaded, which is a \
                  failed recovery and is not retried in a loop (spec §9.1 step 6)"
+            ),
+            DownloadError::AccessKeysNotSupported { declared } => write!(
+                f,
+                "the plan declares {declared} access-key assignment(s) at CP §3.5.2 Nr. 11 / \
+                 CP §3.5.3 AP2 Nr. 13, but `A_Key_Write` has no encoder yet (design spec §10.7); the \
+                 device is left on its current key rather than have this step reported done \
+                 when it was not"
             ),
         }
     }
@@ -680,15 +717,11 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
             report.parts.push(outcome);
         }
 
-        // Step 11 exists in the trace and does nothing: `A_Key_Write` is out
-        // of scope for this phase (spec §10.7), and a step silently missing
-        // from a trace is indistinguishable from a step that was forgotten.
-        record(
-            &mut report,
-            kind,
-            11,
-            "modify access keys (not implemented)",
-        );
+        // CP §3.5.2 Nr. 11, p. 44: *"Set access keys as required"*. The plan
+        // says what "as required" means (C10); a plan declaring none is
+        // reported as empty and a plan declaring some is refused here,
+        // because `A_Key_Write` has no encoder (design spec §10.7).
+        modify_access_keys(&mut report, kind, 11, &self.plan.access_keys)?;
         record(&mut report, kind, 12, "disconnect");
         self.session.disconnect().await;
         Ok(report)
@@ -778,17 +811,12 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
         }
 
         // Nr. 06 of this variant ends *"⇒ Continue at Nr. 13"*, so the
-        // access keys and the disconnect are 13 and 14 and not 8 and 9. Nr. 13
-        // is recorded and empty for the same reason it is in a complete
-        // download: `A_Key_Write` is out of scope for this phase (spec §10.7),
-        // and a step silently missing from a trace is indistinguishable from a
-        // step that was forgotten.
-        record(
-            &mut report,
-            kind,
-            13,
-            "modify access keys (not implemented)",
-        );
+        // access keys and the disconnect are 13 and 14 and not 8 and 9.
+        // CP §3.5.3 AP2 Nr. 13, p. 47, is the same *"Set access keys as
+        // required"* text as CP §3.5.2 Nr. 11, so the same declaration and
+        // the same refusal apply (C10): [`modify_access_keys`] is what makes
+        // both call sites report it identically.
+        modify_access_keys(&mut report, kind, 13, &self.plan.access_keys)?;
         record(&mut report, kind, 14, "disconnect");
         self.session.disconnect().await;
         Ok(report)
@@ -923,6 +951,49 @@ fn record(report: &mut DownloadReport, kind: ProcedureKind, number: u8, title: &
         number,
         title,
     });
+}
+
+/// CP §3.5.2 Nr. 11, p. 44, and CP §3.5.3 AP2 Nr. 13, p. 47 (C10): the
+/// shared body of both "modify access keys" call sites, so that a complete
+/// and a partial download report the same declaration in the same words
+/// rather than two texts that could quietly drift apart.
+///
+/// A plan declaring [`AccessKeyDeclaration::NoneRequired`] is recorded and
+/// nothing more happens, distinct from the old text this replaces, which
+/// read identically whether the plan needed nothing or needed something
+/// that got silently skipped. A plan declaring
+/// [`AccessKeyDeclaration::Required`] is recorded as refused and the
+/// procedure stops there: `A_Key_Write` has no encoder yet (design spec §10.7,
+/// `cemi.rs`'s `key_write_has_an_apci_but_no_encoder`), so this project
+/// cannot carry out what the plan is asking for, and does not pretend to.
+fn modify_access_keys(
+    report: &mut DownloadReport,
+    kind: ProcedureKind,
+    number: u8,
+    declaration: &AccessKeyDeclaration,
+) -> Result<(), DownloadError> {
+    match declaration {
+        AccessKeyDeclaration::NoneRequired => {
+            record(
+                report,
+                kind,
+                number,
+                "modify access keys (declared: none required)",
+            );
+            Ok(())
+        }
+        AccessKeyDeclaration::Required(assignments) => {
+            record(
+                report,
+                kind,
+                number,
+                "modify access keys (declared: refused, not implemented)",
+            );
+            Err(DownloadError::AccessKeysNotSupported {
+                declared: assignments.len(),
+            })
+        }
+    }
 }
 
 /// Steps 01 to 04, which every procedure in §7 and §9.1 opens with.
@@ -1150,7 +1221,9 @@ mod tests {
     use super::super::simulator::{Interruption, Seen, SimulatedDevice, SimulatorConfig};
     use super::super::{ManagementSession, SessionTiming};
     use super::*;
-    use knx_core::commissioning::authorisation::AuthorisationPlan;
+    use knx_core::commissioning::authorisation::{
+        AccessKey, AccessKeyAssignment, AccessKeyDeclaration, AccessLevel, AuthorisationPlan,
+    };
     use knx_core::commissioning::load_control::MASK_0300;
     use knx_core::commissioning::mutation::WriteAuthorisation;
     use knx_core::commissioning::procedure::ProcedureKind;
@@ -1370,6 +1443,150 @@ mod tests {
             "no Load State Machine was touched: {:?}",
             device.seen()
         );
+    }
+
+    /// A test fixture for C10: one assignment, so `Required` is never
+    /// empty here.
+    fn one_access_key_assignment() -> AccessKeyAssignment {
+        AccessKeyAssignment {
+            level: AccessLevel::from_octet(2),
+            key: AccessKey::new(0x1122_3344).unwrap(),
+        }
+    }
+
+    /// C10, direct: [`modify_access_keys`] is the one function both call
+    /// sites share, so this is where the defect the task describes — "the
+    /// report reads identically whether none were needed or some were
+    /// silently skipped" — is tested at its source, without a simulator in
+    /// the way. `NoneRequired` records a step and returns `Ok`; `Required`
+    /// records a *different* step and returns the named error, and the two
+    /// recorded titles must not read the same.
+    #[test]
+    fn modify_access_keys_reports_declared_none_and_refused_differently() {
+        let mut none_report = DownloadReport::new(ProcedureKind::CompleteDownload);
+        modify_access_keys(
+            &mut none_report,
+            ProcedureKind::CompleteDownload,
+            11,
+            &AccessKeyDeclaration::NoneRequired,
+        )
+        .expect("declaring none required does not refuse the step");
+        let none_title = none_report.steps.last().expect("step 11 recorded").title;
+
+        let mut required_report = DownloadReport::new(ProcedureKind::CompleteDownload);
+        let declaration =
+            AccessKeyDeclaration::required(vec![one_access_key_assignment()]).unwrap();
+        let error = modify_access_keys(
+            &mut required_report,
+            ProcedureKind::CompleteDownload,
+            11,
+            &declaration,
+        )
+        .expect_err("declaring a key that cannot be written must refuse, not succeed");
+        assert!(
+            matches!(error, DownloadError::AccessKeysNotSupported { declared: 1 }),
+            "got {error}"
+        );
+        let required_title = required_report
+            .steps
+            .last()
+            .expect("step 11 recorded even though it is refused")
+            .title;
+
+        assert_ne!(
+            none_title, required_title,
+            "a plan needing nothing and a plan needing an unimplemented write must not \
+             read the same"
+        );
+    }
+
+    /// C10: the default declaration is `NoneRequired`, and step 11 says so
+    /// rather than reading the same as it would if a key had been silently
+    /// skipped (CP §3.5.2 Nr. 11, p. 44).
+    #[tokio::test]
+    async fn a_plan_declaring_no_access_keys_reports_step_11_as_declared_none() {
+        let device = ap2_device();
+        let mut session = writer(&device, WriteScope::Download);
+        let report = Downloader::new(&mut session, two_parts())
+            .complete_download()
+            .await
+            .expect("a plan declaring nothing at step 11 completes");
+
+        let step_11 = report
+            .steps
+            .iter()
+            .find(|step| step.number == 11 && step.kind == ProcedureKind::CompleteDownload)
+            .expect("step 11 is recorded even though it does nothing");
+        assert!(
+            step_11.title.contains("none required"),
+            "got {:?}",
+            step_11.title
+        );
+    }
+
+    /// C10's acceptance criterion: a plan declaring keys is refused, not
+    /// silently completed. `A_Key_Write` has no encoder
+    /// (`cemi.rs`'s `key_write_has_an_apci_but_no_encoder`, design spec §10.7).
+    #[tokio::test]
+    async fn a_plan_declaring_access_keys_is_refused_at_step_11() {
+        let device = ap2_device();
+        let mut session = writer(&device, WriteScope::Download);
+        let declaring_plan = two_parts().with_access_keys(
+            AccessKeyDeclaration::required(vec![one_access_key_assignment()]).unwrap(),
+        );
+        let error = Downloader::new(&mut session, declaring_plan)
+            .complete_download()
+            .await
+            .expect_err("a plan declaring access keys must not silently complete");
+
+        assert!(
+            matches!(error, DownloadError::AccessKeysNotSupported { declared: 1 }),
+            "got {error}"
+        );
+        // Step 12, the disconnect, never runs: the refusal stops the
+        // procedure at step 11, one clause number before it.
+        assert!(
+            !error.to_string().is_empty(),
+            "the refusal names why, for a report a human reads"
+        );
+    }
+
+    /// The two call sites (CP §3.5.2 Nr. 11 and CP §3.5.3 AP2 Nr. 13) report
+    /// the same declaration in the same words: [`modify_access_keys`] is
+    /// the one place either procedure calls, so there is nowhere for the
+    /// wording to drift apart between them.
+    #[tokio::test]
+    async fn both_call_sites_report_the_same_declaration_for_the_same_plan() {
+        let complete_device = ap2_device();
+        let mut complete_session = writer(&complete_device, WriteScope::Download);
+        let complete_report = Downloader::new(&mut complete_session, two_parts())
+            .complete_download()
+            .await
+            .expect("a plan declaring nothing completes");
+        let complete_title = complete_report
+            .steps
+            .iter()
+            .find(|step| step.number == 11)
+            .expect("step 11 exists")
+            .title;
+
+        let partial_device = ap2_device();
+        let mut partial_session = writer(&partial_device, WriteScope::Download);
+        // A first complete download so the partial download below has
+        // something stored to escalate from is not needed here: the happy
+        // path (no allocation failure) reaches Nr. 13 directly.
+        let partial_report = Downloader::new(&mut partial_session, two_parts())
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect("a plan declaring nothing completes");
+        let partial_title = partial_report
+            .steps
+            .iter()
+            .find(|step| step.number == 13)
+            .expect("step 13 exists")
+            .title;
+
+        assert_eq!(complete_title, partial_title, "the wording must not drift");
     }
 
     /// §2.3 again, one layer up: a sequencer is not a second door. A session

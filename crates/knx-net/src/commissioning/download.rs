@@ -873,12 +873,18 @@ impl<'s, 't, T: ManagementTransport> Downloader<'s, 't, T> {
         }
 
         // A successful Nr. 06 (or, on the escalation path, the reloads
-        // above) continues at [`PartialDownloadVariant::jump_target`], one
-        // before the last step of the variant's own list — CP §3.5.3 AP2
-        // Nr. 13, p. 47, is the same *"Set access keys as required"* text as
-        // CP §3.5.2 Nr. 11, so the same declaration and the same refusal
-        // apply (C10): [`modify_access_keys`] is what makes both call sites
-        // report it identically.
+        // above) continues at the second-to-last step of the variant's own
+        // list, whichever number that is — CP §3.5.3 AP2 Nr. 13, p. 47, is
+        // the same *"Set access keys as required"* text as CP §3.5.2
+        // Nr. 11, so the same declaration and the same refusal apply (C10):
+        // [`modify_access_keys`] is what makes both call sites report it
+        // identically. This is deliberately not
+        // [`PartialDownloadVariant::jump_target`]: that accessor is `None`
+        // for the Association Table (CP §3.5.3, p. 56, has no escalation
+        // branch for it to skip), but every variant, that one included,
+        // still has an access-keys step and needs its number here — the
+        // four variants where `jump_target()` is `Some` happen to agree
+        // with this arithmetic, they do not supply it.
         let total_steps = procedure.steps.len();
         let access_keys_step = &procedure.steps[total_steps - 2];
         modify_access_keys(
@@ -2069,6 +2075,69 @@ mod tests {
             unloads, 1,
             "the escalation branch's own unload (CP §3.5.3 Nr. 07) never runs for a \
              variant with no Nr. 07"
+        );
+    }
+
+    /// C12 fix round 1, finding 1: distinguishes the escalation guard's two
+    /// plausible readings — "this variant has an escalation branch"
+    /// (`variant.escalation_targets().is_empty()`, the correct one) from
+    /// "this plan has a follower part to escalate onto"
+    /// (`self.plan.parts[position + 1..].is_empty()`, a mutant that happens
+    /// to agree with the correct guard everywhere the rest of this suite
+    /// looks, because the one variant with no escalation — the Association
+    /// Table — is also always last in a valid download order and so never
+    /// has a follower). A single-part [`PartKind::GroupAddressTable`] plan
+    /// separates the two: the variant *does* have an escalation branch (CP
+    /// §3.5.3, p. 55, `⇒ Continue at Nr. 7`), even though this particular
+    /// plan carries no follower for it to reload. The correct guard
+    /// escalates and retries the target itself, succeeding on the second
+    /// (unfailing) attempt; the mutant guard sees no follower and skips
+    /// straight to `Err`.
+    #[tokio::test]
+    async fn an_eligible_variant_with_no_follower_still_escalates_and_retries() {
+        const GROUP_ADDRESS_TABLE_OBJECT: u8 = 1;
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            allocation_fails_once_for: Some(GROUP_ADDRESS_TABLE_OBJECT),
+            ..SimulatorConfig::default()
+        });
+        let parts = plan(vec![table_part_with_no_version(
+            GROUP_ADDRESS_TABLE_OBJECT,
+            "Group Address Table",
+            6,
+            PartKind::GroupAddressTable,
+        )]);
+        let mut session = writer(&device, WriteScope::Download);
+        let report = Downloader::new(&mut session, parts)
+            .partial_download(ObjectIndex::new(GROUP_ADDRESS_TABLE_OBJECT))
+            .await
+            .expect(
+                "the Group Address Table variant does have a Nr. 07 escalation (CP §3.5.3, \
+                 p. 55); a single-part plan with no follower to reload must still retry the \
+                 target itself, not fail outright",
+            );
+        assert_eq!(
+            report.escalated_from,
+            Some(ObjectIndex::new(GROUP_ADDRESS_TABLE_OBJECT)),
+            "the escalation did happen — this is CP §3.5.3's own documented limitation \
+             (§113): a shortened plan with no follower only reloads the target"
+        );
+        assert_eq!(
+            report.parts.len(),
+            1,
+            "one part attempted, its own retry — no follower existed to reload"
+        );
+
+        let writes = load_state_writes(&device);
+        let allocation_attempts = writes
+            .iter()
+            .filter(|(object_index, event)| {
+                *object_index == GROUP_ADDRESS_TABLE_OBJECT
+                    && *event == LoadEvent::AdditionalLoadControls.octet()
+            })
+            .count();
+        assert_eq!(
+            allocation_attempts, 2,
+            "the failed first attempt and the escalation's retry, CP §3.5.3 Nr. 06 and Nr. 08"
         );
     }
 

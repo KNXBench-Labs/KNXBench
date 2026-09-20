@@ -112,6 +112,35 @@ describe("CatalogBrowser", () => {
 
     expect(apiMock.catalogItems).toHaveBeenLastCalledWith("M-2", undefined, null);
     expect(host!.textContent).toContain("Installed: scheme 11");
+    expect(host!.textContent).not.toContain("stored, not verified");
+    root.unmount();
+  });
+
+  // KNOWN_LIMITATIONS.md §85: a `.signature` member is stored, never
+  // checked. The server already qualifies its role text; this test pins
+  // that the report a person actually reads says so too, in English.
+  it("flags an install report containing a signature member as unverified", async () => {
+    apiMock.installProductPackage.mockResolvedValueOnce({
+      sha256: "abc",
+      scheme: 11,
+      skipped: false,
+      members: [
+        { path: "M-0001.signature", role: "Signature (stored, not verified)", sha256: "def", size: 175 },
+        { path: "M-0001/Catalog.xml", role: "Catalog", sha256: "ghi", size: 42 },
+      ],
+      unknown: 0,
+      conflicts: 0,
+    });
+    const { root } = await renderBrowser();
+
+    const input = host!.querySelector<HTMLInputElement>('input[type="file"]')!;
+    await act(async () => {
+      Object.defineProperty(input, "files", { value: [new File(["package"], "signed.knxprod")] });
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    expect(host!.textContent).toContain("1 signature member stored, not verified");
+    expect(host!.textContent).toContain("this application cannot check it");
     root.unmount();
   });
 

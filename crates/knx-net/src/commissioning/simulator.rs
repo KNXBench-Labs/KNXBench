@@ -33,11 +33,13 @@ use knx_core::commissioning::properties::{
     PID_LOAD_STATE_CONTROL, PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH, PID_MCB_TABLE,
     PID_PROGRAM_VERSION, PID_TABLE_REFERENCE,
 };
-use knx_core::IndividualAddress;
+use knx_core::{GroupValue, IndividualAddress};
 use tokio::sync::broadcast;
 
 use super::ERASE_CODE_CONFIRMED_RESTART;
-use crate::cemi::{ApplicationService, Destination, LDataFrame, LDataMessageKind, Tpci};
+use crate::cemi::{
+    ApplicationService, Destination, LDataFrame, LDataMessageKind, Tpci, BROADCAST_DESTINATION,
+};
 use crate::client::{BusError, TunnelEvent};
 use crate::management::ManagementTransport;
 
@@ -254,7 +256,67 @@ pub struct SimulatorConfig {
     /// stored something else is the failure the read-back exists to catch.
     pub corrupt_memory_writes: bool,
     /// The octet at `0060h`, the programming-mode byte.
+    ///
+    /// This is also what `NM_IndividualAddress_Write` step 2 and step 3
+    /// need from this device: MP §2.3, p. 14's broadcast
+    /// `A_IndividualAddress_Read` gets an `A_IndividualAddress_Response`
+    /// from this device only while this is set, and AL §3.2.2, p. 18's
+    /// broadcast `A_IndividualAddress_Write` renames this device only
+    /// while this is set too — *"The application process shall ignore the
+    /// A_IndividualAddress_Write.ind primitive if the device is not in
+    /// ´programming mode´."* There is no second flag for the broadcast
+    /// behaviour: one device, one notion of whether its programming button
+    /// is pressed.
     pub programming_mode: bool,
+    /// Other addresses that answer a broadcast `A_IndividualAddress_Read`
+    /// alongside this device, as if they too were in programming mode.
+    ///
+    /// MP §2.3 step 2, p. 14: *"if more than one response is received ⇒
+    /// more than one device in Programming Mode"* — a rule that only means
+    /// anything once a test can put more than one responder on the bus.
+    /// This simulator is one [`SimulatedDevice`], not a bus, so extra
+    /// responders are named here rather than built as separate devices;
+    /// none of them answer anything but this one broadcast service, and
+    /// none of them can be connected to.
+    pub other_programming_mode_devices: Vec<IndividualAddress>,
+    /// One telegram from an unrelated device, emitted inside the
+    /// `A_IndividualAddress_Read` window, plus its `L_Data.con` echo.
+    ///
+    /// A live installation does not fall silent while a Management Client
+    /// counts, and MP §2.3 step 2, p. 14 counts one thing only:
+    /// *"A_IndividualAddress_Response-PDU"*. Without traffic to ignore,
+    /// [`ManagementSession::broadcast_individual_address_read`]'s frame
+    /// filter is untestable and a client that counted every frame would
+    /// pass — then abort on the first busy bus it met.
+    ///
+    /// [`ManagementSession::broadcast_individual_address_read`]: crate::commissioning::ManagementSession::broadcast_individual_address_read
+    pub unrelated_traffic_during_broadcast: Option<IndividualAddress>,
+    /// Answer a `DeviceDescriptorRead { descriptor_type: 0 }` with a
+    /// `T_Disconnect` instead of the usual `DeviceDescriptorResponse`.
+    ///
+    /// MP §2.3, p. 15, "to 1.": *"If an A_Disconnect-PDU is received
+    /// instead of an A_DeviceDescriptor_Response-PDU, than a device with
+    /// this Individual Address exists but it may either already have
+    /// another Transport Layer connection open and not accept any further
+    /// Transport Layer connections, or does not support connection
+    /// oriented communication mode."* `NM_IndividualAddress_Write` step 1
+    /// reads it as `Occupancy::OccupiedAfterDisconnect` and carries on —
+    /// *"The Management Client shall continue with the Management
+    /// Procedure in every case"* (same clause; `KNOWN_LIMITATIONS.md`
+    /// §108).
+    pub device_descriptor_read_gets_disconnect: bool,
+    /// Acknowledge a `DeviceDescriptorRead { descriptor_type: 0 }` at the
+    /// Transport Layer and then never answer it.
+    ///
+    /// The other half of MP §2.3 step 1's silence, and the opposite
+    /// verdict from [`Self::device_descriptor_read_gets_disconnect`]:
+    /// p. 14, *"If no A_DeviceDescriptor_Response-PDU is received after
+    /// time-out ⇒ IA_new is not occupied"*. The `T_ACK` is the point — it
+    /// stops the Transport Layer from releasing the connection, so the
+    /// client is left holding an open connection with nothing on it, which
+    /// is the only shape in which step 4's `Abort the connection of the
+    /// client side Transport Layer` (p. 15) can be observed being skipped.
+    pub device_descriptor_read_unanswered: bool,
     /// The mask version Device Descriptor Type 0 answers. `07B0h` by
     /// default: a System B mask, which is the profile spec §7's CP §3.5.2
     /// walkthrough covers.
@@ -475,6 +537,10 @@ impl Default for SimulatorConfig {
             protected_memory: None,
             corrupt_memory_writes: false,
             programming_mode: false,
+            other_programming_mode_devices: Vec::new(),
+            unrelated_traffic_during_broadcast: None,
+            device_descriptor_read_gets_disconnect: false,
+            device_descriptor_read_unanswered: false,
             mask_version: 0x07B0,
             allocation_fails_once_for: None,
             interrupt_at: None,
@@ -499,6 +565,11 @@ pub enum Seen {
     Connect,
     /// A `T_Disconnect`.
     Disconnect,
+    /// A broadcast `A_IndividualAddress_Read` (MP §2.3 steps 2 and 3): kept
+    /// as its own count so a test can prove the mandatory re-verification
+    /// immediately before the write actually sent a second one, rather
+    /// than trusting the write to have happened at all.
+    IndividualAddressReadBroadcast,
     /// An `A_Authorize_Request`, and the key it carried.
     Authorize(u32),
     /// A property read.
@@ -561,6 +632,15 @@ pub enum Seen {
 
 #[derive(Debug)]
 struct State {
+    /// Where the simulated device currently lives. Starts at
+    /// [`SIMULATED_DEVICE_ADDRESS`] and only ever moves in response to a
+    /// broadcast `A_IndividualAddress_Write` accepted while
+    /// [`SimulatorConfig::programming_mode`] is set — MP §2.3 step 3's
+    /// whole point. Kept in `State`, not a plain field on
+    /// [`SimulatedDevice`], because a rename is the one thing about this
+    /// device that a test needs to observe *changing* mid-run: step 4
+    /// reconnects to the new address and must reach this same device.
+    address: IndividualAddress,
     /// When the first `PID_LOAD_STATE_CONTROL` read arrived, for
     /// [`SimulatorConfig::settle_load_state_after`] to measure against.
     /// Measuring from device construction instead would make a test's
@@ -608,7 +688,6 @@ struct State {
 
 /// A device that answers management services, wrongly on request.
 pub struct SimulatedDevice {
-    address: IndividualAddress,
     client: IndividualAddress,
     config: SimulatorConfig,
     events: broadcast::Sender<TunnelEvent>,
@@ -657,6 +736,7 @@ impl SimulatedDevice {
         memory.insert(0x0060, u8::from(config.programming_mode));
 
         let state = State {
+            address,
             first_load_state_read: None,
             connected: false,
             dropped: false,
@@ -680,7 +760,6 @@ impl SimulatedDevice {
         };
 
         Self {
-            address,
             client,
             config,
             events,
@@ -688,9 +767,11 @@ impl SimulatedDevice {
         }
     }
 
-    /// Where the simulated device lives.
+    /// Where the simulated device currently lives — the address it was
+    /// built with, unless a broadcast `A_IndividualAddress_Write` has since
+    /// renamed it (see [`State::address`]).
     pub fn address(&self) -> IndividualAddress {
-        self.address
+        self.lock().address
     }
 
     /// Puts a load state in place without a download having produced it, so
@@ -777,6 +858,15 @@ impl SimulatedDevice {
             .count()
     }
 
+    /// How many broadcast `A_IndividualAddress_Read` frames arrived.
+    pub fn individual_address_read_broadcasts(&self) -> usize {
+        self.lock()
+            .seen
+            .iter()
+            .filter(|entry| matches!(entry, Seen::IndividualAddressReadBroadcast))
+            .count()
+    }
+
     /// Whether Verify Mode is on as far as the device is concerned.
     pub fn verify_mode(&self) -> bool {
         self.lock().verify_mode
@@ -810,11 +900,21 @@ impl SimulatedDevice {
     }
 
     fn emit(&self, transport: Tpci, service: ApplicationService) {
+        let source = self.lock().address;
+        self.emit_from(source, transport, service);
+    }
+
+    /// [`Self::emit`], with an explicit source address instead of this
+    /// device's own — the broadcast `A_IndividualAddress_Read` handler
+    /// uses this to speak for [`SimulatorConfig::other_programming_mode_devices`],
+    /// synthetic responders this one `SimulatedDevice` answers on behalf
+    /// of without being them.
+    fn emit_from(&self, source: IndividualAddress, transport: Tpci, service: ApplicationService) {
         // A broadcast send with no receivers is not an error here: a test
         // that has not subscribed is a test that does not care.
         let _ = self.events.send(TunnelEvent::Telegram(LDataFrame {
             kind: LDataMessageKind::Indication,
-            source: self.address,
+            source,
             destination: Destination::Individual(self.client),
             transport,
             service,
@@ -822,10 +922,11 @@ impl SimulatedDevice {
     }
 
     fn emit_connect_confirmation(&self, error: bool) {
+        let address = self.lock().address;
         let _ = self.events.send(TunnelEvent::Telegram(LDataFrame {
             kind: LDataMessageKind::Confirmation { error },
             source: self.client,
-            destination: Destination::Individual(self.address),
+            destination: Destination::Individual(address),
             transport: Tpci::Connect,
             service: ApplicationService::NoApplicationPdu,
         }));
@@ -980,6 +1081,89 @@ impl SimulatedDevice {
         }
         let base = ALLOCATION_BASE + u32::from(object_index) * 0x1000;
         self.lock().reference.insert(object_index, base);
+    }
+
+    /// Answers a frame sent to the broadcast destination `0/0/0`.
+    ///
+    /// MP §2.3, pp. 14-15: `A_IndividualAddress_Read` and
+    /// `A_IndividualAddress_Write` are the only two broadcast services
+    /// spec §7's download procedures ever use. Every device this
+    /// simulator can pretend to be — itself, plus
+    /// [`SimulatorConfig::other_programming_mode_devices`] — answers on
+    /// its own behalf, exactly as distinct devices sharing one bus would;
+    /// none of this goes through [`Self::handle`], `T_Connect`, or any
+    /// notion of a connection, because a broadcast is connectionless by
+    /// definition — AL §3.2.1, p. 18: *"A broadcast communication mode
+    /// shall be connectionless and shall connect one device with all
+    /// others."*
+    fn handle_broadcast(&self, transport: Tpci, service: ApplicationService) {
+        if transport != Tpci::UnnumberedData {
+            return;
+        }
+        match service {
+            ApplicationService::IndividualAddressRead => {
+                let own_address = {
+                    let mut state = self.lock();
+                    state.seen.push(Seen::IndividualAddressReadBroadcast);
+                    state.address
+                };
+                if self.config.programming_mode {
+                    self.emit_from(
+                        own_address,
+                        Tpci::UnnumberedData,
+                        ApplicationService::IndividualAddressResponse,
+                    );
+                }
+                for &other in &self.config.other_programming_mode_devices {
+                    self.emit_from(
+                        other,
+                        Tpci::UnnumberedData,
+                        ApplicationService::IndividualAddressResponse,
+                    );
+                }
+                if let Some(noisy) = self.config.unrelated_traffic_during_broadcast {
+                    // Somebody else's group telegram, landing in the
+                    // middle of the window. Nothing about it is an
+                    // `A_IndividualAddress_Response-PDU`, so MP §2.3 step
+                    // 2's count must not move.
+                    self.emit_from(
+                        noisy,
+                        Tpci::UnnumberedData,
+                        ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+                    );
+                    // And the `L_Data.con` for that same telegram, which
+                    // differs from a response only in `kind`. Synthetic:
+                    // no real device confirms an
+                    // `A_IndividualAddress_Response` it did not send. It
+                    // exists so the counting loop's `Indication` half has
+                    // something to reject that its service half would
+                    // wave through.
+                    let _ = self.events.send(TunnelEvent::Telegram(LDataFrame {
+                        kind: LDataMessageKind::Confirmation { error: false },
+                        source: noisy,
+                        destination: BROADCAST_DESTINATION,
+                        transport: Tpci::UnnumberedData,
+                        service: ApplicationService::IndividualAddressResponse,
+                    }));
+                }
+            }
+            // Unconfirmed (AL §3.5.4 does not apply here — there is no
+            // connection, hence no Verify Mode, to answer through): this
+            // device either takes the new address in silence or, out of
+            // programming mode, ignores the write in silence. AL §3.2.2,
+            // p. 18: *"The application process shall ignore the
+            // A_IndividualAddress_Write.ind primitive if the device is not
+            // in ´programming mode´. Otherwise the local Individual
+            // Address shall be set to the new address."* MP §2.3's own
+            // exception handling has no "to 3." — step 3 is the one step
+            // the clause raises no exception for.
+            ApplicationService::IndividualAddressWrite { address }
+                if self.config.programming_mode =>
+            {
+                self.lock().address = address;
+            }
+            _ => {}
+        }
     }
 
     fn handle(&self, transport: Tpci, service: ApplicationService) {
@@ -1284,6 +1468,30 @@ impl SimulatedDevice {
                 });
             }
             ApplicationService::DeviceDescriptorRead { descriptor_type: 0 } => {
+                if self.config.device_descriptor_read_unanswered {
+                    // The `T_ACK` has already gone out in `handle`'s
+                    // `NumberedData` arm, so the client's Transport Layer
+                    // stays in `OPEN_IDLE` and the silence belongs to the
+                    // application layer. MP §2.3, p. 14: *"If no
+                    // A_DeviceDescriptor_Response-PDU is received after
+                    // time-out ⇒ IA_new is not occupied"*.
+                    return;
+                }
+                if self.config.device_descriptor_read_gets_disconnect {
+                    // MP §2.3, p. 14, the remark beside the A_Disconnect
+                    // arrow: *"If the device that occupies the IA IA_new
+                    // does not support Transport Layer connections, it
+                    // shall send a T_Disconnect-PDU."*
+                    let mut state = self.lock();
+                    state.connected = false;
+                    state.verify_mode = false;
+                    if let Some(control) = state.properties.get_mut(&(0, PID_DEVICE_CONTROL)) {
+                        *control = vec![0x00];
+                    }
+                    drop(state);
+                    self.emit(Tpci::Disconnect, ApplicationService::NoApplicationPdu);
+                    return;
+                }
                 // AL §3.4.2.1 Figure 38: two octets, most significant
                 // first, and step 02 of every procedure in spec §7 reads
                 // them before it decides anything.
@@ -1490,7 +1698,11 @@ impl ManagementTransport for SimulatedDevice {
         transport: Tpci,
         service: ApplicationService,
     ) -> Result<(), BusError> {
-        if destination != Destination::Individual(self.address) {
+        if destination == BROADCAST_DESTINATION {
+            self.handle_broadcast(transport, service);
+            return Ok(());
+        }
+        if destination != Destination::Individual(self.lock().address) {
             // A frame for somebody else is dropped rather than answered:
             // the simulator is one device, not a bus.
             return Ok(());

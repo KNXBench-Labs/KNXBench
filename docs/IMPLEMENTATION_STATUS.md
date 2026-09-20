@@ -7582,13 +7582,20 @@ and `cargo deny check` all exit 0. No web file touched, so `npx tsc
 
 ## 2026-09-20 — C13: the Download Counter is read, reported, and can now refuse a partial download
 
-CP §3.5.3 "imposes nothing" about `PID_DOWNLOAD_COUNTER`, but two other
-clauses do: CP §3.12.4/3.12.5, p. 99-100 (Coupler Model 2.0's own download
-procedure) require storing the counter and refusing a partial download
-when it has changed since the preceding configuration; RES §5.3.2.2, p.
-320 (System B) requires refusing outright when the property is not
-available at all. Before this task neither obligation existed anywhere:
-`grep -rn "download_counter\|DOWNLOAD_COUNTER" crates/` returned nothing.
+CP §3.5.3 "imposes nothing" about `PID_DOWNLOAD_COUNTER`, but Coupler
+Model 2.0's own download procedure does, in two places, both in RES
+clause 5 "Resources for Couplers": CP §3.12.4/3.12.5, p. 99-100 (which
+addresses `OI = 0`, the Coupler Model 2.0 Router Object) require storing
+the counter and refusing a partial download when it has changed since
+the preceding configuration; RES §5.3.2.2, p. 320 — the Coupler Model
+2.0 Device Object, not a System B clause — requires refusing outright
+when the property is not available at all. A full-text search of RES
+finds "shall not perform a Partial Download" exactly once, at that
+clause. There is no System B obligation to do either; this project
+applies both refusals to every device anyway, as our own conservative
+rule (see Known Limitation #114). Before this task neither behaviour
+existed anywhere: `grep -rn "download_counter\|DOWNLOAD_COUNTER" crates/`
+returned nothing.
 
 Added `PID_DOWNLOAD_COUNTER` (PID 30) to
 `crates/knx-core/src/commissioning/properties.rs`, and
@@ -7598,8 +7605,11 @@ both CP §3.12.4/3.12.5 read it there.
 
 The one open question the brief carried in — whether a System B device
 must have the property at all — is answered by Volume 6 Profiles Annex A,
-p. 133 and pp. 138-140 (`[C18]`): optional, not mandatory, for every
-profile including masks 07B0h/17B0h. That answer shapes
+p. 133 and pp. 138-140 (`[C18]`): optional, not mandatory, in the S-Mode
+End-device Device Object table, which covers masks 07B0h/17B0h among
+others. Annex A A.4.2, p. 167 lists the same PID as mandatory (`3/1`)
+for the E-Mode profiles FEC General, Ctrl FEC and PB FEC — a different
+table for different devices, not a contradiction. That answer shapes
 `DownloadCounterCheck` (`crates/knx-net/src/commissioning/download.rs`),
 which keeps *absent* and *changed* as two separate variants rather than
 one refusal case: a device that never had the property is fully

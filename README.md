@@ -75,6 +75,12 @@ The image accepts:
   HTTPS, so the session cookie is marked `Secure`. Leave it unset on plain
   HTTP, where a `Secure` cookie would never be sent back at all.
 
+The hash string contains `$` characters, and `docker compose` interpolates
+those in `.env` files and in `compose.yml`: paste a hash there with every
+`$` doubled to `$$`, or Compose hands the container a truncated credential
+and nothing you type will ever log in. `docker run -e` does not interpolate
+and needs no doubling.
+
 ### Authentication, and what happens without it
 
 `knx-server` will not serve an unauthenticated API to the network. With no

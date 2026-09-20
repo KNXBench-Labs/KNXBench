@@ -10,7 +10,8 @@ use tower_http::services::ServeDir;
 
 mod auth;
 pub use auth::{
-    bind_address, resolve_auth, AuthConfig, AuthSetup, DEFAULT_IDLE_TIMEOUT, SESSION_COOKIE,
+    bind_address, resolve_auth, short_password_notice, AuthConfig, AuthSetup, DEFAULT_IDLE_TIMEOUT,
+    SESSION_COOKIE,
 };
 
 mod auth_password;

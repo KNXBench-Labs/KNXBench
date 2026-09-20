@@ -1445,8 +1445,9 @@ only server and an unmissable startup line saying so.
 probe that needs a password is not a liveness probe), the static frontend
 assets (they are the login screen), and the three `/api/auth/*` routes
 above. Everything else under `/api/` — including `/api/version`, the
-KNX bus routes, and `/api/fs/*`, which browses the host filesystem and was
-the sharpest edge of this limitation — answers `401` with the usual
+KNX bus routes, and `/api/fs/*`, which browses the host filesystem under
+`KNX_DATA_DIR` (confined there by `paths::resolve_in_data_dir`, not by the
+login) and was the sharpest edge of this limitation — answers `401` with the usual
 `{"error": ...}` body to a caller with no valid session.
 
 **What is still a limitation, and belongs to the deployer.**

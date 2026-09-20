@@ -11,6 +11,7 @@ use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64URL;
 use base64::Engine as _;
+use tokio::sync::{Semaphore, SemaphorePermit};
 
 use crate::auth_password::{hash_password, StoredPassword, DEFAULT_ITERATIONS};
 use crate::errors::ApiError;
@@ -30,11 +31,35 @@ pub const DEFAULT_IDLE_TIMEOUT: Duration = Duration::from_secs(12 * 60 * 60);
 const DEFAULT_FAILURE_DELAY: Duration = Duration::from_millis(250);
 
 /// The ceiling on that multiplier: two seconds of penalty per attempt,
-/// which is ruinous for a script and merely irritating for the operator
-/// who mistyped. There is deliberately no lockout — see the module's ADR
+/// which — because attempts are serialised, see [`MAX_CONCURRENT_ATTEMPTS`]
+/// — is two seconds per *guess* rather than per request, and merely
+/// irritating for the operator who mistyped. There is deliberately no lockout — see the module's ADR
 /// (0026): locking out the only operator of a single-operator server is a
 /// denial of service against its owner.
 const MAX_FAILURE_MULTIPLIER: u32 = 8;
+
+/// How many login attempts may be in flight at once.
+///
+/// One. The delay below only costs an attacker anything if attempts are
+/// *serial*: fired in parallel, a hundred guesses would each sleep through
+/// the same two seconds and land a hundred PBKDF2 derivations on the
+/// blocking pool together — a penalty that is no penalty and a free way to
+/// burn every core the host has. With a single permit the delay is a rate
+/// limit rather than a per-request tax, and the CPU cost of guessing is
+/// bounded by one derivation at a time.
+const MAX_CONCURRENT_ATTEMPTS: usize = 1;
+
+/// Below this many characters, a password gets a startup complaint.
+///
+/// NIST SP 800-63B (§5.1.1.2) sets 8 characters as the floor for a
+/// memorised secret it is willing to accept at all, on the assumption that
+/// the verifier also rate-limits and that a compromise costs one account.
+/// Here it is the *only* credential, it opens a file browser and a KNX bus,
+/// and it is reachable from the network the moment it exists — so the
+/// complaint starts higher than the floor. Twelve is not a policy: nothing
+/// is rejected, because a server that refuses to start is a worse failure
+/// than a server that says it is uneasy.
+const MIN_RECOMMENDED_PASSWORD_LEN: usize = 12;
 
 /// A session token's entropy, in bytes, from the operating system's
 /// CSPRNG. 32 bytes is four times what a birthday bound over any
@@ -157,6 +182,10 @@ pub(crate) struct AuthState {
     /// the honest scope: there is one password, so per-account counting
     /// would be per-account in name only.
     failures: Mutex<u32>,
+    /// The gate that makes the failure delay a rate limit instead of a
+    /// per-request tax. Held across verification *and* the stall, so a
+    /// second guess cannot start until the first has finished paying.
+    attempts: Semaphore,
 }
 
 impl AuthState {
@@ -165,7 +194,25 @@ impl AuthState {
             config,
             sessions: Mutex::new(HashMap::new()),
             failures: Mutex::new(0),
+            attempts: Semaphore::new(MAX_CONCURRENT_ATTEMPTS),
         }
+    }
+
+    /// Waits for the login gate and returns the permit that holds it.
+    ///
+    /// The caller keeps the permit for as long as the attempt lasts —
+    /// verification and any penalty delay — and dropping it lets the next
+    /// attempt in. It is a `tokio` semaphore, not a `std` mutex, because
+    /// this wait crosses `.await` points by design; no other lock in this
+    /// module is held while it does, so a queue of guesses cannot slow a
+    /// session check or touch the project state at all.
+    ///
+    /// The semaphore is never closed, so the acquire cannot fail.
+    pub(crate) async fn begin_attempt(&self) -> SemaphorePermit<'_> {
+        self.attempts
+            .acquire()
+            .await
+            .expect("the login gate is never closed")
     }
 
     pub(crate) fn is_required(&self) -> bool {
@@ -312,6 +359,9 @@ pub fn resolve_auth(
                  prefer KNX_AUTH_PASSWORD_HASH from `knx-server --hash-password`."
                     .to_string(),
             );
+            if let Some(complaint) = short_password_notice(plaintext) {
+                notices.push(complaint);
+            }
             AuthConfig::from_plaintext_password(plaintext)?
         }
         (None, None) => {
@@ -336,6 +386,29 @@ pub fn resolve_auth(
         );
     }
     Ok(AuthSetup { config, notices })
+}
+
+/// The complaint a short password earns, or `None` if it is long enough.
+///
+/// Public because `--hash-password` says the same thing at the same
+/// threshold: hashing a four-character password produces a perfectly valid
+/// hash string, and a deployer who is told nothing will reasonably assume
+/// the work factor made it safe. It did not — 600 000 iterations multiply
+/// the cost of *each* guess, and there are not many guesses to make.
+///
+/// Counted in `char`s rather than bytes, so a passphrase in a non-Latin
+/// script is not flattered by UTF-8 into looking longer than it is.
+pub fn short_password_notice(password: &str) -> Option<String> {
+    let length = password.chars().count();
+    (length < MIN_RECOMMENDED_PASSWORD_LEN).then(|| {
+        format!(
+            "This password is {length} characters long. Fewer than \
+             {MIN_RECOMMENDED_PASSWORD_LEN} is guessable in a useful amount of time \
+             once this server is on the network, whatever the work factor: the \
+             delay between failed attempts buys time, not safety. Nothing is \
+             refusing to start — this is the server saying it is uneasy."
+        )
+    })
 }
 
 /// Pulls the session token out of a request's `Cookie` headers.
@@ -422,6 +495,49 @@ mod tests {
     fn test_config() -> AuthConfig {
         let stored = hash_password_with_iterations("open sesame", TEST_ITERATIONS).unwrap();
         AuthConfig::from_password_hash(&stored).unwrap()
+    }
+
+    #[test]
+    fn a_short_password_is_complained_about_and_a_long_one_is_not() {
+        assert!(short_password_notice("hunter2").is_some());
+        // Eleven characters: one short of the threshold, so still a
+        // complaint. The boundary is asserted from both sides because an
+        // off-by-one here would be silent.
+        assert!(short_password_notice("12345678901").is_some());
+        assert!(short_password_notice("123456789012").is_none());
+        assert!(short_password_notice("a perfectly ordinary password").is_none());
+        // Counted in characters, not bytes: eight code points that occupy
+        // far more than twelve bytes are still eight characters.
+        assert!(short_password_notice("паролька").is_some());
+        let complaint = short_password_notice("short").unwrap();
+        assert!(complaint.contains('5'), "{complaint}");
+        assert!(complaint.contains("12"), "{complaint}");
+    }
+
+    #[test]
+    fn a_plaintext_password_that_is_too_short_is_reported_at_startup() {
+        let setup = resolve_auth(None, Some("hunter2"), false).unwrap();
+        assert!(setup.config.is_required());
+        assert!(
+            setup
+                .notices
+                .iter()
+                .any(|n| n.contains("7 characters long")),
+            "got {:?}",
+            setup.notices
+        );
+    }
+
+    #[tokio::test]
+    async fn only_one_login_attempt_runs_at_a_time() {
+        let state = AuthState::new(test_config());
+        let held = state.begin_attempt().await;
+        // The second attempt must not be able to start while the first
+        // holds the gate: without this, the failure delay would be a tax
+        // each guess pays privately instead of a limit on the guess rate.
+        assert!(state.attempts.try_acquire().is_err());
+        drop(held);
+        assert!(state.attempts.try_acquire().is_ok());
     }
 
     #[test]

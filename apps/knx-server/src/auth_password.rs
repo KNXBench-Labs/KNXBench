@@ -159,9 +159,16 @@ fn decode_field(field: Option<&str>, name: &str) -> Result<Vec<u8>, String> {
 /// The lengths are compared first and that comparison does leak: both
 /// operands here are fixed-width digests, so their length is public
 /// information already. The loop itself has no `break` and no branch on
-/// the data — it accumulates the difference and inspects it once — which
-/// is what stops an optimiser from turning it back into a `memcmp` with
-/// the early exit this function exists to avoid.
+/// the data — it accumulates the difference and inspects it once.
+///
+/// That shape is best-effort, not a guarantee. Rust and LLVM promise
+/// nothing about preserving it, and a sufficiently clever optimiser is
+/// entitled to reintroduce an early exit; [`std::hint::black_box`] is the
+/// strongest discouragement available without inline assembly or a crate
+/// like `subtle`, and it is a hint. It is enough here because of what this
+/// function is given: both operands are PBKDF2 outputs over a salt the
+/// caller cannot choose, so an attacker cannot steer the bytes being
+/// compared and has nothing to learn from where they first differ.
 pub fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     if a.len() != b.len() {
         return false;
@@ -170,7 +177,7 @@ pub fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     for (x, y) in a.iter().zip(b.iter()) {
         difference |= x ^ y;
     }
-    difference == 0
+    std::hint::black_box(difference) == 0
 }
 
 /// Hashes `password` at [`DEFAULT_ITERATIONS`] with a fresh random salt.
@@ -182,13 +189,15 @@ pub fn hash_password(password: &str) -> Result<String, String> {
 
 /// [`hash_password`] with the work factor spelled out.
 ///
-/// It exists for two callers. Tests are the loud one: at the production
-/// count a single verification costs seconds in an unoptimised build, so a
-/// suite that logs in a dozen times would spend a minute proving nothing
-/// about iteration counts. The quiet one is a deployer on hardware where
-/// 600 000 iterations is genuinely too slow — the count travels inside the
-/// hash string, so that choice stays visible instead of becoming a build
-/// flag nobody can read back.
+/// It exists for the tests: at the production count a single verification
+/// costs seconds in an unoptimised build, so a suite that logs in a dozen
+/// times would spend a minute proving nothing about iteration counts.
+///
+/// No command-line path reaches it — `--hash-password` always hashes at
+/// [`DEFAULT_ITERATIONS`], deliberately, because a flag for lowering the
+/// work factor is a flag someone will lower it with. A hash made elsewhere
+/// at a lower count still verifies (the count travels inside the string)
+/// and is reported at startup as the compromise it is.
 pub fn hash_password_with_iterations(password: &str, iterations: u32) -> Result<String, String> {
     let mut salt = vec![0u8; SALT_LEN];
     getrandom::fill(&mut salt).map_err(|e| format!("failed to read random salt: {e}"))?;

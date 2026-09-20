@@ -4881,10 +4881,11 @@ in `source_file` — the same treatment `notes.txt` gets under
 `apps/knx-server` or in `apps/knx-web` reads a `'Signature'`-role member
 back out to check it against a key, a hash, or anything else **[V]**
 (`grep -rn '"Signature"' crates/knx-productdb apps` finds exactly one
-writer — `package.rs` — and two verbatim pass-throughs that only forward
-the string for display: `apps/knx-server/src/routes.rs`'s
-`CatalogInstallMemberDto` and `apps/knx-web/src/api.ts`'s matching
-TypeScript type). A row that said `Signature` looked, to anyone reading the
+writer — `package.rs` — and two readers that only forward the string for
+display: `apps/knx-server/src/routes.rs`'s `CatalogInstallMemberDto`,
+which since the display fix below qualifies the text rather than passing it
+through verbatim, and `apps/knx-web/src/api.ts`'s matching TypeScript type,
+which still passes it through untouched). Neither reader opens the file. A row that said `Signature` looked, to anyone reading the
 install report, like something was signed and checked. Nothing was — see
 "Lifted when" below for the display fix task 05 (T05) shipped for that.
 

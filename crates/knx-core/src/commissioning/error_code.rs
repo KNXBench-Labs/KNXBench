@@ -4,7 +4,7 @@
 //! per-subtype table for main type 20 on purpose (`dpt/codec.rs`, and
 //! `KNOWN_LIMITATIONS.md` §61). This module is the caller that codec
 //! comment names: it takes the codec's `DptValue::Enum { code }` and
-//! supplies the 20.011 names from spec §5.6. Nothing here re-decodes an
+//! supplies the 20.011 names from design spec §5.6. Nothing here re-decodes an
 //! octet the codec already decodes.
 
 use std::fmt;
@@ -19,7 +19,7 @@ pub const ERROR_CLASS_SYSTEM: DptRef = DptRef {
 };
 
 /// A `DPT_ErrorClass_System` 20.011 value, `[D]` DPT clause 3, ID 20.011,
-/// `Range: [0 to 18]` (spec §5.6).
+/// `Range: [0 to 18]` (design spec §5.6).
 ///
 /// The names are the Standard's own wording, shortened only by dropping
 /// its parenthetical examples.
@@ -75,7 +75,7 @@ pub enum SystemErrorClass {
 impl SystemErrorClass {
     /// Names an octet, or reports it unknown. 19–255 are *"reserved,
     /// shall not be used"* and are surfaced rather than mapped onto a
-    /// neighbouring name (spec §5.6, §14 item 17).
+    /// neighbouring name (design spec §5.6, §14 item 17).
     pub fn from_code(code: u8) -> Result<Self, ReservedErrorClass> {
         use SystemErrorClass::*;
         Ok(match code {

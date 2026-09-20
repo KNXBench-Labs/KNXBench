@@ -1,6 +1,6 @@
 //! Chunking a memory region into writes: how long a chunk may be, and which service carries it.
 //!
-//! Pure arithmetic over spec §6.4 (`PID_MAX_APDU_LENGTH`, and the 12-octet
+//! Pure arithmetic over design spec §6.4 (`PID_MAX_APDU_LENGTH`, and the 12-octet
 //! default that is 15 − 3) and §6.5 (`A_Memory_Write` below `FFFFh`,
 //! `A_UserMemoryWrite` above it, decided on **base + length**). No I/O:
 //! the caller reads the property, this decides what to send.
@@ -257,7 +257,7 @@ const USER_MEMORY_LIMIT: u32 = 1 << 20;
 
 /// Splits `data` starting at `base` into writes no longer than `limit`.
 ///
-/// Refuses a zero base outright: spec §7.2 step 3 and §9.2 both say
+/// Refuses a zero base outright: design spec §7.2 step 3 and §9.2 both say
 /// `PID_REFERENCE` = 0 means allocation failed, and the one thing the
 /// implementation must never do with that value is compute a write offset
 /// from it.

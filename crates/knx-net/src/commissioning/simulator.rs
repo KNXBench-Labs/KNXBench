@@ -7,7 +7,7 @@
 //! Each of those is a field of [`SimulatorConfig`] and each has a test.
 //!
 //! What this is not: a conformant KNX device. It answers the subset of the
-//! Application Layer the download procedures of spec §7 use, with the
+//! Application Layer the download procedures of design spec §7 use, with the
 //! encodings those clauses cite, and it answers nothing else. Its purpose is
 //! to make the client's behaviour observable — in particular the behaviour
 //! that consists of *not* sending something.
@@ -45,7 +45,7 @@ use crate::management::ManagementTransport;
 
 /// The address the simulated management client appears to have.
 ///
-/// Inside the approved read range of spec §2.2 rather than outside it, so
+/// Inside the approved read range of design spec §2.2 rather than outside it, so
 /// that a fixture address never looks like an invitation to try it on a bus.
 pub const SIMULATED_CLIENT_ADDRESS: (u8, u8, u8) = (1, 1, 24);
 
@@ -155,7 +155,7 @@ pub struct SimulatorConfig {
     /// How many reads answer `LoadCompleting` before the state settles.
     pub load_completing_polls: u8,
     /// Answer nothing while in `LoadCompleting`, which RES Table 94's
-    /// footnote permits and spec §5.5 requires the client to tolerate.
+    /// footnote permits and design spec §5.5 requires the client to tolerate.
     ///
     /// The T_ACK still goes out: this device is busy at the application
     /// layer and alive at the Transport Layer, which is RES §4.23.2.4.1's
@@ -318,7 +318,7 @@ pub struct SimulatorConfig {
     /// client side Transport Layer` (p. 15) can be observed being skipped.
     pub device_descriptor_read_unanswered: bool,
     /// The mask version Device Descriptor Type 0 answers. `07B0h` by
-    /// default: a System B mask, which is the profile spec §7's CP §3.5.2
+    /// default: a System B mask, which is the profile design spec §7's CP §3.5.2
     /// walkthrough covers.
     pub mask_version: u16,
     /// Answer `PID_TABLE_REFERENCE` = 0 for this one object the first time
@@ -331,7 +331,7 @@ pub struct SimulatorConfig {
     /// Break the connection down once, at a named step of the §7.2 inner
     /// loop.
     ///
-    /// This is spec §11.3's *"must be able to be told to fail at a chosen
+    /// This is design spec §11.3's *"must be able to be told to fail at a chosen
     /// step"*, and it is what §14 item 8's interruption at every step is
     /// built on. A one-shot, like every other drop here, so that the
     /// recovery procedure has a device to recover.
@@ -343,7 +343,7 @@ pub struct SimulatorConfig {
     /// for those two objects. RES Table 77, p. 238 (Group Address Table),
     /// Table 80, p. 249 (Association Table) and Table 85, p. 270 (Group
     /// Object Table) do not. Which object index is which Interface Object
-    /// is product data (spec §3.2), not something this simulator can
+    /// is product data (design spec §3.2), not something this simulator can
     /// infer, so a test says which of its indices are the two application
     /// programs and every other index refuses the write the way `[D]`
     /// AL §3.4.4.2, p. 66, says an unlisted property is refused.
@@ -678,7 +678,7 @@ struct State {
     /// [`SimulatorConfig::allocation_fails_once_for`] can fail exactly the
     /// first one.
     allocation_attempts: HashMap<u8, u32>,
-    /// The Memory Control Block per object, whose CRC octets spec §7.2 step
+    /// The Memory Control Block per object, whose CRC octets design spec §7.2 step
     /// 7 stores and §7.4 compares.
     mcb: HashMap<u8, Vec<u8>>,
     properties: HashMap<(u8, u8), Vec<u8>>,
@@ -1002,7 +1002,7 @@ impl SimulatedDevice {
     /// legend defines, in its own printed order, I (intermediate state), M
     /// (mandatory), O (optional) and R (recommended), and both O and R are
     /// legal device behaviour, so this simulator simply exercises the
-    /// optional one. Plus the two ways spec §11.3 asks it to go wrong.
+    /// optional one. Plus the two ways design spec §11.3 asks it to go wrong.
     fn apply_event(&self, object_index: u8, event: LoadEvent) {
         if self.config.drop_load_state_writes {
             return;
@@ -1087,7 +1087,7 @@ impl SimulatedDevice {
     ///
     /// MP §2.3, pp. 14-15: `A_IndividualAddress_Read` and
     /// `A_IndividualAddress_Write` are the only two broadcast services
-    /// spec §7's download procedures ever use. Every device this
+    /// design spec §7's download procedures ever use. Every device this
     /// simulator can pretend to be — itself, plus
     /// [`SimulatorConfig::other_programming_mode_devices`] — answers on
     /// its own behalf, exactly as distinct devices sharing one bus would;
@@ -1493,7 +1493,7 @@ impl SimulatedDevice {
                     return;
                 }
                 // AL §3.4.2.1 Figure 38: two octets, most significant
-                // first, and step 02 of every procedure in spec §7 reads
+                // first, and step 02 of every procedure in design spec §7 reads
                 // them before it decides anything.
                 self.emit_answer(ApplicationService::DeviceDescriptorResponse {
                     descriptor_type: 0,

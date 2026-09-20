@@ -1,6 +1,6 @@
 //! The ten-octet payloads written to `PID_LOAD_STATE_CONTROL`, and the subtype each mask allows.
 //!
-//! Design spec §7.3, from MP §3.31.3's `DM_LoadStateMachineWrite_RCo_IO`
+//! Design design spec §7.3, from MP §3.31.3's `DM_LoadStateMachineWrite_RCo_IO`
 //! and PROF Annex A.2.4.1 Table 7. Building a payload is pure arithmetic and
 //! lives here; sending one is a write and lives behind the mutation API.
 //!
@@ -414,7 +414,7 @@ pub fn require_subtype(
 mod tests {
     use super::*;
 
-    /// Design spec §5.3 and §7.3: the ten-octet payloads, octet for octet.
+    /// Design design spec §5.3 and §7.3: the ten-octet payloads, octet for octet.
     #[test]
     fn every_plain_event_payload_is_the_event_octet_then_nine_zeroes() {
         let cases = [
@@ -517,7 +517,7 @@ mod tests {
         }
     }
 
-    /// Design spec §7.3 rules 1 and 3: the subtype is chosen by mask, and the
+    /// Design design spec §7.3 rules 1 and 3: the subtype is chosen by mask, and the
     /// wrong
     /// mask is a refusal rather than a fallback.
     #[test]

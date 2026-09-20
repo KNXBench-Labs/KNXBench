@@ -1739,7 +1739,7 @@ stop sending `ROUTING_INDICATION` for a received `tw` after a
 `ROUTING_BUSY` frame. `RoutingClient` decoded and logged `ROUTING_BUSY`
 (and `ROUTING_LOST_MESSAGE`) but never reacted to either.
 
-## 33. `RoutingClient`'s loopback round-trip test cannot prove correctness in every environment
+## 33. `RoutingClient`'s round-trip test transmitted on the physical LAN, not on loopback — resolved (2026-09-20)
 
 **Limitation.** `routing_client_sends_and_receives_a_group_value_write`
 (`crates/knx-net/src/client.rs`) sends a real telegram between two
@@ -1769,6 +1769,67 @@ knx-net` as proof that routing round-trips still work.
 **Lifted when.** A `#[ignore]`-style marker or a CI capability probe
 distinguishes "skipped, no proof either way" from "passed, proof
 obtained" in tooling/reporting — no fixed cycle.
+
+**Updated, 2026-09-20 (B1).** Everything above is kept for the record, and
+the headline half of it was wrong. Until this date this section was titled
+"`RoutingClient`'s loopback round-trip test cannot prove correctness in
+every environment", and its "Limitation" paragraph said the test ran "over
+UDP multicast on loopback". It did not. The "Cause" paragraph, four lines
+further down, already contained the true fact — *`ip route get 224.0.23.12`
+resolves via the physical interface, not `lo`* — and the document drew the
+wrong conclusion from its own evidence.
+
+**What actually happened.** The test built its sockets through
+`connect_routing`, which asks for no particular interface:
+`IP_ADD_MEMBERSHIP` joined on `INADDR_ANY` and `IP_MULTICAST_IF` was never
+set, so the kernel picked the outgoing interface from the routing table. On
+the machine this was developed on that is `multicast 224.0.23.12 dev eno1
+src KNX_LAN_HOST` — the physical LAN interface, on the same /16 as the
+installation's KNXnet/IP gateway. Every `cargo test --workspace` therefore
+put one real KNXnet/IP `ROUTING_INDICATION` on that network: a
+`GroupValueWrite(1)` to group address `1/2/3`, source individual address
+`1.1.1`, alongside IGMP membership reports for `224.0.23.12` and
+`239.0.2.1`. **What became of that frame is not known.** Whether any
+KNXnet/IP router on the LAN accepted it and forwarded it to TP, and whether
+`1/2/3` or `1.1.1` mean anything in the installation, was never measured;
+this document claims neither that something was actuated nor that nothing
+was.
+
+**And it proved nothing while doing it.** Production sets
+`IP_MULTICAST_LOOP` to `false`, so the host never got a copy of its own
+datagram, and a switch does not reflect a multicast frame back out the port
+it came in on. The receiving half of the round trip could therefore never
+run: the test reached its five-second timeout and took the "this sandbox
+does not deliver multicast locally" skip path on every run. It transmitted
+on a live installation's network and asserted nothing — the worst of both
+halves.
+
+**What happens now.** The test sockets are built through
+`RoutingClient::connect_with`/`connect_to_group_with` with
+`RoutingSocketOptions::LOOPBACK_ONLY`, which sets `IP_MULTICAST_IF` to
+`127.0.0.1`, joins on `127.0.0.1`, sets `IP_MULTICAST_TTL` to 0 and
+`IP_MULTICAST_LOOP` to `true`. Two independent mechanisms keep the datagram
+on the machine: the kernel never consults the routing table, and a
+multicast datagram with TTL 0 is not transmitted on any link even if it
+did. `loopback_only_options_actually_reach_the_socket` reads all three
+options back off the live socket, so a future change that quietly reverts
+to the production options fails a test instead of resuming transmission.
+Measured on this host and in a bare `unshare -rn` namespace holding only
+`lo`: the round trip now genuinely completes (0.15 s) instead of timing out
+(5 s), so the assertions at the end of the test run for the first time.
+
+**Production is untouched.** `connect_routing` and
+`connect_routing_to_group` pass `RoutingSocketOptions::PRODUCTION`, which
+joins on `Ipv4Addr::UNSPECIFIED`, keeps `IP_MULTICAST_LOOP` off, and makes
+no `IP_MULTICAST_IF` or `IP_MULTICAST_TTL` call at all — byte for byte the
+behaviour described above, which is the correct default for a real
+installation. `production_routing_socket_options_leave_the_network_to_the_kernel`
+guards that constant.
+
+**What of the original limitation survives.** The narrow version: a sandbox
+that delivers no multicast whatsoever, even on `lo`, still takes the skip
+path, and a green `cargo test` there still proves nothing about the round
+trip. That is now the only case the skip covers, rather than every case.
 
 ## 34. Schema-≥21 export drops a handful of known-but-unmapped, per-device/per-line attributes
 

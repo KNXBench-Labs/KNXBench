@@ -14,7 +14,7 @@ fn reference_project_path() -> std::path::PathBuf {
 /// legible instead of one giant assertion block naming which of a dozen
 /// counts broke.
 fn import() -> Option<(knx_app::ImportedProject, knx_productdb::Connection)> {
-    if !reference_project_path().exists() {
+    if !knx_testsupport::corpus_available() {
         eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
         return None;
     }

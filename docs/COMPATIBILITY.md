@@ -121,18 +121,35 @@ choosing not to follow it — the opposite of §7's list below, which is why
 these live here instead of there.
 
 **Q1 (task C18, blocks task C13). Must a System B device implement
-`PID_DOWNLOAD_COUNTER` at all before a Partial Download is attempted?** No —
-its availability is conditional, and the Standard states the consequence of
-its absence explicitly rather than leaving it undefined. RES §4.2.30.1,
-p. 41, defines `PID_DOWNLOAD_COUNTER` (`DPT_Value_2_Ucount`, 7.010) as part
-of the Coupler Model 2.0's Partial Download support; RES p. 320, in the same
-model's Network Management chapter, adds the operative sentence: *"If
-PID_DOWNLOAD_COUNTER is not available for the part to be downloaded, then
-the MaC shall not perform a Partial Download."* That is a normative
-instruction, not an inference — task C13 implements against it directly:
-read the Property before attempting a partial download, and fall back to a
-full download whenever it is absent or unreadable, rather than treating its
-absence as an error.
+`PID_DOWNLOAD_COUNTER` at all before a Partial Download is attempted?** No.
+RES §4.2.30, p. 41, defines `PID_DOWNLOAD_COUNTER` (`DPT_Value_2_Ucount`,
+7.010) as *"a global, Interface Object Type independent read-only
+Property"* — a definition that is not coupler-specific — and §4.2.30.1
+makes having one conditional rather than required: *"A device that has a
+Download Counter shall at least have PID_DOWNLOAD_COUNTER in the Device
+Object and may have additional further Interface Objects with
+PID_DOWNLOAD_COUNTER."* Volume 6 Profiles Annex A §A.1.1, p. 133 supplies
+the rest:
+*"any Interface Object or any Property in an Interface Object that is not
+listed is optional"*, and Annex A's S-Mode End-device Device Object table
+(A.2.3, pp. 138-140) does not list PID 30 for any profile, masks `07B0h` and
+`17B0h` included. So a System B device without a Download Counter is
+conformant, and must never be reported as faulty for lacking one.
+
+**What the Standard does *not* say, and this project's ruling on the gap.**
+The one sentence in RES that commands a refusal — *"If PID_DOWNLOAD_COUNTER
+is not available for the part to be downloaded, then the MaC shall not
+perform a Partial Download."* — is RES §5.3.2.2, p. 320, and clause 5 is
+*"Resources for Couplers"*, §5.3 *"Resources for Coupler Model 2.0"*. It
+binds couplers; there is no equivalent System B clause, and a full-text
+sweep of RES finds that sentence exactly once. KNXBench nevertheless refuses
+a partial download for any device whose counter is absent, because without
+one the Management Client cannot establish that the device is unchanged
+since the last configuration, and this project ranks data integrity above
+convenience. **That refusal is our ruling, not a Standard obligation for
+System B** — and its cost is concrete: a conformant System B device with no
+Download Counter will be refused every partial download and always receive a
+complete one. See `KNOWN_LIMITATIONS.md` §114 (task C13).
 
 **Q2 (task C18, settles task C1's tolerant branch). Is CP §3.5.3's
 `PID_PROGRAM_VERSION` write to the Group Address/Association/Group Object

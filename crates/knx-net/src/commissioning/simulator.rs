@@ -29,9 +29,9 @@ use knx_core::commissioning::load_state::{LoadEvent, LoadState};
 use knx_core::commissioning::memory::MemoryService;
 use knx_core::commissioning::mutation::TargetKind;
 use knx_core::commissioning::properties::{
-    verify_mode_active, ObjectIndex, PID_DEVICE_CONTROL, PID_ERROR_CODE, PID_LOAD_STATE_CONTROL,
-    PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH, PID_MCB_TABLE, PID_PROGRAM_VERSION,
-    PID_TABLE_REFERENCE,
+    verify_mode_active, ObjectIndex, PID_DEVICE_CONTROL, PID_DOWNLOAD_COUNTER, PID_ERROR_CODE,
+    PID_LOAD_STATE_CONTROL, PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH, PID_MCB_TABLE,
+    PID_PROGRAM_VERSION, PID_TABLE_REFERENCE,
 };
 use knx_core::IndividualAddress;
 use tokio::sync::broadcast;
@@ -285,6 +285,27 @@ pub struct SimulatorConfig {
     /// programs and every other index refuses the write the way `[D]`
     /// AL §3.4.4.2, p. 66, says an unlisted property is refused.
     pub application_program_objects: HashSet<u8>,
+    /// `PID_DOWNLOAD_COUNTER` of the Device Object, if this simulated device
+    /// has one at all. `None` — the default — models a device that omits
+    /// it, which Volume 6 Profiles Annex A permits (`[C13]`, `[C18]`): RES
+    /// §4.2.30.1, p. 41, only requires the property "if the device has any
+    /// Download Counter", and the annex's Device Object tables (pp.
+    /// 138-140) list PID 30 for none of them.
+    pub download_counter: Option<u16>,
+    /// Break the connection down once, on the read of
+    /// `PID_DOWNLOAD_COUNTER` — [`Downloader::partial_download`] issues
+    /// exactly one, so unlike the load-state and device-control triggers
+    /// this needs no count.
+    ///
+    /// C13 fix round 1, finding 3: proves that a disconnect or time-out
+    /// mid-read comes back as whatever [`SessionError`] it actually is —
+    /// here [`SessionError::ConnectionLost`] — and is never folded into
+    /// [`DownloadCounterCheck::Absent`], which is reserved for
+    /// `SessionError::PropertyRefused` alone.
+    ///
+    /// [`Downloader::partial_download`]: crate::commissioning::download::Downloader::partial_download
+    /// [`DownloadCounterCheck::Absent`]: crate::commissioning::download::DownloadCounterCheck::Absent
+    pub drop_connection_on_download_counter_read: bool,
     /// Once this much wall-clock time has passed since the *first*
     /// `PID_LOAD_STATE_CONTROL` read arrived, later reads of it answer
     /// [`SimulatorConfig::settled_load_state`] instead of whatever
@@ -432,6 +453,8 @@ impl Default for SimulatorConfig {
             allocation_fails_once_for: None,
             interrupt_at: None,
             application_program_objects: HashSet::new(),
+            download_counter: None,
+            drop_connection_on_download_counter_read: false,
             settle_load_state_after: None,
             settled_load_state: LoadState::Unloaded,
         }
@@ -578,6 +601,9 @@ impl SimulatedDevice {
         }
         if let Some(length) = config.router_max_apdu_length {
             properties.insert((6, PID_MAX_APDU_LENGTH), length.to_be_bytes().to_vec());
+        }
+        if let Some(counter) = config.download_counter {
+            properties.insert((0, PID_DOWNLOAD_COUNTER), counter.to_be_bytes().to_vec());
         }
 
         let mut memory = HashMap::new();
@@ -947,11 +973,23 @@ impl SimulatedDevice {
             let by_device_control_read = is_device_control_read
                 && self.config.drop_connection_on_device_control_read
                     == Some(state.device_control_reads);
+            let by_download_counter_read = self.config.drop_connection_on_download_counter_read
+                && matches!(
+                    service,
+                    ApplicationService::PropertyValueRead {
+                        property_id: PID_DOWNLOAD_COUNTER,
+                        ..
+                    }
+                );
             let by_step = self
                 .config
                 .interrupt_at
                 .is_some_and(|step| step.strikes(&service));
-            if (by_count || by_read || by_device_control_read || by_step)
+            if (by_count
+                || by_read
+                || by_device_control_read
+                || by_download_counter_read
+                || by_step)
                 && state.connected
                 && !state.dropped
             {

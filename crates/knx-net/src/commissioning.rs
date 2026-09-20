@@ -48,9 +48,9 @@ use knx_core::commissioning::programming_mode::{
     prog_mode_write, ProgModeWrite, CURR_PROG_MODE_ADDRESS,
 };
 use knx_core::commissioning::properties::{
-    verify_mode_active, with_verify_mode, ObjectIndex, PID_DEVICE_CONTROL, PID_ERROR_CODE,
-    PID_LOAD_STATE_CONTROL, PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH, PID_MCB_TABLE,
-    PID_TABLE_REFERENCE,
+    verify_mode_active, with_verify_mode, ObjectIndex, PID_DEVICE_CONTROL, PID_DOWNLOAD_COUNTER,
+    PID_ERROR_CODE, PID_LOAD_STATE_CONTROL, PID_MANUFACTURER_ID, PID_MAX_APDU_LENGTH,
+    PID_MCB_TABLE, PID_TABLE_REFERENCE,
 };
 use knx_core::{ContactableAddress, ExcludedAddress, GroupValue, IndividualAddress};
 use tokio::sync::broadcast;
@@ -1408,6 +1408,31 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
             _ => Err(SessionError::MalformedProperty {
                 object_index: ObjectIndex::DEVICE,
                 property_id: PID_MANUFACTURER_ID,
+                expected: 2,
+                got: octets.len(),
+            }),
+        }
+    }
+
+    /// `PID_DOWNLOAD_COUNTER` of the Device Object — `[D]` CP §3.12.4/3.12.5,
+    /// pp. 99-100, and RES §4.2.30.3, p. 42, both read it there rather than
+    /// from the part's own object, so this always addresses
+    /// [`ObjectIndex::DEVICE`] and never the caller's target part.
+    ///
+    /// `SessionError::PropertyRefused` here is not a malformed read: RES
+    /// §4.2.30.1, p. 41, and Volume 6 Profiles Annex A (`[C18]`) both make
+    /// the property optional, so a refusal is the device saying it has none
+    /// — a fact `download.rs`'s `partial_download` acts on, not an error
+    /// this method should paper over.
+    pub async fn read_download_counter(&mut self) -> Result<u16, SessionError> {
+        let octets = self
+            .read_property(ObjectIndex::DEVICE, PID_DOWNLOAD_COUNTER, 1, 1)
+            .await?;
+        match octets[..] {
+            [high, low] => Ok(u16::from_be_bytes([high, low])),
+            _ => Err(SessionError::MalformedProperty {
+                object_index: ObjectIndex::DEVICE,
+                property_id: PID_DOWNLOAD_COUNTER,
                 expected: 2,
                 got: octets.len(),
             }),

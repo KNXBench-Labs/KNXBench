@@ -7651,3 +7651,135 @@ Gates run, all three applicable to a docs-only change: `cargo fmt --all --
 -- check`, `cargo run -p xtask -- check-headers`, `cargo run -p xtask --
 check-layering`. `cargo clippy`, `cargo test`, `cargo deny check` and the web
 gates were not run — no `.rs` or web file touched.
+
+## 2026-09-20 — C13: the Download Counter is read, reported, and can now refuse a partial download
+
+CP §3.5.3 "imposes nothing" about `PID_DOWNLOAD_COUNTER`, but Coupler
+Model 2.0's own download procedure does, in two places, both in RES
+clause 5 "Resources for Couplers": CP §3.12.4/3.12.5, p. 99-100 (which
+addresses `OI = 0`, the Coupler Model 2.0 Router Object) require storing
+the counter and refusing a partial download when it has changed since
+the preceding configuration; RES §5.3.2.2, p. 320 — the Coupler Model
+2.0 Device Object, not a System B clause — requires refusing outright
+when the property is not available at all. A full-text search of RES
+finds "shall not perform a Partial Download" exactly once, at that
+clause. There is no System B obligation to do either; this project
+applies both refusals to every device anyway, as our own conservative
+rule (see Known Limitation #114). Before this task neither behaviour
+existed anywhere: `grep -rn "download_counter\|DOWNLOAD_COUNTER" crates/`
+returned nothing.
+
+Added `PID_DOWNLOAD_COUNTER` (PID 30) to
+`crates/knx-core/src/commissioning/properties.rs`, and
+`ManagementSession::read_download_counter` (`commissioning.rs`), which
+always addresses the Device Object regardless of the part being loaded —
+both CP §3.12.4/3.12.5 read it there.
+
+The one open question the brief carried in — whether a System B device
+must have the property at all — is answered by Volume 6 Profiles Annex A,
+p. 133 and pp. 138-140 (`[C18]`): optional, not mandatory, in the S-Mode
+End-device Device Object table, which covers masks 07B0h/17B0h among
+others. Annex A A.4.2, p. 167 lists the same PID as mandatory (`3/1`)
+for the E-Mode profiles FEC General, Ctrl FEC and PB FEC — a different
+table for different devices, not a contradiction. That answer shapes
+`DownloadCounterCheck` (`crates/knx-net/src/commissioning/download.rs`),
+which keeps *absent* and *changed* as two separate variants rather than
+one refusal case: a device that never had the property is fully
+conformant, one that had it and now disagrees with this MaC's own record
+may have been touched by someone else, and collapsing the two would report
+the second as the first. A fifth variant, `NoStoredCounter`, is this
+project's own bookkeeping gap (a plan that never called
+`DownloadPlan::with_stored_download_counter`) rather than one of the three
+outcomes RES and CP actually describe, and is deliberately permissive
+rather than invented as a fourth spec obligation. `NotChecked` is the
+default for every procedure except `partial_download`, the only one either
+clause's refusal applies to.
+
+`Downloader::partial_download` runs the check once, right after `open()`
+and before its first write (the unload step), via a new
+`check_download_counter` helper parallel in shape to `open()`'s own
+manufacturer-ID guard. `DownloadError` gains `DownloadCounterChanged` and
+`DownloadCounterUnavailable`, both refusing before anything is written;
+their `Display` impls cite CP §3.12.5, p. 100 and RES §5.3.2.2, p. 320
+verbatim. A stale comment at the top of `VersionOutcome::Refused`'s doc —
+claiming no clause reconciles CP §3.5.3's table-variant version write with
+RES's tables that omit `PID_PROGRAM_VERSION` for those same tables, "see
+C18" — is rewritten now that `[C18]` found it: RES §4.2.13.1.3, p. 34,
+defers per-object applicability to the Configuration Procedures and to
+Volume 6 Profiles, and the Annex makes the property optional rather than
+forbidden on the three tables.
+
+`SimulatorConfig` gains `download_counter: Option<u16>`
+(`crates/knx-net/src/commissioning/simulator.rs`), `None` by default —
+modelling the more common, spec-conformant case of a device that omits the
+property — seeded into the property map only when `Some`, using the same
+generic `(object_index, property_id)` fallback every other optional
+property already relies on for its `PropertyRefused` behaviour; no
+special-cased "this property does not exist" branch was needed.
+
+Five new tests in `crates/knx-net/src/commissioning/download.rs` cover all
+four `DownloadCounterCheck` outcomes a partial download can reach
+(`Unchanged` proceeds, `NoStoredCounter` proceeds, `Changed` and `Absent`
+both refuse with the right error variant and, for the two refusals,
+`!device.memory_was_written()` and empty `load_state_writes` — nothing is
+written before the guard, the same shape as C10's access-key guard test) and
+that `complete_download` never checks at all. Thirteen pre-existing tests
+that called `partial_download` without configuring a Download Counter now
+fail the new §5.3.2.2 guard by construction — an absent counter refusing
+was always the correct reading, so each one now supplies a matching
+`SimulatorConfig::download_counter` and
+`DownloadPlan::with_stored_download_counter`; one of the thirteen,
+`both_call_sites_report_the_same_declaration_for_the_same_plan`, needed
+its partial-download half updated this way rather than being counted
+among the five new tests, and none of the thirteen otherwise changed.
+
+Mutation-tested five times against `crates/knx-net/src/commissioning/download.rs`
+and `simulator.rs`, each applied by hand, run against `cargo test -p
+knx-net --lib commissioning::download -j 2`, and reverted by hand with the
+diff checked back to empty before moving on (no intervening commit existed
+yet to `git checkout --` against): (a) deleted only the final `if let
+DownloadCounterCheck::Changed { .. } = ...  return Err(...)` block in
+`check_download_counter`, leaving the `Absent`/`PropertyRefused` arm
+untouched — exit 101, exactly one test fails,
+`a_partial_download_refuses_when_the_download_counter_changed` (none of
+the thirteen updated pre-existing tests expect an `Err` from this check at
+all, so none of them were in a position to catch it); (b) swapped
+`stored == current` for `stored != current` in the `Unchanged` arm,
+inverting which value proceeds — exit 101, 15 tests fail: the two
+dedicated proceeding tests plus thirteen of the pre-existing ones, because
+every one of them stores and reads back the same counter value and the
+inverted comparison now reads that agreement as a change; (c) moved the
+`check_download_counter` call to after the unload step instead of before
+it — exit 101, both refusal tests fail
+(`a_partial_download_refuses_when_the_download_counter_changed` and
+`a_partial_download_refuses_when_the_download_counter_is_absent`), each on
+its `load_state_writes(&device).is_empty()` assertion, because the unload
+write had already landed by the time the guard ran; (d) deleted the
+`PID_DOWNLOAD_COUNTER` insertion from `SimulatedDevice::with_config`, so
+every `SimulatorConfig::download_counter = Some(_)` device reports absent
+regardless — exit 101, 16 tests fail with `DownloadCounterUnavailable`:
+every test that configures a counter, dedicated or pre-existing; (e)
+changed `read_download_counter`'s big-endian decode to little-endian —
+exit 101, 16 tests fail (every fixture in this pass uses a counter value
+under 256 with a non-zero low octet, so a byte-order swap changes the
+decoded value by a factor of 256 and every comparison against a stored
+value disagrees); no dedicated byte-order test was owed, since the
+existing fixtures already catch it by construction.
+
+`docs/KNOWN_LIMITATIONS.md` gets §114: the CP §3.12.5/RES §5.3.2.2
+consequences are applied to the one generic CP §3.5.3 procedure this
+project runs, for every part kind, rather than to a distinct Coupler Model
+2.0 Filter Table/Router Object procedure that CP §3.12.4 alone would call
+for and that this project has never implemented — nothing in the codebase
+yet distinguishes a Coupler Model 2.0 target from a System B one at
+plan-building time. Out of scope, unchanged: `PID_GROUP_RESPONSER_TABLE`
+and CP §3.5.4 step 07 (§110/§111, C11), `A_Key_Write` (§112, C10), an
+escalation that only reloads the segments a shortened plan carries (§113,
+C12), and any procedure-level retry loop — this task added none.
+
+Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets
+-j 2 -- -D warnings`, `cargo test --workspace --no-fail-fast -j 2`,
+`cargo run -p xtask -- check-layering`, `cargo run -p xtask -- check-headers`
+and `cargo deny check` all exit 0. No web file touched, so `npx tsc
+--noEmit` / `npx vitest run` were not run. `check-headers` is unchanged
+(159/167, ceiling 168): no new source file.

@@ -830,7 +830,7 @@ simulator.rs`, including `ManagementSession`'s presence-detection gap
 (design spec §13 R20), which C15/C16's occupancy handling now works around
 rather than trusts. (C14 delivered the same run's differential-download
 data preservation in `knx-etsproj`/`knx-server` instead — see
-[§34](#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes) and the `KV v2.5` fixture. C17, a stopgap against advertising an
+[§34](#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes--resolved-2026-09-20) and the `KV v2.5` fixture. C17, a stopgap against advertising an
 unimplemented procedure, was ruled obsolete once C16 shipped the real
 execution path it existed to guard.) None of this has been run against a
 real device — see [§92](#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device).
@@ -1993,58 +1993,60 @@ membership at all for a group a re-read microseconds later showed held by
 five sockets. One `read(2)` into a buffer large enough for the file is one
 pass of the iterator, and one consistent answer: 0 failures in 150 runs.
 
-## 34. Schema-≥21 export drops a handful of known-but-unmapped, per-device/per-line attributes
+## 34. Schema-≥21 export drops a handful of known-but-unmapped, per-device/per-line attributes — RESOLVED (2026-09-20)
 
-**Limitation.** `crate::known::SCHEMA_21`/`SCHEMA_23` list several
-attributes with no dedicated field on `SourceDevice`/`SourceLine`:
-`DeviceInstance`'s `Comment`, `SerialNumber`, `LastUsedAPDULength`,
-`ReadMaxAPDULength`, `Puid`, `LoadedImage`, `CheckSums`, `DownloadCounter`
-(the last three, C14: ETS's differential-download state, `Project
-Schema23 v01.00.00.pdf` p. 44); `Segment`'s own `Id`,
-`Number`, `Puid`; and `Puid` generally, on every element that carries it.
-`map.rs` folds all of these into one project-wide
-`Vec<RetainedAttribute>`, keyed only by their schema-shaped xpath (e.g.
-every device's `Comment` collapses to the single key
-`(".../DeviceInstance", "Comment")`, indistinguishable between devices).
-Confirmed against `KV v2.5 - demo.knxproj`: all 4 devices carry a
-distinct `SerialNumber` and `Puid`. `knx-etsproj`'s schema-≥21 exporter
-(`export/schema21.rs`) does not reconstruct any of these on export — not
-because they are unrecoverable in principle, but because the flat bucket
-cannot say *which* device or line a given value belongs to, and writing
-one device's real hardware serial number onto every other device would
-be silent data corruption, worse than the loss.
+**Resolved (2026-09-20).** Retained attributes are keyed by the element's
+own ETS id rather than by a schema-shaped path, and both exporters write
+them back onto the element they came from. The key shapes live in one
+module (`knx_etsproj::xpath`) because three writers had already drifted
+into three incompatible spellings of the same device path.
 
-**Cause.** `installation_v21.rs`'s parser (Task 6) retains known-but-
-unmapped attributes at the same schema-shaped-xpath granularity
-`schema11.rs`'s own module doc already documents and accepts for
-document-wide singletons like `Installation/@BCUKey` — a granularity
-that was never a problem for schema 11 (every `DeviceInstance` attribute
-there has a dedicated field, so no leftover ever occurs), but surfaces
-for the first time at schema ≥21, where several genuinely do not.
+Measured by importing each corpus project and exporting it again
+(`crates/knx-etsproj/tests/retained_v21_measurement.rs`, which compares
+every element of both documents keyed by its ancestors' own ids):
 
-**Impact.** Round-tripping a schema-≥21 project through this
-application loses `Comment`, `SerialNumber`, `LastUsedAPDULength`,
-`ReadMaxAPDULength`, `Puid`, `LoadedImage`, `CheckSums` and
-`DownloadCounter` on every device, and `Id`/`Number`/`Puid` on every
-`Segment` — cosmetic/bookkeeping data in most cases (nothing else in
-the file refers back to a `Segment`'s own `Id`), except `SerialNumber`,
-which is real hardware identification a technician may care about, and
-`LoadedImage`/`CheckSums`/`DownloadCounter`, which ETS uses to decide
-whether the *next* download can be differential — re-importing a
-project exported by this application forces ETS's next download to be
-a full one, never a wrong one: import (this application never reads or
-acts on the three) and re-export (this section) are the only two paths
-that touch them, and the loss is "ETS does more work than strictly
-necessary," not "ETS decides wrong." Not lost internally: preserved
-byte-exact in the opaque store and named in the import report (C14);
-lost only on the way back out to a `.knxproj` file.
+| Project | Attributes lost on export | Values changed |
+| --- | --- | --- |
+| ETS4, schema 11 | none | `KNX/@CreatedBy`, `@ToolVersion` (deliberate) |
+| KV, schema 21 | `Installation/@Name`, `@DefaultLine` | the two above, plus `DeviceInstance/@LastDownload` and `@LastModified` |
+| ETS 6.3.0, schema 23 | `Installation/@Name` | the same four |
 
-**Lifted when.** `installation_v21.rs`'s parser gains a per-instance
-xpath for `DeviceInstance`'s and `Segment`'s own leftover attributes —
-the same fix Task 5 already applied to `Security` (per-device
-`SourceDevice::security_raw`, not a document-wide bucket). Out of scope for
-the schema-21/23 import/export plan's Task 7 (export only); tracked here
-for a future fast-follow.
+Before the change, the same measurement counted `SerialNumber`, `Puid`,
+`Comment`, `IsActivityCalculated`, the `Segment` attributes, the
+communication-object flags, `BinaryData`, `BusAccess` and
+`Space/DeviceInstanceRef` among the losses — 514 group-address `Puid`s in
+the ETS6 project alone — and found `GroupAddress/@Central` and
+`@Unfiltered` coming back as `"0"` whatever the source said, which was the
+worse class of defect: a wrong value rather than a missing one.
+
+**What remains.** Three things, none of them user data:
+
+1. `Installation/@Name` and `@DefaultLine` where the source value is the
+   empty string. `knx_core` cannot distinguish an empty value from an
+   absent one, so the writer omits the attribute. A project whose
+   installation actually has a name keeps it.
+2. `DeviceInstance/@LastDownload` and `@LastModified` are reformatted:
+   same instant, fewer fractional-second digits, because the value makes
+   a round trip through a typed timestamp rather than staying text.
+3. `KNX/@CreatedBy` and `@ToolVersion` name this application, on purpose.
+   It is not ETS and does not claim to be.
+
+**The rule that stays.** Where an element has no identity of its own in
+the domain model — two `Segment`s under one `Line`, since `knx_core` has
+lines and not segments — two source values collapse onto one key, and the
+exporter drops the attribute rather than writing one segment's value onto
+both. Corruption is worse than loss; that ruling is unchanged, it simply
+now applies to a rare case instead of to every attribute. Each drop is
+announced as an `ExportWarning::RetainedAttributeNotExported` (or
+`RetainedElementNotExported` for a whole element), one warning per
+`(element, attribute)` class with the number of instances behind it, and
+reaches the UI through the same channel import diagnostics use. The values
+themselves are, as before, preserved byte-exact in the project's opaque
+store (ADR-0006) and named in the import report.
+
+`crates/knx-etsproj/tests/retained_ambiguity.rs` is the test for that
+rule: a line with two segments carrying distinct `Puid`s, neither of which
+appears in the exported file, and a warning that says why.
 
 ## 35. Device-creation `EnrichmentIssue`s are silently dropped — RESOLVED (2026-09-10)
 

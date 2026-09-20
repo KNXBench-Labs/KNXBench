@@ -17,6 +17,7 @@ pub mod source;
 mod testutil;
 pub mod validate;
 pub mod values;
+pub(crate) mod xpath;
 
 pub use container::{Container, ContainerError, EncryptionScheme, EntryInfo};
 pub use detect::{detect, DetectError, Detected, SchemaVersion};
@@ -223,7 +224,22 @@ pub fn import_knxproj_bytes_observed(
         for area in &installation.areas {
             for line in &area.lines {
                 if let Some(bus_access) = &line.bus_access {
-                    opaque_entries.push(opaque::from_retained_element(&topology_path, bus_access));
+                    // Re-keyed onto this line, the way the device subtrees
+                    // below are re-keyed onto their device: the parser's own
+                    // path names the element's shape, not which line it came
+                    // from, so a project with two lines used to collapse both
+                    // `BusAccess` elements into one entry ([`xpath`]). The
+                    // element's position within the line (directly under it at
+                    // schema 11, inside `Segment` at schema ≥21) is preserved
+                    // by keeping whatever followed `/Line` in the parser's path.
+                    let mut rekeyed = bus_access.clone();
+                    let suffix = bus_access
+                        .xpath
+                        .split_once("/Line")
+                        .map(|(_, rest)| rest.to_string())
+                        .unwrap_or_else(|| "/BusAccess".to_string());
+                    rekeyed.xpath = format!("{}{suffix}", xpath::line(&line.id));
+                    opaque_entries.push(opaque::from_retained_element(&topology_path, &rekeyed));
                 }
             }
         }
@@ -242,10 +258,7 @@ pub fn import_knxproj_bytes_observed(
         for area in &installation.areas {
             for line in &area.lines {
                 for device in &line.devices {
-                    let device_xpath = format!(
-                        "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance[@Id='{}']",
-                        device.id
-                    );
+                    let device_xpath = xpath::device_v21(&device.id);
                     if let Some(raw) = &device.module_instances_raw {
                         let mut r = raw.clone();
                         r.xpath = format!("{device_xpath}/ModuleInstances");
@@ -270,10 +283,7 @@ pub fn import_knxproj_bytes_observed(
         // today), but handled defensively regardless, on the same principle
         // as the loop above.
         for device in &installation.unassigned_devices {
-            let device_xpath = format!(
-                "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance[@Id='{}']",
-                device.id
-            );
+            let device_xpath = xpath::unassigned_device(&device.id);
             if let Some(raw) = &device.module_instances_raw {
                 let mut r = raw.clone();
                 r.xpath = format!("{device_xpath}/ModuleInstances");

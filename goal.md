@@ -1,545 +1,427 @@
-# KNXBench completion goal — the open items, as of 2026-09-13
+# KNXBench goal — everything still open, minus commissioning
 
-Use this file as the instruction passed to `/goal`. Its creation alone starts
-no run.
+Written 2026-09-20. Use this file as the instruction passed to `/goal`. Its
+creation alone starts no run.
 
-Drive KNXBench to a genuinely complete, trustworthy v1 state. Work
-autonomously and persist across turns until every item below is either
+Drive KNXBench toward a trustworthy v1 on every front **except** commissioning.
+Work autonomously and persist across turns until every item below is either
 resolved with evidence, or explicitly accepted out of scope by the user.
 
-The previous version of this file (git history, commit `5adf32b` and earlier)
-was written when the manufacturer-product-database corpus was the open front.
-That work shipped. This version replaces it with what is actually left, taken
-from `docs/ROADMAP.md`, `docs/IMPLEMENTATION_STATUS.md`,
-`docs/KNOWN_LIMITATIONS.md`, `docs/GAP_ANALYSIS_ETS.md`, `docs/adr/`, and the
-closing review of 2026-09-13.
+The previous version of this file (git history, commit `7f08b59` and earlier)
+drove the 2026-09-13 goal-completion run. That run finished: thirty tasks plus
+nineteen commissioning-conformance tasks merged, the documentation
+reconciliation (T24) landed, and the single closing Fable review ran on
+2026-09-20 and had its findings fixed (`bb1fa66`, `a927691`, `85b5783`). This
+file replaces it with what is left over, taken from `docs/ROADMAP.md`,
+`docs/GAP_ANALYSIS_ETS.md`, `docs/KNOWN_LIMITATIONS.md`,
+`docs/LIMITATION_TRIAGE.md`, `docs/IMPLEMENTATION_STATUS.md`, `docs/adr/`,
+`ideas.md`, `codex-goal.md` and the 2026-09-20 status audits.
 
-Repository state this file was written against: `main` at `7276b63`, level
-with `origin/main`, clean except an untracked `codex-goal.md`, all eight gates
-green (1272 Rust tests, 456 web tests).
+**Repository state this file was written against:** `main` at `7f08b59`, level
+with `origin/main`, clean checkout, no extra worktrees. Product version
+`0.1.0-alpha.1` everywhere, no release tag.
 
 ---
 
-## 0. Operating rules
+## 0. What this goal deliberately excludes
+
+**Commissioning and every write to real KNX hardware is out of scope for this
+run.** Not cancelled, not downgraded — the user ruled on 2026-09-11 that
+commissioning must work, and the ROADMAP's 2026-09-20 ruling defers phase 3
+only until dedicated test hardware exists. This file simply does not schedule
+it, so a runner working from here never has a reason to open a socket that
+writes.
+
+Concretely out of scope here: T30 phase 3 (hardware verification of
+individual-address programming, download, unload, recovery), and the
+limitations that only a real write can close or that only apply to the write
+path — `KNOWN_LIMITATIONS.md` §7, §92, §93, §99, §101, §104, §105, §108, §109,
+§111, §112, §113, §114, §115, §116. Leave every one of them exactly as
+documented. Do not "prepare" them, do not fold a piece of them into another
+task, and do not relax the hardware rules below because nothing in this file
+needs hardware.
+
+**Hardware rules still bind, because read-only bus work does appear here (the
+T17 diagnostics UI, group-monitor regressions):**
+
+- Individual address `1.1.220` is an alarm panel. Never read it, never write
+  it, never include it in a scan range.
+- `1.1.24`-`1.1.32` are approved for active *reads* only.
+- No write of any kind reaches a real device in this run. Not with a
+  confirmation prompt, not "just once", not in a test that happens to be
+  pointed at the gateway. Simulated transports only.
+
+---
+
+## 1. Operating rules
 
 1. Start every work cycle by reading `docs/IMPLEMENTATION_STATUS.md`,
-   `docs/KNOWN_LIMITATIONS.md`, `docs/ROADMAP.md`, `docs/GAP_ANALYSIS_ETS.md`,
-   and the source of truth for the item at hand. Reconcile stale or
-   contradictory status entries as you find them — several counts in these
-   documents have drifted before and were only caught by re-measuring.
+   `docs/KNOWN_LIMITATIONS.md`, `docs/LIMITATION_TRIAGE.md`,
+   `docs/ROADMAP.md`, `docs/GAP_ANALYSIS_ETS.md` and the source of truth for
+   the item at hand. Re-measure counts rather than quoting them; several have
+   drifted and were only caught by counting again.
 2. **No `.ai/` handover bookkeeping.** `.ai/CURRENT_STATE.md` and `.ai/logs/`
-   are suspended by user ruling until further notice. Documentation updates
-   under `docs/` still count and are still mandatory.
+   stay suspended by user ruling. Note that Codex still commits to `main` and
+   writes the newest entry at the *top* of `.ai/CURRENT_STATE.md` — read it
+   before starting anything, but do not maintain it.
 3. Work from the highest-risk correctness, data-integrity, compatibility or
    user-visible gap downward. Prefer a small coherent vertical slice over
    broad speculative work.
 4. Follow `AGENTS.md` and `CLAUDE.md` exactly. Respect architecture
    boundaries; keep external-format handling lossless and honestly reported.
-5. Create an isolated git worktree before implementing anything. Never work
-   directly in the main checkout.
-6. For every functional change, add focused regression coverage and run the
-   smallest sufficient checks. Run the full gate set before declaring an item
-   complete: `cargo fmt --all --check`, `cargo clippy --workspace
-   --all-targets -- -D warnings`, `cargo test --workspace --no-fail-fast`,
-   `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
-   check-headers`, `cargo deny check`, plus `tsc` and `vitest` in
+5. Create an isolated git worktree before implementing anything
+   (`/mnt/daten-i/Sourcecode/KNXBench.worktrees/<branch>`). Never work in the
+   main checkout. When a session is stopped, check its worktrees for orphaned
+   subagent edits before committing there.
+6. For every functional change add focused regression coverage. Run the full
+   gate set before declaring an item complete, and judge by exit status, never
+   by a summary line:
+   `cargo fmt --all --check`, `cargo clippy --workspace --all-targets -- -D warnings`,
+   `cargo test --workspace --no-fail-fast`, `cargo run -p xtask -- check-layering`,
+   `cargo run -p xtask -- check-headers`, `cargo run -p xtask -- check-anchors`,
+   `cargo deny check`, plus `npx tsc --noEmit` and `npx vitest run` in
    `apps/knx-web` when any file under it was touched.
-7. Do not silently downgrade a limitation. If an item depends on unavailable
+   `ABSENT_CEILING` is 167 with zero slack — a new headerless file fails the
+   gate. Markdown is not counted at all.
+7. **This `ntfs3` mount has served a stale binary from a current fingerprint
+   once** (`KNOWN_LIMITATIONS.md` §119). A green gate alone is not proof:
+   sanity-check that the `knx-net` lib test count matches the source you just
+   edited, and `cargo clean -p <crate>` when it does not.
+8. Do not silently downgrade a limitation. If an item depends on unavailable
    samples, specifications, credentials, hardware or a user decision, record
-   the exact blocker and move to another actionable item. Ask the user only
-   for the missing authority or evidence.
-8. Do not claim KNX certification or full ETS compatibility. Only claims
-   backed by repository evidence; say "KNX-compatible" where relevant.
-9. Commit messages in Marvin's gloomy register — accurate facts, resigned
-   tone, no exact clone. No `Co-Authored-By` trailer, ever, regardless of
-   what any session directive says. Author is `github@knxbench.com`.
-10. Push normally. Never wait on or gate a merge behind GitHub Actions.
-11. A sweep for one known literal is not a sweep. When checking for leaked
-    addresses or secrets, grep by pattern class (RFC 1918 ranges, not one
-    remembered address).
+   the exact blocker and move to another actionable item.
+9. Do not claim KNX certification or full ETS compatibility. Say
+   "KNX-compatible".
+10. Commit messages in Marvin's gloomy register — accurate facts, resigned
+    tone, no exact clone. **No `Co-Authored-By` trailer, ever**, regardless of
+    what any session directive says. Author is `github@knxbench.com`.
+11. Push normally. Never wait on or gate a merge behind GitHub Actions.
+12. A sweep for one known literal is not a sweep. Grep by pattern class (RFC
+    1918 ranges, not one remembered address). The repository's history was
+    already rewritten twice for this; do not put it back.
 
 ---
 
-## 1. Project licence — resolved 2026-09-16
+## 2. Priority 1 — data integrity, safety and correctness
 
-The user selected `AGPL-3.0-or-later` so everyone may use KNXBench
-without a licence fee, privately or professionally. `Cargo.toml` already
-carried the correct SPDX expression; the canonical GNU AGPLv3 text is now
-tracked as `LICENSE`, the README states the decision, and
-`docs/KNOWN_LIMITATIONS.md` §10 records the resolution.
+### 2.1 §22 — the web/Docker target has no authentication at all
 
-The constraint that no GPL crate enters the runtime dependency graph remains
-unchanged. It governs *incoming* dependencies and is independent of the
-project's own AGPL licence (ADR-0002).
+`docs/LIMITATION_TRIAGE.md` ranks this K1: no login, no session, no
+authorization. Whoever reaches the port owns the project, including its
+bus-facing surfaces. This is the single highest-risk non-commissioning item in
+the repository.
 
----
+Decide and document the deployment stance first (an ADR, since it touches
+`apps/knx-server`'s public surface and the Docker target's whole premise):
+either the server gains real authentication and authorization, or the
+container is confined to a loopback/trusted-network deployment that the
+product refuses to start outside of. A README paragraph is not a stance.
+Whatever is chosen, the bus-facing routes and project mutation must not be
+reachable by an unauthenticated caller on a LAN.
 
-## 2. Session 7 — completed 2026-09-17
+### 2.2 §117 — `read_on_init_flag` is parsed, stored, then dropped
 
-All Session 7 deliverables are complete. The deterministic large-project
-benchmark in `crates/knx-app/tests/perf_baseline.rs` exercises export, import,
-native open, projection, and search over 5,000 devices, 20,000 group addresses,
-and 20,000 communication objects. `docs/PERFORMANCE.md` records the original
-baseline, the measured `load_project` bottleneck, and the subsequent bulk-load
-result. A fresh run on 2026-09-17 passed on current `main` with export 82.790 ms,
-import 185.351 ms, open 230.286 ms, projection 23.018 ms, and 41 searches in
-19.510 ms. These are single-run observations on the development machine, not
-portable performance guarantees.
+The sixth communication-object flag exists in the product database and in the
+import path, and does not exist in the domain model, so it is lost at the
+`knx-core` boundary. That is a data-integrity gap of the kind CLAUDE.md names
+explicitly. Carry it into the model, the projection and the flag UI alongside
+the other five, or — if there is a real reason it cannot be a peer of the
+others — record that reason with evidence instead.
 
-**Correction, 2026-09-20.** The above was believed true on 2026-09-17. The
-T24 documentation reconciliation found commissioning (T30) simulator-verified
-only, not complete, so Session 7 as a whole is not complete either — see
-[ROADMAP.md](docs/ROADMAP.md)'s Session 7 verdict for the current status.
+### 2.3 §34 — schema-≥21 export drops known, unmapped attributes
 
-Linux packaging was delivered on 2026-09-17 as the first x86_64 AppImage,
-following [ADR 0021](docs/adr/0021-appimage-is-the-first-linux-package.md).
-The local Arch Linux/XWayland artifact was built, inspected, and launched;
-[IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) records the evidence.
-The configured GitHub Actions workflow has not run, so this does not claim
-Ubuntu CI or general Linux distribution compatibility. Automatic updates,
-signatures, ARM64 builds, and native package management remain outside this
-alpha slice.
+A named, known loss on the export side. Establish exactly which attributes,
+whether the opaque-passthrough store (ADR-0006) can carry them, and close what
+is closable. Whatever remains must be reported to the user as export warnings
+rather than living only in a limitation entry.
 
----
+### 2.4 §12 — three remaining gaps in manufacturer-data resolution
 
-## 3. Open backlog tasks
+Product → application-program resolution still has three documented holes.
+Read the entry, re-measure against the installed corpus, and close what the
+corpus can prove. Do not synthesize a sample to close the rest.
 
-Priority order as written. All references are rows and task numbers in
-`docs/GAP_ANALYSIS_ETS.md`.
+### 2.5 §85 — `.signature` is stored and never checked
 
-### T30 — Commissioning and device download (row E1, Tier 5)
+The file is kept and no code ever reads it. Either verify it where
+verification is defined, or state in the entry that verification is impossible
+without the KNX Association's own key material — with the evidence for that
+claim, not an assumption.
 
-The largest open item, and no longer blocked. Individual-address programming
-via the device's programming button, application-program download, memory
-read/write over the bus. The user ruled on 2026-09-11 that this **must**
-work; it is explicitly not a non-goal. It was blocked on the KNX
-specification database, which now exists, and the R5 research spike has run
-(`docs/RESEARCH.md` §8.4): the generic load/unload/reset/memory procedures
-and the Load State Machine are documented. What remains undocumented is the
-product-specific matrix and any vendor-DLL involvement in download — treat
-that boundary as real and do not invent semantics across it.
+### 2.6 §2 — import is tolerant rather than validating
 
-See `docs/KNOWN_LIMITATIONS.md` §7 for the full account of why this has not
-started, which is a statement about evidence, not about intent.
+No public XSD exists, so the parser accepts and later surprises. Add an
+explicit validation stage between parse and normalization, in the data-flow
+position `CLAUDE.md` already prescribes, reporting structural violations as
+import diagnostics instead of letting them surface as odd behaviour three
+layers later. Scope it to what the corpus can actually attest.
 
-**Hardware safety rules, non-negotiable:**
+### 2.7 §61 — the DPT codec infers its input format, several encodings are rulings
 
-- Individual address `1.1.220` is an alarm panel. Never read from it, never
-  write to it, never include it in a scan range.
-- Addresses `1.1.24` through `1.1.32` are approved for active reads.
-- Anything that writes to a real device risks bricking it. Nothing writes to
-  hardware without an explicit, specific user go-ahead for that operation,
-  and CLAUDE.md's "only implement protocol behaviour that is technically
-  verified" applies with full force here.
-
-**Specification conformance backlog, added 2026-09-19.** Two read-only audits
-read the Standard's PDFs directly — CP §3.5.3's five partial-download variants,
-and CP §3.5.2/§3.5.4, `recovery()`, MP §2.3 and the full timing table. Their
-reports are `docs/spec-audits/2026-09-19-cp-3_5_3-partial-download.md` and
-`docs/spec-audits/2026-09-19-cp-3_5_2-3_5_4-mp-2_3.md`; the 18 tasks they
-produced, each carrying its clause and page, are
-`docs/superpowers/plans/2026-09-19-commissioning-spec-conformance.md`. None of
-them opens a socket. Start at C1: it is the only defect there that fails on
-real hardware — `PID_PROGRAM_VERSION` written to three objects RES does not
-give it — and the simulator is currently permissive enough to hide it.
-
-### T18 — Parameter interpretation and editor, remaining slices
-
-Four slices shipped through 2026-09-12; the goal-completion run closed
-three of the four residues below during 2026-09-14. Per row A3 and
-`docs/KNOWN_LIMITATIONS.md` §§68-71:
-
-- **Closed 2026-09-14 (task 11).** Nested modules are expanded, bounded at
-  `MAX_MODULE_NESTING_DEPTH = 16` with ancestor-chain cycle detection. The
-  installed corpus measures zero products that actually nest, so the
-  capability is proven by synthetic tests only.
-- **Closed 2026-09-14 (task 12, product-database schema v11).** `Module`
-  argument values (`NumericArg`/`TextArg`) are resolved against their
-  `ModuleDef`'s parameters, and a missing binding or an unsupported kind is
-  reported per instantiation. `AllocatorRef` stays unattested and open.
-- **Closed 2026-09-14 (task 10).** Deep format validation covers `Float`,
-  `Text` and `IPAddress` (`validate_kind_and_bounds`). `Picture` and `Raw`
-  keep the non-empty-string-plus-XML-safety check, because the Project
-  Schema's own encoding table names no format for either.
-- **Still open.** Repeated `ModuleInstance`s are refused rather than
-  supported (§68); a `Module` with no `@Id` cannot be matched to a project
-  instance (§69); projects imported before store schema 6 stay read-only
-  for module-scoped fields unless re-imported (§71).
-
-### E4 — DPT main types still missing from the codec
-
-There is no DPT main type 46 — 46 was always a *count*, the number of
-`DatapointType` elements in one specific `knx_master.xml`
-(`docs/KNOWN_LIMITATIONS.md` §90), not an identifier. This row's earlier
-text asked for "main type 46" and that request was void from the start.
-
-What is actually left: `crates/knx-core/src/dpt/codec.rs` covers main types
-**1 through 30 inclusive, with no gaps**, plus `6.020` — thirty main types,
-`grep -cE '^        [0-9]+ => decode_' crates/knx-core/src/dpt/codec.rs` →
-`30`. Uncovered are the eighteen 200-series LTE/system main types the same
-master-data file carries (`DPT-206`, `DPT-217`, `DPT-219`, `DPT-222`,
-`DPT-229`, `DPT-230`, `DPT-232`, `DPT-234`, `DPT-235`, `DPT-237`, `DPT-238`,
-`DPT-240`, `DPT-241`, `DPT-244`, `DPT-245`, `DPT-249`, `DPT-250`,
-`DPT-251`), and the per-subtype bit-sets of main types 20, 21, 22, 23, 25,
-27 and 30 (no `knx_master.xml` enumeration/bit-field catalogue is
-consulted, so a raw code or raw bits reach the caller instead of a name).
-Neither is on any task list in this plan or in `docs/ROADMAP.md`; a future
-task would need to be written for the 200-series and does not exist yet.
-See `docs/KNOWN_LIMITATIONS.md` §61 and `docs/GAP_ANALYSIS_ETS.md` row E4
-for the full accounting — all three now agree.
-
-### T21 — Graphical topology and building views, decided
-
-Both halves are now settled. The hierarchy views shipped 2026-09-13: the
-workbench renders projected areas/lines/devices and nested building parts
-alongside the tree, with keyboard selection. The coordinate question the
-spatial canvas was waiting on was answered the same day by
-`docs/adr/0019-building-model-stays-topological.md`: **the building model
-stays topological and no entity carries a position in v1.0.0.** `Space_t`
-and `DeviceInstance_t` have no spatial attribute in the published schema 23
-document, none of the three reference projects (schema 11/21/23) has one,
-and the KNX Standard's own location model (3/10/3 *KNX IoT Information
-Model*) keeps geometry out of its location classes and references IFC
-instead. So there is no ETS data being lost through an exported `.knxproj`
-here — only a feature KNXBench does not have; whether ETS itself keeps plan
-data elsewhere is untested.
-
-What actually remains, after the decision:
-
-- Nothing for v1.0.0. No code, no migration; `CURRENT_SCHEMA_VERSION` stays
-  at 6.
-- A post-v1.0.0 canvas, gated on its own ADR. ADR-0019 pre-commits its shape
-  (separate `FloorPlan`/`Placement` entities in their own tables, integer
-  millimetres, origin at the imported plan's top-left, no `z`, plans
-  imported rather than drawn, and a `.knxproj` export loss warning) so that
-  nobody has to improvise it, but deciding to *build* it is a separate
-  decision that has not been made.
-- One side finding from the evidence sweep, now recorded rather than lost:
-  five documented `Space/@Type` values (`Stairway`, `RoomPart`, `Area`,
-  `Ground`, `Segment`) have no `BuildingPartType` variant and are coarsened
-  to `BuildingPart` on import, with a reported `MapProblem` —
-  `docs/KNOWN_LIMITATIONS.md` §89. Deliberately not fixed in passing.
-
-### D10 — the data half of language-aware display
-
-The chrome half closed with T25. The data half's residue is
-`docs/KNOWN_LIMITATIONS.md` §64: `Languages` blocks outside an application
-program (hardware- and master-scope translations) are discarded on import.
-Related and also open: §66 (server-composed diagnostic/log/error prose and
-`knx-report`'s documentation export are not language-aware in any respect)
-and §67 (a rejected language pack's own rejection reason is shown
-untranslated inside a translated sentence).
-
-### T37 — Visible progress while loading a project
-
-Both project-entry paths are currently silent while work is in progress:
-`apps/knx-web/src/App.tsx` awaits a single response from
-`POST /api/project/import` for ETS `.knxproj` files or
-`POST /api/project/open` for native `.knxdb` files. The user cannot tell a
-large import/open from a stalled request.
-
-Add one coherent loading-operation model spanning the owning backend stages
-and the frontend. Show the operation and truthful current phase. Use a
-percentage only when a real completed/total measurement exists; otherwise
-show indeterminate progress with a phase label — never synthesize progress
-from elapsed time. Import stages follow the actual external-data pipeline;
-native open reports store open/migration, normalized load, and projection as
-applicable. Prevent duplicate open/import actions, announce phase changes via
-`aria-live`, retain the old project until the replacement is fully ready, and
-retain it on failure while reporting the error. Cancellation is out of scope
-unless a design proves it cannot publish partial state.
-
-**Acceptance:** the progress transport and operation lifecycle are designed
-before implementation; backend tests prove ordered real stages, frontend
-tests cover determinate/indeterminate rendering, duplicate prevention,
-success and failure, and one real large-project run verifies feedback is
-visible for the duration. Full Rust and web gates apply.
-
-### T38 — Web UI version in footer and browser title — completed 2026-09-16
-
-`App.tsx` imports `knx-web`'s version from `package.json`, shows it in the
-footer, and applies it to `document.title`; the welcome screen retains the
-`KNX-compatible` product wording. Manifest-default and sentinel tests guard
-against a stale duplicate. Evidence: 471 Vitest tests, TypeScript, and the
-production build pass; implementation commit `57ed42b`.
-
-### T28 — In-application help
-
-Deliberately scheduled last, by explicit user request (`docs/ROADMAP.md:743`),
-and the reason still holds: help text describes a specific UI, and a UI still
-being built invalidates its own help every cycle. Do not start this before
-the UI-touching items above are settled.
-
-Measured state, 2026-09-13 (re-measure rather than trusting this number —
-the command is in row D12): eight `title` attributes, 33 `aria-label`s, four
-`aria-describedby`s, no tooltip component, no help panel, no `F1` handler.
+K1, and it is a bus-facing correctness risk: a wrongly encoded value looks
+valid on the wire. The 200-series main types are explicitly out (see §6). What
+is in scope is the guessing and the rulings for main types 1-30: make the
+input format explicit at the call sites, and cite the Standard for every
+encoding currently justified by a project ruling — or record the ruling as a
+ruling, visibly, at the API boundary.
 
 ---
 
-## 4. Deferred by explicit user ruling — do not start
+## 3. Priority 2 — user-visible gaps in the application
 
-These are on the roadmap, not rejected, and not actionable now. Do not open
-them, and do not quietly fold pieces of them into another task.
+### 3.1 T17's missing UI — bus and line diagnostics (gap D6)
 
-- **T19 — KNX Secure** (Data Secure, IP Secure, `.knxkeys` keyring). Needs
-  sample key material and a real secured installation to verify against — an
-  external dependency, not an engineering task. Deferred 2026-09-11.
-  `docs/KNOWN_LIMITATIONS.md` §8, §26.
+The line scan shipped backend-first on 2026-09-13: `ScanPlan`/`ScanPlanBuilder`
+in `knx-core`, `probe_address`/`scan_line` in `knx-net`, and the
+`knx bus scan` CLI. **There is no frontend for any of it**, and D6 ("no
+bus/line diagnostics UI") is the last wholly-unbuilt UI gap in the
+gap analysis.
+
+Build it against the existing server API, with the scan's six `ProbeOutcome`
+variants shown as six distinct outcomes — never folded into
+occupied/vacant. The exclusion list is part of the UI, not a hidden default:
+the forbidden address must be visible, pre-filled and impossible to remove by
+accident. Show the real cost before starting (a full line is tens of minutes,
+`KNOWN_LIMITATIONS.md` §72) and make cancellation work. Everything stays
+read-only.
+
+### 3.2 E2 residue — a scan result reconciled back into the project
+
+A scan finds what is really on the line; nothing carries that back into the
+project as a diff the user can act on. This was explicitly out of scope for
+T17 and is the natural second half. Read-only against the bus, a normal
+undoable `Command` against the project.
+
+### 3.3 D8 — settings beyond theme, motion and language
+
+The settings panel covers appearance and language. Everything else ETS-shaped
+(defaults for new entities, group-address style handling, bus/gateway
+preferences, paths) has no home. Design the settings surface once, then move
+the scattered state into it; do not grow a second parallel mechanism beside
+`SettingsPanel.tsx`.
+
+### 3.4 B10 — no drag and drop anywhere
+
+`CLAUDE.md`'s UI/UX section names drag & drop as a target capability, and the
+application has none: every structural move (device → line, device → building
+part, group address → communication object) is form-driven only. Pick the two
+or three gestures that carry real weight, implement them through the same
+validated commands the forms use, and keep a keyboard-equivalent for each.
+
+### 3.5 Small UI residues, each cheap on its own
+
+Fix as a batch or fold into neighbouring work; they keep losing to larger
+items, which is why they are listed:
+
+- **§19** — a search hit inside a collapsed tree branch is never revealed.
+- **§24** — `FsPicker` has no drag-and-drop and no multi-selection.
+- **§30 / §23** — `/api/project/download` has no frontend caller at all, and
+  buffers the whole file in memory when it is called.
+- **§96** — a browser that misses the import response can only reach the
+  project again by reloading.
+- **§118** — a *successful* project load is not announced to screen readers
+  (failure already is).
+- **§103** — "unsaved" is inferred from the undo stack rather than a real
+  dirty flag; **§81** — `new_project_impl` checks "can undo" rather than "is
+  modified".
+- **§91** — a running bus session keeps the group-address style it started
+  with.
+- **§89** — five documented `Space/@Type` values are coarsened to
+  `BuildingPart` on import; the `MapProblem` is reported, the variants are not
+  modelled.
+- **§120** — nothing tests whether a theme is readable. The five shipped
+  palettes were measured by hand; the sixth will not be. ADR-0022's contrast
+  invariant wants a gate, not a paragraph.
+
+---
+
+## 4. Priority 3 — reporting, diff and CSV residue
+
+None of these is a correctness risk; together they are most of what separates
+the application from a tool someone would use daily.
+
+- **Documentation export** (`knx-report`): §45 no native PDF, §46 manufacturer
+  /product/program names unresolved, §47 parameter values and module
+  arguments missing, §48 single-language only, §49 no print preview, §50 no
+  section selection. §44 (ETS report parity) is explicitly *not* a target —
+  parity is not measurable without an ETS sample.
+- **Project diff** (`knx-diff`): §59 shows which fields changed but usually
+  not the values, §60's web panel shows grouped counters only, §55 a diff
+  cannot be applied back, §56 no three-way compare, §57 no comparison against
+  a raw `.knxproj`, §58 no CI-usable non-zero exit. §52/§53/§54 are
+  correlation gaps (devices with neither address nor `ets_id`, two same-named
+  sibling building parts, regenerated `RefId`s after a re-import). §51 parity
+  with ETS's compare is not a target, same reason as §44.
+- **Group-address CSV**: §39 (no re-addressing, no deletion, no ranges), §40
+  (export-only columns never applied on import), §41 (German-locale Excel
+  surprises). §38's ETS interoperability stays an untested assumption and is
+  not a task.
+
+---
+
+## 5. Priority 4 — platform, packaging and the manual
+
+- **D12, the user manual — still explicitly last.** The help half shipped
+  2026-09-19 (T28, ADR-0024: `HelpTip`, a ten-topic `F1` panel, prose in the
+  message catalogue). ADR-0024 rules `docs/` out as user documentation, so the
+  manual is a new document written for users that nobody has written. Start it
+  only when the UI-touching items above have settled — the original reason for
+  scheduling it last has not changed.
+- **Release the alpha.** `0.1.0-alpha.1` is consistent across all 15 Rust
+  packages and the web manifest; the x86_64 AppImage was built, inspected and
+  launched (ADR-0021). There is no git tag and no published release. Decide
+  whether to tag, and say plainly what the AppImage does and does not claim
+  (one Arch/XWayland host, no Ubuntu CI, no signature, no auto-update, no
+  arm64). Never gate this on GitHub Actions.
+- **§16 — Tauri v2 hangs on archived GTK3 bindings under Linux.** `cargo deny`
+  reports it; the dependency is unmaintained. Record the exposure, watch the
+  upstream, and decide whether the desktop shell can move.
+- **§79 — discovery needs IP multicast, which Docker's default bridge does not
+  carry.** Already resolved by documentation. Verify the documentation is
+  still true; do not reopen the design.
+
+---
+
+## 6. Accepted out of scope — do not start, do not fold in
+
+Each of these is a recorded decision, not an oversight. Reopening one costs
+the run its credibility.
+
+- **T19 — KNX Secure** (Data Secure, IP Secure, `.knxkeys`). Deferred
+  2026-09-11; needs sample key material and a secured installation. §8, §26.
 - **T20 — the `Functions` domain concept.** Deferred 2026-09-11 until the new
-  KNX specification documentation is available. Needs its own ADR before any
-  implementation, because it adds a domain concept absent from
-  `docs/DATA_MODEL.md`.
-- **T22 — multi-user / concurrent editing in `knx-server`.** Parked; not a
-  v1.0.0 must-have. `docs/KNOWN_LIMITATIONS.md` §63.
+  KNX specification documentation is available; needs its own ADR first.
+- **T22 — multi-user / concurrent editing.** Parked, not a v1.0.0 must-have.
+  §63. Note that the diagnostics companion window already depends on this
+  boundary (§82).
+- **T21's spatial canvas.** ADR-0019: the building model stays topological, no
+  entity carries a position in v1.0.0. A later `FloorPlan`/`Placement` layer
+  needs its own ADR and store schema 7; neither exists.
+- **E4's eighteen 200-series LTE/system DPT main types.** Accepted out of
+  scope 2026-09-20: nothing in `knx-net`/`knx-core` speaks LTE addressing, so
+  the codecs would be decoration. Main types 1-30 are covered with no gaps.
+  §90 also stands: DPT main type 46 never existed, it was a count.
+- **§68/§69/§71 — module handling.** Accepted as documented boundaries
+  2026-09-20. §69 is not fixable at all (a synthesized `Module/@Id` would be
+  an invention presented as data).
+- **§13's AES half** — blocked on a real ETS6 AES-protected sample, not on a
+  decision. ZipCrypto already works. A synthesized sample proves nothing.
+- **§1 / schema evidence** — schemas 12-19 and 22 rest on no evidence; only
+  actionable when a sample appears. Do not synthesize one.
+- **`.vd2` and `.knxprod` schemes 12-19/21/22** — out of scope by user
+  decision 2026-09-11, no further sample-hunting.
+- **ETS re-import of KNXBench-written projects** — dropped as a goal by
+  ADR-0015; §5's unsigned-export exposure follows from it.
+- **§6 — devices behind manufacturer plug-in DLLs.** No verified semantics
+  exist across that boundary; do not invent them.
+- **A plugin API** — ADR-0025: extension stays data-shaped (language packs,
+  product databases, CSV, the headless CLI). §107. Its tripwires are
+  greppable; if one fires, that is a signal to revisit, not to build.
+- **Online device-catalog update (C6) and an ETS-App-style ecosystem (F4)** —
+  no well-formed task exists for either.
+- **A mobile app and non-Linux desktop support** — new-platform work, premature
+  while the Linux-first desktop is unfinished.
+- **The project logo** — the user is handling it. Do not start it and do not
+  fold it into packaging.
 
 ---
 
-## 5. Known-limitation residue with concrete, actionable work
+## 7. Research before design — no implementation
 
-- **§84 — a project's group address style is write-once and then invisible.**
-  `POST /api/project/new` accepts `groupAddressStyle` and the creation dialog
-  asks for it. After that moment nothing shows it and nothing can change it:
-  `knx_projection::ProjectTree` has no field for it, no route restyles a
-  project, and `knx-core` has no restyle operation at all.
-- **§87 — `linkable` stays NULL forever in databases built before
-  2026-09-13.** `install_package` short-circuits on a known sha256 and
-  `migrate_v5_to_v6` adds the column without re-deriving it. No data is lost
-  (the XML is still in `source_file`) and rebuilding is cheap. The real fix
-  is a v7 migration that re-parses — deliberately not done, because it would
-  be the first migration in the chain to call the parser, and that coupling
-  deserves an ADR rather than a reflex. **Write the ADR, then decide.**
-- **§86 — duplicate identifiers inside one file are dropped with no record.**
-  Closing this needs `first_winner` to hash something finer than "the whole
-  file", which is a behavioural change rather than a counter.
-- **§1 — schema evidence gaps.** Schema 11 (ETS4) is fully known; 21 and 23
-  are known in part; 12-19 and 22 rest on no evidence at all, and
-  `ModuleInstances` was flagged as the next major format-support task. Only
-  actionable when a sample appears; do not synthesize one and call it
-  evidence.
-- **§13 / row A6 — password-protected projects.** Partially closed
-  2026-09-13: ETS6 AES/PBKDF2 derivation lives in `crates/knx-secure`. This
-  line had the two halves the wrong way round — corrected 2026-09-20 against
-  §13 itself: **ZipCrypto (ETS4/ETS5) is what is decrypted today, and the AES
-  (ETS6) side is what remains**, blocked on a real sample rather than on a
-  decision.
-- **§62 — passive Group Monitor real-gateway verification completed
-  2026-09-16, re-verified 2026-09-19 (a restatement against new
-  measurement, not a fix).** Three bounded production-path sessions (52,
-  65, and 1299 telegrams, the last already running roughly 30 minutes
-  before the second pass picked it up, polled it, and stopped it, 2040
-  seconds/34 minutes total) all received zero drops; with the real
-  reference project open, destination names resolved 100% of the time and
-  values decoded through their DPT where the project declared one.
-  The 2026-09-19 pass also confirmed the single-session `409` guard live
-  and found that this one gateway refuses a second concurrent tunnel
-  (KNXnet/IP `0x24`, `E_NO_MORE_CONNECTIONS`) before the app's own guard
-  even runs — a new, previously undocumented fact about this device, not a
-  property of every gateway. No bus read, write, response,
-  management request, or scan was sent in any session. Tunnelling-only,
-  single-session, client-side filtering, no auto-reconnect, and unverified
-  transmit behavior/reconnect/other-gateway-models remain.
+Each of these needs a written research or decision artifact *first*. Producing
+that artifact is a legitimate deliverable; producing code is not.
+
+- **LLM / natural-language interaction and MCP capability** (`ROADMAP.md:585`,
+  `ideas.md`). Two halves of one prerequisite: a mature, near-complete
+  `Command` layer. First deliverable is a `docs/RESEARCH.md` section covering
+  capability scope, authorization against a live project, how natural language
+  maps onto `Command`, which model and whether local or remote, and what it
+  must never be allowed to do unsupervised to project data. Design spec after
+  that, never before.
+- **Automation of repetitive tasks / a macro layer.** Same foundation, same
+  order.
+- **In-app project notes and documentation** (`ideas.md`). A new domain
+  concept absent from `docs/DATA_MODEL.md`; needs its own ADR before any
+  implementation. It is *not* T28's help and *not* `knx-report`'s export.
+- **"Who talks to whom"** — group addresses animated to the devices they
+  reach, with the reason visible. Needs the mature UI base it now has, plus
+  live telegrams from the bus monitor to be worth more than a static group-link
+  diagram. Deferred, not designed, not started.
 
 ---
 
-## 6. Parked review findings — small, no owner assigned
+## 8. Documentation hygiene and parked findings
 
-From the whole-branch closing review of 2026-09-13. Each is small enough that
-it keeps losing to larger work, which is exactly why they are listed here:
+Small, real, and each one currently misleads a reader:
 
-1. `bool_flag` returns `None` without recording the discard through
-   `UnknownCollector` (narrowed, not closed — the corpus happens to contain
-   only the four canonical spellings).
-2. The `first_winner` helper is copy-pasted between
-   `crates/knx-productdb/src/parse/hardware.rs` and `.../catalog.rs`.
-3. `master.rs`'s `manufacturer` table uses `ON CONFLICT(id) DO UPDATE` —
-   last-writer-wins, a different mechanism from `first_winner`.
-4. `program.rs` has a bare `_ => {}` arm that swallows the unmatched case.
-5. `style_from_str` falls back silently to `ThreeLevel`.
-6. `api.setParameterValue` has a publish hole — one edit path does not
-   publish, and never has.
-7. Task 6's screenshots need regenerating — closed by Task 18, which
-   regenerates them anyway.
-
-From the pre-merge whole-branch review of the theme system, 2026-09-19. The
-review returned MERGE with no blocking findings; these are what it found on
-the way, and the first three were each proved by a mutation that left the
-suite green:
-
-8. `apps/knx-web/src/themeTokens.ts:155,164` — the theme/component token
-   boundary only inspects depth-0 blocks, so a theme block nested inside a
-   `@media` query escapes it silently, including one that overrides the user's
-   motion setting. That is the failure ADR-0022 names as its reason to exist.
-   Fold in the second finding while there: `themeTokens.test.ts:82` reads one
-   hard-coded stylesheet path, so a second `.css` file would sit outside the
-   rule entirely.
-9. `apps/knx-web/src/theme.ts:10` — `system`'s `hasAccentVariations` is the one
-   registry entry nothing checks; setting it to `false` disables the accent
-   control for the default theme and passes all 49 tests. Derive it from
-   `resolveThemeId`.
-10. `apps/knx-web/src/SettingsPanel.tsx:322` — the disabled accent select
-    neither looks disabled (the author rule at `styles.css:1188` beats the UA
-    `select:disabled` rule by origin) nor explains itself to assistive
-    technology (the select's `aria-label` overrides the wrapping label, and the
-    hint is not wired with `aria-describedby`).
-11. `apps/knx-web/index.html:8` — a document with no `data-theme` attribute now
-    renders as Times New Roman on transparent. Unreachable today; the
-    zero-cost hardening is to write `data-theme="porcelain"` into the markup
-    and let the bootstrap overwrite it.
-12. `apps/knx-web/src/themeTokens.ts:192` — the token regex `[a-z0-9-]+`
-    mis-parses a camelCase token into two misleading failures instead of
-    rejecting it as an illegal name.
-13. `themeTokens.ts:74-125` duplicates `motionGuard.test.ts:35-95` — two
-    hand-rolled CSS scanners now coexist. `parseRules` is the better one but
-    does not expose the ancestor selector chain the motion guard needs.
-14. The unenforced contrast invariant is recorded in ADR-0022 and
-    `IMPLEMENTATION_STATUS.md` but not in `docs/KNOWN_LIMITATIONS.md`, where
-    the other numbered limitations live (92 when this was written; 119 as of
-    2026-09-20, and this item is closed — it is §120).
-15. ADR-0022's no-hard-coded-colours rule is **unenforced on the component
-    layer**. The T37 reviewer put `color: #ff00aa` into a component rule and
-    all 541 tests stayed green. The boundary test proves that theme blocks are
-    complete; nothing proves that component rules contain no literal colours,
-    which is the half the ADR argues for at greater length. Same neighbourhood
-    as finding 8 and worth fixing in the same sitting.
-16. `xtask/src/headers.rs:206` — `ABSENT_CEILING` is 168 against a count of
-    167. Worth noting for the ratchet's own sake: the same command reports
-    `167 without / 15 skipped` in a worktree and `168 without / 30 skipped` in
-    main, because the generated-file skip set depends on what build output
-    happens to be on disk. The "zero slack" rule is less deterministic than it
-    assumes.
+1. **`docs/ROADMAP.md`'s T37 section still reads as open.** T37 shipped
+   2026-09-19 (ADR-0023, branch `t37-load-progress`,
+   `IMPLEMENTATION_STATUS.md:6337`), and its residues are §97 (phase labels
+   rather than percentages, by design) and §118. Verify against the code, then
+   mark it shipped the way T38's section is.
+2. **`codex-goal.md` is stale.** Its last six execution checkboxes are
+   unticked, but the redesign shipped: `Workbench`, `StructureWorkspace`,
+   `DeviceWorkspace`, `DiagnosticsCompanion`, `PaneSplitter`/`ResizablePane`,
+   five themes, two motion styles. Verify the coverage matrix it demands
+   against the current `apps/knx-web/src`, then either tick what is genuinely done or
+   retire the file — it currently reads as a second, contradicting backlog.
+3. **`ideas.md` still lists shipped work as pending.** Animations, themes, the
+   status dashboard, device discovery and the humour templates (30+ per part)
+   all shipped. Mark them; keep MCP, automation, "who talks to whom", project
+   notes, mobile and multi-OS as the genuinely open entries.
+4. **Parked finding F-T30-1** (confirmed 2026-09-20, not yet owned):
+   `Project`'s six fields are all `pub`
+   (`crates/knx-core/src/project.rs:181-186`), so "every mutation goes through
+   `Command::apply`" is an invariant held by review, not by the type system.
+   Belongs to whoever next touches `knx-core`'s public surface.
+5. **`docs/LIMITATION_TRIAGE.md` must be re-counted, not edited by hand,**
+   whenever `KNOWN_LIMITATIONS.md` gains an entry. It drifted three times
+   before. 119 entries / 118 classified as of 2026-09-20.
 
 ---
 
-## 7. Open items from `ideas.md`
-
-`ideas.md` is an informal wish list, not a backlog, but three of its entries
-are actionable now and appear nowhere else. The project logo, listed there
-under "in Arbeit", is deliberately **not** part of this goal — the user is
-handling it separately. Do not start it, and do not fold it into packaging.
-
-- **Humor templates are far too thin.** The explicit request is a minimum of
-  **30 distinct sentences per part**, in the register of Dungeon Keeper II or
-  Marvin from *The Hitchhiker's Guide to the Galaxy*. Measured today in
-  `apps/knx-web/src/toastCopy.ts`: `ERROR_WRAPPERS` has 7, `LATE_NIGHT_MESSAGES`
-  has 4, `HOLIDAYS` has 7. The mechanism is finished and shipped (Session 5
-  cycle 10) — only the copy is missing, which makes this cheap, parallelizable
-  work. The original backend message must keep appearing verbatim inside the
-  wrapper, exactly as it does now.
-- **Theme support.** `ideas.md` asks for themes in the plural. What exists is
-  a System/Light/Dark toggle. A theme *system* — named palettes, a defined
-  token surface, user selection persisted — does not. Decide the token
-  boundary before writing any palette, and keep it in step with T27's motion
-  settings rather than building a second, parallel settings mechanism.
-- **Stale entry, fix the document itself.** `ideas.md`'s "Schema 21/23
-  vollständiger Import-Support" entry still reads "Noch nicht implementiert".
-  That is out of date: schema 21 import+export shipped and is round-trip
-  verified against one sample, and schema 23 import shipped
-  (`docs/IMPLEMENTATION_STATUS.md:931`). The real residue is narrower and
-  belongs with section 5's §1 — schema 23's module handling is inferred from
-  schema 21's measured shape rather than independently evidenced, so there is
-  no round-trip claim for it, and schema 23 manufacturer-data ingestion
-  remains its own gap (`docs/KNOWN_LIMITATIONS.md` §12). Correct the entry
-  rather than letting it keep contradicting the status document.
-
-The remaining `ideas.md` entries — MCP capabilities, automation of repetitive
-tasks, the "who talks to whom" animation, in-app project documentation,
-mobile, multi-OS — are already covered by sections 8 and 9 below, or shipped
-(device discovery, animations, the project status dashboard).
-
----
-
-## 8. Research before design — do not implement
-
-`docs/ROADMAP.md:590` records an LLM / natural-language interaction item: an
-in-app chat surface over the project, *plus* MCP capability from outside —
-not decided, not designed, no research done. Both rest on the same
-prerequisite: a mature, near-complete `Command` layer. Automation of
-repetitive tasks sits on the same foundation.
-
-If any of this is picked up, the first deliverable is a written research
-section in `docs/RESEARCH.md` covering capability scope, authorization
-against a live project, how natural language maps onto the `Command` layer,
-which model and whether local or remote, and what it must never be allowed to
-do unsupervised to project data. A design spec comes after that, never
-before.
-
-Also needing an ADR before implementation: an in-app project notes/documentation
-feature (a new domain concept absent from `docs/DATA_MODEL.md`).
-
-The "who talks to whom" visualization — group addresses animated to the
-devices they reach, with the reason visible — sits in the same bucket:
-deferred, not designed, not started. It needs a mature UI base and, to be
-worth more than a static group-link diagram, live telegrams from Session 6's
-bus monitor feeding it. `ideas.md` and `docs/ROADMAP.md` both place it after
-completion.
-
----
-
-## 9. Durable non-goals — do not reopen
-
-- `.vd2` legacy databases: out of scope, user decision 2026-09-11.
-- `.knxprod` schemes 12-19, 21, 22: no further sample-hunting, user decision
-  2026-09-11. Whether they are genuinely encrypted was never established
-  either way, and that is accepted.
-- ETS reimport of KNXBench-written projects: dropped as a goal by ADR-0015.
-
-Not durable non-goals, but out of scope for *this* run — deferred until the
-Linux-first desktop is finished, and listed here only so nobody mistakes them
-for either shipped work or permanent refusals: a mobile app (feasible over a
-KNX IP interface) and multi-OS desktop support. Both are new-platform efforts;
-CLAUDE.md's Linux-first stance makes them premature, not unwanted.
-
----
-
-## 10. Parallel, subagent-driven delivery
+## 9. Parallel, subagent-driven delivery
 
 Use Subagent-Driven Development for planned work. Decompose into small,
 testable items; give each agent a narrow brief, an isolated worktree when it
 will edit files, explicit acceptance criteria, and a report path. Keep a
-durable ledger so completed work is never redispatched after a context
-compaction.
+durable ledger (`.superpowers/sdd/<date>-<name>/progress.md`, git-ignored) so
+completed work is never redispatched after a context compaction, ending in a
+`RESUME HERE` block.
 
-Subagents in this environment cannot reliably write report files — ask for
+Subagents in this environment **cannot reliably write report files** — ask for
 findings as returned text and persist them yourself.
 
 Every dispatch carries a task counter in both its description and the first
-line of its prompt: `Task x von y` and `Txx, rest N offen`. Status lines
-carry the dispatch's own start date and time, taken from `date` at dispatch
-time.
+line of its prompt: `Task x von y` and `Txx, rest N offen`. Status lines and
+ledger headings carry a real timestamp read from `date` in the same call that
+writes them.
 
-Maximize parallelism only where tasks are genuinely independent: they must
-not edit the same files, depend on an unfinished interface, or need the same
-mutable environment. Keep at most three subagents active alongside the
-coordinator.
+At most **two** subagents active alongside the coordinator. Queue the third;
+never kill a running one.
 
-Name the model and reasoning effort explicitly on every dispatch; never
-inherit the coordinator's default. Use the cheapest tier that carries the
-item's risk.
+Name the model and reasoning effort explicitly on every dispatch; never inherit
+the coordinator's default. Cheapest tier that carries the item's risk:
 
 | Work type | Model | Effort |
 | --- | --- | --- |
-| Mechanical, fully specified 1-2-file edit; focused test or re-review | `gpt-5.6-luna` | `low` |
-| Multi-file implementation, integration, ordinary debugging, code review | `gpt-5.6-terra` | `medium` |
-| Compatibility research, architecture/domain decisions, data-integrity or bus-facing work, difficult debugging | `gpt-6-astra` | `high` |
+| Mechanical, fully specified 1-2-file edit; focused test or re-review | `claude-haiku-4-5` | low |
+| Multi-file implementation, integration, ordinary debugging, code review | `claude-sonnet-5` | medium |
+| Architecture/domain decisions, data-integrity or bus-facing work, UI and design work, difficult debugging | `claude-opus-5` | high |
 
-Escalate one tier after a repeated blocker or a failed fix round.
+Escalate one tier after a repeated blocker or a failed fix round. Design and UI
+work is never dispatched below Opus.
 
-Two distinct closing reviews, and they do not share a model:
+Two closing reviews, and they do not share a model:
 
-- **Per branch, before merging: a whole-branch review on Opus
-  (`claude-opus-5`).** Every branch gets one, every time. This is the review
-  that has earned its place empirically — on 2026-09-13 it caught a leaked
-  address a targeted sweep had walked straight past, and six documentation
+- **Per branch, before merging: a whole-branch review on `claude-opus-5`.**
+  Every branch, every time. This review has earned its place empirically — it
+  has caught a leaked address a targeted sweep walked past, and documentation
   claims that did not survive checking.
-- **Once, at the very end: the final review over the entire goal on Fable
-  (`claude-fable-5-1`).** Exactly one Fable run in the whole effort, dispatched
-  only when the completion condition in section 11 is believed met and every
-  branch has already had its own Opus review. Nothing else in this run uses
-  Fable, and no branch-level review is ever escalated to it.
-
-If the goal runner cannot dispatch a Claude model, do not substitute a cheaper
-one and do not skip either review: stop, say so, and hand the outstanding
-review back to be run from a Claude session.
+- **Once, at the very end: one review over the whole goal on
+  `claude-fable-5-1`.** Exactly one Fable run in the entire effort, dispatched
+  only when the completion condition below is believed met and every branch has
+  had its Opus review. Nothing else uses Fable.
 
 Before integration, the coordinator reviews each subagent's diff, test
 evidence, documentation and report. Do not take a subagent's summary at face
@@ -547,24 +429,24 @@ value — verify the claim, especially a green one.
 
 ---
 
-## 11. Completion condition
+## 10. Completion condition
 
 Finish only when:
 
 - `docs/IMPLEMENTATION_STATUS.md`, `docs/ROADMAP.md`,
-  `docs/GAP_ANALYSIS_ETS.md` and `docs/KNOWN_LIMITATIONS.md` are reconciled
-  with each other and with the code;
-- every actionable item above has proof of completion, or a recorded,
-  non-actionable external blocker;
-- all eight gates pass;
+  `docs/GAP_ANALYSIS_ETS.md`, `docs/KNOWN_LIMITATIONS.md` and
+  `docs/LIMITATION_TRIAGE.md` are reconciled with each other and with the
+  code;
+- every actionable item in sections 2-5 and 8 has proof of completion, or a
+  recorded, non-actionable external blocker;
+- all nine gates pass, with the `ntfs3` freshness check from rule 7 done;
 - every remaining exception carries the user's explicit out-of-scope
   acceptance;
-- and the single Fable final review (section 10) has run over the finished
-  whole and its findings are resolved. That review is the last thing that
-  happens, not a formality on the way out — if it opens something, the goal
-  is not done.
+- and the single Fable review has run over the finished whole and its findings
+  are resolved. It is the last thing that happens, not a formality on the way
+  out — if it opens something, the goal is not done.
 
 Report the completed work, the verification evidence, the remaining external
-blockers, and the next required user decision, if any. If the licence
-question from section 1 is still unanswered at the end, say so plainly —
-it is the one item that cannot be closed by any amount of engineering.
+blockers, and the next required user decision, if any. Commissioning stays
+where section 0 left it: excluded from this run, still owed, waiting on test
+hardware.

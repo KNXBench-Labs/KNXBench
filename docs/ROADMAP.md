@@ -777,8 +777,31 @@ The GitHub Actions workflow is configured to upload manual-run artifacts and
 to publish pushed `v*` tags, but it has not executed. This delivery establishes
 only the tested compatible glibc, GTK 3, and WebKitGTK 4.1 x86_64 boundary; it
 does not establish Ubuntu CI success or general Linux distribution support. With
-the performance measurement, Linux packaging, licence decision, and the
-earlier fixture and codec work delivered, Session 7 is complete.
+the performance measurement, Linux packaging, and licence decision delivered,
+the fixture/codec/packaging half of Session 7 is complete; commissioning,
+below, is the half that is not.
+
+**Update, 2026-09-20 — commissioning (T30), phase 2 substantially
+delivered.** T30 phase 1 (spec/design work,
+[the design spec](superpowers/specs/2026-09-13-commissioning-download-design.md))
+and phase 2 (protocol implementation against a device simulator, no
+hardware attached) are largely done: seventeen follow-up tasks (C1-C13,
+C15, C16, C18, C19) implemented all six commissioning procedures —
+individual-address write, complete download, load-one-part, partial
+download, unload, recovery — in `crates/knx-core/src/commissioning/` and
+`crates/knx-net/src/commissioning/`, each verified end to end against
+`crates/knx-net/src/commissioning/simulator.rs` (C14 landed the same run's
+differential-download data preservation in `knx-etsproj`/`knx-server`
+instead; C17 was ruled obsolete once C16 shipped the real execution path
+it existed to guard). Phase 3 (real hardware) has so far run **read-only**
+twice, on 2026-09-14 and 2026-09-18, against addresses `1.1.24`-`1.1.32`
+(excluding the forbidden `1.1.220` alarm panel); no write has been sent to
+a real device, and this row of Session 7 stays open until one has. See
+[GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) row **E1** and
+[KNOWN_LIMITATIONS.md §7](KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked)/[§92](KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device)
+for the full account. **Session 7 as a whole is therefore not complete**:
+the fixture, performance, packaging and licence deliverables are; the
+commissioning deliverable is simulator-verified only.
 
 **Entry condition.** All earlier sessions' deliverables exist and are tested.
 

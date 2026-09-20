@@ -110,6 +110,12 @@ pub struct SemanticComObject {
     pub description: Option<String>,
     pub dpt: Option<String>,
     /// Read, write, transmit, update, communication, in that order.
+    ///
+    /// Five, not six, and deliberately so: this type mirrors what export
+    /// writes, and export writes no `ReadOnInitFlag` on a
+    /// `ComObjectInstanceRef` because no measured project file carries one
+    /// (KNOWN_LIMITATIONS §117). A sixth slot here would compare a value
+    /// that is never in either file.
     pub flags: [Option<bool>; 5],
     /// `(group address ets_id, direction)`, sorted.
     pub links: Vec<(String, Direction)>,

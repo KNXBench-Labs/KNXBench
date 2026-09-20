@@ -638,6 +638,13 @@ export const messages = {
   "app.filterName.etsProject": "ETS project",
   "app.filterName.knxDesktopProject": "knx-desktop project",
 
+  // Read-on-Init is the one export warning with no `detail` string from
+  // the server, so its sentence lives here (see `describeExportWarning`).
+  "app.exportWarning.readOnInitNotExported.one":
+    "{count} communication object has Read on init (I) switched on. No measured ETS project file states that flag per object, so the exported .knxproj does not carry it.",
+  "app.exportWarning.readOnInitNotExported.other":
+    "{count} communication objects have Read on init (I) switched on. No measured ETS project file states that flag per object, so the exported .knxproj does not carry it.",
+
   // `DocumentationExportButton.tsx` (task 5, controller correction) —
   // same mislocated string, same fix: the filter name moves from a
   // module-level const into the component, resolved via `t()`.
@@ -1027,7 +1034,7 @@ export const messages = {
   "help.topic.comObjectFlags.p1":
     "A communication object is one input or output of a device's application program. Linking it to a group address is what puts the device on that address. KNXBench models six flags for it — shown as R, W, T, U, C and I in the Properties inspector — and together they decide what the object may do there.",
   "help.topic.comObjectFlags.p2":
-    "C, communication, is the master switch: with it off the object takes no part in bus traffic and the other four have nothing to act on. R, read, lets the object answer a read request with its current value. W, write, lets an incoming telegram change that value.",
+    "C, communication, is the master switch: with it off the object takes no part in bus traffic and the other five have nothing to act on. R, read, lets the object answer a read request with its current value. W, write, lets an incoming telegram change that value.",
   "help.topic.comObjectFlags.p3":
     "T, transmit, lets the object send by itself when its value changes — the flag that makes a sensor a sender. U, update, lets it adopt a value it sees in another device's read response. I, read on init, asks the bus for the address's value once at start-up, so the object begins with a real value rather than a guess. KNXBench stores the six as you set them; it does not judge which combination suits your device.",
 
@@ -1059,7 +1066,7 @@ export const messages = {
   "help.topic.limits.p1":
     "KNXBench is an independent application. It is not made by, endorsed by or certified by the KNX Association, and it is not ETS. Where it reads or writes an ETS file it does so on its own reading of that file.",
   "help.topic.limits.p2":
-    "KNX Secure is not supported. A password-protected project cannot be opened from this window — there is nowhere to type the password. Programming devices over the bus is not offered here either: the bus features are watching traffic and sending single telegrams. Read-on-Init (I) is now part of the project model and editable, with one gap left: no measured ETS project file states that flag per communication object, so exporting a .knxproj leaves an edit to it behind and says so in the export report.",
+    "KNX Secure is not supported. A password-protected project cannot be opened from this window — there is nowhere to type the password. Programming devices over the bus is not offered here either: the bus features are watching traffic and sending single telegrams. Read-on-Init (I) is now part of the project model and editable, with one gap left: no measured ETS project file states that flag per communication object, so an exported .knxproj does not carry it. The export report names the objects where it is switched on — the case where a re-import would come back with a different value.",
   "help.topic.limits.p3":
     "What is here is tested, but a test suite is not a site survey. Before trusting this application about an installation, check what it tells you against the installation itself.",
 

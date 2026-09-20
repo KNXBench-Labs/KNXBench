@@ -8520,9 +8520,15 @@ schema 11, ETS 6.3.0 schema 23, KV schema 21). So `map_com_object` leaves
 the field `Override::Absent` and neither exporter writes an instance-level
 attribute this project has never seen ETS write. What the exporter does
 instead is speak up: `ExportWarning::ReadOnInitNotExported { com_objects }`
-counts the communication objects whose project-layer Read-on-Init the
-written `.knxproj` cannot hold. A product-layer value raises nothing — it
-was never the project's to export.
+counts the communication objects whose project-layer Read-on-Init is
+switched *on* and which the written `.knxproj` cannot hold. A product-layer
+value raises nothing — it was never the project's to export. Nor does an
+exported-layer `false`: every measured program-level occurrence of the
+attribute reads `"Disabled"`, so a `false` resolves back to `false` on
+re-import, and warning about it would leave an unclearable complaint behind
+whenever a user switched the flag on and off again (the Inspector has no
+"clear to inherited" gesture). KNOWN_LIMITATIONS §117 records the one case
+that rule does not cover.
 
 **Everything downstream.** `knx-diff` (`ComObjectFields::read_on_init`, in
 `com_object_changed_fields`), `knx-projection` (`ComObjectNode`, with the

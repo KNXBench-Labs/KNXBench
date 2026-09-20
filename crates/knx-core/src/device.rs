@@ -72,6 +72,37 @@ pub struct ComObjectInstance {
     pub module_instance: Option<ModuleInstanceId>,
 }
 
+/// The program-layer value sitting behind one of `ComObjectInstance`'s own
+/// `Override::Empty` slots — present in the source, explicitly cleared, but
+/// with a value the application program itself still states (ADR-0012 gap
+/// 2, ADR-0027, KNOWN_LIMITATIONS §12). Kept **beside** `ComObjectInstance`
+/// (in `Devices`, keyed by `ComObjectInstanceId`) rather than folded into
+/// `Override<T>` itself: the instance's own `Empty` state must never be
+/// mistaken for having a value, and every one of `Override<T>`'s existing
+/// call sites — the importer, the exporter, every match arm already
+/// written against its four variants — stays exactly as it was.
+///
+/// Every field here is `Layer::Program` or `Layer::ProgramRef` by
+/// construction (`knx_productdb::enrich` is the only writer), so
+/// `Layer::is_exported()` already excludes it from export without this
+/// type needing an opinion of its own.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct ProgramDefaults {
+    pub text: Option<Resolved<Text>>,
+    pub description: Option<Resolved<Text>>,
+    pub dpt: Option<Resolved<DptRef>>,
+}
+
+impl ProgramDefaults {
+    /// Whether every field is unset — the state a `ComObjectInstance` with
+    /// no `Empty` slots, or one whose product database had nothing to say,
+    /// leaves this in. `Devices` uses this to decide whether an entry is
+    /// worth keeping at all.
+    pub fn is_empty(&self) -> bool {
+        self.text.is_none() && self.description.is_none() && self.dpt.is_none()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,6 +177,20 @@ mod tests {
             links: vec![],
             module_instance: None,
         }
+    }
+
+    #[test]
+    fn program_defaults_is_empty_only_with_all_three_fields_unset() {
+        let mut defaults = ProgramDefaults::default();
+        assert!(defaults.is_empty());
+        defaults.dpt = Some(Resolved {
+            value: DptRef {
+                main: 1,
+                sub: Some(1),
+            },
+            layer: Layer::Program,
+        });
+        assert!(!defaults.is_empty());
     }
 
     #[test]

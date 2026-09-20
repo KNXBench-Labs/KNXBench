@@ -3,9 +3,14 @@
 //!
 //! Two rules, both load-bearing:
 //!
-//! 1. Only `Override::Absent` slots are filled. `Empty`, `Malformed` and
-//!    `Value(Instance)` are what the project file actually said, and the
-//!    exporter reproduces them; overwriting one would change the file.
+//! 1. Only `Override::Absent` slots are filled, for `text`/`description`/
+//!    `dpt`. `Malformed` and `Value(Instance)` are what the project file
+//!    actually said, and the exporter reproduces them; overwriting one
+//!    would change the file. `Empty` is also never written into — but a
+//!    resolvable program value behind an `Empty` slot is no longer thrown
+//!    away either: it is lifted into `Devices::program_defaults`, a side
+//!    table the exporter never reads (ADR-0012 gap 2, ADR-0027,
+//!    KNOWN_LIMITATIONS §12).
 //! 2. Nothing is guessed. A datapoint type stated as a list of
 //!    alternatives (RESEARCH §4.2) fills nothing and is reported.
 //!
@@ -44,6 +49,13 @@ pub struct EnrichmentReport {
     /// not an error path.
     pub available: bool,
     pub devices_resolved: usize,
+    /// Communication objects `apply` changed something for — since
+    /// ADR-0027 that includes an object whose own `Override<T>` slots
+    /// never moved and whose only change was a program default lifted
+    /// into, or cleared out of, `Devices::program_defaults`. The CLI
+    /// prints this as "N communication object(s) enriched", so the figure
+    /// is larger than a pre-ADR-0027 build would have reported over the
+    /// same project.
     pub com_objects_enriched: usize,
     pub issues: Vec<EnrichmentIssue>,
 }
@@ -230,14 +242,42 @@ pub fn apply(
         return false;
     };
     let mut changed = false;
+    // `defaults` collects a program value for a slot the instance itself
+    // left `Empty` (ADR-0012 gap 2, ADR-0027) — a fact `fill_absent` never
+    // sees, since it only ever writes into `Absent`. `Devices` keeps this
+    // beside `com`, not inside its `Override<T>` fields: an `Empty` slot's
+    // own state must never read as if it had a value.
+    let mut defaults = knx_core::ProgramDefaults::default();
     if let Some((value, layer)) = text {
-        changed |= fill_absent(&mut com.text, value, layer);
+        match com.text {
+            Override::Absent => {
+                com.text = Override::Value(Resolved { value, layer });
+                changed = true;
+            }
+            Override::Empty => defaults.text = Some(Resolved { value, layer }),
+            Override::Value(_) | Override::Malformed(_) => {}
+        }
     }
     if let Some((value, layer)) = description {
-        changed |= fill_absent(&mut com.description, value, layer);
+        match com.description {
+            Override::Absent => {
+                com.description = Override::Value(Resolved { value, layer });
+                changed = true;
+            }
+            Override::Empty => defaults.description = Some(Resolved { value, layer }),
+            Override::Value(_) | Override::Malformed(_) => {}
+        }
     }
     if let Some(dpt) = dpt {
-        changed |= fill_absent(&mut com.dpt, dpt, layer_of(view.dpt_layer));
+        let layer = layer_of(view.dpt_layer);
+        match com.dpt {
+            Override::Absent => {
+                com.dpt = Override::Value(Resolved { value: dpt, layer });
+                changed = true;
+            }
+            Override::Empty => defaults.dpt = Some(Resolved { value: dpt, layer }),
+            Override::Value(_) | Override::Malformed(_) => {}
+        }
     }
     for (slot, stated, layer) in [
         (&mut com.flags.read, view.read.as_deref(), view.read_layer),
@@ -283,6 +323,20 @@ pub fn apply(
             com.size = Some(Resolved { value, layer });
             changed = true;
         }
+    }
+    // `com`'s mutable borrow of `project.devices` ends here (last use above);
+    // `set_program_defaults` needs its own borrow of the same map, which is
+    // why this is not folded into the match arms above.
+    // An empty `defaults` still has to reach `set_program_defaults` when an
+    // entry already exists: `apply` is `pub` and re-runnable, and a second
+    // pass over a com object whose program no longer states the attribute
+    // must clear the old value, not leave it attributed to a program that
+    // has stopped saying it. `set_program_defaults` removes on empty, so
+    // this is a guard about reaching it, not about what it does.
+    let had_defaults = project.devices.program_defaults(com_id).is_some();
+    if !defaults.is_empty() || had_defaults {
+        changed = true;
+        project.devices.set_program_defaults(com_id, defaults);
     }
     changed
 }
@@ -491,6 +545,129 @@ mod tests {
             .com_object(knx_core::ComObjectInstanceId(1))
             .unwrap();
         assert_eq!(com.dpt, Override::Empty);
+    }
+
+    /// The other half of the same fact: an `Empty` slot is untouched, but a
+    /// resolvable program value behind it is no longer thrown away either
+    /// (ADR-0012 gap 2, ADR-0027, KNOWN_LIMITATIONS §12) — it lands in
+    /// `Devices::program_defaults`, next to `com`, not inside it.
+    #[test]
+    fn an_empty_dpt_lifts_the_program_value_into_program_defaults_instead_of_the_slot() {
+        let (_dir, conn) = db();
+        let mut p = project_with("A-1_O-1_R-1", Override::Empty);
+        let report = enrich(&mut p, &conn).unwrap();
+        assert_eq!(
+            report.com_objects_enriched, 1,
+            "lifting still counts as enrichment"
+        );
+        let com_id = knx_core::ComObjectInstanceId(1);
+        let com = p.devices.com_object(com_id).unwrap();
+        assert_eq!(
+            com.dpt,
+            Override::Empty,
+            "the instance slot itself is untouched"
+        );
+        let defaults = p
+            .devices
+            .program_defaults(com_id)
+            .expect("a program value was available to lift");
+        assert_eq!(
+            defaults.dpt,
+            Some(knx_core::Resolved {
+                value: knx_core::DptRef {
+                    main: 1,
+                    sub: Some(1)
+                },
+                layer: Layer::Program,
+            })
+        );
+        // The program states no description for A-1_O-1, so that field
+        // stays unset even though dpt lifted.
+        assert!(defaults.description.is_none());
+    }
+
+    /// `apply` is `pub` and its doc comment invites reuse, so a second pass
+    /// over the same com object is a real scenario: a changed `program_ref`,
+    /// a re-ingested manufacturer database, a re-enrichment run. If the
+    /// program has stopped stating the attribute, the lifted value has to go
+    /// with it. A default that outlives the program it came from is the side
+    /// table's own failure mode, inverted — no longer a value hidden from the
+    /// user, but a value attributed to nobody.
+    #[test]
+    fn a_second_apply_pass_clears_a_default_the_program_no_longer_states() {
+        let (_dir, conn) = db();
+        let view = com_object_view(&conn, "A-1", "A-1_O-1_R-1", None)
+            .unwrap()
+            .unwrap();
+        let mut p = project_with("A-1_O-1_R-1", Override::Empty);
+        let com_id = knx_core::ComObjectInstanceId(1);
+        let mut issues = Vec::new();
+
+        assert!(apply(&mut p, com_id, "A-1_O-1_R-1", &view, &mut issues));
+        assert!(
+            p.devices.program_defaults(com_id).is_some(),
+            "the first pass lifts the program's dpt behind the Empty slot"
+        );
+
+        // Same view, minus the dpt the program used to state — what a
+        // re-ingested package that dropped the attribute looks like.
+        let silent = ComObjectView {
+            dpt_list: None,
+            ..view
+        };
+        assert!(
+            apply(&mut p, com_id, "A-1_O-1_R-1", &silent, &mut issues),
+            "clearing a stale default is a change like any other"
+        );
+        assert!(
+            p.devices.program_defaults(com_id).is_none(),
+            "a program that states nothing must leave nothing behind"
+        );
+        assert_eq!(
+            p.devices.com_object(com_id).unwrap().dpt,
+            Override::Empty,
+            "and the instance slot is still untouched either way"
+        );
+        assert!(issues.is_empty());
+    }
+
+    #[test]
+    fn an_empty_description_lifts_the_program_value_into_program_defaults() {
+        let (_dir, conn) = db();
+        let mut p = project_with("A-1_O-1_R-1", Override::Absent);
+        p.devices
+            .com_object_mut(knx_core::ComObjectInstanceId(1))
+            .unwrap()
+            .description = Override::Empty;
+        enrich(&mut p, &conn).unwrap();
+        let com_id = knx_core::ComObjectInstanceId(1);
+        let com = p.devices.com_object(com_id).unwrap();
+        assert_eq!(com.description, Override::Empty);
+        // A-1_O-1's ComObject/ComObjectRef state no VisibleDescription in
+        // this fixture, so there is nothing to lift — the entry stays
+        // absent rather than acquiring an empty placeholder.
+        assert!(p.devices.program_defaults(com_id).is_none());
+    }
+
+    /// A slot already `Value(Instance)` is untouched, and nothing is lifted
+    /// either — the same non-overwrite rule as `an_instance_value_is_never_
+    /// overwritten`, extended to the new side table.
+    #[test]
+    fn a_value_slot_gets_no_program_default_entry() {
+        let (_dir, conn) = db();
+        let instance = Override::Value(knx_core::Resolved {
+            value: knx_core::DptRef {
+                main: 5,
+                sub: Some(1),
+            },
+            layer: Layer::Instance,
+        });
+        let mut p = project_with("A-1_O-1_R-1", instance);
+        enrich(&mut p, &conn).unwrap();
+        assert!(p
+            .devices
+            .program_defaults(knx_core::ComObjectInstanceId(1))
+            .is_none());
     }
 
     #[test]

@@ -8815,3 +8815,157 @@ know by name, so the warnings reach the UI without a line of frontend change
 **Not done.** No store migration was needed, so schema 8 stays unclaimed.
 `docs/LIMITATION_TRIAGE.md` is untouched on purpose; a later task recounts
 it mechanically.
+
+## 2026-09-20 — T04: one of §12's three manufacturer-data gaps closes, the other two get an honest accounting (branch `t04-productdb-gaps`, ADR-0027)
+
+[KNOWN_LIMITATIONS.md §12](KNOWN_LIMITATIONS.md#12-manufacturer-data-resolution--one-of-three-gaps-closed-2026-09-20)
+named three gaps left after Session 4's enrichment work. This task
+re-measured all three against the reference project before touching
+anything, closed the one the corpus backed most strongly, and wrote the
+other two down honestly instead of quietly re-describing them as smaller
+than they are.
+
+**Re-measurement first, pinned by
+`crates/knx-app/tests/enrichment_gap_measurement.rs` (new this task).**
+Gap 2's 497/907 empty-`DatapointType` figure holds exactly; of those, 122
+have a resolvable program value behind them, 375 do not, spanning 23 of 36
+devices. `description` adds 82 more empty slots, all 82 liftable; `text` is
+never empty. Gap 3's `AmbiguousDpt` issue count is 107, but only 22 of
+those actually block a fill (the instance slot is `Absent`) — 85 land on a
+slot the instance already stated its own value for, informational noise
+that was never going to be filled regardless, spread across 11 devices and
+51 distinct `ComObjectRef`s carrying an ambiguous list in total.
+
+**Gap 2, closed: `Devices` grows a `program_defaults` side table
+([ADR-0027](adr/0027-program-defaults-side-table.md)).** `ProgramDefaults`
+(`crates/knx-core/src/device.rs`) holds up to three `Resolved<T>` values —
+`text`, `description`, `dpt` — populated only by `knx_productdb::enrich`
+when the instance's own slot is `Empty` and the program states a value.
+`enrich::apply` now matches on `Override::Absent`/`Empty`/`Value`/
+`Malformed` explicitly instead of only ever writing into `Absent`; the
+`Empty` slot itself is never touched — proven by three new unit tests in
+`crates/knx-productdb/src/enrich.rs` plus a corpus-level test asserting
+all 122 dpt and 82 description liftable slots actually populate
+`program_defaults` on the real reference project, with the underlying
+`Override::Empty` unmoved. Persistence mirrors `com_object_override`'s own
+shape: a new `com_object_program_default` table
+(`crates/knx-store/src/devices.rs`,
+`upsert_com_object_program_defaults`/`load_all_program_defaults`), a full
+round trip test, and `crates/knx-store/src/project.rs` wired into both the
+save and load passes. **Schema version moves to 9, not 8** —
+`CURRENT_SCHEMA_VERSION` was 7 on this branch's base commit and a
+concurrent task had already claimed 8 for the schema-≥21 export path;
+`migrate_v7_to_v8` ships as a deliberately empty placeholder mirroring the
+existing v6→v7 precedent, so the coordinator's renumbering at merge is a
+one-line change. Nothing here surfaces a program default in `apps/knx-web`
+— that is left as an explicit open UI question, not silently dropped.
+
+**Gap 1, reconciled rather than re-fixed.** §12's own paragraph on
+parameter interpretation had drifted behind
+[§3](KNOWN_LIMITATIONS.md#3-device-parameters-are-preserved-but-not-interpreted),
+which had already moved through T18 slice 4 (module-scoped editing, for a
+section with exactly one authoritative `ModuleInstance`), task 11 (bounded
+nested-module expansion) and task 12 (module arguments, text substitution
+only) without §12 catching up. §12 now states the real residue — three
+named, individually tracked cases
+([§68](KNOWN_LIMITATIONS.md#68-repeated-module-instantiation-is-refused-not-supported),
+[§69](KNOWN_LIMITATIONS.md#69-a-module-with-no-id-cannot-be-matched-to-a-project-instance),
+[§71](KNOWN_LIMITATIONS.md#71-a-project-imported-before-store-schema-6-has-no-module-instance-ids-to-write-with))
+— and points to §3 as the one place that account is kept, instead of
+carrying its own copy that can drift again. No code changed for this gap;
+this is a documentation-only fix.
+
+**Gap 3, deferred explicitly.** The brief floated surfacing `AmbiguousDpt`
+to the user as a choice rather than resolving it automatically. Measured
+against the stack as it stands: a project-level import's
+`EnrichmentReport` reaches nothing but the CLI's one-line summary and,
+for device creation only, `apps/knx-server`'s already-resolved
+`CreationDiagnostic` path (§35) — there is no route that surfaces a
+project import's issues to `apps/knx-web`, and no domain concept of a
+user-recorded DPT choice to persist one into even if there were. Building
+that is a design of its own scope, the same call §3 already makes for
+module-scoped editing's own residue, and the corpus does not argue for
+promoting it ahead of that: 22 slots across 11 devices, out of 907
+communication objects. §12 records the blocker in full rather than a
+placeholder sentence. **Enrichment still refuses to guess between
+alternatives, unconditionally — that rule is unchanged and untouched.**
+
+**Concurrency notes for the coordinator.** Schema 9 (see above; expect a
+renumber at merge alongside whichever task holds 8).
+`crates/knx-etsproj/src/map.rs`, `.../parse/installation_v21.rs` and
+`.../export/` were not touched. ADR-0027 is new, not a renumbering of an
+existing ADR.
+
+**Tests.** `crates/knx-core`: +2 (`program_defaults_is_absent_until_set_and_cleared_by_removal`,
+`program_defaults_is_empty_only_with_all_three_fields_unset`).
+`crates/knx-store`: +2 (a frozen-v7-fixture-migrates-to-v9 test, a
+`program_defaults` round trip). `crates/knx-productdb`: +3 unit tests in
+`enrich.rs`. `crates/knx-app`: +4 corpus tests in the new
+`enrichment_gap_measurement.rs` (three re-measurement tests, one closure
+proof). `cargo fmt --all --check`, `cargo clippy --workspace --all-targets
+-- -D warnings`, `cargo test --workspace --no-fail-fast`, `cargo run -p
+xtask -- check-layering`, `cargo run -p xtask -- check-headers`, `cargo
+run -p xtask -- check-anchors` and `cargo deny check` all pass — exit
+status only, per §119, this `ntfs3` mount has lied about a green gate
+before.
+
+## 2026-09-20 — T04 fix round 1: the side table gets wired into the two paths every other piece of project state already respects (branch `t04-productdb-gaps`)
+
+Review of the work above approved spec compliance in full and requested
+changes on quality. Three gaps, all latent today because nothing outside
+`knx-core`, `knx-store` and `knx-productdb` reads `program_defaults` yet —
+which is exactly why they were worth closing before a reader exists.
+
+**Undo restores the whole device again.** `Command::DeleteDevice` dropped
+each communication object's `program_defaults` entry (correct on the
+forward path, via `remove_com_object`) and its inverse carried none of
+them, so an undo produced a device that looked whole and was not; a save
+afterwards made that permanent with nothing on screen to say so.
+`Command::CreateDevice` gains a `program_defaults:
+Vec<(ComObjectInstanceId, ProgramDefaults)>` field, empty for a genuine
+creation and populated when the command is an inverse. A com object that
+had no defaults contributes no entry, so undo cannot invent an
+empty-but-present record either. The comment in
+`apps/knx-server/src/domain.rs::create_device_impl` claiming the inverse
+"captures the enriched state for redo" was true of the `Override<T>` slots
+and false of the side table; it now names both halves.
+
+**A stale default can be cleared.** `knx_productdb::enrich::apply` reached
+`set_program_defaults` only when it had something to write, so a second
+pass over a com object whose program no longer states the attribute left
+the old value in place, attributed to a program that had stopped saying
+it. The guard now also fires when an entry already exists;
+`set_program_defaults` removes on empty, as it always did.
+
+**Two test claims are now true.** ADR-0027's Consequences section asserted
+that `remove_com_object`'s cleanup was "tested directly"; the test named
+`..._cleared_by_removal` never called it, and deleting the cleanup line
+left the workspace green. That test is renamed to
+`program_defaults_is_absent_until_set_and_an_empty_value_clears_it` (it
+covers `set_program_defaults`, a different path), and a real one —
+`removing_a_com_object_takes_its_program_defaults_with_it` — was added and
+falsified by deleting the cleanup line. The v9 migration test ran over an
+empty v7 fixture, which exercises the DDL and nothing else; a populated
+one now migrates a v7 file holding a real device and communication object
+and reads the project back with `assert_eq!(loaded, saved)`. ADR-0027
+names both tests instead of asserting they exist.
+
+**Nits.** `EnrichmentReport::com_objects_enriched` gains the doc comment
+its widened meaning needed — it now counts an object whose only change was
+a side-table lift, so the CLI's "N communication object(s) enriched" reads
+higher than a pre-ADR-0027 build's would. The corpus guard in
+`enrichment_gap_measurement.rs` uses `knx_testsupport::corpus_available()`
+instead of its own `exists()` check.
+
+**Out of scope by ruling, not by oversight.** §12's dated heading keeps its
+anchor style (`check-anchors` is green at 212 links across 138 files, and
+§34/§35 set the same precedent). Gap 3's `AmbiguousDpt` surfacing stays
+deferred; the blocker in §12 is unchanged and still accurate.
+
+**Tests.** `crates/knx-core`: +3 (two `command.rs` undo/redo tests for the
+side table, one `devices.rs` removal-cleanup test).
+`crates/knx-productdb`: +1 (`a_second_apply_pass_clears_a_default_the_
+program_no_longer_states`). `crates/knx-store`: +1
+(`a_populated_pre_v9_project_survives_the_v9_migration_unchanged`). Every
+one was verified to fail with its fix reverted. Store schema stays at 9.
+All gates pass by exit status, §119 acknowledged.

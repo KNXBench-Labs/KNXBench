@@ -249,6 +249,24 @@ with no interface on the network, or one where multicast does not leave the
 container, must degrade to today's manual entry without an error wall — that is
 the common case on a developer's laptop, not an exception.
 
+### 3.7 Group-address notation is not selectable
+
+`GroupAddressStyle` (`crates/knx-core/src/address.rs:84`) chooses how many levels
+a group address has — Free, TwoLevel, ThreeLevel — and `GroupAddress::format`
+(`:168`) always joins them with `/`. Some installations, and some people, write
+the same address as `1.1.1`.
+
+Make the separator selectable — `1/1/1` or `1.1.1` — and have the choice apply
+to every group address the UI shows: tables, tree, inspector, bus monitor,
+search, dialogs. It is a display preference, not project data: what is persisted,
+imported and exported stays canonical, so the choice can never change a file's
+contents. Address input accepts both notations whatever is selected.
+
+One thing to get right rather than discover later: `1.1.1` is also how an
+individual address is written. Dotted group addresses are visually identical to
+physical ones, so the UI has to keep the two distinguishable by something other
+than punctuation.
+
 ---
 
 ## 4. Priority 3 — reporting, diff and CSV residue

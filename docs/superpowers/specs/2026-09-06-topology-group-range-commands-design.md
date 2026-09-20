@@ -40,7 +40,7 @@ area designs the projection change and the UI on top of a stable backend.
   a real, previously undocumented gap this spec also closes.
 - `GroupRange` (`group.rs`) already models `parent`/`children` for two
   levels of nesting (main → middle), matching the reference project.
-- [KNOWN_LIMITATIONS.md §21](../../KNOWN_LIMITATIONS.md#21-a-ui-created-group-address-has-no-ets_id-and-is-dropped-on-export):
+- [KNOWN_LIMITATIONS.md §21](../../KNOWN_LIMITATIONS.md#21-resolved-export-refuses-a-group-address-without-a-range):
   `create_group_address_impl` (`apps/knx-server/src/domain.rs`) sets
   `source.ets_id = String::new()` and `range: None` — the exporter silently
   drops any group address like this. Fixing it needs a `GroupRange` to nest

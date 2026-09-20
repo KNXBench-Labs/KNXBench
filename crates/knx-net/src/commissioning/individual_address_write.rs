@@ -495,6 +495,14 @@ mod tests {
         assert_eq!(report.occupancy, Occupancy::OccupiedWithResponse);
         assert!(!report.wrote);
         assert_eq!(device.address(), new_address);
+        // Step 3's re-verification exists to protect a write. With no write
+        // to protect, it is a second second-long broadcast on a live bus
+        // for nothing, so the skip has to cover the recount too.
+        assert_eq!(
+            device.individual_address_read_broadcasts(),
+            1,
+            "nothing is written, so nothing needs re-verifying"
+        );
     }
 
     /// MP §2.3 "to 2.": `IA_new` answers, but the Programming Mode witness

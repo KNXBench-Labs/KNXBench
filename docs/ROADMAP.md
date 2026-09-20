@@ -741,10 +741,14 @@ here (see [KNOWN_LIMITATIONS.md §1](KNOWN_LIMITATIONS.md)). `knx-store`'s
 `.knxdb` migration chain (v1→v4, frozen fixtures) was verified, not
 touched — already complete, 14/14 tests green. **Cycle 2, T29
 (2026-09-11, branch `t29-dpt-codec`):** KNXBench's first DPT codec, in
-`knx-core` (fourteen main types — see
+`knx-core` (fourteen main types on this cycle's own date, 2026-09-11 — see
 [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and
 [KNOWN_LIMITATIONS.md §61](KNOWN_LIMITATIONS.md#61-the-dpt-codec-covers-thirty-main-types-infers-rather-than-reads-its-input-and-leaves-several-encoding-questions-to-a-stated-ruling-rather-than-the-standard) for exactly which ones
-and why not the rest), with `bus monitor`/`bus write` in `apps/knx-cli`
+and why not the rest; **re-measured 2026-09-20, current count is thirty** —
+`grep -cE '^        [0-9]+ => decode_' crates/knx-core/src/dpt/codec.rs` →
+`30` — added across the E4 rounds of 2026-09-13 and 2026-09-14 after this
+cycle's own date; left as fourteen above since that was true when this
+entry was written), with `bus monitor`/`bus write` in `apps/knx-cli`
 wired to decode/encode against it. `cargo test --workspace`: 920 passed, 0
 failed, 3 ignored. A user can now read `knx bus monitor --project <path>`
 output as `On`, `23.5`, or a percentage instead of a raw hex payload, and
@@ -892,5 +896,5 @@ architecture; each has a defined landing place.
 | Whether ETS re-imports an unsigned third-party `.knxproj` | Session 3 delivered the mechanism (`ExportWarning::Unsigned`, always present); per ADR-0015 (Session 7), ETS reimport is no longer a project goal, so the verification itself (risk R9) is deprioritized — no fixed session, and none needed |
 | Whether Data Secure runtime keys are readable from `.knxproj` | Session 7 or later — `knx-secure` |
 | `.knxprod` encryption for master data scheme ≥ 12 | Session 4 delivered `.knxproj`-sourced product database ingest; 2026-09-10's standalone package installer (`knx_productdb::install_package`) showed the "encryption" premise was wrong for schemes 11 and 20 specifically — those 4 real-world files parse with no encryption at all, direct `.knxprod` ingest now works for both (see [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly)). Schemes 12-19/21/22 remain untested (no standalone sample acquired yet) and, as of 2026-09-11, **accepted out of scope by user decision** rather than merely unscheduled — no further sample-hunting is planned, though whether they are genuinely encrypted was never established either way. `.vd2` is a distinct legacy format, also **accepted out of scope, user decision 2026-09-11** (not an encryption question at all). See [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly) for both dated notes. |
-| The project licence | **Answered 2026-09-16:** `AGPL-3.0-or-later`; canonical text tracked in [`LICENSE`](../LICENSE), resolution recorded in [KNOWN_LIMITATIONS.md §10](KNOWN_LIMITATIONS.md#10-the-project-licence-is-not-decided). |
+| The project licence | **Answered 2026-09-16:** `AGPL-3.0-or-later`; canonical text tracked in [`LICENSE`](../LICENSE), resolution recorded in [KNOWN_LIMITATIONS.md §10](KNOWN_LIMITATIONS.md#10-project-licence--resolved-2026-09-16). |
 | Whether building parts and devices carry spatial coordinates (T21's second half) | **Answered 2026-09-13** by [ADR-0019](adr/0019-building-model-stays-topological.md): no, not in v1.0.0. The building model stays topological, graphical views keep computing layout at render time, and no entity gains a position — evidence being that `Space_t`/`DeviceInstance_t` carry no spatial attribute in schema 23's published schema, none of the three reference projects (schema 11/21/23) has one, and the KNX Standard's own location model (3/10/3 *KNX IoT Information Model*) keeps geometry out of its location classes and references IFC instead. The ADR pre-commits the shape of a later `FloorPlan`/`Placement` layer (own tables, integer millimetres, per-plan origin, no `z`, imported plan assets rather than drawing) so it cannot be improvised; **building it needs its own ADR and a store schema 7, and neither exists** — post-v1.0.0, no fixed session. Side finding: five documented `Space/@Type` values are coarsened on import ([KNOWN_LIMITATIONS.md §89](KNOWN_LIMITATIONS.md#89-five-documented-spacetype-values-are-coarsened-to-buildingpart-on-import)). |

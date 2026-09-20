@@ -3242,7 +3242,7 @@ the design document's own §7:
     CLAUDE.md's "do not perform unrelated refactors while implementing a
     feature" argues against reaching into a sibling binary mid-branch for
     a bug this branch's own scope did not require touching. See
-    [§29](#29-apps-knx-cli-bus-monitor-has-formatting-limitations)'s
+    [§29](#29-appsknx-cli-bus-monitor-has-formatting-limitations)'s
     2026-09-11 (T15) update for the record.
 
 **Cause.** Scope decisions for this slice, argued in the design document's
@@ -5176,8 +5176,12 @@ then, restarting the session is the honest answer and this section says so.
 
 **Limitation.** The download protocol of
 [docs/superpowers/specs/2026-09-13-commissioning-download-design.md](superpowers/specs/2026-09-13-commissioning-download-design.md)
-is implemented and tested — 153 tests across `knx-core::commissioning` and
-`knx-net::commissioning`, all of them against
+is implemented and tested — 247 tests across `knx-core::commissioning` and
+`knx-net::commissioning` (131 in `knx-core`, 116 in `knx-net`; **re-measured
+2026-09-20**, correcting the "153" this section previously stated — count
+with `cargo test -p knx-core commissioning:: -- --list` and
+`cargo test -p knx-net commissioning:: -- --list`, summing each run's
+"N tests" line), all of them against
 `crates/knx-net/src/commissioning/simulator.rs`. **No frame produced by this
 code has ever left the machine.** Every statement the implementation makes
 about device behaviour is "what the Standard says a Management Client sends,
@@ -5239,7 +5243,7 @@ download that has been observed to succeed on one manufacturer's device is
 evidence about that device. This entry narrows with each observed device
 and does not close.
 
-## 93. `knx-core`'s declarative procedure model still writes `PID_PROGRAM_VERSION` unconditionally, for every part — PARKED, deferred to task C11
+## 93. `knx-core`'s declarative procedure model still writes `PID_PROGRAM_VERSION` unconditionally, for every part — PARKED, unowned
 
 **Limitation.** `crates/knx-core/src/commissioning/procedure.rs`'s
 `load_one_part()` renders CP §3.5.2 step 06 as a fixed, five-step-plus-two
@@ -5283,9 +5287,19 @@ part: the declarative model currently overstates it, still showing an
 unconditional write where the real one is conditional or tolerant of a
 refusal.
 
-**Lifted when.** Task C11 makes a deliberate call on the dependency
-direction between the two crates for this concept, and updates
-`procedure::load_one_part()`'s step 5 to match whatever it decides.
+**Lifted when.** Corrected 2026-09-20: task C11 merged without touching
+this — its actual scope was CP §3.5.3's five partial-download step-list
+variants (`crates/knx-core/src/commissioning/partial_download_variant.rs`),
+a different finding entirely, and task C12 (which followed it, wiring the
+sequencer to that variant table) didn't touch it either.
+`procedure.rs`'s `load_one_part()` step 5 is still the unconditional
+`PropertyWrite PID_PROGRAM_VERSION` this entry originally described (see
+that function, currently around lines 372-373). No task currently owns
+the dependency-direction decision between `knx-core` and `knx-net` for
+`PartKind` that this fix needs — it is unowned, not merely unscheduled.
+Lifted when a task is opened for it and makes that call, or when
+`knx-core` gains its own concept for "does this part kind carry a program
+version" that `PartKind` could be expressed in terms of instead.
 
 ## 95. Six places where the KNX Standard's printed text must not be followed literally
 

@@ -162,3 +162,41 @@ async fn installing_into_a_readonly_catalog_database_is_an_internal_error() {
 
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 }
+
+/// KNOWN_LIMITATIONS.md §85: a `.signature` member's `role` reaches this
+/// DTO qualified, not as the bare `"Signature"` `knx_productdb` stores —
+/// nobody reading an install report over HTTP should mistake the row for
+/// a passed check.
+#[tokio::test]
+async fn a_signature_members_role_is_qualified_as_unverified_in_the_install_report() {
+    let (_dir, state) = state();
+    let app = knx_server::app(Arc::new(state), None);
+
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let options = SimpleFileOptions::default();
+    for (path, bytes) in [
+        ("knx_master.xml", MASTER),
+        ("M-0001/Catalog.xml", CATALOG),
+        (
+            "M-0001.signature",
+            b"not a real signature, just bytes" as &[u8],
+        ),
+    ] {
+        writer.start_file(path, options).unwrap();
+        std::io::Write::write_all(&mut writer, bytes).unwrap();
+    }
+    let bytes = writer.finish().unwrap().into_inner();
+
+    let response = app
+        .oneshot(multipart("signed.knxprod", &bytes))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let report = json(response).await;
+    let members = report["members"].as_array().unwrap();
+    let signature_member = members
+        .iter()
+        .find(|m| m["path"] == "M-0001.signature")
+        .unwrap();
+    assert_eq!(signature_member["role"], "Signature (stored, not verified)");
+}

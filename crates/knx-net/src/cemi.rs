@@ -100,6 +100,22 @@ pub enum Destination {
     Group(GroupAddress),
 }
 
+/// The broadcast destination `0/0/0`, used by `A_IndividualAddress_Read` and
+/// `A_IndividualAddress_Write` (spec §4.2).
+///
+/// `[D]` The value is the Transport Layer's, not a convention of this
+/// crate: `03_03_04 Transport Layer v01.02.03 AS`, clause 2 "TPDU",
+/// Figure 3 — Transport Control Field, page 6 of 38, distinguishes the two
+/// unnumbered group-addressed PDUs by destination address alone —
+/// *"T_Data_Broadcast-PDU (destination_address = 0)"* against
+/// *"T_Data_Group-PDU (destination_address <> 0)"*. Group address 0 is
+/// therefore not merely reserved: it is what makes a frame a broadcast.
+///
+/// `broadcast_destination_is_group_address_zero` pins the number, because
+/// the client and the simulator both read this constant and would agree
+/// with each other on any wrong value.
+pub const BROADCAST_DESTINATION: Destination = Destination::Group(GroupAddress::from_raw(0));
+
 /// Octet 6 of the `L_Data` frame (the TPDU's Transport Control Field).
 /// Bit layout `[D]`: `03_03_04 Transport Layer v01.02.03 AS`, clause 2
 /// "TPDU", Figure 3 — Transport Control Field, page 6 of 38 (the Markdown
@@ -1376,6 +1392,28 @@ fn finish_l_data(
 mod tests {
     use super::*;
     use knx_core::{GroupAddress, GroupValue, IndividualAddress};
+
+    /// `[D]` TL clause 2, Figure 3, p. 6 of 38:
+    /// *"T_Data_Broadcast-PDU (destination_address = 0)"* against
+    /// *"T_Data_Group-PDU (destination_address <> 0)"*.
+    ///
+    /// Asserted against a literal rather than against
+    /// [`BROADCAST_DESTINATION`] itself: every other use of the constant —
+    /// the client's two broadcast primitives and the simulator's
+    /// `handle_broadcast` — compares it against itself, so the whole suite
+    /// stays green on any value at all. This is the one place the number
+    /// is checked against the Standard's.
+    #[test]
+    fn broadcast_destination_is_group_address_zero() {
+        assert_eq!(
+            BROADCAST_DESTINATION,
+            Destination::Group(GroupAddress::from_raw(0))
+        );
+        let Destination::Group(group) = BROADCAST_DESTINATION else {
+            panic!("a broadcast is group-addressed: AT=1 in Figure 3's own table");
+        };
+        assert_eq!(group.raw(), 0);
+    }
 
     /// A minimal, hand-built `L_Data.ind` carrying `A_GroupValue_Write`
     /// with a 6-bit inline value (e.g. DPT-1 "on"): message code 29h, no

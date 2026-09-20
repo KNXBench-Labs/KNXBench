@@ -1,4 +1,5 @@
-//! Timed baseline for import, open, projection, search and export over one synthetic large project.
+//! Timed baseline for open, projection and search over one synthetic large
+//! project, plus import over the reference ETS file when the corpus is present.
 
 // Every number below is a pure function of `DEVICE_COUNT`, `GROUP_ADDRESS_COUNT`,
 // `BUILDING_DEPTH` and `SEED` — the same four constants always produce the same
@@ -19,10 +20,8 @@
 // `docs/PERFORMANCE.md` for the numbers actually measured this way, with the
 // machine and toolchain that produced them.
 //
-// Coverage, in the order data actually flows through it here: `export` writes
-// the freshly generated project to `.knxproj` bytes; that file is then the
-// input to `import` (`knx_app::import_ets_project`, the real production
-// path); the imported project is saved once (untimed setup) so `open`
+// Coverage, in the order data actually flows through it here: the freshly
+// generated project is saved once (untimed setup) so `open`
 // (`knx_store::load_project`) has a real `.knxdb` to read back; `projection`
 // runs `knx_projection::build_project_tree` on what came back; `search` runs a
 // batch of substring queries against it. There is no production Rust "search"
@@ -31,6 +30,14 @@
 // direct, honest stand-in over the domain model: same shape of operation
 // (case-insensitive substring over names), not a claim that it is the same
 // code path a user's keystroke runs today.
+//
+// `import` is measured separately, against the ETS4 reference project in the
+// gitignored `OriginalData/` corpus, and is skipped when that corpus is
+// absent. Until 2026-09-20 it ran on a synthetic `.knxproj` this file wrote
+// itself with `knx-etsproj`'s exporter; ADR-0028 withdrew the exporter, and
+// there is no honest way to synthesize a 5 000-device `.knxproj` without
+// one. A real ETS file is a smaller but truthful input — see
+// `docs/PERFORMANCE.md` on why the two numbers must not be compared.
 
 use std::fs;
 use std::time::Instant;
@@ -43,8 +50,6 @@ use knx_core::{
     Installation, InstallationId, Language, Layer, Line, LineId, Override, Project, ProjectInfo,
     Resolved, ResolvedFlags, SourceRef, StringTable, Text, Topology, CURRENT_SCHEMA_VERSION,
 };
-use knx_etsproj::export::export_knxproj;
-use knx_etsproj::opaque::{sha256_hex, OpaqueEntry, OpaqueKind};
 use knx_etsproj::report::Severity;
 use knx_store::{load_project, open_and_migrate, save_project};
 
@@ -547,52 +552,40 @@ fn search_project(project: &Project, needle_lower: &str) -> usize {
 fn perf_baseline_large_project() {
     let project = build_synthetic_project();
 
-    // --- export (of the freshly generated project) ---
-    let signature_bytes = b"synthetic benchmark project - not a real ETS signature".to_vec();
-    let signature = OpaqueEntry {
-        source_path: format!("{}.signature", project.info.project_id),
-        xpath: String::new(),
-        kind: OpaqueKind::Signature,
-        name: String::new(),
-        sha256: sha256_hex(&signature_bytes),
-        bytes: signature_bytes,
-    };
-    let export_started = Instant::now();
-    let outcome = export_knxproj(&project, std::slice::from_ref(&signature)).expect(
-        "a freshly generated synthetic project always has a project id and exports cleanly",
-    );
-    let export_elapsed = export_started.elapsed();
-
+    // --- import (the real production path, over a real ETS file) ---
     let store_dir = tempfile::tempdir().expect("temp dir for the benchmark's own throwaway files");
-    let knxproj_path = store_dir.path().join("synthetic.knxproj");
-    fs::write(&knxproj_path, &outcome.bytes).expect("write the generated .knxproj to a temp file");
-
-    // --- import (the real production path, knx_app::import_ets_project) ---
-    let import_conn = open_and_migrate(&store_dir.path().join("import.sqlite"))
-        .expect("migrate a fresh store for import");
-    let import_started = Instant::now();
-    let imported = knx_app::import_ets_project(&knxproj_path, &import_conn)
-        .expect("the file this test just exported imports back cleanly");
-    let import_elapsed = import_started.elapsed();
-
-    assert_eq!(imported.project.devices.iter().count(), DEVICE_COUNT);
-    assert_eq!(
-        imported.project.installations[0].group_addresses.len(),
-        GROUP_ADDRESS_COUNT
-    );
-    assert!(
-        imported
-            .report
-            .errors
-            .iter()
-            .all(|e| e.severity != Severity::Error),
-        "a synthetic project this test built itself should never lose data on import"
-    );
+    let import_elapsed = if knx_testsupport::corpus_available() {
+        let reference = knx_testsupport::reference_ets4_path();
+        let source_bytes = fs::metadata(&reference)
+            .expect("the corpus check above said this file exists")
+            .len();
+        let import_conn = open_and_migrate(&store_dir.path().join("import.sqlite"))
+            .expect("migrate a fresh store for import");
+        let import_started = Instant::now();
+        let imported = knx_app::import_ets_project(&reference, &import_conn)
+            .expect("the ETS4 reference project imports cleanly");
+        let elapsed = import_started.elapsed();
+        assert!(
+            imported
+                .report
+                .errors
+                .iter()
+                .all(|e| e.severity != Severity::Error),
+            "the ETS4 reference project imports without errors; see tests/import_service.rs"
+        );
+        println!("PERF import_source_bytes={source_bytes}");
+        Some(elapsed)
+    } else {
+        eprintln!(
+            "skip: OriginalData/ corpus not present (gitignored, local-only) — no import timing"
+        );
+        None
+    };
 
     // --- open (knx_store::load_project against a real .knxdb) ---
     let open_conn = open_and_migrate(&store_dir.path().join("open.sqlite"))
         .expect("migrate a fresh store for the open benchmark");
-    save_project(&open_conn, &imported.project).expect("save before open is untimed setup");
+    save_project(&open_conn, &project).expect("save before open is untimed setup");
     let open_started = Instant::now();
     let loaded = load_project(&open_conn).expect("load back what was just saved");
     let open_elapsed = open_started.elapsed();
@@ -635,15 +628,12 @@ fn perf_baseline_large_project() {
 
     let query_count = queries.len();
     println!("PERF device_count={DEVICE_COUNT} group_address_count={GROUP_ADDRESS_COUNT} building_depth={BUILDING_DEPTH} com_objects={}", DEVICE_COUNT * COM_OBJECTS_PER_DEVICE);
-    println!("PERF knxproj_bytes={}", outcome.bytes.len());
-    println!(
-        "PERF export_ms={:.3}",
-        export_elapsed.as_secs_f64() * 1000.0
-    );
-    println!(
-        "PERF import_ms={:.3}",
-        import_elapsed.as_secs_f64() * 1000.0
-    );
+    if let Some(import_elapsed) = import_elapsed {
+        println!(
+            "PERF import_ms={:.3}",
+            import_elapsed.as_secs_f64() * 1000.0
+        );
+    }
     println!("PERF open_ms={:.3}", open_elapsed.as_secs_f64() * 1000.0);
     println!(
         "PERF projection_ms={:.3}",

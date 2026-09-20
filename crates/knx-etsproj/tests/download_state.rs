@@ -2,7 +2,7 @@
 
 use std::io::{Cursor, Write};
 
-use knx_etsproj::{import_knxproj_bytes, Container};
+use knx_etsproj::import_knxproj_bytes;
 
 const PROJECT_INFO_21: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
 <KNX xmlns="http://knx.org/xml/project/21">
@@ -99,7 +99,8 @@ fn download_state_attributes_are_preserved_and_reported_by_name() {
         outcome.report
     );
 
-    // Preserved byte-exact in the opaque entry list `export_knxproj` reads.
+    // Preserved byte-exact in the opaque store (ADR-0006) as evidence of
+    // what the source file said.
     // Keyed by the device's own id, not by the element's schema-shaped path:
     // a project-wide `.../DeviceInstance` key cannot tell two devices apart
     // (`knx_etsproj::xpath`'s own module doc, KNOWN_LIMITATIONS §34).
@@ -157,59 +158,4 @@ fn download_state_attributes_absent_is_unremarkable() {
             "no {name} row should exist in the report when the source never carried it"
         );
     }
-}
-
-/// The other half of the round trip: the three attributes come back out of
-/// `export_knxproj` onto the device they were read from. They have no
-/// `knx_core` home, so the exporter takes them from the retained store,
-/// which is keyed per element instance (`knx_etsproj::xpath`) — one device's
-/// `DownloadCounter` can no longer land on another's, which is what
-/// `KNOWN_LIMITATIONS.md` §34 forbade and why this used to be a documented
-/// loss.
-#[test]
-fn download_state_attributes_survive_the_export_round_trip() {
-    let bytes = knxproj_with_installation_21(&installation_21(true));
-    let outcome = import_knxproj_bytes(bytes, "download-state.knxproj").unwrap();
-
-    let entries: Vec<_> = outcome
-        .opaque
-        .iter()
-        .cloned()
-        .chain(
-            outcome
-                .manufacturer
-                .iter()
-                .map(|m| knx_etsproj::opaque::OpaqueEntry {
-                    source_path: m.source_path.clone(),
-                    xpath: String::new(),
-                    kind: m.kind,
-                    name: String::new(),
-                    bytes: m.bytes.clone(),
-                    sha256: m.sha256.clone(),
-                }),
-        )
-        .collect();
-    let exported = knx_etsproj::export::export_knxproj(&outcome.project, &entries).unwrap();
-    // Read the exported archive's own `0.xml` back out rather than
-    // substring-scanning `exported.bytes` directly — that is a ZIP
-    // container, not text, and may or may not compress its entries.
-    let mut written = Container::open(exported.bytes).unwrap();
-    let part = written.project_part().unwrap().to_string();
-    let topology = written.read(&format!("{part}/0.xml")).unwrap();
-    let xml = String::from_utf8_lossy(&topology);
-    assert!(
-        xml.contains(r#"LoadedImage="QUJD""#)
-            && xml.contains(r#"CheckSums="RUZH""#)
-            && xml.contains(r#"DownloadCounter="7""#),
-        "export_knxproj dropped a per-device known-but-unmapped attribute; \
-         the exported topology was: {xml}"
-    );
-    assert!(
-        !exported
-            .warnings
-            .iter()
-            .any(|w| format!("{w:?}").contains("DownloadCounter")),
-        "nothing was lost, so nothing should be warned about: {:?}",
-        exported.warnings
-    );
 }

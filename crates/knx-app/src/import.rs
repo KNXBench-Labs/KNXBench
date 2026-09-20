@@ -40,7 +40,6 @@ pub enum AppError {
     Store(knx_store::MigrationError),
     Sql(SqlError),
     ProductDb(knx_productdb::ProductDbError),
-    Export(knx_etsproj::export::ExportError),
 }
 
 impl std::fmt::Display for AppError {
@@ -50,7 +49,6 @@ impl std::fmt::Display for AppError {
             AppError::Store(e) => write!(f, "{e}"),
             AppError::Sql(e) => write!(f, "{e}"),
             AppError::ProductDb(e) => write!(f, "{e}"),
-            AppError::Export(e) => write!(f, "{e}"),
         }
     }
 }
@@ -81,17 +79,11 @@ impl From<knx_productdb::ProductDbError> for AppError {
     }
 }
 
-impl From<knx_etsproj::export::ExportError> for AppError {
-    fn from(e: knx_etsproj::export::ExportError) -> Self {
-        AppError::Export(e)
-    }
-}
-
 /// What a caller wants done with manufacturer data. `None` runs exactly
 /// the Session 3 path: the files go into the project's opaque store and
 /// nothing is enriched. That path stays supported, and stays tested,
 /// because a user who does not want a shared database must still get a
-/// complete, exportable project.
+/// complete project.
 #[derive(Default)]
 pub struct ImportOptions<'a> {
     pub product_db: Option<&'a knx_productdb::Connection>,

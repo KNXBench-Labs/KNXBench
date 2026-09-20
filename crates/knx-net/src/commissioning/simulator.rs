@@ -36,6 +36,7 @@ use knx_core::commissioning::properties::{
 use knx_core::IndividualAddress;
 use tokio::sync::broadcast;
 
+use super::ERASE_CODE_CONFIRMED_RESTART;
 use crate::cemi::{ApplicationService, Destination, LDataFrame, LDataMessageKind, Tpci};
 use crate::client::{BusError, TunnelEvent};
 use crate::management::ManagementTransport;
@@ -323,6 +324,31 @@ pub struct SimulatorConfig {
     /// The state [`SimulatorConfig::settle_load_state_after`] settles to.
     /// Meaningless while that field is `None`.
     pub settled_load_state: LoadState,
+    /// `error_code` on the `A_Restart_Response` this device answers a
+    /// Master Reset request with. 0 is *"no error"*; the simulator does not
+    /// invent a table of the others, since MP §3.7.1.2.2 leaves the value
+    /// to the responding device.
+    pub restart_error_code: u8,
+    /// `process_time` on the same response, `DPT_TimePeriodSec` (MP
+    /// §3.7.1.2.2, pp. 80-81): *"a minimal time for the MaC to wait, not a
+    /// maximal time"*. `Duration::ZERO` by default so a test that does not
+    /// care about the wait does not pay for one.
+    pub restart_process_time: Duration,
+    /// Answer a Master Reset with a two-octet `A_Restart_Response` instead
+    /// of the required three — no device does this on purpose, but
+    /// [`decode_master_reset_response`] must reject whatever a device
+    /// actually sends, and a test needs a device that sends something
+    /// wrong to prove it.
+    ///
+    /// [`decode_master_reset_response`]: super::decode_master_reset_response
+    pub restart_response_malformed: bool,
+    /// Acknowledge nothing for a Restart request — no `T_ACK`, no
+    /// `A_Restart_Response` — so `exchange()` runs out TL clause 4's own
+    /// retries on this one request. Narrower than
+    /// [`SimulatorConfig::silent`], which would also silence the Verify
+    /// Mode exchange `connect()` runs first and so never let a session
+    /// reach the restart call at all.
+    pub restart_unanswered: bool,
 }
 
 /// The step of the §7.2 inner loop a simulated interruption strikes at.
@@ -457,6 +483,10 @@ impl Default for SimulatorConfig {
             drop_connection_on_download_counter_read: false,
             settle_load_state_after: None,
             settled_load_state: LoadState::Unloaded,
+            restart_error_code: 0,
+            restart_process_time: Duration::ZERO,
+            restart_response_malformed: false,
+            restart_unanswered: false,
         }
     }
 }
@@ -507,6 +537,23 @@ pub enum Seen {
         data: Vec<u8>,
         /// Which of CP §3.5.2's two services carried it.
         service: MemoryService,
+    },
+    /// An `A_Restart`, request or response, in whichever shape it arrived —
+    /// `response` and `restart_type` are cemi.rs's own inline bits, kept
+    /// uninterpreted here for the same reason `cemi.rs` keeps `data`
+    /// uninterpreted: telling a Basic Restart from a Master Reset, or a
+    /// request from a response, is a test's job, not the log's.
+    Restart {
+        /// Set on an `A_Restart_Response`, clear on an `A_Restart` request.
+        response: bool,
+        /// 0 = Basic Restart, 1 = Master Reset (`cemi.rs`'s
+        /// `InvalidRestartType` already refuses anything else).
+        restart_type: u8,
+        /// Empty for a Basic Restart request; `[erase_code,
+        /// channel_number]` for a Master Reset request; `[error_code,
+        /// process_time_hi, process_time_lo]` for a Master Reset response
+        /// (MP §3.7.1.2.2, p. 81).
+        data: Vec<u8>,
     },
     /// Anything else, by name.
     Other(&'static str),
@@ -1038,6 +1085,21 @@ impl SimulatedDevice {
                     self.record(&service);
                     return;
                 }
+                if self.config.restart_unanswered
+                    && matches!(
+                        service,
+                        ApplicationService::Restart {
+                            response: false,
+                            ..
+                        }
+                    )
+                {
+                    // Same shape as `unacknowledged_load_state_reads`: no
+                    // `T_ACK`, nothing recorded, so the client's four
+                    // transmissions and TL's own release afterwards are
+                    // what the test is watching, not this drop.
+                    return;
+                }
                 if self.load_state_read_in(&service, &self.config.unacknowledged_load_state_reads) {
                     // An offline device acknowledges nothing and remembers
                     // nothing, so this one does not record the frame either.
@@ -1107,6 +1169,15 @@ impl SimulatedDevice {
                 address: *address,
                 data: data.clone(),
                 service: MemoryService::UserMemory,
+            },
+            ApplicationService::Restart {
+                response,
+                restart_type,
+                data,
+            } => Seen::Restart {
+                response: *response,
+                restart_type: *restart_type,
+                data: data.clone(),
             },
             ApplicationService::NoApplicationPdu => return,
             other => Seen::Other(other.variant_name()),
@@ -1246,6 +1317,52 @@ impl SimulatedDevice {
                         data: read_back,
                     });
                 }
+            }
+            // MP §3.7.1.1.3, p. 80: *"The Application Layer of the
+            // Management Server shall not confirm the A_Restart-service if
+            // a Basic Restart is called"* — so `restart_type: 0` earns no
+            // arm here and falls to the catch-all below; the T_ACK
+            // `handle` already sent is this device's only word on the
+            // matter.
+            ApplicationService::Restart {
+                response: false,
+                restart_type: 1,
+                data: request,
+            } => {
+                // Table 4 (MP p. 82) fixes Channel Number at `00h` for Erase
+                // Code `01h` (`ERASE_CODE_CONFIRMED_RESTART`); any other
+                // Channel Number paired with it is not a request this
+                // device's configured happy-path answer applies to. MP
+                // §3.7.3 exception (4), p. 90, gives Error Code `03h`
+                // ("Invalid Channel Number") for exactly this mismatch, and
+                // Process Time `0` — the device is not about to erase
+                // anything, so it has nothing to time.
+                let (error_code, process_time) = match request.as_slice() {
+                    [ERASE_CODE_CONFIRMED_RESTART, channel_number] if *channel_number != 0x00 => {
+                        (0x03, 0u16)
+                    }
+                    _ => (
+                        self.config.restart_error_code,
+                        // DPT_TimePeriodSec, big-endian (MP §3.7.1.2.2, pp. 80-81).
+                        u16::try_from(self.config.restart_process_time.as_secs())
+                            .unwrap_or(u16::MAX),
+                    ),
+                };
+                let mut data = vec![error_code];
+                data.extend_from_slice(&process_time.to_be_bytes());
+                if self.config.restart_response_malformed {
+                    // Truncate to two octets: still a `Some(data)` match for
+                    // `restart_master_reset`'s matcher, since that matcher
+                    // looks only at `restart_type`/`response`, not length —
+                    // the malformation has to survive past `exchange()` and
+                    // into `decode_master_reset_response` to prove anything.
+                    data.truncate(2);
+                }
+                self.emit_answer(ApplicationService::Restart {
+                    response: true,
+                    restart_type: 1,
+                    data,
+                });
             }
             _ => {}
         }

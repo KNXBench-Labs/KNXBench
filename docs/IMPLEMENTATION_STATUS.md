@@ -7962,12 +7962,15 @@ is also the fixture that counts step 1's and step 4's disconnects; an
 unacknowledged one read as occupied; and a Programming Mode witness on the
 project exclusion list refused at step 3 before a single frame goes out.
 Two more in `commissioning.rs` pin the counting window's wall-clock length
-and its frame filter. Not tested: `RecountBeforeWrite` actually firing —
-`SimulatorConfig` is immutable for a device's lifetime, so a test cannot
-flip Programming Mode off between step 2's count and step 3's recount
-without a new, independent simulator capability; that is left for whichever
-task next needs a mid-run reconfigurable simulator, rather than built
-speculatively here.
+and its frame filter. Not tested, and found untestable by mutation: anything that
+requires the bus to answer step 2's count and step 3's recount
+differently — `RecountBeforeWrite` firing, and the recount's own
+address guard. `SimulatorConfig` is immutable for a device's lifetime, so
+a test cannot flip Programming Mode off, or move a witness onto `IA_new`,
+between the two reads. Deleting that inner guard leaves every current test
+green, which is a fact about the simulator rather than about the guard;
+closing it needs a mid-run reconfigurable simulator, left for whichever
+task next needs one rather than built speculatively here.
 
 Two documented divergences from MP §2.3, both in
 `docs/KNOWN_LIMITATIONS.md` §116: step 2's `repeat … end repeat` is not a

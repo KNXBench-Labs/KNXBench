@@ -8817,3 +8817,66 @@ know by name, so the warnings reach the UI without a line of frontend change
 **Not done.** No store migration was needed, so schema 8 stays unclaimed.
 `docs/LIMITATION_TRIAGE.md` is untouched on purpose; a later task recounts
 it mechanically.
+
+## 2026-09-20 — T27: the `.knxproj` writer is deleted (branch `t27-drop-export`, ADR-0028)
+
+**The ruling.** "Drop export zu ETS. Das brauchen wir nicht. Einmal
+importiert bleibt es beim KNXBench file format." Asked whether to freeze the
+code or remove it: "raus damit." Recorded as
+[ADR-0028](adr/0028-no-knxproj-export.md), which supersedes
+[ADR-0007](adr/0007-roundtrip-fidelity.md) (a round trip needs a second half)
+and [ADR-0015](adr/0015-native-output-drops-ets-reimport-goal.md) (which had
+explicitly declined to remove the exporter).
+
+**Deleted.** `crates/knx-etsproj/src/export/` (`mod.rs`, `retained.rs`,
+`schema11.rs`, `schema21.rs` — 2,668 lines, gone four days after the last one
+of them was hardened), `crates/knx-app/src/export.rs`, the `knx export` CLI
+subcommand, `POST /api/project/export` with its `ExportWarningDto`, the
+frontend's `api.exportProject`, `describeExportWarning`, the File-menu entry
+and both catalogues' export strings. `ExportWarning` and every variant went
+with them: `Unsigned`, `StaleSignature`, `MissingManufacturerData`,
+`ReadOnInitNotExported`, `RetainedAttributeNotExported`,
+`RetainedElementNotExported`.
+
+**Kept, deliberately.** Import is untouched: the opaque passthrough store
+([ADR-0006](adr/0006-opaque-passthrough-store.md)) still preserves every
+unmodelled byte, now as evidence of what the source file said rather than as
+something to write back. `xpath.rs` keeps its instance-exact keying, which
+the import report uses to name *where* a retained value was found.
+`map_com_object_v21`'s schema-≥21 flag resolution — T03's find — is import-side
+and stays. CSV export, documentation export, the debug report and the project
+diff are all unaffected; none of them writes an ETS format. The file-open
+filter still offers `.knxproj`, because reading one is the whole point.
+
+**Tests: 1,853 passed, 0 failed, 86 binaries** (was 1,895 / 92). All 42
+missing tests are accounted for. Six integration binaries were deleted
+whole — `cli_export.rs` (2), `http_export_route.rs` (4),
+`read_on_init_roundtrip.rs` (4), `retained_ambiguity.rs` (6),
+`retained_v21_measurement.rs` (4), `roundtrip.rs` (4) — plus 16 unit tests
+inside the deleted `export/` modules, which is 40. The last two came out of
+files that kept their import half: `product_db.rs` lost
+`export_is_byte_identical_with_and_without_the_product_database` and renamed
+the survivor to
+`a_project_names_its_manufacturer_gap_when_the_product_database_is_gone`, and
+`download_state.rs` lost
+`download_state_attributes_survive_the_export_round_trip` while
+`download_state_attributes_are_preserved_and_reported_by_name` continues to
+prove the import-side promise. `perf_baseline.rs` lost its `export` stage and
+now imports the real ETS4 corpus project instead of a file it wrote itself,
+so its `import_ms` is not comparable with any number recorded before today.
+
+**The ratchet moved on both sides.** `check-headers` counts files *without* a
+header; deleting five headerless files took the measured count from 167 to
+162, and `ABSENT_CEILING` followed it down. A ratchet that ignores deletions
+is slack by another name.
+
+**Stale screenshots.** `porcelain-file-menu.png` still shows an "Export to
+.knxproj…" entry and `porcelain-help-panel.png` still shows a help topic
+called "Import and export". Neither can be fixed by editing text; both are
+annotated in place in the manual until the screenshot set is retaken.
+
+**Not done.** `docs/LIMITATION_TRIAGE.md` is untouched by hand, as its own
+rules require. The export-only limitation entries — §4, §5, §21, §34, and
+§117's amendment — are closed with the reason "export withdrawn 2026-09-20"
+and kept, unedited, underneath that closure. A superseded record is still a
+record.

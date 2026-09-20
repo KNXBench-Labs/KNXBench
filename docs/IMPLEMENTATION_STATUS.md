@@ -6398,7 +6398,7 @@ project picked the table's left-to-right column order and recorded the
 choice as inferred, not cited — `KNOWN_LIMITATIONS.md` #99. Explicitly out
 of scope, per the task brief: `PID_GROUP_RESPONSER_TABLE`, CP §3.5.4 step 07
 (unload individual address), and any procedure-level retry loop.
-## 2026-09-19 — T23 in-application help (branch `t28-help`)
+## 2026-09-19 — T28 in-application help (branch `t28-help`)
 
 The application can now explain itself without a browser tab open next to
 it. Design first: **ADR-0024** answers the four questions `ROADMAP.md` left
@@ -8408,3 +8408,44 @@ noted in `theme.ts`.
 Gates: `npx tsc --noEmit` and `npx vitest run` in `apps/knx-web` exit 0,
 at 54 files / 739 tests. The Rust gates exit 0 unchanged; this branch
 touches no Rust.
+
+## 2026-09-20 — the final review, and the two things it found that were fixable
+
+The run's single closing review ran over `e2e539a` and re-verified its own
+three earlier findings by execution rather than by reading their diffs: the
+production KNXnet/IP syscall sequence is byte-identical to its pre-fix self
+while every test socket is pinned to loopback (six mutations, each caught
+inside a network namespace, and the KNX multicast group absent from the
+host's `/proc/net/igmp` before, during and after); the theme guard catches
+25 of 26 invented mutations, the 26th being `color: Canvas` — exactly the
+system-colour blind spot [KNOWN_LIMITATIONS.md §120](KNOWN_LIMITATIONS.md#120-nothing-checks-that-a-theme-is-legible)
+documents; and `check-anchors` catches dead, missing-file, wrapped,
+same-file, mixed-case, titled and image links while letting fenced and live
+ones pass. All nine gates exit 0, with `knx-net`'s lib reporting the 252
+tests that prove the binary was not the stale one §119 warns about.
+
+Two of its three new findings are fixed here.
+
+**The header ratchet had gone slack.** `xtask/src/headers.rs`'s
+`ABSENT_CEILING` read 168 while the tree measured 167, so exactly one new
+headerless `.rs` file could be added and still pass `check-headers` — the
+second would have tripped it. A ratchet with a spare notch is not a
+ratchet. Lowered to 167, the number the tree actually measures, and proved
+both ways: one added headerless file now exits 1, and the tree without it
+exits 0.
+
+**The in-application help was filed under the wrong task number.** It is
+T28 — that is what `ROADMAP.md` schedules, what `GAP_ANALYSIS_ETS.md`'s
+Tier 8 lists, and what the branch `t28-help` was called — but five places
+had recorded it as T23, which is the topology/group-range UI that closed on
+2026-09-07. Corrected in `IMPLEMENTATION_STATUS.md`, `KNOWN_LIMITATIONS.md`,
+`ROADMAP.md`, `GAP_ANALYSIS_ETS.md` and `adr/0024-in-application-help.md`;
+the eighteen remaining T23 mentions all really are the topology work.
+
+**The third is not ours to close.** `git log --all -S'KNX_GATEWAY'` finds
+the installation's gateway address in eight commits, every one of them an
+ancestor of the pushed `origin/main`. The working tree is clean — three
+separate commits removed the last of it — but history is not, and the only
+two ways out are a second history rewrite of a published branch or an
+explicit decision to accept it. That is the maintainer's call, and it is
+recorded here rather than made.

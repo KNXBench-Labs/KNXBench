@@ -465,8 +465,9 @@ application does, on any platform.
 
 **Limitation.** The application does not program devices (RESEARCH §8.3).
 
-**Cause.** As of 2026-09-13 the cause is **implementation and hardware, not
-research**: there is no commissioning code, nothing has been *written* to a
+**Cause.** As of 2026-09-13 (superseded below — see the 2026-09-20 update)
+the cause is **implementation and hardware, not research**: there is no
+commissioning code, nothing has been *written* to a
 device (a read-only pass has run, 2026-09-14, see below), bricking a real
 device is a real outcome of getting it wrong, and a short, named list of
 things genuinely remains undocumented (see the 2026-09-13 phase-1 update
@@ -829,7 +830,7 @@ simulator.rs`, including `ManagementSession`'s presence-detection gap
 (design spec §13 R20), which C15/C16's occupancy handling now works around
 rather than trusts. (C14 delivered the same run's differential-download
 data preservation in `knx-etsproj`/`knx-server` instead — see
-[§34](#34-schema-21-export-drops-a-handful-of-known-but-unmapped-perdeviceperline-attributes) and the `KV v2.5` fixture. C17, a stopgap against advertising an
+[§34](#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes) and the `KV v2.5` fixture. C17, a stopgap against advertising an
 unimplemented procedure, was ruled obsolete once C16 shipped the real
 execution path it existed to guard.) None of this has been run against a
 real device — see [§92](#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device).
@@ -6074,7 +6075,7 @@ sequencer now models honestly with `AccessKeyDeclaration`
 either `NoneRequired` or `Required(Vec<AccessKeyAssignment>)`. A plan
 declaring `NoneRequired` completes and the step is reported empty, which is
 correct. A plan declaring `Required` is refused with
-`DownloadError::AccessKeysNotSupported` before the step runs, because
+`DownloadError::AccessKeysNotSupported` at the step, because
 `A_Key_Write` has no encoder: `crates/knx-net/src/cemi.rs`'s
 `key_write_has_an_apci_but_no_encoder` test documents exactly this —
 the APCI constant exists, the frame variant does not.

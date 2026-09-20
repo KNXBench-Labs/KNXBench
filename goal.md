@@ -163,13 +163,25 @@ three of the four residues below during 2026-09-14. Per row A3 and
 
 ### E4 — DPT main types still missing from the codec
 
-`crates/knx-core/src/dpt/codec.rs` covered main types 1-19 (except
-`6.020`) when this was written. Task 5 added main types 20-30 and `6.020`
-on 2026-09-14; **main type 46 remains unimplemented**, and it is the whole
-of what is left here. See `docs/KNOWN_LIMITATIONS.md` §61 for what the
-codec infers rather than reads, and which encoding questions rest on a
-stated ruling rather than the standard — extend that section honestly as
-the coverage grows.
+There is no DPT main type 46 — 46 was always a *count*, the number of
+`DatapointType` elements in one specific `knx_master.xml`
+(`docs/KNOWN_LIMITATIONS.md` §90), not an identifier. This row's earlier
+text asked for "main type 46" and that request was void from the start.
+
+What is actually left: `crates/knx-core/src/dpt/codec.rs` covers main types
+**1 through 30 inclusive, with no gaps**, plus `6.020` — thirty main types,
+`grep -cE '^        [0-9]+ => decode_' crates/knx-core/src/dpt/codec.rs` →
+`30`. Uncovered are the eighteen 200-series LTE/system main types the same
+master-data file carries (`DPT-206`, `DPT-217`, `DPT-219`, `DPT-222`,
+`DPT-229`, `DPT-230`, `DPT-232`, `DPT-234`, `DPT-235`, `DPT-237`, `DPT-238`,
+`DPT-240`, `DPT-241`, `DPT-244`, `DPT-245`, `DPT-249`, `DPT-250`,
+`DPT-251`), and the per-subtype bit-sets of main types 20, 21, 22, 23, 25,
+27 and 30 (no `knx_master.xml` enumeration/bit-field catalogue is
+consulted, so a raw code or raw bits reach the caller instead of a name).
+Neither is on any task list in this plan or in `docs/ROADMAP.md`; a future
+task would need to be written for the 200-series and does not exist yet.
+See `docs/KNOWN_LIMITATIONS.md` §61 and `docs/GAP_ANALYSIS_ETS.md` row E4
+for the full accounting — all three now agree.
 
 ### T21 — Graphical topology and building views, decided
 

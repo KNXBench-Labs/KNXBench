@@ -41,7 +41,7 @@ use knx_core::{
     Override, ParameterInstance, Project, StringTable, Text,
 };
 
-use crate::opaque::{OpaqueEntry, OpaqueKind};
+use crate::opaque::OpaqueEntry;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExportError {
@@ -139,37 +139,37 @@ pub(crate) fn project_with_unranged_group_address(schema: u32) -> Project {
     project
 }
 
-/// Known-but-not-modeled attributes, keyed by the schema-shaped
-/// `(xpath, name)` [`crate::known`] itself uses.
-pub(crate) type RetainedAttrs = BTreeMap<(String, String), String>;
+/// Known-but-not-modeled attributes, keyed by the element instance they
+/// were read from ([`crate::xpath`]) — see
+/// [`super::retained::RetainedAttrs`], which owns the type and the rules.
+pub(crate) use super::retained::RetainedAttrs;
 
 pub(crate) fn retained_attrs(opaque: &[OpaqueEntry]) -> RetainedAttrs {
-    opaque
-        .iter()
-        .filter(|e| e.kind == OpaqueKind::RetainedAttribute)
-        .map(|e| {
-            (
-                (e.xpath.clone(), e.name.clone()),
-                String::from_utf8_lossy(&e.bytes).into_owned(),
-            )
-        })
-        .collect()
+    RetainedAttrs::from_opaque(opaque)
 }
 
-/// Retained elements ([`crate::source::RetainedElement`], raw XML bytes),
-/// keyed by their own schema-shaped xpath. Only `BusAccess` uses this path
-/// today.
-pub(crate) fn retained_elements(opaque: &[OpaqueEntry]) -> BTreeMap<String, Vec<u8>> {
-    opaque
-        .iter()
-        .filter(|e| e.kind == OpaqueKind::RetainedElement)
-        .map(|e| (e.xpath.clone(), e.bytes.clone()))
-        .collect()
+/// Whole elements an import kept verbatim, keyed by the element instance
+/// they came from — see [`super::retained::RetainedElements`], which owns
+/// the type and reports whatever no writer claimed.
+pub(crate) use super::retained::RetainedElements;
+
+pub(crate) fn retained_elements(opaque: &[OpaqueEntry]) -> RetainedElements {
+    RetainedElements::from_opaque(opaque)
 }
 
 /// Accumulates one element's attributes in schema order, filling gaps from
 /// the retained-attribute store last.
 pub(crate) struct Attrs(Vec<(String, String)>);
+
+/// How a schema spells a boolean attribute. Schema 11 writes `"1"`/`"0"`,
+/// schema ≥21 writes `"true"`/`"false"` — measured on both reference
+/// projects. The elements the two schemas share (`GroupRange`,
+/// `GroupAddress`) are written by one function, so it is told which.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum BoolStyle {
+    OneZero,
+    TrueFalse,
+}
 
 impl Attrs {
     pub(crate) fn new() -> Self {
@@ -203,6 +203,13 @@ impl Attrs {
         self.push(name, if value { "1" } else { "0" })
     }
 
+    pub(crate) fn styled_bool(&mut self, name: &str, value: bool, style: BoolStyle) -> &mut Self {
+        match style {
+            BoolStyle::OneZero => self.required_bool(name, value),
+            BoolStyle::TrueFalse => self.push(name, if value { "true" } else { "false" }),
+        }
+    }
+
     pub(crate) fn opt_bool(&mut self, name: &str, value: Option<bool>) -> &mut Self {
         if let Some(v) = value {
             self.required_bool(name, v);
@@ -210,19 +217,15 @@ impl Attrs {
         self
     }
 
-    pub(crate) fn has(&self, name: &str) -> bool {
-        self.0.iter().any(|(n, _)| n == name)
-    }
-
-    /// Fills every attribute this element's schema-shaped `xpath` has in
-    /// the retained store, skipping any name the model already wrote.
-    pub(crate) fn fill_retained(&mut self, retained: &RetainedAttrs, xpath: &str) -> &mut Self {
-        for ((x, name), value) in retained {
-            if x == xpath && !self.has(name) {
-                self.push(name, value.clone());
-            }
-        }
-        self
+    /// What the model already wrote for `name`, if anything.
+    /// `fill_retained` (in `super::retained`) needs the value, not just its
+    /// presence: an imported value the model wrote back identically is not
+    /// a loss, one it overwrote with something else might be.
+    pub(crate) fn value_of(&self, name: &str) -> Option<&str> {
+        self.0
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|(_, v)| v.as_str())
     }
 }
 
@@ -392,16 +395,31 @@ pub(crate) fn write_raw_element(
     writer.write_event(event).map_err(xml_err)
 }
 
+/// Writes the schema-11 `0.xml`. Builds its own retained-attribute store,
+/// for callers that want one document on its own; `export_knxproj` shares
+/// a single store across both documents through
+/// [`write_installation_xml_with`] instead, so that an attribute either
+/// document restores is not also reported as dropped by the other.
 pub fn write_installation_xml(
     project: &Project,
     opaque: &[OpaqueEntry],
+) -> Result<Vec<u8>, ExportError> {
+    write_installation_xml_with(
+        project,
+        &retained_attrs(opaque),
+        &retained_elements(opaque),
+    )
+}
+
+pub(crate) fn write_installation_xml_with(
+    project: &Project,
+    retained: &RetainedAttrs,
+    elements: &RetainedElements,
 ) -> Result<Vec<u8>, ExportError> {
     if project.info.project_id.is_empty() {
         return Err(ExportError::MissingProjectId);
     }
     reject_unranged_group_addresses(project)?;
-    let retained = retained_attrs(opaque);
-    let elements = retained_elements(opaque);
 
     let mut writer = Writer::new_with_indent(Vec::new(), b' ', 2);
     writer
@@ -423,7 +441,7 @@ pub fn write_installation_xml(
 
     open(&mut writer, "Installations", &Attrs::new())?;
     for installation in &project.installations {
-        write_installation(&mut writer, project, installation, &retained, &elements)?;
+        write_installation(&mut writer, project, installation, retained, elements)?;
     }
     close(&mut writer, "Installations")?;
 
@@ -433,14 +451,27 @@ pub fn write_installation_xml(
     Ok(writer.into_inner())
 }
 
+/// Writes the schema-11 `Project.xml`. See [`write_installation_xml`] on
+/// why the shared-store variant exists.
 pub fn write_project_xml(
     project: &Project,
     opaque: &[OpaqueEntry],
 ) -> Result<Vec<u8>, ExportError> {
+    write_project_xml_with(
+        project,
+        &retained_attrs(opaque),
+        &retained_elements(opaque),
+    )
+}
+
+pub(crate) fn write_project_xml_with(
+    project: &Project,
+    retained: &RetainedAttrs,
+    _elements: &RetainedElements,
+) -> Result<Vec<u8>, ExportError> {
     if project.info.project_id.is_empty() {
         return Err(ExportError::MissingProjectId);
     }
-    let retained = retained_attrs(opaque);
 
     let mut writer = Writer::new_with_indent(Vec::new(), b' ', 2);
     writer
@@ -494,7 +525,7 @@ fn write_installation(
     project: &Project,
     installation: &Installation,
     retained: &RetainedAttrs,
-    elements: &BTreeMap<String, Vec<u8>>,
+    elements: &RetainedElements,
 ) -> Result<(), ExportError> {
     let xpath = "/KNX/Project/Installations/Installation";
     let default_line_ets_id = installation
@@ -536,13 +567,22 @@ fn write_installation(
             area,
             &ga_by_id,
             elements,
+            retained,
         )?;
     }
     if !installation.topology.unassigned.is_empty() {
         open(writer, "UnassignedDevices", &Attrs::new())?;
         for &device_id in &installation.topology.unassigned {
             if let Some(device) = project.devices.get(device_id) {
-                write_device(writer, project, installation, &ga_by_id, device)?;
+                write_device(
+                    writer,
+                    project,
+                    installation,
+                    &ga_by_id,
+                    device,
+                    &crate::xpath::unassigned_device(&device.source.ets_id),
+                    retained,
+                )?;
             }
         }
         close(writer, "UnassignedDevices")?;
@@ -553,7 +593,7 @@ fn write_installation(
         open(writer, "Buildings", &Attrs::new())?;
         let by_id: BTreeMap<_, _> = installation.buildings.iter().map(|b| (b.id, b)).collect();
         for part in installation.buildings.iter().filter(|b| b.parent.is_none()) {
-            write_building_part(writer, project, installation, &by_id, part)?;
+            write_building_part(writer, project, installation, &by_id, part, retained)?;
         }
         close(writer, "Buildings")?;
     }
@@ -570,7 +610,14 @@ fn write_installation(
         .iter()
         .filter(|r| r.parent.is_none())
     {
-        write_group_range(writer, &range_by_id, &installation.group_addresses, range)?;
+        write_group_range(
+            writer,
+            &range_by_id,
+            &installation.group_addresses,
+            range,
+            retained,
+            BoolStyle::OneZero,
+        )?;
     }
     close(writer, "GroupRanges")?;
     close(writer, "GroupAddresses")?;
@@ -586,18 +633,20 @@ fn write_area(
     topology: &knx_core::Topology,
     area: &Area,
     ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
-    elements: &BTreeMap<String, Vec<u8>>,
+    elements: &RetainedElements,
+    retained: &RetainedAttrs,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
     attrs.push("Id", area.source.ets_id.clone());
     attrs.push("Name", area.name.clone());
     attrs.push("Address", area.address.to_string());
     attrs.push("CompletionStatus", completion_status_str(area.completion));
+    attrs.fill_retained(retained, &crate::xpath::area(&area.source.ets_id));
     open(writer, "Area", &attrs)?;
 
     for &line_id in &area.lines {
         if let Some(line) = topology.line(line_id) {
-            write_line(writer, project, line, ga_by_id, elements)?;
+            write_line(writer, project, line, ga_by_id, elements, retained)?;
         }
     }
 
@@ -605,12 +654,14 @@ fn write_area(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn write_line(
     writer: &mut Writer<Vec<u8>>,
     project: &Project,
     line: &Line,
     ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
-    elements: &BTreeMap<String, Vec<u8>>,
+    elements: &RetainedElements,
+    retained: &RetainedAttrs,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
     attrs.push("Id", line.source.ets_id.clone());
@@ -625,6 +676,7 @@ fn write_line(
         line.ip_routing_multicast_address,
     );
     attrs.opt_display("MulticastTTL", line.multicast_ttl);
+    attrs.fill_retained(retained, &crate::xpath::line(&line.source.ets_id));
     open(writer, "Line", &attrs)?;
 
     for &device_id in &line.devices {
@@ -633,12 +685,22 @@ fn write_line(
         // so this takes it via the caller passing `project` and resolving
         // parameters per-device instead (see `write_device`'s signature).
         if let Some(device) = project.devices.get(device_id) {
-            write_device_with_params(writer, project, ga_by_id, device)?;
+            write_device_with_params(
+                writer,
+                project,
+                ga_by_id,
+                device,
+                &crate::xpath::device_v11(&device.source.ets_id),
+                retained,
+            )?;
         }
     }
 
-    let bus_access_xpath = "/KNX/Project/Installations/Installation/Topology/Area/Line/BusAccess";
-    if let Some(raw) = elements.get(bus_access_xpath) {
+    // Keyed by this line, not by the shape of the path: a project with two
+    // lines used to splice the first line's `BusAccess` into both
+    // ([`crate::xpath`]).
+    let bus_access_xpath = format!("{}/BusAccess", crate::xpath::line(&line.source.ets_id));
+    if let Some(raw) = elements.take(&bus_access_xpath) {
         write_raw_element(writer, raw)?;
     }
 
@@ -658,13 +720,15 @@ fn write_device(
     installation: &Installation,
     ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
     device: &DeviceInstance,
+    xpath: &str,
+    retained: &RetainedAttrs,
 ) -> Result<(), ExportError> {
     let parameters: Vec<&ParameterInstance> = installation
         .parameters
         .iter()
         .filter(|p| p.device == device.id)
         .collect();
-    write_device_inner(writer, project, parameters, ga_by_id, device)
+    write_device_inner(writer, project, parameters, ga_by_id, device, xpath, retained)
 }
 
 fn write_device_with_params(
@@ -672,6 +736,8 @@ fn write_device_with_params(
     project: &Project,
     ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
     device: &DeviceInstance,
+    xpath: &str,
+    retained: &RetainedAttrs,
 ) -> Result<(), ExportError> {
     // `Line`'s own caller (`write_area`) does not carry `Installation`, only
     // `Topology` — parameters live on `Installation`, so this path resolves
@@ -684,7 +750,7 @@ fn write_device_with_params(
         .flat_map(|i| &i.parameters)
         .filter(|p| p.device == device.id)
         .collect();
-    write_device_inner(writer, project, parameters, ga_by_id, device)
+    write_device_inner(writer, project, parameters, ga_by_id, device, xpath, retained)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -694,6 +760,8 @@ fn write_device_inner<'a>(
     all_parameters: impl IntoIterator<Item = &'a ParameterInstance>,
     ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
     device: &DeviceInstance,
+    xpath: &str,
+    retained: &RetainedAttrs,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
     attrs.push("Id", device.source.ets_id.clone());
@@ -738,6 +806,7 @@ fn write_device_inner<'a>(
         device.visibility_calculated,
     );
     attrs.required_bool("Broken", device.commissioning.broken);
+    attrs.fill_retained(retained, xpath);
 
     let params: Vec<&ParameterInstance> = all_parameters.into_iter().collect();
     let has_children =
@@ -764,7 +833,7 @@ fn write_device_inner<'a>(
         open(writer, "ComObjectInstanceRefs", &Attrs::new())?;
         for &com_id in &device.com_objects {
             if let Some(com) = project.devices.com_object(com_id) {
-                write_com_object(writer, project, ga_by_id, com)?;
+                write_com_object(writer, project, ga_by_id, com, xpath, retained)?;
             }
         }
         close(writer, "ComObjectInstanceRefs")?;
@@ -776,6 +845,7 @@ fn write_device_inner<'a>(
             let mut a = Attrs::new();
             a.push("Id", b.id.clone());
             a.push("Name", b.name.clone());
+            a.fill_retained(retained, &crate::xpath::binary_data(xpath, &b.id));
             empty(writer, "BinaryData", &a)?;
         }
         close(writer, "BinaryData")?;
@@ -790,6 +860,8 @@ fn write_com_object(
     project: &Project,
     ga_by_id: &BTreeMap<knx_core::GroupAddressId, &str>,
     com: &ComObjectInstance,
+    device_xpath: &str,
+    retained: &RetainedAttrs,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
     attrs.push("RefId", com.source.ets_id.clone());
@@ -807,6 +879,13 @@ fn write_com_object(
     push_override_flag(&mut attrs, "TransmitFlag", &com.flags.transmit);
     push_override_flag(&mut attrs, "UpdateFlag", &com.flags.update);
     push_override_flag(&mut attrs, "CommunicationFlag", &com.flags.communication);
+    // The one element writer that used to skip this, so an unexpected
+    // attribute on a `ComObjectInstanceRef` survived import and was dropped
+    // again on the way out (KNOWN_LIMITATIONS §117's promise, kept here).
+    attrs.fill_retained(
+        retained,
+        &crate::xpath::com_object(device_xpath, &com.source.ets_id),
+    );
 
     if com.links.is_empty() {
         empty(writer, "ComObjectInstanceRef", &attrs)?;
@@ -836,6 +915,7 @@ fn write_building_part(
     installation: &Installation,
     by_id: &BTreeMap<knx_core::BuildingPartId, &BuildingPart>,
     part: &BuildingPart,
+    retained: &RetainedAttrs,
 ) -> Result<(), ExportError> {
     let default_line_ets_id = part
         .default_line
@@ -849,6 +929,10 @@ fn write_building_part(
     attrs.push("Type", building_part_type_str(part.kind));
     attrs.opt("DefaultLine", &default_line_ets_id);
     attrs.push("CompletionStatus", completion_status_str(part.completion));
+    attrs.fill_retained(
+        retained,
+        &crate::xpath::building_part("Buildings", "BuildingPart", &part.source.ets_id),
+    );
 
     let has_children = !part.children.is_empty() || !part.devices.is_empty();
     if !has_children {
@@ -858,7 +942,7 @@ fn write_building_part(
     open(writer, "BuildingPart", &attrs)?;
     for &child_id in &part.children {
         if let Some(child) = by_id.get(&child_id) {
-            write_building_part(writer, project, installation, by_id, child)?;
+            write_building_part(writer, project, installation, by_id, child, retained)?;
         }
     }
     for &device_id in &part.devices {
@@ -877,17 +961,20 @@ pub(crate) fn write_group_range(
     by_id: &BTreeMap<knx_core::GroupRangeId, &GroupRange>,
     addresses: &[GroupAddressEntry],
     range: &GroupRange,
+    retained: &RetainedAttrs,
+    bools: BoolStyle,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
     attrs.push("Id", range.source.ets_id.clone());
     attrs.push("Name", range.name.clone());
     attrs.push("RangeStart", range.start.raw().to_string());
     attrs.push("RangeEnd", range.end.raw().to_string());
+    attrs.fill_retained(retained, &crate::xpath::group_range(&range.source.ets_id));
     open(writer, "GroupRange", &attrs)?;
 
     for &child_id in &range.children {
         if let Some(child) = by_id.get(&child_id) {
-            write_group_range(writer, by_id, addresses, child)?;
+            write_group_range(writer, by_id, addresses, child, retained, bools)?;
         }
     }
     for ga in addresses.iter().filter(|g| g.range == Some(range.id)) {
@@ -895,8 +982,12 @@ pub(crate) fn write_group_range(
         a.push("Id", ga.source.ets_id.clone());
         a.push("Address", ga.address.raw().to_string());
         a.push("Name", ga.name.clone());
-        a.required_bool("Central", ga.central);
-        a.required_bool("Unfiltered", ga.unfiltered);
+        a.styled_bool("Central", ga.central, bools);
+        a.styled_bool("Unfiltered", ga.unfiltered, bools);
+        a.fill_retained(
+            retained,
+            &crate::xpath::group_address(&ga.source.ets_id),
+        );
         empty(writer, "GroupAddress", &a)?;
     }
 
@@ -996,12 +1087,14 @@ mod tests {
         // taken from the import rather than written down: a literal here
         // would commit one installation's device name and gateway address
         // to the repository in exchange for no extra coverage at all.
-        let packed = retained_attrs(&out.opaque)
-            .into_values()
+        let store = retained_attrs(&out.opaque);
+        let elements = retained_elements(&out.opaque);
+        let packed = store
+            .unique_values()
             .chain(
-                retained_elements(&out.opaque)
-                    .into_values()
-                    .map(|b| String::from_utf8_lossy(&b).into_owned()),
+                elements
+                    .raw_values()
+                    .map(|b| String::from_utf8_lossy(b).into_owned()),
             )
             .find(|v| v.contains("IpAddr="))
             .expect("the reference project retains a packed IpAddr somewhere");

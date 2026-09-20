@@ -559,6 +559,7 @@ fn build_frame(
         "BinaryData" => Frame::BinaryDataRef(SourceBinaryDataRef {
             id: bag.require("Id", xpath)?,
             name: bag.take("Name"),
+            other: Vec::new(),
         }),
         "BuildingPart" => Frame::BuildingPart(SourceBuildingPart {
             id: bag.require("Id", xpath)?,
@@ -609,10 +610,10 @@ fn attach_other(
         Frame::BuildingPart(v) => &mut v.other,
         Frame::GroupRange(v) => &mut v.other,
         Frame::GroupAddress(v) => &mut v.other,
-        // `SourceParameterInstance` and `SourceBinaryDataRef` have no
-        // `other` field: both are two-field leaves and every attribute
-        // either table lists is already modeled.
-        Frame::Parameter(_) | Frame::BinaryDataRef(_) => return frame,
+        Frame::BinaryDataRef(v) => &mut v.other,
+        // `SourceParameterInstance` has no `other` field: it is a two-field
+        // leaf and both attributes its table lists are already modeled.
+        Frame::Parameter(_) => return frame,
     };
     other.extend(unknown);
     other.extend(leftover);

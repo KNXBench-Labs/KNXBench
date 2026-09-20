@@ -79,6 +79,9 @@ const COM_OBJECT_INSTANCE_REF_ATTRS: &[&str] = &[
 ];
 const CONNECTOR_ATTRS: &[&str] = &["GroupAddressRefId"];
 const BINARY_DATA_LEAF_ATTRS: &[&str] = &["Id", "Name"];
+/// Schema ≥21's own spelling: measured (Task 3) on the ETS 6.3.0 reference
+/// project, whose six `BinaryData` leaves all carry `DoNotCopy`.
+const BINARY_DATA_LEAF_ATTRS_21: &[&str] = &["Id", "Name", "DoNotCopy"];
 
 /// Transcribed from the ETS4 reference project's measured inventory: 37
 /// element paths. `ProjectInformation` is measured from `Project.xml`
@@ -337,6 +340,17 @@ const COM_OBJECT_INSTANCE_REF_ATTRS_21: &[&str] = &[
     "DatapointType",
     "Text",
     "Description",
+    // Measured (Task 3, ETS 6.3.0 reference project, schema 23): 119 flag
+    // attributes on `ComObjectInstanceRef` elements — `ReadFlag` 38,
+    // `WriteFlag` 18, `TransmitFlag` 27, `UpdateFlag` 28,
+    // `CommunicationFlag` 8, spelled `"Enabled"`/`"Disabled"` exactly as
+    // schema 11 spells them. The KV demo project carries none, which is why
+    // the initial transcription concluded they never occur at schema ≥21.
+    "ReadFlag",
+    "WriteFlag",
+    "TransmitFlag",
+    "UpdateFlag",
+    "CommunicationFlag",
 ];
 
 /// Transcribed from `KV v2.5 - demo.knxproj` (`P-03DE/0.xml` and
@@ -433,6 +447,19 @@ pub const SCHEMA_21: KnownSchema = KnownSchema {
             attributes: PARAMETER_INSTANCE_REF_ATTRS,
         },
         KnownElement {
+            // Measured (Task 3): six of these in the ETS 6.3.0 reference
+            // project, never transcribed, so every one was classified as an
+            // unknown element and dropped on export. Wrapper form, no
+            // attributes of its own.
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/BinaryData",
+            attributes: &[],
+        },
+        KnownElement {
+            // The leaf form, same element name as its wrapper.
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/BinaryData/BinaryData",
+            attributes: BINARY_DATA_LEAF_ATTRS_21,
+        },
+        KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ComObjectInstanceRefs",
             attributes: &[],
         },
@@ -487,6 +514,15 @@ pub const SCHEMA_21: KnownSchema = KnownSchema {
             attributes: &["Id", "Name", "Number", "Type", "DefaultLine", "Puid"],
         },
         KnownElement {
+            // Measured (Task 3): the ETS 6.3.0 reference project carries 35
+            // of these. Missing from the initial transcription, so every
+            // device-to-room assignment was classified as an unknown
+            // element, retained verbatim and then dropped on export. Same
+            // shape as schema 11's `Buildings/BuildingPart/DeviceInstanceRef`.
+            path: "/KNX/Project/Installations/Installation/Locations/Space/DeviceInstanceRef",
+            attributes: &["RefId"],
+        },
+        KnownElement {
             path: "/KNX/Project/Installations/Installation/GroupAddresses",
             attributes: &[],
         },
@@ -500,7 +536,20 @@ pub const SCHEMA_21: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange/GroupAddress",
-            attributes: &["Id", "Name", "Address", "DatapointType", "Puid"],
+            // `Central`/`Unfiltered` measured (Task 3) on the ETS 6.3.0
+            // reference project, spelled `"true"`/`"false"`. Without them
+            // here the parser never takes them, the model defaults both to
+            // `false`, and export writes an actively wrong value back —
+            // worse than leaving the attribute out.
+            attributes: &[
+                "Id",
+                "Name",
+                "Address",
+                "DatapointType",
+                "Central",
+                "Unfiltered",
+                "Puid",
+            ],
         },
     ],
 };
@@ -591,6 +640,19 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
             attributes: PARAMETER_INSTANCE_REF_ATTRS,
         },
         KnownElement {
+            // Measured (Task 3): six of these in the ETS 6.3.0 reference
+            // project, never transcribed, so every one was classified as an
+            // unknown element and dropped on export. Wrapper form, no
+            // attributes of its own.
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/BinaryData",
+            attributes: &[],
+        },
+        KnownElement {
+            // The leaf form, same element name as its wrapper.
+            path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/BinaryData/BinaryData",
+            attributes: BINARY_DATA_LEAF_ATTRS_21,
+        },
+        KnownElement {
             path: "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance/ComObjectInstanceRefs",
             attributes: &[],
         },
@@ -631,6 +693,15 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
             attributes: &["Id", "Name", "Number", "Type", "DefaultLine", "Puid"],
         },
         KnownElement {
+            // Measured (Task 3): the ETS 6.3.0 reference project carries 35
+            // of these. Missing from the initial transcription, so every
+            // device-to-room assignment was classified as an unknown
+            // element, retained verbatim and then dropped on export. Same
+            // shape as schema 11's `Buildings/BuildingPart/DeviceInstanceRef`.
+            path: "/KNX/Project/Installations/Installation/Locations/Space/DeviceInstanceRef",
+            attributes: &["RefId"],
+        },
+        KnownElement {
             path: "/KNX/Project/Installations/Installation/GroupAddresses",
             attributes: &[],
         },
@@ -644,7 +715,20 @@ pub const SCHEMA_23: KnownSchema = KnownSchema {
         },
         KnownElement {
             path: "/KNX/Project/Installations/Installation/GroupAddresses/GroupRanges/GroupRange/GroupAddress",
-            attributes: &["Id", "Name", "Address", "DatapointType", "Puid"],
+            // `Central`/`Unfiltered` measured (Task 3) on the ETS 6.3.0
+            // reference project, spelled `"true"`/`"false"`. Without them
+            // here the parser never takes them, the model defaults both to
+            // `false`, and export writes an actively wrong value back —
+            // worse than leaving the attribute out.
+            attributes: &[
+                "Id",
+                "Name",
+                "Address",
+                "DatapointType",
+                "Central",
+                "Unfiltered",
+                "Puid",
+            ],
         },
     ],
 };

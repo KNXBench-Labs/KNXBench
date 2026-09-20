@@ -258,6 +258,7 @@ export const messages: Record<MessageKey, string> = {
   "inspector.comFlag.transmit": "Übertragen",
   "inspector.comFlag.update": "Aktualisieren",
   "inspector.comFlag.communication": "Kommunikation",
+  "inspector.comFlag.readOnInit": "Lesen bei Initialisierung",
   "inspector.direction.send": "Senden",
   "inspector.direction.receive": "Empfangen",
   "inspector.unlink": "Trennen",
@@ -894,11 +895,11 @@ export const messages: Record<MessageKey, string> = {
 
   "help.topic.comObjectFlags.title": "Flags der Kommunikationsobjekte",
   "help.topic.comObjectFlags.p1":
-    "Ein Kommunikationsobjekt ist ein Ein- oder Ausgang des Applikationsprogramms eines Geräts. Es mit einer Gruppenadresse zu verknüpfen, setzt das Gerät auf diese Adresse. KNXBench bildet dafür fünf Flags ab — in den Eigenschaften stehen sie als R, W, T, U und C — und zusammen legen sie fest, was das Objekt dort darf.",
+    "Ein Kommunikationsobjekt ist ein Ein- oder Ausgang des Applikationsprogramms eines Geräts. Es mit einer Gruppenadresse zu verknüpfen, setzt das Gerät auf diese Adresse. KNXBench bildet dafür sechs Flags ab — in den Eigenschaften stehen sie als R, W, T, U, C und I — und zusammen legen sie fest, was das Objekt dort darf.",
   "help.topic.comObjectFlags.p2":
-    "C, Kommunikation, ist der Hauptschalter: ist es aus, nimmt das Objekt am Busverkehr gar nicht teil, und die übrigen vier haben nichts, woran sie wirken könnten. R, Lesen, lässt das Objekt eine Leseanfrage mit seinem aktuellen Wert beantworten. W, Schreiben, lässt ein eintreffendes Telegramm diesen Wert ändern.",
+    "C, Kommunikation, ist der Hauptschalter: ist es aus, nimmt das Objekt am Busverkehr gar nicht teil, und die übrigen fünf haben nichts, woran sie wirken könnten. R, Lesen, lässt das Objekt eine Leseanfrage mit seinem aktuellen Wert beantworten. W, Schreiben, lässt ein eintreffendes Telegramm diesen Wert ändern.",
   "help.topic.comObjectFlags.p3":
-    "T, Übertragen, lässt das Objekt von sich aus senden, wenn sein Wert sich ändert — das Flag, das aus einem Sensor einen Sender macht. U, Aktualisieren, lässt es einen Wert übernehmen, den es in der Leseantwort eines anderen Geräts sieht. KNXBench speichert die fünf so, wie Sie sie setzen, und beurteilt nicht, welche Kombination zu Ihrem Gerät passt.",
+    "T, Übertragen, lässt das Objekt von sich aus senden, wenn sein Wert sich ändert — das Flag, das aus einem Sensor einen Sender macht. U, Aktualisieren, lässt es einen Wert übernehmen, den es in der Leseantwort eines anderen Geräts sieht. I, Lesen bei Initialisierung, fragt den Wert der Adresse einmal beim Start am Bus ab, damit das Objekt mit einem echten Wert beginnt und nicht mit einer Annahme. KNXBench speichert die sechs so, wie Sie sie setzen, und beurteilt nicht, welche Kombination zu Ihrem Gerät passt.",
 
   "help.topic.busMonitor.title": "Busmonitor",
   "help.topic.busMonitor.p1":
@@ -928,13 +929,13 @@ export const messages: Record<MessageKey, string> = {
   "help.topic.limits.p1":
     "KNXBench ist eine unabhängige Anwendung. Sie stammt nicht von der KNX Association, ist von ihr weder unterstützt noch zertifiziert, und sie ist nicht die ETS. Wo sie eine ETS-Datei liest oder schreibt, tut sie das nach eigener Lesart dieser Datei.",
   "help.topic.limits.p2":
-    "KNX Secure wird nicht unterstützt. Ein kennwortgeschütztes Projekt lässt sich aus diesem Fenster nicht öffnen — es gibt keine Stelle, an der das Kennwort einzugeben wäre. Geräte über den Bus zu programmieren, ist hier ebenfalls nicht vorgesehen: die Busfunktionen sind Mitlesen und das Senden einzelner Telegramme. Das sechste Kommunikationsobjekt-Flag des KNX, Read-on-Init (I), bildet das Projektmodell nicht ab: Produktdaten, die es mitbringen, werden gelesen, das Flag selbst wird aber weder angezeigt noch lässt es sich ändern.",
+    "KNX Secure wird nicht unterstützt. Ein kennwortgeschütztes Projekt lässt sich aus diesem Fenster nicht öffnen — es gibt keine Stelle, an der das Kennwort einzugeben wäre. Geräte über den Bus zu programmieren, ist hier ebenfalls nicht vorgesehen: die Busfunktionen sind Mitlesen und das Senden einzelner Telegramme. Read-on-Init (I) gehört jetzt zum Projektmodell und lässt sich ändern; eine Lücke bleibt: keine vermessene ETS-Projektdatei gibt dieses Flag je Kommunikationsobjekt an, deshalb bleibt eine Änderung daran beim Export einer .knxproj zurück — der Exportbericht sagt es ausdrücklich.",
   "help.topic.limits.p3":
     "Was vorhanden ist, ist getestet, aber eine Testsuite ist keine Begehung. Bevor Sie sich in einer Anlage auf diese Anwendung verlassen, gleichen Sie ab, was sie Ihnen sagt, mit dem, was die Anlage tut.",
 
   "help.tip.comFlags.label": "Was die Flags der Kommunikationsobjekte bedeuten",
   "help.tip.comFlags.text":
-    "R, W, T, U und C legen fest, was dieses Objekt am Bus darf. C ist der Hauptschalter — ist es aus, bewirken die anderen vier nichts. Die ausführliche Erklärung steht unter F1.",
+    "R, W, T, U, C und I legen fest, was dieses Objekt am Bus darf. C ist der Hauptschalter — ist es aus, bewirken die anderen fünf nichts. Die ausführliche Erklärung steht unter F1.",
   "help.tip.addressTable.label": "Was diese Tabelle zeigt",
   "help.tip.addressTable.text":
     "Alle Gruppenadressen des Projekts mit ihrem Datenpunkttyp und den damit verknüpften Kommunikationsobjekten. Das Feld filtert nach Adresse, Name oder Datenpunkttyp. Was eine Gruppenadresse ist, erklärt F1.",

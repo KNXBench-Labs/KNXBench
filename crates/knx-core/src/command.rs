@@ -81,7 +81,7 @@ pub enum Command {
         com_object: ComObjectInstanceId,
         description: Override<Text>,
     },
-    /// Sets one of a communication object instance's five flags as a user
+    /// Sets one of a communication object instance's six flags as a user
     /// edit. Always resolves to `Layer::UserEdit` — use
     /// `RestoreComObjectFlag` to put back an exact prior `Override<bool>`
     /// (what undo does). Unlike `SetComObjectDpt`/`SetComObjectDescription`,
@@ -1635,6 +1635,7 @@ mod tests {
                     value: true,
                     layer: Layer::Program,
                 }),
+                read_on_init: Override::Absent,
             },
             size: None,
             is_active: true,
@@ -1907,6 +1908,60 @@ mod tests {
         stack.undo(&mut project).unwrap();
         let restored = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
         assert!(!restored.flags.communication.is_present());
+    }
+
+    /// §117's command-layer acceptance test. The sixth flag rides the same
+    /// generic `ComFlagKind` path as the other five, so this proves the
+    /// generic path really is generic rather than five arms in a trench
+    /// coat.
+    #[test]
+    fn setting_read_on_init_undoes_and_redoes_like_any_other_flag() {
+        let mut project = test_project_with_one_device(None);
+        project.devices.insert_com_object(ComObjectInstance {
+            id: ComObjectInstanceId(1),
+            source: source(),
+            device: DeviceId(1),
+            number: 0,
+            text: Override::Absent,
+            description: Override::Absent,
+            dpt: Override::Absent,
+            flags: ResolvedFlags::none(),
+            size: None,
+            is_active: true,
+            links: vec![],
+            module_instance: None,
+        });
+        let mut stack = CommandStack::new();
+        stack
+            .do_command(
+                &mut project,
+                Command::SetComObjectFlag {
+                    com_object: ComObjectInstanceId(1),
+                    flag: ComFlagKind::ReadOnInit,
+                    value: true,
+                },
+            )
+            .unwrap();
+        let updated = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert!(updated.flags.read_on_init.value().unwrap().value);
+        assert_eq!(
+            updated.flags.read_on_init.value().unwrap().layer,
+            Layer::UserEdit
+        );
+        // Setting the sixth must not have disturbed the fifth.
+        assert!(!updated.flags.communication.is_present());
+
+        stack.undo(&mut project).unwrap();
+        let restored = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert!(!restored.flags.read_on_init.is_present());
+
+        stack.redo(&mut project).unwrap();
+        let redone = project.devices.com_object(ComObjectInstanceId(1)).unwrap();
+        assert!(redone.flags.read_on_init.value().unwrap().value);
+        assert_eq!(
+            redone.flags.read_on_init.value().unwrap().layer,
+            Layer::UserEdit
+        );
     }
 
     #[test]

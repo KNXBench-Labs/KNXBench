@@ -53,7 +53,7 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | § | Thema | Warum K2 |
 | --- | --- | --- |
 | 7 | Geräte-Download nötig, aber blockiert | Ursache ist Hardware, nicht fehlendes Wissen. |
-| 93 | `PID_PROGRAM_VERSION` wird bedingungslos geschrieben | Geparkt, verlagert nach C11. |
+| 93 | `PID_PROGRAM_VERSION` wird bedingungslos geschrieben | Geparkt, unbesetzt — C11 und C12 sind gelandet, ohne das anzufassen (korrigiert 2026-09-20). |
 | 101 | Der „once more"-Versuch kann die Worst-Case-Wartezeit verdreifachen | Spec-konform, aber teuer. |
 | 72 | Ein ungedrosselter Line-Scan kostet echte Buszeit | Zehn Minuten aufwärts mit offenem Tunnel an einer laufenden Anlage. |
 | 74 | Belegt-aber-beschäftigt ist nicht von abwesend zu unterscheiden | Der Draht gibt die Unterscheidung nicht her. |

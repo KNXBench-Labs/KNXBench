@@ -505,7 +505,6 @@ fn map_installation(
         counts.areas.bump();
     }
 
-
     for device in &installation.unassigned_devices {
         let device_id = *tables
             .devices
@@ -954,7 +953,6 @@ fn map_installation_v21(
         counts.areas.bump();
     }
 
-
     for device in &installation.unassigned_devices {
         let device_id = *tables
             .devices
@@ -1231,6 +1229,11 @@ fn keyed(attributes: &[RetainedAttribute], xpath: &str) -> Vec<RetainedAttribute
         .collect()
 }
 
+// Nine arguments, two of them added here: the device's own xpath, so the
+// retained attributes can be keyed to this object rather than to every
+// object in the project, and the problems it may report while doing so.
+// A parameter struct would be a nicer signature and the same nine values.
+#[allow(clippy::too_many_arguments)]
 fn map_com_object_v21(
     ref_id: &str,
     over: Option<&SourceComObjectInstance>,

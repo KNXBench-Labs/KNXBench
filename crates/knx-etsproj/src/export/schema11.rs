@@ -404,11 +404,7 @@ pub fn write_installation_xml(
     project: &Project,
     opaque: &[OpaqueEntry],
 ) -> Result<Vec<u8>, ExportError> {
-    write_installation_xml_with(
-        project,
-        &retained_attrs(opaque),
-        &retained_elements(opaque),
-    )
+    write_installation_xml_with(project, &retained_attrs(opaque), &retained_elements(opaque))
 }
 
 pub(crate) fn write_installation_xml_with(
@@ -457,11 +453,7 @@ pub fn write_project_xml(
     project: &Project,
     opaque: &[OpaqueEntry],
 ) -> Result<Vec<u8>, ExportError> {
-    write_project_xml_with(
-        project,
-        &retained_attrs(opaque),
-        &retained_elements(opaque),
-    )
+    write_project_xml_with(project, &retained_attrs(opaque), &retained_elements(opaque))
 }
 
 pub(crate) fn write_project_xml_with(
@@ -503,7 +495,7 @@ pub(crate) fn write_project_xml_with(
         project.info.project_start.map(format_timestamp),
     );
     info_attrs.opt("ProjectId", &project.info.project_number);
-    info_attrs.fill_retained(&retained, xpath);
+    info_attrs.fill_retained(retained, xpath);
     info_attrs.push(
         "GroupAddressStyle",
         group_address_style_str(project.info.group_address_style),
@@ -728,7 +720,9 @@ fn write_device(
         .iter()
         .filter(|p| p.device == device.id)
         .collect();
-    write_device_inner(writer, project, parameters, ga_by_id, device, xpath, retained)
+    write_device_inner(
+        writer, project, parameters, ga_by_id, device, xpath, retained,
+    )
 }
 
 fn write_device_with_params(
@@ -750,7 +744,9 @@ fn write_device_with_params(
         .flat_map(|i| &i.parameters)
         .filter(|p| p.device == device.id)
         .collect();
-    write_device_inner(writer, project, parameters, ga_by_id, device, xpath, retained)
+    write_device_inner(
+        writer, project, parameters, ga_by_id, device, xpath, retained,
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -984,10 +980,7 @@ pub(crate) fn write_group_range(
         a.push("Name", ga.name.clone());
         a.styled_bool("Central", ga.central, bools);
         a.styled_bool("Unfiltered", ga.unfiltered, bools);
-        a.fill_retained(
-            retained,
-            &crate::xpath::group_address(&ga.source.ets_id),
-        );
+        a.fill_retained(retained, &crate::xpath::group_address(&ga.source.ets_id));
         empty(writer, "GroupAddress", &a)?;
     }
 

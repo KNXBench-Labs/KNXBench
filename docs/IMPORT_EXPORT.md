@@ -179,7 +179,7 @@ Contents (RESEARCH §7) [V], now with `OpaqueKind`, since the code exists:
 | `*.signature` | RSA signatures over manufacturer and project data | `Signature` |
 | `knx_master.xml` | DPT/product master catalogue | `MasterData` |
 | Any other container entry not regenerated on export | Copied through unchanged | `ContainerEntry` |
-| A known-but-not-modelled attribute (`Installation/@BCUKey`, `@SplitType`, `ProjectInformation`'s tool-state attributes; `DeviceInstance`'s `LoadedImage`/`CheckSums`/`DownloadCounter`, ETS's differential-download state, `Project Schema23 v01.00.00.pdf` p. 44) | Name and value, matched back onto its element by `(xpath, name)` on export where a per-instance xpath exists (see `KNOWN_LIMITATIONS.md` #34 for where it does not yet) | `RetainedAttribute` |
+| A known-but-not-modelled attribute (`Installation/@BCUKey`, `@SplitType`, `ProjectInformation`'s tool-state attributes; `DeviceInstance`'s `LoadedImage`/`CheckSums`/`DownloadCounter`, ETS's differential-download state, `Project Schema23 v01.00.00.pdf` p. 44) | Name and value, keyed by the element's own ETS id (`knx_etsproj::xpath`) so export puts it back on the element it came from; where two source elements share one key the value is dropped and an export warning says so (`KNOWN_LIMITATIONS.md` [#34](KNOWN_LIMITATIONS.md#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes)) | `RetainedAttribute` |
 | An unrecognized element, or a known-but-not-modelled element (`BusAccess`) | Raw bytes, tag included | `RetainedElement` |
 
 **Fidelity by construct**, the promised column — modeled in the domain
@@ -348,6 +348,35 @@ normalizing something differently on every pass would satisfy guarantees
 ordinary sense of the word.
 
 See [ADR-0007](adr/0007-roundtrip-fidelity.md).
+
+### 9.1 Attribute-level fidelity, measured
+
+The three guarantees above are about the model and the opaque bytes. They
+say nothing about the `.knxproj` a user exports and opens elsewhere, so
+that is measured separately:
+`crates/knx-etsproj/tests/retained_v21_measurement.rs` imports each corpus
+project, exports it, and compares every element of both documents keyed by
+its ancestors' own ids — counting attributes that went in and did not come
+out, and attributes that came out holding a different value.
+
+As of 2026-09-20 the ETS4 (schema 11) project loses nothing; the KV
+(schema 21) and ETS 6.3.0 (schema 23) projects lose only
+`Installation/@Name` and `@DefaultLine`, both empty strings in the source,
+which the domain model cannot tell apart from absent. Values that change:
+`KNX/@CreatedBy` and `@ToolVersion`, deliberately, because this
+application is not ETS; and `DeviceInstance/@LastDownload`/`@LastModified`,
+reformatted to fewer fractional-second digits by the trip through a typed
+timestamp.
+
+Anything an export cannot put back is reported as an `ExportWarning` --
+`RetainedAttributeNotExported` for an attribute, `RetainedElementNotExported`
+for a whole element — one warning per `(element, attribute)` class with the
+number of instances behind it, carrying a rendered `detail` sentence that
+says which of three things happened: the writer had nowhere to put it, the
+value's owning element could not be identified, or the project wrote a
+different value than the import preserved. These travel the same route to
+the UI as import diagnostics, through `ExportWarningDto` in
+`apps/knx-server`.
 
 ## 10. Product database ingest
 

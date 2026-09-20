@@ -656,11 +656,37 @@ async fn save_project_as(
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase", rename_all_fields = "camelCase")]
 enum ExportWarningDto {
-    Unsigned { detail: String },
-    StaleSignature { source_path: String },
-    ManufacturerDataFromProductDb { entries: usize },
-    MissingManufacturerData { source_path: String, sha256: String },
-    ReadOnInitNotExported { com_objects: usize },
+    Unsigned {
+        detail: String,
+    },
+    StaleSignature {
+        source_path: String,
+    },
+    ManufacturerDataFromProductDb {
+        entries: usize,
+    },
+    MissingManufacturerData {
+        source_path: String,
+        sha256: String,
+    },
+    ReadOnInitNotExported {
+        com_objects: usize,
+    },
+    /// Both carry a rendered `detail`, which is what the frontend's
+    /// `describeExportWarning` falls back to for any variant it does not
+    /// know by name — so these two reach the UI without a line of frontend
+    /// change (KNOWN_LIMITATIONS §34).
+    RetainedAttributeNotExported {
+        element: String,
+        attribute: String,
+        instances: usize,
+        detail: String,
+    },
+    RetainedElementNotExported {
+        element: String,
+        instances: usize,
+        detail: String,
+    },
 }
 
 impl From<knx_etsproj::export::ExportWarning> for ExportWarningDto {
@@ -680,6 +706,26 @@ impl From<knx_etsproj::export::ExportWarning> for ExportWarningDto {
                 sha256,
             },
             W::ReadOnInitNotExported { com_objects } => Self::ReadOnInitNotExported { com_objects },
+            W::RetainedAttributeNotExported {
+                element,
+                attribute,
+                instances,
+                detail,
+            } => Self::RetainedAttributeNotExported {
+                element,
+                attribute,
+                instances,
+                detail,
+            },
+            W::RetainedElementNotExported {
+                element,
+                instances,
+                detail,
+            } => Self::RetainedElementNotExported {
+                element,
+                instances,
+                detail,
+            },
         }
     }
 }

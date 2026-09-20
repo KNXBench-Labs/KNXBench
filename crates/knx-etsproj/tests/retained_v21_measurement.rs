@@ -1,9 +1,11 @@
-//! Measures, against the installed corpus, which source attributes survive a schema-≥21 import but not the export back out (`KNOWN_LIMITATIONS.md` §34).
+//! Counts, over the installed corpus, what an import-export round trip loses or changes.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use knx_etsproj::{export::export_knxproj, import_knxproj_bytes, opaque::OpaqueEntry, Container};
-use knx_testsupport::{corpus_available, reference_ets4_path, reference_ets6_path, reference_kv_schema21_path};
+use knx_testsupport::{
+    corpus_available, reference_ets4_path, reference_ets6_path, reference_kv_schema21_path,
+};
 use quick_xml::events::Event;
 use quick_xml::Reader;
 
@@ -101,12 +103,22 @@ fn round_trip(path: &std::path::Path) -> RoundTrip {
 
     let source_bytes = std::fs::read(path).expect("corpus file is readable");
     let mut source = Container::open(source_bytes).expect("corpus file opens");
-    let part = source.project_part().expect("corpus has a project part").to_string();
-    let source_xml = source.read(&format!("{part}/0.xml")).expect("corpus has a 0.xml");
+    let part = source
+        .project_part()
+        .expect("corpus has a project part")
+        .to_string();
+    let source_xml = source
+        .read(&format!("{part}/0.xml"))
+        .expect("corpus has a 0.xml");
 
     let mut written = Container::open(exported.bytes.clone()).expect("export opens");
-    let part = written.project_part().expect("export has a project part").to_string();
-    let export_xml = written.read(&format!("{part}/0.xml")).expect("export has a 0.xml");
+    let part = written
+        .project_part()
+        .expect("export has a project part")
+        .to_string();
+    let export_xml = written
+        .read(&format!("{part}/0.xml"))
+        .expect("export has a 0.xml");
     RoundTrip {
         source_xml,
         export_xml,
@@ -152,7 +164,9 @@ fn divergences(source_xml: &[u8], export_xml: &[u8]) -> BTreeSet<(String, String
     let exp = elements(export_xml);
     let mut out = BTreeSet::new();
     for (key, attrs) in &src {
-        let Some(written) = exp.get(key) else { continue };
+        let Some(written) = exp.get(key) else {
+            continue;
+        };
         let element = key
             .rsplit('/')
             .next()
@@ -225,7 +239,10 @@ fn schema_21_round_trip_keeps_every_attribute_but_the_empty_ones() {
     // lost; a pair of empty strings is.
     expect_losses(
         &rt,
-        &[("Installation", "DefaultLine", 1), ("Installation", "Name", 1)],
+        &[
+            ("Installation", "DefaultLine", 1),
+            ("Installation", "Name", 1),
+        ],
         "KV schema 21",
     );
     for attr in ["Name", "DefaultLine"] {
@@ -295,9 +312,7 @@ fn every_device_keeps_its_own_serial_number() {
             let written = exp
                 .get(key)
                 .and_then(|a| a.get("SerialNumber"))
-                .unwrap_or_else(|| {
-                    panic!("{project}: a device lost its SerialNumber on export")
-                });
+                .unwrap_or_else(|| panic!("{project}: a device lost its SerialNumber on export"));
             assert_eq!(
                 written, serial,
                 "{project}: a device came back with a serial number that is \

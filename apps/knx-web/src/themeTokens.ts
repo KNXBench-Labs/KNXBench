@@ -32,6 +32,13 @@ export interface CssRule {
   line: number;
   /** Nesting depth; 0 for a top-level rule. */
   depth: number;
+  /**
+   * Every enclosing block's prelude, outermost first; empty at depth 0.
+   * `depth` is `ancestors.length` — the chain is what the motion guard
+   * needs (is any enclosing block the reduced-motion media query?) and what
+   * the theme boundary needs (is this block nested inside anything at all?).
+   */
+  ancestors: string[];
   declarations: CssDeclaration[];
 }
 
@@ -97,6 +104,7 @@ export function parseRules(css: string): CssRule[] {
         selector: buffer.trim().replace(/\s+/g, " "),
         line: bufferLine,
         depth: open.length,
+        ancestors: open.map((ancestor) => ancestor.selector),
         declarations: [],
       };
       rules.push(rule);
@@ -167,32 +175,68 @@ export function themeVariationBlocks(rules: readonly CssRule[]): ThemeVariationB
   return blocks;
 }
 
+/** Whether a single selector part is one of the boundary's two legal shapes. */
+function isLegalThemeSelector(part: string): boolean {
+  return THEME_BASE_SELECTOR.test(part) || THEME_VARIATION_SELECTOR.test(part);
+}
+
 /**
  * Every selector that mentions `data-theme` in a shape the boundary does
  * not allow. Two shapes are allowed and no others: the base block and the
- * accent variation. Everything else — a theme styling an element
- * (`[data-theme="x"] body::before`), or the accent-by-negation trap
- * (`:root:not([data-theme="x"])`, which silently swept every future theme
- * into one palette) — is reported here.
+ * accent variation, **written at the top level**. Everything else — a theme
+ * styling an element (`[data-theme="x"] body::before`), the
+ * accent-by-negation trap (`:root:not([data-theme="x"])`, which silently
+ * swept every future theme into one palette), or a legal-looking theme
+ * block nested inside an `@media` query — is reported here.
+ *
+ * The nesting clause is the point of `ancestors`. `themeBlocks()` only
+ * collects depth-0 blocks, so a theme block inside `@media` used to be
+ * invisible to the whole test file: it was neither held to the boundary
+ * nor reported, and could therefore quietly redefine
+ * `--knx-transition-duration` behind the user's motion setting. Both
+ * directions are caught here — a theme selector that is nested, and any
+ * rule nested *inside* a theme selector.
  */
 export function themeSelectorViolations(rules: readonly CssRule[]): CssRule[] {
-  return rules.filter((rule) =>
-    selectorParts(rule.selector).some(
-      (part) =>
-        part.includes("data-theme") &&
-        !THEME_BASE_SELECTOR.test(part) &&
-        !THEME_VARIATION_SELECTOR.test(part),
-    ),
-  );
+  const mentionsTheme = (selector: string) =>
+    selectorParts(selector).some((part) => part.includes("data-theme"));
+  return rules.filter((rule) => {
+    const parts = selectorParts(rule.selector);
+    if (parts.some((part) => part.includes("data-theme") && !isLegalThemeSelector(part))) return true;
+    if (rule.depth !== 0 && mentionsTheme(rule.selector)) return true;
+    return rule.ancestors.some(mentionsTheme);
+  });
 }
 
-/** Every `--knx-*` token the stylesheet reads through `var()`, sorted. */
+/**
+ * A `--knx-*` custom property name the project's own naming rule accepts:
+ * lowercase words joined by single hyphens. Anything else is a typo
+ * (`--knx-fooBar`, `--knx-foo_bar`) rather than a token, and has to be
+ * named as one.
+ */
+const LEGAL_TOKEN_NAME = /^--knx-[a-z0-9]+(-[a-z0-9]+)*$/;
+
+/**
+ * Every `--knx-*` token the stylesheet reads through `var()`, sorted.
+ *
+ * The name is captured whole — up to the whitespace, comma or paren that
+ * ends it — and *not* filtered through the legal-name character class. A
+ * class of `[a-z0-9-]` truncates `var(--knx-fooBar)` to `--knx-foo`, which
+ * then travels through `requiredThemeTokens()` as a real token and makes
+ * every theme fail for a token nobody ever wrote. `illegalTokenNames()`
+ * below rejects the name instead, once, saying what is actually wrong.
+ */
 export function referencedTokens(css: string): string[] {
   const found = new Set<string>();
-  for (const match of stripComments(css).matchAll(/var\(\s*(--knx-[a-z0-9-]+)/g)) {
+  for (const match of stripComments(css).matchAll(/var\(\s*(--knx-[^\s,)]*)/g)) {
     found.add(match[1]);
   }
   return [...found].sort();
+}
+
+/** The token names in `names` that break the naming rule, sorted. */
+export function illegalTokenNames(names: readonly string[]): string[] {
+  return [...new Set(names.filter((name) => !LEGAL_TOKEN_NAME.test(name)))].sort();
 }
 
 /** Every `--knx-*` token the stylesheet declares anywhere, sorted. */
@@ -232,4 +276,126 @@ export function blockPlainProperties(rule: CssRule): string[] {
     .map((declaration) => declaration.property)
     .filter((property) => !property.startsWith("--knx-"))
     .sort();
+}
+
+/* ── The other half of ADR-0022: no literal colours outside the theme layer ── */
+
+/**
+ * The two keywords that are colour values and yet carry no palette
+ * decision: `transparent` paints nothing and `currentColor` defers to
+ * whatever `color` a theme token already set. Both are allowed anywhere.
+ */
+const COLOURLESS_KEYWORDS = new Set(["transparent", "currentcolor"]);
+
+/** The CSS colour functions. `color-mix()` is deliberately absent: it mixes
+ * what it is given, so `color-mix(in srgb, var(--knx-accent) 8%, transparent)`
+ * stays a theme decision. Its *arguments* are scanned like any other value. */
+const COLOUR_FUNCTION = /\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/i;
+
+/** `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa`. */
+const HEX_COLOUR = /#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b/i;
+
+/**
+ * The CSS named colours. Spelled out rather than approximated, because
+ * `color: red` is exactly the literal this rule exists to stop and no
+ * shorter test catches it. `transparent` and `currentcolor` are handled by
+ * `COLOURLESS_KEYWORDS` above and so are absent here.
+ */
+const NAMED_COLOURS = new Set([
+  "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque",
+  "black", "blanchedalmond", "blue", "blueviolet", "brown", "burlywood",
+  "cadetblue", "chartreuse", "chocolate", "coral", "cornflowerblue", "cornsilk",
+  "crimson", "cyan", "darkblue", "darkcyan", "darkgoldenrod", "darkgray",
+  "darkgreen", "darkgrey", "darkkhaki", "darkmagenta", "darkolivegreen",
+  "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen",
+  "darkslateblue", "darkslategray", "darkslategrey", "darkturquoise",
+  "darkviolet", "deeppink", "deepskyblue", "dimgray", "dimgrey", "dodgerblue",
+  "firebrick", "floralwhite", "forestgreen", "fuchsia", "gainsboro",
+  "ghostwhite", "gold", "goldenrod", "gray", "green", "greenyellow", "grey",
+  "honeydew", "hotpink", "indianred", "indigo", "ivory", "khaki", "lavender",
+  "lavenderblush", "lawngreen", "lemonchiffon", "lightblue", "lightcoral",
+  "lightcyan", "lightgoldenrodyellow", "lightgray", "lightgreen", "lightgrey",
+  "lightpink", "lightsalmon", "lightseagreen", "lightskyblue", "lightslategray",
+  "lightslategrey", "lightsteelblue", "lightyellow", "lime", "limegreen",
+  "linen", "magenta", "maroon", "mediumaquamarine", "mediumblue",
+  "mediumorchid", "mediumpurple", "mediumseagreen", "mediumslateblue",
+  "mediumspringgreen", "mediumturquoise", "mediumvioletred", "midnightblue",
+  "mintcream", "mistyrose", "moccasin", "navajowhite", "navy", "oldlace",
+  "olive", "olivedrab", "orange", "orangered", "orchid", "palegoldenrod",
+  "palegreen", "paleturquoise", "palevioletred", "papayawhip", "peachpuff",
+  "peru", "pink", "plum", "powderblue", "purple", "rebeccapurple", "red",
+  "rosybrown", "royalblue", "saddlebrown", "salmon", "sandybrown", "seagreen",
+  "seashell", "sienna", "silver", "skyblue", "slateblue", "slategray",
+  "slategrey", "snow", "springgreen", "steelblue", "tan", "teal", "thistle",
+  "tomato", "turquoise", "violet", "wheat", "white", "whitesmoke", "yellow",
+  "yellowgreen",
+]);
+
+/** One literal colour found where ADR-0022 says a `var()` belongs. */
+export interface ColourLiteral {
+  /** 1-based line in the source text. */
+  line: number;
+  property: string;
+  value: string;
+  /** The offending fragment, so the failure message names it. */
+  literal: string;
+}
+
+/** Strips every `url(...)` from a value: a data URI is base64, not a colour. */
+function withoutUrls(value: string): string {
+  return value.replace(/url\([^)]*\)/gi, " ");
+}
+
+/** The literal colour in `value`, or `null`. */
+function findColourLiteral(value: string): string | null {
+  const text = withoutUrls(value);
+  const hex = HEX_COLOUR.exec(text);
+  if (hex) return hex[0];
+  const fn = COLOUR_FUNCTION.exec(text);
+  if (fn) return `${fn[1]}()`;
+  for (const word of text.toLowerCase().match(/[a-z][a-z0-9]*(?!\()/g) ?? []) {
+    if (COLOURLESS_KEYWORDS.has(word)) continue;
+    if (NAMED_COLOURS.has(word)) return word;
+  }
+  return null;
+}
+
+/** Whether `rule` is a theme-layer block: one of the boundary's two shapes,
+ * written at the top level. Everything else in the stylesheet is the
+ * component layer. */
+export function isThemeLayerRule(rule: CssRule): boolean {
+  return rule.depth === 0 && isLegalThemeSelector(rule.selector);
+}
+
+/**
+ * Every literal colour written in the component layer, in source order.
+ *
+ * This is the half of ADR-0022 the boundary test does not reach. The
+ * boundary proves that each theme block is *complete*; it says nothing
+ * about a component rule that skips the tokens entirely and writes
+ * `color: #ff00aa`. Such a rule is invisible to every theme — it paints
+ * the same in all five palettes, including the one where it is unreadable
+ * — which is exactly the `color: #ffffff` on `#f7931a` (2.3:1) that ADR-0022
+ * opens by describing.
+ *
+ * `transparent`, `currentColor` and anything inside `url()` are not
+ * palette decisions and pass.
+ */
+export function componentColourLiterals(rules: readonly CssRule[]): ColourLiteral[] {
+  const findings: ColourLiteral[] = [];
+  for (const rule of rules) {
+    if (isThemeLayerRule(rule)) continue;
+    for (const declaration of rule.declarations) {
+      const literal = findColourLiteral(declaration.value);
+      if (literal !== null) {
+        findings.push({
+          line: declaration.line,
+          property: declaration.property,
+          value: declaration.value,
+          literal,
+        });
+      }
+    }
+  }
+  return findings;
 }

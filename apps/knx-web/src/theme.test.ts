@@ -24,6 +24,25 @@ describe("THEMES", () => {
     expect(new Set(THEMES.map((t) => t.id)).size).toBe(THEMES.length);
     expect(THEMES.every((t) => t.name.trim() !== "")).toBe(true);
   });
+
+  // `themeTokens.test.ts` checks every palette's `hasAccentVariations`
+  // against styles.css. It cannot check `system`'s, because `system` has no
+  // block — which left that one entry hand-typed and unexamined. Setting it
+  // to `false` disabled the accent control for the default theme and the
+  // whole suite stayed green.
+  it("keeps System's accent flag in step with the palettes it resolves to", () => {
+    const system = THEMES.find((t) => t.id === "system");
+    expect(system, "the registry no longer offers a System entry").toBeDefined();
+    const resolved = [resolveThemeId("system", false), resolveThemeId("system", true)];
+    for (const id of resolved) {
+      const palette = THEMES.find((t) => t.id === id);
+      expect(palette, `System resolves to "${id}", which is not in the registry`).toBeDefined();
+      expect(
+        system!.hasAccentVariations,
+        `System offers accents ${system!.hasAccentVariations} but resolves to "${id}", which offers ${palette!.hasAccentVariations}`,
+      ).toBe(palette!.hasAccentVariations);
+    }
+  });
 });
 
 describe("resolveThemeId", () => {

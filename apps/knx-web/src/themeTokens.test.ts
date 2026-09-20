@@ -1,17 +1,20 @@
-/** Holds every theme in styles.css to ADR-0022's token boundary. */
-import { readFileSync } from "node:fs";
+/** Holds every theme in the app's stylesheets to ADR-0022's token boundary. */
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ACCENTS } from "./appearance";
 import { THEMES, loadThemeId, resolveThemeId } from "./theme";
-import type { ThemeBlock } from "./themeTokens";
+import type { CssRule, ThemeBlock } from "./themeTokens";
 import {
   COMPONENT_LAYER_TOKENS,
   THEME_BLOCK_PLAIN_PROPERTIES,
   blockPlainProperties,
   blockTokens,
+  componentColourLiterals,
   declaredTokens,
+  illegalTokenNames,
+  isThemeLayerRule,
   parseRules,
   referencedTokens,
   requiredThemeTokens,
@@ -40,6 +43,16 @@ describe("parseRules", () => {
     const rules = parseRules(":root {\n  --knx-backdrop-size: auto, 48px 48px;\n}\n");
     expect(rules[0].declarations[0].value).toBe("auto, 48px 48px");
   });
+
+  it("carries the enclosing selector chain, outermost first", () => {
+    const rules = parseRules("@media print {\n  @supports (display: grid) {\n    .a { color: red; }\n  }\n}\n");
+    expect(rules.map((r) => r.ancestors)).toEqual([
+      [],
+      ["@media print"],
+      ["@media print", "@supports (display: grid)"],
+    ]);
+    expect(rules.map((r) => r.depth)).toEqual([0, 1, 2]);
+  });
 });
 
 describe("themeSelectorViolations", () => {
@@ -62,6 +75,101 @@ describe("themeSelectorViolations", () => {
     );
     expect(themeSelectorViolations(rules)).toEqual([]);
   });
+
+  // The failure ADR-0022 names as its reason to exist, in the one shape
+  // that used to escape every check in this file: `themeBlocks()` collects
+  // depth-0 blocks only, so a theme block inside a media query was neither
+  // held to the boundary nor reported. It could therefore redefine
+  // `--knx-transition-duration` — the user's motion setting — and pass.
+  it("catches a legal-looking theme block nested inside a media query", () => {
+    const rules = parseRules(
+      "@media (min-width: 40em) {\n" +
+        '  :root[data-theme="x"] { --knx-transition-duration: 900ms; }\n' +
+        "}\n",
+    );
+    expect(themeBlocks(rules)).toEqual([]);
+    expect(themeSelectorViolations(rules).map((r) => r.selector)).toEqual([':root[data-theme="x"]']);
+  });
+
+  it("catches a nested accent variation too", () => {
+    const rules = parseRules(
+      "@supports (color: color-mix(in srgb, red, blue)) {\n" +
+        '  :root[data-theme="x"][data-accent="mint"] { --knx-accent: green; }\n' +
+        "}\n",
+    );
+    expect(themeVariationBlocks(rules)).toEqual([]);
+    expect(themeSelectorViolations(rules)).toHaveLength(1);
+  });
+
+  it("catches a rule nested inside a theme block", () => {
+    const rules = parseRules(':root[data-theme="x"] {\n  .card { background: red; }\n}\n');
+    expect(themeSelectorViolations(rules).map((r) => r.selector)).toEqual([".card"]);
+  });
+});
+
+describe("illegalTokenNames", () => {
+  // The old `var\(\s*(--knx-[a-z0-9-]+)` truncated `--knx-fooBar` to
+  // `--knx-foo` and handed that on as a real token, so every theme failed
+  // for a token nobody had written. The name is now read whole and
+  // rejected once, by its actual name.
+  it("reads a camelCase token whole instead of truncating it", () => {
+    expect(referencedTokens(".a { color: var(--knx-fooBar); }")).toEqual(["--knx-fooBar"]);
+    expect(requiredThemeTokens(".a { color: var(--knx-fooBar); }")).toEqual(["--knx-fooBar"]);
+  });
+
+  it("rejects the names the naming rule does not allow", () => {
+    expect(illegalTokenNames(["--knx-fooBar", "--knx-foo_bar", "--knx-Foo", "--knx-"])).toEqual([
+      "--knx-",
+      "--knx-Foo",
+      "--knx-fooBar",
+      "--knx-foo_bar",
+    ]);
+  });
+
+  it("allows the shape every real token has", () => {
+    expect(illegalTokenNames(["--knx-accent", "--knx-on-accent", "--knx-radius-card"])).toEqual([]);
+  });
+});
+
+describe("componentColourLiterals", () => {
+  it("catches a hex literal in a component rule", () => {
+    const rules = parseRules(".badge { color: #ff00aa; }\n");
+    expect(componentColourLiterals(rules).map((f) => f.literal)).toEqual(["#ff00aa"]);
+  });
+
+  it("catches a named colour and a colour function", () => {
+    const rules = parseRules(".a { border: 1px solid red; }\n.b { background: rgba(0, 0, 0, 0.4); }\n");
+    expect(componentColourLiterals(rules).map((f) => f.literal)).toEqual(["red", "rgba()"]);
+  });
+
+  it("leaves the theme layer alone — literals are what a theme block is for", () => {
+    const rules = parseRules(
+      ':root[data-theme="x"] { --knx-accent: #ff00aa; color-scheme: light; }\n' +
+        ':root[data-theme="x"][data-accent="mint"] { --knx-accent: darkseagreen; }\n',
+    );
+    expect(componentColourLiterals(rules)).toEqual([]);
+    expect(rules.every(isThemeLayerRule)).toBe(true);
+  });
+
+  it("allows transparent, currentColor, var() and anything inside url()", () => {
+    const rules = parseRules(
+      ".a { border: 1px solid transparent; }\n" +
+        ".b { fill: currentColor; }\n" +
+        ".c { background: color-mix(in srgb, var(--knx-accent) 8%, var(--knx-surface)); }\n" +
+        '.d { background-image: url("data:image/svg+xml;base64,YWJjZGVm"); }\n',
+    );
+    expect(componentColourLiterals(rules)).toEqual([]);
+  });
+
+  it("reports where the literal is, not just that there is one", () => {
+    const rules = parseRules(".a {\n  color: red;\n}\n");
+    expect(componentColourLiterals(rules)[0]).toEqual({
+      line: 2,
+      property: "color",
+      value: "red",
+      literal: "red",
+    });
+  });
 });
 
 describe("requiredThemeTokens", () => {
@@ -79,11 +187,57 @@ describe("blockPlainProperties", () => {
 });
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const css = readFileSync(join(HERE, "styles.css"), "utf-8");
-const rules = parseRules(css);
+const APP_ROOT = join(HERE, "..");
+
+/** Directories that hold no source of ours. */
+const NOT_OURS = new Set(["node_modules", "dist", ".git", "coverage", "test-results"]);
+
+/** Every `.css` file the app ships, path-relative to the app root.
+ *
+ * Walked rather than named. This file used to read exactly one hard-coded
+ * path, so the day someone split the stylesheet — a second `.css` next to
+ * the first, or a per-component sheet — that file would have sat outside
+ * ADR-0022 entirely: its theme blocks unchecked, its `var()` reads missing
+ * from the boundary, its literal colours unseen. An empty list is itself a
+ * failure below, so a rename cannot make this test vacuously pass either. */
+function findStylesheets(dir: string): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith(".") || NOT_OURS.has(entry.name)) continue;
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...findStylesheets(full));
+    else if (entry.name.endsWith(".css")) found.push(full);
+  }
+  return found.sort();
+}
+
+interface Stylesheet {
+  /** Path relative to `apps/knx-web`, so a failure says which file. */
+  name: string;
+  css: string;
+  rules: CssRule[];
+}
+
+const stylesheets: Stylesheet[] = findStylesheets(APP_ROOT).map((path) => {
+  const text = readFileSync(path, "utf-8");
+  return { name: relative(APP_ROOT, path), css: text, rules: parseRules(text) };
+});
+
+// `var()` reads and theme blocks are questions about the app's whole CSS,
+// not about one file, so both are answered over the concatenation. Line
+// numbers stay per-file — every failure message below names its sheet.
+const css = stylesheets.map((sheet) => sheet.css).join("\n");
+const rules = stylesheets.flatMap((sheet) => sheet.rules);
 const required = requiredThemeTokens(css);
 const blocks = themeBlocks(rules);
 const paletteThemeIds = THEMES.filter((theme) => theme.id !== "system").map((theme) => theme.id);
+
+describe("the stylesheet set this file judges", () => {
+  it("is discovered, not hard-coded, and is not empty", () => {
+    expect(stylesheets.map((sheet) => sheet.name)).toContain("src/styles.css");
+    expect(stylesheets.length).toBeGreaterThan(0);
+  });
+});
 
 /** The one `:root[data-theme="<id>"]` block for `id`, or a named failure
  * instead of `blocks.find(...)!`'s `TypeError` when a registered theme has
@@ -129,11 +283,38 @@ describe("the theme layer of styles.css", () => {
     expect(blockPlainProperties(block.rule)).toEqual([...THEME_BLOCK_PLAIN_PROPERTIES]);
   });
 
-  it("defines no theme by negation and lets no theme style an element", () => {
-    const violations = themeSelectorViolations(rules).map((rule) => `${rule.line}: ${rule.selector}`);
-    expect(violations, `selectors outside the boundary's two shapes:\n${violations.join("\n")}`).toEqual(
-      [],
-    );
+  it.each(stylesheets.map((sheet) => sheet.name))(
+    "%s defines no theme by negation, nests none, and lets none style an element",
+    (name) => {
+      const sheet = stylesheets.find((candidate) => candidate.name === name)!;
+      const violations = themeSelectorViolations(sheet.rules).map(
+        (rule) => `${name}:${rule.line}: ${rule.selector}`,
+      );
+      expect(
+        violations,
+        `selectors outside the boundary's two shapes:\n${violations.join("\n")}`,
+      ).toEqual([]);
+    },
+  );
+
+  it.each(stylesheets.map((sheet) => sheet.name))(
+    "%s writes no literal colour outside the theme layer",
+    (name) => {
+      const sheet = stylesheets.find((candidate) => candidate.name === name)!;
+      const literals = componentColourLiterals(sheet.rules).map(
+        (found) => `${name}:${found.line}: ${found.property}: ${found.value}  (${found.literal})`,
+      );
+      expect(
+        literals,
+        "ADR-0022: a component rule paints through a theme token, never a literal. " +
+          `Use var(--knx-…), or give the theme layer a token for it:\n${literals.join("\n")}`,
+      ).toEqual([]);
+    },
+  );
+
+  it("names every token it reads or declares legally", () => {
+    const illegal = illegalTokenNames([...referencedTokens(css), ...declaredTokens(rules)]);
+    expect(illegal, `--knx-* names outside [a-z0-9-]: ${illegal.join(", ")}`).toEqual([]);
   });
 
   it("declares no token nobody reads", () => {
@@ -200,6 +381,20 @@ describe("index.html's pre-mount bootstrap", () => {
     expect(dark, 'index.html no longer migrates the legacy "dark" value').not.toBeNull();
     expect(light![1]).toBe(loadThemeId({ getItem: () => "light" }));
     expect(dark![1]).toBe(loadThemeId({ getItem: () => "dark" }));
+  });
+
+  // The bootstrap sets data-theme before the first paint, so the markup's
+  // own attribute is unreachable in a working build. It is there for the
+  // build that is not working: a CSP that drops the inline script, a
+  // localStorage access that throws before the attribute is set. Without
+  // it the document matches no theme block at all and renders as Times New
+  // Roman on transparent, because ADR-0022 deliberately left no
+  // no-attribute default.
+  it("ships a data-theme in the markup for the bootstrap to overwrite", () => {
+    const match = /<html\b[^>]*\sdata-theme="([a-z0-9-]+)"/.exec(html);
+    expect(match, "index.html's <html> carries no data-theme fallback").not.toBeNull();
+    expect(paletteThemeIds).toContain(match![1]);
+    expect(match![1]).toBe(resolveThemeId("system", false));
   });
 
   it("falls back to the same system default resolveThemeId does", () => {

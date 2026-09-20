@@ -1,5 +1,12 @@
 <!doctype html>
-<html lang="en">
+<!-- `data-theme` here is a fallback, not the choice: the script below
+     overwrites it before the first paint. It exists because ADR-0022 gives
+     the stylesheet no no-attribute default on purpose, so a document that
+     somehow renders with the bootstrap not having run (a CSP that drops
+     the inline script, say) would match no theme block at all and paint
+     itself Times New Roman on transparent. themeTokens.test.ts keeps this
+     value equal to resolveThemeId("system", false). -->
+<html lang="en" data-theme="porcelain">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

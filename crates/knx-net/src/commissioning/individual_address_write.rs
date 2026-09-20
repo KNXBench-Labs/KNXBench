@@ -252,7 +252,7 @@ pub async fn individual_address_write<T: ManagementTransport>(
 
 #[cfg(test)]
 mod tests {
-    use super::super::simulator::{SimulatedDevice, SimulatorConfig};
+    use super::super::simulator::{Seen, SimulatedDevice, SimulatorConfig};
     use super::super::SessionTiming;
     use super::*;
     use knx_core::commissioning::mutation::WriteScope;
@@ -322,6 +322,28 @@ mod tests {
         assert_eq!(report.steps.len(), 4);
         assert_eq!(report.steps[2].number, 3);
         assert_eq!(device.address(), new_address);
+        // Step 2's count and step 3's mandatory re-verification immediately
+        // before the write (procedure.rs's own words: "programming mode may
+        // have switched itself off") are two separate broadcasts, not one.
+        // A step 3 that wrote on step 2's count alone would still pass every
+        // other assertion here.
+        assert_eq!(
+            device.individual_address_read_broadcasts(),
+            2,
+            "step 3 must re-verify with its own broadcast, not reuse step 2's count"
+        );
+        // MP §2.3 step 4, p. 15: "shall ... execute a restart of the
+        // device" after verifying. A step 4 that only connected and read
+        // the descriptor, without ever sending A_Restart, would still pass
+        // every assertion above.
+        assert!(
+            device
+                .seen()
+                .iter()
+                .any(|entry| matches!(entry, Seen::Restart { .. })),
+            "step 4 must restart the device, not just verify it: {:?}",
+            device.seen()
+        );
     }
 
     /// MP §2.3's own re-assignment case: `IA_new` already answers, and the

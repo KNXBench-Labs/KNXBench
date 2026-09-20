@@ -317,8 +317,11 @@ them, and do not quietly fold pieces of them into another task.
   actionable when a sample appears; do not synthesize one and call it
   evidence.
 - **§13 / row A6 — password-protected projects.** Partially closed
-  2026-09-13: ETS6 AES/PBKDF2 derivation lives in `crates/knx-secure`. The
-  ZipCrypto (ETS4/5) side remains.
+  2026-09-13: ETS6 AES/PBKDF2 derivation lives in `crates/knx-secure`. This
+  line had the two halves the wrong way round — corrected 2026-09-20 against
+  §13 itself: **ZipCrypto (ETS4/ETS5) is what is decrypted today, and the AES
+  (ETS6) side is what remains**, blocked on a real sample rather than on a
+  decision.
 - **§62 — passive Group Monitor real-gateway verification completed
   2026-09-16, re-verified 2026-09-19 (a restatement against new
   measurement, not a fix).** Three bounded production-path sessions (52,
@@ -390,7 +393,8 @@ suite green:
     does not expose the ancestor selector chain the motion guard needs.
 14. The unenforced contrast invariant is recorded in ADR-0022 and
     `IMPLEMENTATION_STATUS.md` but not in `docs/KNOWN_LIMITATIONS.md`, where
-    the other 92 numbered limitations live.
+    the other numbered limitations live (92 when this was written; 119 as of
+    2026-09-20, and this item is closed — it is §120).
 15. ADR-0022's no-hard-coded-colours rule is **unenforced on the component
     layer**. The T37 reviewer put `color: #ff00aa` into a component rule and
     all 541 tests stayed green. The boundary test proves that theme blocks are

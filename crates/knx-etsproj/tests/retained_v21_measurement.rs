@@ -2,7 +2,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use knx_etsproj::{export::export_knxproj, import_knxproj_bytes, opaque::OpaqueEntry, Container};
+use knx_etsproj::export::{export_knxproj, ExportWarning};
+use knx_etsproj::{import_knxproj_bytes, opaque::OpaqueEntry, Container};
 use knx_testsupport::{
     corpus_available, reference_ets4_path, reference_ets6_path, reference_kv_schema21_path,
 };
@@ -13,7 +14,6 @@ use quick_xml::Reader;
 struct RoundTrip {
     source_xml: Vec<u8>,
     export_xml: Vec<u8>,
-    #[allow(dead_code)]
     warnings: Vec<knx_etsproj::export::ExportWarning>,
 }
 
@@ -184,6 +184,44 @@ fn divergences(source_xml: &[u8], export_xml: &[u8]) -> BTreeSet<(String, String
     out
 }
 
+/// Attributes the export writes onto an element the source did not have
+/// them on, `(element, attribute) -> instances`. The blind spot
+/// [`losses`] and [`divergences`] share: both walk the *source* document,
+/// so an attribute that only exists in the export is invisible to them —
+/// and a retained value landing on an element that never carried it looks
+/// exactly like that. `<whole element>` means the export invented an
+/// element the source has no counterpart for.
+fn additions(source_xml: &[u8], export_xml: &[u8]) -> BTreeMap<(String, String), usize> {
+    let src = elements(source_xml);
+    let exp = elements(export_xml);
+    let mut out: BTreeMap<(String, String), usize> = BTreeMap::new();
+    for (key, attrs) in &exp {
+        let element = element_of(key);
+        let Some(original) = src.get(key) else {
+            *out.entry((element, "<whole element>".to_string()))
+                .or_default() += 1;
+            continue;
+        };
+        for name in attrs.keys() {
+            if !original.contains_key(name) {
+                *out.entry((element.clone(), name.clone())).or_default() += 1;
+            }
+        }
+    }
+    out
+}
+
+/// `"DeviceInstance"` from `".../Line[P-1_L-2]/DeviceInstance[P-1_DI-3]"`.
+fn element_of(key: &str) -> String {
+    key.rsplit('/')
+        .next()
+        .expect("split always yields one part")
+        .split('[')
+        .next()
+        .expect("split always yields one part")
+        .to_string()
+}
+
 /// The expected residue of one corpus project: attributes that go in and
 /// do not come back out, `(element, attribute) -> instances`.
 fn expect_losses(rt: &RoundTrip, expected: &[(&str, &str, usize)], project: &str) {
@@ -211,6 +249,103 @@ const ALLOWED_DIVERGENCE: &[(&str, &str)] = &[
     ("DeviceInstance", "LastModified"),
 ];
 
+/// Attributes the export is allowed to write onto an element that did not
+/// carry them, each with the reason it is allowed. An allow-list without
+/// reasons is a way to not look.
+///
+/// None of these is a retained value on a foreign element — every one is
+/// the model writing a field it always writes. Measured identical at this
+/// branch's base commit, so none of them arrived with §34's fix.
+const ALLOWED_ADDITION: &[(&str, &str, &str)] = &[
+    (
+        "GroupAddress",
+        "Central",
+        "an opt-in flag the model carries as a plain bool and the writer \
+         always spells; absent in the source means the same false it writes",
+    ),
+    (
+        "GroupAddress",
+        "Unfiltered",
+        "same as Central: an always-written bool whose absent form and \
+         written form mean the same thing",
+    ),
+    (
+        "DeviceInstance",
+        "Name",
+        "the model has no absent name, only an empty one, so a nameless \
+         source device comes back with Name=\"\" — the same empty string \
+         Installation/@Name loses in the other direction",
+    ),
+    (
+        "DeviceInstance",
+        "ApplicationProgramLoaded",
+        "download state: absent means not loaded, which is what the model \
+         holds and the writer spells out (crates/knx-etsproj/tests/download_state.rs)",
+    ),
+    (
+        "DeviceInstance",
+        "CommunicationPartLoaded",
+        "download state, as above",
+    ),
+    (
+        "DeviceInstance",
+        "IndividualAddressLoaded",
+        "download state, as above",
+    ),
+    (
+        "DeviceInstance",
+        "MediumConfigLoaded",
+        "download state, as above",
+    ),
+    (
+        "DeviceInstance",
+        "ParametersLoaded",
+        "download state, as above",
+    ),
+    (
+        "ComObjectInstanceRef",
+        "<whole element>",
+        "ADR-0014: the device's GroupObjectTree is the authoritative id \
+         list, so an id listed there with no instance override of its own \
+         still becomes a communication object and is written back as a bare \
+         <ComObjectInstanceRef RefId=…/>. The RefId comes from the same \
+         device's own document, so nothing is invented — the element is \
+         spelled out where the source left it implied",
+    ),
+    (
+        "ComObjectInstanceRef",
+        "IsActive",
+        "NOT benign, allow-listed to keep the rest of this instrument \
+         honest: ETS spells @IsActive on all 907 schema-11 refs and on none \
+         of the 717 schema-≥21 ones measured here, and the importer reads \
+         absent as false, so the export states inactive where the source \
+         stated nothing. Whether the schema's default is true (making this \
+         a misread of every modern project's objects) is not settled by the \
+         corpus — no ≥21 file spells it either way. Raised in task 03's fix \
+         round; it belongs to whoever owns the com-object model, not to §34",
+    ),
+];
+
+fn expect_no_additions(rt: &RoundTrip, project: &str) {
+    let allowed: BTreeSet<(String, String)> = ALLOWED_ADDITION
+        .iter()
+        .map(|(e, a, _)| (e.to_string(), a.to_string()))
+        .collect();
+    let unexpected: BTreeMap<_, _> = additions(&rt.source_xml, &rt.export_xml)
+        .into_iter()
+        .filter(|((element, attribute), _)| {
+            !allowed.contains(&(element.clone(), attribute.clone()))
+        })
+        .collect();
+    assert!(
+        unexpected.is_empty(),
+        "{project}: the export wrote an attribute onto an element the source \
+         did not have it on: {unexpected:?}. A retained value landing on the \
+         wrong element is the failure §34 exists to prevent; a model default \
+         that is always written belongs in ALLOWED_ADDITION, with a reason."
+    );
+}
+
 fn expect_no_corruption(rt: &RoundTrip, project: &str) {
     let allowed: BTreeSet<(String, String)> = ALLOWED_DIVERGENCE
         .iter()
@@ -223,6 +358,30 @@ fn expect_no_corruption(rt: &RoundTrip, project: &str) {
         "{project}: an exported attribute holds a value the source did not \
          have: {unexpected:?}. §34's rule is that a wrong value is worse \
          than a missing one."
+    );
+}
+
+/// The export's own account of what it dropped, checked against what the
+/// documents say. §34's table claims these three projects lose no retained
+/// attribute and no retained element; the warnings are where that claim
+/// would first break, so they are asserted rather than merely collected.
+fn expect_no_retained_residue(rt: &RoundTrip, project: &str) {
+    let residue: Vec<_> = rt
+        .warnings
+        .iter()
+        .filter(|w| {
+            matches!(
+                w,
+                ExportWarning::RetainedAttributeNotExported { .. }
+                    | ExportWarning::RetainedElementNotExported { .. }
+            )
+        })
+        .collect();
+    assert!(
+        residue.is_empty(),
+        "{project}: the export reported retained data it could not write \
+         back: {residue:?}. §34 records these three projects as losing \
+         none, so either the writer regressed or the table needs redoing."
     );
 }
 
@@ -258,6 +417,8 @@ fn schema_21_round_trip_keeps_every_attribute_but_the_empty_ones() {
         );
     }
     expect_no_corruption(&rt, "KV schema 21");
+    expect_no_additions(&rt, "KV schema 21");
+    expect_no_retained_residue(&rt, "KV schema 21");
 }
 
 #[test]
@@ -269,6 +430,8 @@ fn schema_23_round_trip_keeps_every_attribute_but_the_empty_one() {
     let rt = round_trip(&reference_ets6_path());
     expect_losses(&rt, &[("Installation", "Name", 1)], "ETS 6.3.0 schema 23");
     expect_no_corruption(&rt, "ETS 6.3.0 schema 23");
+    expect_no_additions(&rt, "ETS 6.3.0 schema 23");
+    expect_no_retained_residue(&rt, "ETS 6.3.0 schema 23");
 }
 
 #[test]
@@ -280,6 +443,8 @@ fn schema_11_round_trip_keeps_every_attribute() {
     let rt = round_trip(&reference_ets4_path());
     expect_losses(&rt, &[], "ETS4 schema 11");
     expect_no_corruption(&rt, "ETS4 schema 11");
+    expect_no_additions(&rt, "ETS4 schema 11");
+    expect_no_retained_residue(&rt, "ETS4 schema 11");
 }
 
 /// The sharp case from §34: a hardware serial number belongs to exactly one

@@ -1277,6 +1277,19 @@ input, select, textarea {
   font-family: var(--knx-font-body);
   max-width: 100%;
 }
+/* A disabled field has to look disabled. The UA's own `select:disabled`
+   greying is an origin below every author rule, so `input, select` above
+   silently overrode it and the disabled accent dropdown (SettingsPanel,
+   for a theme whose accent is part of its identity) looked exactly like a
+   working one. This matches `button:disabled`'s treatment on purpose —
+   same opacity, same cursor, same muted ink — so "you cannot use this"
+   reads the same everywhere. The `:disabled` specificity (0,1,1) also puts
+   it above `.settings-field select`, which is where the accent one lives. */
+input:disabled, select:disabled, textarea:disabled {
+  color: var(--knx-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 textarea { resize: vertical; }
 :focus-visible { outline: 2px solid var(--knx-accent); outline-offset: 3px; }
 th, td { padding: var(--knx-cell-padding); }

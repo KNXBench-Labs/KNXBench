@@ -1,10 +1,10 @@
 # Limitierungen nach Kritikalität
 
-Sortierung der 117 Einträge aus [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)
+Sortierung der 118 Einträge aus [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)
 (`grep -c '^## [0-9]' docs/KNOWN_LIMITATIONS.md`), Stand 2026-09-20. Diese Datei
 ordnet nur — sie ersetzt keinen Eintrag und enthält keine neuen Fakten.
 Maßgeblich bleibt der Volltext dort. §105 ist absichtlich nicht eingestuft
-(siehe unten); die restlichen 116 sind es.
+(siehe unten); die restlichen 117 sind es.
 
 Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 
@@ -79,7 +79,7 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | 71 | Vor Store-Schema 6 importierte Projekte haben keine Modul-Instanz-Ids | Nicht beschreibbar ohne Neuimport. |
 | 16 | Tauri v2 hängt unter Linux an archivierten GTK3-Bindings | `cargo deny` meldet es; Abhängigkeit ohne Wartung. |
 
-## K3 — mittel (51)
+## K3 — mittel (52)
 
 | § | Thema | Warum K3 |
 | --- | --- | --- |
@@ -126,6 +126,7 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | 97 | Fortschritt ist meist eine Phasenbezeichnung, keine Prozentzahl |
 | 102 | Der Decode-Fehlerzweig des Write-Echos hat keinen bekannten Auslöser |
 | 103 | „Ungespeichert" wird aus dem Undo-Stack erschlossen, kein echtes Dirty-Flag |
+| 119 | Kein Test prüft, ob ein Theme lesbar ist | Die fünf ausgelieferten Paletten wurden von Hand gemessen und bestehen; ungedeckt ist erst das nächste Theme. |
 | 64 | `Languages`-Blöcke außerhalb eines Programms — Ingestion gelöst, Lesen teilweise |
 | 104 | Gerät offline mitten in `LoadCompleting` kostet vollen Reconnect pro Poll | Latenz/Bustraffic, laut Eintrag ausdrücklich keine Korrektheitsfrage. |
 | 106 | Debug-Report redigiert vier Musterklassen, sonst nichts | Bewusst begrenzt, offengelegt, Zip wird vor Versand angezeigt. |

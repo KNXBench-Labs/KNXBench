@@ -1,10 +1,22 @@
 # Performance baseline
 
-A reproducible timing of the five stages every large project has to survive:
-import, open, projection, search, export. Not a claim that this is fast
-enough, or slow — just what one specific piece of hardware measured, on one
-specific size of project, on one specific day, so the next measurement has
-something to be compared against.
+A reproducible timing of the stages every large project has to survive:
+import, open, projection, search. Not a claim that this is fast enough, or
+slow — just what one specific piece of hardware measured, on one specific
+size of project, on one specific day, so the next measurement has something
+to be compared against.
+
+**Harness change, 2026-09-20.** There used to be a fifth stage, `export`,
+and it was also how the harness produced the `.knxproj` the `import` stage
+read. `.knxproj` writing was withdrawn
+([ADR-0028](adr/0028-no-knxproj-export.md)), so `export_ms` and
+`knxproj_bytes` are gone from the output and `import_ms` now measures the
+real ETS4 reference project out of the gitignored `OriginalData/` corpus —
+skipped entirely when that corpus is absent. **The old and new `import_ms`
+figures are not comparable**: one parsed a 407,784-byte synthetic file with
+5,000 devices, the other parses a real 36-device project. Every number
+recorded below predates the change and is kept as a historical record, not
+as a target to beat.
 
 ## What "large" means here
 
@@ -34,19 +46,17 @@ project round-trips through the same code a real `ThreeLevel` project would.
 The generated project is fed through **production code**, not a shortcut
 written only for this benchmark:
 
-1. **export** — `knx_etsproj::export::export_knxproj` writes the generated
-   `Project` to `.knxproj` bytes (with one placeholder `Signature` opaque
-   entry, so the file round-trips through `Container::open` on the way
-   back in).
-2. **import** — `knx_app::import_ets_project`, the same function the
-   desktop/web import path calls, reads the `.knxproj` back into a fresh
-   SQLite-backed store.
-3. **open** — `knx_store::save_project` (untimed setup) followed by a timed
+1. **import** — `knx_app::import_ets_project`, the same function the
+   desktop/web import path calls, reads the ETS4 reference `.knxproj` into
+   a fresh SQLite-backed store. Skipped, with a printed notice, when the
+   `OriginalData/` corpus is not present; the remaining stages do not
+   depend on it.
+2. **open** — `knx_store::save_project` (untimed setup) followed by a timed
    `knx_store::load_project` against a second fresh `.knxdb`: "open" means
    reading a database, not writing one.
-4. **projection** — `knx_projection::build_project_tree` over the project
+3. **projection** — `knx_projection::build_project_tree` over the project
    that came back out of the store.
-5. **search** — 41 case-insensitive substring queries (20 device names, 20
+4. **search** — 41 case-insensitive substring queries (20 device names, 20
    group-address names, 1 deliberate miss) against the loaded project.
    **This is not the frontend's search algorithm.** The real search lives
    client-side, in `apps/knx-web/src/searchMatch.ts`; no equivalent exists
@@ -63,7 +73,7 @@ An `#[ignore]`d `cargo test` integration test. `cargo test --workspace`
 a second to that run — while `cargo test -p knx-app --release --test
 perf_baseline -- --ignored` runs it on demand. A feature flag would have
 meant a second Cargo feature just for one test file; a dedicated binary
-would have meant reimplementing the store/import/export wiring `knx-app`'s
+would have meant reimplementing the store and import wiring `knx-app`'s
 existing dev-dependencies already provide. `--ignored` was the smallest
 change that satisfied "does not slow the normal test run."
 
@@ -94,7 +104,7 @@ Measured 2026-09-14 on:
   above is a statement about the measurement window and not about the whole
   afternoon. A run on an otherwise idle machine may come out faster; a run
   alongside a workspace build will come out slower. Neither invalidates the
-  ratios between the five stages, which is what this file is actually for.
+  ratios between the stages, which is what this file is actually for.
 
 Command:
 
@@ -102,7 +112,8 @@ Command:
 cargo test -p knx-app --release --test perf_baseline -- --ignored --nocapture
 ```
 
-Output:
+Output (the 2026-09-14 harness, which still had an `export` stage and
+imported its own output — see the harness note at the top of this file):
 
 ```
 PERF device_count=5000 group_address_count=20000 building_depth=5 com_objects=20000
@@ -116,8 +127,8 @@ PERF search_total_ms=19.031 queries=41 avg_us_per_query=464.2
 
 | Stage | Time |
 |---|---|
-| export (`.knxproj`, 407,784 bytes) | 78.0 ms |
-| import (`.knxproj` → store) | 179.2 ms |
+| export (`.knxproj`, 407,784 bytes) — stage removed 2026-09-20 | 78.0 ms |
+| import (synthetic `.knxproj` → store) — input changed 2026-09-20 | 179.2 ms |
 | open (`load_project` from `.knxdb`) | 945.1 ms |
 | projection (`build_project_tree`) | 18.4 ms |
 | search (41 substring queries) | 19.0 ms total, 464.2 µs/query |
@@ -231,7 +242,7 @@ individually, so that remaining device/binary N+1 work is deliberately outside
 this change.
 
 On the machine and command described above, one post-change release run
-reported:
+reported (again, the 2026-09-14 harness with its `export` stage):
 
 ```text
 PERF device_count=5000 group_address_count=20000 building_depth=5 com_objects=20000

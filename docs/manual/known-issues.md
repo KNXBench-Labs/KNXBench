@@ -83,55 +83,30 @@ published, and the version number is not a promise that anything is finished.
 
 ## Export
 
-### Every export is unsigned, and no real ETS has ever re-imported one
+### `.knxproj` export was withdrawn on 2026-09-20
 
-- **Affected:** exporting a `.knxproj`.
-- **Limitation:** KNXBench does not sign the containers it writes, and
-  whether a real ETS installation accepts an unsigned third-party
-  `.knxproj` has never been tested. Every export carries this warning; it is
-  constructed before anything else can fail, so no export exists without it.
-  Signature entries copied through from the source file are reported as
-  stale, because they no longer match what they sign.
-- **Consequence:** treat export as a one-way door until you have verified it
-  against your own ETS. It may work. Nobody here can tell you that it does.
-- **Workaround:** keep the original file. Do not make an exported container
-  the only copy of anything.
-- **Details:** [§5 exports are unsigned](../KNOWN_LIMITATIONS.md#5-exports-are-unsigned-and-ets-acceptance-is-untested),
-  [§85 a `.signature` member is stored, never verified](../KNOWN_LIMITATIONS.md#85-a-signature-package-member-is-stored-with-role-signature-never-verified)
-
-### A round trip is semantic, not byte-exact
-
-- **Affected:** import followed by export of the same project.
-- **Limitation:** the exported file carries the same meaning as the imported
-  one, not the same bytes. Element order, formatting and other incidental
-  details are regenerated.
-- **Consequence:** `diff` between the original and the export is not a
-  useful check, and the two files will not have the same checksum.
-- **Details:** [§4 round trips are semantic, not byte-exact](../KNOWN_LIMITATIONS.md#4-round-trips-are-semantic-not-byte-exact)
-
-### Read on init is editable, and is not exported
-
-- **Affected:** the sixth communication flag, `I`, when you set it yourself.
-- **Limitation:** the flag is stored, undoable and persisted in the `.knxdb`
-  project file, but no measured ETS project file states it per communication
-  object, so the exporter does not write it.
-- **Consequence:** it does not survive a trip through `.knxproj`. The export
-  warns and names how many communication objects are affected, so the loss is
-  never silent.
-- **Workaround:** keep the native `.knxdb` as the master copy. The behaviour
-  is described in full under
-  [communication objects](user-guide/05-devices-and-products.md#communication-objects).
-- **Details:** [§117 `read_on_init_flag`](../KNOWN_LIMITATIONS.md#117-read_on_init_flag-is-parsed-and-stored-then-discarded-before-it-reaches-knx-core)
-
-### Exporting at schema 21 or newer drops a few known-but-unmapped attributes
-
-- **Affected:** projects imported from ETS5/ETS6 and exported again.
-- **Limitation:** a small set of per-device and per-line attributes that the
-  newer schemas carry are recognised on import but not written back.
-- **Consequence:** a narrow, named category of information does not survive
-  the round trip.
-- **Workaround:** none; the attributes are listed in the linked entry.
-- **Details:** [§34 schema-21 export drops a handful of attributes](../KNOWN_LIMITATIONS.md#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes)
+- **Affected:** anyone who expected to write an ETS file out of KNXBench.
+- **Limitation:** KNXBench reads a `.knxproj` and never writes one. The
+  exporter, the `knx export` subcommand, the `POST /api/project/export` route
+  and the "Export to .knxproj…" button were all removed
+  ([ADR-0028](../adr/0028-no-knxproj-export.md)). Once a project has been
+  imported it stays in KNXBench's own `.knxdb` format.
+- **Consequence:** this section used to list four separate export defects — an
+  unsigned container no ETS had ever accepted, a round trip that was semantic
+  rather than byte-exact, an unexported Read-on-init flag, and a handful of
+  schema-≥21 attributes that were not written back. All four are closed for
+  the same reason: there is nothing writing a `.knxproj` for them to go wrong
+  in. The underlying entries are kept as history in
+  [§4](../KNOWN_LIMITATIONS.md#4-round-trips-are-semantic-not-byte-exact),
+  [§5](../KNOWN_LIMITATIONS.md#5-exports-are-unsigned-and-ets-acceptance-is-untested),
+  [§34](../KNOWN_LIMITATIONS.md#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes--resolved-2026-09-20)
+  and
+  [§117](../KNOWN_LIMITATIONS.md#117-read_on_init_flag-is-parsed-and-stored-then-discarded-before-it-reaches-knx-core).
+- **Workaround:** keep the `.knxproj` you imported — KNXBench never changed it
+  — and use the group-address CSV or the HTML project documentation to hand
+  data to other tools.
+- **Details:** [ADR-0028](../adr/0028-no-knxproj-export.md),
+  [`docs/COMPATIBILITY.md` §4](../COMPATIBILITY.md#4-not-supported)
 
 ## Devices and product data
 

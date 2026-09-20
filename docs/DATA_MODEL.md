@@ -10,9 +10,12 @@ implemented the rest of the domain model described here, in `knx-core`, plus
 the migration-chain skeleton in `knx-store`. Session 3 added one more type,
 `Override<T>` — see the amendment in section 3 and
 [ADR-0010](adr/0010-per-attribute-override-representation.md) — and built
-the importer/exporter (`knx-etsproj`) that actually constructs and
-round-trips this model against a real project; it added no other new
-`knx-core` type. Every section below states whether it is **implemented**,
+the importer (`knx-etsproj`) that actually constructs this model from a
+real project; it added no other new `knx-core` type. Session 3 also built a
+`.knxproj` writer, which was withdrawn on 2026-09-20
+([ADR-0028](adr/0028-no-knxproj-export.md)) — the model is unchanged by
+that, but sentences below that explain a design choice by what "export
+writes" are explaining a decision made when one existed. Every section below states whether it is **implemented**,
 **planned** or **retained but uninterpreted**, so that the document can be
 read as a status as well as a design.
 
@@ -34,9 +37,10 @@ for example `M-006A_A-0001-22-26C0_O-0_R-10001`, together with the path in the
 source document it came from.
 
 ETS identifiers are never used as primary keys. They collide across projects
-and they change. They are also never discarded: export needs them to write a
-file ETS can read, and provenance needs them to explain where a value came
-from.
+and they change. They are also never discarded: provenance needs them to
+explain where a value came from, retained attributes are keyed by them
+(`knx_etsproj::xpath`), and the project diff uses them to recognize the same
+entity across two imports.
 
 Note that ETS ids are not opaque. `ComObjectInstanceRef/@RefId` is a compound
 key — application program id, `_O-<ComObject number>`, `_R-<ComObjectRef id>` —
@@ -66,8 +70,8 @@ needed for the second step.
 Enrichment writes **only into `Override::Absent` slots**
 ([ADR-0012](adr/0012-enrichment-into-absent-slots.md)): `Empty`,
 `Malformed` and an instance-level `Value` are what the project file
-actually said, and overwriting any of them would change what export
-writes back. A space-separated, multi-alternative `ComObjectRef/
+actually said, and overwriting any of them would destroy the record of
+that. A space-separated, multi-alternative `ComObjectRef/
 @DatapointType` (RESEARCH §4.2) fills nothing and is reported rather than
 guessed. `ComObjectInstance.size` is the one field enrichment fills
 without this restriction, exactly per its own doc comment's stated
@@ -109,7 +113,8 @@ sampled here, which is why the instance row above names five and
 758 of 907 instances carry a `DatapointType` attribute at instance level at
 all (149 do not). An importer that reads only the application program is
 therefore wrong for the large majority of objects, and a model without
-provenance cannot decide what to write back on export.
+provenance cannot tell the user which of the three layers a value it is
+showing actually came from.
 
 No resolved scalar exists without its layer, and no overridable attribute
 exists without its three-state presence:
@@ -140,7 +145,8 @@ pub struct Resolved<T> {
 /// ADR-0010. `Override::Empty` and `Override::Absent` are distinct:
 /// collapsing them loses exactly the 497-vs-149 distinction above.
 /// `Override::Malformed` keeps the raw text of a present value that
-/// could not be parsed, so export does not silently drop it.
+/// could not be parsed, so the file's own text is never silently
+/// replaced by a guess.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum Override<T> {
     #[default]
@@ -151,22 +157,25 @@ pub enum Override<T> {
 }
 ```
 
-Export semantics follow from the layer alone, which is what
-`Layer::is_exported()` returns:
+Whether a value is the project's **own** follows from the layer alone,
+which is what `Layer::is_exported()` returns:
 
-| Layer | Origin | Written to `0.xml` on export |
+| Layer | Origin | The project's own value |
 | --- | --- | --- |
 | `Program`, `ProgramRef` | Product database | No |
 | `Instance` | Present in the source project | Yes |
 | `UserEdit` | Changed in this application | Yes |
 | `Inferred` | Derived by us, for example a DPT from linked objects | No — shown in the UI as inferred |
 
-`Override::Absent` writes no attribute; `Override::Empty` writes an empty
-one; `Override::Malformed` writes its raw text back verbatim;
-`Override::Value` writes only if its layer's `is_exported()` is true —
-so `Layer::Inferred`/`Program`/`ProgramRef` inside an `Override::Value` are
-excluded the same way an unwrapped `Resolved<T>` at those layers already
-was. See [ADR-0004](adr/0004-provenance-model.md) for the layer model and
+The method's name is a fossil of the `.knxproj` writer that first needed
+the distinction (ADR-0028 withdrew it on 2026-09-20). The distinction
+itself did not go anywhere: `knx-diff` uses it to decide what is worth
+comparing, and the CSV and documentation exports use it to decide what is
+worth writing. All four `Override` states keep their meanings — `Absent`
+is "never stated", `Empty` is "stated as an empty string", `Malformed`
+holds the unparsable raw text, and `Value` carries its layer with it —
+because the point of the distinction was always to record what the source
+file said, not to drive one writer. See [ADR-0004](adr/0004-provenance-model.md) for the layer model and
 [ADR-0010](adr/0010-per-attribute-override-representation.md) for why it is
 wrapped in `Override<T>` per attribute rather than applied once per object.
 
@@ -375,8 +384,9 @@ directly into the project and keeps no translation for it (measured: this
 session's importer never calls `StringTable::insert`, since it ingests no
 application program yet). `Text::Localized` is reachable only once an
 application program is ingested (Session 4) and resolves a `Program`/
-`ProgramRef`-layer value — which `Layer::is_exported()` excludes from export
-regardless, so the distinction matters for display, not for round-tripping.
+`ProgramRef`-layer value — which `Layer::is_exported()` rejects as not the
+project's own regardless, so the distinction matters for display, not for
+what any writer emits.
 
 This is retrofit-hostile — replacing `String` with a handle after the fact
 touches every entity, every projection and every test — which is why it is in
@@ -432,8 +442,8 @@ Two rules that an over-strict model would get wrong:
 - **A group address with no linked communication object at all is normal** —
   110 of 514.
 
-Both must survive import and export unchanged. Neither is a validation failure;
-at most, both are findings in a report.
+Both must survive import unchanged and stay that way in `.knxdb`. Neither is
+a validation failure; at most, both are findings in a report.
 
 Datapoint types are referenced, not inlined: `knx_master.xml` defines 289 DPT
 subtypes, which belong to the product database rather than to each project.

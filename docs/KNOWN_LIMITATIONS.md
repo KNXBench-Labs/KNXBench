@@ -406,6 +406,16 @@ by this slice.
 
 ## 4. Round trips are semantic, not byte-exact
 
+**Closed 2026-09-20 — export withdrawn.** There is no round trip left to be
+byte-exact or semantic about: KNXBench writes no `.knxproj`
+([ADR-0028](adr/0028-no-knxproj-export.md)). The entry is kept because it
+records why byte-exactness was never promised, and because the underlying
+facts — signatures cannot be regenerated, attribute order is not stable,
+ETS owns its internal identifiers — are still true of any file this project
+reads. What replaces the three guarantees is the import-fidelity statement
+in [IMPORT_EXPORT.md](IMPORT_EXPORT.md) section 9. The original entry
+follows, unedited.
+
 **Limitation.** An exported file is not byte-identical to the imported one
 (risk R4).
 
@@ -418,9 +428,17 @@ differences. That is expected and is not evidence of data loss.
 **Lifted when.** Never — this one is structural. What replaces it are the three
 guarantees in [IMPORT_EXPORT.md](IMPORT_EXPORT.md): semantic model equality,
 hash equality of all opaque bytes, and an explicit unsigned-export statement.
-See [ADR-0007](adr/0007-roundtrip-fidelity.md).
+See [ADR-0007](adr/0007-roundtrip-fidelity.md), itself superseded by
+[ADR-0028](adr/0028-no-knxproj-export.md).
 
 ## 5. Exports are unsigned, and ETS acceptance is untested
+
+**Closed 2026-09-20 — export withdrawn.** No file is written, so no file has
+to be signed and none has to be accepted by ETS. Risk R9 is closed as not
+applicable rather than answered ([ADR-0028](adr/0028-no-knxproj-export.md)).
+Signature entries found in an imported container are still preserved
+byte-exact and still never verified — that part lives on as §85. The
+original entry follows, unedited.
 
 **Limitation.** Every file this application writes is unsigned, and whether ETS
 re-imports it is unknown (risk R9).
@@ -439,11 +457,10 @@ reported as `ExportWarning::StaleSignature { source_path }` per entry: it
 no longer matches the content it signs, since it cannot be regenerated
 without KNX's signing keys.
 
-**Lifted when.** Per [ADR-0015](adr/0015-native-output-drops-ets-reimport-goal.md)
-(Session 7), it isn't going to be: ETS reimport of our export is no longer
-a project goal, so this is not scheduled to be verified. The `.knxproj`
-exporter keeps working as-is and keeps saying it is unsigned; the native
-`.knxdb` file (ADR-0003) is the supported round-trip format.
+**Lifted when.** Never. ADR-0015 already dropped ETS reimport as a goal;
+[ADR-0028](adr/0028-no-knxproj-export.md) then removed the exporter
+outright. The native `.knxdb` file (ADR-0003) is the only format this
+application writes a project into.
 
 ## 6. Devices behind vendor plug-in DLLs
 
@@ -1400,6 +1417,13 @@ into the list at all.
 
 ## 21. Resolved: export refuses a group address without a range
 
+**Closed 2026-09-20 — export withdrawn.** The refusal and the error it
+returned went with the writer ([ADR-0028](adr/0028-no-knxproj-export.md)).
+The ruling behind it stands and is worth keeping in sight: a range-less
+group address is a legitimate thing to hold in `.knxdb` and was never
+something KNXBench would fake a representation for. The original entry
+follows, unedited.
+
 **Resolution, 2026-09-17.** Schema 11 and schema 21 encode group addresses
 inside their `GroupRange` tree. KNXBench has no verified faithful external
 representation for a range-less address, so both writers now return the typed
@@ -1994,6 +2018,19 @@ five sockets. One `read(2)` into a buffer large enough for the file is one
 pass of the iterator, and one consistent answer: 0 failures in 150 runs.
 
 ## 34. Schema-≥21 export drops a handful of known-but-unmapped, per-device/per-line attributes — RESOLVED (2026-09-20)
+
+**Closed 2026-09-20 — export withdrawn.** Resolved in the morning, made moot
+in the afternoon: the exporter this entry describes was deleted the same day
+([ADR-0028](adr/0028-no-knxproj-export.md)), together with
+`retained_v21_measurement.rs` and `retained_ambiguity.rs`. The measurement
+below is preserved because it is the only quantified statement of how much
+of a source file the *importer* holds on to, and the instance-exact key
+module it describes (`knx_etsproj::xpath`) is still in use — it is now how
+the import report says where a preserved value came from. The one remaining
+import-side gap it names is real and unchanged: an `Installation/@Name` or
+`@DefaultLine` that is the empty string in the source cannot be told apart
+from an absent one by the domain model. The original entry follows,
+unedited.
 
 **Resolved (2026-09-20).** Retained attributes are keyed by the element's
 own ETS id rather than by a schema-shaped path, and both exporters write
@@ -6673,6 +6710,17 @@ facts (`a_pre_v7_com_object_reads_its_sixth_flag_as_absent_not_false`).
 `"ReadOnInit"`) all carry it. `help.topic.limits.p2`, which said in prose
 that the flag "is not part of the project model", says something true again
 in both languages.
+
+**Amendment, 2026-09-20 — export withdrawn.** The two paragraphs below were
+written while a `.knxproj` writer existed. It does not
+([ADR-0028](adr/0028-no-knxproj-export.md)):
+`ExportWarning::ReadOnInitNotExported` and its two message-catalogue strings
+are gone with it, and there is no longer any case in which a project-layer
+Read-on-Init value fails to be written somewhere — `.knxdb` holds it like
+any other flag. What survives is the measurement, which is import-side
+evidence: ETS, as measured here, does not write a per-instance Read-on-Init
+attribute, so `map_com_object` leaves the field `Override::Absent` rather
+than inventing a value.
 
 **Residue: no instance-level attribute to import or export.** The name
 `ReadOnInitFlag` is measured 2533 times in the local corpus and every

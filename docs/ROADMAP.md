@@ -16,7 +16,9 @@ Current position: **Session 3 complete**. See
 
 **Done.** The stack, the layering, the domain model design, the import and
 export contract, the compatibility statement, nine ADRs, and a Cargo workspace
-with two mechanically enforced rules and CI.
+with two mechanically enforced rules and CI. (The `.knxproj` half of that
+export contract was withdrawn on 2026-09-20 —
+[ADR-0028](adr/0028-no-knxproj-export.md).)
 
 ## Session 2 — KNX core
 
@@ -138,8 +140,9 @@ future cycle rather than bundled into "Session 4 leftovers":
   are resolved against their `ModuleDef`'s parameters and reported per
   instantiation when a binding is missing or its kind is unsupported.
 - **A layer stack in `Override<T>`** that would make a program value
-  behind an instance-level `Empty` slot visible without risking the export
-  change ADR-0012 identifies. A domain-model change with a migration; not
+  behind an instance-level `Empty` slot visible without risking the change
+  ADR-0012 identifies (which was an export change, back when there was an
+  export; the visibility question outlives it). A domain-model change with a migration; not
   worth taking for visibility alone without a consumer (the parameter
   editor, or a UI) that needs it.
 - **Resolving an ambiguous, space-separated `DatapointType` list**
@@ -765,8 +768,9 @@ T15 closed the display side for tunnelling.
 
 **Update, 2026-09-17 — performance measurement delivered.** The deterministic
 ignored release benchmark in `crates/knx-app/tests/perf_baseline.rs` measures
-export, import, native open, projection, and search over 5,000 devices, 20,000
-group addresses, and 20,000 communication objects. [PERFORMANCE.md](PERFORMANCE.md)
+import, native open, projection, and search over 5,000 devices, 20,000
+group addresses, and 20,000 communication objects. (It measured an `export`
+stage too until 2026-09-20; see the harness note in PERFORMANCE.md.) [PERFORMANCE.md](PERFORMANCE.md)
 records the baseline, the measured `load_project` investigation, and the
 bulk-load result. A fresh 2026-09-17 run passed on current `main`; its
 single-run values remain machine-specific observations rather than performance
@@ -890,10 +894,10 @@ architecture; each has a defined landing place.
 
 | Question | Lands in |
 | --- | --- |
-| ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Schema 21 import+export shipped and round-trip verified (one sample, KV demo project); schema 23 import shipped, module handling inferred not evidenced (no independent module-using schema-23 sample); schema 12, 13, 14, 20, 22 remain undocumented-by-evidence — no fixed session, lands whenever a sample becomes available for each. `Dynamic`/`choose`/`when`'s grammar (mentioned in the row below this one) is now provably avoidable for import (ADR-0014: `GroupObjectTree` already carries ETS's own resolution of it) rather than blocking; the `@test` value grammar itself is documented (RESEARCH §4.3), so this is now purely a parameter-editing (T18) concern, no longer a research one, and not an import one either. |
+| ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Schema 21 import shipped and, until export was withdrawn on 2026-09-20 ([ADR-0028](adr/0028-no-knxproj-export.md)), round-trip verified against one sample (the KV demo project); schema 23 import shipped, module handling inferred not evidenced (no independent module-using schema-23 sample); schema 12, 13, 14, 20, 22 remain undocumented-by-evidence — no fixed session, lands whenever a sample becomes available for each. `Dynamic`/`choose`/`when`'s grammar (mentioned in the row below this one) is now provably avoidable for import (ADR-0014: `GroupObjectTree` already carries ETS's own resolution of it) rather than blocking; the `@test` value grammar itself is documented (RESEARCH §4.3), so this is now purely a parameter-editing (T18) concern, no longer a research one, and not an import one either. |
 | `Functions` element semantics | Session 2 — a domain model addition; absent from the reference sample. Tracked as **T20** ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5); deferred 2026-09-11 by user ruling until the new KNX specification documentation is available — not rejected, stays on the roadmap. |
 | `when/@test` expression grammar | **Answered 2026-09-11** (RESEARCH §4.3): the Standard normatively specifies the `@test` value grammar; `Dynamic`'s structural grammar stays corpus-observed only. Session 4 built the product database around `Dynamic` staying unparsed regardless (`Dynamic`'s raw bytes retained, ADR-0011). **T18 slice 1, same day:** `knx-productdb` now parses, stores (schema v3, `dynamic_node`) and evaluates the tree headlessly. **T18 slice 2, same day:** the evaluator also expands `Module` into its `ModuleDef`'s own stored tree. **T18 slice 3, same day:** the editor shipped — `GET`/`POST /api/device/{id}/parameters` and an `apps/knx-web` panel, top-level fields read/write (design D20-D26; see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5). Module-scoped (per-channel) editing (D25) stayed unscheduled until **T18 slice 4, 2026-09-12** (design D35-D43) closed it: a scope-aware `ValueMap`, the retained `ModuleInstance/@Id`, server-side write-target reconstruction and a panel that writes the server's own id together make a module-scoped field writable when exactly one imported `ModuleInstance` is authoritative for it; repeated instantiation sharing one `RefId` stays refused, not supported (D40), and `Module` arguments stay stored-but-uninterpreted (see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [KNOWN_LIMITATIONS.md §68-§71](KNOWN_LIMITATIONS.md)). |
-| Whether ETS re-imports an unsigned third-party `.knxproj` | Session 3 delivered the mechanism (`ExportWarning::Unsigned`, always present); per ADR-0015 (Session 7), ETS reimport is no longer a project goal, so the verification itself (risk R9) is deprioritized — no fixed session, and none needed |
+| Whether ETS re-imports an unsigned third-party `.knxproj` | **Closed as not applicable, 2026-09-20.** Session 3 delivered the mechanism (`ExportWarning::Unsigned`, always present); ADR-0015 then dropped ETS reimport as a goal, and [ADR-0028](adr/0028-no-knxproj-export.md) removed the exporter and the warning with it. KNXBench writes no `.knxproj`, so there is nothing for ETS to re-import and risk R9 has no subject |
 | Whether Data Secure runtime keys are readable from `.knxproj` | Session 7 or later — `knx-secure` |
 | `.knxprod` encryption for master data scheme ≥ 12 | Session 4 delivered `.knxproj`-sourced product database ingest; 2026-09-10's standalone package installer (`knx_productdb::install_package`) showed the "encryption" premise was wrong for schemes 11 and 20 specifically — those 4 real-world files parse with no encryption at all, direct `.knxprod` ingest now works for both (see [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly)). Schemes 12-19/21/22 remain untested (no standalone sample acquired yet) and, as of 2026-09-11, **accepted out of scope by user decision** rather than merely unscheduled — no further sample-hunting is planned, though whether they are genuinely encrypted was never established either way. `.vd2` is a distinct legacy format, also **accepted out of scope, user decision 2026-09-11** (not an encryption question at all). See [KNOWN_LIMITATIONS.md §11](KNOWN_LIMITATIONS.md#11-knxprod-files-for-master-data-scheme--12-cannot-be-imported-directly) for both dated notes. |
 | The project licence | **Answered 2026-09-16:** `AGPL-3.0-or-later`; canonical text tracked in [`LICENSE`](../LICENSE), resolution recorded in [KNOWN_LIMITATIONS.md §10](KNOWN_LIMITATIONS.md#10-project-licence--resolved-2026-09-16). |

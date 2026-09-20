@@ -74,8 +74,8 @@ underlying model field exists.
 | C1 | **Closed for `.knxdb`-to-`.knxdb` comparison only (2026-09-10, T14).** A new `crates/knx-diff` crate (`diff_projects(&Project, &Project) -> ProjectDiff`, depending on `knx-core` only) computes a "KNXBench project diff" — never described as, or claiming parity with, ETS's own compare feature (no ETS-produced comparison sample exists anywhere in this repository to check against). Reachable from `knx diff <a.knxdb> <b.knxdb>` (`apps/knx-cli`), `POST /api/project/diff {path}` comparing the open project against a `.knxdb` file (`apps/knx-server`), and a "Compare with…" button (`ProjectDiffPanel.tsx`, `apps/knx-web`). | Answers "what changed between these two saves" for `.knxdb`-to-`.knxdb` comparisons. Does **not**: accept a raw `.knxproj` on either side; merge or apply a diff back onto a project; do a three-way (common-ancestor) comparison; do version history/time travel; or detect an ETS re-import's regenerated `RefId`s as "the same entity" (design spec §9 — full list in `KNOWN_LIMITATIONS.md` §51-§58). [KNOWN_LIMITATIONS.md §9](KNOWN_LIMITATIONS.md#9-project-files-are-not-diffable) is partially mitigated, not lifted: the `.knxdb` SQLite file itself is still not diffable at the file/version-control level — this closes the gap by giving the *application* a diff instead, per that entry's own "Lifted when" note. |
 | C2 | **Closed (2026-09-10, T12).** A new `knx-csv` crate reads and writes "KNXBench group-address CSV v1" — a format KNXBench defines and documents itself, **not** a claim of ETS CSV compatibility (no verified ETS sample exists anywhere in this repository or the KNX Standard v3.0.0 corpus). Reachable from `knx ga-export`/`knx ga-import [--dry-run]` on the CLI, `POST /api/group-addresses/csv-export`/`csv-import` on the server, and two toolbar buttons in the web group-address view. | Bulk-authoring group addresses in a spreadsheet is now possible without a full `.knxproj` round trip. See `IMPORT_EXPORT.md §11` for the format and `KNOWN_LIMITATIONS.md` for what it deliberately does not do (re-address, delete, touch group ranges, or apply `DatapointType`/`MainGroup`/`MiddleGroup`). |
 | C3 | **No partial/selective import.** ETS import here is all-or-nothing per project. | Cannot import "just this one line" or "just this device" from a `.knxproj`. |
-| C4 | **Closed (2026-09-10, T10).** `export_ets_project` now has three real callers: `knx export` on the CLI, `POST /api/project/export` on the server, and an "Export to .knxproj…" button in the web Project Explorer. | Closing this also surfaced and fixed two real data-integrity bugs (see `IMPLEMENTATION_STATUS.md`'s T10 entry for the full account): (1) server-side ETS import used a throwaway store, so Save As never persisted opaque passthrough / manufacturer manifest data, and an export taken after it silently lost that data — fixed by carrying that data through `AppState` into every save; (2) the two functions that write those tables (`knx_store::insert_opaque`/`insert_manufacturer_refs`) were plain `INSERT`s with no clear-first step, so once (1)'s fix made every save call them, a plain repeated Save duplicated every row without bound — fixed by clearing the tables before insert, matching `save_project`'s own convention. `export_project` was also changed to read opaque/manifest from live `AppState` instead of re-opening `store_path` off disk, closing off the staleness risk described in [KNOWN_LIMITATIONS.md #18](KNOWN_LIMITATIONS.md#18-open_project-does-not-clear-the-previous-knxdb-store_path) for this specific data (the broader gap in #18 itself is unchanged and out of scope here). |
-| C5 | **No signed export**, and ETS acceptance of an unsigned one is unverified. | [KNOWN_LIMITATIONS.md §5](KNOWN_LIMITATIONS.md#5-exports-are-unsigned-and-ets-acceptance-is-untested). |
+| C4 | **Closed (2026-09-10, T10), then withdrawn — export withdrawn 2026-09-20.** `export_ets_project` briefly had three real callers: `knx export` on the CLI, `POST /api/project/export` on the server, and an "Export to .knxproj…" button in the web Project Explorer. All three, and the writer behind them, were deleted by [ADR-0028](adr/0028-no-knxproj-export.md): KNXBench reads a `.knxproj` and never writes one, so this row records a gap that no longer applies rather than one that is open. | Closing this also surfaced and fixed two real data-integrity bugs (see `IMPLEMENTATION_STATUS.md`'s T10 entry for the full account): (1) server-side ETS import used a throwaway store, so Save As never persisted opaque passthrough / manufacturer manifest data, and an export taken after it silently lost that data — fixed by carrying that data through `AppState` into every save; (2) the two functions that write those tables (`knx_store::insert_opaque`/`insert_manufacturer_refs`) were plain `INSERT`s with no clear-first step, so once (1)'s fix made every save call them, a plain repeated Save duplicated every row without bound — fixed by clearing the tables before insert, matching `save_project`'s own convention. `export_project` was also changed to read opaque/manifest from live `AppState` instead of re-opening `store_path` off disk, closing off the staleness risk described in [KNOWN_LIMITATIONS.md #18](KNOWN_LIMITATIONS.md#18-open_project-does-not-clear-the-previous-knxdb-store_path) for this specific data (the broader gap in #18 itself is unchanged and out of scope here). |
+| C5 | **Closed — export withdrawn 2026-09-20.** There is no signed export because there is no export: [ADR-0028](adr/0028-no-knxproj-export.md) removed `.knxproj` writing altogether, so ETS acceptance of a KNXBench-written file is not a question this project asks any more. | [KNOWN_LIMITATIONS.md §5](KNOWN_LIMITATIONS.md#5-exports-are-unsigned-and-ets-acceptance-is-untested), closed with the same reason. |
 | C6 | **No online device-catalog update.** ETS pulls manufacturer catalog updates from an online service (myKNX / KNX Online Catalog). | `knx-productdb` only ingests what a `.knxproj` already bundles — there is no independent product-database update path at all. |
 
 ## D. UI/UX gaps vs. the ETS workbench
@@ -167,8 +167,9 @@ Each task: **what**, **why**, **depends on**.
 - **T5. Group-range CRUD commands.** **Done** (2026-09-06, backend only).
   `CreateGroupRange`/`DeleteGroupRange`/`RenameGroupRange` land; the
   the former export-drop bug is closed ([KNOWN_LIMITATIONS.md §21](KNOWN_LIMITATIONS.md#21-resolved-export-refuses-a-group-address-without-a-range)):
-  `range_id` remains optional, but schema-11/schema-21 export now refuses an
-  address it cannot represent instead of silently omitting it.
+  `range_id` remains optional, and the writer that used to drop such an
+  address — and was then made to refuse it loudly — no longer exists at all
+  (export withdrawn 2026-09-20, [ADR-0028](adr/0028-no-knxproj-export.md)).
 - **T6. Group-link editing command.** **Done** (2026-09-06, backend
   only). `LinkComObject`/`UnlinkComObject` land, finally calling the
   validation.rs function that already existed for this
@@ -330,19 +331,24 @@ Each task: **what**, **why**, **depends on**.
 ### Tier 3 — export & reporting parity
 
 - ~~**T10. Wire up `export_ets_project` to a real interface.**~~ **Closed
-  (2026-09-10).** `knx export` CLI subcommand, `POST /api/project/export`
-  on `knx-server`, and an "Export to .knxproj…" action in the web
-  Project Explorer all ship. Closes **C4**. Fixing it surfaced a
-  pre-existing data-integrity bug in the server's Save path (opaque
-  passthrough + manufacturer manifest data never persisted after an ETS
-  import) — fixed in the same branch, see `IMPLEMENTATION_STATUS.md`.
+  (2026-09-10), then undone — export withdrawn 2026-09-20.** The `knx
+  export` CLI subcommand, `POST /api/project/export` on `knx-server`, and
+  the "Export to .knxproj…" action in the web Project Explorer all shipped
+  and were all removed ten days later by
+  [ADR-0028](adr/0028-no-knxproj-export.md), together with the writer they
+  called. **C4** is closed as no longer applicable. The work was not
+  entirely wasted: doing it surfaced a pre-existing data-integrity bug in
+  the server's Save path (opaque passthrough + manufacturer manifest data
+  never persisted after an ETS import), and that fix outlives the feature
+  that found it — see `IMPLEMENTATION_STATUS.md`.
 - ~~**T11. Import-report review screen.**~~ **Closed (2026-09-10).** A new
   `SessionLog` (`apps/knx-server/src/session_log.rs`) accumulates
   `LogEntry { timestamp, severity, source, message, location, detail }`
   in memory for the current server process — never written to `.knxdb`,
   reset only on a successful import/native-open (a failed one appends an
   error entry without touching what's already there). Every
-  import/open/save/export/undo/redo/edit funnels through it: import
+  import/open/save/undo/redo/edit funnels through it (export was in that
+  list until 2026-09-20, [ADR-0028](adr/0028-no-knxproj-export.md)): import
   populates it from the same `ImportReport` used for `ProjectTree`'s
   counts (`from_import_report` maps `ImportError`/`UnknownConstruct`/
   `OpaqueSummary`/`Conflict`/`UnsupportedFeature` to warning/info/error
@@ -356,10 +362,10 @@ Each task: **what**, **why**, **depends on**.
   (the existing user-facing error string) on failure. A failure that
   never reaches that point — a bad address parse, an empty id list, no
   project open, no product database configured, a catalog item not found
-  — produces a toast but no log entry. Export was folded in using the
-  same info/error shape as save, even though the design doc's own
-  operation list didn't name it — the one other fallible project-level
-  operation would otherwise have been an arbitrary, undocumented gap.
+  — produces a toast but no log entry. `.knxproj` export was folded in
+  using the same info/error shape as save, even though the design doc's own
+  operation list didn't name it; that route is gone with the exporter, and
+  the CSV and documentation exports keep their own session-log sources.
   `GET /api/log` returns every entry for the session, oldest-first —
   filtering and ordering are frontend-only. `apps/knx-web` adds a
   `LogPanel.tsx` component and a "Log" toolbar button (disabled until a
@@ -450,7 +456,8 @@ Each task: **what**, **why**, **depends on**.
   "doc-export"`); `knx doc-export <store.knxdb> <out.html>`
   (`apps/knx-cli`); an "Export documentation…" button
   (`apps/knx-web/src/DocumentationExportButton.tsx`) in the same toolbar
-  row as the `.knxproj`/CSV export controls. Tested: `knx-report`'s own
+  row as the CSV export controls (the `.knxproj` button that once shared
+  that row was removed on 2026-09-20). Tested: `knx-report`'s own
   suite (`html.rs`/`model.rs`/`render.rs` unit tests, including
   determinism, escaping of `&`/`<`/`>`/`"`/`'` in names, self-containment,
   and every orphan/dangling-reference finding) is 43 tests via `cargo test

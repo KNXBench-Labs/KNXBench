@@ -97,7 +97,7 @@ pub enum GroupAddressStyle {
 pub struct GroupAddress(u16);
 
 impl GroupAddress {
-    pub fn from_raw(raw: u16) -> Self {
+    pub const fn from_raw(raw: u16) -> Self {
         Self(raw)
     }
 

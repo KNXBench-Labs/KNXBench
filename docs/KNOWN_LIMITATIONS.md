@@ -6211,8 +6211,6 @@ implemented as its own `Procedure`, distinct from the CP §3.5.3 one this
 module runs today. Per-part Download Counter instance mapping, for the
 second simplification above, can be lifted independently of either.
 
-## 115. `MasterResetResponse::recovery_wait` computes a duration nobody waits on yet
-
 ## 115. `MasterResetResponse::recovery_wait` and `SessionTiming::restart_basic_t1` compute durations nobody waits on yet
 
 **Limitation.** `[C15]` `ManagementSession::restart_master_reset`
@@ -6268,3 +6266,62 @@ recovery from a Basic Restart or Master Reset needs more than "restart,
 then let a fresh session reconnect" — at which point that procedure's own
 retry loop, not a speculative one built ahead of it, waits out the
 relevant timing value and implements MP §3.7.1.2.2's "one last time" retry.
+
+## 116. Two occupancy signals `individual_address_write` reports have no basis in MP §2.3's text, and step 3's re-verification is untested
+
+**Limitation.** `[C16]` `individual_address_write()`
+(`crates/knx-net/src/commissioning/individual_address_write.rs`) reports
+step 1's finding as one of four `Occupancy` variants. Only two of them —
+`OccupiedWithResponse` and `OccupiedWithoutDescriptor`'s `T_Disconnect`
+half — come from MP §2.3's own text, which describes exactly one
+sequence: connect, then either a `A_DeviceDescriptor_Response` or a
+`T_Disconnect` in its place. `OccupiedWithoutDescriptor`'s other half (the
+descriptor read itself timing out with the connection still open) and
+`OccupiedWithRejectedConnect` (a negative `T_Connect` confirmation, so no
+connection ever opened) are this project's own extension to a state space
+the clause never enumerates.
+
+Separately, step 3's mandatory re-verification —
+`IndividualAddressWriteError::RecountBeforeWrite`, for when "programming
+mode may have switched itself off" between step 2's count and the write —
+has no test exercising it actually firing. `SimulatorConfig` is immutable
+for a `SimulatedDevice`'s lifetime, so no fixture available today can make
+step 2's broadcast and step 3's re-broadcast disagree; both always see the
+same, static Programming Mode configuration.
+
+**Cause.** MP §2.3, p. 14 assumes a well-behaved Transport Layer under a
+connection: it does not consider a `T_Connect` refusal, or a connection
+that opens and then answers nothing at all, because normal operation does
+not produce either. Real hardware, or a deliberately adversarial
+simulator, can. Treating both as occupied — a negative confirmation
+proves a device answered at the Data Link Layer; an open connection this
+session holds is itself proof one exists — is this project's own
+extrapolation from the clause's stated cases, not a citation of one.
+`RecountBeforeWrite`'s untested status is a simpler cause: building a
+`SimulatedDevice` capability to reconfigure itself mid-run, for the sole
+purpose of exercising one error arm, is exactly the kind of feature this
+project builds when a task needs it rather than ahead of one — see §115's
+own reasoning for the same call made about a retry combinator.
+
+**Impact.** The two unsourced `Occupancy` variants change nothing about
+the stop/continue decision `KNOWN_LIMITATIONS.md` §108 documents — that
+decision compares addresses, not signal types, so every occupied variant
+is treated identically once occupancy is established. Their only effect
+is on what a report tells the operator. If a future edition of MP §2.3 or
+its errata describes these cases differently (or not at all), only the
+`Occupancy` enum and its documentation need revisiting, not the stop/
+continue logic. `RecountBeforeWrite`'s code path is otherwise ordinary —
+it calls the same, already-tested
+`ManagementSession::broadcast_individual_address_read` and
+`ProgrammingModeResponders::single_responder` that step 2 uses — so the
+risk carried by its being untested is narrow: a defect specific to
+running that call a second time in the same procedure, which nothing here
+has found reason to suspect exists.
+
+**Lifted when.** A `SimulatedDevice` capability to change its Programming
+Mode configuration mid-run exists for some other reason, at which point a
+test for `RecountBeforeWrite` costs nothing further to add. The two
+unsourced `Occupancy` variants are lifted, or replaced, if
+`docs/RESEARCH.md`'s knowledge-base audit turns up spec text or an
+erratum that describes a `T_Connect` refusal or a connected, unanswered
+descriptor read for this procedure.

@@ -323,6 +323,16 @@ pub struct SimulatorConfig {
     /// The state [`SimulatorConfig::settle_load_state_after`] settles to.
     /// Meaningless while that field is `None`.
     pub settled_load_state: LoadState,
+    /// `error_code` on the `A_Restart_Response` this device answers a
+    /// Master Reset request with. 0 is *"no error"*; the simulator does not
+    /// invent a table of the others, since MP §3.7.1.2.2 leaves the value
+    /// to the responding device.
+    pub restart_error_code: u8,
+    /// `process_time` on the same response, `DPT_TimePeriodSec` (MP
+    /// §3.7.1.2.2, pp. 80-81): *"a minimal time for the MaC to wait, not a
+    /// maximal time"*. `Duration::ZERO` by default so a test that does not
+    /// care about the wait does not pay for one.
+    pub restart_process_time: Duration,
 }
 
 /// The step of the §7.2 inner loop a simulated interruption strikes at.
@@ -457,6 +467,8 @@ impl Default for SimulatorConfig {
             drop_connection_on_download_counter_read: false,
             settle_load_state_after: None,
             settled_load_state: LoadState::Unloaded,
+            restart_error_code: 0,
+            restart_process_time: Duration::ZERO,
         }
     }
 }
@@ -507,6 +519,23 @@ pub enum Seen {
         data: Vec<u8>,
         /// Which of CP §3.5.2's two services carried it.
         service: MemoryService,
+    },
+    /// An `A_Restart`, request or response, in whichever shape it arrived —
+    /// `response` and `restart_type` are cemi.rs's own inline bits, kept
+    /// uninterpreted here for the same reason `cemi.rs` keeps `data`
+    /// uninterpreted: telling a Basic Restart from a Master Reset, or a
+    /// request from a response, is a test's job, not the log's.
+    Restart {
+        /// Set on an `A_Restart_Response`, clear on an `A_Restart` request.
+        response: bool,
+        /// 0 = Basic Restart, 1 = Master Reset (`cemi.rs`'s
+        /// `InvalidRestartType` already refuses anything else).
+        restart_type: u8,
+        /// Empty for a Basic Restart request; `[erase_code,
+        /// channel_number]` for a Master Reset request; `[error_code,
+        /// process_time_hi, process_time_lo]` for a Master Reset response
+        /// (MP §3.7.1.2.2, p. 81).
+        data: Vec<u8>,
     },
     /// Anything else, by name.
     Other(&'static str),
@@ -1108,6 +1137,15 @@ impl SimulatedDevice {
                 data: data.clone(),
                 service: MemoryService::UserMemory,
             },
+            ApplicationService::Restart {
+                response,
+                restart_type,
+                data,
+            } => Seen::Restart {
+                response: *response,
+                restart_type: *restart_type,
+                data: data.clone(),
+            },
             ApplicationService::NoApplicationPdu => return,
             other => Seen::Other(other.variant_name()),
         };
@@ -1246,6 +1284,27 @@ impl SimulatedDevice {
                         data: read_back,
                     });
                 }
+            }
+            // MP §3.7.1.1.3: *"The Application Layer of the Management
+            // Server shall not confirm the A_Restart-service if a Basic
+            // Restart is called"* — so `restart_type: 0` earns no arm here
+            // and falls to the catch-all below; the T_ACK `handle` already
+            // sent is this device's only word on the matter.
+            ApplicationService::Restart {
+                response: false,
+                restart_type: 1,
+                ..
+            } => {
+                // DPT_TimePeriodSec, big-endian (MP §3.7.1.2.2, pp. 80-81).
+                let process_time =
+                    u16::try_from(self.config.restart_process_time.as_secs()).unwrap_or(u16::MAX);
+                let mut data = vec![self.config.restart_error_code];
+                data.extend_from_slice(&process_time.to_be_bytes());
+                self.emit_answer(ApplicationService::Restart {
+                    response: true,
+                    restart_type: 1,
+                    data,
+                });
             }
             _ => {}
         }

@@ -592,7 +592,7 @@ mod tests {
     fn an_ipv4_address_is_redacted_in_prose_in_a_path_and_in_a_json_value() {
         let r = plain();
         assert_eq!(
-            r.apply("tunnel to KNX_GATEWAY:3671 failed"),
+            r.apply("tunnel to 172.22.9.4:3671 failed"),
             format!("tunnel to {IPV4_PLACEHOLDER}:3671 failed")
         );
         assert_eq!(
@@ -1060,10 +1060,10 @@ mod tests {
     #[test]
     fn the_report_and_the_log_are_redacted_but_the_telegrams_are_not() {
         let all = BundleInput {
-            description: "gateway KNX_GATEWAY dropped us".into(),
-            log: Some(serde_json::json!([{ "message": "tunnel KNX_GATEWAY closed" }])),
+            description: "gateway 172.22.9.4 dropped us".into(),
+            log: Some(serde_json::json!([{ "message": "tunnel 172.22.9.4 closed" }])),
             bus_telegrams: Some(
-                serde_json::json!([{ "source": "1.1.5", "gateway": "KNX_GATEWAY" }]),
+                serde_json::json!([{ "source": "1.1.5", "gateway": "172.22.9.4" }]),
             ),
             ..input()
         };
@@ -1080,11 +1080,11 @@ mod tests {
             )
             .unwrap()
         };
-        assert!(!text(REPORT_MD).contains("KNX_GATEWAY"));
-        assert!(!text(LOG_JSON).contains("KNX_GATEWAY"));
+        assert!(!text(REPORT_MD).contains("172.22.9.4"));
+        assert!(!text(LOG_JSON).contains("172.22.9.4"));
         assert!(text(LOG_JSON).contains(IPV4_PLACEHOLDER));
         // The whole point of the opt-in: this file keeps its addresses.
-        assert!(text(BUS_TELEGRAMS_JSON).contains("KNX_GATEWAY"));
+        assert!(text(BUS_TELEGRAMS_JSON).contains("172.22.9.4"));
         assert!(text(BUS_TELEGRAMS_JSON).contains("1.1.5"));
     }
 

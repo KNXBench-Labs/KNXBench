@@ -166,8 +166,9 @@ pub struct SessionTiming {
     /// How long `NM_IndividualAddress_Write` step 2 waits out a broadcast
     /// `A_IndividualAddress_Read` before counting who answered.
     ///
-    /// MP §2.3, p. 14: *"wait 1 second"* — a different figure from, and not
-    /// to be confused with, the 3 s
+    /// MP §2.3, p. 14 gives this figure only as a marginal note on step 2's
+    /// response arrow — *"time-out: 1 s"* — and nowhere as a sentence. It
+    /// is a different figure from, and not to be confused with, the 3 s
     /// [`knx_core::commissioning::programming_mode::INDIVIDUAL_ADDRESS_READ_TIMEOUT`]
     /// used by MP §2.2's plain programming-mode scan. The wait is never cut
     /// short by an early answer: a second responder may still be on the
@@ -1286,15 +1287,28 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// broadcast `A_IndividualAddress_Read`: send once, then count every
     /// distinct answering address over the full `timeout`.
     ///
-    /// MP §2.3, p. 14: *"the Management Client shall ... wait 1 second"*.
+    /// `[D]` MP §2.3 exception handling "to 2.", p. 15: *"The Management
+    /// Client shall always wait until the time-out has elapsed. It shall
+    /// collect all the responses during this time-out."* The length of
+    /// that time-out is p. 14's marginal note on step 2's response arrow,
+    /// *"time-out: 1 s"*, and arrives here as `timeout`.
+    ///
     /// The wait is never cut short by an early answer — this loop keeps
-    /// listening for the entire `timeout` regardless of how soon the
-    /// first (or the only) response arrives, because a second responder
-    /// may still be on the bus and the step's whole job is finding out.
-    /// Ending early on the first answer would turn "exactly one
-    /// responder" into "at least one responded quickly", which is a
-    /// different, weaker claim than the one MP §2.3's stop/continue
-    /// decision needs.
+    /// listening until the deadline regardless of how soon the first (or
+    /// the only) response arrives, because a second responder may still be
+    /// on the bus and the step's whole job is finding out. Ending early on
+    /// the first answer would turn "exactly one responder" into "at least
+    /// one responded quickly", which is a different, weaker claim than the
+    /// one MP §2.3's stop/continue decision needs.
+    ///
+    /// Structurally, not by good intentions: the only path that reaches
+    /// [`ProgrammingModeResponders::complete`] — the only way to obtain a
+    /// witness at all — is the one where `remaining` has reached zero. An
+    /// expired inner slice does not end the loop, it re-reads the clock, so
+    /// shortening the slice changes how often this wakes up and nothing
+    /// else. `the_programming_mode_broadcast_waits_out_the_whole_window`
+    /// measures it anyway, because structure is an argument and the wall
+    /// clock is evidence.
     pub async fn broadcast_individual_address_read(
         &self,
         timeout: Duration,
@@ -1313,10 +1327,25 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
         loop {
             let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
             if remaining.is_zero() {
-                break;
+                // The one exit that may conclude anything. "to 2." makes
+                // the elapsed time-out the precondition of the count, and
+                // `complete()` is the only constructor of a witness, so
+                // the two are tied together here and nowhere else.
+                return Ok(responders.complete());
             }
             match tokio::time::timeout(remaining, events.recv()).await {
                 Ok(Ok(TunnelEvent::Telegram(frame))) => {
+                    // Both halves matter, and
+                    // `unrelated_bus_traffic_is_not_a_second_responder`
+                    // holds each of them down. The service half: a live
+                    // installation does not fall silent for a second
+                    // because this client is counting, and any other
+                    // telegram in the window would otherwise be read as a
+                    // second device in Programming Mode and abort the
+                    // procedure. The kind half: an `L_Data.con` is this
+                    // client's own frame coming back, not a device
+                    // answering — MP §2.3's count is of
+                    // `A_IndividualAddress_Response-PDU`s received.
                     if frame.kind == LDataMessageKind::Indication
                         && frame.service == ApplicationService::IndividualAddressResponse
                     {
@@ -1338,10 +1367,14 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
                         during: "A_IndividualAddress_Response (broadcast)",
                     });
                 }
-                Err(_) => break,
+                // The slice expired, which says nothing except that it is
+                // time to re-read the clock. Deliberately not a `break`:
+                // the loop head owns the decision about when the time-out
+                // has elapsed, so no amount of fiddling with the slice can
+                // turn this into an early return with a completed count.
+                Err(_) => {}
             }
         }
-        Ok(responders.complete())
     }
 
     /// `NM_IndividualAddress_Write` step 3's authorised broadcast
@@ -1350,7 +1383,10 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// Unconfirmed at the application layer — a broadcast write gets no
     /// `T_ACK` and no answer, so sending is all this method does. Step 4's
     /// connect-and-verify, not this call's return value, is what proves
-    /// the write landed (MP §2.3, p. 14, "to 4.").
+    /// the write landed: MP §2.3 exception handling "to 4.", p. 15, *"If
+    /// no A_DeviceDescriptor_Response-PDU is received, than the
+    /// programming of the Individual Address may have failed, or the
+    /// system (Router) is not configured correctly."*
     pub async fn broadcast_individual_address_write(&self) -> Result<(), SessionError> {
         self.authorise_write(WriteScope::IndividualAddressProgramming)?;
         self.transport
@@ -1673,8 +1709,8 @@ impl<'t, T: ManagementTransport> ManagementSession<'t, T> {
     /// `device_descriptor` the answer carries.
     ///
     /// MP §2.3 exception a), p. 15: *"The Management Client shall accept
-    /// any value of descriptor_type, also values <>0, and any value of
-    /// device_descriptor."* [`Self::read_mask_version`] cannot serve this
+    /// any value of descriptor_type, also values ≠ 0, and any value
+    /// of device_descriptor."* [`Self::read_mask_version`] cannot serve this
     /// step: it discards a response whose `descriptor_type` is not 0,
     /// which would misreport an occupied `IA_new` as free merely because
     /// the occupant answered honestly with a descriptor type this session
@@ -4869,6 +4905,92 @@ mod tests {
                 error_code: 0,
                 process_time: Duration::from_secs(5),
             }
+        );
+    }
+
+    /// `[D]` MP §2.3 "to 2.", p. 15: *"The Management Client shall always
+    /// wait until the time-out has elapsed. It shall collect all the
+    /// responses during this time-out."*
+    ///
+    /// The comment above the loop says so; this says so in wall-clock
+    /// time, which is the only form of the claim a mutation cannot talk
+    /// its way around. The two numbers under comparison are 250 ms of
+    /// mandated waiting against the microseconds it takes the simulator's
+    /// single responder to answer — the same "deliberately far apart" rule
+    /// `fast()` records, three orders of magnitude of it. An
+    /// implementation that stopped at the first answer would come back in
+    /// well under a millisecond.
+    #[tokio::test]
+    async fn the_programming_mode_broadcast_waits_out_the_whole_window() {
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: true,
+            ..Default::default()
+        });
+        let session = read_only(&device);
+        let window = Duration::from_millis(250);
+
+        let started = std::time::Instant::now();
+        let responders = session
+            .broadcast_individual_address_read(window)
+            .await
+            .expect("the simulated device answers the broadcast");
+        let elapsed = started.elapsed();
+
+        assert!(
+            elapsed >= window,
+            "the count must not be concluded before the time-out has elapsed: \
+             waited {elapsed:?} of {window:?}"
+        );
+        assert_eq!(responders.device_count(), 1);
+        assert!(
+            responders.single_responder().is_ok(),
+            "an elapsed time-out is what makes a witness obtainable at all"
+        );
+    }
+
+    /// MP §2.3 step 2, p. 14 counts one thing:
+    /// *"A_IndividualAddress_Response-PDU"*, and p. 15 "to 2." turns *"more
+    /// than one"* into a full stop. A bus is not silent for a second
+    /// because this client is counting, so anything else in the window
+    /// must be ignored rather than counted as a second device.
+    ///
+    /// Two frames from the same unrelated address, one for each half of
+    /// the filter: an ordinary `A_GroupValue_Write` indication (wrong
+    /// service) and an `L_Data.con` (wrong `kind`). Either half going
+    /// missing turns the count into 2 and the procedure into an abort.
+    #[tokio::test]
+    async fn unrelated_bus_traffic_is_not_a_second_responder() {
+        let noisy = IndividualAddress::new(1, 1, 45).expect("a valid individual address");
+        let device = SimulatedDevice::with_config(SimulatorConfig {
+            programming_mode: true,
+            unrelated_traffic_during_broadcast: Some(noisy),
+            ..Default::default()
+        });
+        assert_ne!(device.address(), noisy);
+        let session = read_only(&device);
+
+        let responders = session
+            .broadcast_individual_address_read(Duration::from_millis(60))
+            .await
+            .expect("the simulated device answers the broadcast");
+
+        assert_eq!(
+            responders.device_count(),
+            1,
+            "only the responder is a responder: {:?}",
+            responders.devices().collect::<Vec<_>>()
+        );
+        assert_eq!(
+            responders.frame_count(),
+            1,
+            "the unrelated frames must not be recorded even as repetitions"
+        );
+        assert_eq!(
+            responders
+                .single_responder()
+                .expect("exactly one device answered")
+                .current_address(),
+            device.address()
         );
     }
 }

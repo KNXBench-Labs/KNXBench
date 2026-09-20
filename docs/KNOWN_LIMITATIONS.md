@@ -6267,61 +6267,76 @@ then let a fresh session reconnect" — at which point that procedure's own
 retry loop, not a speculative one built ahead of it, waits out the
 relevant timing value and implements MP §3.7.1.2.2's "one last time" retry.
 
-## 116. Two occupancy signals `individual_address_write` reports have no basis in MP §2.3's text, and step 3's re-verification is untested
+## 116. `NM_IndividualAddress_Write` does not loop for the operator, and reads one Transport Layer release as MP §2.3 never quite says
 
 **Limitation.** `[C16]` `individual_address_write()`
-(`crates/knx-net/src/commissioning/individual_address_write.rs`) reports
-step 1's finding as one of four `Occupancy` variants. Only two of them —
-`OccupiedWithResponse` and `OccupiedWithoutDescriptor`'s `T_Disconnect`
-half — come from MP §2.3's own text, which describes exactly one
-sequence: connect, then either a `A_DeviceDescriptor_Response` or a
-`T_Disconnect` in its place. `OccupiedWithoutDescriptor`'s other half (the
-descriptor read itself timing out with the connection still open) and
-`OccupiedWithRejectedConnect` (a negative `T_Connect` confirmation, so no
-connection ever opened) are this project's own extension to a state space
-the clause never enumerates.
+(`crates/knx-net/src/commissioning/individual_address_write.rs`) diverges
+from MP §2.3 in two places, both narrow, both deliberate.
 
-Separately, step 3's mandatory re-verification —
-`IndividualAddressWriteError::RecountBeforeWrite`, for when "programming
-mode may have switched itself off" between step 2's count and the write —
-has no test exercising it actually firing. `SimulatorConfig` is immutable
-for a `SimulatedDevice`'s lifetime, so no fixture available today can make
-step 2's broadcast and step 3's re-broadcast disagree; both always see the
-same, static Programming Mode configuration.
+*Step 2 does not repeat.* The Standard's step 2, p. 14, reads *"2. wait
+until device is in Programming Mode: repeat until one
+A_IndividualAddress_Response-PDU is received … end repeat"*, and p. 13
+states the same obligation in prose: *"The procedure shall wait until
+exactly one device is in Programming Mode."* This implementation
+broadcasts once. On nobody, or on several, it returns
+`IndividualAddressWriteError::Count` to its caller rather than
+re-broadcasting until the count comes right.
 
-**Cause.** MP §2.3, p. 14 assumes a well-behaved Transport Layer under a
-connection: it does not consider a `T_Connect` refusal, or a connection
-that opens and then answers nothing at all, because normal operation does
-not produce either. Real hardware, or a deliberately adversarial
-simulator, can. Treating both as occupied — a negative confirmation
-proves a device answered at the Data Link Layer; an open connection this
-session holds is itself proof one exists — is this project's own
-extrapolation from the clause's stated cases, not a citation of one.
-`RecountBeforeWrite`'s untested status is a simpler cause: building a
-`SimulatedDevice` capability to reconfigure itself mid-run, for the sole
-purpose of exercising one error arm, is exactly the kind of feature this
-project builds when a task needs it rather than ahead of one — see §115's
-own reasoning for the same call made about a retry combinator.
+*A released connection is read as an `A_Disconnect-PDU`.* p. 14 rules that
+*"if A_Disconnect-PDU is received then IA_new shall be regarded as
+occupied"*, and p. 15's "to 1." explains the two devices that behave that
+way. Step 1 reports `Occupancy::OccupiedAfterDisconnect` for that case —
+and also when this client's own Transport Layer releases the connection
+because nothing acknowledged four transmissions (TL §5.4.1, p. 22,
+transition `E18` in `OPEN_WAIT`, action `A6`). No `A_Disconnect-PDU` was
+received in that second case; the local Transport Layer synthesised the
+indication.
 
-**Impact.** The two unsourced `Occupancy` variants change nothing about
-the stop/continue decision `KNOWN_LIMITATIONS.md` §108 documents — that
-decision compares addresses, not signal types, so every occupied variant
-is treated identically once occupancy is established. Their only effect
-is on what a report tells the operator. If a future edition of MP §2.3 or
-its errata describes these cases differently (or not at all), only the
-`Occupancy` enum and its documentation need revisiting, not the stop/
-continue logic. `RecountBeforeWrite`'s code path is otherwise ordinary —
-it calls the same, already-tested
-`ManagementSession::broadcast_individual_address_read` and
-`ProgrammingModeResponders::single_responder` that step 2 uses — so the
-risk carried by its being untested is narrow: a defect specific to
-running that call a second time in the same procedure, which nothing here
-has found reason to suspect exists.
+**Cause.** What step 2's `repeat` waits for is a human walking to a device
+and pressing a button. A library function cannot wait for that on the
+thread that called it, and this project builds no procedure-level retry
+loops — the Standard's own General Exception handling, MP §3.1, p. 68, is
+*"In general if an error is detected, the download shall be interrupted
+and an error-message shall be raised."*, which is the opposite of a retry
+obligation. Returning the count to the operator, who is the one who has to
+go and press the button, puts the loop where the only actor that can close
+it lives. The Standard's own footnote 2) on p. 15 points the same way:
+*"The user of the Management Client should get an information in how many
+devices are Programming Mode is active (none or more than one)."*
 
-**Lifted when.** A `SimulatedDevice` capability to change its Programming
-Mode configuration mid-run exists for some other reason, at which point a
-test for `RecountBeforeWrite` costs nothing further to add. The two
-unsourced `Occupancy` variants are lifted, or replaced, if
-`docs/RESEARCH.md`'s knowledge-base audit turns up spec text or an
-erratum that describes a `T_Connect` refusal or a connected, unanswered
-descriptor read for this procedure.
+The occupancy reading has a smaller cause: MP §2.3 enumerates three
+outcomes for step 1 — a response, a received `A_Disconnect-PDU`, and
+silence until the time-out — and a device that acknowledges nothing at all
+fits none of them exactly. It is not the silence arm, because that arm's
+*"If no A_DeviceDescriptor_Response-PDU is received after time-out"*
+describes a connection that is still open when the time-out expires, which
+this one is not. Of the two remaining arms, "occupied" is the one that
+does not risk handing `IA_new` to a second device.
+
+**Impact.** Neither divergence changes a stop/continue decision the
+Standard specifies. The absent `repeat` makes a zero-or-several count an
+error the caller sees instead of a wait the caller cannot see; a caller
+that wants the Standard's behaviour calls the function again, and any UI
+that drives this has to tell the operator what to do anyway. The occupancy
+reading affects only which of two occupied labels a report carries, since
+`KNOWN_LIMITATIONS.md` §108's stop/continue comparison is on addresses and
+not on labels — an unacknowledged `IA_new` that turns out to be the
+Programming Mode device itself still continues, and one that turns out to
+be somebody else still stops.
+
+**Lifted when.** The `repeat` is lifted by whatever owns the operator
+dialogue — a UI loop that re-runs step 2 while showing "press the
+programming button on exactly one device" implements the Standard's wait
+in the only place it can be implemented, and this function stays the
+single-shot primitive underneath it. The occupancy reading is revisited if
+`docs/RESEARCH.md`'s knowledge-base audit turns up spec text or an erratum
+that rules on a Transport Layer release at step 1.
+
+**Not a limitation any more.** An earlier draft of this section claimed MP
+§2.3 *"does not consider a `T_Connect` refusal, or a connection that opens
+and then answers nothing at all"*. The clause considers both, on p. 14,
+and rules the opposite way from the code that was written against that
+claim: *"if negative A_Connect.Lcon ⇒ IA_new is not occupied"* and *"If no
+A_DeviceDescriptor_Response-PDU is received after time-out ⇒ IA_new is not
+occupied"*. Both now follow the text, and the two `Occupancy` variants
+invented to hold them are gone.

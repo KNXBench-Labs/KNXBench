@@ -179,7 +179,7 @@ Contents (RESEARCH §7) [V], now with `OpaqueKind`, since the code exists:
 | `*.signature` | RSA signatures over manufacturer and project data | `Signature` |
 | `knx_master.xml` | DPT/product master catalogue | `MasterData` |
 | Any other container entry not regenerated on export | Copied through unchanged | `ContainerEntry` |
-| A known-but-not-modelled attribute (`Installation/@BCUKey`, `@SplitType`, `ProjectInformation`'s tool-state attributes; `DeviceInstance`'s `LoadedImage`/`CheckSums`/`DownloadCounter`, ETS's differential-download state, `Project Schema23 v01.00.00.pdf` p. 44) | Name and value, keyed by the element's own ETS id (`knx_etsproj::xpath`) so export puts it back on the element it came from; where two source elements share one key the value is dropped and an export warning says so (`KNOWN_LIMITATIONS.md` [#34](KNOWN_LIMITATIONS.md#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes)) | `RetainedAttribute` |
+| A known-but-not-modelled attribute (`Installation/@BCUKey`, `@SplitType`, `ProjectInformation`'s tool-state attributes; `DeviceInstance`'s `LoadedImage`/`CheckSums`/`DownloadCounter`, ETS's differential-download state, `Project Schema23 v01.00.00.pdf` p. 44) | Name and value, keyed by the element's own ETS id (`knx_etsproj::xpath`) so export puts it back on the element it came from; where two source elements share one key the value is dropped and an export warning says so (`KNOWN_LIMITATIONS.md` [#34](KNOWN_LIMITATIONS.md#34-schema-21-export-drops-a-handful-of-known-but-unmapped-per-deviceper-line-attributes--resolved-2026-09-20)) | `RetainedAttribute` |
 | An unrecognized element, or a known-but-not-modelled element (`BusAccess`) | Raw bytes, tag included | `RetainedElement` |
 
 **Fidelity by construct**, the promised column — modeled in the domain
@@ -368,7 +368,7 @@ application is not ETS; and `DeviceInstance/@LastDownload`/`@LastModified`,
 reformatted to fewer fractional-second digits by the trip through a typed
 timestamp.
 
-Anything an export cannot put back is reported as an `ExportWarning` --
+Anything an export cannot put back is reported as an `ExportWarning` —
 `RetainedAttributeNotExported` for an attribute, `RetainedElementNotExported`
 for a whole element — one warning per `(element, attribute)` class with the
 number of instances behind it, carrying a rendered `detail` sentence that

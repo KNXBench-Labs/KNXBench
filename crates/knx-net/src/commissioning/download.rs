@@ -458,23 +458,52 @@ impl fmt::Display for CrcComparison {
     }
 }
 
-/// What CP §3.12.4/3.12.5's and RES §4.2.30.3's Download Counter check found
+/// What CP §3.12.4/3.12.5's and RES §5.3.2.2's Download Counter check found
 /// before a partial download (`[C13]`), read from `PID_DOWNLOAD_COUNTER` in
-/// the Device Object — never a part's own object, `[D]` CP §3.12.4/3.12.5,
-/// pp. 99-100, both address `OI = 0`.
+/// the Device Object — never a part's own object.
 ///
 /// CP §3.5.3 itself — the five variants this module actually sequences —
-/// imposes nothing about the Download Counter; the obligation comes from
-/// CP §3.12.4/3.12.5's Coupler Model 2.0 procedure and from RES §4.2.30.3's
-/// System B guidance instead, both applied here because the read and the
-/// comparison they describe are the same regardless of which of the two
-/// device profiles a target belongs to, and RES §4.2.30's property is not
-/// itself profile-specific. `Downloader::partial_download` performs this
-/// check once per call, before its first write, and refuses to proceed for
-/// two of the five variants below — this is deliberately not shaped like
-/// [`CrcComparison`], whose every variant lets the download continue: a
-/// stale checksum is merely reported, `[C1]`'s `VersionOutcome::Refused` is
-/// tolerated, but a stale or missing Download Counter stops the procedure.
+/// imposes nothing about the Download Counter. Both clauses that do are
+/// Coupler Model 2.0's own: CP §3.12.4/3.12.5, pp. 99-100, is that model's
+/// Filter Table/Router Object download procedure, and RES §5.3.2.2, p. 320,
+/// sits in RES §5.3 *"Resources for Coupler Model 2.0"* — the only place in
+/// the whole of RES clause 5, *"Resources for Couplers"*, that says *"shall
+/// not perform a Partial Download"*. There is no System B clause requiring
+/// either behaviour. RES §4.2.30 sits in clause 4, *"Device Resources"*,
+/// common to every device; it defines the property generically, and its
+/// §4.2.30.3 advisory — *"should firstly read … may conclude"* — is not a
+/// refusal obligation for anyone.
+///
+/// This module applies both Coupler Model 2.0 consequences to the one
+/// generic CP §3.5.3 procedure it runs, for every part kind, regardless of
+/// which device profile the target actually is (`[C18]`'s masks 07B0h and
+/// 17B0h are System B, not Coupler Model 2.0). That is this project's own
+/// conservative ruling — without a comparable counter the MaC cannot
+/// establish the device is untouched since the last configuration, and
+/// data integrity outranks convenience here — not compliance with a
+/// Standard obligation that covers System B. Known Limitation §114 spells
+/// out what this means in practice: a conformant System B device, which
+/// Volume 6 Annex A never requires to carry this property (`[C18]`), is
+/// refused every partial download and always gets a complete one.
+///
+/// The *changed* comparison is sound reading the Device Object's own
+/// instance alone: RES §4.2.30.3, p. 42, is explicit that an unchanged
+/// Device Object instance lets the client conclude no other instance
+/// changed either. The *absent* refusal is not backed the same way —
+/// RES §5.3.2.2, p. 320, says *"of the part to be downloaded"*, and
+/// RES §4.2.30.1, p. 41, allows a downloadable part its own Download
+/// Counter instance distinct from the Device Object's, or none at all.
+/// Checking only the Device Object instance for absence is this module's
+/// own simplification, not per-part RES §5.3.2.2 compliance — recorded in
+/// §114 rather than implemented as a per-part lookup, because it errs
+/// toward refusing more often, which is the safe direction.
+///
+/// `Downloader::partial_download` performs this check once per call,
+/// before its first write, and refuses to proceed for two of the five
+/// variants below — this is deliberately not shaped like [`CrcComparison`],
+/// whose every variant lets the download continue: a stale checksum is
+/// merely reported, `[C1]`'s `VersionOutcome::Refused` is tolerated, but a
+/// stale or missing Download Counter stops the procedure.
 ///
 /// The type keeps *absent* and *changed* apart on purpose: both currently
 /// refuse the same way, but they are not the same fact. A device that never
@@ -572,7 +601,8 @@ pub enum VersionOutcome {
     /// CP §3.5.3's three table variants ask for the write anyway
     /// (pp. 51-52, 54, 56). `[C18]` found the clause reconciling the two:
     /// RES §4.2.13.1.3, p. 34, defers per-object applicability to *"the
-    /// Configuration Procedures in \[10\]"* — the Coupler Model — *"and …
+    /// Configuration Procedures in \[10\]"* — RES's reference list has
+    /// `[10]` as Chapter 3/5/3, this project's own CP — *"and …
     /// \[17\]"* — Volume 6 Profiles — for "the mandatory - or optional
     /// access rights to Program Version", and Volume 6 Annex A makes the
     /// property optional rather than forbidden on the three tables, not
@@ -1289,37 +1319,52 @@ async fn open<T: ManagementTransport>(
     Ok((mask, limit))
 }
 
-/// CP §3.12.4/3.12.5's and RES §4.2.30.3's Download Counter check (`[C13]`),
+/// CP §3.12.4/3.12.5's and RES §5.3.2.2's Download Counter check (`[C13]`),
 /// run once by [`Downloader::partial_download`], after [`open`] and before
-/// its first write. Reads `PID_DOWNLOAD_COUNTER` from the Device Object —
-/// `[D]` CP §3.12.4/3.12.5, pp. 99-100, both address `OI = 0` — never from
-/// the part being loaded.
+/// its first write. Reads `PID_DOWNLOAD_COUNTER` from the Device Object,
+/// never from the part being loaded — see [`DownloadCounterCheck`]'s own
+/// doc comment for which half of that simplification is backed by a clause
+/// and which is this module's own.
 ///
-/// Returns `Err` for exactly the two outcomes CP §3.12.5 and RES §5.3.2.2
-/// make refusals ([`DownloadCounterCheck::Changed`] and
-/// [`DownloadCounterCheck::Absent`]); `report.download_counter` is set for
-/// every outcome, including the two that let the caller continue.
+/// A `PropertyRefused` read is [`DownloadCounterCheck::Absent`], nothing
+/// else is: a timeout or a disconnect during the read is not a conformant
+/// device without the property, and stays whatever `SessionError` it was
+/// via `?`. The decision to refuse is routed through
+/// [`DownloadCounterCheck::refuses_partial_download`] rather than matched
+/// again here, so the two stay in agreement by construction.
+///
+/// `report.download_counter` is set only for the two outcomes that let the
+/// caller continue ([`DownloadCounterCheck::Unchanged`] and
+/// [`DownloadCounterCheck::NoStoredCounter`]): `partial_download` never
+/// returns `report` on `Err`, so a refusal is reported through the
+/// returned [`DownloadError`] alone, and a value written here for either
+/// refusal would be a write nobody can ever read.
 async fn check_download_counter<T: ManagementTransport>(
     session: &mut ManagementSession<'_, T>,
     plan: &DownloadPlan,
     report: &mut DownloadReport,
 ) -> Result<(), DownloadError> {
-    let current = match session.read_download_counter().await {
-        Ok(value) => value,
-        Err(SessionError::PropertyRefused { .. }) => {
-            report.download_counter = DownloadCounterCheck::Absent;
-            return Err(DownloadError::DownloadCounterUnavailable);
-        }
+    let check = match session.read_download_counter().await {
+        Ok(current) => match plan.stored_download_counter {
+            None => DownloadCounterCheck::NoStoredCounter(current),
+            Some(stored) if stored == current => DownloadCounterCheck::Unchanged(current),
+            Some(stored) => DownloadCounterCheck::Changed { stored, current },
+        },
+        Err(SessionError::PropertyRefused { .. }) => DownloadCounterCheck::Absent,
         Err(err) => return Err(err.into()),
     };
-    report.download_counter = match plan.stored_download_counter {
-        None => DownloadCounterCheck::NoStoredCounter(current),
-        Some(stored) if stored == current => DownloadCounterCheck::Unchanged(current),
-        Some(stored) => DownloadCounterCheck::Changed { stored, current },
-    };
-    if let DownloadCounterCheck::Changed { stored, current } = report.download_counter {
-        return Err(DownloadError::DownloadCounterChanged { stored, current });
+    if check.refuses_partial_download() {
+        return Err(match check {
+            DownloadCounterCheck::Changed { stored, current } => {
+                DownloadError::DownloadCounterChanged { stored, current }
+            }
+            DownloadCounterCheck::Absent => DownloadError::DownloadCounterUnavailable,
+            // `refuses_partial_download` returns `true` for exactly these
+            // two variants; see its own doc comment.
+            _ => unreachable!("refuses_partial_download() only allows Changed and Absent here"),
+        });
     }
+    report.download_counter = check;
     Ok(())
 }
 
@@ -1886,6 +1931,35 @@ mod tests {
         assert_eq!(complete_title, partial_title, "the wording must not drift");
     }
 
+    /// C13 fix round 1, finding 5: `Display` is what a report actually
+    /// shows a user, and nothing pinned its wording to each variant before
+    /// this — deleting an arm's distinct text was as invisible as deleting
+    /// `refuses_partial_download`'s.
+    #[test]
+    fn download_counter_check_display_text_is_specific_to_each_outcome() {
+        assert_eq!(DownloadCounterCheck::NotChecked.to_string(), "not checked");
+        assert_eq!(
+            DownloadCounterCheck::NoStoredCounter(9).to_string(),
+            "no stored Download Counter to compare against; the device answers 9"
+        );
+        assert_eq!(
+            DownloadCounterCheck::Unchanged(4).to_string(),
+            "unchanged at 4"
+        );
+        assert_eq!(
+            DownloadCounterCheck::Changed {
+                stored: 4,
+                current: 9
+            }
+            .to_string(),
+            "changed from 4 to 9 since the preceding configuration"
+        );
+        assert_eq!(
+            DownloadCounterCheck::Absent.to_string(),
+            "not implemented on this device"
+        );
+    }
+
     /// RES §4.2.30.3, p. 42: unchanged is the case where the partial
     /// download proceeds, and `[C13]`'s [`DownloadCounterCheck::Unchanged`]
     /// is what the report says so.
@@ -1972,6 +2046,65 @@ mod tests {
         assert!(
             matches!(error, DownloadError::DownloadCounterUnavailable),
             "got {error}"
+        );
+        assert!(!device.memory_was_written());
+        assert!(load_state_writes(&device).is_empty());
+    }
+
+    /// C13 fix round 1, finding 2: RES §4.2.30.2, p. 41, has the device
+    /// increment the counter on every modification, so a difference of
+    /// exactly one is the ordinary "changed" case, not the boundary of a
+    /// tolerance. Nothing here treats `stored + 1` as close enough.
+    #[tokio::test]
+    async fn a_partial_download_refuses_when_the_download_counter_differs_by_exactly_one() {
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(5),
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Download);
+        let error = Downloader::new(&mut session, two_parts().with_stored_download_counter(4))
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect_err("a counter one higher than stored is still a change, not a match");
+
+        assert!(
+            matches!(
+                error,
+                DownloadError::DownloadCounterChanged {
+                    stored: 4,
+                    current: 5,
+                }
+            ),
+            "got {error}"
+        );
+        assert!(!device.memory_was_written());
+        assert!(load_state_writes(&device).is_empty());
+    }
+
+    /// C13 fix round 1, finding 3: only `SessionError::PropertyRefused`
+    /// means "this device has no Download Counter". A disconnect while
+    /// reading it is a comms fault, not a conformant device, and must not
+    /// be folded into [`DownloadCounterCheck::Absent`] /
+    /// [`DownloadError::DownloadCounterUnavailable`].
+    #[tokio::test]
+    async fn a_download_counter_read_that_loses_the_connection_is_not_reported_as_absent() {
+        let device = ap2_device_with(SimulatorConfig {
+            download_counter: Some(5),
+            drop_connection_on_download_counter_read: true,
+            ..SimulatorConfig::default()
+        });
+        let mut session = writer(&device, WriteScope::Download);
+        let error = Downloader::new(&mut session, two_parts().with_stored_download_counter(4))
+            .partial_download(ObjectIndex::new(3))
+            .await
+            .expect_err("a lost connection is not a successful read of anything");
+
+        assert!(
+            matches!(
+                error,
+                DownloadError::Session(SessionError::ConnectionLost { .. })
+            ),
+            "got {error}, not the underlying comms fault"
         );
         assert!(!device.memory_was_written());
         assert!(load_state_writes(&device).is_empty());

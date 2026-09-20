@@ -15,7 +15,7 @@
 //! `main.tsx` keeps deciding which of the two roles (workbench or
 //! diagnostics companion) it is mounting; this file imports neither, and so
 //! does not drag the editor's module graph into the companion window.
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import * as api from "./api";
 import { useTranslate } from "./i18n";
 import LoginScreen, { type LoginReason } from "./LoginScreen";
@@ -43,6 +43,12 @@ export default function AuthGate(props: {
   // hands the current project back, so nothing could put it on screen again
   // short of the user reopening the file.
   const [everOpen, setEverOpen] = useState(false);
+  // Whether `GET /api/auth/status` ever gave an answer. Only a session that
+  // was known to exist can be said to have ended; after a fail-open (see
+  // below) the first 401 is the first thing this tab has learned about
+  // authentication, and telling that user "your session ended" would be
+  // describing a session they never had.
+  const statusAnswered = useRef(false);
 
   const open = useCallback((authRequired: boolean) => {
     setRequired(authRequired);
@@ -57,6 +63,7 @@ export default function AuthGate(props: {
       .authStatus()
       .then((status) => {
         if (cancelled) return;
+        statusAnswered.current = true;
         if (status.required && !status.authenticated) {
           setRequired(true);
           setLockedBy("initial");
@@ -87,11 +94,13 @@ export default function AuthGate(props: {
     () =>
       subscribeSessionExpired(() => {
         // A session that idled out, or a server that was restarted and
-        // forgot every token it had issued. `required` is set rather than
-        // read: the server has just demonstrated that it wants one, whatever
-        // the status call earlier believed.
+        // forgot every token it had issued — unless the status call never
+        // answered, in which case this 401 is simply the first news of a
+        // password, and the plain "initial" wording is the true one.
+        // `required` is set rather than read: the server has just
+        // demonstrated that it wants one, whatever the status call believed.
         setRequired(true);
-        setLockedBy((previous) => previous ?? "expired");
+        setLockedBy((previous) => previous ?? (statusAnswered.current ? "expired" : "initial"));
       }),
     [],
   );

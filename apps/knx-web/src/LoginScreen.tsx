@@ -95,6 +95,12 @@ export default function LoginScreen(props: {
         role="dialog"
         aria-modal="true"
         aria-labelledby="login-title"
+        // The notice is present in the dialog's first paint, and a live
+        // region announces *mutations*, so `role="status"` alone would let
+        // "your session ended, and the server may have forgotten your
+        // project" pass a screen-reader user by entirely. Naming it as the
+        // dialog's description has it read out when focus lands inside.
+        aria-describedby={noticeKey ? "login-notice" : undefined}
       >
         <p className="eyebrow">{t("login.eyebrow")}</p>
         <h1 className="login-title" id="login-title">
@@ -108,7 +114,7 @@ export default function LoginScreen(props: {
             the user arrived in, it does not report a failure of anything
             they just did. The error below is the `alert`. */}
         {noticeKey && (
-          <p className="login-notice" role="status">
+          <p className="login-notice" id="login-notice" role="status">
             {t(noticeKey)}
           </p>
         )}

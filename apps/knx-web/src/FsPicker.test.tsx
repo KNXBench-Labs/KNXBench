@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { openMountPicker } from "./FsPicker";
-afterEach(() => { vi.restoreAllMocks(); document.body.innerHTML = ""; });
+import { resetSessionListenersForTests, subscribeSessionExpired } from "./session";
+afterEach(() => { vi.restoreAllMocks(); document.body.innerHTML = ""; resetSessionListenersForTests(); });
 it("provides a keyboard file choice and Escape returns focus to its opener", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ok:true,json:async()=>[{name:"Example.knxproj",is_dir:false}]}));
   const opener=document.createElement("button"); document.body.append(opener); opener.focus();
@@ -56,4 +57,59 @@ it("bounds the picker on both axes and leaves the scrolling to its list", () => 
   // path that tells two backups apart.
   expect(list).toMatch(/\n\s*overflow-wrap:\s*anywhere/);
   expect(list).not.toMatch(/text-overflow/);
+});
+
+// T01b. `/api/fs/*` sits behind the same session guard as every other
+// `/api/` route (ADR-0026), but these two helpers hold their own `fetch`
+// rather than going through `api.ts`'s `request()`. Before this, an expired
+// session printed "authentication required" inside the modal and left the
+// user in a file browser with no way forward — the first thing they touch
+// after coming back to an idle tab.
+it("reports a refused listing as an ended session and closes itself", async () => {
+  const expiries = vi.fn();
+  resetSessionListenersForTests();
+  subscribeSessionExpired(expiries);
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: false,
+    status: 401,
+    statusText: "Unauthorized",
+    json: async () => ({ error: "authentication required" }),
+  }));
+
+  let result!: Promise<string | null>;
+  await act(async () => { result = openMountPicker([]); });
+
+  expect(expiries).toHaveBeenCalledTimes(1);
+  // Closed, not left holding a focus trap the login screen cannot reach:
+  // the picker is mounted on its own root outside `AuthGate`'s `inert`
+  // subtree, so it has to get out of the way by itself.
+  expect(await result).toBeNull();
+  expect(document.querySelector('[role="dialog"]')).toBeNull();
+  vi.unstubAllGlobals();
+});
+
+it("treats an ordinary failure as an ordinary failure", async () => {
+  const expiries = vi.fn();
+  resetSessionListenersForTests();
+  subscribeSessionExpired(expiries);
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+    ok: false,
+    status: 403,
+    statusText: "Forbidden",
+    json: async () => ({ error: "outside the allowed roots" }),
+  }));
+
+  let result!: Promise<string | null>;
+  await act(async () => { result = openMountPicker([]); });
+
+  // A path the server refuses to list is not a session that ended, and
+  // bouncing the user to a login screen over one would be a worse lie than
+  // the error line.
+  expect(expiries).not.toHaveBeenCalled();
+  const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
+  expect(dialog).not.toBeNull();
+  expect(dialog!.querySelector(".field-error")?.textContent).toContain("outside the allowed roots");
+  await act(async () => dialog!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+  expect(await result).toBeNull();
+  vi.unstubAllGlobals();
 });

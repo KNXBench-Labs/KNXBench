@@ -7783,3 +7783,70 @@ Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets
 and `cargo deny check` all exit 0. No web file touched, so `npx tsc
 --noEmit` / `npx vitest run` were not run. `check-headers` is unchanged
 (159/167, ceiling 168): no new source file.
+
+## 2026-09-20 — C15: the `A_Restart` sender
+
+`ApplicationService::Restart` and `WriteScope::Restart` (C3) had no session
+method to reach them, so a device left in Programming Mode after a failed
+write stayed there. `ManagementSession` (`crates/knx-net/src/
+commissioning.rs`) gains `restart_basic()` (unconfirmed Basic Restart,
+T_ACK is the whole confirmation, MP §3.7.1.1.1/§3.7.1.1.3) and
+`restart_master_reset(erase_code, channel_number)` (confirmed, decodes the
+device's `A_Restart_Response` into a new `MasterResetResponse { error_code,
+process_time }`, AL §3.4.2.2 "A_Restart-service", Figure 41, p. 52 / MP
+§3.7.1.2.2, pp. 80-81). Both
+route through the new private `disconnect_after_restart()`, which sends
+this session's own `T_Disconnect` and then unconditionally waits
+`SessionTiming::post_restart_disconnect_wait` — MP §3.7.3 exception (5),
+p. 90's *"the configuration shall not be continued while this time-out has
+not elapsed"* — while plain `disconnect()` stays best-effort and unwaited
+for every other caller.
+
+Three timings join `SessionTiming`, none rounded or collapsed: `restart_
+basic_t1` = 1 s (MP §3.7.1.1.2, p. 79, t1), `restart_responsive_again` =
+5 s (same clause, t2, and also the floor `MasterResetResponse::
+recovery_wait` enforces under a device's reported Process Time — *"a
+minimal time for the MaC to wait, not a maximal time"*), and `post_
+restart_disconnect_wait` = 6 s (MP §3.7.3 exception (5), p. 90). The "call
+the failed service one last time" obligation (MP §3.7.1.2.2, p. 81) is
+carried as `recovery_wait`'s return value, not wired to an automatic retry
+loop — no procedure in this project restarts mid-flight and needs to
+resume, so building an actual retry combinator now would be exactly the
+kind of speculative, unverifiable code this plan keeps removing. Recorded
+as `docs/KNOWN_LIMITATIONS.md` §115.
+
+The simulator (`crates/knx-net/src/commissioning/simulator.rs`) gains
+`Seen::Restart { response, restart_type, data }`, two `SimulatorConfig`
+fields (`restart_error_code`, `restart_process_time`), and an `answer()`
+arm: a Basic Restart request gets no application-layer answer at all (MP
+§3.7.1.1.3 forbids one), a Master Reset request gets a Process-Time-
+carrying `A_Restart_Response` built from those two fields, DPT 7.005,
+big-endian, exact.
+
+This also made `set_programming_mode` (existing since an earlier session,
+correct against MP §3.13.2, called only from tests before now) reachable
+by the same restart path a real Programming Mode workflow needs — no
+change to that method itself.
+
+Nine new tests in `crates/knx-net/src/commissioning.rs`: default-value
+assertions for the three new timings; `restart_basic` sends the
+unconfirmed request; a dedicated timing test proving `restart_basic`'s
+post-restart wait actually blocks for the configured duration while plain
+`disconnect()` does not (`only_the_post_restart_path_waits_out_the_
+disconnect_timeout`); `restart_master_reset` carries the Erase Code and
+Channel Number and decodes the response exactly; `recovery_wait`'s floor
+arithmetic in both directions; `decode_master_reset_response`'s malformed-
+data rejection; and two new attempts (`restart_basic`, `restart_master_
+reset`) added to the existing blanket no-authorisation-no-write test.
+
+Mechanical, non-behavioural touch to `crates/knx-net/src/commissioning/
+download.rs` (owned by C13 this round for its download counter, otherwise
+avoided): its test-only `fast()` `SessionTiming` literal needed the same
+three new fields added, purely so the crate keeps compiling — no logic in
+that file changed.
+
+Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace
+--all-targets -j 2 -- -D warnings`, `cargo test --workspace --no-fail-fast
+-j 2`, `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
+check-headers` and `cargo deny check` all exit 0. `check-headers` is
+unchanged (159/167, ceiling 168): no new source file. No web file touched.

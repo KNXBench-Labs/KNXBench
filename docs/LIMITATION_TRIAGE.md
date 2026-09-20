@@ -1,8 +1,10 @@
 # Limitierungen nach Kritikalität
 
-Sortierung der 102 Einträge aus [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md),
-Stand 2026-09-19. Diese Datei ordnet nur — sie ersetzt keinen Eintrag und enthält
-keine neuen Fakten. Maßgeblich bleibt der Volltext dort.
+Sortierung der 117 Einträge aus [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md)
+(`grep -c '^## [0-9]' docs/KNOWN_LIMITATIONS.md`), Stand 2026-09-20. Diese Datei
+ordnet nur — sie ersetzt keinen Eintrag und enthält keine neuen Fakten.
+Maßgeblich bleibt der Volltext dort. §105 ist absichtlich nicht eingestuft
+(siehe unten); die restlichen 116 sind es.
 
 Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 
@@ -30,7 +32,7 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | 5 | Exporte sind unsigniert, ETS-Annahme ungetestet | Eine Datei, von der niemand weiß, ob ETS sie zurücknimmt. |
 | 1 | Single-Sample-Bias | Alles Gewusste über `.knxproj` stammt aus zwei Installationen. Färbt jede Import-Aussage. |
 
-## K2 — hoch (27)
+## K2 — hoch (30)
 
 **Format und Import**
 
@@ -44,6 +46,7 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | 34 | Schema-≥21-Export verliert bekannte, nicht gemappte Attribute | Bekannter, benannter Verlust beim Export. |
 | 87 | Ein Parser-Fix erreicht bereits eingelesene Zeilen nicht | Nur eine Migration holt sie zurück. |
 | 12 | Herstellerdaten-Auflösung: drei Lücken bleiben | Betrifft die Zuordnung Produkt→Programm. |
+| 117 | `read_on_init_flag` wird geparst, gespeichert und an der Core-Grenze fallen gelassen | Sechstes Kommunikationsobjekt-Flag existiert im Domänenmodell nicht; Datenintegritätslücke. |
 
 **Inbetriebnahme und Bus**
 
@@ -58,6 +61,8 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | 62 | Group Monitor nur Tunneling, eine Session, Filter clientseitig | Nur der passive Empfangspfad hat Evidenz von einem echten Gateway. |
 | 26 | `BusConnection` ohne KNX IP Secure | Folgt aus §8. |
 | 79 | Discovery braucht IP-Multicast, das Dockers Default-Bridge nicht führt | Im Container stumm. |
+| 112 | Downloadplan mit `A_Key_Write`-Bedarf wird ganz abgelehnt | Schlüsseländerung während eines Downloads ist damit kein lauffähiger Kern-Workflow. |
+| 114 | Download-Counter-Refusal ist eigenes Ruling, nicht System-B-Pflicht | Ein konformes System-B-Gerät ohne Download Counter bekommt nie einen Partial Download — der Kern-Workflow ist für den Regelfall faktisch abgeschaltet. |
 
 **Anwendung und Interoperabilität**
 
@@ -74,10 +79,10 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | 71 | Vor Store-Schema 6 importierte Projekte haben keine Modul-Instanz-Ids | Nicht beschreibbar ohne Neuimport. |
 | 16 | Tauri v2 hängt unter Linux an archivierten GTK3-Bindings | `cargo deny` meldet es; Abhängigkeit ohne Wartung. |
 
-## K3 — mittel (44)
+## K3 — mittel (51)
 
-| § | Thema |
-| --- | --- |
+| § | Thema | Warum K3 |
+| --- | --- | --- |
 | 9 | Projektdateien nicht diffbar (SQLite) |
 | 14 | Default-Sprache des Projekts ist ein Platzhalter |
 | 15 | Unparsbare Werte überleben nur auf `Override`-Feldern |
@@ -122,11 +127,18 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | 102 | Der Decode-Fehlerzweig des Write-Echos hat keinen bekannten Auslöser |
 | 103 | „Ungespeichert" wird aus dem Undo-Stack erschlossen, kein echtes Dirty-Flag |
 | 64 | `Languages`-Blöcke außerhalb eines Programms — Ingestion gelöst, Lesen teilweise |
+| 104 | Gerät offline mitten in `LoadCompleting` kostet vollen Reconnect pro Poll | Latenz/Bustraffic, laut Eintrag ausdrücklich keine Korrektheitsfrage. |
+| 106 | Debug-Report redigiert vier Musterklassen, sonst nichts | Bewusst begrenzt, offengelegt, Zip wird vor Versand angezeigt. |
+| 107 | Keine Plugin-API — Dritte können nur forken, nicht nachladen | ADR-0025-Entscheidung; vier andere Erweiterungswege (Sprachpakete, Produktdatenbank, CSV, CLI) bleiben offen. |
+| 108 | MP §2.3 widerspricht sich zur belegten `IA_new`; Ausnahmetext gewinnt | Ergebnis wird als Befund gemeldet, nicht stillschweigend erzwungen. |
+| 113 | Eskalation lädt nur die Segmente neu, die der Plan tatsächlich trägt | Nur relevant, wenn der Aufrufer den Plan unvollständig baut; Regelfall betroffen es nicht. |
+| 116 | `NM_IndividualAddress_Write` wiederholt nicht für den Bediener, liest eine Transport-Layer-Freigabe als MP §2.3 es nicht ausdrücklich sagt | Beide Abweichungen ändern keine Stopp/Weiter-Entscheidung des Standards. |
+| 118 | Erfolgreicher Projekt-Load meldet sich Screenreadern nicht | Nur der Erfolgsfall fehlt; `failed` wird bereits angesagt. |
 
-## K4 — niedrig (7)
+## K4 — niedrig (11)
 
-| § | Thema |
-| --- | --- |
+| § | Thema | Warum K4 |
+| --- | --- | --- |
 | 42 | `command_sync.rs`' Moduldoku überzeichnet die eigene Rolle |
 | 43 | Animationen ohne In-App-Schalter, nur OS-Präferenz |
 | 65 | `--version` nennt einen Commit, nie einen Arbeitsstand |
@@ -134,6 +146,10 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 | 95 | Sieben Stellen, an denen der Standardtext nicht wörtlich gilt (Wegweiser, keine Kosten) |
 | 98 | Die zweite Flavour-Zeile sieht fast niemand |
 | 100 | Hilfetexte liegen im Message-Katalog, ein Absatz pro Schlüssel |
+| 109 | Zwei Downloadteile derselben `PartKind` ohne definierte Reihenfolge werden beide abgelehnt | Kein einziger Fall bislang beobachtet, Ablehnung statt Rateversuch. |
+| 110 | `PID_GROUP_RESPONSER_TABLE` bleibt auf jedem Medium unimplementiert | Bewusst — PL110-only laut RES, dieses Projekt zielt auf TP1/RF/IP. |
+| 111 | CP §3.5.4 Schritt 07 (Individualadresse entladen) bleibt unimplementiert | Bewusste Weigerung: das Werkzeug soll das eigene Zielgerät nicht unadressierbar machen. |
+| 115 | `MasterResetResponse::recovery_wait`/`SessionTiming::restart_basic_t1` berechnen Wartezeiten, die niemand abwartet | Toter Code ohne heutigen Aufrufer. |
 
 ## Erledigt, steht als Historie drin (17)
 
@@ -149,10 +165,10 @@ Nummern sind die Abschnittsnummern der Quelldatei. §94 existiert nicht.
 
 ## Nicht in dieser Zählung
 
-- **§104 und §105** liegen auf den offenen Branches `debug-report` (Redaktion des
-  Debug-Berichts) und `c19-release` (Ctrl1-Priorität `SYSTEM` bei den vier
-  verbindungsorientierten TL-Frames) und sind noch nicht gemerged.
-- **Read-on-Init-Flag:** `read_on_init_flag` wird in `crates/knx-productdb` geparst und
-  taucht danach nirgends mehr auf — das sechste Flag eines Kommunikationsobjekts wird
-  gelesen, gespeichert und an der Core-Grenze fallen gelassen. Noch kein Eintrag in
-  `KNOWN_LIMITATIONS.md`; gehört dorthin, Einstufung **K2**.
+- **§105** (Ctrl1-Priorität `SYSTEM` bei den vier verbindungsorientierten
+  TL-Frames) ist gemerged und existiert, ist aber absichtlich nicht
+  eingestuft: der Eintrag selbst sagt "Unknown on real hardware and
+  untested" — Wirkung auf echtem Bus unbekannt, auf dem Simulator (der nicht
+  arbitriert) unbeobachtbar. Eine Einstufung wäre hier geraten, nicht
+  gelesen. Bleibt offen, bis eine Messung gegen echte Hardware oder ein
+  Standard-Zitat zur Priorität-abhängigen Zustellung vorliegt.

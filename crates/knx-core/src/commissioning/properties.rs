@@ -24,7 +24,7 @@ pub const PID_LOAD_STATE_CONTROL: u8 = 5;
 /// exists so that a reader of a frame dump can recognise it.
 pub const PID_RUN_STATE_CONTROL: u8 = 6;
 
-/// `PID_TABLE_REFERENCE` — the base address spec §7.2 step 3 calls
+/// `PID_TABLE_REFERENCE` — the base address design spec §7.2 step 3 calls
 /// `PID_REFERENCE`.
 ///
 /// `[D]` `03_07_03 Standardized Identifier Tables` row
@@ -35,14 +35,14 @@ pub const PID_RUN_STATE_CONTROL: u8 = 6;
 /// memory and zeroes `PID_TABLE_REFERENCE`."*
 pub const PID_TABLE_REFERENCE: u8 = 7;
 
-/// `PID_MANUFACTURER_ID`, the guard of spec §7.1 step 04.
+/// `PID_MANUFACTURER_ID`, the guard of design spec §7.1 step 04.
 ///
 /// `[D]` `03_07_03 Standardized Identifier Tables` row
 /// `| 12: | PID_MANUFACTURER_ID |`, and CP §3.5.2 step 03 *"MaC:
 /// PropRead(DeviceObj, PID_MANUFACTURER_ID (PID = 12)"*.
 pub const PID_MANUFACTURER_ID: u8 = 12;
 
-/// `PID_PROGRAM_VERSION`, written by spec §7.2 step 5.
+/// `PID_PROGRAM_VERSION`, written by design spec §7.2 step 5.
 ///
 /// `[D]` `03_07_03 Standardized Identifier Tables` row
 /// `| 13: | PID_PROGRAM_VERSION | Application Version |`, confirmed by RES
@@ -50,7 +50,7 @@ pub const PID_MANUFACTURER_ID: u8 = 12;
 /// PID_PROGRAM_VERSION | PDT_GENERIC_05"*.
 pub const PID_PROGRAM_VERSION: u8 = 13;
 
-/// `PID_DEVICE_CONTROL`, whose bit 2 is Verify Mode (spec §6.3).
+/// `PID_DEVICE_CONTROL`, whose bit 2 is Verify Mode (design spec §6.3).
 ///
 /// `[D]` RES §4.2.14, Table 11.
 pub const PID_DEVICE_CONTROL: u8 = 14;
@@ -61,14 +61,14 @@ pub const PID_DEVICE_CONTROL: u8 = 14;
 /// `[D]` Spec §3.1's table.
 pub const PID_MCB_TABLE: u8 = 27;
 
-/// `PID_ERROR_CODE`, read *before* any unload (spec §5.5).
+/// `PID_ERROR_CODE`, read *before* any unload (design spec §5.5).
 ///
 /// `[D]` RES §4.2.28. Its values are [`super::error_code`].
 pub const PID_ERROR_CODE: u8 = 28;
 
 /// `PID_OBJECT_INDEX`, which an object reports about itself.
 ///
-/// `[D]` RES §4.2.29, and spec §3.2's correction: this is **not** how an
+/// `[D]` RES §4.2.29, and design spec §3.2's correction: this is **not** how an
 /// object is addressed.
 pub const PID_OBJECT_INDEX: u8 = 29;
 
@@ -85,7 +85,7 @@ pub const PID_OBJECT_INDEX: u8 = 29;
 /// optional, not mandatory (pp. 138-140 omit PID 30 for every profile).
 pub const PID_DOWNLOAD_COUNTER: u8 = 30;
 
-/// `PID_MAX_APDU_LENGTH`, read from the Device Object only (spec §6.4).
+/// `PID_MAX_APDU_LENGTH`, read from the Device Object only (design spec §6.4).
 ///
 /// `[D]` RES §4.3.7.
 pub const PID_MAX_APDU_LENGTH: u8 = 56;
@@ -137,7 +137,7 @@ pub fn with_verify_mode(device_control: u8, on: bool) -> u8 {
 }
 
 /// Which Interface Object a property service addresses, via the service's
-/// own `object_index` field (spec §3.2).
+/// own `object_index` field (design spec §3.2).
 ///
 /// This is a newtype and not a bare `u8` so that a PID and an object index
 /// cannot be swapped at a call site: both are single octets, and the two

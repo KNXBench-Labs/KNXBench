@@ -126,7 +126,7 @@ mod tests {
     }
 
     /// A minimal, valid `ComObjectInstance`: text and description resolved
-    /// at program layer, no datapoint type, all five flags absent, and no
+    /// at program layer, no datapoint type, all six flags absent, and no
     /// size (unstated at instance level in schema 11, as `size` documents).
     fn com_object_instance_fixture() -> ComObjectInstance {
         ComObjectInstance {

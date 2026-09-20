@@ -247,7 +247,7 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
   );
 }
 
-// Five checkboxes, one per `ComFlagName` — each toggle applies immediately
+// Six checkboxes, one per `ComFlagName` — each toggle applies immediately
 // (no blur/Enter gesture, unlike `DptField`/`ComObjectDescriptionField`,
 // since a checkbox's `onChange` already fires exactly once per intended
 // edit). No "clear to inherited" affordance exists here, matching
@@ -267,7 +267,7 @@ function ComObjectFlagsRow(props: { com: ComObjectNode; onApplied: (tree: Projec
     }
   }
 
-  // `label` (the R/W/T/U/C letter) and `name` (`api.ComFlagName`, sent
+  // `label` (the R/W/T/U/C/I letter) and `name` (`api.ComFlagName`, sent
   // verbatim to `setComObjectFlag`) are not translatable — the letters are
   // KNX's own flag abbreviations and `name` is a wire value, not display
   // text. Only `titleKey` — the tooltip a mouse hover shows — is language
@@ -283,11 +283,17 @@ function ComObjectFlagsRow(props: { com: ComObjectNode; onApplied: (tree: Projec
       titleKey: "inspector.comFlag.communication",
       value: com.communication,
     },
+    {
+      label: "I",
+      name: "ReadOnInit",
+      titleKey: "inspector.comFlag.readOnInit",
+      value: com.read_on_init,
+    },
   ];
 
   return (
     <div className="com-object-flags">
-      {/* The five `title` attributes below stay — they are a fine mouse
+      {/* The six `title` attributes below stay — they are a fine mouse
           affordance for a one-word flag name. The tip is the keyboard's
           way in, and carries the sentence the letters cannot (ADR-0024). */}
       <HelpTip labelKey="help.tip.comFlags.label" textKey="help.tip.comFlags.text" />

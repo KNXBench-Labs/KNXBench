@@ -449,6 +449,9 @@ pub struct ComObjectFields {
     pub transmit: Option<bool>,
     pub update: Option<bool>,
     pub communication: Option<bool>,
+    /// The sixth flag (§117). `None` where nothing stated it, which is most
+    /// of the time — it is normally a product-database value.
+    pub read_on_init: Option<bool>,
     /// Sorted by group address key, then direction.
     pub links: Vec<(GroupAddressKey, Direction)>,
     /// The linked module instance's own `ets_id`, `None` for a
@@ -492,6 +495,7 @@ pub fn com_object_fields(
         transmit: semantic_flag(&com.flags.transmit),
         update: semantic_flag(&com.flags.update),
         communication: semantic_flag(&com.flags.communication),
+        read_on_init: semantic_flag(&com.flags.read_on_init),
         links,
         module_instance: com
             .module_instance
@@ -523,6 +527,7 @@ pub fn com_object_changed_fields(
             transmit,
             update,
             communication,
+            read_on_init,
             links,
             module_instance,
         ]
@@ -1230,17 +1235,21 @@ mod tests {
             transmit: Some(true),
             update: Some(false),
             communication: Some(true),
+            read_on_init: None,
             links: vec![],
             module_instance: None,
         };
         let right = ComObjectFields {
             text: Some("Off".into()),
             update: Some(true),
+            // Absent on the left, stated on the right: the sixth flag
+            // reports as a change like any other field (§117).
+            read_on_init: Some(true),
             ..left.clone()
         };
         assert_eq!(
             com_object_changed_fields(&left, &right),
-            vec!["text", "update"]
+            vec!["text", "update", "read_on_init"]
         );
     }
 

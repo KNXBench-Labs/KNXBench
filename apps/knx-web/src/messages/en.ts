@@ -264,6 +264,7 @@ export const messages = {
   "inspector.comFlag.transmit": "Transmit",
   "inspector.comFlag.update": "Update",
   "inspector.comFlag.communication": "Communication",
+  "inspector.comFlag.readOnInit": "Read on init",
   "inspector.direction.send": "Send",
   "inspector.direction.receive": "Receive",
   "inspector.unlink": "Unlink",
@@ -1024,11 +1025,11 @@ export const messages = {
 
   "help.topic.comObjectFlags.title": "Communication object flags",
   "help.topic.comObjectFlags.p1":
-    "A communication object is one input or output of a device's application program. Linking it to a group address is what puts the device on that address. KNXBench models five flags for it — shown as R, W, T, U and C in the Properties inspector — and together they decide what the object may do there.",
+    "A communication object is one input or output of a device's application program. Linking it to a group address is what puts the device on that address. KNXBench models six flags for it — shown as R, W, T, U, C and I in the Properties inspector — and together they decide what the object may do there.",
   "help.topic.comObjectFlags.p2":
     "C, communication, is the master switch: with it off the object takes no part in bus traffic and the other four have nothing to act on. R, read, lets the object answer a read request with its current value. W, write, lets an incoming telegram change that value.",
   "help.topic.comObjectFlags.p3":
-    "T, transmit, lets the object send by itself when its value changes — the flag that makes a sensor a sender. U, update, lets it adopt a value it sees in another device's read response. KNXBench stores the five as you set them; it does not judge which combination suits your device.",
+    "T, transmit, lets the object send by itself when its value changes — the flag that makes a sensor a sender. U, update, lets it adopt a value it sees in another device's read response. I, read on init, asks the bus for the address's value once at start-up, so the object begins with a real value rather than a guess. KNXBench stores the six as you set them; it does not judge which combination suits your device.",
 
   "help.topic.busMonitor.title": "Bus monitor",
   "help.topic.busMonitor.p1":
@@ -1058,13 +1059,13 @@ export const messages = {
   "help.topic.limits.p1":
     "KNXBench is an independent application. It is not made by, endorsed by or certified by the KNX Association, and it is not ETS. Where it reads or writes an ETS file it does so on its own reading of that file.",
   "help.topic.limits.p2":
-    "KNX Secure is not supported. A password-protected project cannot be opened from this window — there is nowhere to type the password. Programming devices over the bus is not offered here either: the bus features are watching traffic and sending single telegrams. KNX's sixth communication-object flag, Read-on-Init (I), is not part of the project model: product data carrying it is read, but the flag is neither shown nor editable.",
+    "KNX Secure is not supported. A password-protected project cannot be opened from this window — there is nowhere to type the password. Programming devices over the bus is not offered here either: the bus features are watching traffic and sending single telegrams. Read-on-Init (I) is now part of the project model and editable, with one gap left: no measured ETS project file states that flag per communication object, so exporting a .knxproj leaves an edit to it behind and says so in the export report.",
   "help.topic.limits.p3":
     "What is here is tested, but a test suite is not a site survey. Before trusting this application about an installation, check what it tells you against the installation itself.",
 
   "help.tip.comFlags.label": "What the communication object flags mean",
   "help.tip.comFlags.text":
-    "R, W, T, U and C decide what this object may do on the bus. C is the master switch — with it off, the other four do nothing. F1 has the full explanation.",
+    "R, W, T, U, C and I decide what this object may do on the bus. C is the master switch — with it off, the other five do nothing. F1 has the full explanation.",
   "help.tip.addressTable.label": "What this table shows",
   "help.tip.addressTable.text":
     "Every group address in the project, with its datapoint type and the communication objects linked to it. The box filters by address, by name or by datapoint type. F1 explains what a group address is.",

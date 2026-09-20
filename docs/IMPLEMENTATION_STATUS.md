@@ -7850,3 +7850,93 @@ Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace
 -j 2`, `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
 check-headers` and `cargo deny check` all exit 0. `check-headers` is
 unchanged (159/167, ceiling 168): no new source file. No web file touched.
+
+## 2026-09-20 — C16: `NM_IndividualAddress_Write`, walked end to end
+
+`procedure.rs:195` named the four steps; `ManagementSession` had a method
+for each of C15's primitives but nothing that walked them in the
+Standard's order. New module `crates/knx-net/src/commissioning/
+individual_address_write.rs` adds a free function,
+`individual_address_write(transport, plan, timing, new_address,
+programming_authorisation, restart_authorisation)`, because the procedure
+needs three sessions with three different targets and authorisations —
+not one `ManagementSession`, whose target and authorisation are fixed at
+construction:
+
+* **Step 1** connects to `IA_new` with [`AuthorisationPlan::Skip`] and
+  calls the new `ManagementSession::probe_device_descriptor()` (added
+  alongside the three broadcast primitives below, in the same
+  `commissioning.rs`): Device Descriptor Type 0, accepting whatever
+  `descriptor_type` the answer carries — MP §2.3 exception a), p. 15.
+  Occupancy is one of four `Occupancy` variants (`NotOccupied`,
+  `OccupiedWithResponse`, `OccupiedWithoutDescriptor` for a `T_Disconnect`
+  or a silent descriptor read, `OccupiedWithRejectedConnect` for a
+  negative `T_Connect` confirmation — the last two are not in MP §2.3's
+  text at all, which only describes a successful connect followed by
+  either a response or a `T_Disconnect`).
+* **Step 2** broadcasts `A_IndividualAddress_Read`
+  (`ManagementSession::broadcast_individual_address_read`, new) and waits
+  out the full `programming_mode_broadcast_timeout` (new `SessionTiming`
+  field, 1 s default — MP §2.3, p. 14's own time-out, distinct from MP
+  §2.2's 3 s), counting distinct sources via the existing
+  `ProgrammingModeResponders`/`single_responder()`.
+* Occupancy and the step-2 witness are compared by address, not by which
+  signal produced the occupancy finding: `KNOWN_LIMITATIONS.md` §108's
+  "to 2." ruling — the procedure stops with
+  `IndividualAddressWriteError::OccupiedByAnotherDevice` only when
+  `IA_new` is occupied *and* the occupant's address differs from the
+  witness's; continues, and skips step 3's write, when they match; the
+  earlier draft of this entry that gated the stop on `Occupancy` alone
+  would have refused the legal same-device re-assignment case.
+* **Step 3** re-verifies the count immediately before writing (a second
+  `broadcast_individual_address_read`, `IndividualAddressWriteError::
+  RecountBeforeWrite` on failure — procedure.rs's own words, "programming
+  mode may have switched itself off") and, only if `IA_new` still differs
+  from the witness's address, broadcasts `A_IndividualAddress_Write`
+  (`ManagementSession::broadcast_individual_address_write`, new,
+  authorised under `WriteScope::IndividualAddressProgramming`).
+* **Step 4** opens a fully authorised connection to `IA_new`, reads the
+  Device Descriptor (`read_mask_version`, existing), and calls C15's
+  `restart_basic()`, which disconnects on every path out by itself — no
+  explicit disconnect call needed here.
+
+The simulator (`crates/knx-net/src/commissioning/simulator.rs`) gains what
+step 1 through 3 need: `State.address` moves out of `SimulatedDevice`
+proper so a broadcast `A_IndividualAddress_Write` can rename the device
+mid-test and step 4 still reaches it; `SimulatorConfig.
+other_programming_mode_devices` lets one `SimulatedDevice` speak for
+synthetic extra Programming Mode responders it is not itself, so a
+two-responder count is testable without a second simulated device; and
+`SimulatorConfig.device_descriptor_read_gets_disconnect` sends a
+`T_Disconnect` instead of the usual descriptor answer, modelling MP
+§2.3's own body-text-vs-exception-text contradiction. A new `Destination`
+constant, `BROADCAST_DESTINATION` (`cemi.rs`, group address `0/0/0`),
+names the destination both the client and the simulator's new
+`handle_broadcast` use.
+
+Six new tests in `individual_address_write.rs`: the ordinary write; the
+re-assignment case (address unchanged, no broadcast write sent); a
+different device's occupancy stopping the procedure with the witness
+address attached; zero and two Programming Mode responders both stopping
+at step 2; and a `T_Disconnect` at step 1 that does *not* stop the
+procedure by itself, reaching (and then failing at) step 4 instead, which
+is what proves steps 2 and 3 were not the ones that stopped it. Not
+tested: `RecountBeforeWrite` actually firing — `SimulatorConfig` is
+immutable for a device's lifetime, so a test cannot flip Programming Mode
+off between step 2's count and step 3's recount without a new,
+independent simulator capability; that is left for whichever task next
+needs a mid-run reconfigurable simulator, rather than built speculatively
+here. Recorded, along with the two `Occupancy` variants MP §2.3's text
+does not describe, as `docs/KNOWN_LIMITATIONS.md` §116.
+
+`ProcedureKind::ALL`'s `IndividualAddressWrite` entry now has an execution
+path; C17 (gate an advertised-but-unimplemented procedure) is obsolete for
+this one specifically, though the general concern it raised may still
+apply elsewhere.
+
+Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace
+--all-targets -j 2 -- -D warnings`, `cargo test --workspace --no-fail-fast
+-j 2`, `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
+check-headers` and `cargo deny check` all exit 0. `check-headers`: 160
+files with a well-formed header (up from 159), 167 without (ceiling 168)
+— one new source file, header included from the start.

@@ -100,6 +100,11 @@ pub enum Destination {
     Group(GroupAddress),
 }
 
+/// The broadcast destination `0/0/0`, used by `A_IndividualAddress_Read` and
+/// `A_IndividualAddress_Write` (spec §4.2, MP §2.3 p. 14): group address 0 is
+/// reserved for broadcast and is never a valid installation group address.
+pub const BROADCAST_DESTINATION: Destination = Destination::Group(GroupAddress::from_raw(0));
+
 /// Octet 6 of the `L_Data` frame (the TPDU's Transport Control Field).
 /// Bit layout `[D]`: `03_03_04 Transport Layer v01.02.03 AS`, clause 2
 /// "TPDU", Figure 3 — Transport Control Field, page 6 of 38 (the Markdown

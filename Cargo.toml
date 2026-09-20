@@ -58,6 +58,11 @@ csv = "1"
 sha2 = "0.10"
 pbkdf2 = "0.12"
 base64 = "0.22"
+# The operating system's CSPRNG and nothing else: no generator state, no
+# seeding, no `rand` distribution machinery. Already resolved in this
+# workspace as a transitive dependency of `tempfile` and `uuid`, so
+# depending on it directly adds an edge, not a crate.
+getrandom = "0.4"
 socket2 = "0.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

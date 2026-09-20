@@ -8149,6 +8149,10 @@ syscall at all — behaviour identical to before, and the only thing
 membership join to `127.0.0.1` and sets TTL 0. Two independent reasons
 the datagram cannot leave the host. No public API changed.
 
+> That last sentence is wrong — there is one reason, and it is
+> `IP_MULTICAST_IF`. Left standing because this file is a log; corrected
+> in the B1 fix round 1 entry below and in KNOWN_LIMITATIONS.md §33.
+
 **The round trip is now actually tested.** Because production disables
 `IP_MULTICAST_LOOP` and a switch does not reflect multicast back to its
 ingress port, the old test could never receive its own frame: it timed
@@ -8193,3 +8197,111 @@ Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace
 -j 2`, `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
 check-headers` (160 with a well-formed header, 167 without, ceiling 168)
 and `cargo deny check` all exit 0.
+
+## 2026-09-20 — B1 fix round 1: one lock, not two, and a flake the fix itself introduced (branch `f1-routing-loopback`)
+
+The B1 branch review passed the loopback fix on both verdict-deciding
+criteria — production provably unchanged, no test reaching a physical
+interface, confirmed by polling `/proc/net/igmp` every 30 ms through the
+whole suite with `224.0.23.12` never once appearing on `eno1` — and failed
+it on two things. Both are now closed.
+
+**"Two independent locks" was false.** Measured here in an isolated
+namespace on a `dummy0` interface, Linux 7.2.5: ten sends at
+`IP_MULTICAST_TTL` 0 and ten at TTL 1 put the same ten frames and the same
+660 bytes on the link, captured with an `AF_PACKET` socket
+(`dst_mac=01:00:5e:00:17:0c ip_ttl=0 proto=17 dst=224.0.23.12`). A switch
+forwards L2 by MAC and never reads the IP TTL, so a TTL-0
+`ROUTING_INDICATION` would reach every other port in the group, a KNXnet/IP
+router included; only an IP *router* declines to forward it. **There is one
+lock, `IP_MULTICAST_IF`.** Corrected at all three sites that claimed
+otherwise — `RoutingSocketOptions`' `ttl` field and `LOOPBACK_ONLY` doc
+comments, the `loopback_only_options_actually_reach_the_socket` assertion
+message, KNOWN_LIMITATIONS.md §33 and this file's B1 entry above. §33's
+convention is kept throughout: the wrong text stands, dated, with the
+correction beneath it. §33 matters here specifically because it exists
+*because* a document drew a confident conclusion its own evidence did not
+support, and a reader who believes there are two locks will one day weaken
+the one that holds.
+
+**The fix had introduced a ~3 % flaky test.** Turning `IP_MULTICAST_LOOP`
+on made local delivery real for the first time, and a UDP socket bound to
+the wildcard address is handed every multicast datagram the host accepts on
+its port — group membership decides what the *host* accepts, not which
+socket gets a copy. Three tests send on `224.0.23.12:3671` concurrently
+(`1.1.1`, `1.1.5`, `1.1.3`), so `telegrams.recv()` returned whichever
+arrived first. Measured: 2 failures in 100 runs of `client::tests::`, every
+one `1.1.5` surfacing in `1.1.1`'s receiver. Separate groups would not have
+helped — a wildcard-bound socket receives datagrams for groups it never
+joined. Both round-trip tests now use `recv_from_source`, which waits for
+its own sender's individual address. Measured after: **0 failures in 150
+runs.**
+
+**Two surviving mutations closed, both proved by mutation.**
+
+| Mutation | Before | After |
+| --- | --- | --- |
+| `join_multicast_v4(…, options.interface)` → `…, UNSPECIFIED` | whole suite green; IGMP membership reports move to the routing table's interface | `the_loopback_join_lands_on_lo_and_nowhere_else` fails, naming the device that gained the membership. `loopback_only_options_actually_reach_the_socket` still passes, which is the point |
+| `set_multicast_loop_v4(options.loop_back)` → `set_multicast_loop_v4(true)` | whole suite green; a routing client hears its own sends in `subscribe()` | `a_loop_back_of_false_reaches_the_socket_as_false` fails. `production_routing_socket_options_leave_the_network_to_the_kernel` still passes, which is the point |
+
+The first mutation was executed only inside `unshare -rn` with a `dummy0`
+interface and a `224.0.0.0/4` route, so that `UNSPECIFIED` resolved to
+something that is not this machine's LAN interface. It was never run on the
+host. `socket2` exposes no getter for the interface a join used, hence
+`/proc/net/igmp`; the test compares a before/after snapshot and asserts only
+that no device other than `lo` *gained* a membership, because the rest of
+the suite joins and drops the same group on `lo` concurrently and other
+processes may legitimately hold it elsewhere.
+
+**A third flake, found while fixing the second.** The `/proc/net/igmp` test
+failed 5 times in 120 runs on a snapshot showing no membership at all for a
+group a re-read microseconds later showed held by five sockets.
+`std::fs::read_to_string` cannot learn a procfs file's length and issues
+several growing reads; `/proc/net/igmp` is a `seq_file` whose iterator
+re-seeks by index between reads, and with the suite joining and dropping the
+same group concurrently that re-seek lands past live records. One `read(2)`
+into a buffer large enough for the file is one pass of the iterator: 0
+failures in 150 runs.
+
+**Three comments corrected.** `loopback_multicast_is_deliverable`'s doc
+claimed its different group kept the probe payload out of a
+`RoutingClient`'s receive loop — false, since
+`connect_routing_to_group_accepts_an_administratively_scoped_address` and
+`connect_routing_to_group_joins_the_given_group_not_the_default` join
+exactly `239.0.2.1:3671` and do get it. Right conclusion, wrong mechanism:
+`frame::decode_frame` rejects `b"knxbench-loopback-probe"` at the header
+(`'k'` is not `0x06`) and `routing_receive_loop` `continue`s before the
+decode-failure counter. The probe's own `set_multicast_loop_v4(true)` is
+inert and now says so — measured, a probe pair with `IP_MULTICAST_LOOP`
+read back as 0 still reaches itself, because delivery on `lo` goes through
+the device path regardless; the same is true of `LOOPBACK_ONLY`'s
+`loop_back: true`, which is kept as the portable way to ask, not as
+something anything depends on. And `LOOPBACK_ONLY`'s "the round-trip test
+uses two separate clients, so the sender seeing its own frame changes
+nothing it asserts" was true of that test alone and false of the suite,
+which was the flake.
+
+**Reported, not fixed.** Two coverage notes now recorded in §33: the
+`KnxNetIpClient::connect_routing` → `RoutingClient::connect` delegation is
+untested in any default suite, and
+`local_discovery_hpai_resolves_a_real_ip_and_keeps_the_real_port` hard-fails
+rather than skips in a namespace that has a multicast route on `lo`. That
+last one came with a correction of its own: a *bare* `unshare -rn` with only
+`lo up` has no such route, the probe `connect()` gets `ENETUNREACH`, the
+skip fires, and all 19 `client::tests::` pass there. The hard failure needs
+`ip route add 224.0.0.0/4 dev lo` on top.
+
+**New limitation.** KNOWN_LIMITATIONS.md **§119** records this machine's
+`ntfs3` build hazard: cargo has decided a just-edited source file was fresh,
+and the branch review had three `cargo test --workspace` runs silently
+execute a stale pre-branch binary that transmitted on the LAN. On this
+machine a green gate is not evidence by itself; for `knx-net` the cheap
+check is the lib test count.
+
+**Test count.** `knx-net` lib: **252** (250 on the branch before this round,
+247 before the branch). Two new tests:
+`the_loopback_join_lands_on_lo_and_nowhere_else` and
+`a_loop_back_of_false_reaches_the_socket_as_false`. No test was weakened or
+removed; `assert_eq!(received.source, sender_address)` is now guaranteed by
+`recv_from_source`'s filter rather than tested by it, and is kept and
+annotated as such.

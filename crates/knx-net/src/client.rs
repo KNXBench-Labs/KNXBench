@@ -534,8 +534,13 @@ struct RoutingSocketOptions {
     /// `IP_MULTICAST_LOOP`: whether this host also receives what this
     /// socket sends.
     loop_back: bool,
-    /// `IP_MULTICAST_TTL`. `None` leaves the kernel default of 1; `Some(0)`
-    /// means the datagram is never put on a wire at all.
+    /// `IP_MULTICAST_TTL`. `None` leaves the kernel default of 1. `Some(0)`
+    /// stops an IP *router* from forwarding the datagram off this subnet
+    /// and nothing more: measured on Linux 7.2.5 in an isolated namespace,
+    /// a TTL-0 multicast datagram is still put on the link as a real
+    /// Ethernet frame (`dst_mac=01:00:5e:00:17:0c ip_ttl=0`), and a switch
+    /// forwards L2 by MAC without ever reading the IP header. This is not
+    /// a containment mechanism on a switched LAN.
     ttl: Option<u32>,
 }
 
@@ -549,15 +554,32 @@ impl RoutingSocketOptions {
         ttl: None,
     };
 
-    /// Tests only. Two independent locks keep the datagram on this
-    /// machine: `IP_MULTICAST_IF` names `lo`, so the kernel never consults
-    /// the routing table (which on a developer's machine resolves
-    /// `224.0.23.12` to the physical LAN interface), and TTL 0 means the
-    /// packet is not transmitted on any link even if that first lock were
-    /// wrong. `loop_back` is `true` — the opposite of production, and the
-    /// one deliberate deviation — because it is the portable way to get
-    /// local delivery; the round-trip test uses two separate clients, so
-    /// the sender seeing its own frame changes nothing it asserts.
+    /// Tests only. **There is exactly one lock, and it is
+    /// `IP_MULTICAST_IF`**: it names `lo`, so the kernel never consults the
+    /// routing table (which on a developer's machine resolves
+    /// `224.0.23.12` to the physical LAN interface). Two tests assert that
+    /// lock from both ends — `loopback_only_options_actually_reach_the_socket`
+    /// reads the option back off the live socket, and
+    /// `the_loopback_join_lands_on_lo_and_nowhere_else` reads the
+    /// membership the kernel actually recorded out of `/proc/net/igmp`.
+    ///
+    /// TTL 0 is *not* a second lock, whatever this comment and
+    /// KNOWN_LIMITATIONS.md §33 said until 2026-09-20. It stops IP-level
+    /// forwarding only; the frame still goes on the link, and a switch
+    /// forwards it by MAC to every other port in the group, a KNXnet/IP
+    /// router included (measured — see the `ttl` field above). Keep it as
+    /// defence against an IP-level mistake, and expect nothing else of it.
+    ///
+    /// `loop_back` is `true` — the opposite of production, and the one
+    /// deliberate deviation — because it is the portable way to ask for
+    /// local delivery. On `lo` this kernel delivers either way (measured:
+    /// a probe pair with `IP_MULTICAST_LOOP` read back as 0 still reached
+    /// each other), so nothing here actually leans on it.
+    ///
+    /// The cost of asking for local delivery is that every socket joined
+    /// to the group sees every other one's telegrams, whichever test sent
+    /// them — hence `recv_from_source`, which each round-trip test uses
+    /// instead of trusting the first frame to arrive to be its own.
     #[cfg(test)]
     const LOOPBACK_ONLY: Self = Self {
         interface: Ipv4Addr::LOCALHOST,
@@ -634,12 +656,22 @@ impl RoutingClient {
         let std_socket: std::net::UdpSocket = socket2_socket.into();
         let socket = UdpSocket::from_std(std_socket).map_err(BusError::Io)?;
 
+        // `options.interface` here, not `UNSPECIFIED`: the membership — and
+        // the IGMP membership report that announces it — must land on the
+        // same interface `IP_MULTICAST_IF` pins. `socket2` exposes no getter
+        // for what a join used, so `the_loopback_join_lands_on_lo_and_nowhere_else`
+        // asks `/proc/net/igmp` instead; without it this argument could be
+        // reverted with the whole suite staying green.
         socket
             .join_multicast_v4(*group.ip(), options.interface)
             .map_err(BusError::Io)?;
         // `false` in production: without it, our own sends would loop back
         // through this same socket and appear in `subscribe()` as if
         // another device sent them (design spec's Architecture section).
+        // `options.loop_back` rather than a literal, and
+        // `a_loop_back_of_false_reaches_the_socket_as_false` reads the result
+        // back off a real socket — hardcoding `true` here would otherwise
+        // ship exactly that bug with every test still passing.
         socket
             .set_multicast_loop_v4(options.loop_back)
             .map_err(BusError::Io)?;
@@ -1030,6 +1062,8 @@ async fn wait_for_reply<T: Clone>(
 mod tests {
     use super::*;
 
+    use std::collections::HashMap;
+
     /// Core v01.06.02 AS §5.5: `DISCONNECT_RESPONSE` is the final
     /// termination of the communication channel. A graceful client must not
     /// report completion while the server is still holding that response.
@@ -1191,6 +1225,14 @@ mod tests {
     /// (not the throwaway probe's). Skipped rather than failed if this
     /// sandbox has no route to the discovery multicast group at all —
     /// that's an environment limitation, not a regression.
+    ///
+    /// The skip guard covers only `probe.connect()` *failing*. In a
+    /// namespace that has a multicast route on `lo` (`unshare -rn` plus
+    /// `ip route add 224.0.0.0/4 dev lo`) the `connect()` succeeds, the
+    /// resolved HPAI is `0.0.0.0`, and this hard-fails below instead of
+    /// skipping — measured, and recorded in KNOWN_LIMITATIONS.md §33. A
+    /// bare `unshare -rn` with only `lo up` is unaffected: no such route,
+    /// so the `connect()` gets `ENETUNREACH` and the skip fires.
     #[tokio::test]
     async fn local_discovery_hpai_resolves_a_real_ip_and_keeps_the_real_port() {
         let socket = UdpSocket::bind("0.0.0.0:0")
@@ -1286,13 +1328,17 @@ mod tests {
         // not a sandbox property, and must fail rather than skip — without
         // this, deleting the `send_to` call outright leaves the test
         // passing (measured).
-        let received = match tokio::time::timeout(Duration::from_secs(5), telegrams.recv()).await {
-            Ok(Ok(telegram)) => telegram,
-            Ok(Err(_)) => panic!("broadcast channel closed unexpectedly"),
-            Err(_) => {
+        //
+        // `recv_from_source` rather than a bare `telegrams.recv()`: this
+        // receiver also hears the other round-trip test's `1.1.5` and the
+        // ROUTING_BUSY test's `1.1.3`, and used to assert on whichever
+        // arrived first. See `recv_from_source`'s own comment.
+        let received = match recv_from_source(&mut telegrams, sender_address, TELEGRAM_WAIT).await {
+            Some(telegram) => telegram,
+            None => {
                 assert!(
                     !loopback_multicast_is_deliverable().await,
-                    "no ROUTING_INDICATION arrived within 5s, yet two plain UDP sockets \
+                    "no ROUTING_INDICATION from the sender arrived within 5s, yet two plain UDP sockets \
                      configured the same way do deliver to each other on this host — \
                      that is a regression in RoutingClient's send/receive path, not a \
                      sandbox limitation"
@@ -1306,12 +1352,59 @@ mod tests {
                 return;
             }
         };
+        // Guaranteed by `recv_from_source`'s filter rather than tested by
+        // it, and kept because it is the property being claimed: the frame
+        // that came back carries the sender's own individual address.
         assert_eq!(received.source, sender_address);
         assert_eq!(received.destination, Destination::Group(group_address));
         assert_eq!(
             received.service,
             ApplicationService::GroupValueWrite(GroupValue::Short(1))
         );
+    }
+
+    /// How long a round-trip test waits for its own telegram before it
+    /// concludes nothing is coming. Measured delivery on this host is
+    /// 0.15 s; five seconds is slack, not an expectation.
+    const TELEGRAM_WAIT: Duration = Duration::from_secs(5);
+
+    /// Waits for a telegram whose source is `source`, discarding everyone
+    /// else's, and gives up after `within`.
+    ///
+    /// Both round-trip tests join `224.0.23.12:3671`, so does
+    /// `routing_client_send_waits_out_a_routing_busy_deadline`, and a UDP
+    /// socket bound to the wildcard address is handed every multicast
+    /// datagram the host accepts on that port — the membership decides what
+    /// the *host* accepts, not which socket gets a copy. The harness runs
+    /// those tests concurrently, so a bare `telegrams.recv()` returns
+    /// whichever telegram arrived first, from whichever test. That is new
+    /// as of B1: before `LOOPBACK_ONLY` turned `IP_MULTICAST_LOOP` on,
+    /// nothing was ever delivered locally and the collision could not
+    /// happen. Measured with the bare `recv()`: 2 failures in 100 runs of
+    /// `client::tests::`, every one of them `1.1.5` — the probe-agreement
+    /// test's sender — surfacing in `1.1.1`'s receiver.
+    ///
+    /// Separate multicast groups would *not* have fixed it, for the same
+    /// reason: a wildcard-bound socket receives datagrams for groups it
+    /// never joined, as long as some socket on the host joined them.
+    async fn recv_from_source(
+        telegrams: &mut broadcast::Receiver<LDataFrame>,
+        source: IndividualAddress,
+        within: Duration,
+    ) -> Option<LDataFrame> {
+        let deadline = tokio::time::Instant::now() + within;
+        loop {
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            match tokio::time::timeout(remaining, telegrams.recv()).await {
+                Ok(Ok(telegram)) if telegram.source == source => return Some(telegram),
+                // Another test's telegram, or a lag skip: keep waiting.
+                Ok(Ok(_)) | Ok(Err(broadcast::error::RecvError::Lagged(_))) => {}
+                Ok(Err(broadcast::error::RecvError::Closed)) => {
+                    panic!("broadcast channel closed unexpectedly")
+                }
+                Err(_) => return None,
+            }
+        }
     }
 
     /// Does this machine deliver a loopback-pinned multicast datagram at
@@ -1322,11 +1415,22 @@ mod tests {
     /// which KNOWN_LIMITATIONS.md §33 originally listed as the thing this
     /// test could not do.
     ///
-    /// Same two locks as `RoutingSocketOptions::LOOPBACK_ONLY`
-    /// (`IP_MULTICAST_IF` = `127.0.0.1`, TTL 0), on a different group
-    /// (`239.0.2.1`, RFC 2365 administratively scoped, never seen on a
-    /// real installation) so the probe payload cannot land in a
-    /// `RoutingClient`'s receive loop and count as a decode failure.
+    /// Same options as `RoutingSocketOptions::LOOPBACK_ONLY`
+    /// (`IP_MULTICAST_IF` = `127.0.0.1`, TTL 0 — one lock and one
+    /// courtesy, see there), on a different group: `239.0.2.1`, RFC 2365
+    /// administratively scoped, never seen on a real installation.
+    ///
+    /// The different group does *not* keep the payload out of a
+    /// `RoutingClient`'s receive loop, whatever this comment claimed
+    /// until 2026-09-20 —
+    /// `connect_routing_to_group_accepts_an_administratively_scoped_address`
+    /// and `connect_routing_to_group_joins_the_given_group_not_the_default`
+    /// join exactly `239.0.2.1:3671`, and their loops do get it. It never
+    /// counts as a decode failure for a different reason:
+    /// `frame::decode_frame` rejects `b"knxbench-loopback-probe"` at the
+    /// header (`'k'` is not `0x06`) and `routing_receive_loop` `continue`s,
+    /// so the payload never reaches the cEMI decode that owns the counter.
+    ///
     /// Any error at all means "cannot tell" and is reported as not
     /// deliverable: this only ever decides whether to skip, so the
     /// conservative answer is the one that skips.
@@ -1347,6 +1451,12 @@ mod tests {
             let std_socket: std::net::UdpSocket = socket2_socket.into();
             let socket = UdpSocket::from_std(std_socket)?;
             socket.join_multicast_v4(PROBE_GROUP, Ipv4Addr::LOCALHOST)?;
+            // Inert here, and kept only so the probe mirrors
+            // `LOOPBACK_ONLY` option for option: measured on this kernel,
+            // a probe pair with `IP_MULTICAST_LOOP` read back as 0 still
+            // reaches itself, because delivery on `lo` goes through the
+            // device path regardless. The probe's verdict does not depend
+            // on this line.
             socket.set_multicast_loop_v4(true)?;
             Ok(socket)
         }
@@ -1388,22 +1498,21 @@ mod tests {
 
         let deliverable = loopback_multicast_is_deliverable().await;
 
-        let sender = match RoutingClient::connect_with(
-            IndividualAddress::new(1, 1, 5).unwrap(),
-            RoutingSocketOptions::LOOPBACK_ONLY,
-        )
-        .await
-        {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!(
-                    "skipping the_loopback_probe_agrees_with_an_actual_loopback_round_trip: \
+        let sender_address = IndividualAddress::new(1, 1, 5).unwrap();
+        let sender =
+            match RoutingClient::connect_with(sender_address, RoutingSocketOptions::LOOPBACK_ONLY)
+                .await
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!(
+                        "skipping the_loopback_probe_agrees_with_an_actual_loopback_round_trip: \
                      could not join the routing multicast group on loopback \
                      in this sandbox: {e}"
-                );
-                return;
-            }
-        };
+                    );
+                    return;
+                }
+            };
         let receiver = RoutingClient::connect_with(
             IndividualAddress::new(1, 1, 6).unwrap(),
             RoutingSocketOptions::LOOPBACK_ONLY,
@@ -1420,9 +1529,14 @@ mod tests {
             )
             .await
             .expect("send over loopback multicast should succeed");
-        let round_tripped = tokio::time::timeout(Duration::from_secs(5), telegrams.recv())
+        // `recv_from_source`, not a bare `recv()`: this receiver also hears
+        // `routing_client_sends_and_receives_a_group_value_write`'s `1.1.1`
+        // and the ROUTING_BUSY test's `1.1.3`, and "some telegram arrived"
+        // would call the round trip a success even if this sender's own
+        // frame never left.
+        let round_tripped = recv_from_source(&mut telegrams, sender_address, TELEGRAM_WAIT)
             .await
-            .is_ok();
+            .is_some();
 
         assert_eq!(
             deliverable, round_tripped,
@@ -1670,13 +1784,189 @@ mod tests {
                 .multicast_ttl_v4()
                 .expect("IP_MULTICAST_TTL should be readable"),
             0,
-            "TTL 0 is the second lock: the datagram may not be put on any link"
+            "TTL 0 stops an IP router forwarding the datagram off this subnet — \
+             it is not a second lock, and the frame still goes on the link"
         );
         assert!(
             socket
                 .multicast_loop_v4()
                 .expect("IP_MULTICAST_LOOP should be readable"),
             "local delivery is the whole point of a loopback-only round-trip test"
+        );
+    }
+
+    /// `/proc/net/igmp` in exactly one `read(2)`, not via
+    /// `std::fs::read_to_string`. That helper cannot learn a procfs file's
+    /// length, so it reads in several growing chunks — and `/proc/net/igmp`
+    /// is a `seq_file` whose iterator re-seeks by *index* between reads. With
+    /// the rest of this suite joining and dropping the same group
+    /// concurrently, that re-seek lands past records that were there a
+    /// moment ago. Measured: 5 failures in 120 runs of `client::tests::`,
+    /// every one a snapshot with no membership at all for a group a re-read
+    /// microseconds later showed held by five sockets. One read is one pass
+    /// of the iterator, so one consistent answer.
+    fn read_proc_net_igmp() -> std::io::Result<String> {
+        use std::io::Read;
+
+        // Far more than the ~40 bytes per interface plus ~40 per membership
+        // this file costs; a short read here would look like "no membership"
+        // and is exactly the failure being fixed.
+        let mut buf = vec![0u8; 64 * 1024];
+        let filled = std::fs::File::open("/proc/net/igmp")?.read(&mut buf)?;
+        assert!(
+            filled < buf.len(),
+            "/proc/net/igmp filled the whole {} byte buffer — it may have been truncated",
+            buf.len()
+        );
+        buf.truncate(filled);
+        String::from_utf8(buf).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+    }
+
+    /// Every device in `/proc/net/igmp` currently holding a membership for
+    /// `group`, mapped to the number of sockets holding it. The file lists
+    /// an interface line (`Idx<TAB>Device : Count Querier`) followed by
+    /// tab-indented group lines, and prints the group as the in-memory
+    /// 32-bit address in hex — which on a little-endian host reads
+    /// back-to-front, `224.0.23.12` as `0C1700E0`. Both orderings are
+    /// accepted so this does not quietly stop matching on a big-endian
+    /// machine and pass by finding nothing.
+    fn igmp_memberships(group: Ipv4Addr) -> std::io::Result<HashMap<String, u32>> {
+        let o = group.octets();
+        let little = format!("{:02X}{:02X}{:02X}{:02X}", o[3], o[2], o[1], o[0]);
+        let big = format!("{:02X}{:02X}{:02X}{:02X}", o[0], o[1], o[2], o[3]);
+
+        let text = read_proc_net_igmp()?;
+        let mut memberships = HashMap::new();
+        let mut device = String::new();
+        for line in text.lines().skip(1) {
+            if line.starts_with('\t') {
+                let mut fields = line.split_whitespace();
+                if let (Some(listed), Some(users)) = (fields.next(), fields.next()) {
+                    if listed.eq_ignore_ascii_case(&little) || listed.eq_ignore_ascii_case(&big) {
+                        *memberships.entry(device.clone()).or_insert(0) +=
+                            users.parse::<u32>().unwrap_or(0);
+                    }
+                }
+            } else if let Some((_index, rest)) = line.split_once('\t') {
+                device = rest
+                    .split(':')
+                    .next()
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string();
+            }
+        }
+        Ok(memberships)
+    }
+
+    /// The mutation guard for `join_multicast_v4`'s interface argument.
+    /// Changing it back to `Ipv4Addr::UNSPECIFIED` leaves `IP_MULTICAST_IF`
+    /// pinned, so `loopback_only_options_actually_reach_the_socket` still
+    /// passes and the whole suite stays green — while the membership, and
+    /// the IGMP membership report announcing it, move to whatever the
+    /// routing table picks. On the machine KNOWN_LIMITATIONS.md §33 was
+    /// written on that is the interface the installation is on. `socket2`
+    /// exposes no getter for a join's interface, so this asks the kernel.
+    ///
+    /// Asserts only that no device other than `lo` *gained* a membership:
+    /// the rest of the suite joins and drops this same group on `lo`
+    /// concurrently, and another process on the machine may hold it on a
+    /// physical interface for reasons of its own. A before/after delta is
+    /// the part that is actually about this code.
+    #[tokio::test]
+    async fn the_loopback_join_lands_on_lo_and_nowhere_else() {
+        let group = *ROUTING_MULTICAST.ip();
+        let Ok(before) = igmp_memberships(group) else {
+            eprintln!(
+                "skipping the_loopback_join_lands_on_lo_and_nowhere_else: \
+                 /proc/net/igmp is not readable in this sandbox"
+            );
+            return;
+        };
+
+        let own_address = IndividualAddress::new(1, 1, 4).unwrap();
+        let client =
+            match RoutingClient::connect_with(own_address, RoutingSocketOptions::LOOPBACK_ONLY)
+                .await
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!(
+                        "skipping the_loopback_join_lands_on_lo_and_nowhere_else: \
+                     could not join the routing multicast group on loopback \
+                     in this sandbox: {e}"
+                    );
+                    return;
+                }
+            };
+
+        let after = igmp_memberships(group).expect("/proc/net/igmp was readable a moment ago");
+        assert!(
+            after.contains_key("lo"),
+            "a LOOPBACK_ONLY client must hold {group} on lo; /proc/net/igmp lists it on \
+             {:?}. The table as it reads now:\n{}",
+            after.keys().collect::<Vec<_>>(),
+            read_proc_net_igmp().unwrap_or_default()
+        );
+        for (device, users) in &after {
+            if device == "lo" {
+                continue;
+            }
+            let was = before.get(device).copied().unwrap_or(0);
+            assert!(
+                *users <= was,
+                "joining {group} with LOOPBACK_ONLY added a membership on {device} \
+                 ({was} before, {users} after) — the interface argument to \
+                 join_multicast_v4 is not reaching the kernel, and IGMP membership \
+                 reports are going out on a real installation's LAN again \
+                 (KNOWN_LIMITATIONS.md §33)"
+            );
+        }
+        drop(client);
+    }
+
+    /// The mutation guard for `set_multicast_loop_v4(options.loop_back)`.
+    /// `production_routing_socket_options_leave_the_network_to_the_kernel`
+    /// guards the *constant*, and nothing read the value back off a socket:
+    /// hardcoding `true` at that call site ships a routing client that
+    /// hears its own sends in `subscribe()` — the bug the comment there
+    /// exists to prevent — with the suite still green (measured).
+    ///
+    /// A `PRODUCTION` socket cannot be built in a test: it would join the
+    /// real group on the real interface, which is the whole of §33. So this
+    /// takes production's `loop_back` and keeps `LOOPBACK_ONLY`'s pin, which
+    /// is the part that makes it safe to build at all.
+    #[tokio::test]
+    async fn a_loop_back_of_false_reaches_the_socket_as_false() {
+        let options = RoutingSocketOptions {
+            loop_back: false,
+            ..RoutingSocketOptions::LOOPBACK_ONLY
+        };
+        assert_eq!(
+            options.loop_back,
+            RoutingSocketOptions::PRODUCTION.loop_back,
+            "this test is only worth anything while it carries production's own value"
+        );
+
+        let own_address = IndividualAddress::new(1, 1, 4).unwrap();
+        let client = match RoutingClient::connect_with(own_address, options).await {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!(
+                    "skipping a_loop_back_of_false_reaches_the_socket_as_false: \
+                     could not join the routing multicast group on loopback \
+                     in this sandbox: {e}"
+                );
+                return;
+            }
+        };
+        assert!(
+            !socket2::SockRef::from(&client.state.socket)
+                .multicast_loop_v4()
+                .expect("IP_MULTICAST_LOOP should be readable"),
+            "loop_back: false must reach the socket as IP_MULTICAST_LOOP = 0; \
+             a literal `true` at that call site would put every send back \
+             into this client's own subscribe()"
         );
     }
 

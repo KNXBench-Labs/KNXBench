@@ -1818,6 +1818,10 @@ Measured on this host and in a bare `unshare -rn` namespace holding only
 `lo`: the round trip now genuinely completes (0.15 s) instead of timing out
 (5 s), so the assertions at the end of the test run for the first time.
 
+> **The "two independent mechanisms" sentence in the paragraph above is
+> wrong.** It is left standing because this section is a record. See
+> **Corrected, 2026-09-20 (B1 fix round 1)** at the end of this section.
+
 **Production is untouched.** `connect_routing` and
 `connect_routing_to_group` pass `RoutingSocketOptions::PRODUCTION`, which
 joins on `Ipv4Addr::UNSPECIFIED`, keeps `IP_MULTICAST_LOOP` off, and makes
@@ -1845,6 +1849,98 @@ that delivers no multicast whatsoever, even on `lo`, still takes the skip
 path, and a green `cargo test` there still proves nothing about the round
 trip. That is now the only case the skip covers, and it is now a measured
 property of the machine rather than an assumption.
+
+Two more things the loopback fix does not cover, both reported rather than
+fixed:
+
+- `connect_routing_joins_the_standard_group_by_default` now enters at
+  `RoutingClient::connect_with`, so the one-line
+  `KnxNetIpClient::connect_routing` → `RoutingClient::connect` delegation is
+  untested in any suite that runs by default. Exercising it means joining
+  the real group on the real interface, which is the whole of this section.
+  Said honestly in the test's own doc comment; said here too, because that
+  is where someone counting coverage will look.
+- `local_discovery_hpai_resolves_a_real_ip_and_keeps_the_real_port`
+  (pre-existing, older than this fix) skips only when `probe.connect()`
+  *fails*. In a namespace that has a multicast route on `lo` — `unshare -rn`
+  plus `ip route add 224.0.0.0/4 dev lo` — the `connect()` succeeds, the
+  resolved HPAI is `0.0.0.0`, and the test hard-fails on the wildcard
+  assertion rather than skipping. Measured. A bare `unshare -rn` with only
+  `lo up` and no such route is not affected: the `connect()` gets
+  `ENETUNREACH`, the skip fires, and all 19 `client::tests::` pass there.
+
+**Corrected, 2026-09-20 (B1 fix round 1).** The "What happens now" paragraph
+above says two independent mechanisms keep the datagram on the machine, "and
+a multicast datagram with TTL 0 is not transmitted on any link even if that
+first mechanism failed". **That is false on Linux, and it is the kind of
+false this whole section exists to warn about — a confident conclusion its
+own evidence does not support.**
+
+Measured in an isolated namespace on a `dummy0` interface, Linux 7.2.5:
+
+```text
+readback IP_MULTICAST_TTL = 0
+readback IP_MULTICAST_LOOP = 0
+  asked TTL=0: 10 frames on dummy0, 660 bytes
+  FRAME SEEN ON dummy0: dst_mac=01:00:5e:00:17:0c ip_ttl=0 proto=17 dst=224.0.23.12
+  asked TTL=1: 10 frames on dummy0, 660 bytes
+```
+
+Ten sends at TTL 0 and ten at TTL 1 moved the same ten frames and the same
+660 bytes, captured with an `AF_PACKET` socket bound to `dummy0`; the branch
+review measured the same thing independently with a different payload size.
+A TTL-0 multicast datagram is put on the link as a real Ethernet frame,
+addressed to the group's own multicast MAC. A switch forwards L2
+by MAC and never reads the IP TTL, so a TTL-0 `ROUTING_INDICATION` would
+still reach every other port in the group, a KNXnet/IP router included. Only
+an IP *router* declines to forward it.
+
+**There is one lock, and it is `IP_MULTICAST_IF`.** TTL 0 stops IP-level
+forwarding and is not a containment mechanism on a switched LAN; it is kept
+as defence against an IP-level mistake and is worth exactly that much. The
+one lock is asserted from both ends:
+
+- `loopback_only_options_actually_reach_the_socket` reads `IP_MULTICAST_IF`
+  back off the live socket.
+- `the_loopback_join_lands_on_lo_and_nowhere_else` (new, B1 fix round 1)
+  reads `/proc/net/igmp` before and after and asserts no device other than
+  `lo` gained a membership for `224.0.23.12`. `socket2` exposes no getter
+  for the interface a join used, so until this test existed the interface
+  argument to `join_multicast_v4` could be reverted to `UNSPECIFIED` with
+  the entire suite staying green — measured, and measured again as the
+  mutation proof for the new test, in a namespace with no physical
+  interface in it.
+
+`IP_MULTICAST_LOOP` is also weaker than it looks, in the harmless
+direction: measured on this kernel, a socket pair pinned to `lo` with
+`IP_MULTICAST_LOOP` read back as 0 still delivers to itself, because
+delivery on `lo` goes through the device path regardless. `LOOPBACK_ONLY`
+keeps `loop_back: true` because it is the portable way to ask, not because
+anything here depends on it.
+
+**One flaky test, introduced by this fix and now closed.** Turning
+`IP_MULTICAST_LOOP` on made local delivery real for the first time, and a
+UDP socket bound to the wildcard address is handed every multicast datagram
+the host accepts on its port — the membership decides what the *host*
+accepts, not which socket gets a copy. Three tests send on
+`224.0.23.12:3671` concurrently (`1.1.1`, `1.1.5`, `1.1.3`), so
+`telegrams.recv()` returned whichever arrived first. Measured: 2 failures in
+100 runs of `client::tests::`, each one `1.1.5` surfacing in `1.1.1`'s
+receiver. Separate multicast groups would not have fixed it, for the same
+reason — a wildcard-bound socket receives datagrams for groups it never
+joined. Both round-trip tests now wait for their own sender's individual
+address (`recv_from_source`). Measured after: 0 failures in 150 runs.
+
+A second flake, this one in the new `/proc/net/igmp` test, is worth
+recording because it will bite anyone else reading procfs from a test:
+`std::fs::read_to_string` cannot learn a procfs file's length and so issues
+several growing reads, and `/proc/net/igmp` is a `seq_file` whose iterator
+re-seeks by *index* between reads. With the suite joining and dropping the
+same group concurrently, that re-seek lands past records that were there a
+moment earlier — 5 failures in 120 runs, every one a snapshot showing no
+membership at all for a group a re-read microseconds later showed held by
+five sockets. One `read(2)` into a buffer large enough for the file is one
+pass of the iterator, and one consistent answer: 0 failures in 150 runs.
 
 ## 34. Schema-≥21 export drops a handful of known-but-unmapped, per-device/per-line attributes
 
@@ -6514,3 +6610,49 @@ by ear.
 for the succeeded terminal state, mirroring the `failed` state's existing
 treatment. Small, UI-only, and not attempted here: this is a documentation
 task, and the finding is recorded rather than fixed.
+
+## 119. On this machine's `ntfs3` mount, cargo has rebuilt from a stale fingerprint — a green gate is not evidence by itself
+
+**Limitation.** The repository sits on an `ntfs3` mount (`findmnt`: `ntfs3
+/dev/sdc1 /mnt/daten-i`), and cargo's freshness check has been observed
+deciding a source file was unchanged when it had just been edited. The
+practical consequence is blunt: **on this machine a green `cargo test` is
+not, by itself, evidence that the code you are looking at was the code that
+ran.**
+
+**Cause.** Cargo's fingerprinting compares filesystem mtimes. Observed
+twice, on 2026-09-20, in the B1 fix round:
+
+- `sed -i` rewrote `crates/knx-net/src/client.rs` at 12:00:19; the previous
+  build had finished two minutes earlier; `cargo test -p knx-net --lib
+  --no-run` printed `Finished` with no `Compiling knx-net` line at all.
+  `touch` on the same file made the next invocation recompile it.
+- Worse, and measured by the B1 branch review rather than here: three
+  `cargo test --workspace` invocations silently executed a *pre-branch*
+  binary at a path whose mtime and md5 both said it was current. Being
+  pre-branch code, that binary transmitted `ROUTING_INDICATION` frames on
+  the physical LAN interface — precisely what §33 exists to stop.
+
+This is one observation on one filesystem. It is not a general claim about
+cargo, and it is not a claim that `ntfs3` reports mtimes incorrectly in
+general — only that the combination has, repeatedly, produced a stale
+freshness decision here.
+
+**Impact.** Every gate run on this machine needs an independent check that
+the binary under test is the current one. For `knx-net` the cheap one is
+the test count: **252 lib tests** as of B1 fix round 1, 250 for the B1
+branch before it, 247 for anything older. A run reporting 247 is executing
+pre-branch code and will transmit on the LAN. `touch` the source, or
+`cargo clean -p <crate>`, and rebuild rather than trusting mtime; do not
+trust a file's mtime or checksum as proof that a *build output* is current,
+because the output's own mtime was equally unreliable in the measured case.
+
+**Lifted when.** Either the working copy moves to a filesystem whose mtimes
+cargo can rely on, or cargo's checksum-based freshness stabilises:
+`-Z checksum-freshness` ("Use a checksum to determine if output is fresh
+rather than filesystem mtime", listed by `cargo -Z help` on cargo 1.98.0)
+exists for exactly this situation but is nightly-only and unstable.
+Pointing `build.target-dir`/`CARGO_TARGET_DIR` at a non-`ntfs3` path would
+address the build outputs but not the source fingerprints. **No build
+configuration was changed in this round** — this entry records the hazard
+and the workaround, and the choice is the maintainer's.

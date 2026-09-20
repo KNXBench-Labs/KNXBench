@@ -6640,6 +6640,29 @@ the attribute on a `ComObjectInstanceRef`, the tolerant parser records it
 as an unknown attribute (§34's machinery) and this entry gets its evidence;
 guessing ahead of that evidence would be worse than the gap.
 
+**The warning counts `true` only, and why.** `ExportWarning::ReadOnInitNotExported`
+fires for an exported-layer `Override::Value(true)` and stays silent for an
+exported-layer `Override::Value(false)`. The reason is that a `false` is not
+a loss in any case measured here: every one of those 2533 program-level
+`ReadOnInitFlag` occurrences reads `"Disabled"`, so a re-import resolves the
+flag back to `false` from the product database and the container and the
+project agree. Counting it would produce a warning nobody can clear — the
+Inspector's flag row has no "clear to inherited" gesture, so a user who
+switches I on and then off again is left with `Value(false)` at
+`Layer::UserEdit` for good, and would see the same complaint on every export
+forever. The case this does not cover: a user `false` against an application
+program that states `Enabled`. No such program has been measured, and if one
+turns up the counting rule needs the product-layer value to compare against,
+which the exporter does not have today. Recorded here rather than papered
+over.
+
+**Supersedes ADR-0010's five-flag prose.** `docs/adr/0010-per-attribute-override-representation.md`
+describes `ResolvedFlags` as a five-flag structure. That was accurate when it
+was written and the ADR is left as it stands — a decision record is history,
+not documentation — but the structure has six fields as of this entry, and
+the ADR's reasoning (one `Override` per attribute, absence distinct from a
+stated value) is exactly what made the sixth field a one-line addition.
+
 ## 118. A succeeded project load announces nothing to a screen reader
 
 **Limitation.** `apps/knx-web`'s `LoadProgressBanner.tsx` is a

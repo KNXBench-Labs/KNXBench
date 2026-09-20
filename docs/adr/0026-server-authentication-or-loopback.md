@@ -343,3 +343,74 @@ cannot tell two operators apart, because both hold the same password.
 no claim that this server is safe to expose to the internet. It is safe to
 expose to a network you have thought about, over a transport you have
 secured yourself.
+
+## Amendment, 2026-09-20 — the frontend half (T01b)
+
+The decision above is unchanged. This records how `apps/knx-web` meets it,
+because the server's 401 is only half a login.
+
+**The gate is a wrapper, not a route.** `AuthGate.tsx` asks
+`GET /api/auth/status` once on mount and branches three ways: not required —
+render the application and never mention sessions; required and already
+authenticated — same, plus a logout control; required and not authenticated —
+render `LoginScreen.tsx`. If the status request itself fails, the gate **fails
+open** and renders the application: a server that did not answer is not a
+server that refused, and conjuring a password prompt onto the desktop shell
+because a fetch failed would be a worse lie than letting the next real 401
+close the gate.
+
+**Mid-session 401 does not unmount the workbench.** `api.ts` publishes one
+event when a request outside `/api/auth/` comes back 401, through
+`session.ts` — a `Set` of callbacks, no React, so `api.ts` stays
+framework-free. `request()` reports for the calls that go through it;
+`installProductPackage` and `FsPicker.tsx`'s two helpers hold their own
+`fetch` for body reasons and call the exported `noteRefusal` by hand. That
+hand-wiring is the weak seam: a future raw `fetch` that forgets it is a 401
+nobody hears, which is precisely how `/api/fs/*` was missed in the first
+round. The gate answers by covering the screen with the login panel while
+leaving the application mounted behind it, `inert` so the hidden workbench is
+unreachable by tab, pointer or screen reader. `display: contents` does not
+defeat `inert`, which applies through the flat tree. This is the only way to
+preserve unsaved work, because no endpoint hands a loaded project back to a
+fresh mount. What it cannot preserve is a *restarted* server's copy of the
+project, and the expiry notice says so in both languages rather than implying
+a completeness it does not have.
+
+**What the cover is and is not.** It is opaque in every theme, so a
+deliberate logout hides the project from anyone looking at the screen. It is
+not an unmount: the workbench's DOM stays in the document, where devtools or
+a browser extension can still read it. That is deliberate, and the two cases
+want it for different reasons — an expired session must keep the unsaved work
+it was holding, and `login.signedOutNotice` promises the workbench comes back
+exactly as it was left, which unmounting on logout would turn into a lie.
+Privacy here means privacy from the room, not from the document.
+
+**The password is never echoed.** It travels in a POST body, is cleared from
+state before the application renders, and appears in no URL, log or error
+message; a rejected attempt shows a fixed translated string, not the server's.
+Submit is disabled while a request is in flight — the server serialises login
+attempts behind a single permit and delays failures on purpose, and a client
+that lets a user queue guesses turns that delay into a queue of pending
+requests.
+
+**The file picker closes itself.** `FsPicker.tsx` mounts on its own
+`createRoot` attached to `document.body`, a sibling of `#root` rather than a
+descendant of the gate's `inert` wrapper, so the cover does not reach it: a
+401 arriving while a picker is open would raise the login screen over a dialog
+that still held the focus trap. It therefore subscribes to the same expiry
+event and resolves itself as a cancel. Closing it was chosen over marking it
+`inert` because the user's next act is typing a password, a directory listing
+fetched before the session ended is stale, and every call site already handles
+the `null` that Cancel returns. It is also the narrower change: no second
+registry of live roots for the gate to keep.
+
+**The notice is the dialog's description.** A live region announces
+mutations, and the expiry notice is present in the dialog's first paint, so
+`role="status"` alone would let the honest half of "preserve unsaved work or
+warn" pass a screen-reader user by. `aria-describedby` on the
+`role="dialog"` element names it. The error keeps `role="alert"`, which is
+correct: it *is* inserted in response to something the user just did.
+
+**Not claimed.** This is a session gate on a single shared password, not a
+user model. The logout control is absent entirely when authentication is off,
+because a control that logs nobody out of nothing is worse than no control.

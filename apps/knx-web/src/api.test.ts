@@ -1,5 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "./api";
+import { subscribeSessionExpired } from "./session";
 
 function mockFetchOnce(body: unknown, ok = true, status = 200) {
   vi.stubGlobal(
@@ -15,8 +16,20 @@ function mockFetchOnce(body: unknown, ok = true, status = 200) {
 }
 
 describe("api", () => {
+  // T01b: `request()` publishes "the server wants a session" through
+  // `session.ts` rather than importing anything that renders. Subscribing
+  // here is how these tests see it happen.
+  const sessionExpired = vi.fn();
+  let unsubscribe: () => void = () => undefined;
+
   beforeEach(() => {
     vi.unstubAllGlobals();
+    sessionExpired.mockClear();
+    unsubscribe = subscribeSessionExpired(sessionExpired);
+  });
+
+  afterEach(() => {
+    unsubscribe();
   });
 
   it("importProject posts the path and client token, and returns the parsed tree", async () => {
@@ -494,5 +507,66 @@ describe("api", () => {
     } catch (e) {
       expect(api.errorMessage(e)).toBe("no project open");
     }
+  });
+  // ── T01b / ADR-0026 — the three auth endpoints and the 401 seam ─────────
+
+  it("authStatus asks the server, and reads back both flags", async () => {
+    mockFetchOnce({ required: true, authenticated: false });
+    const status = await api.authStatus();
+    expect(status).toEqual({ required: true, authenticated: false });
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/auth/status");
+    // A GET: it must not refresh the session's idle clock, and the server
+    // only promises that for the GET.
+    expect(init?.method).toBeUndefined();
+  });
+
+  it("login puts the password in the body and nowhere else", async () => {
+    mockFetchOnce({ authenticated: true });
+    await api.login("correct horse battery staple");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/auth/login");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ password: "correct horse battery staple" });
+    // The one assertion worth spelling out: no query string, ever.
+    expect(String(url)).not.toContain("correct");
+  });
+
+  it("login rejects with the server's status so the screen can tell 401 from 400", async () => {
+    mockFetchOnce({ error: "invalid password" }, false, 401);
+    await expect(api.login("wrong")).rejects.toThrow("invalid password");
+    expect(sessionExpired).not.toHaveBeenCalled();
+  });
+
+  it("logout posts with no body at all", async () => {
+    mockFetchOnce({ authenticated: false });
+    await api.logout();
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/auth/logout");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeUndefined();
+  });
+
+  it("publishes a session expiry when an ordinary call is refused", async () => {
+    mockFetchOnce({ error: "authentication required" }, false, 401);
+    await expect(api.undo()).rejects.toThrow("authentication required");
+    expect(sessionExpired).toHaveBeenCalledTimes(1);
+  });
+
+  it("says nothing about the session when a call fails for any other reason", async () => {
+    mockFetchOnce({ error: "no project open" }, false, 400);
+    await expect(api.undo()).rejects.toThrow("no project open");
+    expect(sessionExpired).not.toHaveBeenCalled();
+  });
+
+  it("publishes a session expiry from the multipart upload too", async () => {
+    // `installProductPackage` is the one call that does not go through
+    // `request()` — it needs FormData's own boundary — so it is also the
+    // one that could quietly miss the seam.
+    mockFetchOnce({ error: "authentication required" }, false, 401);
+    await expect(api.installProductPackage(new File([], "p.knxprod"))).rejects.toThrow(
+      "authentication required",
+    );
+    expect(sessionExpired).toHaveBeenCalledTimes(1);
   });
 });

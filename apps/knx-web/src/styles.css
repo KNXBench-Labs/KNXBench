@@ -1700,3 +1700,132 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 /* The one file redaction deliberately leaves alone. Coloured like an
    error because it is the sentence that must not be skimmed past. */
 .debug-report-warning { color: var(--knx-error-color) !important; }
+
+/* ── T01b / ADR-0026 — the login screen ──────────────────────────────────
+
+   The first thing anyone sees of this application on a server deployment,
+   so it is built the same way everything else is: nothing but the theme
+   layer's tokens (ADR-0022), which is what makes it read as porcelain's
+   flat daylight card and as neon-grid's hairline-on-black panel without a
+   single per-theme rule below.
+
+   It is a full-viewport cover rather than a translucent modal on purpose.
+   The workbench stays mounted behind it so a mid-session 401 loses no work
+   (`AuthGate.tsx`), and a translucent backdrop would put somebody's project
+   on display on an unattended screen — which is the opposite of what
+   "logged out" is supposed to mean. */
+.auth-gate-app { display: contents; }
+
+.auth-checking {
+  margin: 0;
+  padding: 18vh 24px 0;
+  text-align: center;
+  color: var(--knx-muted);
+  font-size: 13px;
+}
+
+.login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow: auto;
+  background: var(--knx-bg);
+  color: var(--knx-foreground);
+}
+
+/* The theme's own backdrop, drawn the same way `body::before` draws it:
+   on a dedicated layer, so the mask clips the pattern and not the card
+   standing on top of it. `none`/`auto`/`none` means the theme has no
+   backdrop and this layer paints nothing at all. */
+.login-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--knx-backdrop-image);
+  background-size: var(--knx-backdrop-size);
+  mask-image: var(--knx-backdrop-mask);
+}
+
+.login-panel {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 28px 30px 24px;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+  background: var(--knx-surface);
+  box-shadow: var(--knx-shadow-raised);
+  overflow: hidden;
+}
+
+/* The one flourish: the accent gradient as a hairline along the top edge.
+   A flat palette defines `--knx-gradient-primary` as its accent twice over,
+   so this is a solid rule there and a real gradient in the two loud
+   themes — one declaration, five deliberate results. */
+.login-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--knx-gradient-primary);
+}
+
+.login-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 14px;
+  font-size: 26px;
+}
+
+.login-wordmark { background: var(--knx-gradient-display); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+.login-intro { margin: 0 0 14px; color: var(--knx-muted); }
+
+/* The reason-for-being line: bordered on the accent side so it reads as a
+   notice rather than as more body copy, and left alone by the palettes. */
+.login-notice {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--knx-border);
+  border-left: 3px solid var(--knx-accent);
+  border-radius: var(--knx-radius-input);
+  background: color-mix(in srgb, var(--knx-accent) 6%, var(--knx-surface));
+  font-size: 12px;
+}
+
+.login-form { display: grid; gap: 14px; }
+.login-field { display: grid; gap: 6px; }
+.login-field-label { color: var(--knx-muted); font-size: 12px; }
+/* Monospace, like every other field in this application that holds a value
+   rather than a sentence — and it makes a mistyped character in a password
+   manager's paste visible as a wrong dot count rather than invisible. */
+.login-field input { width: 100%; font-family: var(--knx-font-mono); letter-spacing: 0.08em; }
+.login-error { margin: 0; }
+.login-submit { width: 100%; background: var(--knx-accent); color: var(--knx-on-accent); justify-content: center; }
+/* The app-wide `button:disabled` paints a disabled button in the surface
+   colour, which on a toolbar reads as "greyed out" and on this card — also
+   surface — reads as a sentence that fell over. It is disabled for most of
+   the time this screen is on display (empty field, attempt in flight), so
+   it keeps an outline and stays recognisably a button. */
+.login-submit:disabled { border: 1px solid var(--knx-border); }
+.login-footnote { margin: 18px 0 0; color: var(--knx-muted); font-size: 11px; }
+
+/* Entrance, on the motion control's own terms: duration from the level,
+   easing from the style, so "Smooth" glides the panel up and "Glitch"
+   steps it into place in four jerks. `both` matters — with motion off the
+   duration is 0ms and the panel is simply *there*, in its end state, rather
+   than stuck at `opacity: 0`. */
+@keyframes knx-login-panel-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .login-panel {
+    animation: knx-login-panel-in var(--knx-transition-duration) var(--knx-motion-easing) both;
+  }
+}

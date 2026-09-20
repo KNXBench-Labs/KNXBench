@@ -347,7 +347,7 @@ about reading:
 | # | Guarantee | Where it is tested |
 | --- | --- | --- |
 | 1 | **Nothing is silently discarded.** Anything the model cannot represent is either an opaque entry or a report entry, and a value that is neither is a bug in the importer | the import test suites in `crates/knx-etsproj/tests/` |
-| 2 | **Opaque bytes are the source's bytes.** Every opaque entry is stored with the SHA-256 it arrived with, whole-file or retained attribute | `crates/knx-etsproj/tests/opaque*.rs`, `download_state.rs` |
+| 2 | **Opaque bytes are the source's bytes.** Every opaque entry is stored with the SHA-256 it arrived with, whole-file or retained attribute | the `opaque` unit tests in `crates/knx-etsproj/src/opaque.rs`, plus `crates/knx-etsproj/tests/download_state.rs` |
 | 3 | **Retained values keep their address.** Each retained attribute is keyed to the single source element instance it came from (`knx_etsproj::xpath`), so the report can say where it was | `download_state_attributes_are_preserved_and_reported_by_name` |
 
 Byte equality of anything KNXBench produces is not attempted and is never

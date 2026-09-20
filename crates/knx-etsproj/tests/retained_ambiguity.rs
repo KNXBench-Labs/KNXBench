@@ -125,3 +125,153 @@ fn unambiguous_neighbours_still_come_back() {
         "no device attribute was dropped, so nothing should warn about one: {warnings:?}"
     );
 }
+
+/// One line, two `Segment`s, each with its own `BusAccess` — the element
+/// flavour of the same collision. Both key on
+/// `…/Line[@Id='…']/Segment/BusAccess`, because the exporter synthesizes
+/// one segment per line and there is nothing else to key by.
+const TWO_BUS_ACCESS: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/21" CreatedBy="ETS6" ToolVersion="ETS 6.1.0">
+  <Project Id="P-0001">
+    <Installations>
+      <Installation Name="T" DefaultLine="P-0001-0_L-2">
+        <Topology>
+          <Area Id="P-0001-0_A-1" Address="1">
+            <Line Id="P-0001-0_L-2" Address="1">
+              <Segment Id="P-0001-0_L-2_S-1" Number="0" MediumTypeRefId="MT-0">
+                <DeviceInstance Id="P-0001-0_DI-1" Name="D1" ProductRefId="M-0001_H-1_P-1"
+                                Hardware2ProgramRefId="M-0001_H-1_HP-1" Address="1" />
+                <BusAccess Name="alpha" Edi="one" />
+              </Segment>
+              <Segment Id="P-0001-0_L-2_S-2" Number="1" MediumTypeRefId="MT-0">
+                <DeviceInstance Id="P-0001-0_DI-2" Name="D2" ProductRefId="M-0001_H-1_P-1"
+                                Hardware2ProgramRefId="M-0001_H-1_HP-1" Address="2" />
+                <BusAccess Name="beta" Edi="two" />
+              </Segment>
+            </Line>
+          </Area>
+        </Topology>
+      </Installation>
+    </Installations>
+  </Project>
+</KNX>"#;
+
+/// The retained-element entries an import of `TWO_BUS_ACCESS` produces,
+/// with the collision the store is meant to survive actually present.
+///
+/// The importer alone cannot produce it today: `SourceLine::bus_access` is
+/// an `Option`, so the second `<BusAccess>` overwrites the first while the
+/// document is still being parsed and only one entry ever reaches the
+/// opaque store. That is an import-side loss of its own — recorded in this
+/// task's report — and it is not what this test is about. The store is the
+/// boundary under test here, and a store can hold the pair: any importer
+/// that stops dropping the first element, and any project file written by
+/// one that already does, hands the exporter two blobs under one key.
+fn entries_with_a_colliding_twin(opaque: &[OpaqueEntry]) -> Vec<OpaqueEntry> {
+    let mut entries = opaque.to_vec();
+    let survivor = entries
+        .iter()
+        .find(|e| e.xpath.ends_with("/Segment/BusAccess"))
+        .cloned()
+        .expect("the import retained one of the two BusAccess elements");
+    entries.push(OpaqueEntry {
+        bytes: br#"<BusAccess Name="alpha" Edi="one" />"#.to_vec(),
+        // Never read by the export; the store checks its own hashes.
+        sha256: String::new(),
+        ..survivor
+    });
+    entries
+}
+
+/// Two blobs under one key: neither is written, and the export says how
+/// many elements it is talking about. Writing the one the store happened
+/// to see last would hand one segment's bus access to the other, which is
+/// §34's forbidden trade — and it is what this store did before the rule
+/// reached its element half.
+#[test]
+fn an_ambiguous_retained_element_is_omitted_and_warned_about() {
+    let outcome = import_knxproj_bytes(knxproj(TWO_BUS_ACCESS), "ambiguity.knxproj").unwrap();
+    let entries = entries_with_a_colliding_twin(&outcome.opaque);
+    let exported = export_knxproj(&outcome.project, &entries).unwrap();
+    let mut written = Container::open(exported.bytes).unwrap();
+    let part = written.project_part().unwrap().to_string();
+    let xml = String::from_utf8(written.read(&format!("{part}/0.xml")).unwrap()).unwrap();
+
+    assert!(
+        !xml.contains("BusAccess"),
+        "neither segment's BusAccess may be written when the two cannot be \
+         told apart:\n{xml}"
+    );
+
+    let warnings: Vec<_> = exported
+        .warnings
+        .iter()
+        .filter(|w| {
+            matches!(
+                w,
+                ExportWarning::RetainedElementNotExported { element, .. } if element == "BusAccess"
+            )
+        })
+        .collect();
+    assert_eq!(
+        warnings.len(),
+        1,
+        "one warning per element class, not one per instance: {:?}",
+        exported.warnings
+    );
+    let ExportWarning::RetainedElementNotExported {
+        instances, detail, ..
+    } = warnings[0]
+    else {
+        unreachable!("filtered above")
+    };
+    assert_eq!(*instances, 2, "both segments should be counted");
+    assert!(
+        detail.contains("shared one `<BusAccess>` identity"),
+        "the warning must say why, not merely that: {detail}"
+    );
+}
+
+/// The control: one `BusAccess` under one segment still comes back
+/// verbatim, and nothing warns. A rule that dropped every retained element
+/// would pass the test above and be useless.
+#[test]
+fn an_unambiguous_retained_element_still_comes_back() {
+    let (xml, warnings) = round_trip(ONE_BUS_ACCESS);
+    assert!(
+        xml.contains(r#"<BusAccess Name="alpha" Edi="one" />"#),
+        "the only BusAccess in the document has an unambiguous owner:\n{xml}"
+    );
+    assert!(
+        !warnings
+            .iter()
+            .any(|w| matches!(w, ExportWarning::RetainedElementNotExported { .. })),
+        "nothing was left behind, so nothing should warn: {warnings:?}"
+    );
+}
+
+/// `TWO_BUS_ACCESS` with the second segment removed. Both fixtures carry a
+/// device per segment on purpose: the schema-≥21 writer spells a
+/// device-less `Segment` as an empty element and never asks the store for
+/// its `BusAccess` at all, which would make the assertion below pass
+/// without the rule under test ever running.
+const ONE_BUS_ACCESS: &[u8] = br#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/21" CreatedBy="ETS6" ToolVersion="ETS 6.1.0">
+  <Project Id="P-0001">
+    <Installations>
+      <Installation Name="T" DefaultLine="P-0001-0_L-2">
+        <Topology>
+          <Area Id="P-0001-0_A-1" Address="1">
+            <Line Id="P-0001-0_L-2" Address="1">
+              <Segment Id="P-0001-0_L-2_S-1" Number="0" MediumTypeRefId="MT-0">
+                <DeviceInstance Id="P-0001-0_DI-1" Name="D1" ProductRefId="M-0001_H-1_P-1"
+                                Hardware2ProgramRefId="M-0001_H-1_HP-1" Address="1" />
+                <BusAccess Name="alpha" Edi="one" />
+              </Segment>
+            </Line>
+          </Area>
+        </Topology>
+      </Installation>
+    </Installations>
+  </Project>
+</KNX>"#;

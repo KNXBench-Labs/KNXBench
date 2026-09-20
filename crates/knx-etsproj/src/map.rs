@@ -448,7 +448,7 @@ fn map_installation(
                     ids,
                     devices,
                     &mut parameters,
-                    &line_xpath,
+                    &crate::xpath::device_v11(&device.id),
                     problems,
                     counts,
                 );
@@ -485,7 +485,7 @@ fn map_installation(
                 completion: required_completion(&line.completion_status, &line_xpath, problems),
                 devices: device_ids,
             });
-            retained.extend(line.other.iter().cloned());
+            retained.extend(keyed(&line.other, &line_xpath));
             counts.lines.bump();
             line_ids.push(line_id);
         }
@@ -501,11 +501,10 @@ fn map_installation(
             completion: required_completion(&area.completion_status, &area_xpath, problems),
             lines: line_ids,
         });
-        retained.extend(area.other.iter().cloned());
+        retained.extend(keyed(&area.other, &area_xpath));
         counts.areas.bump();
     }
 
-    let unassigned_xpath = format!("{xpath}/Topology/UnassignedDevices");
     for device in &installation.unassigned_devices {
         let device_id = *tables
             .devices
@@ -521,7 +520,7 @@ fn map_installation(
             ids,
             devices,
             &mut parameters,
-            &unassigned_xpath,
+            &crate::xpath::unassigned_device(&device.id),
             problems,
             counts,
         );
@@ -534,7 +533,6 @@ fn map_installation(
             range,
             None,
             source_path,
-            xpath,
             tables,
             &mut group_ranges,
             &mut group_addresses,
@@ -549,7 +547,8 @@ fn map_installation(
             part,
             None,
             source_path,
-            xpath,
+            "Buildings",
+            "BuildingPart",
             tables,
             &mut buildings,
             &mut retained,
@@ -591,12 +590,12 @@ fn map_device(
     ids: &mut IdAllocators,
     devices: &mut Devices,
     parameters: &mut Vec<ParameterInstance>,
-    parent_xpath: &str,
+    xpath: &str,
     problems: &mut Vec<MapProblem>,
     counts: &mut EntityCounts,
 ) -> Vec<RetainedAttribute> {
-    let xpath = format!("{parent_xpath}/DeviceInstance[@Id='{}']", device.id);
-    let mut retained = device.other.clone();
+    let xpath = xpath.to_string();
+    let mut retained = keyed(&device.other, &xpath);
 
     let address = compose_individual_address(
         area_address,
@@ -645,6 +644,9 @@ fn map_device(
             name: b.name.clone().unwrap_or_default(),
         })
         .collect();
+    for b in &device.binary_data {
+        retained.extend(keyed(&b.other, &crate::xpath::binary_data(&xpath, &b.id)));
+    }
 
     let commissioning = CommissioningState {
         completion: required_completion(&device.completion_status, &xpath, problems),
@@ -704,11 +706,8 @@ fn map_com_object(
     device_xpath: &str,
     problems: &mut Vec<MapProblem>,
 ) -> (ComObjectInstance, Vec<RetainedAttribute>) {
-    let xpath = format!(
-        "{device_xpath}/ComObjectInstanceRefs/ComObjectInstanceRef[@RefId='{}']",
-        com.ref_id
-    );
-    let retained = com.other.clone();
+    let xpath = crate::xpath::com_object(device_xpath, &com.ref_id);
+    let retained = keyed(&com.other, &xpath);
 
     let number = match com_object_number(&com.ref_id) {
         Ok(n) => n,
@@ -846,7 +845,7 @@ fn map_installation_v21(
             .areas
             .get(&area.id)
             .expect("every area is allocated in pass 1");
-        let area_xpath = format!("{xpath}/Topology/Area[@Id='{}']", area.id);
+        let area_xpath = crate::xpath::area(&area.id);
         let area_addr = required_u8(&area.address, "Area/@Address", &area_xpath, problems);
 
         let mut line_ids = Vec::new();
@@ -855,7 +854,8 @@ fn map_installation_v21(
                 .lines
                 .get(&line.id)
                 .expect("every line is allocated in pass 1");
-            let line_xpath = format!("{area_xpath}/Line[@Id='{}']", line.id);
+            let line_xpath = crate::xpath::line(&line.id);
+            let segment_xpath = crate::xpath::segment(&line.id);
             let line_addr = required_u8(&line.address, "Line/@Address", &line_xpath, problems);
 
             let mut device_ids = Vec::new();
@@ -864,7 +864,6 @@ fn map_installation_v21(
                     .devices
                     .get(&device.id)
                     .expect("every device is allocated in pass 1");
-                let segment_xpath = format!("{line_xpath}/Segment");
                 let device_retained = map_device_v21(
                     device,
                     device_id,
@@ -875,7 +874,7 @@ fn map_installation_v21(
                     ids,
                     devices,
                     &mut parameters,
-                    &segment_xpath,
+                    &crate::xpath::device_v21(&device.id),
                     problems,
                     counts,
                 );
@@ -912,7 +911,29 @@ fn map_installation_v21(
                 completion: required_completion(&line.completion_status, &line_xpath, problems),
                 devices: device_ids,
             });
-            retained.extend(line.other.iter().cloned());
+            // `Segment`'s own attributes were folded into the enclosing
+            // `Line` by the parser (`installation_v21.rs`'s `"Segment"`
+            // arm), so they arrive here mixed in with the line's own and
+            // are told apart by the path the parser gave them. They are
+            // keyed by the owning line, not by the segment: `knx_core` has
+            // no segment entity to key by, and the exporter synthesizes
+            // exactly one segment per line. A line with two segments
+            // therefore produces one key twice, which the export store
+            // treats as ambiguous and refuses to write back — the right
+            // answer, since there is no longer any way to tell which
+            // segment a value came from.
+            for attribute in &line.other {
+                let owner = if attribute.xpath.ends_with("/Segment") {
+                    &segment_xpath
+                } else {
+                    &line_xpath
+                };
+                retained.push(RetainedAttribute {
+                    xpath: owner.clone(),
+                    name: attribute.name.clone(),
+                    value: attribute.value.clone(),
+                });
+            }
             counts.lines.bump();
             line_ids.push(line_id);
         }
@@ -928,11 +949,10 @@ fn map_installation_v21(
             completion: required_completion(&area.completion_status, &area_xpath, problems),
             lines: line_ids,
         });
-        retained.extend(area.other.iter().cloned());
+        retained.extend(keyed(&area.other, &area_xpath));
         counts.areas.bump();
     }
 
-    let unassigned_xpath = format!("{xpath}/Topology/UnassignedDevices");
     for device in &installation.unassigned_devices {
         let device_id = *tables
             .devices
@@ -948,7 +968,7 @@ fn map_installation_v21(
             ids,
             devices,
             &mut parameters,
-            &unassigned_xpath,
+            &crate::xpath::unassigned_device(&device.id),
             problems,
             counts,
         );
@@ -961,7 +981,6 @@ fn map_installation_v21(
             range,
             None,
             source_path,
-            xpath,
             tables,
             &mut group_ranges,
             &mut group_addresses,
@@ -976,7 +995,8 @@ fn map_installation_v21(
             part,
             None,
             source_path,
-            xpath,
+            "Locations",
+            "Space",
             tables,
             &mut buildings,
             &mut retained,
@@ -1029,12 +1049,12 @@ fn map_device_v21(
     ids: &mut IdAllocators,
     devices: &mut Devices,
     parameters: &mut Vec<ParameterInstance>,
-    parent_xpath: &str,
+    xpath: &str,
     problems: &mut Vec<MapProblem>,
     counts: &mut EntityCounts,
 ) -> Vec<RetainedAttribute> {
-    let xpath = format!("{parent_xpath}/DeviceInstance[@Id='{}']", device.id);
-    let mut retained = device.other.clone();
+    let xpath = xpath.to_string();
+    let mut retained = keyed(&device.other, &xpath);
 
     let address = compose_individual_address(
         area_address,
@@ -1127,6 +1147,9 @@ fn map_device_v21(
             name: b.name.clone().unwrap_or_default(),
         })
         .collect();
+    for b in &device.binary_data {
+        retained.extend(keyed(&b.other, &crate::xpath::binary_data(&xpath, &b.id)));
+    }
 
     let commissioning = CommissioningState {
         completion: required_completion(&device.completion_status, &xpath, problems),
@@ -1186,6 +1209,31 @@ fn map_device_v21(
 /// `&IdTables` directly — `Links`'s targets are already short ids, and that
 /// is the only cross-reference this function resolves.
 #[allow(clippy::too_many_arguments)]
+/// Re-keys the attributes one source element retained onto that element's
+/// own instance xpath ([`crate::xpath`]).
+///
+/// The parser can only key a retained attribute by the *shape* of the
+/// element it sat on (`".../DeviceInstance"`), because that is all a path
+/// stack knows. Mapping is the first stage that holds the element's
+/// identity, so it is where the key gains its `[@Id='…']` predicate. Every
+/// device's `SerialNumber` used to collapse into one key here; now each one
+/// keeps its own (`KNOWN_LIMITATIONS.md` §34).
+fn keyed(attributes: &[RetainedAttribute], xpath: &str) -> Vec<RetainedAttribute> {
+    attributes
+        .iter()
+        .map(|a| RetainedAttribute {
+            xpath: xpath.to_string(),
+            name: a.name.clone(),
+            value: a.value.clone(),
+        })
+        .collect()
+}
+
+// Nine arguments, two of them added here: the device's own xpath, so the
+// retained attributes can be keyed to this object rather than to every
+// object in the project, and the problems it may report while doing so.
+// A parameter struct would be a nicer signature and the same nine values.
+#[allow(clippy::too_many_arguments)]
 fn map_com_object_v21(
     ref_id: &str,
     over: Option<&SourceComObjectInstance>,
@@ -1197,8 +1245,11 @@ fn map_com_object_v21(
     device_xpath: &str,
     problems: &mut Vec<MapProblem>,
 ) -> (ComObjectInstance, Vec<RetainedAttribute>) {
-    let xpath = format!("{device_xpath}/GroupObjectTree[@Id='{ref_id}']");
-    let mut retained = Vec::new();
+    let xpath = crate::xpath::com_object(device_xpath, ref_id);
+    let mut retained = match over {
+        Some(c) => keyed(&c.other, &xpath),
+        None => Vec::new(),
+    };
 
     let (number, module_instance) = match module_com_object_ref(ref_id) {
         Ok((_short, number)) => {
@@ -1241,9 +1292,31 @@ fn map_com_object_v21(
             override_text(&c.text),
             override_text(&c.description),
             override_dpt(&c.datapoint_type, &xpath, problems),
-            // Schema ≥21 instance overrides never carry flags (ADR-0014,
-            // measured against the KV reference project).
-            ResolvedFlags::none(),
+            // Schema ≥21 instance overrides *do* carry flags, contrary to
+            // what this line asserted until now. ADR-0014's claim was
+            // measured against `KV v2.5 - demo.knxproj` alone, where it
+            // happens to hold: that project spells no flag on any of its
+            // `ComObjectInstanceRef` elements. The ETS 6.3.0 reference
+            // project (schema 23) carries 119 of them — `ReadFlag` 38,
+            // `WriteFlag` 18, `TransmitFlag` 27, `UpdateFlag` 28,
+            // `CommunicationFlag` 8 — spelled `"Enabled"`/`"Disabled"`,
+            // exactly as schema 11 spells them. One sample proved the
+            // wrong thing; the flags are resolved here now, the same way
+            // `map_com_object` resolves them.
+            ResolvedFlags {
+                read: override_bool(&c.read_flag, &xpath, problems),
+                write: override_bool(&c.write_flag, &xpath, problems),
+                transmit: override_bool(&c.transmit_flag, &xpath, problems),
+                update: override_bool(&c.update_flag, &xpath, problems),
+                communication: override_bool(&c.communication_flag, &xpath, problems),
+                // Absent for the same reason as at schema 11: no
+                // `ReadOnInitFlag` occurs on a `ComObjectInstanceRef`
+                // anywhere in the local corpus — not in the ETS4 project,
+                // not in the ETS 6.3.0 one, not in the KV demo — so it
+                // arrives from the product database instead
+                // (KNOWN_LIMITATIONS §117).
+                read_on_init: Override::Absent,
+            },
             required_bool(&c.is_active, &xpath, problems),
             c.channel_id.clone().map(|v| RetainedAttribute {
                 xpath: xpath.clone(),
@@ -1335,7 +1408,6 @@ fn map_group_range(
     range: &SourceGroupRange,
     parent: Option<GroupRangeId>,
     source_path: &str,
-    parent_xpath: &str,
     tables: &IdTables,
     group_ranges: &mut Vec<GroupRange>,
     group_addresses: &mut Vec<GroupAddressEntry>,
@@ -1347,7 +1419,7 @@ fn map_group_range(
         .group_ranges
         .get(&range.id)
         .expect("every group range is allocated in pass 1");
-    let xpath = format!("{parent_xpath}/GroupRanges/GroupRange[@Id='{}']", range.id);
+    let xpath = crate::xpath::group_range(&range.id);
 
     let start = required_ga(
         &range.range_start,
@@ -1363,7 +1435,6 @@ fn map_group_range(
             child,
             Some(id),
             source_path,
-            &xpath,
             tables,
             group_ranges,
             group_addresses,
@@ -1390,7 +1461,10 @@ fn map_group_range(
             unfiltered: required_bool(&address.unfiltered, &xpath, problems),
             range: Some(id),
         });
-        retained.extend(address.other.iter().cloned());
+        retained.extend(keyed(
+            &address.other,
+            &crate::xpath::group_address(&address.id),
+        ));
         counts.group_addresses.bump();
     }
 
@@ -1406,7 +1480,7 @@ fn map_group_range(
         parent,
         children: child_ids,
     });
-    retained.extend(range.other.iter().cloned());
+    retained.extend(keyed(&range.other, &xpath));
     counts.group_ranges.bump();
 
     id
@@ -1417,7 +1491,8 @@ fn map_building_part(
     part: &SourceBuildingPart,
     parent: Option<BuildingPartId>,
     source_path: &str,
-    parent_xpath: &str,
+    container: &str,
+    element: &str,
     tables: &IdTables,
     buildings: &mut Vec<BuildingPart>,
     retained: &mut Vec<RetainedAttribute>,
@@ -1428,7 +1503,7 @@ fn map_building_part(
         .building_parts
         .get(&part.id)
         .expect("every building part is allocated in pass 1");
-    let xpath = format!("{parent_xpath}/BuildingPart[@Id='{}']", part.id);
+    let xpath = crate::xpath::building_part(container, element, &part.id);
 
     let kind = match &part.kind {
         None => {
@@ -1471,7 +1546,8 @@ fn map_building_part(
             child,
             Some(id),
             source_path,
-            &xpath,
+            container,
+            element,
             tables,
             buildings,
             retained,
@@ -1495,7 +1571,7 @@ fn map_building_part(
         devices,
         parent,
     });
-    retained.extend(part.other.iter().cloned());
+    retained.extend(keyed(&part.other, &xpath));
     counts.building_parts.bump();
 
     id
@@ -2090,7 +2166,10 @@ mod tests {
     /// Regression test for a review finding: a schema-≥21 `DeviceInstance`
     /// sits under `Line/Segment/`, not directly under `Line/` the way
     /// schema 11 does — a `MapProblem`'s xpath must reflect the real
-    /// document structure, not schema 11's shallower one.
+    /// document structure, not schema 11's shallower one. The ancestor
+    /// `Line` is no longer predicated by its own id ([`crate::xpath`]: the
+    /// element's own id is what identifies it), so only the `/Segment/`
+    /// step is asserted here.
     #[test]
     fn a_schema_21_map_problem_xpath_includes_the_segment_element() {
         if !crate::testutil::corpus_available() {
@@ -2113,8 +2192,8 @@ mod tests {
             .find(|p| matches!(p.detail, MapProblemDetail::Value(_)))
             .expect("the malformed LastModified value is reported");
         assert!(
-            problem.xpath.contains("/Line[") && problem.xpath.contains("/Segment/DeviceInstance["),
-            "expected xpath to include .../Line[...]/Segment/DeviceInstance[...], got: {}",
+            problem.xpath.contains("/Line/Segment/DeviceInstance["),
+            "expected xpath to include .../Line/Segment/DeviceInstance[...], got: {}",
             problem.xpath
         );
     }

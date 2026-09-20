@@ -15,8 +15,9 @@ use knx_core::string_table::Language;
 
 use crate::building::{load_buildings, upsert_building_part};
 use crate::devices::{
-    load_all_com_objects, load_all_device_ids, load_device, set_device_line,
-    upsert_com_object_instance, upsert_device, upsert_group_links,
+    load_all_com_objects, load_all_device_ids, load_all_program_defaults, load_device,
+    set_device_line, upsert_com_object_instance, upsert_com_object_program_defaults, upsert_device,
+    upsert_group_links,
 };
 use crate::group::{
     load_group_addresses, load_group_ranges, upsert_group_address, upsert_group_range,
@@ -69,6 +70,7 @@ pub fn set_group_address_style(
 
 const DELETE_ALL_TABLES: &[&str] = &[
     // Child-to-parent order — matches the reverse of the insert order below.
+    "com_object_program_default",
     "com_object_override",
     "group_link",
     "com_object_instance",
@@ -242,6 +244,9 @@ pub fn save_project(conn: &Connection, project: &Project) -> Result<(), StoreErr
                 .expect("DeviceInstance::com_objects only ever names existing com objects");
             upsert_com_object_instance(&tx, device.id, j as i64, com)?;
             upsert_group_links(&tx, com.id, &com.links)?;
+            if let Some(defaults) = project.devices.program_defaults(com.id) {
+                upsert_com_object_program_defaults(&tx, com.id, defaults)?;
+            }
             written_com_objects.insert(com.id);
         }
     }
@@ -403,11 +408,15 @@ pub fn load_project(conn: &Connection) -> Result<Project, StoreError> {
 
     let mut devices = knx_core::devices::Devices::new();
     let mut com_objects_by_device = load_all_com_objects(conn)?;
+    let mut program_defaults = load_all_program_defaults(conn)?;
     for device_id in load_all_device_ids(conn)? {
         let mut device = load_device(conn, device_id)?;
         let com_objects = com_objects_by_device.remove(&device_id).unwrap_or_default();
         device.com_objects = com_objects.iter().map(|com| com.id).collect();
         for com in com_objects {
+            if let Some(defaults) = program_defaults.remove(&com.id) {
+                devices.set_program_defaults(com.id, defaults);
+            }
             devices.insert_com_object(com);
         }
         devices.insert(device);
@@ -849,6 +858,24 @@ mod tests {
                 .com_objects
                 .push(id);
         }
+        // One of the two carries a lifted program default too (ADR-0012 gap
+        // 2, ADR-0027) — `assert_eq!(loaded, project)` below already
+        // compares all of `Devices`, program defaults included, so this is
+        // the round trip proof for the new table, not a separate test.
+        project.devices.set_program_defaults(
+            ComObjectInstanceId(9),
+            knx_core::device::ProgramDefaults {
+                text: None,
+                description: None,
+                dpt: Some(knx_core::Resolved {
+                    value: knx_core::DptRef {
+                        main: 1,
+                        sub: Some(1),
+                    },
+                    layer: knx_core::Layer::Program,
+                }),
+            },
+        );
 
         save_project(&conn, &project).unwrap();
         let loaded = load_project(&conn).unwrap();
@@ -857,6 +884,10 @@ mod tests {
             loaded_device.com_objects,
             vec![ComObjectInstanceId(9), ComObjectInstanceId(3)]
         );
+        assert!(loaded
+            .devices
+            .program_defaults(ComObjectInstanceId(9))
+            .is_some());
         assert_eq!(loaded, project);
     }
 

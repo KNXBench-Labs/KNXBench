@@ -7,7 +7,7 @@ use std::fmt;
 
 use crate::address::GroupAddressStyle;
 use crate::building::BuildingPart;
-use crate::device::{ComObjectInstance, DeviceInstance};
+use crate::device::{ComObjectInstance, DeviceInstance, ProgramDefaults};
 use crate::dpt::DptRef;
 use crate::flags::{ComFlagKind, Direction, GroupLink};
 use crate::group::{GroupAddressEntry, GroupRange};
@@ -195,9 +195,15 @@ pub enum Command {
     /// pre-allocated by the caller via `Project::ids::next_device_id`/
     /// `next_com_object_instance_id`; `device.com_objects` already lists
     /// their ids, so no separate id list is threaded through twice.
+    /// `program_defaults` carries the side-table entries (ADR-0027) that
+    /// belong to those communication objects — empty for a genuine
+    /// creation, populated when this command is `DeleteDevice`'s inverse,
+    /// because `Devices::program_defaults` lives beside `ComObjectInstance`
+    /// rather than inside it and would otherwise not survive an undo.
     CreateDevice {
         device: DeviceInstance,
         com_objects: Vec<ComObjectInstance>,
+        program_defaults: Vec<(ComObjectInstanceId, ProgramDefaults)>,
         line: Option<LineId>,
     },
     /// Refuses (`CommandError::DeviceHasLinks`) if any of the device's
@@ -925,10 +931,12 @@ impl Command {
             Command::CreateDevice {
                 device,
                 com_objects,
+                program_defaults,
                 line,
             } => {
                 let device = device.clone();
                 let com_objects = com_objects.clone();
+                let program_defaults = program_defaults.clone();
                 let line = *line;
                 let device_id = device.id;
                 let installation = project
@@ -942,6 +950,12 @@ impl Command {
                 }
                 for com in &com_objects {
                     project.devices.insert_com_object(com.clone());
+                }
+                // After the instances exist: `set_program_defaults` is keyed
+                // by `ComObjectInstanceId`, so restoring before the insert
+                // would attach defaults to nothing.
+                for (com_id, defaults) in program_defaults {
+                    project.devices.set_program_defaults(com_id, defaults);
                 }
                 project.devices.insert(device);
                 match line {
@@ -980,14 +994,28 @@ impl Command {
                     .ok_or(CommandError::InstallationNotFound)?;
                 let line = remove_device_from_topology(installation, id)?;
                 let device = project.devices.remove(id).unwrap();
-                let com_objects = device
-                    .com_objects
-                    .iter()
-                    .filter_map(|&com_id| project.devices.remove_com_object(com_id))
-                    .collect();
+                // `remove_com_object` also drops the com object's
+                // `program_defaults` entry (ADR-0027), so the inverse has to
+                // read it out first or undo would resurrect the device
+                // without the values enrichment lifted for it. A com object
+                // with no defaults contributes nothing, so undo cannot
+                // invent an empty-but-present record either.
+                let mut com_objects = Vec::with_capacity(device.com_objects.len());
+                let mut program_defaults = Vec::new();
+                for &com_id in &device.com_objects {
+                    let defaults = project.devices.program_defaults(com_id).cloned();
+                    let Some(com) = project.devices.remove_com_object(com_id) else {
+                        continue;
+                    };
+                    com_objects.push(com);
+                    if let Some(defaults) = defaults {
+                        program_defaults.push((com_id, defaults));
+                    }
+                }
                 Ok(Command::CreateDevice {
                     device,
                     com_objects,
+                    program_defaults,
                     line,
                 })
             }
@@ -2339,6 +2367,7 @@ mod tests {
                 Command::CreateDevice {
                     device: device.clone(),
                     com_objects: vec![com.clone()],
+                    program_defaults: vec![],
                     line: None,
                 },
             )
@@ -2383,6 +2412,7 @@ mod tests {
                 Command::CreateDevice {
                     device: test_device_instance(DeviceId(2), vec![]),
                     com_objects: vec![],
+                    program_defaults: vec![],
                     line: Some(LineId(1)),
                 },
             )
@@ -2397,6 +2427,7 @@ mod tests {
             Command::CreateDevice {
                 device: test_device_instance(DeviceId(3), vec![]),
                 com_objects: vec![],
+                program_defaults: vec![],
                 line: Some(LineId(99)),
             },
         );
@@ -2450,6 +2481,7 @@ mod tests {
                 Command::CreateDevice {
                     device,
                     com_objects: vec![com],
+                    program_defaults: vec![],
                     line: None,
                 },
             )
@@ -2500,6 +2532,114 @@ mod tests {
             restored_again.dpt.value().unwrap().layer,
             Layer::Program,
             "the enriched value must survive a delete/undo/redo/undo cycle unchanged"
+        );
+    }
+
+    /// The side-table half of the same promise. `program_defaults` lives
+    /// beside `ComObjectInstance` rather than inside it (ADR-0027), so
+    /// `DeleteDevice`'s inverse has to carry it explicitly or undo hands
+    /// the user a device that looks whole and quietly is not — and a save
+    /// afterwards makes that permanent.
+    #[test]
+    fn deleting_then_undoing_restores_the_program_defaults_the_delete_destroyed() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let com = test_com_object_instance(ComObjectInstanceId(10), DeviceId(2));
+        let device = test_device_instance(DeviceId(2), vec![ComObjectInstanceId(10)]);
+        stack
+            .do_command(
+                &mut project,
+                Command::CreateDevice {
+                    device,
+                    com_objects: vec![com],
+                    program_defaults: vec![],
+                    line: None,
+                },
+            )
+            .unwrap();
+
+        // Stand-in for `knx_productdb::enrich::apply` lifting a program
+        // value behind an `Override::Empty` slot into the side table — a
+        // direct mutation, not a `Command`, exactly like the real pass.
+        let defaults = ProgramDefaults {
+            text: None,
+            description: None,
+            dpt: Some(Resolved {
+                value: DptRef {
+                    main: 9,
+                    sub: Some(1),
+                },
+                layer: Layer::Program,
+            }),
+        };
+        project
+            .devices
+            .set_program_defaults(ComObjectInstanceId(10), defaults.clone());
+
+        stack
+            .do_command(&mut project, Command::DeleteDevice { id: DeviceId(2) })
+            .unwrap();
+        assert!(project
+            .devices
+            .program_defaults(ComObjectInstanceId(10))
+            .is_none());
+
+        stack.undo(&mut project).unwrap();
+        assert_eq!(
+            project.devices.program_defaults(ComObjectInstanceId(10)),
+            Some(&defaults),
+            "undo must bring the lifted program default back, not just the com object"
+        );
+
+        // And around again, so redo cannot quietly drop what undo restored.
+        stack.redo(&mut project).unwrap();
+        assert!(project
+            .devices
+            .program_defaults(ComObjectInstanceId(10))
+            .is_none());
+        stack.undo(&mut project).unwrap();
+        assert_eq!(
+            project.devices.program_defaults(ComObjectInstanceId(10)),
+            Some(&defaults)
+        );
+    }
+
+    /// The other direction: a com object that never had defaults must not
+    /// come back from an undo carrying an empty-but-present record.
+    /// `None` and "present and empty" are different claims about what the
+    /// program states, and the side table exists to keep them apart.
+    #[test]
+    fn undoing_a_delete_does_not_invent_program_defaults_for_a_device_that_had_none() {
+        let mut project = test_project_with_one_device(None);
+        let mut stack = CommandStack::new();
+        let com = test_com_object_instance(ComObjectInstanceId(10), DeviceId(2));
+        let device = test_device_instance(DeviceId(2), vec![ComObjectInstanceId(10)]);
+        stack
+            .do_command(
+                &mut project,
+                Command::CreateDevice {
+                    device,
+                    com_objects: vec![com],
+                    program_defaults: vec![],
+                    line: None,
+                },
+            )
+            .unwrap();
+
+        stack
+            .do_command(&mut project, Command::DeleteDevice { id: DeviceId(2) })
+            .unwrap();
+        stack.undo(&mut project).unwrap();
+        assert!(project
+            .devices
+            .com_object(ComObjectInstanceId(10))
+            .is_some());
+        assert!(
+            project
+                .devices
+                .program_defaults(ComObjectInstanceId(10))
+                .is_none(),
+            "no defaults went in, so none may come out"
         );
     }
 

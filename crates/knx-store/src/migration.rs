@@ -1,6 +1,6 @@
 //! Schema-version migration chain, keyed off SQLite's `user_version` pragma
 //! (ADR-0003). Migrations run in order; there is no version-skipping path
-//! and no downgrade. The chain now runs v0 -> v7: the `schema_meta` marker
+//! and no downgrade. The chain now runs v0 -> v9: the `schema_meta` marker
 //! table (v1), the opaque passthrough table (v2), the manufacturer manifest
 //! (v3), every `knx_core::Project` entity table (v4 — `project_info`
 //! through `parameter_instance`, written and read by `project.rs`'s
@@ -9,8 +9,12 @@
 //! retained `ModuleInstance/@Id` (v6 — D38, `module_instance.
 //! instance_ets_id`) and the Read-on-Init flag's own `com_object_override`
 //! attribute (v7 — §117, a version bump with no DDL; see
-//! `migrate_v6_to_v7`). Each version has a frozen fixture under `fixtures/`
-//! that the tests below migrate forward.
+//! `migrate_v6_to_v7`). v8 is reserved for a concurrent branch (the
+//! schema-≥21 export path) this chain never saw the contents of — see
+//! `migrate_v7_to_v8`. v9 adds `com_object_program_default`
+//! (KNOWN_LIMITATIONS §12 gap 2, ADR-0012 amended by ADR-0027). Each
+//! version has a frozen fixture under `fixtures/` that the tests below
+//! migrate forward.
 
 use std::fmt;
 use std::path::Path;
@@ -18,7 +22,7 @@ use std::path::Path;
 use rusqlite::Connection;
 
 /// Matches `knx_core::project::CURRENT_SCHEMA_VERSION`.
-pub const CURRENT_SCHEMA_VERSION: i64 = 7;
+pub const CURRENT_SCHEMA_VERSION: i64 = 9;
 
 #[derive(Debug)]
 pub enum MigrationError {
@@ -379,6 +383,39 @@ fn migrate_v6_to_v7(_conn: &Connection) -> Result<(), MigrationError> {
     Ok(())
 }
 
+/// v7 -> v8: **reserved**. A concurrent branch (the schema-≥21 export path)
+/// owns this slot; this branch never got to see what it contains.
+/// Deliberately empty of DDL so this branch's own chain stays contiguous
+/// and testable today, same trick as `migrate_v6_to_v7`. The coordinator
+/// deletes this stub at merge time and renumbers `migrate_v8_to_v9` down
+/// to `migrate_v7_to_v8` in its place — a one-line change, by design.
+fn migrate_v7_to_v8(_conn: &Connection) -> Result<(), MigrationError> {
+    Ok(())
+}
+
+/// v8 -> v9: `com_object_program_default` (KNOWN_LIMITATIONS §12 gap 2,
+/// ADR-0012 amended by ADR-0027). One row per lifted field on a
+/// communication object instance whose own slot was `Override::Empty` but
+/// whose application program still states a value — mirrors
+/// `com_object_override`'s shape (attr/value/layer) rather than inventing a
+/// new one, since it is the same "one attribute, one row" problem with a
+/// different source layer. `layer` is always `program` or `program_ref`
+/// here; never `instance` or `user_edit` (`knx_productdb::enrich` is the
+/// only writer).
+fn migrate_v8_to_v9(conn: &Connection) -> Result<(), MigrationError> {
+    conn.execute_batch(
+        "CREATE TABLE com_object_program_default (
+            com_object_instance_id INTEGER NOT NULL REFERENCES com_object_instance(id),
+            attr TEXT NOT NULL,
+            value TEXT NOT NULL,
+            text_kind TEXT,
+            layer TEXT NOT NULL,
+            PRIMARY KEY (com_object_instance_id, attr)
+        ) STRICT;",
+    )?;
+    Ok(())
+}
+
 type Migration = fn(&Connection) -> Result<(), MigrationError>;
 
 /// Ordered chain; index `i` migrates `user_version` `i` to `i + 1`.
@@ -391,6 +428,8 @@ fn migrations() -> Vec<Migration> {
         migrate_v4_to_v5,
         migrate_v5_to_v6,
         migrate_v6_to_v7,
+        migrate_v7_to_v8,
+        migrate_v8_to_v9,
     ]
 }
 
@@ -592,10 +631,10 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // `open_and_migrate` always runs the full chain, so a fresh file
-        // lands on `CURRENT_SCHEMA_VERSION` (now 7), not v3 — the manifest
+        // lands on `CURRENT_SCHEMA_VERSION` (now 9), not v3 — the manifest
         // table introduced at v3 is what this test actually verifies, and it
         // still exists and is empty at v5.
-        assert_eq!(v, 7);
+        assert_eq!(v, 9);
         assert_eq!(
             crate::manifest::load_manufacturer_refs(&conn).unwrap(),
             vec![]
@@ -616,8 +655,8 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // See the comment on the test above: the chain runs all the way to
-        // `CURRENT_SCHEMA_VERSION` (now 7), not just to v3.
-        assert_eq!(v, 7);
+        // `CURRENT_SCHEMA_VERSION` (now 9), not just to v3.
+        assert_eq!(v, 9);
         // The v2 opaque table survives the migration with its data intact.
         assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
     }
@@ -630,9 +669,9 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // As with the tests above, a fresh file always lands on
-        // `CURRENT_SCHEMA_VERSION` (now 7) — the v4 entity tables checked
+        // `CURRENT_SCHEMA_VERSION` (now 9) — the v4 entity tables checked
         // below still exist and are empty at v5.
-        assert_eq!(v, 7);
+        assert_eq!(v, 9);
         for table in [
             "project_info",
             "id_allocators",
@@ -682,9 +721,9 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // See the comment on `the_frozen_v2_fixture_migrates_forward_to_v3`:
-        // the chain runs all the way to `CURRENT_SCHEMA_VERSION` (now 7), not
+        // the chain runs all the way to `CURRENT_SCHEMA_VERSION` (now 9), not
         // just to v4.
-        assert_eq!(v, 7);
+        assert_eq!(v, 9);
         assert_eq!(crate::opaque::load_opaque(&conn).unwrap(), vec![]);
     }
 
@@ -705,9 +744,9 @@ mod tests {
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
         // See the comment on `the_frozen_v3_fixture_migrates_forward_to_v4`:
-        // the chain runs all the way to `CURRENT_SCHEMA_VERSION` (now 7),
+        // the chain runs all the way to `CURRENT_SCHEMA_VERSION` (now 9),
         // not just to v5.
-        assert_eq!(v, 7);
+        assert_eq!(v, 9);
     }
 
     #[test]
@@ -726,7 +765,7 @@ mod tests {
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 7);
+        assert_eq!(v, 9);
         // `module_instance` carries no rows in the empty fixture, so the
         // "existing rows default to ''" claim is checked directly against
         // the column definition ETS never populated.
@@ -757,7 +796,7 @@ mod tests {
         let v: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(v, 7);
+        assert_eq!(v, 9);
         // v7 adds no DDL — `com_object_override` is keyed by attribute name,
         // so the sixth flag needed a new `attr` string and nothing else.
         // What the migration must not do is invent rows, so the table is
@@ -766,6 +805,192 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM com_object_override", [], |r| r.get(0))
             .unwrap();
         assert_eq!(overrides, 0);
+    }
+
+    #[test]
+    fn the_frozen_v7_fixture_migrates_forward_to_v9() {
+        // Copied, not opened in place: a migration test must not mutate its
+        // fixture — `open_and_migrate` would otherwise rewrite the committed
+        // v7 file on disk to v9.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v7.sqlite");
+        std::fs::copy(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v7-empty.sqlite"),
+            &path,
+        )
+        .unwrap();
+        let conn = open_and_migrate(&path).unwrap();
+        let v: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(v, 9);
+        // v8 (reserved, no DDL) and v9's new `com_object_program_default`
+        // table both land; the table exists and, migrating from empty, is
+        // itself empty — a migration invents no rows.
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM com_object_program_default", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    /// A migration only ever runs over old data that has rows in it, so a
+    /// test over an empty old database exercises the schema change and
+    /// nothing else. This one writes a real project — device, communication
+    /// object, a stated dpt and a stated flag — into a genuine v7 file,
+    /// migrates it, and reads the project back. ADR-0027's claim that "an
+    /// already-persisted project with no `com_object_program_default` rows
+    /// behaves exactly as before" is this assertion and nothing more.
+    #[test]
+    fn a_populated_pre_v9_project_survives_the_v9_migration_unchanged() {
+        use knx_core::{
+            ComObjectInstance, ComObjectInstanceId, DeviceId, DptRef, Layer, Override, Resolved,
+            ResolvedFlags,
+        };
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("v7-populated.sqlite");
+        std::fs::copy(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/v7-empty.sqlite"),
+            &path,
+        )
+        .unwrap();
+
+        let saved = {
+            // Same trick `a_pre_v7_com_object_reads_its_sixth_flag_as_absent_
+            // not_false` uses one screen down: write through today's writer,
+            // then take the file back to the old shape by hand. `save_project`
+            // clears `com_object_program_default` unconditionally and so
+            // cannot run against a file that lacks the table, and a v7 build's
+            // writer is not available to a v9 build to borrow.
+            let conn = open_and_migrate(&path).unwrap();
+
+            let mut project = knx_core::Project::new(knx_core::Language("en".into()));
+            project.installations.push(knx_core::Installation {
+                id: knx_core::InstallationId(0),
+                name: "I".into(),
+                default_line: None,
+                multicast_address: None,
+                completion: knx_core::CompletionStatus::FinishedDesign,
+                topology: knx_core::Topology {
+                    areas: vec![],
+                    lines: vec![],
+                    unassigned: vec![DeviceId(1)],
+                },
+                buildings: vec![],
+                group_ranges: vec![],
+                group_addresses: vec![],
+                parameters: vec![],
+            });
+            project.devices.insert(knx_core::DeviceInstance {
+                id: DeviceId(1),
+                source: knx_core::SourceRef {
+                    path: "P-0001/0.xml".into(),
+                    ets_id: "A-1".into(),
+                },
+                name: "A pre-v9 device".into(),
+                description: None,
+                address: None,
+                product_ref: "P".into(),
+                program_ref: "H".into(),
+                commissioning: knx_core::CommissioningState::default(),
+                visibility_calculated: true,
+                com_objects: vec![ComObjectInstanceId(5)],
+                binary_data: vec![],
+            });
+            project.devices.insert_com_object(ComObjectInstance {
+                id: ComObjectInstanceId(5),
+                source: knx_core::SourceRef {
+                    path: "P-0001/0.xml".into(),
+                    ets_id: "A-1_O-1_R-1".into(),
+                },
+                device: DeviceId(1),
+                number: 3,
+                text: Override::Empty,
+                description: Override::Absent,
+                dpt: Override::Value(Resolved {
+                    value: DptRef {
+                        main: 9,
+                        sub: Some(1),
+                    },
+                    layer: Layer::Instance,
+                }),
+                flags: ResolvedFlags {
+                    communication: Override::Value(Resolved {
+                        value: true,
+                        layer: Layer::Instance,
+                    }),
+                    ..ResolvedFlags::none()
+                },
+                size: None,
+                is_active: true,
+                links: vec![],
+                module_instance: None,
+            });
+            crate::project::save_project(&conn, &project).unwrap();
+
+            // Back to a genuine v7 shape: v8 is a no-DDL placeholder and v9's
+            // only change is this table, so dropping it and rewinding
+            // `user_version` leaves exactly the file a v7 build would have
+            // written for this project.
+            conn.execute_batch("DROP TABLE com_object_program_default;")
+                .unwrap();
+            conn.pragma_update(None, "user_version", 7i64).unwrap();
+            project
+        };
+
+        {
+            let conn = Connection::open(&path).unwrap();
+            let version: i64 = conn
+                .query_row("PRAGMA user_version", [], |r| r.get(0))
+                .unwrap();
+            assert_eq!(version, 7, "the file under test must be a v7 file");
+            let devices: i64 = conn
+                .query_row("SELECT COUNT(*) FROM device", [], |r| r.get(0))
+                .unwrap();
+            assert_eq!(devices, 1, "and a populated one, which is the whole point");
+        }
+
+        let conn = open_and_migrate(&path).unwrap();
+        let version: i64 = conn
+            .query_row("PRAGMA user_version", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(version, 9);
+
+        let loaded = crate::project::load_project(&conn).unwrap();
+        assert_eq!(
+            loaded, saved,
+            "a v7 project must come back out of a v9 database exactly as it went in"
+        );
+
+        // The values, named individually, so a failure says which one moved
+        // rather than dumping two whole projects at the reader.
+        let com = loaded.devices.com_object(ComObjectInstanceId(5)).unwrap();
+        assert_eq!(com.number, 3);
+        assert_eq!(com.text, Override::Empty, "Empty is not Absent, still");
+        assert_eq!(
+            com.dpt.value().map(|r| r.value),
+            Some(DptRef {
+                main: 9,
+                sub: Some(1)
+            })
+        );
+        assert_eq!(com.dpt.value().map(|r| r.layer), Some(Layer::Instance));
+        assert_eq!(com.flags.communication.value().map(|r| r.value), Some(true));
+
+        // And the new table is there, empty, having invented nothing for the
+        // `Empty` text slot it would have been entitled to guess about.
+        let defaults: i64 = conn
+            .query_row("SELECT COUNT(*) FROM com_object_program_default", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(defaults, 0);
+        assert!(loaded
+            .devices
+            .program_defaults(ComObjectInstanceId(5))
+            .is_none());
     }
 
     /// The point of schema 7, stated as an assertion: a communication object
@@ -890,7 +1115,7 @@ mod tests {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 7);
+        assert_eq!(version, 9);
         let instance_ets_id: String = conn
             .query_row(
                 "SELECT instance_ets_id FROM module_instance WHERE id = 1",
@@ -922,7 +1147,7 @@ mod tests {
         let version: i64 = conn
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .unwrap();
-        assert_eq!(version, 7); // `migrate` always runs to CURRENT_SCHEMA_VERSION, not just to v5
+        assert_eq!(version, 9); // `migrate` always runs to CURRENT_SCHEMA_VERSION, not just to v5
         conn.execute("INSERT INTO module_instance (id, device_id, position, source_path, source_ets_id, repeat_index) VALUES (1, 0, 0, 't', 't', '6x1')", []).unwrap_err(); // device_id FK: no device(0) exists, expected to fail — proves the FK/table exist
         conn.query_row(
             "SELECT module_instance_id FROM com_object_instance LIMIT 0",

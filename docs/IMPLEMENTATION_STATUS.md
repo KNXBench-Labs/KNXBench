@@ -8127,3 +8127,69 @@ check-headers` and `cargo deny check` all exit 0 (see this task's own
 report for the full table). Licence re-verified unchanged:
 `Cargo.toml`'s `license = "AGPL-3.0-or-later"`, `LICENSE` present (GNU
 AGPL v3 text, 661 lines), `cargo deny check`'s licence rule set passes.
+
+## 2026-09-20 — B1: the routing tests stop transmitting onto the real LAN (branch `f1-routing-loopback`)
+
+`crates/knx-net/src/client.rs`'s five socket-opening routing tests ran
+`connect_routing`/`connect_to_group` with production's socket options,
+which set no `IP_MULTICAST_IF` and joined on `INADDR_ANY`. The kernel
+therefore picked the interface from the routing table — on a machine with
+a KNX installation on the LAN, `ip route get 224.0.23.12` resolves to the
+physical interface, not `lo`. Every `cargo test --workspace` put a real
+KNXnet/IP `ROUTING_INDICATION` (a `GroupValueWrite(1)` to `1/2/3` from
+`1.1.1`) and two IGMP membership reports onto that network. What became
+of the frame beyond the wire is not known and is not claimed either way.
+
+**Fixed.** New private `RoutingSocketOptions` (interface, loop-back, TTL)
+with two constants: `PRODUCTION`, which joins on `UNSPECIFIED`, keeps
+`IP_MULTICAST_LOOP` off and makes no `IP_MULTICAST_IF`/`IP_MULTICAST_TTL`
+syscall at all — behaviour identical to before, and the only thing
+`connect_routing`/`connect_routing_to_group` can reach — and a
+`#[cfg(test)]` `LOOPBACK_ONLY`, which pins `IP_MULTICAST_IF` and the
+membership join to `127.0.0.1` and sets TTL 0. Two independent reasons
+the datagram cannot leave the host. No public API changed.
+
+**The round trip is now actually tested.** Because production disables
+`IP_MULTICAST_LOOP` and a switch does not reflect multicast back to its
+ingress port, the old test could never receive its own frame: it timed
+out after five seconds and took the skip path on every run, asserting
+nothing while transmitting on a live installation. Pinned to `lo` it
+completes in 0.15 s and its three assertions run.
+
+**The skip stopped hiding regressions.** Measured: deleting `send_to`
+from `RoutingClient::send` left the old test passing. The timeout arm now
+consults `loopback_multicast_is_deliverable()` — two plain
+`socket2`/`tokio` sockets on `239.0.2.1`, no `RoutingClient` involved —
+and fails rather than skips when the host demonstrably does deliver. The
+same deleted `send_to` now fails the test. That closes the "Lifted when"
+condition KNOWN_LIMITATIONS.md §33 carried since Session 6 Cycle 4.
+
+**New tests.** `production_routing_socket_options_leave_the_network_to_the_kernel`
+(guards the production constant, no socket),
+`loopback_only_options_actually_reach_the_socket` (reads
+`IP_MULTICAST_IF`/`TTL`/`LOOP` back off a live test socket) and
+`the_loopback_probe_agrees_with_an_actual_loopback_round_trip` (the probe
+and the real round trip must always agree). All five mutations tried —
+wrong group address, wrong source address, dropped `send_to`, TTL lock
+removed, interface pin moved, production constant pinned to loopback —
+are caught.
+
+**Superseded.** The two "known gap #33" lines earlier in this file (the
+Session 6 Cycle 4 entry's "skips gracefully in a sandbox lacking
+multicast loopback" and the Cycle 5 entry's "environment-dependent skip")
+describe the old state; they are left as written, since this file is a
+log, and this entry is what holds now.
+
+**Not changed, reported only.** `local_discovery_hpai` and its test bind
+`0.0.0.0` and UDP-`connect()` to `224.0.23.12`; `connect()` on a UDP
+socket transmits nothing, so no frame leaves — but the resolved HPAI is
+the machine's real LAN address. `apps/knx-server/src/main.rs` binds
+`0.0.0.0` for the HTTP server (production, not a test). The
+`live_gateway.rs` and `live_commissioning_readonly.rs` suites remain
+`#[ignore]`d behind `KNX_GATEWAY`/`KNX_TEST_GA`.
+
+Gates: `cargo fmt --all -- --check`, `cargo clippy --workspace
+--all-targets -j 2 -- -D warnings`, `cargo test --workspace --no-fail-fast
+-j 2`, `cargo run -p xtask -- check-layering`, `cargo run -p xtask --
+check-headers` (160 with a well-formed header, 167 without, ceiling 168)
+and `cargo deny check` all exit 0.

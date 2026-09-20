@@ -1279,19 +1279,29 @@ mod tests {
         // Some sandboxes accept `IP_ADD_MEMBERSHIP`/`sendto()` without error
         // yet never actually deliver the datagram locally — a stricter,
         // no-route-at-all failure than the ones `connect_with` above can
-        // detect. Treat that the same way: skip, don't fail. (With
-        // `LOOPBACK_ONLY` it does deliver on an ordinary Linux host and in
-        // a bare `unshare -rn` namespace, both measured; this arm is for
-        // the sandbox that manages neither.)
+        // detect. Before skipping on that theory, check it: ask the kernel
+        // the same question with sockets `RoutingClient` had no hand in
+        // (`loopback_multicast_is_deliverable`). If those two do reach each
+        // other, "no datagram arrived" is a regression in `RoutingClient`,
+        // not a sandbox property, and must fail rather than skip — without
+        // this, deleting the `send_to` call outright leaves the test
+        // passing (measured).
         let received = match tokio::time::timeout(Duration::from_secs(5), telegrams.recv()).await {
             Ok(Ok(telegram)) => telegram,
             Ok(Err(_)) => panic!("broadcast channel closed unexpectedly"),
             Err(_) => {
+                assert!(
+                    !loopback_multicast_is_deliverable().await,
+                    "no ROUTING_INDICATION arrived within 5s, yet two plain UDP sockets \
+                     configured the same way do deliver to each other on this host — \
+                     that is a regression in RoutingClient's send/receive path, not a \
+                     sandbox limitation"
+                );
                 eprintln!(
                     "skipping routing_client_sends_and_receives_a_group_value_write: \
-                     joined the multicast group but no datagram arrived within 5s — \
-                     this sandbox appears to accept the join/send but not deliver \
-                     multicast locally"
+                     joined the multicast group but no datagram arrived within 5s, and \
+                     a plain-socket probe does not deliver either — this sandbox accepts \
+                     the join/send but does not deliver multicast locally"
                 );
                 return;
             }
@@ -1301,6 +1311,124 @@ mod tests {
         assert_eq!(
             received.service,
             ApplicationService::GroupValueWrite(GroupValue::Short(1))
+        );
+    }
+
+    /// Does this machine deliver a loopback-pinned multicast datagram at
+    /// all? Deliberately built from plain `socket2`/`tokio` sockets rather
+    /// than from `RoutingClient`, so that the answer is about the kernel
+    /// and not about the code under test — that is the whole point: it
+    /// tells a sandbox limitation apart from a `RoutingClient` regression,
+    /// which KNOWN_LIMITATIONS.md §33 originally listed as the thing this
+    /// test could not do.
+    ///
+    /// Same two locks as `RoutingSocketOptions::LOOPBACK_ONLY`
+    /// (`IP_MULTICAST_IF` = `127.0.0.1`, TTL 0), on a different group
+    /// (`239.0.2.1`, RFC 2365 administratively scoped, never seen on a
+    /// real installation) so the probe payload cannot land in a
+    /// `RoutingClient`'s receive loop and count as a decode failure.
+    /// Any error at all means "cannot tell" and is reported as not
+    /// deliverable: this only ever decides whether to skip, so the
+    /// conservative answer is the one that skips.
+    async fn loopback_multicast_is_deliverable() -> bool {
+        use socket2::{Domain, Socket, Type};
+
+        const PROBE_GROUP: Ipv4Addr = Ipv4Addr::new(239, 0, 2, 1);
+        const PROBE_PORT: u16 = 3671;
+
+        fn probe_socket() -> std::io::Result<UdpSocket> {
+            let socket2_socket = Socket::new(Domain::IPV4, Type::DGRAM, None)?;
+            socket2_socket.set_reuse_address(true)?;
+            socket2_socket
+                .bind(&std::net::SocketAddr::from((Ipv4Addr::UNSPECIFIED, PROBE_PORT)).into())?;
+            socket2_socket.set_nonblocking(true)?;
+            socket2_socket.set_multicast_if_v4(&Ipv4Addr::LOCALHOST)?;
+            socket2_socket.set_multicast_ttl_v4(0)?;
+            let std_socket: std::net::UdpSocket = socket2_socket.into();
+            let socket = UdpSocket::from_std(std_socket)?;
+            socket.join_multicast_v4(PROBE_GROUP, Ipv4Addr::LOCALHOST)?;
+            socket.set_multicast_loop_v4(true)?;
+            Ok(socket)
+        }
+
+        let (Ok(sender), Ok(receiver)) = (probe_socket(), probe_socket()) else {
+            return false;
+        };
+        if sender
+            .send_to(
+                b"knxbench-loopback-probe",
+                SocketAddrV4::new(PROBE_GROUP, PROBE_PORT),
+            )
+            .await
+            .is_err()
+        {
+            return false;
+        }
+        let mut buf = [0u8; 32];
+        matches!(
+            tokio::time::timeout(Duration::from_secs(2), receiver.recv_from(&mut buf)).await,
+            Ok(Ok(_))
+        )
+    }
+
+    /// The probe above has to be right about *this* machine before the
+    /// round-trip test may lean on it, and it is the kind of helper that
+    /// could quietly start answering `false` for everyone (a typo'd
+    /// option, an error arm swallowing the wrong thing) and turn the
+    /// round-trip test back into an unconditional skip. On a host that
+    /// does deliver loopback multicast — measured here and in a bare
+    /// `unshare -rn` namespace — it must say so. A sandbox that genuinely
+    /// cannot is exactly the case the probe exists to detect, so this one
+    /// cannot assert unconditionally either; it asserts agreement with the
+    /// round trip instead, which is the property that matters.
+    #[tokio::test]
+    async fn the_loopback_probe_agrees_with_an_actual_loopback_round_trip() {
+        use crate::cemi::{ApplicationService, Destination, GroupValue};
+        use knx_core::{GroupAddress, GroupAddressStyle, IndividualAddress};
+
+        let deliverable = loopback_multicast_is_deliverable().await;
+
+        let sender = match RoutingClient::connect_with(
+            IndividualAddress::new(1, 1, 5).unwrap(),
+            RoutingSocketOptions::LOOPBACK_ONLY,
+        )
+        .await
+        {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!(
+                    "skipping the_loopback_probe_agrees_with_an_actual_loopback_round_trip: \
+                     could not join the routing multicast group on loopback \
+                     in this sandbox: {e}"
+                );
+                return;
+            }
+        };
+        let receiver = RoutingClient::connect_with(
+            IndividualAddress::new(1, 1, 6).unwrap(),
+            RoutingSocketOptions::LOOPBACK_ONLY,
+        )
+        .await
+        .expect("second RoutingClient should join the same group fine (SO_REUSEADDR)");
+        let mut telegrams = receiver.subscribe();
+        sender
+            .send(
+                Destination::Group(
+                    GroupAddress::parse("1/2/3", GroupAddressStyle::ThreeLevel).unwrap(),
+                ),
+                ApplicationService::GroupValueWrite(GroupValue::Short(1)),
+            )
+            .await
+            .expect("send over loopback multicast should succeed");
+        let round_tripped = tokio::time::timeout(Duration::from_secs(5), telegrams.recv())
+            .await
+            .is_ok();
+
+        assert_eq!(
+            deliverable, round_tripped,
+            "the probe and the real round trip must agree about whether this host \
+             delivers loopback multicast; if they disagree the probe is lying and the \
+             skip decision it guards is worthless"
         );
     }
 

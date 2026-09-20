@@ -105,6 +105,19 @@ describe("checkMotionDeclarations", () => {
     expect(findings[0].reason).toMatch(/prefers-reduced-motion/);
   });
 
+  // Shared blind spot, shared fix: the semicolon before `}` is optional,
+  // and while `parseRules` flushed only on `;` this declaration was
+  // invisible to the guard — a literal 200ms the motion control cannot
+  // touch, inside the one block where the guard is supposed to be
+  // strictest, passing quietly.
+  it("flags a literal duration written without its final semicolon", () => {
+    const css = `@media (prefers-reduced-motion: no-preference) {\n  .m {\n    transition: opacity 200ms ease\n  }\n}\n`;
+    const findings = checkMotionDeclarations(css);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].reason).toMatch(/literal duration/);
+    expect(findings[0].line).toBe(3);
+  });
+
   it("passes a fully compliant declaration", () => {
     const css = `@media (prefers-reduced-motion: no-preference) {\n  .foo {\n    transition: transform var(--knx-transition-duration) var(--knx-motion-easing);\n  }\n}\n`;
     expect(checkMotionDeclarations(css)).toEqual([]);
@@ -129,6 +142,15 @@ describe("checkMotionDeclarations", () => {
   });
 });
 
+// One hard-coded path, on purpose, and it is the weakest thing in this
+// file. `themeTokens.test.ts` walks for every `.css` file precisely
+// because a second stylesheet would otherwise sit outside ADR-0022, and
+// the same argument applies verbatim here: the roadmap's standing rule is
+// that *every* animation this application ships is switchable off, and a
+// second stylesheet would get boundary coverage from that walk and no
+// motion coverage at all. `help.test.ts` and `diagnosticShell.test.ts`
+// read the same single path for their own reasons. Recorded rather than
+// built — the walk belongs in one shared helper, not in a third copy.
 describe("styles.css", () => {
   it("has no unguarded transition/animation declarations", () => {
     const stylesheetPath = join(dirname(fileURLToPath(import.meta.url)), "styles.css");

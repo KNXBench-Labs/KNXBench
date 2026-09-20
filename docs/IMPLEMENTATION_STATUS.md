@@ -8046,7 +8046,10 @@ point at §34, and its own text is brought up to date with the same E1
 rewrite. Heading numbering re-checked after the additions:
 `grep -c "^## [0-9]" docs/KNOWN_LIMITATIONS.md` → 117, headings run 1-118
 with only the deliberate §94 gap, zero duplicates (the duplicate `## 115.`
-from an earlier session stays fixed).
+from an earlier session stays fixed). (Superseded by §120: that count was
+true on the day it was written and two entries have landed since. The
+live figure is the one in `LIMITATION_TRIAGE.md`'s header, which carries
+the same `grep -c` command that produced this one.)
 
 `LIMITATION_TRIAGE.md`'s "102 Einträge" header was stale by fifteen. Real
 count re-measured with the same `grep -c` command above; every newly
@@ -8127,3 +8130,79 @@ check-headers` and `cargo deny check` all exit 0 (see this task's own
 report for the full table). Licence re-verified unchanged:
 `Cargo.toml`'s `license = "AGPL-3.0-or-later"`, `LICENSE` present (GNU
 AGPL v3 text, 661 lines), `cargo deny check`'s licence rule set passes.
+
+## 2026-09-20 — F2: eight parked theme findings closed, and then the parser that hid them
+
+Frontend, `apps/knx-web`. Eight findings the theme system's pre-merge
+review had parked were implemented, each with a test that fails against
+the unfixed behaviour: the token boundary now carries every rule's
+ancestor chain (a theme block nested in an `@media` query used to be
+invisible to every check in `themeTokens.test.ts`, including one
+redefining `--knx-transition-duration` behind the user's motion setting);
+`componentColourLiterals()` rejects hex literals, colour functions and
+named colours outside the theme layer, which nothing had ever checked;
+the test walks `apps/knx-web` for stylesheets instead of reading one
+hard-coded path, and fails if it finds none; `var(--knx-fooBar)` is read
+whole instead of truncated to `--knx-foo`; `system`'s
+`hasAccentVariations` is derived from `resolveThemeId` rather than
+asserted; the disabled accent `<select>` has an `input:disabled,
+select:disabled, textarea:disabled` rule and an `aria-describedby`;
+`index.html` carries a `data-theme` fallback for the document whose
+bootstrap never ran; and the motion guard's hand-rolled CSS scanner was
+deleted in favour of `parseRules`, leaving one scanner in the app.
+
+The whole-branch review then failed the branch on what those guards could
+not see, and both holes were in the shared parser. `parseRules` flushed a
+declaration only at `;`, so a final declaration written without its
+optional trailing semicolon — `.evil { color: #ff00aa }`, valid CSS every
+browser honours — was invisible to all three guards at once; ADR-0022's
+opening contrast failure could be reinstated with the suite green. It now
+flushes at `}` as well. And the theme-selector boundary judged per
+comma-part in one function and on the whole collapsed selector in three
+others, so `:root[data-theme="a"], :root[data-theme="b"] { … }` was a
+third shape belonging to neither set — two themes sharing one block,
+which ADR-0022 forbids — while `:root[DATA-THEME="a"]` slipped past
+because attribute names in a selector are case-insensitive and the guard
+was not. All four classifiers now ask one question over the whole
+selector, with the attribute name folded to lowercase and the theme id,
+which really is case-sensitive, left alone.
+
+Three of the new guard's own mechanisms turned out to be unreachable and
+were made load-bearing instead of left decorative: the `url()` exemption's
+only fixture was a `data:` URI whose `;base64` split the declaration
+before the exemption was reached (it now has `url("images/red-logo.png")`,
+which is the false positive the exemption exists to prevent);
+`COLOURLESS_KEYWORDS` skipped two words that were not in `NAMED_COLOURS`
+to begin with (both are listed there now, so deleting the skip fails the
+suite); and the word scan's `(?!\()` lookahead backtracked one character,
+so `tanh(` yielded the named colour `tan` — it now matches whole words and
+checks the following character, with `tan()`, a real CSS math function,
+as the fixture that keeps the check honest. Custom property *names* are
+also stripped before the scan, so a token called `--knx-teal-surface` no
+longer fails the guard for its own name, while a `var(--x, red)` fallback
+still does.
+
+`KNOWN_LIMITATIONS.md` gains §120 (nothing checks that a theme is
+*legible*: the boundary proves a palette is complete and says nothing
+about contrast; the five shipped palettes were measured by hand during
+T37, which is a measurement of a moment rather than an invariant). Its
+text also records the literal-colour guard's own blind spot — the CSS
+system colour keywords (`Canvas`, `AccentColor`, `ButtonBorder`) are
+colour values, are not in the named-colour list, and are exactly as
+theme-blind as `#ff00aa`. `LIMITATION_TRIAGE.md` classifies it K3 and its
+derived counts are set for 120 entries, 119 classified, K3 at 53 — which
+assumes the parallel `ntfs3` entry at §119 lands too. ADR-0022's
+enforcement section gains both new gaps and a real anchor into §120.
+
+Recorded, not fixed: the motion guard's `styles.css` assertion still reads
+one hard-coded path (so do `help.test.ts` and `diagnosticShell.test.ts`),
+because a second stylesheet would get boundary coverage from the walk in
+`themeTokens.test.ts` and no motion coverage at all — noted in
+`motionGuard.test.ts` rather than built; and `systemHasAccentVariations`'s
+`every`-versus-`some` choice is conservative, equivalent today because
+both resolved palettes vary by accent, and unpinned by any test, which is
+noted in `theme.ts`.
+
+Gates: `npx tsc --noEmit` and `npx vitest run` in `apps/knx-web` exit 0,
+at 54 files / 729 tests. The Rust gates exit 0 unchanged; this branch
+touches no Rust.

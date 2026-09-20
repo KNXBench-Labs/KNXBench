@@ -224,6 +224,17 @@ fn anchors_in_file(source: &str) -> HashSet<String> {
 /// closing `###`-style hashes trimmed. `None` for anything else, including
 /// a `#` with no following space (not a heading — could be a `#5` issue
 /// reference) and anything past level 6.
+///
+/// Two known gaps, neither exercised by anything in `docs/` today:
+/// `trim_start` strips indentation unconditionally, so a `## ` line inside
+/// a 4-space-indented code block (CommonMark's *other* code-block form —
+/// `is_fence` only tracks the fenced kind) is read as a live heading that
+/// was never rendered as one. And a setext heading (a text line followed
+/// by a line of `===` or `---`) is not recognized at all — ATX is the
+/// only form this function knows — so it produces no anchor and a link to
+/// it reports a false dead link. Both would need a caller with more
+/// context than one line at a time; neither is worth that until a real
+/// heading trips it.
 fn heading_text(line: &str) -> Option<&str> {
     let trimmed = line.trim_start();
     let hashes = trimmed.chars().take_while(|&c| c == '#').count();
@@ -266,9 +277,24 @@ struct LinkRef {
 /// (`http(s)://`, `mailto:`) and links with no `#` at all (nothing for
 /// this lint to check) are skipped here rather than by the caller, so a
 /// caller can trust that every `LinkRef` it sees needs resolving.
+///
+/// `[text](target)` is allowed to wrap across a line break — it renders
+/// as one link on GitHub, and a checker that only looked at one `source
+/// .lines()` line at a time would never see it (and never see a dead
+/// anchor inside it). Fence state is still decided per line, exactly as
+/// before, and a fenced line contributes nothing to the text this
+/// function scans, so a link that lives inside a fence stays invisible.
+/// Non-fenced lines are joined with `\n` into one buffer before the
+/// bracket/paren scan, with a parallel table mapping every character
+/// back to the source line it came from, so a link that opens on one
+/// line and closes on another is still found — and still reported at
+/// the line where its `[` starts, so a reader can locate it.
 fn links_in_file(source: &str) -> Vec<LinkRef> {
     let mut out = Vec::new();
     let mut in_code = false;
+    let mut visible = String::new();
+    let mut line_at: Vec<usize> = Vec::new();
+    let mut first = true;
 
     for (idx, line) in source.lines().enumerate() {
         if is_fence(line) {
@@ -278,51 +304,78 @@ fn links_in_file(source: &str) -> Vec<LinkRef> {
         if in_code {
             continue;
         }
-        for target in line_link_targets(line) {
-            let target = target.split_whitespace().next().unwrap_or("");
-            if target.is_empty()
-                || target.starts_with("http://")
-                || target.starts_with("https://")
-                || target.starts_with("mailto:")
-            {
-                continue;
-            }
-            let Some(hash) = target.find('#') else {
-                continue;
-            };
-            let (path_part, anchor_part) = target.split_at(hash);
-            let anchor = &anchor_part[1..];
-            if anchor.is_empty() {
-                continue; // a link to a file, not a place in it
-            }
-            out.push(LinkRef {
-                line: idx + 1,
-                target_path: path_part.to_string(),
-                anchor: anchor.to_string(),
-                raw: target.to_string(),
-            });
+        if !first {
+            visible.push('\n');
+            line_at.push(idx + 1);
         }
+        first = false;
+        for c in line.chars() {
+            visible.push(c);
+            line_at.push(idx + 1);
+        }
+    }
+
+    let chars: Vec<char> = visible.chars().collect();
+    for found in scan_link_targets(&chars) {
+        let target = found.target.split_whitespace().next().unwrap_or("");
+        if target.is_empty()
+            || target.starts_with("http://")
+            || target.starts_with("https://")
+            || target.starts_with("mailto:")
+        {
+            continue;
+        }
+        let Some(hash) = target.find('#') else {
+            continue;
+        };
+        let (path_part, anchor_part) = target.split_at(hash);
+        let anchor = &anchor_part[1..];
+        if anchor.is_empty() {
+            continue; // a link to a file, not a place in it
+        }
+        out.push(LinkRef {
+            line: line_at.get(found.open).copied().unwrap_or(1),
+            target_path: path_part.to_string(),
+            anchor: anchor.to_string(),
+            raw: target.to_string(),
+        });
     }
 
     out
 }
 
-/// Every `(...)` target of a `[...]  (...)` inline link on one line.
-/// Bracket and paren nesting are both tracked one level deep, which is
-/// enough for the link text and URLs this repository actually writes;
+/// One `[...](...)` match found by `scan_link_targets`: where its `[`
+/// opened (a character offset into the scanned buffer) and the raw
+/// `(...)` contents.
+struct RawLink {
+    open: usize,
+    target: String,
+}
+
+/// Every `(...)` target of a `[...](...)` inline link in `chars`. Bracket
+/// and paren nesting are both tracked one level deep, which is enough
+/// for the link text and URLs this repository actually writes;
 /// reference-style `[text][ref]` links are not used anywhere in `docs/`
-/// (verified by sweep, not assumed) so they are not handled here.
-fn line_link_targets(line: &str) -> Vec<String> {
-    let chars: Vec<char> = line.chars().collect();
+/// (verified by sweep, not assumed) so they are not handled here. Works
+/// equally over a single line or a multi-line buffer stitched together
+/// by `links_in_file` — it only ever looks at bracket/paren adjacency,
+/// never at where a line break falls.
+///
+/// Known gap, not exercised by anything in `docs/` today: an inline code
+/// span (single backticks around `[text](#anchor)`, used to show a link
+/// as a literal example rather than render it as one) is not recognized
+/// here — only a fenced block is skipped, at the whole-line level. A link
+/// written this way is checked as if it were live.
+fn scan_link_targets(chars: &[char]) -> Vec<RawLink> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < chars.len() {
         if chars[i] == '[' {
-            if let Some(close) = matching_delim(&chars, i, '[', ']') {
+            if let Some(close) = matching_delim(chars, i, '[', ']') {
                 if chars.get(close + 1) == Some(&'(') {
-                    if let Some(paren_close) = matching_delim(&chars, close + 1, '(', ')') {
+                    if let Some(paren_close) = matching_delim(chars, close + 1, '(', ')') {
                         let target: String = chars[close + 2..paren_close].iter().collect();
-                        out.push(target);
+                        out.push(RawLink { open: i, target });
                         i = paren_close + 1;
                         continue;
                     }
@@ -512,6 +565,26 @@ mod tests {
         let links = links_in_file(src);
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].anchor, "real-heading");
+    }
+
+    #[test]
+    fn a_link_whose_text_wraps_across_a_newline_is_still_found() {
+        // `[text](target)` split over two lines renders as one link on
+        // GitHub; a checker that only ever looked at one `source.lines()`
+        // line at a time would never see this one, dead anchor and all.
+        let src = "# Alpha\n\nSee [the wrapped\nlink](#nope) for details.\n";
+        let links = links_in_file(src);
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].line, 3, "report the line the link opens on");
+        assert_eq!(links[0].anchor, "nope");
+
+        let report_root = scratch_root("wrapped-link");
+        write(&report_root, "docs/A.md", src);
+        let report = scan(&report_root).unwrap();
+        fs::remove_dir_all(&report_root).unwrap();
+
+        assert_eq!(report.dead.len(), 1, "{:?}", report.dead);
+        assert_eq!(report.dead[0].line, 3);
     }
 
     #[test]

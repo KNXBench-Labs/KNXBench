@@ -1989,7 +1989,9 @@ name = "knx-server"
 version = "0.1.0-alpha.1"
 dependencies = [
  "axum",
+ "base64 0.22.1",
  "chrono",
+ "getrandom 0.4.3",
  "knx-app",
  "knx-core",
  "knx-csv",
@@ -2001,8 +2003,10 @@ dependencies = [
  "knx-report",
  "knx-store",
  "knx-testsupport",
+ "pbkdf2",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
  "tokio",
  "tower",

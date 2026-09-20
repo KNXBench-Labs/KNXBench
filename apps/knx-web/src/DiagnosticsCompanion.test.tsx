@@ -209,6 +209,13 @@ describe("one editing workspace", () => {
     // and nothing else. The picker entry points that reach `FsPicker`'s
     // upload are `pickOpenPath`/`pickSavePath`, which this window never
     // calls.
+    //
+    // T01b adds `session.ts`: `api.ts` publishes "the server answered 401"
+    // from inside its shared `request()` helper, and that notifier lives
+    // there. It holds a `Set` of callbacks and nothing else — no fetch, no
+    // project state, nothing this window could mutate with — so it is the
+    // cheapest possible way for the companion to end up at the same login
+    // screen as the editor instead of silently failing to poll.
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -226,6 +233,7 @@ describe("one editing workspace", () => {
       "languagePack.ts",
       "messages/de.ts",
       "messages/en.ts",
+      "session.ts",
       "uiLanguage.ts",
     ]);
 

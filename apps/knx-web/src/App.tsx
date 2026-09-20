@@ -43,6 +43,7 @@ import HelpPanel from "./HelpPanel";
 import AboutDialog from "./AboutDialog";
 import Overlay from "./Overlay";
 import { canQuit, quitApp } from "./quit";
+import type { SessionControls } from "./session";
 import { opensHelp } from "./help";
 
 // How often the browser asks the server what a running load is doing
@@ -94,9 +95,16 @@ function describeExportWarning(w: unknown, t: Translate): string {
 
 type AppProps = {
   manifestVersion?: string;
+  /**
+   * What `AuthGate` knows about the session this shell is running inside
+   * (ADR-0026). Absent in the tests that render `App` directly, and
+   * `required: false` on the desktop shell — both mean the same thing here:
+   * no session exists, so no way to end one is offered.
+   */
+  session?: SessionControls;
 };
 
-function App({ manifestVersion = packageVersion }: AppProps) {
+function App({ manifestVersion = packageVersion, session }: AppProps) {
   // Called unconditionally on every render (not just from `SettingsPanel`,
   // which only mounts once Settings is opened) so `useUiLanguage()`'s own
   // effect — setting `document.documentElement.lang` — runs for the whole
@@ -798,6 +806,15 @@ function App({ manifestVersion = packageVersion }: AppProps) {
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
       <DebugReportButton onSummary={pushFun} onError={reportError} onClearErrors={clearErrors} />
       <button onClick={() => setAboutOpen(true)}>{t("toolbar.about")}</button>
+      {/* ADR-0026: only where a session exists to end. On the desktop shell
+          — and on any server started without a password — `required` is
+          false and a logout button would be an offer to leave a room with
+          no door. */}
+      {session?.required === true && (
+        <button className="file-menu-logout" onClick={session.logout}>
+          {t("toolbar.logout")}
+        </button>
+      )}
       {/* F4: present only in the desktop shell. A browser tab cannot close
           itself, so in the web build this item would be a button that
           does nothing — see `quit.ts`. */}

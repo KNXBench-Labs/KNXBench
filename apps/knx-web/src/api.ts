@@ -4,6 +4,33 @@
 //! swapping the import at each call site is the only change there.
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
+import { notifySessionExpired } from "./session";
+
+/**
+ * The three endpoints a login screen talks to (ADR-0026). Their own 401 is
+ * an *answer* — "that password is wrong" — not a session that ended, so a
+ * refusal from one of these must never be published as an expiry: doing so
+ * would send `AuthGate` back to the login screen it is already showing, and
+ * on the desktop shell would conjure one out of nothing.
+ */
+const AUTH_PATH_PREFIX = "/api/auth/";
+
+/**
+ * The one place the frontend learns that the server wants a session.
+ *
+ * Most `/api/` calls funnel through `request()`, which calls this itself.
+ * The two that cannot — `installProductPackage`, which needs a streaming
+ * body, and `FsPicker.tsx`'s two helpers, which need `FormData` and a raw
+ * `Response` — call it by hand, which is why it is exported. Every route
+ * they touch sits behind the same `route_layer` as the rest (ADR-0026), so
+ * a `fetch` that skips this helper is a 401 that reaches nobody and a modal
+ * the user cannot get out of.
+ */
+export function noteRefusal(path: string, status: number): void {
+  if (status === 401 && !path.startsWith(AUTH_PATH_PREFIX)) {
+    notifySessionExpired();
+  }
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
@@ -12,6 +39,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
+    noteRefusal(path, response.status);
     throw requestError(response.status, body?.error ?? `${response.status} ${response.statusText}`);
   }
   if (response.headers.get("content-length") === "0") {
@@ -466,6 +494,46 @@ export function serverVersion(): Promise<{ version: string }> {
   return request("/api/version");
 }
 
+/**
+ * `GET /api/auth/status`'s answer (ADR-0026). `required` decides whether a
+ * login screen may exist at all — the desktop shell runs with
+ * authentication off and answers `{ required: false, authenticated: true }`,
+ * which is the branch that keeps a password prompt off a machine that never
+ * had one. The call deliberately does not refresh the session's idle clock,
+ * so asking is free and changes nothing.
+ */
+export interface AuthStatus {
+  required: boolean;
+  authenticated: boolean;
+}
+
+export function authStatus(): Promise<AuthStatus> {
+  return request("/api/auth/status");
+}
+
+/**
+ * `POST /api/auth/login`. Resolves once the session cookie is set (the
+ * cookie is `HttpOnly`, so nothing here can read it and nothing here needs
+ * to); rejects with status 401 for a wrong password — after the server's
+ * deliberate penalty delay, which is why the caller must not let a second
+ * attempt start while this one is in flight — or 400 if this server has no
+ * password configured at all.
+ *
+ * The password goes in the body and nowhere else: never a query string,
+ * never a header, never a log line.
+ */
+export function login(password: string): Promise<{ authenticated: boolean }> {
+  return request("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  });
+}
+
+/** `POST /api/auth/logout`. Idempotent, and answers 200 even with no session. */
+export function logout(): Promise<{ authenticated: boolean }> {
+  return request("/api/auth/logout", { method: "POST" });
+}
+
 /// Uses multipart directly rather than `request()`: setting JSON's
 /// `Content-Type` on a FormData request would remove the required boundary.
 export async function installProductPackage(file: File): Promise<CatalogInstallReport> {
@@ -474,7 +542,8 @@ export async function installProductPackage(file: File): Promise<CatalogInstallR
   const response = await fetch("/api/catalog/install", { method: "POST", body: form });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new Error(body?.error ?? `${response.status} ${response.statusText}`);
+    noteRefusal("/api/catalog/install", response.status);
+    throw requestError(response.status, body?.error ?? `${response.status} ${response.statusText}`);
   }
   return response.json() as Promise<CatalogInstallReport>;
 }

@@ -5682,7 +5682,7 @@ style) settles the nibble order, or a real device's read/write-access
 behaviour is observed to disagree with this project's current labelling.
 ## 100. Help prose lives in the message catalogue, one paragraph per key
 
-**Limitation.** T23's help text (ADR-0024) is stored the same way every other
+**Limitation.** T28's help text (ADR-0024) is stored the same way every other
 user-facing string is: as entries in `apps/knx-web/src/messages/en.ts` and
 `messages/de.ts`. One key holds one paragraph of plain text. There is no
 Markdown, no rich text, no per-topic file, and no separate help store. The

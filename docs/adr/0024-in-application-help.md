@@ -65,7 +65,7 @@ users find easier. No usability study was run, and none is claimed.
   state update winning a race against the screen reader's own lookup.
   Recorded here because it looks like a styling detail and is in fact the
   decision — `help.test.ts` reads `styles.css` and fails if either
-  declaration reappears. (Corrected 2026-09-19 in T23's first fix round;
+  declaration reappears. (Corrected 2026-09-19 in T28's first fix round;
   the original wording claimed the property without naming what buys it,
   and the implementation did use `visibility: hidden`.)
 - **`HelpPanel`** — a modal overlay on `F1`, holding **topics**: the KNX

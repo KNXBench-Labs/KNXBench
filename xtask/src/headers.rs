@@ -202,8 +202,12 @@ fn check_sentence(line: &str, text: &str) -> Header {
 /// it down. Raising it means deciding the convention no longer applies,
 /// which is an ADR, not a constant. Measured 2026-09-12 (ADR-0018 §5);
 /// lowered the same day once the T25 frontend files gained headers, and
-/// again on 2026-09-13 when the workbench merge landed at 168.
-pub const ABSENT_CEILING: usize = 168;
+/// again on 2026-09-13 when the workbench merge landed at 168, and again
+/// on 2026-09-20 to the 167 the tree actually measures — the ratchet had
+/// been sitting one slot above reality since a file gained a header
+/// without the constant following it down, which is exactly the slack that
+/// lets the next headerless file in for free.
+pub const ABSENT_CEILING: usize = 167;
 
 /// The ratchet's verdict on a report: the message to print if it trips,
 /// `None` if the count is at or below [`ABSENT_CEILING`].

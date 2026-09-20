@@ -823,7 +823,7 @@ not bundled into a UI cycle.
 
 ## Cross-cutting — In-application help and user documentation
 
-**Shipped 2026-09-19 (T23), for the help half only.** The four questions
+**Shipped 2026-09-19 (T28), for the help half only.** The four questions
 this section poses are answered in
 [ADR-0024](adr/0024-in-application-help.md), and the implementation landed
 with it: a focusable help tip (`HelpTip.tsx`), a ten-topic help panel on

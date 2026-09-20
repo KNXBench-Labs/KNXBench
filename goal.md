@@ -107,7 +107,7 @@ alpha slice.
 Priority order as written. All references are rows and task numbers in
 `docs/GAP_ANALYSIS_ETS.md`.
 
-### T30 — Commissioning and device download (row E2, Tier 5)
+### T30 — Commissioning and device download (row E1, Tier 5)
 
 The largest open item, and no longer blocked. Individual-address programming
 via the device's programming button, application-program download, memory

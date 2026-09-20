@@ -177,6 +177,10 @@ pub struct SourceComObjectInstance {
 pub struct SourceBinaryDataRef {
     pub id: String,
     pub name: Option<String>,
+    /// Schema ≥21 adds `DoNotCopy` here, and a future schema may add more:
+    /// anything this leaf carries beyond `Id`/`Name` is kept rather than
+    /// dropped, and goes back onto the same leaf on export.
+    pub other: Vec<RetainedAttribute>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

@@ -89,22 +89,35 @@ use knx_core::{
 
 use super::schema11::{
     building_part_type_str, close, empty, group_address_style_str, open, push_override_dpt,
-    push_override_text, reject_unranged_group_addresses, retained_attrs, retained_elements,
-    write_group_range, xml_err, Attrs, RetainedAttrs, EXPORTER_NAME, EXPORTER_VERSION,
+    push_override_flag, push_override_text, reject_unranged_group_addresses, retained_attrs,
+    retained_elements, write_group_range, xml_err, Attrs, BoolStyle, RetainedAttrs,
+    RetainedElements, EXPORTER_NAME, EXPORTER_VERSION,
 };
 use super::ExportError;
 use crate::opaque::OpaqueEntry;
 
+/// Writes the schema-≥21 `0.xml`. See [`super::schema11::write_installation_xml`]
+/// on why the shared-store variant below exists.
 pub fn write_installation_xml_v21(
     project: &Project,
     opaque: &[OpaqueEntry],
+) -> Result<Vec<u8>, ExportError> {
+    write_installation_xml_v21_with(
+        project,
+        &retained_attrs(opaque),
+        &retained_elements(opaque),
+    )
+}
+
+pub(crate) fn write_installation_xml_v21_with(
+    project: &Project,
+    retained: &RetainedAttrs,
+    elements: &RetainedElements,
 ) -> Result<Vec<u8>, ExportError> {
     if project.info.project_id.is_empty() {
         return Err(ExportError::MissingProjectId);
     }
     reject_unranged_group_addresses(project)?;
-    let retained = retained_attrs(opaque);
-    let elements = retained_elements(opaque);
 
     let mut writer = Writer::new_with_indent(Vec::new(), b' ', 2);
     writer
@@ -132,7 +145,7 @@ pub fn write_installation_xml_v21(
 
     open(&mut writer, "Installations", &Attrs::new())?;
     for installation in &project.installations {
-        write_installation_v21(&mut writer, project, installation, &retained, &elements)?;
+        write_installation_v21(&mut writer, project, installation, retained, elements)?;
     }
     close(&mut writer, "Installations")?;
 
@@ -142,15 +155,28 @@ pub fn write_installation_xml_v21(
     Ok(writer.into_inner())
 }
 
+/// Writes the schema-≥21 `project.xml`. See
+/// [`super::schema11::write_installation_xml`] on why the shared-store
+/// variant below exists.
 pub fn write_project_xml_v21(
     project: &Project,
     opaque: &[OpaqueEntry],
 ) -> Result<Vec<u8>, ExportError> {
+    write_project_xml_v21_with(
+        project,
+        &retained_attrs(opaque),
+        &retained_elements(opaque),
+    )
+}
+
+pub(crate) fn write_project_xml_v21_with(
+    project: &Project,
+    retained: &RetainedAttrs,
+    elements: &RetainedElements,
+) -> Result<Vec<u8>, ExportError> {
     if project.info.project_id.is_empty() {
         return Err(ExportError::MissingProjectId);
     }
-    let retained = retained_attrs(opaque);
-    let elements = retained_elements(opaque);
 
     let mut writer = Writer::new_with_indent(Vec::new(), b' ', 2);
     writer
@@ -195,10 +221,10 @@ pub fn write_project_xml_v21(
     // in `knx_core::ProjectInfo`, only ever one `ProjectInformation` per
     // project, so the flat retained-attribute bucket loses nothing here
     // (see the module doc's granularity note).
-    info_attrs.fill_retained(&retained, xpath);
+    info_attrs.fill_retained(retained, xpath);
 
     let traces_xpath = format!("{xpath}/ProjectTraces");
-    match elements.get(&traces_xpath) {
+    match elements.take(&traces_xpath) {
         Some(raw) => {
             open(&mut writer, "ProjectInformation", &info_attrs)?;
             write_raw_subtree(&mut writer, raw)?;
@@ -248,25 +274,6 @@ fn write_raw_subtree(writer: &mut Writer<Vec<u8>>, raw: &[u8]) -> Result<(), Exp
     }
 }
 
-/// The literal xpath `lib.rs`'s import-side splice loop gives a device's
-/// `ModuleInstances`/`GroupObjectTree`/`Security` subtree — must match that
-/// loop's own string exactly, since this is the only place either side's
-/// formula is allowed to drift from the other's.
-fn device_raw_xpath(device_ets_id: &str) -> String {
-    format!(
-        "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance[@Id='{device_ets_id}']"
-    )
-}
-
-/// Same as [`device_raw_xpath`], for a device with no line (untested at
-/// schema ≥21 — see this module's own doc comment and `lib.rs`'s mirrored
-/// splice loop).
-fn unassigned_device_raw_xpath(device_ets_id: &str) -> String {
-    format!(
-        "/KNX/Project/Installations/Installation/Topology/UnassignedDevices/DeviceInstance[@Id='{device_ets_id}']"
-    )
-}
-
 /// The short form of every group address's ETS id (`"GA-3"` from
 /// `"P-03DE-0_GA-3"`), the inverse of `map.rs`'s own
 /// `short_group_address_ids` — `ComObjectInstanceRef/@Links` names a group
@@ -290,7 +297,7 @@ fn write_installation_v21(
     project: &Project,
     installation: &Installation,
     retained: &RetainedAttrs,
-    elements: &BTreeMap<String, Vec<u8>>,
+    elements: &RetainedElements,
 ) -> Result<(), ExportError> {
     let xpath = "/KNX/Project/Installations/Installation";
     let default_line_ets_id = installation
@@ -340,18 +347,13 @@ fn write_installation_v21(
         for &device_id in &installation.topology.unassigned {
             if let Some(device) = project.devices.get(device_id) {
                 let parameters = device_parameters(project, device.id);
-                let device_xpath = format!(
-                    "{xpath}/Topology/UnassignedDevices/DeviceInstance[@Id='{}']",
-                    device.source.ets_id
-                );
-                let raw_xpath = unassigned_device_raw_xpath(&device.source.ets_id);
+                let device_xpath = crate::xpath::unassigned_device(&device.source.ets_id);
                 write_device_v21(
                     writer,
                     project,
                     &parameters,
                     device,
                     &device_xpath,
-                    &raw_xpath,
                     retained,
                     elements,
                     &short_ga,
@@ -366,7 +368,7 @@ fn write_installation_v21(
         open(writer, "Locations", &Attrs::new())?;
         let by_id: BTreeMap<_, _> = installation.buildings.iter().map(|b| (b.id, b)).collect();
         for part in installation.buildings.iter().filter(|b| b.parent.is_none()) {
-            write_space(writer, project, &by_id, part)?;
+            write_space(writer, project, &by_id, part, retained)?;
         }
         close(writer, "Locations")?;
     }
@@ -386,7 +388,14 @@ fn write_installation_v21(
         // Reused verbatim from `schema11.rs`: `GroupRanges`/`GroupRange`/
         // `GroupAddress` are the same element and attribute shapes at
         // schema ≥21 (measured — `crate::known::SCHEMA_21`'s own table).
-        write_group_range(writer, &range_by_id, &installation.group_addresses, range)?;
+        write_group_range(
+            writer,
+            &range_by_id,
+            &installation.group_addresses,
+            range,
+            retained,
+            BoolStyle::TrueFalse,
+        )?;
     }
     close(writer, "GroupRanges")?;
     close(writer, "GroupAddresses")?;
@@ -401,7 +410,7 @@ fn write_area_v21(
     topology: &Topology,
     area: &Area,
     retained: &RetainedAttrs,
-    elements: &BTreeMap<String, Vec<u8>>,
+    elements: &RetainedElements,
     short_ga: &BTreeMap<GroupAddressId, String>,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
@@ -412,6 +421,7 @@ fn write_area_v21(
     if !area.name.is_empty() {
         attrs.push("Name", area.name.clone());
     }
+    attrs.fill_retained(retained, &crate::xpath::area(&area.source.ets_id));
     open(writer, "Area", &attrs)?;
 
     for &line_id in &area.lines {
@@ -419,7 +429,6 @@ fn write_area_v21(
             write_line_v21(
                 writer,
                 project,
-                &area.source.ets_id,
                 line,
                 retained,
                 elements,
@@ -436,10 +445,9 @@ fn write_area_v21(
 fn write_line_v21(
     writer: &mut Writer<Vec<u8>>,
     project: &Project,
-    area_ets_id: &str,
     line: &Line,
     retained: &RetainedAttrs,
-    elements: &BTreeMap<String, Vec<u8>>,
+    elements: &RetainedElements,
     short_ga: &BTreeMap<GroupAddressId, String>,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
@@ -448,15 +456,18 @@ fn write_line_v21(
     if !line.name.is_empty() {
         attrs.push("Name", line.name.clone());
     }
+    let line_xpath = crate::xpath::line(&line.source.ets_id);
+    attrs.fill_retained(retained, &line_xpath);
     open(writer, "Line", &attrs)?;
 
     // `Segment` re-synthesizes the wrapper the parser transparently merged
     // away on import (module doc), carrying the medium/domain-address
-    // attributes schema 11 puts directly on `Line`. Its own `Id`/`Number`
-    // are not reconstructed — see the module doc's granularity note; there
-    // is one `Segment` per `Line` in every sample measured so far, so this
-    // loses a synthetic bookkeeping id, nothing a device or group address
-    // ever refers back to.
+    // attributes schema 11 puts directly on `Line`. `knx_core` has no
+    // segment entity, so its own `Id`/`Number`/`Puid` come back out of the
+    // retained store, keyed by the owning line ([`crate::xpath::segment`]) —
+    // unambiguous while there is one `Segment` per `Line`, as every sample
+    // measured so far has, and deliberately dropped with a warning the
+    // moment a file carries two.
     let mut seg_attrs = Attrs::new();
     seg_attrs.push("MediumTypeRefId", line.medium_ref.clone());
     seg_attrs.opt("DomainAddress", &line.domain_address);
@@ -468,11 +479,7 @@ fn write_line_v21(
         line.ip_routing_multicast_address,
     );
     seg_attrs.opt_display("MulticastTTL", line.multicast_ttl);
-
-    let line_xpath = format!(
-        "/KNX/Project/Installations/Installation/Topology/Area[@Id='{area_ets_id}']/Line[@Id='{}']",
-        line.source.ets_id
-    );
+    seg_attrs.fill_retained(retained, &crate::xpath::segment(&line.source.ets_id));
 
     if line.devices.is_empty() {
         empty(writer, "Segment", &seg_attrs)?;
@@ -481,23 +488,25 @@ fn write_line_v21(
         for &device_id in &line.devices {
             if let Some(device) = project.devices.get(device_id) {
                 let parameters = device_parameters(project, device.id);
-                let device_xpath = format!(
-                    "{line_xpath}/DeviceInstance[@Id='{}']",
-                    device.source.ets_id
-                );
-                let raw_xpath = device_raw_xpath(&device.source.ets_id);
+                let device_xpath = crate::xpath::device_v21(&device.source.ets_id);
                 write_device_v21(
                     writer,
                     project,
                     &parameters,
                     device,
                     &device_xpath,
-                    &raw_xpath,
                     retained,
                     elements,
                     short_ga,
                 )?;
             }
+        }
+        // `BusAccess` sits inside `Segment` at schema ≥21 — measured, the
+        // ETS 6.3.0 reference project — not directly under `Line` the way
+        // schema 11 puts it.
+        let bus_access_xpath = format!("{}/BusAccess", crate::xpath::segment(&line.source.ets_id));
+        if let Some(raw) = elements.take(&bus_access_xpath) {
+            write_raw_subtree(writer, raw)?;
         }
         close(writer, "Segment")?;
     }
@@ -526,9 +535,8 @@ fn write_device_v21(
     parameters: &[&ParameterInstance],
     device: &DeviceInstance,
     device_xpath: &str,
-    raw_xpath: &str,
     retained: &RetainedAttrs,
-    elements: &BTreeMap<String, Vec<u8>>,
+    elements: &RetainedElements,
     short_ga: &BTreeMap<GroupAddressId, String>,
 ) -> Result<(), ExportError> {
     let mut attrs = Attrs::new();
@@ -540,12 +548,6 @@ fn write_device_v21(
     attrs.push("ProductRefId", device.product_ref.clone());
     attrs.push("Hardware2ProgramRefId", device.program_ref.clone());
     attrs.opt("Description", &device.description);
-    // `Comment`/`SerialNumber`/`IsActivityCalculated`/`LastUsedAPDULength`/
-    // `ReadMaxAPDULength`/`Puid`/`LoadedImage`/`CheckSums`/`DownloadCounter`
-    // are deliberately not written — see the module doc's granularity note.
-    // No `CompletionStatus`/`Broken`/`IsCommunicationObjectVisibilityCalculated`
-    // either: genuinely absent from `crate::known::SCHEMA_21`'s own
-    // attribute list, not merely unmapped.
     push_bool_tf(
         &mut attrs,
         "ApplicationProgramLoaded",
@@ -571,6 +573,16 @@ fn write_device_v21(
         "ParametersLoaded",
         device.commissioning.parameters_loaded,
     );
+    // Schema ≥21's spelling of schema 11's
+    // `IsCommunicationObjectVisibilityCalculated`
+    // (`installation_v21.rs`'s own note) — the same
+    // `DeviceInstance::visibility_calculated` field, parsed since Task 5 and
+    // until now never written back.
+    push_bool_tf(
+        &mut attrs,
+        "IsActivityCalculated",
+        device.visibility_calculated,
+    );
     attrs.opt_display(
         "LastModified",
         device.commissioning.last_modified.map(format_timestamp_v21),
@@ -579,12 +591,19 @@ fn write_device_v21(
         "LastDownload",
         device.commissioning.last_download.map(format_timestamp_v21),
     );
+    // Everything schema ≥21 puts on a `DeviceInstance` without a home in
+    // `knx_core` — `Comment`, `SerialNumber`, `IsActivityCalculated`,
+    // `LastUsedAPDULength`, `ReadMaxAPDULength`, `Puid`, `CompletionStatus`,
+    // the differential-download bookkeeping — comes back here, on the device
+    // it was read from and no other.
+    attrs.fill_retained(retained, device_xpath);
 
-    let module_instances = elements.get(&format!("{raw_xpath}/ModuleInstances"));
-    let group_object_tree = elements.get(&format!("{raw_xpath}/GroupObjectTree"));
-    let security = elements.get(&format!("{raw_xpath}/Security"));
+    let module_instances = elements.take(&format!("{device_xpath}/ModuleInstances"));
+    let group_object_tree = elements.take(&format!("{device_xpath}/GroupObjectTree"));
+    let security = elements.take(&format!("{device_xpath}/Security"));
 
     let has_children = !parameters.is_empty()
+        || !device.binary_data.is_empty()
         || !device.com_objects.is_empty()
         || module_instances.is_some()
         || group_object_tree.is_some()
@@ -616,8 +635,23 @@ fn write_device_v21(
         close(writer, "ComObjectInstanceRefs")?;
     }
 
+    // Measured on the ETS 6.3.0 reference project: `BinaryData` sits
+    // between `ComObjectInstanceRefs` and `Security`.
+    if !device.binary_data.is_empty() {
+        open(writer, "BinaryData", &Attrs::new())?;
+        for b in &device.binary_data {
+            let mut a = Attrs::new();
+            a.push("Id", b.id.clone());
+            a.push("Name", b.name.clone());
+            a.fill_retained(retained, &crate::xpath::binary_data(device_xpath, &b.id));
+            empty(writer, "BinaryData", &a)?;
+        }
+        close(writer, "BinaryData")?;
+    }
+
     // Order matches the measured sample exactly: ParameterInstanceRefs,
-    // ComObjectInstanceRefs, ModuleInstances, GroupObjectTree, Security.
+    // ComObjectInstanceRefs, BinaryData, ModuleInstances, GroupObjectTree,
+    // Security.
     if let Some(raw) = module_instances {
         write_raw_subtree(writer, raw)?;
     }
@@ -635,10 +669,10 @@ fn write_device_v21(
 /// Flat `ComObjectInstanceRef` — no nested `Connectors` at schema ≥21.
 /// `RefId` is `com.source.ets_id` verbatim (the original, unstripped
 /// `GroupObjectTree` id — `map_com_object_v21`'s own doc comment). Flags
-/// are never written: schema ≥21 instance overrides never carry them
-/// (`map_com_object_v21`'s own doc comment; `com.flags` is always
-/// `ResolvedFlags::none()` here, so there is nothing to write even if this
-/// function tried).
+/// *are* written: the ETS 6.3.0 reference project carries 119 of them
+/// (Task 3's measurement, `crate::known::COM_OBJECT_INSTANCE_REF_ATTRS_21`),
+/// which is how the earlier "schema ≥21 never carries flags" reading — drawn
+/// from a single sample that happens to carry none — was found to be wrong.
 fn write_com_object_v21(
     writer: &mut Writer<Vec<u8>>,
     project: &Project,
@@ -648,11 +682,11 @@ fn write_com_object_v21(
     short_ga: &BTreeMap<GroupAddressId, String>,
 ) -> Result<(), ExportError> {
     let ref_id = &com.source.ets_id;
-    let xpath = format!("{device_xpath}/GroupObjectTree[@Id='{ref_id}']");
+    let xpath = crate::xpath::com_object(device_xpath, ref_id);
 
     let mut attrs = Attrs::new();
     attrs.push("RefId", ref_id.clone());
-    let channel_id = retained.get(&(xpath, "ChannelId".to_string())).cloned();
+    let channel_id = retained.take(&xpath, "ChannelId");
     attrs.opt("ChannelId", &channel_id);
 
     if !com.links.is_empty() {
@@ -678,6 +712,12 @@ fn write_com_object_v21(
         &com.description,
         &project.strings,
     );
+    push_override_flag(&mut attrs, "ReadFlag", &com.flags.read);
+    push_override_flag(&mut attrs, "WriteFlag", &com.flags.write);
+    push_override_flag(&mut attrs, "TransmitFlag", &com.flags.transmit);
+    push_override_flag(&mut attrs, "UpdateFlag", &com.flags.update);
+    push_override_flag(&mut attrs, "CommunicationFlag", &com.flags.communication);
+    attrs.fill_retained(retained, &xpath);
 
     empty(writer, "ComObjectInstanceRef", &attrs)
 }
@@ -687,6 +727,7 @@ fn write_space(
     project: &Project,
     by_id: &BTreeMap<knx_core::BuildingPartId, &BuildingPart>,
     part: &BuildingPart,
+    retained: &RetainedAttrs,
 ) -> Result<(), ExportError> {
     let default_line_ets_id = part.default_line.and_then(|id| {
         project
@@ -702,8 +743,13 @@ fn write_space(
     attrs.opt("Number", &part.number);
     attrs.push("Type", building_part_type_str(part.kind));
     attrs.opt("DefaultLine", &default_line_ets_id);
-    // No `CompletionStatus`: genuinely absent from `crate::known::SCHEMA_21`'s
-    // `Locations/Space` entry.
+    // `CompletionStatus` is not in `crate::known::SCHEMA_21`'s `Space` entry
+    // and has no `knx_core` home at this schema, so it comes back — like
+    // `Puid` — out of the retained store rather than being invented here.
+    attrs.fill_retained(
+        retained,
+        &crate::xpath::building_part("Locations", "Space", &part.source.ets_id),
+    );
 
     let has_children = !part.children.is_empty() || !part.devices.is_empty();
     if !has_children {
@@ -713,7 +759,7 @@ fn write_space(
     open(writer, "Space", &attrs)?;
     for &child_id in &part.children {
         if let Some(child) = by_id.get(&child_id) {
-            write_space(writer, project, by_id, child)?;
+            write_space(writer, project, by_id, child, retained)?;
         }
     }
     for &device_id in &part.devices {

@@ -100,8 +100,10 @@ fn download_state_attributes_are_preserved_and_reported_by_name() {
     );
 
     // Preserved byte-exact in the opaque entry list `export_knxproj` reads.
-    let device_xpath =
-        "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance";
+    // Keyed by the device's own id, not by the element's schema-shaped path:
+    // a project-wide `.../DeviceInstance` key cannot tell two devices apart
+    // (`knx_etsproj::xpath`'s own module doc, KNOWN_LIMITATIONS §34).
+    let device_xpath = "/KNX/Project/Installations/Installation/Topology/Area/Line/Segment/DeviceInstance[@Id='P-0001-0_DI-1']";
     let find = |name: &str| {
         outcome
             .opaque
@@ -157,18 +159,15 @@ fn download_state_attributes_absent_is_unremarkable() {
     }
 }
 
-/// No export/round-trip-through-a-file path exists for these three
-/// attributes today, same as every other per-`DeviceInstance` known-but-
-/// unmapped attribute (`KNOWN_LIMITATIONS.md` #34): `schema21.rs` never
-/// calls `fill_retained()` for `DeviceInstance`, because `RetainedAttrs` is
-/// keyed only by `(xpath, name)`, project-wide, not per device — writing
-/// one device's `DownloadCounter` back onto every device the moment a
-/// project has more than one would be silent corruption, not preservation.
-/// This test documents that today's `export_knxproj` output for this
-/// fixture does *not* contain the attribute text, rather than silently
-/// relying on the two tests above to imply it.
+/// The other half of the round trip: the three attributes come back out of
+/// `export_knxproj` onto the device they were read from. They have no
+/// `knx_core` home, so the exporter takes them from the retained store,
+/// which is keyed per element instance (`knx_etsproj::xpath`) — one device's
+/// `DownloadCounter` can no longer land on another's, which is what
+/// `KNOWN_LIMITATIONS.md` §34 forbade and why this used to be a documented
+/// loss.
 #[test]
-fn download_state_attributes_do_not_survive_export_yet() {
+fn download_state_attributes_survive_the_export_round_trip() {
     let bytes = knxproj_with_installation_21(&installation_21(true));
     let outcome = import_knxproj_bytes(bytes, "download-state.knxproj").unwrap();
 
@@ -199,11 +198,18 @@ fn download_state_attributes_do_not_survive_export_yet() {
     let topology = written.read(&format!("{part}/0.xml")).unwrap();
     let xml = String::from_utf8_lossy(&topology);
     assert!(
-        !xml.contains("DownloadCounter")
-            && !xml.contains("LoadedImage")
-            && !xml.contains("CheckSums"),
-        "export_knxproj unexpectedly reconstructed a per-device known-but-unmapped \
-         attribute — if this now passes, KNOWN_LIMITATIONS.md #34 and this test's own \
-         doc comment are both stale and need updating together"
+        xml.contains(r#"LoadedImage="QUJD""#)
+            && xml.contains(r#"CheckSums="RUZH""#)
+            && xml.contains(r#"DownloadCounter="7""#),
+        "export_knxproj dropped a per-device known-but-unmapped attribute; \
+         the exported topology was: {xml}"
+    );
+    assert!(
+        !exported
+            .warnings
+            .iter()
+            .any(|w| format!("{w:?}").contains("DownloadCounter")),
+        "nothing was lost, so nothing should be warned about: {:?}",
+        exported.warnings
     );
 }

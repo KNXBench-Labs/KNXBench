@@ -878,6 +878,144 @@ pub fn load_group_links(
     Ok(links)
 }
 
+/// Writes one `com_object_program_default` row. Reuses `Attr` and its
+/// `attr_to_str` — same three attribute names (`text`/`description`/`dpt`)
+/// as `com_object_override`, since this is the program layer's own say on
+/// the same three fields, not a fourth kind of attribute.
+fn write_program_default_row(
+    conn: &Connection,
+    com_object_instance_id: ComObjectInstanceId,
+    attr: Attr,
+    value: &str,
+    text_kind: Option<&str>,
+    layer: Layer,
+) -> Result<(), StoreError> {
+    conn.execute(
+        "INSERT INTO com_object_program_default
+             (com_object_instance_id, attr, value, text_kind, layer)
+         VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT(com_object_instance_id, attr) DO UPDATE SET
+             value = excluded.value,
+             text_kind = excluded.text_kind,
+             layer = excluded.layer",
+        params![
+            com_object_instance_id.0,
+            attr_to_str(attr),
+            value,
+            text_kind,
+            layer_to_str(layer),
+        ],
+    )?;
+    Ok(())
+}
+
+/// Replaces every `com_object_program_default` row for `id` with what
+/// `defaults` now says — deletes first, same "rewrite the whole set" shape
+/// `upsert_com_object_instance` uses for `com_object_override`, since a
+/// field that goes from `Some` back to `None` (the program database
+/// changed, or was dropped) must not leave a stale row behind.
+pub fn upsert_com_object_program_defaults(
+    conn: &Connection,
+    com_object_instance_id: ComObjectInstanceId,
+    defaults: &knx_core::device::ProgramDefaults,
+) -> Result<(), StoreError> {
+    conn.execute(
+        "DELETE FROM com_object_program_default WHERE com_object_instance_id = ?1",
+        params![com_object_instance_id.0],
+    )?;
+    if let Some(Resolved { value, layer }) = &defaults.text {
+        let (kind, text) = match value {
+            Text::Literal(s) => ("literal", s.clone()),
+            Text::Localized(LocalizedString(TranslationKey(k))) => ("localized", k.clone()),
+        };
+        write_program_default_row(
+            conn,
+            com_object_instance_id,
+            Attr::Text,
+            &text,
+            Some(kind),
+            *layer,
+        )?;
+    }
+    if let Some(Resolved { value, layer }) = &defaults.description {
+        let (kind, text) = match value {
+            Text::Literal(s) => ("literal", s.clone()),
+            Text::Localized(LocalizedString(TranslationKey(k))) => ("localized", k.clone()),
+        };
+        write_program_default_row(
+            conn,
+            com_object_instance_id,
+            Attr::Description,
+            &text,
+            Some(kind),
+            *layer,
+        )?;
+    }
+    if let Some(Resolved { value, layer }) = &defaults.dpt {
+        write_program_default_row(
+            conn,
+            com_object_instance_id,
+            Attr::Dpt,
+            &value.to_string(),
+            None,
+            *layer,
+        )?;
+    }
+    Ok(())
+}
+
+/// Every com object's program defaults, in one pass — `load_project`'s
+/// counterpart to `load_all_com_objects`, same "one query beats N" reason.
+pub(crate) fn load_all_program_defaults(
+    conn: &Connection,
+) -> Result<BTreeMap<ComObjectInstanceId, knx_core::device::ProgramDefaults>, StoreError> {
+    let mut stmt = conn.prepare(
+        "SELECT com_object_instance_id, attr, value, text_kind, layer
+         FROM com_object_program_default
+         ORDER BY com_object_instance_id",
+    )?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((
+                ComObjectInstanceId(row.get(0)?),
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, Option<String>>(3)?,
+                row.get::<_, String>(4)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let mut by_id: BTreeMap<ComObjectInstanceId, knx_core::device::ProgramDefaults> =
+        BTreeMap::new();
+    for (id, attr, value, text_kind, layer) in rows {
+        let entry = by_id.entry(id).or_default();
+        let layer = layer_from_str(&layer);
+        match attr.as_str() {
+            "text" => {
+                let text = match text_kind.as_deref() {
+                    Some("localized") => Text::Localized(LocalizedString(TranslationKey(value))),
+                    _ => Text::Literal(value),
+                };
+                entry.text = Some(Resolved { value: text, layer });
+            }
+            "description" => {
+                let text = match text_kind.as_deref() {
+                    Some("localized") => Text::Localized(LocalizedString(TranslationKey(value))),
+                    _ => Text::Literal(value),
+                };
+                entry.description = Some(Resolved { value: text, layer });
+            }
+            "dpt" => {
+                let dpt = DptRef::parse(&value).expect("stored DptRef text is always valid");
+                entry.dpt = Some(Resolved { value: dpt, layer });
+            }
+            other => return Err(StoreError::UnknownOverrideAttr(other.to_string())),
+        }
+    }
+    Ok(by_id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1105,6 +1243,46 @@ mod tests {
         assert_eq!(loaded.flags, com.flags);
         assert_eq!(loaded.size, com.size);
         assert_eq!(loaded.is_active, com.is_active);
+    }
+
+    #[test]
+    fn program_defaults_round_trip_and_an_empty_replacement_clears_the_row() {
+        use knx_core::device::ProgramDefaults;
+
+        let conn = open_and_migrate_in_memory().unwrap();
+        upsert_installation_row(&conn, &installation()).unwrap();
+        let d = device();
+        upsert_device(&conn, InstallationId(0), 0, &d).unwrap();
+        let com = com_object_fixture();
+        upsert_com_object_instance(&conn, d.id, 0, &com).unwrap();
+
+        let defaults = ProgramDefaults {
+            text: Some(Resolved {
+                value: Text::Literal("An/Aus (Programm)".into()),
+                layer: Layer::Program,
+            }),
+            description: Some(Resolved {
+                value: Text::Localized(LocalizedString(TranslationKey("k9".into()))),
+                layer: Layer::ProgramRef,
+            }),
+            dpt: Some(Resolved {
+                value: DptRef {
+                    main: 1,
+                    sub: Some(2),
+                },
+                layer: Layer::Program,
+            }),
+        };
+        upsert_com_object_program_defaults(&conn, com.id, &defaults).unwrap();
+
+        let loaded = load_all_program_defaults(&conn).unwrap();
+        assert_eq!(loaded.get(&com.id), Some(&defaults));
+
+        // Replacing with an empty ProgramDefaults deletes the rows rather
+        // than leaving three stale ones behind.
+        upsert_com_object_program_defaults(&conn, com.id, &ProgramDefaults::default()).unwrap();
+        let loaded = load_all_program_defaults(&conn).unwrap();
+        assert_eq!(loaded.get(&com.id), None);
     }
 
     #[test]

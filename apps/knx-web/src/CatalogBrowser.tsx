@@ -236,6 +236,18 @@ export default function CatalogBrowser(props: {
           })}
         </p>
       )}
+      {/* KNOWN_LIMITATIONS.md §85: a `.signature` member's `role` starts
+          with "Signature" whether or not it was checked — because nothing
+          ever checks it. This is the one place a person reads an install
+          report; the count exists so "installed cleanly" and "signed and
+          verified" cannot be the same sentence in either language. */}
+      {installReport && installReport.members.some((member) => member.role.startsWith("Signature")) && (
+        <p className="catalog-report catalog-report-caution">
+          {t("catalog.installReport.unverifiedSignature", {
+            count: installReport.members.filter((member) => member.role.startsWith("Signature")).length,
+          })}
+        </p>
+      )}
       <select value={manufacturer} onChange={(e) => changeManufacturer(e.target.value)}>
         <option value="">{t("catalog.allManufacturers")}</option>
         {manufacturers.map((m) => (

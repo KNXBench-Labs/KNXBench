@@ -410,6 +410,9 @@ export interface CatalogItem {
 
 export interface CatalogInstallMember {
   path: string;
+  // Not a taxonomy to switch on: the server already qualifies the one role
+  // that could be misread as a passed check ("Signature (stored, not
+  // verified)" — KNOWN_LIMITATIONS.md §85). Display it, don't parse it.
   role: string;
   sha256: string;
   size: number;

@@ -666,6 +666,30 @@ mod tests {
         }
     }
 
+    /// C10 reclassified both access-key steps from `Write` to `Guard`, on the
+    /// grounds that a step which refuses or reports and writes nothing is not
+    /// a write. Nothing outside this module reads `StepEffect`, so without
+    /// this test the reclassification is a claim in a commit message rather
+    /// than a property of the code — and `first_destructive_step` would start
+    /// naming the wrong step the day an access-key write does get built.
+    #[test]
+    fn neither_access_key_step_counts_as_a_write() {
+        for procedure in [complete_download(), partial_download()] {
+            let step = procedure
+                .steps
+                .iter()
+                .find(|step| step.title == "modify access keys")
+                .expect("both download procedures carry the access-key step");
+            assert_eq!(
+                step.effect,
+                StepEffect::Guard,
+                "{}: step {} writes nothing until A_Key_Write exists",
+                procedure.kind,
+                step.number
+            );
+        }
+    }
+
     #[test]
     fn the_first_destructive_step_of_a_complete_download_is_the_unload() {
         let procedure = complete_download();

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import { type Translate, useTranslate } from "./i18n";
 import { getSetting, setSetting, useSettingsRevision } from "./settingsStore";
+import type { ProjectTree } from "./bindings/ProjectTree";
 
 const EXCLUSIONS_KEY = "lineScanExclusions";
 const POLL_INTERVAL_MS = 1000;
@@ -47,7 +48,17 @@ function statusKey(status: api.LineScanResultsResponse["status"]) {
   }
 }
 
-export default function LineScanPanel() {
+interface LineScanPanelProps {
+  projectOpen?: boolean;
+  projectRevision?: ProjectTree | null;
+  onTreeUpdate?: (tree: ProjectTree) => void | Promise<void>;
+}
+
+export default function LineScanPanel({
+  projectOpen = true,
+  projectRevision,
+  onTreeUpdate,
+}: LineScanPanelProps = {}) {
   const t = useTranslate();
   useSettingsRevision();
   const exclusions = configuredExclusions();
@@ -70,6 +81,12 @@ export default function LineScanPanel() {
   const [starting, setStarting] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [activeExclusions, setActiveExclusions] = useState<string[]>([]);
+  const [comparison, setComparison] = useState<api.LineScanComparison | null>(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [comparisonRevision, setComparisonRevision] = useState(0);
+  const [selectedUnexpected, setSelectedUnexpected] = useState<string[]>([]);
+  const [selectedMissing, setSelectedMissing] = useState<string[]>([]);
+  const [reconciling, setReconciling] = useState(false);
   const sinceRef = useRef(0);
   const pollGenerationRef = useRef(0);
   const pollInFlightRef = useRef(false);
@@ -140,6 +157,31 @@ export default function LineScanPanel() {
     return () => window.clearInterval(interval);
   }, [response?.status, response?.sessionId, cancelling]);
 
+  useEffect(() => {
+    if (response?.status !== "completed" || !projectOpen) {
+      setComparison(null);
+      return;
+    }
+    let active = true;
+    setComparisonLoading(true);
+    setSelectedUnexpected([]);
+    setSelectedMissing([]);
+    void api
+      .compareLineScan(response.sessionId)
+      .then((value) => {
+        if (active && sessionIdRef.current === response.sessionId) setComparison(value);
+      })
+      .catch((reason) => {
+        if (active) setError(api.errorMessage(reason));
+      })
+      .finally(() => {
+        if (active) setComparisonLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [response?.status, response?.sessionId, projectOpen, projectRevision, comparisonRevision]);
+
   async function preview() {
     setError(null);
     const fingerprint = requestFingerprint;
@@ -160,6 +202,9 @@ export default function LineScanPanel() {
     setActiveExclusions(request.excluded);
     setError(null);
     setResults([]);
+    setComparison(null);
+    setSelectedUnexpected([]);
+    setSelectedMissing([]);
     sinceRef.current = 0;
     try {
       const started = await api.startLineScan(request);
@@ -220,6 +265,40 @@ export default function LineScanPanel() {
     setEstimate(null);
   }
 
+  function toggleSelection(
+    address: string,
+    selected: string[],
+    setSelected: (value: string[]) => void,
+  ) {
+    setSelected(
+      selected.includes(address)
+        ? selected.filter((candidate) => candidate !== address)
+        : [...selected, address],
+    );
+  }
+
+  async function reconcile() {
+    const sessionId = sessionIdRef.current;
+    if (sessionId === null || selectedUnexpected.length + selectedMissing.length === 0) return;
+    setReconciling(true);
+    setError(null);
+    try {
+      const tree = await api.reconcileLineScan(
+        sessionId,
+        selectedUnexpected,
+        selectedMissing,
+      );
+      await onTreeUpdate?.(tree);
+      setSelectedUnexpected([]);
+      setSelectedMissing([]);
+      setComparisonRevision((revision) => revision + 1);
+    } catch (reason) {
+      setError(api.errorMessage(reason));
+    } finally {
+      setReconciling(false);
+    }
+  }
+
   return (
     <section className="line-scan-panel">
       <header>
@@ -255,6 +334,27 @@ export default function LineScanPanel() {
       {error && <p className="form-error" role="alert">{error}</p>}
       {response && <section className="line-scan-progress" aria-live="polite"><p>{t(statusKey(response.status))} · {response.completedCount}/{response.totalCount}</p><progress max={response.totalCount} value={response.completedCount} />{response.error && <p className="form-error">{response.error}</p>}</section>}
       {results.length > 0 && <table className="line-scan-results"><thead><tr><th>{t("lineScan.address")}</th><th>{t("lineScan.outcome")}</th></tr></thead><tbody>{results.map((result) => <tr key={result.address}><td><code>{result.address}</code></td><td><span data-scan-outcome={result.outcome.kind}>{outcomeLabel(result.outcome, t)}</span></td></tr>)}</tbody></table>}
+      {response?.status === "completed" && !projectOpen && <p>{t("lineScan.reconciliation.projectRequired")}</p>}
+      {response?.status === "completed" && projectOpen && comparisonLoading && <p>{t("lineScan.reconciliation.loading")}</p>}
+      {response?.status === "completed" && projectOpen && comparison && <section className="line-scan-reconciliation" aria-live="polite">
+        <h3>{t("lineScan.reconciliation.title")}</h3>
+        <div className="line-scan-reconciliation-group">
+          <h4>{t("lineScan.reconciliation.unexpected")}</h4>
+          <p>{t("lineScan.reconciliation.unexpectedHelp")}</p>
+          {comparison.unexpected.length === 0 ? <p>{t("lineScan.reconciliation.none")}</p> : <ul>{comparison.unexpected.map((address) => <li key={address}><label><input type="checkbox" checked={selectedUnexpected.includes(address)} onChange={() => toggleSelection(address, selectedUnexpected, setSelectedUnexpected)} /><code>{address}</code></label></li>)}</ul>}
+        </div>
+        <div className="line-scan-reconciliation-group">
+          <h4>{t("lineScan.reconciliation.missing")}</h4>
+          <p>{t("lineScan.reconciliation.missingHelp")}</p>
+          {comparison.missing.length === 0 ? <p>{t("lineScan.reconciliation.none")}</p> : <ul>{comparison.missing.map((address) => <li key={address}><label><input type="checkbox" checked={selectedMissing.includes(address)} onChange={() => toggleSelection(address, selectedMissing, setSelectedMissing)} /><code>{address}</code></label></li>)}</ul>}
+        </div>
+        <div className="line-scan-reconciliation-group line-scan-reconciliation-excluded">
+          <h4>{t("lineScan.reconciliation.excluded")}</h4>
+          <p>{t("lineScan.reconciliation.excludedHelp")}</p>
+          {comparison.excludedInProject.length === 0 ? <p>{t("lineScan.reconciliation.none")}</p> : <ul>{comparison.excludedInProject.map((address) => <li key={address}><code>{address}</code></li>)}</ul>}
+        </div>
+        <button className="primary-action" disabled={reconciling || selectedUnexpected.length + selectedMissing.length === 0} onClick={() => void reconcile()}>{t("lineScan.reconciliation.apply")}</button>
+      </section>}
     </section>
   );
 }

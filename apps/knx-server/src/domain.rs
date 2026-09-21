@@ -1908,6 +1908,7 @@ pub fn create_device_impl(
         // so there are no program defaults to restore. The enrichment pass
         // below is what puts the first ones there.
         program_defaults: Vec::new(),
+        installation: None,
         line: line_id.map(knx_core::LineId),
     };
     // Captured before `do_command` consumes `cmd` below — same convention
@@ -1957,6 +1958,136 @@ pub fn delete_device_impl(
             id: knx_core::DeviceId(id),
         },
     )
+}
+
+pub fn reconcile_scan_impl(
+    state: &AppState,
+    range: knx_net::ScannedRange,
+    results: &[(knx_core::IndividualAddress, knx_net::ProbeOutcome)],
+    excluded: &HashSet<knx_core::IndividualAddress>,
+    selected_unexpected: Vec<knx_core::IndividualAddress>,
+    selected_missing: Vec<knx_core::IndividualAddress>,
+) -> Result<knx_projection::ProjectTree, String> {
+    let unexpected_set: HashSet<_> = selected_unexpected.iter().copied().collect();
+    if unexpected_set.len() != selected_unexpected.len() {
+        return Err("unexpected selection contains duplicate addresses".into());
+    }
+    let missing_set: HashSet<_> = selected_missing.iter().copied().collect();
+    if missing_set.len() != selected_missing.len() {
+        return Err("missing selection contains duplicate addresses".into());
+    }
+
+    let mut project = state.project.lock().expect("state mutex poisoned");
+    let project = project.as_mut().ok_or("no project open")?;
+    let project_addresses: Vec<_> = project
+        .devices
+        .iter()
+        .filter_map(|device| device.address)
+        .collect();
+    let comparison = knx_net::compare_with_project(&range, results, excluded, &project_addresses);
+    let allowed_unexpected: HashSet<_> = comparison.unexpected.into_iter().collect();
+    let allowed_missing: HashSet<_> = comparison.missing.into_iter().collect();
+    if !unexpected_set.is_subset(&allowed_unexpected) {
+        return Err("unexpected selection is not part of the current scan comparison".into());
+    }
+    if !missing_set.is_subset(&allowed_missing) {
+        return Err("missing selection is not part of the current scan comparison".into());
+    }
+
+    let stack = &mut *state.command_stack.lock().expect("state mutex poisoned");
+    if selected_unexpected.is_empty() && selected_missing.is_empty() {
+        let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+        return Ok(tree_with_state(project, stack, import_counts));
+    }
+
+    let mut commands = Vec::new();
+    for address in selected_missing {
+        let ids: Vec<_> = project
+            .devices
+            .iter()
+            .filter(|device| device.address == Some(address))
+            .map(|device| device.id)
+            .collect();
+        let [id] = ids.as_slice() else {
+            return Err(format!(
+                "missing address {address} must resolve to exactly one project device"
+            ));
+        };
+        commands.push(knx_core::Command::DeleteDevice { id: *id });
+    }
+
+    if !selected_unexpected.is_empty() {
+        let matching_placement = project.installations.iter().find_map(|installation| {
+            installation
+                .topology
+                .lines
+                .iter()
+                .find(|line| {
+                    line.address == range.line
+                        && installation
+                            .topology
+                            .area_of(line.id)
+                            .is_some_and(|area| area.address == range.area)
+                })
+                .map(|line| (installation.id, line.id))
+        });
+        let (installation, line) = match matching_placement {
+            Some((installation, line)) => (Some(installation), Some(line)),
+            None => (
+                project
+                    .installations
+                    .first()
+                    .map(|installation| installation.id),
+                None,
+            ),
+        };
+        let mut ids = project.ids.clone();
+        let mut create_commands = Vec::new();
+        for address in selected_unexpected {
+            let device_id = ids.next_device_id();
+            let source_id = format!("KB-SCAN-{:04X}", address.raw());
+            create_commands.push(knx_core::Command::CreateDevice {
+                device: knx_core::DeviceInstance {
+                    id: device_id,
+                    source: knx_core::SourceRef {
+                        path: source_id.clone(),
+                        ets_id: source_id,
+                    },
+                    name: format!("Scanned device {address}"),
+                    description: None,
+                    address: Some(address),
+                    product_ref: String::new(),
+                    program_ref: String::new(),
+                    commissioning: knx_core::CommissioningState::default(),
+                    visibility_calculated: true,
+                    com_objects: Vec::new(),
+                    binary_data: Vec::new(),
+                },
+                com_objects: Vec::new(),
+                program_defaults: Vec::new(),
+                installation,
+                line,
+            });
+        }
+        commands.push(knx_core::Command::SetIdAllocators { ids });
+        commands.extend(create_commands);
+    }
+
+    let command = knx_core::Command::Batch(commands);
+    let command_detail = format!("{command:?}");
+    let result = stack
+        .do_command(project, command)
+        .map_err(|error| error.to_string());
+    let import_counts = *state.import_counts.lock().expect("state mutex poisoned");
+    let tree = tree_with_state(project, stack, import_counts);
+    log_outcome(
+        state,
+        "Batch",
+        "scan reconciliation".to_string(),
+        Some(command_detail),
+        &result,
+    );
+    result.map(|()| tree)
 }
 
 /// Builds a `Command::Batch` of one `DeleteDevice` per id, refusing an
@@ -3604,6 +3735,90 @@ mod tests {
         state.product_db = None;
         *state.project.lock().unwrap() = Some(project);
         state
+    }
+
+    #[test]
+    fn scan_reconciliation_uses_a_matching_line_in_a_later_installation() {
+        let state = state_with_one_installation();
+        {
+            let mut project = state.project.lock().unwrap();
+            let project = project.as_mut().unwrap();
+            project.installations.push(knx_core::Installation {
+                id: knx_core::InstallationId(1),
+                name: "Second".into(),
+                default_line: None,
+                multicast_address: None,
+                completion: knx_core::CompletionStatus::FinishedDesign,
+                topology: knx_core::Topology {
+                    areas: vec![knx_core::Area {
+                        id: knx_core::AreaId(1),
+                        source: knx_core::SourceRef {
+                            path: "test-area".into(),
+                            ets_id: "test-area".into(),
+                        },
+                        name: "Area".into(),
+                        address: 1,
+                        completion: knx_core::CompletionStatus::FinishedDesign,
+                        lines: vec![knx_core::LineId(1)],
+                    }],
+                    lines: vec![knx_core::Line {
+                        id: knx_core::LineId(1),
+                        source: knx_core::SourceRef {
+                            path: "test-line".into(),
+                            ets_id: "test-line".into(),
+                        },
+                        name: "Line".into(),
+                        address: 1,
+                        medium_ref: String::new(),
+                        domain_address: None,
+                        domain_address_is_checked: None,
+                        ip_routing_multicast_address: None,
+                        multicast_ttl: None,
+                        completion: knx_core::CompletionStatus::FinishedDesign,
+                        devices: vec![],
+                    }],
+                    unassigned: vec![],
+                },
+                buildings: vec![],
+                group_ranges: vec![],
+                group_addresses: vec![],
+                parameters: vec![],
+            });
+        }
+        let address = knx_core::IndividualAddress::new(1, 1, 4).unwrap();
+
+        reconcile_scan_impl(
+            &state,
+            knx_net::ScannedRange {
+                area: 1,
+                line: 1,
+                first_device: 4,
+                last_device: 4,
+            },
+            &[(
+                address,
+                knx_net::ProbeOutcome::Occupied {
+                    mask_version: Some(0x0701),
+                },
+            )],
+            &HashSet::new(),
+            vec![address],
+            vec![],
+        )
+        .unwrap();
+
+        let project = state.project.lock().unwrap();
+        let project = project.as_ref().unwrap();
+        let added = project
+            .devices
+            .iter()
+            .find(|device| device.address == Some(address))
+            .unwrap();
+        assert!(project.installations[0].topology.unassigned.is_empty());
+        assert_eq!(
+            project.installations[1].topology.lines[0].devices,
+            vec![added.id]
+        );
     }
 
     const CATALOG_HARDWARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>

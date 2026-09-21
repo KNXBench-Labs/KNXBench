@@ -17,6 +17,7 @@ import type { Selection } from "./selection";
 import ParameterPanel from "./ParameterPanel";
 import HelpTip from "./HelpTip";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
+import { useGroupAddressFormat } from "./gaNotation";
 import {
   directionLabel,
   dptText,
@@ -325,6 +326,7 @@ function GroupLinkRow(props: {
 }) {
   const { com, link, onApplied } = props;
   const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -340,7 +342,8 @@ function GroupLinkRow(props: {
   return (
     <li className="group-link-row">
       <span>
-        {directionLabel(t, link.direction)}: {link.address ?? `#${link.ga_id}`}
+        {directionLabel(t, link.direction)}:{" "}
+        <span className="ga-address">{link.address === null ? `#${link.ga_id}` : formatGa(link.address)}</span>
         {link.name ? ` ${link.name}` : ""}
       </span>
       <button onClick={remove}>{t("inspector.unlink")}</button>
@@ -361,6 +364,7 @@ function NewGroupLinkRow(props: {
 }) {
   const { com, groupAddresses, onApplied } = props;
   const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
   const [gaId, setGaId] = useState("");
   const [direction, setDirection] = useState<"Send" | "Receive">("Send");
   const [error, setError] = useState<string | null>(null);
@@ -384,7 +388,7 @@ function NewGroupLinkRow(props: {
         <option value="">{t("inspector.chooseGroupAddress")}</option>
         {groupAddresses.map((ga) => (
           <option key={ga.id} value={ga.id}>
-            {ga.address} {ga.name}
+            {formatGa(ga.address)} {ga.name}
           </option>
         ))}
       </select>
@@ -680,6 +684,7 @@ export function DeviceWorkspace(props: {
   const { detail, tree, onApplied } = props;
   const groupAddresses = tree.installations[0]?.group_addresses ?? [];
   const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
   const [tab, setTab] = useState(0);
   // One array, three panels, and index arithmetic derived from its length:
   // the previous `1 - tab` toggle silently encoded "there are exactly two
@@ -715,7 +720,7 @@ export function DeviceWorkspace(props: {
         {detail.com_objects.map((com) => (
           <li key={com.id}>
             <details className="com-object-detail">
-            <summary className="com-object-summary"><span className="mono">{com.number}</span><strong>{com.name ?? t("inspector.unnamed")}</strong><span className="mono">{com.dpt ?? "—"}</span><span className="mono">{com.links.map((link) => link.address ?? "—").join(", ") || "—"}</span></summary>
+            <summary className="com-object-summary"><span className="mono">{com.number}</span><strong>{com.name ?? t("inspector.unnamed")}</strong><span className="mono">{com.dpt ?? "—"}</span><span className="mono ga-address">{com.links.map((link) => (link.address === null ? "—" : formatGa(link.address))).join(", ") || "—"}</span></summary>
             <div className="com-object-edit-fields">
             <DptField com={com} onApplied={onApplied} />
             {com.dpt_layer && <span className="provenance-badge">{com.dpt_layer}</span>}
@@ -824,6 +829,7 @@ function GroupAddressInspector(props: {
 }) {
   const { ga, canDelete, onDeleted } = props;
   const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -841,7 +847,7 @@ function GroupAddressInspector(props: {
   return (
     <div className="inspector">
       <h2>{ga.name}</h2>
-      <p className="inspector-address">{ga.address}</p>
+      <p className="inspector-address ga-address">{formatGa(ga.address)}</p>
       <dl className="inspector-facts">
         <dt>{t("addressTable.dpt")}</dt>
         <dd className={hasDptConflict(ga) ? "mono dpt-conflict" : "mono"}>
@@ -924,6 +930,7 @@ function GroupRangeInspector(props: {
 }) {
   const { range, canEdit, onApplied, onDeleted } = props;
   const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
   const [error, setError] = useState<string | null>(null);
 
   async function remove() {
@@ -939,8 +946,8 @@ function GroupRangeInspector(props: {
   return (
     <div className="inspector">
       <h2>{range.name}</h2>
-      <p className="inspector-address">
-        {range.start}–{range.end}
+      <p className="inspector-address ga-address">
+        {formatGa(range.start)}–{formatGa(range.end)}
       </p>
       {canEdit ? (
         <>

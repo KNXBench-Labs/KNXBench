@@ -189,6 +189,14 @@ connection it opens for that import is in-memory
 (`knx_store::open_and_migrate_in_memory`) and discarded on drop — ETS
 import never touches a `.knxdb` file. 1 test.
 
+**Linux desktop dependency review (2026-09-22).** RustSec withdrew the ten
+GTK3 `RUSTSEC-2024-0411`–`0420` maintenance notices after `gtk3-rs` resumed
+development, so their stale `deny.toml` suppressions were removed. Six other
+Tauri-transitive unmaintained notices remain explicitly accepted with a dated
+reason. KNXBench stays on stable Tauri 2 for the alpha: Tauri 3 is still alpha
+and the ordinary Wry GTK4/WebKitGTK 6 migrations are open. See
+[KNOWN_LIMITATIONS.md §16](KNOWN_LIMITATIONS.md#16-tauri-v2-remains-on-gtk3-former-maintenance-advisories-are-resolved).
+
 Cycle 3 adds knx-desktop's own persistence, a second and entirely
 separate file format: `save_project`/`save_project_as`/
 `open_native_project` persist/restore the in-memory `Project` as a

@@ -1328,7 +1328,42 @@ reference project — the case is reachable only with hand-broken input.
 those fields, making the added model surface worth its cost. Until then
 the asymmetry is deliberate, documented, and reported at import time.
 
-## 16. Tauri v2's Linux backend depends on archived GTK3 bindings
+<a id="16-tauri-v2s-linux-backend-depends-on-archived-gtk3-bindings"></a>
+
+## 16. Tauri v2 remains on GTK3; former maintenance advisories are resolved
+
+**Resolved premise (verified 2026-09-22).** The desktop shell still uses
+`tauri` 2.11 and GTK3, but those bindings are no longer archived. RustSec
+withdrew RUSTSEC-2024-0411 through RUSTSEC-2024-0420 on 2026-08-14 after the
+`gtk3-rs` repository was unarchived and development resumed. **[D]** The
+withdrawal and reason are recorded in each advisory, for example
+[RUSTSEC-2024-0415](https://rustsec.org/advisories/RUSTSEC-2024-0415.html).
+On the locked dependency graph, `cargo deny check advisories` exits 0 and
+reports the ten old ignore entries as unmatched. **[V]** They have therefore
+been removed from `deny.toml`; keeping withdrawn suppressions would conceal
+future policy drift rather than reduce risk.
+
+**Remaining exposure.** Six unrelated transitive maintenance notices remain:
+RUSTSEC-2024-0370 for `proc-macro-error`, plus RUSTSEC-2025-0075, -0080,
+-0081, -0098 and -0100 for `unic-*` crates pulled through
+`urlpattern`/`tauri-utils`. They are not reported vulnerabilities, have no
+patched release, and each acceptance in `deny.toml` carries its review date
+and dependency reason. **[V]** A hostile input does not gain a known exploit
+from these notices; the concrete cost is relying on code whose maintainers no
+longer promise fixes.
+
+**Decision.** Keep Tauri 2 for this alpha. Tauri 3.0.0-alpha.2 was published
+on 2026-09-21, while Tauri's normal Wry Linux GTK4/WebKitGTK 6 migration
+([tauri#14684](https://github.com/tauri-apps/tauri/pull/14684)) and Wry's own
+migration ([wry#1767](https://github.com/tauri-apps/wry/pull/1767)) remain open
+as of 2026-09-22. **[D]** The separate experimental CEF runtime uses GTK4,
+but adopting a new runtime and Chromium distribution would be a platform
+migration, not a maintenance-warning fix. **[A]** Re-evaluate after the Wry
+GTK4 work ships in a stable Tauri release; every Tauri dependency bump still
+runs `cargo deny check`, so a changed advisory set fails visibly.
+
+<details>
+<summary>Historical finding before the RustSec withdrawals</summary>
 
 **Limitation.** The desktop shell's Linux runtime depends on `tauri` 2.11,
 which pulls in the archived gtk-rs GTK3 bindings; `cargo deny check` flags
@@ -1348,6 +1383,8 @@ database. Until then, the `deny.toml` ignore list is permanent infrastructure.
 
 **Lifted when.** Tauri v3 or a later `tauri` 2.x release ships its GTK4
 backend and becomes the default on Linux.
+
+</details>
 
 ## 17. Deleting a group address can leave a dangling `GroupLink` — resolved
 

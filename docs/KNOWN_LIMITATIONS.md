@@ -3135,9 +3135,11 @@ grammar.** `encode(dpt, input, DptInputFormat)` requires the caller to declare
 not format declarations and are rejected by this path. CLI callers can pass
 `--input-format`; HTTP callers can send `inputFormat`; the web client sends a
 deterministic DPT-family choice. If an older CLI or HTTP caller omits the field,
-that boundary selects `default_input_format(dpt)`, which depends only on DPT
-identity and never on the value text. The former permissive parser remains
-available only under the honest compatibility name `encode_inferred_format`.
+that compatibility boundary deliberately calls `encode_inferred_format` so
+fixed-width binary bit sets retain their previous wire value. New web requests
+never take that branch. `default_input_format(dpt)` remains the deterministic
+recommendation for explicit callers; it depends only on DPT identity and never
+on value text.
 
 The public `encoding_rulings(dpt)` API returns stable identifiers, the exact
 Standard context, and KNXBench's decision for every affected encoding below.

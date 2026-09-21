@@ -446,7 +446,7 @@ export const messages = {
   "lineScan.candidates.other": "{count} candidate addresses",
   "lineScan.basis.one": "{timeout} ms timeout × {confirmations} confirmation; {pause} ms pause",
   "lineScan.basis.other": "{timeout} ms timeout × {confirmations} confirmations; {pause} ms pause",
-  "lineScan.worstCase": "{duration} worst case",
+  "lineScan.worstCase": "{duration} response/pacing budget; transport overhead excluded",
   "lineScan.status.running": "Running",
   "lineScan.status.completed": "Completed",
   "lineScan.status.cancelled": "Cancelled",

@@ -38,6 +38,7 @@ pub struct LineScanSession {
     id: u64,
     total_count: usize,
     omitted: Vec<IndividualAddress>,
+    excluded: Vec<IndividualAddress>,
     shared: Arc<SharedScan>,
     cancel: Option<oneshot::Sender<()>>,
     task: Option<JoinHandle<()>>,
@@ -54,6 +55,8 @@ impl LineScanSession {
         let tunnel = connector.connect_tunnel(gateway).await?;
         let total_count = plan.addresses().len();
         let omitted = plan.omitted().to_vec();
+        let mut excluded: Vec<_> = plan.excluded().iter().copied().collect();
+        excluded.sort_unstable_by_key(|address| address.raw());
         let shared = Arc::new(SharedScan {
             status: Mutex::new(LineScanStatus::Running),
             results: Mutex::new(Vec::with_capacity(total_count)),
@@ -67,6 +70,7 @@ impl LineScanSession {
             id,
             total_count,
             omitted,
+            excluded,
             shared,
             cancel: Some(cancel_tx),
             task: Some(task),
@@ -85,6 +89,10 @@ impl LineScanSession {
         &self.omitted
     }
 
+    pub fn excluded(&self) -> &[IndividualAddress] {
+        &self.excluded
+    }
+
     pub fn status(&self) -> LineScanStatus {
         self.shared
             .status
@@ -97,6 +105,24 @@ impl LineScanSession {
         let results = self.shared.results.lock().expect("scan results poisoned");
         let start = since.min(results.len());
         (results.len(), results[start..].to_vec())
+    }
+
+    /// Takes a coherent progress snapshot. Reading status first guarantees that
+    /// a terminal status can only be paired with results read after the worker
+    /// published its final callback.
+    pub fn snapshot_since(&self, since: usize) -> (LineScanStatus, usize, Vec<LineScanResult>) {
+        self.snapshot_since_after_status(since, || {})
+    }
+
+    fn snapshot_since_after_status(
+        &self,
+        since: usize,
+        after_status: impl FnOnce(),
+    ) -> (LineScanStatus, usize, Vec<LineScanResult>) {
+        let status = self.status();
+        after_status();
+        let (next_since, results) = self.results_since(since);
+        (status, next_since, results)
     }
 
     pub async fn cancel(&mut self) -> LineScanStatus {
@@ -168,4 +194,43 @@ async fn run_scan(
     };
     *shared.status.lock().expect("scan status poisoned") = status;
     let _ = tunnel.disconnect().await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn completion_between_status_and_results_keeps_snapshot_non_terminal() {
+        let shared = Arc::new(SharedScan {
+            status: Mutex::new(LineScanStatus::Running),
+            results: Mutex::new(Vec::new()),
+        });
+        let publisher = Arc::clone(&shared);
+        let session = LineScanSession {
+            id: 1,
+            total_count: 1,
+            omitted: Vec::new(),
+            excluded: Vec::new(),
+            shared,
+            cancel: None,
+            task: None,
+        };
+
+        let (status, next_since, results) = session.snapshot_since_after_status(0, || {
+            publisher
+                .results
+                .lock()
+                .expect("scan results poisoned")
+                .push(LineScanResult {
+                    address: IndividualAddress::new(2, 3, 4).unwrap(),
+                    outcome: ProbeOutcome::OccupiedBusy,
+                });
+            *publisher.status.lock().expect("scan status poisoned") = LineScanStatus::Completed;
+        });
+
+        assert_eq!(status, LineScanStatus::Running);
+        assert_eq!(next_since, 1);
+        assert_eq!(results.len(), 1);
+    }
 }

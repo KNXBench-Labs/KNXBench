@@ -540,12 +540,33 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                   duration of a search on purpose: the search window is
                   fixed, so four clicks buy four timeouts and no answer
                   sooner. The label says which state it is in; the live
-                  region below says what came back. */}
+                  region below says what came back.
+
+                  `aria-label` swaps with the phase rather than staying
+                  fixed on `busDiscovery.searchLabel`: a fixed label would
+                  leave the accessible name reading "Search for..." while
+                  the visible text says "Searching…", which is a WCAG
+                  2.5.3 (Label in Name) failure for voice control — the
+                  spoken command no longer matches what is on screen. In
+                  the busy phase the name is exactly the visible text, so
+                  the two can never disagree.
+
+                  `aria-busy` stays despite sitting on a `disabled`
+                  button, which some screen readers do not report:
+                  `disabled` already keeps the control out of the tab
+                  order and out of the accessibility tree's actionable
+                  set, so no assistive-tech user is missing a state that
+                  reachability itself doesn't already convey. The
+                  attribute costs nothing and still serves anything that
+                  inspects the DOM directly rather than through a
+                  screen reader's actionable-element model — an
+                  automated accessibility checker, a test, a future
+                  non-AT consumer. */}
               <button
                 className="bus-discovery-search"
                 onClick={() => void searchBusInterfaces()}
                 disabled={searching}
-                aria-label={t("busDiscovery.searchLabel")}
+                aria-label={searching ? t("busDiscovery.searching") : t("busDiscovery.searchLabel")}
                 aria-busy={searching}
               >
                 {searching ? t("busDiscovery.searching") : t("busDiscovery.search")}

@@ -104,12 +104,20 @@ export function useBusDiscovery(): BusDiscoveryState {
 }
 
 /**
- * Drops the module-level result. Module state outlives a component and a
- * test file's modules are shared across its tests, so without this one
- * test's finished search would decide the next test's first render.
+ * Drops the module-level result and forgets every subscriber. Module
+ * state outlives a component and a test file's modules are shared across
+ * its tests, so without this one test's finished search would decide the
+ * next test's first render — and a test that unmounts its host without
+ * `root.unmount()` (as `BusMonitorPanel.test.tsx` does, to keep each test
+ * to one root) never triggers `subscribe`'s own cleanup, so its callback
+ * would sit in the `Set` past the end of the test and re-render a
+ * detached tree on every later `publish()`. Both halves are the same
+ * kind of leftover — a value and a listener nobody will read again — so
+ * both are cleared together.
  */
 export function resetBusDiscoveryForTests(): void {
   state = { phase: "idle", interfaces: [], error: null };
+  subscribers.clear();
 }
 
 /**

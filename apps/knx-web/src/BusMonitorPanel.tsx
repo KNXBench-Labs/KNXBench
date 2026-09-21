@@ -11,6 +11,7 @@ import {
   recordSessionContext,
   subscribeContextChanges,
 } from "./busContext";
+import { ensureBusDiscovery, searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
 import { useTranslate } from "./i18n";
 import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
 import HelpTip from "./HelpTip";
@@ -119,6 +120,16 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
   const [gatewayInput, setGatewayInput] = useState("");
+  // T25. The search itself lives in a module-level store, not here: it is
+  // started once at application start (`App.tsx`) and its result belongs
+  // to the window, not to whichever mount of this panel happens to be
+  // alive. This call covers the case where the panel mounts without that
+  // ever having run — a second window, or a test rendering the panel on
+  // its own — and does nothing when a search has already happened.
+  const discovery = useBusDiscovery();
+  useEffect(() => {
+    ensureBusDiscovery();
+  }, []);
   const [session, setSession] = useState<AttachedSession | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [pollError, setPollError] = useState<string | null>(null);
@@ -467,13 +478,33 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
     });
   }, [rows, textFilter, serviceFilters]);
 
+  // T25. One sentence for whichever state the search is in, for both the
+  // live region and — by being `null` in the `"idle"` phase — the decision
+  // whether the whole cluster renders at all. A window that has not
+  // searched yet says nothing rather than announcing an empty list it
+  // never looked for. `"failed"` is a sentence here and nothing louder
+  // anywhere: a search that could not run is not a thing the user did
+  // wrong, and the gateway field was never blocked by it.
+  const searching = discovery.phase === "searching";
+  const discoveryStatus =
+    discovery.phase === "idle"
+      ? null
+      : searching
+        ? t("busDiscovery.searching")
+        : discovery.phase === "failed"
+          ? t("busDiscovery.failed")
+          : discovery.interfaces.length === 0
+            ? t("busDiscovery.empty")
+            : t("busDiscovery.resultCount", { count: discovery.interfaces.length });
+
   return (
     <div className="bus-monitor-panel">
       {/* `.workspace-heading` like every other centre-pane view; the
           connect controls are this view's action cluster. The eyebrow
-          states the only transport this panel has: `knx-server`'s bus
-          layer is tunnelling-only, no discovery and no routing (see
-          `apps/knx-server/src/bus.rs`'s module comment, D7).
+          states the only transport a *session* on this panel has:
+          tunnelling, no routing (see `apps/knx-server/src/bus.rs`'s module
+          comment). Discovery is not a transport — it finds an address to
+          put in the field below, and never carries a telegram.
           The placeholder is an RFC 5737 documentation address, not
           anybody's gateway. */}
       <header className="workspace-heading">
@@ -500,17 +531,114 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
           {session ? (
             <button onClick={disconnect}>{t("busMonitor.disconnect")}</button>
           ) : (
-            <button
-              onClick={connect}
-              disabled={!gatewayInput}
-              title={gatewayInput ? undefined : t("busMonitor.connectNeedsGateway")}
-            >
-              {t("busMonitor.connect")}
-            </button>
+            <>
+              <button
+                onClick={connect}
+                disabled={!gatewayInput}
+                title={gatewayInput ? undefined : t("busMonitor.connectNeedsGateway")}
+              >
+                {t("busMonitor.connect")}
+              </button>
+              {/* T25. Next to the field it serves, and only while there is
+                  no session — the field is locked during one, so an offer
+                  to change it would be a dead control. Disabled for the
+                  duration of a search on purpose: the search window is
+                  fixed, so four clicks buy four timeouts and no answer
+                  sooner. The label says which state it is in; the live
+                  region below says what came back.
+
+                  `aria-label` swaps with the phase rather than staying
+                  fixed on `busDiscovery.searchLabel`: a fixed label would
+                  leave the accessible name reading "Search for..." while
+                  the visible text says "Searching…", which is a WCAG
+                  2.5.3 (Label in Name) failure for voice control — the
+                  spoken command no longer matches what is on screen. In
+                  the busy phase the name is exactly the visible text, so
+                  the two can never disagree.
+
+                  `aria-busy` stays despite sitting on a `disabled`
+                  button, which some screen readers do not report:
+                  `disabled` already keeps the control out of the tab
+                  order and out of the accessibility tree's actionable
+                  set, so no assistive-tech user is missing a state that
+                  reachability itself doesn't already convey. The
+                  attribute costs nothing and still serves anything that
+                  inspects the DOM directly rather than through a
+                  screen reader's actionable-element model — an
+                  automated accessibility checker, a test, a future
+                  non-AT consumer. */}
+              <button
+                className="bus-discovery-search"
+                onClick={() => void searchBusInterfaces()}
+                disabled={searching}
+                aria-label={searching ? t("busDiscovery.searching") : t("busDiscovery.searchLabel")}
+                aria-busy={searching}
+              >
+                {searching ? t("busDiscovery.searching") : t("busDiscovery.search")}
+              </button>
+            </>
           )}
           <HelpTip labelKey="help.tip.busGateway.label" textKey="help.tip.busGateway.text" />
         </div>
       </header>
+      {/* T25 — what the interface search found. Rendered only while no
+          session is attached, for the same reason the Search button is:
+          once connected, the gateway is decided and a list of alternatives
+          is clutter.
+
+          Nothing in here is an error surface. `role="status"` (polite),
+          never `role="alert"`; no `.field-error`; an empty result is a
+          sentence plus the reason it might be empty, and a search that
+          could not run says so quietly and points back at the field, which
+          has accepted typed addresses all along and still does. */}
+      {!session && discoveryStatus && (
+        <section className="bus-discovery">
+          <p className="bus-discovery-status" role="status" aria-live="polite">
+            {discoveryStatus}
+          </p>
+          {discovery.phase === "done" && discovery.interfaces.length === 0 && (
+            <p className="bus-discovery-hint">{t("busDiscovery.emptyHint")}</p>
+          )}
+          {/* The server's own words for a failed search, kept rather than
+              swallowed — English whatever the UI language is, which is why
+              it sits next to a translated sentence that already carries
+              the meaning. */}
+          {discovery.phase === "failed" && discovery.error && (
+            <p className="bus-discovery-hint bus-discovery-detail">{discovery.error}</p>
+          )}
+          {discovery.interfaces.length > 0 && (
+            <>
+              <p className="bus-discovery-caption">{t("busDiscovery.resultsCaption")}</p>
+              <ul className="bus-discovery-results">
+                {discovery.interfaces.map((iface) => (
+                  <li key={iface.controlEndpoint}>
+                    {/* No `aria-label`: one would replace everything
+                        inside, and the interface address and the
+                        tunnelling tag are exactly the facts that decide
+                        which of three interfaces is the right one. The
+                        caption above says what clicking does. */}
+                    <button
+                      type="button"
+                      className="bus-discovery-option"
+                      onClick={() => setGatewayInput(iface.controlEndpoint)}
+                    >
+                      <span className="bus-discovery-name">{iface.friendlyName}</span>
+                      <span className="bus-discovery-endpoint mono">{iface.controlEndpoint}</span>
+                      <span className="bus-discovery-meta">
+                        {t("busDiscovery.individualAddressLabel")}{" "}
+                        <span className="mono">{iface.individualAddress}</span>
+                      </span>
+                      {iface.supportsTunnelling && (
+                        <span className="bus-discovery-tag">{t("busDiscovery.tunnelling")}</span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
       {connectError && <span className="field-error">{connectError}</span>}
       {session && (
         <p className="bus-monitor-session">

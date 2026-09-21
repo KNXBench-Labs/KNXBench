@@ -90,17 +90,18 @@ Nothing in this section is planned. These are entries in the project's own
 idea list, and where an entry has a condition attached, it is a technical
 dependency somebody noticed — not a queue position.
 
-**Natural-language and MCP interaction.** A chat surface inside the
-application, and an MCP server other tools could drive from outside. Recorded
-as a research item with no task opened, no design, and no research done. It
-depends on a mature, serialisable command layer, which is also the
-prerequisite for every other extension idea here. Under consideration; no
-date.
+**Natural-language and MCP interaction.** Researched in
+[RESEARCH.md §13](../RESEARCH.md#13-natural-language-interaction-and-mcp-prerequisite-audit-2026-09-22-t19),
+not scheduled. The current command, authorization, revision and audit
+boundaries are not sufficient for mutation. Any later start is bounded reads
+and typed proposals with exact human approval, never raw commands or bus work.
 
-**Automating repetitive tasks.** A macro or automation layer for the kind of
-work that is the same twenty times in a row. Same dependency as above: it
-needs a complete command layer underneath it before it can be anything but a
-demo. An idea.
+**Automating repetitive tasks.** Researched in
+[RESEARCH.md §14](../RESEARCH.md#14-repetitive-task-automation-and-macro-layer-decision-2026-09-22-t20),
+not scheduled. The supported future direction is a parameterised template over
+an explicit selection, expanded into a previewed, revision-bound and atomic
+`Command::Batch` with one-step undo. Raw command recording, partial mutation,
+a script engine and bus-facing macros are not the plan.
 
 **A live "who talks to whom" view.** Animated connections between group
 addresses and the devices that use them — ideally fed by live telegrams from

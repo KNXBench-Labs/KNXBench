@@ -3932,6 +3932,227 @@ and proposals; do not start with autonomous mutation. **[A]**
 
 ---
 
+## 14. Repetitive-task automation and macro-layer decision (2026-09-22, T20)
+
+This section answers the automation item in `goal.md` §7. It is distinct from
+the older T20 label for the KNX `Functions` domain concept. Repository facts
+are **[V]** and recommendations are **[A]**. No macro implementation, prototype
+or dependency is part of this decision.
+
+### 14.1 Verdict: the batch primitive is ready; a general macro boundary is not
+
+**The prerequisite is met only for a narrow, deterministic in-application bulk
+operation, not for a general macro or scripting surface.** `Command::Batch`
+already supplies atomic in-memory application and one-step undo, and the CSV
+importer demonstrates a pure plan-before-apply workflow. The complete
+automation prerequisite is nevertheless not met: [§13](#131-verdict-useful-command-coverage-but-no-safe-public-automation-boundary)
+records incomplete command coverage, application validation outside the core,
+no serialisable public intent contract and no project revision precondition.
+**[V]**
+
+The smallest sound future shape is a **parameterised operation template applied
+to an explicit selection**. It resolves targets against one project snapshot,
+produces a concrete `Command`/`Command::Batch` plan plus diagnostics and a
+before/after preview, then requires confirmation of that exact plan. **[A]** It
+must not record or replay raw commands and is not a programming language.
+
+### 14.2 Repetitive work that the current model can express
+
+The following are real repetitions only where the existing command and
+application layers can construct and validate every concrete edit **[V]**:
+
+- set the same parameter on several compatible devices through the
+  product-aware validation in `apps/knx-server/src/domain.rs`, then emit one
+  `SetParameterValue` per target;
+- allocate a deterministic group-address pattern as `CreateGroupAddress`
+  commands, or update names/flags with `UpdateGroupAddress`; address allocation
+  and range placement belong in the planner, not in `Command`. Preview and
+  output use KNXBench's fixed slash notation; a macro adds no notation selector
+  (compatible input parsing remains a separate concern);
+- instantiate the same resolved product/application configuration repeatedly
+  through the existing application-level device builder and `CreateDevice`;
+- rename selected building parts or group ranges, update group-address names,
+  and move selected devices in topology/building views using the corresponding
+  existing variants;
+- link or unlink selected communication objects and group addresses with an
+  explicit direction. Today's command checks target existence and duplicate
+  links, not DPT compatibility; any compatibility policy is therefore an unmet
+  planner prerequisite rather than a capability to assume.
+
+The list is deliberately narrower than the motivating examples. `Command` has
+no general device-name edit, application-program reassignment, group-address
+re-addressing or complete installation targeting, as catalogued in §13. A
+template cannot honestly promise operations the domain layer cannot express.
+
+`crates/knx-csv/src/plan.rs` is concrete prior art: `plan_import` reads an
+immutable project, allocates IDs on a local allocator clone, classifies every
+row, returns diagnostics and emits either no command or one `Command::Batch`.
+`knx ga-import --dry-run` exposes the same plan without mutation
+(`apps/knx-cli/src/main.rs`). Scan reconciliation and the existing server batch
+operations likewise construct batches in `apps/knx-server/src/domain.rs`.
+These are evidence for planner-plus-batch reuse, not evidence that a general
+macro language already exists. **[V]**
+
+### 14.3 Candidate forms and target mismatch
+
+Three forms were evaluated:
+
+1. **Recorded raw `Command` sequence — rejected.** Commands contain resolved
+   entity IDs, allocated IDs and concrete values from the original project.
+   Replaying them against another selection is either stale, fails validation,
+   or requires an implicit ID-remapping heuristic that could edit the wrong
+   entity. Internal `Restore*` and allocator commands make raw capture an even
+   less suitable public format.
+2. **Parameterised template over an explicit selection — recommended.** A
+   versioned operation kind declares parameters, eligible target kinds and
+   deterministic expansion rules. Resolution produces concrete IDs and
+   commands. An ineligible, missing or ambiguous target is a named plan error;
+   it is never silently skipped or guessed. **[A]**
+3. **Small scripting surface — deferred.** Control flow, target queries,
+   sandboxing, resource bounds, debugging, versioning and API stability would
+   create a second application platform. Dynamic decisions also make a complete
+   preview harder to guarantee. No demonstrated workflow currently justifies
+   that lifecycle cost. **[A]**
+
+Templates should describe user intent, not serialize `Command`. For example,
+“set parameter P to V on these device IDs” remains stable enough to validate;
+the planner may then use today's product data and command constructors. A
+template whose target no longer matches fails closed and must be planned again.
+
+### 14.4 One undo step and all-or-nothing failure
+
+No new undo grouping abstraction is needed for the narrow design.
+`Command::Batch` applies subcommands in order, applies accumulated inverses in
+reverse if any subcommand fails, and returns one inverse `Batch` on success
+(`crates/knx-core/src/command.rs`). `CommandStack::do_command` pushes that one
+inverse, so a 200-edit macro is one user-visible undo step; redo likewise
+replays one batch. **[V]** Callers must reject an empty plan instead of sending
+`Batch([])` through `CommandStack`, where it would otherwise consume an undo
+entry; current server batch helpers already reject empty selections. **[V+A]**
+
+The mutation policy is **all or nothing**. Planning should collect every
+detectable target error without mutating the project. Apply then executes only
+the approved batch; a failure at item 137 rolls back items 1–136 and reports the
+failing operation. Best-effort mutation is rejected because “197 of 200” is a
+different project state from the request, while stop-and-ask during execution
+would split consent and undo semantics. **[A]**
+
+This guarantee applies only to pure project commands. Filesystem changes,
+catalog installation, network calls and bus operations must never be placed in
+the batch: `Command` rollback cannot reverse external effects. Memory, preview
+latency and undo size for large plans remain benchmark questions; measured
+limits may bound batch size later, but are not guessed here.
+
+### 14.5 Preview and stale-plan protection
+
+A preview is a concrete plan, not a prose promise. It should contain **[A]**:
+
+- operation kind and template parameters;
+- project identity and base revision;
+- resolved target IDs in deterministic order;
+- exact proposed field/entity changes, including generated IDs and addresses;
+- unchanged, ineligible and erroneous targets with reasons;
+- warning/error counts and the exact `Command`/`Batch` to apply.
+
+The planner should apply the candidate batch to a clone and derive a
+user-facing before/after projection; application must run the already approved
+plan, not regenerate a subtly different one. This extends the `ImportPlan`
+pattern, while `knx-projection` remains the UI read-model boundary rather than
+becoming mutation logic. **[A]**
+
+KNXBench currently has no project revision token (§13.2). That is a blocker for
+preview followed by later confirmation: any intervening mutation must
+invalidate the plan instead of applying it to a new state. A synchronous
+single-lock implementation could avoid staleness but could not offer a useful
+human confirmation interval. The future plan therefore needs a checked base
+revision before apply.
+
+### 14.6 Sequencing with natural-language interaction
+
+Build the deterministic macro substrate before any T19 model-driven mutation.
+It forces typed intents, eligibility rules, plan diagnostics, preview,
+revision-bound confirmation and atomic apply to work with ordinary user input
+first. A later natural-language surface may propose one of those typed
+templates, but it must not emit raw commands, select hidden targets or approve
+its own plan. **[A]** This reduces model integration to proposal generation;
+authorization and consent requirements from §13 remain unchanged.
+
+No template or model receives commissioning, programming, download, reset,
+device-management or KNX bus-write capability. Those operations have external
+physical effects and are outside this goal run even with confirmation. **[A]**
+
+### 14.7 Reconsideration gate
+
+Design may start only after a narrow first operation is named, its complete
+application-level validation is reusable, a project revision can bind preview
+to apply, and tests can prove deterministic planning, all-or-nothing rollback,
+one-step undo/redo and stale-plan rejection. General scripting needs separate
+evidence and a new decision; it is not an automatic next phase. **[A]**
+
+---
+
+## 15. KNX `Function` project semantics feasibility (2026-09-22)
+
+This resolves the older roadmap item also labelled T20. Unlike §14's
+KNXBench-specific automation decision, this is a KNX format question and was
+checked directly against the local KNX Standard v3.0.0 PDFs.
+
+### 15.1 Verdict
+
+**A `Function` domain entity is specification-grounded and implementable for
+Project Schema 23.** It still requires an ADR/design and product work; this
+finding does not implement it and does not establish older-schema behavior or
+full ETS compatibility.
+
+The primary serialization evidence is *Project Schema23 v01.00.00*:
+
+- §1.2.6.7 places a `Function` below a `BuildingPart` and types it as
+  `Function_t`;
+- §1.2.6.9 defines `Function_t` as a function containing group addresses, with
+  `GroupAddressRef` children; required `Id`, `Name` and project-wide unique
+  `Puid`; optional `Type`, IDREFS `Implements`, `Number`, `Comment`,
+  `Description`, `CompletionStatus` (default `Undefined`) and the literally
+  spelled `DefaulGroupRange` IDREF;
+- §1.2.6.10 defines each `GroupAddressRef_t` with `Id`, group-address `RefId`,
+  `Name`, optional `Role` and project-wide unique `Puid`.
+
+The semantic evidence agrees with that shape. *3_10_2 KNX IoT Constants*
+defines an ETS Function as an Application Function assigned to an ETS building
+structure element and grouping one or more group addresses; it also defines
+Application Function and Function Point (pp. 7–8). *3_10_3 KNX IoT Information
+Model* §1.3.2.2.1 says an Application Function typically groups more than one
+Function Point and can be instantiated by an ETS user as an ETS Function;
+§1.3.2.2.2 relates a Function Point to a group address; §2.1.2.1 explicitly
+maps the ETS Function concept to an Application Function (pp. 25–30, 79).
+The information model's “typically more than one Function Point” is descriptive
+typicality, not a minimum cardinality for project validation.
+
+### 15.2 Fit and remaining boundary
+
+KNXBench already models recursive `BuildingPart`s and group addresses in
+`knx-core`, and `knx-productdb` persists/queries master-data `FunctionType` and
+`FunctionPoint` rows (`crates/knx-productdb/src/parse/master.rs` and
+`query.rs`). It does **not** have a project-level `Function` entity, project
+import mapping, projection, commands, storage migration or UI for the schema-23
+structure. **[V]** Master-data function types are reference vocabulary, not a
+substitute for project instances.
+
+Before implementation, an ADR must define a project `Function` owned by its
+parent `BuildingPart`, stable source identity, all §1.2.6.9 metadata, ordered
+`GroupAddressRef` values including role/name, project-wide PUID preservation,
+validation of every reference and loss reporting. **[A]** The PDF's unusual
+literal `DefaulGroupRange` spelling must be checked against the published XSD
+or a real Schema-23 instance before naming a domain field; it must not be
+silently corrected by assumption. Unknown or malformed data must remain
+preserved/reported under the normal import rules.
+
+Schema 11/21 behavior and actual ETS-produced ordering/usage remain unverified:
+the repository reference projects contain no `Function` instance. Those
+versions must not be inferred from Schema 23. A schema-specific fixture or
+corresponding published schema decides their support later.
+
+---
+
 ## Sources
 
 * [Project schema description – KNX Association](https://support.knx.org/hc/en-us/articles/4408207190674-Project-schema-description)

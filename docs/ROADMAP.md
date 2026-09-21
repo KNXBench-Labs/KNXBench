@@ -601,6 +601,37 @@ raw commands, autonomous project mutation and every bus/commissioning action
 remain excluded. The original 2026-09-10 memo is superseded by this research
 decision rather than serving as an implementation plan.
 
+## Cross-cutting — Repetitive-task automation
+
+**Researched, 2026-09-22 (T20); implementation remains deferred.** The macro
+question is decided in [RESEARCH.md §14](RESEARCH.md#14-repetitive-task-automation-and-macro-layer-decision-2026-09-22-t20).
+The existing atomic `Command::Batch` and CSV `ImportPlan` pattern are enough
+foundation for a future narrow bulk operation, but not for a general macro or
+scripting API.
+
+The recommended first shape is a parameterised operation template over an
+explicit selection. It must produce a deterministic, revision-bound command
+plan and before/after preview; confirmation applies that exact plan as one
+all-or-nothing batch and one undo step. Raw command recording, heuristic target
+remapping, best-effort partial mutation, a script engine and every bus-facing
+macro are rejected or deferred. This deterministic substrate comes before any
+T19 model-driven mutation.
+
+## Cross-cutting — KNX `Functions` domain concept
+
+**Specification prerequisite resolved, 2026-09-22; implementation remains
+deferred.** Direct PDF evidence and the schema-23 verdict are recorded in
+[RESEARCH.md §15](RESEARCH.md#15-knx-function-project-semantics-feasibility-2026-09-22).
+Project Schema 23 defines `Function` under `BuildingPart`, its identity/type
+attributes and its group-address references; the KNX IoT information model
+supplies the matching ETS Function/Application Function semantics.
+
+An ADR/design is still required before code. It must add a project entity,
+import, projection, versioned storage, commands and validation without treating
+the already persisted master-data `FunctionType`/`FunctionPoint` vocabulary as
+project instances. Schema 11/21 behavior remains unverified and must not be
+extrapolated from Schema 23.
+
 
 ## Cross-cutting — Third-party extension and plugins
 
@@ -889,7 +920,7 @@ architecture; each has a defined landing place.
 | Question | Lands in |
 | --- | --- |
 | ETS5 and ETS6 schema deltas (13, 14, 20, 21+) | Schema 21 import shipped and, until export was withdrawn on 2026-09-20 ([ADR-0028](adr/0028-no-knxproj-export.md)), round-trip verified against one sample (the KV demo project); schema 23 import shipped, module handling inferred not evidenced (no independent module-using schema-23 sample); schema 12, 13, 14, 20, 22 remain undocumented-by-evidence — no fixed session, lands whenever a sample becomes available for each. `Dynamic`/`choose`/`when`'s grammar (mentioned in the row below this one) is now provably avoidable for import (ADR-0014: `GroupObjectTree` already carries ETS's own resolution of it) rather than blocking; the `@test` value grammar itself is documented (RESEARCH §4.3), so this is now purely a parameter-editing (T18) concern, no longer a research one, and not an import one either. |
-| `Functions` element semantics | Session 2 — a domain model addition; absent from the reference sample. Tracked as **T20** ([GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5); deferred 2026-09-11 by user ruling until the new KNX specification documentation is available — not rejected, stays on the roadmap. |
+| `Functions` element semantics | **Specification prerequisite resolved 2026-09-22 for Schema 23** ([RESEARCH.md §15](RESEARCH.md#15-knx-function-project-semantics-feasibility-2026-09-22)). Project entity/import/design remain deferred; Schema 11/21 and real-project usage remain unverified. |
 | `when/@test` expression grammar | **Answered 2026-09-11** (RESEARCH §4.3): the Standard normatively specifies the `@test` value grammar; `Dynamic`'s structural grammar stays corpus-observed only. Session 4 built the product database around `Dynamic` staying unparsed regardless (`Dynamic`'s raw bytes retained, ADR-0011). **T18 slice 1, same day:** `knx-productdb` now parses, stores (schema v3, `dynamic_node`) and evaluates the tree headlessly. **T18 slice 2, same day:** the evaluator also expands `Module` into its `ModuleDef`'s own stored tree. **T18 slice 3, same day:** the editor shipped — `GET`/`POST /api/device/{id}/parameters` and an `apps/knx-web` panel, top-level fields read/write (design D20-D26; see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [GAP_ANALYSIS_ETS.md](GAP_ANALYSIS_ETS.md) Tier 5). Module-scoped (per-channel) editing (D25) stayed unscheduled until **T18 slice 4, 2026-09-12** (design D35-D43) closed it: a scope-aware `ValueMap`, the retained `ModuleInstance/@Id`, server-side write-target reconstruction and a panel that writes the server's own id together make a module-scoped field writable when exactly one imported `ModuleInstance` is authoritative for it; repeated instantiation sharing one `RefId` stays refused, not supported (D40), and `Module` arguments stay stored-but-uninterpreted (see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) and [KNOWN_LIMITATIONS.md §68-§71](KNOWN_LIMITATIONS.md)). |
 | Whether ETS re-imports an unsigned third-party `.knxproj` | **Closed as not applicable, 2026-09-20.** Session 3 delivered the mechanism (`ExportWarning::Unsigned`, always present); ADR-0015 then dropped ETS reimport as a goal, and [ADR-0028](adr/0028-no-knxproj-export.md) removed the exporter and the warning with it. KNXBench writes no `.knxproj`, so there is nothing for ETS to re-import and risk R9 has no subject |
 | Whether Data Secure runtime keys are readable from `.knxproj` | Session 7 or later — `knx-secure` |

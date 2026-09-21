@@ -9081,7 +9081,10 @@ about the values, so the theme/accent/motion vocabularies stay in the frontend
 registries that already own them instead of rotting in a second copy. A `PUT`
 names the keys it changes and leaves every other key alone, including one this
 build has never heard of. A `null` removes a key. `AppState::settings_lock`
-serializes the read-modify-write so two windows cannot lose each other's keys.
+serializes the read-modify-write so two windows cannot lose each other's keys
+— taken by all three routes, the read included, because `settings::load`
+writes back a migrated document and renames a damaged one aside and is
+therefore not a read at all.
 
 **The browser keeps one cache key, and it cannot be mistaken for the record.**
 `apps/knx-web/src/settingsStore.ts` mirrors the whole document into
@@ -9122,9 +9125,25 @@ browser stored, not a registry. A migration is needed only when the *meaning*
 of an existing key changes, and then it is one function on `MIGRATIONS` plus a
 bump of `CURRENT_SCHEMA_VERSION`.
 
-**Tests: 1,895 passed, 0 failed, 88 binaries** (+26 and +1 binary over this
-branch's base: 17 unit tests in `settings.rs`, 9 in the new
-`tests/http_settings.rs`). Frontend: **787 passed across 56 files** (+19: 18 in
+**Review round 1 (2026-09-21).** Seven findings closed. `GET /api/settings`
+takes `settings_lock` like the two writing routes, which also makes `store`'s
+single fixed temp-file name and `quarantine`'s collision loop safe rather than
+lucky. `store` now `sync_all`s the temp file and fsyncs the data directory,
+because its doc comment promised a durability the code had not arranged. The
+collision-counter test takes its timestamp as an argument (`quarantine_at`)
+instead of hoping two wall-clock reads land in the same second. Adoption over a
+damaged file reports that the file was moved aside rather than claiming it
+exists, moments after moving it. On the frontend, `markAdopted()` moved inside
+the success path: it had been marking the handover done when the POST failed
+for any reason other than a 409, which left the preferences in the browser,
+unadopted, and never retried. The `notice` string's comment no longer claims a
+translation that does not exist — the gap is
+[KNOWN_LIMITATIONS.md §122](KNOWN_LIMITATIONS.md#122-settings-file-notices-reach-the-user-in-english-only),
+and the settings surface (T10) owns the fix.
+
+**Tests: 1,897 passed, 0 failed, 88 binaries** (+28 and +1 binary over this
+branch's base: 18 unit tests in `settings.rs`, 10 in the new
+`tests/http_settings.rs`). Frontend: **788 passed across 56 files** (+20: 19 in
 the new `settingsStore.test.ts`, 1 in `appearance.test.tsx` for a hook
 following the record that lands after it mounted). Sixteen existing test files
 were re-pointed at the store; `DiagnosticsCompanion.test.tsx`'s pinned import

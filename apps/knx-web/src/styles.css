@@ -1652,6 +1652,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .bus-compose-sent { color: var(--knx-success-color); font-family: var(--knx-font-mono); }
 .bus-compose-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
 .bus-compose-fields label { display: flex; flex-direction: column; gap: 5px; }
+.bus-compose-input-format { min-width: 210px; }
 .bus-monitor-filters { margin: 18px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 @media (max-width: 1350px) {
   .monitor-data { grid-template-columns: minmax(0, 1fr); }

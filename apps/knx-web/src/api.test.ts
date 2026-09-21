@@ -32,6 +32,23 @@ describe("api", () => {
     unsubscribe();
   });
 
+  it("writeBusValue sends the selected input format explicitly", async () => {
+    mockFetchOnce({
+      encodedPayload: "[10]",
+      service: "GroupValueWrite",
+      decodedEcho: { kind: "value", dpt: "DPST-21-1", text: "00010000" },
+    });
+    await api.writeBusValue("1/2/3", "DPST-21-1", "10", "hexadecimal");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe("/api/bus/write");
+    expect(JSON.parse(init.body as string)).toEqual({
+      destination: "1/2/3",
+      dpt: "DPST-21-1",
+      inputFormat: "hexadecimal",
+      value: "10",
+    });
+  });
+
   it("importProject posts the path and client token, and returns the parsed tree", async () => {
     mockFetchOnce({ installations: [] });
     const tree = await api.importProject("/x.knxproj", "a-client-token");

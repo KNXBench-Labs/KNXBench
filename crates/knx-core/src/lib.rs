@@ -37,8 +37,9 @@ pub use commissioning::{
 pub use device::{BinaryDataRef, ComObjectInstance, DeviceInstance, ProgramDefaults};
 pub use devices::Devices;
 pub use dpt::{
-    decode, encode, group_address_dpt_from, resolve_group_address_dpt,
-    resolve_project_group_address_dpts, DptCodecError, DptParseError, DptRef, DptValue,
+    decode, default_input_format, encode, encode_inferred_format, encoding_rulings,
+    group_address_dpt_from, resolve_group_address_dpt, resolve_project_group_address_dpts,
+    DptCodecError, DptEncodingRuling, DptInputFormat, DptParseError, DptRef, DptValue,
     GroupAddressDpt, GroupValue,
 };
 pub use flags::{ComFlagKind, ComFlags, Direction, GroupLink, ObjectSize, ResolvedFlags};

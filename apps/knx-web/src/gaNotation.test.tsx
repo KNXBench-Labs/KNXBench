@@ -268,7 +268,12 @@ it("sends the canonical address whichever notation is selected or typed", async 
     for (const typed of ["1/2/3", "1.2.3"]) {
       setGaNotation(notation);
       await sendFrom(typed);
-      expect(apiMock.writeBusValue).toHaveBeenLastCalledWith("1/2/3", "DPST-1-1", "off");
+      expect(apiMock.writeBusValue).toHaveBeenLastCalledWith(
+        "1/2/3",
+        "DPST-1-1",
+        "off",
+        null,
+      );
     }
   }
 });

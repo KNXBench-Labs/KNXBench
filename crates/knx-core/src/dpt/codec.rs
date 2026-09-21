@@ -29,6 +29,153 @@ use std::fmt;
 
 use super::{DptRef, GroupValue};
 
+/// The grammar the caller says `input` uses.
+///
+/// This is deliberately separate from [`DptRef`]. A DPT selects the wire
+/// encoding; it does not say whether a human supplied `7`, `07`, or
+/// `00000111`. The bus-facing encode path must receive that fact rather than
+/// infer it from prefixes or from whichever parser happens to accept first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DptInputFormat {
+    /// The DPT family's documented structured form (`on`, `control off`,
+    /// `monday 07:30:00`, and similar).
+    Canonical,
+    /// Base-10 integer or floating-point notation, without a radix prefix.
+    Decimal,
+    /// Base-16 digits, without a `0x` prefix.
+    Hexadecimal,
+    /// Base-2 digits, without a `0b` prefix.
+    Binary,
+    /// Literal character or string content.
+    Text,
+}
+
+impl DptInputFormat {
+    /// Parses the stable CLI/HTTP spelling of an input format.
+    pub fn parse_name(input: &str) -> Option<Self> {
+        match input {
+            "canonical" => Some(Self::Canonical),
+            "decimal" => Some(Self::Decimal),
+            "hexadecimal" => Some(Self::Hexadecimal),
+            "binary" => Some(Self::Binary),
+            "text" => Some(Self::Text),
+            _ => None,
+        }
+    }
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Canonical => "canonical",
+            Self::Decimal => "decimal",
+            Self::Hexadecimal => "hexadecimal",
+            Self::Binary => "binary",
+            Self::Text => "text",
+        }
+    }
+}
+
+impl fmt::Display for DptInputFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// A stable, caller-visible description of a wire-encoding decision that
+/// the KNX Standard does not settle unambiguously.
+///
+/// These are not warnings that encoding failed. They disclose where a
+/// successful result follows KNXBench's documented judgment rather than an
+/// unambiguous normative rule. Callers can surface them before a bus write.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DptEncodingRuling {
+    /// Stable machine-readable identifier.
+    pub id: &'static str,
+    /// Standard document and section containing the ambiguity or evidence.
+    pub standard_reference: &'static str,
+    /// The behavior KNXBench chose.
+    pub decision: &'static str,
+}
+
+const SCALED_ANGLE_LINEAR_MAPPING: DptEncodingRuling = DptEncodingRuling {
+    id: "scaled-angle-linear-mapping",
+    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §3.5.1",
+    decision: "map DPT 5.003 linearly between raw 0..255 and 0..360 degrees",
+};
+const STATUS_MODE_FORMAT_RANGE: DptEncodingRuling = DptEncodingRuling {
+    id: "status-mode-format-range",
+    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §3.7",
+    decision: "enforce the B5N3 format range for DPT 6.020 even though subtype tables are otherwise not enforced",
+};
+const INVALID_SENTINEL_PRECEDENCE: DptEncodingRuling = DptEncodingRuling {
+    id: "invalid-sentinel-precedence",
+    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §§3.9 and 3.10",
+    decision:
+        "treat 0x7FFF as invalid data even where a printed arithmetic maximum collides with it",
+};
+const SCENE_NUMBER_IS_WIRE_VALUE: DptEncodingRuling = DptEncodingRuling {
+    id: "scene-number-is-wire-value",
+    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §§3.18, 3.19 NOTE 9, and 3.25 NOTE 16",
+    decision: "encode and decode scene numbers as raw wire values; leave the recommended display offset to the UI",
+};
+const DATETIME_SRC_IS_RESERVED: DptEncodingRuling = DptEncodingRuling {
+    id: "datetime-src-is-reserved",
+    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §3.20 NOTE 15",
+    decision:
+        "follow the encoding row and NOTE 15 by treating octet 1 bit 6 as reserved rather than SRC",
+};
+const DATETIME_INVALID_FIELDS_KEEP_WIDTH_ONLY: DptEncodingRuling = DptEncodingRuling {
+    id: "datetime-invalid-fields-keep-width-only",
+    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §3.20",
+    decision: "when an invalid flag is set, validate the affected date or time field width but not its semantic range",
+};
+const FORMAT_LEVEL_VALIDATION_ONLY: DptEncodingRuling = DptEncodingRuling {
+    id: "format-level-validation-only",
+    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §§3.21-3.23, 3.26, 4.5, 4.6, 8.3-8.5",
+    decision: "preserve every format-level enumeration code or bit and leave subtype-specific reserved values to the caller",
+};
+const STRICT_NULL_TERMINATION: DptEncodingRuling = DptEncodingRuling {
+    id: "strict-null-termination",
+    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §§3.24 and 3.27",
+    decision: "reject variable strings with a missing or interior NUL instead of guessing padding or truncation intent",
+};
+const SIGNED64_RANGE_TYPO_CORRECTED: DptEncodingRuling = DptEncodingRuling {
+    id: "signed64-range-typo-corrected",
+    standard_reference: "03_07_02 Datapoint Types v02.02.01 AS §3.28.1",
+    decision: "use the signed i64 range printed in the datapoint rows, correcting the format row's missing minus sign",
+};
+
+const NO_RULINGS: &[DptEncodingRuling] = &[];
+const ANGLE_RULINGS: &[DptEncodingRuling] = &[SCALED_ANGLE_LINEAR_MAPPING];
+const STATUS_MODE_RULINGS: &[DptEncodingRuling] = &[STATUS_MODE_FORMAT_RANGE];
+const SENTINEL_RULINGS: &[DptEncodingRuling] = &[INVALID_SENTINEL_PRECEDENCE];
+const SCENE_RULINGS: &[DptEncodingRuling] = &[SCENE_NUMBER_IS_WIRE_VALUE];
+const DATETIME_RULINGS: &[DptEncodingRuling] = &[
+    DATETIME_SRC_IS_RESERVED,
+    DATETIME_INVALID_FIELDS_KEEP_WIDTH_ONLY,
+];
+const FORMAT_LEVEL_RULINGS: &[DptEncodingRuling] = &[FORMAT_LEVEL_VALIDATION_ONLY];
+const NULL_TERMINATION_RULINGS: &[DptEncodingRuling] = &[STRICT_NULL_TERMINATION];
+const SIGNED64_RULINGS: &[DptEncodingRuling] = &[SIGNED64_RANGE_TYPO_CORRECTED];
+
+/// Returns every project ruling that can affect this DPT's wire codec.
+///
+/// An empty slice means the codec has no known encoding judgment for that
+/// DPT; it does not claim that the DPT is supported. See [`encode`] for the
+/// separate support check.
+pub const fn encoding_rulings(dpt: DptRef) -> &'static [DptEncodingRuling] {
+    match (dpt.main, dpt.sub) {
+        (5, Some(3)) => ANGLE_RULINGS,
+        (6, Some(20)) => STATUS_MODE_RULINGS,
+        (8, Some(10)) | (9, _) => SENTINEL_RULINGS,
+        (17 | 18 | 26, _) => SCENE_RULINGS,
+        (19, _) => DATETIME_RULINGS,
+        (20 | 21 | 22 | 23 | 25 | 27 | 30, _) => FORMAT_LEVEL_RULINGS,
+        (24 | 28, _) => NULL_TERMINATION_RULINGS,
+        (29, _) => SIGNED64_RULINGS,
+        _ => NO_RULINGS,
+    }
+}
+
 /// A decoded datapoint value. Variants mirror the Standard's own format
 /// families (DPT-AS §1.3.1's notation), not per-subtype semantic types —
 /// see spec E4-D4. A `DptValue` only carries the meaning its format
@@ -368,9 +515,8 @@ impl fmt::Display for DptValue {
 /// variant means "the codec invented an answer".
 #[derive(Debug, Clone, PartialEq)]
 pub enum DptCodecError {
-    /// `dpt.main` is not one of the main types this slice implements —
-    /// including `6.020`, whose `B5N3` layout is a different format from
-    /// the rest of main type 6 and has no `DptValue` variant yet.
+    /// `dpt.main` is not one of the main types 1 through 30 implemented by
+    /// this codec.
     UnsupportedDpt(DptRef),
     /// The payload's length does not match what `dpt` requires.
     /// `expected_bits`/`got` are the DPT's own significant-bit width and
@@ -386,6 +532,13 @@ pub enum DptCodecError {
     OutOfRange { dpt: DptRef, value: String },
     /// `encode`'s text input is not a value of `dpt`.
     Unparsable { dpt: DptRef, input: String },
+    /// The caller labelled `input` with a grammar this DPT does not accept,
+    /// or supplied a value that visibly belongs to a different grammar.
+    InputFormatMismatch {
+        dpt: DptRef,
+        format: DptInputFormat,
+        input: String,
+    },
     /// The payload carries `dpt`'s own documented "this means invalid
     /// data" code (DPT-AS states one for some DPTs, e.g. 5.006's `255` or
     /// 8.010's `7FFFh`; see the per-type comments below for the citation).
@@ -412,6 +565,10 @@ impl fmt::Display for DptCodecError {
             DptCodecError::Unparsable { dpt, input } => {
                 write!(f, "{dpt}: not a value of this datapoint type: {input:?}")
             }
+            DptCodecError::InputFormatMismatch { dpt, format, input } => write!(
+                f,
+                "{dpt}: input {input:?} does not match declared format {format}"
+            ),
             DptCodecError::InvalidData { dpt } => {
                 write!(f, "{dpt}: payload is the DPT's own \"invalid data\" code")
             }
@@ -467,11 +624,13 @@ pub fn decode(dpt: DptRef, payload: &GroupValue) -> Result<DptValue, DptCodecErr
     }
 }
 
-/// Encodes engineering-value text into a wire payload. See each `encode_*`
-/// helper for that main type's text grammar; grammars not dictated by the
-/// Standard (which specifies wire encoding, not human text) are this
-/// module's own design choice, documented at the helper.
-pub fn encode(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+/// Compatibility encoder that infers the accepted text grammar from the DPT
+/// and parser behavior.
+///
+/// New bus-facing callers should use [`encode`] and state the input grammar.
+/// See each `encode_*` helper for the legacy grammar; the Standard specifies
+/// wire encoding, not this human-readable syntax.
+pub fn encode_inferred_format(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
     match dpt.main {
         1 => encode_b1(dpt, input),
         2 => encode_b2(dpt, input),
@@ -504,6 +663,66 @@ pub fn encode(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
         29 => encode_v64(dpt, input),
         30 => encode_bit_set::<3>(dpt, input),
         _ => Err(DptCodecError::UnsupportedDpt(dpt)),
+    }
+}
+
+/// Encodes a value only through the grammar the caller explicitly selected.
+///
+/// Unlike [`encode_inferred_format`], this function never chooses a radix from
+/// a prefix or from whichever parser happens to accept the input first.
+pub fn encode(
+    dpt: DptRef,
+    input: &str,
+    format: DptInputFormat,
+) -> Result<GroupValue, DptCodecError> {
+    let mismatch = || DptCodecError::InputFormatMismatch {
+        dpt,
+        format,
+        input: input.to_string(),
+    };
+
+    match dpt.main {
+        1 => match format {
+            DptInputFormat::Canonical => {
+                let normalized = input.trim().to_ascii_lowercase();
+                if !matches!(normalized.as_str(), "on" | "off" | "true" | "false") {
+                    return Err(mismatch());
+                }
+                encode_b1(dpt, input)
+            }
+            DptInputFormat::Decimal => {
+                if !matches!(input.trim(), "0" | "1") {
+                    return Err(mismatch());
+                }
+                encode_b1(dpt, input)
+            }
+            _ => Err(mismatch()),
+        },
+        21 => encode_bit_set_explicit::<1>(dpt, input, format),
+        22 => encode_bit_set_explicit::<2>(dpt, input, format),
+        27 => encode_bit_set_explicit::<4>(dpt, input, format),
+        30 => encode_bit_set_explicit::<3>(dpt, input, format),
+        _ => {
+            let expected = default_input_format(dpt);
+            if expected.is_some_and(|expected| expected != format) {
+                return Err(mismatch());
+            }
+            encode_inferred_format(dpt, input)
+        }
+    }
+}
+
+/// Deterministic input grammar used when a user-facing caller offers no
+/// alternate radix. It depends on the DPT, never on the input string.
+pub fn default_input_format(dpt: DptRef) -> Option<DptInputFormat> {
+    use DptInputFormat::{Canonical, Decimal, Text};
+
+    match (dpt.main, dpt.sub) {
+        (2 | 3 | 10 | 11 | 15 | 18 | 19 | 25 | 26, _) | (6, Some(20)) => Some(Canonical),
+        (4 | 16 | 24 | 28, _) => Some(Text),
+        (5..=9 | 12..=14 | 17 | 20..=23 | 27 | 29 | 30, _) => Some(Decimal),
+        (1, _) => Some(Canonical),
+        _ => None,
     }
 }
 
@@ -2432,6 +2651,63 @@ fn encode_bit_set<const N: usize>(dpt: DptRef, input: &str) -> Result<GroupValue
     Ok(GroupValue::Bytes(octets))
 }
 
+/// Explicit-radix counterpart to [`encode_bit_set`]. Prefixes are refused:
+/// the [`DptInputFormat`] argument is the sole radix source.
+fn encode_bit_set_explicit<const N: usize>(
+    dpt: DptRef,
+    input: &str,
+    format: DptInputFormat,
+) -> Result<GroupValue, DptCodecError> {
+    let trimmed = input.trim();
+    let radix = match format {
+        DptInputFormat::Decimal => 10,
+        DptInputFormat::Hexadecimal => 16,
+        DptInputFormat::Binary => 2,
+        DptInputFormat::Canonical | DptInputFormat::Text => {
+            return Err(DptCodecError::InputFormatMismatch {
+                dpt,
+                format,
+                input: input.to_string(),
+            });
+        }
+    };
+    let has_radix_prefix = match format {
+        DptInputFormat::Hexadecimal => trimmed.starts_with("0x") || trimmed.starts_with("0X"),
+        DptInputFormat::Decimal | DptInputFormat::Binary => {
+            trimmed.starts_with("0x")
+                || trimmed.starts_with("0X")
+                || trimmed.starts_with("0b")
+                || trimmed.starts_with("0B")
+        }
+        DptInputFormat::Canonical | DptInputFormat::Text => unreachable!(),
+    };
+    if trimmed.is_empty() || has_radix_prefix {
+        return Err(DptCodecError::InputFormatMismatch {
+            dpt,
+            format,
+            input: input.to_string(),
+        });
+    }
+    let bits =
+        u32::from_str_radix(trimmed, radix).map_err(|_| DptCodecError::InputFormatMismatch {
+            dpt,
+            format,
+            input: input.to_string(),
+        })?;
+    let width = N * 8;
+    if width < 32 && bits >= (1u32 << width) {
+        return Err(DptCodecError::OutOfRange {
+            dpt,
+            value: trimmed.to_string(),
+        });
+    }
+    let octets = (0..N)
+        .rev()
+        .map(|shift| ((bits >> (shift * 8)) & 0xFF) as u8)
+        .collect();
+    Ok(GroupValue::Bytes(octets))
+}
+
 // ---------------------------------------------------------------------
 // Main type 23 — N2, 2-bit enumeration (DPT-AS §3.23, §4.6)
 // ---------------------------------------------------------------------
@@ -2740,6 +3016,146 @@ mod tests {
 
     fn dpt(main: u16, sub: Option<u16>) -> DptRef {
         DptRef { main, sub }
+    }
+
+    /// Existing round-trip tests pin the former inferred parser byte for
+    /// byte. New production-facing tests call the three-argument `encode`
+    /// directly and prove the explicit boundary separately.
+    fn encode(dpt: DptRef, input: &str) -> Result<GroupValue, DptCodecError> {
+        encode_inferred_format(dpt, input)
+    }
+
+    #[test]
+    fn explicit_input_format_rejects_a_valid_value_in_the_wrong_grammar() {
+        let boolean = dpt(1, Some(1));
+        assert_eq!(
+            super::encode(boolean, "on", DptInputFormat::Canonical).unwrap(),
+            GroupValue::Short(1)
+        );
+        assert_eq!(
+            super::encode(boolean, "1", DptInputFormat::Decimal).unwrap(),
+            GroupValue::Short(1)
+        );
+        assert_eq!(
+            super::encode(boolean, "on", DptInputFormat::Decimal),
+            Err(DptCodecError::InputFormatMismatch {
+                dpt: boolean,
+                format: DptInputFormat::Decimal,
+                input: "on".to_string(),
+            })
+        );
+        assert_eq!(
+            super::encode(boolean, "1", DptInputFormat::Canonical),
+            Err(DptCodecError::InputFormatMismatch {
+                dpt: boolean,
+                format: DptInputFormat::Canonical,
+                input: "1".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn explicit_bit_set_radix_never_comes_from_a_prefix_guess() {
+        let bit_set = dpt(21, Some(1));
+        assert_eq!(
+            super::encode(bit_set, "7", DptInputFormat::Decimal).unwrap(),
+            GroupValue::Bytes(vec![0x07])
+        );
+        assert_eq!(
+            super::encode(bit_set, "07", DptInputFormat::Hexadecimal).unwrap(),
+            GroupValue::Bytes(vec![0x07])
+        );
+        assert_eq!(
+            super::encode(bit_set, "0B", DptInputFormat::Hexadecimal).unwrap(),
+            GroupValue::Bytes(vec![0x0B])
+        );
+        assert_eq!(
+            super::encode(bit_set, "00000111", DptInputFormat::Binary).unwrap(),
+            GroupValue::Bytes(vec![0x07])
+        );
+        for (input, format) in [
+            ("0x07", DptInputFormat::Decimal),
+            ("0b00000111", DptInputFormat::Binary),
+            ("7", DptInputFormat::Canonical),
+        ] {
+            assert!(matches!(
+                super::encode(bit_set, input, format),
+                Err(DptCodecError::InputFormatMismatch { .. })
+            ));
+        }
+    }
+
+    #[test]
+    fn default_input_formats_cover_all_thirty_supported_main_types() {
+        use DptInputFormat::{Canonical, Decimal, Text};
+
+        let expected = [
+            Canonical, Canonical, Canonical, Text, Decimal, Decimal, Decimal, Decimal, Decimal,
+            Canonical, Canonical, Decimal, Decimal, Decimal, Canonical, Text, Decimal, Canonical,
+            Canonical, Decimal, Decimal, Decimal, Decimal, Text, Canonical, Canonical, Decimal,
+            Text, Decimal, Decimal,
+        ];
+        for (main, format) in (1u16..=30).zip(expected) {
+            assert_eq!(
+                default_input_format(dpt(main, None)),
+                Some(format),
+                "DPT-{main}"
+            );
+        }
+        assert_eq!(default_input_format(dpt(6, Some(20))), Some(Canonical));
+        assert_eq!(default_input_format(dpt(31, None)), None);
+    }
+
+    #[test]
+    fn project_rulings_are_queryable_for_every_affected_dpt_family() {
+        fn ids(dpt: DptRef) -> Vec<&'static str> {
+            encoding_rulings(dpt)
+                .iter()
+                .map(|ruling| ruling.id)
+                .collect()
+        }
+
+        assert_eq!(ids(dpt(5, Some(3))), ["scaled-angle-linear-mapping"]);
+        assert_eq!(ids(dpt(6, Some(20))), ["status-mode-format-range"]);
+        assert_eq!(ids(dpt(8, Some(10))), ["invalid-sentinel-precedence"]);
+        assert_eq!(ids(dpt(9, None)), ["invalid-sentinel-precedence"]);
+        assert_eq!(ids(dpt(17, None)), ["scene-number-is-wire-value"]);
+        assert_eq!(ids(dpt(18, Some(1))), ["scene-number-is-wire-value"]);
+        assert_eq!(
+            ids(dpt(19, Some(1))),
+            [
+                "datetime-src-is-reserved",
+                "datetime-invalid-fields-keep-width-only",
+            ]
+        );
+        for main in [20, 21, 22, 23, 25, 27, 30] {
+            assert_eq!(
+                ids(dpt(main, None)),
+                ["format-level-validation-only"],
+                "DPT-{main}"
+            );
+        }
+        assert_eq!(ids(dpt(24, None)), ["strict-null-termination"]);
+        assert_eq!(ids(dpt(26, Some(1))), ["scene-number-is-wire-value"]);
+        assert_eq!(ids(dpt(28, None)), ["strict-null-termination"]);
+        assert_eq!(ids(dpt(29, None)), ["signed64-range-typo-corrected"]);
+        assert!(ids(dpt(1, Some(1))).is_empty());
+    }
+
+    #[test]
+    fn every_public_ruling_names_its_standard_context_and_decision() {
+        for main in 1..=30 {
+            for ruling in encoding_rulings(dpt(main, None)) {
+                assert!(!ruling.standard_reference.is_empty(), "{}", ruling.id);
+                assert!(!ruling.decision.is_empty(), "{}", ruling.id);
+            }
+        }
+        for dpt in [dpt(5, Some(3)), dpt(6, Some(20)), dpt(8, Some(10))] {
+            for ruling in encoding_rulings(dpt) {
+                assert!(!ruling.standard_reference.is_empty(), "{}", ruling.id);
+                assert!(!ruling.decision.is_empty(), "{}", ruling.id);
+            }
+        }
     }
 
     // -- Main type 1 -----------------------------------------------------

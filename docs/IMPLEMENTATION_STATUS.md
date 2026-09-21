@@ -9275,8 +9275,9 @@ address works.
 empty, in the CLI's own words (`DISCOVER_EMPTY_HINT`: multicast reach, and
 running in a container without host networking —
 [KNOWN_LIMITATIONS.md §79](KNOWN_LIMITATIONS.md#79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry)).
-A failed search says so quietly and points back at the field. Ten new message
-keys in `en.ts` and `de.ts`; no English literal in the component. Motion lives
+A failed search says so quietly and points back at the field. Eleven new
+message keys in `en.ts` and `de.ts` (`resultCount` is a plural pair, counted
+as two); no English literal in the component. Motion lives
 inside `@media (prefers-reduced-motion: no-preference)` and is driven by
 `--knx-transition-duration`/`--knx-motion-easing`, so both motion styles and
 all five themes carry it without a second rule.

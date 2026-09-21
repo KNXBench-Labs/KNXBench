@@ -10,6 +10,8 @@ const apiMock = vi.hoisted(() => ({
   startLineScan: vi.fn(),
   pollLineScan: vi.fn(),
   cancelLineScan: vi.fn(),
+  compareLineScan: vi.fn(),
+  reconcileLineScan: vi.fn(),
 }));
 
 vi.mock("./api", () => ({
@@ -35,12 +37,12 @@ function notFound(): Error {
   return error;
 }
 
-async function renderPanel() {
+async function renderPanel(onTreeUpdate?: (tree: unknown) => void) {
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
   await act(async () => {
-    root!.render(<LineScanPanel />);
+    root!.render(<LineScanPanel onTreeUpdate={onTreeUpdate} />);
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -75,6 +77,12 @@ beforeEach(() => {
   });
   apiMock.startLineScan.mockResolvedValue({ sessionId: 4, estimate: awaitableEstimate() });
   apiMock.cancelLineScan.mockResolvedValue(scanResponse("cancelled", []));
+  apiMock.compareLineScan.mockResolvedValue({
+    unexpected: ["1.1.4"],
+    missing: ["1.1.2"],
+    excludedInProject: ["1.1.3"],
+  });
+  apiMock.reconcileLineScan.mockResolvedValue({ can_undo: true });
 });
 
 afterEach(async () => {
@@ -327,5 +335,74 @@ describe("LineScanPanel", () => {
     await act(async () => click("Confirm removal"));
     expect(getSetting("lineScanExclusions")).toEqual([]);
     expect(host!.textContent).not.toContain("2.3.42");
+  });
+
+  it("shows completed evidence unselected and only reconciles deliberate choices", async () => {
+    apiMock.pollLineScan.mockResolvedValue(scanResponse("completed", []));
+    const onTreeUpdate = vi.fn();
+    await renderPanel(onTreeUpdate);
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiMock.compareLineScan).toHaveBeenCalledWith(4);
+    expect(host!.textContent).toContain("Bus answered, not in project");
+    expect(host!.textContent).toContain("In project, no answer");
+    expect(host!.textContent).toContain("In project, not examined");
+    const choices = host!.querySelectorAll<HTMLInputElement>(
+      '.line-scan-reconciliation input[type="checkbox"]',
+    );
+    expect(choices).toHaveLength(2);
+    expect(Array.from(choices).every((choice) => !choice.checked)).toBe(true);
+    const apply = Array.from(host!.querySelectorAll<HTMLButtonElement>("button")).find(
+      (button) => button.textContent === "Apply selected changes",
+    )!;
+    expect(apply.disabled).toBe(true);
+
+    await act(async () => choices[0].click());
+    expect(apply.disabled).toBe(false);
+    await act(async () => {
+      apply.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(apiMock.reconcileLineScan).toHaveBeenCalledWith(4, ["1.1.4"], []);
+    expect(onTreeUpdate).toHaveBeenCalledWith({ can_undo: true });
+  });
+
+  it("refreshes completed evidence and clears selections when the project changes", async () => {
+    apiMock.pollLineScan.mockResolvedValue(scanResponse("completed", []));
+    await renderPanel();
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const firstChoice = host!.querySelector<HTMLInputElement>(
+      '.line-scan-reconciliation input[type="checkbox"]',
+    )!;
+    await act(async () => firstChoice.click());
+    expect(firstChoice.checked).toBe(true);
+
+    await act(async () => {
+      const changedProjectProps = { projectRevision: { revision: 2 } } as unknown as
+        React.ComponentProps<typeof LineScanPanel>;
+      root!.render(<LineScanPanel {...changedProjectProps} />);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(apiMock.compareLineScan).toHaveBeenCalledTimes(2);
+    expect(
+      host!.querySelector<HTMLInputElement>(
+        '.line-scan-reconciliation input[type="checkbox"]',
+      )!.checked,
+    ).toBe(false);
+    expect(
+      Array.from(host!.querySelectorAll<HTMLButtonElement>("button")).find(
+        (button) => button.textContent === "Apply selected changes",
+      )!.disabled,
+    ).toBe(true);
   });
 });

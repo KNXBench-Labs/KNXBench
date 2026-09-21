@@ -1146,6 +1146,12 @@ export interface LineScanResultsResponse {
   results: LineScanResult[];
 }
 
+export interface LineScanComparison {
+  unexpected: string[];
+  missing: string[];
+  excludedInProject: string[];
+}
+
 export function startBusMonitor(gateway: string): Promise<BusMonitorStartResponse> {
   return request("/api/bus/monitor/start", { method: "POST", body: JSON.stringify({ gateway }) });
 }
@@ -1190,6 +1196,21 @@ export function pollLineScan(since: number, sessionId?: number): Promise<LineSca
 
 export function cancelLineScan(sessionId: number): Promise<LineScanResultsResponse> {
   return request(`/api/bus/scan/cancel?sessionId=${sessionId}`, { method: "POST" });
+}
+
+export function compareLineScan(sessionId: number): Promise<LineScanComparison> {
+  return request(`/api/bus/scan/comparison?sessionId=${sessionId}`);
+}
+
+export function reconcileLineScan(
+  sessionId: number,
+  unexpected: string[],
+  missing: string[],
+): Promise<ProjectTree> {
+  return request("/api/bus/scan/reconcile", {
+    method: "POST",
+    body: JSON.stringify({ sessionId, unexpected, missing }),
+  });
 }
 
 export function writeBusValue(

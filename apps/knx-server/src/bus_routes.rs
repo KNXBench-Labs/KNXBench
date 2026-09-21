@@ -33,13 +33,17 @@ use serde::{Deserialize, Serialize};
 
 use knx_core::scan::{ScanPlan, ScanPlanBuilder};
 use knx_core::{GroupAddress, GroupAddressDpt, GroupAddressStyle, IndividualAddress};
-use knx_net::{ApplicationService, Destination, ProbeOutcome, ProbePolicy, ScanEstimate};
+use knx_net::{
+    compare_with_project, ApplicationService, Destination, ProbeOutcome, ProbePolicy, ScanEstimate,
+    ScannedRange,
+};
 
 use crate::bus::{
     self, decode_single, BusSession, BusSessionError, DecodedValue, GroupAddressContext,
     SessionStatus, TelegramRow,
 };
 use crate::bus_scan::{LineScanResult, LineScanSession, LineScanStatus};
+use crate::domain;
 use crate::errors::ApiError;
 use crate::SharedState;
 
@@ -54,6 +58,8 @@ pub fn bus_routes() -> Router<SharedState> {
         .route("/api/bus/scan/start", post(start_scan))
         .route("/api/bus/scan/results", get(poll_scan))
         .route("/api/bus/scan/cancel", post(cancel_scan))
+        .route("/api/bus/scan/comparison", get(scan_comparison))
+        .route("/api/bus/scan/reconcile", post(reconcile_scan))
 }
 
 #[derive(Deserialize)]
@@ -81,7 +87,9 @@ struct ScanEstimateResponse {
     worst_case_ms: u64,
 }
 
-fn build_scan(body: &ScanRequest) -> Result<(ScanPlan, ProbePolicy, ScanEstimate), ApiError> {
+fn build_scan(
+    body: &ScanRequest,
+) -> Result<(ScanPlan, ProbePolicy, ScanEstimate, ScannedRange), ApiError> {
     if body.response_timeout_ms == 0 {
         return Err(ApiError::bad_request(
             "responseTimeoutMs must be greater than zero",
@@ -113,7 +121,13 @@ fn build_scan(body: &ScanRequest) -> Result<(ScanPlan, ProbePolicy, ScanEstimate
     )
     .map_err(|error| ApiError::bad_request(error.to_string()))?;
     let estimate = ScanEstimate::new(&plan, &policy);
-    Ok((plan, policy, estimate))
+    let range = ScannedRange {
+        area: body.area,
+        line: body.line,
+        first_device: body.first_device,
+        last_device: body.last_device,
+    };
+    Ok((plan, policy, estimate, range))
 }
 
 fn estimate_response(
@@ -134,7 +148,7 @@ fn estimate_response(
 async fn estimate_scan(
     Json(body): Json<ScanRequest>,
 ) -> Result<Json<ScanEstimateResponse>, ApiError> {
-    let (plan, policy, estimate) = build_scan(&body)?;
+    let (plan, policy, estimate, _) = build_scan(&body)?;
     Ok(Json(estimate_response(&plan, &policy, estimate)))
 }
 
@@ -155,7 +169,7 @@ async fn start_scan(
         .ok_or_else(|| ApiError::bad_request("gateway is required"))?
         .parse::<SocketAddrV4>()
         .map_err(|_| ApiError::bad_request("gateway is not a host:port IPv4 address"))?;
-    let (plan, policy, estimate) = build_scan(&body)?;
+    let (plan, policy, estimate, range) = build_scan(&body)?;
     let response_estimate = estimate_response(&plan, &policy, estimate);
     let mut guard = state.line_scan_session.lock().await;
     if let Some(existing) = guard.as_mut() {
@@ -170,9 +184,10 @@ async fn start_scan(
     let id = state
         .next_line_scan_session_id
         .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-    let session = LineScanSession::start(id, gateway, state.connector.as_ref(), plan, policy)
-        .await
-        .map_err(session_error_to_api_error)?;
+    let session =
+        LineScanSession::start(id, range, gateway, state.connector.as_ref(), plan, policy)
+            .await
+            .map_err(session_error_to_api_error)?;
     *guard = Some(session);
     Ok(Json(ScanStartResponse {
         session_id: id,
@@ -313,6 +328,138 @@ async fn cancel_scan(
     }
     session.cancel().await;
     Ok(Json(scan_response(session, 0)))
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ScanComparisonResponse {
+    unexpected: Vec<String>,
+    missing: Vec<String>,
+    excluded_in_project: Vec<String>,
+}
+
+async fn scan_comparison(
+    State(state): State<SharedState>,
+    Query(query): Query<ScanSessionQuery>,
+) -> Result<Json<ScanComparisonResponse>, ApiError> {
+    let guard = state.line_scan_session.lock().await;
+    let session = guard.as_ref().ok_or_else(|| {
+        ApiError::with_status(StatusCode::CONFLICT, "no line scan session exists")
+    })?;
+    if query.session_id != session.id() {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            format!("line scan session {} is no longer active", query.session_id),
+        ));
+    }
+
+    let (status, _, results) = session.snapshot_since(0);
+    if status != LineScanStatus::Completed {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            "only a completed line scan can be compared with the project",
+        ));
+    }
+
+    let project = state.project.lock().expect("state mutex poisoned");
+    let project = project
+        .as_ref()
+        .ok_or_else(|| ApiError::with_status(StatusCode::CONFLICT, "no project open"))?;
+    let project_addresses: Vec<_> = project
+        .devices
+        .iter()
+        .filter_map(|device| device.address)
+        .collect();
+    let excluded = session.excluded().iter().copied().collect();
+    let evidence: Vec<_> = results
+        .into_iter()
+        .map(|result| (result.address, result.outcome))
+        .collect();
+    let comparison =
+        compare_with_project(&session.range(), &evidence, &excluded, &project_addresses);
+
+    Ok(Json(ScanComparisonResponse {
+        unexpected: comparison
+            .unexpected
+            .into_iter()
+            .map(|address| address.to_string())
+            .collect(),
+        missing: comparison
+            .missing
+            .into_iter()
+            .map(|address| address.to_string())
+            .collect(),
+        excluded_in_project: comparison
+            .excluded_in_project
+            .into_iter()
+            .map(|address| address.to_string())
+            .collect(),
+    }))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ScanReconcileBody {
+    session_id: u64,
+    #[serde(default)]
+    unexpected: Vec<String>,
+    #[serde(default)]
+    missing: Vec<String>,
+}
+
+fn parse_scan_selection(
+    values: Vec<String>,
+    field: &str,
+) -> Result<Vec<IndividualAddress>, ApiError> {
+    values
+        .into_iter()
+        .map(|value| {
+            value.parse::<IndividualAddress>().map_err(|error| {
+                ApiError::bad_request(format!("invalid {field} address {value:?}: {error}"))
+            })
+        })
+        .collect()
+}
+
+async fn reconcile_scan(
+    State(state): State<SharedState>,
+    Json(body): Json<ScanReconcileBody>,
+) -> Result<Json<knx_projection::ProjectTree>, ApiError> {
+    let guard = state.line_scan_session.lock().await;
+    let session = guard.as_ref().ok_or_else(|| {
+        ApiError::with_status(StatusCode::CONFLICT, "no line scan session exists")
+    })?;
+    if body.session_id != session.id() {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            format!("line scan session {} is no longer active", body.session_id),
+        ));
+    }
+    let (status, _, results) = session.snapshot_since(0);
+    if status != LineScanStatus::Completed {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            "only a completed line scan can be reconciled",
+        ));
+    }
+
+    let unexpected = parse_scan_selection(body.unexpected, "unexpected")?;
+    let missing = parse_scan_selection(body.missing, "missing")?;
+    let evidence: Vec<_> = results
+        .into_iter()
+        .map(|result| (result.address, result.outcome))
+        .collect();
+    let excluded = session.excluded().iter().copied().collect();
+    let tree = domain::reconcile_scan_impl(
+        &state,
+        session.range(),
+        &evidence,
+        &excluded,
+        unexpected,
+        missing,
+    )
+    .map_err(ApiError::bad_request)?;
+    Ok(Json(tree))
 }
 
 /// Maps a [`BusSessionError`] to its HTTP status for the three mutating

@@ -9740,3 +9740,28 @@ T09 can consume `LineScanResultsResponse`: it provides the session id and status
 `nextSince`, completed/total counts, omitted addresses, and incremental address/outcome
 records. Project reconciliation remains deliberately outside T08 and must turn those records
 into a previewable, undoable diff rather than mutating the project during the scan.
+
+## 2026-09-21 — T09: completed scans reconcile through one undoable batch
+
+Completed line-scan sessions now expose a server-side project comparison with
+three separate evidence groups: bus responses absent from the project,
+project addresses without a confirming response, and project addresses that
+were excluded and therefore not examined. The comparison is recomputed from
+the current project and session evidence; stale session ids, unfinished or
+cancelled scans, and selections outside the current comparison are refused.
+
+The diagnostics UI starts with no selected action and gives excluded evidence
+no checkbox. It deliberately says that a response does not prove project
+membership and silence does not prove absence. The scanner's own address is
+also shown as not examined and is never offered as a missing-device action.
+Undo, redo, and other project-tree updates refresh the comparison and clear
+stale selections. Applying selected findings
+creates product/program-less devices or removes uniquely resolved missing
+devices as one `Command::Batch`; empty selection is a true no-op. The batch
+also restores allocator state and exact topology order on undo, so apply then
+undo returns the project structurally byte-identical. No scan or reconciliation
+path infers manufacturer, product, or application-program data. New devices
+use a matching line in any installation when one exists. Removal is refused
+while building membership, parameters, or module instances still reference the
+device, rather than orphaning that data. Tests use only synthetic in-process
+transport and assert that reconciliation itself sends no bus frame.

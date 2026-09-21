@@ -255,7 +255,7 @@ async fn an_address_that_reached_the_session_log_does_not_reach_the_bundle() {
             timestamp: "2026-09-19T10:00:00Z".into(),
             severity: knx_server::Severity::Error,
             source: "bus".into(),
-            message: "tunnel to 172.22.9.4 refused".into(),
+            message: "tunnel to 203.0.113.4 refused".into(),
             location: None,
             detail: Some("peer fe80::1234 gave up".into()),
         });
@@ -271,7 +271,7 @@ async fn an_address_that_reached_the_session_log_does_not_reach_the_bundle() {
     .await;
 
     let text = zip_entry_text(&target, "log.json");
-    assert!(!text.contains("172.22.9.4"), "{text}");
+    assert!(!text.contains("203.0.113.4"), "{text}");
     assert!(!text.contains("fe80::1234"), "{text}");
     assert!(text.contains("[redacted-ipv4]"), "{text}");
     assert!(text.contains("[redacted-ipv6]"), "{text}");
@@ -384,7 +384,7 @@ async fn included_telegrams_keep_their_addresses_their_name_and_their_decoded_va
         &app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
     // `1/1/1` is the fixture's group address: raw 1 << 11 | 1 << 8 | 1.

@@ -3378,7 +3378,7 @@ mod tests {
     #[test]
     fn ip_address_accepts_ipv4_decimal_dotted_notation() {
         let view = view_of_kind("IPAddress");
-        assert!(validate_kind_and_bounds(&view, "192.168.1.1").is_ok());
+        assert!(validate_kind_and_bounds(&view, "192.0.2.1").is_ok());
         assert!(validate_kind_and_bounds(&view, "0.0.0.0").is_ok());
         assert!(validate_kind_and_bounds(&view, "255.255.255.255").is_ok());
     }
@@ -3386,7 +3386,7 @@ mod tests {
     #[test]
     fn ip_address_rejects_leading_zeroes_and_out_of_range_octets() {
         let view = view_of_kind("IPAddress");
-        assert!(validate_kind_and_bounds(&view, "192.168.001.1").is_err());
+        assert!(validate_kind_and_bounds(&view, "192.0.2.001").is_err());
         assert!(validate_kind_and_bounds(&view, "256.1.1.1").is_err());
         assert!(validate_kind_and_bounds(&view, "1.2.3").is_err());
     }

@@ -832,7 +832,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           </nav>
         </ResizablePane>}
         <div className="workbench-center">
-          {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusDiagnosticsPanel projectOpen={tree !== null} /> : tree ? (
+          {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusDiagnosticsPanel project={tree} onTreeUpdate={handleTreeUpdate} /> : tree ? (
             view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
               rangeScope={addressScope} onRangeScope={setAddressScope}
               multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate}

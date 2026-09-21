@@ -7,7 +7,7 @@ use knx_core::scan::ScanPlan;
 use knx_core::IndividualAddress;
 use knx_net::{
     scan_line, ApplicationService, BusError, Destination, ProbeOutcome, ProbePolicy, ScanError,
-    ScanTransport, Tpci,
+    ScanTransport, ScannedRange, Tpci,
 };
 use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
@@ -36,6 +36,7 @@ struct SharedScan {
 
 pub struct LineScanSession {
     id: u64,
+    range: ScannedRange,
     total_count: usize,
     omitted: Vec<IndividualAddress>,
     excluded: Vec<IndividualAddress>,
@@ -47,6 +48,7 @@ pub struct LineScanSession {
 impl LineScanSession {
     pub async fn start(
         id: u64,
+        range: ScannedRange,
         gateway: SocketAddrV4,
         connector: &dyn GatewayConnector,
         plan: ScanPlan,
@@ -68,6 +70,7 @@ impl LineScanSession {
         });
         Ok(Self {
             id,
+            range,
             total_count,
             omitted,
             excluded,
@@ -79,6 +82,10 @@ impl LineScanSession {
 
     pub fn id(&self) -> u64 {
         self.id
+    }
+
+    pub fn range(&self) -> ScannedRange {
+        self.range
     }
 
     pub fn total_count(&self) -> usize {
@@ -209,6 +216,12 @@ mod tests {
         let publisher = Arc::clone(&shared);
         let session = LineScanSession {
             id: 1,
+            range: ScannedRange {
+                area: 2,
+                line: 3,
+                first_device: 4,
+                last_device: 4,
+            },
             total_count: 1,
             omitted: Vec::new(),
             excluded: Vec::new(),

@@ -6,6 +6,7 @@
 //! variants (`Connect`/`NumberedData`/`Disconnect`) this probe rides on.
 //! See `docs/superpowers/plans/2026-09-12-line-scan-implementation.md`.
 
+use std::collections::HashSet;
 use std::time::Duration;
 
 use knx_core::scan::{ScanPlan, ScanPlanError};
@@ -14,6 +15,94 @@ use tokio::sync::broadcast;
 
 use crate::cemi::{ApplicationService, Destination, LDataMessageKind, Tpci};
 use crate::client::{BusError, TunnelClient, TunnelEvent};
+
+/// Device-address span covered by one scan, including excluded addresses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScannedRange {
+    pub area: u8,
+    pub line: u8,
+    pub first_device: u8,
+    pub last_device: u8,
+}
+
+impl ScannedRange {
+    pub fn contains(&self, address: IndividualAddress) -> bool {
+        address.area() == self.area
+            && address.line() == self.line
+            && address.device() >= self.first_device
+            && address.device() <= self.last_device
+    }
+}
+
+/// Project-side interpretation of one completed line scan.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ProjectComparison {
+    pub unexpected: Vec<IndividualAddress>,
+    pub missing: Vec<IndividualAddress>,
+    /// Project addresses that were not probed, either because the operator
+    /// excluded them or because the address was the scan tunnel's own.
+    pub excluded_in_project: Vec<IndividualAddress>,
+}
+
+/// Compares scan evidence with stored project addresses without mutating either side.
+pub fn compare_with_project(
+    range: &ScannedRange,
+    results: &[(IndividualAddress, ProbeOutcome)],
+    excluded: &HashSet<IndividualAddress>,
+    project_addresses: &[IndividualAddress],
+) -> ProjectComparison {
+    let present: HashSet<IndividualAddress> = results
+        .iter()
+        .filter(|(_, outcome)| {
+            matches!(
+                outcome,
+                ProbeOutcome::Occupied { .. }
+                    | ProbeOutcome::OccupiedSilent
+                    | ProbeOutcome::OccupiedBusy
+            )
+        })
+        .map(|(address, _)| *address)
+        .collect();
+    let in_range_project: HashSet<IndividualAddress> = project_addresses
+        .iter()
+        .copied()
+        .filter(|address| range.contains(*address))
+        .collect();
+    let self_addresses: HashSet<IndividualAddress> = results
+        .iter()
+        .filter(|(_, outcome)| matches!(outcome, ProbeOutcome::SelfAddress))
+        .map(|(address, _)| *address)
+        .collect();
+
+    let mut unexpected: Vec<_> = present
+        .iter()
+        .copied()
+        .filter(|address| !in_range_project.contains(address))
+        .collect();
+    unexpected.sort_unstable_by_key(|address| address.raw());
+    let mut missing: Vec<_> = in_range_project
+        .iter()
+        .copied()
+        .filter(|address| {
+            !present.contains(address)
+                && !excluded.contains(address)
+                && !self_addresses.contains(address)
+        })
+        .collect();
+    missing.sort_unstable_by_key(|address| address.raw());
+    let mut excluded_in_project: Vec<_> = in_range_project
+        .iter()
+        .copied()
+        .filter(|address| excluded.contains(address) || self_addresses.contains(address))
+        .collect();
+    excluded_in_project.sort_unstable_by_key(|address| address.raw());
+
+    ProjectComparison {
+        unexpected,
+        missing,
+        excluded_in_project,
+    }
+}
 
 /// How a line scan probes one address, and how long it is willing to wait
 /// for an answer before moving on. See the accessor docs below for which
@@ -560,6 +649,41 @@ mod tests {
 
     fn addr(area: u8, line: u8, device: u8) -> IndividualAddress {
         IndividualAddress::new(area, line, device).unwrap()
+    }
+
+    #[test]
+    fn project_comparison_keeps_unexpected_missing_and_excluded_evidence_separate() {
+        let range = ScannedRange {
+            area: 2,
+            line: 3,
+            first_device: 1,
+            last_device: 9,
+        };
+        let results = vec![
+            (addr(2, 3, 2), ProbeOutcome::Occupied { mask_version: None }),
+            (addr(2, 3, 3), ProbeOutcome::OccupiedSilent),
+            (addr(2, 3, 4), ProbeOutcome::OccupiedBusy),
+            (addr(2, 3, 5), ProbeOutcome::Vacant),
+            (addr(2, 3, 6), ProbeOutcome::Indeterminate),
+            (addr(2, 3, 7), ProbeOutcome::SelfAddress),
+        ];
+        let excluded = std::collections::HashSet::from([addr(2, 3, 9)]);
+        let project = vec![
+            addr(2, 3, 3),
+            addr(2, 3, 5),
+            addr(2, 3, 7),
+            addr(2, 3, 9),
+            addr(2, 4, 1),
+        ];
+
+        let comparison = compare_with_project(&range, &results, &excluded, &project);
+
+        assert_eq!(comparison.unexpected, vec![addr(2, 3, 2), addr(2, 3, 4)]);
+        assert_eq!(comparison.missing, vec![addr(2, 3, 5)]);
+        assert_eq!(
+            comparison.excluded_in_project,
+            vec![addr(2, 3, 7), addr(2, 3, 9)]
+        );
     }
 
     /// A scripted per-address reply, applied once per probe pass a fake

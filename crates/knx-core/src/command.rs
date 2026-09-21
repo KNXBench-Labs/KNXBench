@@ -12,12 +12,12 @@ use crate::dpt::DptRef;
 use crate::flags::{ComFlagKind, Direction, GroupLink};
 use crate::group::{GroupAddressEntry, GroupRange};
 use crate::ids::{
-    AreaId, BuildingPartId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId, LineId,
-    ParameterInstanceId, SourceRef,
+    AreaId, BuildingPartId, ComObjectInstanceId, DeviceId, GroupAddressId, GroupRangeId,
+    InstallationId, LineId, ParameterInstanceId, SourceRef,
 };
 use crate::installation::Installation;
 use crate::parameter::ParameterInstance;
-use crate::project::Project;
+use crate::project::{IdAllocators, Project};
 use crate::provenance::{Layer, Override, Resolved};
 use crate::string_table::Text;
 use crate::topology::{Area, Line};
@@ -187,6 +187,12 @@ pub enum Command {
         device: DeviceId,
         line: Option<LineId>,
     },
+    /// Replaces the project-id allocator snapshot as part of a larger batch.
+    /// This exists so commands that allocate several entities can restore the
+    /// allocator exactly on undo instead of leaving consumed ids behind.
+    SetIdAllocators {
+        ids: IdAllocators,
+    },
     /// Creates a device with its communication-object instances already
     /// attached, placed in `line` or, if `None`, `Topology::unassigned` —
     /// mirrors `MoveDeviceToLine`'s own placement rule, since a device is
@@ -204,6 +210,9 @@ pub enum Command {
         device: DeviceInstance,
         com_objects: Vec<ComObjectInstance>,
         program_defaults: Vec<(ComObjectInstanceId, ProgramDefaults)>,
+        /// Target installation. `None` preserves the legacy first-installation
+        /// behavior for existing callers.
+        installation: Option<InstallationId>,
         line: Option<LineId>,
     },
     /// Refuses (`CommandError::DeviceHasLinks`) if any of the device's
@@ -212,6 +221,16 @@ pub enum Command {
     /// check.
     DeleteDevice {
         id: DeviceId,
+    },
+    /// Internal inverse of [`Command::DeleteDevice`], retaining the exact
+    /// topology position so undo restores byte-for-byte ordering.
+    RestoreDevice {
+        device: DeviceInstance,
+        com_objects: Vec<ComObjectInstance>,
+        program_defaults: Vec<(ComObjectInstanceId, ProgramDefaults)>,
+        installation: InstallationId,
+        line: Option<LineId>,
+        position: usize,
     },
     /// `part.id` is pre-allocated by the caller via
     /// `Project::ids::next_building_part_id`. `part.parent` names the
@@ -309,6 +328,10 @@ pub enum CommandError {
     /// A `DeleteArea` was refused because it still owns at least one line.
     AreaNotEmpty(AreaId),
     LineNotFound(LineId),
+    InvalidTopologyPosition {
+        device: DeviceId,
+        position: usize,
+    },
     /// A `DeleteLine` was refused because it still owns at least one
     /// device.
     LineNotEmpty(LineId),
@@ -317,6 +340,9 @@ pub enum CommandError {
     /// deleting it now would leave a dangling `GroupLink`, the device
     /// equivalent of `GroupAddressInUse`.
     DeviceHasLinks(DeviceId),
+    /// A device is still referenced by a building placement, parameter, or
+    /// module instance that `DeleteDevice` cannot safely discard implicitly.
+    DeviceHasDependentData(DeviceId),
     BuildingPartNotFound(BuildingPartId),
     /// A `DeleteBuildingPart` was refused because it still has a child
     /// part or a device located in it.
@@ -385,12 +411,20 @@ impl fmt::Display for CommandError {
                 write!(f, "area {id} still has lines, cannot delete")
             }
             CommandError::LineNotFound(id) => write!(f, "line {id} not found"),
+            CommandError::InvalidTopologyPosition { device, position } => write!(
+                f,
+                "topology position {position} is invalid while restoring device {device}"
+            ),
             CommandError::LineNotEmpty(id) => {
                 write!(f, "line {id} still has devices, cannot delete")
             }
             CommandError::DeviceHasLinks(id) => {
                 write!(f, "device {id} still has linked communication objects, cannot delete")
             }
+            CommandError::DeviceHasDependentData(id) => write!(
+                f,
+                "device {id} still has building, parameter, or module data, cannot delete"
+            ),
             CommandError::BuildingPartNotFound(id) => write!(f, "building part {id} not found"),
             CommandError::BuildingPartNotEmpty(id) => {
                 write!(f, "building part {id} still has children or devices, cannot delete")
@@ -448,7 +482,7 @@ impl From<ValidationError> for CommandError {
 fn remove_device_from_topology(
     installation: &mut Installation,
     device: DeviceId,
-) -> Result<Option<LineId>, CommandError> {
+) -> Result<(Option<LineId>, usize), CommandError> {
     if let Some(pos) = installation
         .topology
         .unassigned
@@ -456,7 +490,7 @@ fn remove_device_from_topology(
         .position(|&d| d == device)
     {
         installation.topology.unassigned.remove(pos);
-        Ok(None)
+        Ok((None, pos))
     } else if let Some(current_line) = installation
         .topology
         .lines
@@ -464,8 +498,13 @@ fn remove_device_from_topology(
         .find(|l| l.devices.contains(&device))
     {
         let id = current_line.id;
-        current_line.devices.retain(|&d| d != device);
-        Ok(Some(id))
+        let pos = current_line
+            .devices
+            .iter()
+            .position(|&candidate| candidate == device)
+            .expect("line was selected because it contains the device");
+        current_line.devices.remove(pos);
+        Ok((Some(id), pos))
     } else {
         Err(CommandError::DeviceNotFound(device))
     }
@@ -909,7 +948,7 @@ impl Command {
                         return Err(CommandError::LineNotFound(line_id));
                     }
                 }
-                let previous = remove_device_from_topology(installation, device)?;
+                let (previous, _) = remove_device_from_topology(installation, device)?;
                 match line {
                     Some(line_id) => {
                         installation
@@ -928,21 +967,34 @@ impl Command {
                     line: previous,
                 })
             }
+            Command::SetIdAllocators { ids } => {
+                let previous = std::mem::replace(&mut project.ids, ids.clone());
+                Ok(Command::SetIdAllocators { ids: previous })
+            }
             Command::CreateDevice {
                 device,
                 com_objects,
                 program_defaults,
+                installation,
                 line,
             } => {
                 let device = device.clone();
                 let com_objects = com_objects.clone();
                 let program_defaults = program_defaults.clone();
+                let installation_id = *installation;
                 let line = *line;
                 let device_id = device.id;
-                let installation = project
-                    .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
+                let installation = match installation_id {
+                    Some(id) => project
+                        .installations
+                        .iter_mut()
+                        .find(|installation| installation.id == id)
+                        .ok_or(CommandError::InstallationNotFound)?,
+                    None => project
+                        .installations
+                        .first_mut()
+                        .ok_or(CommandError::InstallationNotFound)?,
+                };
                 if let Some(line_id) = line {
                     if !installation.topology.lines.iter().any(|l| l.id == line_id) {
                         return Err(CommandError::LineNotFound(line_id));
@@ -973,6 +1025,54 @@ impl Command {
                 }
                 Ok(Command::DeleteDevice { id: device_id })
             }
+            Command::RestoreDevice {
+                device,
+                com_objects,
+                program_defaults,
+                installation,
+                line,
+                position,
+            } => {
+                let device = device.clone();
+                let com_objects = com_objects.clone();
+                let program_defaults = program_defaults.clone();
+                let installation_id = *installation;
+                let line = *line;
+                let position = *position;
+                let device_id = device.id;
+                let installation = project
+                    .installations
+                    .iter_mut()
+                    .find(|candidate| candidate.id == installation_id)
+                    .ok_or(CommandError::InstallationNotFound)?;
+                let target = match line {
+                    Some(line_id) => {
+                        &mut installation
+                            .topology
+                            .lines
+                            .iter_mut()
+                            .find(|candidate| candidate.id == line_id)
+                            .ok_or(CommandError::LineNotFound(line_id))?
+                            .devices
+                    }
+                    None => &mut installation.topology.unassigned,
+                };
+                if position > target.len() {
+                    return Err(CommandError::InvalidTopologyPosition {
+                        device: device_id,
+                        position,
+                    });
+                }
+                for com in &com_objects {
+                    project.devices.insert_com_object(com.clone());
+                }
+                for (com_id, defaults) in program_defaults {
+                    project.devices.set_program_defaults(com_id, defaults);
+                }
+                project.devices.insert(device);
+                target.insert(position, device_id);
+                Ok(Command::DeleteDevice { id: device_id })
+            }
             Command::DeleteDevice { id } => {
                 let id = *id;
                 let device_ref = project
@@ -988,11 +1088,37 @@ impl Command {
                 if has_links {
                     return Err(CommandError::DeviceHasLinks(id));
                 }
-                let installation = project
+                let has_project_references = project.installations.iter().any(|installation| {
+                    installation
+                        .buildings
+                        .iter()
+                        .any(|part| part.devices.contains(&id))
+                        || installation
+                            .parameters
+                            .iter()
+                            .any(|parameter| parameter.device == id)
+                }) || project
+                    .devices
+                    .module_instances()
+                    .any(|module| module.device == id);
+                if has_project_references {
+                    return Err(CommandError::DeviceHasDependentData(id));
+                }
+                let installation_index = project
                     .installations
-                    .first_mut()
-                    .ok_or(CommandError::InstallationNotFound)?;
-                let line = remove_device_from_topology(installation, id)?;
+                    .iter()
+                    .position(|installation| {
+                        installation.topology.unassigned.contains(&id)
+                            || installation
+                                .topology
+                                .lines
+                                .iter()
+                                .any(|line| line.devices.contains(&id))
+                    })
+                    .ok_or(CommandError::DeviceNotFound(id))?;
+                let installation = &mut project.installations[installation_index];
+                let installation_id = installation.id;
+                let (line, position) = remove_device_from_topology(installation, id)?;
                 let device = project.devices.remove(id).unwrap();
                 // `remove_com_object` also drops the com object's
                 // `program_defaults` entry (ADR-0027), so the inverse has to
@@ -1012,11 +1138,13 @@ impl Command {
                         program_defaults.push((com_id, defaults));
                     }
                 }
-                Ok(Command::CreateDevice {
+                Ok(Command::RestoreDevice {
                     device,
                     com_objects,
                     program_defaults,
+                    installation: installation_id,
                     line,
+                    position,
                 })
             }
             Command::CreateBuildingPart { part } => {
@@ -2368,6 +2496,7 @@ mod tests {
                     device: device.clone(),
                     com_objects: vec![com.clone()],
                     program_defaults: vec![],
+                    installation: None,
                     line: None,
                 },
             )
@@ -2413,6 +2542,7 @@ mod tests {
                     device: test_device_instance(DeviceId(2), vec![]),
                     com_objects: vec![],
                     program_defaults: vec![],
+                    installation: None,
                     line: Some(LineId(1)),
                 },
             )
@@ -2428,6 +2558,7 @@ mod tests {
                 device: test_device_instance(DeviceId(3), vec![]),
                 com_objects: vec![],
                 program_defaults: vec![],
+                installation: None,
                 line: Some(LineId(99)),
             },
         );
@@ -2470,6 +2601,35 @@ mod tests {
     }
 
     #[test]
+    fn delete_device_refuses_while_project_structures_still_reference_it() {
+        let mut project = test_project_with_one_device(None);
+        project.installations[0]
+            .topology
+            .unassigned
+            .push(DeviceId(1));
+        project.installations[0].buildings.push(BuildingPart {
+            id: BuildingPartId(1),
+            source: source(),
+            name: "Room".into(),
+            number: None,
+            kind: BuildingPartType::Room,
+            default_line: None,
+            completion: CompletionStatus::FinishedDesign,
+            children: vec![],
+            devices: vec![DeviceId(1)],
+            parent: None,
+        });
+        let before = format!("{project:#?}");
+        let mut stack = CommandStack::new();
+
+        let result = stack.do_command(&mut project, Command::DeleteDevice { id: DeviceId(1) });
+
+        assert!(result.is_err());
+        assert_eq!(format!("{project:#?}"), before);
+        assert!(!stack.can_undo());
+    }
+
+    #[test]
     fn deleting_then_undoing_and_redoing_preserves_values_captured_at_delete_time() {
         let mut project = test_project_with_one_device(None);
         let mut stack = CommandStack::new();
@@ -2482,6 +2642,7 @@ mod tests {
                     device,
                     com_objects: vec![com],
                     program_defaults: vec![],
+                    installation: None,
                     line: None,
                 },
             )
@@ -2553,6 +2714,7 @@ mod tests {
                     device,
                     com_objects: vec![com],
                     program_defaults: vec![],
+                    installation: None,
                     line: None,
                 },
             )
@@ -2621,6 +2783,7 @@ mod tests {
                     device,
                     com_objects: vec![com],
                     program_defaults: vec![],
+                    installation: None,
                     line: None,
                 },
             )

@@ -605,7 +605,8 @@ fn check_group_addresses_outside_their_range(
 mod tests {
     use super::*;
     use crate::testutil::{
-        minimal_source_document, reference_kv_source_document, reference_source_document,
+        minimal_source_document, reference_ets6_source_document, reference_kv_source_document,
+        reference_source_document,
     };
 
     #[test]
@@ -634,6 +635,23 @@ mod tests {
             return;
         }
         let doc = reference_kv_source_document();
+        let out = validate(&doc);
+        assert_eq!(out.errors, vec![]);
+        assert_eq!(out.warnings, vec![]);
+    }
+
+    /// The third corpus project, and the one the short-link check exists
+    /// for: 596 of the 622 `Send`/`Receive` links this task's fixtures
+    /// cover are the ETS6 schema-23 re-export's, not the ETS4 or KV
+    /// projects'. If this ever reports anything, the short-id resolution
+    /// has drifted from the mapper's on the corpus it matters on most.
+    #[test]
+    fn the_ets6_schema_23_reference_project_validates_clean() {
+        if !crate::testutil::corpus_available() {
+            eprintln!("skip: OriginalData/ corpus not present (gitignored, local-only)");
+            return;
+        }
+        let doc = reference_ets6_source_document();
         let out = validate(&doc);
         assert_eq!(out.errors, vec![]);
         assert_eq!(out.warnings, vec![]);

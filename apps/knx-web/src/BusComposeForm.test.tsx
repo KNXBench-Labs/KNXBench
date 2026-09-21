@@ -17,6 +17,8 @@ const apiMock = vi.hoisted(() => ({
 
 vi.mock("./api", () => ({
   ...apiMock,
+  defaultDptInputFormat: (dpt: string) =>
+    dpt === "DPST-1-1" ? "canonical" : dpt === "DPST-5-1" ? "decimal" : "canonical",
   errorMessage: (error: unknown) => (error instanceof Error ? error.message : String(error)),
 }));
 
@@ -107,7 +109,12 @@ describe("BusComposeForm", () => {
 
     await clickSend();
 
-    expect(apiMock.writeBusValue).toHaveBeenCalledWith("1/2/3", "DPST-1-1", "on");
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith(
+      "1/2/3",
+      "DPST-1-1",
+      "on",
+      "canonical",
+    );
   });
 
   it("an explicit DPT typed in the field wins over the prefilled resolution", async () => {
@@ -119,7 +126,7 @@ describe("BusComposeForm", () => {
 
     await clickSend();
 
-    expect(apiMock.writeBusValue).toHaveBeenCalledWith("1/2/3", "DPST-5-1", "50");
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith("1/2/3", "DPST-5-1", "50", "decimal");
   });
 
   it("blocks the send and shows the verbatim no-DPT message for a None resolution — writeBusValue is never called", async () => {
@@ -159,7 +166,12 @@ describe("BusComposeForm", () => {
 
     await clickSend();
 
-    expect(apiMock.writeBusValue).toHaveBeenCalledWith("1/2/3", "DPST-1-1", "on");
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith(
+      "1/2/3",
+      "DPST-1-1",
+      "on",
+      "canonical",
+    );
   });
 
   it("an unknown resolution (hand-typed or edited destination) defers to the server instead of guessing", async () => {
@@ -171,7 +183,7 @@ describe("BusComposeForm", () => {
 
     await clickSend();
 
-    expect(apiMock.writeBusValue).toHaveBeenCalledWith("9/9/9", null, "on");
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith("9/9/9", null, "on", null);
   });
 
   it("editing the destination after a None prefill drops the stale resolution, so the next send is not pre-blocked", async () => {
@@ -186,7 +198,7 @@ describe("BusComposeForm", () => {
     // The `"none"` resolution described `1/2/3`, not `9/9/9` — once the
     // user retypes the destination, this component no longer has any
     // basis to reject client-side and defers to the server instead.
-    expect(apiMock.writeBusValue).toHaveBeenCalledWith("9/9/9", null, "on");
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith("9/9/9", null, "on", null);
   });
 
   it("shows the server's echoed encodedPayload on success", async () => {

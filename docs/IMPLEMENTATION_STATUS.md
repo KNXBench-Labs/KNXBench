@@ -9674,3 +9674,28 @@ fails there — 867 malformed ids and 0 enriched respectively. Unit tests:
 the three `RefId` shapes, which schema writes which, and where the
 reconstruction does and does not happen). `LIMITATION_TRIAGE.md` untouched,
 per instruction.
+
+## 2026-09-21 — T07: DPT writes declare their grammar and rulings leave the footnotes
+
+The bus-facing codec now accepts an explicit `DptInputFormat` (`Canonical`,
+`Decimal`, `Hexadecimal`, `Binary`, or `Text`). `encode` rejects values that do
+not match the declared grammar; the old permissive behavior is available only
+as the deliberately named `encode_inferred_format` compatibility helper.
+`default_input_format` chooses solely from `DptRef`, never from input text.
+CLI writes expose `--input-format`, HTTP writes accept `inputFormat`, and the
+web compose form sends its deterministic DPT-family format explicitly. Omitted
+CLI/HTTP fields retain compatibility through the same per-DPT default.
+
+`encoding_rulings(DptRef)` makes every §61 project judgment in main types 1–30
+queryable through stable identifiers with its Standard context and the chosen
+behavior. It covers the 5.003 angle mapping, 6.020 format-range enforcement,
+8.010/9.* sentinel collisions, scene-number display offset, both 19.* date/time
+decisions, format-level-only validation for the enumeration/bit-set families,
+strict NUL handling for 24/28, and the corrected signed-64 range. No wire
+encoding changed. The eighteen 200-series LTE/system DPTs remain an accepted
+scope exclusion because the stack has no LTE addressing path.
+
+TDD pinned format mismatch, prefix rejection, deterministic defaults, CLI and
+HTTP propagation, web request shape, and the complete ruling inventory. No KNX
+hardware or network transport was opened; all send assertions use dry-run or a
+fake tunnel. Full gate results are recorded in the T07 handover log.

@@ -1,5 +1,29 @@
 - **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **In Progress:** T22 read-only mutation audit complete. Outside `knx-core`,
+  22 production field-root mutation sites were classified: 12 legitimate
+  construction/import sites, two shared enrichment implementation sites, and
+  eight live allocator sites. Nine live bypass call points remain: those eight
+  allocator mutations plus post-command product enrichment in
+  `create_device_impl`. No live non-command write to `schema_version`,
+  `strings`, `info`, or `installations` was found. Test/fixture mutations were
+  inventoried separately.
+- **Pending/Next Steps:** Architectural gate: present and obtain approval for
+  the T22 design before writing its ADR/spec or product code. Recommended
+  design is to replace live allocator mutation with cloned allocators plus an
+  atomic `Command::Batch([SetIdAllocators, domain command])`, retain narrowly
+  documented construction/enrichment exceptions, and add a tested
+  `xtask check-project-mutation` gate with exact-site allowlisting. The ADR
+  must state that this is a source gate, not full type-system sealing.
+- **Notes Claude:** `/root/cavecrew_investigator_t22` independently found the
+  same bypass class and identified `reconcile_scan_impl` as the existing good
+  batch pattern. Do not implement until the user approves the presented T22
+  architectural direction.
+
+---
+
+- **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
 - **Completed:** T21 project-notes research artifact committed and pushed as
   `8d989f7`. ADR-0031 chooses one ordered, project-owned note collection with
   typed entity targets, explicit delete disposition, plain text only, report

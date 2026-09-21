@@ -714,6 +714,12 @@ Dockerfile, `docs/GAP_ANALYSIS_ETS.md` row E5, and
 all say so now; `apps/knx-cli`'s `bus discover` also names the cause on
 an empty result instead of looking like a quiet network.
 
+**Reachability update, 2026-09-22.** `POST /api/bus/discover` and the web
+**Discover gateways** action now ship in `knx-server`, so the documented host
+network requirement applies to the standard Docker image, not only to a
+separately containerised CLI. Bridge mode remains valid when discovery is not
+needed and the gateway endpoint is entered manually.
+
 **Entry condition.** A project can be opened and its group addresses resolved,
 so that captured telegrams have something to resolve against.
 

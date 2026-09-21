@@ -21,15 +21,15 @@ A KNXnet/IP interface announces itself when asked. KNXBench sends a multicast
 `SEARCH_REQUEST` to the standard group `224.0.23.12` on port `3671`, and every
 interface that hears it answers with its name and address.
 
-Discovery lives in the command line only:
+Discovery is available in the UI and on the command line:
 
 ```bash
 knx bus discover
 ```
 
-The graphical bus monitor has no discovery button. If you do not already know your
-interface's address, run the command above, or read the address off the device's own
-configuration page.
+The graphical bus monitor offers **Discover gateways** through the same
+server-side discovery call. The CLI remains useful for terminal diagnostics.
+Line scan still requires a known control endpoint to be entered manually.
 
 > **Note**
 >

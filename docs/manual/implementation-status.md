@@ -161,11 +161,11 @@ raised. A project that has been imported stays in `.knxdb`.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Gateway discovery | ✅ Implemented, command line only | No graphical equivalent — [Bus monitor and KNXnet/IP](user-guide/07-bus-and-interfaces.md) |
+| Gateway discovery | ✅ Implemented | CLI and graphical bus monitor — [Bus monitor and KNXnet/IP](user-guide/07-bus-and-interfaces.md) |
 | Tunnelling: connect, monitor, decode | ✅ Implemented | Verified live against one gateway; a 34-minute session read 1,299 telegrams with no drops |
 | Routing (multicast) | 🟡 Partial or experimental, command line only | The graphical monitor is tunnelling only — [§62](../KNOWN_LIMITATIONS.md#62-the-group-monitor-gui-t15-is-tunnelling-only-single-session-client-filtered-and-only-its-passive-receive-path-has-real-gateway-evidence) |
 | Sending a group value write | ✅ Implemented | The only bus write KNXBench performs; project undo does not cover it |
-| Line scan | 🟡 Partial or experimental, command line only | Live bus load, cannot identify products or cross couplers — [§72](../KNOWN_LIMITATIONS.md#72-line-scan-t17-an-unthrottled-scan-is-a-live-bus-cost-not-a-theoretical-one--shipped-2026-09-13-still-true) |
+| Line scan | 🟡 Partial or experimental | CLI and graphical diagnostics; live bus load, cannot identify products or cross couplers — [§72](../KNOWN_LIMITATIONS.md#72-line-scan-t17-an-unthrottled-scan-is-a-live-bus-cost-not-a-theoretical-one--shipped-2026-09-13-still-true) |
 | Verification against more than one gateway model | 🟡 Partial or experimental | Exactly one model so far |
 | USB and other non-IP interfaces | ❌ Not implemented | KNXnet/IP only |
 

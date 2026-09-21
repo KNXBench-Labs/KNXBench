@@ -63,6 +63,18 @@ docker run -d --name knxbench -p 8484:8080 \
 curl -sf http://127.0.0.1:8484/healthz
 ```
 
+That published-port form supports project work and manually entered gateway
+addresses, but Docker's default bridge blocks the multicast used by the
+**Discover gateways** button. On Linux, use host networking when discovery is
+needed (host mode ignores `-p`, hence `KNX_PORT`):
+
+```bash
+docker run -d --name knxbench --network host \
+  -e KNX_PORT=8484 \
+  -e KNX_AUTH_PASSWORD='pick something long and boring' \
+  -v "$(pwd)/data:/data" knxbench-server
+```
+
 Then open <http://127.0.0.1:8484> and sign in with that password. Your projects live in
 `data/` on the host, so they survive container restarts.
 

@@ -123,6 +123,14 @@ fn run_cli(args: &[&str]) -> Output {
         .expect("failed to run the knx binary")
 }
 
+#[test]
+fn usage_names_every_explicit_dpt_input_format() {
+    let out = run_cli(&[]);
+    assert!(!out.status.success());
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(stderr.contains("--input-format <canonical|decimal|hexadecimal|binary|text>"));
+}
+
 /// Mirrors `apps/knx-cli/src/main.rs`'s private `format_group_value_payload`
 /// (there is no lib target to import it from — `apps/knx-cli` is
 /// binary-only by design, spec E4-D9). Kept to these four lines
@@ -138,7 +146,7 @@ fn payload_string(v: &GroupValue) -> String {
 #[test]
 fn dry_run_with_explicit_dpt_prints_the_expected_payload_and_exits_0() {
     let dpt = DptRef::parse("DPST-9-1").unwrap();
-    let expected = knx_core::encode(dpt, "21.5").unwrap();
+    let expected = knx_core::encode(dpt, "21.5", knx_core::DptInputFormat::Decimal).unwrap();
 
     let out = run_cli(&[
         "bus",
@@ -166,13 +174,46 @@ fn dry_run_with_explicit_dpt_prints_the_expected_payload_and_exits_0() {
 }
 
 #[test]
+fn omitted_format_keeps_the_legacy_fixed_width_binary_bit_set() {
+    let dpt = DptRef::parse("DPST-21-1").unwrap();
+    let expected = knx_core::encode_inferred_format(dpt, "00000010").unwrap();
+    assert_eq!(expected, GroupValue::Bytes(vec![0x02]));
+
+    let out = run_cli(&[
+        "bus",
+        "write",
+        "--gateway",
+        "127.0.0.1:3671",
+        "--dpt",
+        "DPST-21-1",
+        "--dry-run",
+        "1/2/3",
+        "00000010",
+    ]);
+
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(
+        String::from_utf8(out.stdout).unwrap(),
+        format!(
+            "1/2/3 DPST-21-1 00000010 -> {}\n",
+            payload_string(&expected)
+        )
+    );
+}
+
+#[test]
 fn dry_run_with_a_project_resolving_to_a_single_dpt_encodes_using_it() {
     let dir = tempfile::tempdir().unwrap();
     let store = dir.path().join("project.knxdb");
     write_store(&store, &project_with_group_address("1/2/3", &[(1, 1)]));
 
     let dpt = DptRef::parse("DPST-1-1").unwrap();
-    let expected = knx_core::encode(dpt, "on").unwrap();
+    let expected = knx_core::encode(dpt, "on", knx_core::DptInputFormat::Canonical).unwrap();
 
     let out = run_cli(&[
         "bus",
@@ -269,6 +310,50 @@ fn an_unparsable_value_for_the_given_dpt_fails_before_connecting() {
     let stderr = String::from_utf8(out.stderr).unwrap();
     assert!(stderr.contains("DPST-9-1"), "{stderr}");
     assert!(stderr.contains("not-a-number"), "{stderr}");
+}
+
+#[test]
+fn dry_run_uses_the_declared_hexadecimal_format_without_prefix_inference() {
+    let out = run_cli(&[
+        "bus",
+        "write",
+        "--gateway",
+        "127.0.0.1:3671",
+        "--dpt",
+        "DPST-21-1",
+        "--input-format",
+        "hexadecimal",
+        "--dry-run",
+        "1/2/3",
+        "07",
+    ]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(String::from_utf8(out.stdout).unwrap().contains("[07]"));
+}
+
+#[test]
+fn declared_decimal_format_rejects_a_hexadecimal_prefix_before_connecting() {
+    let out = run_cli(&[
+        "bus",
+        "write",
+        "--gateway",
+        "127.0.0.1:3671",
+        "--dpt",
+        "DPST-21-1",
+        "--input-format",
+        "decimal",
+        "--dry-run",
+        "1/2/3",
+        "0x07",
+    ]);
+    assert_ne!(out.status.code(), Some(0));
+    let stderr = String::from_utf8(out.stderr).unwrap();
+    assert!(stderr.contains("declared format decimal"), "{stderr}");
 }
 
 #[test]

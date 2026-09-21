@@ -75,6 +75,16 @@ function setInputValue(selector: string, value: string) {
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+function setSelectValue(selector: string, value: string) {
+  const select = host!.querySelector<HTMLSelectElement>(selector)!;
+  const setter = Object.getOwnPropertyDescriptor(
+    window.HTMLSelectElement.prototype,
+    "value",
+  )!.set!;
+  setter.call(select, value);
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 async function clickSend() {
   const button = Array.from(host!.querySelectorAll("button")).find((b) => b.textContent === "Send")!;
   await act(async () => {
@@ -107,7 +117,12 @@ describe("BusComposeForm", () => {
 
     await clickSend();
 
-    expect(apiMock.writeBusValue).toHaveBeenCalledWith("1/2/3", "DPST-1-1", "on");
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith(
+      "1/2/3",
+      "DPST-1-1",
+      "on",
+      null,
+    );
   });
 
   it("an explicit DPT typed in the field wins over the prefilled resolution", async () => {
@@ -119,7 +134,24 @@ describe("BusComposeForm", () => {
 
     await clickSend();
 
-    expect(apiMock.writeBusValue).toHaveBeenCalledWith("1/2/3", "DPST-5-1", "50");
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith("1/2/3", "DPST-5-1", "50", null);
+  });
+
+  it("sends a user-selected input grammar instead of inferring from the value", async () => {
+    await renderForm("1/2/3", { kind: "single", dpt: "DPST-21-1" });
+    await act(async () => {
+      setInputValue(".bus-compose-value", "00000010");
+      setSelectValue(".bus-compose-input-format", "binary");
+    });
+
+    await clickSend();
+
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith(
+      "1/2/3",
+      "DPST-21-1",
+      "00000010",
+      "binary",
+    );
   });
 
   it("blocks the send and shows the verbatim no-DPT message for a None resolution — writeBusValue is never called", async () => {
@@ -159,7 +191,12 @@ describe("BusComposeForm", () => {
 
     await clickSend();
 
-    expect(apiMock.writeBusValue).toHaveBeenCalledWith("1/2/3", "DPST-1-1", "on");
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith(
+      "1/2/3",
+      "DPST-1-1",
+      "on",
+      null,
+    );
   });
 
   it("an unknown resolution (hand-typed or edited destination) defers to the server instead of guessing", async () => {
@@ -171,7 +208,20 @@ describe("BusComposeForm", () => {
 
     await clickSend();
 
-    expect(apiMock.writeBusValue).toHaveBeenCalledWith("9/9/9", null, "on");
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith("9/9/9", null, "on", null);
+  });
+
+  it("passes an explicit grammar even when the server must resolve the DPT", async () => {
+    await renderForm("", { kind: "unknown" });
+    await act(async () => {
+      setInputValue(".bus-compose-destination", "9/9/9");
+      setInputValue(".bus-compose-value", "00000010");
+      setSelectValue(".bus-compose-input-format", "binary");
+    });
+
+    await clickSend();
+
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith("9/9/9", null, "00000010", "binary");
   });
 
   it("editing the destination after a None prefill drops the stale resolution, so the next send is not pre-blocked", async () => {
@@ -186,7 +236,7 @@ describe("BusComposeForm", () => {
     // The `"none"` resolution described `1/2/3`, not `9/9/9` — once the
     // user retypes the destination, this component no longer has any
     // basis to reject client-side and defers to the server instead.
-    expect(apiMock.writeBusValue).toHaveBeenCalledWith("9/9/9", null, "on");
+    expect(apiMock.writeBusValue).toHaveBeenCalledWith("9/9/9", null, "on", null);
   });
 
   it("shows the server's echoed encodedPayload on success", async () => {

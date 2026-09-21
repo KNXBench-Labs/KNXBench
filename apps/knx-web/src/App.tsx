@@ -22,7 +22,7 @@ import type { CommandContext } from "./commandRegistry";
 import SettingsPanel from "./SettingsPanel";
 import Dashboard from "./Dashboard";
 import LogPanel from "./LogPanel";
-import BusMonitorPanel from "./BusMonitorPanel";
+import BusDiagnosticsPanel from "./BusDiagnosticsPanel";
 import { publishProjectContext } from "./busContext";
 import { ensureBusDiscovery } from "./busDiscovery";
 import { openCompanionWindow } from "./diagnosticsWindow";
@@ -832,7 +832,7 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
           </nav>
         </ResizablePane>}
         <div className="workbench-center">
-          {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusMonitorPanel projectOpen={tree !== null} /> : tree ? (
+          {logOpen ? <LogPanel tree={tree} refreshKey={logVersion} /> : monitorOpen ? <BusDiagnosticsPanel projectOpen={tree !== null} /> : tree ? (
             view === "overview" ? <Dashboard tree={tree} /> : <StructureWorkspace tree={tree} view={view} selection={selection} buildingScope={buildingScope} onBuildingScope={setBuildingScope}
               rangeScope={addressScope} onRangeScope={setAddressScope}
               multiSelection={multiSelection} onItemClick={onItemClick} onTreeUpdate={handleTreeUpdate}

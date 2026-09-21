@@ -9350,7 +9350,17 @@ directory; multi-user is parked). No live synchronization between two open
 windows: a second window reads the record when it loads and does not learn
 about the first window's change until it reloads.
 
-## 2026-09-21 — T26 selectable group-address notation (ADR-0030, branch `t26-ga-notation`)
+## 2026-09-21 — T26 group addresses use fixed slash notation (ADR-0030, branch `t26-ga-notation`)
+
+**Current ruling (supersedes the historical implementation record below).** KNXBench now
+renders structured group addresses with `/` everywhere and offers no notation selector or
+stored notation preference. Dotted two- and three-level forms remain accepted only as
+compatible input and search aliases, then canonicalize to slash notation. This follows the
+KNX specification examples cited in ADR-0030 and keeps group addresses visually distinct
+from dotted individual addresses. The remainder of this entry records the earlier selectable
+implementation and is retained only as history; it no longer describes current behavior.
+
+**Historical implementation record (superseded).**
 
 A user who reads `1.2.3` no longer has to read somebody else's punctuation.
 The notation is a preference, it applies to every group address the interface
@@ -9417,7 +9427,7 @@ Inspector's section headings, the search overlay's kind groups — and the
 supplementary one is a `.ga-address` class taking `--knx-accent-tertiary`,
 a theme token defined by all five themes (ADR-0022), with tabular figures so
 a column of addresses lines up. What is left over is
-[KNOWN_LIMITATIONS.md §123](KNOWN_LIMITATIONS.md#123-with-dots-selected-a-group-address-and-an-individual-address-are-spelled-alike),
+[KNOWN_LIMITATIONS.md §123](KNOWN_LIMITATIONS.md#123-resolved-group-addresses-no-longer-use-dotted-display-notation),
 written honestly rather than pretending the notation has no cost.
 
 **The control** sits in `SettingsPanel.tsx` beside the accent and density
@@ -9702,3 +9712,31 @@ recommendations, CLI and HTTP propagation, visible web format selection, both
 known- and server-resolved DPT paths, and the complete ruling inventory. No KNX
 hardware or network transport was opened; all send assertions use dry-run or a
 fake tunnel. Full gate results are recorded in the T07 handover log.
+
+## 2026-09-21 — T08: read-only line diagnostics reaches the UI
+
+The server now exposes an incremental line-scan session API: `POST
+/api/bus/scan/estimate`, `POST /api/bus/scan/start`, `GET
+/api/bus/scan/results?since=…`, and `POST /api/bus/scan/cancel`. Results are retained with a
+monotonic cursor, binds polling and cancellation to an expected session id, cancellation stops
+the scan task and disconnects its tunnel, and a second active scan is rejected. Terminal
+snapshots cannot expose completion before their final rows. The estimate and runtime use the same `ScanPlan` and
+`ProbePolicy` data; address zero is rejected as the line-coupler address.
+
+The diagnostics workspace shows the response/pacing budget before start and states that
+transport overhead is excluded,
+progress during execution, cancellation, and all six `ProbeOutcome` states without folding
+uncertain evidence into occupied or vacant. Exclusions come from settings, are visible and
+editable, and require a second deliberate click before removal. The shipped exclusion list
+is empty. Polling is single-flight so the same cursor cannot append results twice, and result
+labels follow the active UI language. The UI contains no write or commissioning action.
+
+Server integration tests cover estimate validation, a complete fake scan, cancellation, and
+prove an excluded synthetic address never reaches the transport. Frontend tests cover the
+estimate, six distinct outcomes, localization, non-overlapping polling, cancellation, and
+protected removal. No real gateway, LAN endpoint, or KNX device was contacted.
+
+T09 can consume `LineScanResultsResponse`: it provides the session id and status, monotonic
+`nextSince`, completed/total counts, omitted addresses, and incremental address/outcome
+records. Project reconciliation remains deliberately outside T08 and must turn those records
+into a previewable, undoable diff rather than mutating the project during the scan.

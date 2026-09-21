@@ -149,8 +149,13 @@ export function saveGaNotation(storage: Pick<Storage, "setItem">, notation: GaNo
  *
  * Deliberately not part of `index.html`'s pre-mount bootstrap. That script
  * exists for the attributes the first paint is styled by; a group address
- * cannot be on screen before the project tree has been fetched, which is
- * a round trip that `initSettings()` has long since beaten.
+ * needs no such head start. `App` never fetches a project at mount (`tree`
+ * starts `null`; the only mount-time fetch is `App.tsx`'s product-languages
+ * request), and `settingsStorage` reads the synchronous `localStorage` cache
+ * (`settingsStore.ts`), not a network round trip — `initSettings()`'s own
+ * fetch just refreshes that cache once the server answers. So a returning
+ * window already has the right notation on first paint, without needing
+ * `initSettings()` to have won any race to get there.
  */
 export function useGaNotation(): GaNotation {
   const revision = useSettingsRevision();

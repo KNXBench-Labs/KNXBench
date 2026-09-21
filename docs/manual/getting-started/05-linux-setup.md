@@ -81,16 +81,18 @@ problem you can diagnose from the output.
 This is documented and was locally verified, not guessed: see
 [`docs/KNOWN_LIMITATIONS.md` §79](../../KNOWN_LIMITATIONS.md#79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry).
 On Linux, running that container with `--network host` instead puts the
-request on the real network interface, exactly like running the CLI outside
-a container at all. This does not apply to the `knxbench-server` Docker image
-itself — it has no discovery route in its HTTP API, only tunnelling, so its
-default bridge networking is fine as shipped.
+request on the real network interface, exactly like running the CLI outside a
+container. This now applies to the shipped `knxbench-server` image too:
+**Discover gateways** in the web UI calls `POST /api/bus/discover`, which uses
+the same multicast implementation. Bridge mode still supports project work,
+bus tunnelling to a manually entered endpoint, and all ordinary HTTP traffic.
 
 > **Tip**
 >
-> `--network host` only works on Linux hosts. There is no equivalent for
-> other platforms, which is one more small reason this project calls itself
-> Linux-first rather than Linux-compatible.
+> The verified recommendation is Linux Docker Engine with `--network host`.
+> Docker Desktop 4.34 and later has an opt-in host-networking feature, but
+> KNXBench has not verified that layer for multicast discovery. Linux-first
+> remains the supported boundary.
 
 We do not give general firewall advice beyond what is documented above — your
 network, your rules.

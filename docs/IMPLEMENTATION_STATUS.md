@@ -596,11 +596,11 @@ Known gaps added this cycle (not bugs, scope decisions):
   implemented — no gateway encountered so far has needed them.
 - The discovery multicast group/port and the collection timeout are
   hardcoded constants; no CLI override exists yet.
-- Discovery does not work unmodified inside the `knx-server` Docker
-  container (needs `--network host`) — a known, not-yet-solved
-  constraint (ROADMAP.md, Session 6 entry); `knx-server` does not call
-  `discover` yet, so nothing regresses, but the gap is now reachable from
-  a CLI a container user might reasonably try. **Documented, 2026-09-13
+- Discovery in the `knx-server` Docker container needs `--network host`.
+  Since `POST /api/bus/discover` shipped, the web bus monitor reaches this
+  path too; bridge mode returns an empty discovery result while
+  project work and manually configured tunnelling remain available.
+  **Documented, 2026-09-13; corrected for the HTTP route 2026-09-22
   (backlog E5):** this stays a deployment constraint, not a fix — see the
   E5 entry below and [KNOWN_LIMITATIONS.md §79](KNOWN_LIMITATIONS.md#79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry).
 
@@ -730,8 +730,13 @@ round trip until a later cycle's incremental-sync pass covers all of
 them together. 49 Rust tests added across
 `crates/knx-core`/`crates/knx-projection`/`apps/knx-server`.
 
-**Backlog E5 (2026-09-13) — Docker discovery documented, not coded
-around.** `discover()` (`crates/knx-net/src/client.rs:146`) needs IP
+**Backlog E5 (2026-09-13; reachability updated 2026-09-22) — Docker
+discovery documented, not coded around.** The server and web UI now expose
+discovery through `POST /api/bus/discover`; the 2026-09-13 statement below
+that only a separately containerised CLI could reach it is retained as the
+historical measurement. Current Docker, README, and manual text require host
+networking for the web action too. `discover()`
+(`crates/knx-net/src/client.rs:146`) needs IP
 multicast, which Docker's default bridge network does not carry — a
 constraint carried since the web/Docker deployment target and Session 6
 Cycle 3, never fixed because there is no honest fix: no multicast relay,
@@ -741,8 +746,8 @@ did establish, and verify against actual sources rather than assume:
 `apps/knx-server`'s Dockerfile builds and ships only the `knx-server`
 binary — `grep -rn discover apps/knx-server/src/` finds no discovery
 route — so the documented `docker run` deployment path in README.md
-cannot reach `discover()` at all today; the gap is reachable only by
-running `knx-cli` inside some other container a developer builds. Docker's
+could not reach `discover()` then; the gap was reachable only by running
+`knx-cli` inside some other container a developer built. Docker's
 own docs ([bridge](https://docs.docker.com/engine/network/drivers/bridge/),
 [host](https://docs.docker.com/engine/network/drivers/host/)) confirm the
 NAT/publish model that explains the failure and confirm `--network host`

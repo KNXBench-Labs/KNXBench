@@ -27,9 +27,9 @@ ENV KNX_DATA_DIR=/data
 ENV KNX_PORT=8080
 VOLUME /data
 EXPOSE 8080
-# knx-server has no KNXnet/IP discovery route today, so this image's default
-# bridge networking is fine as-is. If discovery ever moves into the HTTP API,
-# or an image bundles the knx-cli binary, it will need `docker run --network
-# host` (Linux-only) — the default bridge does not carry the IP multicast
-# discovery depends on. See docs/KNOWN_LIMITATIONS.md #79.
+# `POST /api/bus/discover` sends KNXnet/IP multicast. Docker's default bridge
+# does not carry that request onto the LAN, so run this image with
+# `--network host` on Linux when gateway discovery is needed. Project editing
+# and manually entered unicast endpoints still work through the bridge. See
+# docs/KNOWN_LIMITATIONS.md #79.
 ENTRYPOINT ["/usr/local/bin/knx-server"]

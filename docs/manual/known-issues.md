@@ -349,7 +349,8 @@ published, and the version number is not a promise that anything is finished.
 
 ### Discovery does not work inside Docker's default network
 
-- **Affected:** KNXnet/IP gateway discovery from a container.
+- **Affected:** KNXnet/IP gateway discovery from a container, including the
+  web UI's **Discover gateways** action.
 - **Limitation:** discovery needs IP multicast, which the default bridge
   network does not carry.
 - **Workaround:** the host network, as above, or configure the gateway

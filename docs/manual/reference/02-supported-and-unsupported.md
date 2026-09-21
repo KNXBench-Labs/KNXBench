@@ -160,7 +160,7 @@ secured installation cannot currently be fully represented or monitored by KNXBe
 
 | Item | Status | Evidence |
 | --- | --- | --- |
-| KNXnet/IP discovery | ✅ Implemented, command line only | `knx bus discover`, no graphical equivalent — [Bus monitor and KNXnet/IP](../user-guide/07-bus-and-interfaces.md) |
+| KNXnet/IP discovery | ✅ Implemented | CLI and graphical bus monitor — [Bus monitor and KNXnet/IP](../user-guide/07-bus-and-interfaces.md) |
 | Tunneling: connect, monitor, decode telegrams | ✅ Implemented | Verified live against one real gateway; a 34-minute session read 1,299 telegrams with zero drops and 100% of destination names resolved — [COMPATIBILITY.md §3](../../COMPATIBILITY.md#3-expected-but-unverified) |
 | Routing (multicast) | 🟡 Partial or experimental, command line only | `knx bus route-monitor` and `knx bus route-send`; the graphical bus monitor supports tunneling only — [Bus monitor and KNXnet/IP](../user-guide/07-bus-and-interfaces.md) |
 | Sending a group-value write from the bus monitor or the command line | ✅ Implemented | The only kind of bus write KNXBench performs; project Undo does not cover it |

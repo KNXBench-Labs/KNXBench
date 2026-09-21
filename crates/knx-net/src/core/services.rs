@@ -174,7 +174,7 @@ mod tests {
 
     fn hpai() -> Hpai {
         Hpai {
-            addr: Ipv4Addr::new(10, 0, 0, 5),
+            addr: Ipv4Addr::new(203, 0, 113, 5),
             port: 50000,
         }
     }

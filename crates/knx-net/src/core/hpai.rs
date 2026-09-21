@@ -84,11 +84,11 @@ mod tests {
     #[test]
     fn encode_then_decode_round_trips() {
         let hpai = Hpai {
-            addr: Ipv4Addr::new(172, 18, 250, 1),
+            addr: Ipv4Addr::new(192, 0, 2, 1),
             port: 3671,
         };
         let bytes = hpai.encode();
-        assert_eq!(bytes, [0x08, 0x01, 172, 18, 250, 1, 0x0E, 0x57]);
+        assert_eq!(bytes, [0x08, 0x01, 192, 0, 2, 1, 0x0E, 0x57]);
 
         let (decoded, rest) = Hpai::decode(&bytes).unwrap();
         assert_eq!(decoded, hpai);
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn decode_leaves_trailing_bytes_for_the_caller() {
         let mut bytes = Hpai {
-            addr: Ipv4Addr::new(10, 0, 0, 1),
+            addr: Ipv4Addr::new(203, 0, 113, 1),
             port: 1,
         }
         .encode()

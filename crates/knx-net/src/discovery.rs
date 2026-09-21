@@ -111,7 +111,7 @@ mod tests {
 
     fn control_hpai() -> Hpai {
         Hpai {
-            addr: Ipv4Addr::new(172, 18, 250, 1),
+            addr: Ipv4Addr::new(192, 0, 2, 1),
             port: 3671,
         }
     }

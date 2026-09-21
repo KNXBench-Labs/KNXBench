@@ -9139,8 +9139,8 @@ saw) reported:
   @GroupAddressRefId`.
 - `check_duplicate_ids` walked areas, lines, devices, binary data, group
   ranges and group addresses, but not **45 `BuildingPart`/`Space` ids**
-  (22 + 22 + 1). `map.rs::allocate_building_part_ids` keys a `HashMap` by
-  that id, so a duplicate would silently merge two rooms into one —
+  (22 + 22 + 1). `map.rs::allocate_ids` keys a `BTreeMap<String, BuildingPartId>`
+  by that id, so a duplicate would silently merge two rooms into one —
   exactly the "never silently discard information" failure mode, and
   `xpath.rs`'s own header had already nominated this stage for the job.
 

@@ -174,7 +174,7 @@ through `ImportReport::errors`, tagged `stage: "validate"`.
 | Check | Severity | Scope |
 | --- | --- | --- |
 | Duplicate `@Id` (`Area`, `Line`, `DeviceInstance`, `BinaryData`, `GroupRange`, `GroupAddress`, `BuildingPart`) | Error | Document-wide — ETS ids embed their installation |
-| Dangling `Connectors/Send|Receive/@GroupAddressRefId` (schema 11) | Error | Document-wide, same reason |
+| Dangling `Connectors/Send\|Receive/@GroupAddressRefId` (schema 11) | Error | Document-wide, same reason |
 | Dangling `Links` target (schema ≥21, short ids such as `GA-3`) | Error | Per installation — a short id embeds no installation |
 | Two devices on one individual address | Warning | Per installation |
 | Two group addresses on one address | Warning | Per installation |

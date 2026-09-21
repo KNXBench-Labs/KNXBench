@@ -411,6 +411,42 @@ exists now that there is no second document to compare against. The
 empty-string gap is a real import-side limitation and is recorded as such
 in `KNOWN_LIMITATIONS.md`.
 
+### 9.2 Communication-object `RefId` shapes, and which one a schema writes
+
+A `ComObjectInstanceRef/@RefId` — and, at schema ≥21, every id in
+`GroupObjectTree/@GroupObjectInstances` — comes in three shapes. The
+importer reads all three, and reads nothing else.
+
+| Shape | Example | Where seen | How the object number is obtained |
+| --- | --- | --- | --- |
+| Fully qualified | `M-006A_A-0001-22-26C0-O0079_O-0_R-10001` | ETS4, schema 11 | `values::com_object_number` — the `O-<n>` of the final two segments |
+| Module-based | `MD-2_M-1_MI-1_O-2-0_R-4` | KV demo, schema 21 | `values::module_com_object_ref` — the *second* numeral of `O-<a>-<b>` |
+| Device-local | `O-3_R-10005` | ETS 6.3.0, schema 23 | `values::device_local_com_object_number` — the `O-<n>` head |
+
+The device-local shape carries no application-program prefix because it does
+not need one: the `DeviceInstance` that holds it already names its own
+`Hardware2ProgramRefId`, and the container's own `M-<n>/Hardware.xml`
+resolves that to exactly one `ApplicationProgramRef`. The prefix is implied
+by position, not missing. Measured over the whole ETS 6.3.0 reference
+project: all 867 of its `GroupObjectTree` ids and all 691 of its
+`ComObjectInstanceRef/@RefId`s are two-segment, and reattaching each one's
+own device program names an existing `ComObjectRef/@Id` 867 times out of
+867, with the `ComObject/@Number` behind it equal to the id's own `O-<n>`
+digits every time.
+
+**Where the reconstruction happens, and where it does not.** The project
+model keeps the id exactly as the file wrote it
+(`ComObjectInstance::source::ets_id`); nothing is rewritten on the way in.
+The fully-qualified form is rebuilt only at the moment of a product-database
+lookup (`knx_productdb::com_object_lookup_id`), using the program *that
+device* resolved to. An id whose shape is none of the three above is
+reported as `MalformedRefId` and mapped to object number `0`; a rebuilt id
+the database does not know is reported as
+`EnrichmentIssue::ComObjectRefMissing`. Neither is ever attached to a
+different device's object — the same rule `KNOWN_LIMITATIONS.md` §34 sets,
+applied on the read side. Evidence base and its limits:
+`KNOWN_LIMITATIONS.md` §124.
+
 ## 10. Product database ingest
 
 **Implemented (Session 4).** `<M-xxxx>/*` container entries (catalog,

@@ -174,15 +174,50 @@ fn module_ref_id(program_id: &str, device_ref_id: &str) -> Option<String> {
     Some(format!("{program_id}_MD-{md_digits}_{tail}"))
 }
 
+/// True for ETS 6's two-segment, device-local `ComObjectInstanceRef/@RefId`
+/// shape (`O-<n>_R-<m>`) — exactly one underscore, `O-` then digits, `R-`
+/// then digits. The productdb-local twin of
+/// `knx-etsproj::values::is_device_local_ref_id`, duplicated for the same
+/// reason `module_ref_id` above is: a new knx-productdb → knx-etsproj
+/// dependency edge is not worth eight lines.
+///
+/// Strict on purpose. A shape this does not recognise is looked up
+/// verbatim and, if the database has no such `ComObjectRef`, reported as
+/// [`EnrichmentIssue::ComObjectRefMissing`] — a reported miss, never a
+/// guessed hit.
+fn is_device_local_ref_id(ref_id: &str) -> bool {
+    let Some((head, tail)) = ref_id.split_once('_') else {
+        return false;
+    };
+    let digits = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+    !tail.contains('_')
+        && head.strip_prefix("O-").is_some_and(digits)
+        && tail.strip_prefix("R-").is_some_and(digits)
+}
+
 /// The `ComObjectRef` id to look up for one device-level `RefId`: the
 /// module-reconstructed id when `module_based`, the `RefId` itself
 /// otherwise, with `module_ref_id`'s own `unwrap_or_else` fallback to the
 /// raw `RefId` when reconstruction fails — `enrich()` and any other caller
 /// wanting the exact same id share this one implementation instead of each
 /// keeping their own copy of the `if`.
+///
+/// The third case is ETS 6's device-local `O-<n>_R-<m>`, which carries no
+/// application-program prefix of its own and so matched nothing here: all
+/// 867 communication objects of the ETS 6.3.0 reference project enriched
+/// as `ComObjectRefMissing`, zero enriched. `program_id` is the program
+/// *this device* resolved to — `enrich()` looks it up per device, and so
+/// does every other caller — so prefixing it is scoping the id to its own
+/// device, not guessing at somebody else's. Measured against the corpus
+/// before it was written: the reconstructed id names an existing
+/// `ComObjectRef` 867 times out of 867, never more than one, and the
+/// `ComObject/@Number` behind it agrees with the id's own `O-<n>` digits
+/// every time.
 pub fn com_object_lookup_id(program_id: &str, ref_id: &str, module_based: bool) -> String {
     if module_based {
         module_ref_id(program_id, ref_id).unwrap_or_else(|| ref_id.to_string())
+    } else if is_device_local_ref_id(ref_id) {
+        format!("{program_id}_{ref_id}")
     } else {
         ref_id.to_string()
     }
@@ -870,6 +905,34 @@ mod tests {
                 );
             }
             other => panic!("expected a program-layer text, got {other:?}"),
+        }
+    }
+
+    /// ETS 6's device-local `O-<n>_R-<m>` gains its own device's program
+    /// prefix; a schema-11 id, already fully qualified, is left alone; a
+    /// module id still goes through the module hop. Nothing else is
+    /// touched, and nothing is ever prefixed with a program the caller did
+    /// not resolve for that device.
+    #[test]
+    fn the_lookup_id_prefixes_only_the_device_local_shape() {
+        assert_eq!(
+            com_object_lookup_id("M-006A_A-0001-22-617E-O0079", "O-3_R-10005", false),
+            "M-006A_A-0001-22-617E-O0079_O-3_R-10005"
+        );
+        // Already fully qualified — prefixing again would invent an id.
+        assert_eq!(
+            com_object_lookup_id("A-1", "M-0083_A-0019-16-ECA7_O-59_R-149", false),
+            "M-0083_A-0019-16-ECA7_O-59_R-149"
+        );
+        // Module ids keep the module hop, not the new prefix.
+        assert_eq!(
+            com_object_lookup_id("A-1", "MD-2_M-1_MI-1_O-2-0_R-4", true),
+            "A-1_MD-2_O-2-0_R-4"
+        );
+        // Shapes that are not device-local are looked up verbatim and
+        // reported as missing if the database has no such id.
+        for verbatim in ["O-3", "UP-411_R-411", "O-3_R-10005_extra", "O-3a_R-1"] {
+            assert_eq!(com_object_lookup_id("A-1", verbatim, false), verbatim);
         }
     }
 }

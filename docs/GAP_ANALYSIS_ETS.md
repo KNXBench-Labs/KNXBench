@@ -795,11 +795,12 @@ Design spec: `docs/superpowers/specs/2026-09-11-group-monitor-design.md`.
   ([KNOWN_LIMITATIONS.md §8](KNOWN_LIMITATIONS.md#8-knx-secure-is-not-implemented),
   [§26](KNOWN_LIMITATIONS.md#26-busconnection-does-not-yet-support-knx-ip-secure)).
   Closes **A2**, **E3**.
-- **T20. `Functions` domain concept.** Needs its own ADR (new domain
-  concept, not in DATA_MODEL today) before implementation, same as
-  ROADMAP's existing rule for the project-notes idea. **Deferred
-  2026-09-11 by user ruling until the new KNX specification documentation
-  is available** — not rejected, stays on the roadmap. Closes **A1**.
+- **T20. `Functions` domain concept.** **Specification prerequisite resolved
+  2026-09-22 for Project Schema 23** by direct PDF review
+  ([RESEARCH.md §15](RESEARCH.md#15-knx-function-project-semantics-feasibility-2026-09-22)).
+  A project `Function` entity, import, projection, storage, commands and UI
+  still need their own ADR/design. Schema 11/21 behavior and real-project usage
+  remain unverified and must not be inferred from Schema 23. Closes **A1**.
 - **T21. Graphical topology and building views.** **Partially implemented
   2026-09-13:** the workbench renders projected areas/lines/devices and
   nested building parts alongside the tree, with keyboard selection.

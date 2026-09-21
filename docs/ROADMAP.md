@@ -587,31 +587,19 @@ already-shipped application logic rather than new domain capability.
 
 ## Cross-cutting — LLM / natural-language interaction
 
-**Memo (2026-09-10) — not decided, not designed, no task opened, no
-research done yet.** Added by explicit request: a chat window connected to
-an LLM, usable for natural-language interaction with the project — and,
-per the request, not limited to being MCP-capable from the outside, but
-also directly built into the application itself (an in-app chat surface,
-not only an MCP server other tools could drive).
+**Researched, 2026-09-22 (T19); implementation remains deferred.** The
+joint prerequisite for an in-app natural-language surface and an MCP adapter
+is audited in [RESEARCH.md §13](RESEARCH.md#13-natural-language-interaction-and-mcp-prerequisite-audit-2026-09-22-t19).
+The verdict is negative: today's `Command` layer is useful for reversible
+in-memory editing, but it is neither a complete engineering-intent model nor
+a safe public automation boundary. Authorization, revision-bound approval,
+shared application validation and attributable audit are also missing.
 
-This is explicitly a research item before it is a design item: *how* such
-a thing should work — which capabilities it gets, how it is authorized
-against a live project, how "natural language" maps onto the existing
-`Command` layer (the same layer the deferred MCP note above already
-identifies as the load-bearing prerequisite), which LLM(s) it talks to and
-whether that is local, remote, or configurable, and what it must never be
-allowed to do unsupervised to project data — needs to be researched and
-written up (`docs/RESEARCH.md`, per this project's own documentation rule)
-before any design spec is attempted.
-
-Relationship to the existing deferred MCP note above: that note already
-says MCP capabilities need a mature, near-complete `Command` layer as their
-foundation, and are premature before Session 7. This item is the same
-dependency, plus a second, in-application surface on top of it — so it is
-at least as far out, and should not be scheduled ahead of the `Command`
-layer's own completion. Recorded here only so the idea is not lost before
-someone does that research; whoever picks it up should treat this
-paragraph as a starting prompt, not a constraint.
+No LLM/MCP mutation interface is scheduled. Reconsider it only at the gate
+defined by that research, beginning with bounded reads and typed proposals;
+raw commands, autonomous project mutation and every bus/commissioning action
+remain excluded. The original 2026-09-10 memo is superseded by this research
+decision rather than serving as an implementation plan.
 
 
 ## Cross-cutting — Third-party extension and plugins

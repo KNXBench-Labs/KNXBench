@@ -14,6 +14,7 @@ import type { ItemClickHandler } from "./multiSelection";
 import { nestGroupRanges, type GroupRangeTreeNode } from "./treeUtils";
 import CatalogBrowser from "./CatalogBrowser";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
+import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
 
 // The same discriminant-vs-label lookup `Inspector.tsx`'s
 // `buildingPartKindLabel` uses, duplicated rather than shared — both files
@@ -281,10 +282,11 @@ function AreaItem(
 
 function GroupAddressItem(props: { ga: GroupAddressNode } & SelectionProps) {
   const { ga, selection, multiSelection, onItemClick } = props;
+  const formatGa = useGroupAddressFormat();
   const sel: Selection = { kind: "group_address", id: ga.id };
   return (
     <TreeNode
-      label={`${ga.address} ${ga.name}`}
+      label={`${formatGa(ga.address)} ${ga.name}`}
       selected={
         (selection?.kind === "group_address" && selection.id === ga.id) ||
         (multiSelection?.kind === "group_address" && multiSelection.ids.has(ga.id))
@@ -310,6 +312,7 @@ function NewGroupAddressRow(props: {
 }) {
   const { ranges, onCreated } = props;
   const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
   const [rangeId, setRangeId] = useState("");
@@ -322,7 +325,9 @@ function NewGroupAddressRow(props: {
     try {
       const tree = await api.createGroupAddress(
         name,
-        address,
+        // Both notations accepted whatever is on screen; the API only
+        // ever sees the canonical `/` form (`gaNotation.ts`).
+        canonicalGroupAddress(address),
         rangeId === "" ? undefined : Number(rangeId),
       );
       onCreated(tree);
@@ -338,7 +343,7 @@ function NewGroupAddressRow(props: {
     <li className="tree-new-row">
       <input
         value={address}
-        placeholder="1/1/1"
+        placeholder={formatGa("1/1/1")}
         onChange={(e) => setAddress(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") void create();
@@ -356,7 +361,7 @@ function NewGroupAddressRow(props: {
         <option value="">{t("explorer.noRange")}</option>
         {ranges.map((r) => (
           <option key={r.id} value={r.id}>
-            {r.start}–{r.end} {r.name}
+            {formatGa(r.start)}–{formatGa(r.end)} {r.name}
           </option>
         ))}
       </select>
@@ -381,6 +386,7 @@ function NewGroupRangeRow(props: {
 }) {
   const { parentId, onCreated } = props;
   const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
   const [name, setName] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -391,7 +397,12 @@ function NewGroupRangeRow(props: {
     if (!canCreate) return;
     setError(null);
     try {
-      const tree = await api.createGroupRange(name, start, end, parentId);
+      const tree = await api.createGroupRange(
+        name,
+        canonicalGroupAddress(start),
+        canonicalGroupAddress(end),
+        parentId,
+      );
       onCreated(tree);
       setName("");
       setStart("");
@@ -405,7 +416,7 @@ function NewGroupRangeRow(props: {
     <li className="tree-new-row">
       <input
         value={start}
-        placeholder="1/0/0"
+        placeholder={formatGa("1/0/0")}
         onChange={(e) => setStart(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") void create();
@@ -413,7 +424,7 @@ function NewGroupRangeRow(props: {
       />
       <input
         value={end}
-        placeholder="1/7/255"
+        placeholder={formatGa("1/7/255")}
         onChange={(e) => setEnd(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") void create();
@@ -562,10 +573,11 @@ function GroupRangeItem(
   } & Pick<SelectionProps, "selection" | "onSelect">,
 ) {
   const { node, isFirst, onCreated, selection, onSelect } = props;
+  const formatGa = useGroupAddressFormat();
   const { range, children } = node;
   return (
     <TreeNode
-      label={`${range.start}–${range.end} ${range.name}`}
+      label={`${formatGa(range.start)}–${formatGa(range.end)} ${range.name}`}
       selected={selection?.kind === "group_range" && selection.id === range.id}
       onSelect={() => onSelect({ kind: "group_range", id: range.id })}
     >

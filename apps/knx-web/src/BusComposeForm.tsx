@@ -16,6 +16,7 @@ import { useState } from "react";
 import * as api from "./api";
 import type { BusWriteResponse } from "./api";
 import { useTranslate } from "./i18n";
+import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
 
 /// What the parent (`BusMonitorPanel.tsx`) knows about this destination's
 /// DPT resolution *at the moment it was prefilled* — mirrors
@@ -95,6 +96,7 @@ export default function BusComposeForm({
   contextStale,
 }: BusComposeFormProps) {
   const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
   const [destination, setDestination] = useState(initialDestination);
   const [dpt, setDpt] = useState(initialResolution.kind === "single" ? initialResolution.dpt : "");
   const [value, setValue] = useState("");
@@ -169,7 +171,15 @@ export default function BusComposeForm({
 
     setSending(true);
     try {
-      const response = await api.writeBusValue(destination, dptToSend, value);
+      // The field accepts either notation; the wire only ever carries the
+      // canonical `/` form (`gaNotation.ts`). Anything that is not a
+      // level-style address goes through untouched, so the server's own
+      // validation names what the user actually typed.
+      const response = await api.writeBusValue(
+        canonicalGroupAddress(destination),
+        dptToSend,
+        value,
+      );
       setSent(response);
     } catch (e) {
       // `400`/`409`/`502` all land here — shown inline on the form, not
@@ -220,8 +230,9 @@ export default function BusComposeForm({
           {t("busCompose.destinationLabel")}
           <input
             type="text"
-            className="bus-compose-destination"
+            className="bus-compose-destination ga-address"
             value={destination}
+            placeholder={formatGa("1/1/1")}
             onChange={(e) => onDestinationChange(e.target.value)}
             disabled={sessionClosed || contextStale}
             aria-describedby={disabledReason}

@@ -23,11 +23,18 @@ function respond(queue: Array<Partial<SettingsResponse> | Error>): void {
       calls.push([
         path,
         init?.method ?? "GET",
-        init?.body === undefined ? undefined : (JSON.parse(String(init.body)) as unknown),
+        init?.body === undefined
+          ? undefined
+          : (JSON.parse(String(init.body)) as unknown),
       ]);
       const next = remaining.shift() ?? { status: "ok", settings: {} };
       if (next instanceof Error) return Promise.reject(next);
-      const body: SettingsResponse = { schemaVersion: 1, settings: {}, status: "ok", ...next };
+      const body: SettingsResponse = {
+        schemaVersion: 1,
+        settings: {},
+        status: "ok",
+        ...next,
+      };
       return Promise.resolve({
         ok: true,
         status: 200,
@@ -51,7 +58,9 @@ afterEach(() => {
 
 describe("reading the record", () => {
   it("takes the server's settings as the truth for the session", async () => {
-    respond([{ status: "ok", settings: { theme: "neon-grid", uiLanguage: "de" } }]);
+    respond([
+      { status: "ok", settings: { theme: "neon-grid", uiLanguage: "de" } },
+    ]);
 
     await initSettings();
 
@@ -61,11 +70,15 @@ describe("reading the record", () => {
   });
 
   it("mirrors the document into one opaque cache key, not into eight loose ones", async () => {
-    respond([{ status: "ok", settings: { theme: "graphite", accent: "mint" } }]);
+    respond([
+      { status: "ok", settings: { theme: "graphite", accent: "mint" } },
+    ]);
 
     await initSettings();
 
-    const cached = JSON.parse(window.localStorage.getItem(SETTINGS_CACHE_KEY)!) as {
+    const cached = JSON.parse(
+      window.localStorage.getItem(SETTINGS_CACHE_KEY)!,
+    ) as {
       settings: Record<string, unknown>;
     };
     expect(cached.settings).toEqual({ theme: "graphite", accent: "mint" });
@@ -91,7 +104,13 @@ describe("reading the record", () => {
   it.each(["absent", "refusedNewer", "quarantined"] as const)(
     "runs on defaults without throwing when the file is %s",
     async (status) => {
-      respond([{ status, settings: {}, notice: status === "absent" ? undefined : "something" }]);
+      respond([
+        {
+          status,
+          settings: {},
+          notice: status === "absent" ? undefined : "something",
+        },
+      ]);
 
       await expect(initSettings()).resolves.toBeUndefined();
 
@@ -124,7 +143,10 @@ describe("adopting what a browser already has", () => {
     seedBrowserEra();
     respond([
       { status: "absent", settings: {} },
-      { status: "migrated", settings: { theme: "graphite", accent: "mint", uiLanguage: "de" } },
+      {
+        status: "migrated",
+        settings: { theme: "graphite", accent: "mint", uiLanguage: "de" },
+      },
     ]);
 
     await initSettings();
@@ -153,8 +175,14 @@ describe("adopting what a browser already has", () => {
 
   it("clears the keys it handed over, and only those", async () => {
     seedBrowserEra();
-    window.localStorage.setItem("knx-desktop:project-context", "not a preference");
-    respond([{ status: "absent", settings: {} }, { status: "migrated", settings: {} }]);
+    window.localStorage.setItem(
+      "knx-desktop:project-context",
+      "not a preference",
+    );
+    respond([
+      { status: "absent", settings: {} },
+      { status: "migrated", settings: {} },
+    ]);
 
     await initSettings();
 
@@ -162,11 +190,16 @@ describe("adopting what a browser already has", () => {
     expect(window.localStorage.getItem("knx-desktop:ui-language")).toBeNull();
     // `busContext.ts`'s per-window session state is not a preference and
     // was never this module's to take.
-    expect(window.localStorage.getItem("knx-desktop:project-context")).toBe("not a preference");
+    expect(window.localStorage.getItem("knx-desktop:project-context")).toBe(
+      "not a preference",
+    );
   });
 
   it("does not adopt a second time, even with the old keys back", async () => {
-    window.localStorage.setItem(SETTINGS_ADOPTED_KEY, "2026-09-21T00:00:00.000Z");
+    window.localStorage.setItem(
+      SETTINGS_ADOPTED_KEY,
+      "2026-09-21T00:00:00.000Z",
+    );
     seedBrowserEra();
     respond([{ status: "absent", settings: {} }]);
 
@@ -189,7 +222,9 @@ describe("adopting what a browser already has", () => {
 
   it("asks the server again when another window adopted first", async () => {
     seedBrowserEra();
-    const conflict = new Error("a settings file already exists; there is nothing to adopt into");
+    const conflict = new Error(
+      "a settings file already exists; there is nothing to adopt into",
+    );
     respond([
       { status: "absent", settings: {} },
       conflict,
@@ -199,6 +234,46 @@ describe("adopting what a browser already has", () => {
     await initSettings();
 
     expect(getSetting("theme")).toBe("bitcoin-defi");
+    // The record exists, so the handover is over either way: it is done,
+    // and this browser's copy is superseded.
+    expect(window.localStorage.getItem(SETTINGS_ADOPTED_KEY)).not.toBeNull();
+    expect(window.localStorage.getItem("knx-desktop:theme")).toBeNull();
+  });
+
+  it("tries again next load when the handover itself failed", async () => {
+    seedBrowserEra();
+    // Not a 409: a dropped connection, a 500, a session that expired
+    // between the read and the write. The file is still absent afterwards,
+    // so nothing was adopted and the preferences are still in the browser.
+    respond([
+      { status: "absent", settings: {} },
+      new Error("Failed to fetch"),
+      { status: "absent", settings: {} },
+    ]);
+
+    await initSettings();
+
+    expect(window.localStorage.getItem(SETTINGS_ADOPTED_KEY)).toBeNull();
+    expect(window.localStorage.getItem("knx-desktop:theme")).toBe("dark");
+    expect(window.localStorage.getItem("knx-desktop:ui-language")).toBe("de");
+
+    // Which is the whole point: the next load has another go, and this
+    // time the browser's preferences reach the file.
+    resetSettingsForTests();
+    calls = [];
+    respond([
+      { status: "absent", settings: {} },
+      { status: "migrated", settings: { theme: "graphite" } },
+    ]);
+
+    await initSettings();
+
+    expect(calls.map(([path]) => path)).toEqual([
+      "/api/settings",
+      "/api/settings/adopt",
+    ]);
+    expect(window.localStorage.getItem(SETTINGS_ADOPTED_KEY)).not.toBeNull();
+    expect(getSetting("theme")).toBe("graphite");
   });
 
   it("adopts nothing when the browser has nothing", async () => {
@@ -218,7 +293,11 @@ describe("writing", () => {
     setSetting("accent", "rose");
     await Promise.resolve();
 
-    expect(calls[1]).toEqual(["/api/settings", "PUT", { settings: { accent: "rose" } }]);
+    expect(calls[1]).toEqual([
+      "/api/settings",
+      "PUT",
+      { settings: { accent: "rose" } },
+    ]);
   });
 
   it("sends nothing at all when the value has not changed", async () => {
@@ -231,14 +310,18 @@ describe("writing", () => {
     expect(calls).toHaveLength(1);
   });
 
-  it("removes a preference with a null rather than the string \"null\"", async () => {
+  it('removes a preference with a null rather than the string "null"', async () => {
     respond([{ status: "ok", settings: { productLanguage: "de-DE" } }]);
     await initSettings();
 
     settingsStorage.removeItem("productLanguage");
     await Promise.resolve();
 
-    expect(calls[1]).toEqual(["/api/settings", "PUT", { settings: { productLanguage: null } }]);
+    expect(calls[1]).toEqual([
+      "/api/settings",
+      "PUT",
+      { settings: { productLanguage: null } },
+    ]);
     expect(getSetting("productLanguage")).toBeUndefined();
   });
 

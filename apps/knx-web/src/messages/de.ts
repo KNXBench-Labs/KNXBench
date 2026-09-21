@@ -413,7 +413,7 @@ export const messages: Record<MessageKey, string> = {
   "lineScan.candidates.other": "{count} Kandidatenadressen",
   "lineScan.basis.one": "{timeout} ms Timeout × {confirmations} Bestätigung; {pause} ms Pause",
   "lineScan.basis.other": "{timeout} ms Timeout × {confirmations} Bestätigungen; {pause} ms Pause",
-  "lineScan.worstCase": "{duration} im ungünstigsten Fall",
+  "lineScan.worstCase": "{duration} Antwort-/Pausenbudget; Transportaufwand nicht enthalten",
   "lineScan.status.running": "Läuft",
   "lineScan.status.completed": "Abgeschlossen",
   "lineScan.status.cancelled": "Abgebrochen",

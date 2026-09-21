@@ -108,6 +108,7 @@ function scanResponse(status: "running" | "completed" | "cancelled" | "failed", 
     completedCount: results.length,
     totalCount: 6,
     omittedAddresses: [],
+    excludedAddresses: [],
     results,
   };
 }
@@ -126,9 +127,34 @@ describe("LineScanPanel", () => {
     expect(host!.textContent).toContain("3 candidate addresses");
     expect(host!.textContent).toContain("6000 ms timeout × 1 confirmation");
     expect(host!.textContent).toContain("100 ms pause");
-    expect(host!.textContent).toContain("18.2 s worst case");
+    expect(host!.textContent).toContain("18.2 s response/pacing budget; transport overhead excluded");
     expect(host!.querySelector<HTMLButtonElement>(".line-scan-start")!.disabled).toBe(false);
     expect(apiMock.startLineScan).not.toHaveBeenCalled();
+  });
+
+  it("does not authorize changed inputs with a stale estimate response", async () => {
+    let releaseEstimate: ((value: ReturnType<typeof awaitableEstimate>) => void) | undefined;
+    const pendingEstimate = new Promise<ReturnType<typeof awaitableEstimate>>((resolve) => {
+      releaseEstimate = resolve;
+    });
+    apiMock.estimateLineScan.mockReturnValueOnce(pendingEstimate);
+    await renderPanel();
+
+    await act(async () => {
+      setInput('.line-scan-config input[placeholder="192.0.2.10:3671"]', "192.0.2.10:3671");
+      click("Estimate cost");
+      await Promise.resolve();
+    });
+    await act(async () => {
+      const inputs = host!.querySelectorAll<HTMLInputElement>('.line-scan-config input[type="number"]');
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
+      setter.call(inputs[2], "2");
+      inputs[2].dispatchEvent(new Event("input", { bubbles: true }));
+      releaseEstimate!(awaitableEstimate());
+      await pendingEstimate;
+    });
+
+    expect(host!.querySelector<HTMLButtonElement>(".line-scan-start")!.disabled).toBe(true);
   });
 
   it("renders all six outcomes as distinct named states", async () => {
@@ -223,7 +249,69 @@ describe("LineScanPanel", () => {
     });
 
     expect(apiMock.cancelLineScan).toHaveBeenCalledOnce();
+    expect(apiMock.cancelLineScan).toHaveBeenCalledWith(4);
     expect(host!.textContent).toContain("Cancelled");
+  });
+
+  it("does not append a timer poll that finishes after cancellation", async () => {
+    const finalResult = {
+      address: "2.3.42",
+      outcome: { kind: "occupiedBusy" },
+    } as const;
+    let releasePoll: ((value: ReturnType<typeof scanResponse>) => void) | undefined;
+    let releaseCancel: ((value: ReturnType<typeof scanResponse>) => void) | undefined;
+    const pendingPoll = new Promise<ReturnType<typeof scanResponse>>((resolve) => {
+      releasePoll = resolve;
+    });
+    const pendingCancel = new Promise<ReturnType<typeof scanResponse>>((resolve) => {
+      releaseCancel = resolve;
+    });
+    apiMock.pollLineScan
+      .mockRejectedValueOnce(notFound())
+      .mockResolvedValueOnce(scanResponse("running", []))
+      .mockReturnValueOnce(pendingPoll);
+    apiMock.cancelLineScan.mockReturnValueOnce(pendingCancel);
+    await renderPanel();
+    await act(async () => {
+      setInput('.line-scan-config input[placeholder="192.0.2.10:3671"]', "192.0.2.10:3671");
+      click("Estimate cost");
+      await Promise.resolve();
+    });
+    await act(async () => {
+      click("Start read-only scan");
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      click("Cancel scan");
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    await act(async () => {
+      releaseCancel!(scanResponse("cancelled", [finalResult]));
+      await pendingCancel;
+      releasePoll!(scanResponse("cancelled", [finalResult]));
+      await pendingPoll;
+    });
+
+    expect(host!.querySelectorAll("[data-scan-outcome]")).toHaveLength(1);
+  });
+
+  it("locks exclusion editing while the active scan plan is immutable", async () => {
+    setSetting("lineScanExclusions", ["2.3.42"]);
+    apiMock.pollLineScan.mockRejectedValueOnce(notFound()).mockResolvedValue(scanResponse("running", []));
+    await renderPanel();
+    await act(async () => {
+      setInput('.line-scan-config input[placeholder="192.0.2.10:3671"]', "192.0.2.10:3671");
+      click("Estimate cost");
+      await Promise.resolve();
+    });
+    await act(async () => {
+      click("Start read-only scan");
+      await Promise.resolve();
+    });
+
+    expect(host!.querySelector<HTMLInputElement>(".line-scan-add-exclusion input")!.disabled).toBe(true);
+    expect(Array.from(host!.querySelectorAll<HTMLButtonElement>(".line-scan-exclusions button")).every((button) => button.disabled)).toBe(true);
   });
 
   it("requires a deliberate confirmation before removing a configured exclusion", async () => {

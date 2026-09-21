@@ -9718,11 +9718,13 @@ fake tunnel. Full gate results are recorded in the T07 handover log.
 The server now exposes an incremental line-scan session API: `POST
 /api/bus/scan/estimate`, `POST /api/bus/scan/start`, `GET
 /api/bus/scan/results?since=…`, and `POST /api/bus/scan/cancel`. Results are retained with a
-monotonic cursor, cancellation stops the scan task and disconnects its tunnel, and a second
-active scan is rejected. The estimate and runtime use the same `ScanPlan` and
+monotonic cursor, binds polling and cancellation to an expected session id, cancellation stops
+the scan task and disconnects its tunnel, and a second active scan is rejected. Terminal
+snapshots cannot expose completion before their final rows. The estimate and runtime use the same `ScanPlan` and
 `ProbePolicy` data; address zero is rejected as the line-coupler address.
 
-The diagnostics workspace shows the cost and its timeout/pacing basis before start,
+The diagnostics workspace shows the response/pacing budget before start and states that
+transport overhead is excluded,
 progress during execution, cancellation, and all six `ProbeOutcome` states without folding
 uncertain evidence into occupied or vacant. Exclusions come from settings, are visible and
 editable, and require a second deliberate click before removal. The shipped exclusion list

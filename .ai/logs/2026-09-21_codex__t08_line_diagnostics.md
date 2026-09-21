@@ -27,13 +27,13 @@ implementation-status entry were reconciled.
 
 - `cargo fmt --all --check`: exit 0.
 - `cargo clippy --workspace --all-targets -- -D warnings`: exit 0.
-- `cargo test --workspace --no-fail-fast`: 1,937 passed across 92 result blocks, 0 failed.
+- `cargo test --workspace --no-fail-fast`: 1,939 passed across 92 result blocks, 0 failed.
 - `cargo run -p xtask -- check-layering`: exit 0.
 - `cargo run -p xtask -- check-headers`: 186 present, 162 absent, ceiling 162.
 - `cargo run -p xtask -- check-anchors`: 376 links across 175 Markdown files, none dead.
 - `cargo deny check`: exit 0.
 - `npx tsc --noEmit`: exit 0.
-- `npx vitest run`: 816 passed across 59 files.
+- `npx vitest run`: 819 passed across 59 files.
 
 The first all-workspace attempt exhausted the `/tmp` quota while linking. Only the dedicated
 `/tmp/knxbench-t08-target` build cache was pruned, then the complete Rust sequence was rerun
@@ -47,3 +47,14 @@ the header, anchor, dependency, focused UI, TypeScript, and full web gates were 
 T09 may consume `LineScanResultsResponse` to build a previewable, undoable project diff. It
 must not mutate project state during a scan, and uncertain scan outcomes must not be collapsed
 into occupied or vacant.
+
+## Fresh review and fix pass
+
+The required fresh whole-branch review found no Critical issues and five Important races or
+misleading states. One RED→GREEN pass fixed all five: terminal server snapshots read status
+before results and have a deterministic completion-interleaving test; poll and cancel calls
+bind to the expected session id; cancellation suspends timers and invalidates every outstanding
+generation; active-scan exclusions are snapshotted and their editor is locked; estimates are
+bound to the exact request fingerprint. The review's Minor wording issue was also fixed: the
+UI now calls the number a response/pacing budget and states transport overhead is excluded.
+The complete Rust and Web gate sets above were rerun after these fixes.

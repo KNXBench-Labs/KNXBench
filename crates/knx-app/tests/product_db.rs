@@ -145,7 +145,9 @@ fn an_empty_product_database_reports_how_many_devices_it_could_not_resolve() {
     )
     .unwrap();
 
-    let enrichment = imported.enrichment.expect("a product database was supplied");
+    let enrichment = imported
+        .enrichment
+        .expect("a product database was supplied");
     assert!(
         !enrichment.available,
         "an empty <ManufacturerData/> ingests no application program"
@@ -186,7 +188,9 @@ fn a_populated_product_database_leaves_no_unresolved_device() {
     )
     .unwrap();
 
-    let enrichment = imported.enrichment.expect("a product database was supplied");
+    let enrichment = imported
+        .enrichment
+        .expect("a product database was supplied");
     assert!(enrichment.available);
     assert_eq!(enrichment.devices_unresolved, 0);
     assert_eq!(

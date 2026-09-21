@@ -526,3 +526,17 @@ Report the completed work, the verification evidence, the remaining external
 blockers, and the next required user decision, if any. Commissioning stays
 where section 0 left it: excluded from this run, still owed, waiting on test
 hardware.
+## 11. User-reported UX and workflow issues — amendment 2026-09-21
+
+The observations formerly collected in `docs/Issues.md` are now normalized into
+thirteen independently testable tasks in
+`docs/superpowers/plans/2026-09-21-user-reported-issues.md`. They are part of
+this goal's backlog. Where that plan names overlap with an existing item
+(dirty state, settings, drag/drop, discovery), extend the existing owner and
+deliver one coherent implementation rather than creating a competing path.
+
+The issue plan also records which reports describe already-present behavior:
+bus-monitor text/service filters, KNXnet/IP discovery, and separate Send and
+Receive group links exist today. Those tasks reproduce reachability or
+packaging failures and add the missing behavior; they do not reimplement the
+existing core. Evidence-gated KNX/domain questions remain investigation-first.

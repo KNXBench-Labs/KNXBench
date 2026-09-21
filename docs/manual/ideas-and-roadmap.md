@@ -117,9 +117,11 @@ by design, and porting is only sensible once the Linux version is stable. An
 idea, with no work done.
 
 **Project notes inside the application.** Somewhere to write down why a
-decision was made, attached to the project itself. This is a new domain
-concept that the data model does not have, so it needs its own architecture
-decision before anybody writes code. Under consideration.
+decision was made, attached to the project or a user-facing entity. The domain
+shape is now decided in
+[ADR-0031](../adr/0031-project-notes-are-a-project-owned-collection.md): a
+project-owned collection with typed targets and explicit report opt-in. It is
+not implemented.
 
 **More humour in the messages.** The existing toast and error copy should be
 expanded considerably — the note in the idea list asks for at least thirty

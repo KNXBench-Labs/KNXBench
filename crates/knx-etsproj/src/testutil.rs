@@ -119,3 +119,24 @@ pub(crate) fn reference_kv_source_document() -> SourceDocument {
     document.info = info;
     document
 }
+
+/// Third corpus project, alongside [`reference_source_document`] (ETS4,
+/// schema 11) and [`reference_kv_source_document`] (KV demo, schema 21):
+/// the ETS6 re-export of the same "Unser Zuhause" installation — still
+/// `P-0512`, just re-saved by a newer ETS — at schema 23, the schema the
+/// short-link check (T06) mostly exists for. Parsed the same way
+/// [`reference_kv_source_document`] is, and for the same reason: `lib.rs`
+/// does not expose a `SourceDocument` on its own, only a mapped
+/// `ImportOutcome`.
+pub(crate) fn reference_ets6_source_document() -> SourceDocument {
+    let schema = known_schema(23).unwrap();
+    let mut c = Container::open(std::fs::read(reference_ets6_path()).unwrap()).unwrap();
+    let topology_bytes = c.read("P-0512/0.xml").unwrap();
+    let mut document = parse_installation_v21(&topology_bytes, "P-0512/0.xml", schema)
+        .unwrap()
+        .document;
+    let info_bytes = c.read("P-0512/Project.xml").unwrap();
+    let (info, _) = parse_project_info(&info_bytes, "P-0512/Project.xml", schema).unwrap();
+    document.info = info;
+    document
+}

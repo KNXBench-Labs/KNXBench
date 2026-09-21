@@ -333,6 +333,24 @@ fn print_summary(file: &str, imported: &knx_app::ImportedProject) {
             enrichment.devices_resolved,
             enrichment.issues.len()
         );
+        // Said out loud, because the line above cannot: with an empty
+        // product database it reads "0 enriched from 0 programs, 0
+        // issues", three zeroes that look like a clean run rather than a
+        // project whose devices are all unknown. Since T27 withdrew
+        // `.knxproj` export there is no `MissingManufacturerData` export
+        // warning left to say it either.
+        if enrichment.devices_unresolved > 0 {
+            let cause = if enrichment.available {
+                "no application program in the product database matches them"
+            } else {
+                "the product database holds no application program at all"
+            };
+            println!(
+                "  of which {} device(s) have no resolvable product: {cause} — \
+                 their communication objects keep only what the project file itself stated",
+                enrichment.devices_unresolved
+            );
+        }
     }
 }
 

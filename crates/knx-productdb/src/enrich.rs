@@ -49,6 +49,24 @@ pub struct EnrichmentReport {
     /// not an error path.
     pub available: bool,
     pub devices_resolved: usize,
+    /// Devices whose product/application program this database could not
+    /// resolve — the size of the manufacturer-data gap, in devices.
+    ///
+    /// Filled on **both** paths, which is the whole reason it exists
+    /// separately from `issues`. With a populated database it equals the
+    /// number of [`EnrichmentIssue::ProgramMissing`] issues. With an empty
+    /// one (`available == false`) `enrich` returns before it looks at a
+    /// single device, so `issues` is empty and `devices_resolved` is zero
+    /// — three zeroes that read as "nothing was wrong" when what actually
+    /// happened is that nothing could be resolved at all. This field says
+    /// which of the two it was.
+    ///
+    /// ADR-0005 requires the missing-database state to be ordinary rather
+    /// than an error path. Ordinary is not the same as silent: until T27
+    /// withdrew `.knxproj` export, `ExportWarning::MissingManufacturerData`
+    /// was what told a user their products were unknown, and it was the
+    /// only thing that did. This is where that sentence went.
+    pub devices_unresolved: usize,
     /// Communication objects `apply` changed something for — since
     /// ADR-0027 that includes an object whose own `Override<T>` slots
     /// never moved and whose only change was a program default lifted
@@ -82,6 +100,10 @@ pub fn enrich(
         ..EnrichmentReport::default()
     };
     if !report.available {
+        // Not one device resolved, and no per-device issue to say so
+        // without turning an ordinary state into N error entries. The
+        // count is the honest middle: see `devices_unresolved`.
+        report.devices_unresolved = project.devices.iter().count();
         return Ok(report);
     }
 
@@ -106,6 +128,7 @@ pub fn enrich(
 
     for (_device, device_ets_id, program_ref, coms) in devices {
         let Some(program_id) = resolve_program(conn, &program_ref)? else {
+            report.devices_unresolved += 1;
             report.issues.push(EnrichmentIssue::ProgramMissing {
                 device_ets_id,
                 program_ref,

@@ -123,6 +123,41 @@ impl Default for ProbePolicy {
     }
 }
 
+/// Conservative wall-clock preview for a sequential line scan.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScanEstimate {
+    candidate_count: usize,
+    worst_case: Duration,
+}
+
+impl ScanEstimate {
+    pub fn new(plan: &ScanPlan, policy: &ProbePolicy) -> Self {
+        let candidates = u32::try_from(plan.addresses().len()).unwrap_or(u32::MAX);
+        let confirmations = u32::from(policy.vacant_confirmations());
+        let timeout = policy
+            .response_timeout()
+            .saturating_mul(candidates.saturating_mul(confirmations));
+        let between_confirmation_pauses =
+            candidates.saturating_mul(confirmations.saturating_sub(1));
+        let between_address_pauses = candidates.saturating_sub(1);
+        let pauses = policy
+            .inter_probe_pause()
+            .saturating_mul(between_confirmation_pauses.saturating_add(between_address_pauses));
+        Self {
+            candidate_count: plan.addresses().len(),
+            worst_case: timeout.saturating_add(pauses),
+        }
+    }
+
+    pub fn candidate_count(self) -> usize {
+        self.candidate_count
+    }
+
+    pub fn worst_case(self) -> Duration {
+        self.worst_case
+    }
+}
+
 /// What one probe learned about an individual address.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProbeOutcome {

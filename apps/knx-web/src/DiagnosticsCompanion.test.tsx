@@ -227,6 +227,12 @@ describe("one editing workspace", () => {
     // project state, nothing this window could mutate with — so it is the
     // cheapest possible way for the companion to end up at the same login
     // screen as the editor instead of silently failing to poll.
+    // T26 adds `gaNotation.ts`, reached from both bus components: the
+    // monitor renders a destination group address and the compose form
+    // reads one back, and both go through the display-notation preference
+    // to do it. It reads and writes the same settings document
+    // `settingsStore.ts` already brought into this graph, and touches no
+    // project state at all.
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -239,6 +245,7 @@ describe("one editing workspace", () => {
       "busContext.ts",
       "diagnosticsWindow.ts",
       "filePicker.ts",
+      "gaNotation.ts",
       "help.ts",
       "i18n.ts",
       "languagePack.ts",

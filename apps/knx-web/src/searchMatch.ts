@@ -1,3 +1,4 @@
+import { groupAddressSpellings } from "./gaNotation";
 import type { SearchEntry } from "./treeUtils";
 
 const MAX_RESULTS = 50;
@@ -17,7 +18,13 @@ function haystacksFor(entry: SearchEntry): string[] {
     return entry.address ? [label, entry.address.toLowerCase()] : [label];
   }
   if (entry.kind === "group_address") {
-    return [label, entry.address.toLowerCase()];
+    // Both notations, always — a needle typed as `1/1` has to find an
+    // address displayed as `1.1.5` and the other way round, whichever
+    // notation is currently on screen (`gaNotation.ts`). A device's
+    // *individual* address above gets no such treatment: it has exactly
+    // one spelling, and inventing a second would make `1/1/5` match a
+    // device.
+    return [label, ...groupAddressSpellings(entry.address).map((form) => form.toLowerCase())];
   }
   return [label, entry.path.toLowerCase()];
 }

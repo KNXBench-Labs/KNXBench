@@ -124,7 +124,6 @@ afterEach(() => {
   apiMock.loadProgress.mockResolvedValue(null);
   resetSettingsForTests();
   resetProductLanguageForTests();
-  resetSettingsForTests();
   document.documentElement.removeAttribute("lang");
   document.title = "";
   resetUiLanguageForTests();

@@ -35,7 +35,6 @@ afterEach(() => {
   apiMock.catalogItems.mockResolvedValue([]);
   resetSettingsForTests();
   resetProductLanguageForTests();
-  resetSettingsForTests();
   resetUiLanguageForTests();
 });
 

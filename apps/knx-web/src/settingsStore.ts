@@ -378,6 +378,8 @@ async function loadFromServer(): Promise<void> {
           }),
         });
         forgetBrowserEraKeys(payload);
+        // The POST is the only thing that proves the handover happened.
+        markAdopted();
       } catch (error) {
         // Most likely a 409: another window adopted first, and the record
         // now exists. Re-read rather than guess.
@@ -387,8 +389,17 @@ async function loadFromServer(): Promise<void> {
         } catch {
           return;
         }
+        // A record exists, so somebody adopted; this browser has nothing
+        // left to hand over. Still `absent` means the POST failed for its
+        // own reasons — a dropped connection, a 500, an expired session —
+        // and the preferences are still sitting in this browser. Leave the
+        // flag unset so the next load tries again, rather than marking a
+        // handover that never happened and losing the lot.
+        if (response.status !== "absent") {
+          forgetBrowserEraKeys(payload);
+          markAdopted();
+        }
       }
-      markAdopted();
     }
   }
 

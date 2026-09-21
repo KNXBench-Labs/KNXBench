@@ -38,7 +38,6 @@ afterEach(() => {
   vi.clearAllMocks();
   resetSettingsForTests();
   resetProductLanguageForTests();
-  resetSettingsForTests();
   resetUiLanguageForTests();
 });
 

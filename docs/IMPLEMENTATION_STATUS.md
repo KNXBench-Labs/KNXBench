@@ -9510,3 +9510,83 @@ from the `51610db` baseline; `knx_net`'s lib block read the mandated 252),
 `xtask check-layering`, `xtask check-headers`, `xtask check-anchors`,
 `cargo deny check` — all exit 0. `apps/knx-web` untouched, so the frontend
 gates did not apply.
+
+**T25 (goal run): the application finds the IP interfaces itself (2026-09-21),
+branch `t25-discovery`.** `knx-net` has been able to run a KNXnet/IP
+`SEARCH_REQUEST` since Session 6, Cycle 3, and the CLI has been able to ask it
+to. The UI could not: the gateway field was an empty box that expected a user
+to know an address by heart. It now asks the network, once, without being told
+to.
+
+**The search reached the server through the seam it already had, not around
+it.** `apps/knx-server/src/bus.rs`'s `GatewayConnector` trait gains a
+`discover()` method beside `connect_tunnel()`; `RealConnector` delegates to
+`KnxNetIpClient::discover()`, and `fake::FakeConnector` answers a scripted list
+— the same reason the seam exists at all, so a route can be tested without a
+socket. The design spec's old "tunnelling only, no discovery, no routing" note
+in that module's header was corrected rather than quietly contradicted: routing
+is still absent, discovery no longer is.
+
+**`POST /api/bus/discover`, deliberately not `GET`.** A `GET` is fair game for
+prefetching, speculative revalidation and any cache that thinks it is being
+helpful, and each of those would put an unasked-for multicast datagram onto
+somebody's installation network. A test pins the `405`. An empty list is a
+`200` with `interfaces: []` — a search that ran and found nothing is a result,
+not a failure — and only a search that could not be *performed* becomes a
+`502`, through the existing `session_error_to_api_error`.
+
+**One search, one answer, shared.** `apps/knx-web/src/busDiscovery.ts` is a
+module-level store over `useSyncExternalStore`, the same shape
+`productLanguage.ts` uses. `App.tsx` starts the search on mount and does not
+await it: it never blocks first paint, never delays a project from loading and
+never raises a dialog. `BusMonitorPanel` starts it too, idempotently, so a
+panel that mounts in the companion window without `App` still gets an answer.
+Whatever comes back is an offer — **nothing connects automatically**, and a
+click on a found interface fills the gateway field and stops there.
+
+**The field stays a field.** The Search button sits next to it, disabled with
+`aria-busy` for the duration of a search (the KNXnet/IP search window is fixed
+at 10 s by Core v01.06.02 AS §5.2.4, so four clicks buy four timeouts and no
+faster answer). Results are buttons showing the friendly name first, then the
+endpoint and the interface's individual address. Typing an address by hand
+works before, during and after a search, including an address that answered
+nothing — multicast not reaching a subnet says nothing about whether a unicast
+address works.
+
+**Nothing here is an error surface.** `role="status"`, never `role="alert"`; no
+`.field-error`. An empty result gets a sentence plus the reason it may be
+empty, in the CLI's own words (`DISCOVER_EMPTY_HINT`: multicast reach, and
+running in a container without host networking —
+[KNOWN_LIMITATIONS.md §79](KNOWN_LIMITATIONS.md#79-discovery-needs-ip-multicast-which-dockers-default-bridge-network-does-not-carry)).
+A failed search says so quietly and points back at the field. Eleven new
+message keys in `en.ts` and `de.ts` (`resultCount` is a plural pair, counted
+as two); no English literal in the component. Motion lives
+inside `@media (prefers-reduced-motion: no-preference)` and is driven by
+`--knx-transition-duration`/`--knx-motion-easing`, so both motion styles and
+all five themes carry it without a second rule.
+
+**Tests: 1,888 passed, 0 failed, 88 binaries** (+7 over this branch's base at
+`258feee`: 2 in `bus.rs` for the fake connector's scripted answers, 5 in the
+new `apps/knx-server/tests/http_bus_discover.rs`). Frontend: **779 passed
+across 56 files** (+10 over the same base's 769: 5 in the new
+`busDiscovery.test.ts`, 5 in `BusMonitorPanel.test.tsx` covering the startup
+search, the empty result, the disabled button, a failed search leaving no error
+wall, and selection filling the field). `DiagnosticsCompanion.test.tsx`'s
+pinned import graph gains `busDiscovery.ts` and `discoverBusInterfaces`, with
+the note that the fourth `POST` in that window writes nothing anywhere.
+
+**Not built, on purpose.** No `CONNECT_REQUEST`, no tunnelling handshake, no
+management procedure: discovery asks and reads, and this task wrote nothing to
+any device. No `SEARCH_REQUEST_EXTENDED` (Core v2, with its SRPs for filtering
+by programming mode or MAC) — `knx-net` does not implement it, and adding it is
+a protocol-crate task, not a UI one. No "search at startup" preference: the
+search is unconditional, which is what was asked for, and the versioned
+settings file landed on a branch this one is not based on. And the fields a
+`SEARCH_RESPONSE` carries but `DiscoveredGateway` drops are recorded as
+[KNOWN_LIMITATIONS.md §124](KNOWN_LIMITATIONS.md#124-the-interface-search-shows-four-facts-about-an-interface-the-protocol-carries-more)
+rather than fixed by widening a protocol type from a UI task. That section was
+written as §123 on a branch based on `258feee`, which predates §121 and §122
+from the settings-file branch; by the time it merged, the group-address
+notation branch had independently taken §123 as well, so it became §124 at
+merge. Two branches picking the same free number is what happens when both are
+honest about a file that only ever grows.

@@ -1078,6 +1078,22 @@ export interface BusWriteResponse {
   decodedEcho: BusDecodedValue;
 }
 
+// `DiscoveredInterfaceDto`/`DiscoverResponse` (bus_routes.rs, T25). One
+// entry per KNX-compatible interface that answered the multicast
+// `SEARCH_REQUEST`. `controlEndpoint` is already in the `host:port` shape
+// `startBusMonitor` wants, so a found interface goes straight into the
+// gateway field with no reassembly.
+export interface BusDiscoveredInterface {
+  controlEndpoint: string;
+  individualAddress: string;
+  friendlyName: string;
+  supportsTunnelling: boolean;
+}
+
+export interface BusDiscoverResponse {
+  interfaces: BusDiscoveredInterface[];
+}
+
 export function startBusMonitor(gateway: string): Promise<BusMonitorStartResponse> {
   return request("/api/bus/monitor/start", { method: "POST", body: JSON.stringify({ gateway }) });
 }
@@ -1091,6 +1107,14 @@ export function stopBusMonitor(): Promise<BusMonitorStopResponse> {
 // remember that omitting it means "from the start."
 export function pollBusTelegrams(since: number): Promise<BusMonitorTelegramsResponse> {
   return request(`/api/bus/monitor/telegrams?since=${since}`);
+}
+
+// `POST`, matching the route (`bus_routes.rs`'s `discover_interfaces`):
+// the search puts a multicast datagram on the network, and a `GET` would
+// be fair game for prefetching. An empty `interfaces` array is a normal
+// success, never an error — see `busDiscovery.ts`.
+export function discoverBusInterfaces(): Promise<BusDiscoverResponse> {
+  return request("/api/bus/discover", { method: "POST" });
 }
 
 export function writeBusValue(destination: string, dpt: string | null, value: string): Promise<BusWriteResponse> {

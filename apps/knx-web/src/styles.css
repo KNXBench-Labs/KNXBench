@@ -1044,6 +1044,129 @@ main {
   font-style: italic;
 }
 
+/* T25 — the interface search. Deliberately styled as information, not as
+   a problem: muted text, no error colour, no border shouting for
+   attention. Finding nothing is the ordinary result on a laptop, and the
+   gateway field above still takes a typed address either way. */
+.bus-discovery {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.bus-discovery-status {
+  margin: 0;
+  color: var(--knx-muted);
+  font-size: 0.9em;
+}
+
+.bus-discovery-hint,
+.bus-discovery-caption {
+  margin: 0;
+  color: var(--knx-muted);
+  font-size: 0.82em;
+  line-height: 1.45;
+  max-width: 78ch;
+}
+
+/* The server's own English sentence for a search that could not run. It
+   is kept rather than swallowed, and it is the quietest thing on the
+   panel. */
+.bus-discovery-detail {
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.bus-discovery-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One found interface, as a card-shaped button: the name is what a person
+   recognises, the endpoint is what goes in the field, and the interface's
+   own individual address is what tells three identical-looking boxes
+   apart. `text-transform: none` because the shell upper-cases buttons and
+   a friendly name is not a label. */
+.bus-discovery-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--knx-border);
+  border-radius: var(--knx-radius-card);
+  background: var(--knx-surface);
+  color: var(--knx-foreground);
+  box-shadow: none;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+
+.bus-discovery-option:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--knx-accent);
+}
+
+.bus-discovery-name {
+  font-weight: 600;
+  font-size: 0.92em;
+}
+
+.bus-discovery-endpoint {
+  font-size: 0.85em;
+}
+
+.bus-discovery-meta {
+  color: var(--knx-muted);
+  font-size: 0.78em;
+}
+
+.bus-discovery-tag {
+  align-self: flex-start;
+  padding: 0 0.35rem;
+  border-radius: var(--knx-radius-button);
+  background: color-mix(in srgb, var(--knx-accent) 14%, transparent);
+  color: var(--knx-accent);
+  font-size: 0.72em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* A found interface arriving, and a search in flight. Both durations come
+   from the motion setting, so "Motion: off" sets them to 0ms and nothing
+   moves at all; the easing comes from the motion *style*, which is what
+   makes the same two rules read as a smooth fade under "Smooth" and as a
+   stepped flicker under "Glitch" without a second set of keyframes.
+   `prefers-reduced-motion: reduce` is handled structurally by the media
+   query, as everywhere else in this file. */
+@keyframes knx-discovery-option-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes knx-discovery-searching {
+  from { opacity: 1; }
+  to { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bus-discovery-option {
+    animation: knx-discovery-option-in var(--knx-transition-duration) var(--knx-motion-easing) both;
+  }
+  .bus-discovery-search[aria-busy="true"] {
+    animation: knx-discovery-searching calc(var(--knx-transition-duration) * 3)
+      var(--knx-motion-easing) infinite alternate;
+  }
+}
+
 .bus-monitor-table {
   width: 100%;
   border-collapse: collapse;

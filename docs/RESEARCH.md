@@ -3747,6 +3747,191 @@ Recommendations carried forward, each traceable to a finding above:
 
 ---
 
+## 13. Natural-language interaction and MCP prerequisite audit (2026-09-22, T19)
+
+This section answers the joint prerequisite behind the proposed in-app
+natural-language surface and a possible Model Context Protocol (MCP) server.
+Repository facts are **[V]**, protocol documentation is **[D]**, and the
+recommended future shape is **[A]**.
+
+### 13.1 Verdict: useful command coverage, but no safe public automation boundary
+
+**The prerequisite is not met. No LLM or MCP mutation surface should be
+implemented yet.** `crates/knx-core/src/command.rs` provides valuable,
+reversible editing and an atomic in-memory `Batch`, but it is neither a
+near-complete engineering intent model nor a serialisable public contract.
+Authentication now protects the server, but authorization, project revision
+checks, attributable audit and durable multi-client conflict handling do not
+exist. **[V]** A bounded read/proposal surface is technically plausible later;
+general live-project mutation is not.
+
+The current `Command` enum has 33 variants **[V]**:
+
+| Capability | Existing variants |
+| --- | --- |
+| Device fields | `SetIndividualAddress`, `SetDeviceDescription` |
+| Communication objects | `SetComObjectDpt`, `SetComObjectDescription`, `SetComObjectFlag` |
+| Parameters | `SetParameterValue` |
+| Group addresses | `CreateGroupAddress`, `DeleteGroupAddress`, `UpdateGroupAddress` |
+| Topology | `CreateArea`, `DeleteArea`, `CreateLine`, `DeleteLine`, `MoveDeviceToLine` |
+| Devices | `CreateDevice`, `DeleteDevice` |
+| Buildings | `CreateBuildingPart`, `DeleteBuildingPart`, `RenameBuildingPart`, `MoveDeviceToBuildingPart` |
+| Group ranges | `CreateGroupRange`, `DeleteGroupRange`, `RenameGroupRange` |
+| Links and project setting | `LinkComObject`, `UnlinkComObject`, `SetGroupAddressStyle` |
+| Internal undo/allocation/composition | five `Restore*` variants, `SetIdAllocators`, `Batch` |
+
+`Command::apply` returns an inverse; `Batch` rolls back already-applied
+subcommands on an error and becomes one undo step through `CommandStack`.
+That is a strong in-memory edit invariant, not a database transaction, user
+consent record, concurrency protocol or reversal of external side effects.
+`Command` derives no Serde traits, and internal `Restore*` payloads and
+allocator snapshots must never be mistaken for public user intents. **[V]**
+
+Material gaps established by the complete enum are **[V]**:
+
+- no numeric re-addressing or range reassignment of an existing group
+  address; `UpdateGroupAddress` changes only name, `central` and `unfiltered`;
+- no area/line rename or address change, line reparenting, building-part
+  reparent/type update, or existing group-range boundary/parent update;
+- no installation CRUD and no consistent installation selector. Most
+  installation-scoped commands still use the first installation, although
+  `CreateDevice` can select one, `RestoreDevice` preserves one, and group
+  address style validation covers all installations. The enum header's blanket
+  first-installation comment is therefore stale, but targeting remains
+  incomplete;
+- no application-program, product or version reassignment, general module
+  instance editing, independent communication-object CRUD, or project metadata
+  editing beyond group-address style;
+- no load/save/import/export/catalog or hardware operations in `Command`;
+  those are separate services and routes;
+- `SetParameterValue` stores a raw value. Product-specific kind, bounds and
+  editability checks live in `apps/knx-server/src/domain.rs`; calling the core
+  command directly would bypass necessary application validation.
+
+These gaps prevent an honest claim that natural language can drive general KNX
+engineering through the command layer.
+
+### 13.2 Authorization and concurrent live projects
+
+ADR-0026 authenticates the HTTP API with one shared password and a browser
+session. It deliberately provides no accounts, person identity, project roles
+or operation scopes. The guarded router contains project mutations, file and
+settings access, catalog installation and bus routes behind the same coarse
+gate (`apps/knx-server/src/lib.rs`, `auth.rs`, `routes.rs` and
+`bus_routes.rs`). **[V]** Authentication therefore answers "may this client
+enter?", not "which person approved this exact project operation?" An LLM,
+MCP client and human browser would all act with the same authority.
+
+`AppState` holds one project and one shared `CommandStack`. A mutex prevents
+two commands executing simultaneously, but there is no project generation or
+revision precondition, actor metadata, durable audit, mutation idempotency or
+client update stream. Validation and command construction can also occur in a
+different lock phase from application. **[V]** A proposal built from revision
+N can therefore be applied after another client has produced revision N+1,
+and shared undo can reverse another actor's edit. KNOWN_LIMITATIONS.md §63
+already records the same last-writer-wins boundary.
+
+Before automation may mutate a live project, KNXBench needs an authenticated
+operator/client identity, project and operation permissions, a monotonically
+checked project revision, atomic validation-plus-apply, bounded batches,
+request idempotency, attributable audit, an explicit undo ownership policy,
+and stale-view notification or enforced reload. **[A]** A single enforced
+writer is simpler than full collaborative editing and remains a valid design,
+but today's shared password does not enforce it.
+
+### 13.3 Mapping language to edits
+
+Three mappings were considered:
+
+1. **Model emits raw `Command` values — rejected.** Serialising the enum would
+   expose internal inverse/allocation forms, bind a public protocol to core
+   implementation details, and let callers bypass application-level parameter
+   and product validation.
+2. **Model calls typed tools that construct commands — necessary but not
+   sufficient.** Typed identifiers, bounded schemas and centralized validation
+   reduce malformed calls. They do not supply authorization, consent or a
+   revision check, and a model can still select the wrong valid object.
+3. **Model proposes; a human approves an exact diff — recommended initial
+   mutation policy.** The approval must bind project identity, base revision,
+   resolved target IDs, exact payload, expiry and approving operator. Any state
+   change invalidates it; the model cannot approve its own proposal. **[A]**
+
+The reusable application flow should be **[A]**:
+
+`bounded project read model → typed intent proposal → deterministic validation
+and diff → human approval → revision-checked Command/Batch → result and audit`
+
+Both in-app chat and a future MCP adapter should call that one application
+service. Model/MCP dependencies stay outside `knx-core`. Public intent DTOs
+must be versioned and must exclude raw SQL, shell access, arbitrary filesystem
+paths, whole-`Project` replacement, `Restore*` and `SetIdAllocators`.
+
+The MCP 2025-11-25 tools specification says tools are model-controlled,
+requires servers to validate inputs and apply access controls/rate limits, and
+recommends keeping a human able to deny tool invocations. **[D]** MCP supplies
+an interface, not KNX correctness or consent. Its HTTP authorization profile
+uses an OAuth-based flow and explicitly rejects token passthrough; the current
+KNXBench cookie is not evidence of MCP authorization compliance. **[D]** The
+standard transports are stdio and Streamable HTTP; local HTTP still needs
+Origin validation and authentication. **[D]** Sources:
+
+- [MCP tools, 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
+- [MCP authorization, 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
+- [MCP transports, 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
+- [MCP security guidance, 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices)
+
+### 13.4 Model choice and project-data consequences
+
+No model is selected by this research. Capability claims must be measured on a
+fixed corpus covering target resolution, German and English KNX intent,
+ambiguity refusal, bounded structured proposals, invalid identifiers,
+instructions embedded in imported labels, stale-state retries, latency and
+memory use. **[A]** A benchmark, not vendor prose, decides whether a candidate
+is useful.
+
+A local model can avoid sending selected project context to an external model
+provider only if inference, telemetry and every tool path remain local. Local
+execution does not itself grant authorization. A remote model receives the
+prompted building layout, room and device names, topology, addresses,
+parameters and logs; before selecting one, the operator must choose the
+provider/endpoint explicitly and verify retention, training use, jurisdiction,
+subprocessors and contract terms. **[A]** An external MCP client may forward
+tool results to its own remote model, so local MCP transport does not imply
+local inference.
+
+Context must be minimized. KNX keys/keyrings, passwords, session tokens,
+opaque archives and unrelated filesystem data are never model context.
+Imported names and descriptions are untrusted data, not instructions. Reads
+also require explicit project/data scope because an installation inventory can
+reveal how a building is used.
+
+### 13.5 Operations never allowed unsupervised
+
+Until the prerequisites above exist, every mutation is prohibited through an
+LLM/MCP surface. If a later approved proposal flow is built, explicit human
+approval is still required for deleting devices or group addresses, unlinking,
+physical- or group-address re-addressing, parameter overwrite, DPT/flag
+changes, topology/building moves, bulk edits, shared undo/redo, project
+replacement, save-overwrite, import, catalog installation and any export that
+discloses project data. **[A]** Missing CSV rows must never imply deletion, and
+an empty/ambiguous target must fail closed.
+
+No model receives bus write, commissioning, programming, download, unload,
+reset or device-management capability. Those operations are outside this goal
+run even with confirmation; undo cannot reverse their physical effects. The
+existence of `/api/bus/write` is not authorization to expose it. **[V+A]**
+
+### 13.6 Reconsideration gate
+
+Revisit implementation only when the command gap list is deliberately closed
+or a narrower public scope is accepted, versioned intent schemas and shared
+application validation exist, §63's live-project concurrency has an enforced
+policy, authorization identifies an operator and operation scope, and exact
+diff approval plus audit is testable. At that point, start with bounded reads
+and proposals; do not start with autonomous mutation. **[A]**
+
+---
+
 ## Sources
 
 * [Project schema description – KNX Association](https://support.knx.org/hc/en-us/articles/4408207190674-Project-schema-description)

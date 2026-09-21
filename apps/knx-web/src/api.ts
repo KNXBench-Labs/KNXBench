@@ -1142,6 +1142,7 @@ export interface LineScanResultsResponse {
   completedCount: number;
   totalCount: number;
   omittedAddresses: string[];
+  excludedAddresses: string[];
   results: LineScanResult[];
 }
 
@@ -1182,12 +1183,13 @@ export function startLineScan(requestBody: LineScanRequest): Promise<LineScanSta
   });
 }
 
-export function pollLineScan(since: number): Promise<LineScanResultsResponse> {
-  return request(`/api/bus/scan/results?since=${since}`);
+export function pollLineScan(since: number, sessionId?: number): Promise<LineScanResultsResponse> {
+  const expected = sessionId === undefined ? "" : `&sessionId=${sessionId}`;
+  return request(`/api/bus/scan/results?since=${since}${expected}`);
 }
 
-export function cancelLineScan(): Promise<LineScanResultsResponse> {
-  return request("/api/bus/scan/cancel", { method: "POST" });
+export function cancelLineScan(sessionId: number): Promise<LineScanResultsResponse> {
+  return request(`/api/bus/scan/cancel?sessionId=${sessionId}`, { method: "POST" });
 }
 
 export function writeBusValue(

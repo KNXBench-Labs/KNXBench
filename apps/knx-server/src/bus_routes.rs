@@ -181,9 +181,17 @@ async fn start_scan(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct ScanPollQuery {
     #[serde(default)]
     since: usize,
+    session_id: Option<u64>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ScanSessionQuery {
+    session_id: u64,
 }
 
 #[derive(Serialize)]
@@ -240,6 +248,7 @@ struct ScanResultsResponse {
     completed_count: usize,
     total_count: usize,
     omitted_addresses: Vec<String>,
+    excluded_addresses: Vec<String>,
     results: Vec<ScanResultDto>,
 }
 
@@ -253,8 +262,8 @@ fn scan_status(status: LineScanStatus) -> (&'static str, Option<String>) {
 }
 
 fn scan_response(session: &LineScanSession, since: usize) -> ScanResultsResponse {
-    let (next_since, results) = session.results_since(since);
-    let (status, error) = scan_status(session.status());
+    let (snapshot_status, next_since, results) = session.snapshot_since(since);
+    let (status, error) = scan_status(snapshot_status);
     ScanResultsResponse {
         session_id: session.id(),
         status,
@@ -263,6 +272,7 @@ fn scan_response(session: &LineScanSession, since: usize) -> ScanResultsResponse
         completed_count: next_since,
         total_count: session.total_count(),
         omitted_addresses: session.omitted().iter().map(ToString::to_string).collect(),
+        excluded_addresses: session.excluded().iter().map(ToString::to_string).collect(),
         results: results.into_iter().map(Into::into).collect(),
     }
 }
@@ -275,16 +285,32 @@ async fn poll_scan(
     let session = guard.as_ref().ok_or_else(|| {
         ApiError::with_status(StatusCode::NOT_FOUND, "no line scan session exists")
     })?;
+    if query.session_id.is_some_and(|id| id != session.id()) {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            format!(
+                "line scan session {} is no longer active",
+                query.session_id.unwrap()
+            ),
+        ));
+    }
     Ok(Json(scan_response(session, query.since)))
 }
 
 async fn cancel_scan(
     State(state): State<SharedState>,
+    Query(query): Query<ScanSessionQuery>,
 ) -> Result<Json<ScanResultsResponse>, ApiError> {
     let mut guard = state.line_scan_session.lock().await;
     let session = guard.as_mut().ok_or_else(|| {
         ApiError::with_status(StatusCode::CONFLICT, "no line scan session exists")
     })?;
+    if query.session_id != session.id() {
+        return Err(ApiError::with_status(
+            StatusCode::CONFLICT,
+            format!("line scan session {} is no longer active", query.session_id),
+        ));
+    }
     session.cancel().await;
     Ok(Json(scan_response(session, 0)))
 }

@@ -184,11 +184,60 @@ async fn cancellation_stops_the_probe_and_disconnects_the_tunnel() {
     }
     assert!(!handle.sent_frames().is_empty(), "probe never started");
 
-    let cancel = call(&app, "POST", "/api/bus/scan/cancel", None).await;
+    let session_id = body_json(start).await["sessionId"].as_u64().unwrap();
+    let cancel = call(
+        &app,
+        "POST",
+        &format!("/api/bus/scan/cancel?sessionId={session_id}"),
+        None,
+    )
+    .await;
     assert_eq!(cancel.status(), StatusCode::OK);
     assert_eq!(body_json(cancel).await["status"], "cancelled");
     let sent_after_cancel = handle.sent_frames().len();
     tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     assert_eq!(handle.sent_frames().len(), sent_after_cancel);
     assert!(handle.disconnected());
+}
+
+#[tokio::test]
+async fn poll_and_cancel_reject_a_different_scan_session() {
+    let (tunnel, _handle) = fake_tunnel();
+    let app = knx_server::app(Arc::new(state_with(tunnel)), None);
+    let start = call(
+        &app,
+        "POST",
+        "/api/bus/scan/start",
+        Some(scan_request(2, 2, &[], 60_000)),
+    )
+    .await;
+    let session_id = body_json(start).await["sessionId"].as_u64().unwrap();
+    let wrong_id = session_id + 1;
+
+    let poll = call(
+        &app,
+        "GET",
+        &format!("/api/bus/scan/results?since=0&sessionId={wrong_id}"),
+        None,
+    )
+    .await;
+    assert_eq!(poll.status(), StatusCode::CONFLICT);
+
+    let cancel = call(
+        &app,
+        "POST",
+        &format!("/api/bus/scan/cancel?sessionId={wrong_id}"),
+        None,
+    )
+    .await;
+    assert_eq!(cancel.status(), StatusCode::CONFLICT);
+
+    let cleanup = call(
+        &app,
+        "POST",
+        &format!("/api/bus/scan/cancel?sessionId={session_id}"),
+        None,
+    )
+    .await;
+    assert_eq!(cleanup.status(), StatusCode::OK);
 }

@@ -6211,8 +6211,8 @@ that garbles a path rather than a leak, and the far more common
 A third is the mirror image of the second fix round's IPv4 change. The scan
 now slides a four-group window across a whole run of digits and dots rather
 than requiring the run to split into exactly four groups, which is what
-closes a typo'd fifth octet or a glued extra group (`192.168.1.1.5`,
-`5.192.168.1.1`) that used to survive intact. But a bare, unlabelled number
+closes a typo'd fifth octet or a glued extra group (`192.0.2.1.5`,
+`5.192.0.2.1`) that used to survive intact. But a bare, unlabelled number
 with five or more dot-separated parts is not distinguishable from an address
 by shape alone, and a genuine version string in that shape (`1.2.3.4.5` with
 nothing in front of it) is over-redacted the same way a real address would

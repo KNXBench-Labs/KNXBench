@@ -7182,7 +7182,7 @@ frontend classify a string rather than trusting its call site, would both
 work; neither is worth doing before someone reports being confused by the
 one this replaces.
 
-## 124. ETS 6's device-local communication-object ids are read from a single project's evidence
+## 125. ETS 6's device-local communication-object ids are read from a single project's evidence
 
 **What changed first.** Until T29 the ETS 6.3.0 reference project (schema 23)
 reported **867** `MapProblem::Value(MalformedRefId(..))` over **310** distinct
@@ -7244,10 +7244,12 @@ side) **[V]**.
 
 **Not affected.** The schema-11 (ETS4) and schema-21 (KV demo) corpus
 projects map and enrich identically to before: 907 and 75 communication
-objects, 0 and 1 import errors, 0 and 0 enrichment issues — pinned by
-`crates/knx-etsproj/tests/device_local_com_object_refs.rs` and
-`crates/knx-app/tests/ets6_device_local_enrichment.rs`, which fail if either
-count moves **[V]**.
+objects, 0 and 1 import errors, and 107 and 0 enrichment issues. The ETS4
+issues are its already-pinned `AmbiguousDpt` alternatives, not lookup
+failures. These counts are covered by
+`crates/knx-etsproj/tests/device_local_com_object_refs.rs`,
+`crates/knx-app/tests/enrichment_gap_measurement.rs`, and
+`crates/knx-app/tests/ets6_device_local_enrichment.rs` **[V]**.
 
 **Lifted when.** A second, independently produced schema-23 project is in the
 corpus and its `GroupObjectTree` ids are counted the same way. This is the

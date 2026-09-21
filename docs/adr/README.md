@@ -41,3 +41,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0027](0027-program-defaults-side-table.md) | A program-defaults side table, not a layer stack on `Override<T>` | Accepted | 2026-09-20 |
 | [0028](0028-no-knxproj-export.md) | KNXBench reads `.knxproj` and never writes one | Accepted | 2026-09-20 |
 | [0029](0029-application-settings-file.md) | Application settings live in one versioned file on the server | Accepted | 2026-09-21 |
+| [0030](0030-group-address-notation-is-a-display-preference.md) | Group-address notation is a display preference, rendered last | Accepted | 2026-09-21 |

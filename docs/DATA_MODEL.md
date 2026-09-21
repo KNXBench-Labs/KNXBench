@@ -272,6 +272,17 @@ handle into the string table.
 them, so the model must not be shaped in a way that assumes their absence. This
 is an assumption, not a verified fact (RESEARCH §3.1).
 
+**Decided, not implemented — project notes:**
+[ADR-0031](adr/0031-project-notes-are-a-project-owned-collection.md) reserves a
+future ordered `ProjectNote` collection on the `Project` aggregate. A note has
+a stable ID and a typed target for either the project or a supported
+user-facing entity; it is not a text field copied onto every entity. The
+current six-field `Project` in `knx-core/src/project.rs` has no such collection,
+and schema version 9 has no note table. Implementation therefore requires a
+future schema bump, ordered migration, and frozen predecessor fixture. Existing
+projects will migrate to an empty collection; this paragraph does not claim
+that notes can currently be created, stored, projected, or reported.
+
 ## 5. Two orthogonal hierarchies
 
 *Implemented: `knx-core/src/{topology,building,devices}.rs`.*

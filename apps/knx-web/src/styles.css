@@ -1374,6 +1374,16 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .workspace-heading h1 { margin: 4px 0; font-size: 28px; }
 .eyebrow { color: var(--knx-muted); font-size: 12px; margin: 0; }
 .mono { font-family: var(--knx-font-mono); }
+/* Group addresses, wherever they are rendered. With the dotted notation
+   selected, `1.2.3` is also how an individual address is written, so the
+   two need something other than punctuation to tell them apart. The
+   primary cue is structural and already on screen — column headers
+   (Source vs Destination), tree branches, section headings, the search
+   overlay's kind groups — and this is the supplementary one: group
+   addresses take the tertiary accent, `.inspector-address` already did,
+   and individual addresses keep the body colour. A theme token, never a
+   literal (ADR-0022). Tabular figures so a column of them lines up. */
+.ga-address { color: var(--knx-accent-tertiary); font-variant-numeric: tabular-nums; }
 .topology-area { margin-bottom: 24px; }
 .diagram-heading { display: flex; gap: 10px; align-items: center; font-weight: 600; width: 100%; }
 .diagram-heading small { color: var(--knx-muted); margin-left: auto; }

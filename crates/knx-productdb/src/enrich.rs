@@ -191,7 +191,9 @@ fn is_device_local_ref_id(ref_id: &str) -> bool {
     };
     let digits = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
     !tail.contains('_')
-        && head.strip_prefix("O-").is_some_and(digits)
+        && head
+            .strip_prefix("O-")
+            .is_some_and(|value| digits(value) && value.parse::<u16>().is_ok())
         && tail.strip_prefix("R-").is_some_and(digits)
 }
 
@@ -919,6 +921,10 @@ mod tests {
             com_object_lookup_id("M-006A_A-0001-22-617E-O0079", "O-3_R-10005", false),
             "M-006A_A-0001-22-617E-O0079_O-3_R-10005"
         );
+        assert_eq!(
+            com_object_lookup_id("A-1", "O-65535_R-1", false),
+            "A-1_O-65535_R-1"
+        );
         // Already fully qualified — prefixing again would invent an id.
         assert_eq!(
             com_object_lookup_id("A-1", "M-0083_A-0019-16-ECA7_O-59_R-149", false),
@@ -931,7 +937,14 @@ mod tests {
         );
         // Shapes that are not device-local are looked up verbatim and
         // reported as missing if the database has no such id.
-        for verbatim in ["O-3", "UP-411_R-411", "O-3_R-10005_extra", "O-3a_R-1"] {
+        for verbatim in [
+            "O-3",
+            "UP-411_R-411",
+            "O-3_R-10005_extra",
+            "O-3a_R-1",
+            "O-65536_R-1",
+            "O-999999999999999999999999999999_R-1",
+        ] {
             assert_eq!(com_object_lookup_id("A-1", verbatim, false), verbatim);
         }
     }

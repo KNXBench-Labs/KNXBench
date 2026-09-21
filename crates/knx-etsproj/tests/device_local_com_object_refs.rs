@@ -50,6 +50,61 @@ fn the_ets6_project_reports_no_malformed_com_object_ref_ids() {
     let out = import_knxproj(&support::reference_ets6_path()).unwrap();
     assert_eq!(out.report.source.schema_version, 23);
 
+    // The RefId loss is gone, but nine unrelated, explicitly reported
+    // attributes remain unsupported. Pin both the loss signal and the
+    // constructs behind it so a future unknown cannot hide in the same
+    // headline count. Every occurrence must also have reached the opaque
+    // store summary; reporting without preservation would not be enough.
+    assert!(out.report.has_losses());
+    assert_eq!(out.report.unknown.len(), 9);
+    let unknown_names = out
+        .report
+        .unknown
+        .iter()
+        .map(|unknown| unknown.name.as_str())
+        .collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(
+        unknown_names,
+        std::collections::BTreeSet::from([
+            "CompletionStatus",
+            "Hide16BitGroupsFromLegacyPlugins",
+            "Name",
+            "ProjectId",
+            "ProjectTracingLevel",
+        ])
+    );
+    for unknown in &out.report.unknown {
+        assert_eq!(unknown.kind, knx_etsproj::parse::UnknownKind::Attribute);
+        assert!(unknown.sample.is_some(), "{} has no sample", unknown.name);
+    }
+    let reported_by_name =
+        out.report
+            .unknown
+            .iter()
+            .fold(std::collections::BTreeMap::new(), |mut counts, unknown| {
+                *counts.entry(unknown.name.as_str()).or_insert(0usize) +=
+                    unknown.occurrences as usize;
+                counts
+            });
+    let preserved_by_name = out
+        .report
+        .opaque
+        .iter()
+        .filter(|opaque| opaque.kind == "RetainedAttribute")
+        .fold(std::collections::BTreeMap::new(), |mut counts, opaque| {
+            *counts.entry(opaque.name.as_str()).or_insert(0usize) += 1;
+            counts
+        });
+    for (name, reported) in reported_by_name {
+        assert!(
+            preserved_by_name
+                .get(name)
+                .is_some_and(|preserved| *preserved >= reported),
+            "{name}: reported {reported}, preserved {:?}",
+            preserved_by_name.get(name)
+        );
+    }
+
     // Counted, not compared element-wise: the pre-fix failure printed all
     // 867 ids and was unreadable. The first few are enough to recognise
     // the shape that regressed.

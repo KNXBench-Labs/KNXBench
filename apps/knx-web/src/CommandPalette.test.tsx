@@ -11,7 +11,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import CommandPalette from "./CommandPalette";
 import type { CommandContext } from "./commandRegistry";
 import type { ProjectTree } from "./bindings/ProjectTree";
-import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
+import { resetSettingsForTests, settingsStorage } from "./settingsStore";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -20,7 +21,7 @@ let host: HTMLDivElement | undefined;
 afterEach(() => {
   host?.remove();
   host = undefined;
-  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   resetUiLanguageForTests();
 });
 
@@ -126,7 +127,7 @@ describe("CommandPalette", () => {
   // resolution and the filtering both use the *German* label once the UI
   // language is German, not the (English) catalogue key underneath it.
   it("finds a command by its German label when the UI language is German", async () => {
-    saveUiLanguage(window.localStorage, "de");
+    saveUiLanguage(settingsStorage, "de");
     resetUiLanguageForTests();
     const { root } = await renderPalette(noopCtx());
 
@@ -149,7 +150,7 @@ describe("CommandPalette", () => {
   // convention: "Strg" for Ctrl), so the badge is no longer a verbatim
   // "Ctrl+Z" once the UI language is German.
   it("translates the shortcut hint badge when the UI language is German", async () => {
-    saveUiLanguage(window.localStorage, "de");
+    saveUiLanguage(settingsStorage, "de");
     resetUiLanguageForTests();
     const { root } = await renderPalette(noopCtx());
 

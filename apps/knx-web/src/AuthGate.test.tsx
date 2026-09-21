@@ -28,7 +28,8 @@ vi.mock("./api", () => ({
 import AuthGate from "./AuthGate";
 import { messages as en } from "./messages/en";
 import { notifySessionExpired, resetSessionListenersForTests, type SessionControls } from "./session";
-import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
+import { resetUiLanguageForTests } from "./uiLanguage";
+import { resetSettingsForTests } from "./settingsStore";
 
 let host: HTMLDivElement | undefined;
 let root: Root | undefined;
@@ -41,7 +42,7 @@ afterEach(async () => {
   vi.clearAllMocks();
   apiMock.logout.mockResolvedValue({ authenticated: false });
   resetSessionListenersForTests();
-  window.localStorage.removeItem(UI_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   resetUiLanguageForTests();
 });
 

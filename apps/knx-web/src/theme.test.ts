@@ -63,17 +63,17 @@ describe("loadThemeId", () => {
   });
 
   it("returns a known stored id unchanged", () => {
-    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "bitcoin-defi" }))).toBe("bitcoin-defi");
+    expect(loadThemeId(fakeStorage({ "theme": "bitcoin-defi" }))).toBe("bitcoin-defi");
   });
 
   it("falls back to system for an unknown id", () => {
-    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "solarized" }))).toBe("system");
+    expect(loadThemeId(fakeStorage({ "theme": "solarized" }))).toBe("system");
   });
 
   it("preserves the intent of old System/Light/Dark values", () => {
-    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "system" }))).toBe("system");
-    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "light" }))).toBe("porcelain");
-    expect(loadThemeId(fakeStorage({ "knx-desktop:theme": "dark" }))).toBe("graphite");
+    expect(loadThemeId(fakeStorage({ "theme": "system" }))).toBe("system");
+    expect(loadThemeId(fakeStorage({ "theme": "light" }))).toBe("porcelain");
+    expect(loadThemeId(fakeStorage({ "theme": "dark" }))).toBe("graphite");
   });
 });
 
@@ -81,7 +81,7 @@ describe("saveThemeId", () => {
   it("stores the exact key and value", () => {
     const storage = fakeStorage();
     saveThemeId(storage, "bitcoin-defi");
-    expect(storage.setItem).toHaveBeenCalledWith("knx-desktop:theme", "bitcoin-defi");
+    expect(storage.setItem).toHaveBeenCalledWith("theme", "bitcoin-defi");
   });
 });
 
@@ -90,7 +90,7 @@ describe("persistence", () => {
   it.each(THEMES.map((t) => t.id))("restores %s through the one store", (id) => {
     const storage = fakeStorage();
     saveThemeId(storage, id);
-    expect(storage.setItem).toHaveBeenCalledWith("knx-desktop:theme", id);
+    expect(storage.setItem).toHaveBeenCalledWith("theme", id);
     expect(loadThemeId(storage)).toBe(id);
   });
 });

@@ -1,17 +1,22 @@
 /** User-importable UI language packs: validate, store, import, and export beyond built-in ones. */
 import { useSyncExternalStore } from "react";
 import { messages as enMessages } from "./messages/en";
+import { getSetting, setSettingOrThrow, subscribeToSettings } from "./settingsStore";
 
 /**
- * `localStorage` key for installed language packs, a sibling of
- * `uiLanguage.ts`'s `UI_LANGUAGE_STORAGE_KEY`: that key names which
- * language is *active*, this one holds the packs that make an
+ * Key inside the settings document for installed language packs, a
+ * sibling of `uiLanguage.ts`'s `UI_LANGUAGE_STORAGE_KEY`: that key names
+ * which language is *active*, this one holds the packs that make an
  * imported-but-not-compiled-in language available to name in the first
- * place. Stored as a JSON object keyed by `tag`, so importing a pack with
- * a tag that's already installed replaces it — an upgrade, not a
- * duplicate.
+ * place. A JSON object keyed by `tag`, so importing a pack with a tag
+ * that's already installed replaces it — an upgrade, not a duplicate.
+ *
+ * The one preference stored as a real nested object rather than a string:
+ * the browser era had no choice but to escape it into a `localStorage`
+ * value, and a settings file full of escaped JSON would be unreadable by
+ * the human it is sitting on disk for.
  */
-export const LANGUAGE_PACKS_STORAGE_KEY = "knx-desktop:ui-language-packs";
+export const LANGUAGE_PACKS_STORAGE_KEY = "uiLanguagePacks";
 
 /** The format version this build writes. A pack may declare a different
  * (including higher) `formatVersion` and is still accepted — see
@@ -384,30 +389,39 @@ function notifyPackSubscribers(): void {
   for (const onStoreChange of subscribers) onStoreChange();
 }
 
-function readStore(storage: Pick<Storage, "getItem">): Record<string, LanguagePack> {
-  const raw = storage.getItem(LANGUAGE_PACKS_STORAGE_KEY);
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
-    return parsed as Record<string, LanguagePack>;
-  } catch {
-    // Corrupted/hand-edited storage is treated as "no packs installed",
-    // the same always-safe-default philosophy `theme.ts`'s `loadThemeId`
-    // uses for an unrecognised value, not a thrown error mid-render.
-    return {};
+function readStore(): Record<string, LanguagePack> {
+  const stored = getSetting(LANGUAGE_PACKS_STORAGE_KEY);
+  // An object in the settings document; a string is what the browser era
+  // stored and what a hand-edited file may still say, so it is parsed
+  // rather than thrown away.
+  let parsed: unknown = stored;
+  if (typeof stored === "string") {
+    try {
+      parsed = JSON.parse(stored) as unknown;
+    } catch {
+      // Corrupted/hand-edited storage is treated as "no packs installed",
+      // the same always-safe-default philosophy `theme.ts`'s `loadThemeId`
+      // uses for an unrecognised value, not a thrown error mid-render.
+      return {};
+    }
   }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+  // A copy, deliberately: `getCache()` is mutated in place by
+  // `importLanguagePack`, and mutating the settings document's own object
+  // would leave `setSettingOrThrow` comparing a value against itself and
+  // concluding nothing had changed.
+  return { ...(parsed as Record<string, LanguagePack>) };
 }
 
 function getCache(): Record<string, LanguagePack> {
   if (cache === undefined) {
-    cache = readStore(window.localStorage);
+    cache = readStore();
   }
   return cache;
 }
 
 function persist(): void {
-  window.localStorage.setItem(LANGUAGE_PACKS_STORAGE_KEY, JSON.stringify(getCache()));
+  setSettingOrThrow(LANGUAGE_PACKS_STORAGE_KEY, { ...getCache() });
 }
 
 /**
@@ -574,3 +588,12 @@ export function exportEnglishTemplate(): LanguagePack {
     messages: { ...enMessages },
   };
 }
+
+
+// The settings document can be replaced under this cache — by the
+// server's answer arriving after first paint, most of all. Same
+// invalidation as `uiLanguage.ts`; `getCache()` re-reads on demand.
+subscribeToSettings(() => {
+  cache = undefined;
+  notifyPackSubscribers();
+});

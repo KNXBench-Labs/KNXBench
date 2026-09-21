@@ -1,8 +1,11 @@
 /** Detects, stores, and exposes the active UI language, built-in or an imported pack's tag. */
 import { useEffect, useSyncExternalStore } from "react";
 import { isWellFormedBcp47Tag } from "./languagePack";
+import { settingsStorage, subscribeToSettings } from "./settingsStore";
 
-export const UI_LANGUAGE_STORAGE_KEY = "knx-desktop:ui-language";
+/** The key inside the settings document the server keeps, not a
+ * `localStorage` key — `settingsStorage` resolves it against the record. */
+export const UI_LANGUAGE_STORAGE_KEY = "uiLanguage";
 
 /**
  * The closed set of UI chrome languages `messages/*.ts` actually ships a
@@ -59,7 +62,7 @@ const subscribers = new Set<() => void>();
 
 function getSnapshot(): UiLanguage {
   if (cached === undefined) {
-    cached = loadUiLanguage(window.localStorage, window.navigator);
+    cached = loadUiLanguage(settingsStorage, window.navigator);
   }
   return cached;
 }
@@ -70,7 +73,7 @@ function subscribe(onStoreChange: () => void): () => void {
 }
 
 function setStoredUiLanguage(language: UiLanguage): void {
-  saveUiLanguage(window.localStorage, language);
+  saveUiLanguage(settingsStorage, language);
   cached = language;
   for (const onStoreChange of subscribers) onStoreChange();
 }
@@ -147,3 +150,14 @@ export function useUiLanguage(): [UiLanguage, (language: UiLanguage) => void] {
 export function getActiveUiLanguage(): UiLanguage {
   return getSnapshot();
 }
+
+// The record can change under this cache — the settings file arriving from
+// the server after first paint, or another preference module's write
+// rewriting the document. Dropping the cache and telling subscribers is
+// enough: `getSnapshot()` re-reads on demand, and a re-read that finds the
+// same language hands back the same string, so `useSyncExternalStore` sees
+// no change and nothing re-renders.
+subscribeToSettings(() => {
+  cached = undefined;
+  for (const onStoreChange of subscribers) onStoreChange();
+});

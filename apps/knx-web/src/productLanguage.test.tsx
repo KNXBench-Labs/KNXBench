@@ -15,9 +15,10 @@ import {
   saveProductLanguage,
   useProductLanguage,
 } from "./productLanguage";
+import { resetSettingsForTests } from "./settingsStore";
 
 afterEach(() => {
-  window.localStorage.removeItem(PRODUCT_LANGUAGE_STORAGE_KEY);
+  resetSettingsForTests();
   resetProductLanguageForTests();
 });
 

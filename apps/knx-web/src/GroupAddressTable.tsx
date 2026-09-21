@@ -15,6 +15,7 @@ import {
   rangePath,
   rangeWithDescendants,
 } from "./groupAddressView";
+import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
 import { useTranslate } from "./i18n";
 import HelpTip from "./HelpTip";
 
@@ -49,6 +50,7 @@ function LinkRow(props: {
   onTreeUpdate: (tree: ProjectTree) => void;
 }) {
   const { ga, link, onTreeUpdate } = props;
+  const formatGa = useGroupAddressFormat();
   const t = useTranslate();
   const [error, setError] = useState<string | null>(null);
 
@@ -84,7 +86,7 @@ function LinkRow(props: {
           onClick={unlink}
           aria-label={t("addressTable.unlinkFrom", {
             object: link.com_object_name ?? `#${link.com_object_number}`,
-            address: ga.address,
+            address: formatGa(ga.address),
           })}
         >
           {t("inspector.unlink")}
@@ -108,6 +110,7 @@ export default function GroupAddressTable(props: {
 }) {
   const { installation, selection, multiSelection, onItemClick, onTreeUpdate, rangeScope } = props;
   const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
   const [query, setQuery] = useState("");
 
   const scopedIds = useMemo(
@@ -120,7 +123,9 @@ export default function GroupAddressTable(props: {
     if (scopedIds && (ga.range === null || !scopedIds.has(ga.range))) return false;
     if (needle === "") return true;
     return (
-      ga.address.toLowerCase().includes(needle) ||
+      // Both notations, always: the filter must not depend on which one
+      // is on screen (`gaNotation.ts`'s `groupAddressSpellings`).
+      groupAddressMatches(ga.address, needle) ||
       ga.name.toLowerCase().includes(needle) ||
       ga.dpts.some((dpt) => dpt.toLowerCase().includes(needle))
     );
@@ -179,7 +184,7 @@ export default function GroupAddressTable(props: {
                     <input
                       type="checkbox"
                       checked={checked(ga)}
-                      aria-label={`${ga.address} ${ga.name}`}
+                      aria-label={`${formatGa(ga.address)} ${ga.name}`}
                       onChange={() =>
                         onItemClick(
                           CHECKBOX_CLICK,
@@ -191,7 +196,7 @@ export default function GroupAddressTable(props: {
                       }
                     />
                   </td>
-                  <td className="mono">
+                  <td className="mono ga-address">
                     <button
                       className="table-select"
                       onClick={(e) =>
@@ -204,7 +209,7 @@ export default function GroupAddressTable(props: {
                         )
                       }
                     >
-                      {ga.address}
+                      {formatGa(ga.address)}
                     </button>
                   </td>
                   <td>{ga.name}</td>
@@ -238,7 +243,7 @@ export default function GroupAddressTable(props: {
       </div>
       {selected && (
         <section className="address-links-panel" aria-label={t("addressTable.links")}>
-          <h2>{t("addressTable.linksFor", { address: selected.address })}</h2>
+          <h2>{t("addressTable.linksFor", { address: formatGa(selected.address) })}</h2>
           {selected.links.length === 0 ? (
             <p role="status">{t("addressTable.noLinksYet")}</p>
           ) : (

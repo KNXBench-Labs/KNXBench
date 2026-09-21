@@ -12,6 +12,7 @@ import {
   subscribeContextChanges,
 } from "./busContext";
 import { useTranslate } from "./i18n";
+import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
 import HelpTip from "./HelpTip";
 
 // The identity of the one session this panel can ever be attached to
@@ -116,6 +117,7 @@ let nextComposeSeedKey = 1;
 /// rather than the user discovering that from a failed send.
 export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean }) {
   const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
   const [gatewayInput, setGatewayInput] = useState("");
   const [session, setSession] = useState<AttachedSession | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
@@ -183,7 +185,9 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
     setSelectedSequence(row.seq);
     setComposeSeed({
       key: nextComposeSeedKey++,
-      destination: row.destination,
+      // Seeded in the notation on screen, so the field agrees with the
+      // row that was clicked; `BusComposeForm` canonicalizes on send.
+      destination: formatGa(row.destination),
       resolution: resolutionFromRow(row),
     });
   }
@@ -456,9 +460,10 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
     return rows.filter((row) => {
       if (isKnownService(row.service) && !serviceFilters[row.service]) return false;
       if (!query) return true;
-      const destination = row.destination.toLowerCase();
       const name = (row.destinationName ?? "").toLowerCase();
-      return destination.includes(query) || name.includes(query);
+      // Both notations, whichever is displayed — same rule the
+      // group-address table's filter follows (`gaNotation.ts`).
+      return groupAddressMatches(row.destination, query) || name.includes(query);
     });
   }, [rows, textFilter, serviceFilters]);
 
@@ -659,8 +664,8 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
                     <td>{row.seq}</td>
                     <td>{row.timestamp}</td>
                     <td>{row.source}</td>
-                    <td>
-                      {row.destination}
+                    <td className="ga-address">
+                      {formatGa(row.destination)}
                       {row.destinationName && (
                         <span className="bus-monitor-dest-name"> ({row.destinationName})</span>
                       )}
@@ -681,7 +686,7 @@ export default function BusMonitorPanel({ projectOpen }: { projectOpen: boolean 
             {selectedTelegram ? <dl>
               <dt>{t("busMonitor.column.time")}</dt><dd>{selectedTelegram.timestamp}</dd>
               <dt>{t("busMonitor.column.source")}</dt><dd className="mono">{selectedTelegram.source}</dd>
-              <dt>{t("busMonitor.column.destination")}</dt><dd><span className="mono">{selectedTelegram.destination}</span>{selectedTelegram.destinationName && <p>{selectedTelegram.destinationName}</p>}</dd>
+              <dt>{t("busMonitor.column.destination")}</dt><dd><span className="mono ga-address">{formatGa(selectedTelegram.destination)}</span>{selectedTelegram.destinationName && <p>{selectedTelegram.destinationName}</p>}</dd>
               <dt>{t("busMonitor.column.service")}</dt><dd>{selectedTelegram.service}</dd>
               <dt>{t("busMonitor.column.decoded")}</dt><dd>{decodedSummary(selectedTelegram)}{selectedTelegram.decoded?.error && <p className="field-error">{selectedTelegram.decoded.error}</p>}</dd>
               <dt>{t("busMonitor.column.payload")}</dt><dd className="mono">{selectedTelegram.rawPayload ?? "—"}</dd>

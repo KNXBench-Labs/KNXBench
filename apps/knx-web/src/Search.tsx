@@ -8,6 +8,7 @@ import type { SearchEntry } from "./treeUtils";
 import { matchEntries } from "./searchMatch";
 import Overlay from "./Overlay";
 import { useTranslate } from "./i18n";
+import { useGroupAddressFormat } from "./gaNotation";
 import type { MessageKey } from "./messages/en";
 
 const KIND_LABEL_KEYS: Record<SearchEntry["kind"], MessageKey> = {
@@ -18,11 +19,14 @@ const KIND_LABEL_KEYS: Record<SearchEntry["kind"], MessageKey> = {
 
 const KIND_ORDER: SearchEntry["kind"][] = ["device", "group_address", "building_part"];
 
-function describeEntry(entry: SearchEntry): string {
+// `formatGa` applies to the group-address branch only: a device's address
+// is an *individual* address, which is always dotted and never a
+// preference (`gaNotation.ts`'s module comment).
+function describeEntry(entry: SearchEntry, formatGa: (address: string) => string): string {
   if (entry.kind === "device") {
     return entry.address ? `${entry.label} — ${entry.address}` : entry.label;
   }
-  if (entry.kind === "group_address") return `${entry.label} — ${entry.address}`;
+  if (entry.kind === "group_address") return `${entry.label} — ${formatGa(entry.address)}`;
   return `${entry.label} — ${entry.path}`;
 }
 
@@ -33,6 +37,7 @@ export default function Search(props: {
 }) {
   const { tree, onSelect, onClose } = props;
   const t = useTranslate();
+  const formatGa = useGroupAddressFormat();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
@@ -100,7 +105,7 @@ export default function Search(props: {
                     className={position === highlight ? "search-result selected" : "search-result"}
                     onClick={() => pick(entry)}
                   >
-                    {describeEntry(entry)}
+                    {describeEntry(entry, formatGa)}
                   </li>
                 );
               })}

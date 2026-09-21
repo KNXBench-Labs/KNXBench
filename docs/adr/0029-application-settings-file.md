@@ -153,8 +153,10 @@ What this does not do:
 * It does not synchronize live between two open windows. A second window
   reads the record when it loads and writes its own changes to it; it
   does not learn about the first window's change until it reloads. The
-  server serializes the read-modify-write (`AppState::settings_lock`), so
-  the two cannot lose each other's *keys* — only the second window's view
-  of a key the first one changed goes stale.
+  server serializes the read-modify-write (`AppState::settings_lock`,
+  taken by all three routes — the read included, because a read that
+  migrates or quarantines writes too), so the two cannot lose each
+  other's *keys* — only the second window's view of a key the first one
+  changed goes stale.
 * It does not encrypt anything. These are preferences; the file holds no
   credentials and no bus addresses.

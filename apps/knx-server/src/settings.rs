@@ -263,11 +263,21 @@ fn schema_version(value: &Value) -> Option<u32> {
     value.as_u64().and_then(|v| u32::try_from(v).ok())
 }
 
-/// Writes `document` atomically: a sibling temp file, then a rename, so a
-/// crash mid-write leaves the previous settings intact rather than half a
-/// document. Keys come out in `serde_json`'s map order (alphabetical,
-/// without the `preserve_order` feature), which makes the file stable to
-/// diff between writes.
+/// Writes `document` atomically: a sibling temp file, flushed to the
+/// platter, then a rename, then an fsync of the directory that holds the
+/// rename. A crash mid-write therefore leaves the previous settings
+/// intact rather than half a document, and a crash just after the rename
+/// leaves a whole document rather than a durable name pointing at bytes
+/// that never landed. The file is small and written rarely, so the two
+/// syncs cost nothing worth counting.
+///
+/// The temp file has one fixed name, which is safe only because every
+/// caller holds `AppState::settings_lock` (`crate::settings_routes`); two
+/// unsynchronized writers would race on that path.
+///
+/// Keys come out in `serde_json`'s map order (alphabetical, without the
+/// `preserve_order` feature), which makes the file stable to diff between
+/// writes.
 pub fn store(data_dir: &Path, document: &SettingsDocument) -> std::io::Result<()> {
     let mut root = Map::new();
     root.insert(
@@ -284,8 +294,17 @@ pub fn store(data_dir: &Path, document: &SettingsDocument) -> std::io::Result<()
     std::fs::create_dir_all(data_dir)?;
     let target = settings_path(data_dir);
     let temporary = data_dir.join(format!("{SETTINGS_FILE_NAME}.tmp"));
-    std::fs::write(&temporary, body)?;
-    std::fs::rename(&temporary, &target)
+    {
+        use std::io::Write;
+        let mut file = std::fs::File::create(&temporary)?;
+        file.write_all(body.as_bytes())?;
+        file.sync_all()?;
+    }
+    std::fs::rename(&temporary, &target)?;
+    // A rename is atomic, which is not the same as durable: without this
+    // the directory entry can survive a crash the payload did not.
+    std::fs::File::open(data_dir)?.sync_all()?;
+    Ok(())
 }
 
 /// Moves a file this build cannot read out of the way, under a name that
@@ -294,7 +313,19 @@ pub fn store(data_dir: &Path, document: &SettingsDocument) -> std::io::Result<()
 /// spent an evening arranging, and "this build could not parse it" is a
 /// long way from "nobody can".
 fn quarantine(data_dir: &Path, path: &Path, reason: &str) -> std::io::Result<SettingsLoad> {
-    let stamp = chrono::Utc::now().format("%Y%m%dT%H%M%SZ");
+    let stamp = chrono::Utc::now().format("%Y%m%dT%H%M%SZ").to_string();
+    quarantine_at(data_dir, path, reason, &stamp)
+}
+
+/// The body of [`quarantine`] with the clock handed in, so the
+/// collision counter can be tested without waiting for two failures to
+/// fall inside the same second.
+fn quarantine_at(
+    data_dir: &Path,
+    path: &Path,
+    reason: &str,
+    stamp: &str,
+) -> std::io::Result<SettingsLoad> {
     let mut moved_to = data_dir.join(format!("settings.damaged-{stamp}.json"));
     // Two damaged files in the same second is contrived, but overwriting
     // the first one with the second would be exactly the data loss this
@@ -489,25 +520,52 @@ mod tests {
 
     #[test]
     fn two_damaged_files_in_the_same_second_do_not_overwrite_each_other() {
+        // The stamp is handed in rather than read from the clock: on a real
+        // clock the two calls can straddle a second boundary, the names
+        // differ for the wrong reason, and the counter this test exists to
+        // cover never runs.
         let dir = data_dir();
         let path = settings_path(dir.path());
+        let stamp = "20260921T120000Z";
+
         std::fs::write(&path, "first wreck").unwrap();
         let SettingsLoad::Quarantined {
             moved_to: first, ..
-        } = load(dir.path()).unwrap()
+        } = quarantine_at(dir.path(), &path, "is not JSON", stamp).unwrap()
         else {
             panic!("expected a quarantine");
         };
         std::fs::write(&path, "second wreck").unwrap();
         let SettingsLoad::Quarantined {
             moved_to: second, ..
-        } = load(dir.path()).unwrap()
+        } = quarantine_at(dir.path(), &path, "is not JSON", stamp).unwrap()
         else {
             panic!("expected a quarantine");
         };
-        assert_ne!(first, second);
+
+        assert_eq!(
+            first.file_name().unwrap(),
+            format!("settings.damaged-{stamp}.json").as_str()
+        );
+        assert_eq!(
+            second.file_name().unwrap(),
+            format!("settings.damaged-{stamp}-1.json").as_str()
+        );
         assert_eq!(std::fs::read_to_string(&first).unwrap(), "first wreck");
         assert_eq!(std::fs::read_to_string(&second).unwrap(), "second wreck");
+    }
+
+    #[test]
+    fn a_damaged_file_is_quarantined_under_a_stamped_name() {
+        let dir = data_dir();
+        std::fs::write(settings_path(dir.path()), "not JSON at all").unwrap();
+        let SettingsLoad::Quarantined { moved_to, .. } = load(dir.path()).unwrap() else {
+            panic!("expected a quarantine");
+        };
+        let name = moved_to.file_name().unwrap().to_string_lossy().into_owned();
+        assert!(name.starts_with("settings.damaged-"), "{name}");
+        assert!(name.ends_with(".json"), "{name}");
+        assert!(!settings_path(dir.path()).exists());
     }
 
     #[test]

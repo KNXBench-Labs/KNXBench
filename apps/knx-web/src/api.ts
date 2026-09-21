@@ -1078,6 +1078,8 @@ export interface BusWriteResponse {
   decodedEcho: BusDecodedValue;
 }
 
+export type DptInputFormat = "canonical" | "decimal" | "hexadecimal" | "binary" | "text";
+
 // `DiscoveredInterfaceDto`/`DiscoverResponse` (bus_routes.rs, T25). One
 // entry per KNX-compatible interface that answered the multicast
 // `SEARCH_REQUEST`. `controlEndpoint` is already in the `host:port` shape
@@ -1117,10 +1119,15 @@ export function discoverBusInterfaces(): Promise<BusDiscoverResponse> {
   return request("/api/bus/discover", { method: "POST" });
 }
 
-export function writeBusValue(destination: string, dpt: string | null, value: string): Promise<BusWriteResponse> {
+export function writeBusValue(
+  destination: string,
+  dpt: string | null,
+  value: string,
+  inputFormat: DptInputFormat | null,
+): Promise<BusWriteResponse> {
   return request("/api/bus/write", {
     method: "POST",
-    body: JSON.stringify({ destination, dpt, value }),
+    body: JSON.stringify({ destination, dpt, inputFormat, value }),
   });
 }
 

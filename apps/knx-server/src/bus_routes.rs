@@ -352,6 +352,7 @@ async fn poll_telegrams(
 struct WriteRequest {
     destination: String,
     dpt: Option<String>,
+    input_format: Option<String>,
     value: String,
 }
 
@@ -438,8 +439,18 @@ async fn write_value(
         }
     };
 
-    let value =
-        knx_core::encode(dpt, &body.value).map_err(|e| ApiError::bad_request(e.to_string()))?;
+    let value = match body.input_format.as_deref() {
+        Some(name) => {
+            let format = knx_core::DptInputFormat::parse_name(name).ok_or_else(|| {
+                ApiError::bad_request(format!(
+                    "unknown input format {name:?}; expected canonical, decimal, hexadecimal, binary, or text"
+                ))
+            })?;
+            knx_core::encode(dpt, &body.value, format)
+        }
+        None => knx_core::encode_inferred_format(dpt, &body.value),
+    }
+    .map_err(|e| ApiError::bad_request(e.to_string()))?;
 
     session
         .send(

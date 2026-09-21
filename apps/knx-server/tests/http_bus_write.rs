@@ -61,7 +61,7 @@ async fn start_session(app: &axum::Router) {
         app,
         "POST",
         "/api/bus/monitor/start",
-        Some(json!({ "gateway": "192.168.1.10:3671" })),
+        Some(json!({ "gateway": "192.0.2.10:3671" })),
     )
     .await;
     assert_eq!(response.status(), StatusCode::OK);

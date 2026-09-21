@@ -6977,7 +6977,7 @@ new file carries one, the free slot is untouched), `cargo deny check`,
 ### Fix round 1 (review findings)
 
 **The redaction pass missed an address followed by a dot.** The IPv4 scan
-class includes `.`, so `192.168.1.1.` at the end of a sentence scanned as a
+class includes `.`, so `192.0.2.1.` at the end of a sentence scanned as a
 five-group run, failed the four-group test and was left in `report.md` — and
 `report.md` is the body of the prefilled GitHub issue, so the leak reached
 the browser. A candidate run is now trimmed of leading and trailing dots
@@ -7023,9 +7023,9 @@ eight gates exit 0 again.
 
 **A quad glued to a fifth group still leaked.** Fix round 1 trimmed the
 leading and trailing dots off a scanned run before validating it, which
-closed a sentence-final address (`192.168.1.1.`). It trims dots, not digits,
-so a typo'd fifth octet or a glued extra group — `192.168.1.1.5`,
-`5.192.168.1.1`, `1.2.3.4.5.6.7.8` — still split into more than four groups
+closed a sentence-final address (`192.0.2.1.`). It trims dots, not digits,
+so a typo'd fifth octet or a glued extra group — `192.0.2.1.5`,
+`5.192.0.2.1`, `1.2.3.4.5.6.7.8` — still split into more than four groups
 and still failed the "exactly four" test unchanged. `redact_ipv4` now slides
 a four-group window across a run's dot-separated groups, left to right,
 taking the first valid quad and resuming right after it, so a run can yield
@@ -7053,8 +7053,8 @@ this application prints is affected.
 Three new unit tests pin the fix, including one that requires the literal
 address text to be entirely absent from the output rather than merely
 compared against one hand-picked rendering (the scan takes the leftmost
-valid window, which for `5.192.168.1.1` is `5.192.168.1`, not the more
-"obvious" `192.168.1.1` — either is a correct answer to "did the address
+valid window, which for `5.192.0.2.1` is `5.192.168.1`, not the more
+"obvious" `192.0.2.1` — either is a correct answer to "did the address
 survive?"). Mutation check: reverting `redact_ipv4` to the round-1
 trim-and-validate-the-whole-run logic fails all three new tests at once,
 `cargo test` exit 101.
@@ -9450,3 +9450,63 @@ one and the byte-identical projection are the closest seams the frontend has
 to "what is exported or persisted does not change"; the export path itself is
 Rust and out of reach from here, so it remains asserted rather than proven at
 the exporter.
+## 2026-09-21 — T33: address hygiene sweep, dotted-quad octet spelling gets its own search (branch `t33-address-hygiene`)
+
+Follow-up to `51610db`, which fixed `Ipv4Addr::new(172, 18, 250, 1)` — an
+installation's real KNXnet/IP interface, found because someone finally
+grepped for the octet form instead of the dotted-quad form. This sweep
+covers the rest of the class: dotted quads (`10.x`, `172.16-31.x`,
+`192.168.x`), the same `Ipv4Addr::new(…)` constructor, byte-array literals,
+and `host:port` strings, across `.rs`, `.md`, `.json`, `.toml` (excluding
+`node_modules/`, `target/`, `OriginalData/`). Nine occurrences fixed across
+five Rust files and four docs: `apps/knx-server/src/debug_report.rs` (its
+own doc comment says the point out loud — "RFC 1918 ranges are exactly
+where a real gateway address hides, and the only honest way to catch them
+is to catch the shape" — which is what made this file's own redaction-test
+literals worth a second look, see below), `domain.rs`, `http_bus_monitor.rs`,
+`http_bus_write.rs`, `http_debug_report.rs`, `docs/IMPLEMENTATION_STATUS.md`,
+`docs/KNOWN_LIMITATIONS.md`, `docs/design/2026-09-13-codex-ui-concept/
+prompts.md`, `docs/superpowers/specs/2026-09-11-group-monitor-design.md`.
+Private ranges replaced with documentation ranges (RFC 5737/RFC 5737-alike):
+`192.168.x.y` → `192.0.2.y`, `10.x.y.z`/`172.16-31.x.z` → `203.0.113.z`,
+keeping the last octet and every port unchanged, mapped consistently within
+each file. `Ipv4Addr::new(192, 0, 2, 1)` call sites in `knx-net` were
+already correct from a prior fix and untouched; `224.0.23.12` (KNXnet/IP
+routing multicast) is a protocol constant, not a private address, and is
+untouched everywhere it appears.
+
+**Two things deliberately left alone, both reported rather than decided
+unilaterally.** `debug_report.rs`'s
+`rfc_1918_and_loopback_ranges_are_caught_by_the_pattern_not_by_a_list` test
+feeds `10.0.0.1`, `172.16.0.1`, `172.31.255.254` and `192.168.0.1` (the
+exact lower/upper boundaries of the three RFC 1918 blocks) through the
+redactor alongside `127.0.0.1`, `169.254.1.1`, `8.8.8.8` and
+`255.255.255.255`, to prove redaction happens by IPv4 shape, not by a
+hardcoded range list. Swapping those four boundary values for TEST-NET
+addresses would not fail the test (the redactor doesn't care whether an
+address is private) but would make the test's own name a lie about what it
+covers — left as-is. `docs/design/2026-09-13-codex-ui-proof/README.md`
+states that the committed `.png` screenshots show `192.168.1.10:3671` in
+the gateway field; those are Chromium screenshots, not regenerated for this
+sweep, so rewriting the address in the prose would make the sentence wrong
+about the pixels sitting next to it — left as-is, with an existing note in
+the same paragraph already recommending the RFC 5737 placeholder for new
+material.
+
+**No new real-looking address found.** Everything swept reads as an
+invented placeholder (`192.168.1.10`, `172.22.9.4`, `10.0.0.5`, and
+similarly shaped values) — none of it carries the specificity that made
+the octet-form fixture `51610db` removed suspicious in the first place.
+
+`domain.rs`'s `192.168.001.1` (testing that a leading-zero octet is
+rejected) became `192.0.2.001` rather than a value that dropped the leading
+zero — the defect under test has to survive the address it sits in.
+
+Gates: `cargo fmt --all --check` (one file needed a re-wrap after
+`10.1.2.3` grew into `203.0.113.3`, nothing else reformatted), `cargo
+clippy --workspace --all-targets -D warnings`, `cargo test --workspace
+--no-fail-fast` (**1,909 passed, 0 failed, 88 result blocks** — unchanged
+from the `51610db` baseline; `knx_net`'s lib block read the mandated 252),
+`xtask check-layering`, `xtask check-headers`, `xtask check-anchors`,
+`cargo deny check` — all exit 0. `apps/knx-web` untouched, so the frontend
+gates did not apply.

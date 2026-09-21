@@ -24,6 +24,7 @@ import Dashboard from "./Dashboard";
 import LogPanel from "./LogPanel";
 import BusMonitorPanel from "./BusMonitorPanel";
 import { publishProjectContext } from "./busContext";
+import { ensureBusDiscovery } from "./busDiscovery";
 import { openCompanionWindow } from "./diagnosticsWindow";
 import { useAppearance } from "./appearance";
 import { THEMES, useThemeId } from "./theme";
@@ -356,6 +357,19 @@ function App({ manifestVersion = packageVersion, session }: AppProps) {
     startupToastShown.current = true;
     const message = pickStartupToast(new Date());
     if (message) pushFun(message);
+  }, []);
+
+  // T25 — look for KNX-compatible IP interfaces once, at application
+  // start. Deliberately not awaited and deliberately without any UI of its
+  // own here: it must not hold up first paint, must not delay a project
+  // from loading, and must not put anything in front of a user whose
+  // network has no KNX installation on it, which is the common case on a
+  // laptop. Whatever it finds is an offer the bus monitor's gateway field
+  // makes later; nothing connects on its own. `ensureBusDiscovery` is
+  // idempotent, so StrictMode's double invoke needs no guard of its own
+  // here — unlike the toast above, which would otherwise fire twice.
+  useEffect(() => {
+    ensureBusDiscovery();
   }, []);
 
   // Opens (or focuses) the read-only diagnostic companion. Every outcome is

@@ -463,6 +463,28 @@ export const messages = {
     "The bus session was replaced — now showing session {id}. Rows from the previous session were cleared.",
   "busMonitor.endedElsewhere": "The bus session was ended elsewhere.",
 
+  // T25 — the interface search (`busDiscovery.ts`, and the cluster next to
+  // the gateway field in `BusMonitorPanel.tsx`). Finding nothing is an
+  // ordinary outcome and reads as one: no alert role, no error styling,
+  // and the gateway field still takes a typed address either way.
+  // `busDiscovery.emptyHint` carries the same two facts the CLI's
+  // `DISCOVER_EMPTY_HINT` does (`apps/knx-cli/src/main.rs`) — multicast
+  // has to reach this network segment, and a container without host
+  // networking is the usual reason it does not.
+  "busDiscovery.search": "Search",
+  "busDiscovery.searching": "Searching…",
+  "busDiscovery.searchLabel": "Search for KNX-compatible IP interfaces",
+  "busDiscovery.resultCount.one": "{count} interface answered.",
+  "busDiscovery.resultCount.other": "{count} interfaces answered.",
+  "busDiscovery.resultsCaption": "Select an interface to fill in the gateway address.",
+  "busDiscovery.individualAddressLabel": "Interface address",
+  "busDiscovery.tunnelling": "Tunnelling",
+  "busDiscovery.empty": "No interfaces answered.",
+  "busDiscovery.emptyHint":
+    "The search reaches only as far as IP multicast does on this network segment. An empty result can mean no interface answered, or that the search request never left this machine — running inside a container without host networking is a common cause. Entering the address by hand still works.",
+  "busDiscovery.failed":
+    "The search could not be run. Entering the gateway address by hand still works.",
+
   // `CatalogBrowser.tsx`.
   "catalog.title": "Device catalog",
   "catalog.installing": "Installing product database…",

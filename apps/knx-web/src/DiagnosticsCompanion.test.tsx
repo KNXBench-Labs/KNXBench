@@ -20,6 +20,7 @@ const apiMock = vi.hoisted(() => ({
   pollBusTelegrams: vi.fn(),
   writeBusValue: vi.fn(),
   getSessionLog: vi.fn(),
+  discoverBusInterfaces: vi.fn().mockResolvedValue({ interfaces: [] }),
   undo: vi.fn(),
   redo: vi.fn(),
 }));
@@ -33,6 +34,7 @@ vi.mock("./api", () => ({
       : undefined,
 }));
 
+import { resetBusDiscoveryForTests } from "./busDiscovery";
 import DiagnosticsCompanion from "./DiagnosticsCompanion";
 import { resetSettingsForTests } from "./settingsStore";
 
@@ -227,12 +229,20 @@ describe("one editing workspace", () => {
     // project state, nothing this window could mutate with — so it is the
     // cheapest possible way for the companion to end up at the same login
     // screen as the editor instead of silently failing to poll.
+    //
     // T26 adds `gaNotation.ts`, reached from both bus components: the
     // monitor renders a destination group address and the compose form
     // reads one back, and both go through the display-notation preference
     // to do it. It reads and writes the same settings document
     // `settingsStore.ts` already brought into this graph, and touches no
     // project state at all.
+    //
+    // T25 adds `busDiscovery.ts`: the module-level result of the
+    // KNXnet/IP interface search, which `BusMonitorPanel` reads. It holds
+    // one value and a `Set` of subscribers, and the one request it makes
+    // is the search itself — a multicast question and a read of the
+    // answers, which changes nothing on any device and nothing in any
+    // project.
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -243,6 +253,7 @@ describe("one editing workspace", () => {
       "Overlay.tsx",
       "api.ts",
       "busContext.ts",
+      "busDiscovery.ts",
       "diagnosticsWindow.ts",
       "filePicker.ts",
       "gaNotation.ts",
@@ -256,14 +267,18 @@ describe("one editing workspace", () => {
       "uiLanguage.ts",
     ]);
 
-    // Every `api.x(...)` the graph performs. Three of these write, and all
-    // three write to the *bus*, never to the project, and each needs a
-    // deliberate click. No undo, no redo, no save, no import, no rename,
-    // no parameter or flag write appears — out of 52 exported functions,
-    // 43 of which issue a mutating request:
+    // Every `api.x(...)` the graph performs. Four of them are `POST`s.
+    // Three write to the *bus*, never to the project, and each needs a
+    // deliberate click; the fourth, `discoverBusInterfaces`, is a `POST`
+    // only so that no cache or prefetch can fire it, and it writes
+    // nothing anywhere — it asks by multicast who is listening and reads
+    // the replies. No undo, no redo, no save, no import, no rename, no
+    // parameter or flag write appears — out of 61 exported functions, 47
+    // of which issue a mutating request:
     //   grep -cE '^export (async )?function ' api.ts
     //   grep -cE 'method: "(POST|PUT|DELETE|PATCH)"' api.ts
     expect(apiCallsIn(graph).sort()).toEqual([
+      "discoverBusInterfaces",
       "errorMessage",
       "errorStatus",
       "getSessionLog",
@@ -373,5 +388,24 @@ describe("one shared bus session", () => {
     });
 
     expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+  });
+});
+
+describe("the companion's own interface search", () => {
+  // `ensureBusDiscovery`'s own doc comment names this exact case: "a
+  // component that needs the result mounts before [the startup search]
+  // ever ran (a second window, a test rendering the panel alone)". The
+  // companion is the one window that mounts `BusMonitorPanel` without
+  // `App` above it, so this is the only place that path is actually
+  // exercised — and until now nothing here asserted it ran at all.
+  // Reset first: an earlier test in this file may already have driven
+  // the module-level store past `"idle"`, which would make
+  // `ensureBusDiscovery` a silent no-op and this assertion vacuous.
+  it("runs the interface search on mount and does not start a session", async () => {
+    resetBusDiscoveryForTests();
+    await renderCompanion();
+
+    expect(apiMock.discoverBusInterfaces).toHaveBeenCalled();
+    expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
   });
 });

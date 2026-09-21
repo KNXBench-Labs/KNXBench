@@ -68,6 +68,11 @@ const apiMock = vi.hoisted(() => ({
   // it mounts, rather than reading a constant the frontend would have to
   // remember to bump.
   serverVersion: vi.fn().mockResolvedValue({ version: "0.0.0-test" }),
+  // T25: `App` starts one interface search in the background on mount.
+  // An empty result is the honest default for a test machine with no KNX
+  // installation on its network, and it keeps the search out of every
+  // test here that is about something else.
+  discoverBusInterfaces: vi.fn().mockResolvedValue({ interfaces: [] }),
 }));
 
 const filePickerMock = vi.hoisted(() => ({

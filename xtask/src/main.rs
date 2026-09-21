@@ -106,6 +106,15 @@ fn check_layering() -> ExitCode {
         "knx-etsproj",
         &["knx-store"],
     ));
+    // knx-etsproj's import validation (stage 4, T06) must stay a pure
+    // function of one parsed document. Reaching knx-productdb would let a
+    // cross-database check sneak into what is supposed to be a
+    // single-document validation pass.
+    violations.extend(layering::forbidden_reachable(
+        &graph,
+        "knx-etsproj",
+        &["knx-productdb"],
+    ));
     // knx-productdb owns its own parser and its own store (ADR-0011). It
     // must not reach the project-import crate or the project store: a
     // .knxprod ingest added later must not have to travel through the
@@ -182,8 +191,9 @@ fn check_layering() -> ExitCode {
 
     if violations.is_empty() {
         println!(
-            "layering ok: knx-core reaches none of {:?}; knx-etsproj does not reach knx-store; \
-             knx-productdb reaches neither knx-etsproj nor knx-store; knx-projection reaches \
+            "layering ok: knx-core reaches none of {:?}; knx-etsproj reaches neither knx-store \
+             nor knx-productdb; knx-productdb reaches neither knx-etsproj nor knx-store; \
+             knx-projection reaches \
              none of {:?}; knx-csv reaches none of knx-store, knx-etsproj, knx-productdb; \
              knx-report reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \
              knx-diff reaches none of knx-store, knx-etsproj, knx-productdb, or {:?}; \

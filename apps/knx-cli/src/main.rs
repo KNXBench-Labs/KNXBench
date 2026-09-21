@@ -346,7 +346,7 @@ fn print_summary(file: &str, imported: &knx_app::ImportedProject) {
                 "the product database holds no application program at all"
             };
             println!(
-                "  {} device(s) have no resolvable product: {cause} — \
+                "  of which {} device(s) have no resolvable product: {cause} — \
                  their communication objects keep only what the project file itself stated",
                 enrichment.devices_unresolved
             );

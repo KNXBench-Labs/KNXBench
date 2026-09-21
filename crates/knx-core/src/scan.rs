@@ -7,9 +7,7 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use crate::address::{
-    is_project_excluded, AddressError, IndividualAddress, EXCLUDED_INDIVIDUAL_ADDRESSES,
-};
+use crate::address::{AddressError, IndividualAddress};
 
 /// Packs already-validated `area`/`line`/`device` parts into an address.
 /// Used only inside `range()`'s device loop, where `area`/`line` come from
@@ -64,8 +62,7 @@ impl ScanPlan {
         &self.omitted
     }
 
-    /// The exclusion set this plan was built against: the project list of
-    /// [`EXCLUDED_INDIVIDUAL_ADDRESSES`] plus whatever the caller added.
+    /// The configuration-supplied exclusion set this plan was built against.
     pub fn excluded(&self) -> &HashSet<IndividualAddress> {
         &self.excluded
     }
@@ -116,23 +113,11 @@ impl ScanPlan {
 /// only route to a `ScanPlan`; there is no constructor that skips applying
 /// `excluded` to the candidate list.
 ///
-/// The project exclusion list of [`EXCLUDED_INDIVIDUAL_ADDRESSES`] is
-/// already in the set before the caller says anything, and there is no
-/// method that removes it. `exclude`/`exclude_all` only ever add. Spec
-/// §2.1 requires the list to live in one place and be taken from there
-/// rather than from a caller, because a caller that can pass the list can
-/// pass a list with the alarm panel missing from it.
-#[derive(Debug, Clone)]
+/// The builder starts empty. Configuration owners add exclusions through
+/// `exclude`/`exclude_all`; those methods only ever add.
+#[derive(Debug, Clone, Default)]
 pub struct ScanPlanBuilder {
     excluded: HashSet<IndividualAddress>,
-}
-
-impl Default for ScanPlanBuilder {
-    fn default() -> Self {
-        Self {
-            excluded: EXCLUDED_INDIVIDUAL_ADDRESSES.iter().copied().collect(),
-        }
-    }
 }
 
 impl ScanPlanBuilder {
@@ -169,7 +154,7 @@ impl ScanPlanBuilder {
     /// either one out of range (>15) fails with
     /// [`ScanPlanError::InvalidLineAddress`] rather than wrapping around to
     /// a different, unintended line.
-    /// A project-excluded address on this line is omitted and reported in
+    /// A configured excluded address on this line is omitted and reported in
     /// [`ScanPlan::omitted`], not refused: "scan line 1.1" is a standing
     /// sweep of whatever is legitimately reachable, and refusing it
     /// outright would make line 1.1 unscannable for as long as the alarm
@@ -180,33 +165,23 @@ impl ScanPlanBuilder {
             IndividualAddress::new(area, line, 1).map_err(ScanPlanError::InvalidLineAddress)?;
         let last =
             IndividualAddress::new(area, line, 255).map_err(ScanPlanError::InvalidLineAddress)?;
-        self.span(first, last, ExcludedInSpan::Omit)
+        self.span(first, last)
     }
 
-    /// An explicit `first..=last` device range on one line, caller
-    /// exclusions omitted — but a span that contains a **project**-excluded
-    /// address is refused outright with
-    /// [`ScanPlanError::ExcludedAddressInRange`].
-    ///
-    /// Spec §2.1: "A plan that would have contained an excluded address is
-    /// **not** silently shortened." An operator who typed
-    /// `1.1.200`–`1.1.240` asked for a specific span; handing back a span
-    /// with a hole in it and no complaint is indistinguishable from the
-    /// guard not running. They can narrow the range themselves, or scan
-    /// the line, which is the documented sweep.
+    /// An explicit `first..=last` device range on one line. Configured
+    /// exclusions are omitted and exposed through [`ScanPlan::omitted`].
     pub fn range(
         self,
         first: IndividualAddress,
         last: IndividualAddress,
     ) -> Result<ScanPlan, ScanPlanError> {
-        self.span(first, last, ExcludedInSpan::Refuse)
+        self.span(first, last)
     }
 
     fn span(
         self,
         first: IndividualAddress,
         last: IndividualAddress,
-        project_excluded: ExcludedInSpan,
     ) -> Result<ScanPlan, ScanPlanError> {
         if first.area() != last.area()
             || first.line() != last.line()
@@ -218,9 +193,6 @@ impl ScanPlanBuilder {
         let mut omitted = Vec::new();
         for device in first.device()..=last.device() {
             let address = packed(first.area(), first.line(), device);
-            if is_project_excluded(address) && project_excluded == ExcludedInSpan::Refuse {
-                return Err(ScanPlanError::ExcludedAddressInRange(address));
-            }
             if self.excluded.contains(&address) {
                 omitted.push(address);
             } else {
@@ -236,15 +208,6 @@ impl ScanPlanBuilder {
             omitted,
         })
     }
-}
-
-/// What [`ScanPlanBuilder::span`] does when the requested span contains a
-/// project-excluded address. Never a public choice: `line` omits, `range`
-/// refuses, and no caller picks.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ExcludedInSpan {
-    Omit,
-    Refuse,
 }
 
 /// Why a [`ScanPlan`] could not be built, or failed its own invariant.
@@ -303,24 +266,31 @@ mod tests {
 
     #[test]
     fn line_scan_omits_excluded_addresses_and_contains_every_other() {
-        // The project list (1.1.220) is already in the set; these two are
-        // the caller's own additions. Three omissions, not two.
+        // Both omissions come from the caller's configuration.
         let caller_excluded = [addr(1, 1, 5), addr(1, 1, 200)];
         let plan = ScanPlanBuilder::new()
             .exclude_all(caller_excluded)
             .line(1, 1)
             .unwrap();
 
-        assert_eq!(plan.addresses().len(), 255 - 3);
+        assert_eq!(plan.addresses().len(), 255 - 2);
         for device in 1..=255u8 {
             let candidate = addr(1, 1, device);
-            let omitted = caller_excluded.contains(&candidate) || is_project_excluded(candidate);
+            let omitted = caller_excluded.contains(&candidate);
             assert_eq!(
                 plan.addresses().contains(&candidate),
                 !omitted,
                 "device {device} should be a candidate iff it was not excluded"
             );
         }
+    }
+
+    #[test]
+    fn a_new_scan_builder_has_no_installation_specific_exclusions() {
+        let plan = ScanPlanBuilder::new().line(2, 2).unwrap();
+        assert!(plan.excluded().is_empty());
+        assert!(plan.omitted().is_empty());
+        assert_eq!(plan.addresses().len(), 255);
     }
 
     #[test]
@@ -385,65 +355,16 @@ mod tests {
     }
 
     #[test]
-    fn the_alarm_panel_at_1_1_220_can_never_be_probed_when_excluded() {
-        // The user's rule, verbatim: 1.1.220 must never be read or
-        // written. Nobody passes the exclusion any more — the plan takes
-        // it from `EXCLUDED_INDIVIDUAL_ADDRESSES` itself. This test fails
-        // loudly if the exclusion filter is ever reordered to run after
-        // candidate construction instead of during it.
-        let alarm_panel = addr(1, 1, 220);
-        let plan = ScanPlan::line(1, 1).unwrap();
+    fn configured_exclusions_are_omitted_from_an_explicit_range() {
+        let protected = addr(2, 3, 42);
+        let plan = ScanPlanBuilder::new()
+            .exclude(protected)
+            .range(addr(2, 3, 40), addr(2, 3, 44))
+            .unwrap();
 
-        assert!(
-            !plan.addresses().contains(&alarm_panel),
-            "1.1.220 must never appear in a scan plan's candidates"
-        );
+        assert!(!plan.addresses().contains(&protected));
+        assert_eq!(plan.omitted(), &[protected]);
         assert_eq!(plan.verify(), Ok(()));
-    }
-
-    #[test]
-    fn a_line_scan_reports_the_alarm_panel_as_omitted_rather_than_dropping_it_silently() {
-        // §2.1: a shortened plan that says nothing is indistinguishable
-        // from a guard that never ran.
-        let plan = ScanPlan::line(1, 1).unwrap();
-        assert_eq!(plan.omitted(), &[addr(1, 1, 220)]);
-    }
-
-    #[test]
-    fn a_range_spanning_the_alarm_panel_is_refused_not_shortened() {
-        // §14 item 11, the range clause, with the addendum's own span.
-        let err = ScanPlan::range(addr(1, 1, 200), addr(1, 1, 240)).unwrap_err();
-        assert_eq!(err, ScanPlanError::ExcludedAddressInRange(addr(1, 1, 220)));
-        assert!(err.to_string().contains("1.1.220"));
-    }
-
-    #[test]
-    fn a_range_of_exactly_the_alarm_panel_is_refused() {
-        let alarm_panel = addr(1, 1, 220);
-        assert_eq!(
-            ScanPlan::range(alarm_panel, alarm_panel),
-            Err(ScanPlanError::ExcludedAddressInRange(alarm_panel))
-        );
-    }
-
-    #[test]
-    fn a_range_beside_the_alarm_panel_is_still_allowed() {
-        // The refusal must be exact, or the guard becomes a reason not to
-        // scan anything near it.
-        let plan = ScanPlan::range(addr(1, 1, 200), addr(1, 1, 219)).unwrap();
-        assert_eq!(plan.addresses().len(), 20);
-        assert!(plan.omitted().is_empty());
-    }
-
-    #[test]
-    fn a_builder_cannot_un_exclude_the_project_list() {
-        // There is no `include`, no `clear`, and `Default` seeds the set.
-        // Asserted on the observable consequence rather than on the API
-        // shape, since the API shape is what a future refactor changes.
-        assert!(ScanPlanBuilder::new().excluded.contains(&addr(1, 1, 220)));
-        assert!(ScanPlanBuilder::default()
-            .excluded
-            .contains(&addr(1, 1, 220)));
     }
 
     #[test]

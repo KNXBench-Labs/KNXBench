@@ -9520,7 +9520,7 @@ attributes in `0.xml`, four in `Project.xml` — each reported with its xpath,
 name, occurrence count and a sample, and each retained. Enrichment reports
 107 `AmbiguousDpt` issues, the deliberate refusal to pick one datapoint type
 out of a stated list (RESEARCH §4.2), which only became visible once the
-lookups started hitting. Both are in `KNOWN_LIMITATIONS.md` §124 with their
+lookups started hitting. Both are in `KNOWN_LIMITATIONS.md` §125 with their
 numbers.
 
 **Tests.** `crates/knx-etsproj/tests/device_local_com_object_refs.rs` (new,
@@ -9531,7 +9531,7 @@ fails there — 867 malformed ids and 0 enriched respectively. Unit tests:
 `values::tests::the_device_local_path_refuses_every_shape_that_is_not_one`
 (11 rejected shapes), `enrich::tests::the_lookup_id_prefixes_only_the_device_local_shape`.
 
-**Docs.** `KNOWN_LIMITATIONS.md` §124 (new), `IMPORT_EXPORT.md` §9.2 (new —
+**Docs.** `KNOWN_LIMITATIONS.md` §125 (new), `IMPORT_EXPORT.md` §9.2 (new —
 the three `RefId` shapes, which schema writes which, and where the
 reconstruction does and does not happen). `LIMITATION_TRIAGE.md` untouched,
 per instruction.

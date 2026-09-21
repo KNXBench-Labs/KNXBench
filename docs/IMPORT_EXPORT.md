@@ -445,7 +445,7 @@ the database does not know is reported as
 `EnrichmentIssue::ComObjectRefMissing`. Neither is ever attached to a
 different device's object — the same rule `KNOWN_LIMITATIONS.md` §34 sets,
 applied on the read side. Evidence base and its limits:
-`KNOWN_LIMITATIONS.md` §124.
+`KNOWN_LIMITATIONS.md` §125.
 
 ## 10. Product database ingest
 

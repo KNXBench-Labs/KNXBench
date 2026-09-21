@@ -162,6 +162,35 @@ call stack regardless of document depth — verified with a 10,000-level
 turns into a clean `ParseError::Xml`, not a crash, with no depth-specific
 code added.
 
+### 4.1 Structural validation (stage 4)
+
+Tolerant parsing is not the same as unchecked import. `knx_etsproj::validate`
+runs between parse and mapping — the position `CLAUDE.md`'s data flow
+prescribes — and classifies structural problems without ever modifying the
+document or aborting the import. An **error** is data the mapper cannot use;
+a **warning** is data it can use but should not trust. Both reach the user
+through `ImportReport::errors`, tagged `stage: "validate"`.
+
+| Check | Severity | Scope |
+| --- | --- | --- |
+| Duplicate `@Id` (`Area`, `Line`, `DeviceInstance`, `BinaryData`, `GroupRange`, `GroupAddress`, `BuildingPart`) | Error | Document-wide — ETS ids embed their installation |
+| Dangling `Connectors/Send|Receive/@GroupAddressRefId` (schema 11) | Error | Document-wide, same reason |
+| Dangling `Links` target (schema ≥21, short ids such as `GA-3`) | Error | Per installation — a short id embeds no installation |
+| Two devices on one individual address | Warning | Per installation |
+| Two group addresses on one address | Warning | Per installation |
+| Group address outside its enclosing `GroupRange`'s bounds | Warning | Per range |
+
+The set is bounded by what the corpus can attest rather than by an
+authoritative schema, because there is none
+([KNOWN_LIMITATIONS §2](KNOWN_LIMITATIONS.md#2-no-authoritative-xsd-is-publicly-available)).
+Two things follow, both documented in `validate.rs`'s own header with the
+measurement behind them: `ModuleInstance/@Id` is not checked for uniqueness
+(it is device-scoped — the KV schema-21 project repeats 16 of its 32 ids
+across devices sharing one application program), and the reference checks
+that need either the mapper's id tables (`@DefaultLine`, `DeviceInstanceRef`)
+or the product database (`ProductRefId`) stay with those stages, so each
+class of problem has exactly one reporting channel.
+
 ## 5. Opaque store
 
 A table in the project file (`opaque_entry`, `knx-store` schema version 2):

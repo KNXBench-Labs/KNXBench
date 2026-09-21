@@ -2671,12 +2671,17 @@ fn encode_bit_set_explicit<const N: usize>(
             });
         }
     };
-    if trimmed.is_empty()
-        || trimmed.starts_with("0x")
-        || trimmed.starts_with("0X")
-        || trimmed.starts_with("0b")
-        || trimmed.starts_with("0B")
-    {
+    let has_radix_prefix = match format {
+        DptInputFormat::Hexadecimal => trimmed.starts_with("0x") || trimmed.starts_with("0X"),
+        DptInputFormat::Decimal | DptInputFormat::Binary => {
+            trimmed.starts_with("0x")
+                || trimmed.starts_with("0X")
+                || trimmed.starts_with("0b")
+                || trimmed.starts_with("0B")
+        }
+        DptInputFormat::Canonical | DptInputFormat::Text => unreachable!(),
+    };
+    if trimmed.is_empty() || has_radix_prefix {
         return Err(DptCodecError::InputFormatMismatch {
             dpt,
             format,
@@ -3059,6 +3064,10 @@ mod tests {
         assert_eq!(
             super::encode(bit_set, "07", DptInputFormat::Hexadecimal).unwrap(),
             GroupValue::Bytes(vec![0x07])
+        );
+        assert_eq!(
+            super::encode(bit_set, "0B", DptInputFormat::Hexadecimal).unwrap(),
+            GroupValue::Bytes(vec![0x0B])
         );
         assert_eq!(
             super::encode(bit_set, "00000111", DptInputFormat::Binary).unwrap(),

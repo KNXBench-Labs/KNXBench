@@ -3136,10 +3136,12 @@ not format declarations and are rejected by this path. CLI callers can pass
 `--input-format`; HTTP callers can send `inputFormat`; the web client sends a
 deterministic DPT-family choice. If an older CLI or HTTP caller omits the field,
 that compatibility boundary deliberately calls `encode_inferred_format` so
-fixed-width binary bit sets retain their previous wire value. New web requests
-never take that branch. `default_input_format(dpt)` remains the deterministic
-recommendation for explicit callers; it depends only on DPT identity and never
-on value text.
+fixed-width binary bit sets retain their previous wire value. The web form
+exposes the same compatibility mode visibly as `Auto` and lets the user select
+each explicit grammar; it never labels arbitrary text with a guessed format.
+`default_input_format(dpt)` remains a deterministic recommendation for callers
+that deliberately want one; it depends only on DPT identity and never on value
+text.
 
 The public `encoding_rulings(dpt)` API returns stable identifiers, the exact
 Standard context, and KNXBench's decision for every affected encoding below.
@@ -3407,8 +3409,8 @@ comes from resolving the project's linked communication objects, and there
 is nowhere else to get it from; without the flag, the monitor prints
 exactly what it printed before this slice. `bus write` needs either
 `--project` (to resolve one) or an explicit `--dpt <DPST-m-s>`. Its input
-grammar is explicit through `--input-format`; omission selects the documented
-per-DPT default, never a parser chosen from the value's spelling.
+grammar is explicit through `--input-format`; omission deliberately selects the
+named legacy compatibility parser so existing writes keep their bytes.
 
 **Subtype wording and units beyond the scaled subtypes are not modelled.**
 The codec does not consult `knx_master.xml`'s DPT catalogue, so it has no

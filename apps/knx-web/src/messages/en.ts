@@ -747,6 +747,13 @@ export const messages = {
   "appearance.blue": "Blue",
   "appearance.amber": "Amber",
   "appearance.rose": "Rose",
+  // The separator a group address is *displayed* with. Never what is
+  // stored, exported or sent on the bus — those are always slashes.
+  "appearance.groupAddressNotation": "Group address notation",
+  "appearance.gaNotation.slash": "Slashes — 1/2/3",
+  "appearance.gaNotation.dot": "Dots — 1.2.3",
+  "appearance.groupAddressNotationHint":
+    "Applies to every group address shown in the interface. Individual addresses keep their dots, and project files, exports and bus telegrams always use slashes. Either notation can be typed in.",
   "appearance.compact": "Compact",
   "appearance.comfortable": "Comfortable",
   "workbench.overview": "Overview",

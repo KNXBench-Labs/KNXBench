@@ -634,6 +634,11 @@ export const messages: Record<MessageKey, string> = {
   "appearance.blue": "Blau",
   "appearance.amber": "Bernstein",
   "appearance.rose": "Rosa",
+  "appearance.groupAddressNotation": "Gruppenadress-Schreibweise",
+  "appearance.gaNotation.slash": "Schrägstriche — 1/2/3",
+  "appearance.gaNotation.dot": "Punkte — 1.2.3",
+  "appearance.groupAddressNotationHint":
+    "Gilt für jede im Programm angezeigte Gruppenadresse. Physikalische Adressen behalten ihre Punkte, und Projektdateien, Exporte und Bustelegramme verwenden immer Schrägstriche. Eingeben können Sie beide Schreibweisen.",
   "appearance.compact": "Kompakt",
   "appearance.comfortable": "Komfortabel",
   "workbench.overview": "Übersicht",

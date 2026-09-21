@@ -9349,3 +9349,104 @@ question from where it is edited. No per-user settings (one file per data
 directory; multi-user is parked). No live synchronization between two open
 windows: a second window reads the record when it loads and does not learn
 about the first window's change until it reloads.
+
+## 2026-09-21 — T26 selectable group-address notation (ADR-0030, branch `t26-ga-notation`)
+
+A user who reads `1.2.3` no longer has to read somebody else's punctuation.
+The notation is a preference, it applies to every group address the interface
+shows, and it stops at the glass: nothing persisted, exported or transmitted
+moves a byte.
+
+**Where it lives.** `apps/knx-web/src/gaNotation.ts`, one module, one key —
+`groupAddressNotation` in the settings record the server keeps (ADR-0029).
+That is the whole cost of one more preference: a module-local key constant, a
+`loadGaNotation`/`saveGaNotation` pair and `useSettingsRevision()`. No
+registry, no route, no server code, no migration, and nothing in
+`BROWSER_ERA_KEYS`, which is a closed historical record of what the browser
+stored and not a place new keys go. `index.html`'s pre-mount bootstrap is
+deliberately untouched: it exists for the attributes the first paint is styled
+by, and a group address cannot be on screen before the project tree has been
+fetched — a round trip `initSettings()` has long since beaten.
+
+**`crates/knx-core` never hears about it.** `GroupAddress::format` still joins
+with `/`, every DTO still carries `/`, and `check-layering` still passes
+because nothing new crosses a layer. The transform is the last step before a
+person reads the string, and `canonicalGroupAddress` is the first step after
+they type one.
+
+**It is a conversion, not a `replace`.** `groupAddressLevels` matches two- and
+three-level addresses in either notation, with a back-reference so a mixed
+`1/2.3` is refused rather than half-converted, and returns `null` for
+everything else. `null` means "hand it back untouched", which is what happens
+to a `Free`-style address (a plain decimal with no separator at all), a device
+named with a slash, a filesystem path, a DPT id like `DPST-1-1` and the empty
+string. Level *values* are not range-checked here: `GroupAddressStyle` decides
+the bit split and the server owns that verdict, so a renderer that
+second-guessed it would only invent a disagreement.
+
+**Render sites converted.** `ProjectExplorer` (the group-address tree label,
+the group-range label, the range `<option>` list, both new-row placeholders),
+`GroupAddressTable` (the address cell, the checkbox and unlink screen-reader
+labels, the links-panel heading), `Inspector` (`GroupAddressInspector`,
+`GroupRangeInspector`, `GroupLinkRow`, the new-link `<option>`, the
+communication-object summary's link list), `Search` (the group-address
+result's detail line), `BusMonitorPanel` (the Destination column, the detail
+pane, the compose form's seed) and `BusComposeForm` (its placeholder).
+Deliberately **not** converted: `DeviceNode.address`, `AreaNode.address`,
+`LineNode.address` and `GroupLinkNode.device_address`, which are individual
+addresses and have one spelling; `rangePath` in `groupAddressView.ts`, which
+joins range *names*; the CSV and diff panels, which show counts; and server
+sentences in the Log panel, which are free text rather than fields.
+
+**Input takes both notations, always**, whichever one is displayed — at
+`createGroupAddress`, at both ends of `createGroupRange` and at
+`writeBusValue`. Pasting an address out of a document, an email or ETS must
+not require translating it first, and a preference about reading is no reason
+to refuse a spelling. Unrecognised text is passed through untouched so the
+server's error names what the user actually typed.
+
+**Search and filter match both spellings, always** — the group-address
+table's filter and the search overlay's index, via `groupAddressSpellings`.
+Group addresses only: an individual address has one spelling, and `1/1/13`
+must not find a device at `1.1.13`. That negative is pinned by test.
+
+**The ambiguity is answered structurally.** With dots selected, `1.2.3` is
+also how an individual address is written. The primary cue is the labelling
+already on screen — `Source` against `Destination`, the tree's branches, the
+Inspector's section headings, the search overlay's kind groups — and the
+supplementary one is a `.ga-address` class taking `--knx-accent-tertiary`,
+a theme token defined by all five themes (ADR-0022), with tabular figures so
+a column of addresses lines up. What is left over is
+[KNOWN_LIMITATIONS.md §123](KNOWN_LIMITATIONS.md#123-with-dots-selected-a-group-address-and-an-individual-address-are-spelled-alike),
+written honestly rather than pretending the notation has no cost.
+
+**The control** sits in `SettingsPanel.tsx` beside the accent and density
+fields, built the way they are built — a labelled `<select>` with an
+`aria-describedby` hint — so the settings surface (T10) finds it with its
+siblings rather than in a panel of its own. Catalogue keys in `en.ts` and
+`de.ts`; no English string in a component.
+
+**[§91](KNOWN_LIMITATIONS.md#91-a-running-bus-session-keeps-rendering-group-addresses-in-the-style-the-project-had-when-it-started)
+is neither worse nor harder to fix.** It is about the *level* style a bus
+session snapshots at `/start`; this change never alters a level count, so
+§91's safety argument — that a string written in one style is refused rather
+than parsed as a different address, because the field counts differ —
+survives untouched. Its fix is server-side and does not meet this code.
+
+**Tests.** Rust is untouched by this change and says so: **1,909 passed, 0
+failed, 88 result blocks**, unchanged from this branch's base — the `knx_net`
+lib block reads 252, which is the canary
+[§119](KNOWN_LIMITATIONS.md#119-on-this-machines-ntfs3-mount-cargo-has-rebuilt-from-a-stale-fingerprint--a-green-gate-is-not-evidence-by-itself)
+asks for. Frontend: **798 passed across 57 files**, of which 9 are the new
+`gaNotation.test.tsx`: both notations rendering one address; the non-address
+strings left alone; the preference surviving a simulated reload and falling
+back for an unrecognised value; every reader re-rendering on change; matching
+across notations while a device's individual address stays unfindable by a
+slashed needle; the table rendering in the chosen notation with the
+`InstallationNode` the server sent byte-identical before and after; the table
+filter in both notations with dots displayed; and `writeBusValue` receiving
+`1/2/3` for all four combinations of setting and typed notation. That last
+one and the byte-identical projection are the closest seams the frontend has
+to "what is exported or persisted does not change"; the export path itself is
+Rust and out of reach from here, so it remains asserted rather than proven at
+the exporter.

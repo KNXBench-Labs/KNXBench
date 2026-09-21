@@ -7219,3 +7219,76 @@ is the other half of what discovery cannot promise: an empty result is a
 result, and on a container without host networking it is the *only*
 possible result. The UI says so in its own words rather than presenting an
 empty list as a verdict about the installation.
+## 125. ETS 6's device-local communication-object ids are read from a single project's evidence
+
+**What changed first.** Until T29 the ETS 6.3.0 reference project (schema 23)
+reported **867** `MapProblem::Value(MalformedRefId(..))` over **310** distinct
+ids, and mapped every one of its 867 communication objects to object number
+`0`. The cause was a shape, not corruption: every id in that project's
+`GroupObjectTree/@GroupObjectInstances` is the two-segment, device-local form
+`O-<n>_R-<m>`, while `values.rs::split_object_tail` required the
+three-segment, fully-qualified schema-11 form
+`<program>_O-<n>_R-<m>` **[V]**. Both halves of the pipeline now read the
+device-local form — `values::device_local_com_object_number` on the import
+side and `knx_productdb::com_object_lookup_id` on the enrichment side — so
+the 867 map errors are gone and all 867 objects enrich, up from 0.
+
+**The limitation.** That rule was measured against **one** schema-23 project.
+The measurement itself is exhaustive over that project and left nothing
+uncounted: prefixing each of the 867 ids with its own device's resolved
+application program (`DeviceInstance/@Hardware2ProgramRefId` →
+`M-<n>/Hardware.xml`'s `Hardware2Program` → `ApplicationProgramRef/@RefId`)
+names an existing `ComObjectRef/@Id` **867 times out of 867**, never more than
+one candidate, and the `ComObject/@Number` behind each agrees with the id's
+own `O-<n>` digits in all 867 cases, across all 310 distinct ids and all 35
+devices **[V]**. What is *not* evidenced is that every ETS 6 export writes
+this form. One sample has already proved the wrong thing about schema ≥21
+once — ADR-0014's claim that instance-level flags do not occur at schema ≥21
+was measured against `KV v2.5 - demo.knxproj` alone and this same project
+disproved it with 119 of them **[D]**.
+
+**Why that is safe rather than merely likely.** The reader is strict and the
+residue is reported, not guessed. `device_local_com_object_number` accepts
+exactly one underscore, `O-` then digits, `R-` then digits; anything else —
+including a schema-11 parameter ref (`…_UP-411_R-411`) and a module id
+(`MD-…`) — still falls through to `MalformedRefId` and still reaches the user
+through the import report. On the enrichment side the program prefix is
+always the program *that device* resolved to, looked up per device, so a
+misread id produces a reported `ComObjectRefMissing`, never another device's
+communication object attached to this one (the §34 ruling, on the import
+side) **[V]**.
+
+**Residue a user can still hit on this very project.**
+
+- `report.has_losses()` is still `true` for the schema-23 reference project,
+  now for a smaller and entirely different reason: **9** unknown constructs,
+  five attributes in `P-0512/0.xml` (`Space/@CompletionStatus`,
+  `Area/@Name`, `Line/@CompletionStatus`, `Line/@Name`,
+  `DeviceInstance/@CompletionStatus`) and four in `P-0512/Project.xml`
+  (`ProjectInformation`'s `CompletionStatus`, `ProjectId`,
+  `ProjectTracingLevel`, `Hide16BitGroupsFromLegacyPlugins`). All nine are
+  preserved as retained attributes and each is reported with its own xpath,
+  name, occurrence count and a sample value, so the user is told what and
+  where. Map errors on that project are now **0** **[V]**.
+- Enrichment reports **107** `AmbiguousDpt` issues on this project, which
+  only became visible once the lookups started hitting. Those are the
+  deliberate refusal to pick one datapoint type out of a list of stated
+  alternatives (RESEARCH §4.2), not a lookup failure **[V]**.
+- A device whose application program is not in the product database cannot
+  have its ids qualified at all, since the prefix *is* the program. That is
+  the ordinary manufacturer-data gap and is reported per device as
+  `ProgramMissing`, exactly as before **[A]**.
+
+**Not affected.** The schema-11 (ETS4) and schema-21 (KV demo) corpus
+projects map and enrich identically to before: 907 and 75 communication
+objects, 0 and 1 import errors, and 107 and 0 enrichment issues. The ETS4
+issues are its already-pinned `AmbiguousDpt` alternatives, not lookup
+failures. These counts are covered by
+`crates/knx-etsproj/tests/device_local_com_object_refs.rs`,
+`crates/knx-app/tests/enrichment_gap_measurement.rs`, and
+`crates/knx-app/tests/ets6_device_local_enrichment.rs` **[V]**.
+
+**Lifted when.** A second, independently produced schema-23 project is in the
+corpus and its `GroupObjectTree` ids are counted the same way. This is the
+same evidence `COMPATIBILITY.md` already wants for schema 23's module
+handling, and one sample would settle both.

@@ -1,4 +1,25 @@
 - **Last Agent:** Codex
+- **Timestamp:** 2026-09-22 (Europe/Berlin)
+- **Completed:** T21 project-notes research artifact committed and pushed as
+  `8d989f7`. ADR-0031 chooses one ordered, project-owned note collection with
+  typed entity targets, explicit delete disposition, plain text only, report
+  opt-in defaulting false, and explicit loss reporting for formats that cannot
+  carry notes. No product code or schema changed. `check-anchors` passed (386
+  links, none dead); independent review found 0 Critical / 0 Important.
+- **Pending/Next Steps:** T10 still waits for explicit human review of
+  `docs/superpowers/specs/2026-09-22-settings-surface-design.md`; product edits
+  remain behind the written-spec gate. Continue the next independent
+  research/decision item from `goal.md` meanwhile. T18 remains untagged until
+  the overall goal's final AppImage verification and publish decision.
+- **Notes Claude:** Detail log:
+  `.ai/logs/2026-09-22_codex__t21_project_notes_adr.md`. The ignored local
+  `ideas.md` entry was updated but intentionally not force-added. Commits need
+  a short lightly funny subject plus a concise explanatory body, author
+  `KNXBench <github@knxbench.com>`, and no co-author.
+
+---
+
+- **Last Agent:** Codex
 - **Timestamp:** 2026-09-22 01:33 CEST
 - **Completed:** T10's approved conversational direction is now the written architectural spec `docs/superpowers/specs/2026-09-22-settings-surface-design.md`; no product code changed. It keeps ADR-0029's single versioned settings record and existing Settings overlay, groups Appearance / Language & data / Bus & diagnostics, adds optional `preferredGateway` only as a one-time authoritative seed, and extracts one protected line-scan exclusion editor for Settings plus Line Scan. Machine-readable settings diagnostics remain distinct for migration/adoption/refusal/quarantine and are localized in Settings and Log panels while retaining English debug fallback. Existing invalid exclusion strings and retired `groupAddressNotation` are preserved rather than silently discarded. A pre-hydration key journal prevents the initial GET/adoption response from erasing fast local edits. Group-address output remains fixed slash notation with no selector. Final read-only spec review after seven Important fixes: 0 Critical/0 Important; `git diff --check` and anchors (386 links/181 Markdown files) pass. No network, KNX/LAN, bus or hardware access.
 - **Pending/Next Steps:** T10's reviewed spec is committed and pushed on `origin/main` at `16b1807`. Wait for the required user review of the written spec. After approval, invoke `writing-plans`, write/review/commit the implementation plan, obtain the execution-method confirmation required by the architectural workflow, then create an isolated worktree and implement strictly TDD. T18 remains untagged until the overall goal is finished and a final AppImage check plus explicit publish decision occurs.

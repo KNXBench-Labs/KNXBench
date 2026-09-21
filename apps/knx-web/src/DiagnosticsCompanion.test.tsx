@@ -20,6 +20,7 @@ const apiMock = vi.hoisted(() => ({
   pollBusTelegrams: vi.fn(),
   writeBusValue: vi.fn(),
   getSessionLog: vi.fn(),
+  discoverBusInterfaces: vi.fn().mockResolvedValue({ interfaces: [] }),
   undo: vi.fn(),
   redo: vi.fn(),
 }));
@@ -33,6 +34,7 @@ vi.mock("./api", () => ({
       : undefined,
 }));
 
+import { resetBusDiscoveryForTests } from "./busDiscovery";
 import DiagnosticsCompanion from "./DiagnosticsCompanion";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -366,5 +368,24 @@ describe("one shared bus session", () => {
     });
 
     expect(apiMock.stopBusMonitor).not.toHaveBeenCalled();
+  });
+});
+
+describe("the companion's own interface search", () => {
+  // `ensureBusDiscovery`'s own doc comment names this exact case: "a
+  // component that needs the result mounts before [the startup search]
+  // ever ran (a second window, a test rendering the panel alone)". The
+  // companion is the one window that mounts `BusMonitorPanel` without
+  // `App` above it, so this is the only place that path is actually
+  // exercised — and until now nothing here asserted it ran at all.
+  // Reset first: an earlier test in this file may already have driven
+  // the module-level store past `"idle"`, which would make
+  // `ensureBusDiscovery` a silent no-op and this assertion vacuous.
+  it("runs the interface search on mount and does not start a session", async () => {
+    resetBusDiscoveryForTests();
+    await renderCompanion();
+
+    expect(apiMock.discoverBusInterfaces).toHaveBeenCalled();
+    expect(apiMock.startBusMonitor).not.toHaveBeenCalled();
   });
 });

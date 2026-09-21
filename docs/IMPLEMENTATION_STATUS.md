@@ -9113,3 +9113,117 @@ still pins the unqualified stored value, which is correct and unchanged.
 already-merged heading renames of §12 and §34 — pre-existing breakage,
 unrelated to this task, caught only because `check-anchors` is a gate.
 `docs/LIMITATION_TRIAGE.md` not touched, per instruction.
+
+## 2026-09-21 — T06: the validation stage stops being schema-11-only, and the manufacturer gap gets its sentence back (branch `t06-import-validation`)
+
+`KNOWN_LIMITATIONS.md` §2 said import was "tolerant rather than
+validating". Half of that was already false — `knx_etsproj::validate` has
+run as stage 4, between `ParseProjectInfo` and `Map`, since Session 3 —
+and the other half was true in a way nobody had measured. This task
+measured it, closed the two holes the measurement found, and wrote down
+the checks that were considered and deliberately refused.
+
+**What the measurement said.** A temporary harness (deleted before the
+first commit; it opened each corpus project through `Container::open` →
+`project_part()` → `detect_from_bytes` → `parse_installation`/
+`parse_installation_v21` → `parse_project_info` and counted what stage 4
+saw) reported:
+
+- Stage 4 fires **zero** errors and **zero** warnings on all three corpus
+  projects. Good news, but it also means no existing check had a positive
+  case in the corpus.
+- The dangling-link check resolved **596 of 1,218** communication-object
+  links. The missing 622 are the schema-≥21 `Links` spelling — 26 in the
+  KV schema-21 project, 596 in the ETS6 schema-23 one — which the check
+  never looked at, because it only walked `Connectors/Send|Receive/
+  @GroupAddressRefId`.
+- `check_duplicate_ids` walked areas, lines, devices, binary data, group
+  ranges and group addresses, but not **45 `BuildingPart`/`Space` ids**
+  (22 + 22 + 1). `map.rs::allocate_ids` keys a `BTreeMap<String, BuildingPartId>`
+  by that id, so a duplicate would silently merge two rooms into one —
+  exactly the "never silently discard information" failure mode, and
+  `xpath.rs`'s own header had already nominated this stage for the job.
+
+**What was fixed.** `validate.rs` now walks the building tree recursively
+(`walk_building_part`, choosing `Locations/Space` at schema ≥21 and
+`Buildings/BuildingPart` below it) and feeds those ids into the existing
+duplicate check, and the dangling-link check understands both spellings.
+The two spellings need different scoping: a fully-qualified id
+(`P-0512-0_GA-1`) embeds its installation number, so it is resolved
+document-wide like every other ETS id; a short id (`GA-3`) embeds
+nothing, so it is resolved per installation, via a `LinkSpelling` enum on
+the collected link and a second `(installation, short_id)` index built by
+stripping everything up to the last `_`. A link whose target does not
+parse as a short id at all simply fails to resolve and is reported as
+dangling — never a panic.
+
+**What was refused, with the measurement behind it.** `ModuleInstance/@Id`
+looks like an obvious uniqueness candidate and is not one: the KV
+schema-21 project carries 32 of them and only 16 distinct values, because
+module instance ids are device-scoped and two devices running the same
+application program repeat them. Adding the check would invent 16 errors
+on a valid file. `validate.rs`'s header records this with the numbers,
+and `repeated_module_instance_ids_across_devices_are_not_a_duplicate`
+locks it so a future contributor has to delete a test to make the
+mistake.
+
+**The cross-database question, answered.** Validation of
+`ProductRefId`/`Hardware2ProgramRefId` against the product database
+**stays out of stage 4** and remains `knx_productdb::enrich`'s job. Three
+reasons, in order of how hard they are to argue with: `knx-etsproj` does
+not depend on `knx-productdb` and must not start (`xtask check-layering`
+is a gate); stage 4 is a pure function of one `SourceDocument`, and the
+manufacturer files are not even collected until stage 7; and whether a
+product resolves is a property of the *installed database*, not of the
+file — the same `.knxproj` validates differently on two machines, which
+is not what an import validation error should mean.
+
+That leaves exactly one reporting channel, and T27 had broken it:
+deleting the `.knxproj` writer took `ExportWarning::MissingManufacturerData`
+with it, the only surface that ever told a user an unresolvable
+manufacturer reference existed. `EnrichmentReport` now carries
+**`devices_unresolved`**, incremented both on the empty-database early
+return and beside every `EnrichmentIssue::ProgramMissing`, and
+`apps/knx-cli` prints it with the reason ("no application program in the
+product database matches them" vs. "the product database holds no
+application program at all"). Without it the empty-database case reports
+`devices_resolved: 0`, `com_objects_enriched: 0`, `issues: []` — which is
+indistinguishable from a project that has no devices.
+
+**Tests.** `crates/knx-etsproj/src/validate.rs`: 6 → 14. The new ones are
+`the_schema_21_reference_project_validates_clean`,
+`a_resolvable_schema_21_short_link_is_not_reported`,
+`a_dangling_schema_21_short_link_is_an_error`,
+`malformed_schema_21_link_targets_are_reported_not_panicked_on` (six
+shapes: `"GA-"`, `"GA-not-a-number"`, `"-"`, `"_"`, an emoji, and a
+fully-qualified id in a short-id position),
+`a_short_link_does_not_resolve_across_installations`,
+`a_duplicate_building_part_id_is_an_error`,
+`a_nested_building_tree_with_distinct_ids_validates_clean`, and the
+module-instance refusal test above — a real-shape case and a
+malformed-input case per new check, as the brief required.
+`crates/knx-app/tests/product_db.rs`: 3 → 5
+(`an_empty_product_database_reports_how_many_devices_it_could_not_resolve`,
+which uses `knx_testsupport::write_minimal_knxproj` rather than the corpus
+because the corpus project's own manufacturer XML is what makes the
+database non-empty, and
+`a_populated_product_database_leaves_no_unresolved_device`, so a
+`devices_unresolved` wired to a constant fails).
+
+**Docs.** §2 rewritten in place, heading text byte-identical so the anchor
+holds. `docs/IMPORT_EXPORT.md` gains §4.1, a table of the six checks with
+their scoping. `docs/LIMITATION_TRIAGE.md` not touched, per instruction.
+
+**Known and not fixed here** (all pre-existing, all out of this task's
+scope, all found by the same harness): the ETS6 schema-23 reference
+project produces **867 `MapProblem` `Value(MalformedRefId(..))`, 310
+distinct**, because all 691 `ComObjectInstanceRef/@RefId` in its
+`P-0512/0.xml` are device-local two-segment ids (`O-3_R-10005`) and
+`values.rs::split_object_tail` demands three — so `report.has_losses()`
+is true for that project and no doc mentions it. The KV project's
+`Installation/@DefaultLine=""` yields one `UnresolvedReference` with an
+empty target, arguably a severity bug (empty means unset, not dangling),
+but it is the mapper's call. And `apps/knx-server/src/domain.rs::import_and_project`
+discards `imported.enrichment` outright, so the web path still says
+nothing about the manufacturer gap — the CLI is the only surface fixed
+here.
